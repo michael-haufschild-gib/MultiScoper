@@ -369,11 +369,22 @@ void OscillatorListItemComponent::mouseEnter(const juce::MouseEvent&)
 void OscillatorListItemComponent::mouseExit(const juce::MouseEvent&)
 {
     isHovered_ = false;
+    dragHandleHovered_ = false;
     settingsHovered_ = false;
     deleteHovered_ = false;
     visibilityHovered_ = false;
     hoveredModeButton_ = -1;
     repaint();
+}
+
+void OscillatorListItemComponent::mouseMove(const juce::MouseEvent& e)
+{
+    bool newDragHandleHovered = isInDragZone(e.getPosition());
+    if (newDragHandleHovered != dragHandleHovered_)
+    {
+        dragHandleHovered_ = newDragHandleHovered;
+        repaint();
+    }
 }
 
 void OscillatorListItemComponent::mouseDown(const juce::MouseEvent& e)
@@ -521,6 +532,61 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
         }
     }
 
+    repaint();
+}
+
+bool OscillatorListItemComponent::keyPressed(const juce::KeyPress& key)
+{
+    // Space/Enter to toggle selection
+    if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey)
+    {
+        listeners_.call([this](Listener& l) { l.oscillatorSelected(oscillatorId_); });
+        return true;
+    }
+
+    // Delete key to delete oscillator
+    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+    {
+        listeners_.call([this](Listener& l) { l.oscillatorDeleteRequested(oscillatorId_); });
+        return true;
+    }
+
+    // V key to toggle visibility
+    if (key.getTextCharacter() == 'v' || key.getTextCharacter() == 'V')
+    {
+        isVisible_ = !isVisible_;
+        repaint();
+        listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
+        return true;
+    }
+
+    // Cmd/Ctrl+Up/Down to reorder oscillators (keyboard alternative to drag-drop)
+    if (key.getModifiers().isCommandDown())
+    {
+        if (key.getKeyCode() == juce::KeyPress::upKey)
+        {
+            listeners_.call([this](Listener& l) { l.oscillatorMoveRequested(oscillatorId_, -1); });
+            return true;
+        }
+        if (key.getKeyCode() == juce::KeyPress::downKey)
+        {
+            listeners_.call([this](Listener& l) { l.oscillatorMoveRequested(oscillatorId_, 1); });
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void OscillatorListItemComponent::focusGained(FocusChangeType)
+{
+    hasFocus_ = true;
+    repaint();
+}
+
+void OscillatorListItemComponent::focusLost(FocusChangeType)
+{
+    hasFocus_ = false;
     repaint();
 }
 

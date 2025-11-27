@@ -247,6 +247,7 @@ private:
     void oscillatorConfigRequested(const OscillatorId& id) override;
     void oscillatorDeleteRequested(const OscillatorId& id) override;
     void oscillatorDragStarted(const OscillatorId& id) override;
+    void oscillatorMoveRequested(const OscillatorId& id, int direction) override;
 
     // OscillatorListToolbar::Listener overrides
     void filterModeChanged(OscillatorFilterMode mode) override;

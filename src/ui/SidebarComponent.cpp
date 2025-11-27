@@ -710,6 +710,33 @@ void SidebarComponent::oscillatorDragStarted(const OscillatorId& id)
     }
 }
 
+void SidebarComponent::oscillatorMoveRequested(const OscillatorId& id, int direction)
+{
+    // Find the index of the oscillator to move
+    int sourceIndex = -1;
+    for (size_t i = 0; i < oscillatorItems_.size(); ++i)
+    {
+        if (oscillatorItems_[i]->getOscillatorId() == id)
+        {
+            sourceIndex = static_cast<int>(i);
+            break;
+        }
+    }
+
+    if (sourceIndex < 0)
+        return;
+
+    // Calculate target index
+    int targetIndex = sourceIndex + direction;
+
+    // Bounds check
+    if (targetIndex < 0 || targetIndex >= static_cast<int>(oscillatorItems_.size()))
+        return;
+
+    // Reuse existing reorder logic
+    finishDrag(sourceIndex, targetIndex);
+}
+
 // OscillatorListToolbar::Listener implementation
 void SidebarComponent::filterModeChanged(OscillatorFilterMode mode)
 {
