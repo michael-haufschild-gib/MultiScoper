@@ -34,6 +34,7 @@ public:
         virtual void oscillatorConfigRequested(const OscillatorId& /*id*/) {}
         virtual void oscillatorDeleteRequested(const OscillatorId& /*id*/) {}
         virtual void oscillatorDragStarted(const OscillatorId& /*id*/) {}
+        virtual void oscillatorMoveRequested(const OscillatorId& /*id*/, int /*direction*/) {}
     };
 
     explicit OscillatorListItemComponent(const Oscillator& oscillator);
@@ -43,9 +44,13 @@ public:
     void resized() override;
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
+    bool keyPressed(const juce::KeyPress& key) override;
+    void focusGained(FocusChangeType cause) override;
+    void focusLost(FocusChangeType cause) override;
 
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
@@ -96,6 +101,8 @@ private:
     bool selected_ = false;
     bool isHovered_ = false;
     bool isDragging_ = false;
+    bool hasFocus_ = false;
+    bool dragHandleHovered_ = false;
     bool settingsHovered_ = false;
     bool deleteHovered_ = false;
     bool visibilityHovered_ = false;

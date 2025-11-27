@@ -178,18 +178,19 @@ target_link_libraries(Oscil
         juce::juce_recommended_warning_flags
 )
 
-# RealtimeSanitizer flags (Clang 18+ only)
+# RealtimeSanitizer flags (LLVM Clang 20+ only - not Apple Clang, not Ubuntu's packaged Clang)
 # Catches allocations, mutex locks, and blocking syscalls in audio thread
 if(OSCIL_ENABLE_RTSAN)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18)
-        message(STATUS "RealtimeSanitizer enabled")
+    # Check for LLVM Clang (not AppleClang) version 20+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
+        message(STATUS "RealtimeSanitizer enabled (Clang ${CMAKE_CXX_COMPILER_VERSION})")
         target_compile_options(Oscil PRIVATE -fsanitize=realtime)
         target_link_options(Oscil PRIVATE -fsanitize=realtime)
         # Also apply to standalone target for testing
         target_compile_options(Oscil_Standalone PRIVATE -fsanitize=realtime)
         target_link_options(Oscil_Standalone PRIVATE -fsanitize=realtime)
     else()
-        message(WARNING "RealtimeSanitizer requires Clang 18+. Current compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+        message(WARNING "RealtimeSanitizer requires LLVM Clang 20+. Current compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
     endif()
 endif()
 

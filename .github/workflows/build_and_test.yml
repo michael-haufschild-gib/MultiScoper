@@ -118,9 +118,11 @@ jobs:
 
   # RealtimeSanitizer job - detects real-time safety violations in audio code
   # Catches: allocations, mutex locks, blocking syscalls in processBlock()
+  # Note: Requires LLVM's official Clang 20+ (Ubuntu's packaged Clang doesn't include RTSan)
   rtsan:
     name: RealtimeSanitizer
     runs-on: ubuntu-24.04
+    continue-on-error: true  # RTSan is experimental, don't block PRs
 
     steps:
       - name: Checkout repository
@@ -128,11 +130,17 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
+      - name: Install LLVM 20 (with RTSan support)
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 20
+          sudo apt-get install -y clang-20 lld-20
+
+      - name: Install JUCE dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            clang-18 \
             libasound2-dev \
             libjack-jackd2-dev \
             ladspa-sdk \
@@ -153,8 +161,8 @@ jobs:
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_C_COMPILER=clang-18 \
-            -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DCMAKE_C_COMPILER=clang-20 \
+            -DCMAKE_CXX_COMPILER=clang++-20 \
             -DOSCIL_ENABLE_RTSAN=ON \
             -DOSCIL_BUILD_TESTS=ON
 

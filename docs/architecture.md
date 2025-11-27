@@ -14,6 +14,7 @@ include/                    # Header files (.h)
 ├── core/                   # Core logic: processors, state, data models
 ├── dsp/                    # Digital signal processing algorithms
 ├── ui/                     # UI components (juce::Component subclasses)
+│   ├── components/         # Reusable UI component library (buttons, sliders, etc.)
 │   ├── sections/           # Sidebar collapsible sections
 │   └── coordinators/       # State-UI coordination logic
 └── Oscil.h                 # Main umbrella header
@@ -22,6 +23,7 @@ src/                        # Implementation files (.cpp)
 ├── core/                   # Core implementations
 ├── dsp/                    # DSP implementations
 └── ui/                     # UI implementations
+    ├── components/         # Reusable UI component implementations
     ├── sections/           # Sidebar section implementations
     └── coordinators/       # Coordinator implementations
 

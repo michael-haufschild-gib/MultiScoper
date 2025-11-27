@@ -36,6 +36,9 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
     }
 
     ThemeManager::getInstance().addListener(this);
+
+    // Enable keyboard focus for accessibility
+    setWantsKeyboardFocus(true);
 }
 
 OscillatorListItemComponent::~OscillatorListItemComponent()
@@ -69,9 +72,17 @@ void OscillatorListItemComponent::paintCompact(juce::Graphics& g, const ColorThe
         g.fillRoundedRectangle(bounds.reduced(2), 6.0f);
     }
 
-    // Drag handle (6 dots)
+    // Focus ring for keyboard accessibility
+    if (hasFocus_)
+    {
+        g.setColour(theme.controlActive.withAlpha(0.6f));
+        g.drawRoundedRectangle(bounds.reduced(2), 6.0f, 2.0f);
+    }
+
+    // Drag handle (6 dots) - with hover feedback
     auto dragArea = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
-    g.setColour(theme.textSecondary.withAlpha(0.4f * alpha));
+    float dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
+    g.setColour(theme.textSecondary.withAlpha(dotAlpha * alpha));
     float dotSize = 3.0f;
     float dotSpacing = 5.0f;
     float startX = dragArea.getCentreX() - dotSpacing / 2;
@@ -136,16 +147,25 @@ void OscillatorListItemComponent::paintExpanded(juce::Graphics& g, const ColorTh
     g.setColour(theme.backgroundSecondary.brighter(0.05f));
     g.fillRoundedRectangle(bounds.reduced(2), 8.0f);
 
-    // Border
-    g.setColour(theme.controlBorder.withAlpha(0.5f));
-    g.drawRoundedRectangle(bounds.reduced(2), 8.0f, 1.0f);
+    // Border (use focus ring color if focused)
+    if (hasFocus_)
+    {
+        g.setColour(theme.controlActive.withAlpha(0.8f));
+        g.drawRoundedRectangle(bounds.reduced(2), 8.0f, 2.0f);
+    }
+    else
+    {
+        g.setColour(theme.controlBorder.withAlpha(0.5f));
+        g.drawRoundedRectangle(bounds.reduced(2), 8.0f, 1.0f);
+    }
 
     // Top row (same as compact but with different background)
     auto topRow = bounds.removeFromTop(COMPACT_HEIGHT);
 
-    // Drag handle
+    // Drag handle - with hover feedback
     auto dragArea = topRow.removeFromLeft(DRAG_HANDLE_WIDTH);
-    g.setColour(theme.textSecondary.withAlpha(0.4f));
+    float dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
+    g.setColour(theme.textSecondary.withAlpha(dotAlpha));
     float dotSize = 3.0f;
     float dotSpacing = 5.0f;
     float startX = dragArea.getCentreX() - dotSpacing / 2;
