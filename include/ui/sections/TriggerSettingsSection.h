@@ -9,6 +9,8 @@
 #include "ui/ThemeManager.h"
 #include "ui/SegmentedButtonBar.h"
 #include "ui/sections/SectionConstants.h"
+#include "ui/components/OscilSlider.h"
+#include "ui/components/OscilDropdown.h"
 #include "dsp/TimingConfig.h"
 #include <functional>
 
@@ -85,16 +87,14 @@ private:
 
     // Trigger Source dropdown
     std::unique_ptr<juce::Label> sourceLabel_;
-    std::unique_ptr<juce::ComboBox> sourceSelector_;
+    std::unique_ptr<OscilDropdown> sourceSelector_;
 
     // Mode selector
     std::unique_ptr<juce::Label> modeLabel_;
-    std::unique_ptr<juce::ComboBox> modeSelector_;
+    std::unique_ptr<OscilDropdown> modeSelector_;
 
     // Threshold controls (visible only in Triggered mode)
-    std::unique_ptr<juce::Label> thresholdLabel_;
-    std::unique_ptr<juce::Slider> thresholdSlider_;
-    std::unique_ptr<juce::Label> thresholdValueLabel_;
+    std::unique_ptr<OscilSlider> thresholdSlider_;
 
     // Edge selector (visible only in Triggered mode)
     std::unique_ptr<juce::Label> edgeLabel_;

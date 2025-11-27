@@ -1,12 +1,15 @@
 /*
     Oscil - Segmented Button Bar Component
     Reusable segmented control for exclusive selection (radio-button style)
+    Now uses OscilButton internally for consistent styling and animations
 */
 
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ThemeManager.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/ComponentTypes.h"
 #include <vector>
 #include <functional>
 
@@ -14,43 +17,11 @@ namespace oscil
 {
 
 /**
- * A single segment button within the SegmentedButtonBar
- */
-class SegmentButton : public juce::Component
-{
-public:
-    SegmentButton(const juce::String& label, int buttonId);
-
-    void paint(juce::Graphics& g) override;
-    void mouseEnter(const juce::MouseEvent& e) override;
-    void mouseExit(const juce::MouseEvent& e) override;
-    void mouseUp(const juce::MouseEvent& e) override;
-
-    void setSelected(bool selected);
-    bool isSelected() const { return selected_; }
-
-    int getButtonId() const { return buttonId_; }
-    const juce::String& getLabel() const { return label_; }
-
-    void setFirst(bool first) { isFirst_ = first; }
-    void setLast(bool last) { isLast_ = last; }
-
-    std::function<void(int)> onClick;
-
-private:
-    juce::String label_;
-    int buttonId_;
-    bool selected_ = false;
-    bool isHovered_ = false;
-    bool isFirst_ = false;
-    bool isLast_ = false;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SegmentButton)
-};
-
-/**
  * Segmented button bar for exclusive selection
  * Used for: TIME/MELODIC toggle, Processing Mode selection, Filter tabs
+ *
+ * Now uses OscilButton internally with toggleable and segment position support
+ * for consistent styling, animations, and accessibility across the UI.
  */
 class SegmentedButtonBar : public juce::Component,
                             public ThemeManagerListener
@@ -64,6 +35,9 @@ public:
 
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
+
+    // Keyboard navigation
+    bool keyPressed(const juce::KeyPress& key) override;
 
     /**
      * Add a button to the bar
@@ -110,8 +84,9 @@ public:
 private:
     void handleButtonClick(int id);
     void updateButtonStates();
+    int getSelectedIndex() const;
 
-    std::vector<std::unique_ptr<SegmentButton>> buttons_;
+    std::vector<std::unique_ptr<OscilButton>> buttons_;
     int selectedId_ = -1;
     bool enabled_ = true;
     int minButtonWidth_ = 60;

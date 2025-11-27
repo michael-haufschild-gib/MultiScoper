@@ -42,27 +42,20 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*modeToggle_);
 
     // TIME mode controls
-    timeIntervalLabel_ = std::make_unique<juce::Label>();
-    timeIntervalLabel_->setText("Interval", juce::dontSendNotification);
-    timeIntervalLabel_->setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(*timeIntervalLabel_);
-
-    timeIntervalSlider_ = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::NoTextBox);
-    timeIntervalSlider_->setRange(1.0, 1000.0, 1.0);
-    timeIntervalSlider_->setValue(currentTimeIntervalMs_);
-    timeIntervalSlider_->setSkewFactorFromMidPoint(100.0);
-    timeIntervalSlider_->onValueChange = [this]()
+    timeIntervalSlider_ = std::make_unique<OscilSlider>();
+    timeIntervalSlider_->setLabel("Interval");
+    timeIntervalSlider_->setRange(1.0, 1000.0);
+    timeIntervalSlider_->setStep(1.0);
+    timeIntervalSlider_->setValue(currentTimeIntervalMs_, false);
+    timeIntervalSlider_->setSuffix(" ms");
+    timeIntervalSlider_->setSkewFactor(0.3);  // Log-like behavior (lower value = more log-like)
+    timeIntervalSlider_->onValueChanged = [this](double value)
     {
-        currentTimeIntervalMs_ = static_cast<int>(timeIntervalSlider_->getValue());
+        currentTimeIntervalMs_ = static_cast<int>(value);
         updateCalculatedInterval();
         notifyTimeIntervalChanged();
     };
     addAndMakeVisible(*timeIntervalSlider_);
-
-    timeIntervalValueLabel_ = std::make_unique<juce::Label>();
-    timeIntervalValueLabel_->setText(juce::String(currentTimeIntervalMs_) + " ms", juce::dontSendNotification);
-    timeIntervalValueLabel_->setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(*timeIntervalValueLabel_);
 
     // MELODIC mode controls (per design: "Note Interval")
     noteIntervalLabel_ = std::make_unique<juce::Label>();
@@ -70,14 +63,17 @@ void TimingSidebarSection::setupComponents()
     noteIntervalLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*noteIntervalLabel_);
 
-    noteIntervalSelector_ = std::make_unique<juce::ComboBox>();
+    noteIntervalSelector_ = std::make_unique<OscilDropdown>();
     populateNoteIntervalSelector();
-    noteIntervalSelector_->onChange = [this]()
+    noteIntervalSelector_->onSelectionChanged = [this](int index)
     {
-        int selectedId = noteIntervalSelector_->getSelectedId();
-        if (selectedId > 0)
+        // OscilDropdown uses 0-based indices
+        if (index >= 0)
         {
-            currentNoteInterval_ = static_cast<NoteInterval>(selectedId - 1);
+            // Map index back to NoteInterval enum
+            // This needs to account for separators which aren't in the enum
+            // For simplicity, we'll track the mapping in populateNoteIntervalSelector
+            currentNoteInterval_ = static_cast<NoteInterval>(index);
             updateCalculatedInterval();
             notifyNoteIntervalChanged();
         }
@@ -102,21 +98,21 @@ void TimingSidebarSection::setupComponents()
     updateCalculatedInterval();
 
     // Host sync toggle
-    hostSyncToggle_ = std::make_unique<juce::ToggleButton>("Sync to Host");
-    hostSyncToggle_->setToggleState(hostSyncEnabled_, juce::dontSendNotification);
-    hostSyncToggle_->onClick = [this]()
+    hostSyncToggle_ = std::make_unique<OscilToggle>("Sync to Host");
+    hostSyncToggle_->setValue(hostSyncEnabled_, false);
+    hostSyncToggle_->onValueChanged = [this](bool value)
     {
-        hostSyncEnabled_ = hostSyncToggle_->getToggleState();
+        hostSyncEnabled_ = value;
         notifyHostSyncChanged();
     };
     addAndMakeVisible(*hostSyncToggle_);
 
     // Reset on play toggle
-    resetOnPlayToggle_ = std::make_unique<juce::ToggleButton>("Reset on Play");
-    resetOnPlayToggle_->setToggleState(resetOnPlayEnabled_, juce::dontSendNotification);
-    resetOnPlayToggle_->onClick = [this]()
+    resetOnPlayToggle_ = std::make_unique<OscilToggle>("Reset on Play");
+    resetOnPlayToggle_->setValue(resetOnPlayEnabled_, false);
+    resetOnPlayToggle_->onValueChanged = [this](bool value)
     {
-        resetOnPlayEnabled_ = resetOnPlayToggle_->getToggleState();
+        resetOnPlayEnabled_ = value;
         notifyResetOnPlayChanged();
     };
     addAndMakeVisible(*resetOnPlayToggle_);
@@ -132,41 +128,33 @@ void TimingSidebarSection::setupComponents()
 
 void TimingSidebarSection::populateNoteIntervalSelector()
 {
-    noteIntervalSelector_->clear();
+    noteIntervalSelector_->clearItems();
+
+    // OscilDropdown uses 0-based indices, not IDs
+    // We need to map index to NoteInterval enum value
+    // Store the mapping in order
 
     // Standard notes (per design: "1/16th", "1/8th", "1/4", "1/2", "1 Bar")
-    noteIntervalSelector_->addItem("1/32nd", static_cast<int>(NoteInterval::THIRTY_SECOND) + 1);
-    noteIntervalSelector_->addItem("1/16th", static_cast<int>(NoteInterval::SIXTEENTH) + 1);
-    noteIntervalSelector_->addItem("1/12th", static_cast<int>(NoteInterval::TWELFTH) + 1);
-    noteIntervalSelector_->addItem("1/8th", static_cast<int>(NoteInterval::EIGHTH) + 1);
-    noteIntervalSelector_->addItem("1/4", static_cast<int>(NoteInterval::QUARTER) + 1);
-    noteIntervalSelector_->addItem("1/2", static_cast<int>(NoteInterval::HALF) + 1);
-    noteIntervalSelector_->addItem("1 Bar", static_cast<int>(NoteInterval::WHOLE) + 1);
+    noteIntervalSelector_->addItem("1/32nd");     // index 0 = NoteInterval::THIRTY_SECOND
+    noteIntervalSelector_->addItem("1/16th");     // index 1 = NoteInterval::SIXTEENTH
+    noteIntervalSelector_->addItem("1/12th");     // index 2 = NoteInterval::TWELFTH
+    noteIntervalSelector_->addItem("1/8th");      // index 3 = NoteInterval::EIGHTH
+    noteIntervalSelector_->addItem("1/4");        // index 4 = NoteInterval::QUARTER
+    noteIntervalSelector_->addItem("1/2");        // index 5 = NoteInterval::HALF
+    noteIntervalSelector_->addItem("1 Bar");      // index 6 = NoteInterval::WHOLE
+    noteIntervalSelector_->addItem("2 Bars");     // index 7 = NoteInterval::TWO_BARS
+    noteIntervalSelector_->addItem("3 Bars");     // index 8 = NoteInterval::THREE_BARS
+    noteIntervalSelector_->addItem("4 Bars");     // index 9 = NoteInterval::FOUR_BARS
+    noteIntervalSelector_->addItem("8 Bars");     // index 10 = NoteInterval::EIGHT_BARS
+    noteIntervalSelector_->addItem("1/8th.");     // index 11 = NoteInterval::DOTTED_EIGHTH
+    noteIntervalSelector_->addItem("1/4.");       // index 12 = NoteInterval::DOTTED_QUARTER
+    noteIntervalSelector_->addItem("1/2.");       // index 13 = NoteInterval::DOTTED_HALF
+    noteIntervalSelector_->addItem("1/8th T");    // index 14 = NoteInterval::TRIPLET_EIGHTH
+    noteIntervalSelector_->addItem("1/4 T");      // index 15 = NoteInterval::TRIPLET_QUARTER
+    noteIntervalSelector_->addItem("1/2 T");      // index 16 = NoteInterval::TRIPLET_HALF
 
-    noteIntervalSelector_->addSeparator();
-
-    // Multi-bar
-    noteIntervalSelector_->addItem("2 Bars", static_cast<int>(NoteInterval::TWO_BARS) + 1);
-    noteIntervalSelector_->addItem("3 Bars", static_cast<int>(NoteInterval::THREE_BARS) + 1);
-    noteIntervalSelector_->addItem("4 Bars", static_cast<int>(NoteInterval::FOUR_BARS) + 1);
-    noteIntervalSelector_->addItem("8 Bars", static_cast<int>(NoteInterval::EIGHT_BARS) + 1);
-
-    noteIntervalSelector_->addSeparator();
-
-    // Dotted
-    noteIntervalSelector_->addItem("1/8th.", static_cast<int>(NoteInterval::DOTTED_EIGHTH) + 1);
-    noteIntervalSelector_->addItem("1/4.", static_cast<int>(NoteInterval::DOTTED_QUARTER) + 1);
-    noteIntervalSelector_->addItem("1/2.", static_cast<int>(NoteInterval::DOTTED_HALF) + 1);
-
-    noteIntervalSelector_->addSeparator();
-
-    // Triplets
-    noteIntervalSelector_->addItem("1/8th T", static_cast<int>(NoteInterval::TRIPLET_EIGHTH) + 1);
-    noteIntervalSelector_->addItem("1/4 T", static_cast<int>(NoteInterval::TRIPLET_QUARTER) + 1);
-    noteIntervalSelector_->addItem("1/2 T", static_cast<int>(NoteInterval::TRIPLET_HALF) + 1);
-
-    // Set current selection
-    noteIntervalSelector_->setSelectedId(static_cast<int>(currentNoteInterval_) + 1);
+    // Set current selection using index (NoteInterval enum values are sequential)
+    noteIntervalSelector_->setSelectedIndex(static_cast<int>(currentNoteInterval_), false);
 }
 
 void TimingSidebarSection::paint(juce::Graphics& g)
@@ -244,16 +232,9 @@ void TimingSidebarSection::resized()
     // TIME mode controls
     if (currentMode_ == TimingMode::TIME)
     {
-        // Interval label and value on same row
-        int labelWidth = 50;
-        int valueWidth = 60;
-        timeIntervalLabel_->setBounds(bounds.getX(), y, labelWidth, ROW_HEIGHT);
-        timeIntervalValueLabel_->setBounds(bounds.getRight() - valueWidth, y, valueWidth, ROW_HEIGHT);
-        y += ROW_HEIGHT + SPACING_SMALL;
-
-        // Slider below
-        timeIntervalSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
-        y += ROW_HEIGHT + SPACING_LARGE;
+        // OscilSlider with integrated label
+        timeIntervalSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), 40);
+        y += 40 + SPACING_LARGE;
     }
     else // MELODIC mode
     {
@@ -290,36 +271,18 @@ void TimingSidebarSection::resized()
 
 void TimingSidebarSection::themeChanged(const ColorTheme& newTheme)
 {
+    // Oscil components (OscilSlider, OscilDropdown, OscilToggle) handle their own theming
+    // automatically via ThemeManagerListener. We only need to style the remaining JUCE Labels.
+
     // Section label
     sectionLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
     sectionLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
 
-    // TIME mode
-    timeIntervalLabel_->setColour(juce::Label::textColourId, newTheme.textPrimary);
-    timeIntervalValueLabel_->setColour(juce::Label::textColourId, newTheme.textHighlight);
-    timeIntervalSlider_->setColour(juce::Slider::thumbColourId, newTheme.controlActive);
-    timeIntervalSlider_->setColour(juce::Slider::trackColourId, newTheme.controlBackground);
-
-    // MELODIC mode
+    // MELODIC mode labels
     noteIntervalLabel_->setColour(juce::Label::textColourId, newTheme.textPrimary);
     bpmLabel_->setColour(juce::Label::textColourId, newTheme.textPrimary);
     bpmValueLabel_->setColour(juce::Label::textColourId, newTheme.textHighlight);
     calculatedIntervalLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-
-    // ComboBox styling
-    noteIntervalSelector_->setColour(juce::ComboBox::backgroundColourId, newTheme.controlBackground);
-    noteIntervalSelector_->setColour(juce::ComboBox::textColourId, newTheme.textPrimary);
-    noteIntervalSelector_->setColour(juce::ComboBox::outlineColourId, newTheme.controlBorder);
-    noteIntervalSelector_->setColour(juce::ComboBox::arrowColourId, newTheme.textSecondary);
-
-    // Toggles
-    hostSyncToggle_->setColour(juce::ToggleButton::textColourId, newTheme.textPrimary);
-    hostSyncToggle_->setColour(juce::ToggleButton::tickColourId, newTheme.controlActive);
-    hostSyncToggle_->setColour(juce::ToggleButton::tickDisabledColourId, newTheme.textSecondary.withAlpha(0.5f));
-
-    resetOnPlayToggle_->setColour(juce::ToggleButton::textColourId, newTheme.textPrimary);
-    resetOnPlayToggle_->setColour(juce::ToggleButton::tickColourId, newTheme.controlActive);
-    resetOnPlayToggle_->setColour(juce::ToggleButton::tickDisabledColourId, newTheme.textSecondary.withAlpha(0.5f));
 
     // Sync status
     syncStatusLabel_->setColour(juce::Label::textColourId,
@@ -333,9 +296,7 @@ void TimingSidebarSection::updateModeVisibility()
     bool isTimeMode = (currentMode_ == TimingMode::TIME);
 
     // TIME mode controls
-    timeIntervalLabel_->setVisible(isTimeMode);
     timeIntervalSlider_->setVisible(isTimeMode);
-    timeIntervalValueLabel_->setVisible(isTimeMode);
 
     // MELODIC mode controls
     noteIntervalLabel_->setVisible(!isTimeMode);
@@ -352,8 +313,7 @@ void TimingSidebarSection::updateCalculatedInterval()
 {
     if (currentMode_ == TimingMode::TIME)
     {
-        timeIntervalValueLabel_->setText(juce::String(currentTimeIntervalMs_) + " ms",
-                                          juce::dontSendNotification);
+        // OscilSlider handles its own display - nothing to update
     }
     else
     {
@@ -388,28 +348,28 @@ void TimingSidebarSection::setTimingMode(TimingMode mode)
 void TimingSidebarSection::setTimeIntervalMs(int ms)
 {
     currentTimeIntervalMs_ = ms;
-    timeIntervalSlider_->setValue(ms, juce::dontSendNotification);
+    timeIntervalSlider_->setValue(ms, false);
     updateCalculatedInterval();
 }
 
 void TimingSidebarSection::setNoteInterval(NoteInterval interval)
 {
     currentNoteInterval_ = interval;
-    noteIntervalSelector_->setSelectedId(static_cast<int>(interval) + 1, juce::dontSendNotification);
+    noteIntervalSelector_->setSelectedIndex(static_cast<int>(interval), false);
     updateCalculatedInterval();
 }
 
 void TimingSidebarSection::setHostSyncEnabled(bool enabled)
 {
     hostSyncEnabled_ = enabled;
-    hostSyncToggle_->setToggleState(enabled, juce::dontSendNotification);
+    hostSyncToggle_->setValue(enabled, false);
     resized();
 }
 
 void TimingSidebarSection::setResetOnPlayEnabled(bool enabled)
 {
     resetOnPlayEnabled_ = enabled;
-    resetOnPlayToggle_->setToggleState(enabled, juce::dontSendNotification);
+    resetOnPlayToggle_->setValue(enabled, false);
 }
 
 void TimingSidebarSection::setHostBPM(float bpm)
@@ -451,8 +411,7 @@ int TimingSidebarSection::getPreferredHeight() const
 
     if (currentMode_ == TimingMode::TIME)
     {
-        height += ROW_HEIGHT + SPACING_SMALL;            // Interval label/value row
-        height += ROW_HEIGHT + SPACING_LARGE;            // Slider
+        height += 40 + SPACING_LARGE;                    // OscilSlider (integrated label)
     }
     else
     {

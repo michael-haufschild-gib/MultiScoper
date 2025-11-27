@@ -567,4 +567,44 @@ void GlobalPreferences::setShowStatusBar(bool show)
     preferences_.setProperty("showStatusBar", show, nullptr);
 }
 
+bool GlobalPreferences::getReducedMotion() const
+{
+    return preferences_.getProperty("reducedMotion", false);
+}
+
+void GlobalPreferences::setReducedMotion(bool reduced)
+{
+    preferences_.setProperty("reducedMotion", reduced, nullptr);
+}
+
+bool GlobalPreferences::getUIAudioFeedback() const
+{
+    return preferences_.getProperty("uiAudioFeedback", false);
+}
+
+void GlobalPreferences::setUIAudioFeedback(bool enabled)
+{
+    preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
+}
+
+bool GlobalPreferences::getTooltipsEnabled() const
+{
+    return preferences_.getProperty("tooltipsEnabled", true);
+}
+
+void GlobalPreferences::setTooltipsEnabled(bool enabled)
+{
+    preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
+}
+
+int GlobalPreferences::getDefaultSidebarWidth() const
+{
+    return preferences_.getProperty("defaultSidebarWidth", 280);
+}
+
+void GlobalPreferences::setDefaultSidebarWidth(int width)
+{
+    preferences_.setProperty("defaultSidebarWidth", width, nullptr);
+}
+
 } // namespace oscil

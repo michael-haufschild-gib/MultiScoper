@@ -28,31 +28,31 @@ void DisplayOptionsSection::setupComponents()
     addAndMakeVisible(*sectionLabel_);
 
     // Show Grid toggle
-    showGridToggle_ = std::make_unique<juce::ToggleButton>("Show Grid");
-    showGridToggle_->setToggleState(showGridEnabled_, juce::dontSendNotification);
-    showGridToggle_->onClick = [this]()
+    showGridToggle_ = std::make_unique<OscilToggle>("Show Grid");
+    showGridToggle_->setValue(showGridEnabled_, false);
+    showGridToggle_->onValueChanged = [this](bool value)
     {
-        showGridEnabled_ = showGridToggle_->getToggleState();
+        showGridEnabled_ = value;
         notifyShowGridChanged();
     };
     addAndMakeVisible(*showGridToggle_);
 
     // Auto-Scale toggle
-    autoScaleToggle_ = std::make_unique<juce::ToggleButton>("Auto-Scale");
-    autoScaleToggle_->setToggleState(autoScaleEnabled_, juce::dontSendNotification);
-    autoScaleToggle_->onClick = [this]()
+    autoScaleToggle_ = std::make_unique<OscilToggle>("Auto-Scale");
+    autoScaleToggle_->setValue(autoScaleEnabled_, false);
+    autoScaleToggle_->onValueChanged = [this](bool value)
     {
-        autoScaleEnabled_ = autoScaleToggle_->getToggleState();
+        autoScaleEnabled_ = value;
         notifyAutoScaleChanged();
     };
     addAndMakeVisible(*autoScaleToggle_);
 
     // Hold Display toggle
-    holdDisplayToggle_ = std::make_unique<juce::ToggleButton>("Hold");
-    holdDisplayToggle_->setToggleState(holdDisplayEnabled_, juce::dontSendNotification);
-    holdDisplayToggle_->onClick = [this]()
+    holdDisplayToggle_ = std::make_unique<OscilToggle>("Hold");
+    holdDisplayToggle_->setValue(holdDisplayEnabled_, false);
+    holdDisplayToggle_->onValueChanged = [this](bool value)
     {
-        holdDisplayEnabled_ = holdDisplayToggle_->getToggleState();
+        holdDisplayEnabled_ = value;
         notifyHoldDisplayChanged();
     };
     addAndMakeVisible(*holdDisplayToggle_);
@@ -98,21 +98,12 @@ void DisplayOptionsSection::resized()
 
 void DisplayOptionsSection::themeChanged(const ColorTheme& newTheme)
 {
+    // OscilToggle components handle their own theming automatically
+    // via ThemeManagerListener. We only need to style the remaining JUCE Labels.
+
     // Section label
     sectionLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
     sectionLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
-
-    // Toggle styling
-    auto styleToggle = [&newTheme](juce::ToggleButton* toggle)
-    {
-        toggle->setColour(juce::ToggleButton::textColourId, newTheme.textPrimary);
-        toggle->setColour(juce::ToggleButton::tickColourId, newTheme.controlActive);
-        toggle->setColour(juce::ToggleButton::tickDisabledColourId, newTheme.textSecondary.withAlpha(0.5f));
-    };
-
-    styleToggle(showGridToggle_.get());
-    styleToggle(autoScaleToggle_.get());
-    styleToggle(holdDisplayToggle_.get());
 
     repaint();
 }
@@ -120,19 +111,19 @@ void DisplayOptionsSection::themeChanged(const ColorTheme& newTheme)
 void DisplayOptionsSection::setShowGrid(bool enabled)
 {
     showGridEnabled_ = enabled;
-    showGridToggle_->setToggleState(enabled, juce::dontSendNotification);
+    showGridToggle_->setValue(enabled, false);
 }
 
 void DisplayOptionsSection::setAutoScale(bool enabled)
 {
     autoScaleEnabled_ = enabled;
-    autoScaleToggle_->setToggleState(enabled, juce::dontSendNotification);
+    autoScaleToggle_->setValue(enabled, false);
 }
 
 void DisplayOptionsSection::setHoldDisplay(bool enabled)
 {
     holdDisplayEnabled_ = enabled;
-    holdDisplayToggle_->setToggleState(enabled, juce::dontSendNotification);
+    holdDisplayToggle_->setValue(enabled, false);
 }
 
 void DisplayOptionsSection::addListener(Listener* listener)

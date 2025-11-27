@@ -8,6 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/ThemeManager.h"
 #include "ui/sections/SectionConstants.h"
+#include "ui/components/OscilToggle.h"
 #include <functional>
 
 namespace oscil
@@ -68,9 +69,9 @@ private:
     std::unique_ptr<juce::Label> sectionLabel_;
 
     // Toggles
-    std::unique_ptr<juce::ToggleButton> showGridToggle_;
-    std::unique_ptr<juce::ToggleButton> autoScaleToggle_;
-    std::unique_ptr<juce::ToggleButton> holdDisplayToggle_;
+    std::unique_ptr<OscilToggle> showGridToggle_;
+    std::unique_ptr<OscilToggle> autoScaleToggle_;
+    std::unique_ptr<OscilToggle> holdDisplayToggle_;
 
     // State
     bool showGridEnabled_ = true;

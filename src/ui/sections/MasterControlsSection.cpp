@@ -28,49 +28,47 @@ void MasterControlsSection::setupComponents()
     addAndMakeVisible(*sectionLabel_);
 
     // Timebase controls
-    timebaseLabel_ = std::make_unique<juce::Label>();
-    timebaseLabel_->setText("Timebase", juce::dontSendNotification);
-    timebaseLabel_->setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(*timebaseLabel_);
-
-    timebaseSlider_ = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::NoTextBox);
-    timebaseSlider_->setRange(MIN_TIMEBASE_MS, MAX_TIMEBASE_MS, 1.0);
-    timebaseSlider_->setValue(currentTimebaseMs_);
-    timebaseSlider_->setSkewFactorFromMidPoint(100.0); // Log-like behavior around 100ms
-    timebaseSlider_->onValueChange = [this]()
+    timebaseSlider_ = std::make_unique<OscilSlider>();
+    timebaseSlider_->setLabel("Timebase");
+    timebaseSlider_->setRange(MIN_TIMEBASE_MS, MAX_TIMEBASE_MS);
+    timebaseSlider_->setStep(1.0);
+    timebaseSlider_->setValue(currentTimebaseMs_, false);
+    timebaseSlider_->setSkewFactor(0.3);  // Log-like behavior (lower value = more log-like)
+    timebaseSlider_->onValueChanged = [this](double value)
     {
-        currentTimebaseMs_ = static_cast<float>(timebaseSlider_->getValue());
-        updateTimebaseDisplay();
+        currentTimebaseMs_ = static_cast<float>(value);
+        // Update suffix dynamically based on value
+        if (currentTimebaseMs_ >= 1000.0f)
+        {
+            timebaseSlider_->setSuffix(" s");
+            timebaseSlider_->setValue(currentTimebaseMs_ / 1000.0f, false);
+        }
+        else
+        {
+            timebaseSlider_->setSuffix(" ms");
+        }
         notifyTimebaseChanged();
     };
+    // Set initial suffix
+    if (currentTimebaseMs_ >= 1000.0f)
+        timebaseSlider_->setSuffix(" s");
+    else
+        timebaseSlider_->setSuffix(" ms");
     addAndMakeVisible(*timebaseSlider_);
 
-    timebaseValueLabel_ = std::make_unique<juce::Label>();
-    timebaseValueLabel_->setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(*timebaseValueLabel_);
-    updateTimebaseDisplay();
-
     // Gain controls
-    gainLabel_ = std::make_unique<juce::Label>();
-    gainLabel_->setText("Gain", juce::dontSendNotification);
-    gainLabel_->setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(*gainLabel_);
-
-    gainSlider_ = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::NoTextBox);
-    gainSlider_->setRange(MIN_GAIN_DB, MAX_GAIN_DB, 0.1);
-    gainSlider_->setValue(currentGainDb_);
-    gainSlider_->onValueChange = [this]()
+    gainSlider_ = std::make_unique<OscilSlider>();
+    gainSlider_->setLabel("Gain");
+    gainSlider_->setRange(MIN_GAIN_DB, MAX_GAIN_DB);
+    gainSlider_->setStep(0.1);
+    gainSlider_->setValue(currentGainDb_, false);
+    gainSlider_->setSuffix(" dB");
+    gainSlider_->onValueChanged = [this](double value)
     {
-        currentGainDb_ = static_cast<float>(gainSlider_->getValue());
-        updateGainDisplay();
+        currentGainDb_ = static_cast<float>(value);
         notifyGainChanged();
     };
     addAndMakeVisible(*gainSlider_);
-
-    gainValueLabel_ = std::make_unique<juce::Label>();
-    gainValueLabel_->setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(*gainValueLabel_);
-    updateGainDisplay();
 
     // Apply initial theme
     themeChanged(ThemeManager::getInstance().getCurrentTheme());
@@ -101,88 +99,46 @@ void MasterControlsSection::resized()
     sectionLabel_->setBounds(bounds.getX(), y, bounds.getWidth(), LABEL_HEIGHT);
     y += LABEL_HEIGHT + SPACING_LARGE;
 
-    // Timebase controls
-    int labelWidth = 60;
-    int valueWidth = 70;
+    // OscilSlider components have integrated labels - use full row height (40px)
+    timebaseSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), 40);
+    y += 40 + SPACING_LARGE;
 
-    timebaseLabel_->setBounds(bounds.getX(), y, labelWidth, ROW_HEIGHT);
-    timebaseValueLabel_->setBounds(bounds.getRight() - valueWidth, y, valueWidth, ROW_HEIGHT);
-    y += ROW_HEIGHT + SPACING_SMALL;
-
-    timebaseSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
-    y += ROW_HEIGHT + SPACING_LARGE;
-
-    // Gain controls
-    gainLabel_->setBounds(bounds.getX(), y, labelWidth, ROW_HEIGHT);
-    gainValueLabel_->setBounds(bounds.getRight() - valueWidth, y, valueWidth, ROW_HEIGHT);
-    y += ROW_HEIGHT + SPACING_SMALL;
-
-    gainSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
+    gainSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), 40);
 }
 
 void MasterControlsSection::themeChanged(const ColorTheme& newTheme)
 {
+    // OscilSlider components handle their own theming automatically
+    // via ThemeManagerListener. We only need to style the remaining JUCE Labels.
+
     // Section label
     sectionLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
     sectionLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
 
-    // Timebase
-    timebaseLabel_->setColour(juce::Label::textColourId, newTheme.textPrimary);
-    timebaseValueLabel_->setColour(juce::Label::textColourId, newTheme.textHighlight);
-    timebaseSlider_->setColour(juce::Slider::thumbColourId, newTheme.controlActive);
-    timebaseSlider_->setColour(juce::Slider::trackColourId, newTheme.controlBackground);
-    timebaseSlider_->setColour(juce::Slider::backgroundColourId, newTheme.controlBackground);
-
-    // Gain
-    gainLabel_->setColour(juce::Label::textColourId, newTheme.textPrimary);
-    gainValueLabel_->setColour(juce::Label::textColourId, newTheme.textHighlight);
-    gainSlider_->setColour(juce::Slider::thumbColourId, newTheme.controlActive);
-    gainSlider_->setColour(juce::Slider::trackColourId, newTheme.controlBackground);
-    gainSlider_->setColour(juce::Slider::backgroundColourId, newTheme.controlBackground);
-
     repaint();
-}
-
-void MasterControlsSection::updateTimebaseDisplay()
-{
-    juce::String text;
-    if (currentTimebaseMs_ >= 1000.0f)
-    {
-        text = juce::String(currentTimebaseMs_ / 1000.0f, 2) + " s";
-    }
-    else
-    {
-        text = juce::String(static_cast<int>(currentTimebaseMs_)) + " ms";
-    }
-    timebaseValueLabel_->setText(text, juce::dontSendNotification);
-}
-
-void MasterControlsSection::updateGainDisplay()
-{
-    juce::String text;
-    if (currentGainDb_ >= 0.0f)
-    {
-        text = "+" + juce::String(currentGainDb_, 1) + " dB";
-    }
-    else
-    {
-        text = juce::String(currentGainDb_, 1) + " dB";
-    }
-    gainValueLabel_->setText(text, juce::dontSendNotification);
 }
 
 void MasterControlsSection::setTimebaseMs(float ms)
 {
     currentTimebaseMs_ = juce::jlimit(MIN_TIMEBASE_MS, MAX_TIMEBASE_MS, ms);
-    timebaseSlider_->setValue(currentTimebaseMs_, juce::dontSendNotification);
-    updateTimebaseDisplay();
+
+    // Update slider value and suffix based on magnitude
+    if (currentTimebaseMs_ >= 1000.0f)
+    {
+        timebaseSlider_->setSuffix(" s");
+        timebaseSlider_->setValue(currentTimebaseMs_ / 1000.0f, false);
+    }
+    else
+    {
+        timebaseSlider_->setSuffix(" ms");
+        timebaseSlider_->setValue(currentTimebaseMs_, false);
+    }
 }
 
 void MasterControlsSection::setGainDb(float dB)
 {
     currentGainDb_ = juce::jlimit(MIN_GAIN_DB, MAX_GAIN_DB, dB);
-    gainSlider_->setValue(currentGainDb_, juce::dontSendNotification);
-    updateGainDisplay();
+    gainSlider_->setValue(currentGainDb_, false);
 }
 
 void MasterControlsSection::addListener(Listener* listener)
@@ -201,10 +157,8 @@ int MasterControlsSection::getPreferredHeight() const
 
     int height = SECTION_PADDING * 2;                    // Top and bottom padding
     height += LABEL_HEIGHT + SPACING_LARGE;              // Section header
-    height += ROW_HEIGHT + SPACING_SMALL;                // Timebase label/value row
-    height += ROW_HEIGHT + SPACING_LARGE;                // Timebase slider
-    height += ROW_HEIGHT + SPACING_SMALL;                // Gain label/value row
-    height += ROW_HEIGHT;                                // Gain slider
+    height += 40 + SPACING_LARGE;                        // Timebase OscilSlider (integrated label)
+    height += 40;                                        // Gain OscilSlider (integrated label)
     return height;
 }
 

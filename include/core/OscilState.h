@@ -270,6 +270,19 @@ public:
     bool getShowStatusBar() const;
     void setShowStatusBar(bool show);
 
+    // UI customization settings
+    bool getReducedMotion() const;
+    void setReducedMotion(bool reduced);
+
+    bool getUIAudioFeedback() const;
+    void setUIAudioFeedback(bool enabled);
+
+    bool getTooltipsEnabled() const;
+    void setTooltipsEnabled(bool enabled);
+
+    int getDefaultSidebarWidth() const;
+    void setDefaultSidebarWidth(int width);
+
     GlobalPreferences(const GlobalPreferences&) = delete;
     GlobalPreferences& operator=(const GlobalPreferences&) = delete;
 

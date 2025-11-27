@@ -9,6 +9,9 @@
 #include "ui/ThemeManager.h"
 #include "ui/SegmentedButtonBar.h"
 #include "ui/sections/SectionConstants.h"
+#include "ui/components/OscilSlider.h"
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/OscilToggle.h"
 #include "dsp/TimingConfig.h"
 #include <functional>
 
@@ -87,13 +90,11 @@ private:
     std::unique_ptr<SegmentedButtonBar> modeToggle_;
 
     // TIME mode controls
-    std::unique_ptr<juce::Label> timeIntervalLabel_;
-    std::unique_ptr<juce::Slider> timeIntervalSlider_;
-    std::unique_ptr<juce::Label> timeIntervalValueLabel_;
+    std::unique_ptr<OscilSlider> timeIntervalSlider_;
 
     // MELODIC mode controls
     std::unique_ptr<juce::Label> noteIntervalLabel_;
-    std::unique_ptr<juce::ComboBox> noteIntervalSelector_;
+    std::unique_ptr<OscilDropdown> noteIntervalSelector_;
 
     // BPM display
     std::unique_ptr<juce::Label> bpmLabel_;
@@ -103,10 +104,10 @@ private:
     std::unique_ptr<juce::Label> calculatedIntervalLabel_;
 
     // Host sync toggle
-    std::unique_ptr<juce::ToggleButton> hostSyncToggle_;
+    std::unique_ptr<OscilToggle> hostSyncToggle_;
 
     // Reset on play toggle
-    std::unique_ptr<juce::ToggleButton> resetOnPlayToggle_;
+    std::unique_ptr<OscilToggle> resetOnPlayToggle_;
 
     // Sync status indicator
     std::unique_ptr<juce::Label> syncStatusLabel_;

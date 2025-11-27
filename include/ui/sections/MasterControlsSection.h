@@ -8,6 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/ThemeManager.h"
 #include "ui/sections/SectionConstants.h"
+#include "ui/components/OscilSlider.h"
 #include <functional>
 
 namespace oscil
@@ -65,21 +66,15 @@ private:
     void setupComponents();
     void notifyTimebaseChanged();
     void notifyGainChanged();
-    void updateTimebaseDisplay();
-    void updateGainDisplay();
 
     // Section header
     std::unique_ptr<juce::Label> sectionLabel_;
 
     // Timebase controls
-    std::unique_ptr<juce::Label> timebaseLabel_;
-    std::unique_ptr<juce::Slider> timebaseSlider_;
-    std::unique_ptr<juce::Label> timebaseValueLabel_;
+    std::unique_ptr<OscilSlider> timebaseSlider_;
 
     // Gain controls
-    std::unique_ptr<juce::Label> gainLabel_;
-    std::unique_ptr<juce::Slider> gainSlider_;
-    std::unique_ptr<juce::Label> gainValueLabel_;
+    std::unique_ptr<OscilSlider> gainSlider_;
 
     // State
     float currentTimebaseMs_ = 50.0f;

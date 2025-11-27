@@ -10,6 +10,12 @@
 #include "core/Pane.h"
 #include "ui/ThemeManager.h"
 #include "ui/SegmentedButtonBar.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/OscilSlider.h"
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/OscilTextField.h"
+#include "ui/components/OscilColorSwatches.h"
+#include "ui/components/OscilToggle.h"
 #include <functional>
 #include <vector>
 
@@ -66,7 +72,7 @@ public:
     /**
      * Check if popup is visible
      */
-    bool isPopupVisible() const { return isVisible(); }
+    bool isPopupVisible() const { return Component::isVisible(); }
 
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
@@ -74,6 +80,9 @@ public:
     // Preferred dimensions
     static constexpr int POPUP_WIDTH = 360;
     static constexpr int POPUP_HEIGHT = 520;
+
+    // Number of default color swatches
+    static constexpr int NUM_COLOR_SWATCHES = 10;
 
 private:
     void setupComponents();
@@ -107,9 +116,9 @@ private:
     int orderIndex_ = 0;  // Track order to preserve during config changes
 
     // Header section
-    std::unique_ptr<juce::TextEditor> nameEditor_;
-    std::unique_ptr<juce::TextButton> visibilityButton_;
-    std::unique_ptr<juce::TextButton> closeButton_;
+    std::unique_ptr<OscilTextField> nameEditor_;
+    std::unique_ptr<OscilToggle> visibilityToggle_;
+    std::unique_ptr<OscilButton> closeButton_;
 
     // Source section
     std::unique_ptr<juce::Label> sourceLabel_;
@@ -121,33 +130,28 @@ private:
 
     // Color section
     std::unique_ptr<juce::Label> colorLabel_;
-    std::vector<std::unique_ptr<juce::TextButton>> colorSwatches_;
-    static constexpr int NUM_COLOR_SWATCHES = 10;
+    std::unique_ptr<OscilColorSwatches> colorSwatches_;
 
     // Line Width slider
-    std::unique_ptr<juce::Label> lineWidthLabel_;
-    std::unique_ptr<juce::Slider> lineWidthSlider_;
+    std::unique_ptr<OscilSlider> lineWidthSlider_;
 
     // Opacity slider
-    std::unique_ptr<juce::Label> opacityLabel_;
-    std::unique_ptr<juce::Slider> opacitySlider_;
+    std::unique_ptr<OscilSlider> opacitySlider_;
 
     // Vertical Scale slider
-    std::unique_ptr<juce::Label> scaleLabel_;
-    std::unique_ptr<juce::Slider> scaleSlider_;
+    std::unique_ptr<OscilSlider> scaleSlider_;
 
     // Vertical Offset slider
-    std::unique_ptr<juce::Label> offsetLabel_;
-    std::unique_ptr<juce::Slider> offsetSlider_;
+    std::unique_ptr<OscilSlider> offsetSlider_;
 
     // Pane selector
     std::unique_ptr<juce::Label> paneLabel_;
-    std::unique_ptr<juce::ComboBox> paneSelector_;
+    std::unique_ptr<OscilDropdown> paneSelector_;
     std::vector<std::pair<PaneId, juce::String>> availablePanes_;
 
     // Footer buttons
-    std::unique_ptr<juce::TextButton> deleteButton_;
-    std::unique_ptr<juce::TextButton> footerCloseButton_;
+    std::unique_ptr<OscilButton> deleteButton_;
+    std::unique_ptr<OscilButton> footerCloseButton_;
 
     juce::ListenerList<Listener> listeners_;
 

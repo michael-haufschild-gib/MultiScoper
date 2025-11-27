@@ -22,25 +22,23 @@ OscillatorConfigPopup::~OscillatorConfigPopup()
 
 void OscillatorConfigPopup::setupComponents()
 {
-    // Header: Name editor
-    nameEditor_ = std::make_unique<juce::TextEditor>();
-    nameEditor_->setMultiLine(false);
-    nameEditor_->setReturnKeyStartsNewLine(false);
-    nameEditor_->onReturnKey = [this]() { handleNameEdit(); };
-    nameEditor_->onFocusLost = [this]() { handleNameEdit(); };
+    // Header: Name editor (OscilTextField)
+    nameEditor_ = std::make_unique<OscilTextField>();
+    nameEditor_->setPlaceholder("Oscillator Name");
+    nameEditor_->onReturnPressed = [this]() { handleNameEdit(); };
+    // OscilTextField doesn't have onFocusLost - use onTextChanged for immediate feedback
+    nameEditor_->onTextChanged = [this](const juce::String&) { handleNameEdit(); };
     addAndMakeVisible(*nameEditor_);
 
-    // Header: Visibility button
-    visibilityButton_ = std::make_unique<juce::TextButton>();
-    visibilityButton_->setButtonText(juce::String::charToString(0x1F441));  // Eye emoji
-    visibilityButton_->setTooltip("Toggle Visibility");
-    visibilityButton_->onClick = [this]() { handleVisibilityToggle(); };
-    addAndMakeVisible(*visibilityButton_);
+    // Header: Visibility toggle (OscilToggle for visibility on/off)
+    visibilityToggle_ = std::make_unique<OscilToggle>("Visible");
+    visibilityToggle_->setValue(true, false);
+    visibilityToggle_->onValueChanged = [this](bool) { handleVisibilityToggle(); };
+    addAndMakeVisible(*visibilityToggle_);
 
-    // Header: Close button
-    closeButton_ = std::make_unique<juce::TextButton>();
-    closeButton_->setButtonText(juce::String::charToString(0x2715));  // X symbol
-    closeButton_->setTooltip("Close");
+    // Header: Close button (OscilButton)
+    closeButton_ = std::make_unique<OscilButton>("X");
+    closeButton_->setVariant(ButtonVariant::Ghost);
     closeButton_->onClick = [this]() { handleClose(); };
     addAndMakeVisible(*closeButton_);
 
@@ -66,80 +64,76 @@ void OscillatorConfigPopup::setupComponents()
     modeButtons_->onSelectionChanged = [this](int id) { handleProcessingModeChange(id); };
     addAndMakeVisible(*modeButtons_);
 
-    // Color swatches (per design: "Color Picker")
+    // Color swatches (OscilColorSwatches)
     colorLabel_ = std::make_unique<juce::Label>("", "Color Picker");
     addAndMakeVisible(*colorLabel_);
 
-    for (int i = 0; i < NUM_COLOR_SWATCHES; ++i)
-    {
-        auto swatch = std::make_unique<juce::TextButton>();
-        swatch->setColour(juce::TextButton::buttonColourId, defaultColors_[i]);
-        swatch->onClick = [this, i]() { handleColorSelect(defaultColors_[i]); };
-        addAndMakeVisible(*swatch);
-        colorSwatches_.push_back(std::move(swatch));
-    }
+    colorSwatches_ = std::make_unique<OscilColorSwatches>();
+    std::vector<juce::Colour> colors(defaultColors_.begin(), defaultColors_.end());
+    colorSwatches_->setColors(colors);
+    colorSwatches_->onColorSelected = [this](int, juce::Colour color) { handleColorSelect(color); };
+    addAndMakeVisible(*colorSwatches_);
 
-    // Line Width slider
-    lineWidthLabel_ = std::make_unique<juce::Label>("", "Line Width");
-    addAndMakeVisible(*lineWidthLabel_);
-
-    lineWidthSlider_ = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
-    lineWidthSlider_->setRange(Oscillator::MIN_LINE_WIDTH, Oscillator::MAX_LINE_WIDTH, 0.1);
-    lineWidthSlider_->setValue(Oscillator::DEFAULT_LINE_WIDTH);
-    lineWidthSlider_->setTextValueSuffix(" px");
-    lineWidthSlider_->onValueChange = [this]() { handleLineWidthChange(); };
+    // Line Width slider (OscilSlider with label)
+    lineWidthSlider_ = std::make_unique<OscilSlider>();
+    lineWidthSlider_->setLabel("Line Width");
+    lineWidthSlider_->setRange(Oscillator::MIN_LINE_WIDTH, Oscillator::MAX_LINE_WIDTH);
+    lineWidthSlider_->setStep(0.1);
+    lineWidthSlider_->setValue(Oscillator::DEFAULT_LINE_WIDTH, false);
+    lineWidthSlider_->setSuffix(" px");
+    lineWidthSlider_->onValueChanged = [this](double) { handleLineWidthChange(); };
     addAndMakeVisible(*lineWidthSlider_);
 
-    // Opacity slider
-    opacityLabel_ = std::make_unique<juce::Label>("", "Opacity");
-    addAndMakeVisible(*opacityLabel_);
-
-    opacitySlider_ = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
-    opacitySlider_->setRange(0.0, 100.0, 1.0);
-    opacitySlider_->setValue(100.0);
-    opacitySlider_->setTextValueSuffix(" %");
-    opacitySlider_->onValueChange = [this]() { handleOpacityChange(); };
+    // Opacity slider (OscilSlider with label)
+    opacitySlider_ = std::make_unique<OscilSlider>();
+    opacitySlider_->setLabel("Opacity");
+    opacitySlider_->setRange(0.0, 100.0);
+    opacitySlider_->setStep(1.0);
+    opacitySlider_->setValue(100.0, false);
+    opacitySlider_->setSuffix(" %");
+    opacitySlider_->onValueChanged = [this](double) { handleOpacityChange(); };
     addAndMakeVisible(*opacitySlider_);
 
-    // Vertical Scale slider
-    scaleLabel_ = std::make_unique<juce::Label>("", "Vertical Scale");
-    addAndMakeVisible(*scaleLabel_);
-
-    scaleSlider_ = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
-    scaleSlider_->setRange(Oscillator::MIN_VERTICAL_SCALE, Oscillator::MAX_VERTICAL_SCALE, 0.1);
-    scaleSlider_->setValue(Oscillator::DEFAULT_VERTICAL_SCALE);
-    scaleSlider_->setTextValueSuffix("x");
-    scaleSlider_->onValueChange = [this]() { handleVerticalScaleChange(); };
+    // Vertical Scale slider (OscilSlider with label)
+    scaleSlider_ = std::make_unique<OscilSlider>();
+    scaleSlider_->setLabel("Vertical Scale");
+    scaleSlider_->setRange(Oscillator::MIN_VERTICAL_SCALE, Oscillator::MAX_VERTICAL_SCALE);
+    scaleSlider_->setStep(0.1);
+    scaleSlider_->setValue(Oscillator::DEFAULT_VERTICAL_SCALE, false);
+    scaleSlider_->setSuffix("x");
+    scaleSlider_->onValueChanged = [this](double) { handleVerticalScaleChange(); };
     addAndMakeVisible(*scaleSlider_);
 
-    // Vertical Offset slider
-    offsetLabel_ = std::make_unique<juce::Label>("", "Vertical Offset");
-    addAndMakeVisible(*offsetLabel_);
-
-    offsetSlider_ = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
-    offsetSlider_->setRange(Oscillator::MIN_VERTICAL_OFFSET, Oscillator::MAX_VERTICAL_OFFSET, 0.01);
-    offsetSlider_->setValue(Oscillator::DEFAULT_VERTICAL_OFFSET);
-    offsetSlider_->onValueChange = [this]() { handleVerticalOffsetChange(); };
+    // Vertical Offset slider (OscilSlider with label)
+    offsetSlider_ = std::make_unique<OscilSlider>();
+    offsetSlider_->setLabel("Vertical Offset");
+    offsetSlider_->setRange(Oscillator::MIN_VERTICAL_OFFSET, Oscillator::MAX_VERTICAL_OFFSET);
+    offsetSlider_->setStep(0.01);
+    offsetSlider_->setValue(Oscillator::DEFAULT_VERTICAL_OFFSET, false);
+    offsetSlider_->onValueChanged = [this](double) { handleVerticalOffsetChange(); };
     addAndMakeVisible(*offsetSlider_);
 
-    // Pane selector (per design: just "Pane")
+    // Pane selector (OscilDropdown)
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
     addAndMakeVisible(*paneLabel_);
 
-    paneSelector_ = std::make_unique<juce::ComboBox>();
-    paneSelector_->onChange = [this]() { handlePaneChange(); };
+    paneSelector_ = std::make_unique<OscilDropdown>();
+    paneSelector_->onSelectionChanged = [this](int) { handlePaneChange(); };
     addAndMakeVisible(*paneSelector_);
 
-    // Footer buttons (per design: Delete Oscillator + Close)
-    deleteButton_ = std::make_unique<juce::TextButton>("Delete Oscillator");
+    // Footer: Delete button (OscilButton with Danger variant)
+    deleteButton_ = std::make_unique<OscilButton>("Delete Oscillator");
+    deleteButton_->setVariant(ButtonVariant::Danger);
     deleteButton_->onClick = [this]() { handleDelete(); };
     addAndMakeVisible(*deleteButton_);
 
-    footerCloseButton_ = std::make_unique<juce::TextButton>("Close");
+    // Footer: Close button (OscilButton with secondary variant)
+    footerCloseButton_ = std::make_unique<OscilButton>("Close");
+    footerCloseButton_->setVariant(ButtonVariant::Secondary);
     footerCloseButton_->onClick = [this]() { handleClose(); };
     addAndMakeVisible(*footerCloseButton_);
 
-    // Apply initial theme
+    // Components handle their own theming - just trigger initial update
     themeChanged(ThemeManager::getInstance().getCurrentTheme());
 }
 
@@ -203,7 +197,7 @@ void OscillatorConfigPopup::resized()
     headerRow.removeFromLeft(32);  // Space for color indicator
 
     closeButton_->setBounds(headerRow.removeFromRight(28).reduced(2));
-    visibilityButton_->setBounds(headerRow.removeFromRight(28).reduced(2));
+    visibilityToggle_->setBounds(headerRow.removeFromRight(60));  // OscilToggle needs more width
     headerRow.removeFromRight(8);
     nameEditor_->setBounds(headerRow);
 
@@ -219,30 +213,23 @@ void OscillatorConfigPopup::resized()
     modeButtons_->setBounds(contentBounds.removeFromTop(28));
     contentBounds.removeFromTop(12);
 
-    // Color swatches
+    // Color swatches (single OscilColorSwatches component)
     colorLabel_->setBounds(contentBounds.removeFromTop(20));
-    auto colorRow = contentBounds.removeFromTop(28);
-    int swatchWidth = colorRow.getWidth() / NUM_COLOR_SWATCHES;
-    for (int i = 0; i < NUM_COLOR_SWATCHES; ++i)
-    {
-        colorSwatches_[i]->setBounds(colorRow.removeFromLeft(swatchWidth).reduced(2));
-    }
+    colorSwatches_->setBounds(contentBounds.removeFromTop(32));
     contentBounds.removeFromTop(12);
 
-    // Slider rows (label + slider)
-    auto makeSliderRow = [&contentBounds](juce::Label* label, juce::Slider* slider) {
-        auto row = contentBounds.removeFromTop(32);
-        label->setBounds(row.removeFromLeft(100));
-        slider->setBounds(row);
-        contentBounds.removeFromTop(8);
-    };
-
-    makeSliderRow(lineWidthLabel_.get(), lineWidthSlider_.get());
-    makeSliderRow(opacityLabel_.get(), opacitySlider_.get());
-    makeSliderRow(scaleLabel_.get(), scaleSlider_.get());
-    makeSliderRow(offsetLabel_.get(), offsetSlider_.get());
-
+    // OscilSlider components have integrated labels - use full row height
+    lineWidthSlider_->setBounds(contentBounds.removeFromTop(40));
     contentBounds.removeFromTop(4);
+
+    opacitySlider_->setBounds(contentBounds.removeFromTop(40));
+    contentBounds.removeFromTop(4);
+
+    scaleSlider_->setBounds(contentBounds.removeFromTop(40));
+    contentBounds.removeFromTop(4);
+
+    offsetSlider_->setBounds(contentBounds.removeFromTop(40));
+    contentBounds.removeFromTop(8);
 
     // Pane selector
     auto paneRow = contentBounds.removeFromTop(32);
@@ -260,21 +247,10 @@ void OscillatorConfigPopup::resized()
 
 void OscillatorConfigPopup::themeChanged(const ColorTheme& newTheme)
 {
-    // Name editor
-    nameEditor_->setColour(juce::TextEditor::backgroundColourId, newTheme.controlBackground);
-    nameEditor_->setColour(juce::TextEditor::textColourId, newTheme.textPrimary);
-    nameEditor_->setColour(juce::TextEditor::outlineColourId, newTheme.controlBorder);
+    // Oscil components (OscilTextField, OscilToggle, OscilButton, OscilSlider,
+    // OscilDropdown, OscilColorSwatches) handle their own theming automatically
+    // via ThemeManagerListener. We only need to style the remaining JUCE Labels.
 
-    // Visibility button
-    visibilityButton_->setColour(juce::TextButton::buttonColourId, newTheme.controlBackground);
-    visibilityButton_->setColour(juce::TextButton::textColourOffId,
-                                  visible_ ? newTheme.textPrimary : newTheme.textSecondary);
-
-    // Close button
-    closeButton_->setColour(juce::TextButton::buttonColourId, newTheme.controlBackground);
-    closeButton_->setColour(juce::TextButton::textColourOffId, newTheme.textSecondary);
-
-    // Labels
     auto styleLabel = [&newTheme](juce::Label* label, bool isHeader = false) {
         label->setColour(juce::Label::textColourId, isHeader ? newTheme.textPrimary : newTheme.textSecondary);
         label->setFont(juce::FontOptions(isHeader ? 13.0f : 12.0f));
@@ -283,40 +259,7 @@ void OscillatorConfigPopup::themeChanged(const ColorTheme& newTheme)
     styleLabel(sourceLabel_.get(), true);
     styleLabel(modeLabel_.get(), true);
     styleLabel(colorLabel_.get(), true);
-    styleLabel(lineWidthLabel_.get());
-    styleLabel(opacityLabel_.get());
-    styleLabel(scaleLabel_.get());
-    styleLabel(offsetLabel_.get());
     styleLabel(paneLabel_.get());
-
-    // Sliders
-    auto styleSlider = [&newTheme](juce::Slider* slider) {
-        slider->setColour(juce::Slider::backgroundColourId, newTheme.controlBackground);
-        slider->setColour(juce::Slider::trackColourId, newTheme.controlActive);
-        slider->setColour(juce::Slider::thumbColourId, newTheme.controlHighlight);
-        slider->setColour(juce::Slider::textBoxTextColourId, newTheme.textPrimary);
-        slider->setColour(juce::Slider::textBoxBackgroundColourId, newTheme.controlBackground);
-        slider->setColour(juce::Slider::textBoxOutlineColourId, newTheme.controlBorder);
-    };
-
-    styleSlider(lineWidthSlider_.get());
-    styleSlider(opacitySlider_.get());
-    styleSlider(scaleSlider_.get());
-    styleSlider(offsetSlider_.get());
-
-    // Pane selector
-    paneSelector_->setColour(juce::ComboBox::backgroundColourId, newTheme.controlBackground);
-    paneSelector_->setColour(juce::ComboBox::textColourId, newTheme.textPrimary);
-    paneSelector_->setColour(juce::ComboBox::outlineColourId, newTheme.controlBorder);
-    paneSelector_->setColour(juce::ComboBox::arrowColourId, newTheme.textSecondary);
-
-    // Delete button (red/destructive)
-    deleteButton_->setColour(juce::TextButton::buttonColourId, newTheme.statusError.withAlpha(0.2f));
-    deleteButton_->setColour(juce::TextButton::textColourOffId, newTheme.statusError);
-
-    // Footer Close button (neutral style)
-    footerCloseButton_->setColour(juce::TextButton::buttonColourId, newTheme.controlBackground);
-    footerCloseButton_->setColour(juce::TextButton::textColourOffId, newTheme.textPrimary);
 
     repaint();
 }
@@ -344,30 +287,30 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
     paneId_ = oscillator.getPaneId();
     orderIndex_ = oscillator.getOrderIndex();
 
-    // Update controls
-    nameEditor_->setText(name_, juce::dontSendNotification);
+    // Update controls using new Oscil component APIs
+    nameEditor_->setText(name_, false);  // Don't notify
     sourceSelector_->setSelectedSourceId(sourceId_);
     modeButtons_->setSelectedId(static_cast<int>(processingMode_));
-    lineWidthSlider_->setValue(lineWidth_, juce::dontSendNotification);
-    opacitySlider_->setValue(opacity_ * 100.0, juce::dontSendNotification);
-    scaleSlider_->setValue(verticalScale_, juce::dontSendNotification);
-    offsetSlider_->setValue(verticalOffset_, juce::dontSendNotification);
+    lineWidthSlider_->setValue(lineWidth_, false);  // Don't notify
+    opacitySlider_->setValue(opacity_ * 100.0, false);  // Don't notify
+    scaleSlider_->setValue(verticalScale_, false);  // Don't notify
+    offsetSlider_->setValue(verticalOffset_, false);  // Don't notify
 
-    // Update pane selector
+    // Update visibility toggle
+    visibilityToggle_->setValue(visible_, false);  // Don't animate on load
+
+    // Update color swatches selection
+    colorSwatches_->setSelectedColor(colour_);
+
+    // Update pane selector (OscilDropdown uses setSelectedIndex)
     for (int i = 0; i < paneSelector_->getNumItems(); ++i)
     {
-        // Find matching pane ID
         if (static_cast<size_t>(i) < availablePanes_.size() && availablePanes_[i].first == paneId_)
         {
-            paneSelector_->setSelectedItemIndex(i, juce::dontSendNotification);
+            paneSelector_->setSelectedIndex(i, false);  // Don't notify
             break;
         }
     }
-
-    // Update visibility button state
-    visibilityButton_->setColour(juce::TextButton::textColourOffId,
-        visible_ ? ThemeManager::getInstance().getCurrentTheme().textPrimary
-                 : ThemeManager::getInstance().getCurrentTheme().textSecondary);
 
     repaint();
 }
@@ -375,11 +318,12 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
 void OscillatorConfigPopup::setAvailablePanes(const std::vector<std::pair<PaneId, juce::String>>& panes)
 {
     availablePanes_ = panes;
-    paneSelector_->clear(juce::dontSendNotification);
+    paneSelector_->clearItems();
 
     for (size_t i = 0; i < panes.size(); ++i)
     {
-        paneSelector_->addItem(panes[i].second, static_cast<int>(i + 1));
+        // OscilDropdown addItem takes (label, id) where id is optional string
+        paneSelector_->addItem(panes[i].second, panes[i].first.id);
     }
 }
 
@@ -435,10 +379,8 @@ void OscillatorConfigPopup::handleNameEdit()
 
 void OscillatorConfigPopup::handleVisibilityToggle()
 {
-    visible_ = !visible_;
-    visibilityButton_->setColour(juce::TextButton::textColourOffId,
-        visible_ ? ThemeManager::getInstance().getCurrentTheme().textPrimary
-                 : ThemeManager::getInstance().getCurrentTheme().textSecondary);
+    // Get current state from the OscilToggle component
+    visible_ = visibilityToggle_->getValue();
     notifyConfigChanged();
 }
 
@@ -487,7 +429,8 @@ void OscillatorConfigPopup::handleVerticalOffsetChange()
 
 void OscillatorConfigPopup::handlePaneChange()
 {
-    int index = paneSelector_->getSelectedItemIndex();
+    // OscilDropdown uses getSelectedIndex() instead of getSelectedItemIndex()
+    int index = paneSelector_->getSelectedIndex();
     if (index >= 0 && static_cast<size_t>(index) < availablePanes_.size())
     {
         paneId_ = availablePanes_[index].first;

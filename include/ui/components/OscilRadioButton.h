@@ -1,0 +1,202 @@
+/*
+    Oscil - Radio Button and Radio Group Components
+    Mutually exclusive selection controls with animations
+*/
+
+#pragma once
+
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/ThemeManager.h"
+#include "ui/components/ComponentConstants.h"
+#include "ui/components/ComponentTypes.h"
+#include "ui/components/SpringAnimation.h"
+#include "ui/components/AnimationSettings.h"
+
+namespace oscil
+{
+
+// Forward declaration
+class OscilRadioGroup;
+
+/**
+ * Individual radio button with animated selection
+ *
+ * Features:
+ * - Animated selection dot with spring physics
+ * - Optional label (left or right)
+ * - Focus ring for keyboard navigation
+ * - Designed to work within OscilRadioGroup
+ */
+class OscilRadioButton : public juce::Component,
+                         public ThemeManagerListener,
+                         private juce::Timer
+{
+public:
+    OscilRadioButton();
+    explicit OscilRadioButton(const juce::String& label);
+    ~OscilRadioButton() override;
+
+    // State
+    void setSelected(bool selected, bool notify = true);
+    bool isSelected() const { return selected_; }
+
+    // Configuration
+    void setLabel(const juce::String& label);
+    juce::String getLabel() const { return label_; }
+
+    void setLabelOnRight(bool onRight);
+    bool isLabelOnRight() const { return labelOnRight_; }
+
+    void setEnabled(bool enabled);
+    bool isEnabled() const { return enabled_; }
+
+    // Callbacks
+    std::function<void()> onSelected;
+
+    // Size hints
+    int getPreferredWidth() const;
+    int getPreferredHeight() const;
+
+    // Component overrides
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
+
+    bool keyPressed(const juce::KeyPress& key) override;
+    void focusGained(FocusChangeType cause) override;
+    void focusLost(FocusChangeType cause) override;
+
+    // ThemeManagerListener
+    void themeChanged(const ColorTheme& newTheme) override;
+
+    // Accessibility
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+
+private:
+    friend class OscilRadioGroup;
+
+    void timerCallback() override;
+    void updateAnimations();
+
+    // Rendering
+    void paintCircle(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+    void paintDot(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+    void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+
+    // State
+    bool selected_ = false;
+    bool enabled_ = true;
+    bool isHovered_ = false;
+    bool isPressed_ = false;
+    bool hasFocus_ = false;
+    juce::String label_;
+    bool labelOnRight_ = true;
+
+    // Parent group (if any)
+    OscilRadioGroup* parentGroup_ = nullptr;
+
+    // Animation
+    SpringAnimation selectionSpring_;
+    SpringAnimation hoverSpring_;
+
+    // Theme
+    ColorTheme theme_;
+
+    static constexpr int RADIO_SIZE = 18;
+    static constexpr int DOT_SIZE = 8;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilRadioButton)
+};
+
+/**
+ * Container for radio buttons with mutual exclusivity
+ *
+ * Features:
+ * - Manages collection of radio buttons
+ * - Ensures only one selected at a time
+ * - Horizontal or vertical layout
+ * - Keyboard navigation between options
+ */
+class OscilRadioGroup : public juce::Component,
+                        public ThemeManagerListener
+{
+public:
+    enum class Orientation
+    {
+        Horizontal,
+        Vertical
+    };
+
+    OscilRadioGroup();
+    explicit OscilRadioGroup(Orientation orientation);
+    ~OscilRadioGroup() override;
+
+    // Options management
+    void addOption(const juce::String& label);
+    void addOptions(const std::initializer_list<juce::String>& labels);
+    void clearOptions();
+
+    int getNumOptions() const { return static_cast<int>(buttons_.size()); }
+
+    // Selection
+    void setSelectedIndex(int index, bool notify = true);
+    int getSelectedIndex() const { return selectedIndex_; }
+
+    juce::String getSelectedLabel() const;
+
+    // Configuration
+    void setOrientation(Orientation orientation);
+    Orientation getOrientation() const { return orientation_; }
+
+    void setSpacing(int spacing);
+    int getSpacing() const { return spacing_; }
+
+    void setEnabled(bool enabled);
+    bool isEnabled() const { return enabled_; }
+
+    // Callbacks
+    std::function<void(int)> onSelectionChanged;
+    std::function<void(const juce::String&)> onSelectionChangedLabel;
+
+    // Size hints
+    int getPreferredWidth() const;
+    int getPreferredHeight() const;
+
+    // Component overrides
+    void resized() override;
+
+    bool keyPressed(const juce::KeyPress& key) override;
+
+    // ThemeManagerListener
+    void themeChanged(const ColorTheme& newTheme) override;
+
+    // Accessibility
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+
+    // Access buttons (for internal use by OscilRadioButton)
+    OscilRadioButton* getButton(int index) const
+    {
+        return (index >= 0 && index < buttons_.size()) ? buttons_[index] : nullptr;
+    }
+
+private:
+    void handleButtonSelected(int index);
+    void updateButtonStates();
+    void layoutButtons();
+
+    juce::OwnedArray<OscilRadioButton> buttons_;
+    int selectedIndex_ = -1;
+    Orientation orientation_ = Orientation::Vertical;
+    int spacing_ = ComponentLayout::SPACING_SM;
+    bool enabled_ = true;
+
+    ColorTheme theme_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilRadioGroup)
+};
+
+} // namespace oscil
