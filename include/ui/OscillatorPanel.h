@@ -1,0 +1,126 @@
+/*
+    Oscil - Oscillator Panel Header
+    Panel for configuring individual oscillator settings
+*/
+
+#pragma once
+
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "core/Oscillator.h"
+#include "core/InstanceRegistry.h"
+#include <functional>
+
+namespace oscil
+{
+
+// Forward declarations
+class ColorPickerComponent;
+class SourceSelectorComponent;
+
+/**
+ * Panel for configuring an individual oscillator.
+ * Provides controls for source, processing mode, color, visibility, and deletion.
+ */
+class OscillatorPanel : public juce::Component
+{
+public:
+    explicit OscillatorPanel(const Oscillator& oscillator);
+    ~OscillatorPanel() override;
+
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+    /**
+     * Get the oscillator ID this panel controls
+     */
+    OscillatorId getOscillatorId() const { return oscillatorId_; }
+
+    /**
+     * Update the oscillator data
+     */
+    void setOscillator(const Oscillator& oscillator);
+
+    /**
+     * Get current oscillator configuration
+     */
+    Oscillator getOscillator() const;
+
+    /**
+     * Set callback for when oscillator configuration changes
+     */
+    void onOscillatorChanged(std::function<void(const Oscillator&)> callback)
+    {
+        oscillatorChangedCallback_ = std::move(callback);
+    }
+
+    /**
+     * Set callback for when delete is requested
+     */
+    void onDeleteRequested(std::function<void(const OscillatorId&)> callback)
+    {
+        deleteRequestedCallback_ = std::move(callback);
+    }
+
+    /**
+     * Set callback for when visibility toggle is requested
+     */
+    void onVisibilityToggled(std::function<void(const OscillatorId&, bool)> callback)
+    {
+        visibilityToggledCallback_ = std::move(callback);
+    }
+
+    // Height constants
+    static constexpr int COLLAPSED_HEIGHT = 32;
+    static constexpr int EXPANDED_HEIGHT = 180;
+
+    /**
+     * Check if the panel is expanded
+     */
+    bool isExpanded() const { return expanded_; }
+
+    /**
+     * Set expanded state
+     */
+    void setExpanded(bool expanded);
+
+private:
+    void notifyOscillatorChanged();
+    void handleSourceChange(const SourceId& sourceId);
+    void handleProcessingModeChange();
+    void handleColourChange(juce::Colour colour);
+    void handleVisibilityToggle();
+    void handleDeleteClick();
+    void handleExpandToggle();
+
+    OscillatorId oscillatorId_;
+    SourceId sourceId_;
+    ProcessingMode processingMode_ = ProcessingMode::FullStereo;
+    juce::Colour colour_{ juce::Colours::green };
+    float opacity_ = 1.0f;
+    bool visible_ = true;
+    juce::String name_;
+    bool expanded_ = false;
+
+    // Header controls (always visible)
+    std::unique_ptr<juce::Label> nameLabel_;
+    std::unique_ptr<juce::ToggleButton> visibilityToggle_;
+    std::unique_ptr<juce::TextButton> expandButton_;
+    std::unique_ptr<juce::TextButton> deleteButton_;
+
+    // Expanded controls
+    std::unique_ptr<juce::Label> sourceLabel_;
+    std::unique_ptr<SourceSelectorComponent> sourceSelector_;
+    std::unique_ptr<juce::Label> modeLabel_;
+    std::unique_ptr<juce::ComboBox> processingModeSelector_;
+    std::unique_ptr<juce::Label> colourLabel_;
+    std::unique_ptr<ColorPickerComponent> colorPicker_;
+
+    // Callbacks
+    std::function<void(const Oscillator&)> oscillatorChangedCallback_;
+    std::function<void(const OscillatorId&)> deleteRequestedCallback_;
+    std::function<void(const OscillatorId&, bool)> visibilityToggledCallback_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorPanel)
+};
+
+} // namespace oscil

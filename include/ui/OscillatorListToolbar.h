@@ -1,0 +1,85 @@
+/*
+    Oscil - Oscillator List Toolbar
+    Filter and count controls for the oscillator list
+*/
+
+#pragma once
+
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/ThemeManager.h"
+#include "ui/SegmentedButtonBar.h"
+#include <functional>
+
+namespace oscil
+{
+
+/**
+ * Filter options for oscillator list
+ */
+enum class OscillatorFilterMode
+{
+    All,
+    Visible,
+    Hidden
+};
+
+/**
+ * Toolbar component for oscillator list
+ * Provides filter and count display
+ */
+class OscillatorListToolbar : public juce::Component,
+                               public ThemeManagerListener
+{
+public:
+    /**
+     * Listener interface for toolbar actions
+     */
+    class Listener
+    {
+    public:
+        virtual ~Listener() = default;
+        virtual void filterModeChanged(OscillatorFilterMode /*mode*/) {}
+    };
+
+    OscillatorListToolbar();
+    ~OscillatorListToolbar() override;
+
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+    // ThemeManagerListener
+    void themeChanged(const ColorTheme& newTheme) override;
+
+    // State setters
+    void setFilterMode(OscillatorFilterMode mode);
+    void setOscillatorCount(int total, int visible);
+
+    // State getters
+    OscillatorFilterMode getFilterMode() const { return currentFilterMode_; }
+
+    void addListener(Listener* listener);
+    void removeListener(Listener* listener);
+
+    static constexpr int PREFERRED_HEIGHT = 36;  // Reduced since we removed a row
+
+private:
+    void setupComponents();
+    void updateCountLabel();
+
+    // Filter tabs
+    std::unique_ptr<SegmentedButtonBar> filterTabs_;
+
+    // Count display
+    std::unique_ptr<juce::Label> countLabel_;
+
+    // State
+    OscillatorFilterMode currentFilterMode_ = OscillatorFilterMode::All;
+    int totalCount_ = 0;
+    int visibleCount_ = 0;
+
+    juce::ListenerList<Listener> listeners_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListToolbar)
+};
+
+} // namespace oscil

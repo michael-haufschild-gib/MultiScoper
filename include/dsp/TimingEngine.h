@@ -1,0 +1,433 @@
+/*
+    Oscil - Timing Engine
+    Timing and synchronization system for waveform display
+    Aligned with PRD TimingConfig specification
+*/
+
+#pragma once
+
+#include <juce_core/juce_core.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <atomic>
+
+// Include entity-level TimingConfig for integration
+#include "TimingConfig.h"
+
+namespace oscil
+{
+
+// Forward declare entity types (already defined in TimingConfig.h)
+// Using separate naming to distinguish engine-internal types from entity types
+// Entity types: TimingMode, NoteInterval, TriggerMode (from TimingConfig.h)
+// Engine types: EngineNoteInterval, WaveformTriggerMode (internal to TimingEngine)
+
+/**
+ * Note interval options for MELODIC mode (engine-internal representation)
+ * Use conversion functions to map to/from entity NoteInterval
+ */
+enum class EngineNoteInterval
+{
+    NOTE_1_32ND,        // 1/32 note
+    NOTE_1_16TH,        // 1/16 note
+    NOTE_1_12TH,        // 1/12 note (triplet)
+    NOTE_1_8TH,         // 1/8 note
+    NOTE_1_4TH,         // 1/4 note (quarter)
+    NOTE_1_2,           // 1/2 note (half)
+    NOTE_1_1,           // Whole note
+    NOTE_2_1,           // 2 bars
+    NOTE_3_1,           // 3 bars
+    NOTE_4_1,           // 4 bars
+    NOTE_8_1,           // 8 bars
+    NOTE_DOTTED_1_8TH,  // Dotted 1/8
+    NOTE_TRIPLET_1_4TH, // Triplet 1/4
+    NOTE_DOTTED_1_4TH,  // Dotted 1/4
+    NOTE_TRIPLET_1_2,   // Triplet 1/2
+    NOTE_DOTTED_1_2,    // Dotted 1/2
+    NOTE_TRIPLET_1_8TH  // Triplet 1/8
+};
+
+/**
+ * Waveform trigger modes (distinct from entity TriggerMode which is for sync)
+ */
+enum class WaveformTriggerMode
+{
+    None,           // No triggering (free running)
+    RisingEdge,     // Trigger on rising edge crossing threshold
+    FallingEdge,    // Trigger on falling edge crossing threshold
+    Level,          // Trigger when level exceeds threshold
+    Manual          // Manual trigger only
+};
+
+/**
+ * Convert EngineNoteInterval to beats (quarter notes)
+ */
+inline double engineNoteIntervalToBeats(EngineNoteInterval interval)
+{
+    switch (interval)
+    {
+        case EngineNoteInterval::NOTE_1_32ND:        return 0.125;
+        case EngineNoteInterval::NOTE_1_16TH:        return 0.25;
+        case EngineNoteInterval::NOTE_1_12TH:        return 0.333333;
+        case EngineNoteInterval::NOTE_1_8TH:         return 0.5;
+        case EngineNoteInterval::NOTE_1_4TH:         return 1.0;
+        case EngineNoteInterval::NOTE_1_2:           return 2.0;
+        case EngineNoteInterval::NOTE_1_1:           return 4.0;
+        case EngineNoteInterval::NOTE_2_1:           return 8.0;
+        case EngineNoteInterval::NOTE_3_1:           return 12.0;
+        case EngineNoteInterval::NOTE_4_1:           return 16.0;
+        case EngineNoteInterval::NOTE_8_1:           return 32.0;
+        case EngineNoteInterval::NOTE_DOTTED_1_8TH:  return 0.75;
+        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return 0.666666;
+        case EngineNoteInterval::NOTE_DOTTED_1_4TH:  return 1.5;
+        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return 1.333333;
+        case EngineNoteInterval::NOTE_DOTTED_1_2:    return 3.0;
+        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return 0.333333;
+        default:                                      return 1.0;
+    }
+}
+
+/**
+ * Convert EngineNoteInterval to display string
+ */
+inline juce::String engineNoteIntervalToString(EngineNoteInterval interval)
+{
+    switch (interval)
+    {
+        case EngineNoteInterval::NOTE_1_32ND:        return "1/32";
+        case EngineNoteInterval::NOTE_1_16TH:        return "1/16";
+        case EngineNoteInterval::NOTE_1_12TH:        return "1/12";
+        case EngineNoteInterval::NOTE_1_8TH:         return "1/8";
+        case EngineNoteInterval::NOTE_1_4TH:         return "1/4";
+        case EngineNoteInterval::NOTE_1_2:           return "1/2";
+        case EngineNoteInterval::NOTE_1_1:           return "1 Bar";
+        case EngineNoteInterval::NOTE_2_1:           return "2 Bars";
+        case EngineNoteInterval::NOTE_3_1:           return "3 Bars";
+        case EngineNoteInterval::NOTE_4_1:           return "4 Bars";
+        case EngineNoteInterval::NOTE_8_1:           return "8 Bars";
+        case EngineNoteInterval::NOTE_DOTTED_1_8TH:  return "1/8.";
+        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return "1/4T";
+        case EngineNoteInterval::NOTE_DOTTED_1_4TH:  return "1/4.";
+        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return "1/2T";
+        case EngineNoteInterval::NOTE_DOTTED_1_2:    return "1/2.";
+        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return "1/8T";
+        default:                                      return "1/4";
+    }
+}
+
+/**
+ * Convert entity NoteInterval to engine EngineNoteInterval
+ */
+inline EngineNoteInterval entityToEngineNoteInterval(NoteInterval interval)
+{
+    switch (interval)
+    {
+        case NoteInterval::THIRTY_SECOND:   return EngineNoteInterval::NOTE_1_32ND;
+        case NoteInterval::SIXTEENTH:       return EngineNoteInterval::NOTE_1_16TH;
+        case NoteInterval::TWELFTH:         return EngineNoteInterval::NOTE_1_12TH;
+        case NoteInterval::EIGHTH:          return EngineNoteInterval::NOTE_1_8TH;
+        case NoteInterval::QUARTER:         return EngineNoteInterval::NOTE_1_4TH;
+        case NoteInterval::HALF:            return EngineNoteInterval::NOTE_1_2;
+        case NoteInterval::WHOLE:           return EngineNoteInterval::NOTE_1_1;
+        case NoteInterval::TWO_BARS:        return EngineNoteInterval::NOTE_2_1;
+        case NoteInterval::THREE_BARS:      return EngineNoteInterval::NOTE_3_1;
+        case NoteInterval::FOUR_BARS:       return EngineNoteInterval::NOTE_4_1;
+        case NoteInterval::EIGHT_BARS:      return EngineNoteInterval::NOTE_8_1;
+        case NoteInterval::DOTTED_EIGHTH:   return EngineNoteInterval::NOTE_DOTTED_1_8TH;
+        case NoteInterval::DOTTED_QUARTER:  return EngineNoteInterval::NOTE_DOTTED_1_4TH;
+        case NoteInterval::DOTTED_HALF:     return EngineNoteInterval::NOTE_DOTTED_1_2;
+        case NoteInterval::TRIPLET_EIGHTH:  return EngineNoteInterval::NOTE_TRIPLET_1_8TH;
+        case NoteInterval::TRIPLET_QUARTER: return EngineNoteInterval::NOTE_TRIPLET_1_4TH;
+        case NoteInterval::TRIPLET_HALF:    return EngineNoteInterval::NOTE_TRIPLET_1_2;
+        default:                            return EngineNoteInterval::NOTE_1_4TH;
+    }
+}
+
+/**
+ * Convert engine EngineNoteInterval to entity NoteInterval
+ */
+inline NoteInterval engineToEntityNoteInterval(EngineNoteInterval interval)
+{
+    switch (interval)
+    {
+        case EngineNoteInterval::NOTE_1_32ND:        return NoteInterval::THIRTY_SECOND;
+        case EngineNoteInterval::NOTE_1_16TH:        return NoteInterval::SIXTEENTH;
+        case EngineNoteInterval::NOTE_1_12TH:        return NoteInterval::TWELFTH;
+        case EngineNoteInterval::NOTE_1_8TH:         return NoteInterval::EIGHTH;
+        case EngineNoteInterval::NOTE_1_4TH:         return NoteInterval::QUARTER;
+        case EngineNoteInterval::NOTE_1_2:           return NoteInterval::HALF;
+        case EngineNoteInterval::NOTE_1_1:           return NoteInterval::WHOLE;
+        case EngineNoteInterval::NOTE_2_1:           return NoteInterval::TWO_BARS;
+        case EngineNoteInterval::NOTE_3_1:           return NoteInterval::THREE_BARS;
+        case EngineNoteInterval::NOTE_4_1:           return NoteInterval::FOUR_BARS;
+        case EngineNoteInterval::NOTE_8_1:           return NoteInterval::EIGHT_BARS;
+        case EngineNoteInterval::NOTE_DOTTED_1_8TH:  return NoteInterval::DOTTED_EIGHTH;
+        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return NoteInterval::TRIPLET_QUARTER;
+        case EngineNoteInterval::NOTE_DOTTED_1_4TH:  return NoteInterval::DOTTED_QUARTER;
+        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return NoteInterval::TRIPLET_HALF;
+        case EngineNoteInterval::NOTE_DOTTED_1_2:    return NoteInterval::DOTTED_HALF;
+        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return NoteInterval::TRIPLET_EIGHTH;
+        default:                                      return NoteInterval::QUARTER;
+    }
+}
+
+/**
+ * Engine-internal timing configuration
+ * Distinct from entity-level TimingConfig (oscil::TimingConfig)
+ */
+struct EngineTimingConfig
+{
+    // Mode selection (uses entity TimingMode)
+    TimingMode timingMode = TimingMode::TIME;
+
+    // Host sync
+    bool hostSyncEnabled = false;       // Sync with host start/stop events
+    bool syncToPlayhead = false;        // Align resets with host playhead
+
+    // TIME mode settings
+    int timeIntervalMs = 1000;          // Time interval in milliseconds (10-60000)
+
+    // MELODIC mode settings (uses engine-internal note interval)
+    EngineNoteInterval noteInterval = EngineNoteInterval::NOTE_1_4TH;
+
+    // Host information (read-only from DAW)
+    float hostBPM = 120.0f;             // Current host BPM (20-300)
+
+    // Calculated value
+    float actualIntervalMs = 1000.0f;   // Computed interval duration
+
+    // Trigger settings (uses engine-internal waveform trigger mode)
+    WaveformTriggerMode triggerMode = WaveformTriggerMode::None;
+    float triggerThreshold = 0.1f;      // Trigger threshold (0.0 - 1.0)
+    int triggerChannel = 0;             // Channel for triggering
+    float triggerHysteresis = 0.01f;    // Hysteresis to prevent retriggering
+
+    // Sync state
+    double lastSyncTimestamp = 0.0;     // Sample timestamp of last sync point
+
+    // Constraints (same as entity for consistency)
+    static constexpr int MIN_TIME_INTERVAL_MS = 10;
+    static constexpr int MAX_TIME_INTERVAL_MS = 60000;
+    static constexpr float MIN_BPM = 20.0f;
+    static constexpr float MAX_BPM = 300.0f;
+};
+
+/**
+ * Host timing information from DAW
+ */
+struct HostTimingInfo
+{
+    double bpm = 120.0;
+    double ppqPosition = 0.0;           // Position in quarter notes
+    bool isPlaying = false;
+    double sampleRate = 44100.0;
+    int64_t timeInSamples = 0;
+
+    // Time signature
+    int timeSigNumerator = 4;
+    int timeSigDenominator = 4;
+
+    // Transport state
+    enum class TransportState { STOPPED, PLAYING, RECORDING, PAUSED };
+    TransportState transportState = TransportState::STOPPED;
+};
+
+/**
+ * Timing engine for waveform display synchronization.
+ * Handles TIME/MELODIC modes, triggering, and DAW synchronization.
+ */
+class TimingEngine
+{
+public:
+    TimingEngine();
+    ~TimingEngine();
+
+    /**
+     * Update host timing information from DAW
+     * Called from processBlock
+     */
+    void updateHostInfo(const juce::AudioPlayHead::PositionInfo& positionInfo);
+
+    /**
+     * Process a block of audio for trigger detection
+     * @param buffer Audio buffer to analyze
+     * @return True if trigger condition met
+     */
+    bool processBlock(const juce::AudioBuffer<float>& buffer);
+
+    /**
+     * Get the number of samples to display based on current settings
+     */
+    int getDisplaySampleCount(double sampleRate) const;
+
+    /**
+     * Get the actual interval in milliseconds based on current settings
+     */
+    float getActualIntervalMs() const;
+
+    /**
+     * Get the window size in seconds based on current settings
+     */
+    double getWindowSizeSeconds() const;
+
+    /**
+     * Check if a manual trigger was requested and clear the flag
+     */
+    bool checkAndClearManualTrigger();
+
+    /**
+     * Request a manual trigger
+     */
+    void requestManualTrigger();
+
+    /**
+     * Get the current engine configuration
+     */
+    const EngineTimingConfig& getConfig() const { return config_; }
+
+    /**
+     * Set the engine configuration
+     */
+    void setConfig(const EngineTimingConfig& config);
+
+    /**
+     * Get the current host timing info
+     */
+    const HostTimingInfo& getHostInfo() const { return hostInfo_; }
+
+    /**
+     * Set sample rate
+     */
+    void setSampleRate(double sampleRate) { hostInfo_.sampleRate = sampleRate; }
+
+    // Configuration setters
+    void setTimingMode(TimingMode mode);
+    void setHostSyncEnabled(bool enabled);
+    void setTimeIntervalMs(int ms);
+    void setNoteInterval(EngineNoteInterval interval);
+    void setWaveformTriggerMode(WaveformTriggerMode mode) { config_.triggerMode = mode; }
+    void setTriggerThreshold(float threshold) { config_.triggerThreshold = juce::jlimit(0.0f, 1.0f, threshold); }
+    void setSyncToPlayhead(bool enabled) { config_.syncToPlayhead = enabled; }
+
+    /**
+     * Recalculate actual interval based on current mode and BPM
+     */
+    void recalculateInterval();
+
+    // === Entity Integration Methods ===
+
+    /**
+     * Apply settings from entity-level TimingConfig
+     * Converts entity types to engine-internal types
+     */
+    void applyEntityConfig(const TimingConfig& entityConfig);
+
+    /**
+     * Export current settings as entity-level TimingConfig
+     * Converts engine-internal types to entity types
+     */
+    TimingConfig toEntityConfig() const;
+
+    /**
+     * Set note interval from entity type (convenience method)
+     */
+    void setNoteIntervalFromEntity(NoteInterval interval)
+    {
+        setNoteInterval(entityToEngineNoteInterval(interval));
+    }
+
+    /**
+     * Get note interval as entity type (convenience method)
+     */
+    NoteInterval getNoteIntervalAsEntity() const
+    {
+        return engineToEntityNoteInterval(config_.noteInterval);
+    }
+
+    // === Serialization ===
+
+    /**
+     * Serialize configuration to ValueTree
+     */
+    juce::ValueTree toValueTree() const;
+
+    /**
+     * Load configuration from ValueTree
+     */
+    void fromValueTree(const juce::ValueTree& state);
+
+    /**
+     * Listener interface for timing engine events.
+     *
+     * THREAD SAFETY: All listener callbacks are guaranteed to be invoked on the
+     * message thread via MessageManager::callAsync(). This means listener
+     * implementations can safely:
+     * - Perform UI operations (repaint, component updates)
+     * - Access UI state without synchronization
+     *
+     * Note: Because callbacks are async, values may be slightly stale by the time
+     * the callback executes. For real-time critical operations, poll getConfig()
+     * instead of relying on listener updates.
+     */
+    class Listener
+    {
+    public:
+        virtual ~Listener() = default;
+        virtual void timingModeChanged(TimingMode mode) {}
+        virtual void intervalChanged(float actualIntervalMs) {}
+        virtual void hostBPMChanged(float bpm) {}
+        virtual void hostSyncStateChanged(bool enabled) {}
+    };
+
+    void addListener(Listener* listener);
+    void removeListener(Listener* listener);
+
+private:
+    EngineTimingConfig config_;
+    HostTimingInfo hostInfo_;
+
+    // Trigger state
+    std::atomic<bool> manualTrigger_{ false };
+    bool previousTriggerState_ = false;
+    float previousSample_ = 0.0f;
+
+    // Previous BPM for change detection
+    float previousBPM_ = 120.0f;
+
+    juce::ListenerList<Listener> listeners_;
+
+    // Validity flag for async callbacks (prevents use-after-free)
+    std::shared_ptr<std::atomic<bool>> isValid_ = std::make_shared<std::atomic<bool>>(true);
+
+    // Trigger detection
+    bool detectTrigger(const float* samples, int numSamples);
+    bool detectRisingEdge(float sample);
+    bool detectFallingEdge(float sample);
+    bool detectLevel(float sample);
+
+    void notifyTimingModeChanged();
+    void notifyIntervalChanged();
+    void notifyHostBPMChanged();
+    void notifyHostSyncStateChanged();
+};
+
+// ValueTree identifiers for TimingConfig
+namespace TimingIds
+{
+    static const juce::Identifier Timing{ "Timing" };
+    static const juce::Identifier TimingMode{ "timingMode" };
+    static const juce::Identifier HostSyncEnabled{ "hostSyncEnabled" };
+    static const juce::Identifier SyncToPlayhead{ "syncToPlayhead" };
+    static const juce::Identifier TimeIntervalMs{ "timeIntervalMs" };
+    static const juce::Identifier NoteInterval{ "noteInterval" };
+    static const juce::Identifier TriggerMode{ "triggerMode" };
+    static const juce::Identifier TriggerThreshold{ "triggerThreshold" };
+}
+
+// Legacy identifiers for migration
+namespace LegacyTimingIds
+{
+    static const juce::Identifier TimeBase{ "timeBase" };
+    static const juce::Identifier WindowSize{ "windowSize" };
+}
+
+} // namespace oscil

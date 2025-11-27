@@ -1,0 +1,114 @@
+/*
+    Oscil Test Harness - HTTP Server
+    REST API for remote control of the test harness
+*/
+
+#pragma once
+
+// Disable SSL and Brotli support - we only need HTTP for local testing
+#define CPPHTTPLIB_OPENSSL_SUPPORT 0
+#define CPPHTTPLIB_BROTLI_SUPPORT 0
+
+#include <httplib.h>
+#include <nlohmann/json.hpp>
+#include "TestDAW.h"
+#include "TestUIController.h"
+#include "TestScreenshot.h"
+#include <thread>
+#include <atomic>
+
+namespace oscil::test
+{
+
+using json = nlohmann::json;
+
+/**
+ * HTTP server providing REST API for test harness control.
+ * Runs on a separate thread.
+ */
+class TestHttpServer
+{
+public:
+    static constexpr int DEFAULT_PORT = 8765;
+
+    TestHttpServer(TestDAW& daw);
+    ~TestHttpServer();
+
+    /**
+     * Start the server on the given port
+     */
+    bool start(int port = DEFAULT_PORT);
+
+    /**
+     * Stop the server
+     */
+    void stop();
+
+    /**
+     * Check if server is running
+     */
+    bool isRunning() const { return running_.load(); }
+
+    /**
+     * Get the port number
+     */
+    int getPort() const { return port_; }
+
+private:
+    void setupRoutes();
+    void serverThread();
+
+    // Utility functions
+    json successResponse(const json& data = {});
+    json errorResponse(const std::string& message);
+
+    // Route handlers - Transport
+    void handleTransportPlay(const httplib::Request& req, httplib::Response& res);
+    void handleTransportStop(const httplib::Request& req, httplib::Response& res);
+    void handleTransportSetBpm(const httplib::Request& req, httplib::Response& res);
+    void handleTransportSetPosition(const httplib::Request& req, httplib::Response& res);
+    void handleTransportState(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Track Audio
+    void handleTrackAudio(const httplib::Request& req, httplib::Response& res);
+    void handleTrackBurst(const httplib::Request& req, httplib::Response& res);
+    void handleTrackInfo(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - UI
+    void handleUIClick(const httplib::Request& req, httplib::Response& res);
+    void handleUIDoubleClick(const httplib::Request& req, httplib::Response& res);
+    void handleUISelect(const httplib::Request& req, httplib::Response& res);
+    void handleUIToggle(const httplib::Request& req, httplib::Response& res);
+    void handleUISlider(const httplib::Request& req, httplib::Response& res);
+    void handleUIDrag(const httplib::Request& req, httplib::Response& res);
+    void handleUIState(const httplib::Request& req, httplib::Response& res);
+    void handleUIElement(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Screenshot
+    void handleScreenshot(const httplib::Request& req, httplib::Response& res);
+    void handleVerifyWaveform(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - State
+    void handleStateReset(const httplib::Request& req, httplib::Response& res);
+    void handleStateSave(const httplib::Request& req, httplib::Response& res);
+    void handleStateLoad(const httplib::Request& req, httplib::Response& res);
+    void handleStateOscillators(const httplib::Request& req, httplib::Response& res);
+    void handleStatePanes(const httplib::Request& req, httplib::Response& res);
+    void handleStateSources(const httplib::Request& req, httplib::Response& res);
+
+    // Health check
+    void handleHealth(const httplib::Request& req, httplib::Response& res);
+
+    TestDAW& daw_;
+    TestUIController uiController_;
+    TestScreenshot screenshot_;
+
+    std::unique_ptr<httplib::Server> server_;
+    std::unique_ptr<std::thread> serverThread_;
+    std::atomic<bool> running_{false};
+    int port_ = DEFAULT_PORT;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestHttpServer)
+};
+
+} // namespace oscil::test

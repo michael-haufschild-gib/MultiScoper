@@ -1,0 +1,36 @@
+# Build directories
+build/
+cmake-build-*/
+
+# IDE files
+.idea/
+.vscode/
+*.xcodeproj/
+*.xcworkspace/
+
+# Compiled files
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# Dependency caches
+.cache/
+
+# Test results (generated)
+test-results/
+
+# Screenshots (generated during testing)
+screenshots/
+
+# Claude settings (user-specific)
+.claude/settings.json
+.claude/settings.local.json
