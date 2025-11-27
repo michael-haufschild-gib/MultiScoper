@@ -10,6 +10,7 @@
 #if OSCIL_ENABLE_OPENGL
 #include <juce_opengl/juce_opengl.h>
 #endif
+#include <melatonin_inspector/melatonin_inspector.h>
 #include "core/PluginProcessor.h"
 #include "core/WindowLayout.h"
 
@@ -146,6 +147,9 @@ private:
     // OpenGL context for GPU-accelerated rendering
     juce::OpenGLContext openGLContext_;
 #endif
+
+    // Melatonin Inspector for UI debugging (toggle with Cmd+I / Ctrl+I)
+    melatonin::Inspector inspector_ { *this };
 
     static constexpr int TOOLBAR_HEIGHT = 40;
     static constexpr int STATUS_BAR_HEIGHT = 24;
