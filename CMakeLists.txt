@@ -15,6 +15,10 @@ endif()
 # Option for OpenGL support
 option(OSCIL_ENABLE_OPENGL "Enable OpenGL context for GPU compositing" ON)
 
+# Option for RealtimeSanitizer (requires Clang 18+)
+# Detects real-time safety violations: allocations, locks, syscalls in audio thread
+option(OSCIL_ENABLE_RTSAN "Enable RealtimeSanitizer for real-time safety checking" OFF)
+
 # Fetch JUCE
 include(FetchContent)
 
@@ -173,6 +177,21 @@ target_link_libraries(Oscil
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+# RealtimeSanitizer flags (Clang 18+ only)
+# Catches allocations, mutex locks, and blocking syscalls in audio thread
+if(OSCIL_ENABLE_RTSAN)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18)
+        message(STATUS "RealtimeSanitizer enabled")
+        target_compile_options(Oscil PRIVATE -fsanitize=realtime)
+        target_link_options(Oscil PRIVATE -fsanitize=realtime)
+        # Also apply to standalone target for testing
+        target_compile_options(Oscil_Standalone PRIVATE -fsanitize=realtime)
+        target_link_options(Oscil_Standalone PRIVATE -fsanitize=realtime)
+    else()
+        message(WARNING "RealtimeSanitizer requires Clang 18+. Current compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+    endif()
+endif()
 
 # Tests
 option(OSCIL_BUILD_TESTS "Build unit tests" ON)

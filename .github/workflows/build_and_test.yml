@@ -115,3 +115,54 @@ jobs:
           name: oscil4-standalone-${{ matrix.name }}
           path: build/Oscil_artefacts/Release/Standalone/
           if-no-files-found: error
+
+  # RealtimeSanitizer job - detects real-time safety violations in audio code
+  # Catches: allocations, mutex locks, blocking syscalls in processBlock()
+  rtsan:
+    name: RealtimeSanitizer
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-18 \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            ladspa-sdk \
+            libcurl4-openssl-dev \
+            libfreetype6-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            libwebkit2gtk-4.1-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev
+
+      - name: Configure CMake with RTSan
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=clang-18 \
+            -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DOSCIL_ENABLE_RTSAN=ON \
+            -DOSCIL_BUILD_TESTS=ON
+
+      - name: Build with RTSan
+        run: cmake --build build --config Debug --parallel 4
+
+      - name: Run unit tests with RTSan
+        run: ctest --test-dir build --build-config Debug --output-on-failure
+        env:
+          # RTSan will abort on first violation - we want to catch them
+          RTSAN_OPTIONS: "halt_on_error=1"
