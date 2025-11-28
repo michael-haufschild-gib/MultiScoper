@@ -3,12 +3,29 @@ name: Build and Test
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'screenshots/**'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'screenshots/**'
+      - '.gitignore'
+      - 'LICENSE'
   workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
+  # Consistent hashes for dependency caching
+  JUCE_VERSION: "8.0.5"
+  HTTPLIB_VERSION: "v0.27.0"
+  JSON_VERSION: "v3.12.0"
+  GTEST_VERSION: "v1.17.0"
 
 jobs:
   build:
@@ -45,6 +62,45 @@ jobs:
         with:
           submodules: recursive
 
+      # ============================================================
+      # CACHING - Aggressive caching to minimize build times
+      # ============================================================
+
+      # Cache FetchContent dependencies (JUCE, httplib, json, googletest)
+      # These rarely change and take significant time to download/configure
+      - name: Cache FetchContent dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/${{ matrix.cmake_preset }}/_deps
+          key: fetchcontent-${{ matrix.name }}-${{ env.JUCE_VERSION }}-${{ env.HTTPLIB_VERSION }}-${{ env.JSON_VERSION }}-${{ env.GTEST_VERSION }}
+          restore-keys: |
+            fetchcontent-${{ matrix.name }}-
+
+      # Cache CMake configuration (CMakeCache.txt, generated files)
+      - name: Cache CMake configuration
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/${{ matrix.cmake_preset }}/CMakeCache.txt
+            build/${{ matrix.cmake_preset }}/CMakeFiles
+          key: cmake-config-${{ matrix.name }}-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}
+          restore-keys: |
+            cmake-config-${{ matrix.name }}-
+
+      # Cache pluginval download
+      - name: Cache pluginval
+        uses: actions/cache@v4
+        with:
+          path: |
+            pluginval*
+            ${{ matrix.pluginval_exe }}
+          key: pluginval-${{ matrix.name }}-v1.0.4
+
+      # ============================================================
+      # INSTALL DEPENDENCIES
+      # ============================================================
+
       # Install Ninja build system
       - name: Install Ninja (macOS)
         if: runner.os == 'macOS'
@@ -58,12 +114,17 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
-      # Setup ccache for faster rebuilds
+      # Setup ccache for faster rebuilds (aggressive settings)
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ matrix.name }}-${{ env.BUILD_TYPE }}
-          max-size: 500M
+          key: ${{ matrix.name }}-${{ env.BUILD_TYPE }}-${{ github.ref_name }}
+          restore-keys: |
+            ${{ matrix.name }}-${{ env.BUILD_TYPE }}-${{ github.ref_name }}
+            ${{ matrix.name }}-${{ env.BUILD_TYPE }}-main
+            ${{ matrix.name }}-${{ env.BUILD_TYPE }}-
+          max-size: 1G
+          verbose: 2
 
       # Linux dependencies
       - name: Install Linux dependencies
@@ -98,12 +159,17 @@ jobs:
       - name: Run Unit Tests
         run: ctest --preset ${{ matrix.cmake_preset }}
 
-      # Download pluginval
+      # Download pluginval (skip if cached)
       - name: Download pluginval
         shell: bash
         run: |
-          curl -LO ${{ matrix.pluginval_url }}
-          unzip pluginval_*.zip
+          if [ ! -f "${{ matrix.pluginval_exe }}" ]; then
+            echo "Downloading pluginval..."
+            curl -LO ${{ matrix.pluginval_url }}
+            unzip -o pluginval_*.zip
+          else
+            echo "Using cached pluginval"
+          fi
 
       # Validate VST3 plugin with pluginval
       - name: Validate VST3 with pluginval
@@ -148,14 +214,29 @@ jobs:
         with:
           submodules: recursive
 
+      # Cache FetchContent dependencies for RTSan build
+      - name: Cache FetchContent dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/_deps
+          key: fetchcontent-rtsan-${{ env.JUCE_VERSION }}-${{ env.HTTPLIB_VERSION }}-${{ env.JSON_VERSION }}-${{ env.GTEST_VERSION }}
+          restore-keys: |
+            fetchcontent-rtsan-
+
       - name: Install Ninja
         run: sudo apt-get update && sudo apt-get install -y ninja-build
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: rtsan-debug
-          max-size: 500M
+          key: rtsan-debug-${{ github.ref_name }}
+          restore-keys: |
+            rtsan-debug-${{ github.ref_name }}
+            rtsan-debug-main
+            rtsan-debug-
+          max-size: 1G
+          verbose: 2
 
       - name: Install LLVM 20 (with RTSan support)
         run: |
