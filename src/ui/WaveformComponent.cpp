@@ -291,8 +291,8 @@ void WaveformComponent::updateWaveformPath()
     }
 
     // Read samples from capture buffer
-    std::vector<float> leftSamples(displaySamples_);
-    std::vector<float> rightSamples(displaySamples_);
+    std::vector<float> leftSamples(static_cast<size_t>(displaySamples_));
+    std::vector<float> rightSamples(static_cast<size_t>(displaySamples_));
 
     int samplesReadLeft = captureBuffer_->read(leftSamples.data(), displaySamples_, 0);
     int samplesReadRight = captureBuffer_->read(rightSamples.data(), displaySamples_, 1);
@@ -308,8 +308,8 @@ void WaveformComponent::updateWaveformPath()
     {
         for (int i = 0; i < samplesRead; ++i)
         {
-            leftSamples[i] *= gainLinear_;
-            rightSamples[i] *= gainLinear_;
+            leftSamples[static_cast<size_t>(i)] *= gainLinear_;
+            rightSamples[static_cast<size_t>(i)] *= gainLinear_;
         }
     }
 

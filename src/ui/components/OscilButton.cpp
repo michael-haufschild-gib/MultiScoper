@@ -121,7 +121,7 @@ int OscilButton::getPreferredWidth() const
     if (variant_ == ButtonVariant::Icon)
         return ComponentLayout::BUTTON_ICON_SIZE;
 
-    auto font = juce::Font(14.0f);
+    auto font = juce::Font(juce::FontOptions().withHeight(14.0f));
     int textWidth = font.getStringWidth(label_);
     int iconWidth = icon_.isValid() ? static_cast<int>(ICON_SIZE + ICON_PADDING) : 0;
 
@@ -144,7 +144,6 @@ void OscilButton::paint(juce::Graphics& g)
     // Apply scale animation
     if (std::abs(currentScale_ - 1.0f) > 0.001f)
     {
-        auto center = bounds.getCentre();
         auto scaledBounds = bounds.withSizeKeepingCentre(
             bounds.getWidth() * currentScale_,
             bounds.getHeight() * currentScale_
@@ -235,7 +234,7 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     }
 
     // Text with optional icon
-    auto font = juce::Font(14.0f);
+    auto font = juce::Font(juce::FontOptions().withHeight(14.0f));
     g.setFont(font);
 
     if (icon_.isValid())

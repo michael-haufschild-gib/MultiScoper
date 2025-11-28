@@ -95,7 +95,7 @@ void OscilTabs::setTabBadge(int index, int count)
 {
     if (index >= 0 && index < static_cast<int>(tabs_.size()))
     {
-        tabs_[index].badgeCount = count;
+        tabs_[static_cast<size_t>(index)].badgeCount = count;
         repaint();
     }
 }
@@ -104,7 +104,7 @@ void OscilTabs::setTabEnabled(int index, bool enabled)
 {
     if (index >= 0 && index < static_cast<int>(tabs_.size()))
     {
-        tabs_[index].enabled = enabled;
+        tabs_[static_cast<size_t>(index)].enabled = enabled;
         repaint();
     }
 }
@@ -114,7 +114,7 @@ void OscilTabs::setSelectedIndex(int index, bool notify)
     if (index < 0 || index >= static_cast<int>(tabs_.size()))
         return;
 
-    if (!tabs_[index].enabled)
+    if (!tabs_[static_cast<size_t>(index)].enabled)
         return;
 
     if (selectedIndex_ == index)
@@ -153,17 +153,17 @@ void OscilTabs::setSelectedIndex(int index, bool notify)
 juce::String OscilTabs::getSelectedId() const
 {
     if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(tabs_.size()))
-        return tabs_[selectedIndex_].id;
+        return tabs_[static_cast<size_t>(selectedIndex_)].id;
     return {};
 }
 
 void OscilTabs::setSelectedById(const juce::String& id, bool notify)
 {
-    for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
+    for (size_t i = 0; i < tabs_.size(); ++i)
     {
         if (tabs_[i].id == id)
         {
-            setSelectedIndex(i, notify);
+            setSelectedIndex(static_cast<int>(i), notify);
             return;
         }
     }
@@ -230,7 +230,7 @@ int OscilTabs::getPreferredWidth() const
             }
             else
             {
-                auto font = juce::Font(13.0f);
+                auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
                 int labelWidth = font.getStringWidth(tab.label);
                 int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
                 int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
@@ -244,7 +244,7 @@ int OscilTabs::getPreferredWidth() const
         int maxWidth = 0;
         for (const auto& tab : tabs_)
         {
-            auto font = juce::Font(13.0f);
+            auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
             int labelWidth = font.getStringWidth(tab.label);
             int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
             int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
@@ -306,7 +306,7 @@ void OscilTabs::paint(juce::Graphics& g)
 
 void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> bounds)
 {
-    const auto& tab = tabs_[index];
+    const auto& tab = tabs_[static_cast<size_t>(index)];
     bool isSelected = (index == selectedIndex_);
     bool isHovered = (index == hoveredIndex_);
     float opacity = tab.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
@@ -323,7 +323,7 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     int contentWidth = 0;
 
     // Calculate total content width for centering
-    auto font = juce::Font(13.0f);
+    auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
     int labelWidth = font.getStringWidth(tab.label);
     contentWidth += labelWidth;
 
@@ -425,7 +425,7 @@ void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int c
     g.fillEllipse(bounds.toFloat());
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(10.0f).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)).boldened());
 
     juce::String text = count > 99 ? "99+" : juce::String(count);
     g.drawText(text, bounds, juce::Justification::centred);
@@ -482,9 +482,9 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
         {
             // Calculate position based on preceding tab widths
             int x = 0;
-            auto font = juce::Font(13.0f);
+            auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
 
-            for (int i = 0; i < index; ++i)
+            for (size_t i = 0; i < static_cast<size_t>(index); ++i)
             {
                 const auto& tab = tabs_[i];
                 int labelWidth = font.getStringWidth(tab.label);
@@ -493,7 +493,7 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
                 x += labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
             }
 
-            const auto& tab = tabs_[index];
+            const auto& tab = tabs_[static_cast<size_t>(index)];
             int labelWidth = font.getStringWidth(tab.label);
             int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
             int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
@@ -535,7 +535,7 @@ juce::Rectangle<float> OscilTabs::getIndicatorBounds() const
 void OscilTabs::mouseDown(const juce::MouseEvent& e)
 {
     int index = getTabAtPosition(e.getPosition());
-    if (index >= 0 && tabs_[index].enabled)
+    if (index >= 0 && tabs_[static_cast<size_t>(index)].enabled)
         setSelectedIndex(index);
 }
 
@@ -583,7 +583,7 @@ bool OscilTabs::keyPressed(const juce::KeyPress& key)
     // Skip disabled tabs
     int direction = (newIndex > selectedIndex_) ? 1 : -1;
     while (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) &&
-           !tabs_[newIndex].enabled)
+           !tabs_[static_cast<size_t>(newIndex)].enabled)
     {
         newIndex += direction;
     }

@@ -31,9 +31,9 @@ struct ProcessedSignal
     {
         numSamples = samples;
         isStereo = stereo;
-        channel1.resize(samples);
+        channel1.resize(static_cast<size_t>(samples));
         if (stereo)
-            channel2.resize(samples);
+            channel2.resize(static_cast<size_t>(samples));
         else
             channel2.clear();
     }

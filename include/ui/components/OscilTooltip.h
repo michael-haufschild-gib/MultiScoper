@@ -102,7 +102,7 @@ private:
 class TooltipClient : private juce::Timer
 {
 public:
-    virtual ~TooltipClient() = default;
+    ~TooltipClient() override = default;
 
     void setRichTooltip(const RichTooltipContent& content);
     void setSimpleTooltip(const juce::String& text);

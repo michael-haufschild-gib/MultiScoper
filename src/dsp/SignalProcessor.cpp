@@ -94,7 +94,7 @@ void SignalProcessor::processMono(const float* left, const float* right,
     {
         float l = (left != nullptr) ? left[i] : 0.0f;
         float r = (right != nullptr) ? right[i] : l;
-        output.channel1[i] = (l + r) * 0.5f;
+        output.channel1[static_cast<size_t>(i)] = (l + r) * 0.5f;
     }
 }
 
@@ -114,7 +114,7 @@ void SignalProcessor::processSide(const float* left, const float* right,
     {
         float l = (left != nullptr) ? left[i] : 0.0f;
         float r = (right != nullptr) ? right[i] : l;
-        output.channel1[i] = (l - r) * 0.5f;
+        output.channel1[static_cast<size_t>(i)] = (l - r) * 0.5f;
     }
 }
 
@@ -277,11 +277,11 @@ void AdaptiveDecimator::setDisplayWidth(int widthPixels)
 void AdaptiveDecimator::process(const float* input, int inputLength,
                                  std::vector<float>& output) const
 {
-    output.resize(targetSamples_);
+    output.resize(static_cast<size_t>(targetSamples_));
 
     if (inputLength <= targetSamples_)
     {
-        output.resize(inputLength);
+        output.resize(static_cast<size_t>(inputLength));
         std::copy(input, input + inputLength, output.begin());
         return;
     }
@@ -293,8 +293,8 @@ void AdaptiveDecimator::processWithEnvelope(const float* input, int inputLength,
                                              std::vector<float>& minEnvelope,
                                              std::vector<float>& maxEnvelope) const
 {
-    minEnvelope.resize(displayWidth_);
-    maxEnvelope.resize(displayWidth_);
+    minEnvelope.resize(static_cast<size_t>(displayWidth_));
+    maxEnvelope.resize(static_cast<size_t>(displayWidth_));
 
     if (inputLength <= 0)
     {
@@ -320,8 +320,8 @@ void AdaptiveDecimator::processWithEnvelope(const float* input, int inputLength,
             maxVal = std::max(maxVal, input[j]);
         }
 
-        minEnvelope[i] = minVal;
-        maxEnvelope[i] = maxVal;
+        minEnvelope[static_cast<size_t>(i)] = minVal;
+        maxEnvelope[static_cast<size_t>(i)] = maxVal;
     }
 }
 

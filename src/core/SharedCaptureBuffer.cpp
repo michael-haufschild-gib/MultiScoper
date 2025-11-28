@@ -65,28 +65,29 @@ void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int
     // Write samples to ring buffer
     for (int i = 0; i < numSamples; ++i)
     {
-        size_t pos = wrapPosition(writePos + i);
+        size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
 
         for (int ch = 0; ch < numChannels; ++ch)
         {
+            size_t chIdx = static_cast<size_t>(ch);
             if (samples[ch] != nullptr)
             {
-                buffers_[ch][pos] = samples[ch][i];
+                buffers_[chIdx][pos] = samples[ch][i];
             }
         }
 
         // Zero out unused channels
-        for (int ch = numChannels; ch < static_cast<int>(MAX_CHANNELS); ++ch)
+        for (size_t ch = static_cast<size_t>(numChannels); ch < MAX_CHANNELS; ++ch)
         {
             buffers_[ch][pos] = 0.0f;
         }
     }
 
     // Update write position atomically
-    writePos_.store(wrapPosition(writePos + numSamples), std::memory_order_release);
+    writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
 
     // Update total samples written
-    samplesWritten_.fetch_add(numSamples, std::memory_order_relaxed);
+    samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_relaxed);
 
     // Update metadata using lock-free SeqLock pattern
     CaptureFrameMetadata meta = metadata;
@@ -101,19 +102,21 @@ int SharedCaptureBuffer::read(float* output, int numSamples, int channel) const
         return 0;
 
     size_t available = getAvailableSamples();
-    int samplesToRead = std::min(static_cast<size_t>(numSamples), available);
+    size_t requestedSamples = static_cast<size_t>(numSamples);
+    int samplesToRead = static_cast<int>(std::min(requestedSamples, available));
 
     if (samplesToRead <= 0)
         return 0;
 
     // Read from the most recent samples (before write position)
     size_t writePos = writePos_.load(std::memory_order_acquire);
-    size_t readStart = (writePos + capacity_ - samplesToRead) % capacity_;
+    size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToRead)) % capacity_;
+    size_t channelIdx = static_cast<size_t>(channel);
 
     for (int i = 0; i < samplesToRead; ++i)
     {
-        size_t pos = wrapPosition(readStart + i);
-        output[i] = buffers_[channel][pos];
+        size_t pos = wrapPosition(readStart + static_cast<size_t>(i));
+        output[i] = buffers_[channelIdx][pos];
     }
 
     return samplesToRead;
@@ -161,19 +164,21 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
         return 0.0f;
 
     size_t available = getAvailableSamples();
-    int samplesToAnalyze = std::min(static_cast<size_t>(numSamples), available);
+    size_t requestedSamples = static_cast<size_t>(numSamples);
+    int samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
 
     if (samplesToAnalyze <= 0)
         return 0.0f;
 
     size_t writePos = writePos_.load(std::memory_order_acquire);
-    size_t readStart = (writePos + capacity_ - samplesToAnalyze) % capacity_;
+    size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) % capacity_;
 
+    size_t channelIdx = static_cast<size_t>(channel);
     float peak = 0.0f;
     for (int i = 0; i < samplesToAnalyze; ++i)
     {
-        size_t pos = wrapPosition(readStart + i);
-        float absVal = std::abs(buffers_[channel][pos]);
+        size_t pos = wrapPosition(readStart + static_cast<size_t>(i));
+        float absVal = std::abs(buffers_[channelIdx][pos]);
         if (absVal > peak)
             peak = absVal;
     }
@@ -187,23 +192,25 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
         return 0.0f;
 
     size_t available = getAvailableSamples();
-    int samplesToAnalyze = std::min(static_cast<size_t>(numSamples), available);
+    size_t requestedSamples = static_cast<size_t>(numSamples);
+    int samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
 
     if (samplesToAnalyze <= 0)
         return 0.0f;
 
     size_t writePos = writePos_.load(std::memory_order_acquire);
-    size_t readStart = (writePos + capacity_ - samplesToAnalyze) % capacity_;
+    size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) % capacity_;
 
+    size_t channelIdx = static_cast<size_t>(channel);
     double sumSquares = 0.0;
     for (int i = 0; i < samplesToAnalyze; ++i)
     {
-        size_t pos = wrapPosition(readStart + i);
-        float val = buffers_[channel][pos];
+        size_t pos = wrapPosition(readStart + static_cast<size_t>(i));
+        float val = buffers_[channelIdx][pos];
         sumSquares += val * val;
     }
 
-    return static_cast<float>(std::sqrt(sumSquares / samplesToAnalyze));
+    return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
 }
 
 } // namespace oscil

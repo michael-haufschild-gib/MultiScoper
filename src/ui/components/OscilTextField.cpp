@@ -134,7 +134,7 @@ void OscilTextField::setRange(double min, double max)
     // Reapply constraints to current value
     double constrained = numValue_;
     applyNumericConstraints(constrained);
-    if (constrained != numValue_)
+    if (std::abs(constrained - numValue_) > 1e-10)
         setNumericValue(constrained, false);
 }
 
@@ -274,7 +274,7 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     if (hasError())
     {
         g.setColour(theme_.statusError.withAlpha(opacity));
-        g.setFont(juce::Font(11.0f));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
         g.drawText(errorMessage_,
             bounds.translated(0, bounds.getHeight() + 2).withHeight(14),
             juce::Justification::left);
@@ -328,7 +328,7 @@ void OscilTextField::resized()
     editor_->setBounds(editorBounds);
 }
 
-void OscilTextField::mouseDown(const juce::MouseEvent& e)
+void OscilTextField::mouseDown(const juce::MouseEvent& /*e*/)
 {
     // Pass to editor
     editor_->grabKeyboardFocus();
@@ -362,7 +362,7 @@ void OscilTextField::mouseWheelMove(const juce::MouseEvent& e,
     setNumericValue(numValue_ + delta, true);
 }
 
-void OscilTextField::focusGained(FocusChangeType cause)
+void OscilTextField::focusGained(FocusChangeType /*cause*/)
 {
     if (AnimationSettings::shouldUseSpringAnimations())
     {
@@ -376,7 +376,7 @@ void OscilTextField::focusGained(FocusChangeType cause)
     }
 }
 
-void OscilTextField::focusLost(FocusChangeType cause)
+void OscilTextField::focusLost(FocusChangeType /*cause*/)
 {
     if (AnimationSettings::shouldUseSpringAnimations())
     {
@@ -410,7 +410,7 @@ void OscilTextField::updateEditorStyle()
     editor_->setColour(juce::TextEditor::highlightColourId, theme_.controlActive.withAlpha(0.3f));
     editor_->setColour(juce::CaretComponent::caretColourId, theme_.controlActive);
 
-    editor_->setFont(juce::Font(13.0f));
+    editor_->setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
     editor_->setTextToShowWhenEmpty(placeholder_, theme_.textSecondary);
 }
 

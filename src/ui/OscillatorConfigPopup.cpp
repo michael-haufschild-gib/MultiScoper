@@ -305,7 +305,7 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
     // Update pane selector (OscilDropdown uses setSelectedIndex)
     for (int i = 0; i < paneSelector_->getNumItems(); ++i)
     {
-        if (static_cast<size_t>(i) < availablePanes_.size() && availablePanes_[i].first == paneId_)
+        if (static_cast<size_t>(i) < availablePanes_.size() && availablePanes_[static_cast<size_t>(i)].first == paneId_)
         {
             paneSelector_->setSelectedIndex(i, false);  // Don't notify
             break;
@@ -433,7 +433,7 @@ void OscillatorConfigPopup::handlePaneChange()
     int index = paneSelector_->getSelectedIndex();
     if (index >= 0 && static_cast<size_t>(index) < availablePanes_.size())
     {
-        paneId_ = availablePanes_[index].first;
+        paneId_ = availablePanes_[static_cast<size_t>(index)].first;
         notifyConfigChanged();
     }
 }

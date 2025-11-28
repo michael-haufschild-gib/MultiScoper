@@ -157,7 +157,7 @@ SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
 
     // Create resize handle (on left edge since sidebar is on right)
     resizeHandle_ = std::make_unique<SidebarResizeHandle>();
-    resizeHandle_->onResizeStart = [this]()
+    resizeHandle_->onResizeStart = []()
     {
         // Store current width for delta calculations
     };
@@ -175,7 +175,7 @@ SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
             notifySidebarWidthChanged();
         }
     };
-    resizeHandle_->onResizeEnd = [this]()
+    resizeHandle_->onResizeEnd = []()
     {
         // Finalize resize
     };
@@ -670,7 +670,7 @@ void SidebarComponent::oscillatorDeleteRequested(const OscillatorId& id)
 {
     // Use callAsync because this callback may trigger refreshOscillatorList()
     // which destroys the OscillatorListItemComponent that's still on the call stack
-    juce::MessageManager::callAsync([this, safeSidebar = juce::Component::SafePointer<SidebarComponent>(this), id]()
+    juce::MessageManager::callAsync([safeSidebar = juce::Component::SafePointer<SidebarComponent>(this), id]()
     {
         if (safeSidebar != nullptr)
             safeSidebar->notifyOscillatorDeleteRequested(id);
@@ -769,7 +769,7 @@ void SidebarComponent::refreshSourceList(const std::vector<SourceInfo>& sources)
         auto item = std::make_unique<SourceItemComponent>(source);
 
         // Set up callbacks
-        item->onSelected = [this](const SourceId& /*id*/)
+        item->onSelected = [](const SourceId& /*id*/)
         {
             // Could highlight the source or show details
         };

@@ -266,10 +266,10 @@ public:
     {
     public:
         virtual ~Listener() = default;
-        virtual void columnLayoutChanged(ColumnLayout layout) {}
+        virtual void columnLayoutChanged(ColumnLayout /*layout*/) {}
         virtual void paneOrderChanged() {}
-        virtual void paneAdded(const PaneId& paneId) {}
-        virtual void paneRemoved(const PaneId& paneId) {}
+        virtual void paneAdded(const PaneId& /*paneId*/) {}
+        virtual void paneRemoved(const PaneId& /*paneId*/) {}
     };
 
     void addListener(Listener* listener);

@@ -41,9 +41,9 @@ void SegmentedButtonBar::resized()
     int startX = (bounds.getWidth() - totalWidth) / 2;
     if (startX < 0) startX = 0;
 
-    for (int i = 0; i < numButtons; ++i)
+    for (size_t i = 0; i < static_cast<size_t>(numButtons); ++i)
     {
-        buttons_[i]->setBounds(startX + i * buttonWidth, 0, buttonWidth, bounds.getHeight());
+        buttons_[i]->setBounds(startX + static_cast<int>(i) * buttonWidth, 0, buttonWidth, bounds.getHeight());
     }
 }
 
@@ -129,9 +129,9 @@ void SegmentedButtonBar::handleButtonClick(int id)
 
 void SegmentedButtonBar::updateButtonStates()
 {
-    int numButtons = static_cast<int>(buttons_.size());
+    size_t numButtons = buttons_.size();
 
-    for (int i = 0; i < numButtons; ++i)
+    for (size_t i = 0; i < numButtons; ++i)
     {
         SegmentPosition position;
 

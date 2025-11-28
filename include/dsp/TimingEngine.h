@@ -372,10 +372,10 @@ public:
     {
     public:
         virtual ~Listener() = default;
-        virtual void timingModeChanged(TimingMode mode) {}
-        virtual void intervalChanged(float actualIntervalMs) {}
-        virtual void hostBPMChanged(float bpm) {}
-        virtual void hostSyncStateChanged(bool enabled) {}
+        virtual void timingModeChanged(TimingMode /*mode*/) {}
+        virtual void intervalChanged(float /*actualIntervalMs*/) {}
+        virtual void hostBPMChanged(float /*bpm*/) {}
+        virtual void hostSyncStateChanged(bool /*enabled*/) {}
     };
 
     void addListener(Listener* listener);

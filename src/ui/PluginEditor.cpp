@@ -367,9 +367,9 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     themeSelector_ = std::make_unique<juce::ComboBox>("theme");
     auto themes = processor_.getThemeService().getAvailableThemes();
-    for (int i = 0; i < static_cast<int>(themes.size()); ++i)
+    for (size_t i = 0; i < themes.size(); ++i)
     {
-        themeSelector_->addItem(themes[i], i + 1);
+        themeSelector_->addItem(themes[i], static_cast<int>(i) + 1);
     }
     // Load saved theme name and APPLY it (not just display)
     auto savedThemeName = processor_.getState().getThemeName();
@@ -537,7 +537,7 @@ void OscilPluginEditor::timerCallback()
 
     if (currentTime - lastFrameTime_ >= 1000.0)
     {
-        currentFps_ = frameCount_ * 1000.0f / static_cast<float>(currentTime - lastFrameTime_);
+        currentFps_ = static_cast<float>(frameCount_) * 1000.0f / static_cast<float>(currentTime - lastFrameTime_);
         frameCount_ = 0;
         lastFrameTime_ = currentTime;
 
@@ -551,14 +551,16 @@ void OscilPluginEditor::timerCallback()
 
             // Memory usage - estimate based on capture buffer and oscillators
             // Each capture buffer ~0.5MB, plus UI overhead
-            float memoryMB = 0.5f * static_cast<float>(processor_.getInstanceRegistry().getSourceCount())
-                           + 0.1f * static_cast<float>(processor_.getState().getOscillators().size())
+            size_t sourceCount = processor_.getInstanceRegistry().getSourceCount();
+            size_t oscillatorCount = processor_.getState().getOscillators().size();
+            float memoryMB = 0.5f * static_cast<float>(sourceCount)
+                           + 0.1f * static_cast<float>(oscillatorCount)
                            + 5.0f; // Base UI overhead
             statusBar_->setMemoryUsage(memoryMB);
 
             // Oscillator and source counts
-            statusBar_->setOscillatorCount(static_cast<int>(processor_.getState().getOscillators().size()));
-            statusBar_->setSourceCount(static_cast<int>(processor_.getInstanceRegistry().getSourceCount()));
+            statusBar_->setOscillatorCount(static_cast<int>(oscillatorCount));
+            statusBar_->setSourceCount(static_cast<int>(sourceCount));
         }
     }
 
@@ -628,7 +630,7 @@ void OscilPluginEditor::updateLayout()
     {
         auto bounds = layoutManager.getPaneBounds(i,
             juce::Rectangle<int>(0, 0, contentComponent_->getWidth(), contentComponent_->getHeight()));
-        paneComponents_[i]->setBounds(bounds);
+        paneComponents_[static_cast<size_t>(i)]->setBounds(bounds);
     }
 }
 

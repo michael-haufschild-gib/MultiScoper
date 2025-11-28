@@ -67,7 +67,7 @@ struct ColorTheme
     {
         if (waveformColors.empty())
             return juce::Colours::green;
-        return waveformColors[index % waveformColors.size()];
+        return waveformColors[static_cast<size_t>(index) % waveformColors.size()];
     }
 
     /**

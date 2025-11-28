@@ -69,9 +69,6 @@ private:
     // Filter tabs
     std::unique_ptr<SegmentedButtonBar> filterTabs_;
 
-    // Count display
-    std::unique_ptr<juce::Label> countLabel_;
-
     // State
     OscillatorFilterMode currentFilterMode_ = OscillatorFilterMode::All;
     int totalCount_ = 0;

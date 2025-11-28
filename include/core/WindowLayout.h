@@ -93,9 +93,9 @@ public:
     {
     public:
         virtual ~Listener() = default;
-        virtual void windowSizeChanged(int width, int height) {}
-        virtual void sidebarWidthChanged(int width) {}
-        virtual void sidebarCollapseStateChanged(bool collapsed) {}
+        virtual void windowSizeChanged(int /*width*/, int /*height*/) {}
+        virtual void sidebarWidthChanged(int /*width*/) {}
+        virtual void sidebarCollapseStateChanged(bool /*collapsed*/) {}
     };
 
     void addListener(Listener* listener);

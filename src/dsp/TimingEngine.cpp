@@ -237,7 +237,9 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
                 triggered = detectLevel(sample);
                 break;
 
-            default:
+            case WaveformTriggerMode::None:
+            case WaveformTriggerMode::Manual:
+                // These modes don't use sample-based detection
                 break;
         }
 
@@ -436,7 +438,9 @@ TimingConfig TimingEngine::toEntityConfig() const
             case WaveformTriggerMode::Level:
                 entityConfig.triggerEdge = TriggerEdge::Both;
                 break;
-            default:
+            case WaveformTriggerMode::None:
+            case WaveformTriggerMode::Manual:
+                // Already filtered above, but handle explicitly for enum completeness
                 entityConfig.triggerEdge = TriggerEdge::Rising;
                 break;
         }

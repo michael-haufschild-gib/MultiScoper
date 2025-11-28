@@ -128,13 +128,13 @@ void OscilDropdownPopup::updateFilteredItems()
 {
     filteredIndices_.clear();
 
-    for (int i = 0; i < static_cast<int>(items_.size()); ++i)
+    for (size_t i = 0; i < items_.size(); ++i)
     {
         const auto& item = items_[i];
 
         if (item.isSeparator)
         {
-            filteredIndices_.push_back(i);
+            filteredIndices_.push_back(static_cast<int>(i));
             continue;
         }
 
@@ -142,7 +142,7 @@ void OscilDropdownPopup::updateFilteredItems()
             item.label.containsIgnoreCase(searchText_) ||
             item.description.containsIgnoreCase(searchText_))
         {
-            filteredIndices_.push_back(i);
+            filteredIndices_.push_back(static_cast<int>(i));
         }
     }
 }
@@ -168,7 +168,7 @@ void OscilDropdownPopup::paint(juce::Graphics& g)
     for (size_t i = 0; i < filteredIndices_.size() && i < MAX_VISIBLE_ITEMS; ++i)
     {
         int itemIndex = filteredIndices_[i];
-        const auto& item = items_[itemIndex];
+        const auto& item = items_[static_cast<size_t>(itemIndex)];
         auto itemBounds = juce::Rectangle<int>(POPUP_PADDING, y,
             getWidth() - POPUP_PADDING * 2, ITEM_HEIGHT);
 
@@ -252,7 +252,7 @@ void OscilDropdownPopup::paintItem(juce::Graphics& g, const DropdownItem& item,
     // Label
     g.setColour((isSelected ? theme_.controlActive : theme_.textPrimary)
         .withAlpha(alpha * opacity));
-    g.setFont(juce::Font(13.0f));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
 
     if (item.description.isNotEmpty())
     {
@@ -260,7 +260,7 @@ void OscilDropdownPopup::paintItem(juce::Graphics& g, const DropdownItem& item,
         g.drawText(item.label, labelBounds, juce::Justification::centredLeft);
 
         g.setColour(theme_.textSecondary.withAlpha(alpha * opacity * 0.8f));
-        g.setFont(juce::Font(11.0f));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
         g.drawText(item.description, contentBounds, juce::Justification::centredLeft);
     }
     else
@@ -284,8 +284,8 @@ void OscilDropdownPopup::mouseDown(const juce::MouseEvent& e)
 
     if (index >= 0 && index < static_cast<int>(filteredIndices_.size()))
     {
-        int itemIndex = filteredIndices_[index];
-        const auto& item = items_[itemIndex];
+        int itemIndex = filteredIndices_[static_cast<size_t>(index)];
+        const auto& item = items_[static_cast<size_t>(itemIndex)];
 
         if (!item.isSeparator && item.enabled)
         {
@@ -342,8 +342,8 @@ bool OscilDropdownPopup::keyPressed(const juce::KeyPress& key)
 
     if (key == juce::KeyPress::returnKey && focusedIndex_ >= 0)
     {
-        int itemIndex = filteredIndices_[focusedIndex_];
-        const auto& item = items_[itemIndex];
+        int itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
+        const auto& item = items_[static_cast<size_t>(itemIndex)];
 
         if (!item.isSeparator && item.enabled && onItemClicked)
         {
@@ -487,13 +487,13 @@ int OscilDropdown::getSelectedIndex() const
 juce::String OscilDropdown::getSelectedId() const
 {
     int index = getSelectedIndex();
-    return (index >= 0) ? items_[index].id : juce::String();
+    return (index >= 0) ? items_[static_cast<size_t>(index)].id : juce::String();
 }
 
 juce::String OscilDropdown::getSelectedLabel() const
 {
     int index = getSelectedIndex();
-    return (index >= 0) ? items_[index].label : juce::String();
+    return (index >= 0) ? items_[static_cast<size_t>(index)].label : juce::String();
 }
 
 void OscilDropdown::setSelectedIndices(const std::set<int>& indices, bool notify)
@@ -523,7 +523,7 @@ std::vector<juce::String> OscilDropdown::getSelectedIds() const
     std::vector<juce::String> result;
     for (int index : selectedIndices_)
         if (index >= 0 && index < static_cast<int>(items_.size()))
-            result.push_back(items_[index].id);
+            result.push_back(items_[static_cast<size_t>(index)].id);
     return result;
 }
 
@@ -532,7 +532,7 @@ std::vector<juce::String> OscilDropdown::getSelectedLabels() const
     std::vector<juce::String> result;
     for (int index : selectedIndices_)
         if (index >= 0 && index < static_cast<int>(items_.size()))
-            result.push_back(items_[index].label);
+            result.push_back(items_[static_cast<size_t>(index)].label);
     return result;
 }
 
@@ -656,7 +656,7 @@ void OscilDropdown::updateDisplayText()
     else if (selectedIndices_.size() == 1)
     {
         int index = *selectedIndices_.begin();
-        displayText_ = items_[index].label;
+        displayText_ = items_[static_cast<size_t>(index)].label;
     }
     else
     {
@@ -670,7 +670,7 @@ int OscilDropdown::getPreferredWidth() const
 
     for (const auto& item : items_)
     {
-        auto font = juce::Font(13.0f);
+        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
         int width = font.getStringWidth(item.label);
         maxWidth = std::max(maxWidth, width);
     }
@@ -723,7 +723,7 @@ void OscilDropdown::paint(juce::Graphics& g)
     bool isPlaceholder = selectedIndices_.empty();
     g.setColour((isPlaceholder ? theme_.textSecondary : theme_.textPrimary)
         .withAlpha(opacity));
-    g.setFont(juce::Font(13.0f));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
     g.drawText(displayText_, textBounds, juce::Justification::centredLeft);
 
     // Chevron

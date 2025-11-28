@@ -292,9 +292,9 @@ void PluginTestServer::handleGetPaneBounds(const httplib::Request& /*req*/, http
         nlohmann::json panes = nlohmann::json::array();
         const auto& paneList = layoutManager.getPanes();
 
-        for (int i = 0; i < static_cast<int>(paneList.size()); ++i)
+        for (size_t i = 0; i < paneList.size(); ++i)
         {
-            auto bounds = layoutManager.getPaneBounds(i, availableArea);
+            auto bounds = layoutManager.getPaneBounds(static_cast<int>(i), availableArea);
             nlohmann::json paneInfo;
             paneInfo["index"] = i;
             paneInfo["id"] = paneList[i].getId().id.toStdString();
@@ -390,7 +390,7 @@ void PluginTestServer::handleDeleteOscillator(const httplib::Request& req, httpl
             }
             else if (index >= 0 && index < static_cast<int>(oscillators.size()))
             {
-                targetId = oscillators[index].getId();
+                targetId = oscillators[static_cast<size_t>(index)].getId();
             }
             else
             {
@@ -455,7 +455,7 @@ void PluginTestServer::handleUpdateOscillator(const httplib::Request& req, httpl
             }
             else if (oscillatorIndex >= 0 && oscillatorIndex < static_cast<int>(oscillators.size()))
             {
-                targetId = oscillators[oscillatorIndex].getId();
+                targetId = oscillators[static_cast<size_t>(oscillatorIndex)].getId();
             }
 
             // Find and update the oscillator
@@ -540,7 +540,7 @@ void PluginTestServer::handleMovePane(const httplib::Request& req, httplib::Resp
                 return response;
             }
 
-            PaneId movedPaneId = panes[fromIndex].getId();
+            PaneId movedPaneId = panes[static_cast<size_t>(fromIndex)].getId();
             layoutManager.movePane(movedPaneId, toIndex);
 
             response["status"] = "ok";
@@ -1703,7 +1703,7 @@ void PluginTestServer::handleRunRenderingTest(const httplib::Request& /*req*/, h
 
 void PluginTestServer::handleGetSources(const httplib::Request& /*req*/, httplib::Response& res)
 {
-    auto result = runOnMessageThread([this]() -> nlohmann::json {
+    auto result = runOnMessageThread([]() -> nlohmann::json {
         nlohmann::json response;
         auto& registry = InstanceRegistry::getInstance();
         auto sources = registry.getAllSources();
@@ -1811,7 +1811,7 @@ void PluginTestServer::handleAssignSource(const httplib::Request& req, httplib::
             }
             else if (oscillatorIndex >= 0 && oscillatorIndex < static_cast<int>(oscillators.size()))
             {
-                targetOscId = oscillators[oscillatorIndex].getId();
+                targetOscId = oscillators[static_cast<size_t>(oscillatorIndex)].getId();
             }
             else
             {
@@ -2090,13 +2090,13 @@ void PluginTestServer::handleTestOscillatorReorder(const httplib::Request& /*req
 
         // Create 3 test oscillators with specific names
         std::vector<juce::String> names = {"Alpha", "Beta", "Gamma"};
-        for (int i = 0; i < 3; ++i)
+        for (size_t i = 0; i < 3; ++i)
         {
             Oscillator osc;
             osc.setPaneId(targetPaneId);
             osc.setProcessingMode(ProcessingMode::FullStereo);
             osc.setName(names[i]);
-            osc.setOrderIndex(i);
+            osc.setOrderIndex(static_cast<int>(i));
             state.addOscillator(osc);
         }
 

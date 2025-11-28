@@ -280,13 +280,13 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     g.fillRoundedRectangle(bounds, TRACK_HEIGHT / 2.0f);
 
     // Filled portion
-    float fillProportion = valueToProportionOfLength(value_);
+    float fillProportion = static_cast<float>(valueToProportionOfLength(value_));
 
     juce::Rectangle<float> filledBounds;
     if (variant_ == SliderVariant::Range)
     {
-        float startProp = valueToProportionOfLength(rangeStart_);
-        float endProp = valueToProportionOfLength(rangeEnd_);
+        float startProp = static_cast<float>(valueToProportionOfLength(rangeStart_));
+        float endProp = static_cast<float>(valueToProportionOfLength(rangeEnd_));
 
         if (isVertical)
         {
@@ -319,7 +319,7 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     g.fillRoundedRectangle(filledBounds, TRACK_HEIGHT / 2.0f);
 }
 
-void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical, bool isRangeEnd)
+void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical, bool /*isRangeEnd*/)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     auto bounds = getLocalBounds().toFloat();
@@ -363,7 +363,7 @@ void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool
 {
     juce::String valueText = formatValue(value_);
 
-    auto font = juce::Font(12.0f);
+    auto font = juce::Font(juce::FontOptions().withHeight(12.0f));
     int textWidth = font.getStringWidth(valueText) + TOOLTIP_PADDING * 2;
 
     juce::Rectangle<float> tooltipBounds;
@@ -531,9 +531,9 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     if (e.mods.isAltDown())
     {
         // Fine control - move from drag start with reduced sensitivity
-        float delta = proportion - valueToProportionOfLength(dragStartValue_);
+        float delta = proportion - static_cast<float>(valueToProportionOfLength(dragStartValue_));
         delta *= ComponentLayout::FINE_CONTROL_FACTOR;
-        proportion = valueToProportionOfLength(dragStartValue_) + delta;
+        proportion = static_cast<float>(valueToProportionOfLength(dragStartValue_)) + delta;
     }
 
     proportion = juce::jlimit(0.0f, 1.0f, proportion);
@@ -796,7 +796,7 @@ std::unique_ptr<juce::AccessibilityHandler> OscilSlider::createAccessibilityHand
         juce::AccessibilityRole::slider,
         juce::AccessibilityActions()
             .addAction(juce::AccessibilityActionType::showMenu,
-                [this] { /* Show context menu */ })
+                [] { /* Show context menu */ })
     );
 }
 

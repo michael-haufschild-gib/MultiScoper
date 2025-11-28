@@ -259,8 +259,8 @@ TEST_F(SharedCaptureBufferTest, SeqLockMetadataConsistency)
             writeCount++;
             i++;
 
-            // Small delay to allow reads
-            for (volatile int j = 0; j < 10; ++j) {}
+            // Small delay to allow reads - use yield to avoid busy-wait
+            std::this_thread::yield();
         }
     });
 

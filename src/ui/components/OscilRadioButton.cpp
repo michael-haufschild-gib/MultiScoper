@@ -95,7 +95,7 @@ int OscilRadioButton::getPreferredWidth() const
 
     if (label_.isNotEmpty())
     {
-        auto font = juce::Font(13.0f);
+        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
         int labelWidth = font.getStringWidth(label_);
         return radioWidth + ComponentLayout::SPACING_SM + labelWidth;
     }
@@ -105,7 +105,7 @@ int OscilRadioButton::getPreferredWidth() const
 
 int OscilRadioButton::getPreferredHeight() const
 {
-    return std::max(RADIO_SIZE, static_cast<int>(juce::Font(13.0f).getHeight()));
+    return std::max(RADIO_SIZE, static_cast<int>(juce::Font(juce::FontOptions().withHeight(13.0f)).getHeight()));
 }
 
 void OscilRadioButton::paint(juce::Graphics& g)
@@ -131,12 +131,12 @@ void OscilRadioButton::paint(juce::Graphics& g)
             .withLeft(RADIO_SIZE + ComponentLayout::SPACING_SM);
 
         g.setColour(theme_.textPrimary.withAlpha(opacity));
-        g.setFont(juce::Font(13.0f));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = juce::Font(13.0f);
+        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
         int labelWidth = font.getStringWidth(label_);
 
         // Draw label on left

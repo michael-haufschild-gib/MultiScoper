@@ -67,7 +67,7 @@ public:
     void clearTabs();
 
     int getNumTabs() const { return static_cast<int>(tabs_.size()); }
-    const TabItem& getTab(int index) const { return tabs_[index]; }
+    const TabItem& getTab(int index) const { return tabs_[static_cast<size_t>(index)]; }
 
     void setTabBadge(int index, int count);
     void setTabEnabled(int index, bool enabled);

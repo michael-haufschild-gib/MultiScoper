@@ -33,16 +33,6 @@ void OscillatorListToolbar::setupComponents()
         listeners_.call([this](Listener& l) { l.filterModeChanged(currentFilterMode_); });
     };
     addAndMakeVisible(*filterTabs_);
-
-    // Count label (hidden - we draw custom badge in paint)
-    countLabel_ = std::make_unique<juce::Label>();
-    countLabel_->setJustificationType(juce::Justification::centredRight);
-    countLabel_->setVisible(false);
-    addAndMakeVisible(*countLabel_);
-    updateCountLabel();
-
-    // Apply initial theme
-    themeChanged(ThemeManager::getInstance().getCurrentTheme());
 }
 
 void OscillatorListToolbar::paint(juce::Graphics& g)
@@ -99,32 +89,15 @@ void OscillatorListToolbar::resized()
     filterTabs_->setBounds(bounds);
 }
 
-void OscillatorListToolbar::themeChanged(const ColorTheme& newTheme)
+void OscillatorListToolbar::themeChanged(const ColorTheme& /*newTheme*/)
 {
-    // Count label
-    countLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    countLabel_->setFont(juce::FontOptions(11.0f));
-
     repaint();
 }
 
 void OscillatorListToolbar::updateCountLabel()
 {
-    juce::String text;
-    if (currentFilterMode_ == OscillatorFilterMode::All)
-    {
-        text = juce::String(totalCount_) + " Oscillators";
-    }
-    else if (currentFilterMode_ == OscillatorFilterMode::Visible)
-    {
-        text = juce::String(visibleCount_) + " Visible";
-    }
-    else
-    {
-        text = juce::String(totalCount_ - visibleCount_) + " Hidden";
-    }
-    countLabel_->setText(text, juce::dontSendNotification);
-    repaint();  // Repaint to update the badge
+    // Count badge is drawn directly in paint() using the state variables
+    repaint();
 }
 
 void OscillatorListToolbar::setFilterMode(OscillatorFilterMode mode)

@@ -114,9 +114,9 @@ void PaneLayoutManager::removePane(const PaneId& paneId)
         notifyPaneRemoved(paneId);
 
         // Re-index remaining panes
-        for (int i = 0; i < static_cast<int>(panes_.size()); ++i)
+        for (size_t i = 0; i < panes_.size(); ++i)
         {
-            panes_[i].setOrderIndex(i);
+            panes_[i].setOrderIndex(static_cast<int>(i));
         }
     }
 }
@@ -189,9 +189,9 @@ void PaneLayoutManager::movePane(const PaneId& paneId, int newIndex)
     panes_.insert(panes_.begin() + newIndex, pane);
 
     // Update order indices
-    for (int i = 0; i < static_cast<int>(panes_.size()); ++i)
+    for (size_t i = 0; i < panes_.size(); ++i)
     {
-        panes_[i].setOrderIndex(i);
+        panes_[i].setOrderIndex(static_cast<int>(i));
     }
 
     notifyPaneOrderChanged();
@@ -236,9 +236,9 @@ int PaneLayoutManager::getPaneCountInColumn(int column) const
 
 int PaneLayoutManager::getColumnForPane(int paneIndex) const
 {
-    if (paneIndex >= 0 && paneIndex < static_cast<int>(panes_.size()))
+    if (paneIndex >= 0 && static_cast<size_t>(paneIndex) < panes_.size())
     {
-        return panes_[paneIndex].getColumnIndex();
+        return panes_[static_cast<size_t>(paneIndex)].getColumnIndex();
     }
 
     // Fallback: row-major distribution
@@ -251,10 +251,10 @@ int PaneLayoutManager::getColumnForPane(int paneIndex) const
 
 juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Rectangle<int> availableArea) const
 {
-    if (panes_.empty() || paneIndex < 0 || paneIndex >= static_cast<int>(panes_.size()))
+    if (panes_.empty() || paneIndex < 0 || static_cast<size_t>(paneIndex) >= panes_.size())
         return {};
 
-    const Pane& pane = panes_[paneIndex];
+    const Pane& pane = panes_[static_cast<size_t>(paneIndex)];
     int numColumns = getColumnCount();
 
     // Calculate column width
@@ -267,12 +267,12 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Recta
     // Calculate total height ratio for this column
     float totalRatio = 0.0f;
     int panePositionInColumn = -1;
-    for (int i = 0; i < static_cast<int>(columnPanes.size()); ++i)
+    for (size_t i = 0; i < columnPanes.size(); ++i)
     {
         totalRatio += columnPanes[i]->getHeightRatio();
         if (columnPanes[i]->getId() == pane.getId())
         {
-            panePositionInColumn = i;
+            panePositionInColumn = static_cast<int>(i);
         }
     }
 
@@ -283,7 +283,7 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Recta
     float yRatio = 0.0f;
     for (int i = 0; i < panePositionInColumn; ++i)
     {
-        yRatio += columnPanes[i]->getHeightRatio();
+        yRatio += columnPanes[static_cast<size_t>(i)]->getHeightRatio();
     }
 
     int colX = availableArea.getX() + column * colWidth;
@@ -307,12 +307,12 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBoundsInColumn(const PaneId& pane
     // Calculate total height ratio
     float totalRatio = 0.0f;
     int panePosition = -1;
-    for (int i = 0; i < static_cast<int>(columnPanes.size()); ++i)
+    for (size_t i = 0; i < columnPanes.size(); ++i)
     {
         totalRatio += columnPanes[i]->getHeightRatio();
         if (columnPanes[i]->getId() == paneId)
         {
-            panePosition = i;
+            panePosition = static_cast<int>(i);
         }
     }
 
@@ -323,7 +323,7 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBoundsInColumn(const PaneId& pane
     float yRatio = 0.0f;
     for (int i = 0; i < panePosition; ++i)
     {
-        yRatio += columnPanes[i]->getHeightRatio();
+        yRatio += columnPanes[static_cast<size_t>(i)]->getHeightRatio();
     }
 
     int paneY = columnArea.getY() + static_cast<int>((yRatio / totalRatio) * columnArea.getHeight());
@@ -342,11 +342,11 @@ void PaneLayoutManager::redistributePanes()
     int numColumns = getColumnCount();
 
     // PRD: Round-robin distribution to balance columns
-    for (int i = 0; i < static_cast<int>(panes_.size()); ++i)
+    for (size_t i = 0; i < panes_.size(); ++i)
     {
-        int newCol = i % numColumns;
+        int newCol = static_cast<int>(i) % numColumns;
         panes_[i].setColumnIndex(newCol);
-        panes_[i].setOrderIndex(i);
+        panes_[i].setOrderIndex(static_cast<int>(i));
     }
 
     notifyPaneOrderChanged();
@@ -396,9 +396,9 @@ void PaneLayoutManager::fromValueTree(const juce::ValueTree& state)
     if (!panes_.empty())
     {
         int numColumns = getColumnCount();
-        for (int i = 0; i < static_cast<int>(panes_.size()); ++i)
+        for (size_t i = 0; i < panes_.size(); ++i)
         {
-            int newCol = i % numColumns;
+            int newCol = static_cast<int>(i) % numColumns;
             panes_[i].setColumnIndex(newCol);
         }
     }

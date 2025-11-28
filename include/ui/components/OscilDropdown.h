@@ -126,7 +126,7 @@ public:
     void clearItems();
 
     int getNumItems() const { return static_cast<int>(items_.size()); }
-    const DropdownItem& getItem(int index) const { return items_[index]; }
+    const DropdownItem& getItem(int index) const { return items_[static_cast<size_t>(index)]; }
 
     // Single selection
     void setSelectedIndex(int index, bool notify = true);

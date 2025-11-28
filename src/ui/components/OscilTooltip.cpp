@@ -200,9 +200,9 @@ TooltipPosition OscilTooltip::calculateBestPosition(juce::Point<int> target,
 
 int OscilTooltip::calculateContentWidth() const
 {
-    auto titleFont = juce::Font(13.0f, juce::Font::bold);
-    auto normalFont = juce::Font(12.0f);
-    auto smallFont = juce::Font(11.0f);
+    auto titleFont = juce::Font(juce::FontOptions().withHeight(13.0f)).boldened();
+    auto normalFont = juce::Font(juce::FontOptions().withHeight(12.0f));
+    auto smallFont = juce::Font(juce::FontOptions().withHeight(11.0f));
 
     int maxWidth = 0;
 
@@ -291,7 +291,7 @@ void OscilTooltip::paint(juce::Graphics& g)
     if (content_.title.isNotEmpty())
     {
         g.setColour(theme_.textPrimary.withAlpha(opacity));
-        g.setFont(juce::Font(13.0f, juce::Font::bold));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)).boldened());
         g.drawText(content_.title,
             PADDING, y, getWidth() - PADDING * 2, 16,
             juce::Justification::left);
@@ -302,7 +302,7 @@ void OscilTooltip::paint(juce::Graphics& g)
     if (content_.value.isNotEmpty())
     {
         g.setColour(theme_.textPrimary.withAlpha(opacity));
-        g.setFont(juce::Font(12.0f));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
         g.drawText(content_.value,
             PADDING, y, getWidth() - PADDING * 2, 14,
             juce::Justification::left);
@@ -328,7 +328,7 @@ void OscilTooltip::paint(juce::Graphics& g)
     if (content_.shortcut.isNotEmpty())
     {
         g.setColour(theme_.textSecondary.withAlpha(opacity));
-        g.setFont(juce::Font(11.0f));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
         g.drawText(content_.shortcut,
             PADDING, y, getWidth() - PADDING * 2, 14,
             juce::Justification::left);
@@ -339,7 +339,7 @@ void OscilTooltip::paint(juce::Graphics& g)
     if (content_.hint.isNotEmpty())
     {
         g.setColour(theme_.textSecondary.withAlpha(opacity * 0.8f));
-        g.setFont(juce::Font(11.0f, juce::Font::italic));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)).italicised());
         g.drawText(content_.hint,
             PADDING, y, getWidth() - PADDING * 2, 14,
             juce::Justification::left);
