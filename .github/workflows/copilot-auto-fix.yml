@@ -15,6 +15,24 @@ jobs:
       contents: read
 
     steps:
+      - name: Check for required secret
+        env:
+          HAS_PAT: ${{ secrets.COPILOT_ASSIGN_PAT != '' }}
+        run: |
+          if [ "$HAS_PAT" != "true" ]; then
+            echo "::error::COPILOT_ASSIGN_PAT secret is not set."
+            echo ""
+            echo "To enable automatic CI fix with Copilot:"
+            echo "1. Create a fine-grained PAT at https://github.com/settings/tokens?type=beta"
+            echo "   - Repository access: Only select repositories -> this repo"
+            echo "   - Permissions: Issues (Read/Write), Contents (Read)"
+            echo "2. Add the token as a repository secret named COPILOT_ASSIGN_PAT"
+            echo "   at https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo "3. Enable Copilot coding agent at https://github.com/settings/copilot"
+            exit 1
+          fi
+          echo "COPILOT_ASSIGN_PAT secret is configured"
+
       - name: Checkout
         uses: actions/checkout@v4
 
