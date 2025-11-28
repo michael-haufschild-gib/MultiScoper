@@ -28,8 +28,8 @@ cmake --build --preset <preset-name>
 # Test
 ctest --preset <preset-name>
 
-# Run specific test
-./build/<preset>/OscilTests --gtest_filter="TestName.*"
+# Run specific test (use ctest for cross-platform compatibility)
+ctest --preset <preset-name> -R "TestName"
 ```
 
 ## Project Structure
@@ -128,7 +128,7 @@ Do NOT modify these without explicit instruction:
 ## When Fixing Issues
 
 1. **Minimal changes**: Fix only what's broken
-2. **Test locally**: Ensure `ctest --preset dev` passes (Linux: use `ci-linux`)
+2. **Test locally**: Ensure tests pass with `ctest --preset dev` (macOS) or `ctest --preset ci-linux` (Linux)
 3. **Cross-platform**: Consider all three platforms
 4. **No regressions**: Don't break existing functionality
 5. **Update docs**: If changing build/dependency versions, update `docs/development.md`
@@ -155,6 +155,6 @@ When adding new source files:
 
 When adding tests:
 1. Create test file: `tests/test_class_name.cpp`
-2. Add to `CMakeLists.txt` under `add_executable(OscilTests ...)`
-3. If testing new code, add the source file to OscilTests too
+2. Add the test file to `CMakeLists.txt` under `add_executable(OscilTests ...)`
+3. If testing new source code, also add that source file (e.g., `src/core/MyClass.cpp`) to OscilTests
 4. Run: `ctest --preset dev`
