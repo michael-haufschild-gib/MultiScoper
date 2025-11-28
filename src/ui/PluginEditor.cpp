@@ -439,11 +439,14 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     startTimerHz(60);
 
     // Start test server for automated UI testing (standalone only)
-    #if JUCE_STANDALONE_APPLICATION
-    testServer_ = std::make_unique<PluginTestServer>(*this);
-    testServer_->start(9876);
-    DBG("Test server started on port 9876");
-    #endif
+    // Use runtime check because compile-time JUCE_STANDALONE_APPLICATION is 1
+    // for shared code library even when linked into VST3/AU targets
+    if (juce::PluginHostType::getPluginLoadedAs() == juce::AudioProcessor::wrapperType_Standalone)
+    {
+        testServer_ = std::make_unique<PluginTestServer>(*this);
+        testServer_->start(9876);
+        DBG("Test server started on port 9876");
+    }
 
     // Attach OpenGL context for GPU-accelerated rendering
     #if OSCIL_ENABLE_OPENGL
@@ -458,16 +461,18 @@ OscilPluginEditor::~OscilPluginEditor()
     // This must happen before OpenGL detach to avoid render-while-detaching
     stopTimer();
 
-    // Detach OpenGL context after timer is stopped
+    // Detach OpenGL context after timer is stopped (if not already detached)
     #if OSCIL_ENABLE_OPENGL
-    openGLContext_.detach();
+    if (!openGLDetached_)
+    {
+        openGLContext_.detach();
+        openGLDetached_ = true;
+    }
     #endif
 
-    // Stop test server
-    #if JUCE_STANDALONE_APPLICATION
+    // Stop test server (if it was started)
     if (testServer_)
         testServer_->stop();
-    #endif
 
     // Remove sidebar listener
     if (sidebar_ && sidebarAdapter_)
@@ -475,6 +480,25 @@ OscilPluginEditor::~OscilPluginEditor()
 
     // Coordinators handle their own listener cleanup in their destructors
     // They are destroyed in reverse order of construction
+}
+
+void OscilPluginEditor::parentHierarchyChanged()
+{
+    juce::AudioProcessorEditor::parentHierarchyChanged();
+
+    // Detach OpenGL context early when component is being removed from hierarchy
+    // This prevents race conditions in VST3 hosts where the context may be
+    // invalidated before the destructor runs (especially during rapid editor
+    // creation/destruction cycles like in pluginval testing)
+    #if OSCIL_ENABLE_OPENGL
+    if (getParentComponent() == nullptr && !openGLDetached_)
+    {
+        stopTimer();  // Stop timer first to prevent render callbacks
+        openGLContext_.detach();
+        openGLDetached_ = true;
+        DBG("OpenGL context detached early (parentHierarchyChanged)");
+    }
+    #endif
 }
 
 void OscilPluginEditor::paint(juce::Graphics& g)

@@ -61,6 +61,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void parentHierarchyChanged() override;
 
     // Sidebar control
     void toggleSidebar();
@@ -148,6 +149,7 @@ private:
 #if OSCIL_ENABLE_OPENGL
     // OpenGL context for GPU-accelerated rendering
     juce::OpenGLContext openGLContext_;
+    bool openGLDetached_ = false;  // Track if context was detached early
 #endif
 
 #if OSCIL_ENABLE_INSPECTOR
