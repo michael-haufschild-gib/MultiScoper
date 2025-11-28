@@ -10,6 +10,7 @@ namespace oscil
 
 TriggerSettingsSection::TriggerSettingsSection()
 {
+    OSCIL_REGISTER_TEST_ID("sidebar_trigger");
     setupComponents();
     ThemeManager::getInstance().addListener(this);
     updateModeVisibility();
@@ -59,7 +60,7 @@ void TriggerSettingsSection::setupComponents()
     modeLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*modeLabel_);
 
-    modeSelector_ = std::make_unique<OscilDropdown>();
+    modeSelector_ = std::make_unique<OscilDropdown>("sidebar_trigger_modeDropdown");
     modeSelector_->addItem("Free Running");  // index 0 = TriggerMode::FREE_RUNNING
     modeSelector_->addItem("Host Sync");     // index 1 = TriggerMode::HOST_SYNC
     modeSelector_->addItem("Triggered");     // index 2 = TriggerMode::TRIGGERED
@@ -76,7 +77,7 @@ void TriggerSettingsSection::setupComponents()
     addAndMakeVisible(*modeSelector_);
 
     // Threshold controls
-    thresholdSlider_ = std::make_unique<OscilSlider>();
+    thresholdSlider_ = std::make_unique<OscilSlider>("sidebar_trigger_thresholdSlider");
     thresholdSlider_->setLabel("Threshold");
     thresholdSlider_->setRange(MIN_THRESHOLD_DBFS, MAX_THRESHOLD_DBFS);
     thresholdSlider_->setStep(0.5);
@@ -106,6 +107,7 @@ void TriggerSettingsSection::setupComponents()
         notifyTriggerEdgeChanged();
     };
     addAndMakeVisible(*edgeToggle_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*edgeToggle_, "sidebar_trigger_edgeToggle");
 
     // Apply initial theme
     themeChanged(ThemeManager::getInstance().getCurrentTheme());

@@ -20,8 +20,7 @@ namespace oscil
  */
 enum class StereoDisplayMode
 {
-    Overlaid,  // Both channels on same center line (legacy)
-    Stacked    // L channel on top, R channel on bottom (preferred)
+    Stacked    // L channel on top, R channel on bottom
 };
 
 class OscilPluginProcessor;

@@ -30,17 +30,18 @@ OscillatorPanel::OscillatorPanel(const Oscillator& oscillator)
     };
     addAndMakeVisible(*nameLabel_);
 
-    visibilityToggle_ = std::make_unique<juce::ToggleButton>();
-    visibilityToggle_->setToggleState(visible_, juce::dontSendNotification);
-    visibilityToggle_->setButtonText(visible_ ? "V" : "H");
-    visibilityToggle_->onClick = [this]() { handleVisibilityToggle(); };
+    visibilityToggle_ = std::make_unique<OscilToggle>();
+    visibilityToggle_->setValue(visible_, false);
+    visibilityToggle_->onValueChanged = [this](bool /*value*/) { handleVisibilityToggle(); };
     addAndMakeVisible(*visibilityToggle_);
 
-    expandButton_ = std::make_unique<juce::TextButton>("...");
+    expandButton_ = std::make_unique<OscilButton>("...");
+    expandButton_->setVariant(ButtonVariant::Ghost);
     expandButton_->onClick = [this]() { handleExpandToggle(); };
     addAndMakeVisible(*expandButton_);
 
-    deleteButton_ = std::make_unique<juce::TextButton>("X");
+    deleteButton_ = std::make_unique<OscilButton>("X");
+    deleteButton_->setVariant(ButtonVariant::Danger);
     deleteButton_->onClick = [this]() { handleDeleteClick(); };
     addAndMakeVisible(*deleteButton_);
 
@@ -56,15 +57,16 @@ OscillatorPanel::OscillatorPanel(const Oscillator& oscillator)
     modeLabel_ = std::make_unique<juce::Label>("", "Mode:");
     addChildComponent(*modeLabel_);
 
-    processingModeSelector_ = std::make_unique<juce::ComboBox>("mode");
-    processingModeSelector_->addItem("Full Stereo", 1);
-    processingModeSelector_->addItem("Mono", 2);
-    processingModeSelector_->addItem("Mid", 3);
-    processingModeSelector_->addItem("Side", 4);
-    processingModeSelector_->addItem("Left", 5);
-    processingModeSelector_->addItem("Right", 6);
-    processingModeSelector_->setSelectedId(static_cast<int>(processingMode_) + 1, juce::dontSendNotification);
-    processingModeSelector_->onChange = [this]() { handleProcessingModeChange(); };
+    processingModeSelector_ = std::make_unique<OscilDropdown>();
+    processingModeSelector_->addItem("Full Stereo");
+    processingModeSelector_->addItem("Mono");
+    processingModeSelector_->addItem("Mid");
+    processingModeSelector_->addItem("Side");
+    processingModeSelector_->addItem("Left");
+    processingModeSelector_->addItem("Right");
+    // ProcessingMode enum is 0-based, OscilDropdown is also 0-based
+    processingModeSelector_->setSelectedIndex(static_cast<int>(processingMode_), false);
+    processingModeSelector_->onSelectionChanged = [this](int /*index*/) { handleProcessingModeChange(); };
     addChildComponent(*processingModeSelector_);
 
     colourLabel_ = std::make_unique<juce::Label>("", "Colour:");
@@ -158,10 +160,10 @@ void OscillatorPanel::setOscillator(const Oscillator& oscillator)
 
     // Update UI
     nameLabel_->setText(name_.isEmpty() ? "Oscillator" : name_, juce::dontSendNotification);
-    visibilityToggle_->setToggleState(visible_, juce::dontSendNotification);
-    visibilityToggle_->setButtonText(visible_ ? "V" : "H");
+    visibilityToggle_->setValue(visible_, false);
     sourceSelector_->setSelectedSourceId(sourceId_);
-    processingModeSelector_->setSelectedId(static_cast<int>(processingMode_) + 1, juce::dontSendNotification);
+    // ProcessingMode enum is 0-based, OscilDropdown is also 0-based
+    processingModeSelector_->setSelectedIndex(static_cast<int>(processingMode_), false);
     colorPicker_->setColour(colour_.withAlpha(opacity_));
 
     repaint();
@@ -195,7 +197,7 @@ void OscillatorPanel::setExpanded(bool expanded)
         colourLabel_->setVisible(expanded_);
         colorPicker_->setVisible(expanded_);
 
-        expandButton_->setButtonText(expanded_ ? "-" : "...");
+        expandButton_->setText(expanded_ ? "-" : "...");
 
         // Notify parent to resize
         if (auto* parent = getParentComponent())
@@ -222,10 +224,10 @@ void OscillatorPanel::handleSourceChange(const SourceId& sourceId)
 
 void OscillatorPanel::handleProcessingModeChange()
 {
-    int selectedId = processingModeSelector_->getSelectedId();
-    if (selectedId >= 1 && selectedId <= 6)
+    int selectedIndex = processingModeSelector_->getSelectedIndex();
+    if (selectedIndex >= 0 && selectedIndex <= 5)
     {
-        processingMode_ = static_cast<ProcessingMode>(selectedId - 1);
+        processingMode_ = static_cast<ProcessingMode>(selectedIndex);
         notifyOscillatorChanged();
     }
 }
@@ -240,8 +242,7 @@ void OscillatorPanel::handleColourChange(juce::Colour colour)
 
 void OscillatorPanel::handleVisibilityToggle()
 {
-    visible_ = visibilityToggle_->getToggleState();
-    visibilityToggle_->setButtonText(visible_ ? "V" : "H");
+    visible_ = visibilityToggle_->getValue();
 
     if (visibilityToggledCallback_)
     {

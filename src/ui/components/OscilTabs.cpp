@@ -28,6 +28,18 @@ OscilTabs::OscilTabs(Orientation orientation)
     orientation_ = orientation;
 }
 
+OscilTabs::OscilTabs(Orientation orientation, const juce::String& testId)
+    : OscilTabs()
+{
+    orientation_ = orientation;
+    setTestId(testId);
+}
+
+void OscilTabs::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilTabs::~OscilTabs()
 {
     ThemeManager::getInstance().removeListener(this);

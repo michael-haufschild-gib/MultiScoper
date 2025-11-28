@@ -32,6 +32,18 @@ OscilAccordionSection::OscilAccordionSection(const juce::String& title)
     title_ = title;
 }
 
+OscilAccordionSection::OscilAccordionSection(const juce::String& title, const juce::String& testId)
+    : OscilAccordionSection()
+{
+    title_ = title;
+    setTestId(testId);
+}
+
+void OscilAccordionSection::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilAccordionSection::~OscilAccordionSection()
 {
     ThemeManager::getInstance().removeListener(this);

@@ -259,6 +259,8 @@ if(OSCIL_BUILD_TESTS)
         tests/test_state_persistence.cpp
         tests/test_source.cpp
         tests/test_timing_config.cpp
+        tests/test_timing_engine.cpp
+        tests/test_plugin_processor.cpp
 
         # UI Component Tests
         tests/test_spring_animation.cpp
@@ -290,7 +292,32 @@ if(OSCIL_BUILD_TESTS)
         src/core/WindowLayout.cpp
         src/core/Source.cpp
         src/dsp/SignalProcessor.cpp
+        src/dsp/TimingEngine.cpp
+        src/core/PluginProcessor.cpp
+        src/ui/PluginEditor.cpp
+        src/ui/WaveformComponent.cpp
+        src/ui/OscillatorPanel.cpp
+        src/ui/PaneComponent.cpp
         src/ui/ThemeManager.cpp
+        src/ui/ThemeEditorComponent.cpp
+        src/ui/ColorPickerComponent.cpp
+        src/ui/StatusBarComponent.cpp
+        src/ui/SourceSelectorComponent.cpp
+        src/ui/SettingsDropdown.cpp
+        src/ui/SidebarComponent.cpp
+        src/ui/SourceItemComponent.cpp
+        src/ui/SegmentedButtonBar.cpp
+        src/ui/OscillatorListToolbar.cpp
+        src/ui/OscillatorListItem.cpp
+        src/ui/OscillatorConfigPopup.cpp
+        src/ui/PluginTestServer.cpp
+        src/ui/sections/TimingSidebarSection.cpp
+        src/ui/sections/MasterControlsSection.cpp
+        src/ui/sections/TriggerSettingsSection.cpp
+        src/ui/sections/DisplayOptionsSection.cpp
+        src/ui/coordinators/SourceCoordinator.cpp
+        src/ui/coordinators/ThemeCoordinator.cpp
+        src/ui/coordinators/LayoutCoordinator.cpp
 
         # UI Component source files for testing
         src/ui/components/OscilButton.cpp
@@ -316,6 +343,7 @@ if(OSCIL_BUILD_TESTS)
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${httplib_SOURCE_DIR}
     )
 
     target_link_libraries(OscilTests
@@ -326,10 +354,13 @@ if(OSCIL_BUILD_TESTS)
             juce::juce_data_structures
             juce::juce_graphics
             juce::juce_gui_basics
+            juce::juce_gui_extra
             juce::juce_events
             juce::juce_audio_basics
             juce::juce_audio_devices
             juce::juce_audio_processors
+            juce::juce_audio_utils
+            nlohmann_json::nlohmann_json
     )
 
     target_compile_definitions(OscilTests

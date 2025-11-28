@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -111,11 +112,13 @@ private:
  */
 class OscilDropdown : public juce::Component,
                       public ThemeManagerListener,
+                      public TestIdSupport,
                       private juce::Timer
 {
 public:
     OscilDropdown();
     explicit OscilDropdown(const juce::String& placeholder);
+    OscilDropdown(const juce::String& placeholder, const juce::String& testId);
     ~OscilDropdown() override;
 
     // Items management
@@ -212,6 +215,10 @@ private:
 
     static constexpr int CHEVRON_SIZE = 16;
     static constexpr int PADDING_H = 12;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilDropdown)
 };

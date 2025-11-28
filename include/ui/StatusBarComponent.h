@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -22,7 +23,8 @@ enum class RenderingMode
 /**
  * Status bar showing FPS, CPU usage, memory usage, and rendering mode
  */
-class StatusBarComponent : public juce::Component
+class StatusBarComponent : public juce::Component,
+                           public TestIdSupport
 {
 public:
     StatusBarComponent();
@@ -51,6 +53,9 @@ private:
     int oscillatorCount_ = 0;
     int sourceCount_ = 0;
     RenderingMode renderingMode_ = RenderingMode::Software;
+
+    // TestIdSupport
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StatusBarComponent)
 };

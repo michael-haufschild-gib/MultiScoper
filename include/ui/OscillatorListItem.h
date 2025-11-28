@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/ThemeManager.h"
+#include "ui/components/TestId.h"
 #include "core/Oscillator.h"
 #include <functional>
 
@@ -116,6 +117,8 @@ private:
     static constexpr int COLOR_INDICATOR_SIZE = 14;
     static constexpr int ICON_BUTTON_SIZE = 24;
     static constexpr int ROW_PADDING = 8;
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListItemComponent)
 };

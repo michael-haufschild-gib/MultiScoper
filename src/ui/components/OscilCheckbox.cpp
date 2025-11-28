@@ -29,6 +29,18 @@ OscilCheckbox::OscilCheckbox(const juce::String& label)
     label_ = label;
 }
 
+OscilCheckbox::OscilCheckbox(const juce::String& label, const juce::String& testId)
+    : OscilCheckbox()
+{
+    label_ = label;
+    setTestId(testId);
+}
+
+void OscilCheckbox::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilCheckbox::~OscilCheckbox()
 {
     ThemeManager::getInstance().removeListener(this);

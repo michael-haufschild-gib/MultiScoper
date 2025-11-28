@@ -223,8 +223,15 @@ void SignalProcessor::decimate(const float* input, int inputLength,
 
     if (inputLength <= outputLength)
     {
-        // No decimation needed, just copy
-        std::copy(input, input + std::min(inputLength, outputLength), output);
+        // Upsampling or same size - copy input and fill remaining with last value
+        std::copy(input, input + inputLength, output);
+
+        // Fill remaining output with the last input value (sample-and-hold)
+        if (inputLength < outputLength && inputLength > 0)
+        {
+            float lastValue = input[inputLength - 1];
+            std::fill(output + inputLength, output + outputLength, lastValue);
+        }
         return;
     }
 

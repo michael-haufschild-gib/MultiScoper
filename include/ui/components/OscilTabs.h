@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -39,6 +40,7 @@ struct TabItem
  */
 class OscilTabs : public juce::Component,
                   public ThemeManagerListener,
+                  public TestIdSupport,
                   private juce::Timer
 {
 public:
@@ -57,6 +59,7 @@ public:
 
     OscilTabs();
     explicit OscilTabs(Orientation orientation);
+    OscilTabs(Orientation orientation, const juce::String& testId);
     ~OscilTabs() override;
 
     // Tab management
@@ -160,6 +163,10 @@ private:
     static constexpr int TAB_PADDING_H = 16;
     static constexpr int ICON_SIZE = 16;
     static constexpr int BADGE_SIZE = 18;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilTabs)
 };

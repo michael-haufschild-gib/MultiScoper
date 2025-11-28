@@ -11,19 +11,22 @@ namespace oscil
 
 OscillatorConfigPopup::OscillatorConfigPopup()
 {
+    OSCIL_REGISTER_TEST_ID("configPopup");
     setupComponents();
     ThemeManager::getInstance().addListener(this);
 }
 
 OscillatorConfigPopup::~OscillatorConfigPopup()
 {
+    OSCIL_UNREGISTER_CHILD_TEST_ID("configPopup_sourceDropdown");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("configPopup_modeSelector");
     ThemeManager::getInstance().removeListener(this);
 }
 
 void OscillatorConfigPopup::setupComponents()
 {
     // Header: Name editor (OscilTextField)
-    nameEditor_ = std::make_unique<OscilTextField>();
+    nameEditor_ = std::make_unique<OscilTextField>(TextFieldVariant::Text, "configPopup_nameField");
     nameEditor_->setPlaceholder("Oscillator Name");
     nameEditor_->onReturnPressed = [this]() { handleNameEdit(); };
     // OscilTextField doesn't have onFocusLost - use onTextChanged for immediate feedback
@@ -37,7 +40,7 @@ void OscillatorConfigPopup::setupComponents()
     addAndMakeVisible(*visibilityToggle_);
 
     // Header: Close button (OscilButton)
-    closeButton_ = std::make_unique<OscilButton>("X");
+    closeButton_ = std::make_unique<OscilButton>("X", "configPopup_closeBtn");
     closeButton_->setVariant(ButtonVariant::Ghost);
     closeButton_->onClick = [this]() { handleClose(); };
     addAndMakeVisible(*closeButton_);
@@ -49,33 +52,35 @@ void OscillatorConfigPopup::setupComponents()
     sourceSelector_ = std::make_unique<SourceSelectorComponent>();
     sourceSelector_->onSelectionChanged([this](const SourceId& id) { handleSourceChange(id); });
     addAndMakeVisible(*sourceSelector_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
 
     // Processing mode section
     modeLabel_ = std::make_unique<juce::Label>("", "Processing Mode");
     addAndMakeVisible(*modeLabel_);
 
     modeButtons_ = std::make_unique<SegmentedButtonBar>();
-    modeButtons_->addButton("Full Stereo", static_cast<int>(ProcessingMode::FullStereo));
-    modeButtons_->addButton("Mono", static_cast<int>(ProcessingMode::Mono));
-    modeButtons_->addButton("Mid", static_cast<int>(ProcessingMode::Mid));
-    modeButtons_->addButton("Side", static_cast<int>(ProcessingMode::Side));
-    modeButtons_->addButton("Left", static_cast<int>(ProcessingMode::Left));
-    modeButtons_->addButton("Right", static_cast<int>(ProcessingMode::Right));
+    modeButtons_->addButton("Full Stereo", static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
+    modeButtons_->addButton("Mono", static_cast<int>(ProcessingMode::Mono), "configPopup_modeSelector_mono");
+    modeButtons_->addButton("Mid", static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
+    modeButtons_->addButton("Side", static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
+    modeButtons_->addButton("Left", static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
+    modeButtons_->addButton("Right", static_cast<int>(ProcessingMode::Right), "configPopup_modeSelector_right");
     modeButtons_->onSelectionChanged = [this](int id) { handleProcessingModeChange(id); };
     addAndMakeVisible(*modeButtons_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
 
     // Color swatches (OscilColorSwatches)
     colorLabel_ = std::make_unique<juce::Label>("", "Color Picker");
     addAndMakeVisible(*colorLabel_);
 
-    colorSwatches_ = std::make_unique<OscilColorSwatches>();
+    colorSwatches_ = std::make_unique<OscilColorSwatches>("configPopup_colorPicker");
     std::vector<juce::Colour> colors(defaultColors_.begin(), defaultColors_.end());
     colorSwatches_->setColors(colors);
     colorSwatches_->onColorSelected = [this](int, juce::Colour color) { handleColorSelect(color); };
     addAndMakeVisible(*colorSwatches_);
 
     // Line Width slider (OscilSlider with label)
-    lineWidthSlider_ = std::make_unique<OscilSlider>();
+    lineWidthSlider_ = std::make_unique<OscilSlider>("configPopup_lineWidthSlider");
     lineWidthSlider_->setLabel("Line Width");
     lineWidthSlider_->setRange(Oscillator::MIN_LINE_WIDTH, Oscillator::MAX_LINE_WIDTH);
     lineWidthSlider_->setStep(0.1);
@@ -85,7 +90,7 @@ void OscillatorConfigPopup::setupComponents()
     addAndMakeVisible(*lineWidthSlider_);
 
     // Opacity slider (OscilSlider with label)
-    opacitySlider_ = std::make_unique<OscilSlider>();
+    opacitySlider_ = std::make_unique<OscilSlider>("configPopup_opacitySlider");
     opacitySlider_->setLabel("Opacity");
     opacitySlider_->setRange(0.0, 100.0);
     opacitySlider_->setStep(1.0);
@@ -95,7 +100,7 @@ void OscillatorConfigPopup::setupComponents()
     addAndMakeVisible(*opacitySlider_);
 
     // Vertical Scale slider (OscilSlider with label)
-    scaleSlider_ = std::make_unique<OscilSlider>();
+    scaleSlider_ = std::make_unique<OscilSlider>("configPopup_verticalScaleSlider");
     scaleSlider_->setLabel("Vertical Scale");
     scaleSlider_->setRange(Oscillator::MIN_VERTICAL_SCALE, Oscillator::MAX_VERTICAL_SCALE);
     scaleSlider_->setStep(0.1);
@@ -105,7 +110,7 @@ void OscillatorConfigPopup::setupComponents()
     addAndMakeVisible(*scaleSlider_);
 
     // Vertical Offset slider (OscilSlider with label)
-    offsetSlider_ = std::make_unique<OscilSlider>();
+    offsetSlider_ = std::make_unique<OscilSlider>("configPopup_verticalOffsetSlider");
     offsetSlider_->setLabel("Vertical Offset");
     offsetSlider_->setRange(Oscillator::MIN_VERTICAL_OFFSET, Oscillator::MAX_VERTICAL_OFFSET);
     offsetSlider_->setStep(0.01);
@@ -117,12 +122,12 @@ void OscillatorConfigPopup::setupComponents()
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
     addAndMakeVisible(*paneLabel_);
 
-    paneSelector_ = std::make_unique<OscilDropdown>();
+    paneSelector_ = std::make_unique<OscilDropdown>("", "configPopup_paneDropdown");
     paneSelector_->onSelectionChanged = [this](int) { handlePaneChange(); };
     addAndMakeVisible(*paneSelector_);
 
     // Footer: Delete button (OscilButton with Danger variant)
-    deleteButton_ = std::make_unique<OscilButton>("Delete Oscillator");
+    deleteButton_ = std::make_unique<OscilButton>("Delete Oscillator", "configPopup_deleteBtn");
     deleteButton_->setVariant(ButtonVariant::Danger);
     deleteButton_->onClick = [this]() { handleDelete(); };
     addAndMakeVisible(*deleteButton_);

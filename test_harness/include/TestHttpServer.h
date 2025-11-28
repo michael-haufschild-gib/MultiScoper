@@ -14,6 +14,7 @@
 #include "TestDAW.h"
 #include "TestUIController.h"
 #include "TestScreenshot.h"
+#include "TestMetrics.h"
 #include <thread>
 #include <atomic>
 
@@ -74,19 +75,51 @@ private:
     void handleTrackBurst(const httplib::Request& req, httplib::Response& res);
     void handleTrackInfo(const httplib::Request& req, httplib::Response& res);
 
-    // Route handlers - UI
+    // Route handlers - UI Mouse
     void handleUIClick(const httplib::Request& req, httplib::Response& res);
     void handleUIDoubleClick(const httplib::Request& req, httplib::Response& res);
+    void handleUIRightClick(const httplib::Request& req, httplib::Response& res);
+    void handleUIHover(const httplib::Request& req, httplib::Response& res);
     void handleUISelect(const httplib::Request& req, httplib::Response& res);
     void handleUIToggle(const httplib::Request& req, httplib::Response& res);
     void handleUISlider(const httplib::Request& req, httplib::Response& res);
+    void handleUISliderIncrement(const httplib::Request& req, httplib::Response& res);
+    void handleUISliderDecrement(const httplib::Request& req, httplib::Response& res);
+    void handleUISliderReset(const httplib::Request& req, httplib::Response& res);
     void handleUIDrag(const httplib::Request& req, httplib::Response& res);
+    void handleUIDragOffset(const httplib::Request& req, httplib::Response& res);
+    void handleUIScroll(const httplib::Request& req, httplib::Response& res);
     void handleUIState(const httplib::Request& req, httplib::Response& res);
     void handleUIElement(const httplib::Request& req, httplib::Response& res);
+    void handleUIElements(const httplib::Request& req, httplib::Response& res);
 
-    // Route handlers - Screenshot
+    // Route handlers - UI Keyboard
+    void handleUIKeyPress(const httplib::Request& req, httplib::Response& res);
+    void handleUITypeText(const httplib::Request& req, httplib::Response& res);
+    void handleUIClearText(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - UI Focus
+    void handleUIFocus(const httplib::Request& req, httplib::Response& res);
+    void handleUIGetFocused(const httplib::Request& req, httplib::Response& res);
+    void handleUIFocusNext(const httplib::Request& req, httplib::Response& res);
+    void handleUIFocusPrevious(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - UI Wait
+    void handleUIWaitForElement(const httplib::Request& req, httplib::Response& res);
+    void handleUIWaitForVisible(const httplib::Request& req, httplib::Response& res);
+    void handleUIWaitForEnabled(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Screenshot & Visual Verification
     void handleScreenshot(const httplib::Request& req, httplib::Response& res);
+    void handleScreenshotCompare(const httplib::Request& req, httplib::Response& res);
+    void handleBaselineSave(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Verification
     void handleVerifyWaveform(const httplib::Request& req, httplib::Response& res);
+    void handleVerifyColor(const httplib::Request& req, httplib::Response& res);
+    void handleVerifyBounds(const httplib::Request& req, httplib::Response& res);
+    void handleVerifyVisible(const httplib::Request& req, httplib::Response& res);
+    void handleAnalyzeWaveform(const httplib::Request& req, httplib::Response& res);
 
     // Route handlers - State
     void handleStateReset(const httplib::Request& req, httplib::Response& res);
@@ -99,9 +132,18 @@ private:
     // Health check
     void handleHealth(const httplib::Request& req, httplib::Response& res);
 
+    // Route handlers - Performance Metrics
+    void handleMetricsStart(const httplib::Request& req, httplib::Response& res);
+    void handleMetricsStop(const httplib::Request& req, httplib::Response& res);
+    void handleMetricsCurrent(const httplib::Request& req, httplib::Response& res);
+    void handleMetricsStats(const httplib::Request& req, httplib::Response& res);
+    void handleMetricsReset(const httplib::Request& req, httplib::Response& res);
+    void handleMetricsRecordFrame(const httplib::Request& req, httplib::Response& res);
+
     TestDAW& daw_;
     TestUIController uiController_;
     TestScreenshot screenshot_;
+    TestMetrics metrics_;
 
     std::unique_ptr<httplib::Server> server_;
     std::unique_ptr<std::thread> serverThread_;

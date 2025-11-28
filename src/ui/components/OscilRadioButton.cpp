@@ -33,6 +33,18 @@ OscilRadioButton::OscilRadioButton(const juce::String& label)
     label_ = label;
 }
 
+OscilRadioButton::OscilRadioButton(const juce::String& label, const juce::String& testId)
+    : OscilRadioButton()
+{
+    label_ = label;
+    setTestId(testId);
+}
+
+void OscilRadioButton::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilRadioButton::~OscilRadioButton()
 {
     ThemeManager::getInstance().removeListener(this);

@@ -12,6 +12,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 #include <vector>
 
 namespace oscil
@@ -30,14 +31,18 @@ namespace oscil
  * - Scroll wheel support
  * - Value tooltip on hover
  * - Full keyboard accessibility
+ * - E2E test automation via testId
  */
 class OscilSlider : public juce::Component,
                     public ThemeManagerListener,
+                    public TestIdSupport,
                     private juce::Timer
 {
 public:
     OscilSlider();
     explicit OscilSlider(SliderVariant variant);
+    explicit OscilSlider(const juce::String& testId);
+    OscilSlider(SliderVariant variant, const juce::String& testId);
     ~OscilSlider() override;
 
     // Variant
@@ -208,6 +213,10 @@ private:
     static constexpr int TOOLTIP_HEIGHT = 24;
     static constexpr int TOOLTIP_PADDING = 8;
     static constexpr float THUMB_HIT_EXTRA = 6.0f;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilSlider)
 };

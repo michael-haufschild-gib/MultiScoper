@@ -9,6 +9,7 @@
 #include "ui/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -23,12 +24,14 @@ namespace oscil
  * - Compact mode for smaller spaces
  */
 class OscilBadge : public juce::Component,
-                   public ThemeManagerListener
+                   public ThemeManagerListener,
+                   public TestIdSupport
 {
 public:
     OscilBadge();
     explicit OscilBadge(const juce::String& text);
     OscilBadge(const juce::String& text, BadgeColor color);
+    OscilBadge(const juce::String& text, BadgeColor color, const juce::String& testId);
     ~OscilBadge() override;
 
     // Content
@@ -76,6 +79,10 @@ private:
     static constexpr int PADDING_V = 4;
     static constexpr int COMPACT_PADDING_H = 6;
     static constexpr int COMPACT_PADDING_V = 2;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilBadge)
 };

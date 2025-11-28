@@ -253,6 +253,21 @@ bool ThemeManager::deleteTheme(const juce::String& name)
     if (it == themes_.end() || it->second.isSystemTheme)
         return false;
 
+    // If deleting the current theme, switch to a default theme first
+    if (currentTheme_.name == name)
+    {
+        // Find a system theme to switch to
+        for (const auto& [themeName, theme] : themes_)
+        {
+            if (theme.isSystemTheme)
+            {
+                currentTheme_ = theme;
+                notifyListeners();
+                break;
+            }
+        }
+    }
+
     themes_.erase(it);
 
     // Delete theme file from disk

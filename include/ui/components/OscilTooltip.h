@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -27,10 +28,12 @@ namespace oscil
  */
 class OscilTooltip : public juce::Component,
                      public ThemeManagerListener,
+                     public TestIdSupport,
                      private juce::Timer
 {
 public:
     OscilTooltip();
+    explicit OscilTooltip(const juce::String& testId);
     ~OscilTooltip() override;
 
     // Content configuration
@@ -91,6 +94,10 @@ private:
 
     // Global tooltip instance for simple usage
     static inline juce::Component::SafePointer<OscilTooltip> globalTooltip_;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilTooltip)
 };

@@ -12,6 +12,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -31,11 +32,14 @@ class OscilButton;
  */
 class OscilTextField : public juce::Component,
                        public ThemeManagerListener,
+                       public TestIdSupport,
                        private juce::Timer
 {
 public:
     OscilTextField();
     explicit OscilTextField(TextFieldVariant variant);
+    explicit OscilTextField(const juce::String& testId);
+    OscilTextField(TextFieldVariant variant, const juce::String& testId);
     ~OscilTextField() override;
 
     // Variant configuration
@@ -155,6 +159,10 @@ private:
     // Layout constants
     static constexpr int ICON_WIDTH = 32;
     static constexpr int STEPPER_WIDTH = 28;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilTextField)
 };

@@ -11,21 +11,22 @@ namespace oscil
 
 ColorPickerComponent::ColorPickerComponent()
 {
-    // Create sliders
-    auto createSlider = [this](std::unique_ptr<juce::Slider>& slider, const juce::String& name)
+    // Create sliders for RGBA channels
+    auto createSlider = [this](std::unique_ptr<OscilSlider>& slider)
     {
-        slider = std::make_unique<juce::Slider>(name);
-        slider->setSliderStyle(juce::Slider::LinearHorizontal);
-        slider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
-        slider->setRange(0, 255, 1);
-        slider->onValueChange = [this]() { updateFromSliders(); };
+        slider = std::make_unique<OscilSlider>();
+        slider->setRange(0, 255);
+        slider->setStep(1);
+        slider->setDecimalPlaces(0);
+        slider->setShowValueOnHover(true);
+        slider->onValueChanged = [this](double /*value*/) { updateFromSliders(); };
         addAndMakeVisible(*slider);
     };
 
-    createSlider(redSlider_, "R");
-    createSlider(greenSlider_, "G");
-    createSlider(blueSlider_, "B");
-    createSlider(alphaSlider_, "A");
+    createSlider(redSlider_);
+    createSlider(greenSlider_);
+    createSlider(blueSlider_);
+    createSlider(alphaSlider_);
 
     // Create labels
     auto createLabel = [this](std::unique_ptr<juce::Label>& label, const juce::String& text)
@@ -42,12 +43,9 @@ ColorPickerComponent::ColorPickerComponent()
     createLabel(hexLabel_, "Hex:");
 
     // Create hex input
-    hexInput_ = std::make_unique<juce::TextEditor>("hex");
-    hexInput_->setMultiLine(false);
-    hexInput_->setReturnKeyStartsNewLine(false);
-    hexInput_->setInputRestrictions(9, "#0123456789ABCDEFabcdef");
-    hexInput_->onReturnKey = [this]() { updateFromHex(); };
-    hexInput_->onFocusLost = [this]() { updateFromHex(); };
+    hexInput_ = std::make_unique<OscilTextField>();
+    hexInput_->setPlaceholder("#RRGGBBAA");
+    hexInput_->onReturnPressed = [this]() { updateFromHex(); };
     addAndMakeVisible(*hexInput_);
 
     // Initialize controls
@@ -101,7 +99,7 @@ void ColorPickerComponent::resized()
     bounds.removeFromRight(10); // spacing
 
     // Layout sliders vertically
-    auto layoutRow = [&](juce::Label* label, juce::Slider* slider)
+    auto layoutRow = [&](juce::Label* label, OscilSlider* slider)
     {
         auto row = bounds.removeFromTop(sliderHeight);
         label->setBounds(row.removeFromLeft(labelWidth));
@@ -197,7 +195,7 @@ void ColorPickerComponent::updateFromSliders()
         static_cast<juce::uint8>(alphaSlider_->getValue())
     );
 
-    hexInput_->setText(toHexString(currentColour_), juce::dontSendNotification);
+    hexInput_->setText(toHexString(currentColour_), false);
     repaint();
     notifyColourChanged();
 
@@ -215,10 +213,10 @@ void ColorPickerComponent::updateFromHex()
         isUpdating_ = true;
 
         currentColour_ = newColour;
-        redSlider_->setValue(currentColour_.getRed(), juce::dontSendNotification);
-        greenSlider_->setValue(currentColour_.getGreen(), juce::dontSendNotification);
-        blueSlider_->setValue(currentColour_.getBlue(), juce::dontSendNotification);
-        alphaSlider_->setValue(currentColour_.getAlpha(), juce::dontSendNotification);
+        redSlider_->setValue(currentColour_.getRed(), false);
+        greenSlider_->setValue(currentColour_.getGreen(), false);
+        blueSlider_->setValue(currentColour_.getBlue(), false);
+        alphaSlider_->setValue(currentColour_.getAlpha(), false);
         repaint();
         notifyColourChanged();
 
@@ -227,7 +225,7 @@ void ColorPickerComponent::updateFromHex()
     else
     {
         // Restore valid value
-        hexInput_->setText(toHexString(currentColour_), juce::dontSendNotification);
+        hexInput_->setText(toHexString(currentColour_), false);
     }
 }
 
@@ -238,11 +236,11 @@ void ColorPickerComponent::updateControls()
 
     isUpdating_ = true;
 
-    redSlider_->setValue(currentColour_.getRed(), juce::dontSendNotification);
-    greenSlider_->setValue(currentColour_.getGreen(), juce::dontSendNotification);
-    blueSlider_->setValue(currentColour_.getBlue(), juce::dontSendNotification);
-    alphaSlider_->setValue(currentColour_.getAlpha(), juce::dontSendNotification);
-    hexInput_->setText(toHexString(currentColour_), juce::dontSendNotification);
+    redSlider_->setValue(currentColour_.getRed(), false);
+    greenSlider_->setValue(currentColour_.getGreen(), false);
+    blueSlider_->setValue(currentColour_.getBlue(), false);
+    alphaSlider_->setValue(currentColour_.getAlpha(), false);
+    hexInput_->setText(toHexString(currentColour_), false);
 
     repaint();
 

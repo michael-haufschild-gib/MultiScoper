@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -20,11 +21,13 @@ namespace oscil
  */
 class OscilAccordionSection : public juce::Component,
                               public ThemeManagerListener,
+                              public TestIdSupport,
                               private juce::Timer
 {
 public:
     OscilAccordionSection();
     explicit OscilAccordionSection(const juce::String& title);
+    OscilAccordionSection(const juce::String& title, const juce::String& testId);
     ~OscilAccordionSection() override;
 
     // Configuration
@@ -93,6 +96,10 @@ private:
     static constexpr int CHEVRON_SIZE = 16;
     static constexpr int ICON_SIZE = 18;
     static constexpr int PADDING_H = 12;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilAccordionSection)
 };

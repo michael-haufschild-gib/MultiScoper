@@ -8,6 +8,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "core/InstanceRegistry.h"
 #include "core/Pane.h"
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/TestId.h"
 #include <functional>
 #include <memory>
 
@@ -71,12 +73,14 @@ private:
     bool isHovered_ = false;
     bool isSelected_ = false;
 
-    std::unique_ptr<juce::ComboBox> addToPaneDropdown_;
+    std::unique_ptr<OscilDropdown> addToPaneDropdown_;
     std::vector<PaneId> paneIds_;  // Maps dropdown index to PaneId
 
     static constexpr int ITEM_HEIGHT = 36;
     static constexpr int ACTIVITY_DOT_SIZE = 8;
     static constexpr int DROPDOWN_WIDTH = 100;
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourceItemComponent)
 };

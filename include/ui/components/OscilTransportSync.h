@@ -12,6 +12,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -28,10 +29,12 @@ namespace oscil
  */
 class OscilTransportSync : public juce::Component,
                            public ThemeManagerListener,
+                           public TestIdSupport,
                            private juce::Timer
 {
 public:
     OscilTransportSync();
+    explicit OscilTransportSync(const juce::String& testId);
     ~OscilTransportSync() override;
 
     // Transport info update (call from processBlock)
@@ -125,6 +128,10 @@ private:
     SpringAnimation beatPulseSpring_;
 
     ColorTheme theme_;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilTransportSync)
 };

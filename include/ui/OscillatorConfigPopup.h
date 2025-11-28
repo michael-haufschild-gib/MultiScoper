@@ -16,6 +16,7 @@
 #include "ui/components/OscilTextField.h"
 #include "ui/components/OscilColorSwatches.h"
 #include "ui/components/OscilToggle.h"
+#include "ui/components/TestId.h"
 #include <functional>
 #include <vector>
 
@@ -168,6 +169,8 @@ private:
         juce::Colour(0xFF32CD32),  // Lime Green
         juce::Colour(0xFFFF1493)   // Deep Pink
     }};
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorConfigPopup)
 };

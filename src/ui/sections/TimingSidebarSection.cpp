@@ -10,6 +10,7 @@ namespace oscil
 
 TimingSidebarSection::TimingSidebarSection()
 {
+    OSCIL_REGISTER_TEST_ID("sidebar_timing");
     setupComponents();
     ThemeManager::getInstance().addListener(this);
     updateModeVisibility();
@@ -40,9 +41,10 @@ void TimingSidebarSection::setupComponents()
         notifyTimingModeChanged();
     };
     addAndMakeVisible(*modeToggle_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*modeToggle_, "sidebar_timing_modeToggle");
 
     // TIME mode controls
-    timeIntervalSlider_ = std::make_unique<OscilSlider>();
+    timeIntervalSlider_ = std::make_unique<OscilSlider>("sidebar_timing_intervalSlider");
     timeIntervalSlider_->setLabel("Interval");
     timeIntervalSlider_->setRange(1.0, 1000.0);
     timeIntervalSlider_->setStep(1.0);
@@ -63,7 +65,7 @@ void TimingSidebarSection::setupComponents()
     noteIntervalLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*noteIntervalLabel_);
 
-    noteIntervalSelector_ = std::make_unique<OscilDropdown>();
+    noteIntervalSelector_ = std::make_unique<OscilDropdown>("sidebar_timing_noteDropdown");
     populateNoteIntervalSelector();
     noteIntervalSelector_->onSelectionChanged = [this](int index)
     {
@@ -90,15 +92,17 @@ void TimingSidebarSection::setupComponents()
     bpmValueLabel_->setText(juce::String(hostBPM_, 1), juce::dontSendNotification);
     bpmValueLabel_->setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(*bpmValueLabel_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*bpmValueLabel_, "sidebar_timing_bpmDisplay");
 
     // Calculated interval display
     calculatedIntervalLabel_ = std::make_unique<juce::Label>();
     calculatedIntervalLabel_->setJustificationType(juce::Justification::centred);
     addAndMakeVisible(*calculatedIntervalLabel_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*calculatedIntervalLabel_, "sidebar_timing_intervalDisplay");
     updateCalculatedInterval();
 
     // Host sync toggle
-    hostSyncToggle_ = std::make_unique<OscilToggle>("Sync to Host");
+    hostSyncToggle_ = std::make_unique<OscilToggle>("Sync to Host", "sidebar_timing_hostSyncToggle");
     hostSyncToggle_->setValue(hostSyncEnabled_, false);
     hostSyncToggle_->onValueChanged = [this](bool value)
     {
@@ -108,7 +112,7 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*hostSyncToggle_);
 
     // Reset on play toggle
-    resetOnPlayToggle_ = std::make_unique<OscilToggle>("Reset on Play");
+    resetOnPlayToggle_ = std::make_unique<OscilToggle>("Reset on Play", "sidebar_timing_resetOnPlayToggle");
     resetOnPlayToggle_->setValue(resetOnPlayEnabled_, false);
     resetOnPlayToggle_->onValueChanged = [this](bool value)
     {

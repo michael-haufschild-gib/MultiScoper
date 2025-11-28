@@ -167,6 +167,8 @@ SettingsDropdown::SettingsDropdown(OscilPluginProcessor& processor)
 {
     juce::ignoreUnused(processor_);  // May be used for future settings
 
+    setTestId("settingsDropdown");
+
     setupThemeSection();
     setupLayoutSection();
     setupStatusBarSection();
@@ -176,7 +178,19 @@ SettingsDropdown::SettingsDropdown(OscilPluginProcessor& processor)
 
 SettingsDropdown::~SettingsDropdown()
 {
+    // Unregister child testIds
+    OSCIL_UNREGISTER_CHILD_TEST_ID("settingsDropdown_statusBarToggle");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("settingsDropdown_layout1Btn");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("settingsDropdown_layout2Btn");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("settingsDropdown_layout3Btn");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("settingsDropdown_editThemeBtn");
+
     ThemeManager::getInstance().removeListener(this);
+}
+
+void SettingsDropdown::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
 }
 
 void SettingsDropdown::setupThemeSection()
@@ -187,9 +201,11 @@ void SettingsDropdown::setupThemeSection()
     addAndMakeVisible(themeSectionLabel_.get());
 
     // Theme Editor button
-    editThemeButton_ = std::make_unique<juce::TextButton>("Theme Editor...");
+    editThemeButton_ = std::make_unique<OscilButton>("Theme Editor...");
+    editThemeButton_->setVariant(ButtonVariant::Secondary);
     editThemeButton_->onClick = [this]() { notifyThemeEditRequested(); };
     addAndMakeVisible(editThemeButton_.get());
+    OSCIL_REGISTER_CHILD_TEST_ID(*editThemeButton_, "settingsDropdown_editThemeBtn");
 
     // Populate theme list
     refreshThemeList();
@@ -210,6 +226,11 @@ void SettingsDropdown::setupLayoutSection()
         button->setSelected(layout == currentLayout_);
         button->onClick = [this](ColumnLayout l) { selectLayout(l); };
         addAndMakeVisible(*button);
+
+        // Register testId for each button
+        juce::String testId = "settingsDropdown_layout" + juce::String(i) + "Btn";
+        OSCIL_REGISTER_CHILD_TEST_ID(*button, testId);
+
         layoutButtons_.push_back(std::move(button));
     }
 }
@@ -220,14 +241,15 @@ void SettingsDropdown::setupStatusBarSection()
     statusBarLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
     addAndMakeVisible(statusBarLabel_.get());
 
-    statusBarToggle_ = std::make_unique<juce::ToggleButton>();
-    statusBarToggle_->setToggleState(statusBarVisible_, juce::dontSendNotification);
-    statusBarToggle_->onClick = [this]()
+    statusBarToggle_ = std::make_unique<OscilToggle>();
+    statusBarToggle_->setValue(statusBarVisible_, false);
+    statusBarToggle_->onValueChanged = [this](bool value)
     {
-        statusBarVisible_ = statusBarToggle_->getToggleState();
+        statusBarVisible_ = value;
         notifyStatusBarVisibilityChanged();
     };
     addAndMakeVisible(statusBarToggle_.get());
+    OSCIL_REGISTER_CHILD_TEST_ID(*statusBarToggle_, "settingsDropdown_statusBarToggle");
 }
 
 void SettingsDropdown::refreshThemeList()
@@ -353,9 +375,7 @@ void SettingsDropdown::themeChanged(const ColorTheme& /*newTheme*/)
     layoutSectionLabel_->setColour(juce::Label::textColourId, theme.textSecondary);
     statusBarLabel_->setColour(juce::Label::textColourId, theme.textSecondary);
 
-    // Update button colors
-    editThemeButton_->setColour(juce::TextButton::buttonColourId, theme.controlBackground);
-    editThemeButton_->setColour(juce::TextButton::textColourOffId, theme.textPrimary);
+    // OscilButton and OscilToggle handle their own theme colors automatically
 
     repaint();
 }
@@ -363,7 +383,7 @@ void SettingsDropdown::themeChanged(const ColorTheme& /*newTheme*/)
 void SettingsDropdown::setStatusBarVisible(bool visible)
 {
     statusBarVisible_ = visible;
-    statusBarToggle_->setToggleState(visible, juce::dontSendNotification);
+    statusBarToggle_->setValue(visible, false);
 }
 
 void SettingsDropdown::setLayoutMode(ColumnLayout layout)

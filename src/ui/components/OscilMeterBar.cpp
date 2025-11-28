@@ -16,6 +16,17 @@ OscilMeterBar::OscilMeterBar()
     startTimerHz(30);  // Update at 30 FPS
 }
 
+OscilMeterBar::OscilMeterBar(const juce::String& testId)
+    : OscilMeterBar()
+{
+    setTestId(testId);
+}
+
+void OscilMeterBar::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilMeterBar::~OscilMeterBar()
 {
     ThemeManager::getInstance().removeListener(this);

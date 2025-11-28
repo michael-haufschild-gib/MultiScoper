@@ -423,11 +423,4 @@ namespace TimingIds
     static const juce::Identifier TriggerThreshold{ "triggerThreshold" };
 }
 
-// Legacy identifiers for migration
-namespace LegacyTimingIds
-{
-    static const juce::Identifier TimeBase{ "timeBase" };
-    static const juce::Identifier WindowSize{ "windowSize" };
-}
-
 } // namespace oscil

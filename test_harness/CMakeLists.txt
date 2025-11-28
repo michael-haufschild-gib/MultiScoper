@@ -38,6 +38,7 @@ set(TEST_HARNESS_SOURCES
     src/TestElementRegistry.cpp
     src/TestUIController.cpp
     src/TestScreenshot.cpp
+    src/TestMetrics.cpp
 )
 
 set(TEST_HARNESS_HEADERS
@@ -49,6 +50,7 @@ set(TEST_HARNESS_HEADERS
     include/TestElementRegistry.h
     include/TestUIController.h
     include/TestScreenshot.h
+    include/TestMetrics.h
     include/TestableComponent.h
 )
 
@@ -87,6 +89,24 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/SourceCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/ThemeCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/LayoutCoordinator.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/PluginTestServer.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordion.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilBadge.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButton.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilCheckbox.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorPicker.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorSwatches.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdown.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilMeterBar.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModal.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButton.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSlider.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabs.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextField.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilToggle.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTooltip.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTransportSync.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/UIAudioFeedback.cpp
 )
 
 # Create JUCE standalone application

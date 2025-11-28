@@ -78,7 +78,6 @@ bool OscilState::fromXmlString(const juce::String& xmlString)
         if (loadedState.isValid() && loadedState.hasType(StateIds::OscilState))
         {
             state_ = loadedState;
-            migrateIfNeeded();
 
             // Load layout manager state
             auto panesNode = getPanesNode();
@@ -331,21 +330,6 @@ int OscilState::getSchemaVersion() const
     return state_.getProperty(StateIds::Version, 1);
 }
 
-bool OscilState::needsMigration() const
-{
-    int version = getSchemaVersion();
-    if (version < CURRENT_SCHEMA_VERSION)
-        return true;
-
-    // Check for legacy properties
-    if (state_.hasProperty(StateIds::LegacyGlobalMode))
-        return true;
-
-    if (state_.getChildWithName(StateIds::LegacyTracks).isValid())
-        return true;
-
-    return false;
-}
 
 // Const versions - just return what exists (may be invalid)
 juce::ValueTree OscilState::getOscillatorsNode() const
@@ -396,82 +380,6 @@ juce::ValueTree OscilState::getOrCreateLayoutNode()
         state_.appendChild(node, nullptr);
     }
     return node;
-}
-
-void OscilState::migrateIfNeeded()
-{
-    if (!needsMigration())
-        return;
-
-    int version = getSchemaVersion();
-
-    // Migrate from legacy track-based system
-    if (version < 2 || state_.getChildWithName(StateIds::LegacyTracks).isValid())
-    {
-        migrateFromLegacy();
-    }
-
-    // Update version
-    state_.setProperty(StateIds::Version, CURRENT_SCHEMA_VERSION, nullptr);
-}
-
-void OscilState::migrateFromLegacy()
-{
-    auto legacyTracks = state_.getChildWithName(StateIds::LegacyTracks);
-    juce::String legacyGlobalMode = state_.getProperty(StateIds::LegacyGlobalMode, "FullStereo");
-
-    // Create default pane if needed
-    auto panesNode = getOrCreatePanesNode();
-    if (panesNode.getNumChildren() == 0)
-    {
-        Pane defaultPane;
-        defaultPane.setName("Default");
-        defaultPane.setOrderIndex(0);
-        panesNode.appendChild(defaultPane.toValueTree(), nullptr);
-        layoutManager_.addPane(defaultPane);
-    }
-
-    // Get the default pane ID
-    PaneId defaultPaneId;
-    if (layoutManager_.getPaneCount() > 0)
-    {
-        defaultPaneId = layoutManager_.getPanes()[0].getId();
-    }
-
-    // Migrate legacy tracks to oscillators
-    if (legacyTracks.isValid())
-    {
-        auto oscillatorsNode = getOrCreateOscillatorsNode();
-        int order = 0;
-
-        for (int i = 0; i < legacyTracks.getNumChildren(); ++i)
-        {
-            auto legacyTrack = legacyTracks.getChild(i);
-
-            Oscillator osc;
-            osc.setSourceId(SourceId{ legacyTrack.getProperty(StateIds::Id, "").toString() });
-            osc.setName(legacyTrack.getProperty(StateIds::Name, "Track " + juce::String(i + 1)));
-            osc.setProcessingMode(stringToProcessingMode(legacyGlobalMode));
-            osc.setPaneId(defaultPaneId);
-            osc.setOrderIndex(order++);
-
-            if (legacyTrack.hasProperty(StateIds::Colour))
-            {
-                osc.setColour(juce::Colour(static_cast<juce::uint32>(
-                    static_cast<int>(legacyTrack.getProperty(StateIds::Colour)))));
-            }
-
-            oscillatorsNode.appendChild(osc.toValueTree(), nullptr);
-        }
-
-        // Remove legacy tracks
-        state_.removeChild(legacyTracks, nullptr);
-    }
-
-    // Remove legacy properties
-    state_.removeProperty(StateIds::LegacyGlobalMode, nullptr);
-    state_.removeProperty(StateIds::LegacyGridRows, nullptr);
-    state_.removeProperty(StateIds::LegacyGridCols, nullptr);
 }
 
 // GlobalPreferences implementation

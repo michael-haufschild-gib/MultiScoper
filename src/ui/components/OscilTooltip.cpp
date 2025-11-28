@@ -21,6 +21,17 @@ OscilTooltip::OscilTooltip()
     opacitySpring_.target = 0.0f;
 }
 
+OscilTooltip::OscilTooltip(const juce::String& testId)
+    : OscilTooltip()
+{
+    setTestId(testId);
+}
+
+void OscilTooltip::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilTooltip::~OscilTooltip()
 {
     ThemeManager::getInstance().removeListener(this);

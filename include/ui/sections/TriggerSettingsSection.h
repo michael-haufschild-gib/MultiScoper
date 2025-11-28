@@ -11,6 +11,7 @@
 #include "ui/sections/SectionConstants.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilDropdown.h"
+#include "ui/components/TestId.h"
 #include "dsp/TimingConfig.h"
 #include <functional>
 
@@ -107,6 +108,8 @@ private:
     TriggerEdge currentEdge_ = TriggerEdge::Rising;
 
     juce::ListenerList<Listener> listeners_;
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TriggerSettingsSection)
 };

@@ -39,6 +39,18 @@ OscilToggle::OscilToggle(const juce::String& label)
     label_ = label;
 }
 
+OscilToggle::OscilToggle(const juce::String& label, const juce::String& testId)
+    : OscilToggle()
+{
+    label_ = label;
+    setTestId(testId);
+}
+
+void OscilToggle::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilToggle::~OscilToggle()
 {
     ThemeManager::getInstance().removeListener(this);

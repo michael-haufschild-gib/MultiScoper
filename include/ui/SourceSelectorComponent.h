@@ -8,6 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "core/InstanceRegistry.h"
 #include "ThemeManager.h"
+#include "ui/components/OscilTextField.h"
 #include <functional>
 
 namespace oscil
@@ -107,7 +108,7 @@ private:
     void handleFilterChange();
     void applyFilter();
 
-    std::unique_ptr<juce::TextEditor> searchInput_;
+    std::unique_ptr<OscilTextField> searchInput_;
     std::unique_ptr<juce::Label> sectionHeader_;
     std::unique_ptr<juce::Viewport> listViewport_;
     std::unique_ptr<juce::Component> listContainer_;

@@ -24,11 +24,22 @@ OscilButton::OscilButton(const juce::String& text)
     brightnessSpring_.target = 0.0f;
 }
 
+OscilButton::OscilButton(const juce::String& text, const juce::String& testId)
+    : OscilButton(text)
+{
+    setTestId(testId);
+}
+
 OscilButton::OscilButton(const juce::Image& icon)
     : OscilButton(juce::String{})
 {
     icon_ = icon;
     variant_ = ButtonVariant::Icon;
+}
+
+void OscilButton::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
 }
 
 OscilButton::~OscilButton()

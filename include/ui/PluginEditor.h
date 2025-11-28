@@ -15,6 +15,9 @@
 #endif
 #include "core/PluginProcessor.h"
 #include "core/WindowLayout.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -53,6 +56,7 @@ class PaneContainerComponent;
  */
 class OscilPluginEditor : public juce::AudioProcessorEditor,
                           public juce::DragAndDropContainer,
+                          public TestIdSupport,
                           private juce::Timer
 {
 public:
@@ -133,10 +137,10 @@ private:
     std::unique_ptr<ConfigPopupListenerAdapter> configPopupAdapter_;
 
     // Toolbar components
-    std::unique_ptr<juce::ComboBox> columnSelector_;
-    std::unique_ptr<juce::TextButton> addOscillatorButton_;
-    std::unique_ptr<juce::ComboBox> themeSelector_;
-    std::unique_ptr<juce::TextButton> sidebarToggleButton_;
+    std::unique_ptr<OscilDropdown> columnSelector_;
+    std::unique_ptr<OscilButton> addOscillatorButton_;
+    std::unique_ptr<OscilDropdown> themeSelector_;
+    std::unique_ptr<OscilButton> sidebarToggleButton_;
 
     // Test server (for automated UI testing)
     std::unique_ptr<PluginTestServer> testServer_;
@@ -161,6 +165,9 @@ private:
     static constexpr int STATUS_BAR_HEIGHT = 24;
     static constexpr int DEFAULT_WIDTH = 1200;
     static constexpr int DEFAULT_HEIGHT = 800;
+
+    // TestIdSupport
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilPluginEditor)
 };

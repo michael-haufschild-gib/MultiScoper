@@ -10,6 +10,7 @@ namespace oscil
 
 OscillatorListToolbar::OscillatorListToolbar()
 {
+    OSCIL_REGISTER_TEST_ID("sidebar_oscillators_toolbar");
     setupComponents();
     ThemeManager::getInstance().addListener(this);
 }
@@ -23,9 +24,9 @@ void OscillatorListToolbar::setupComponents()
 {
     // Filter tabs
     filterTabs_ = std::make_unique<SegmentedButtonBar>();
-    filterTabs_->addButton("All", static_cast<int>(OscillatorFilterMode::All));
-    filterTabs_->addButton("Visible", static_cast<int>(OscillatorFilterMode::Visible));
-    filterTabs_->addButton("Hidden", static_cast<int>(OscillatorFilterMode::Hidden));
+    filterTabs_->addButton("All", static_cast<int>(OscillatorFilterMode::All), "sidebar_oscillators_toolbar_allTab");
+    filterTabs_->addButton("Visible", static_cast<int>(OscillatorFilterMode::Visible), "sidebar_oscillators_toolbar_visibleTab");
+    filterTabs_->addButton("Hidden", static_cast<int>(OscillatorFilterMode::Hidden), "sidebar_oscillators_toolbar_hiddenTab");
     filterTabs_->setSelectedId(static_cast<int>(currentFilterMode_));
     filterTabs_->onSelectionChanged = [this](int id)
     {

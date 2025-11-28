@@ -5,6 +5,7 @@
 
 #include "ui/ThemeEditorComponent.h"
 #include "ui/ThemeManager.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -181,37 +182,52 @@ ThemeEditorComponent::ThemeEditorComponent()
 {
     ThemeManager::getInstance().addListener(this);
 
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_TEST_ID("themeEditor");
+#endif
+
     // Theme list
     themeList_ = std::make_unique<juce::ListBox>("Themes", this);
     themeList_->setRowHeight(24);
     addAndMakeVisible(*themeList_);
 
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
+#endif
+
     // Action buttons
-    createButton_ = std::make_unique<juce::TextButton>("New");
+    createButton_ = std::make_unique<OscilButton>("New", "themeEditor_createBtn");
+    createButton_->setVariant(ButtonVariant::Primary);
     createButton_->onClick = [this]() { handleCreateTheme(); };
     addAndMakeVisible(*createButton_);
 
-    cloneButton_ = std::make_unique<juce::TextButton>("Clone");
+    cloneButton_ = std::make_unique<OscilButton>("Clone", "themeEditor_cloneBtn");
+    cloneButton_->setVariant(ButtonVariant::Secondary);
     cloneButton_->onClick = [this]() { handleCloneTheme(); };
     addAndMakeVisible(*cloneButton_);
 
-    deleteButton_ = std::make_unique<juce::TextButton>("Delete");
+    deleteButton_ = std::make_unique<OscilButton>("Delete", "themeEditor_deleteBtn");
+    deleteButton_->setVariant(ButtonVariant::Danger);
     deleteButton_->onClick = [this]() { handleDeleteTheme(); };
     addAndMakeVisible(*deleteButton_);
 
-    importButton_ = std::make_unique<juce::TextButton>("Import");
+    importButton_ = std::make_unique<OscilButton>("Import", "themeEditor_importBtn");
+    importButton_->setVariant(ButtonVariant::Secondary);
     importButton_->onClick = [this]() { handleImportTheme(); };
     addAndMakeVisible(*importButton_);
 
-    exportButton_ = std::make_unique<juce::TextButton>("Export");
+    exportButton_ = std::make_unique<OscilButton>("Export", "themeEditor_exportBtn");
+    exportButton_->setVariant(ButtonVariant::Secondary);
     exportButton_->onClick = [this]() { handleExportTheme(); };
     addAndMakeVisible(*exportButton_);
 
-    applyButton_ = std::make_unique<juce::TextButton>("Apply");
+    applyButton_ = std::make_unique<OscilButton>("Apply", "themeEditor_applyBtn");
+    applyButton_->setVariant(ButtonVariant::Primary);
     applyButton_->onClick = [this]() { handleApplyTheme(); };
     addAndMakeVisible(*applyButton_);
 
-    closeButton_ = std::make_unique<juce::TextButton>("Close");
+    closeButton_ = std::make_unique<OscilButton>("Close", "themeEditor_closeBtn");
+    closeButton_->setVariant(ButtonVariant::Ghost);
     closeButton_->onClick = [this]()
     {
         if (closeCallback_)
@@ -223,8 +239,8 @@ ThemeEditorComponent::ThemeEditorComponent()
     nameLabel_ = std::make_unique<juce::Label>("", "Name:");
     addAndMakeVisible(*nameLabel_);
 
-    nameEditor_ = std::make_unique<juce::TextEditor>("name");
-    nameEditor_->setMultiLine(false);
+    nameEditor_ = std::make_unique<OscilTextField>("themeEditor_nameField");
+    nameEditor_->setPlaceholder("Theme Name");
     addAndMakeVisible(*nameEditor_);
 
     // System theme indicator
@@ -249,6 +265,10 @@ ThemeEditorComponent::ThemeEditorComponent()
 
 ThemeEditorComponent::~ThemeEditorComponent()
 {
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_UNREGISTER_CHILD_TEST_ID("themeEditor_themeList");
+#endif
+
     ThemeManager::getInstance().removeListener(this);
 }
 
@@ -415,7 +435,7 @@ void ThemeEditorComponent::selectTheme(const juce::String& name)
         editingTheme_ = *sourceTheme;
     }
 
-    nameEditor_->setText(name, juce::dontSendNotification);
+    nameEditor_->setText(name, false);
 
     bool isSystem = ThemeManager::getInstance().isSystemTheme(name);
     systemThemeLabel_->setVisible(isSystem);

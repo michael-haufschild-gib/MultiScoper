@@ -73,12 +73,6 @@ namespace StateIds
     static const juce::Identifier AutoScale{ "autoScale" };
     static const juce::Identifier HoldDisplay{ "holdDisplay" };
     static const juce::Identifier GainDb{ "gainDb" };
-
-    // Legacy identifiers for migration
-    static const juce::Identifier LegacyTracks{ "Tracks" };
-    static const juce::Identifier LegacyGlobalMode{ "globalMode" };
-    static const juce::Identifier LegacyGridRows{ "gridRows" };
-    static const juce::Identifier LegacyGridCols{ "gridCols" };
 }
 
 /**
@@ -201,11 +195,6 @@ public:
      */
     int getSchemaVersion() const;
 
-    /**
-     * Check if migration is needed
-     */
-    bool needsMigration() const;
-
     // Current schema version
     static constexpr int CURRENT_SCHEMA_VERSION = 2;
 
@@ -217,8 +206,6 @@ private:
     PaneLayoutManager layoutManager_;
 
     void initializeDefaultState();
-    void migrateIfNeeded();
-    void migrateFromLegacy();
 
     /**
      * Sync layoutManager_ back to state_ before serialization.

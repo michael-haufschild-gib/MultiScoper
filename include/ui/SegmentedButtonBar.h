@@ -43,8 +43,9 @@ public:
      * Add a button to the bar
      * @param label Display text for the button
      * @param id Unique identifier for the button
+     * @param testId Optional test ID for the button
      */
-    void addButton(const juce::String& label, int id);
+    void addButton(const juce::String& label, int id, const juce::String& testId = {});
 
     /**
      * Remove all buttons

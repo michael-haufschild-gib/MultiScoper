@@ -220,10 +220,9 @@ void NoSourceItem::mouseUp(const juce::MouseEvent& e)
 SourceSelectorPopup::SourceSelectorPopup()
 {
     // Search input with magnifier icon
-    searchInput_ = std::make_unique<juce::TextEditor>();
-    searchInput_->setMultiLine(false);
-    searchInput_->setTextToShowWhenEmpty("Search sources...", juce::Colours::grey);
-    searchInput_->onTextChange = [this]() { handleFilterChange(); };
+    searchInput_ = std::make_unique<OscilTextField>(TextFieldVariant::Search);
+    searchInput_->setPlaceholder("Search sources...");
+    searchInput_->onTextChanged = [this](const juce::String& /*text*/) { handleFilterChange(); };
     addAndMakeVisible(*searchInput_);
 
     // Section header
@@ -383,10 +382,7 @@ void SourceSelectorPopup::sourceUpdated(const SourceId&)
 
 void SourceSelectorPopup::themeChanged(const ColorTheme& newTheme)
 {
-    // Style search input
-    searchInput_->setColour(juce::TextEditor::backgroundColourId, newTheme.controlBackground);
-    searchInput_->setColour(juce::TextEditor::textColourId, newTheme.textPrimary);
-    searchInput_->setColour(juce::TextEditor::outlineColourId, newTheme.controlBorder);
+    // OscilTextField handles its own theme colors automatically
 
     // Style header
     sectionHeader_->setColour(juce::Label::textColourId, newTheme.textSecondary);

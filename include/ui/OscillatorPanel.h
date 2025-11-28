@@ -8,6 +8,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
 #include "core/InstanceRegistry.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/OscilToggle.h"
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/TestId.h"
 #include <functional>
 
 namespace oscil
@@ -103,15 +107,15 @@ private:
 
     // Header controls (always visible)
     std::unique_ptr<juce::Label> nameLabel_;
-    std::unique_ptr<juce::ToggleButton> visibilityToggle_;
-    std::unique_ptr<juce::TextButton> expandButton_;
-    std::unique_ptr<juce::TextButton> deleteButton_;
+    std::unique_ptr<OscilToggle> visibilityToggle_;
+    std::unique_ptr<OscilButton> expandButton_;
+    std::unique_ptr<OscilButton> deleteButton_;
 
     // Expanded controls
     std::unique_ptr<juce::Label> sourceLabel_;
     std::unique_ptr<SourceSelectorComponent> sourceSelector_;
     std::unique_ptr<juce::Label> modeLabel_;
-    std::unique_ptr<juce::ComboBox> processingModeSelector_;
+    std::unique_ptr<OscilDropdown> processingModeSelector_;
     std::unique_ptr<juce::Label> colourLabel_;
     std::unique_ptr<ColorPickerComponent> colorPicker_;
 
@@ -119,6 +123,8 @@ private:
     std::function<void(const Oscillator&)> oscillatorChangedCallback_;
     std::function<void(const OscillatorId&)> deleteRequestedCallback_;
     std::function<void(const OscillatorId&, bool)> visibilityToggledCallback_;
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorPanel)
 };

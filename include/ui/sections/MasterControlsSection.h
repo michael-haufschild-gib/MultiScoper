@@ -9,6 +9,7 @@
 #include "ui/ThemeManager.h"
 #include "ui/sections/SectionConstants.h"
 #include "ui/components/OscilSlider.h"
+#include "ui/components/TestId.h"
 #include <functional>
 
 namespace oscil
@@ -81,6 +82,8 @@ private:
     float currentGainDb_ = 0.0f;
 
     juce::ListenerList<Listener> listeners_;
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MasterControlsSection)
 };

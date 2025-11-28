@@ -431,6 +431,18 @@ OscilDropdown::OscilDropdown(const juce::String& placeholder)
     placeholder_ = placeholder;
 }
 
+OscilDropdown::OscilDropdown(const juce::String& placeholder, const juce::String& testId)
+    : OscilDropdown()
+{
+    placeholder_ = placeholder;
+    setTestId(testId);
+}
+
+void OscilDropdown::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilDropdown::~OscilDropdown()
 {
     ThemeManager::getInstance().removeListener(this);

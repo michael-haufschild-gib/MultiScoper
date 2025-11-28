@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -29,11 +30,13 @@ class OscilRadioGroup;
  */
 class OscilRadioButton : public juce::Component,
                          public ThemeManagerListener,
+                         public TestIdSupport,
                          private juce::Timer
 {
 public:
     OscilRadioButton();
     explicit OscilRadioButton(const juce::String& label);
+    OscilRadioButton(const juce::String& label, const juce::String& testId);
     ~OscilRadioButton() override;
 
     // State
@@ -108,6 +111,10 @@ private:
 
     static constexpr int RADIO_SIZE = 18;
     static constexpr int DOT_SIZE = 8;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilRadioButton)
 };

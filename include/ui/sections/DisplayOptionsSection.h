@@ -9,6 +9,7 @@
 #include "ui/ThemeManager.h"
 #include "ui/sections/SectionConstants.h"
 #include "ui/components/OscilToggle.h"
+#include "ui/components/TestId.h"
 #include <functional>
 
 namespace oscil
@@ -79,6 +80,8 @@ private:
     bool holdDisplayEnabled_ = false;
 
     juce::ListenerList<Listener> listeners_;
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DisplayOptionsSection)
 };

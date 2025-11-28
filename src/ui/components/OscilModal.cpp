@@ -29,6 +29,18 @@ OscilModal::OscilModal(const juce::String& title)
     title_ = title;
 }
 
+OscilModal::OscilModal(const juce::String& title, const juce::String& testId)
+    : OscilModal()
+{
+    title_ = title;
+    setTestId(testId);
+}
+
+void OscilModal::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilModal::~OscilModal()
 {
     ThemeManager::getInstance().removeListener(this);

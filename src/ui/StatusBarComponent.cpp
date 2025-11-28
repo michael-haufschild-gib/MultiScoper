@@ -4,6 +4,7 @@
 
 #include "ui/StatusBarComponent.h"
 #include "ui/ThemeManager.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -13,6 +14,10 @@ StatusBarComponent::StatusBarComponent()
     setOpaque(true);
     // Detect rendering mode at construction time
     renderingMode_ = detectRenderingMode();
+
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_TEST_ID("statusBar");
+#endif
 }
 
 RenderingMode StatusBarComponent::detectRenderingMode()

@@ -17,6 +17,7 @@
 #include "ui/sections/MasterControlsSection.h"
 #include "ui/sections/TriggerSettingsSection.h"
 #include "ui/sections/DisplayOptionsSection.h"
+#include "ui/components/TestId.h"
 #include <vector>
 
 namespace oscil
@@ -29,7 +30,8 @@ class SourceItemComponent;
 /**
  * Resize handle component for sidebar edge
  */
-class SidebarResizeHandle : public juce::Component
+class SidebarResizeHandle : public juce::Component,
+                            public TestIdSupport
 {
 public:
     SidebarResizeHandle();
@@ -49,6 +51,9 @@ private:
     bool isHovered_ = false;
     bool isDragging_ = false;
     int dragStartX_ = 0;
+
+    // TestIdSupport
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SidebarResizeHandle)
 };
@@ -90,7 +95,8 @@ class SidebarComponent : public juce::Component,
                          public TimingSidebarSection::Listener,
                          public MasterControlsSection::Listener,
                          public TriggerSettingsSection::Listener,
-                         public DisplayOptionsSection::Listener
+                         public DisplayOptionsSection::Listener,
+                         public TestIdSupport
 {
 public:
     /**
@@ -279,6 +285,9 @@ private:
     static constexpr int RESIZE_HANDLE_WIDTH = 6;
     static constexpr int SOURCES_SECTION_MIN_HEIGHT = 100;
     static constexpr int OSCILLATOR_TOOLBAR_HEIGHT = OscillatorListToolbar::PREFERRED_HEIGHT;
+
+    // TestIdSupport
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SidebarComponent)
 };

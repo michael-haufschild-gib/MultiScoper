@@ -306,28 +306,6 @@ void TimingEngine::fromValueTree(const juce::ValueTree& state)
 {
     if (!state.hasType(TimingIds::Timing))
     {
-        // Try legacy migration
-        if (state.hasProperty(LegacyTimingIds::TimeBase))
-        {
-            // Migrate from old format
-            int legacyTimeBase = state.getProperty(LegacyTimingIds::TimeBase, 0);
-            double legacyWindowSize = state.getProperty(LegacyTimingIds::WindowSize, 100.0);
-
-            // Map old TimeBase to new TimingMode
-            // Old: FreeRunning=0, HostSync=1, TimeBased=2, MusicalBased=3
-            if (legacyTimeBase == 3) // MusicalBased
-            {
-                config_.timingMode = TimingMode::MELODIC;
-            }
-            else
-            {
-                config_.timingMode = TimingMode::TIME;
-                config_.timeIntervalMs = static_cast<int>(legacyWindowSize);
-            }
-
-            recalculateInterval();
-            return;
-        }
         return;
     }
 

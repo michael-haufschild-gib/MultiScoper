@@ -25,6 +25,18 @@ OscilBadge::OscilBadge(const juce::String& text, BadgeColor color)
     color_ = color;
 }
 
+OscilBadge::OscilBadge(const juce::String& text, BadgeColor color, const juce::String& testId)
+    : OscilBadge(text)
+{
+    color_ = color;
+    setTestId(testId);
+}
+
+void OscilBadge::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilBadge::~OscilBadge()
 {
     ThemeManager::getInstance().removeListener(this);

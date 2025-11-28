@@ -10,6 +10,7 @@ namespace oscil
 
 MasterControlsSection::MasterControlsSection()
 {
+    OSCIL_REGISTER_TEST_ID("sidebar_masterControls");
     setupComponents();
     ThemeManager::getInstance().addListener(this);
 }
@@ -28,7 +29,7 @@ void MasterControlsSection::setupComponents()
     addAndMakeVisible(*sectionLabel_);
 
     // Timebase controls
-    timebaseSlider_ = std::make_unique<OscilSlider>();
+    timebaseSlider_ = std::make_unique<OscilSlider>("sidebar_masterControls_timebaseSlider");
     timebaseSlider_->setLabel("Timebase");
     timebaseSlider_->setRange(MIN_TIMEBASE_MS, MAX_TIMEBASE_MS);
     timebaseSlider_->setStep(1.0);
@@ -57,7 +58,7 @@ void MasterControlsSection::setupComponents()
     addAndMakeVisible(*timebaseSlider_);
 
     // Gain controls
-    gainSlider_ = std::make_unique<OscilSlider>();
+    gainSlider_ = std::make_unique<OscilSlider>("sidebar_masterControls_gainSlider");
     gainSlider_->setLabel("Gain");
     gainSlider_->setRange(MIN_GAIN_DB, MAX_GAIN_DB);
     gainSlider_->setStep(0.1);

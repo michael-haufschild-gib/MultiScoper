@@ -6,6 +6,7 @@
 #include "ui/SidebarComponent.h"
 #include "ui/SourceItemComponent.h"
 #include "core/PluginProcessor.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -15,6 +16,10 @@ namespace oscil
 SidebarResizeHandle::SidebarResizeHandle()
 {
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_TEST_ID("sidebar_resizeHandle");
+#endif
 }
 
 void SidebarResizeHandle::paint(juce::Graphics& g)
@@ -156,6 +161,10 @@ SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
     juce::ignoreUnused(processor_);
     ThemeManager::getInstance().addListener(this);
 
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_TEST_ID("sidebar");
+#endif
+
     // Create resize handle (on left edge since sidebar is on right)
     resizeHandle_ = std::make_unique<SidebarResizeHandle>();
     resizeHandle_->onResizeStart = []()
@@ -193,11 +202,19 @@ SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
     sourcesLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(sourcesLabel_.get());
 
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_CHILD_TEST_ID(*sourcesLabel_, "sidebar_sources_header");
+#endif
+
     sourcesViewport_ = std::make_unique<juce::Viewport>();
     sourcesContainer_ = std::make_unique<juce::Component>();
     sourcesViewport_->setViewedComponent(sourcesContainer_.get(), false);
     sourcesViewport_->setScrollBarsShown(true, false);
     addAndMakeVisible(sourcesViewport_.get());
+
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_CHILD_TEST_ID(*sourcesContainer_, "sidebar_sources");
+#endif
 
     // Oscillators section with toolbar
     oscillatorToolbar_ = std::make_unique<OscillatorListToolbar>();
@@ -228,6 +245,11 @@ SidebarComponent::~SidebarComponent()
     {
         juce::Desktop::getInstance().removeGlobalMouseListener(this);
     }
+
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_UNREGISTER_CHILD_TEST_ID("sidebar_sources_header");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("sidebar_sources");
+#endif
 
     ThemeManager::getInstance().removeListener(this);
     if (oscillatorToolbar_)

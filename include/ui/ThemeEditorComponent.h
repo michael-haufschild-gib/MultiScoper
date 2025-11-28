@@ -8,6 +8,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ThemeManager.h"
 #include "ColorPickerComponent.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/OscilTextField.h"
+#include "ui/components/TestId.h"
 #include <memory>
 #include <functional>
 
@@ -82,7 +85,8 @@ private:
  */
 class ThemeEditorComponent : public juce::Component,
                               public juce::ListBoxModel,
-                              public ThemeManagerListener
+                              public ThemeManagerListener,
+                              public TestIdSupport
 {
 public:
     ThemeEditorComponent();
@@ -127,13 +131,13 @@ private:
     ColorTheme editingTheme_;  // Copy of theme being edited
 
     // Action buttons
-    std::unique_ptr<juce::TextButton> createButton_;
-    std::unique_ptr<juce::TextButton> cloneButton_;
-    std::unique_ptr<juce::TextButton> deleteButton_;
-    std::unique_ptr<juce::TextButton> importButton_;
-    std::unique_ptr<juce::TextButton> exportButton_;
-    std::unique_ptr<juce::TextButton> applyButton_;
-    std::unique_ptr<juce::TextButton> closeButton_;
+    std::unique_ptr<OscilButton> createButton_;
+    std::unique_ptr<OscilButton> cloneButton_;
+    std::unique_ptr<OscilButton> deleteButton_;
+    std::unique_ptr<OscilButton> importButton_;
+    std::unique_ptr<OscilButton> exportButton_;
+    std::unique_ptr<OscilButton> applyButton_;
+    std::unique_ptr<OscilButton> closeButton_;
 
     // Color sections (scrollable)
     std::unique_ptr<juce::Viewport> colorViewport_;
@@ -146,12 +150,15 @@ private:
 
     // Theme name editor
     std::unique_ptr<juce::Label> nameLabel_;
-    std::unique_ptr<juce::TextEditor> nameEditor_;
+    std::unique_ptr<OscilTextField> nameEditor_;
 
     // System theme indicator
     std::unique_ptr<juce::Label> systemThemeLabel_;
 
     std::function<void()> closeCallback_;
+
+    // TestIdSupport
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ThemeEditorComponent)
 };

@@ -8,6 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/ThemeManager.h"
 #include "ui/SegmentedButtonBar.h"
+#include "ui/components/TestId.h"
 #include <functional>
 
 namespace oscil
@@ -75,6 +76,8 @@ private:
     int visibleCount_ = 0;
 
     juce::ListenerList<Listener> listeners_;
+
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListToolbar)
 };

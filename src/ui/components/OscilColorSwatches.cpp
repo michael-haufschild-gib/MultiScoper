@@ -18,6 +18,17 @@ OscilColorSwatches::OscilColorSwatches()
     hoverSpring_.position = 0.0f;
 }
 
+OscilColorSwatches::OscilColorSwatches(const juce::String& testId)
+    : OscilColorSwatches()
+{
+    setTestId(testId);
+}
+
+void OscilColorSwatches::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilColorSwatches::~OscilColorSwatches()
 {
     ThemeManager::getInstance().removeListener(this);

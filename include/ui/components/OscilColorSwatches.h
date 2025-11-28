@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -27,10 +28,12 @@ namespace oscil
  */
 class OscilColorSwatches : public juce::Component,
                            public ThemeManagerListener,
+                           public TestIdSupport,
                            private juce::Timer
 {
 public:
     OscilColorSwatches();
+    explicit OscilColorSwatches(const juce::String& testId);
     ~OscilColorSwatches() override;
 
     // Colors
@@ -112,6 +115,10 @@ private:
     SpringAnimation hoverSpring_;
 
     ColorTheme theme_;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilColorSwatches)
 };

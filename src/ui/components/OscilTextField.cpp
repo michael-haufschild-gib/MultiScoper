@@ -26,6 +26,24 @@ OscilTextField::OscilTextField(TextFieldVariant variant)
     setVariant(variant);
 }
 
+OscilTextField::OscilTextField(const juce::String& testId)
+    : OscilTextField()
+{
+    setTestId(testId);
+}
+
+OscilTextField::OscilTextField(TextFieldVariant variant, const juce::String& testId)
+    : OscilTextField()
+{
+    setVariant(variant);
+    setTestId(testId);
+}
+
+void OscilTextField::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilTextField::~OscilTextField()
 {
     ThemeManager::getInstance().removeListener(this);

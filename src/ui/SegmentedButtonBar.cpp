@@ -53,9 +53,9 @@ void SegmentedButtonBar::themeChanged(const ColorTheme&)
     repaint();
 }
 
-void SegmentedButtonBar::addButton(const juce::String& label, int id)
+void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce::String& testId)
 {
-    auto button = std::make_unique<OscilButton>(label);
+    auto button = std::make_unique<OscilButton>(label, testId);
 
     // Configure as a toggleable segment button
     button->setToggleable(true);

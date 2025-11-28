@@ -348,46 +348,59 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         [this]() { onLayoutChanged(); });
 
     // Create toolbar components
-    columnSelector_ = std::make_unique<juce::ComboBox>("columns");
-    columnSelector_->addItem("1 Column", 1);
-    columnSelector_->addItem("2 Columns", 2);
-    columnSelector_->addItem("3 Columns", 3);
-    columnSelector_->setSelectedId(static_cast<int>(processor_.getState().getColumnLayout()));
-    columnSelector_->onChange = [this]()
+    columnSelector_ = std::make_unique<OscilDropdown>();
+    columnSelector_->addItem("1 Column");
+    columnSelector_->addItem("2 Columns");
+    columnSelector_->addItem("3 Columns");
+    // ColumnLayout enum is 1-based, OscilDropdown is 0-based
+    columnSelector_->setSelectedIndex(static_cast<int>(processor_.getState().getColumnLayout()) - 1);
+    columnSelector_->onSelectionChanged = [this](int index)
     {
-        auto layout = static_cast<ColumnLayout>(columnSelector_->getSelectedId());
+        auto layout = static_cast<ColumnLayout>(index + 1);
         processor_.getState().setColumnLayout(layout);
         refreshOscillatorPanels();  // Full refresh needed to properly apply column layout
     };
     addAndMakeVisible(*columnSelector_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*columnSelector_, "toolbar_columnSelector");
 
-    addOscillatorButton_ = std::make_unique<juce::TextButton>("+ Add");
+    addOscillatorButton_ = std::make_unique<OscilButton>("+ Add");
     addOscillatorButton_->onClick = [this]() { createDefaultOscillator(); };
     addAndMakeVisible(*addOscillatorButton_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*addOscillatorButton_, "toolbar_addOscillatorBtn");
 
-    themeSelector_ = std::make_unique<juce::ComboBox>("theme");
+    themeSelector_ = std::make_unique<OscilDropdown>();
     auto themes = processor_.getThemeService().getAvailableThemes();
-    for (size_t i = 0; i < themes.size(); ++i)
+    for (const auto& themeName : themes)
     {
-        themeSelector_->addItem(themes[i], static_cast<int>(i) + 1);
+        themeSelector_->addItem(themeName);
     }
     // Load saved theme name and APPLY it (not just display)
     auto savedThemeName = processor_.getState().getThemeName();
-    themeSelector_->setText(savedThemeName);
+    // Find the index of the saved theme
+    for (int i = 0; i < themeSelector_->getNumItems(); ++i)
+    {
+        if (themeSelector_->getItem(i).label == savedThemeName)
+        {
+            themeSelector_->setSelectedIndex(i, false);
+            break;
+        }
+    }
     processor_.getThemeService().setCurrentTheme(savedThemeName);
 
-    themeSelector_->onChange = [this]()
+    themeSelector_->onSelectionChanged = [this](int /*index*/)
     {
-        auto themeName = themeSelector_->getText();
+        auto themeName = themeSelector_->getSelectedLabel();
         processor_.getThemeService().setCurrentTheme(themeName);
         processor_.getState().setThemeName(themeName);
     };
     addAndMakeVisible(*themeSelector_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*themeSelector_, "toolbar_themeSelector");
 
     // Sidebar toggle button
-    sidebarToggleButton_ = std::make_unique<juce::TextButton>("Sidebar");
+    sidebarToggleButton_ = std::make_unique<OscilButton>("Sidebar");
     sidebarToggleButton_->onClick = [this]() { toggleSidebar(); };
     addAndMakeVisible(*sidebarToggleButton_);
+    OSCIL_REGISTER_CHILD_TEST_ID(*sidebarToggleButton_, "toolbar_sidebarToggleBtn");
 
     // Create viewport and content
     viewport_ = std::make_unique<juce::Viewport>();
@@ -457,6 +470,12 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
 OscilPluginEditor::~OscilPluginEditor()
 {
+    // Unregister child testIds
+    OSCIL_UNREGISTER_CHILD_TEST_ID("toolbar_columnSelector");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("toolbar_addOscillatorBtn");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("toolbar_themeSelector");
+    OSCIL_UNREGISTER_CHILD_TEST_ID("toolbar_sidebarToggleBtn");
+
     // Stop timer FIRST to prevent repaint callbacks during destruction
     // This must happen before OpenGL detach to avoid render-while-detaching
     stopTimer();
@@ -477,6 +496,10 @@ OscilPluginEditor::~OscilPluginEditor()
     // Remove sidebar listener
     if (sidebar_ && sidebarAdapter_)
         sidebar_->removeListener(sidebarAdapter_.get());
+
+    // Remove config popup listener
+    if (configPopup_ && configPopupAdapter_)
+        configPopup_->removeListener(configPopupAdapter_.get());
 
     // Coordinators handle their own listener cleanup in their destructors
     // They are destroyed in reverse order of construction

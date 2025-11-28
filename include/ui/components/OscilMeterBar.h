@@ -9,6 +9,7 @@
 #include "ui/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -26,6 +27,7 @@ namespace oscil
  */
 class OscilMeterBar : public juce::Component,
                       public ThemeManagerListener,
+                      public TestIdSupport,
                       private juce::Timer
 {
 public:
@@ -43,6 +45,7 @@ public:
     };
 
     OscilMeterBar();
+    explicit OscilMeterBar(const juce::String& testId);
     ~OscilMeterBar() override;
 
     // Level input (0.0 to 1.0, can exceed for clip detection)
@@ -143,6 +146,10 @@ private:
     static constexpr int STEREO_WIDTH = 24;
     static constexpr int SCALE_WIDTH = 24;
     static constexpr float SMOOTH_FACTOR = 0.3f;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilMeterBar)
 };

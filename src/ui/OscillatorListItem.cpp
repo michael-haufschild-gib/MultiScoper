@@ -17,6 +17,10 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
     , processingMode_(oscillator.getProcessingMode())
     , isVisible_(oscillator.isVisible())
 {
+    // Register test ID with oscillator index
+    juce::String testId = "sidebar_oscillators_item_" + juce::String(oscillator.getOrderIndex());
+    OSCIL_REGISTER_TEST_ID(testId);
+
     // Get track name from source registry
     if (oscillator.getSourceId().isValid())
     {

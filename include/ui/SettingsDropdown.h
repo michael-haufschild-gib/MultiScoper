@@ -8,6 +8,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ThemeManager.h"
 #include "core/Pane.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/OscilToggle.h"
+#include "ui/components/TestId.h"
 #include <vector>
 
 namespace oscil
@@ -81,7 +84,8 @@ private:
  * Note: Timing controls moved to TimingSidebarSection
  */
 class SettingsDropdown : public juce::Component,
-                         public ThemeManagerListener
+                         public ThemeManagerListener,
+                         public TestIdSupport
 {
 public:
     /**
@@ -124,7 +128,7 @@ private:
     // Theme section - visual list per design
     std::unique_ptr<juce::Label> themeSectionLabel_;
     std::vector<std::unique_ptr<ThemeListItem>> themeItems_;
-    std::unique_ptr<juce::TextButton> editThemeButton_;
+    std::unique_ptr<OscilButton> editThemeButton_;
 
     // Layout section - visual icons per design
     std::unique_ptr<juce::Label> layoutSectionLabel_;
@@ -132,7 +136,7 @@ private:
 
     // Status bar section
     std::unique_ptr<juce::Label> statusBarLabel_;
-    std::unique_ptr<juce::ToggleButton> statusBarToggle_;
+    std::unique_ptr<OscilToggle> statusBarToggle_;
 
     // State
     bool statusBarVisible_ = true;
@@ -154,6 +158,10 @@ private:
 
     static constexpr int THEME_ITEM_HEIGHT = 28;
     static constexpr int LAYOUT_ICON_SIZE = 40;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsDropdown)
 };

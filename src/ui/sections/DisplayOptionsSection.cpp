@@ -10,6 +10,7 @@ namespace oscil
 
 DisplayOptionsSection::DisplayOptionsSection()
 {
+    OSCIL_REGISTER_TEST_ID("sidebar_display");
     setupComponents();
     ThemeManager::getInstance().addListener(this);
 }
@@ -28,7 +29,7 @@ void DisplayOptionsSection::setupComponents()
     addAndMakeVisible(*sectionLabel_);
 
     // Show Grid toggle
-    showGridToggle_ = std::make_unique<OscilToggle>("Show Grid");
+    showGridToggle_ = std::make_unique<OscilToggle>("Show Grid", "sidebar_display_gridToggle");
     showGridToggle_->setValue(showGridEnabled_, false);
     showGridToggle_->onValueChanged = [this](bool value)
     {
@@ -38,7 +39,7 @@ void DisplayOptionsSection::setupComponents()
     addAndMakeVisible(*showGridToggle_);
 
     // Auto-Scale toggle
-    autoScaleToggle_ = std::make_unique<OscilToggle>("Auto-Scale");
+    autoScaleToggle_ = std::make_unique<OscilToggle>("Auto-Scale", "sidebar_display_autoScaleToggle");
     autoScaleToggle_->setValue(autoScaleEnabled_, false);
     autoScaleToggle_->onValueChanged = [this](bool value)
     {
@@ -48,7 +49,7 @@ void DisplayOptionsSection::setupComponents()
     addAndMakeVisible(*autoScaleToggle_);
 
     // Hold Display toggle
-    holdDisplayToggle_ = std::make_unique<OscilToggle>("Hold");
+    holdDisplayToggle_ = std::make_unique<OscilToggle>("Hold", "sidebar_display_holdToggle");
     holdDisplayToggle_->setValue(holdDisplayEnabled_, false);
     holdDisplayToggle_->onValueChanged = [this](bool value)
     {

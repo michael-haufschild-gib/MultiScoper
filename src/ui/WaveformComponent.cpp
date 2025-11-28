@@ -132,12 +132,9 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
     int width = bounds.getWidth();
     int height = bounds.getHeight();
 
-    bool isStacked = (processingMode_ == ProcessingMode::FullStereo &&
-                      stereoDisplayMode_ == StereoDisplayMode::Stacked);
-
-    if (isStacked)
+    if (processingMode_ == ProcessingMode::FullStereo)
     {
-        // Draw grid for both channels (stacked mode)
+        // Stereo stacked: draw grid for both channels
         float halfHeight = static_cast<float>(height) * 0.5f;
         float topCenterY = halfHeight * 0.5f;     // Center of top half (L channel)
         float bottomCenterY = halfHeight * 1.5f;  // Center of bottom half (R channel)
@@ -183,7 +180,7 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
     }
     else
     {
-        // Standard single-center grid (overlaid or mono modes)
+        // Mono/other modes: standard single-center grid
         float centerY = static_cast<float>(height) * 0.5f;
 
         // Draw minor grid lines (horizontal)
@@ -219,9 +216,6 @@ void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*b
     if (!captureBuffer_)
         return;
 
-    bool isStacked = (processingMode_ == ProcessingMode::FullStereo &&
-                      stereoDisplayMode_ == StereoDisplayMode::Stacked);
-
     // Draw first channel (L or mono)
     if (!waveformPath1_.isEmpty())
     {
@@ -229,19 +223,10 @@ void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*b
         g.strokePath(waveformPath1_, juce::PathStrokeType(1.5f));
     }
 
-    // Draw second channel for stereo mode
+    // Draw second channel for stereo mode (stacked: same color, channels visually separated)
     if (processingMode_ == ProcessingMode::FullStereo && !waveformPath2_.isEmpty())
     {
-        if (isStacked)
-        {
-            // Stacked mode: same color for both channels (they're visually separated)
-            g.setColour(colour_.withAlpha(opacity_));
-        }
-        else
-        {
-            // Overlaid mode: slightly different opacity for visual distinction
-            g.setColour(colour_.withAlpha(opacity_ * 0.7f));
-        }
+        g.setColour(colour_.withAlpha(opacity_));
         g.strokePath(waveformPath2_, juce::PathStrokeType(1.5f));
     }
 }
@@ -264,17 +249,13 @@ void WaveformComponent::updateWaveformPath()
     if (width <= 0 || height <= 0)
         return;
 
-    // Determine if we're in stacked stereo mode
-    bool isStacked = (processingMode_ == ProcessingMode::FullStereo &&
-                      stereoDisplayMode_ == StereoDisplayMode::Stacked);
-
-    // Calculate center Y positions based on mode
+    // Calculate center Y positions based on processing mode
     float centerY1, centerY2;
     float amplitude1, amplitude2;  // Amplitude range for each channel
 
-    if (isStacked)
+    if (processingMode_ == ProcessingMode::FullStereo)
     {
-        // Stacked mode: L on top half, R on bottom half
+        // Stereo stacked: L on top half, R on bottom half
         float halfHeight = static_cast<float>(height) * 0.5f;
         centerY1 = halfHeight * 0.5f;      // Center of top half (L channel)
         centerY2 = halfHeight * 1.5f;      // Center of bottom half (R channel)
@@ -283,7 +264,7 @@ void WaveformComponent::updateWaveformPath()
     }
     else
     {
-        // Overlaid mode: both channels at same center
+        // Mono/other modes: single channel centered
         centerY1 = static_cast<float>(height) * 0.5f;
         centerY2 = static_cast<float>(height) * 0.5f;
         amplitude1 = static_cast<float>(height) * 0.5f;
@@ -362,12 +343,14 @@ void WaveformComponent::updateWaveformPath()
             float y = centerY1 - displayBuffer1_[i] * amplitude1 * effectiveScale;
 
             // Clamp to appropriate region
-            if (isStacked)
+            if (processingMode_ == ProcessingMode::FullStereo)
             {
+                // Stereo stacked: L channel in top half
                 y = juce::jlimit(0.0f, static_cast<float>(height) * 0.5f, y);
             }
             else
             {
+                // Mono: full height
                 y = juce::jlimit(0.0f, static_cast<float>(height), y);
             }
 
@@ -389,15 +372,8 @@ void WaveformComponent::updateWaveformPath()
             float x = static_cast<float>(i) * xScale;
             float y = centerY2 - displayBuffer2_[i] * amplitude2 * effectiveScale;
 
-            // Clamp to appropriate region
-            if (isStacked)
-            {
-                y = juce::jlimit(static_cast<float>(height) * 0.5f, static_cast<float>(height), y);
-            }
-            else
-            {
-                y = juce::jlimit(0.0f, static_cast<float>(height), y);
-            }
+            // Stereo stacked: R channel in bottom half
+            y = juce::jlimit(static_cast<float>(height) * 0.5f, static_cast<float>(height), y);
 
             waveformPath2_.lineTo(x, y);
         }

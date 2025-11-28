@@ -45,6 +45,24 @@ OscilSlider::OscilSlider(SliderVariant variant)
     setVariant(variant);
 }
 
+OscilSlider::OscilSlider(const juce::String& testId)
+    : OscilSlider()
+{
+    setTestId(testId);
+}
+
+OscilSlider::OscilSlider(SliderVariant variant, const juce::String& testId)
+    : OscilSlider()
+{
+    setVariant(variant);
+    setTestId(testId);
+}
+
+void OscilSlider::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilSlider::~OscilSlider()
 {
     ThemeManager::getInstance().removeListener(this);

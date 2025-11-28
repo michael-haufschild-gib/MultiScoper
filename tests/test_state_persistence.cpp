@@ -196,15 +196,6 @@ TEST_F(StatePersistenceTest, InvalidXmlHandling)
     EXPECT_FALSE(state.fromXmlString("<WrongRoot></WrongRoot>"));
 }
 
-// Test: Migration detection
-TEST_F(StatePersistenceTest, MigrationDetection)
-{
-    OscilState state;
-
-    // Fresh state should not need migration
-    EXPECT_FALSE(state.needsMigration());
-}
-
 // Test: Pane layout manager integration
 TEST_F(StatePersistenceTest, PaneLayoutManagerIntegration)
 {
@@ -283,4 +274,596 @@ TEST_F(StatePersistenceTest, SchemaVersionInSerializedState)
 
     // Version should be present
     EXPECT_TRUE(xmlString.contains("version"));
+}
+
+// =============================================================================
+// CORRUPTION RECOVERY TESTS
+// =============================================================================
+
+TEST_F(StatePersistenceTest, MalformedXmlRecovery)
+{
+    OscilState state;
+
+    // Malformed XML (unclosed tag)
+    EXPECT_FALSE(state.fromXmlString("<OscilState><broken"));
+
+    // State should remain usable with defaults
+    EXPECT_EQ(state.getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+}
+
+TEST_F(StatePersistenceTest, TruncatedXmlRecovery)
+{
+    OscilState original;
+    original.setThemeName("Test Theme");
+
+    juce::String xmlString = original.toXmlString();
+
+    // Truncate the XML
+    juce::String truncated = xmlString.substring(0, xmlString.length() / 2);
+
+    OscilState state;
+    EXPECT_FALSE(state.fromXmlString(truncated));
+}
+
+TEST_F(StatePersistenceTest, XmlWithWrongRootType)
+{
+    OscilState state;
+
+    // Valid XML but wrong root type
+    EXPECT_FALSE(state.fromXmlString("<SomeOtherRoot><Oscillators/></SomeOtherRoot>"));
+}
+
+TEST_F(StatePersistenceTest, XmlWithMissingChildNodes)
+{
+    OscilState state;
+
+    // Valid OscilState but missing all child nodes
+    juce::String minimalXml = "<OscilState version=\"2\"/>";
+    EXPECT_TRUE(state.fromXmlString(minimalXml));
+
+    // Should have empty oscillators
+    EXPECT_TRUE(state.getOscillators().empty());
+
+    // Adding oscillator should still work (creates Oscillators node)
+    Oscillator osc;
+    osc.setName("Test");
+    state.addOscillator(osc);
+    EXPECT_EQ(state.getOscillators().size(), 1);
+}
+
+TEST_F(StatePersistenceTest, XmlWithPartialChildNodes)
+{
+    OscilState state;
+
+    // Has Oscillators but missing Layout and Theme
+    juce::String partialXml = R"(
+        <OscilState version="2">
+            <Oscillators/>
+        </OscilState>
+    )";
+    EXPECT_TRUE(state.fromXmlString(partialXml));
+
+    // Should use defaults for missing nodes
+    EXPECT_EQ(state.getThemeName(), "Dark Professional");
+}
+
+TEST_F(StatePersistenceTest, CorruptedOscillatorDataRecovery)
+{
+    OscilState state;
+
+    // Oscillator with invalid/missing properties
+    juce::String xmlWithBadOsc = R"(
+        <OscilState version="2">
+            <Oscillators>
+                <Oscillator/>
+                <Oscillator id="valid-id" name="Valid Osc"/>
+            </Oscillators>
+        </OscilState>
+    )";
+    EXPECT_TRUE(state.fromXmlString(xmlWithBadOsc));
+
+    // Should load what it can
+    auto oscillators = state.getOscillators();
+    EXPECT_GE(oscillators.size(), 1);
+}
+
+// =============================================================================
+// SCHEMA MIGRATION TESTS
+// =============================================================================
+
+TEST_F(StatePersistenceTest, MissingSchemaVersion)
+{
+    OscilState state;
+
+    // Old state without version property
+    juce::String oldXml = R"(
+        <OscilState>
+            <Oscillators/>
+            <Theme themeName="Classic Green"/>
+        </OscilState>
+    )";
+    EXPECT_TRUE(state.fromXmlString(oldXml));
+
+    // getSchemaVersion defaults to 1 for old states
+    EXPECT_EQ(state.getSchemaVersion(), 1);
+}
+
+TEST_F(StatePersistenceTest, OldSchemaVersion)
+{
+    OscilState state;
+
+    // Version 1 state
+    juce::String v1Xml = R"(
+        <OscilState version="1">
+            <Oscillators/>
+            <Theme themeName="Old Theme"/>
+        </OscilState>
+    )";
+    EXPECT_TRUE(state.fromXmlString(v1Xml));
+
+    EXPECT_EQ(state.getSchemaVersion(), 1);
+    EXPECT_EQ(state.getThemeName(), "Old Theme");
+}
+
+TEST_F(StatePersistenceTest, FutureSchemaVersion)
+{
+    OscilState state;
+
+    // Future version (should still load)
+    juce::String futureXml = R"(
+        <OscilState version="999">
+            <Oscillators/>
+            <Theme themeName="Future Theme"/>
+        </OscilState>
+    )";
+    EXPECT_TRUE(state.fromXmlString(futureXml));
+
+    EXPECT_EQ(state.getSchemaVersion(), 999);
+}
+
+// =============================================================================
+// EDGE CASE TESTS - Oscillator Operations
+// =============================================================================
+
+TEST_F(StatePersistenceTest, RemoveNonExistentOscillator)
+{
+    OscilState state;
+
+    Oscillator osc;
+    state.addOscillator(osc);
+    EXPECT_EQ(state.getOscillators().size(), 1);
+
+    // Remove with non-existent ID
+    state.removeOscillator(OscillatorId::generate());
+
+    // Should still have original oscillator
+    EXPECT_EQ(state.getOscillators().size(), 1);
+}
+
+TEST_F(StatePersistenceTest, UpdateNonExistentOscillator)
+{
+    OscilState state;
+
+    Oscillator osc;
+    osc.setName("Test");
+    state.addOscillator(osc);
+
+    // Create new oscillator with different ID and try to update
+    Oscillator nonExistent;
+    nonExistent.setName("Non-existent");
+    state.updateOscillator(nonExistent);
+
+    // Original should be unchanged
+    auto oscillators = state.getOscillators();
+    EXPECT_EQ(oscillators.size(), 1);
+    EXPECT_EQ(oscillators[0].getName(), "Test");
+}
+
+TEST_F(StatePersistenceTest, ReorderWithInvalidOldIndex)
+{
+    OscilState state;
+
+    Oscillator osc1, osc2;
+    osc1.setOrderIndex(0);
+    osc2.setOrderIndex(1);
+    state.addOscillator(osc1);
+    state.addOscillator(osc2);
+
+    // Invalid oldIndex
+    state.reorderOscillators(-1, 0);
+    state.reorderOscillators(10, 0);
+
+    // Should be unchanged
+    EXPECT_EQ(state.getOscillators().size(), 2);
+}
+
+TEST_F(StatePersistenceTest, ReorderWithInvalidNewIndex)
+{
+    OscilState state;
+
+    Oscillator osc1, osc2;
+    osc1.setOrderIndex(0);
+    osc2.setOrderIndex(1);
+    state.addOscillator(osc1);
+    state.addOscillator(osc2);
+
+    // Invalid newIndex
+    state.reorderOscillators(0, -1);
+    state.reorderOscillators(0, 10);
+
+    // Should be unchanged
+    EXPECT_EQ(state.getOscillators().size(), 2);
+}
+
+TEST_F(StatePersistenceTest, ReorderSameIndex)
+{
+    OscilState state;
+
+    Oscillator osc;
+    osc.setOrderIndex(0);
+    state.addOscillator(osc);
+
+    // Same index should be no-op
+    state.reorderOscillators(0, 0);
+
+    EXPECT_EQ(state.getOscillators().size(), 1);
+}
+
+TEST_F(StatePersistenceTest, ReorderEmptyList)
+{
+    OscilState state;
+
+    // Reorder on empty list should not crash
+    state.reorderOscillators(0, 1);
+}
+
+// =============================================================================
+// EDGE CASE TESTS - Column Layout
+// =============================================================================
+
+TEST_F(StatePersistenceTest, ColumnLayoutClampingLow)
+{
+    OscilState state;
+
+    // Set via direct property manipulation (bypassing setter)
+    auto& tree = state.getState();
+    auto layout = tree.getChildWithName(StateIds::Layout);
+    layout.setProperty(StateIds::Columns, -1, nullptr);
+
+    // getColumnLayout should clamp
+    EXPECT_EQ(static_cast<int>(state.getColumnLayout()), 1);
+}
+
+TEST_F(StatePersistenceTest, ColumnLayoutClampingHigh)
+{
+    OscilState state;
+
+    // Set via direct property manipulation (bypassing setter)
+    auto& tree = state.getState();
+    auto layout = tree.getChildWithName(StateIds::Layout);
+    layout.setProperty(StateIds::Columns, 100, nullptr);
+
+    // getColumnLayout should clamp to 3
+    EXPECT_EQ(static_cast<int>(state.getColumnLayout()), 3);
+}
+
+// =============================================================================
+// EDGE CASE TESTS - Display Options
+// =============================================================================
+
+TEST_F(StatePersistenceTest, DisplayOptionsDefaults)
+{
+    OscilState state;
+
+    // Check defaults
+    EXPECT_TRUE(state.isShowGridEnabled());
+    EXPECT_TRUE(state.isAutoScaleEnabled());
+    EXPECT_FALSE(state.isHoldDisplayEnabled());
+    EXPECT_FLOAT_EQ(state.getGainDb(), 0.0f);
+}
+
+TEST_F(StatePersistenceTest, DisplayOptionsPersistence)
+{
+    OscilState original;
+
+    original.setShowGridEnabled(false);
+    original.setAutoScaleEnabled(false);
+    original.setHoldDisplayEnabled(true);
+    original.setGainDb(-12.0f);
+
+    juce::String xml = original.toXmlString();
+
+    OscilState restored;
+    EXPECT_TRUE(restored.fromXmlString(xml));
+
+    EXPECT_FALSE(restored.isShowGridEnabled());
+    EXPECT_FALSE(restored.isAutoScaleEnabled());
+    EXPECT_TRUE(restored.isHoldDisplayEnabled());
+    EXPECT_FLOAT_EQ(restored.getGainDb(), -12.0f);
+}
+
+TEST_F(StatePersistenceTest, GainDbExtremeValues)
+{
+    OscilState state;
+
+    state.setGainDb(100.0f);
+    EXPECT_FLOAT_EQ(state.getGainDb(), 100.0f);
+
+    state.setGainDb(-100.0f);
+    EXPECT_FLOAT_EQ(state.getGainDb(), -100.0f);
+}
+
+// =============================================================================
+// EDGE CASE TESTS - Sidebar Configuration
+// =============================================================================
+
+TEST_F(StatePersistenceTest, SidebarDefaults)
+{
+    OscilState state;
+
+    EXPECT_EQ(state.getSidebarWidth(), 300);
+    EXPECT_FALSE(state.isSidebarCollapsed());
+    EXPECT_TRUE(state.isStatusBarVisible());
+}
+
+TEST_F(StatePersistenceTest, SidebarPersistence)
+{
+    OscilState original;
+
+    original.setSidebarWidth(400);
+    original.setSidebarCollapsed(true);
+    original.setStatusBarVisible(false);
+
+    juce::String xml = original.toXmlString();
+
+    OscilState restored;
+    EXPECT_TRUE(restored.fromXmlString(xml));
+
+    EXPECT_EQ(restored.getSidebarWidth(), 400);
+    EXPECT_TRUE(restored.isSidebarCollapsed());
+    EXPECT_FALSE(restored.isStatusBarVisible());
+}
+
+TEST_F(StatePersistenceTest, SidebarWidthExtremeValues)
+{
+    OscilState state;
+
+    state.setSidebarWidth(0);
+    EXPECT_EQ(state.getSidebarWidth(), 0);
+
+    state.setSidebarWidth(10000);
+    EXPECT_EQ(state.getSidebarWidth(), 10000);
+
+    state.setSidebarWidth(-100);
+    EXPECT_EQ(state.getSidebarWidth(), -100);
+}
+
+// =============================================================================
+// LARGE STATE HANDLING TESTS
+// =============================================================================
+
+TEST_F(StatePersistenceTest, ManyOscillators)
+{
+    OscilState state;
+
+    // Add many oscillators
+    const int count = 100;
+    for (int i = 0; i < count; ++i)
+    {
+        Oscillator osc;
+        osc.setName(juce::String("Oscillator ") + juce::String(i));
+        osc.setOrderIndex(i);
+        state.addOscillator(osc);
+    }
+
+    EXPECT_EQ(state.getOscillators().size(), count);
+
+    // Serialize and restore
+    juce::String xml = state.toXmlString();
+    EXPECT_FALSE(xml.isEmpty());
+
+    OscilState restored;
+    EXPECT_TRUE(restored.fromXmlString(xml));
+    EXPECT_EQ(restored.getOscillators().size(), count);
+}
+
+TEST_F(StatePersistenceTest, LongThemeName)
+{
+    OscilState state;
+
+    // Very long theme name
+    juce::String longName;
+    for (int i = 0; i < 1000; ++i)
+        longName += "X";
+
+    state.setThemeName(longName);
+    EXPECT_EQ(state.getThemeName(), longName);
+
+    // Should persist correctly
+    juce::String xml = state.toXmlString();
+    OscilState restored;
+    EXPECT_TRUE(restored.fromXmlString(xml));
+    EXPECT_EQ(restored.getThemeName(), longName);
+}
+
+TEST_F(StatePersistenceTest, SpecialCharactersInThemeName)
+{
+    OscilState state;
+
+    state.setThemeName("Theme <with> \"special\" & 'chars'");
+
+    juce::String xml = state.toXmlString();
+    OscilState restored;
+    EXPECT_TRUE(restored.fromXmlString(xml));
+
+    EXPECT_EQ(restored.getThemeName(), "Theme <with> \"special\" & 'chars'");
+}
+
+// =============================================================================
+// LISTENER TESTS
+// =============================================================================
+
+class TestListener : public juce::ValueTree::Listener
+{
+public:
+    int propertyChangedCount = 0;
+    int childAddedCount = 0;
+    int childRemovedCount = 0;
+
+    void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override
+    {
+        propertyChangedCount++;
+    }
+
+    void valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&) override
+    {
+        childAddedCount++;
+    }
+
+    void valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree&, int) override
+    {
+        childRemovedCount++;
+    }
+};
+
+TEST_F(StatePersistenceTest, ListenerNotifications)
+{
+    OscilState state;
+    TestListener listener;
+
+    state.addListener(&listener);
+
+    // Change property
+    state.setThemeName("New Theme");
+    EXPECT_GT(listener.propertyChangedCount, 0);
+
+    // Add oscillator
+    Oscillator osc;
+    state.addOscillator(osc);
+    EXPECT_GT(listener.childAddedCount, 0);
+
+    // Remove oscillator
+    state.removeOscillator(osc.getId());
+    EXPECT_GT(listener.childRemovedCount, 0);
+
+    state.removeListener(&listener);
+}
+
+TEST_F(StatePersistenceTest, RemoveListenerStopsNotifications)
+{
+    OscilState state;
+    TestListener listener;
+
+    state.addListener(&listener);
+    state.setThemeName("Theme 1");
+    int countAfterFirst = listener.propertyChangedCount;
+
+    state.removeListener(&listener);
+    state.setThemeName("Theme 2");
+
+    // Count should not have increased
+    EXPECT_EQ(listener.propertyChangedCount, countAfterFirst);
+}
+
+// =============================================================================
+// CONSTRUCTOR TESTS
+// =============================================================================
+
+TEST_F(StatePersistenceTest, ConstructFromValidXml)
+{
+    juce::String xml = R"(
+        <OscilState version="2">
+            <Oscillators/>
+            <Theme themeName="Constructed Theme"/>
+        </OscilState>
+    )";
+
+    OscilState state(xml);
+
+    EXPECT_EQ(state.getThemeName(), "Constructed Theme");
+}
+
+TEST_F(StatePersistenceTest, ConstructFromInvalidXml)
+{
+    OscilState state("invalid xml content");
+
+    // Should have default state
+    EXPECT_EQ(state.getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state.getThemeName(), "Dark Professional");
+}
+
+TEST_F(StatePersistenceTest, ConstructFromEmptyString)
+{
+    OscilState state("");
+
+    // Should have default state
+    EXPECT_EQ(state.getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+}
+
+// =============================================================================
+// GLOBAL PREFERENCES TESTS
+// =============================================================================
+
+TEST_F(StatePersistenceTest, GlobalPreferencesDefaults)
+{
+    auto& prefs = GlobalPreferences::getInstance();
+
+    // Check that defaults are reasonable
+    EXPECT_EQ(prefs.getDefaultTheme(), "Dark Professional");
+    EXPECT_EQ(prefs.getDefaultColumnLayout(), 1);
+    EXPECT_TRUE(prefs.getShowStatusBar());
+    EXPECT_FALSE(prefs.getReducedMotion());
+    EXPECT_FALSE(prefs.getUIAudioFeedback());
+    EXPECT_TRUE(prefs.getTooltipsEnabled());
+    EXPECT_EQ(prefs.getDefaultSidebarWidth(), 280);
+}
+
+TEST_F(StatePersistenceTest, GlobalPreferencesSettersAndGetters)
+{
+    auto& prefs = GlobalPreferences::getInstance();
+
+    // Save original values
+    auto originalTheme = prefs.getDefaultTheme();
+    auto originalColumns = prefs.getDefaultColumnLayout();
+    auto originalSidebarWidth = prefs.getDefaultSidebarWidth();
+
+    // Test setters
+    prefs.setDefaultTheme("Test Theme");
+    EXPECT_EQ(prefs.getDefaultTheme(), "Test Theme");
+
+    prefs.setDefaultColumnLayout(2);
+    EXPECT_EQ(prefs.getDefaultColumnLayout(), 2);
+
+    prefs.setShowStatusBar(false);
+    EXPECT_FALSE(prefs.getShowStatusBar());
+
+    prefs.setReducedMotion(true);
+    EXPECT_TRUE(prefs.getReducedMotion());
+
+    prefs.setUIAudioFeedback(true);
+    EXPECT_TRUE(prefs.getUIAudioFeedback());
+
+    prefs.setTooltipsEnabled(false);
+    EXPECT_FALSE(prefs.getTooltipsEnabled());
+
+    prefs.setDefaultSidebarWidth(350);
+    EXPECT_EQ(prefs.getDefaultSidebarWidth(), 350);
+
+    // Restore original values
+    prefs.setDefaultTheme(originalTheme);
+    prefs.setDefaultColumnLayout(originalColumns);
+    prefs.setShowStatusBar(true);
+    prefs.setReducedMotion(false);
+    prefs.setUIAudioFeedback(false);
+    prefs.setTooltipsEnabled(true);
+    prefs.setDefaultSidebarWidth(originalSidebarWidth);
+}
+
+TEST_F(StatePersistenceTest, GlobalPreferencesSingleton)
+{
+    auto& prefs1 = GlobalPreferences::getInstance();
+    auto& prefs2 = GlobalPreferences::getInstance();
+
+    // Should be the same instance
+    EXPECT_EQ(&prefs1, &prefs2);
 }

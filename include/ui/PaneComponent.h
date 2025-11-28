@@ -9,6 +9,7 @@
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 #include "WaveformComponent.h"
+#include "ui/components/TestId.h"
 #include <vector>
 #include <memory>
 #include <functional>
@@ -23,7 +24,8 @@ class OscilPluginProcessor;
  * Supports drag-and-drop reordering.
  */
 class PaneComponent : public juce::Component,
-                       public juce::DragAndDropTarget
+                       public juce::DragAndDropTarget,
+                       public TestIdSupport
 {
 public:
     PaneComponent(OscilPluginProcessor& processor, const PaneId& paneId);
@@ -93,7 +95,7 @@ public:
     /**
      * Get pane index for drag-and-drop
      */
-    void setPaneIndex(int index) { paneIndex_ = index; }
+    void setPaneIndex(int index);
     int getPaneIndex() const { return paneIndex_; }
 
     // Display options - apply to all waveforms in this pane
@@ -144,6 +146,9 @@ private:
     static constexpr int HEADER_HEIGHT = 24;
     static constexpr int PADDING = 4;
     static constexpr int DRAG_THRESHOLD = 5;
+
+    // TestIdSupport
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneComponent)
 };

@@ -18,6 +18,17 @@ OscilTransportSync::OscilTransportSync()
     startTimerHz(30);
 }
 
+OscilTransportSync::OscilTransportSync(const juce::String& testId)
+    : OscilTransportSync()
+{
+    setTestId(testId);
+}
+
+void OscilTransportSync::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilTransportSync::~OscilTransportSync()
 {
     ThemeManager::getInstance().removeListener(this);

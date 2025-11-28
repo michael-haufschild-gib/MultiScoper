@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -27,6 +28,7 @@ namespace oscil
  */
 class OscilButton : public juce::Component,
                     public ThemeManagerListener,
+                    public TestIdSupport,
                     private juce::Timer
 {
 public:
@@ -34,6 +36,11 @@ public:
      * Create a button with a text label
      */
     explicit OscilButton(const juce::String& text = {});
+
+    /**
+     * Create a button with a text label and testId
+     */
+    OscilButton(const juce::String& text, const juce::String& testId);
 
     /**
      * Create an icon-only button
@@ -149,6 +156,10 @@ private:
     static constexpr int ICON_PADDING = 8;
     static constexpr int TEXT_PADDING = 16;
     static constexpr float ICON_SIZE = 16.0f;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilButton)
 };

@@ -6,6 +6,7 @@
 #include "ui/ThemeManager.h"
 #include "core/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -15,6 +16,17 @@ PaneComponent::PaneComponent(OscilPluginProcessor& processor, const PaneId& pane
     , paneId_(paneId)
 {
     setOpaque(true);
+}
+
+void PaneComponent::setPaneIndex(int index)
+{
+    paneIndex_ = index;
+
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    // Register pane with index-based testId
+    auto testId = juce::String("pane_") + juce::String(index);
+    OSCIL_REGISTER_TEST_ID(testId.toRawUTF8());
+#endif
 }
 
 void PaneComponent::paint(juce::Graphics& g)

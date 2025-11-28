@@ -12,6 +12,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -25,14 +26,17 @@ namespace oscil
  * - APVTS attachment support for DAW automation
  * - Full keyboard accessibility
  * - Optional label
+ * - E2E test automation via testId
  */
 class OscilToggle : public juce::Component,
                     public ThemeManagerListener,
+                    public TestIdSupport,
                     private juce::Timer
 {
 public:
     OscilToggle();
     explicit OscilToggle(const juce::String& label);
+    OscilToggle(const juce::String& label, const juce::String& testId);
     ~OscilToggle() override;
 
     // Value control
@@ -111,6 +115,10 @@ private:
 
     // Internal toggle button for APVTS attachment compatibility
     juce::ToggleButton internalButton_;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilToggle)
 };

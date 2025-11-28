@@ -13,10 +13,14 @@ SourceItemComponent::SourceItemComponent(const SourceInfo& sourceInfo)
     , displayName_(sourceInfo.name)
     , trackName_("")  // SourceInfo doesn't have separate track name
 {
-    // Create add-to-pane dropdown
-    addToPaneDropdown_ = std::make_unique<juce::ComboBox>();
-    addToPaneDropdown_->setTextWhenNothingSelected("Add...");
-    addToPaneDropdown_->onChange = [this]() { handleAddToPaneSelection(); };
+    // Register test ID with source ID
+    juce::String testId = "sidebar_sources_item_" + sourceId_.id;
+    OSCIL_REGISTER_TEST_ID(testId);
+
+    // Create add-to-pane dropdown with test ID
+    juce::String dropdownTestId = "sidebar_sources_item_" + sourceId_.id + "_paneDropdown";
+    addToPaneDropdown_ = std::make_unique<OscilDropdown>("Add...", dropdownTestId);
+    addToPaneDropdown_->onSelectionChanged = [this](int /*index*/) { handleAddToPaneSelection(); };
     addAndMakeVisible(addToPaneDropdown_.get());
 }
 
@@ -112,28 +116,29 @@ void SourceItemComponent::updateSourceInfo(const SourceInfo& info)
 
 void SourceItemComponent::updateAvailablePanes(const std::vector<Pane>& panes)
 {
-    addToPaneDropdown_->clear();
+    addToPaneDropdown_->clearItems();
     paneIds_.clear();
 
-    // Add "New Pane" option
-    addToPaneDropdown_->addItem("New Pane", 1);
+    // Add "New Pane" option (index 0)
+    addToPaneDropdown_->addItem("New Pane");
     paneIds_.push_back(PaneId{});  // Empty ID means create new
 
-    // Add separator
-    addToPaneDropdown_->addSeparator();
+    // Add separator (index 1)
+    addToPaneDropdown_->addItem(DropdownItem::separator());
+    paneIds_.push_back(PaneId{});  // Placeholder for separator
 
-    // Add existing panes
-    int itemId = 2;
+    // Add existing panes (indices 2+)
+    int paneNum = 1;
     for (const auto& pane : panes)
     {
         juce::String paneName = pane.getName();
         if (paneName.isEmpty())
         {
-            paneName = "Pane " + juce::String(itemId - 1);
+            paneName = "Pane " + juce::String(paneNum);
         }
-        addToPaneDropdown_->addItem(paneName, itemId);
+        addToPaneDropdown_->addItem(paneName);
         paneIds_.push_back(pane.getId());
-        ++itemId;
+        ++paneNum;
     }
 }
 
@@ -148,13 +153,20 @@ void SourceItemComponent::setActive(bool isActive)
 
 void SourceItemComponent::handleAddToPaneSelection()
 {
-    int selectedId = addToPaneDropdown_->getSelectedId();
-    if (selectedId <= 0 || static_cast<size_t>(selectedId - 1) >= paneIds_.size())
+    int selectedIndex = addToPaneDropdown_->getSelectedIndex();
+    // Skip if nothing selected, separator selected, or out of range
+    if (selectedIndex < 0 || static_cast<size_t>(selectedIndex) >= paneIds_.size())
     {
         return;
     }
 
-    PaneId targetPaneId = paneIds_[static_cast<size_t>(selectedId - 1)];
+    // Index 1 is the separator, skip it
+    if (selectedIndex == 1)
+    {
+        return;
+    }
+
+    PaneId targetPaneId = paneIds_[static_cast<size_t>(selectedIndex)];
 
     // Use SafePointer because onAddToPane triggers refreshOscillatorPanels()
     // which may destroy this component during the callback
@@ -168,7 +180,7 @@ void SourceItemComponent::handleAddToPaneSelection()
     // Only reset dropdown if we're still valid (component wasn't destroyed)
     if (safeThis != nullptr)
     {
-        addToPaneDropdown_->setSelectedId(0, juce::dontSendNotification);
+        addToPaneDropdown_->setSelectedIndex(-1, false);
     }
 }
 

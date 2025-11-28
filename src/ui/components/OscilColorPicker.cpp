@@ -37,6 +37,17 @@ OscilColorPicker::OscilColorPicker()
     updateHexField();
 }
 
+OscilColorPicker::OscilColorPicker(const juce::String& testId)
+    : OscilColorPicker()
+{
+    setTestId(testId);
+}
+
+void OscilColorPicker::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 OscilColorPicker::~OscilColorPicker()
 {
     ThemeManager::getInstance().removeListener(this);

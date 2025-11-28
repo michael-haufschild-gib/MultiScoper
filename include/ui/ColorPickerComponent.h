@@ -6,6 +6,8 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/components/OscilSlider.h"
+#include "ui/components/OscilTextField.h"
 #include <functional>
 
 namespace oscil
@@ -75,10 +77,10 @@ private:
     juce::Colour currentColour_{ juce::Colours::green };
 
     // RGBA Sliders
-    std::unique_ptr<juce::Slider> redSlider_;
-    std::unique_ptr<juce::Slider> greenSlider_;
-    std::unique_ptr<juce::Slider> blueSlider_;
-    std::unique_ptr<juce::Slider> alphaSlider_;
+    std::unique_ptr<OscilSlider> redSlider_;
+    std::unique_ptr<OscilSlider> greenSlider_;
+    std::unique_ptr<OscilSlider> blueSlider_;
+    std::unique_ptr<OscilSlider> alphaSlider_;
 
     // Labels
     std::unique_ptr<juce::Label> redLabel_;
@@ -88,7 +90,7 @@ private:
 
     // Hex input
     std::unique_ptr<juce::Label> hexLabel_;
-    std::unique_ptr<juce::TextEditor> hexInput_;
+    std::unique_ptr<OscilTextField> hexInput_;
 
     // Color preview
     juce::Rectangle<int> previewBounds_;

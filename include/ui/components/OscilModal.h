@@ -11,6 +11,7 @@
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
@@ -31,11 +32,13 @@ namespace oscil
  */
 class OscilModal : public juce::Component,
                    public ThemeManagerListener,
+                   public TestIdSupport,
                    private juce::Timer
 {
 public:
     OscilModal();
     explicit OscilModal(const juce::String& title);
+    OscilModal(const juce::String& title, const juce::String& testId);
     ~OscilModal() override;
 
     // Configuration
@@ -125,6 +128,10 @@ private:
     static constexpr int SIZE_SMALL = 320;
     static constexpr int SIZE_MEDIUM = 480;
     static constexpr int SIZE_LARGE = 640;
+
+    // TestIdSupport
+    void registerTestId() override;
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilModal)
 };

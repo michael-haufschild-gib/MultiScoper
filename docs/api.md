@@ -185,9 +185,8 @@ public:
     juce::String getThemeName() const;
     void setThemeName(const juce::String& themeName);
 
-    // Migration
+    // Schema version
     int getSchemaVersion() const;
-    bool needsMigration() const;
 };
 ```
 
@@ -536,3 +535,145 @@ public:
 
 ❌ **Don't**: Use ProcessedSignal without calling `resize()` first
 ✅ **Do**: Call `output.resize(numSamples, isStereo)` before processing
+
+---
+
+## Test Harness HTTP API
+
+The test harness provides a REST API on port 8765 for automated E2E testing.
+
+### Health Check
+
+```
+GET /health
+Response: { success: true, data: { status: "ok", running: true, tracks: 2 } }
+```
+
+### Transport Control
+
+```
+POST /transport/play           - Start playback
+POST /transport/stop           - Stop playback
+POST /transport/setBpm         - Body: { bpm: 120.0 }
+POST /transport/setPosition    - Body: { samples: 0 }
+GET  /transport/state          - Get transport state
+```
+
+### Track Audio Control
+
+```
+POST /track/{id}/audio  - Body: { waveform: "sine", frequency: 440, amplitude: 0.8 }
+POST /track/{id}/burst  - Body: { samples: 4410, waveform: "sine" }
+GET  /track/{id}/info   - Get track info
+```
+
+### UI Mouse Interactions
+
+```
+POST /ui/click           - Body: { elementId: "button-1" }
+POST /ui/doubleClick     - Body: { elementId: "slider-1" }
+POST /ui/rightClick      - Body: { elementId: "item-1" }
+POST /ui/hover           - Body: { elementId: "button-1", durationMs: 500 }
+POST /ui/drag            - Body: { from: "item-1", to: "pane-2", shift: false, alt: false }
+POST /ui/dragOffset      - Body: { elementId: "slider-1", deltaX: 50, deltaY: 0, alt: true }
+POST /ui/scroll          - Body: { elementId: "slider-1", deltaY: 0.1, shift: false }
+POST /ui/select          - Body: { elementId: "dropdown-1", itemId: 2 } or { itemText: "Option" }
+POST /ui/toggle          - Body: { elementId: "checkbox-1", value: true }
+POST /ui/slider          - Body: { elementId: "slider-1", value: 0.5 }
+POST /ui/slider/increment- Body: { elementId: "slider-1" }
+POST /ui/slider/decrement- Body: { elementId: "slider-1" }
+POST /ui/slider/reset    - Body: { elementId: "slider-1" } (double-click to reset)
+```
+
+### UI Keyboard Interactions
+
+```
+POST /ui/keyPress  - Body: { key: "escape", elementId: "", shift: false, alt: false, ctrl: false }
+                   - Keys: escape, enter, space, tab, up, down, left, right, home, end, delete, f1-f12
+POST /ui/typeText  - Body: { elementId: "textfield-1", text: "hello" }
+POST /ui/clearText - Body: { elementId: "textfield-1" }
+```
+
+### UI Focus Management
+
+```
+POST /ui/focus         - Body: { elementId: "button-1" }
+GET  /ui/focused       - Get currently focused element
+POST /ui/focusNext     - Move focus to next element
+POST /ui/focusPrevious - Move focus to previous element
+```
+
+### UI Wait Conditions
+
+```
+POST /ui/waitForElement - Body: { elementId: "modal-1", timeoutMs: 5000 }
+POST /ui/waitForVisible - Body: { elementId: "panel-1", timeoutMs: 5000 }
+POST /ui/waitForEnabled - Body: { elementId: "button-1", timeoutMs: 5000 }
+```
+
+### UI State Queries
+
+```
+GET /ui/state           - Get full UI state with all elements
+GET /ui/elements        - List all registered test elements
+GET /ui/element/{id}    - Get specific element info
+```
+
+### Screenshot & Visual Verification
+
+```
+POST /screenshot         - Body: { path: "/tmp/shot.png", element: "window" or testId }
+POST /screenshot/compare - Body: { elementId: "panel-1", baseline: "/path/baseline.png", tolerance: 5 }
+POST /baseline/save      - Body: { elementId: "panel-1", directory: "/path/baselines", name: "panel" }
+```
+
+### Visual Verification
+
+```
+POST /verify/waveform - Body: { elementId: "waveform-1", minAmplitude: 0.05 }
+POST /verify/color    - Body: { elementId: "panel-1", color: "#FF0000", tolerance: 10, mode: "background"|"contains" }
+POST /verify/bounds   - Body: { elementId: "panel-1", width: 400, height: 300, tolerance: 5 }
+POST /verify/visible  - Body: { elementId: "panel-1" }
+GET  /analyze/waveform?elementId=waveform-1&backgroundColor=#000000
+```
+
+### State Management
+
+```
+POST /state/reset      - Reset plugin state
+POST /state/save       - Body: { path: "/tmp/state.xml" }
+POST /state/load       - Body: { path: "/tmp/state.xml" }
+GET  /state/oscillators- List all oscillators
+GET  /state/panes      - List all panes
+GET  /state/sources    - List all available sources
+```
+
+### Performance Metrics
+
+```
+POST /metrics/start       - Body: { intervalMs: 100 } - Start collection
+POST /metrics/stop        - Stop collection
+GET  /metrics/current     - Get current FPS, CPU%, Memory
+GET  /metrics/stats       - Get statistics (avgFps, minFps, maxFps, avgCpu, maxCpu, avgMemoryMB)
+GET  /metrics/stats?periodMs=5000 - Stats for last N milliseconds
+POST /metrics/reset       - Clear all collected data
+POST /metrics/recordFrame - Record a frame render time
+```
+
+### Test Element IDs
+
+UI components are registered with testIds following these patterns:
+
+```
+sidebar-source-list              - Source list component
+sidebar-source-{sourceId}        - Individual source item
+sidebar-add-oscillator           - Add oscillator button
+pane-{paneId}                    - Pane component
+waveform-{oscillatorId}          - Waveform display
+oscillator-panel-{oscillatorId}  - Oscillator control panel
+button-{name}                    - Buttons
+slider-{name}                    - Sliders
+dropdown-{name}                  - Dropdowns
+toggle-{name}                    - Toggle switches
+tabs-{name}                      - Tab bars
+```
