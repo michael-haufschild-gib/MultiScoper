@@ -109,9 +109,9 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto startTime = juce::Time::getHighResolutionTicks();
 
     // Get host timing information
-    if (auto* playHead = getPlayHead())
+    if (auto* hostPlayHead = getPlayHead())
     {
-        if (auto positionInfo = playHead->getPosition())
+        if (auto positionInfo = hostPlayHead->getPosition())
         {
             timingEngine_.updateHostInfo(*positionInfo);
         }

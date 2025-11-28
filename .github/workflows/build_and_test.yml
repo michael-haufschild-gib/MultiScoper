@@ -114,6 +114,11 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
+      # Setup MSVC environment for Windows (required for Ninja to use MSVC instead of MinGW)
+      - name: Setup MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       # Setup ccache for faster rebuilds (aggressive settings)
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -145,7 +150,8 @@ jobs:
             libxrender-dev \
             libwebkit2gtk-4.0-dev \
             libglu1-mesa-dev \
-            mesa-common-dev
+            mesa-common-dev \
+            xvfb
 
       # Configure CMake using presets
       - name: Configure CMake
@@ -170,6 +176,13 @@ jobs:
           else
             echo "Using cached pluginval"
           fi
+
+      # Start virtual display for Linux (required for pluginval GUI tests)
+      - name: Start Xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo /usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
 
       # Validate VST3 plugin with pluginval
       - name: Validate VST3 with pluginval

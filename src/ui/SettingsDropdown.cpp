@@ -118,12 +118,12 @@ void LayoutIconButton::drawLayoutIcon(juce::Graphics& g, const juce::Rectangle<f
 
     int numColumns = static_cast<int>(layout_);
     float gap = 3.0f;
-    float totalGap = gap * (numColumns - 1);
-    float colWidth = (bounds.getWidth() - totalGap) / numColumns;
+    float totalGap = gap * static_cast<float>(numColumns - 1);
+    float colWidth = (bounds.getWidth() - totalGap) / static_cast<float>(numColumns);
 
     for (int i = 0; i < numColumns; ++i)
     {
-        float x = bounds.getX() + i * (colWidth + gap);
+        float x = bounds.getX() + static_cast<float>(i) * (colWidth + gap);
         juce::Rectangle<float> colRect(x, bounds.getY(), colWidth, bounds.getHeight());
         g.fillRoundedRectangle(colRect, 2.0f);
     }

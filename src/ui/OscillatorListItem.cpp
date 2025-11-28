@@ -91,8 +91,8 @@ void OscillatorListItemComponent::paintCompact(juce::Graphics& g, const ColorThe
     {
         for (int col = 0; col < 2; ++col)
         {
-            float x = startX + col * dotSpacing;
-            float y = startY + row * dotSpacing;
+            float x = startX + static_cast<float>(col) * dotSpacing;
+            float y = startY + static_cast<float>(row) * dotSpacing;
             g.fillEllipse(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
         }
     }
@@ -174,8 +174,8 @@ void OscillatorListItemComponent::paintExpanded(juce::Graphics& g, const ColorTh
     {
         for (int col = 0; col < 2; ++col)
         {
-            float x = startX + col * dotSpacing;
-            float y = startY + row * dotSpacing;
+            float x = startX + static_cast<float>(col) * dotSpacing;
+            float y = startY + static_cast<float>(row) * dotSpacing;
             g.fillEllipse(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
         }
     }
@@ -319,7 +319,7 @@ void OscillatorListItemComponent::paintIconButton(juce::Graphics& g, juce::Recta
         // Gear teeth
         for (int i = 0; i < 6; ++i)
         {
-            float angle = i * juce::MathConstants<float>::pi / 3;
+            float angle = static_cast<float>(i) * juce::MathConstants<float>::pi / 3;
             float x1 = cx + std::cos(angle) * (size/2 - 1);
             float y1 = cy + std::sin(angle) * (size/2 - 1);
             float x2 = cx + std::cos(angle) * (size/2 + 2);
@@ -494,9 +494,9 @@ bool OscillatorListItemComponent::isInModeButton(const juce::Point<int>& pos, Pr
     float modeButtonWidth = 48.0f;
 
     if (pos.y < modeY || pos.y >= modeY + modeHeight) return false;
-    if (pos.x < modeX || pos.x >= modeX + modeButtonWidth * 4) return false;
+    if (pos.x < static_cast<float>(modeX) || pos.x >= static_cast<float>(modeX) + modeButtonWidth * 4) return false;
 
-    int buttonIndex = static_cast<int>((pos.x - modeX) / modeButtonWidth);
+    int buttonIndex = static_cast<int>((pos.x - static_cast<float>(modeX)) / modeButtonWidth);
     switch (buttonIndex)
     {
         case 0: outMode = ProcessingMode::FullStereo; return true;

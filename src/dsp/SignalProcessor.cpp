@@ -232,8 +232,8 @@ void SignalProcessor::decimate(const float* input, int inputLength,
 
     for (int i = 0; i < outputLength; ++i)
     {
-        int startIdx = static_cast<int>(i * samplesPerOutput);
-        int endIdx = static_cast<int>((i + 1) * samplesPerOutput);
+        int startIdx = static_cast<int>(static_cast<float>(i) * samplesPerOutput);
+        int endIdx = static_cast<int>(static_cast<float>(i + 1) * samplesPerOutput);
         endIdx = std::min(endIdx, inputLength);
 
         if (preservePeaks)
@@ -261,7 +261,7 @@ void SignalProcessor::decimate(const float* input, int inputLength,
             {
                 sum += input[j];
             }
-            output[i] = count > 0 ? sum / count : 0.0f;
+            output[i] = count > 0 ? sum / static_cast<float>(count) : 0.0f;
         }
     }
 }
@@ -307,8 +307,8 @@ void AdaptiveDecimator::processWithEnvelope(const float* input, int inputLength,
 
     for (int i = 0; i < displayWidth_; ++i)
     {
-        int startIdx = static_cast<int>(i * samplesPerPixel);
-        int endIdx = static_cast<int>((i + 1) * samplesPerPixel);
+        int startIdx = static_cast<int>(static_cast<float>(i) * samplesPerPixel);
+        int endIdx = static_cast<int>(static_cast<float>(i + 1) * samplesPerPixel);
         endIdx = std::min(endIdx, inputLength);
 
         float minVal = input[startIdx];

@@ -167,7 +167,7 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
 
     // Background
     auto bgColour = getBackgroundColour();
-    if (currentBrightness_ != 0.0f)
+    if (std::abs(currentBrightness_) > 1e-6f)
         bgColour = bgColour.brighter(currentBrightness_);
 
     if (!enabled_)

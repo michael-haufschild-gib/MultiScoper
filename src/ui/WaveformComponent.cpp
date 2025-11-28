@@ -138,7 +138,7 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
     if (isStacked)
     {
         // Draw grid for both channels (stacked mode)
-        float halfHeight = height * 0.5f;
+        float halfHeight = static_cast<float>(height) * 0.5f;
         float topCenterY = halfHeight * 0.5f;     // Center of top half (L channel)
         float bottomCenterY = halfHeight * 1.5f;  // Center of bottom half (R channel)
 
@@ -147,7 +147,7 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
         const int numVerticalLines = 10;
         for (int i = 1; i < numVerticalLines; ++i)
         {
-            float x = (static_cast<float>(i) / numVerticalLines) * width;
+            float x = (static_cast<float>(i) / numVerticalLines) * static_cast<float>(width);
             g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(height));
         }
 
@@ -184,14 +184,14 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
     else
     {
         // Standard single-center grid (overlaid or mono modes)
-        float centerY = height * 0.5f;
+        float centerY = static_cast<float>(height) * 0.5f;
 
         // Draw minor grid lines (horizontal)
         g.setColour(theme.gridMinor);
         const int numMinorLines = 8;
         for (int i = 1; i < numMinorLines; ++i)
         {
-            float y = (static_cast<float>(i) / numMinorLines) * height;
+            float y = (static_cast<float>(i) / numMinorLines) * static_cast<float>(height);
             g.drawHorizontalLine(static_cast<int>(y), 0.0f, static_cast<float>(width));
         }
 
@@ -199,7 +199,7 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
         const int numVerticalLines = 10;
         for (int i = 1; i < numVerticalLines; ++i)
         {
-            float x = (static_cast<float>(i) / numVerticalLines) * width;
+            float x = (static_cast<float>(i) / numVerticalLines) * static_cast<float>(width);
             g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(height));
         }
 
@@ -275,7 +275,7 @@ void WaveformComponent::updateWaveformPath()
     if (isStacked)
     {
         // Stacked mode: L on top half, R on bottom half
-        float halfHeight = height * 0.5f;
+        float halfHeight = static_cast<float>(height) * 0.5f;
         centerY1 = halfHeight * 0.5f;      // Center of top half (L channel)
         centerY2 = halfHeight * 1.5f;      // Center of bottom half (R channel)
         amplitude1 = halfHeight * 0.5f;    // Amplitude fits in quarter height
@@ -284,10 +284,10 @@ void WaveformComponent::updateWaveformPath()
     else
     {
         // Overlaid mode: both channels at same center
-        centerY1 = height * 0.5f;
-        centerY2 = height * 0.5f;
-        amplitude1 = height * 0.5f;
-        amplitude2 = height * 0.5f;
+        centerY1 = static_cast<float>(height) * 0.5f;
+        centerY2 = static_cast<float>(height) * 0.5f;
+        amplitude1 = static_cast<float>(height) * 0.5f;
+        amplitude2 = static_cast<float>(height) * 0.5f;
     }
 
     // Read samples from capture buffer
@@ -304,7 +304,7 @@ void WaveformComponent::updateWaveformPath()
     int samplesRead = (samplesReadRight > 0) ? std::min(samplesReadLeft, samplesReadRight) : samplesReadLeft;
 
     // Apply gain to samples
-    if (gainLinear_ != 1.0f)
+    if (std::abs(gainLinear_ - 1.0f) > 1e-6f)
     {
         for (int i = 0; i < samplesRead; ++i)
         {

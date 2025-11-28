@@ -123,7 +123,6 @@ private:
 
     // Animation
     SpringAnimation beatPulseSpring_;
-    float lastBeatPosition_ = 0.0f;
 
     ColorTheme theme_;
 

@@ -177,7 +177,7 @@ public:
     int getEffectiveWidth() const;
 
 private:
-    [[maybe_unused]] OscilPluginProcessor& processor_;
+    OscilPluginProcessor& processor_;
 
     // Child components
     std::unique_ptr<SidebarResizeHandle> resizeHandle_;

@@ -173,7 +173,7 @@ void OscillatorConfigPopup::paint(juce::Graphics& g)
     // Draw color indicator next to name
     auto colorIndicatorBounds = juce::Rectangle<float>(
         popupBounds.getX() + 16,
-        getHeight() / 2.0f - POPUP_HEIGHT / 2.0f + 12,
+        static_cast<float>(getHeight()) / 2.0f - POPUP_HEIGHT / 2.0f + 12,
         24, 24
     );
     g.setColour(colour_);

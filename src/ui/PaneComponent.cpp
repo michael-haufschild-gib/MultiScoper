@@ -146,7 +146,7 @@ void PaneComponent::mouseDrag(const juce::MouseEvent& event)
             dragG.setOpacity(0.7f);
             dragG.drawImageAt(snapshot, 0, 0);
 
-            container->startDragging(dragDescription, this, dragImage, true, nullptr, &event.source);
+            container->startDragging(dragDescription, this, juce::ScaledImage(dragImage), true, nullptr, &event.source);
         }
     }
 }

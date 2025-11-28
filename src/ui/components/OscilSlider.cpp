@@ -628,7 +628,7 @@ bool OscilSlider::keyPressed(const juce::KeyPress& key)
         return true;
     }
 
-    if (delta != 0.0)
+    if (std::abs(delta) > 1e-9)
     {
         if (key.getModifiers().isShiftDown())
             delta *= ComponentLayout::COARSE_CONTROL_FACTOR;
@@ -693,7 +693,7 @@ double OscilSlider::valueToProportionOfLength(double value) const
 {
     double proportion = (value - minValue_) / (maxValue_ - minValue_);
 
-    if (skewFactor_ != 1.0)
+    if (std::abs(skewFactor_ - 1.0) > 1e-9)
         proportion = std::pow(proportion, 1.0 / skewFactor_);
 
     return proportion;
@@ -701,7 +701,7 @@ double OscilSlider::valueToProportionOfLength(double value) const
 
 double OscilSlider::proportionOfLengthToValue(double proportion) const
 {
-    if (skewFactor_ != 1.0)
+    if (std::abs(skewFactor_ - 1.0) > 1e-9)
         proportion = std::pow(proportion, skewFactor_);
 
     return minValue_ + proportion * (maxValue_ - minValue_);

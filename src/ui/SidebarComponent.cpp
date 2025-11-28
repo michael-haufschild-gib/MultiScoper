@@ -153,6 +153,7 @@ void SidebarCollapseButton::setCollapsed(bool collapsed)
 SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
     : processor_(processor)
 {
+    juce::ignoreUnused(processor_);
     ThemeManager::getInstance().addListener(this);
 
     // Create resize handle (on left edge since sidebar is on right)

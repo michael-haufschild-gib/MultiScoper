@@ -287,8 +287,8 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Recta
     }
 
     int colX = availableArea.getX() + column * colWidth;
-    int paneY = availableArea.getY() + static_cast<int>((yRatio / totalRatio) * availableArea.getHeight());
-    int paneHeight = static_cast<int>((pane.getHeightRatio() / totalRatio) * availableArea.getHeight());
+    int paneY = availableArea.getY() + static_cast<int>((yRatio / totalRatio) * static_cast<float>(availableArea.getHeight()));
+    int paneHeight = static_cast<int>((pane.getHeightRatio() / totalRatio) * static_cast<float>(availableArea.getHeight()));
 
     // Add small margin
     const int margin = 2;
@@ -326,8 +326,8 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBoundsInColumn(const PaneId& pane
         yRatio += columnPanes[static_cast<size_t>(i)]->getHeightRatio();
     }
 
-    int paneY = columnArea.getY() + static_cast<int>((yRatio / totalRatio) * columnArea.getHeight());
-    int paneHeight = static_cast<int>((pane->getHeightRatio() / totalRatio) * columnArea.getHeight());
+    int paneY = columnArea.getY() + static_cast<int>((yRatio / totalRatio) * static_cast<float>(columnArea.getHeight()));
+    int paneHeight = static_cast<int>((pane->getHeightRatio() / totalRatio) * static_cast<float>(columnArea.getHeight()));
 
     const int margin = 2;
     return juce::Rectangle<int>(columnArea.getX() + margin, paneY + margin,
