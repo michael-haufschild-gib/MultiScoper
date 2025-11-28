@@ -346,7 +346,10 @@ if(OSCIL_BUILD_TESTS)
     endif()
 
     include(GoogleTest)
-    gtest_discover_tests(OscilTests)
+    # Use PRE_TEST discovery mode to avoid running the test executable during build.
+    # JUCE GUI initialization in test_main.cpp can cause access violations on Windows
+    # when run during CMake's test discovery phase at build time.
+    gtest_discover_tests(OscilTests DISCOVERY_MODE PRE_TEST)
 endif()
 
 # E2E Test Harness (optional)
