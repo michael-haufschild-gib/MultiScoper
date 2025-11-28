@@ -1,0 +1,103 @@
+name: Auto-fix CI failures with Copilot
+
+on:
+  workflow_run:
+    workflows: ["Build and Test"]
+    types: [completed]
+
+jobs:
+  create-fix-issue:
+    # Only run when the CI workflow fails
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare issue body
+        run: |
+          cat > issue_body.txt << 'EOF'
+          @github-copilot start agent task
+
+          The CI workflow [failed](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}).
+
+          Please investigate the failure, identify the root cause, and create a fix.
+
+          ## Failure Details
+          - **Workflow**: ${{ github.event.workflow_run.name }}
+          - **Run ID**: ${{ github.event.workflow_run.id }}
+          - **Commit**: ${{ github.event.workflow_run.head_sha }}
+          - **Branch**: ${{ github.event.workflow_run.head_branch }}
+          - **Trigger**: ${{ github.event.workflow_run.event }}
+
+          ## Instructions
+          1. Check the workflow logs for error messages
+          2. Identify which job/step failed
+          3. Analyze the error and determine the fix
+          4. Make the minimal changes necessary to fix the issue
+          5. Ensure tests pass before submitting the PR
+
+          ## Context
+          This is a JUCE C++ audio plugin project. Common failure causes:
+          - Dependency version mismatches
+          - Platform-specific build issues (macOS/Linux/Windows)
+          - Missing CMake preset configurations
+          - Test failures in GoogleTest
+          - pluginval validation failures
+          EOF
+
+      - name: Create issue and assign Copilot
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_ASSIGN_PAT }}
+        run: |
+          set -euo pipefail
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          REPO="${GITHUB_REPOSITORY##*/}"
+
+          # Get Copilot bot ID
+          BOT_ID=$(gh api graphql \
+            -f owner="$OWNER" -f name="$REPO" \
+            -f query='
+            query($owner:String!, $name:String!){
+              repository(owner:$owner, name:$name){
+                suggestedActors(capabilities:[CAN_BE_ASSIGNED], first:100){
+                  nodes{ login __typename ... on Bot { id } }
+                }
+              }
+            }' \
+            --jq '.data.repository.suggestedActors.nodes[] | select(.login=="copilot-swe-agent") | .id')
+
+          if [ -z "$BOT_ID" ]; then
+            echo "Error: Could not find copilot-swe-agent. Is Copilot coding agent enabled?"
+            exit 1
+          fi
+
+          REPO_ID=$(gh api graphql \
+            -f owner="$OWNER" -f name="$REPO" \
+            -f query='query($owner:String!, $name:String!){ repository(owner:$owner, name:$name){ id } }' \
+            --jq '.data.repository.id')
+
+          TITLE="CI Fix: ${{ github.event.workflow_run.name }} failed on ${{ github.event.workflow_run.head_branch }}"
+          BODY="$(cat issue_body.txt)"
+
+          # Create issue and assign to Copilot
+          RESULT=$(gh api graphql \
+            -f repo="$REPO_ID" -f title="$TITLE" -f body="$BODY" -f assignee="$BOT_ID" \
+            -f query='
+            mutation($repo:ID!, $title:String!, $body:String!, $assignee:ID!){
+              createIssue(input:{
+                repositoryId:$repo,
+                title:$title,
+                body:$body,
+                assigneeIds:[$assignee]
+              }){
+                issue{ number url }
+              }
+            }' \
+            --jq '.data.createIssue.issue')
+
+          echo "Created issue: $(echo "$RESULT" | jq -r '.url')"
