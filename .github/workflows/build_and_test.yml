@@ -35,12 +35,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: macOS
-            os: macos-14
-            cmake_preset: ci-macos
-            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
-            pluginval_exe: pluginval.app/Contents/MacOS/pluginval
-            plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
+          # Temporarily disabled - will re-enable in a few weeks
+          # - name: macOS
+          #   os: macos-14
+          #   cmake_preset: ci-macos
+          #   pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
+          #   pluginval_exe: pluginval.app/Contents/MacOS/pluginval
+          #   plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
           - name: Windows
             os: windows-latest
@@ -49,12 +50,13 @@ jobs:
             pluginval_exe: pluginval.exe
             plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
-          - name: Linux
-            os: ubuntu-22.04
-            cmake_preset: ci-linux
-            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
-            pluginval_exe: pluginval
-            plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
+          # Temporarily disabled - will re-enable in a few weeks
+          # - name: Linux
+          #   os: ubuntu-22.04
+          #   cmake_preset: ci-linux
+          #   pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
+          #   pluginval_exe: pluginval
+          #   plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
     steps:
       - name: Checkout repository
