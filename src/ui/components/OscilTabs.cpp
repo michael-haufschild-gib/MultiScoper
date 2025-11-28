@@ -231,7 +231,9 @@ int OscilTabs::getPreferredWidth() const
             else
             {
                 auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-                int labelWidth = font.getStringWidth(tab.label);
+                juce::GlyphArrangement glyphs;
+                glyphs.addLineOfText(font, tab.label, 0, 0);
+                int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
                 int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
                 int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
                 totalWidth += labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
@@ -245,7 +247,9 @@ int OscilTabs::getPreferredWidth() const
         for (const auto& tab : tabs_)
         {
             auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-            int labelWidth = font.getStringWidth(tab.label);
+            juce::GlyphArrangement glyphs;
+            glyphs.addLineOfText(font, tab.label, 0, 0);
+            int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
             int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
             int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
             maxWidth = std::max(maxWidth, labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2);
@@ -324,7 +328,9 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
 
     // Calculate total content width for centering
     auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-    int labelWidth = font.getStringWidth(tab.label);
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText(font, tab.label, 0, 0);
+    int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
     contentWidth += labelWidth;
 
     if (tab.icon.isValid())
@@ -487,14 +493,18 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
             for (size_t i = 0; i < static_cast<size_t>(index); ++i)
             {
                 const auto& tab = tabs_[i];
-                int labelWidth = font.getStringWidth(tab.label);
+                juce::GlyphArrangement glyphs;
+                glyphs.addLineOfText(font, tab.label, 0, 0);
+                int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
                 int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
                 int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
                 x += labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
             }
 
             const auto& tab = tabs_[static_cast<size_t>(index)];
-            int labelWidth = font.getStringWidth(tab.label);
+            juce::GlyphArrangement glyphs;
+            glyphs.addLineOfText(font, tab.label, 0, 0);
+            int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
             int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
             int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
             int width = labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;

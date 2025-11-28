@@ -364,21 +364,23 @@ void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool
     juce::String valueText = formatValue(value_);
 
     auto font = juce::Font(juce::FontOptions().withHeight(12.0f));
-    int textWidth = font.getStringWidth(valueText) + TOOLTIP_PADDING * 2;
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText(font, valueText, 0, 0);
+    float textWidthF = glyphs.getBoundingBox(0, -1, false).getWidth() + TOOLTIP_PADDING * 2;
 
     juce::Rectangle<float> tooltipBounds;
 
     if (isVertical)
     {
         tooltipBounds = juce::Rectangle<float>(
-            getWidth() + 4.0f, thumbPosition - TOOLTIP_HEIGHT / 2.0f,
-            static_cast<float>(textWidth), static_cast<float>(TOOLTIP_HEIGHT));
+            static_cast<float>(getWidth()) + 4.0f, thumbPosition - TOOLTIP_HEIGHT / 2.0f,
+            textWidthF, static_cast<float>(TOOLTIP_HEIGHT));
     }
     else
     {
         tooltipBounds = juce::Rectangle<float>(
-            thumbPosition - textWidth / 2.0f, -TOOLTIP_HEIGHT - 4.0f,
-            static_cast<float>(textWidth), static_cast<float>(TOOLTIP_HEIGHT));
+            thumbPosition - textWidthF / 2.0f, -TOOLTIP_HEIGHT - 4.0f,
+            textWidthF, static_cast<float>(TOOLTIP_HEIGHT));
     }
 
     // Clamp to bounds
@@ -488,7 +490,7 @@ void OscilSlider::mouseDown(const juce::MouseEvent& e)
         else
         {
             // Both or neither - pick closest
-            float mousePos = isVertical ? e.getPosition().y : e.getPosition().x;
+            float mousePos = isVertical ? static_cast<float>(e.getPosition().y) : static_cast<float>(e.getPosition().x);
             draggingRangeEnd_ = std::abs(mousePos - endThumbPos) < std::abs(mousePos - startThumbPos);
         }
 
@@ -516,14 +518,14 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     float proportion;
     if (isVertical)
     {
-        float trackHeight = bounds.getHeight() - THUMB_SIZE;
-        float relY = bounds.getBottom() - THUMB_SIZE / 2 - e.getPosition().y;
+        float trackHeight = static_cast<float>(bounds.getHeight()) - THUMB_SIZE;
+        float relY = static_cast<float>(bounds.getBottom()) - THUMB_SIZE / 2 - static_cast<float>(e.getPosition().y);
         proportion = relY / trackHeight;
     }
     else
     {
-        float trackWidth = bounds.getWidth() - THUMB_SIZE;
-        float relX = e.getPosition().x - THUMB_SIZE / 2;
+        float trackWidth = static_cast<float>(bounds.getWidth()) - THUMB_SIZE;
+        float relX = static_cast<float>(e.getPosition().x) - THUMB_SIZE / 2;
         proportion = relX / trackWidth;
     }
 
@@ -748,13 +750,13 @@ bool OscilSlider::hitTestThumb(const juce::Point<int>& point, float thumbPositio
 
     if (isVertical)
     {
-        float cx = getWidth() / 2.0f;
+        float cx = static_cast<float>(getWidth()) / 2.0f;
         return juce::Rectangle<float>(cx - size / 2, thumbPosition - size / 2, size, size)
             .contains(point.toFloat());
     }
     else
     {
-        float cy = getHeight() / 2.0f;
+        float cy = static_cast<float>(getHeight()) / 2.0f;
         return juce::Rectangle<float>(thumbPosition - size / 2, cy - size / 2, size, size)
             .contains(point.toFloat());
     }

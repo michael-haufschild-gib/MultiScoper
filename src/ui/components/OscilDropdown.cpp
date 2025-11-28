@@ -671,7 +671,9 @@ int OscilDropdown::getPreferredWidth() const
     for (const auto& item : items_)
     {
         auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-        int width = font.getStringWidth(item.label);
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, item.label, 0, 0);
+        int width = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
         maxWidth = std::max(maxWidth, width);
     }
 

@@ -60,13 +60,13 @@ void OscilColorSwatches::setSelectedIndex(int index, bool notify)
     repaint();
 
     if (notify && onColorSelected && index >= 0)
-        onColorSelected(index, colors_[index]);
+        onColorSelected(index, colors_[static_cast<size_t>(index)]);
 }
 
 juce::Colour OscilColorSwatches::getSelectedColor() const
 {
     if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(colors_.size()))
-        return colors_[selectedIndex_];
+        return colors_[static_cast<size_t>(selectedIndex_)];
 
     return juce::Colour();
 }
@@ -75,7 +75,7 @@ void OscilColorSwatches::setSelectedColor(juce::Colour color, bool notify)
 {
     for (int i = 0; i < static_cast<int>(colors_.size()); ++i)
     {
-        if (colors_[i] == color)
+        if (colors_[static_cast<size_t>(i)] == color)
         {
             setSelectedIndex(i, notify);
             return;
@@ -135,7 +135,7 @@ int OscilColorSwatches::getColumnCount() const
 int OscilColorSwatches::getRowCount() const
 {
     int cols = getColumnCount();
-    return static_cast<int>((colors_.size() + cols - 1) / cols);
+    return static_cast<int>((colors_.size() + static_cast<size_t>(cols) - 1) / static_cast<size_t>(cols));
 }
 
 int OscilColorSwatches::getPreferredWidth() const
@@ -147,7 +147,7 @@ int OscilColorSwatches::getPreferredWidth() const
 int OscilColorSwatches::getPreferredHeight() const
 {
     int cols = getColumnCount();
-    int rows = static_cast<int>((colors_.size() + cols - 1) / cols);
+    int rows = static_cast<int>((colors_.size() + static_cast<size_t>(cols) - 1) / static_cast<size_t>(cols));
     return rows * swatchSize_ + (rows - 1) * spacing_;
 }
 
@@ -174,7 +174,7 @@ void OscilColorSwatches::paint(juce::Graphics& g)
 
 void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectangle<int> bounds)
 {
-    auto color = colors_[index];
+    auto color = colors_[static_cast<size_t>(index)];
     bool isSelected = (index == selectedIndex_);
     bool isHovered = (index == hoveredIndex_);
 
@@ -221,7 +221,7 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
 
 void OscilColorSwatches::paintCheckmark(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    auto color = colors_[selectedIndex_];
+    auto color = colors_[static_cast<size_t>(selectedIndex_)];
 
     // Choose white or black checkmark based on color brightness
     auto checkColor = color.getBrightness() > 0.5f ? juce::Colours::black : juce::Colours::white;
@@ -304,7 +304,7 @@ void OscilColorSwatches::mouseMove(const juce::MouseEvent& e)
 
         // Notify for live preview
         if (onColorHovered && newHovered >= 0)
-            onColorHovered(colors_[newHovered]);
+            onColorHovered(colors_[static_cast<size_t>(newHovered)]);
     }
 }
 
@@ -317,7 +317,7 @@ void OscilColorSwatches::mouseExit(const juce::MouseEvent&)
 
         // Notify hover ended (revert preview)
         if (onColorHovered && selectedIndex_ >= 0)
-            onColorHovered(colors_[selectedIndex_]);
+            onColorHovered(colors_[static_cast<size_t>(selectedIndex_)]);
     }
 }
 
@@ -350,7 +350,7 @@ bool OscilColorSwatches::keyPressed(const juce::KeyPress& key)
 
         // Preview on keyboard nav
         if (onColorHovered)
-            onColorHovered(colors_[focusedIndex_]);
+            onColorHovered(colors_[static_cast<size_t>(focusedIndex_)]);
 
         return true;
     }

@@ -96,7 +96,9 @@ int OscilRadioButton::getPreferredWidth() const
     if (label_.isNotEmpty())
     {
         auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-        int labelWidth = font.getStringWidth(label_);
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, label_, 0, 0);
+        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
         return radioWidth + ComponentLayout::SPACING_SM + labelWidth;
     }
 
@@ -123,7 +125,7 @@ void OscilRadioButton::paint(juce::Graphics& g)
     else if (labelOnRight_)
     {
         circleBounds = juce::Rectangle<float>(
-            0, (bounds.getHeight() - RADIO_SIZE) / 2.0f,
+            0, static_cast<float>(bounds.getHeight() - RADIO_SIZE) / 2.0f,
             RADIO_SIZE, RADIO_SIZE);
 
         // Draw label
@@ -137,7 +139,9 @@ void OscilRadioButton::paint(juce::Graphics& g)
     else
     {
         auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-        int labelWidth = font.getStringWidth(label_);
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, label_, 0, 0);
+        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
 
         // Draw label on left
         auto labelBounds = juce::Rectangle<float>(
@@ -148,8 +152,8 @@ void OscilRadioButton::paint(juce::Graphics& g)
         g.drawText(label_, labelBounds, juce::Justification::centredRight);
 
         circleBounds = juce::Rectangle<float>(
-            labelWidth + ComponentLayout::SPACING_SM,
-            (bounds.getHeight() - RADIO_SIZE) / 2.0f,
+            static_cast<float>(labelWidth + ComponentLayout::SPACING_SM),
+            static_cast<float>(bounds.getHeight() - RADIO_SIZE) / 2.0f,
             RADIO_SIZE, RADIO_SIZE);
     }
 

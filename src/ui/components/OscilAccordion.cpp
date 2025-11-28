@@ -137,7 +137,7 @@ int OscilAccordionSection::getPreferredHeight() const
     int contentHeight = getContentHeight();
     float expandAmount = expandSpring_.position;
 
-    return HEADER_HEIGHT + static_cast<int>(contentHeight * expandAmount);
+    return HEADER_HEIGHT + static_cast<int>(static_cast<float>(contentHeight) * expandAmount);
 }
 
 void OscilAccordionSection::paint(juce::Graphics& g)
@@ -196,7 +196,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 
     // Title
     g.setColour(theme_.textPrimary.withAlpha(opacity));
-    g.setFont(juce::Font(13.0f).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)).boldened());
     g.drawText(title_, contentBounds, juce::Justification::centredLeft);
 
     // Focus ring

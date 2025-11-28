@@ -177,8 +177,8 @@ void OscilModal::paint(juce::Graphics& g)
     auto centreX = modalBounds.getCentreX();
     auto centreY = modalBounds.getCentreY();
 
-    auto scaledWidth = static_cast<int>(modalBounds.getWidth() * scale);
-    auto scaledHeight = static_cast<int>(modalBounds.getHeight() * scale);
+    auto scaledWidth = static_cast<int>(static_cast<float>(modalBounds.getWidth()) * scale);
+    auto scaledHeight = static_cast<int>(static_cast<float>(modalBounds.getHeight()) * scale);
 
     auto scaledBounds = juce::Rectangle<int>(
         centreX - scaledWidth / 2,
@@ -202,7 +202,6 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
     float alpha = showSpring_.position;
 
     // Shadow
-    auto shadowBounds = bounds.expanded(20);
     juce::DropShadow shadow(juce::Colours::black.withAlpha(0.3f * alpha), 20, {0, 4});
     shadow.drawForRectangle(g, bounds);
 
@@ -233,7 +232,7 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
         textBounds.removeFromRight(CLOSE_BUTTON_SIZE + 8);
 
     g.setColour(theme_.textPrimary.withAlpha(alpha));
-    g.setFont(juce::Font(15.0f).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(15.0f)).boldened());
     g.drawText(title_, textBounds, juce::Justification::centredLeft);
 
     // Close button
@@ -267,7 +266,7 @@ juce::Rectangle<int> OscilModal::getModalBounds() const
 {
     auto parentBounds = getLocalBounds();
 
-    int width, height;
+    int width = 0, height = 0;
 
     if (customWidth_ > 0 && customHeight_ > 0)
     {
@@ -289,6 +288,9 @@ juce::Rectangle<int> OscilModal::getModalBounds() const
                 break;
             case ModalSize::FullScreen:
                 return parentBounds.reduced(MODAL_MARGIN);
+            case ModalSize::Auto:
+                width = SIZE_MEDIUM;
+                break;
         }
 
         // Calculate height based on content
@@ -479,8 +481,8 @@ std::unique_ptr<juce::AccessibilityHandler> OscilModal::createAccessibilityHandl
 
 void OscilAlertModal::show(const juce::String& title,
                             const juce::String& message,
-                            Type type,
-                            std::function<void()> onOk)
+                            [[maybe_unused]] Type type,
+                            [[maybe_unused]] std::function<void()> onOk)
 {
     // Create content
     auto content = std::make_unique<juce::Component>();
@@ -507,9 +509,9 @@ void OscilAlertModal::show(const juce::String& title,
     modal->show();
 }
 
-void OscilAlertModal::confirm(const juce::String& title,
-                               const juce::String& message,
-                               std::function<void(bool)> onResult)
+void OscilAlertModal::confirm([[maybe_unused]] const juce::String& title,
+                               [[maybe_unused]] const juce::String& message,
+                               [[maybe_unused]] std::function<void(bool)> onResult)
 {
     // Similar implementation with Cancel and OK buttons
     // Would pass result to callback

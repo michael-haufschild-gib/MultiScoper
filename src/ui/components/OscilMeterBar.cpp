@@ -256,7 +256,7 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
 void OscilMeterBar::paintScale(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     g.setColour(theme_.textSecondary);
-    g.setFont(juce::Font(9.0f));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(9.0f)));
 
     // Draw dB markers
     std::vector<float> markers = {0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -48.0f};

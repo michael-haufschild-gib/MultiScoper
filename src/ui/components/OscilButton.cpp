@@ -122,7 +122,9 @@ int OscilButton::getPreferredWidth() const
         return ComponentLayout::BUTTON_ICON_SIZE;
 
     auto font = juce::Font(juce::FontOptions().withHeight(14.0f));
-    int textWidth = font.getStringWidth(label_);
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText(font, label_, 0, 0);
+    int textWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
     int iconWidth = icon_.isValid() ? static_cast<int>(ICON_SIZE + ICON_PADDING) : 0;
 
     return std::max(ComponentLayout::BUTTON_MIN_WIDTH,
@@ -240,7 +242,9 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     if (icon_.isValid())
     {
         float iconY = (bounds.getHeight() - ICON_SIZE) / 2;
-        float textWidth = font.getStringWidth(label_);
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, label_, 0, 0);
+        float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
 
         if (iconOnLeft_)
         {

@@ -80,8 +80,10 @@ void OscilBadge::setCompact(bool compact)
 
 int OscilBadge::getPreferredWidth() const
 {
-    auto font = juce::Font(compact_ ? 11.0f : 12.0f);
-    int textWidth = font.getStringWidth(text_);
+    auto font = juce::Font(juce::FontOptions().withHeight(compact_ ? 11.0f : 12.0f));
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText(font, text_, 0, 0);
+    int textWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
     int iconWidth = icon_.isValid() ? ICON_SIZE + 4 : 0;
     int padding = compact_ ? COMPACT_PADDING_H : PADDING_H;
 
@@ -119,7 +121,7 @@ void OscilBadge::paint(juce::Graphics& g)
 
     // Content
     int padding = compact_ ? COMPACT_PADDING_H : PADDING_H;
-    auto contentBounds = bounds.reduced(padding, 0);
+    auto contentBounds = bounds.reduced(static_cast<float>(padding), 0);
 
     if (icon_.isValid())
     {
@@ -132,7 +134,7 @@ void OscilBadge::paint(juce::Graphics& g)
     }
 
     g.setColour(textColour);
-    g.setFont(juce::Font(compact_ ? 11.0f : 12.0f));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(compact_ ? 11.0f : 12.0f)));
     g.drawText(text_, contentBounds, juce::Justification::centred);
 }
 

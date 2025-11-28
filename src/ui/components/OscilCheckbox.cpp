@@ -110,7 +110,9 @@ int OscilCheckbox::getPreferredWidth() const
     if (label_.isNotEmpty())
     {
         auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-        int labelWidth = font.getStringWidth(label_);
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, label_, 0, 0);
+        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
         return boxWidth + ComponentLayout::SPACING_SM + labelWidth;
     }
 
@@ -139,7 +141,7 @@ void OscilCheckbox::paint(juce::Graphics& g)
     else if (labelOnRight_)
     {
         boxBounds = juce::Rectangle<float>(
-            0, (bounds.getHeight() - ComponentLayout::CHECKBOX_SIZE) / 2.0f,
+            0, (static_cast<float>(bounds.getHeight()) - ComponentLayout::CHECKBOX_SIZE) / 2.0f,
             ComponentLayout::CHECKBOX_SIZE, ComponentLayout::CHECKBOX_SIZE);
 
         // Draw label
@@ -153,19 +155,21 @@ void OscilCheckbox::paint(juce::Graphics& g)
     else
     {
         auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
-        int labelWidth = font.getStringWidth(label_);
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, label_, 0, 0);
+        float labelWidthF = glyphs.getBoundingBox(0, -1, false).getWidth();
 
         // Draw label on left
         auto labelBounds = juce::Rectangle<float>(
-            0, 0, static_cast<float>(labelWidth), static_cast<float>(bounds.getHeight()));
+            0, 0, labelWidthF, static_cast<float>(bounds.getHeight()));
 
         g.setColour(theme_.textPrimary.withAlpha(opacity));
         g.setFont(font);
         g.drawText(label_, labelBounds, juce::Justification::centredRight);
 
         boxBounds = juce::Rectangle<float>(
-            labelWidth + ComponentLayout::SPACING_SM,
-            (bounds.getHeight() - ComponentLayout::CHECKBOX_SIZE) / 2.0f,
+            labelWidthF + ComponentLayout::SPACING_SM,
+            (static_cast<float>(bounds.getHeight()) - ComponentLayout::CHECKBOX_SIZE) / 2.0f,
             ComponentLayout::CHECKBOX_SIZE, ComponentLayout::CHECKBOX_SIZE);
     }
 

@@ -149,7 +149,7 @@ void OscilTransportSync::paintBPMDisplay(juce::Graphics& g, juce::Rectangle<int>
 
     // BPM value
     g.setColour(theme_.textPrimary);
-    g.setFont(juce::Font(compactMode_ ? 14.0f : 18.0f).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(compactMode_ ? 14.0f : 18.0f)).boldened());
 
     juce::String bpmText = juce::String(bpm, 1);
     g.drawText(bpmText, bounds.reduced(4, 0), juce::Justification::centred);
@@ -158,7 +158,7 @@ void OscilTransportSync::paintBPMDisplay(juce::Graphics& g, juce::Rectangle<int>
     if (!compactMode_)
     {
         g.setColour(theme_.textSecondary);
-        g.setFont(juce::Font(9.0f));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(9.0f)));
         g.drawText("BPM", bounds.getX(), bounds.getBottom() - 12, bounds.getWidth(), 10,
                    juce::Justification::centred);
     }
@@ -175,7 +175,7 @@ void OscilTransportSync::paintBPMDisplay(juce::Graphics& g, juce::Rectangle<int>
 void OscilTransportSync::paintTimeSignature(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     g.setColour(theme_.textSecondary);
-    g.setFont(juce::Font(12.0f));
+    g.setFont(juce::Font(juce::FontOptions().withHeight(12.0f)));
 
     juce::String text = juce::String(timeSignatureNumerator_) + "/" +
                         juce::String(timeSignatureDenominator_);
@@ -221,7 +221,7 @@ void OscilTransportSync::paintSyncButton(juce::Graphics& g, juce::Rectangle<int>
     auto colour = syncEnabled_ ? theme_.controlActive : theme_.textSecondary;
 
     g.setColour(colour);
-    g.setFont(juce::Font(10.0f).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)).boldened());
     g.drawText("SYNC", bounds, juce::Justification::centred);
 
     if (syncEnabled_)
@@ -252,7 +252,7 @@ juce::Rectangle<int> OscilTransportSync::getBeatIndicatorBounds() const
 
 juce::Rectangle<int> OscilTransportSync::getSyncButtonBounds() const
 {
-    return juce::Rectangle<int>(getWidth() - 36, (getHeight() - 16) / 2, 32, 16);
+    return juce::Rectangle<int>(getWidth() - 36, static_cast<int>((getHeight() - 16) / 2), 32, 16);
 }
 
 void OscilTransportSync::resized()

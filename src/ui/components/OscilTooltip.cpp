@@ -207,16 +207,32 @@ int OscilTooltip::calculateContentWidth() const
     int maxWidth = 0;
 
     if (content_.title.isNotEmpty())
-        maxWidth = std::max(maxWidth, titleFont.getStringWidth(content_.title));
+    {
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(titleFont, content_.title, 0, 0);
+        maxWidth = std::max(maxWidth, static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth()));
+    }
 
     if (content_.value.isNotEmpty())
-        maxWidth = std::max(maxWidth, normalFont.getStringWidth(content_.value));
+    {
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(normalFont, content_.value, 0, 0);
+        maxWidth = std::max(maxWidth, static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth()));
+    }
 
     if (content_.shortcut.isNotEmpty())
-        maxWidth = std::max(maxWidth, smallFont.getStringWidth(content_.shortcut));
+    {
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(smallFont, content_.shortcut, 0, 0);
+        maxWidth = std::max(maxWidth, static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth()));
+    }
 
     if (content_.hint.isNotEmpty())
-        maxWidth = std::max(maxWidth, smallFont.getStringWidth(content_.hint));
+    {
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(smallFont, content_.hint, 0, 0);
+        maxWidth = std::max(maxWidth, static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth()));
+    }
 
     // Add color preview width if showing
     if (content_.showColourPreview)

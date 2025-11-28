@@ -15,6 +15,10 @@ endif()
 # Option for OpenGL support
 option(OSCIL_ENABLE_OPENGL "Enable OpenGL context for GPU compositing" ON)
 
+# Option for Melatonin Inspector (UI debugging tool)
+# Disabled by default for CI/release builds - creates a separate window that can timeout in headless environments
+option(OSCIL_ENABLE_INSPECTOR "Enable Melatonin Inspector for UI debugging (development only)" OFF)
+
 # Option for RealtimeSanitizer (requires Clang 18+)
 # Detects real-time safety violations: allocations, locks, syscalls in audio thread
 option(OSCIL_ENABLE_RTSAN "Enable RealtimeSanitizer for real-time safety checking" OFF)
@@ -48,12 +52,15 @@ FetchContent_MakeAvailable(JUCE httplib json)
 
 # Melatonin Inspector for UI debugging (browser-like devtools for JUCE)
 # Must be declared and made available AFTER JUCE but BEFORE juce_add_plugin
-FetchContent_Declare(melatonin_inspector
-    GIT_REPOSITORY https://github.com/sudara/melatonin_inspector.git
-    GIT_TAG origin/main
-    SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/melatonin_inspector
-)
-FetchContent_MakeAvailable(melatonin_inspector)
+# Only fetch/build when explicitly enabled - creates separate window that causes CI timeouts
+if(OSCIL_ENABLE_INSPECTOR)
+    FetchContent_Declare(melatonin_inspector
+        GIT_REPOSITORY https://github.com/sudara/melatonin_inspector.git
+        GIT_TAG origin/main
+        SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/melatonin_inspector
+    )
+    FetchContent_MakeAvailable(melatonin_inspector)
+endif()
 
 # Define the plugin
 juce_add_plugin(Oscil
@@ -147,15 +154,16 @@ target_include_directories(Oscil
 )
 
 # JUCE compile definitions
+# Note: JUCE_DISPLAY_SPLASH_SCREEN removed - JUCE 8+ no longer uses splash screen
 target_compile_definitions(Oscil
     PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
-        JUCE_DISPLAY_SPLASH_SCREEN=0
         JUCE_REPORT_APP_USAGE=0
         JUCE_STRICT_REFCOUNTEDPOINTER=1
         $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
+        $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:OSCIL_ENABLE_INSPECTOR=1>
 )
 
 # Link JUCE modules
@@ -170,13 +178,26 @@ target_link_libraries(Oscil
         juce::juce_data_structures
         juce::juce_events
         nlohmann_json::nlohmann_json
-        melatonin_inspector
+        $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:melatonin_inspector>
         $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+# Suppress warnings from JUCE third-party dependencies (Harfbuzz, VST3 SDK)
+# These are internal JUCE libraries we cannot modify
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    # First suppress unknown warning option warnings, then use both flag variants:
+    # - LLVM Clang 20+ uses -Wno-nontrivial-memcall
+    # - Apple Clang uses -Wno-nontrivial-memaccess
+    target_compile_options(Oscil PRIVATE
+        -Wno-unknown-warning-option  # Suppress warnings about unrecognized flags
+        -Wno-nontrivial-memcall      # LLVM Clang: Harfbuzz memcpy warnings
+        -Wno-nontrivial-memaccess    # Apple Clang: Harfbuzz memcpy warnings
+    )
+endif()
 
 # RealtimeSanitizer flags (LLVM Clang 20+ only - not Apple Clang, not Ubuntu's packaged Clang)
 # Catches allocations, mutex locks, and blocking syscalls in audio thread
@@ -186,9 +207,13 @@ if(OSCIL_ENABLE_RTSAN)
         message(STATUS "RealtimeSanitizer enabled (Clang ${CMAKE_CXX_COMPILER_VERSION})")
         target_compile_options(Oscil PRIVATE -fsanitize=realtime)
         target_link_options(Oscil PRIVATE -fsanitize=realtime)
-        # Also apply to standalone target for testing
-        target_compile_options(Oscil_Standalone PRIVATE -fsanitize=realtime)
-        target_link_options(Oscil_Standalone PRIVATE -fsanitize=realtime)
+        # Apply to ALL plugin format targets (Standalone, VST3, AU)
+        foreach(target IN ITEMS Oscil_Standalone Oscil_VST3 Oscil_AU)
+            if(TARGET ${target})
+                target_compile_options(${target} PRIVATE -fsanitize=realtime)
+                target_link_options(${target} PRIVATE -fsanitize=realtime)
+            endif()
+        endforeach()
     else()
         message(WARNING "RealtimeSanitizer requires LLVM Clang 20+. Current compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
     endif()

@@ -140,11 +140,11 @@ void OscilColorPicker::paintSquareMode(juce::Graphics& g)
 
     for (int y = 0; y < bounds.getHeight(); ++y)
     {
-        float brightness = 1.0f - (static_cast<float>(y) / bounds.getHeight());
+        float brightness = 1.0f - (static_cast<float>(y) / static_cast<float>(bounds.getHeight()));
 
         for (int x = 0; x < bounds.getWidth(); ++x)
         {
-            float saturation = static_cast<float>(x) / bounds.getWidth();
+            float saturation = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
             auto color = juce::Colour::fromHSV(hue_, saturation, brightness, 1.0f);
             gradient.setPixelAt(x, y, color);
         }
@@ -157,8 +157,8 @@ void OscilColorPicker::paintSquareMode(juce::Graphics& g)
     g.drawRect(bounds);
 
     // Indicator
-    float indicatorX = bounds.getX() + saturation_ * bounds.getWidth();
-    float indicatorY = bounds.getY() + (1.0f - brightness_) * bounds.getHeight();
+    float indicatorX = static_cast<float>(bounds.getX()) + saturation_ * static_cast<float>(bounds.getWidth());
+    float indicatorY = static_cast<float>(bounds.getY()) + (1.0f - brightness_) * static_cast<float>(bounds.getHeight());
 
     g.setColour(juce::Colours::white);
     g.drawEllipse(indicatorX - 6, indicatorY - 6, 12, 12, 2.0f);
@@ -169,17 +169,15 @@ void OscilColorPicker::paintSquareMode(juce::Graphics& g)
 void OscilColorPicker::paintWheelMode(juce::Graphics& g)
 {
     auto bounds = getGradientBounds();
-    float radius = std::min(bounds.getWidth(), bounds.getHeight()) / 2.0f;
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
+    float radius = static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f;
 
     // Draw color wheel
     for (int y = 0; y < bounds.getHeight(); ++y)
     {
         for (int x = 0; x < bounds.getWidth(); ++x)
         {
-            float dx = x - radius;
-            float dy = y - radius;
+            float dx = static_cast<float>(x) - radius;
+            float dy = static_cast<float>(y) - radius;
             float distance = std::sqrt(dx * dx + dy * dy);
 
             if (distance <= radius)
@@ -191,7 +189,7 @@ void OscilColorPicker::paintWheelMode(juce::Graphics& g)
 
                 auto color = juce::Colour::fromHSV(hue, sat, brightness_, 1.0f);
                 g.setColour(color);
-                g.fillRect(bounds.getX() + x, bounds.getY() + y, 1, 1);
+                g.fillRect(static_cast<float>(bounds.getX() + x), static_cast<float>(bounds.getY() + y), 1.0f, 1.0f);
             }
         }
     }
@@ -202,7 +200,7 @@ void OscilColorPicker::paintHueSlider(juce::Graphics& g, juce::Rectangle<int> bo
     // Hue gradient
     for (int x = 0; x < bounds.getWidth(); ++x)
     {
-        float hue = static_cast<float>(x) / bounds.getWidth();
+        float hue = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
         g.setColour(juce::Colour::fromHSV(hue, 1.0f, 1.0f, 1.0f));
         g.fillRect(bounds.getX() + x, bounds.getY(), 1, bounds.getHeight());
     }
@@ -212,7 +210,7 @@ void OscilColorPicker::paintHueSlider(juce::Graphics& g, juce::Rectangle<int> bo
     g.drawRect(bounds);
 
     // Indicator
-    float indicatorX = bounds.getX() + hue_ * bounds.getWidth();
+    float indicatorX = static_cast<float>(bounds.getX()) + hue_ * static_cast<float>(bounds.getWidth());
     g.setColour(juce::Colours::white);
     g.fillRect(static_cast<int>(indicatorX) - 2, bounds.getY() - 2, 4, bounds.getHeight() + 4);
     g.setColour(juce::Colours::black);
@@ -239,7 +237,7 @@ void OscilColorPicker::paintAlphaSlider(juce::Graphics& g, juce::Rectangle<int> 
     auto baseColor = juce::Colour::fromHSV(hue_, saturation_, brightness_, 1.0f);
     for (int x = 0; x < bounds.getWidth(); ++x)
     {
-        float alpha = static_cast<float>(x) / bounds.getWidth();
+        float alpha = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
         g.setColour(baseColor.withAlpha(alpha));
         g.fillRect(bounds.getX() + x, bounds.getY(), 1, bounds.getHeight());
     }
@@ -249,7 +247,7 @@ void OscilColorPicker::paintAlphaSlider(juce::Graphics& g, juce::Rectangle<int> 
     g.drawRect(bounds);
 
     // Indicator
-    float indicatorX = bounds.getX() + alpha_ * bounds.getWidth();
+    float indicatorX = static_cast<float>(bounds.getX()) + alpha_ * static_cast<float>(bounds.getWidth());
     g.setColour(juce::Colours::white);
     g.fillRect(static_cast<int>(indicatorX) - 2, bounds.getY() - 2, 4, bounds.getHeight() + 4);
     g.setColour(juce::Colours::black);
@@ -362,7 +360,7 @@ void OscilColorPicker::mouseDown(const juce::MouseEvent& e)
         case DragTarget::Alpha:
             handleAlphaDrag(e.getPosition());
             break;
-        default:
+        case DragTarget::None:
             break;
     }
 }
@@ -380,7 +378,7 @@ void OscilColorPicker::mouseDrag(const juce::MouseEvent& e)
         case DragTarget::Alpha:
             handleAlphaDrag(e.getPosition());
             break;
-        default:
+        case DragTarget::None:
             break;
     }
 }
@@ -397,8 +395,8 @@ void OscilColorPicker::handleGradientDrag(juce::Point<int> pos)
 {
     auto bounds = getGradientBounds();
 
-    saturation_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / bounds.getWidth(), 0.0f, 1.0f);
-    brightness_ = std::clamp(1.0f - static_cast<float>(pos.y - bounds.getY()) / bounds.getHeight(), 0.0f, 1.0f);
+    saturation_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
+    brightness_ = std::clamp(1.0f - static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight()), 0.0f, 1.0f);
 
     updateFromHSV();
 }
@@ -406,14 +404,14 @@ void OscilColorPicker::handleGradientDrag(juce::Point<int> pos)
 void OscilColorPicker::handleHueDrag(juce::Point<int> pos)
 {
     auto bounds = getHueSliderBounds();
-    hue_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / bounds.getWidth(), 0.0f, 1.0f);
+    hue_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
     updateFromHSV();
 }
 
 void OscilColorPicker::handleAlphaDrag(juce::Point<int> pos)
 {
     auto bounds = getAlphaSliderBounds();
-    alpha_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / bounds.getWidth(), 0.0f, 1.0f);
+    alpha_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
     updateFromHSV();
 }
 
