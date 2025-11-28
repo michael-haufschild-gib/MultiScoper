@@ -1,30 +1,38 @@
 /*
     Oscil - Test Main Entry Point
+    
+    NOTE: JUCE initialization is deferred to SetUp() rather than using a static
+    initializer to avoid crashes during gtest_discover_tests, which runs the
+    executable with --gtest_list_tests to enumerate tests at build time.
 */
 
 #include <gtest/gtest.h>
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 
-// Initialize JUCE for tests
-class JuceInitializer
+// GoogleTest environment for JUCE initialization
+// This is only invoked when tests actually run, not during test discovery
+class JuceTestEnvironment : public ::testing::Environment
 {
 public:
-    JuceInitializer()
+    void SetUp() override
     {
         juce::initialiseJuce_GUI();
     }
 
-    ~JuceInitializer()
+    void TearDown() override
     {
         juce::shutdownJuce_GUI();
     }
 };
 
-static JuceInitializer juceInit;
-
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
+    
+    // Register JUCE environment - SetUp() is only called when running tests,
+    // not when listing tests (--gtest_list_tests) during test discovery
+    ::testing::AddGlobalTestEnvironment(new JuceTestEnvironment());
+    
     return RUN_ALL_TESTS();
 }
