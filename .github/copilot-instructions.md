@@ -11,6 +11,8 @@ This file provides context for GitHub Copilot coding agent when working on this 
 - **Testing**: GoogleTest 1.17.0
 - **CI/CD**: GitHub Actions (macOS, Linux, Windows)
 
+All code lives in the `oscil` namespace.
+
 ## Build Commands
 
 ```bash
@@ -25,6 +27,9 @@ cmake --build --preset <preset-name>
 
 # Test
 ctest --preset <preset-name>
+
+# Run specific test (use ctest for cross-platform compatibility)
+ctest --preset <preset-name> -R "TestName"
 ```
 
 ## Project Structure
@@ -33,14 +38,28 @@ ctest --preset <preset-name>
 oscil4/
 ├── CMakeLists.txt          # Main build configuration
 ├── CMakePresets.json       # Build presets
-├── include/                # Header files
-│   ├── core/               # Core logic
-│   ├── dsp/                # DSP processing
-│   └── ui/                 # UI components
-├── src/                    # Implementation files
+├── include/                # Header files (.h)
+│   ├── core/               # Core logic: processors, state, data models
+│   ├── dsp/                # Digital signal processing algorithms
+│   └── ui/                 # UI components (juce::Component subclasses)
+│       ├── components/     # Reusable UI component library
+│       ├── sections/       # Sidebar collapsible sections
+│       └── coordinators/   # State-UI coordination logic
+├── src/                    # Implementation files (.cpp)
+│   ├── core/               # Core implementations
+│   ├── dsp/                # DSP implementations
+│   └── ui/                 # UI implementations
 ├── tests/                  # GoogleTest unit tests
+├── test_harness/           # E2E test harness (optional)
 └── docs/                   # Documentation
 ```
+
+## Key Documentation Files
+
+For detailed guidance, refer to:
+- `docs/architecture.md` - Code organization, patterns, and class creation
+- `docs/development.md` - Build setup, IDE configuration, debugging
+- `docs/testing.md` - Test writing patterns and E2E test harness
 
 ## Common CI Failure Patterns
 
@@ -74,11 +93,42 @@ oscil4/
 - Keep DSP code lock-free and real-time safe
 - Use `jassert` for debug assertions
 - Prefer RAII for resource management
+- All code must be in the `oscil` namespace
+- Classes: `PascalCase` (e.g., `WaveformComponent`)
+- Member variables: `camelCase_` with trailing underscore
+- Methods: `camelCase` (e.g., `getCaptureBuffer()`)
+- Headers in `include/`, implementations in `src/`
+
+## Thread Safety Rules
+
+**Audio Thread** (in `processBlock()`):
+- Use ONLY lock-free operations
+- NO allocations after `prepareToPlay()`
+- NO mutex locks - use atomics and ring buffers
+
+**UI Thread**:
+- All JUCE Component methods are UI-thread only
+- Use message queue for cross-thread communication
+
+## Git Workflow
+
+- Create feature branches from `main` or `develop`
+- Write clear, descriptive commit messages
+- Keep commits focused on single changes
+- Run tests before pushing
+
+## Boundaries - What NOT to Modify
+
+Do NOT modify these without explicit instruction:
+- `.github/workflows/` - CI/CD configuration
+- Third-party dependencies or their versions in `CMakeLists.txt`
+- JUCE module configurations
+- Build presets in `CMakePresets.json` (unless fixing CI)
 
 ## When Fixing Issues
 
 1. **Minimal changes**: Fix only what's broken
-2. **Test locally**: Ensure `ctest --preset dev` passes
+2. **Test locally**: Ensure tests pass with `ctest --preset dev` (macOS) or `ctest --preset ci-linux` (Linux)
 3. **Cross-platform**: Consider all three platforms
 4. **No regressions**: Don't break existing functionality
 5. **Update docs**: If changing build/dependency versions, update `docs/development.md`
@@ -91,3 +141,20 @@ oscil4/
 | CI failure | `.github/workflows/build_and_test.yml` |
 | Test failure | `tests/test_*.cpp` |
 | Dependency issue | `CMakeLists.txt` (FetchContent section) |
+| Architecture questions | `docs/architecture.md` |
+| Build/debug questions | `docs/development.md` |
+| Testing questions | `docs/testing.md` |
+
+## Adding New Code
+
+When adding new source files:
+1. Create header in `include/[domain]/ClassName.h`
+2. Create implementation in `src/[domain]/ClassName.cpp`
+3. Add `.cpp` file to `CMakeLists.txt` under `target_sources(Oscil PRIVATE ...)`
+4. Rebuild: `cmake --build --preset dev`
+
+When adding tests:
+1. Create test file: `tests/test_class_name.cpp`
+2. Add the test file to `CMakeLists.txt` under `add_executable(OscilTests ...)`
+3. If testing new source code, also add that source file (e.g., `src/core/MyClass.cpp`) to OscilTests
+4. Run: `ctest --preset dev`
