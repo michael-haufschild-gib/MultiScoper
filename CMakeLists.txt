@@ -224,13 +224,15 @@ if(OSCIL_ENABLE_RTSAN)
     # Check for LLVM Clang (not AppleClang) version 20+
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
         message(STATUS "RealtimeSanitizer enabled (Clang ${CMAKE_CXX_COMPILER_VERSION})")
+        # Compile with RTSan instrumentation
         target_compile_options(Oscil PRIVATE -fsanitize=realtime)
         target_link_options(Oscil PRIVATE -fsanitize=realtime)
-        # Apply to ALL plugin format targets (Standalone, VST3, AU)
+        # For plugin targets (shared libraries), we need static RTSan runtime
+        # since they're loaded by DAW hosts that don't have RTSan
         foreach(target IN ITEMS Oscil_Standalone Oscil_VST3 Oscil_AU)
             if(TARGET ${target})
                 target_compile_options(${target} PRIVATE -fsanitize=realtime)
-                target_link_options(${target} PRIVATE -fsanitize=realtime)
+                target_link_options(${target} PRIVATE -fsanitize=realtime -static-libsan)
             endif()
         endforeach()
     else()
@@ -341,6 +343,12 @@ if(OSCIL_BUILD_TESTS)
             JUCE_USE_CURL=0
             JUCE_WEB_BROWSER=0
     )
+
+    # Apply RTSan to tests (tests are executables, not shared libraries)
+    if(OSCIL_ENABLE_RTSAN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
+        target_compile_options(OscilTests PRIVATE -fsanitize=realtime)
+        target_link_options(OscilTests PRIVATE -fsanitize=realtime)
+    endif()
 
     include(GoogleTest)
     gtest_discover_tests(OscilTests)

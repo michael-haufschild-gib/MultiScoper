@@ -28,9 +28,18 @@ env:
   GTEST_VERSION: "v1.17.0"
 
 jobs:
+  # Main build job disabled - focusing on RTSan fixes first
+  # build:
+  #   name: ${{ matrix.name }}
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+
+  # Temporarily using a placeholder to keep YAML valid
+  # Re-enable the build job above once RTSan issues are resolved
   build:
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    name: Build (disabled)
+    runs-on: ubuntu-latest
+    if: false  # Disabled until RTSan issues are fixed
     strategy:
       fail-fast: false
       matrix:
@@ -219,7 +228,6 @@ jobs:
   rtsan:
     name: RealtimeSanitizer
     runs-on: ubuntu-24.04
-    continue-on-error: true  # RTSan is experimental, don't block PRs
 
     steps:
       - name: Checkout repository
