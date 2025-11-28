@@ -220,21 +220,16 @@ endif()
 
 # RealtimeSanitizer flags (LLVM Clang 20+ only - not Apple Clang, not Ubuntu's packaged Clang)
 # Catches allocations, mutex locks, and blocking syscalls in audio thread
+# Note: RTSan is only used for testing (OscilTests target), not for plugin builds.
+# Plugin targets (VST3, AU, Standalone) are shared libraries that have complex
+# linking requirements with RTSan that are not worth the effort to maintain.
 if(OSCIL_ENABLE_RTSAN)
     # Check for LLVM Clang (not AppleClang) version 20+
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
         message(STATUS "RealtimeSanitizer enabled (Clang ${CMAKE_CXX_COMPILER_VERSION})")
-        # Compile with RTSan instrumentation
+        # Compile with RTSan instrumentation for the shared code library
         target_compile_options(Oscil PRIVATE -fsanitize=realtime)
         target_link_options(Oscil PRIVATE -fsanitize=realtime)
-        # For plugin targets (shared libraries), we need static RTSan runtime
-        # since they're loaded by DAW hosts that don't have RTSan
-        foreach(target IN ITEMS Oscil_Standalone Oscil_VST3 Oscil_AU)
-            if(TARGET ${target})
-                target_compile_options(${target} PRIVATE -fsanitize=realtime)
-                target_link_options(${target} PRIVATE -fsanitize=realtime -static-libsan)
-            endif()
-        endforeach()
     else()
         message(WARNING "RealtimeSanitizer requires LLVM Clang 20+. Current compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
     endif()

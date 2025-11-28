@@ -28,18 +28,9 @@ env:
   GTEST_VERSION: "v1.17.0"
 
 jobs:
-  # Main build job disabled - focusing on RTSan fixes first
-  # build:
-  #   name: ${{ matrix.name }}
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-
-  # Temporarily using a placeholder to keep YAML valid
-  # Re-enable the build job above once RTSan issues are resolved
   build:
-    name: Build (disabled)
-    runs-on: ubuntu-latest
-    if: false  # Disabled until RTSan issues are fixed
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -295,7 +286,7 @@ jobs:
             -DOSCIL_BUILD_TESTS=ON
 
       - name: Build with RTSan
-        run: cmake --build build --parallel
+        run: cmake --build build --target OscilTests --parallel
 
       - name: Run unit tests with RTSan
         run: ctest --test-dir build --build-config Debug --output-on-failure
