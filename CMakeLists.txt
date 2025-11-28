@@ -7,6 +7,25 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# ============================================================================
+# Compiler Cache (ccache) - Speeds up rebuilds by caching compiled objects
+# Supports Ninja and Makefile generators. Install: brew install ccache (macOS)
+# ============================================================================
+find_program(CCACHE_EXECUTABLE ccache)
+if(CCACHE_EXECUTABLE)
+    message(STATUS "Found ccache: ${CCACHE_EXECUTABLE}")
+    # Only set if not already defined (allows override via -D or CMakePresets.json)
+    if(NOT DEFINED CMAKE_C_COMPILER_LAUNCHER)
+        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+    endif()
+    if(NOT DEFINED CMAKE_CXX_COMPILER_LAUNCHER)
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+    endif()
+else()
+    message(STATUS "ccache not found - builds will not be cached")
+    message(STATUS "  Install: brew install ccache (macOS) | apt install ccache (Linux)")
+endif()
+
 # Build universal binary for macOS (Intel + Apple Silicon)
 if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build architectures for macOS")
@@ -29,21 +48,21 @@ include(FetchContent)
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 8.0.4
+    GIT_TAG 8.0.5
     GIT_SHALLOW TRUE
 )
 
 FetchContent_Declare(
     httplib
     GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG v0.14.3
+    GIT_TAG v0.27.0
     GIT_SHALLOW TRUE
 )
 
 FetchContent_Declare(
     json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
+    GIT_TAG v3.12.0
     GIT_SHALLOW TRUE
 )
 
@@ -228,7 +247,7 @@ if(OSCIL_BUILD_TESTS)
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG v1.14.0
+        GIT_TAG v1.17.0
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(googletest)

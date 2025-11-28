@@ -9,7 +9,6 @@ on:
 
 env:
   BUILD_TYPE: Release
-  CMAKE_BUILD_PARALLEL_LEVEL: 4
 
 jobs:
   build:
@@ -21,22 +20,22 @@ jobs:
         include:
           - name: macOS
             os: macos-14
-            cmake_args: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_macOS.zip
+            cmake_preset: ci-macos
+            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
             pluginval_exe: pluginval.app/Contents/MacOS/pluginval
             plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
           - name: Windows
             os: windows-latest
-            cmake_args: ""
-            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_Windows.zip
+            cmake_preset: ci-windows
+            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip
             pluginval_exe: pluginval.exe
             plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
           - name: Linux
             os: ubuntu-22.04
-            cmake_args: ""
-            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_Linux.zip
+            cmake_preset: ci-linux
+            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
             pluginval_exe: pluginval
             plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
@@ -46,11 +45,30 @@ jobs:
         with:
           submodules: recursive
 
+      # Install Ninja build system
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install Ninja (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja
+
+      # Setup ccache for faster rebuilds
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.name }}-${{ env.BUILD_TYPE }}
+          max-size: 500M
+
       # Linux dependencies
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
           sudo apt-get install -y \
             libasound2-dev \
             libjack-jackd2-dev \
@@ -68,17 +86,17 @@ jobs:
             libglu1-mesa-dev \
             mesa-common-dev
 
-      # Configure CMake
+      # Configure CMake using presets
       - name: Configure CMake
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} ${{ matrix.cmake_args }} -DOSCIL_BUILD_TESTS=ON
+        run: cmake --preset ${{ matrix.cmake_preset }}
 
-      # Build
+      # Build using presets
       - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+        run: cmake --build --preset ${{ matrix.cmake_preset }}
 
       # Run unit tests
       - name: Run Unit Tests
-        run: ctest --test-dir build --build-config ${{ env.BUILD_TYPE }} --output-on-failure --verbose
+        run: ctest --preset ${{ matrix.cmake_preset }}
 
       # Download pluginval
       - name: Download pluginval
@@ -91,14 +109,14 @@ jobs:
       - name: Validate VST3 with pluginval
         shell: bash
         run: |
-          ./${{ matrix.pluginval_exe }} --strictness-level 10 --verbose --validate "build/${{ matrix.plugin_path }}"
+          ./${{ matrix.pluginval_exe }} --strictness-level 10 --verbose --validate "build/${{ matrix.cmake_preset }}/${{ matrix.plugin_path }}"
 
       # Upload build artifacts
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
           name: oscil4-vst3-${{ matrix.name }}
-          path: build/Oscil_artefacts/Release/VST3/
+          path: build/${{ matrix.cmake_preset }}/Oscil_artefacts/Release/VST3/
           if-no-files-found: error
 
       - name: Upload AU (macOS only)
@@ -106,14 +124,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: oscil4-au-${{ matrix.name }}
-          path: build/Oscil_artefacts/Release/AU/
+          path: build/${{ matrix.cmake_preset }}/Oscil_artefacts/Release/AU/
           if-no-files-found: error
 
       - name: Upload Standalone
         uses: actions/upload-artifact@v4
         with:
           name: oscil4-standalone-${{ matrix.name }}
-          path: build/Oscil_artefacts/Release/Standalone/
+          path: build/${{ matrix.cmake_preset }}/Oscil_artefacts/Release/Standalone/
           if-no-files-found: error
 
   # RealtimeSanitizer job - detects real-time safety violations in audio code
@@ -130,6 +148,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: rtsan-debug
+          max-size: 500M
+
       - name: Install LLVM 20 (with RTSan support)
         run: |
           wget https://apt.llvm.org/llvm.sh
@@ -139,7 +166,6 @@ jobs:
 
       - name: Install JUCE dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y \
             libasound2-dev \
             libjack-jackd2-dev \
@@ -159,7 +185,7 @@ jobs:
 
       - name: Configure CMake with RTSan
         run: |
-          cmake -B build \
+          cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_C_COMPILER=clang-20 \
             -DCMAKE_CXX_COMPILER=clang++-20 \
@@ -167,7 +193,7 @@ jobs:
             -DOSCIL_BUILD_TESTS=ON
 
       - name: Build with RTSan
-        run: cmake --build build --config Debug --parallel 4
+        run: cmake --build build --parallel
 
       - name: Run unit tests with RTSan
         run: ctest --test-dir build --build-config Debug --output-on-failure

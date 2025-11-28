@@ -34,3 +34,6 @@ screenshots/
 # Claude settings (user-specific)
 .claude/settings.json
 .claude/settings.local.json
+
+# Temporary build logs
+buildwarning*.txt

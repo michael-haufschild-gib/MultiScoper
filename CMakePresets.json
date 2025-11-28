@@ -1,0 +1,209 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "ccache",
+      "hidden": true,
+      "description": "ccache environment - auto-detected by CMakeLists.txt if installed",
+      "environment": {
+        "CCACHE_BASEDIR": "${sourceDir}",
+        "CCACHE_SLOPPINESS": "pch_defines,time_macros,include_file_mtime"
+      }
+    },
+    {
+      "name": "ninja",
+      "hidden": true,
+      "generator": "Ninja"
+    },
+    {
+      "name": "ninja-multi",
+      "hidden": true,
+      "generator": "Ninja Multi-Config"
+    },
+    {
+      "name": "dev",
+      "displayName": "Development (Debug + Ninja + ccache)",
+      "description": "Fast iterative development with debug symbols",
+      "inherits": ["base", "ninja", "ccache"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OSCIL_BUILD_TESTS": "ON",
+        "OSCIL_ENABLE_INSPECTOR": "ON"
+      }
+    },
+    {
+      "name": "dev-release",
+      "displayName": "Development Release (RelWithDebInfo + Ninja + ccache)",
+      "description": "Optimized build with debug info for profiling",
+      "inherits": ["base", "ninja", "ccache"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "OSCIL_BUILD_TESTS": "ON",
+        "OSCIL_ENABLE_INSPECTOR": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release (Ninja + ccache)",
+      "description": "Optimized release build",
+      "inherits": ["base", "ninja", "ccache"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OSCIL_BUILD_TESTS": "OFF",
+        "OSCIL_ENABLE_INSPECTOR": "OFF"
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "CI Build (Release + Ninja + ccache)",
+      "description": "Continuous integration build with tests",
+      "inherits": ["base", "ninja", "ccache"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OSCIL_BUILD_TESTS": "ON",
+        "OSCIL_ENABLE_INSPECTOR": "OFF"
+      }
+    },
+    {
+      "name": "ci-macos",
+      "displayName": "CI macOS (Universal Binary)",
+      "description": "CI build for macOS with universal binary",
+      "inherits": "ci",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "ci-linux",
+      "displayName": "CI Linux",
+      "description": "CI build for Linux",
+      "inherits": "ci",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "ci-windows",
+      "displayName": "CI Windows",
+      "description": "CI build for Windows",
+      "inherits": "ci",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "rtsan",
+      "displayName": "RealtimeSanitizer (Debug + RTSan)",
+      "description": "Debug build with RealtimeSanitizer for audio thread safety",
+      "inherits": ["base", "ninja", "ccache"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OSCIL_BUILD_TESTS": "ON",
+        "OSCIL_ENABLE_RTSAN": "ON",
+        "OSCIL_ENABLE_INSPECTOR": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "jobs": 0
+    },
+    {
+      "name": "dev-release",
+      "configurePreset": "dev-release",
+      "jobs": 0
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 0
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "jobs": 0
+    },
+    {
+      "name": "ci-macos",
+      "configurePreset": "ci-macos",
+      "jobs": 0
+    },
+    {
+      "name": "ci-linux",
+      "configurePreset": "ci-linux",
+      "jobs": 0
+    },
+    {
+      "name": "ci-windows",
+      "configurePreset": "ci-windows",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
+      }
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "verbose"
+      }
+    },
+    {
+      "name": "ci-macos",
+      "configurePreset": "ci-macos",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "verbose"
+      }
+    },
+    {
+      "name": "ci-linux",
+      "configurePreset": "ci-linux",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "verbose"
+      }
+    },
+    {
+      "name": "ci-windows",
+      "configurePreset": "ci-windows",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "verbose"
+      }
+    }
+  ]
+}
