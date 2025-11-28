@@ -50,6 +50,36 @@ struct ColorTheme
     juce::Colour statusWarning{ 0xFFCCAA00 };
     juce::Colour statusError{ 0xFFCC0000 };
 
+    // Button Colors - Primary
+    juce::Colour btnPrimaryBg{ 0xFF007ACC };
+    juce::Colour btnPrimaryBgHover{ 0xFF008AD9 };
+    juce::Colour btnPrimaryBgActive{ 0xFF0062A3 };
+    juce::Colour btnPrimaryBgDisabled{ 0xFF353535 }; // Often dimmed
+    juce::Colour btnPrimaryText{ 0xFFFFFFFF };
+    juce::Colour btnPrimaryTextHover{ 0xFFFFFFFF };
+    juce::Colour btnPrimaryTextActive{ 0xFFFFFFFF };
+    juce::Colour btnPrimaryTextDisabled{ 0xFFA0A0A0 };
+
+    // Button Colors - Secondary
+    juce::Colour btnSecondaryBg{ 0xFF3A3A3A };
+    juce::Colour btnSecondaryBgHover{ 0xFF454545 };
+    juce::Colour btnSecondaryBgActive{ 0xFF303030 };
+    juce::Colour btnSecondaryBgDisabled{ 0xFF252525 };
+    juce::Colour btnSecondaryText{ 0xFFE0E0E0 };
+    juce::Colour btnSecondaryTextHover{ 0xFFFFFFFF };
+    juce::Colour btnSecondaryTextActive{ 0xFFFFFFFF };
+    juce::Colour btnSecondaryTextDisabled{ 0xFF606060 };
+
+    // Button Colors - Tertiary
+    juce::Colour btnTertiaryBg{ 0x00000000 }; // Transparent
+    juce::Colour btnTertiaryBgHover{ 0x1AFFFFFF }; // Slight overlay
+    juce::Colour btnTertiaryBgActive{ 0x33FFFFFF };
+    juce::Colour btnTertiaryBgDisabled{ 0x00000000 };
+    juce::Colour btnTertiaryText{ 0xFFE0E0E0 };
+    juce::Colour btnTertiaryTextHover{ 0xFFFFFFFF };
+    juce::Colour btnTertiaryTextActive{ 0xFFFFFFFF };
+    juce::Colour btnTertiaryTextDisabled{ 0xFF606060 };
+
     // Default waveform colors (up to 64)
     std::vector<juce::Colour> waveformColors;
 

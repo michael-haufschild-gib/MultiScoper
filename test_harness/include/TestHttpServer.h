@@ -74,6 +74,8 @@ private:
     void handleTrackAudio(const httplib::Request& req, httplib::Response& res);
     void handleTrackBurst(const httplib::Request& req, httplib::Response& res);
     void handleTrackInfo(const httplib::Request& req, httplib::Response& res);
+    void handleTrackShowEditor(const httplib::Request& req, httplib::Response& res);
+    void handleTrackHideEditor(const httplib::Request& req, httplib::Response& res);
 
     // Route handlers - UI Mouse
     void handleUIClick(const httplib::Request& req, httplib::Response& res);
@@ -126,6 +128,9 @@ private:
     void handleStateSave(const httplib::Request& req, httplib::Response& res);
     void handleStateLoad(const httplib::Request& req, httplib::Response& res);
     void handleStateOscillators(const httplib::Request& req, httplib::Response& res);
+    void handleStateAddOscillator(const httplib::Request& req, httplib::Response& res);
+    void handleStateUpdateOscillator(const httplib::Request& req, httplib::Response& res);
+    void handleStateReorderOscillators(const httplib::Request& req, httplib::Response& res);
     void handleStatePanes(const httplib::Request& req, httplib::Response& res);
     void handleStateSources(const httplib::Request& req, httplib::Response& res);
 

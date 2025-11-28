@@ -1,6 +1,6 @@
 /*
     Oscil - Master Controls Sidebar Section
-    Timebase and Gain controls for the sidebar
+    Gain control for the sidebar
 */
 
 #pragma once
@@ -17,7 +17,7 @@ namespace oscil
 
 /**
  * Master controls section component for the sidebar
- * Provides Timebase (ms) and Gain (dB) sliders
+ * Provides Gain (dB) slider only
  */
 class MasterControlsSection : public juce::Component,
                                public ThemeManagerListener
@@ -30,7 +30,6 @@ public:
     {
     public:
         virtual ~Listener() = default;
-        virtual void timebaseChanged(float /*ms*/) {}
         virtual void gainChanged(float /*dB*/) {}
     };
 
@@ -44,11 +43,9 @@ public:
     void themeChanged(const ColorTheme& newTheme) override;
 
     // State setters
-    void setTimebaseMs(float ms);
     void setGainDb(float dB);
 
     // State getters
-    float getTimebaseMs() const { return currentTimebaseMs_; }
     float getGainDb() const { return currentGainDb_; }
 
     void addListener(Listener* listener);
@@ -58,27 +55,20 @@ public:
     int getPreferredHeight() const;
 
     // PRD ranges
-    static constexpr float MIN_TIMEBASE_MS = 1.0f;
-    static constexpr float MAX_TIMEBASE_MS = 60000.0f;
     static constexpr float MIN_GAIN_DB = -60.0f;
     static constexpr float MAX_GAIN_DB = 12.0f;
 
 private:
     void setupComponents();
-    void notifyTimebaseChanged();
     void notifyGainChanged();
 
     // Section header
     std::unique_ptr<juce::Label> sectionLabel_;
 
-    // Timebase controls
-    std::unique_ptr<OscilSlider> timebaseSlider_;
-
     // Gain controls
     std::unique_ptr<OscilSlider> gainSlider_;
 
     // State
-    float currentTimebaseMs_ = 50.0f;
     float currentGainDb_ = 0.0f;
 
     juce::ListenerList<Listener> listeners_;

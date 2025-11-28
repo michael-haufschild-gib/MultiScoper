@@ -154,7 +154,7 @@ private:
     void paintHorizontal(juce::Graphics& g);
     void paintVertical(juce::Graphics& g);
     void paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds, bool isVertical);
-    void paintThumb(juce::Graphics& g, float position, bool isVertical, bool isRangeEnd = false);
+    void paintThumb(juce::Graphics& g, float position, bool isVertical, bool isRangeEnd = false, float labelOffset = 0.0f);
     void paintValueTooltip(juce::Graphics& g, float thumbPosition, bool isVertical);
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
     juce::String formatValue(double value) const;

@@ -93,6 +93,12 @@ void TestHttpServer::setupRoutes()
     server_->Get(R"(/track/(\d+)/info)", [this](const httplib::Request& req, httplib::Response& res) {
         handleTrackInfo(req, res);
     });
+    server_->Post(R"(/track/(\d+)/showEditor)", [this](const httplib::Request& req, httplib::Response& res) {
+        handleTrackShowEditor(req, res);
+    });
+    server_->Post(R"(/track/(\d+)/hideEditor)", [this](const httplib::Request& req, httplib::Response& res) {
+        handleTrackHideEditor(req, res);
+    });
 
     // UI Mouse Interaction
     server_->Post("/ui/click", [this](const httplib::Request& req, httplib::Response& res) {
@@ -222,6 +228,16 @@ void TestHttpServer::setupRoutes()
     });
     server_->Get("/state/oscillators", [this](const httplib::Request& req, httplib::Response& res) {
         handleStateOscillators(req, res);
+    });
+    server_->Post("/state/oscillator/add", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateAddOscillator(req, res);
+    });
+
+    server_->Post("/state/oscillator/update", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateUpdateOscillator(req, res);
+    });
+    server_->Post("/state/oscillator/reorder", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateReorderOscillators(req, res);
     });
     server_->Get("/state/panes", [this](const httplib::Request& req, httplib::Response& res) {
         handleStatePanes(req, res);
@@ -406,6 +422,61 @@ void TestHttpServer::handleTrackInfo(const httplib::Request& req, httplib::Respo
         data["amplitude"] = track->getAudioGenerator().getAmplitude();
         data["generating"] = track->getAudioGenerator().isGenerating();
 
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleTrackShowEditor(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        int trackId = std::stoi(req.matches[1]);
+
+        // Must call showTrackEditor on the message thread
+        juce::MessageManager::callAsync([this, trackId]()
+        {
+            daw_.showTrackEditor(trackId);
+        });
+
+        // Give time for the editor to open
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        json data;
+        data["trackId"] = trackId;
+        data["editorVisible"] = true;
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleTrackHideEditor(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        int trackId = std::stoi(req.matches[1]);
+        auto* track = daw_.getTrack(trackId);
+
+        if (track == nullptr)
+        {
+            res.set_content(errorResponse("Track not found").dump(), "application/json");
+            return;
+        }
+
+        // Must call hideEditor on the message thread
+        juce::MessageManager::callAsync([track]()
+        {
+            track->hideEditor();
+        });
+
+        json data;
+        data["trackId"] = trackId;
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -1403,7 +1474,14 @@ void TestHttpServer::handleStateOscillators(const httplib::Request&, httplib::Re
     if (auto* track = daw_.getTrack(0))
     {
         auto& state = track->getProcessor().getState();
-        for (const auto& osc : state.getOscillators())
+        auto oscList = state.getOscillators();
+
+        // Sort by orderIndex to return in display order
+        std::sort(oscList.begin(), oscList.end(), [](const auto& a, const auto& b) {
+            return a.getOrderIndex() < b.getOrderIndex();
+        });
+
+        for (const auto& osc : oscList)
         {
             json oscJson;
             oscJson["id"] = osc.getId().id.toStdString();
@@ -1411,11 +1489,236 @@ void TestHttpServer::handleStateOscillators(const httplib::Request&, httplib::Re
             oscJson["sourceId"] = osc.getSourceId().id.toStdString();
             oscJson["paneId"] = osc.getPaneId().id.toStdString();
             oscJson["mode"] = processingModeToString(osc.getProcessingMode()).toStdString();
+            oscJson["orderIndex"] = osc.getOrderIndex();
+            oscJson["visible"] = osc.isVisible();
             oscillators.push_back(oscJson);
         }
     }
 
     res.set_content(successResponse(oscillators).dump(), "application/json");
+}
+
+void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        auto& state = track->getProcessor().getState();
+        auto& layoutManager = state.getLayoutManager();
+
+        // Create pane if needed
+        if (layoutManager.getPaneCount() == 0)
+        {
+            Pane defaultPane;
+            defaultPane.setName("Pane 1");
+            defaultPane.setOrderIndex(0);
+            layoutManager.addPane(defaultPane);
+        }
+
+        // Get the first pane for new oscillator
+        PaneId targetPaneId;
+        if (layoutManager.getPaneCount() > 0)
+        {
+            targetPaneId = layoutManager.getPanes()[0].getId();
+        }
+
+        // Create new oscillator
+        Oscillator osc;
+
+        // Set name (default based on count)
+        std::string name = body.value("name", "");
+        if (name.empty())
+        {
+            name = "Oscillator " + std::to_string(state.getOscillators().size() + 1);
+        }
+        osc.setName(name);
+
+        // Set source ID if provided, otherwise use processor's source
+        std::string sourceIdStr = body.value("sourceId", "");
+        if (!sourceIdStr.empty())
+        {
+            osc.setSourceId(SourceId{ juce::String(sourceIdStr) });
+        }
+        else if (track->getProcessor().getSourceId().isValid())
+        {
+            osc.setSourceId(track->getProcessor().getSourceId());
+        }
+
+        // Set pane ID if provided
+        std::string paneIdStr = body.value("paneId", "");
+        if (!paneIdStr.empty())
+        {
+            osc.setPaneId(PaneId{ juce::String(paneIdStr) });
+        }
+        else
+        {
+            osc.setPaneId(targetPaneId);
+        }
+
+        // Set processing mode
+        std::string modeStr = body.value("mode", "FullStereo");
+        osc.setProcessingMode(stringToProcessingMode(juce::String(modeStr)));
+
+        // Set colour if provided (as hex string like "#FF0000")
+        std::string colourStr = body.value("colour", "");
+        if (!colourStr.empty())
+        {
+            osc.setColour(juce::Colour::fromString(juce::String(colourStr)));
+        }
+        else
+        {
+            // Use default waveform colors based on count
+            static const juce::Colour defaultColors[] = {
+                juce::Colour(0xFF00FF00), // Green
+                juce::Colour(0xFF0088FF), // Blue
+                juce::Colour(0xFFFF8800), // Orange
+                juce::Colour(0xFFFF0088), // Pink
+                juce::Colour(0xFF88FF00), // Lime
+            };
+            int colorIndex = static_cast<int>(state.getOscillators().size()) % 5;
+            osc.setColour(defaultColors[colorIndex]);
+        }
+
+        // Set order index
+        osc.setOrderIndex(static_cast<int>(state.getOscillators().size()));
+
+        // Add to state
+        state.addOscillator(osc);
+
+        // Return the created oscillator info
+        json oscJson;
+        oscJson["id"] = osc.getId().id.toStdString();
+        oscJson["name"] = osc.getName().toStdString();
+        oscJson["sourceId"] = osc.getSourceId().id.toStdString();
+        oscJson["paneId"] = osc.getPaneId().id.toStdString();
+        oscJson["mode"] = processingModeToString(osc.getProcessingMode()).toStdString();
+
+        res.set_content(successResponse(oscJson).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+
+        // Required: oscillator ID
+        std::string idStr = body.value("id", "");
+        if (idStr.empty())
+        {
+            res.set_content(errorResponse("Oscillator 'id' is required").dump(), "application/json");
+            return;
+        }
+
+        auto& state = track->getProcessor().getState();
+        OscillatorId oscId{ juce::String(idStr) };
+
+        auto existingOsc = state.getOscillator(oscId);
+        if (!existingOsc.has_value())
+        {
+            res.set_content(errorResponse("Oscillator not found: " + idStr).dump(), "application/json");
+            return;
+        }
+
+        Oscillator osc = existingOsc.value();
+
+        // Update optional fields if provided
+        if (body.contains("visible"))
+        {
+            osc.setVisible(body["visible"].get<bool>());
+        }
+        if (body.contains("name"))
+        {
+            osc.setName(juce::String(body["name"].get<std::string>()));
+        }
+        if (body.contains("opacity"))
+        {
+            osc.setOpacity(body["opacity"].get<float>());
+        }
+        if (body.contains("lineWidth"))
+        {
+            osc.setLineWidth(body["lineWidth"].get<float>());
+        }
+
+        // Update the oscillator in state - THIS IS THE FUNCTION WITH THE BUG FIX!
+        state.updateOscillator(osc);
+
+        // Return updated oscillator info
+        json oscJson;
+        oscJson["id"] = osc.getId().id.toStdString();
+        oscJson["name"] = osc.getName().toStdString();
+        oscJson["visible"] = osc.isVisible();
+        oscJson["opacity"] = osc.getOpacity();
+        oscJson["lineWidth"] = osc.getLineWidth();
+
+        res.set_content(successResponse(oscJson).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        int fromIndex = body.value("fromIndex", -1);
+        int toIndex = body.value("toIndex", -1);
+
+        if (fromIndex < 0 || toIndex < 0)
+        {
+            res.set_content(errorResponse("fromIndex and toIndex are required").dump(), "application/json");
+            return;
+        }
+
+        auto& state = track->getProcessor().getState();
+        state.reorderOscillators(fromIndex, toIndex);
+
+        // Return updated oscillator list
+        json oscillators = json::array();
+        for (const auto& osc : state.getOscillators())
+        {
+            json oscJson;
+            oscJson["id"] = osc.getId().id.toStdString();
+            oscJson["name"] = osc.getName().toStdString();
+            oscJson["orderIndex"] = osc.getOrderIndex();
+            oscillators.push_back(oscJson);
+        }
+
+        res.set_content(successResponse(oscillators).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
 }
 
 void TestHttpServer::handleStatePanes(const httplib::Request&, httplib::Response& res)

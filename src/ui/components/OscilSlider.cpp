@@ -251,7 +251,19 @@ void OscilSlider::paint(juce::Graphics& g)
 void OscilSlider::paintHorizontal(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    float trackY = bounds.getCentreY() - TRACK_HEIGHT / 2.0f;
+    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+
+    // Paint label if set
+    float labelHeight = 0.0f;
+    if (label_.isNotEmpty())
+    {
+        labelHeight = 14.0f;
+        g.setColour(theme_.textSecondary.withAlpha(opacity));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.drawText(label_, bounds.withHeight(labelHeight), juce::Justification::centredLeft);
+    }
+
+    float trackY = bounds.getCentreY() - TRACK_HEIGHT / 2.0f + labelHeight / 2.0f;
     auto trackBounds = juce::Rectangle<float>(
         THUMB_SIZE / 2.0f, trackY,
         bounds.getWidth() - THUMB_SIZE, static_cast<float>(TRACK_HEIGHT));
@@ -261,12 +273,12 @@ void OscilSlider::paintHorizontal(juce::Graphics& g)
     // Paint thumb(s)
     if (variant_ == SliderVariant::Range)
     {
-        paintThumb(g, getThumbPosition(false), false, false);
-        paintThumb(g, getThumbPosition(true), false, true);
+        paintThumb(g, getThumbPosition(false), false, false, labelHeight);
+        paintThumb(g, getThumbPosition(true), false, true, labelHeight);
     }
     else
     {
-        paintThumb(g, getThumbPosition(), false);
+        paintThumb(g, getThumbPosition(), false, false, labelHeight);
     }
 
     // Paint tooltip on hover
@@ -277,6 +289,18 @@ void OscilSlider::paintHorizontal(juce::Graphics& g)
 void OscilSlider::paintVertical(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
+    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+
+    // Paint label if set (below the slider for vertical)
+    float labelHeight = 0.0f;
+    if (label_.isNotEmpty())
+    {
+        labelHeight = 14.0f;
+        g.setColour(theme_.textSecondary.withAlpha(opacity));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.drawText(label_, bounds.removeFromBottom(labelHeight), juce::Justification::centred);
+    }
+
     float trackX = bounds.getCentreX() - TRACK_HEIGHT / 2.0f;
     auto trackBounds = juce::Rectangle<float>(
         trackX, THUMB_SIZE / 2.0f,
@@ -337,7 +361,7 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     g.fillRoundedRectangle(filledBounds, TRACK_HEIGHT / 2.0f);
 }
 
-void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical, bool /*isRangeEnd*/)
+void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical, bool /*isRangeEnd*/, float labelOffset)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     auto bounds = getLocalBounds().toFloat();
@@ -357,7 +381,7 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
     else
     {
         cx = position;
-        cy = bounds.getCentreY();
+        cy = bounds.getCentreY() + labelOffset / 2.0f;  // Offset to match track position
     }
 
     auto thumbBounds = juce::Rectangle<float>(

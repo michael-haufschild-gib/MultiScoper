@@ -373,6 +373,15 @@ void PaneComponent::setGainDb(float dB)
     }
 }
 
+void PaneComponent::setDisplaySamples(int samples)
+{
+    for (auto& entry : waveforms_)
+    {
+        if (entry.waveform)
+            entry.waveform->setDisplaySamples(samples);
+    }
+}
+
 void PaneComponent::highlightOscillator(const OscillatorId& oscillatorId)
 {
     for (auto& entry : waveforms_)

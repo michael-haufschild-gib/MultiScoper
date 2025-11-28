@@ -17,6 +17,7 @@ namespace SectionLayout
     static constexpr int SECTION_PADDING = 8;
     static constexpr int ROW_HEIGHT = 28;
     static constexpr int LABEL_HEIGHT = 16;
+    static constexpr int DROPDOWN_HEIGHT = 32;
 
     // Spacing constants
     static constexpr int SPACING_SMALL = 2;

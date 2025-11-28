@@ -4,7 +4,6 @@
 */
 
 #include "ui/SidebarComponent.h"
-#include "ui/SourceItemComponent.h"
 #include "core/PluginProcessor.h"
 #include "ui/components/TestId.h"
 
@@ -196,25 +195,13 @@ SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
     collapseButton_->onClick = [this]() { toggleCollapsed(); };
     addAndMakeVisible(collapseButton_.get());
 
-    // Sources section
-    sourcesLabel_ = std::make_unique<juce::Label>("", "Sources");
-    sourcesLabel_->setFont(juce::FontOptions(13.0f).withStyle("Bold"));
-    sourcesLabel_->setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(sourcesLabel_.get());
-
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_CHILD_TEST_ID(*sourcesLabel_, "sidebar_sources_header");
-#endif
-
-    sourcesViewport_ = std::make_unique<juce::Viewport>();
-    sourcesContainer_ = std::make_unique<juce::Component>();
-    sourcesViewport_->setViewedComponent(sourcesContainer_.get(), false);
-    sourcesViewport_->setScrollBarsShown(true, false);
-    addAndMakeVisible(sourcesViewport_.get());
-
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_CHILD_TEST_ID(*sourcesContainer_, "sidebar_sources");
-#endif
+    // Add Oscillator button
+    addOscillatorButton_ = std::make_unique<OscilButton>("+ Add Oscillator", "sidebar_addOscillator");
+    addOscillatorButton_->setVariant(ButtonVariant::Primary);
+    addOscillatorButton_->onClick = [this]() {
+        listeners_.call([](Listener& l) { l.addOscillatorDialogRequested(); });
+    };
+    addAndMakeVisible(addOscillatorButton_.get());
 
     // Oscillators section with toolbar
     oscillatorToolbar_ = std::make_unique<OscillatorListToolbar>();
@@ -245,11 +232,6 @@ SidebarComponent::~SidebarComponent()
     {
         juce::Desktop::getInstance().removeGlobalMouseListener(this);
     }
-
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_UNREGISTER_CHILD_TEST_ID("sidebar_sources_header");
-    OSCIL_UNREGISTER_CHILD_TEST_ID("sidebar_sources");
-#endif
 
     ThemeManager::getInstance().removeListener(this);
     if (oscillatorToolbar_)
@@ -340,8 +322,7 @@ void SidebarComponent::resized()
     {
         // Collapsed state - only show collapse button centered
         collapseButton_->setBounds(bounds.withSizeKeepingCentre(24, 24));
-        sourcesLabel_->setVisible(false);
-        sourcesViewport_->setVisible(false);
+        addOscillatorButton_->setVisible(false);
         oscillatorToolbar_->setVisible(false);
         listViewport_->setVisible(false);
         sectionsViewport_->setVisible(false);
@@ -349,8 +330,7 @@ void SidebarComponent::resized()
     else
     {
         // Expanded state
-        sourcesLabel_->setVisible(true);
-        sourcesViewport_->setVisible(true);
+        addOscillatorButton_->setVisible(true);
         oscillatorToolbar_->setVisible(true);
         listViewport_->setVisible(true);
         sectionsViewport_->setVisible(true);
@@ -359,30 +339,9 @@ void SidebarComponent::resized()
         auto topRow = bounds.removeFromTop(SECTION_HEADER_HEIGHT).reduced(4, 4);
         collapseButton_->setBounds(topRow.removeFromRight(24));
 
-        // Sources section header
-        auto sourcesHeaderRow = bounds.removeFromTop(SECTION_HEADER_HEIGHT).reduced(8, 4);
-        sourcesLabel_->setBounds(sourcesHeaderRow);
-
-        // Sources area - fixed small height when few sources
-        int sourcesHeight = std::max(60, std::min(100,
-                                      static_cast<int>(sourceItems_.size()) * 36 + 8));
-
-        // Sources list area
-        auto sourcesArea = bounds.removeFromTop(sourcesHeight).reduced(4, 0);
-        sourcesViewport_->setBounds(sourcesArea);
-
-        // Update sources container size
-        int sourcesContentHeight = static_cast<int>(sourceItems_.size()) * 36;
-        sourcesContainer_->setSize(sourcesViewport_->getWidth() - 8,
-                                    std::max(sourcesContentHeight, sourcesArea.getHeight()));
-
-        // Position source items
-        int y = 0;
-        for (auto& item : sourceItems_)
-        {
-            item->setBounds(0, y, sourcesContainer_->getWidth(), 36);
-            y += 36;
-        }
+        // Add Oscillator button at top
+        auto buttonArea = bounds.removeFromTop(ADD_BUTTON_HEIGHT).reduced(8, 4);
+        addOscillatorButton_->setBounds(buttonArea);
 
         // Oscillators toolbar
         auto toolbarArea = bounds.removeFromTop(OSCILLATOR_TOOLBAR_HEIGHT);
@@ -407,7 +366,7 @@ void SidebarComponent::resized()
                                  std::max(oscillatorsContentHeight, oscillatorsArea.getHeight()));
 
         // Position oscillator items using their preferred heights
-        y = 0;
+        int y = 0;
         for (auto& item : oscillatorItems_)
         {
             int itemHeight = item->getPreferredHeight();
@@ -423,8 +382,6 @@ void SidebarComponent::resized()
 
 void SidebarComponent::themeChanged(const ColorTheme&)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
-    sourcesLabel_->setColour(juce::Label::textColourId, theme.textPrimary);
     repaint();
 }
 
@@ -471,6 +428,9 @@ void SidebarComponent::refreshOscillatorList(const std::vector<Oscillator>& osci
     }
 
     oscillatorItems_.clear();
+
+    // Remove old children from the container before adding new ones
+    listContainer_->removeAllChildren();
 
     // Store all oscillators for filtering
     allOscillators_ = oscillators;
@@ -573,9 +533,9 @@ void SidebarComponent::notifyOscillatorVisibilityChanged(const OscillatorId& osc
     listeners_.call([&oscillatorId, visible](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId, visible); });
 }
 
-void SidebarComponent::notifyAddSourceToPane(const SourceId& sourceId, const PaneId& paneId)
+void SidebarComponent::notifyAddOscillatorRequested(const AddOscillatorDialog::Result& result)
 {
-    listeners_.call([&sourceId, &paneId](Listener& l) { l.addSourceToPane(sourceId, paneId); });
+    listeners_.call([&result](Listener& l) { l.addOscillatorRequested(result); });
 }
 
 void SidebarComponent::notifyOscillatorsReordered(int fromIndex, int toIndex)
@@ -783,67 +743,41 @@ void SidebarComponent::updateOscillatorCounts()
     }
 }
 
-void SidebarComponent::refreshSourceList(const std::vector<SourceInfo>& sources)
+void SidebarComponent::refreshSourceList(const std::vector<SourceInfo>& /*sources*/)
 {
-    sourceItems_.clear();
-
-    for (const auto& source : sources)
-    {
-        auto item = std::make_unique<SourceItemComponent>(source);
-
-        // Set up callbacks
-        item->onSelected = [](const SourceId& /*id*/)
-        {
-            // Could highlight the source or show details
-        };
-
-        item->onAddToPane = [this](const SourceId& sourceId, const PaneId& paneId)
-        {
-            notifyAddSourceToPane(sourceId, paneId);
-        };
-
-        // Update the dropdown with current panes
-        item->updateAvailablePanes(currentPanes_);
-
-        sourcesContainer_->addAndMakeVisible(*item);
-        sourceItems_.push_back(std::move(item));
-    }
-
-    resized();
+    // Sources now handled by PluginEditor for the Add Oscillator dialog
 }
 
 void SidebarComponent::refreshPaneList(const std::vector<Pane>& panes)
 {
+    // Cache panes for PluginEditor to use when showing the Add Oscillator dialog
     currentPanes_ = panes;
-
-    // Update all source items with the new pane list
-    for (auto& item : sourceItems_)
-    {
-        item->updateAvailablePanes(panes);
-    }
 }
 
 void SidebarComponent::setupSections()
 {
-    // Create timing section
+    // Create timing section and wrap in collapsible
     timingSection_ = std::make_unique<TimingSidebarSection>();
     timingSection_->addListener(this);
-    sectionsContainer_->addAndMakeVisible(*timingSection_);
 
-    // Create master controls section
-    masterControlsSection_ = std::make_unique<MasterControlsSection>();
-    masterControlsSection_->addListener(this);
-    sectionsContainer_->addAndMakeVisible(*masterControlsSection_);
+    timingCollapsible_ = std::make_unique<CollapsibleSection>("TIMING", "sidebar_timing");
+    timingCollapsible_->setContent(timingSection_.get());
+    timingCollapsible_->onLayoutNeeded = [this]() { updateSectionsLayout(); };
+    sectionsContainer_->addAndMakeVisible(*timingCollapsible_);
 
-    // Create trigger settings section
-    triggerSettingsSection_ = std::make_unique<TriggerSettingsSection>();
-    triggerSettingsSection_->addListener(this);
-    sectionsContainer_->addAndMakeVisible(*triggerSettingsSection_);
+    // Create options section (merged master controls + display options) and wrap in collapsible
+    optionsSection_ = std::make_unique<OptionsSection>();
+    optionsSection_->addListener(this);
 
-    // Create display options section
-    displayOptionsSection_ = std::make_unique<DisplayOptionsSection>();
-    displayOptionsSection_->addListener(this);
-    sectionsContainer_->addAndMakeVisible(*displayOptionsSection_);
+    // Initialize themes
+    auto& themeManager = ThemeManager::getInstance();
+    optionsSection_->setAvailableThemes(themeManager.getAvailableThemes());
+    optionsSection_->setCurrentTheme(themeManager.getCurrentTheme().name);
+
+    optionsCollapsible_ = std::make_unique<CollapsibleSection>("OPTIONS", "sidebar_options");
+    optionsCollapsible_->setContent(optionsSection_.get());
+    optionsCollapsible_->onLayoutNeeded = [this]() { updateSectionsLayout(); };
+    sectionsContainer_->addAndMakeVisible(*optionsCollapsible_);
 }
 
 void SidebarComponent::updateSectionsLayout()
@@ -854,32 +788,41 @@ void SidebarComponent::updateSectionsLayout()
     int containerWidth = sectionsViewport_->getWidth() - 8;  // Account for scrollbar
     int y = 0;
 
-    // Layout each section
-    if (timingSection_)
+    // Layout collapsible timing section
+    if (timingCollapsible_)
     {
-        int height = timingSection_->getPreferredHeight();
-        timingSection_->setBounds(0, y, containerWidth, height);
+        // Set content height first so collapsible can calculate properly
+        if (timingSection_ && !timingCollapsible_->isCollapsed())
+        {
+            int contentHeight = timingSection_->getPreferredHeight();
+            timingSection_->setSize(containerWidth, contentHeight);
+        }
+
+        int height = CollapsibleSection::HEADER_HEIGHT;
+        if (!timingCollapsible_->isCollapsed() && timingSection_)
+        {
+            height += timingSection_->getPreferredHeight();
+        }
+        timingCollapsible_->setBounds(0, y, containerWidth, height);
         y += height;
     }
 
-    if (masterControlsSection_)
+    // Layout collapsible options section
+    if (optionsCollapsible_)
     {
-        int height = masterControlsSection_->getPreferredHeight();
-        masterControlsSection_->setBounds(0, y, containerWidth, height);
-        y += height;
-    }
+        // Set content height first so collapsible can calculate properly
+        if (optionsSection_ && !optionsCollapsible_->isCollapsed())
+        {
+            int contentHeight = optionsSection_->getPreferredHeight();
+            optionsSection_->setSize(containerWidth, contentHeight);
+        }
 
-    if (triggerSettingsSection_)
-    {
-        int height = triggerSettingsSection_->getPreferredHeight();
-        triggerSettingsSection_->setBounds(0, y, containerWidth, height);
-        y += height;
-    }
-
-    if (displayOptionsSection_)
-    {
-        int height = displayOptionsSection_->getPreferredHeight();
-        displayOptionsSection_->setBounds(0, y, containerWidth, height);
+        int height = CollapsibleSection::HEADER_HEIGHT;
+        if (!optionsCollapsible_->isCollapsed() && optionsSection_)
+        {
+            height += optionsSection_->getPreferredHeight();
+        }
+        optionsCollapsible_->setBounds(0, y, containerWidth, height);
         y += height;
     }
 
@@ -908,44 +851,22 @@ void SidebarComponent::hostSyncChanged(bool enabled)
     listeners_.call([enabled](Listener& l) { l.hostSyncChanged(enabled); });
 }
 
-void SidebarComponent::resetOnPlayChanged(bool enabled)
+void SidebarComponent::waveformModeChanged(WaveformMode mode)
 {
-    listeners_.call([enabled](Listener& l) { l.resetOnPlayChanged(enabled); });
+    listeners_.call([mode](Listener& l) { l.waveformModeChanged(mode); });
 }
 
-// MasterControlsSection::Listener implementation
-void SidebarComponent::timebaseChanged(float ms)
+void SidebarComponent::bpmChanged(float bpm)
 {
-    listeners_.call([ms](Listener& l) { l.timebaseChanged(ms); });
+    listeners_.call([bpm](Listener& l) { l.bpmChanged(bpm); });
 }
 
+// OptionsSection::Listener implementation
 void SidebarComponent::gainChanged(float dB)
 {
     listeners_.call([dB](Listener& l) { l.gainChanged(dB); });
 }
 
-// TriggerSettingsSection::Listener implementation
-void SidebarComponent::triggerSourceChanged(const juce::String& sourceName)
-{
-    listeners_.call([&sourceName](Listener& l) { l.triggerSourceChanged(sourceName); });
-}
-
-void SidebarComponent::triggerModeChanged(TriggerMode mode)
-{
-    listeners_.call([mode](Listener& l) { l.triggerModeChanged(mode); });
-}
-
-void SidebarComponent::triggerThresholdChanged(float dBFS)
-{
-    listeners_.call([dBFS](Listener& l) { l.triggerThresholdChanged(dBFS); });
-}
-
-void SidebarComponent::triggerEdgeChanged(TriggerEdge edge)
-{
-    listeners_.call([edge](Listener& l) { l.triggerEdgeChanged(edge); });
-}
-
-// DisplayOptionsSection::Listener implementation
 void SidebarComponent::showGridChanged(bool enabled)
 {
     listeners_.call([enabled](Listener& l) { l.showGridChanged(enabled); });
@@ -959,6 +880,16 @@ void SidebarComponent::autoScaleChanged(bool enabled)
 void SidebarComponent::holdDisplayChanged(bool enabled)
 {
     listeners_.call([enabled](Listener& l) { l.holdDisplayChanged(enabled); });
+}
+
+void SidebarComponent::layoutChanged(int columnCount)
+{
+    listeners_.call([columnCount](Listener& l) { l.layoutChanged(columnCount); });
+}
+
+void SidebarComponent::themeChanged(const juce::String& themeName)
+{
+    listeners_.call([&themeName](Listener& l) { l.themeChanged(themeName); });
 }
 
 } // namespace oscil

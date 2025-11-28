@@ -82,10 +82,13 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorListToolbar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorListItem.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorConfigPopup.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/AddOscillatorDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/TimingSidebarSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/MasterControlsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/TriggerSettingsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/DisplayOptionsSection.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/sections/CollapsibleSection.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/sections/OptionsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/SourceCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/ThemeCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/LayoutCoordinator.cpp

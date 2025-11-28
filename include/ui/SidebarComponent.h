@@ -13,10 +13,11 @@
 #include "core/Pane.h"
 #include "ui/OscillatorListItem.h"
 #include "ui/OscillatorListToolbar.h"
+#include "ui/AddOscillatorDialog.h"
 #include "ui/sections/TimingSidebarSection.h"
-#include "ui/sections/MasterControlsSection.h"
-#include "ui/sections/TriggerSettingsSection.h"
-#include "ui/sections/DisplayOptionsSection.h"
+#include "ui/sections/OptionsSection.h"
+#include "ui/sections/CollapsibleSection.h"
+#include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
 #include <vector>
 
@@ -93,9 +94,7 @@ class SidebarComponent : public juce::Component,
                          public OscillatorListItemComponent::Listener,
                          public OscillatorListToolbar::Listener,
                          public TimingSidebarSection::Listener,
-                         public MasterControlsSection::Listener,
-                         public TriggerSettingsSection::Listener,
-                         public DisplayOptionsSection::Listener,
+                         public OptionsSection::Listener,
                          public TestIdSupport
 {
 public:
@@ -114,29 +113,28 @@ public:
         virtual void oscillatorModeChanged(const OscillatorId& /*oscillatorId*/, ProcessingMode /*mode*/) {}
         virtual void oscillatorVisibilityChanged(const OscillatorId& /*oscillatorId*/, bool /*visible*/) {}
         virtual void oscillatorsReordered(int /*fromIndex*/, int /*toIndex*/) {}
-        virtual void addSourceToPane(const SourceId& /*sourceId*/, const PaneId& /*paneId*/) {}
+        virtual void addOscillatorRequested(const AddOscillatorDialog::Result& /*result*/) {}
+        virtual void addOscillatorDialogRequested() {}
 
         // Timing section events
         virtual void timingModeChanged(TimingMode /*mode*/) {}
         virtual void noteIntervalChanged(NoteInterval /*interval*/) {}
         virtual void timeIntervalChanged(int /*ms*/) {}
         virtual void hostSyncChanged(bool /*enabled*/) {}
-        virtual void resetOnPlayChanged(bool /*enabled*/) {}
+        virtual void waveformModeChanged(WaveformMode /*mode*/) {}
+        virtual void bpmChanged(float /*bpm*/) {}
 
         // Master controls events
-        virtual void timebaseChanged(float /*ms*/) {}
         virtual void gainChanged(float /*dB*/) {}
-
-        // Trigger settings events
-        virtual void triggerSourceChanged(const juce::String& /*sourceName*/) {}
-        virtual void triggerModeChanged(TriggerMode /*mode*/) {}
-        virtual void triggerThresholdChanged(float /*dBFS*/) {}
-        virtual void triggerEdgeChanged(TriggerEdge /*edge*/) {}
 
         // Display options events
         virtual void showGridChanged(bool /*enabled*/) {}
         virtual void autoScaleChanged(bool /*enabled*/) {}
         virtual void holdDisplayChanged(bool /*enabled*/) {}
+
+        // Layout and theme events (from Options section)
+        virtual void layoutChanged(int /*columnCount*/) {}
+        virtual void themeChanged(const juce::String& /*themeName*/) {}
     };
 
     explicit SidebarComponent(OscilPluginProcessor& processor);
@@ -175,9 +173,9 @@ public:
 
     // Section accessors
     TimingSidebarSection* getTimingSection() { return timingSection_.get(); }
-    MasterControlsSection* getMasterControlsSection() { return masterControlsSection_.get(); }
-    TriggerSettingsSection* getTriggerSettingsSection() { return triggerSettingsSection_.get(); }
-    DisplayOptionsSection* getDisplayOptionsSection() { return displayOptionsSection_.get(); }
+    OptionsSection* getOptionsSection() { return optionsSection_.get(); }
+    CollapsibleSection* getTimingCollapsible() { return timingCollapsible_.get(); }
+    CollapsibleSection* getOptionsCollapsible() { return optionsCollapsible_.get(); }
 
     // Get the effective width (collapsed or expanded)
     int getEffectiveWidth() const;
@@ -189,11 +187,8 @@ private:
     std::unique_ptr<SidebarResizeHandle> resizeHandle_;
     std::unique_ptr<SidebarCollapseButton> collapseButton_;
 
-    // Sources section
-    std::unique_ptr<juce::Label> sourcesLabel_;
-    std::unique_ptr<juce::Viewport> sourcesViewport_;
-    std::unique_ptr<juce::Component> sourcesContainer_;
-    std::vector<std::unique_ptr<SourceItemComponent>> sourceItems_;
+    // Add Oscillator button
+    std::unique_ptr<OscilButton> addOscillatorButton_;
 
     // Oscillators section with toolbar
     std::unique_ptr<OscillatorListToolbar> oscillatorToolbar_;
@@ -205,9 +200,9 @@ private:
     std::unique_ptr<juce::Viewport> sectionsViewport_;
     std::unique_ptr<juce::Component> sectionsContainer_;
     std::unique_ptr<TimingSidebarSection> timingSection_;
-    std::unique_ptr<MasterControlsSection> masterControlsSection_;
-    std::unique_ptr<TriggerSettingsSection> triggerSettingsSection_;
-    std::unique_ptr<DisplayOptionsSection> displayOptionsSection_;
+    std::unique_ptr<OptionsSection> optionsSection_;
+    std::unique_ptr<CollapsibleSection> timingCollapsible_;
+    std::unique_ptr<CollapsibleSection> optionsCollapsible_;
 
     // State
     bool collapsed_ = false;
@@ -235,7 +230,7 @@ private:
     void notifyOscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode);
     void notifyOscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible);
     void notifyOscillatorsReordered(int fromIndex, int toIndex);
-    void notifyAddSourceToPane(const SourceId& sourceId, const PaneId& paneId);
+    void notifyAddOscillatorRequested(const AddOscillatorDialog::Result& result);
 
     // Drag-drop helpers
     int getItemIndexAtY(int y) const;
@@ -263,27 +258,21 @@ private:
     void noteIntervalChanged(NoteInterval interval) override;
     void timeIntervalChanged(int ms) override;
     void hostSyncChanged(bool enabled) override;
-    void resetOnPlayChanged(bool enabled) override;
+    void waveformModeChanged(WaveformMode mode) override;
+    void bpmChanged(float bpm) override;
 
-    // MasterControlsSection::Listener overrides
-    void timebaseChanged(float ms) override;
+    // OptionsSection::Listener overrides
     void gainChanged(float dB) override;
-
-    // TriggerSettingsSection::Listener overrides
-    void triggerSourceChanged(const juce::String& sourceName) override;
-    void triggerModeChanged(TriggerMode mode) override;
-    void triggerThresholdChanged(float dBFS) override;
-    void triggerEdgeChanged(TriggerEdge edge) override;
-
-    // DisplayOptionsSection::Listener overrides
     void showGridChanged(bool enabled) override;
     void autoScaleChanged(bool enabled) override;
     void holdDisplayChanged(bool enabled) override;
+    void layoutChanged(int columnCount) override;
+    void themeChanged(const juce::String& themeName) override;
 
     static constexpr int SECTION_HEADER_HEIGHT = 28;
     static constexpr int ITEM_HEIGHT = OscillatorListItemComponent::PREFERRED_HEIGHT;
     static constexpr int RESIZE_HANDLE_WIDTH = 6;
-    static constexpr int SOURCES_SECTION_MIN_HEIGHT = 100;
+    static constexpr int ADD_BUTTON_HEIGHT = 36;
     static constexpr int OSCILLATOR_TOOLBAR_HEIGHT = OscillatorListToolbar::PREFERRED_HEIGHT;
 
     // TestIdSupport

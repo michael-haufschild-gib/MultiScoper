@@ -103,6 +103,7 @@ public:
     void setAutoScale(bool enabled);
     void setHoldDisplay(bool enabled);
     void setGainDb(float dB);
+    void setDisplaySamples(int samples);
 
     /**
      * Highlight a specific oscillator (or clear highlight if oscillatorId is invalid)

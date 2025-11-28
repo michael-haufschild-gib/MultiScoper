@@ -214,14 +214,19 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
         buttonPath.addRectangle(bounds);
     }
 
-    if (variant_ != ButtonVariant::Ghost || isHovered_ || isPressed_ || isToggled_)
+    if (variant_ != ButtonVariant::Ghost && variant_ != ButtonVariant::Tertiary && variant_ != ButtonVariant::Icon)
+    {
+        g.setColour(bgColour);
+        g.fillPath(buttonPath);
+    }
+    else if ((isHovered_ || isPressed_ || isToggled_) && (variant_ == ButtonVariant::Ghost || variant_ == ButtonVariant::Tertiary || variant_ == ButtonVariant::Icon))
     {
         g.setColour(bgColour);
         g.fillPath(buttonPath);
     }
 
-    // Border for Secondary variant or segmented buttons
-    if (variant_ == ButtonVariant::Secondary || segmentPosition_ != SegmentPosition::None)
+    // Border only for segmented buttons (not for standard Secondary buttons anymore)
+    if (segmentPosition_ != SegmentPosition::None)
     {
         g.setColour(getBorderColour());
         g.strokePath(buttonPath, juce::PathStrokeType(1.0f));
@@ -305,25 +310,61 @@ juce::Colour OscilButton::getBackgroundColour() const
     // Handle toggled state for toggleable buttons
     if (toggleable_ && isToggled_)
     {
-        return theme_.controlActive;  // Blue when toggled
+        return theme_.btnPrimaryBgActive; 
     }
 
+    if (!enabled_)
+    {
+        switch (variant_)
+        {
+            case ButtonVariant::Primary:   return theme_.btnPrimaryBgDisabled;
+            case ButtonVariant::Secondary: return theme_.btnSecondaryBgDisabled;
+            case ButtonVariant::Tertiary:  return theme_.btnTertiaryBgDisabled;
+            case ButtonVariant::Ghost:     return theme_.btnTertiaryBgDisabled;
+            case ButtonVariant::Danger:    return theme_.statusError.withAlpha(0.5f); // Fallback
+            case ButtonVariant::Icon:      return theme_.backgroundSecondary.withAlpha(0.5f);
+            default:                       return theme_.btnPrimaryBgDisabled;
+        }
+    }
+
+    if (isPressed_)
+    {
+        switch (variant_)
+        {
+            case ButtonVariant::Primary:   return theme_.btnPrimaryBgActive;
+            case ButtonVariant::Secondary: return theme_.btnSecondaryBgActive;
+            case ButtonVariant::Tertiary:  return theme_.btnTertiaryBgActive;
+            case ButtonVariant::Ghost:     return theme_.btnTertiaryBgActive;
+            case ButtonVariant::Danger:    return theme_.statusError.darker(0.2f);
+            case ButtonVariant::Icon:      return theme_.controlHighlight;
+            default:                       return theme_.btnPrimaryBgActive;
+        }
+    }
+
+    if (isHovered_)
+    {
+        switch (variant_)
+        {
+            case ButtonVariant::Primary:   return theme_.btnPrimaryBgHover;
+            case ButtonVariant::Secondary: return theme_.btnSecondaryBgHover;
+            case ButtonVariant::Tertiary:  return theme_.btnTertiaryBgHover;
+            case ButtonVariant::Ghost:     return theme_.btnTertiaryBgHover;
+            case ButtonVariant::Danger:    return theme_.statusError.brighter(0.1f);
+            case ButtonVariant::Icon:      return theme_.controlHighlight;
+            default:                       return theme_.btnPrimaryBgHover;
+        }
+    }
+
+    // Default state
     switch (variant_)
     {
-        case ButtonVariant::Primary:
-            return theme_.controlActive;  // Blue
-        case ButtonVariant::Secondary:
-            return theme_.backgroundSecondary;
-        case ButtonVariant::Danger:
-            return theme_.statusError;  // Red
-        case ButtonVariant::Ghost:
-            return isHovered_ ? theme_.controlBackground.withAlpha(0.5f)
-                              : juce::Colours::transparentBlack;
-        case ButtonVariant::Icon:
-            return isHovered_ ? theme_.controlBackground
-                              : theme_.backgroundSecondary;
-        default:
-            return theme_.controlActive;
+        case ButtonVariant::Primary:   return theme_.btnPrimaryBg;
+        case ButtonVariant::Secondary: return theme_.btnSecondaryBg;
+        case ButtonVariant::Tertiary:  return theme_.btnTertiaryBg;
+        case ButtonVariant::Ghost:     return theme_.btnTertiaryBg; // Ghost is alias for Tertiary style
+        case ButtonVariant::Danger:    return theme_.statusError;
+        case ButtonVariant::Icon:      return theme_.backgroundSecondary; // Default icon bg
+        default:                       return theme_.btnPrimaryBg;
     }
 }
 
@@ -332,21 +373,61 @@ juce::Colour OscilButton::getTextColour() const
     // Handle toggled state for toggleable buttons
     if (toggleable_ && isToggled_)
     {
-        return theme_.textHighlight;  // White text when toggled
+        return theme_.btnPrimaryTextActive;
     }
 
+    if (!enabled_)
+    {
+        switch (variant_)
+        {
+            case ButtonVariant::Primary:   return theme_.btnPrimaryTextDisabled;
+            case ButtonVariant::Secondary: return theme_.btnSecondaryTextDisabled;
+            case ButtonVariant::Tertiary:  return theme_.btnTertiaryTextDisabled;
+            case ButtonVariant::Ghost:     return theme_.btnTertiaryTextDisabled;
+            case ButtonVariant::Danger:    return theme_.textSecondary;
+            case ButtonVariant::Icon:      return theme_.textSecondary;
+            default:                       return theme_.textSecondary;
+        }
+    }
+
+    if (isPressed_)
+    {
+        switch (variant_)
+        {
+            case ButtonVariant::Primary:   return theme_.btnPrimaryTextActive;
+            case ButtonVariant::Secondary: return theme_.btnSecondaryTextActive;
+            case ButtonVariant::Tertiary:  return theme_.btnTertiaryTextActive;
+            case ButtonVariant::Ghost:     return theme_.btnTertiaryTextActive;
+            case ButtonVariant::Danger:    return juce::Colours::white;
+            case ButtonVariant::Icon:      return theme_.textHighlight;
+            default:                       return theme_.textHighlight;
+        }
+    }
+
+    if (isHovered_)
+    {
+        switch (variant_)
+        {
+            case ButtonVariant::Primary:   return theme_.btnPrimaryTextHover;
+            case ButtonVariant::Secondary: return theme_.btnSecondaryTextHover;
+            case ButtonVariant::Tertiary:  return theme_.btnTertiaryTextHover;
+            case ButtonVariant::Ghost:     return theme_.btnTertiaryTextHover;
+            case ButtonVariant::Danger:    return juce::Colours::white;
+            case ButtonVariant::Icon:      return theme_.textHighlight;
+            default:                       return theme_.textHighlight;
+        }
+    }
+
+    // Default state
     switch (variant_)
     {
-        case ButtonVariant::Primary:
-        case ButtonVariant::Danger:
-            return juce::Colours::white;
-        case ButtonVariant::Secondary:
-        case ButtonVariant::Icon:
-            return theme_.textPrimary;
-        case ButtonVariant::Ghost:
-            return theme_.controlActive;
-        default:
-            return theme_.textPrimary;
+        case ButtonVariant::Primary:   return theme_.btnPrimaryText;
+        case ButtonVariant::Secondary: return theme_.btnSecondaryText;
+        case ButtonVariant::Tertiary:  return theme_.btnTertiaryText;
+        case ButtonVariant::Ghost:     return theme_.btnTertiaryText;
+        case ButtonVariant::Danger:    return juce::Colours::white;
+        case ButtonVariant::Icon:      return theme_.textPrimary;
+        default:                       return theme_.btnPrimaryText;
     }
 }
 

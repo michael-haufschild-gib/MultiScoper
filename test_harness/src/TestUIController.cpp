@@ -4,6 +4,7 @@
 */
 
 #include "TestUIController.h"
+#include "ui/components/OscilDropdown.h"
 #include <thread>
 #include <chrono>
 
@@ -1016,6 +1017,24 @@ json TestUIController::componentToJson(juce::Component* component, const juce::S
         info["text"] = button->getButtonText().toStdString();
         info["toggled"] = button->getToggleState();
         info["toggleable"] = button->getClickingTogglesState();
+    }
+    else if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
+    {
+        info["type"] = "combobox"; // Treat as combobox for consistency
+        info["selectedId"] = oscilDropdown->getSelectedId().toStdString();
+        info["selectedText"] = oscilDropdown->getSelectedLabel().toStdString();
+        info["numItems"] = oscilDropdown->getNumItems();
+
+        json items = json::array();
+        for (int i = 0; i < oscilDropdown->getNumItems(); ++i)
+        {
+            const auto& item = oscilDropdown->getItem(i);
+            items.push_back({
+                {"id", item.id.toStdString()},
+                {"text", item.label.toStdString()}
+            });
+        }
+        info["items"] = items;
     }
     else if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
     {

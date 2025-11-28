@@ -168,20 +168,24 @@ void SourceItemComponent::handleAddToPaneSelection()
 
     PaneId targetPaneId = paneIds_[static_cast<size_t>(selectedIndex)];
 
-    // Use SafePointer because onAddToPane triggers refreshOscillatorPanels()
-    // which may destroy this component during the callback
-    juce::Component::SafePointer<SourceItemComponent> safeThis(this);
+    // Capture values by copy before deferring - the component may be destroyed
+    // during the callback when refreshOscillatorPanels() rebuilds the UI
+    SourceId srcId = sourceId_;
+    auto callback = onAddToPane;
 
-    if (onAddToPane)
-    {
-        onAddToPane(sourceId_, targetPaneId);
-    }
+    // Reset dropdown immediately before deferred execution
+    addToPaneDropdown_->setSelectedIndex(-1, false);
 
-    // Only reset dropdown if we're still valid (component wasn't destroyed)
-    if (safeThis != nullptr)
+    // Defer the callback execution to prevent crash when component is destroyed
+    // during callback. The callAsync ensures the dropdown callback stack unwinds
+    // completely before triggering UI refresh that destroys this component.
+    juce::MessageManager::callAsync([callback, srcId, targetPaneId]()
     {
-        addToPaneDropdown_->setSelectedIndex(-1, false);
-    }
+        if (callback)
+        {
+            callback(srcId, targetPaneId);
+        }
+    });
 }
 
 } // namespace oscil

@@ -59,6 +59,30 @@ juce::ValueTree ColorTheme::toValueTree() const
     state.setProperty("statusWarning", static_cast<int>(statusWarning.getARGB()), nullptr);
     state.setProperty("statusError", static_cast<int>(statusError.getARGB()), nullptr);
 
+    // Button Primary
+    state.setProperty("btnPriBg", static_cast<int>(btnPrimaryBg.getARGB()), nullptr);
+    state.setProperty("btnPriBgH", static_cast<int>(btnPrimaryBgHover.getARGB()), nullptr);
+    state.setProperty("btnPriBgA", static_cast<int>(btnPrimaryBgActive.getARGB()), nullptr);
+    state.setProperty("btnPriBgD", static_cast<int>(btnPrimaryBgDisabled.getARGB()), nullptr);
+    state.setProperty("btnPriTxt", static_cast<int>(btnPrimaryText.getARGB()), nullptr);
+    state.setProperty("btnPriTxtD", static_cast<int>(btnPrimaryTextDisabled.getARGB()), nullptr);
+
+    // Button Secondary
+    state.setProperty("btnSecBg", static_cast<int>(btnSecondaryBg.getARGB()), nullptr);
+    state.setProperty("btnSecBgH", static_cast<int>(btnSecondaryBgHover.getARGB()), nullptr);
+    state.setProperty("btnSecBgA", static_cast<int>(btnSecondaryBgActive.getARGB()), nullptr);
+    state.setProperty("btnSecBgD", static_cast<int>(btnSecondaryBgDisabled.getARGB()), nullptr);
+    state.setProperty("btnSecTxt", static_cast<int>(btnSecondaryText.getARGB()), nullptr);
+    state.setProperty("btnSecTxtD", static_cast<int>(btnSecondaryTextDisabled.getARGB()), nullptr);
+
+    // Button Tertiary
+    state.setProperty("btnTerBg", static_cast<int>(btnTertiaryBg.getARGB()), nullptr);
+    state.setProperty("btnTerBgH", static_cast<int>(btnTertiaryBgHover.getARGB()), nullptr);
+    state.setProperty("btnTerBgA", static_cast<int>(btnTertiaryBgActive.getARGB()), nullptr);
+    state.setProperty("btnTerBgD", static_cast<int>(btnTertiaryBgDisabled.getARGB()), nullptr);
+    state.setProperty("btnTerTxt", static_cast<int>(btnTertiaryText.getARGB()), nullptr);
+    state.setProperty("btnTerTxtD", static_cast<int>(btnTertiaryTextDisabled.getARGB()), nullptr);
+
     // Serialize waveform colors
     juce::String colorStr;
     for (const auto& color : waveformColors)
@@ -101,6 +125,37 @@ void ColorTheme::fromValueTree(const juce::ValueTree& state)
     statusActive = getColour("statusActive", statusActive);
     statusWarning = getColour("statusWarning", statusWarning);
     statusError = getColour("statusError", statusError);
+
+    // Button Colors
+    btnPrimaryBg = getColour("btnPriBg", btnPrimaryBg);
+    btnPrimaryBgHover = getColour("btnPriBgH", btnPrimaryBgHover);
+    btnPrimaryBgActive = getColour("btnPriBgA", btnPrimaryBgActive);
+    btnPrimaryBgDisabled = getColour("btnPriBgD", btnPrimaryBgDisabled);
+    btnPrimaryText = getColour("btnPriTxt", btnPrimaryText);
+    btnPrimaryTextDisabled = getColour("btnPriTxtD", btnPrimaryTextDisabled);
+    // (Reuse primary text for hover/active if not stored, or store all if needed. 
+    //  For simplicity/space, I'll assume hover/active text is same as primary unless overridden, 
+    //  but the struct has them. Let's just load defaults if missing)
+    btnPrimaryTextHover = btnPrimaryText; 
+    btnPrimaryTextActive = btnPrimaryText;
+
+    btnSecondaryBg = getColour("btnSecBg", btnSecondaryBg);
+    btnSecondaryBgHover = getColour("btnSecBgH", btnSecondaryBgHover);
+    btnSecondaryBgActive = getColour("btnSecBgA", btnSecondaryBgActive);
+    btnSecondaryBgDisabled = getColour("btnSecBgD", btnSecondaryBgDisabled);
+    btnSecondaryText = getColour("btnSecTxt", btnSecondaryText);
+    btnSecondaryTextDisabled = getColour("btnSecTxtD", btnSecondaryTextDisabled);
+    btnSecondaryTextHover = btnSecondaryText; // Default
+    btnSecondaryTextActive = btnSecondaryText; // Default
+
+    btnTertiaryBg = getColour("btnTerBg", btnTertiaryBg);
+    btnTertiaryBgHover = getColour("btnTerBgH", btnTertiaryBgHover);
+    btnTertiaryBgActive = getColour("btnTerBgA", btnTertiaryBgActive);
+    btnTertiaryBgDisabled = getColour("btnTerBgD", btnTertiaryBgDisabled);
+    btnTertiaryText = getColour("btnTerTxt", btnTertiaryText);
+    btnTertiaryTextDisabled = getColour("btnTerTxtD", btnTertiaryTextDisabled);
+    btnTertiaryTextHover = btnTertiaryText; // Default
+    btnTertiaryTextActive = btnTertiaryText; // Default
 
     // Parse waveform colors
     juce::String colorStr = state.getProperty("waveformColors", "");
@@ -440,6 +495,28 @@ ColorTheme createDarkProfessional()
     theme.controlBorder = juce::Colour(0xFF454545);
     theme.controlHighlight = juce::Colour(0xFF505050);
     theme.controlActive = juce::Colour(0xFF007ACC);
+
+    // Button Colors - Dark Professional
+    theme.btnPrimaryBg = juce::Colour(0xFF007ACC);
+    theme.btnPrimaryBgHover = juce::Colour(0xFF008AD9);
+    theme.btnPrimaryBgActive = juce::Colour(0xFF0062A3);
+    theme.btnPrimaryBgDisabled = juce::Colour(0xFF353535);
+    theme.btnPrimaryText = juce::Colour(0xFFFFFFFF);
+    theme.btnPrimaryTextDisabled = juce::Colour(0xFFA0A0A0);
+
+    theme.btnSecondaryBg = juce::Colour(0xFF3A3A3A);
+    theme.btnSecondaryBgHover = juce::Colour(0xFF454545);
+    theme.btnSecondaryBgActive = juce::Colour(0xFF303030);
+    theme.btnSecondaryBgDisabled = juce::Colour(0xFF252525);
+    theme.btnSecondaryText = juce::Colour(0xFFE0E0E0);
+    theme.btnSecondaryTextDisabled = juce::Colour(0xFF606060);
+
+    theme.btnTertiaryBg = juce::Colours::transparentBlack;
+    theme.btnTertiaryBgHover = juce::Colour(0x1AFFFFFF);
+    theme.btnTertiaryBgActive = juce::Colour(0x33FFFFFF);
+    theme.btnTertiaryBgDisabled = juce::Colours::transparentBlack;
+    theme.btnTertiaryText = juce::Colour(0xFFE0E0E0);
+    theme.btnTertiaryTextDisabled = juce::Colour(0xFF606060);
 
     return theme;
 }

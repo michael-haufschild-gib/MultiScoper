@@ -4132,3 +4132,60 @@ public:
 **Error Recovery**: COMPLETE ✓
 **Performance Specifications**: DETAILED ✓
 **Accessibility Compliance**: VERIFIED ✓
+
+
+Time mode
+- Slider to set the interval in ms
+- Also shows an input next to the slider which shows the ms value and allows to change it by entering a number
+
+Melodic mode
+- Slider to set the interval
+- Also shows a select next to it which shows the currently selected interval and allows to change the interval by choosing a different option
+- Allows to switch between Free Running and Host Sync mode
+- In Free Running mode it shows a slider to select the BPM, default 120. Shows next to it an input field that shows the currently selected bpm value and allows to change the bpm by entering a number.
+
+In both modes a Mode select is available with the options:
+- "Free running": waveforms just keep running
+- "Restart on Play": waveforms will reset and start "from 0 position" when user starts playback in the host
+- "Restart on Note": waveforms will reset when track on which the plugin instance sits receives a midi note
+
+
+Master control only contains the "Gain" slider
+
+
+
+
+Have 2 oscillators.
+Select the first oscillator in the list.
+Switch the visible switch to hide the oscillator.
+Result: the oscillator moves down in the list.
+Expected: there is no automated reordering of oscillators in the oscillator list. Oscillator entries can only be reordered by the user via drag and drop.
+
+
+
+
+
+
+
+
+Fix and confirm via e2e tests:
+Button styles are all over the place. Ensure that we have primary, secondary, tertiary buttons in our ui component library with the four states default, active (clicked), hover and disabled. Each button follows best practices in terms of font size and padding similar to such buttons in a web application. buttons do not have a visible border color but rounded borders. the background color and text color per button type and state can be set in the theme. text is always horizontally and vertically centered.
+then go through the codebase and make sure all popups and the sidebar use these buttons from our ui component library
+
+Fix and confirm via e2e tests:
+The text in input fields is not vertically centered. Make sure that our input fields are correctly built following best practices similar to how they would be done in a web application. make sure they have proper styling, all the states an input typically has, and all styles are set via the theme.
+
+Fix and confirm via e2e tests:
+Where we have a combination of a slider and an input field to its right or a slider and a dropdown to its right, the input field  or dropdown field must be large enough to have their content visible. currently this is not the case.
+
+Fix and confirm via e2e tests that actually click and check via screenshots:
+- the timer settings in "Time" mode should be 1ms to 2000 miliseconds.
+- the slider to set the interval must have the label "ms" - not "Interval"
+- the input field to the right of the slider must show the current value and update whenever the slider value is changed - currently it shows no value. also whenever the user inputs a (valid) number in the input field, the slider must update to show the right position for the entered value
+
+review the codebase and make sure that every popup/dialog/modal is actually using the src/ui/components/OscilModal.cpp component instead of creating its own modal frame. where the OscilModal is missing functionality to make it truly reusable, add this functionality.
+confirm with e2e tests that each modal you refactored is still fully working.
+
+review the codebase and make sure that every button is using src/ui/components/OscilButton.cpp instead of drawing its own buttons
+
+

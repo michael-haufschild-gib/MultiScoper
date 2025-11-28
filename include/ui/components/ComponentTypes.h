@@ -15,7 +15,8 @@ namespace oscil
 enum class ButtonVariant
 {
     Primary,    // Blue filled button for primary actions
-    Secondary,  // Dark filled button with border
+    Secondary,  // Dark filled button (formerly with border, now borderless)
+    Tertiary,   // Subtle button (similar to Ghost)
     Danger,     // Red filled button for destructive actions
     Ghost,      // Transparent with text only
     Icon        // Square icon-only button

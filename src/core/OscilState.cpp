@@ -147,7 +147,8 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
         if (child.getProperty(StateIds::Id).toString() == oscillator.getId().id)
         {
             oscillatorsNode.removeChild(i, nullptr);
-            oscillatorsNode.appendChild(oscillator.toValueTree(), nullptr);
+            // Insert at the same position to preserve order
+            oscillatorsNode.addChild(oscillator.toValueTree(), i, nullptr);
             return;
         }
     }

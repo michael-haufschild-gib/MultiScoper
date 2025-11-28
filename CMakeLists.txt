@@ -133,12 +133,15 @@ target_sources(Oscil
         src/ui/OscillatorListToolbar.cpp
         src/ui/OscillatorListItem.cpp
         src/ui/OscillatorConfigPopup.cpp
+        src/ui/AddOscillatorDialog.cpp
         src/ui/PluginTestServer.cpp
         # UI Sections
         src/ui/sections/TimingSidebarSection.cpp
         src/ui/sections/MasterControlsSection.cpp
         src/ui/sections/TriggerSettingsSection.cpp
         src/ui/sections/DisplayOptionsSection.cpp
+        src/ui/sections/CollapsibleSection.cpp
+        src/ui/sections/OptionsSection.cpp
         # UI Coordinators
         src/ui/coordinators/SourceCoordinator.cpp
         src/ui/coordinators/ThemeCoordinator.cpp
@@ -282,6 +285,10 @@ if(OSCIL_BUILD_TESTS)
         # tests/test_oscil_meterbar.cpp
         # tests/test_oscil_transportsync.cpp
         tests/test_ui_audio_feedback.cpp
+        tests/test_timing_controls_e2e.cpp
+        tests/test_add_oscillator_dialog.cpp
+        tests/test_collapsible_sections_e2e.cpp
+        tests/test_sidebar_theme_population.cpp
 
         # Include necessary source files for testing
         src/core/InstanceRegistry.cpp
@@ -310,11 +317,14 @@ if(OSCIL_BUILD_TESTS)
         src/ui/OscillatorListToolbar.cpp
         src/ui/OscillatorListItem.cpp
         src/ui/OscillatorConfigPopup.cpp
+        src/ui/AddOscillatorDialog.cpp
         src/ui/PluginTestServer.cpp
         src/ui/sections/TimingSidebarSection.cpp
         src/ui/sections/MasterControlsSection.cpp
         src/ui/sections/TriggerSettingsSection.cpp
         src/ui/sections/DisplayOptionsSection.cpp
+        src/ui/sections/CollapsibleSection.cpp
+        src/ui/sections/OptionsSection.cpp
         src/ui/coordinators/SourceCoordinator.cpp
         src/ui/coordinators/ThemeCoordinator.cpp
         src/ui/coordinators/LayoutCoordinator.cpp

@@ -15,9 +15,8 @@
 #endif
 #include "core/PluginProcessor.h"
 #include "core/WindowLayout.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilDropdown.h"
 #include "ui/components/TestId.h"
+#include "ui/AddOscillatorDialog.h"
 
 namespace oscil
 {
@@ -75,12 +74,15 @@ public:
     void onSidebarCollapsedStateChanged(bool collapsed);
     void onOscillatorSelected(const OscillatorId& oscillatorId);
     void onOscillatorConfigRequested(const OscillatorId& oscillatorId);
-    void onAddSourceToPane(const SourceId& sourceId, const PaneId& paneId);
 
     // Config popup event handlers
     void onOscillatorConfigChanged(const OscillatorId& oscillatorId, const Oscillator& updated);
     void onOscillatorDeleteRequested(const OscillatorId& oscillatorId);
     void onConfigPopupClosed();
+
+    // Add oscillator dialog handlers
+    void onAddOscillatorDialogRequested();
+    void onAddOscillatorResult(const AddOscillatorDialog::Result& result);
 
     // Oscillator property change handlers (from sidebar)
     void onOscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode);
@@ -100,6 +102,7 @@ public:
     void setAutoScaleForAllPanes(bool enabled);
     void setHoldDisplayForAllPanes(bool enabled);
     void setGainDbForAllPanes(float dB);
+    void setDisplaySamplesForAllPanes(int samples);
     void highlightOscillator(const OscillatorId& oscillatorId);
 
     // Test access - for automated testing only
@@ -112,6 +115,7 @@ private:
     void refreshOscillatorPanels();
     void createDefaultOscillator();
     void handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId);
+    void handleEmptyColumnDrop(const PaneId& movedPaneId, int targetColumn);
 
     // Coordinator callbacks
     void onSourcesChanged();
@@ -135,12 +139,8 @@ private:
     std::unique_ptr<SidebarListenerAdapter> sidebarAdapter_;
     std::unique_ptr<OscillatorConfigPopup> configPopup_;
     std::unique_ptr<ConfigPopupListenerAdapter> configPopupAdapter_;
+    std::unique_ptr<AddOscillatorDialog> addOscillatorDialog_;
 
-    // Toolbar components
-    std::unique_ptr<OscilDropdown> columnSelector_;
-    std::unique_ptr<OscilButton> addOscillatorButton_;
-    std::unique_ptr<OscilDropdown> themeSelector_;
-    std::unique_ptr<OscilButton> sidebarToggleButton_;
 
     // Test server (for automated UI testing)
     std::unique_ptr<PluginTestServer> testServer_;
@@ -161,7 +161,6 @@ private:
     melatonin::Inspector inspector_ { *this };
 #endif
 
-    static constexpr int TOOLBAR_HEIGHT = 40;
     static constexpr int STATUS_BAR_HEIGHT = 24;
     static constexpr int DEFAULT_WIDTH = 1200;
     static constexpr int DEFAULT_HEIGHT = 800;
