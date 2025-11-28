@@ -2,9 +2,10 @@
     Oscil - Signal Processor Tests
 */
 
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <gtest/gtest.h>
 #include "dsp/SignalProcessor.h"
-#include <cmath>
 
 using namespace oscil;
 
