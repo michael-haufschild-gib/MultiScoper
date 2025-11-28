@@ -1,5 +1,0 @@
-if(EXISTS "/home/runner/work/MultiScoper/MultiScoper/_codeql_build_dir/OscilTests[1]_tests.cmake")
-  include("/home/runner/work/MultiScoper/MultiScoper/_codeql_build_dir/OscilTests[1]_tests.cmake")
-else()
-  add_test(OscilTests_NOT_BUILT OscilTests_NOT_BUILT)
-endif()
