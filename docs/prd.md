@@ -4208,3 +4208,39 @@ plan based on this the following addition to our plugin:
 4. this project has an architecture that allows to easily add new shaders.
 5. when the user has GPU rendering enabled (juce opengl), the shader selected for an oscialltor is used for rendering the oscillator waveform.
 6. for start, one default shader exist, that is just rendering the waveform normally using the color, line width and opacity set for the oscillator. but it also adds some neon glow in the same color.
+
+
+Read docs/shaders.md to understand how to add shaders to this Juce 8 multi-platform audio plugin project.
+
+A working example of a simple shader you find in src/rendering/shaders/NeonGlowShader.cpp
+
+In docs/ui-designs/waveforms1.jpeg we have several UI designs of waveforms using shaders for inspiration. They cannot be 100% adapted to our usecase.
+
+Plan the visual and technical approach to adapt from docs/ui-designs/waveforms1.jpeg the "Particle Stream" design into a shader of the same name for our project.
+
+Then write all todos and implement the shader and make it available in the plugin for selection by the user, following docs/shaders.md and the src/rendering/shaders/NeonGlowShader.cpp example.
+
+Notes: do not just write a version of the neonglowshader. this particle stream shader is more complex, game-like, with glowing particles and particle effects with some level of random movement. Take the time to plan this carefully. We want a visual "wow".
+
+
+---
+Read docs/shaders.md to understand how to add shaders to this Juce 8 multi-platform audio plugin project.
+
+A working example of a simple shader you find in src/rendering/shaders/NeonGlowShader.cpp
+
+In docs/ui-designs/waveforms1.jpeg we have several UI designs of waveforms using shaders for inspiration. They cannot be 100% adapted to our usecase.
+
+Plan the visual and technical approach to add a new shader to this project:
+- The shader must be visually stunning and complex, more game like than analysis
+- We already have a useful shader for audio engineering tasks, this shader is more about looking cool and stunning and more a music visualizer
+
+You have total freedom, as long as the waveform is still recognizable. Work with different shader types, glow, particles, wireframe, textures, bloom, glitch, anything you can think of.
+
+Then write all todos and implement the shader and make it available in the plugin for selection by the user, following docs/shaders.md and the src/rendering/shaders/NeonGlowShader.cpp example.
+
+Remember: the purpose of this shader is to look visually stunning, triple A game
+---
+
+
+
+Do a full review and root cause analysis, plan refactor tasks and then implement: the linewidth and opacity setting for an oscillator are broken in software rendering and in gpu rendering mode. they either do nothing, or even lead to nothing being drawn at all, when the values are changed from their defaults.

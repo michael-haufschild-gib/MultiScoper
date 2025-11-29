@@ -303,6 +303,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_add_oscillator_dialog.cpp
         tests/test_accordion_sections_e2e.cpp
         tests/test_sidebar_theme_population.cpp
+        tests/test_shaders.cpp
 
         # Include necessary source files for testing
         src/core/InstanceRegistry.cpp

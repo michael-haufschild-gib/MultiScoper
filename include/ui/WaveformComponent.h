@@ -63,6 +63,11 @@ public:
     void setOpacity(float opacity);
 
     /**
+     * Set the line width for waveform rendering
+     */
+    void setLineWidth(float width);
+
+    /**
      * Set the number of samples to display
      */
     void setDisplaySamples(int samples);
@@ -157,6 +162,7 @@ public:
     bool isHoldDisplayEnabled() const { return holdDisplay_; }
     float getGainLinear() const { return gainLinear_; }
     float getOpacity() const { return opacity_; }
+    float getLineWidth() const { return lineWidth_; }
     juce::Colour getColour() const { return colour_; }
     ProcessingMode getProcessingMode() const { return processingMode_; }
     bool hasWaveformData() const { return !waveformPath1_.isEmpty(); }
@@ -175,6 +181,7 @@ private:
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
     juce::Colour colour_{ 0xFF00FF00 };
     float opacity_ = 1.0f;
+    float lineWidth_ = 1.5f;  // Default line width
     int displaySamples_ = 2048;
     bool showGrid_ = true;
     bool autoScale_ = true;

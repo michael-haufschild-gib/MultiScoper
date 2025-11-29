@@ -94,6 +94,12 @@ void WaveformComponent::setOpacity(float opacity)
     opacity_ = juce::jlimit(0.0f, 1.0f, opacity);
 }
 
+void WaveformComponent::setLineWidth(float width)
+{
+    // Use same constraints as Oscillator::MIN_LINE_WIDTH and MAX_LINE_WIDTH
+    lineWidth_ = juce::jlimit(0.5f, 5.0f, width);
+}
+
 void WaveformComponent::setDisplaySamples(int samples)
 {
     displaySamples_ = std::max(64, samples);
@@ -263,9 +269,10 @@ void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangl
     ShaderRenderParams params;
     params.colour = colour_;
     params.opacity = opacity_;
-    params.lineWidth = 1.5f;  // TODO: Use lineWidth from oscillator settings
+    params.lineWidth = lineWidth_;
     params.bounds = bounds.toFloat();
     params.isStereo = (processingMode_ == ProcessingMode::FullStereo);
+    params.verticalScale = effectiveScale_;
 
     // Use software rendering path (GPU rendering happens in OpenGL render callback)
     // The shader's software fallback provides the neon glow effect via multi-pass path rendering
@@ -282,14 +289,14 @@ void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*b
     if (!waveformPath1_.isEmpty())
     {
         g.setColour(colour_.withAlpha(opacity_));
-        g.strokePath(waveformPath1_, juce::PathStrokeType(1.5f));
+        g.strokePath(waveformPath1_, juce::PathStrokeType(lineWidth_));
     }
 
     // Draw second channel for stereo mode (stacked: same color, channels visually separated)
     if (processingMode_ == ProcessingMode::FullStereo && !waveformPath2_.isEmpty())
     {
         g.setColour(colour_.withAlpha(opacity_));
-        g.strokePath(waveformPath2_, juce::PathStrokeType(1.5f));
+        g.strokePath(waveformPath2_, juce::PathStrokeType(lineWidth_));
     }
 }
 
@@ -488,7 +495,7 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     // Copy render parameters
     data.colour = colour_;
     data.opacity = opacity_;
-    data.lineWidth = 1.5f;  // Default line width
+    data.lineWidth = lineWidth_;
     data.isStereo = (processingMode_ == ProcessingMode::FullStereo);
     data.shaderId = shaderId_;
     data.visible = isVisible() && !displayBuffer1_.empty();

@@ -23,10 +23,8 @@ ShaderRegistry::~ShaderRegistry() = default;
 
 void ShaderRegistry::registerBuiltInShaders()
 {
+    // Register default shaders
     registerShader(std::make_unique<NeonGlowShader>());
-    // Future shaders can be registered here:
-    // registerShader(std::make_unique<ClassicShader>());
-    // registerShader(std::make_unique<GradientShader>());
 }
 
 void ShaderRegistry::registerShader(std::unique_ptr<WaveformShader> shader)

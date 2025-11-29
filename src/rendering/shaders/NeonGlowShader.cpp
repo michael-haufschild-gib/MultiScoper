@@ -337,7 +337,8 @@ void NeonGlowShader::render(
     // Use geometry wide enough for glow to fade out
     // The fragment shader creates the thin core line, the geometry provides space for the glow halo
     std::vector<float> vertices;
-    float glowWidth = 15.0f;  // Moderate glow width - not too big, not too small
+    // Scale glow width based on lineWidth: base 15px at default 1.5 lineWidth, proportionally scaled
+    float glowWidth = params.lineWidth * 10.0f;
     buildLineGeometry(vertices, channel1, centerY1, amplitude1,
         glowWidth, params.bounds.getX(), params.bounds.getWidth());
 
