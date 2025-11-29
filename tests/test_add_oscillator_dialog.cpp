@@ -255,10 +255,10 @@ TEST_F(AddOscillatorDialogTest, ResizedDoesNotCrash)
 TEST_F(AddOscillatorDialogTest, DialogDimensionsReasonable)
 {
     // Dialog has internal constants for size
-    // DIALOG_WIDTH = 360, DIALOG_HEIGHT = 530
+    // DIALOG_WIDTH = 360, DIALOG_HEIGHT = 590 (increased for shader dropdown)
     // These should be visible in the dialog's paint method
     EXPECT_EQ(AddOscillatorDialog::DIALOG_WIDTH, 360);
-    EXPECT_EQ(AddOscillatorDialog::DIALOG_HEIGHT, 530);
+    EXPECT_EQ(AddOscillatorDialog::DIALOG_HEIGHT, 590);
 }
 
 // Test: Multiple sources with same name handled correctly

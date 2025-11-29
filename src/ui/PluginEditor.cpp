@@ -15,6 +15,9 @@
 #include "ui/coordinators/ThemeCoordinator.h"
 #include "ui/coordinators/LayoutCoordinator.h"
 #include "core/InstanceRegistry.h"
+#if OSCIL_ENABLE_OPENGL
+#include "rendering/WaveformGLRenderer.h"
+#endif
 #include <cmath>
 
 namespace oscil
@@ -225,20 +228,10 @@ public:
 
     void bpmChanged(float bpm) override
     {
-        // Update internal BPM in the timing engine for free-running mode
-        auto& timingEngine = editor_.getProcessor().getTimingEngine();
-        auto config = timingEngine.getConfig();
-        // Note: Internal BPM is used when host sync is disabled
-        // The TimingEngine uses hostBPM for calculations, so we update that
-        // when not synced to host
-        if (!config.hostSyncEnabled)
-        {
-            // Create updated config with new BPM
-            EngineTimingConfig updatedConfig = config;
-            updatedConfig.hostBPM = bpm;
-            timingEngine.setConfig(updatedConfig);
-            updateDisplaySamplesFromTimingEngine();
-        }
+        // Update internal BPM in the timing engine
+        // The engine handles whether to recalculate based on sync state
+        editor_.getProcessor().getTimingEngine().setInternalBPM(bpm);
+        updateDisplaySamplesFromTimingEngine();
     }
 
 private:
@@ -481,15 +474,25 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     // Attach OpenGL context based on saved rendering preference
     #if OSCIL_ENABLE_OPENGL
+    // Create the GL renderer (always, even if GPU mode is initially off)
+    glRenderer_ = std::make_unique<WaveformGLRenderer>();
+    glRenderer_->setContext(&openGLContext_);
+
     if (gpuRenderingEnabled)
     {
+        gpuRenderingEnabled_ = true;
+        openGLContext_.setRenderer(glRenderer_.get());
+        // Use continuous repainting - GL thread renders independently
+        // Timer callback updates the waveform data, GL thread picks it up
+        openGLContext_.setContinuousRepainting(true);
         openGLContext_.attachTo(*this);
         openGLDetached_ = false;
-        DBG("OpenGL context attached for GPU rendering");
+        DBG("OpenGL context attached for GPU rendering with WaveformGLRenderer");
     }
     else
     {
         openGLDetached_ = true;
+        gpuRenderingEnabled_ = false;
         DBG("Software rendering mode (OpenGL not attached)");
     }
     statusBar_->setRenderingMode(gpuRenderingEnabled ? RenderingMode::OpenGL : RenderingMode::Software);
@@ -612,11 +615,25 @@ void OscilPluginEditor::timerCallback()
         }
     }
 
-    // Trigger repaint of waveform components
-    for (auto& pane : paneComponents_)
+    // Update GL renderer with waveform data (if GPU mode enabled)
+    // GL thread runs continuously and picks up the updated data
+    #if OSCIL_ENABLE_OPENGL
+    if (gpuRenderingEnabled_ && glRenderer_)
     {
-        if (pane)
-            pane->repaint();
+        updateGLWaveformData();
+    }
+    #endif
+
+    // Trigger repaint of waveform components (only needed for software rendering)
+    #if OSCIL_ENABLE_OPENGL
+    if (!gpuRenderingEnabled_)
+    #endif
+    {
+        for (auto& pane : paneComponents_)
+        {
+            if (pane)
+                pane->repaint();
+        }
     }
 }
 
@@ -1095,6 +1112,7 @@ void OscilPluginEditor::onAddOscillatorResult(const AddOscillatorDialog::Result&
     osc.setPaneId(targetPaneId);
     osc.setProcessingMode(ProcessingMode::FullStereo);
     osc.setColour(result.color);
+    osc.setShaderId(result.shaderId);
 
     // Set name (use result name, or generate default)
     if (result.name.isNotEmpty())
@@ -1288,15 +1306,36 @@ void OscilPluginEditor::highlightOscillator(const OscillatorId& oscillatorId)
 void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
 {
 #if OSCIL_ENABLE_OPENGL
+    gpuRenderingEnabled_ = enabled;
+
     if (enabled && !openGLContext_.isAttached())
     {
+        // Set up renderer before attaching
+        openGLContext_.setRenderer(glRenderer_.get());
+        // Use continuous repainting - GL thread renders independently
+        // Timer callback updates the waveform data, GL thread picks it up
+        openGLContext_.setContinuousRepainting(true);
         openGLContext_.attachTo(*this);
         openGLDetached_ = false;
+        DBG("GPU rendering enabled - OpenGL context attached");
     }
     else if (!enabled && openGLContext_.isAttached() && !openGLDetached_)
     {
         openGLContext_.detach();
         openGLDetached_ = true;
+        DBG("GPU rendering disabled - OpenGL context detached");
+    }
+
+    // Update all waveform components' GPU mode
+    for (auto& pane : paneComponents_)
+    {
+        for (size_t i = 0; i < pane->getOscillatorCount(); ++i)
+        {
+            if (auto* waveform = pane->getWaveformAt(i))
+            {
+                waveform->setGpuRenderingEnabled(enabled);
+            }
+        }
     }
 #else
     juce::ignoreUnused(enabled);
@@ -1325,5 +1364,41 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
     }
     repaint();
 }
+
+#if OSCIL_ENABLE_OPENGL
+void OscilPluginEditor::updateGLWaveformData()
+{
+    if (!glRenderer_)
+        return;
+
+    // Iterate through all panes and collect waveform render data
+    for (auto& pane : paneComponents_)
+    {
+        if (!pane)
+            continue;
+
+        for (size_t i = 0; i < pane->getOscillatorCount(); ++i)
+        {
+            auto* waveform = pane->getWaveformAt(i);
+            if (!waveform)
+                continue;
+
+            // Force update of waveform data (reads from capture buffer, calculates levels)
+            waveform->forceUpdateWaveformData();
+
+            // Populate render data for the GL thread
+            WaveformRenderData data;
+            waveform->populateGLRenderData(data);
+
+            // Register the waveform if not already registered
+            // (registerWaveform is a no-op if already registered)
+            glRenderer_->registerWaveform(data.id);
+
+            // Update the renderer with fresh waveform data
+            glRenderer_->updateWaveform(data);
+        }
+    }
+}
+#endif
 
 } // namespace oscil

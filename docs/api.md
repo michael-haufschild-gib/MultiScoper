@@ -227,6 +227,89 @@ public:
 };
 ```
 
+## Rendering Classes
+
+### WaveformShader
+
+Abstract base class for GPU-accelerated waveform visualization shaders.
+
+```cpp
+class WaveformShader
+{
+public:
+    virtual ~WaveformShader() = default;
+
+    // Shader identification
+    [[nodiscard]] virtual juce::String getId() const = 0;
+    [[nodiscard]] virtual juce::String getDisplayName() const = 0;
+    [[nodiscard]] virtual juce::String getDescription() const = 0;
+    [[nodiscard]] ShaderInfo getInfo() const;
+
+#if OSCIL_ENABLE_OPENGL
+    virtual bool compile(juce::OpenGLContext& context) = 0;
+    virtual void release() = 0;
+    [[nodiscard]] virtual bool isCompiled() const = 0;
+    virtual void render(juce::OpenGLContext& context,
+                        const std::vector<float>& channel1,
+                        const std::vector<float>* channel2,
+                        const ShaderRenderParams& params) = 0;
+#endif
+
+    virtual void renderSoftware(juce::Graphics& g,
+                                const std::vector<float>& channel1,
+                                const std::vector<float>* channel2,
+                                const ShaderRenderParams& params);
+};
+```
+
+### ShaderRegistry
+
+Singleton managing shader registration and retrieval.
+
+```cpp
+class ShaderRegistry
+{
+public:
+    [[nodiscard]] static ShaderRegistry& getInstance();
+
+    // Shader management
+    void registerShader(std::unique_ptr<WaveformShader> shader);
+    [[nodiscard]] WaveformShader* getShader(const juce::String& shaderId);
+    [[nodiscard]] std::vector<ShaderInfo> getAvailableShaders() const;
+    [[nodiscard]] juce::String getDefaultShaderId() const;
+    [[nodiscard]] bool hasShader(const juce::String& shaderId) const;
+
+#if OSCIL_ENABLE_OPENGL
+    void compileAll(juce::OpenGLContext& context);
+    void releaseAll();
+#endif
+};
+```
+
+### WaveformGLRenderer
+
+OpenGL renderer implementing `juce::OpenGLRenderer` for GPU-accelerated waveform display.
+
+```cpp
+class WaveformGLRenderer : public juce::OpenGLRenderer
+{
+public:
+    // juce::OpenGLRenderer interface
+    void newOpenGLContextCreated() override;
+    void renderOpenGL() override;
+    void openGLContextClosing() override;
+
+    // Waveform management
+    void setContext(juce::OpenGLContext* context);
+    void registerWaveform(int id);
+    void unregisterWaveform(int id);
+    void updateWaveform(const WaveformRenderData& data);
+    void setBackgroundColour(juce::Colour colour);
+    bool isReady() const;
+    int getWaveformCount() const;
+};
+```
+
 ## Enums
 
 ### ProcessingMode
@@ -353,6 +436,48 @@ struct ProcessedSignal
 
     void resize(int samples, bool stereo);
     void clear();
+};
+```
+
+### ShaderInfo
+
+```cpp
+struct ShaderInfo
+{
+    juce::String id;           // Unique identifier (e.g., "neon_glow")
+    juce::String displayName;  // Human-readable name
+    juce::String description;  // Brief description for tooltips
+};
+```
+
+### ShaderRenderParams
+
+```cpp
+struct ShaderRenderParams
+{
+    juce::Colour colour;
+    float opacity = 1.0f;
+    float lineWidth = 1.5f;
+    juce::Rectangle<float> bounds;
+    bool isStereo = false;
+};
+```
+
+### WaveformRenderData
+
+```cpp
+struct WaveformRenderData
+{
+    int id = 0;                          // Unique identifier
+    juce::Rectangle<float> bounds;       // Screen position and size
+    std::vector<float> channel1;         // First channel samples
+    std::vector<float> channel2;         // Second channel (stereo only)
+    juce::Colour colour{ 0xFF00FF00 };   // Waveform color
+    float opacity = 1.0f;                // Opacity (0-1)
+    float lineWidth = 1.5f;              // Line thickness
+    bool isStereo = false;               // Whether to render channel2
+    juce::String shaderId = "neon_glow"; // Shader to use
+    bool visible = true;                 // Whether to render this waveform
 };
 ```
 

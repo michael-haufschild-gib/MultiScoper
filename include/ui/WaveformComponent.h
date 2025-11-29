@@ -11,9 +11,14 @@
 #include "core/SharedCaptureBuffer.h"
 #include "dsp/SignalProcessor.h"
 #include <vector>
+#include <atomic>
 
 namespace oscil
 {
+
+// Forward declarations
+class WaveformShader;
+struct WaveformRenderData;
 
 /**
  * Display mode for stereo waveforms
@@ -61,6 +66,34 @@ public:
      * Set the number of samples to display
      */
     void setDisplaySamples(int samples);
+
+    /**
+     * Set the shader ID for GPU rendering
+     */
+    void setShaderId(const juce::String& shaderId);
+
+    /**
+     * Enable/disable GPU shader rendering
+     * When enabled and a valid shader is set, uses GPU rendering
+     */
+    void setGpuRenderingEnabled(bool enabled);
+
+    /**
+     * Set unique waveform ID for GL renderer registration
+     */
+    void setWaveformId(int id);
+
+    /**
+     * Get the waveform ID
+     */
+    int getWaveformId() const { return waveformId_; }
+
+    /**
+     * Populate render data for the GL renderer (thread-safe snapshot)
+     * Call this from the message thread to prepare data for GL rendering
+     * @param data Output struct to fill with current waveform state
+     */
+    void populateGLRenderData(WaveformRenderData& data) const;
 
     /**
      * Enable/disable grid rendering
@@ -129,10 +162,13 @@ public:
     bool hasWaveformData() const { return !waveformPath1_.isEmpty(); }
     int getDisplaySamples() const { return displaySamples_; }
     std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const { return captureBuffer_; }
+    juce::String getShaderId() const { return shaderId_; }
+    bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
 
 private:
     void drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawWaveform(juce::Graphics& g, juce::Rectangle<int> bounds);
+    void drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void updateWaveformPath();
 
     std::shared_ptr<SharedCaptureBuffer> captureBuffer_;
@@ -147,6 +183,12 @@ private:
     float gainLinear_ = 1.0f;  // Linear gain multiplier (converted from dB)
     bool highlighted_ = false;
     StereoDisplayMode stereoDisplayMode_ = StereoDisplayMode::Stacked;
+
+    // Shader rendering
+    juce::String shaderId_ = "neon_glow";
+    bool gpuRenderingEnabled_ = false;
+    int waveformId_ = 0;  // Unique ID for GL renderer registration
+    static std::atomic<int> nextWaveformId_;  // Counter for generating unique IDs
 
     SignalProcessor signalProcessor_;
     AdaptiveDecimator decimator_;

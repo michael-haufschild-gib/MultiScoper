@@ -189,8 +189,9 @@ struct EngineTimingConfig
     // MELODIC mode settings (uses engine-internal note interval)
     EngineNoteInterval noteInterval = EngineNoteInterval::NOTE_1_4TH;
 
-    // Host information (read-only from DAW)
-    float hostBPM = 120.0f;             // Current host BPM (20-300)
+    // BPM settings
+    float internalBPM = 120.0f;         // User-specified BPM (used when hostSyncEnabled = false)
+    float hostBPM = 120.0f;             // Current host BPM from DAW (used when hostSyncEnabled = true)
 
     // Calculated value
     float actualIntervalMs = 1000.0f;   // Computed interval duration
@@ -304,6 +305,7 @@ public:
     void setHostSyncEnabled(bool enabled);
     void setTimeIntervalMs(int ms);
     void setNoteInterval(EngineNoteInterval interval);
+    void setInternalBPM(float bpm);  // Set user-specified BPM for free-running mode
     void setWaveformTriggerMode(WaveformTriggerMode mode) { config_.triggerMode = mode; }
     void setTriggerThreshold(float threshold) { config_.triggerThreshold = juce::jlimit(0.0f, 1.0f, threshold); }
     void setSyncToPlayhead(bool enabled) { config_.syncToPlayhead = enabled; }

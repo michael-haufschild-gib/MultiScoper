@@ -84,9 +84,6 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorConfigPopup.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AddOscillatorDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/TimingSidebarSection.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/sections/MasterControlsSection.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/sections/TriggerSettingsSection.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/sections/DisplayOptionsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/OptionsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/SourceCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/ThemeCoordinator.cpp
@@ -109,6 +106,11 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTooltip.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTransportSync.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/UIAudioFeedback.cpp
+    # Rendering sources
+    ${CMAKE_SOURCE_DIR}/src/rendering/WaveformShader.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/ShaderRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/shaders/NeonGlowShader.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/WaveformGLRenderer.cpp
 )
 
 # Create JUCE standalone application
@@ -145,6 +147,7 @@ target_link_libraries(OscilTestHarness PRIVATE
     juce::juce_data_structures
     juce::juce_events
     juce::juce_audio_basics
+    $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     httplib::httplib
     nlohmann_json::nlohmann_json
     PUBLIC
@@ -161,4 +164,5 @@ target_compile_definitions(OscilTestHarness PRIVATE
     JUCE_REPORT_APP_USAGE=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1
     TEST_HARNESS=1
+    $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
 )

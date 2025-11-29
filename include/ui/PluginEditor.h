@@ -23,6 +23,7 @@ namespace oscil
 
 // Forward declarations
 class WaveformComponent;
+class WaveformGLRenderer;
 class OscillatorPanel;
 class PaneComponent;
 class StatusBarComponent;
@@ -164,7 +165,11 @@ private:
 #if OSCIL_ENABLE_OPENGL
     // OpenGL context for GPU-accelerated rendering
     juce::OpenGLContext openGLContext_;
+    std::unique_ptr<WaveformGLRenderer> glRenderer_;
     bool openGLDetached_ = false;  // Track if context was detached early
+    bool gpuRenderingEnabled_ = false;  // Track GPU rendering state
+
+    void updateGLWaveformData();  // Update waveform data for GL renderer
 #endif
 
 #if OSCIL_ENABLE_INSPECTOR

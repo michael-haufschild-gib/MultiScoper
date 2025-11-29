@@ -4168,26 +4168,20 @@ Expected: there is no automated reordering of oscillators in the oscillator list
 
 
 ---
-Plan the following:
-- Each pane has a
-
+Do a root cause analyis, then fix this bug: in the timing panel, in melodic mode, the "sync" switch does nothing. waveforms are unaffected and only use the timing that was set in the input field when the sync switch was off.
 
 
 ---
-review the codebase and make sure that every popup/dialog/modal is actually using the src/ui/components/OscilModal.cpp component instead of creating its own modal frame. where the OscilModal is missing functionality to make it truly reusable, add this functionality.
-confirm with e2e tests that each modal you refactored is still fully working.
-
-
-
-
-
-observed bug: the timing interval resets, the waveform reset to this timing settings.
-expected: selecting an oscillator or any other sidebar element unrelated to the timing settings should have no impact on the timing settings.
+Do a root cause analyis, then fix this bug: number input fields that have a + and - button inside of them, do not show the + and - text on the buttons but instead just "...", possibly because they are not large enough or have too much padding? This affects multiple input fields.
 
 ---
-plan and implement this change for the Timing sidebar section, in the "Melodic" tab:
-1. remove the bpm slider
-2. move the host sync switch into the row with the bpm input field. the row should look like: "BPM" label + bpm input field + sync switch
+Do a root cause analyis, then fix this bug: the sidebar has on its top right a caret button to open / close the sidebar drawer. this is completely not working.
+
+
+
+
+
+
 
 
 
@@ -4195,6 +4189,6 @@ plan based on this the following addition to our plugin:
 1. each oscillator has a shader setting
 2. the user can select the shader from the list of available shaders in the oscillator setting config. the shader dropdown is below the color settings.
 3. the user can also select the shader from the list of available shaders in the dialog to add a new oscillator. the dropdown is below the color settings.
-3. this project has an architecture that allows to easily add new shaders.
-4. when the user has GPU rendering enabled (juce opengl), the shader selected for an oscialltor is used for rendering the oscillator waveform.
-5. for start, one default shader exist, that is just rendering the waveform normally using the color, line width and opacity set for the oscillator. but it also adds some neon glow in the same color.
+4. this project has an architecture that allows to easily add new shaders.
+5. when the user has GPU rendering enabled (juce opengl), the shader selected for an oscialltor is used for rendering the oscillator waveform.
+6. for start, one default shader exist, that is just rendering the waveform normally using the color, line width and opacity set for the oscillator. but it also adds some neon glow in the same color.

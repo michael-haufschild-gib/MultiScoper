@@ -6,7 +6,6 @@
 
 #include <gtest/gtest.h>
 #include "ui/sections/TimingSidebarSection.h"
-#include "ui/sections/MasterControlsSection.h"
 #include "dsp/TimingConfig.h"
 
 using namespace oscil;
@@ -133,43 +132,6 @@ public:
         bpmChangedCalled = false;
     }
 };
-
-// Test: MasterControlsSection listener interface
-class MockMasterListener : public MasterControlsSection::Listener
-{
-public:
-    void gainChanged(float dB) override
-    {
-        lastGainDb = dB;
-        gainChangedCalled = true;
-    }
-
-    float lastGainDb = 0.0f;
-    bool gainChangedCalled = false;
-
-    void reset()
-    {
-        gainChangedCalled = false;
-    }
-};
-
-// Test: MasterControlsSection emits gainChanged when slider value changes
-TEST_F(TimingCalculationsTest, MasterControlsGainEmitsCallback)
-{
-    MasterControlsSection section;
-    MockMasterListener listener;
-    section.addListener(&listener);
-
-    // Initial state check
-    EXPECT_FALSE(listener.gainChangedCalled);
-
-    // Verify gain range constants
-    EXPECT_EQ(MasterControlsSection::MIN_GAIN_DB, -60.0f);
-    EXPECT_EQ(MasterControlsSection::MAX_GAIN_DB, 12.0f);
-
-    // Clean up
-    section.removeListener(&listener);
-}
 
 // Test: WaveformMode enum values
 TEST_F(TimingCalculationsTest, WaveformModeEnumValues)

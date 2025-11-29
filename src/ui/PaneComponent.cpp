@@ -221,6 +221,7 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
     entry.waveform->setColour(oscillator.getColour());
     entry.waveform->setOpacity(oscillator.getOpacity());
     entry.waveform->setVisible(oscillator.isVisible());
+    entry.waveform->setShaderId(oscillator.getShaderId());
 
     // Get capture buffer - always try processor's buffer first since it's always available
     // The registry lookup might fail if prepareToPlay() hasn't been called yet

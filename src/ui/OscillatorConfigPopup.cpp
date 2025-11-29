@@ -7,6 +7,7 @@
 #include "ui/SourceSelectorComponent.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/ProcessingModeIcons.h"
+#include "rendering/ShaderRegistry.h"
 
 namespace oscil
 {
@@ -81,6 +82,20 @@ void OscillatorConfigPopup::setupComponents()
     colorSwatches_->setColors(colors);
     colorSwatches_->onColorSelected = [this](int, juce::Colour color) { handleColorSelect(color); };
     addAndMakeVisible(*colorSwatches_);
+
+    // Shader dropdown
+    shaderLabel_ = std::make_unique<juce::Label>("", "Shader");
+    addAndMakeVisible(*shaderLabel_);
+
+    shaderDropdown_ = std::make_unique<OscilDropdown>("", "configPopup_shaderDropdown");
+    // Populate from shader registry
+    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
+    for (const auto& shaderInfo : availableShaders)
+    {
+        shaderDropdown_->addItem(shaderInfo.displayName, shaderInfo.id);
+    }
+    shaderDropdown_->onSelectionChanged = [this](int) { handleShaderChange(); };
+    addAndMakeVisible(*shaderDropdown_);
 
     // Line Width slider (OscilSlider with label)
     lineWidthSlider_ = std::make_unique<OscilSlider>("configPopup_lineWidthSlider");
@@ -226,6 +241,12 @@ void OscillatorConfigPopup::resized()
     colorSwatches_->setBounds(contentBounds.removeFromTop(32));
     contentBounds.removeFromTop(12);
 
+    // Shader dropdown
+    auto shaderRow = contentBounds.removeFromTop(32);
+    shaderLabel_->setBounds(shaderRow.removeFromLeft(100));
+    shaderDropdown_->setBounds(shaderRow);
+    contentBounds.removeFromTop(8);
+
     // OscilSlider components have integrated labels - use full row height
     lineWidthSlider_->setBounds(contentBounds.removeFromTop(40));
     contentBounds.removeFromTop(4);
@@ -267,6 +288,7 @@ void OscillatorConfigPopup::themeChanged(const ColorTheme& newTheme)
     styleLabel(sourceLabel_.get(), true);
     styleLabel(modeLabel_.get(), true);
     styleLabel(colorLabel_.get(), true);
+    styleLabel(shaderLabel_.get());
     styleLabel(paneLabel_.get());
 
     repaint();
@@ -294,6 +316,7 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
     verticalOffset_ = oscillator.getVerticalOffset();
     paneId_ = oscillator.getPaneId();
     orderIndex_ = oscillator.getOrderIndex();
+    shaderId_ = oscillator.getShaderId();
 
     // Update controls using new Oscil component APIs
     nameEditor_->setText(name_, false);  // Don't notify
@@ -309,6 +332,17 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
 
     // Update color swatches selection
     colorSwatches_->setSelectedColor(colour_);
+
+    // Update shader dropdown selection
+    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
+    for (size_t i = 0; i < availableShaders.size(); ++i)
+    {
+        if (availableShaders[i].id == shaderId_)
+        {
+            shaderDropdown_->setSelectedIndex(static_cast<int>(i), false);  // Don't notify
+            break;
+        }
+    }
 
     // Update pane selector (OscilDropdown uses setSelectedIndex)
     for (int i = 0; i < paneSelector_->getNumItems(); ++i)
@@ -354,6 +388,7 @@ void OscillatorConfigPopup::notifyConfigChanged()
     state.setProperty("verticalOffset", verticalOffset_, nullptr);
     state.setProperty("paneId", paneId_.id, nullptr);
     state.setProperty("order", orderIndex_, nullptr);
+    state.setProperty("shaderId", shaderId_, nullptr);
     state.setProperty("schemaVersion", Oscillator::CURRENT_SCHEMA_VERSION, nullptr);
 
     Oscillator updated(state);
@@ -442,6 +477,17 @@ void OscillatorConfigPopup::handlePaneChange()
     if (index >= 0 && static_cast<size_t>(index) < availablePanes_.size())
     {
         paneId_ = availablePanes_[static_cast<size_t>(index)].first;
+        notifyConfigChanged();
+    }
+}
+
+void OscillatorConfigPopup::handleShaderChange()
+{
+    int index = shaderDropdown_->getSelectedIndex();
+    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
+    if (index >= 0 && static_cast<size_t>(index) < availableShaders.size())
+    {
+        shaderId_ = availableShaders[static_cast<size_t>(index)].id;
         notifyConfigChanged();
     }
 }

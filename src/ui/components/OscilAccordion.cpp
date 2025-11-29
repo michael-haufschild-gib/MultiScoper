@@ -125,8 +125,12 @@ void OscilAccordionSection::setExpanded(bool expanded, bool animate)
     }
     else
     {
+        // When skipping animation, set BOTH position AND target to prevent
+        // the spring from animating toward the wrong value when timer runs
         expandSpring_.position = expanded ? 1.0f : 0.0f;
+        expandSpring_.target = expanded ? 1.0f : 0.0f;
         chevronSpring_.position = expanded ? 1.0f : 0.0f;
+        chevronSpring_.target = expanded ? 1.0f : 0.0f;
 
         if (content_)
             content_->setVisible(expanded);
@@ -293,20 +297,10 @@ void OscilAccordionSection::mouseDown(const juce::MouseEvent& e)
     mouseDownInHeader_ = e.mods.isLeftButtonDown() && !e.mods.isPopupMenu() &&
                          e.y < HEADER_HEIGHT && enabled_;
 
-    DBG("OscilAccordionSection::mouseDown - title: " << title_
-        << ", y: " << e.y
-        << ", leftButton: " << e.mods.isLeftButtonDown()
-        << ", mouseDownInHeader: " << mouseDownInHeader_
-        << ", pressure: " << e.pressure);
 }
 
 void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
 {
-    DBG("OscilAccordionSection::mouseUp - title: " << title_
-        << ", y: " << e.y
-        << ", mouseDownInHeader: " << mouseDownInHeader_
-        << ", wasDragged: " << e.mouseWasDraggedSinceMouseDown());
-
     // Only toggle if:
     // 1. MouseDown started in header (mouseDownInHeader_)
     // 2. MouseUp is still in header area

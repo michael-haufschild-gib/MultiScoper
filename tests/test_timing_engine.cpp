@@ -238,10 +238,12 @@ TEST_F(TimingEngineTest, MelodicModeBPMChange)
 {
     engine.setTimingMode(TimingMode::MELODIC);
     engine.setNoteInterval(EngineNoteInterval::NOTE_1_4TH);
+    engine.setHostSyncEnabled(true);  // Enable host sync so hostBPM is used
 
     // 120 BPM -> 500ms
     EngineTimingConfig config = engine.getConfig();
     config.hostBPM = 120.0f;
+    config.hostSyncEnabled = true;  // Ensure sync is enabled in config too
     engine.setConfig(config);
     EXPECT_FLOAT_EQ(engine.getActualIntervalMs(), 500.0f);
 
@@ -471,6 +473,7 @@ TEST_F(TimingEngineTest, HostInfoUpdate_BPMChange)
 {
     engine.setTimingMode(TimingMode::MELODIC);
     engine.setNoteInterval(EngineNoteInterval::NOTE_1_4TH);
+    engine.setHostSyncEnabled(true);  // Enable host sync so hostBPM affects interval
 
     // Create position info with new BPM
     juce::AudioPlayHead::PositionInfo posInfo;

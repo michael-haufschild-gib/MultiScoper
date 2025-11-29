@@ -134,7 +134,9 @@ void TimingEngine::recalculateInterval()
             // Formula: interval_ms = (beats * 60000) / BPM
             // Use double throughout for precision, then cast to float at the end
             double beats = engineNoteIntervalToBeats(config_.noteInterval);
-            double bpm = static_cast<double>(juce::jmax(config_.hostBPM, EngineTimingConfig::MIN_BPM));
+            // Use host BPM when synced, internal BPM when free-running
+            float effectiveBPM = config_.hostSyncEnabled ? config_.hostBPM : config_.internalBPM;
+            double bpm = static_cast<double>(juce::jmax(effectiveBPM, EngineTimingConfig::MIN_BPM));
             newInterval = static_cast<float>((beats * 60000.0) / bpm);
             break;
         }
@@ -175,7 +177,27 @@ void TimingEngine::setHostSyncEnabled(bool enabled)
     if (config_.hostSyncEnabled != enabled)
     {
         config_.hostSyncEnabled = enabled;
+        // Recalculate interval since BPM source changed (host vs internal)
+        if (config_.timingMode == TimingMode::MELODIC)
+        {
+            recalculateInterval();
+        }
         notifyHostSyncStateChanged();
+    }
+}
+
+void TimingEngine::setInternalBPM(float bpm)
+{
+    bpm = juce::jlimit(EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM, bpm);
+
+    if (std::abs(config_.internalBPM - bpm) > 0.01f)
+    {
+        config_.internalBPM = bpm;
+        // Only recalculate if we're in MELODIC mode and NOT synced to host
+        if (config_.timingMode == TimingMode::MELODIC && !config_.hostSyncEnabled)
+        {
+            recalculateInterval();
+        }
     }
 }
 

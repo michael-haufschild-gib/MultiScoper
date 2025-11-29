@@ -1,7 +1,7 @@
 # Architecture Guide for LLM Coding Agents
 
 **Purpose**: Instructions for where to put code and what patterns to follow in the Oscil codebase.
-**Tech Stack**: C++20, JUCE 8.0.4, CMake, GoogleTest, cpp-httplib, nlohmann/json
+**Tech Stack**: C++20, JUCE 8.0.5, CMake, GoogleTest 1.17.0, cpp-httplib 0.27.0, nlohmann/json 3.12.0
 
 ## Project Overview
 
@@ -13,6 +13,8 @@ Oscil is a multi-track audio oscilloscope VST/AU plugin. All code lives in the `
 include/                    # Header files (.h)
 ├── core/                   # Core logic: processors, state, data models
 ├── dsp/                    # Digital signal processing algorithms
+├── rendering/              # OpenGL shaders and GPU rendering
+│   └── shaders/            # Individual shader implementations
 ├── ui/                     # UI components (juce::Component subclasses)
 │   ├── components/         # Reusable UI component library (buttons, sliders, etc.)
 │   ├── sections/           # Sidebar collapsible sections
@@ -22,6 +24,8 @@ include/                    # Header files (.h)
 src/                        # Implementation files (.cpp)
 ├── core/                   # Core implementations
 ├── dsp/                    # DSP implementations
+├── rendering/              # GPU rendering implementations
+│   └── shaders/            # Shader implementations
 └── ui/                     # UI implementations
     ├── components/         # Reusable UI component implementations
     ├── sections/           # Sidebar section implementations
@@ -38,6 +42,8 @@ test_harness/               # E2E test harness (separate JUCE app)
 **Decision tree - where does my code go?**
 - Audio processing logic? → `src/dsp/` + `include/dsp/`
 - State management/data models? → `src/core/` + `include/core/`
+- OpenGL shader? → `src/rendering/shaders/` + `include/rendering/shaders/`
+- GPU rendering (non-shader)? → `src/rendering/` + `include/rendering/`
 - UI rendering/components? → `src/ui/` + `include/ui/`
 - Collapsible sidebar section? → `src/ui/sections/` + `include/ui/sections/`
 - State-UI coordination? → `src/ui/coordinators/` + `include/ui/coordinators/`
@@ -338,6 +344,75 @@ src/ui/coordinators/MyCoordinator.cpp
 
 **Step 4**: Instantiate in `PluginEditor` and connect to UI
 
+## How to Create a Waveform Shader
+
+OpenGL shaders render waveforms with GPU acceleration. Use the `WaveformShader` base class.
+
+**Step 1**: Create header at `include/rendering/shaders/MyShader.h`
+
+```cpp
+/*
+    Oscil - My Shader
+    Description of the visual effect
+*/
+
+#pragma once
+
+#include "rendering/WaveformShader.h"
+
+namespace oscil
+{
+
+class MyShader : public WaveformShader
+{
+public:
+    MyShader() = default;
+    ~MyShader() override;
+
+    // Shader identification
+    [[nodiscard]] juce::String getId() const override { return "my_shader"; }
+    [[nodiscard]] juce::String getDisplayName() const override { return "My Shader"; }
+    [[nodiscard]] juce::String getDescription() const override { return "Brief description"; }
+
+#if OSCIL_ENABLE_OPENGL
+    bool compile(juce::OpenGLContext& context) override;
+    void release() override;
+    [[nodiscard]] bool isCompiled() const override;
+    void render(juce::OpenGLContext& context,
+                const std::vector<float>& channel1,
+                const std::vector<float>* channel2,
+                const ShaderRenderParams& params) override;
+#endif
+
+    void renderSoftware(juce::Graphics& g,
+                        const std::vector<float>& channel1,
+                        const std::vector<float>* channel2,
+                        const ShaderRenderParams& params) override;
+
+private:
+#if OSCIL_ENABLE_OPENGL
+    std::unique_ptr<juce::OpenGLShaderProgram> shaderProgram_;
+#endif
+    bool compiled_ = false;
+};
+
+} // namespace oscil
+```
+
+**Step 2**: Create implementation at `src/rendering/shaders/MyShader.cpp`
+
+**Step 3**: Register in `ShaderRegistry::registerBuiltInShaders()`:
+```cpp
+registerShader(std::make_unique<MyShader>());
+```
+
+**Step 4**: Add to `CMakeLists.txt`:
+```cmake
+src/rendering/shaders/MyShader.cpp
+```
+
+**Key Pattern**: Always provide `renderSoftware()` fallback for when OpenGL is disabled.
+
 ## How to Add a Theme Color
 
 1. Add property to `ColorTheme` struct in `include/ui/ThemeManager.h`
@@ -362,6 +437,8 @@ src/ui/coordinators/MyCoordinator.cpp
 |------------|----------|
 | `juce::Component` | Creating any visual UI element |
 | `juce::AudioProcessor` | Creating the main plugin (already done: `OscilPluginProcessor`) |
+| `juce::OpenGLRenderer` | GPU-accelerated rendering (see `WaveformGLRenderer`) |
+| `WaveformShader` | Creating custom GPU waveform effects |
 | `InstanceRegistryListener` | Reacting to source registration/removal |
 | `ThemeManagerListener` | Reacting to theme changes |
 
@@ -370,6 +447,7 @@ src/ui/coordinators/MyCoordinator.cpp
 Use sparingly. Current singletons:
 - `InstanceRegistry::getInstance()` - Multi-instance coordination across plugin instances
 - `ThemeManager::getInstance()` - Theme management and persistence
+- `ShaderRegistry::getInstance()` - GPU shader registration and retrieval
 - `GlobalPreferences::getInstance()` - User preferences stored separately from project state (default theme, layout settings)
 
 ## State Persistence

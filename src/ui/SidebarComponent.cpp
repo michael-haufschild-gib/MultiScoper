@@ -142,7 +142,7 @@ void SidebarCollapseButton::mouseExit(const juce::MouseEvent&)
 
 void SidebarCollapseButton::mouseUp(const juce::MouseEvent& e)
 {
-    if (getBounds().contains(e.getPosition()) && onClick)
+    if (getLocalBounds().contains(e.getPosition()) && onClick)
         onClick();
 }
 
@@ -227,9 +227,10 @@ SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
     // Control sections in scrollable viewport
     accordionViewport_ = std::make_unique<juce::Viewport>();
     accordion_ = std::make_unique<OscilAccordion>();
-    
+
     accordionViewport_->setViewedComponent(accordion_.get(), false);
     accordionViewport_->setScrollBarsShown(true, false);
+    accordionViewport_->setScrollOnDragMode(juce::Viewport::ScrollOnDragMode::never);  // Prevent trackpad gestures from scrolling
     addAndMakeVisible(accordionViewport_.get());
 
     setupSections();

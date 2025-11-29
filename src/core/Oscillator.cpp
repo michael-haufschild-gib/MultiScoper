@@ -58,6 +58,8 @@ juce::ValueTree Oscillator::toValueTree() const
         state.setProperty(StateIds::TimeWindow, timeWindow_.value(), nullptr);
     }
 
+    state.setProperty(StateIds::ShaderId, shaderId_, nullptr);
+
     return state;
 }
 
@@ -110,6 +112,9 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     verticalScale_ = juce::jlimit(MIN_VERTICAL_SCALE, MAX_VERTICAL_SCALE, verticalScale_);
     verticalOffset_ = juce::jlimit(MIN_VERTICAL_OFFSET, MAX_VERTICAL_OFFSET, verticalOffset_);
     opacity_ = juce::jlimit(0.0f, 1.0f, opacity_);
+
+    // Shader ID (default to neon_glow for migration)
+    shaderId_ = state.getProperty(StateIds::ShaderId, "neon_glow");
 
     schemaVersion_ = CURRENT_SCHEMA_VERSION;
 }

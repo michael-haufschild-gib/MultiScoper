@@ -148,9 +148,6 @@ target_sources(Oscil
         src/ui/PluginTestServer.cpp
         # UI Sections
         src/ui/sections/TimingSidebarSection.cpp
-        src/ui/sections/MasterControlsSection.cpp
-        src/ui/sections/TriggerSettingsSection.cpp
-        src/ui/sections/DisplayOptionsSection.cpp
         src/ui/sections/OptionsSection.cpp
         # UI Coordinators
         src/ui/coordinators/SourceCoordinator.cpp
@@ -175,6 +172,12 @@ target_sources(Oscil
         src/ui/components/OscilMeterBar.cpp
         src/ui/components/OscilTransportSync.cpp
         src/ui/components/UIAudioFeedback.cpp
+
+        # Rendering (Shaders)
+        src/rendering/WaveformShader.cpp
+        src/rendering/ShaderRegistry.cpp
+        src/rendering/shaders/NeonGlowShader.cpp
+        src/rendering/WaveformGLRenderer.cpp
 )
 
 # Include directories
@@ -331,9 +334,6 @@ if(OSCIL_BUILD_TESTS)
         src/ui/AddOscillatorDialog.cpp
         src/ui/PluginTestServer.cpp
         src/ui/sections/TimingSidebarSection.cpp
-        src/ui/sections/MasterControlsSection.cpp
-        src/ui/sections/TriggerSettingsSection.cpp
-        src/ui/sections/DisplayOptionsSection.cpp
         src/ui/sections/OptionsSection.cpp
         src/ui/coordinators/SourceCoordinator.cpp
         src/ui/coordinators/ThemeCoordinator.cpp
@@ -357,6 +357,12 @@ if(OSCIL_BUILD_TESTS)
         src/ui/components/OscilMeterBar.cpp
         src/ui/components/OscilTransportSync.cpp
         src/ui/components/UIAudioFeedback.cpp
+
+        # Rendering source files for testing
+        src/rendering/WaveformShader.cpp
+        src/rendering/ShaderRegistry.cpp
+        src/rendering/shaders/NeonGlowShader.cpp
+        src/rendering/WaveformGLRenderer.cpp
     )
 
     target_include_directories(OscilTests

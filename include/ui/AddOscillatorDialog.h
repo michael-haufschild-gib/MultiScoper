@@ -36,10 +36,11 @@ public:
     struct Result
     {
         SourceId sourceId;
-        PaneId paneId;          // Empty if createNewPane is true
-        bool createNewPane;     // True if "New pane" was selected
+        PaneId paneId;                  // Empty if createNewPane is true
+        bool createNewPane = false;     // True if "New pane" was selected
         juce::String name;
         juce::Colour color;
+        juce::String shaderId;          // Shader to use for rendering
     };
 
     /**
@@ -84,7 +85,7 @@ public:
 
     // Preferred dimensions
     static constexpr int DIALOG_WIDTH = 360;
-    static constexpr int DIALOG_HEIGHT = 530;
+    static constexpr int DIALOG_HEIGHT = 590;  // Increased for shader dropdown
 
     // Number of color swatches
     static constexpr int NUM_COLOR_SWATCHES = 10;
@@ -131,6 +132,10 @@ private:
     std::unique_ptr<OscilButton> customColorButton_;
     juce::Colour customColor_;  // Stores custom color if selected
     juce::ColourSelector* colourSelector_ = nullptr;  // Weak reference, CallOutBox owns it
+
+    // Shader section
+    std::unique_ptr<juce::Label> shaderLabel_;
+    std::unique_ptr<OscilDropdown> shaderDropdown_;
 
     // Error message
     std::unique_ptr<juce::Label> errorLabel_;

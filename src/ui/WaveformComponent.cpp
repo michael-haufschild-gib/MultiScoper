@@ -4,13 +4,23 @@
 
 #include "ui/WaveformComponent.h"
 #include "ui/ThemeManager.h"
+#include "rendering/ShaderRegistry.h"
+#include "rendering/WaveformShader.h"
+#if OSCIL_ENABLE_OPENGL
+#include "rendering/WaveformGLRenderer.h"
+#endif
 
 namespace oscil
 {
 
+// Static counter for unique waveform IDs
+std::atomic<int> WaveformComponent::nextWaveformId_{ 1 };
+
 WaveformComponent::WaveformComponent()
 {
     setOpaque(false);
+    // Auto-assign a unique ID
+    waveformId_ = nextWaveformId_.fetch_add(1);
 }
 
 void WaveformComponent::paint(juce::Graphics& g)
@@ -36,12 +46,17 @@ void WaveformComponent::paint(juce::Graphics& g)
         drawGrid(g, bounds);
     }
 
-    // Update and draw waveform
-    updateWaveformPath();
-    drawWaveform(g, bounds);
+    // In GPU mode, waveform is rendered by OpenGL (WaveformGLRenderer::renderOpenGL)
+    // In software mode, draw waveform here using JUCE Graphics
+    if (!gpuRenderingEnabled_)
+    {
+        // Update and draw waveform using CPU rendering
+        updateWaveformPath();
+        drawWaveform(g, bounds);
+    }
 
-    // If no waveform data, show "No Signal" text
-    if (waveformPath1_.isEmpty() && bounds.getWidth() > 50 && bounds.getHeight() > 30)
+    // If no waveform data, show "No Signal" text (only in software mode)
+    if (!gpuRenderingEnabled_ && waveformPath1_.isEmpty() && bounds.getWidth() > 50 && bounds.getHeight() > 30)
     {
         g.setColour(theme.textSecondary.withAlpha(0.5f));
         g.setFont(14.0f);
@@ -77,6 +92,16 @@ void WaveformComponent::setOpacity(float opacity)
 void WaveformComponent::setDisplaySamples(int samples)
 {
     displaySamples_ = std::max(64, samples);
+}
+
+void WaveformComponent::setShaderId(const juce::String& shaderId)
+{
+    shaderId_ = shaderId;
+}
+
+void WaveformComponent::setGpuRenderingEnabled(bool enabled)
+{
+    gpuRenderingEnabled_ = enabled;
 }
 
 void WaveformComponent::setShowGrid(bool show)
@@ -209,6 +234,38 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
         g.drawHorizontalLine(static_cast<int>(centerY * 0.5f), 0.0f, static_cast<float>(width));
         g.drawHorizontalLine(static_cast<int>(centerY * 1.5f), 0.0f, static_cast<float>(width));
     }
+}
+
+void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds)
+{
+    // Get shader from registry
+    auto* shader = ShaderRegistry::getInstance().getShader(shaderId_);
+    if (!shader)
+    {
+        // Fallback to default shader
+        shader = ShaderRegistry::getInstance().getShader(
+            ShaderRegistry::getInstance().getDefaultShaderId());
+    }
+
+    if (!shader)
+    {
+        // Last resort: use standard path rendering
+        drawWaveform(g, bounds);
+        return;
+    }
+
+    // Set up render parameters
+    ShaderRenderParams params;
+    params.colour = colour_;
+    params.opacity = opacity_;
+    params.lineWidth = 1.5f;  // TODO: Use lineWidth from oscillator settings
+    params.bounds = bounds.toFloat();
+    params.isStereo = (processingMode_ == ProcessingMode::FullStereo);
+
+    // Use software rendering path (GPU rendering happens in OpenGL render callback)
+    // The shader's software fallback provides the neon glow effect via multi-pass path rendering
+    const std::vector<float>* channel2Ptr = params.isStereo ? &displayBuffer2_ : nullptr;
+    shader->renderSoftware(g, displayBuffer1_, channel2Ptr, params);
 }
 
 void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*bounds*/)
@@ -378,6 +435,49 @@ void WaveformComponent::updateWaveformPath()
             waveformPath2_.lineTo(x, y);
         }
     }
+}
+
+void WaveformComponent::setWaveformId(int id)
+{
+    waveformId_ = id;
+}
+
+void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
+{
+#if OSCIL_ENABLE_OPENGL
+    data.id = waveformId_;
+
+    // Convert component bounds to coordinates relative to the top-level component
+    // (the PluginEditor where the OpenGL context is attached)
+    // The GL renderer uses a coordinate system where (0,0) is top-left of the editor
+    auto* topLevel = getTopLevelComponent();
+    juce::Rectangle<int> relativeBounds;
+    if (topLevel != nullptr)
+    {
+        // Get our bounds in the coordinate space of the top-level component
+        relativeBounds = topLevel->getLocalArea(this, getLocalBounds());
+    }
+    else
+    {
+        // Fallback to local bounds if no parent hierarchy
+        relativeBounds = getLocalBounds();
+    }
+    data.bounds = relativeBounds.toFloat();
+
+    // Copy display buffer data
+    data.channel1 = displayBuffer1_;
+    data.channel2 = displayBuffer2_;
+
+    // Copy render parameters
+    data.colour = colour_;
+    data.opacity = opacity_;
+    data.lineWidth = 1.5f;  // Default line width
+    data.isStereo = (processingMode_ == ProcessingMode::FullStereo);
+    data.shaderId = shaderId_;
+    data.visible = isVisible() && !displayBuffer1_.empty();
+#else
+    juce::ignoreUnused(data);
+#endif
 }
 
 } // namespace oscil

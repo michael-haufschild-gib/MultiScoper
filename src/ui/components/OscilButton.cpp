@@ -244,8 +244,21 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
         g.strokePath(buttonPath, juce::PathStrokeType(1.0f));
     }
 
-    // Content - use reduced padding for segmented buttons to fit short labels
-    int horizontalPadding = (segmentPosition_ != SegmentPosition::None) ? 4 : TEXT_PADDING;
+    // Content - use reduced padding for segmented buttons and narrow buttons
+    int horizontalPadding;
+    if (segmentPosition_ != SegmentPosition::None)
+    {
+        horizontalPadding = 4;
+    }
+    else if (bounds.getWidth() < TEXT_PADDING * 3)
+    {
+        // For narrow buttons, use minimal padding to ensure text fits
+        horizontalPadding = 2;
+    }
+    else
+    {
+        horizontalPadding = TEXT_PADDING;
+    }
     auto contentBounds = bounds.reduced(static_cast<float>(horizontalPadding), 0);
     auto textColour = getTextColour();
     if (!enabled_)

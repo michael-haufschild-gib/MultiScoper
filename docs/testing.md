@@ -1,7 +1,7 @@
 # Testing Guide for LLM Coding Agents
 
 **Purpose**: Instructions for writing and running tests in the Oscil codebase.
-**Test Stack**: GoogleTest (gtest) v1.14.0
+**Test Stack**: GoogleTest (gtest) v1.17.0
 
 ## Quick Reference
 

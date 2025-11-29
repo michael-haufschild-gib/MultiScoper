@@ -4,6 +4,7 @@
 */
 
 #include "ui/AddOscillatorDialog.h"
+#include "rendering/ShaderRegistry.h"
 
 namespace oscil
 {
@@ -87,6 +88,24 @@ void AddOscillatorDialog::setupComponents()
             nullptr);
     };
     addAndMakeVisible(*customColorButton_);
+
+    // Shader section
+    shaderLabel_ = std::make_unique<juce::Label>("", "Shader");
+    addAndMakeVisible(*shaderLabel_);
+
+    shaderDropdown_ = std::make_unique<OscilDropdown>("", "addOscillatorDialog_shaderDropdown");
+    // Populate from shader registry
+    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
+    for (const auto& shaderInfo : availableShaders)
+    {
+        shaderDropdown_->addItem(shaderInfo.displayName, shaderInfo.id);
+    }
+    // Default to first shader (neon_glow)
+    if (!availableShaders.empty())
+    {
+        shaderDropdown_->setSelectedIndex(0, false);
+    }
+    addAndMakeVisible(*shaderDropdown_);
 
     // Error label (hidden by default)
     errorLabel_ = std::make_unique<juce::Label>("", "");
@@ -183,6 +202,12 @@ void AddOscillatorDialog::resized()
     colorSwatches_->setBounds(contentBounds.removeFromTop(COLOR_SECTION_HEIGHT));
     contentBounds.removeFromTop(4);
     customColorButton_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
+    contentBounds.removeFromTop(SECTION_SPACING);
+
+    // Shader section
+    shaderLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
+    contentBounds.removeFromTop(4);
+    shaderDropdown_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
     contentBounds.removeFromTop(8);
 
     // Error label
@@ -219,6 +244,7 @@ void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
     styleLabel(paneLabel_.get());
     styleLabel(nameLabel_.get());
     styleLabel(colorLabel_.get());
+    styleLabel(shaderLabel_.get());
 
     // Error label uses error color
     errorLabel_->setColour(juce::Label::textColourId, newTheme.statusError);
@@ -377,6 +403,19 @@ void AddOscillatorDialog::handleOkClick()
     else
     {
         result.color = customColor_;
+    }
+
+    // Get selected shader
+    int shaderIndex = shaderDropdown_->getSelectedIndex();
+    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
+    if (shaderIndex >= 0 && static_cast<size_t>(shaderIndex) < availableShaders.size())
+    {
+        result.shaderId = availableShaders[static_cast<size_t>(shaderIndex)].id;
+    }
+    else
+    {
+        // Default to neon_glow if nothing selected
+        result.shaderId = ShaderRegistry::getInstance().getDefaultShaderId();
     }
 
     // Call callback and hide
