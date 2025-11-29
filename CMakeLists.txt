@@ -177,6 +177,7 @@ target_sources(Oscil
         src/rendering/WaveformShader.cpp
         src/rendering/ShaderRegistry.cpp
         src/rendering/shaders/NeonGlowShader.cpp
+        src/rendering/shaders/HoloMatrixShader.cpp
         src/rendering/WaveformGLRenderer.cpp
 )
 
@@ -363,6 +364,7 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/WaveformShader.cpp
         src/rendering/ShaderRegistry.cpp
         src/rendering/shaders/NeonGlowShader.cpp
+        src/rendering/shaders/HoloMatrixShader.cpp
         src/rendering/WaveformGLRenderer.cpp
     )
 
