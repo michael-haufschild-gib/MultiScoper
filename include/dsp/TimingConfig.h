@@ -213,7 +213,7 @@ struct TimingConfig
     TriggerMode triggerMode = TriggerMode::FREE_RUNNING;
 
     // TIME mode settings
-    float timeIntervalMs = 50.0f;  // 1.0-60000.0 ms (1ms to 60s)
+    float timeIntervalMs = 500.0f;  // 0.1-4000.0 ms (default 500ms)
 
     // MELODIC mode settings
     NoteInterval noteInterval = NoteInterval::QUARTER;
@@ -228,11 +228,12 @@ struct TimingConfig
     TriggerEdge triggerEdge = TriggerEdge::Rising;  // Edge detection mode
 
     // Computed values (read-only, updated by calculateActualInterval)
-    float actualIntervalMs = 50.0f;   // Final calculated interval in ms
+    float actualIntervalMs = 500.0f;   // Final calculated interval in ms
 
     // Constraints from PRD
-    static constexpr float MIN_TIME_INTERVAL_MS = 1.0f;
-    static constexpr float MAX_TIME_INTERVAL_MS = 60000.0f;
+    static constexpr float MIN_TIME_INTERVAL_MS = 0.1f;
+    static constexpr float MAX_TIME_INTERVAL_MS = 4000.0f;
+    static constexpr float DEFAULT_TIME_INTERVAL_MS = 500.0f;
     static constexpr float MIN_BPM = 20.0f;
     static constexpr float MAX_BPM = 300.0f;
     static constexpr float DEFAULT_BPM = 120.0f;
@@ -384,7 +385,7 @@ struct TimingConfig
 
         timingMode = stringToTimingMode(tree.getProperty("timingMode", "TIME").toString());
         triggerMode = stringToTriggerMode(tree.getProperty("triggerMode", "FREE_RUNNING").toString());
-        timeIntervalMs = static_cast<float>(tree.getProperty("timeIntervalMs", 50.0f));
+        timeIntervalMs = static_cast<float>(tree.getProperty("timeIntervalMs", 500.0f));
         noteInterval = stringToNoteInterval(tree.getProperty("noteInterval", "1/4").toString());
         hostSyncEnabled = static_cast<bool>(tree.getProperty("hostSyncEnabled", false));
         hostBPM = static_cast<float>(tree.getProperty("hostBPM", 120.0f));

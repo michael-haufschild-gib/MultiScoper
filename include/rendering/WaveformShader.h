@@ -35,6 +35,7 @@ struct ShaderRenderParams
     float lineWidth = 1.5f;
     juce::Rectangle<float> bounds;
     bool isStereo = false;
+    float verticalScale = 1.0f;  // Vertical scale factor (includes auto-scale)
 };
 
 /**
@@ -69,8 +70,9 @@ public:
 
     /**
      * Release OpenGL resources
+     * @param context The OpenGL context (must be active when called)
      */
-    virtual void release() = 0;
+    virtual void release(juce::OpenGLContext& context) = 0;
 
     /**
      * Check if shader is compiled and ready to use
@@ -120,6 +122,7 @@ protected:
     /**
      * Helper to build a triangle strip for line rendering
      * Creates anti-aliased line geometry from sample points
+     * @param boundsX X offset for screen-space coordinates (bounds.getX())
      */
     static void buildLineGeometry(
         std::vector<float>& vertices,
@@ -127,8 +130,16 @@ protected:
         float centerY,
         float amplitude,
         float lineWidth,
-        int width
+        float boundsX,
+        float boundsWidth
     );
+
+    /**
+     * Helper to check and log OpenGL errors
+     * @param location Description of where the check is being made
+     * @return true if no errors were found
+     */
+    static bool checkGLError(const char* location);
 #endif
 };
 

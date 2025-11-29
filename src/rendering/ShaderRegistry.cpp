@@ -83,13 +83,13 @@ void ShaderRegistry::compileAll(juce::OpenGLContext& context)
     }
 }
 
-void ShaderRegistry::releaseAll()
+void ShaderRegistry::releaseAll(juce::OpenGLContext& context)
 {
     for (auto& [id, shader] : shaders_)
     {
         if (shader && shader->isCompiled())
         {
-            shader->release();
+            shader->release(context);
         }
     }
 }

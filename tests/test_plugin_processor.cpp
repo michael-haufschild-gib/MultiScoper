@@ -382,7 +382,7 @@ TEST_F(PluginProcessorTest, StateInformation_SaveAndRestore)
 
     // Verify state was restored
     EXPECT_EQ(newProcessor->getTimingEngine().getConfig().timingMode, TimingMode::MELODIC);
-    EXPECT_EQ(newProcessor->getTimingEngine().getConfig().timeIntervalMs, 750);
+    EXPECT_FLOAT_EQ(newProcessor->getTimingEngine().getConfig().timeIntervalMs, 750.0f);
 }
 
 TEST_F(PluginProcessorTest, StateInformation_EmptyState)

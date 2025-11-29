@@ -830,7 +830,7 @@ void SidebarComponent::noteIntervalChanged(NoteInterval interval)
     listeners_.call([interval](Listener& l) { l.noteIntervalChanged(interval); });
 }
 
-void SidebarComponent::timeIntervalChanged(int ms)
+void SidebarComponent::timeIntervalChanged(float ms)
 {
     listeners_.call([ms](Listener& l) { l.timeIntervalChanged(ms); });
 }

@@ -73,7 +73,7 @@ TEST_F(TimingEngineTest, DefaultConfiguration)
     const auto& config = engine.getConfig();
 
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
-    EXPECT_EQ(config.timeIntervalMs, 1000);
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
     EXPECT_EQ(config.noteInterval, EngineNoteInterval::NOTE_1_4TH);
     EXPECT_FALSE(config.hostSyncEnabled);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
@@ -122,33 +122,33 @@ TEST_F(TimingEngineTest, TimeModeDisplaySampleCount)
 TEST_F(TimingEngineTest, TimeIntervalClamping_Minimum)
 {
     engine.setTimingMode(TimingMode::TIME);
-    engine.setTimeIntervalMs(1); // Below minimum (10ms)
+    engine.setTimeIntervalMs(0.05f); // Below minimum (0.1ms)
 
-    EXPECT_GE(engine.getActualIntervalMs(), static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS));
+    EXPECT_GE(engine.getActualIntervalMs(), EngineTimingConfig::MIN_TIME_INTERVAL_MS);
 }
 
 TEST_F(TimingEngineTest, TimeIntervalClamping_Maximum)
 {
     engine.setTimingMode(TimingMode::TIME);
-    engine.setTimeIntervalMs(100000); // Above maximum (60000ms)
+    engine.setTimeIntervalMs(10000.0f); // Above maximum (4000ms)
 
-    EXPECT_LE(engine.getActualIntervalMs(), static_cast<float>(EngineTimingConfig::MAX_TIME_INTERVAL_MS));
+    EXPECT_LE(engine.getActualIntervalMs(), EngineTimingConfig::MAX_TIME_INTERVAL_MS);
 }
 
 TEST_F(TimingEngineTest, TimeIntervalClamping_Negative)
 {
     engine.setTimingMode(TimingMode::TIME);
-    engine.setTimeIntervalMs(-100);
+    engine.setTimeIntervalMs(-100.0f);
 
-    EXPECT_GE(engine.getActualIntervalMs(), static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS));
+    EXPECT_GE(engine.getActualIntervalMs(), EngineTimingConfig::MIN_TIME_INTERVAL_MS);
 }
 
 TEST_F(TimingEngineTest, TimeIntervalClamping_Zero)
 {
     engine.setTimingMode(TimingMode::TIME);
-    engine.setTimeIntervalMs(0);
+    engine.setTimeIntervalMs(0.0f);
 
-    EXPECT_GE(engine.getActualIntervalMs(), static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS));
+    EXPECT_GE(engine.getActualIntervalMs(), EngineTimingConfig::MIN_TIME_INTERVAL_MS);
 }
 
 // =============================================================================
@@ -268,8 +268,8 @@ TEST_F(TimingEngineTest, MelodicModeVerySlowBPM)
     engine.setConfig(config);
 
     // 8 bars at 20 BPM = 32 beats * (60000/20) = 96000ms
-    // But clamped to MAX_TIME_INTERVAL_MS (60000)
-    EXPECT_LE(engine.getActualIntervalMs(), static_cast<float>(EngineTimingConfig::MAX_TIME_INTERVAL_MS));
+    // But clamped to MAX_TIME_INTERVAL_MS (4000)
+    EXPECT_LE(engine.getActualIntervalMs(), EngineTimingConfig::MAX_TIME_INTERVAL_MS);
 }
 
 TEST_F(TimingEngineTest, MelodicModeVeryFastBPM)
@@ -282,8 +282,8 @@ TEST_F(TimingEngineTest, MelodicModeVeryFastBPM)
     engine.setConfig(config);
 
     // 1/32 at 300 BPM = 0.125 beats * (60000/300) = 25ms
-    // But clamped to MIN_TIME_INTERVAL_MS (10)
-    EXPECT_GE(engine.getActualIntervalMs(), static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS));
+    // Should be above MIN_TIME_INTERVAL_MS (0.1)
+    EXPECT_GE(engine.getActualIntervalMs(), EngineTimingConfig::MIN_TIME_INTERVAL_MS);
 }
 
 // =============================================================================
@@ -563,7 +563,7 @@ TEST_F(TimingEngineTest, SerializationRoundTrip)
     const auto& config = restoredEngine.getConfig();
 
     EXPECT_EQ(config.timingMode, TimingMode::MELODIC);
-    EXPECT_EQ(config.timeIntervalMs, 750);
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 750.0f);
     EXPECT_EQ(config.noteInterval, EngineNoteInterval::NOTE_DOTTED_1_8TH);
     EXPECT_TRUE(config.hostSyncEnabled);
     EXPECT_TRUE(config.syncToPlayhead);
@@ -600,7 +600,7 @@ TEST_F(TimingEngineTest, DeserializationWithMissingProperties)
     // Should have the set property
     EXPECT_EQ(testEngine.getConfig().timingMode, TimingMode::MELODIC);
 
-    // Other properties should have valid defaults
+    // Other properties should have valid defaults (float comparison)
     EXPECT_GE(testEngine.getConfig().timeIntervalMs, EngineTimingConfig::MIN_TIME_INTERVAL_MS);
 }
 

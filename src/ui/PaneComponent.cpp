@@ -34,9 +34,17 @@ void PaneComponent::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
     const auto& theme = ThemeManager::getInstance().getCurrentTheme();
 
-    // Draw pane background
-    g.setColour(theme.backgroundPane);
-    g.fillRect(bounds);
+    // FIX: In GPU mode, the OpenGL renderer handles the background.
+    // Only fill the pane background in software rendering mode.
+#if OSCIL_ENABLE_OPENGL
+    bool gpuEnabled = processor_.getState().isGpuRenderingEnabled();
+    if (!gpuEnabled)
+#endif
+    {
+        // Draw pane background
+        g.setColour(theme.backgroundPane);
+        g.fillRect(bounds);
+    }
 
     // Draw border - highlight if drag target
     if (isDragOver_)

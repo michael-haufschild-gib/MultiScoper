@@ -8,6 +8,7 @@
 #include "rendering/WaveformShader.h"
 #if OSCIL_ENABLE_OPENGL
 #include "rendering/WaveformGLRenderer.h"
+#include <juce_audio_processors/juce_audio_processors.h>
 #endif
 
 namespace oscil
@@ -29,19 +30,23 @@ void WaveformComponent::paint(juce::Graphics& g)
 
     const auto& theme = ThemeManager::getInstance().getCurrentTheme();
 
-    // Draw background
-    g.setColour(theme.backgroundPane);
-    g.fillRect(bounds);
+    // FIX: Only draw background in software mode - in GPU mode, OpenGL renders directly
+    // and filling background here would cover the GL waveform
+    if (!gpuRenderingEnabled_)
+    {
+        g.setColour(theme.backgroundPane);
+        g.fillRect(bounds);
+    }
 
-    // Draw highlight border if selected
+    // Draw highlight border if selected (works in both modes - drawn on top)
     if (highlighted_)
     {
         g.setColour(theme.controlActive.withAlpha(0.8f));
         g.drawRect(bounds.toFloat(), 2.0f);
     }
 
-    // Draw grid
-    if (showGrid_)
+    // Draw grid only in software mode (GPU mode should render grid via shader if needed)
+    if (showGrid_ && !gpuRenderingEnabled_)
     {
         drawGrid(g, bounds);
     }
@@ -374,7 +379,7 @@ void WaveformComponent::updateWaveformPath()
                                                  processedSignal_.numSamples);
 
     // Calculate effective vertical scale (apply autoScale if enabled)
-    float effectiveScale = verticalScale_;
+    effectiveScale_ = verticalScale_;
     if (autoScale_ && currentPeak_ > 0.001f)
     {
         // Target 80% of display height for the peak
@@ -382,7 +387,7 @@ void WaveformComponent::updateWaveformPath()
         float autoScaleFactor = targetFill / currentPeak_;
         // Clamp to reasonable range to prevent extreme scaling
         autoScaleFactor = juce::jlimit(0.5f, 10.0f, autoScaleFactor);
-        effectiveScale = autoScaleFactor;
+        effectiveScale_ = autoScaleFactor;
     }
 
     // Build path for first channel (L or mono)
@@ -391,13 +396,13 @@ void WaveformComponent::updateWaveformPath()
     {
         float xScale = static_cast<float>(width) / static_cast<float>(displayBuffer1_.size() - 1);
 
-        float yStart = centerY1 - displayBuffer1_[0] * amplitude1 * effectiveScale;
+        float yStart = centerY1 - displayBuffer1_[0] * amplitude1 * effectiveScale_;
         waveformPath1_.startNewSubPath(0, yStart);
 
         for (size_t i = 1; i < displayBuffer1_.size(); ++i)
         {
             float x = static_cast<float>(i) * xScale;
-            float y = centerY1 - displayBuffer1_[i] * amplitude1 * effectiveScale;
+            float y = centerY1 - displayBuffer1_[i] * amplitude1 * effectiveScale_;
 
             // Clamp to appropriate region
             if (processingMode_ == ProcessingMode::FullStereo)
@@ -421,13 +426,13 @@ void WaveformComponent::updateWaveformPath()
     {
         float xScale = static_cast<float>(width) / static_cast<float>(displayBuffer2_.size() - 1);
 
-        float yStart = centerY2 - displayBuffer2_[0] * amplitude2 * effectiveScale;
+        float yStart = centerY2 - displayBuffer2_[0] * amplitude2 * effectiveScale_;
         waveformPath2_.startNewSubPath(0, yStart);
 
         for (size_t i = 1; i < displayBuffer2_.size(); ++i)
         {
             float x = static_cast<float>(i) * xScale;
-            float y = centerY2 - displayBuffer2_[i] * amplitude2 * effectiveScale;
+            float y = centerY2 - displayBuffer2_[i] * amplitude2 * effectiveScale_;
 
             // Stereo stacked: R channel in bottom half
             y = juce::jlimit(static_cast<float>(height) * 0.5f, static_cast<float>(height), y);
@@ -447,19 +452,31 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
 #if OSCIL_ENABLE_OPENGL
     data.id = waveformId_;
 
-    // Convert component bounds to coordinates relative to the top-level component
-    // (the PluginEditor where the OpenGL context is attached)
-    // The GL renderer uses a coordinate system where (0,0) is top-left of the editor
-    auto* topLevel = getTopLevelComponent();
+    // Convert component bounds to coordinates relative to the AudioProcessorEditor
+    // (where the OpenGL context is attached), NOT the top-level window.
+    // In a plugin, getTopLevelComponent() returns the DAW's window, which is wrong.
+    // We need to find the AudioProcessorEditor ancestor and get bounds relative to that.
     juce::Rectangle<int> relativeBounds;
-    if (topLevel != nullptr)
+
+    // Find the AudioProcessorEditor ancestor (where OpenGL context is attached)
+    juce::Component* editorComponent = nullptr;
+    for (auto* p = getParentComponent(); p != nullptr; p = p->getParentComponent())
     {
-        // Get our bounds in the coordinate space of the top-level component
-        relativeBounds = topLevel->getLocalArea(this, getLocalBounds());
+        if (dynamic_cast<juce::AudioProcessorEditor*>(p) != nullptr)
+        {
+            editorComponent = p;
+            break;
+        }
+    }
+
+    if (editorComponent != nullptr)
+    {
+        // Get our bounds in the coordinate space of the plugin editor
+        relativeBounds = editorComponent->getLocalArea(this, getLocalBounds());
     }
     else
     {
-        // Fallback to local bounds if no parent hierarchy
+        // Fallback to local bounds if no editor found (shouldn't happen in normal use)
         relativeBounds = getLocalBounds();
     }
     data.bounds = relativeBounds.toFloat();
@@ -475,6 +492,7 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     data.isStereo = (processingMode_ == ProcessingMode::FullStereo);
     data.shaderId = shaderId_;
     data.visible = isVisible() && !displayBuffer1_.empty();
+    data.verticalScale = effectiveScale_;  // Pass auto-scale factor to GPU
 #else
     juce::ignoreUnused(data);
 #endif

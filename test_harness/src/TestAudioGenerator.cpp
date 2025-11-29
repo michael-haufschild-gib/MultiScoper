@@ -113,7 +113,8 @@ void TestAudioGenerator::setWaveform(Waveform type)
 
 void TestAudioGenerator::setFrequency(float hz)
 {
-    frequency_.store(juce::jlimit(20.0f, 20000.0f, hz));
+    // Allow LFO rates (sub-audio frequencies) for test visualization
+    frequency_.store(juce::jlimit(0.01f, 20000.0f, hz));
     phaseIncrement_ = frequency_.load() / sampleRate_;
 }
 

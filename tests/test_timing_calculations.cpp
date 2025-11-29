@@ -84,7 +84,7 @@ public:
         noteIntervalChangedCalled = true;
     }
 
-    void timeIntervalChanged(int ms) override
+    void timeIntervalChanged(float ms) override
     {
         lastTimeIntervalMs = ms;
         timeIntervalChangedCalled = true;
@@ -110,7 +110,7 @@ public:
 
     TimingMode lastTimingMode = TimingMode::TIME;
     NoteInterval lastNoteInterval = NoteInterval::QUARTER;
-    int lastTimeIntervalMs = 0;
+    float lastTimeIntervalMs = 0.0f;
     bool lastHostSync = false;
     WaveformMode lastWaveformMode = WaveformMode::FreeRunning;
     float lastBpm = 120.0f;

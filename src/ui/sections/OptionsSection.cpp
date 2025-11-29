@@ -58,6 +58,8 @@ void OptionsSection::setupComponents()
     autoScaleToggle_->onValueChanged = [this](bool value)
     {
         autoScaleEnabled_ = value;
+        // Disable gain slider when auto-scale is on (gain has no effect when auto-scaling)
+        gainSlider_->setEnabled(!value);
         notifyAutoScaleChanged();
     };
     addAndMakeVisible(*autoScaleToggle_);
@@ -222,6 +224,8 @@ void OptionsSection::setAutoScale(bool enabled)
 {
     autoScaleEnabled_ = enabled;
     autoScaleToggle_->setValue(enabled, false);
+    // Disable gain slider when auto-scale is on (gain has no effect when auto-scaling)
+    gainSlider_->setEnabled(!enabled);
 }
 
 void OptionsSection::setHoldDisplay(bool enabled)

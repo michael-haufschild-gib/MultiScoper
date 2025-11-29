@@ -119,7 +119,7 @@ public:
         // Timing section events
         virtual void timingModeChanged(TimingMode /*mode*/) {}
         virtual void noteIntervalChanged(NoteInterval /*interval*/) {}
-        virtual void timeIntervalChanged(int /*ms*/) {}
+        virtual void timeIntervalChanged(float /*ms*/) {}
         virtual void hostSyncChanged(bool /*enabled*/) {}
         virtual void waveformModeChanged(WaveformMode /*mode*/) {}
         virtual void bpmChanged(float /*bpm*/) {}
@@ -257,7 +257,7 @@ private:
     // TimingSidebarSection::Listener overrides
     void timingModeChanged(TimingMode mode) override;
     void noteIntervalChanged(NoteInterval interval) override;
-    void timeIntervalChanged(int ms) override;
+    void timeIntervalChanged(float ms) override;
     void hostSyncChanged(bool enabled) override;
     void waveformModeChanged(WaveformMode mode) override;
     void bpmChanged(float bpm) override;

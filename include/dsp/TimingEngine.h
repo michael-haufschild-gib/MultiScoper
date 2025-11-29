@@ -184,7 +184,7 @@ struct EngineTimingConfig
     bool syncToPlayhead = false;        // Align resets with host playhead
 
     // TIME mode settings
-    int timeIntervalMs = 1000;          // Time interval in milliseconds (10-60000)
+    float timeIntervalMs = 500.0f;      // Time interval in milliseconds (0.1-4000)
 
     // MELODIC mode settings (uses engine-internal note interval)
     EngineNoteInterval noteInterval = EngineNoteInterval::NOTE_1_4TH;
@@ -194,7 +194,7 @@ struct EngineTimingConfig
     float hostBPM = 120.0f;             // Current host BPM from DAW (used when hostSyncEnabled = true)
 
     // Calculated value
-    float actualIntervalMs = 1000.0f;   // Computed interval duration
+    float actualIntervalMs = 500.0f;    // Computed interval duration
 
     // Trigger settings (uses engine-internal waveform trigger mode)
     WaveformTriggerMode triggerMode = WaveformTriggerMode::None;
@@ -206,8 +206,9 @@ struct EngineTimingConfig
     double lastSyncTimestamp = 0.0;     // Sample timestamp of last sync point
 
     // Constraints (same as entity for consistency)
-    static constexpr int MIN_TIME_INTERVAL_MS = 10;
-    static constexpr int MAX_TIME_INTERVAL_MS = 60000;
+    static constexpr float MIN_TIME_INTERVAL_MS = 0.1f;
+    static constexpr float MAX_TIME_INTERVAL_MS = 4000.0f;
+    static constexpr float DEFAULT_TIME_INTERVAL_MS = 500.0f;
     static constexpr float MIN_BPM = 20.0f;
     static constexpr float MAX_BPM = 300.0f;
 };
@@ -303,7 +304,7 @@ public:
     // Configuration setters
     void setTimingMode(TimingMode mode);
     void setHostSyncEnabled(bool enabled);
-    void setTimeIntervalMs(int ms);
+    void setTimeIntervalMs(float ms);
     void setNoteInterval(EngineNoteInterval interval);
     void setInternalBPM(float bpm);  // Set user-specified BPM for free-running mode
     void setWaveformTriggerMode(WaveformTriggerMode mode) { config_.triggerMode = mode; }

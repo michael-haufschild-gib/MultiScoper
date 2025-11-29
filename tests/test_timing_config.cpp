@@ -25,7 +25,7 @@ TEST_F(TimingConfigTest, DefaultValues)
 
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
     EXPECT_EQ(config.triggerMode, TriggerMode::FREE_RUNNING);
-    EXPECT_FLOAT_EQ(config.timeIntervalMs, 50.0f);
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
     EXPECT_EQ(config.noteInterval, NoteInterval::QUARTER);
     EXPECT_FALSE(config.hostSyncEnabled);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
@@ -397,7 +397,7 @@ TEST_F(TimingConfigTest, DeserializeValueTreeMissingProperties)
     // Should have default values
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
     EXPECT_EQ(config.triggerMode, TriggerMode::FREE_RUNNING);
-    EXPECT_FLOAT_EQ(config.timeIntervalMs, 50.0f);
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
     EXPECT_EQ(config.noteInterval, NoteInterval::QUARTER);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
 }
@@ -537,8 +537,8 @@ TEST_F(TimingConfigTest, MultiBarIntervalFourBars)
     config.setHostBPM(120.0f);
     config.setNoteInterval(NoteInterval::FOUR_BARS);
 
-    // At 120 BPM, 4 bars (16 quarter notes) = 8000ms
-    EXPECT_FLOAT_EQ(config.actualIntervalMs, 8000.0f);
+    // At 120 BPM, 4 bars (16 quarter notes) = 8000ms, clamped to MAX (4000ms)
+    EXPECT_FLOAT_EQ(config.actualIntervalMs, TimingConfig::MAX_TIME_INTERVAL_MS);
 }
 
 TEST_F(TimingConfigTest, MultiBarIntervalEightBars)
@@ -548,8 +548,8 @@ TEST_F(TimingConfigTest, MultiBarIntervalEightBars)
     config.setHostBPM(120.0f);
     config.setNoteInterval(NoteInterval::EIGHT_BARS);
 
-    // At 120 BPM, 8 bars (32 quarter notes) = 16000ms
-    EXPECT_FLOAT_EQ(config.actualIntervalMs, 16000.0f);
+    // At 120 BPM, 8 bars (32 quarter notes) = 16000ms, clamped to MAX (4000ms)
+    EXPECT_FLOAT_EQ(config.actualIntervalMs, TimingConfig::MAX_TIME_INTERVAL_MS);
 }
 
 TEST_F(TimingConfigTest, MultiBarIntervalClampedToMax)

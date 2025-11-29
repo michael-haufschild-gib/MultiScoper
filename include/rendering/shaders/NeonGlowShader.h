@@ -31,7 +31,7 @@ public:
 
 #if OSCIL_ENABLE_OPENGL
     bool compile(juce::OpenGLContext& context) override;
-    void release() override;
+    void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 
     void render(

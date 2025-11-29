@@ -57,14 +57,14 @@ void TimingSidebarSection::setupComponents()
 
     // TIME mode controls - input field only (full width)
     timeIntervalField_ = std::make_unique<OscilTextField>(TextFieldVariant::Number, "sidebar_timing_intervalField");
-    timeIntervalField_->setRange(1.0, 2000.0);
-    timeIntervalField_->setStep(1.0);
-    timeIntervalField_->setDecimalPlaces(0);
+    timeIntervalField_->setRange(0.1, 4000.0);
+    timeIntervalField_->setStep(0.1);
+    timeIntervalField_->setDecimalPlaces(1);
     timeIntervalField_->setSuffix("ms");
     timeIntervalField_->setNumericValue(currentTimeIntervalMs_, false);
     timeIntervalField_->onValueChanged = [this](double value)
     {
-        currentTimeIntervalMs_ = static_cast<int>(value);
+        currentTimeIntervalMs_ = static_cast<float>(value);
         notifyTimeIntervalChanged();
     };
     addAndMakeVisible(*timeIntervalField_);
@@ -317,10 +317,10 @@ void TimingSidebarSection::setTimingMode(TimingMode mode)
     }
 }
 
-void TimingSidebarSection::setTimeIntervalMs(int ms)
+void TimingSidebarSection::setTimeIntervalMs(float ms)
 {
     currentTimeIntervalMs_ = ms;
-    timeIntervalField_->setNumericValue(ms, false);
+    timeIntervalField_->setNumericValue(static_cast<double>(ms), false);
 }
 
 void TimingSidebarSection::setNoteInterval(NoteInterval interval)

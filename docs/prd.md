@@ -4164,26 +4164,42 @@ Expected: there is no automated reordering of oscillators in the oscillator list
 
 
 
+---
 
+
+Plan and implement this fix:
+
+Problem: `WaveformGLRenderer` uses a hardcoded background color (`0xFF1A1A1A`). This is not synchronized with the `ThemeManager`. If the user changes the theme, the GPU clear color will remain dark grey, potentially clashing with the UI if transparency is enabled.
+
+Solution:
+
+Update `WaveformGLRenderer` to accept a background color update whenever the theme changes, so the `glClear` color matches `theme.backgroundPrimary`. The pane background is `theme.backgroundPrimary`
+
+
+
+----
+Plan and implement this fix:
+Be in GPU rendering mode. Have an oscillator rendering its waveform in the pane. Then change the color of the oscillator in the oscillator config popup.
+Observed: The waveform now renders in the new color, but the pane also shows a static version of the waveform in the old color. Something is not properly cleaned up when changing colors.
+This does not only happen when changing colors, but when changing anything in the oscillator config popup.
+
+----
+Plan and implement this fix:
+1. The gain scaling and auto scaling are not consistent between software and GPU render mode. GPU mode does not apply auto-scaling.
+2. When auto-scaling is on, the gain slider setting should be disabled. It makes no sense to have the gain slider active when the waveforms are already autoscaled.
+
+----
+Review and plan the todos for a fix:
+The statusbar stats do not seem to update. FPS, CPU, Mem are not working. There also seems to be a difference between software render mode and gpu render mode. In sofware render mode at least the FPS and Mem value show a value,
 
 
 ---
-Do a root cause analyis, then fix this bug: in the timing panel, in melodic mode, the "sync" switch does nothing. waveforms are unaffected and only use the timing that was set in the input field when the sync switch was off.
+Plan and implement this change:
+- The minimum time to set as timing interval in "Time" mode is 0.1 ms (you may have to refactor to use float instead of integer)
+- The default value for the timing interval in "Time" mode is 500 ms
+- The maximum time to set as timing interval is 4000 ms
 
-
----
-Do a root cause analyis, then fix this bug: number input fields that have a + and - button inside of them, do not show the + and - text on the buttons but instead just "...", possibly because they are not large enough or have too much padding? This affects multiple input fields.
-
----
-Do a root cause analyis, then fix this bug: the sidebar has on its top right a caret button to open / close the sidebar drawer. this is completely not working.
-
-
-
-
-
-
-
-
+----
 
 plan based on this the following addition to our plugin:
 1. each oscillator has a shader setting

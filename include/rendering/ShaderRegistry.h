@@ -70,8 +70,9 @@ public:
     /**
      * Release all shader resources
      * Call this before OpenGL context is destroyed
+     * @param context The OpenGL context (must be active when called)
      */
-    void releaseAll();
+    void releaseAll(juce::OpenGLContext& context);
 #endif
 
     // Prevent copying

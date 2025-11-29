@@ -207,7 +207,7 @@ public:
         updateDisplaySamplesFromTimingEngine();
     }
 
-    void timeIntervalChanged(int ms) override
+    void timeIntervalChanged(float ms) override
     {
         editor_.getProcessor().getTimingEngine().setTimeIntervalMs(ms);
         updateDisplaySamplesFromTimingEngine();
@@ -436,7 +436,13 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     // Source coordinator already initialized available sources in its constructor
 
-    // Refresh UI
+    // CRITICAL: Initialize GPU rendering state from saved preference BEFORE building panels
+    // This ensures WaveformComponents get correct GPU state when created in refreshOscillatorPanels()
+#if OSCIL_ENABLE_OPENGL
+    gpuRenderingEnabled_ = processor_.getState().isGpuRenderingEnabled();
+#endif
+
+    // Refresh UI - now WaveformComponents will be created with correct GPU state
     refreshOscillatorPanels();
 
     // Apply saved display options
@@ -485,6 +491,8 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         // Use continuous repainting - GL thread renders independently
         // Timer callback updates the waveform data, GL thread picks it up
         openGLContext_.setContinuousRepainting(true);
+        // Request OpenGL 3.2 Core Profile for VAO support (required on macOS)
+        openGLContext_.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);
         openGLContext_.attachTo(*this);
         openGLDetached_ = false;
         DBG("OpenGL context attached for GPU rendering with WaveformGLRenderer");
@@ -495,6 +503,24 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         gpuRenderingEnabled_ = false;
         DBG("Software rendering mode (OpenGL not attached)");
     }
+
+    // CRITICAL: Propagate GPU rendering state to all waveform components
+    // This must happen AFTER OpenGL context setup and AFTER panes are built
+    // Otherwise WaveformComponents won't know they should render via GPU
+    for (auto& pane : paneComponents_)
+    {
+        if (pane)
+        {
+            for (size_t i = 0; i < pane->getOscillatorCount(); ++i)
+            {
+                if (auto* waveform = pane->getWaveformAt(i))
+                {
+                    waveform->setGpuRenderingEnabled(gpuRenderingEnabled_);
+                }
+            }
+        }
+    }
+
     statusBar_->setRenderingMode(gpuRenderingEnabled ? RenderingMode::OpenGL : RenderingMode::Software);
     #else
     // OpenGL not available, always software rendering
@@ -557,8 +583,16 @@ void OscilPluginEditor::parentHierarchyChanged()
 
 void OscilPluginEditor::paint(juce::Graphics& g)
 {
-    const auto& theme = themeCoordinator_->getCurrentTheme();
-    g.fillAll(theme.backgroundPrimary);
+    // FIX: In GPU mode, the OpenGL renderer clears the background.
+    // Only fill the background in software rendering mode to avoid
+    // overwriting the GPU-rendered waveforms.
+#if OSCIL_ENABLE_OPENGL
+    if (!gpuRenderingEnabled_)
+#endif
+    {
+        const auto& theme = themeCoordinator_->getCurrentTheme();
+        g.fillAll(theme.backgroundPrimary);
+    }
 }
 
 void OscilPluginEditor::resized()
@@ -612,6 +646,9 @@ void OscilPluginEditor::timerCallback()
             // Oscillator and source counts
             statusBar_->setOscillatorCount(static_cast<int>(oscillatorCount));
             statusBar_->setSourceCount(static_cast<int>(sourceCount));
+
+            // Trigger repaint to display updated values
+            statusBar_->repaint();
         }
     }
 
@@ -711,6 +748,16 @@ void OscilPluginEditor::refreshOscillatorPanels()
         ~TimerGuard() { timer.startTimerHz(60); }
     } timerGuard(*this);
 
+    // FIX: Clear all waveforms from GL renderer BEFORE clearing pane components.
+    // This prevents stale waveform entries (with old colors) from persisting
+    // and being rendered alongside new waveforms when panels are recreated.
+#if OSCIL_ENABLE_OPENGL
+    if (glRenderer_)
+    {
+        glRenderer_->clearAllWaveforms();
+    }
+#endif
+
     // Clear existing panes
     paneComponents_.clear();
 
@@ -747,6 +794,18 @@ void OscilPluginEditor::refreshOscillatorPanels()
                 paneComponent->addOscillator(osc);
             }
         }
+
+        // CRITICAL: Set GPU rendering state on all waveforms IMMEDIATELY after creation
+        // This must happen before addAndMakeVisible triggers any paint calls
+#if OSCIL_ENABLE_OPENGL
+        for (size_t i = 0; i < paneComponent->getOscillatorCount(); ++i)
+        {
+            if (auto* waveform = paneComponent->getWaveformAt(i))
+            {
+                waveform->setGpuRenderingEnabled(gpuRenderingEnabled_);
+            }
+        }
+#endif
 
         contentComponent_->addAndMakeVisible(*paneComponent);
         paneComponents_.push_back(std::move(paneComponent));
@@ -1315,6 +1374,8 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
         // Use continuous repainting - GL thread renders independently
         // Timer callback updates the waveform data, GL thread picks it up
         openGLContext_.setContinuousRepainting(true);
+        // Request OpenGL 3.2 Core Profile for VAO support (required on macOS)
+        openGLContext_.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);
         openGLContext_.attachTo(*this);
         openGLDetached_ = false;
         DBG("GPU rendering enabled - OpenGL context attached");

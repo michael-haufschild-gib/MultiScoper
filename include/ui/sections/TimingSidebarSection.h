@@ -66,7 +66,7 @@ public:
         virtual ~Listener() = default;
         virtual void timingModeChanged(TimingMode /*mode*/) {}
         virtual void noteIntervalChanged(NoteInterval /*interval*/) {}
-        virtual void timeIntervalChanged(int /*ms*/) {}
+        virtual void timeIntervalChanged(float /*ms*/) {}
         virtual void hostSyncChanged(bool /*enabled*/) {}
         virtual void waveformModeChanged(WaveformMode /*mode*/) {}
         virtual void bpmChanged(float /*bpm*/) {}
@@ -83,7 +83,7 @@ public:
 
     // State setters (for external updates)
     void setTimingMode(TimingMode mode);
-    void setTimeIntervalMs(int ms);
+    void setTimeIntervalMs(float ms);
     void setNoteInterval(NoteInterval interval);
     void setHostSyncEnabled(bool enabled);
     void setWaveformMode(WaveformMode mode);
@@ -93,7 +93,7 @@ public:
 
     // State getters
     TimingMode getTimingMode() const { return currentMode_; }
-    int getTimeIntervalMs() const { return currentTimeIntervalMs_; }
+    float getTimeIntervalMs() const { return currentTimeIntervalMs_; }
     NoteInterval getNoteInterval() const { return currentNoteInterval_; }
     bool isHostSyncEnabled() const { return hostSyncEnabled_; }
     WaveformMode getWaveformMode() const { return waveformMode_; }
@@ -145,7 +145,7 @@ private:
 
     // State
     TimingMode currentMode_ = TimingMode::TIME;
-    int currentTimeIntervalMs_ = 50;
+    float currentTimeIntervalMs_ = 500.0f;
     NoteInterval currentNoteInterval_ = NoteInterval::QUARTER;
     WaveformMode waveformMode_ = WaveformMode::FreeRunning;
     float hostBPM_ = 120.0f;

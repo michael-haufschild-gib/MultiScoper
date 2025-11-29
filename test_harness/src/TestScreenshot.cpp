@@ -10,6 +10,11 @@
 namespace oscil::test
 {
 
+// Forward declaration for macOS native window capture (defined in TestScreenshotMac.mm)
+#if JUCE_MAC
+juce::Image captureNativeWindowMac(juce::Component* component, const juce::String& outputPath = juce::String());
+#endif
+
 // ================== Screenshot Capture ==================
 
 bool TestScreenshot::captureElement(const juce::String& elementId, const juce::File& outputFile)
@@ -41,6 +46,16 @@ bool TestScreenshot::captureWindow(juce::Component* component, const juce::File&
     auto* topLevel = component->getTopLevelComponent();
     if (topLevel == nullptr)
         return false;
+
+#if JUCE_MAC
+    // Use native window capture on macOS to include OpenGL content
+    // Pass the output path directly so screencapture writes the file
+    outputFile.getParentDirectory().createDirectory();
+    auto image = captureNativeWindowMac(topLevel, outputFile.getFullPathName());
+    if (!image.isNull())
+        return outputFile.existsAsFile();
+    // Fall back to component snapshot if native capture fails
+#endif
 
     return captureComponent(topLevel, outputFile);
 }

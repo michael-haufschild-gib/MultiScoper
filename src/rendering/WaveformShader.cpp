@@ -116,20 +116,22 @@ void WaveformShader::buildLineGeometry(
     float centerY,
     float amplitude,
     float lineWidth,
-    int width)
+    float boundsX,
+    float boundsWidth)
 {
     if (samples.size() < 2)
         return;
 
-    // Reserve space for triangle strip (2 vertices per sample point, 4 floats per vertex: x, y, nx, ny)
+    // Reserve space for triangle strip (2 vertices per sample point, 4 floats per vertex: x, y, distFromCenter, reserved)
     vertices.reserve(samples.size() * 2 * 4);
 
-    float xScale = static_cast<float>(width) / static_cast<float>(samples.size() - 1);
+    float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
     float halfWidth = lineWidth * 0.5f;
 
     for (size_t i = 0; i < samples.size(); ++i)
     {
-        float x = static_cast<float>(i) * xScale;
+        // FIX: Add boundsX to x coordinate for screen-space positioning
+        float x = boundsX + static_cast<float>(i) * xScale;
         float y = centerY - samples[i] * amplitude;
 
         // Calculate normal direction (perpendicular to line segment)
@@ -138,9 +140,9 @@ void WaveformShader::buildLineGeometry(
         if (i > 0 && i < samples.size() - 1)
         {
             // Average of normals from adjacent segments
-            float prevX = (static_cast<float>(i) - 1.0f) * xScale;
+            float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
             float prevY = centerY - samples[i - 1] * amplitude;
-            float nextX = (static_cast<float>(i) + 1.0f) * xScale;
+            float nextX = boundsX + (static_cast<float>(i) + 1.0f) * xScale;
             float nextY = centerY - samples[i + 1] * amplitude;
 
             float dx = nextX - prevX;
@@ -155,7 +157,7 @@ void WaveformShader::buildLineGeometry(
         }
         else if (i == 0 && samples.size() > 1)
         {
-            float nextX = xScale;
+            float nextX = boundsX + xScale;
             float nextY = centerY - samples[1] * amplitude;
             float dx = nextX - x;
             float dy = nextY - y;
@@ -169,7 +171,7 @@ void WaveformShader::buildLineGeometry(
         }
         else if (i == samples.size() - 1 && samples.size() > 1)
         {
-            float prevX = (static_cast<float>(i) - 1.0f) * xScale;
+            float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
             float prevY = centerY - samples[i - 1] * amplitude;
             float dx = x - prevX;
             float dy = y - prevY;
@@ -195,6 +197,33 @@ void WaveformShader::buildLineGeometry(
         vertices.push_back(-1.0f);  // Distance from center (for glow)
         vertices.push_back(0.0f);   // Reserved
     }
+}
+
+bool WaveformShader::checkGLError([[maybe_unused]] const char* location)
+{
+    using namespace juce::gl;
+
+    GLenum error = glGetError();
+    if (error == GL_NO_ERROR)
+        return true;
+
+    [[maybe_unused]] const char* errorStr = "Unknown error";
+    switch (error)
+    {
+        case GL_INVALID_ENUM:                  errorStr = "GL_INVALID_ENUM"; break;
+        case GL_INVALID_VALUE:                 errorStr = "GL_INVALID_VALUE"; break;
+        case GL_INVALID_OPERATION:             errorStr = "GL_INVALID_OPERATION"; break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION: errorStr = "GL_INVALID_FRAMEBUFFER_OPERATION"; break;
+        case GL_OUT_OF_MEMORY:                 errorStr = "GL_OUT_OF_MEMORY"; break;
+        default: break;
+    }
+
+    DBG("OpenGL error at " << location << ": " << errorStr << " (0x" << juce::String::toHexString(static_cast<int>(error)) << ")");
+
+    // Clear any remaining errors
+    while (glGetError() != GL_NO_ERROR) {}
+
+    return false;
 }
 #endif
 

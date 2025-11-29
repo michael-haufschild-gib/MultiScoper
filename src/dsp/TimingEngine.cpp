@@ -201,12 +201,12 @@ void TimingEngine::setInternalBPM(float bpm)
     }
 }
 
-void TimingEngine::setTimeIntervalMs(int ms)
+void TimingEngine::setTimeIntervalMs(float ms)
 {
     ms = juce::jlimit(EngineTimingConfig::MIN_TIME_INTERVAL_MS,
                       EngineTimingConfig::MAX_TIME_INTERVAL_MS, ms);
 
-    if (config_.timeIntervalMs != ms)
+    if (std::abs(config_.timeIntervalMs - ms) > 0.001f)
     {
         config_.timeIntervalMs = ms;
         if (config_.timingMode == TimingMode::TIME)
@@ -335,14 +335,14 @@ void TimingEngine::fromValueTree(const juce::ValueTree& state)
         static_cast<int>(state.getProperty(TimingIds::TimingMode, 0)));
     config_.hostSyncEnabled = state.getProperty(TimingIds::HostSyncEnabled, false);
     config_.syncToPlayhead = state.getProperty(TimingIds::SyncToPlayhead, false);
-    config_.timeIntervalMs = state.getProperty(TimingIds::TimeIntervalMs, 1000);
+    config_.timeIntervalMs = static_cast<float>(state.getProperty(TimingIds::TimeIntervalMs, 500.0f));
     config_.noteInterval = static_cast<EngineNoteInterval>(
         static_cast<int>(state.getProperty(TimingIds::NoteInterval, 4))); // Default NOTE_1_4TH
     config_.triggerMode = static_cast<WaveformTriggerMode>(
         static_cast<int>(state.getProperty(TimingIds::TriggerMode, 0)));
     config_.triggerThreshold = state.getProperty(TimingIds::TriggerThreshold, 0.1f);
 
-    // Validate constraints
+    // Validate constraints (using float comparison)
     config_.timeIntervalMs = juce::jlimit(
         EngineTimingConfig::MIN_TIME_INTERVAL_MS,
         EngineTimingConfig::MAX_TIME_INTERVAL_MS,

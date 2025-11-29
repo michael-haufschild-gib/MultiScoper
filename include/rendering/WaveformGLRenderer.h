@@ -14,6 +14,7 @@
 #include <vector>
 #include <unordered_map>
 #include <atomic>
+#include <memory>
 
 namespace oscil
 {
@@ -37,6 +38,7 @@ struct WaveformRenderData
     bool isStereo = false;               // Whether to render channel2
     juce::String shaderId = "neon_glow"; // Shader to use
     bool visible = true;                 // Whether to render this waveform
+    float verticalScale = 1.0f;          // Vertical scale factor (includes auto-scale)
 };
 
 /**
@@ -98,9 +100,17 @@ public:
      */
     int getWaveformCount() const;
 
+    /**
+     * Clear all registered waveforms (thread-safe)
+     * Call this when refreshing panels to prevent stale waveform data from rendering
+     */
+    void clearAllWaveforms();
+
 private:
     void compileShaders();
+    void compileDebugShader();
     void renderWaveform(const WaveformRenderData& data);
+    void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);
 
     juce::OpenGLContext* context_ = nullptr;
     std::atomic<bool> contextReady_{ false };
@@ -113,6 +123,14 @@ private:
     // Render state
     juce::Colour backgroundColour_{ 0xFF1A1A1A };
     bool shadersCompiled_ = false;
+
+    // Debug rendering resources
+    std::unique_ptr<juce::OpenGLShaderProgram> debugShader_;
+    GLuint debugVAO_ = 0;
+    GLuint debugVBO_ = 0;
+    GLint debugProjectionLoc_ = -1;
+    GLint debugColorLoc_ = -1;
+    bool debugShaderCompiled_ = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformGLRenderer)
 };

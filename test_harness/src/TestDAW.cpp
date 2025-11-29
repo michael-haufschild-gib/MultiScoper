@@ -33,9 +33,10 @@ void TestDAW::initialize(int numTracks)
         auto track = std::make_unique<TestTrack>(i, trackName, transport_);
         track->prepare(sampleRate_, bufferSize_);
 
-        // Set default audio - each track gets a different frequency
-        float baseFreq = 220.0f; // A3
-        track->getAudioGenerator().setFrequency(baseFreq * std::pow(2.0f, i / 12.0f * 7)); // fifths
+        // Set default audio - each track gets a different LFO frequency for visual testing
+        constexpr float trackFrequencies[] = { 0.5f, 0.125f, 3.0f };
+        float freq = (i < 3) ? trackFrequencies[i] : 0.5f;
+        track->getAudioGenerator().setFrequency(freq);
         track->getAudioGenerator().setWaveform(Waveform::Sine);
         track->getAudioGenerator().setAmplitude(0.5f);
 

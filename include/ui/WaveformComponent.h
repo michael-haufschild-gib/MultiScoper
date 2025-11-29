@@ -201,6 +201,7 @@ private:
 
     float currentPeak_ = 0.0f;
     float currentRMS_ = 0.0f;
+    float effectiveScale_ = 1.0f;  // Computed scale factor (includes auto-scale)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)
 };

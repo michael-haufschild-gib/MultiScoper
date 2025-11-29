@@ -41,6 +41,11 @@ set(TEST_HARNESS_SOURCES
     src/TestMetrics.cpp
 )
 
+# Add platform-specific sources
+if(APPLE)
+    list(APPEND TEST_HARNESS_SOURCES src/TestScreenshotMac.mm)
+endif()
+
 set(TEST_HARNESS_HEADERS
     include/TestAudioGenerator.h
     include/TestTransport.h
