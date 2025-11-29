@@ -325,10 +325,6 @@ void NeonGlowShader::render(
     GLint positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
     GLint distFromCenterLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "distFromCenter");
 
-    // Fallback to index 0 and 1 if not found (should not happen with correct shader)
-    if (positionLoc < 0) positionLoc = 0;
-    if (distFromCenterLoc < 0) distFromCenterLoc = 1;
-
     // Bind VAO
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
@@ -347,11 +343,18 @@ void NeonGlowShader::render(
         vertices.data(), GL_DYNAMIC_DRAW);
 
     // Set up vertex attributes using dynamic locations
-    ext.glEnableVertexAttribArray(static_cast<GLuint>(positionLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-    ext.glEnableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-        reinterpret_cast<void*>(2 * sizeof(float)));
+    // Only enable vertex attributes if they exist in the shader (location >= 0)
+    if (positionLoc >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(positionLoc));
+        ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+    }
+    if (distFromCenterLoc >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
+        ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+            reinterpret_cast<void*>(2 * sizeof(float)));
+    }
 
     if (shouldLog)
         NEON_LOG("Drawing ch1: " << vertices.size() / 4 << " verts, bounds=("
@@ -395,9 +398,11 @@ void NeonGlowShader::render(
         }
     }
 
-    // Cleanup
-    ext.glDisableVertexAttribArray(static_cast<GLuint>(positionLoc));
-    ext.glDisableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
+    // Cleanup - only disable vertex attributes that were enabled
+    if (positionLoc >= 0)
+        ext.glDisableVertexAttribArray(static_cast<GLuint>(positionLoc));
+    if (distFromCenterLoc >= 0)
+        ext.glDisableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
     ext.glBindVertexArray(0);
     glDisable(GL_BLEND);

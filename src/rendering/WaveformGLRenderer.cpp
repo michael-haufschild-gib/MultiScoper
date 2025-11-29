@@ -372,8 +372,12 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     if (shouldLog)
         GL_LOG("Position attribute location: " << positionLoc);
 
-    ext.glEnableVertexAttribArray(positionLoc >= 0 ? positionLoc : 0);
-    ext.glVertexAttribPointer(positionLoc >= 0 ? positionLoc : 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+    // Only enable and configure the vertex attribute if it exists (location >= 0)
+    if (positionLoc >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(positionLoc));
+        ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+    }
     GLenum errAttrib = glGetError();
     if (shouldLog && errAttrib != GL_NO_ERROR)
         GL_LOG("Error after vertex attrib setup: " << errAttrib);
@@ -395,8 +399,9 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
                << " B=" << colour.getFloatBlue() << " A=1.0");
     }
 
-    // Cleanup
-    ext.glDisableVertexAttribArray(positionLoc >= 0 ? positionLoc : 0);
+    // Cleanup - only disable the attribute if it was enabled
+    if (positionLoc >= 0)
+        ext.glDisableVertexAttribArray(static_cast<GLuint>(positionLoc));
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
     ext.glBindVertexArray(0);
     glDisable(GL_BLEND);
