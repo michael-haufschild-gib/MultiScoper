@@ -182,9 +182,11 @@ void WaveformGLRenderer::renderOpenGL()
 
     // Copy waveform data under lock for thread safety
     std::vector<WaveformRenderData> waveformsToRender;
+    size_t registeredWaveformCount = 0;
     {
         const juce::SpinLock::ScopedLockType lock(dataLock_);
-        waveformsToRender.reserve(waveforms_.size());
+        registeredWaveformCount = waveforms_.size();
+        waveformsToRender.reserve(registeredWaveformCount);
         for (const auto& pair : waveforms_)
         {
             // In debug mode, render even if channel1 is empty and not visible
@@ -213,7 +215,7 @@ void WaveformGLRenderer::renderOpenGL()
     {
         frameCounter = 0;
         GL_LOG("renderOpenGL: " << waveformsToRender.size() << " waveforms, "
-               << waveforms_.size() << " registered, viewport=" << width << "x" << height);
+               << registeredWaveformCount << " registered, viewport=" << width << "x" << height);
         for (const auto& data : waveformsToRender)
         {
             GL_LOG("  Waveform " << data.id << ": bounds=("
