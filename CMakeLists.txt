@@ -174,6 +174,7 @@ target_sources(Oscil
         src/ui/components/UIAudioFeedback.cpp
 
         # Rendering (Shaders)
+        src/rendering/Framebuffer.cpp
         src/rendering/WaveformShader.cpp
         src/rendering/ShaderRegistry.cpp
         src/rendering/shaders/NeonGlowShader.cpp
@@ -360,6 +361,7 @@ if(OSCIL_BUILD_TESTS)
         src/ui/components/UIAudioFeedback.cpp
 
         # Rendering source files for testing
+        src/rendering/Framebuffer.cpp
         src/rendering/WaveformShader.cpp
         src/rendering/ShaderRegistry.cpp
         src/rendering/shaders/NeonGlowShader.cpp
