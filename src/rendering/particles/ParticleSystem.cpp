@@ -134,7 +134,7 @@ bool ParticleSystem::initialize(juce::OpenGLContext& context)
         ext.glEnableVertexAttribArray(static_cast<GLuint>(instancePosAttrib_));
         ext.glVertexAttribPointer(static_cast<GLuint>(instancePosAttrib_), 2, GL_FLOAT, GL_FALSE,
                                   static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, x)));
-        glVertexAttribDivisor(static_cast<GLuint>(instancePosAttrib_), 1);
+        ext.glVertexAttribDivisor(static_cast<GLuint>(instancePosAttrib_), 1);
     }
 
     if (instanceColorAttrib_ >= 0)
@@ -142,7 +142,7 @@ bool ParticleSystem::initialize(juce::OpenGLContext& context)
         ext.glEnableVertexAttribArray(static_cast<GLuint>(instanceColorAttrib_));
         ext.glVertexAttribPointer(static_cast<GLuint>(instanceColorAttrib_), 4, GL_FLOAT, GL_FALSE,
                                   static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, r)));
-        glVertexAttribDivisor(static_cast<GLuint>(instanceColorAttrib_), 1);
+        ext.glVertexAttribDivisor(static_cast<GLuint>(instanceColorAttrib_), 1);
     }
 
     if (instanceSizeAttrib_ >= 0)
@@ -150,7 +150,7 @@ bool ParticleSystem::initialize(juce::OpenGLContext& context)
         ext.glEnableVertexAttribArray(static_cast<GLuint>(instanceSizeAttrib_));
         ext.glVertexAttribPointer(static_cast<GLuint>(instanceSizeAttrib_), 1, GL_FLOAT, GL_FALSE,
                                   static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, size)));
-        glVertexAttribDivisor(static_cast<GLuint>(instanceSizeAttrib_), 1);
+        ext.glVertexAttribDivisor(static_cast<GLuint>(instanceSizeAttrib_), 1);
     }
 
     if (instanceRotationAttrib_ >= 0)
@@ -158,7 +158,7 @@ bool ParticleSystem::initialize(juce::OpenGLContext& context)
         ext.glEnableVertexAttribArray(static_cast<GLuint>(instanceRotationAttrib_));
         ext.glVertexAttribPointer(static_cast<GLuint>(instanceRotationAttrib_), 1, GL_FLOAT, GL_FALSE,
                                   static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, rotation)));
-        glVertexAttribDivisor(static_cast<GLuint>(instanceRotationAttrib_), 1);
+        ext.glVertexAttribDivisor(static_cast<GLuint>(instanceRotationAttrib_), 1);
     }
 
     ext.glBindVertexArray(0);
