@@ -4,6 +4,7 @@
 
 #include "rendering/ShaderRegistry.h"
 #include "rendering/shaders/NeonGlowShader.h"
+#include "rendering/shaders/VectorFlowShader.h"
 
 namespace oscil
 {
@@ -25,6 +26,7 @@ void ShaderRegistry::registerBuiltInShaders()
 {
     // Register default shaders
     registerShader(std::make_unique<NeonGlowShader>());
+    registerShader(std::make_unique<VectorFlowShader>());
 }
 
 void ShaderRegistry::registerShader(std::unique_ptr<WaveformShader> shader)
