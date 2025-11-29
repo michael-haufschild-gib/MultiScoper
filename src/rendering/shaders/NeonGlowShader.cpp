@@ -15,7 +15,6 @@ using namespace juce::gl;
 static const char* neonVertexShader = R"(
     attribute vec2 position;
     attribute float distFromCenter;
-    attribute float t;
 
     uniform mat4 projection;
 
@@ -192,7 +191,7 @@ void NeonGlowShader::render(
         
         ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
         
-        // Attributes: pos(2), dist(1), t(1)
+        // Attributes: pos(2), dist(1)
         // We only need pos and dist for neon. BasicShader uses 0 and 1.
         GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
         GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
