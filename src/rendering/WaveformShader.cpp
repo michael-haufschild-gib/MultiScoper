@@ -189,13 +189,49 @@ void WaveformShader::buildLineGeometry(
         vertices.push_back(x + nx * halfWidth);
         vertices.push_back(y + ny * halfWidth);
         vertices.push_back(1.0f);  // Distance from center (for glow)
-        vertices.push_back(0.0f);  // Reserved
+        vertices.push_back(static_cast<float>(i) / static_cast<float>(samples.size() - 1)); // Normalized t along wave
 
         // Vertex 2: position - normal offset (bottom of line)
         vertices.push_back(x - nx * halfWidth);
         vertices.push_back(y - ny * halfWidth);
         vertices.push_back(-1.0f);  // Distance from center (for glow)
-        vertices.push_back(0.0f);   // Reserved
+        vertices.push_back(static_cast<float>(i) / static_cast<float>(samples.size() - 1)); // Normalized t along wave
+    }
+}
+
+void WaveformShader::buildFillGeometry(
+    std::vector<float>& vertices,
+    const std::vector<float>& samples,
+    float centerY,
+    float zeroY,
+    float amplitude,
+    float boundsX,
+    float boundsWidth)
+{
+    if (samples.size() < 2)
+        return;
+
+    vertices.reserve(samples.size() * 2 * 4);
+
+    float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
+
+    for (size_t i = 0; i < samples.size(); ++i)
+    {
+        float t = static_cast<float>(i) / static_cast<float>(samples.size() - 1);
+        float x = boundsX + static_cast<float>(i) * xScale;
+        float yWave = centerY - samples[i] * amplitude;
+
+        // Top vertex (at waveform)
+        vertices.push_back(x);
+        vertices.push_back(yWave);
+        vertices.push_back(1.0f); // v = 1 (top)
+        vertices.push_back(t);    // u = t
+
+        // Bottom vertex (at zero/baseline)
+        vertices.push_back(x);
+        vertices.push_back(zeroY);
+        vertices.push_back(0.0f); // v = 0 (bottom)
+        vertices.push_back(t);    // u = t
     }
 }
 

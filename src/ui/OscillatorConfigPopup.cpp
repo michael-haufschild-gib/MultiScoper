@@ -7,7 +7,7 @@
 #include "ui/SourceSelectorComponent.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/ProcessingModeIcons.h"
-#include "rendering/ShaderRegistry.h"
+#include "rendering/VisualConfiguration.h"
 
 namespace oscil
 {
@@ -83,19 +83,19 @@ void OscillatorConfigPopup::setupComponents()
     colorSwatches_->onColorSelected = [this](int, juce::Colour color) { handleColorSelect(color); };
     addAndMakeVisible(*colorSwatches_);
 
-    // Shader dropdown
-    shaderLabel_ = std::make_unique<juce::Label>("", "Shader");
-    addAndMakeVisible(*shaderLabel_);
+    // Visual preset dropdown (replaces legacy shader dropdown)
+    visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
+    addAndMakeVisible(*visualPresetLabel_);
 
-    shaderDropdown_ = std::make_unique<OscilDropdown>("", "configPopup_shaderDropdown");
-    // Populate from shader registry
-    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
-    for (const auto& shaderInfo : availableShaders)
+    visualPresetDropdown_ = std::make_unique<OscilDropdown>("", "configPopup_visualPresetDropdown");
+    // Populate from visual configuration presets
+    auto availablePresets = VisualConfiguration::getAvailablePresets();
+    for (const auto& preset : availablePresets)
     {
-        shaderDropdown_->addItem(shaderInfo.displayName, shaderInfo.id);
+        visualPresetDropdown_->addItem(preset.second, preset.first);
     }
-    shaderDropdown_->onSelectionChanged = [this](int) { handleShaderChange(); };
-    addAndMakeVisible(*shaderDropdown_);
+    visualPresetDropdown_->onSelectionChanged = [this](int) { handleVisualPresetChange(); };
+    addAndMakeVisible(*visualPresetDropdown_);
 
     // Line Width slider (OscilSlider with label)
     lineWidthSlider_ = std::make_unique<OscilSlider>("configPopup_lineWidthSlider");
@@ -241,10 +241,10 @@ void OscillatorConfigPopup::resized()
     colorSwatches_->setBounds(contentBounds.removeFromTop(32));
     contentBounds.removeFromTop(12);
 
-    // Shader dropdown
-    auto shaderRow = contentBounds.removeFromTop(32);
-    shaderLabel_->setBounds(shaderRow.removeFromLeft(100));
-    shaderDropdown_->setBounds(shaderRow);
+    // Visual preset dropdown
+    auto presetRow = contentBounds.removeFromTop(32);
+    visualPresetLabel_->setBounds(presetRow.removeFromLeft(100));
+    visualPresetDropdown_->setBounds(presetRow);
     contentBounds.removeFromTop(8);
 
     // OscilSlider components have integrated labels - use full row height
@@ -288,7 +288,7 @@ void OscillatorConfigPopup::themeChanged(const ColorTheme& newTheme)
     styleLabel(sourceLabel_.get(), true);
     styleLabel(modeLabel_.get(), true);
     styleLabel(colorLabel_.get(), true);
-    styleLabel(shaderLabel_.get());
+    styleLabel(visualPresetLabel_.get());
     styleLabel(paneLabel_.get());
 
     repaint();
@@ -316,7 +316,7 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
     verticalOffset_ = oscillator.getVerticalOffset();
     paneId_ = oscillator.getPaneId();
     orderIndex_ = oscillator.getOrderIndex();
-    shaderId_ = oscillator.getShaderId();
+    visualPresetId_ = oscillator.getVisualPresetId();
 
     // Update controls using new Oscil component APIs
     nameEditor_->setText(name_, false);  // Don't notify
@@ -333,13 +333,13 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
     // Update color swatches selection
     colorSwatches_->setSelectedColor(colour_);
 
-    // Update shader dropdown selection
-    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
-    for (size_t i = 0; i < availableShaders.size(); ++i)
+    // Update visual preset dropdown selection
+    auto availablePresets = VisualConfiguration::getAvailablePresets();
+    for (size_t i = 0; i < availablePresets.size(); ++i)
     {
-        if (availableShaders[i].id == shaderId_)
+        if (availablePresets[i].first == visualPresetId_)
         {
-            shaderDropdown_->setSelectedIndex(static_cast<int>(i), false);  // Don't notify
+            visualPresetDropdown_->setSelectedIndex(static_cast<int>(i), false);  // Don't notify
             break;
         }
     }
@@ -388,7 +388,7 @@ void OscillatorConfigPopup::notifyConfigChanged()
     state.setProperty("verticalOffset", verticalOffset_, nullptr);
     state.setProperty("paneId", paneId_.id, nullptr);
     state.setProperty("order", orderIndex_, nullptr);
-    state.setProperty("shaderId", shaderId_, nullptr);
+    state.setProperty("visualPresetId", visualPresetId_, nullptr);
     state.setProperty("schemaVersion", Oscillator::CURRENT_SCHEMA_VERSION, nullptr);
 
     Oscillator updated(state);
@@ -481,13 +481,13 @@ void OscillatorConfigPopup::handlePaneChange()
     }
 }
 
-void OscillatorConfigPopup::handleShaderChange()
+void OscillatorConfigPopup::handleVisualPresetChange()
 {
-    int index = shaderDropdown_->getSelectedIndex();
-    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
-    if (index >= 0 && static_cast<size_t>(index) < availableShaders.size())
+    int index = visualPresetDropdown_->getSelectedIndex();
+    auto availablePresets = VisualConfiguration::getAvailablePresets();
+    if (index >= 0 && static_cast<size_t>(index) < availablePresets.size())
     {
-        shaderId_ = availableShaders[static_cast<size_t>(index)].id;
+        visualPresetId_ = availablePresets[static_cast<size_t>(index)].first;
         notifyConfigChanged();
     }
 }

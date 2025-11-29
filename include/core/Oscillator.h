@@ -176,6 +176,7 @@ public:
     [[nodiscard]] float getVerticalOffset() const noexcept { return verticalOffset_; }
     [[nodiscard]] std::optional<float> getTimeWindow() const noexcept { return timeWindow_; }
     [[nodiscard]] juce::String getShaderId() const noexcept { return shaderId_; }
+    [[nodiscard]] juce::String getVisualPresetId() const noexcept { return visualPresetId_; }
 
     // Setters
     void setSourceId(const SourceId& sourceId);
@@ -191,6 +192,7 @@ public:
     void setVerticalOffset(float offset) noexcept { verticalOffset_ = juce::jlimit(MIN_VERTICAL_OFFSET, MAX_VERTICAL_OFFSET, offset); }
     void setTimeWindow(std::optional<float> window) noexcept { timeWindow_ = window; }
     void setShaderId(const juce::String& shaderId) noexcept { shaderId_ = shaderId; }
+    void setVisualPresetId(const juce::String& presetId) noexcept { visualPresetId_ = presetId; }
 
     /**
      * Clear source assignment (transitions to NO_SOURCE state)
@@ -250,7 +252,8 @@ private:
     float verticalScale_ = DEFAULT_VERTICAL_SCALE;
     float verticalOffset_ = DEFAULT_VERTICAL_OFFSET;
     std::optional<float> timeWindow_;  // Per-oscillator time window override (seconds)
-    juce::String shaderId_ = "neon_glow";  // Shader for GPU rendering
+    juce::String shaderId_ = "basic";  // Shader for GPU rendering
+    juce::String visualPresetId_ = "default";  // Visual preset for render effects
 
     int schemaVersion_ = CURRENT_SCHEMA_VERSION;
 };

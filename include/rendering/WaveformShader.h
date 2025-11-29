@@ -20,8 +20,8 @@ namespace oscil
  */
 struct ShaderInfo
 {
-    juce::String id;           // Unique identifier (e.g., "neon_glow")
-    juce::String displayName;  // Human-readable name (e.g., "Neon Glow")
+    juce::String id;           // Unique identifier (e.g., "basic")
+    juce::String displayName;  // Human-readable name (e.g., "Basic")
     juce::String description;  // Brief description for tooltips
 };
 
@@ -36,6 +36,7 @@ struct ShaderRenderParams
     juce::Rectangle<float> bounds;
     bool isStereo = false;
     float verticalScale = 1.0f;  // Vertical scale factor (includes auto-scale)
+    float time = 0.0f;           // Time in seconds for animation
 };
 
 /**
@@ -130,6 +131,20 @@ protected:
         float centerY,
         float amplitude,
         float lineWidth,
+        float boundsX,
+        float boundsWidth
+    );
+
+    /**
+     * Helper to build a triangle strip for filling the area under the waveform.
+     * Creates geometry extending from the waveform line down to y=0 (relative to center).
+     */
+    static void buildFillGeometry(
+        std::vector<float>& vertices,
+        const std::vector<float>& samples,
+        float centerY,
+        float zeroY, // The Y coordinate to fill down/up to
+        float amplitude,
         float boundsX,
         float boundsWidth
     );

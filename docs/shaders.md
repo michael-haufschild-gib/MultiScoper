@@ -467,12 +467,12 @@ void MyShader::renderSoftware(
 Edit `src/rendering/ShaderRegistry.cpp`:
 
 ```cpp
-#include "rendering/shaders/NeonGlowShader.h"
+#include "rendering/shaders/BasicShader.h"
 #include "rendering/shaders/MyShader.h"  // Add include
 
 void ShaderRegistry::registerBuiltInShaders()
 {
-    registerShader(std::make_unique<NeonGlowShader>());
+    registerShader(std::make_unique<BasicShader>());
     registerShader(std::make_unique<MyShader>());  // Add registration
 }
 ```
@@ -566,7 +566,7 @@ What visual effect do you want?
 │   └── Use base renderSoftware() with custom color
 ├── Glowing/neon effect
 │   └── Use additive blending + multiple passes
-│       └── See NeonGlowShader for reference
+│       └── See BasicShader for reference
 ├── Gradient fill
 │   └── Pass UV coordinates as varying
 ├── Textured effect
@@ -625,9 +625,9 @@ MY_LOG("projection=" << gl_->projectionLoc
 
 ## Example Shaders
 
-### Reference: NeonGlowShader
+### Reference: BasicShader
 
-Location: `src/rendering/shaders/NeonGlowShader.cpp`
+Location: `src/rendering/shaders/BasicShader.cpp`
 
 Key features:
 - Multi-pass rendering for glow buildup

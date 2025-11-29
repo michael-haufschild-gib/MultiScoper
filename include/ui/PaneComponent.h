@@ -75,6 +75,12 @@ public:
     void updateOscillator(const OscillatorId& oscillatorId, ProcessingMode mode, bool visible);
 
     /**
+     * Update all properties of an oscillator (used when config popup changes are made)
+     * @param oscillator The oscillator with updated properties
+     */
+    void updateOscillatorFull(const Oscillator& oscillator);
+
+    /**
      * Get the pane ID
      */
     PaneId getPaneId() const { return paneId_; }

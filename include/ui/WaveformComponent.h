@@ -78,6 +78,11 @@ public:
     void setShaderId(const juce::String& shaderId);
 
     /**
+     * Set the visual preset ID for advanced rendering effects
+     */
+    void setVisualPresetId(const juce::String& presetId);
+
+    /**
      * Enable/disable GPU shader rendering
      * When enabled and a valid shader is set, uses GPU rendering
      */
@@ -192,7 +197,8 @@ private:
     StereoDisplayMode stereoDisplayMode_ = StereoDisplayMode::Stacked;
 
     // Shader rendering
-    juce::String shaderId_ = "neon_glow";
+    juce::String shaderId_ = "basic";
+    juce::String visualPresetId_ = "default";  // Visual preset for advanced rendering
     bool gpuRenderingEnabled_ = false;
     int waveformId_ = 0;  // Unique ID for GL renderer registration
     static std::atomic<int> nextWaveformId_;  // Counter for generating unique IDs

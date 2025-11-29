@@ -8,7 +8,9 @@
 
 #include "rendering/ShaderRegistry.h"
 #include "rendering/WaveformShader.h"
+#include "rendering/RenderEngine.h"
 #include <iostream>
+#include <chrono>
 
 namespace oscil
 {
@@ -71,6 +73,26 @@ void WaveformGLRenderer::newOpenGLContextCreated()
     {
         compileShaders();
     }
+
+    // Initialize the advanced render engine
+    if (useRenderEngine_ && context_)
+    {
+        renderEngine_ = std::make_unique<RenderEngine>();
+        if (!renderEngine_->initialize(*context_))
+        {
+            GL_LOG("WARNING: RenderEngine initialization failed, falling back to basic rendering");
+            DBG("WaveformGLRenderer: RenderEngine initialization failed");
+            renderEngine_.reset();
+        }
+        else
+        {
+            GL_LOG("RenderEngine initialized successfully");
+            DBG("WaveformGLRenderer: RenderEngine initialized");
+        }
+    }
+
+    // Initialize frame timing
+    lastFrameTime_ = std::chrono::steady_clock::now();
 
     contextReady_.store(true);
     GL_LOG("contextReady_ set to TRUE");
@@ -164,6 +186,13 @@ void WaveformGLRenderer::renderOpenGL()
 
     jassert(juce::OpenGLHelpers::isContextActive());
 
+    // Calculate delta time for animations
+    auto now = std::chrono::steady_clock::now();
+    float deltaTime = std::chrono::duration<float>(now - lastFrameTime_).count();
+    lastFrameTime_ = now;
+    // Clamp delta time to prevent huge jumps
+    deltaTime = std::min(deltaTime, 0.1f);
+
     // Set viewport to match the component
     const float desktopScale = static_cast<float>(context_->getRenderingScale());
     auto* targetComponent = context_->getTargetComponent();
@@ -177,8 +206,18 @@ void WaveformGLRenderer::renderOpenGL()
 
     glViewport(0, 0, width, height);
 
-    // Clear the framebuffer with the background color.
-    juce::OpenGLHelpers::clear(backgroundColour_);
+    // Handle resize for render engine
+    if (renderEngine_ && renderEngine_->isInitialized())
+    {
+        // Check if we need to resize the FBOs
+        static int lastWidth = 0, lastHeight = 0;
+        if (width != lastWidth || height != lastHeight)
+        {
+            renderEngine_->resize(width, height);
+            lastWidth = width;
+            lastHeight = height;
+        }
+    }
 
     // Copy waveform data under lock for thread safety
     std::vector<WaveformRenderData> waveformsToRender;
@@ -213,19 +252,24 @@ void WaveformGLRenderer::renderOpenGL()
     {
         frameCounter = 0;
         GL_LOG("renderOpenGL: " << waveformsToRender.size() << " waveforms, "
-               << waveforms_.size() << " registered, viewport=" << width << "x" << height);
+               << waveforms_.size() << " registered, viewport=" << width << "x" << height
+               << ", renderEngine=" << (renderEngine_ ? "active" : "off"));
         for (const auto& data : waveformsToRender)
         {
             GL_LOG("  Waveform " << data.id << ": bounds=("
                    << data.bounds.getX() << "," << data.bounds.getY() << ","
                    << data.bounds.getWidth() << "x" << data.bounds.getHeight() << ")"
                    << ", ch1 size=" << data.channel1.size()
-                   << ", visible=" << data.visible);
+                   << ", visible=" << data.visible
+                   << ", preset=" << data.visualConfig.presetId.toStdString());
         }
     }
 
     if constexpr (DEBUG_RENDER_MODE)
     {
+        // Clear the framebuffer with the background color.
+        juce::OpenGLHelpers::clear(backgroundColour_);
+
         // HARDCODED TEST: Always draw a bright RED rectangle at fixed position
         // This isolates whether the shader/draw call works AT ALL
         renderDebugRect(juce::Rectangle<float>(50.0f, 50.0f, 200.0f, 200.0f),
@@ -241,9 +285,40 @@ void WaveformGLRenderer::renderOpenGL()
             renderDebugRect(data.bounds, data.colour);
         }
     }
+    else if (renderEngine_ && renderEngine_->isInitialized())
+    {
+        // ========== ADVANCED RENDER ENGINE PATH ==========
+        // Use the full render engine with post-processing, particles, etc.
+
+        // Begin frame (clears scene FBO, updates timing)
+        renderEngine_->beginFrame(deltaTime);
+
+        // Register/update waveform configs with render engine
+        for (const auto& data : waveformsToRender)
+        {
+            // Ensure waveform is registered
+            if (!renderEngine_->getWaveformConfig(data.id))
+            {
+                renderEngine_->registerWaveform(data.id);
+            }
+
+            // Update the visual configuration for this waveform
+            renderEngine_->setWaveformConfig(data.id, data.visualConfig);
+
+            // Render the waveform through the engine
+            renderEngine_->renderWaveform(data);
+        }
+
+        // End frame (applies global effects, blits to screen)
+        renderEngine_->endFrame();
+    }
     else
     {
-        // Normal mode: render waveforms with shaders
+        // ========== BASIC FALLBACK RENDER PATH ==========
+        // Clear the framebuffer with the background color.
+        juce::OpenGLHelpers::clear(backgroundColour_);
+
+        // Normal mode: render waveforms with shaders directly
         for (const auto& data : waveformsToRender)
         {
             renderWaveform(data);
@@ -334,8 +409,8 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
         GL_LOG("Current program ID: " << programID);
 
     // Get uniform locations directly from OpenGL
-    GLint projLoc = ext.glGetUniformLocation(programID, "projection");
-    GLint colorLoc = ext.glGetUniformLocation(programID, "color");
+    GLint projLoc = ext.glGetUniformLocation(static_cast<GLuint>(programID), "projection");
+    GLint colorLoc = ext.glGetUniformLocation(static_cast<GLuint>(programID), "color");
     if (shouldLog)
         GL_LOG("Direct uniform locations: proj=" << projLoc << ", color=" << colorLoc);
 
@@ -372,8 +447,9 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     if (shouldLog)
         GL_LOG("Position attribute location: " << positionLoc);
 
-    ext.glEnableVertexAttribArray(positionLoc >= 0 ? positionLoc : 0);
-    ext.glVertexAttribPointer(positionLoc >= 0 ? positionLoc : 0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+    GLuint posAttrib = static_cast<GLuint>(positionLoc >= 0 ? positionLoc : 0);
+    ext.glEnableVertexAttribArray(posAttrib);
+    ext.glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
     GLenum errAttrib = glGetError();
     if (shouldLog && errAttrib != GL_NO_ERROR)
         GL_LOG("Error after vertex attrib setup: " << errAttrib);
@@ -396,7 +472,7 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     }
 
     // Cleanup
-    ext.glDisableVertexAttribArray(positionLoc >= 0 ? positionLoc : 0);
+    ext.glDisableVertexAttribArray(posAttrib);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
     ext.glBindVertexArray(0);
     glDisable(GL_BLEND);
@@ -439,6 +515,14 @@ void WaveformGLRenderer::openGLContextClosing()
 {
     DBG("WaveformGLRenderer: OpenGL context closing");
     contextReady_.store(false);
+
+    // Shutdown render engine first (it has its own resources)
+    if (renderEngine_)
+    {
+        renderEngine_->shutdown();
+        renderEngine_.reset();
+        DBG("WaveformGLRenderer: RenderEngine shutdown complete");
+    }
 
     // Release debug shader resources
     if (context_ != nullptr)
