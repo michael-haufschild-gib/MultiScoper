@@ -130,7 +130,7 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     captureBuffer_->write(buffer, metadata);
 
     // Process trigger detection (read-only operation)
-    timingEngine_.processBlock(buffer);
+    (void)timingEngine_.processBlock(buffer);
 
     // Audio passes through unchanged - this is a visualization plugin
 
@@ -173,7 +173,7 @@ void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     auto xmlString = juce::String::createStringFromData(data, sizeInBytes);
-    state_.fromXmlString(xmlString);
+    (void)state_.fromXmlString(xmlString);
 
     // Apply restored state
     timingEngine_.fromValueTree(state_.getState().getChildWithName(StateIds::Timing));

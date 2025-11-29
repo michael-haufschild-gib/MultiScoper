@@ -7,10 +7,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/ThemeManager.h"
-#include "ui/SegmentedButtonBar.h"
+#include "ui/components/SegmentedButtonBar.h"
 #include "ui/sections/SectionConstants.h"
 #include "ui/sections/DynamicHeightContent.h"
-#include "ui/components/OscilSlider.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilToggle.h"
 #include "ui/components/OscilTextField.h"
@@ -118,9 +117,7 @@ private:
     void notifyHostSyncChanged();
     void notifyWaveformModeChanged();
     void notifyBpmChanged();
-
-    // Section header
-    std::unique_ptr<juce::Label> sectionLabel_;
+    void notifyHeightChanged();
 
     // TIME/MELODIC toggle
     std::unique_ptr<SegmentedButtonBar> modeToggle_;
@@ -130,11 +127,9 @@ private:
     std::unique_ptr<OscilDropdown> waveformModeSelector_;
 
     // TIME mode controls
-    std::unique_ptr<OscilSlider> timeIntervalSlider_;
     std::unique_ptr<OscilTextField> timeIntervalField_;
 
     // MELODIC mode controls
-    std::unique_ptr<OscilSlider> noteIntervalSlider_;
     std::unique_ptr<OscilDropdown> noteIntervalSelector_;
 
     // Sync toggle (MELODIC mode only)
@@ -142,7 +137,6 @@ private:
 
     // BPM controls (MELODIC mode only)
     std::unique_ptr<juce::Label> bpmLabel_;
-    std::unique_ptr<OscilSlider> bpmSlider_;         // Free Running mode
     std::unique_ptr<OscilTextField> bpmField_;       // Free Running mode
     std::unique_ptr<juce::Label> bpmValueLabel_;     // Host Sync mode (read-only)
 

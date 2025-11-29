@@ -101,7 +101,7 @@ public:
     /**
      * Get the singleton instance
      */
-    static InstanceRegistry& getInstance();
+    [[nodiscard]] static InstanceRegistry& getInstance();
 
     /**
      * Register a new plugin instance as a signal source.
@@ -113,7 +113,7 @@ public:
      * @param channelCount Number of audio channels
      * @param sampleRate Current sample rate
      */
-    SourceId registerInstance(
+    [[nodiscard]] SourceId registerInstance(
         const juce::String& trackIdentifier,
         std::shared_ptr<SharedCaptureBuffer> captureBuffer,
         const juce::String& name = "Track",
@@ -129,17 +129,17 @@ public:
     /**
      * Get all available sources
      */
-    std::vector<SourceInfo> getAllSources() const override;
+    [[nodiscard]] std::vector<SourceInfo> getAllSources() const override;
 
     /**
      * Get a specific source by ID
      */
-    std::optional<SourceInfo> getSource(const SourceId& sourceId) const override;
+    [[nodiscard]] std::optional<SourceInfo> getSource(const SourceId& sourceId) const override;
 
     /**
      * Get the capture buffer for a source
      */
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer(const SourceId& sourceId) const override;
+    [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer(const SourceId& sourceId) const override;
 
     /**
      * Update source metadata (name, sample rate, etc.)
@@ -149,7 +149,7 @@ public:
     /**
      * Get the number of registered sources
      */
-    size_t getSourceCount() const override;
+    [[nodiscard]] size_t getSourceCount() const override;
 
     /**
      * Add a listener for registry changes

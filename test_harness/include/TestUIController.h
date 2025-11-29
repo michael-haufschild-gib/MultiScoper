@@ -195,6 +195,11 @@ public:
     bool selectByText(const juce::String& elementId, const juce::String& text);
 
     /**
+     * Select an item in an OscilDropdown by string item ID
+     */
+    bool selectById(const juce::String& elementId, const juce::String& itemId);
+
+    /**
      * Set a toggle button state
      */
     bool toggle(const juce::String& elementId, bool value);

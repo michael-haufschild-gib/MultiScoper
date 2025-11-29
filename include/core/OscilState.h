@@ -73,6 +73,9 @@ namespace StateIds
     static const juce::Identifier AutoScale{ "autoScale" };
     static const juce::Identifier HoldDisplay{ "holdDisplay" };
     static const juce::Identifier GainDb{ "gainDb" };
+
+    // Rendering mode
+    static const juce::Identifier GpuRenderingEnabled{ "gpuRenderingEnabled" };
 }
 
 /**
@@ -92,23 +95,23 @@ public:
     /**
      * Get the root ValueTree
      */
-    juce::ValueTree& getState() { return state_; }
-    const juce::ValueTree& getState() const { return state_; }
+    [[nodiscard]] juce::ValueTree& getState() { return state_; }
+    [[nodiscard]] const juce::ValueTree& getState() const { return state_; }
 
     /**
      * Serialize to XML for DAW persistence
      */
-    juce::String toXmlString() const;
+    [[nodiscard]] juce::String toXmlString() const;
 
     /**
      * Load from XML string
      */
-    bool fromXmlString(const juce::String& xmlString);
+    [[nodiscard]] bool fromXmlString(const juce::String& xmlString);
 
     /**
      * Get all oscillators
      */
-    std::vector<Oscillator> getOscillators() const;
+    [[nodiscard]] std::vector<Oscillator> getOscillators() const;
 
     /**
      * Add an oscillator
@@ -134,55 +137,62 @@ public:
     /**
      * Get oscillator by ID
      */
-    std::optional<Oscillator> getOscillator(const OscillatorId& oscillatorId) const;
+    [[nodiscard]] std::optional<Oscillator> getOscillator(const OscillatorId& oscillatorId) const;
 
     /**
      * Get the pane layout manager
      */
-    PaneLayoutManager& getLayoutManager() { return layoutManager_; }
-    const PaneLayoutManager& getLayoutManager() const { return layoutManager_; }
+    [[nodiscard]] PaneLayoutManager& getLayoutManager() { return layoutManager_; }
+    [[nodiscard]] const PaneLayoutManager& getLayoutManager() const { return layoutManager_; }
 
     /**
      * Get/set current theme name
      */
-    juce::String getThemeName() const;
+    [[nodiscard]] juce::String getThemeName() const;
     void setThemeName(const juce::String& themeName);
 
     /**
      * Get/set column layout
      */
-    ColumnLayout getColumnLayout() const;
+    [[nodiscard]] ColumnLayout getColumnLayout() const;
     void setColumnLayout(ColumnLayout layout);
 
     /**
      * Get/set sidebar configuration
      */
-    int getSidebarWidth() const;
+    [[nodiscard]] int getSidebarWidth() const;
     void setSidebarWidth(int width);
 
-    bool isSidebarCollapsed() const;
+    [[nodiscard]] bool isSidebarCollapsed() const;
     void setSidebarCollapsed(bool collapsed);
 
     /**
      * Get/set status bar visibility
      */
-    bool isStatusBarVisible() const;
+    [[nodiscard]] bool isStatusBarVisible() const;
     void setStatusBarVisible(bool visible);
 
     /**
      * Display options
      */
-    bool isShowGridEnabled() const;
+    [[nodiscard]] bool isShowGridEnabled() const;
     void setShowGridEnabled(bool enabled);
 
-    bool isAutoScaleEnabled() const;
+    [[nodiscard]] bool isAutoScaleEnabled() const;
     void setAutoScaleEnabled(bool enabled);
 
-    bool isHoldDisplayEnabled() const;
+    [[nodiscard]] bool isHoldDisplayEnabled() const;
     void setHoldDisplayEnabled(bool enabled);
 
-    float getGainDb() const;
+    [[nodiscard]] float getGainDb() const;
     void setGainDb(float dB);
+
+    /**
+     * Get/set GPU rendering mode
+     * When enabled, OpenGL context is attached for hardware acceleration
+     */
+    [[nodiscard]] bool isGpuRenderingEnabled() const;
+    void setGpuRenderingEnabled(bool enabled);
 
     /**
      * Add a listener for state changes
@@ -193,7 +203,7 @@ public:
     /**
      * Get the current schema version
      */
-    int getSchemaVersion() const;
+    [[nodiscard]] int getSchemaVersion() const;
 
     // Current schema version
     static constexpr int CURRENT_SCHEMA_VERSION = 2;
@@ -230,12 +240,12 @@ private:
 class GlobalPreferences
 {
 public:
-    static GlobalPreferences& getInstance();
+    [[nodiscard]] static GlobalPreferences& getInstance();
 
     /**
      * Get the preferences file
      */
-    juce::File getPreferencesFile() const;
+    [[nodiscard]] juce::File getPreferencesFile() const;
 
     /**
      * Load preferences from disk
@@ -248,26 +258,26 @@ public:
     void save();
 
     // Preference accessors
-    juce::String getDefaultTheme() const;
+    [[nodiscard]] juce::String getDefaultTheme() const;
     void setDefaultTheme(const juce::String& themeName);
 
-    int getDefaultColumnLayout() const;
+    [[nodiscard]] int getDefaultColumnLayout() const;
     void setDefaultColumnLayout(int columns);
 
-    bool getShowStatusBar() const;
+    [[nodiscard]] bool getShowStatusBar() const;
     void setShowStatusBar(bool show);
 
     // UI customization settings
-    bool getReducedMotion() const;
+    [[nodiscard]] bool getReducedMotion() const;
     void setReducedMotion(bool reduced);
 
-    bool getUIAudioFeedback() const;
+    [[nodiscard]] bool getUIAudioFeedback() const;
     void setUIAudioFeedback(bool enabled);
 
-    bool getTooltipsEnabled() const;
+    [[nodiscard]] bool getTooltipsEnabled() const;
     void setTooltipsEnabled(bool enabled);
 
-    int getDefaultSidebarWidth() const;
+    [[nodiscard]] int getDefaultSidebarWidth() const;
     void setDefaultSidebarWidth(int width);
 
     GlobalPreferences(const GlobalPreferences&) = delete;

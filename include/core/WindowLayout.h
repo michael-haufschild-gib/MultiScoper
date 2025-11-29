@@ -51,16 +51,16 @@ public:
     void fromValueTree(const juce::ValueTree& state);
 
     // Window dimensions
-    int getWindowWidth() const { return windowWidth_; }
-    int getWindowHeight() const { return windowHeight_; }
+    [[nodiscard]] int getWindowWidth() const noexcept { return windowWidth_; }
+    [[nodiscard]] int getWindowHeight() const noexcept { return windowHeight_; }
 
     void setWindowWidth(int width);
     void setWindowHeight(int height);
     void setWindowSize(int width, int height);
 
     // Sidebar
-    int getSidebarWidth() const { return sidebarWidth_; }
-    bool isSidebarCollapsed() const { return sidebarCollapsed_; }
+    [[nodiscard]] int getSidebarWidth() const noexcept { return sidebarWidth_; }
+    [[nodiscard]] bool isSidebarCollapsed() const noexcept { return sidebarCollapsed_; }
 
     void setSidebarWidth(int width);
     void setSidebarCollapsed(bool collapsed);
@@ -69,22 +69,22 @@ public:
     /**
      * Get effective sidebar width (considering collapsed state)
      */
-    int getEffectiveSidebarWidth() const;
+    [[nodiscard]] int getEffectiveSidebarWidth() const;
 
     /**
      * Get oscilloscope display area width
      */
-    int getOscilloscopeAreaWidth() const;
+    [[nodiscard]] int getOscilloscopeAreaWidth() const;
 
     /**
      * Validate and clamp sidebar width given current window width
      */
-    int clampSidebarWidth(int proposedWidth) const;
+    [[nodiscard]] int clampSidebarWidth(int proposedWidth) const;
 
     /**
      * Check if proposed window size is valid
      */
-    bool isValidWindowSize(int width, int height) const;
+    [[nodiscard]] bool isValidWindowSize(int width, int height) const;
 
     /**
      * Listener interface for layout changes

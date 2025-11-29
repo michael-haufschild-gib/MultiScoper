@@ -234,7 +234,7 @@ void Source::updateLastAudioTime()
         state_ == SourceState::INACTIVE ||
         state_ == SourceState::STALE)
     {
-        transitionTo(SourceState::ACTIVE);
+        (void)transitionTo(SourceState::ACTIVE);
     }
 }
 
@@ -251,29 +251,29 @@ void Source::updateActivityState()
     {
         if (timeSinceAudio > STALE_THRESHOLD_MS)
         {
-            transitionTo(SourceState::STALE);
+            (void)transitionTo(SourceState::STALE);
         }
         else if (timeSinceAudio > INACTIVE_THRESHOLD_MS)
         {
-            transitionTo(SourceState::INACTIVE);
+            (void)transitionTo(SourceState::INACTIVE);
         }
     }
     else if (state_ == SourceState::INACTIVE)
     {
         if (timeSinceAudio > STALE_THRESHOLD_MS)
         {
-            transitionTo(SourceState::STALE);
+            (void)transitionTo(SourceState::STALE);
         }
     }
 }
 
-void Source::updateCorrelationMetrics(float correlation)
+void Source::updateCorrelationMetrics(float correlation) noexcept
 {
     correlationMetrics_.correlationCoefficient = juce::jlimit(-1.0f, 1.0f, correlation);
     correlationMetrics_.isValid = true;
 }
 
-void Source::updateSignalMetrics(float rms, float peak, float dcOffset)
+void Source::updateSignalMetrics(float rms, float peak, float dcOffset) noexcept
 {
     signalMetrics_.rmsLevel = rms;
     signalMetrics_.peakLevel = peak;

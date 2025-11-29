@@ -90,6 +90,18 @@ void OscilButton::clearIcon()
     repaint();
 }
 
+void OscilButton::setIconPath(const juce::Path& path)
+{
+    iconPath_ = path;
+    repaint();
+}
+
+void OscilButton::clearIconPath()
+{
+    iconPath_.clear();
+    repaint();
+}
+
 void OscilButton::setShortcut(const juce::KeyPress& key)
 {
     shortcutKey_ = key;
@@ -232,23 +244,49 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
         g.strokePath(buttonPath, juce::PathStrokeType(1.0f));
     }
 
-    // Content
-    auto contentBounds = bounds.reduced(TEXT_PADDING, 0);
+    // Content - use reduced padding for segmented buttons to fit short labels
+    int horizontalPadding = (segmentPosition_ != SegmentPosition::None) ? 4 : TEXT_PADDING;
+    auto contentBounds = bounds.reduced(static_cast<float>(horizontalPadding), 0);
     auto textColour = getTextColour();
     if (!enabled_)
         textColour = textColour.withAlpha(ComponentLayout::DISABLED_OPACITY);
 
     g.setColour(textColour);
 
-    // Icon-only button
+    // Path icon rendering (takes precedence over image icon and text)
+    if (!iconPath_.isEmpty())
+    {
+        auto pathBounds = iconPath_.getBounds();
+        float padding = 4.0f;
+        float availableSize = std::min(bounds.getWidth(), bounds.getHeight()) - padding * 2;
+
+        // Scale path to fit within available space
+        float scale = availableSize / std::max(pathBounds.getWidth(), pathBounds.getHeight());
+
+        // Center the path within the bounds
+        float offsetX = bounds.getCentreX() - (pathBounds.getCentreX() * scale);
+        float offsetY = bounds.getCentreY() - (pathBounds.getCentreY() * scale);
+
+        auto transform = juce::AffineTransform::scale(scale).translated(offsetX, offsetY);
+
+        juce::Path scaledPath = iconPath_;
+        scaledPath.applyTransform(transform);
+
+        g.fillPath(scaledPath);
+        return;
+    }
+
+    // Icon-only button (image-based)
     if (variant_ == ButtonVariant::Icon)
     {
         if (icon_.isValid())
         {
             auto iconBounds = bounds.reduced((bounds.getWidth() - ICON_SIZE) / 2);
             g.drawImage(icon_, iconBounds, juce::RectanglePlacement::centred);
+            return;
         }
-        return;
+        // Fall through to render text label if no image icon is set
+        // This allows Icon variant buttons to use text labels (e.g., Unicode symbols)
     }
 
     // Text with optional icon

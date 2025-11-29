@@ -89,19 +89,19 @@ public:
      * @param numSamples   Number of samples
      * @return Correlation coefficient (-1.0 to 1.0)
      */
-    static float calculateCorrelation(const float* leftChannel,
+    [[nodiscard]] static float calculateCorrelation(const float* leftChannel,
                                       const float* rightChannel,
                                       int numSamples);
 
     /**
      * Calculate peak level of samples
      */
-    static float calculatePeak(const float* samples, int numSamples);
+    [[nodiscard]] static float calculatePeak(const float* samples, int numSamples);
 
     /**
      * Calculate RMS level of samples
      */
-    static float calculateRMS(const float* samples, int numSamples);
+    [[nodiscard]] static float calculateRMS(const float* samples, int numSamples);
 
     /**
      * Decimate samples for display (reduce sample count while preserving visual characteristics)
@@ -145,7 +145,7 @@ public:
     /**
      * Get the recommended sample count for display
      */
-    int getTargetSampleCount() const { return targetSamples_; }
+    [[nodiscard]] int getTargetSampleCount() const { return targetSamples_; }
 
     /**
      * Decimate samples for display

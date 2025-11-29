@@ -106,6 +106,22 @@ void OptionsSection::setupComponents()
     };
     addAndMakeVisible(*themeDropdown_);
 
+    // Rendering section label
+    renderingLabel_ = std::make_unique<juce::Label>();
+    renderingLabel_->setText("RENDERING", juce::dontSendNotification);
+    renderingLabel_->setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(*renderingLabel_);
+
+    // GPU rendering toggle
+    gpuRenderingToggle_ = std::make_unique<OscilToggle>("GPU Acceleration", "sidebar_options_gpuRenderingToggle");
+    gpuRenderingToggle_->setValue(gpuRenderingEnabled_, false);
+    gpuRenderingToggle_->onValueChanged = [this](bool value)
+    {
+        gpuRenderingEnabled_ = value;
+        notifyGpuRenderingChanged();
+    };
+    addAndMakeVisible(*gpuRenderingToggle_);
+
     // Apply initial theme
     themeChanged(ThemeManager::getInstance().getCurrentTheme());
 }
@@ -125,7 +141,7 @@ void OptionsSection::resized()
     using namespace SectionLayout;
 
     auto bounds = getLocalBounds().reduced(SECTION_PADDING);
-    int y = 0;
+    int y = bounds.getY();
 
     // Gain slider (OscilSlider has integrated label)
     gainSlider_->setBounds(bounds.getX(), y, bounds.getWidth(), 40);
@@ -157,6 +173,13 @@ void OptionsSection::resized()
     y += LABEL_HEIGHT + SPACING_MEDIUM;
 
     themeDropdown_->setBounds(bounds.getX(), y, bounds.getWidth(), DROPDOWN_HEIGHT);
+    y += DROPDOWN_HEIGHT + SPACING_LARGE;
+
+    // Rendering section label and toggle
+    renderingLabel_->setBounds(bounds.getX(), y, bounds.getWidth(), LABEL_HEIGHT);
+    y += LABEL_HEIGHT + SPACING_MEDIUM;
+
+    gpuRenderingToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
 }
 
 void OptionsSection::themeChanged(const ColorTheme& newTheme)
@@ -175,6 +198,10 @@ void OptionsSection::themeChanged(const ColorTheme& newTheme)
     // Theme section label
     themeLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
     themeLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
+
+    // Rendering section label
+    renderingLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
+    renderingLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
 
     repaint();
 }
@@ -226,7 +253,9 @@ int OptionsSection::getPreferredHeight() const
     height += LABEL_HEIGHT + SPACING_MEDIUM;         // Layout label
     height += DROPDOWN_HEIGHT + SPACING_LARGE;       // Layout dropdown
     height += LABEL_HEIGHT + SPACING_MEDIUM;         // Theme label
-    height += DROPDOWN_HEIGHT;                       // Theme dropdown
+    height += DROPDOWN_HEIGHT + SPACING_LARGE;       // Theme dropdown
+    height += LABEL_HEIGHT + SPACING_MEDIUM;         // Rendering label
+    height += ROW_HEIGHT;                            // GPU toggle
     return height;
 }
 
@@ -301,6 +330,18 @@ void OptionsSection::notifyAutoScaleChanged()
 void OptionsSection::notifyHoldDisplayChanged()
 {
     listeners_.call([this](Listener& l) { l.holdDisplayChanged(holdDisplayEnabled_); });
+}
+
+void OptionsSection::setGpuRenderingEnabled(bool enabled)
+{
+    gpuRenderingEnabled_ = enabled;
+    if (gpuRenderingToggle_ != nullptr)
+        gpuRenderingToggle_->setValue(enabled, false);
+}
+
+void OptionsSection::notifyGpuRenderingChanged()
+{
+    listeners_.call([this](Listener& l) { l.gpuRenderingChanged(gpuRenderingEnabled_); });
 }
 
 } // namespace oscil

@@ -157,6 +157,8 @@ void SidebarCollapseButton::setCollapsed(bool collapsed)
 SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
     : processor_(processor)
 {
+    // processor_ stored for potential future direct state access
+    // Currently all operations go through the Listener interface
     juce::ignoreUnused(processor_);
     ThemeManager::getInstance().addListener(this);
 
@@ -215,12 +217,20 @@ SidebarComponent::SidebarComponent(OscilPluginProcessor& processor)
     listViewport_->setScrollOnDragMode(juce::Viewport::ScrollOnDragMode::never);  // Allow items to handle drag
     addAndMakeVisible(listViewport_.get());
 
+    // Empty state label (shown when no oscillators)
+    emptyStateLabel_ = std::make_unique<juce::Label>();
+    emptyStateLabel_->setText("No oscillators yet.\nClick '+ Add Oscillator' above to get started.", juce::dontSendNotification);
+    emptyStateLabel_->setJustificationType(juce::Justification::centred);
+    emptyStateLabel_->setColour(juce::Label::textColourId, ThemeManager::getInstance().getCurrentTheme().textSecondary);
+    addChildComponent(emptyStateLabel_.get());  // Initially hidden
+
     // Control sections in scrollable viewport
-    sectionsViewport_ = std::make_unique<juce::Viewport>();
-    sectionsContainer_ = std::make_unique<juce::Component>();
-    sectionsViewport_->setViewedComponent(sectionsContainer_.get(), false);
-    sectionsViewport_->setScrollBarsShown(true, false);
-    addAndMakeVisible(sectionsViewport_.get());
+    accordionViewport_ = std::make_unique<juce::Viewport>();
+    accordion_ = std::make_unique<OscilAccordion>();
+    
+    accordionViewport_->setViewedComponent(accordion_.get(), false);
+    accordionViewport_->setScrollBarsShown(true, false);
+    addAndMakeVisible(accordionViewport_.get());
 
     setupSections();
 }
@@ -325,15 +335,18 @@ void SidebarComponent::resized()
         addOscillatorButton_->setVisible(false);
         oscillatorToolbar_->setVisible(false);
         listViewport_->setVisible(false);
-        sectionsViewport_->setVisible(false);
+        emptyStateLabel_->setVisible(false);
+        accordionViewport_->setVisible(false);
     }
     else
     {
         // Expanded state
+        bool hasOscillators = !oscillatorItems_.empty();
         addOscillatorButton_->setVisible(true);
         oscillatorToolbar_->setVisible(true);
-        listViewport_->setVisible(true);
-        sectionsViewport_->setVisible(true);
+        listViewport_->setVisible(hasOscillators);
+        emptyStateLabel_->setVisible(!hasOscillators);
+        accordionViewport_->setVisible(true);
 
         // Collapse button at top right
         auto topRow = bounds.removeFromTop(SECTION_HEADER_HEIGHT).reduced(4, 4);
@@ -346,6 +359,13 @@ void SidebarComponent::resized()
         // Oscillators toolbar
         auto toolbarArea = bounds.removeFromTop(OSCILLATOR_TOOLBAR_HEIGHT);
         oscillatorToolbar_->setBounds(toolbarArea);
+
+        // Empty state label position (same area as oscillators list)
+        if (!hasOscillators)
+        {
+            auto emptyArea = bounds.reduced(8, 0).withHeight(100);
+            emptyStateLabel_->setBounds(emptyArea);
+        }
 
         // Calculate total content height based on each item's preferred height
         int oscillatorsContentHeight = 0;
@@ -375,8 +395,14 @@ void SidebarComponent::resized()
         }
 
         // Control sections viewport - takes remaining space
-        sectionsViewport_->setBounds(bounds.reduced(4, 0));
-        updateSectionsLayout();
+        accordionViewport_->setBounds(bounds.reduced(4, 0));
+        
+        // Update accordion width to match viewport
+        if (accordion_)
+        {
+            int width = accordionViewport_->getWidth() - (accordionViewport_->getScrollBarThickness() + 4);
+            accordion_->setSize(width, accordion_->getPreferredHeight());
+        }
     }
 }
 
@@ -465,6 +491,11 @@ void SidebarComponent::refreshOscillatorList(const std::vector<Oscillator>& osci
         listContainer_->addAndMakeVisible(*item);
         oscillatorItems_.push_back(std::move(item));
     }
+
+    // Show empty state label if no oscillators
+    bool hasOscillators = !filteredOscillators.empty();
+    emptyStateLabel_->setVisible(!hasOscillators);
+    listViewport_->setVisible(hasOscillators);
 
     // Update toolbar oscillator count
     updateOscillatorCounts();
@@ -756,16 +787,21 @@ void SidebarComponent::refreshPaneList(const std::vector<Pane>& panes)
 
 void SidebarComponent::setupSections()
 {
-    // Create timing section and wrap in collapsible
+    accordion_->clearSections();
+    accordion_->setAllowMultiExpand(true); // Allow multiple sections open
+
+    // Create timing section
     timingSection_ = std::make_unique<TimingSidebarSection>();
     timingSection_->addListener(this);
 
-    timingCollapsible_ = std::make_unique<CollapsibleSection>("TIMING", "sidebar_timing");
-    timingCollapsible_->setContent(timingSection_.get());
-    timingCollapsible_->onLayoutNeeded = [this]() { updateSectionsLayout(); };
-    sectionsContainer_->addAndMakeVisible(*timingCollapsible_);
+    auto* timing = accordion_->addSection("TIMING", timingSection_.get());
+    if (timing)
+    {
+        timing->setTestId("sidebar_timing");
+        timing->setExpanded(true, false);
+    }
 
-    // Create options section (merged master controls + display options) and wrap in collapsible
+    // Create options section
     optionsSection_ = std::make_unique<OptionsSection>();
     optionsSection_->addListener(this);
 
@@ -774,60 +810,12 @@ void SidebarComponent::setupSections()
     optionsSection_->setAvailableThemes(themeManager.getAvailableThemes());
     optionsSection_->setCurrentTheme(themeManager.getCurrentTheme().name);
 
-    optionsCollapsible_ = std::make_unique<CollapsibleSection>("OPTIONS", "sidebar_options");
-    optionsCollapsible_->setContent(optionsSection_.get());
-    optionsCollapsible_->onLayoutNeeded = [this]() { updateSectionsLayout(); };
-    sectionsContainer_->addAndMakeVisible(*optionsCollapsible_);
-}
-
-void SidebarComponent::updateSectionsLayout()
-{
-    if (!sectionsContainer_)
-        return;
-
-    int containerWidth = sectionsViewport_->getWidth() - 8;  // Account for scrollbar
-    int y = 0;
-
-    // Layout collapsible timing section
-    if (timingCollapsible_)
+    auto* options = accordion_->addSection("OPTIONS", optionsSection_.get());
+    if (options)
     {
-        // Set content height first so collapsible can calculate properly
-        if (timingSection_ && !timingCollapsible_->isCollapsed())
-        {
-            int contentHeight = timingSection_->getPreferredHeight();
-            timingSection_->setSize(containerWidth, contentHeight);
-        }
-
-        int height = CollapsibleSection::HEADER_HEIGHT;
-        if (!timingCollapsible_->isCollapsed() && timingSection_)
-        {
-            height += timingSection_->getPreferredHeight();
-        }
-        timingCollapsible_->setBounds(0, y, containerWidth, height);
-        y += height;
+        options->setTestId("sidebar_options");
+        options->setExpanded(true, false);
     }
-
-    // Layout collapsible options section
-    if (optionsCollapsible_)
-    {
-        // Set content height first so collapsible can calculate properly
-        if (optionsSection_ && !optionsCollapsible_->isCollapsed())
-        {
-            int contentHeight = optionsSection_->getPreferredHeight();
-            optionsSection_->setSize(containerWidth, contentHeight);
-        }
-
-        int height = CollapsibleSection::HEADER_HEIGHT;
-        if (!optionsCollapsible_->isCollapsed() && optionsSection_)
-        {
-            height += optionsSection_->getPreferredHeight();
-        }
-        optionsCollapsible_->setBounds(0, y, containerWidth, height);
-        y += height;
-    }
-
-    // Update container size
-    sectionsContainer_->setSize(containerWidth, y);
 }
 
 // TimingSidebarSection::Listener implementation
@@ -890,6 +878,11 @@ void SidebarComponent::layoutChanged(int columnCount)
 void SidebarComponent::themeChanged(const juce::String& themeName)
 {
     listeners_.call([&themeName](Listener& l) { l.themeChanged(themeName); });
+}
+
+void SidebarComponent::gpuRenderingChanged(bool enabled)
+{
+    listeners_.call([enabled](Listener& l) { l.gpuRenderingChanged(enabled); });
 }
 
 } // namespace oscil

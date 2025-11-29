@@ -24,7 +24,7 @@ void AddOscillatorDialog::setupComponents()
 {
     // Title label
     titleLabel_ = std::make_unique<juce::Label>("", "Add Oscillator");
-    titleLabel_->setFont(juce::Font(16.0f, juce::Font::bold));
+    titleLabel_->setFont(juce::FontOptions(16.0f).withStyle("Bold"));
     addAndMakeVisible(*titleLabel_);
 
     // Close button (X) - use unicode × for cleaner look, Secondary variant for visibility
@@ -205,7 +205,7 @@ void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
         if (isTitle)
         {
             label->setColour(juce::Label::textColourId, newTheme.textPrimary);
-            label->setFont(juce::Font(16.0f, juce::Font::bold));
+            label->setFont(juce::FontOptions(16.0f).withStyle("Bold"));
         }
         else
         {

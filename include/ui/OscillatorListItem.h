@@ -8,6 +8,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/ThemeManager.h"
 #include "ui/components/TestId.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/OscilToggle.h"
+#include "ui/components/SegmentedButtonBar.h"
 #include "core/Oscillator.h"
 #include <functional>
 
@@ -19,7 +22,8 @@ namespace oscil
  * Shows compact view for non-selected items, expands when selected to show mode/visibility controls
  */
 class OscillatorListItemComponent : public juce::Component,
-                                     public ThemeManagerListener
+                                     public ThemeManagerListener,
+                                     public TestIdSupport
 {
 public:
     /**
@@ -76,19 +80,10 @@ public:
     static constexpr int PREFERRED_HEIGHT = COMPACT_HEIGHT;  // Default for layout calculations
 
 private:
-    void paintCompact(juce::Graphics& g, const ColorTheme& theme);
-    void paintExpanded(juce::Graphics& g, const ColorTheme& theme);
-    void paintModeButton(juce::Graphics& g, juce::Rectangle<float> bounds,
-                         const juce::String& text, bool isActive, const ColorTheme& theme);
-    void paintVisibilityToggle(juce::Graphics& g, juce::Rectangle<float> bounds, const ColorTheme& theme);
-    void paintIconButton(juce::Graphics& g, juce::Rectangle<float> bounds,
-                         const juce::String& icon, bool isHovered, const ColorTheme& theme, bool isDanger = false);
-
+    void setupComponents(int orderIndex);
+    void updateVisibility();
+    
     bool isInDragZone(const juce::Point<int>& pos) const;
-    bool isInSettingsButton(const juce::Point<int>& pos) const;
-    bool isInDeleteButton(const juce::Point<int>& pos) const;
-    bool isInVisibilityToggle(const juce::Point<int>& pos) const;
-    bool isInModeButton(const juce::Point<int>& pos, ProcessingMode& outMode) const;
 
     // Data
     OscillatorId oscillatorId_;
@@ -104,11 +99,14 @@ private:
     bool isDragging_ = false;
     bool hasFocus_ = false;
     bool dragHandleHovered_ = false;
-    bool settingsHovered_ = false;
-    bool deleteHovered_ = false;
-    bool visibilityHovered_ = false;
-    int hoveredModeButton_ = -1;  // -1 = none, 0-3 = mode index
     juce::Point<int> dragStartPos_;
+
+    // Child components
+    std::unique_ptr<OscilButton> deleteButton_;
+    std::unique_ptr<OscilButton> settingsButton_;
+    std::unique_ptr<OscilButton> visibilityButton_; // Used for icon-only visibility toggle in compact mode
+    std::unique_ptr<OscilToggle> visibilityToggle_; // Used in expanded mode
+    std::unique_ptr<SegmentedButtonBar> modeButtons_;
 
     juce::ListenerList<Listener> listeners_;
 
@@ -118,6 +116,8 @@ private:
     static constexpr int ICON_BUTTON_SIZE = 24;
     static constexpr int ROW_PADDING = 8;
 
+    // TestIdSupport
+    void registerTestId() override;
     OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListItemComponent)

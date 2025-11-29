@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/ThemeManager.h"
-#include "ui/SegmentedButtonBar.h"
+#include "ui/components/SegmentedButtonBar.h"
 #include "ui/sections/SectionConstants.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilDropdown.h"

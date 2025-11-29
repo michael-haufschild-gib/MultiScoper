@@ -158,7 +158,7 @@ private:
 
     // Layout constants
     static constexpr int ICON_WIDTH = 32;
-    static constexpr int STEPPER_WIDTH = 28;
+    static constexpr int STEPPER_WIDTH = 32;  // Larger for clear +/- visibility
 
     // TestIdSupport
     void registerTestId() override;

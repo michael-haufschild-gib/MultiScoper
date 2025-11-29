@@ -3,6 +3,7 @@
 */
 
 #include "TestHttpServer.h"
+#include "TestElementRegistry.h"
 #include "core/OscilState.h"
 
 namespace oscil::test
@@ -12,6 +13,46 @@ TestHttpServer::TestHttpServer(TestDAW& daw)
     : daw_(daw)
 {
     server_ = std::make_unique<httplib::Server>();
+
+    // Configure server timeouts for long-running operations like showEditor
+    server_->set_read_timeout(30, 0);  // 30 seconds
+    server_->set_write_timeout(30, 0); // 30 seconds
+
+    // Add pre-routing handler to log all incoming requests
+    server_->set_pre_routing_handler([](const httplib::Request& req, httplib::Response&) -> httplib::Server::HandlerResponse {
+        std::cerr << "[HTTP IN] " << req.method << " " << req.path << std::endl;
+        return httplib::Server::HandlerResponse::Unhandled;  // Continue to normal routing
+    });
+
+    // Add exception handler
+    server_->set_exception_handler([](const httplib::Request& req, httplib::Response& res, std::exception_ptr ep) {
+        std::string errMsg;
+        try {
+            if (ep) std::rethrow_exception(ep);
+        } catch (const std::exception& e) {
+            errMsg = e.what();
+        } catch (...) {
+            errMsg = "Unknown exception";
+        }
+        std::cerr << "[HTTP EXCEPTION] " << req.method << " " << req.path << " - " << errMsg << std::endl;
+        nlohmann::json errJson;
+        errJson["success"] = false;
+        errJson["error"] = "Exception: " + errMsg;
+        res.status = 500;
+        res.set_content(errJson.dump(), "application/json");
+    });
+
+    // Add error handler for debugging
+    server_->set_error_handler([](const httplib::Request& req, httplib::Response& res)
+    {
+        std::string errMsg = "Internal server error on " + req.method + " " + req.path + " (status: " + std::to_string(res.status) + ")";
+        std::cerr << "[HTTP ERROR] " << errMsg << std::endl;
+        nlohmann::json errJson;
+        errJson["success"] = false;
+        errJson["error"] = errMsg;
+        res.set_content(errJson.dump(), "application/json");
+    });
+
     setupRoutes();
 }
 
@@ -432,26 +473,65 @@ void TestHttpServer::handleTrackInfo(const httplib::Request& req, httplib::Respo
 
 void TestHttpServer::handleTrackShowEditor(const httplib::Request& req, httplib::Response& res)
 {
+    std::cerr << "[DEBUG] handleTrackShowEditor called" << std::endl << std::flush;
     try
     {
         int trackId = std::stoi(req.matches[1]);
+        std::cerr << "[DEBUG] trackId = " << trackId << std::endl << std::flush;
 
-        // Must call showTrackEditor on the message thread
+        auto* track = daw_.getTrack(trackId);
+        std::cerr << "[DEBUG] track = " << (track != nullptr ? "valid" : "null") << std::endl;
+
+        if (track == nullptr)
+        {
+            res.set_content(errorResponse("Track not found").dump(), "application/json");
+            return;
+        }
+
+        // Check if editor is already open
+        bool alreadyVisible = track->isEditorVisible();
+        std::cerr << "[DEBUG] isEditorVisible = " << alreadyVisible << std::endl;
+
+        if (alreadyVisible)
+        {
+            int elemCount = static_cast<int>(TestElementRegistry::getInstance().getAllElements().size());
+            json data;
+            data["trackId"] = trackId;
+            data["editorVisible"] = true;
+            data["elementsRegistered"] = elemCount;
+            data["alreadyOpen"] = true;
+            res.set_content(successResponse(data).dump(), "application/json");
+            return;
+        }
+
+        std::cerr << "[DEBUG] Calling callAsync to show editor" << std::endl;
+
+        // Call showTrackEditor on the message thread (fire and forget)
+        // The client should poll /ui/elements to wait for UI to be ready
         juce::MessageManager::callAsync([this, trackId]()
         {
+            std::cerr << "[DEBUG] callAsync executing on message thread" << std::endl;
             daw_.showTrackEditor(trackId);
+            std::cerr << "[DEBUG] showTrackEditor completed" << std::endl;
         });
 
-        // Give time for the editor to open
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::cerr << "[DEBUG] callAsync queued, preparing response" << std::endl;
 
+        // Return immediately - client should poll for readiness
         json data;
         data["trackId"] = trackId;
-        data["editorVisible"] = true;
+        data["editorVisible"] = false;  // Not visible yet - async
+        data["elementsRegistered"] = 0;
+        data["async"] = true;
+        data["message"] = "Editor opening requested. Poll /ui/elements or use /ui/wait/element/{id} to wait for UI.";
+
+        std::cerr << "[DEBUG] Sending success response" << std::endl;
         res.set_content(successResponse(data).dump(), "application/json");
+        std::cerr << "[DEBUG] Response sent" << std::endl;
     }
     catch (const std::exception& e)
     {
+        std::cerr << "[ERROR] Exception in handleTrackShowEditor: " << e.what() << std::endl;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -536,13 +616,25 @@ void TestHttpServer::handleUISelect(const httplib::Request& req, httplib::Respon
     {
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
-        int itemId = body.value("itemId", -1);
         std::string itemText = body.value("itemText", "");
 
         bool success = false;
-        if (itemId >= 0)
+
+        // Check if itemId is a string (for OscilDropdown) or int (for ComboBox)
+        if (body.contains("itemId"))
         {
-            success = uiController_.select(elementId, itemId);
+            if (body["itemId"].is_string())
+            {
+                // String ID - use selectById for OscilDropdown
+                std::string itemIdStr = body["itemId"].get<std::string>();
+                success = uiController_.selectById(elementId, itemIdStr);
+            }
+            else if (body["itemId"].is_number_integer())
+            {
+                // Integer ID - use select for juce::ComboBox
+                int itemId = body["itemId"].get<int>();
+                success = uiController_.select(elementId, itemId);
+            }
         }
         else if (!itemText.empty())
         {
@@ -1112,6 +1204,15 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 {
     std::string elementId = req.matches[1];
     auto info = uiController_.getElementInfo(elementId);
+
+    // Return 404 if element not found
+    if (info.contains("error"))
+    {
+        res.status = 404;
+        res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
+        return;
+    }
+
     res.set_content(successResponse(info).dump(), "application/json");
 }
 
@@ -1404,10 +1505,33 @@ void TestHttpServer::handleAnalyzeWaveform(const httplib::Request& req, httplib:
 void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response& res)
 {
     // Reset each track's processor state
-    for (auto* track : daw_.getTracks())
+    auto* track = daw_.getTrack(0);
+    if (track)
     {
-        // Would need a reset method on the processor
+        // Clear oscillators and panes on the message thread
+        juce::MessageManager::callAsync([track]() {
+            auto& state = track->getProcessor().getState();
+
+            // Remove all oscillators
+            auto oscillators = state.getOscillators();
+            for (const auto& osc : oscillators)
+            {
+                state.removeOscillator(osc.getId());
+            }
+
+            // Clear panes
+            auto& layoutManager = state.getLayoutManager();
+            auto panes = layoutManager.getPanes();
+            for (const auto& pane : panes)
+            {
+                layoutManager.removePane(pane.getId());
+            }
+        });
     }
+
+    // Clear the element registry
+    TestElementRegistry::getInstance().clear();
+
     res.set_content(successResponse().dump(), "application/json");
 }
 
@@ -1589,16 +1713,20 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
         // Set order index
         osc.setOrderIndex(static_cast<int>(state.getOscillators().size()));
 
-        // Add to state
-        state.addOscillator(osc);
-
-        // Return the created oscillator info
+        // Build response before adding to state (we have the ID already)
         json oscJson;
         oscJson["id"] = osc.getId().id.toStdString();
         oscJson["name"] = osc.getName().toStdString();
         oscJson["sourceId"] = osc.getSourceId().id.toStdString();
         oscJson["paneId"] = osc.getPaneId().id.toStdString();
         oscJson["mode"] = processingModeToString(osc.getProcessingMode()).toStdString();
+
+        // Add to state on message thread to ensure UI updates properly
+        // Capture oscillator by copy and track pointer (safe lifetime)
+        Oscillator oscCopy = osc;
+        juce::MessageManager::callAsync([oscCopy, track]() mutable {
+            track->getProcessor().getState().addOscillator(oscCopy);
+        });
 
         res.set_content(successResponse(oscJson).dump(), "application/json");
     }

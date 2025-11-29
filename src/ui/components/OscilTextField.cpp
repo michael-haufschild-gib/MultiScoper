@@ -77,13 +77,14 @@ void OscilTextField::setupComponents()
     addAndMakeVisible(*editor_);
 
     // Stepper buttons for Number variant (created but not visible by default)
+    // Using Primary variant (blue) for clear visibility
     decrementButton_ = std::make_unique<OscilButton>("-");
-    decrementButton_->setVariant(ButtonVariant::Ghost);
+    decrementButton_->setVariant(ButtonVariant::Primary);
     decrementButton_->onClick = [this] { decrementValue(); };
     addChildComponent(*decrementButton_);
 
     incrementButton_ = std::make_unique<OscilButton>("+");
-    incrementButton_->setVariant(ButtonVariant::Ghost);
+    incrementButton_->setVariant(ButtonVariant::Primary);
     incrementButton_->onClick = [this] { incrementValue(); };
     addChildComponent(*incrementButton_);
 

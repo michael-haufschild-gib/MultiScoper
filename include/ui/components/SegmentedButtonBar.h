@@ -7,11 +7,9 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ThemeManager.h"
+#include "ui/ThemeManager.h"
 #include "ui/components/OscilButton.h"
-#include "ui/components/ComponentTypes.h"
 #include <vector>
-#include <functional>
 
 namespace oscil
 {
@@ -40,12 +38,20 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;
 
     /**
-     * Add a button to the bar
+     * Add a button to the bar with text label
      * @param label Display text for the button
      * @param id Unique identifier for the button
      * @param testId Optional test ID for the button
      */
     void addButton(const juce::String& label, int id, const juce::String& testId = {});
+
+    /**
+     * Add a button to the bar with a path-based icon
+     * @param iconPath Path to render as the button icon (uses theme colors)
+     * @param id Unique identifier for the button
+     * @param testId Optional test ID for the button
+     */
+    void addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId = {});
 
     /**
      * Remove all buttons

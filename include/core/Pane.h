@@ -47,19 +47,19 @@ public:
     void fromValueTree(const juce::ValueTree& state);
 
     // Getters
-    PaneId getId() const { return id_; }
-    int getOrderIndex() const { return orderIndex_; }
-    bool isCollapsed() const { return collapsed_; }
-    juce::String getName() const { return name_; }
-    float getHeightRatio() const { return heightRatio_; }
-    int getColumnIndex() const { return columnIndex_; }
+    [[nodiscard]] PaneId getId() const noexcept { return id_; }
+    [[nodiscard]] int getOrderIndex() const noexcept { return orderIndex_; }
+    [[nodiscard]] bool isCollapsed() const noexcept { return collapsed_; }
+    [[nodiscard]] juce::String getName() const noexcept { return name_; }
+    [[nodiscard]] float getHeightRatio() const noexcept { return heightRatio_; }
+    [[nodiscard]] int getColumnIndex() const noexcept { return columnIndex_; }
 
     // Setters
-    void setOrderIndex(int index) { orderIndex_ = index; }
-    void setCollapsed(bool collapsed) { collapsed_ = collapsed; }
-    void setName(const juce::String& name) { name_ = name; }
-    void setHeightRatio(float ratio) { heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, ratio); }
-    void setColumnIndex(int column) { columnIndex_ = column; }
+    void setOrderIndex(int index) noexcept { orderIndex_ = index; }
+    void setCollapsed(bool collapsed) noexcept { collapsed_ = collapsed; }
+    void setName(const juce::String& name) noexcept { name_ = name; }
+    void setHeightRatio(float ratio) noexcept { heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, ratio); }
+    void setColumnIndex(int column) noexcept { columnIndex_ = column; }
 
 private:
     PaneId id_;
@@ -136,7 +136,7 @@ struct PaneDragState
         endDrag();
     }
 
-    bool isSamePositionDrop() const
+    [[nodiscard]] bool isSamePositionDrop() const noexcept
     {
         return dragStartIndex == dropTargetIndex && dragStartColumn == dropTargetColumn;
     }
@@ -168,12 +168,12 @@ public:
     /**
      * Get the column layout
      */
-    ColumnLayout getColumnLayout() const { return columnLayout_; }
+    [[nodiscard]] ColumnLayout getColumnLayout() const noexcept { return columnLayout_; }
 
     /**
      * Get the number of columns
      */
-    int getColumnCount() const { return static_cast<int>(columnLayout_); }
+    [[nodiscard]] int getColumnCount() const noexcept { return static_cast<int>(columnLayout_); }
 
     /**
      * Add a pane
@@ -188,19 +188,19 @@ public:
     /**
      * Get all panes in order (const access only - use addPane/removePane/movePane to modify)
      */
-    const std::vector<Pane>& getPanes() const { return panes_; }
+    [[nodiscard]] const std::vector<Pane>& getPanes() const noexcept { return panes_; }
 
     /**
      * Get panes for a specific column
      */
-    std::vector<Pane*> getPanesInColumn(int column);
-    std::vector<const Pane*> getPanesInColumn(int column) const;
+    [[nodiscard]] std::vector<Pane*> getPanesInColumn(int column);
+    [[nodiscard]] std::vector<const Pane*> getPanesInColumn(int column) const;
 
     /**
      * Get pane by ID
      */
-    Pane* getPane(const PaneId& paneId);
-    const Pane* getPane(const PaneId& paneId) const;
+    [[nodiscard]] Pane* getPane(const PaneId& paneId);
+    [[nodiscard]] const Pane* getPane(const PaneId& paneId) const;
 
     /**
      * Move a pane to a new position within or between columns
@@ -220,28 +220,28 @@ public:
     /**
      * Get the number of panes
      */
-    size_t getPaneCount() const { return panes_.size(); }
+    [[nodiscard]] size_t getPaneCount() const noexcept { return panes_.size(); }
 
     /**
      * Get the number of panes in a specific column
      */
-    int getPaneCountInColumn(int column) const;
+    [[nodiscard]] int getPaneCountInColumn(int column) const;
 
     /**
      * Calculate which column a pane should appear in
      * Uses row-major distribution
      */
-    int getColumnForPane(int paneIndex) const;
+    [[nodiscard]] int getColumnForPane(int paneIndex) const;
 
     /**
      * Calculate pane bounds within the available area
      */
-    juce::Rectangle<int> getPaneBounds(int paneIndex, juce::Rectangle<int> availableArea) const;
+    [[nodiscard]] juce::Rectangle<int> getPaneBounds(int paneIndex, juce::Rectangle<int> availableArea) const;
 
     /**
      * Calculate pane bounds for a pane in a specific column
      */
-    juce::Rectangle<int> getPaneBoundsInColumn(const PaneId& paneId, juce::Rectangle<int> columnArea) const;
+    [[nodiscard]] juce::Rectangle<int> getPaneBoundsInColumn(const PaneId& paneId, juce::Rectangle<int> columnArea) const;
 
     /**
      * Redistribute panes across columns after layout change

@@ -202,54 +202,54 @@ public:
     void fromValueTree(const juce::ValueTree& state);
 
     // === Identity ===
-    SourceId getId() const { return id_; }
-    juce::String getDawTrackId() const { return dawTrackId_; }
-    void setDawTrackId(const juce::String& trackId) { dawTrackId_ = trackId; }
+    [[nodiscard]] SourceId getId() const noexcept { return id_; }
+    [[nodiscard]] juce::String getDawTrackId() const noexcept { return dawTrackId_; }
+    void setDawTrackId(const juce::String& trackId) noexcept { dawTrackId_ = trackId; }
 
     // === Ownership ===
-    InstanceId getOwningInstanceId() const { return owningInstanceId_; }
+    [[nodiscard]] InstanceId getOwningInstanceId() const noexcept { return owningInstanceId_; }
     void setOwningInstanceId(const InstanceId& instanceId);
 
-    const std::vector<InstanceId>& getBackupInstanceIds() const { return backupInstanceIds_; }
+    [[nodiscard]] const std::vector<InstanceId>& getBackupInstanceIds() const noexcept { return backupInstanceIds_; }
     void addBackupInstance(const InstanceId& instanceId);
     void removeBackupInstance(const InstanceId& instanceId);
-    bool hasBackupInstances() const { return !backupInstanceIds_.empty(); }
-    std::optional<InstanceId> getNextBackupInstance() const;
+    [[nodiscard]] bool hasBackupInstances() const noexcept { return !backupInstanceIds_.empty(); }
+    [[nodiscard]] std::optional<InstanceId> getNextBackupInstance() const;
 
     /**
      * Transfer ownership to the next backup instance
      * @return true if transfer successful, false if no backup available
      */
-    bool transferOwnership();
+    [[nodiscard]] bool transferOwnership();
 
     // === Audio Configuration ===
-    float getSampleRate() const { return sampleRate_; }
-    void setSampleRate(float rate) { sampleRate_ = rate; }
+    [[nodiscard]] float getSampleRate() const noexcept { return sampleRate_; }
+    void setSampleRate(float rate) noexcept { sampleRate_ = rate; }
 
-    ChannelConfig getChannelConfig() const { return channelConfig_; }
-    void setChannelConfig(ChannelConfig config) { channelConfig_ = config; }
+    [[nodiscard]] ChannelConfig getChannelConfig() const noexcept { return channelConfig_; }
+    void setChannelConfig(ChannelConfig config) noexcept { channelConfig_ = config; }
 
-    int getBufferSize() const { return bufferSize_; }
-    void setBufferSize(int size) { bufferSize_ = size; }
+    [[nodiscard]] int getBufferSize() const noexcept { return bufferSize_; }
+    void setBufferSize(int size) noexcept { bufferSize_ = size; }
 
     // === State Machine ===
-    SourceState getState() const { return state_; }
+    [[nodiscard]] SourceState getState() const noexcept { return state_; }
 
     /**
      * Transition to a new state with validation
      * @return true if transition is valid and performed
      */
-    bool transitionTo(SourceState newState);
+    [[nodiscard]] bool transitionTo(SourceState newState);
 
     /**
      * Check if transition to target state is valid
      */
-    bool canTransitionTo(SourceState targetState) const;
+    [[nodiscard]] bool canTransitionTo(SourceState targetState) const;
 
     // === Activity Tracking ===
-    bool isActive() const { return state_ == SourceState::ACTIVE; }
+    [[nodiscard]] bool isActive() const noexcept { return state_ == SourceState::ACTIVE; }
 
-    juce::String getDisplayName() const { return displayName_; }
+    [[nodiscard]] juce::String getDisplayName() const noexcept { return displayName_; }
     void setDisplayName(const juce::String& name);
 
     /**
@@ -260,7 +260,7 @@ public:
     /**
      * Get time since last audio in milliseconds
      */
-    int64_t getTimeSinceLastAudio() const;
+    [[nodiscard]] int64_t getTimeSinceLastAudio() const;
 
     /**
      * Check and update state based on audio activity timing
@@ -269,20 +269,20 @@ public:
     void updateActivityState();
 
     // === Metrics ===
-    const CorrelationMetrics& getCorrelationMetrics() const { return correlationMetrics_; }
-    void updateCorrelationMetrics(float correlation);
+    [[nodiscard]] const CorrelationMetrics& getCorrelationMetrics() const noexcept { return correlationMetrics_; }
+    void updateCorrelationMetrics(float correlation) noexcept;
 
-    const SignalMetrics& getSignalMetrics() const { return signalMetrics_; }
-    void updateSignalMetrics(float rms, float peak, float dcOffset);
+    [[nodiscard]] const SignalMetrics& getSignalMetrics() const noexcept { return signalMetrics_; }
+    void updateSignalMetrics(float rms, float peak, float dcOffset) noexcept;
 
     // === Capture Buffer ===
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const { return captureBuffer_; }
-    void setCaptureBuffer(std::shared_ptr<SharedCaptureBuffer> buffer) { captureBuffer_ = buffer; }
+    [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const noexcept { return captureBuffer_; }
+    void setCaptureBuffer(std::shared_ptr<SharedCaptureBuffer> buffer) noexcept { captureBuffer_ = buffer; }
 
     // === Timestamps ===
-    juce::Time getCreatedAt() const { return createdAt_; }
-    juce::Time getLastHeartbeat() const { return lastHeartbeat_; }
-    void updateHeartbeat() { lastHeartbeat_ = juce::Time::getCurrentTime(); }
+    [[nodiscard]] juce::Time getCreatedAt() const noexcept { return createdAt_; }
+    [[nodiscard]] juce::Time getLastHeartbeat() const noexcept { return lastHeartbeat_; }
+    void updateHeartbeat() noexcept { lastHeartbeat_ = juce::Time::getCurrentTime(); }
 
     // Schema version for migration
     static constexpr int CURRENT_SCHEMA_VERSION = 1;

@@ -99,6 +99,17 @@ juce_add_plugin(Oscil
     AU_MAIN_TYPE "kAudioUnitType_Effect"
 )
 
+# Binary resources (SVG icons from icomoon)
+juce_add_binary_data(OscilBinaryData
+    HEADER_NAME "BinaryData.h"
+    NAMESPACE BinaryData
+    SOURCES
+        resources/icomoon/SVG/bin.svg
+        resources/icomoon/SVG/cog.svg
+        resources/icomoon/SVG/eye.svg
+        resources/icomoon/SVG/eye-blocked.svg
+)
+
 # Source files
 target_sources(Oscil
     PRIVATE
@@ -129,7 +140,7 @@ target_sources(Oscil
         src/ui/SettingsDropdown.cpp
         src/ui/SidebarComponent.cpp
         src/ui/SourceItemComponent.cpp
-        src/ui/SegmentedButtonBar.cpp
+        src/ui/components/SegmentedButtonBar.cpp
         src/ui/OscillatorListToolbar.cpp
         src/ui/OscillatorListItem.cpp
         src/ui/OscillatorConfigPopup.cpp
@@ -140,7 +151,6 @@ target_sources(Oscil
         src/ui/sections/MasterControlsSection.cpp
         src/ui/sections/TriggerSettingsSection.cpp
         src/ui/sections/DisplayOptionsSection.cpp
-        src/ui/sections/CollapsibleSection.cpp
         src/ui/sections/OptionsSection.cpp
         # UI Coordinators
         src/ui/coordinators/SourceCoordinator.cpp
@@ -191,6 +201,7 @@ target_compile_definitions(Oscil
 # Link JUCE modules
 target_link_libraries(Oscil
     PRIVATE
+        OscilBinaryData
         juce::juce_audio_utils
         juce::juce_audio_processors
         juce::juce_graphics
@@ -285,9 +296,9 @@ if(OSCIL_BUILD_TESTS)
         # tests/test_oscil_meterbar.cpp
         # tests/test_oscil_transportsync.cpp
         tests/test_ui_audio_feedback.cpp
-        tests/test_timing_controls_e2e.cpp
+        tests/test_timing_calculations.cpp
         tests/test_add_oscillator_dialog.cpp
-        tests/test_collapsible_sections_e2e.cpp
+        tests/test_accordion_sections_e2e.cpp
         tests/test_sidebar_theme_population.cpp
 
         # Include necessary source files for testing
@@ -313,7 +324,7 @@ if(OSCIL_BUILD_TESTS)
         src/ui/SettingsDropdown.cpp
         src/ui/SidebarComponent.cpp
         src/ui/SourceItemComponent.cpp
-        src/ui/SegmentedButtonBar.cpp
+        src/ui/components/SegmentedButtonBar.cpp
         src/ui/OscillatorListToolbar.cpp
         src/ui/OscillatorListItem.cpp
         src/ui/OscillatorConfigPopup.cpp
@@ -323,7 +334,6 @@ if(OSCIL_BUILD_TESTS)
         src/ui/sections/MasterControlsSection.cpp
         src/ui/sections/TriggerSettingsSection.cpp
         src/ui/sections/DisplayOptionsSection.cpp
-        src/ui/sections/CollapsibleSection.cpp
         src/ui/sections/OptionsSection.cpp
         src/ui/coordinators/SourceCoordinator.cpp
         src/ui/coordinators/ThemeCoordinator.cpp
@@ -358,8 +368,8 @@ if(OSCIL_BUILD_TESTS)
 
     target_link_libraries(OscilTests
         PRIVATE
-            GTest::gtest
-            GTest::gtest_main
+            OscilBinaryData
+            GTest::gtest_main  # gtest_main already includes gtest
             juce::juce_core
             juce::juce_data_structures
             juce::juce_graphics

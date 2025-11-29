@@ -218,7 +218,7 @@ TEST_F(StatePersistenceTest, PaneLayoutManagerIntegration)
     juce::String xmlString = state.toXmlString();
 
     OscilState restored;
-    restored.fromXmlString(xmlString);
+    (void)restored.fromXmlString(xmlString);
 
     // Note: Pane layout manager serialization is handled separately
     // This tests that the state can hold pane data

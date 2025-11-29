@@ -4,8 +4,9 @@
 */
 
 #include "ui/OscillatorListItem.h"
+#include "ui/components/ProcessingModeIcons.h"
+#include "ui/components/ListItemIcons.h"
 #include "core/InstanceRegistry.h"
-#include <iostream>
 
 namespace oscil
 {
@@ -19,7 +20,7 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
 {
     // Register test ID with oscillator index
     juce::String testId = "sidebar_oscillators_item_" + juce::String(oscillator.getOrderIndex());
-    OSCIL_REGISTER_TEST_ID(testId);
+    setTestId(testId);
 
     // Get track name from source registry
     if (oscillator.getSourceId().isValid())
@@ -41,8 +42,85 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
 
     ThemeManager::getInstance().addListener(this);
 
+    setupComponents(oscillator.getOrderIndex());
+
     // Enable keyboard focus for accessibility
     setWantsKeyboardFocus(true);
+}
+
+void OscillatorListItemComponent::setupComponents(int orderIndex)
+{
+    juce::String suffix = juce::String(orderIndex);
+
+    // Delete button with trash icon
+    deleteButton_ = std::make_unique<OscilButton>("");
+    deleteButton_->setVariant(ButtonVariant::Icon);
+    deleteButton_->setIconPath(ListItemIcons::createTrashIcon(static_cast<float>(ICON_BUTTON_SIZE)));
+    deleteButton_->setTooltip("Delete Oscillator (Delete/Backspace)");
+    if (suffix.isNotEmpty()) deleteButton_->setTestId(getTestId() + "_delete");
+    deleteButton_->onClick = [this]() { listeners_.call([this](Listener& l) { l.oscillatorDeleteRequested(oscillatorId_); }); };
+    addChildComponent(*deleteButton_);
+
+    // Settings button with gear icon
+    settingsButton_ = std::make_unique<OscilButton>("");
+    settingsButton_->setVariant(ButtonVariant::Icon);
+    settingsButton_->setIconPath(ListItemIcons::createGearIcon(static_cast<float>(ICON_BUTTON_SIZE)));
+    settingsButton_->setTooltip("Configure Oscillator (Enter)");
+    if (suffix.isNotEmpty()) settingsButton_->setTestId(getTestId() + "_settings");
+    settingsButton_->onClick = [this]() { listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); }); };
+    addChildComponent(*settingsButton_);
+
+    // Visibility button (Compact mode) - eye icon
+    visibilityButton_ = std::make_unique<OscilButton>("");
+    visibilityButton_->setVariant(ButtonVariant::Icon);
+    visibilityButton_->setIconPath(isVisible_ ?
+        ListItemIcons::createEyeOpenIcon(static_cast<float>(ICON_BUTTON_SIZE)) :
+        ListItemIcons::createEyeClosedIcon(static_cast<float>(ICON_BUTTON_SIZE)));
+    if (suffix.isNotEmpty()) visibilityButton_->setTestId(getTestId() + "_vis_btn");
+    visibilityButton_->onClick = [this]() {
+        isVisible_ = !isVisible_;
+        updateVisibility();
+        listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
+    };
+    addChildComponent(*visibilityButton_);
+
+    // Visibility toggle (Expanded mode)
+    visibilityToggle_ = std::make_unique<OscilToggle>("Visible");
+    if (suffix.isNotEmpty()) visibilityToggle_->setTestId(getTestId() + "_vis_toggle");
+    visibilityToggle_->onValueChanged = [this](bool visible) {
+        isVisible_ = visible;
+        updateVisibility();
+        listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
+    };
+    addChildComponent(*visibilityToggle_);
+
+    // Mode buttons - using icons for Stereo/Mono, short text for others
+    modeButtons_ = std::make_unique<SegmentedButtonBar>();
+    modeButtons_->setMinButtonWidth(36);  // Compact buttons for 6 modes
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(14), static_cast<int>(ProcessingMode::FullStereo));
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(14), static_cast<int>(ProcessingMode::Mono));
+    modeButtons_->addButton("M", static_cast<int>(ProcessingMode::Mid));
+    modeButtons_->addButton("S", static_cast<int>(ProcessingMode::Side));
+    modeButtons_->addButton("L", static_cast<int>(ProcessingMode::Left));
+    modeButtons_->addButton("R", static_cast<int>(ProcessingMode::Right));
+    if (suffix.isNotEmpty()) 
+    {
+        // SegmentedButtonBar doesn't easily support setting IDs for internal buttons via this API
+        // But we can register the bar itself
+        OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, getTestId() + "_mode");
+    }
+    modeButtons_->onSelectionChanged = [this](int id) {
+        processingMode_ = static_cast<ProcessingMode>(id);
+        listeners_.call([this](Listener& l) { l.oscillatorModeChanged(oscillatorId_, processingMode_); });
+    };
+    addChildComponent(*modeButtons_);
+
+    updateVisibility();
+}
+
+void OscillatorListItemComponent::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
 }
 
 OscillatorListItemComponent::~OscillatorListItemComponent()
@@ -50,40 +128,75 @@ OscillatorListItemComponent::~OscillatorListItemComponent()
     ThemeManager::getInstance().removeListener(this);
 }
 
-void OscillatorListItemComponent::paint(juce::Graphics& g)
+void OscillatorListItemComponent::updateVisibility()
 {
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    // Always show action buttons for accessibility, but dim when not hovered/selected
+    // This ensures touch users and keyboard users can discover and use them
+    deleteButton_->setVisible(true);
+    settingsButton_->setVisible(true);
 
+    // Use alpha to indicate interactivity without hiding
+    float buttonAlpha = (selected_ || isHovered_) ? 1.0f : 0.4f;
+    deleteButton_->setAlpha(buttonAlpha);
+    settingsButton_->setAlpha(buttonAlpha);
+
+    // Visibility controls
     if (selected_)
     {
-        paintExpanded(g, theme);
+        visibilityButton_->setVisible(false);
+        visibilityToggle_->setVisible(true);
+        visibilityToggle_->setValue(isVisible_, false);
+        modeButtons_->setVisible(true);
+        modeButtons_->setSelectedId(static_cast<int>(processingMode_));
     }
     else
     {
-        paintCompact(g, theme);
+        // In compact mode, always show visibility button so users can toggle visibility
+        // Update button icon and tooltip based on current state
+        visibilityButton_->setIconPath(isVisible_ ?
+            ListItemIcons::createEyeOpenIcon(static_cast<float>(ICON_BUTTON_SIZE)) :
+            ListItemIcons::createEyeClosedIcon(static_cast<float>(ICON_BUTTON_SIZE)));
+        visibilityButton_->setTooltip(isVisible_ ? "Hide Oscillator (V)" : "Show Oscillator (V)");
+        visibilityButton_->setVisible(true);
+        visibilityToggle_->setVisible(false);
+        modeButtons_->setVisible(false);
     }
+    
+    repaint();
+    resized();
 }
 
-void OscillatorListItemComponent::paintCompact(juce::Graphics& g, const ColorTheme& theme)
+void OscillatorListItemComponent::paint(juce::Graphics& g)
 {
+    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
     float alpha = isVisible_ ? 1.0f : 0.5f;
 
-    // Background for hover/selection
-    if (isHovered_)
+    // Background
+    if (selected_)
     {
-        g.setColour(theme.controlHighlight.withAlpha(0.2f));
-        g.fillRoundedRectangle(bounds.reduced(2), 6.0f);
+        g.setColour(theme.backgroundSecondary.brighter(0.05f));
+        g.fillRoundedRectangle(bounds.reduced(2), 8.0f);
+        
+        g.setColour(hasFocus_ ? theme.controlActive.withAlpha(0.8f) : theme.controlBorder.withAlpha(0.5f));
+        g.drawRoundedRectangle(bounds.reduced(2), 8.0f, hasFocus_ ? 2.0f : 1.0f);
+    }
+    else
+    {
+        if (isHovered_)
+        {
+            g.setColour(theme.controlHighlight.withAlpha(0.2f));
+            g.fillRoundedRectangle(bounds.reduced(2), 6.0f);
+        }
+        
+        if (hasFocus_)
+        {
+            g.setColour(theme.controlActive.withAlpha(0.6f));
+            g.drawRoundedRectangle(bounds.reduced(2), 6.0f, 2.0f);
+        }
     }
 
-    // Focus ring for keyboard accessibility
-    if (hasFocus_)
-    {
-        g.setColour(theme.controlActive.withAlpha(0.6f));
-        g.drawRoundedRectangle(bounds.reduced(2), 6.0f, 2.0f);
-    }
-
-    // Drag handle (6 dots) - with hover feedback
+    // Drag handle
     auto dragArea = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
     float dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
     g.setColour(theme.textSecondary.withAlpha(dotAlpha * alpha));
@@ -92,293 +205,81 @@ void OscillatorListItemComponent::paintCompact(juce::Graphics& g, const ColorThe
     float startX = dragArea.getCentreX() - dotSpacing / 2;
     float startY = dragArea.getCentreY() - dotSpacing;
     for (int row = 0; row < 3; ++row)
-    {
         for (int col = 0; col < 2; ++col)
-        {
-            float x = startX + static_cast<float>(col) * dotSpacing;
-            float y = startY + static_cast<float>(row) * dotSpacing;
-            g.fillEllipse(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
-        }
-    }
+            g.fillEllipse(startX + col * dotSpacing - dotSize/2, startY + row * dotSpacing - dotSize/2, dotSize, dotSize);
 
     // Color indicator
     bounds.removeFromLeft(4);
-    float colorY = bounds.getCentreY() - COLOR_INDICATOR_SIZE / 2.0f;
+    float colorY = selected_ ? (COMPACT_HEIGHT / 2.0f - COLOR_INDICATOR_SIZE / 2.0f) : (bounds.getCentreY() - COLOR_INDICATOR_SIZE / 2.0f);
     g.setColour(colour_.withAlpha(alpha));
-    g.fillEllipse(bounds.getX(), colorY,
-                  static_cast<float>(COLOR_INDICATOR_SIZE),
-                  static_cast<float>(COLOR_INDICATOR_SIZE));
-    bounds.removeFromLeft(COLOR_INDICATOR_SIZE + 10);
-
-    // Right side buttons (from right to left)
-    auto rightArea = bounds.removeFromRight(ICON_BUTTON_SIZE * 2 + 8);
-
-    // Delete button
-    auto deleteBounds = rightArea.removeFromRight(ICON_BUTTON_SIZE);
-    paintIconButton(g, deleteBounds, "trash", deleteHovered_, theme, true);
-
-    // Settings button
-    auto settingsBounds = rightArea.removeFromRight(ICON_BUTTON_SIZE);
-    paintIconButton(g, settingsBounds, "gear", settingsHovered_, theme);
-
-    // If hidden, show eye-slash icon
-    if (!isVisible_)
-    {
-        auto eyeBounds = rightArea.removeFromRight(ICON_BUTTON_SIZE);
-        paintIconButton(g, eyeBounds, "eye-slash", false, theme);
-    }
-
-    // Text area
-    bounds.removeFromRight(8);
-
-    // Display name (bold, larger)
-    g.setColour(theme.textPrimary.withAlpha(alpha));
+    g.fillEllipse(bounds.getX(), colorY, static_cast<float>(COLOR_INDICATOR_SIZE), static_cast<float>(COLOR_INDICATOR_SIZE));
+    
+    // Text
+    float textX = bounds.getX() + COLOR_INDICATOR_SIZE + 10;
+    float textW = bounds.getWidth() - (ICON_BUTTON_SIZE * 2 + 8) - (COLOR_INDICATOR_SIZE + 10); // Approx space
+    float topH = selected_ ? COMPACT_HEIGHT : bounds.getHeight();
+    
+    auto nameBounds = juce::Rectangle<float>(textX, selected_ ? 0 : 0, textW, topH * 0.55f);
+    auto trackBounds = juce::Rectangle<float>(textX, nameBounds.getBottom(), textW, topH * 0.45f);
+    
+    g.setColour((selected_ ? theme.textHighlight : theme.textPrimary).withAlpha(alpha));
     g.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
-    auto nameBounds = bounds.removeFromTop(bounds.getHeight() * 0.55f);
-    g.drawText(displayName_, nameBounds.toNearestInt(), juce::Justification::bottomLeft, true);
+    g.drawText(displayName_, nameBounds, juce::Justification::bottomLeft, true);
 
-    // Track name (smaller, secondary)
     g.setColour(theme.textSecondary.withAlpha(alpha));
     g.setFont(juce::FontOptions(12.0f));
-    g.drawText(trackName_, bounds.toNearestInt(), juce::Justification::topLeft, true);
-}
-
-void OscillatorListItemComponent::paintExpanded(juce::Graphics& g, const ColorTheme& theme)
-{
-    auto bounds = getLocalBounds().toFloat();
-
-    // Selected background
-    g.setColour(theme.backgroundSecondary.brighter(0.05f));
-    g.fillRoundedRectangle(bounds.reduced(2), 8.0f);
-
-    // Border (use focus ring color if focused)
-    if (hasFocus_)
-    {
-        g.setColour(theme.controlActive.withAlpha(0.8f));
-        g.drawRoundedRectangle(bounds.reduced(2), 8.0f, 2.0f);
-    }
-    else
-    {
-        g.setColour(theme.controlBorder.withAlpha(0.5f));
-        g.drawRoundedRectangle(bounds.reduced(2), 8.0f, 1.0f);
-    }
-
-    // Top row (same as compact but with different background)
-    auto topRow = bounds.removeFromTop(COMPACT_HEIGHT);
-
-    // Drag handle - with hover feedback
-    auto dragArea = topRow.removeFromLeft(DRAG_HANDLE_WIDTH);
-    float dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
-    g.setColour(theme.textSecondary.withAlpha(dotAlpha));
-    float dotSize = 3.0f;
-    float dotSpacing = 5.0f;
-    float startX = dragArea.getCentreX() - dotSpacing / 2;
-    float startY = dragArea.getCentreY() - dotSpacing;
-    for (int row = 0; row < 3; ++row)
-    {
-        for (int col = 0; col < 2; ++col)
-        {
-            float x = startX + static_cast<float>(col) * dotSpacing;
-            float y = startY + static_cast<float>(row) * dotSpacing;
-            g.fillEllipse(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
-        }
-    }
-
-    // Color indicator
-    topRow.removeFromLeft(4);
-    float colorY = topRow.getCentreY() - COLOR_INDICATOR_SIZE / 2.0f;
-    g.setColour(colour_);
-    g.fillEllipse(topRow.getX(), colorY,
-                  static_cast<float>(COLOR_INDICATOR_SIZE),
-                  static_cast<float>(COLOR_INDICATOR_SIZE));
-    topRow.removeFromLeft(COLOR_INDICATOR_SIZE + 10);
-
-    // Right side buttons
-    auto rightArea = topRow.removeFromRight(ICON_BUTTON_SIZE * 2 + 8);
-
-    auto deleteBounds = rightArea.removeFromRight(ICON_BUTTON_SIZE);
-    paintIconButton(g, deleteBounds, "trash", deleteHovered_, theme, true);
-
-    auto settingsBounds = rightArea.removeFromRight(ICON_BUTTON_SIZE);
-    paintIconButton(g, settingsBounds, "gear", settingsHovered_, theme);
-
-    // Text
-    topRow.removeFromRight(8);
-    g.setColour(theme.textHighlight);
-    g.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
-    auto nameBounds = topRow.removeFromTop(topRow.getHeight() * 0.55f);
-    g.drawText(displayName_, nameBounds.toNearestInt(), juce::Justification::bottomLeft, true);
-
-    g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(12.0f));
-    g.drawText(trackName_, topRow.toNearestInt(), juce::Justification::topLeft, true);
-
-    // Bottom row - mode buttons and visibility toggle
-    auto bottomRow = bounds.reduced(DRAG_HANDLE_WIDTH + 4, 4);
-
-    // Mode buttons (segmented control style)
-    auto modeArea = bottomRow.removeFromLeft(200);
-    float modeButtonWidth = 48.0f;
-    float modeButtonHeight = 28.0f;
-    float modeY = modeArea.getCentreY() - modeButtonHeight / 2;
-
-    // Draw mode button group background
-    auto modeGroupBounds = juce::Rectangle<float>(modeArea.getX(), modeY, modeButtonWidth * 4, modeButtonHeight);
-    g.setColour(theme.controlBackground);
-    g.fillRoundedRectangle(modeGroupBounds, 4.0f);
-
-    // Draw each mode button
-    paintModeButton(g, juce::Rectangle<float>(modeArea.getX(), modeY, modeButtonWidth, modeButtonHeight),
-                    "Stereo", processingMode_ == ProcessingMode::FullStereo, theme);
-    paintModeButton(g, juce::Rectangle<float>(modeArea.getX() + modeButtonWidth, modeY, modeButtonWidth, modeButtonHeight),
-                    "Mono", processingMode_ == ProcessingMode::Mono, theme);
-    paintModeButton(g, juce::Rectangle<float>(modeArea.getX() + modeButtonWidth * 2, modeY, modeButtonWidth, modeButtonHeight),
-                    "Mid", processingMode_ == ProcessingMode::Mid, theme);
-    paintModeButton(g, juce::Rectangle<float>(modeArea.getX() + modeButtonWidth * 3, modeY, modeButtonWidth, modeButtonHeight),
-                    "Side", processingMode_ == ProcessingMode::Side, theme);
-
-    // Visibility toggle (on right side)
-    bottomRow.removeFromLeft(16);
-    auto toggleArea = bottomRow.removeFromLeft(56);
-    paintVisibilityToggle(g, toggleArea, theme);
-}
-
-void OscillatorListItemComponent::paintModeButton(juce::Graphics& g, juce::Rectangle<float> bounds,
-                                                   const juce::String& text, bool isActive, const ColorTheme& theme)
-{
-    if (isActive)
-    {
-        g.setColour(theme.controlActive);
-        g.fillRoundedRectangle(bounds.reduced(1), 3.0f);
-        g.setColour(theme.textHighlight);
-    }
-    else
-    {
-        g.setColour(theme.textSecondary);
-    }
-
-    g.setFont(juce::FontOptions(11.0f));
-    g.drawText(text, bounds.toNearestInt(), juce::Justification::centred, false);
-
-    // Draw separator line (except for last button)
-    if (text != "Side")
-    {
-        g.setColour(theme.controlBorder.withAlpha(0.3f));
-        g.drawVerticalLine(static_cast<int>(bounds.getRight()), bounds.getY() + 4, bounds.getBottom() - 4);
-    }
-}
-
-void OscillatorListItemComponent::paintVisibilityToggle(juce::Graphics& g, juce::Rectangle<float> bounds, const ColorTheme& theme)
-{
-    // Draw toggle switch
-    float toggleWidth = 44.0f;
-    float toggleHeight = 24.0f;
-    float toggleX = bounds.getCentreX() - toggleWidth / 2;
-    float toggleY = bounds.getCentreY() - toggleHeight / 2;
-
-    auto toggleBounds = juce::Rectangle<float>(toggleX, toggleY, toggleWidth, toggleHeight);
-
-    // Background pill
-    g.setColour(isVisible_ ? theme.statusActive : theme.controlBackground);
-    g.fillRoundedRectangle(toggleBounds, toggleHeight / 2);
-
-    // Knob
-    float knobSize = toggleHeight - 4;
-    float knobX = isVisible_ ? (toggleBounds.getRight() - knobSize - 2) : (toggleBounds.getX() + 2);
-    float knobY = toggleBounds.getY() + 2;
-
-    g.setColour(juce::Colours::white);
-    g.fillEllipse(knobX, knobY, knobSize, knobSize);
-
-    // Eye icon on knob
-    g.setColour(isVisible_ ? theme.statusActive : theme.textSecondary);
-    g.setFont(juce::FontOptions(11.0f));
-    // Simple eye representation
-    float eyeX = knobX + knobSize / 2;
-    float eyeY = knobY + knobSize / 2;
-    float eyeSize = 6.0f;
-    g.drawEllipse(eyeX - eyeSize, eyeY - eyeSize / 2, eyeSize * 2, eyeSize, 1.5f);
-    g.fillEllipse(eyeX - 2, eyeY - 2, 4, 4);
-}
-
-void OscillatorListItemComponent::paintIconButton(juce::Graphics& g, juce::Rectangle<float> bounds,
-                                                   const juce::String& icon, bool isHovered,
-                                                   const ColorTheme& theme, bool isDanger)
-{
-    if (isHovered)
-    {
-        g.setColour(theme.controlHighlight.withAlpha(0.3f));
-        g.fillRoundedRectangle(bounds.reduced(2), 4.0f);
-    }
-
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
-
-    if (icon == "gear")
-    {
-        g.setColour(isHovered ? theme.textHighlight : theme.textSecondary);
-        // Simple gear icon
-        float size = 8.0f;
-        g.drawEllipse(cx - size/2, cy - size/2, size, size, 1.5f);
-        // Gear teeth
-        for (int i = 0; i < 6; ++i)
-        {
-            float angle = static_cast<float>(i) * juce::MathConstants<float>::pi / 3;
-            float x1 = cx + std::cos(angle) * (size/2 - 1);
-            float y1 = cy + std::sin(angle) * (size/2 - 1);
-            float x2 = cx + std::cos(angle) * (size/2 + 2);
-            float y2 = cy + std::sin(angle) * (size/2 + 2);
-            g.drawLine(x1, y1, x2, y2, 2.0f);
-        }
-    }
-    else if (icon == "trash")
-    {
-        g.setColour(isDanger && isHovered ? juce::Colours::red : (isHovered ? theme.textHighlight : theme.textSecondary));
-        float s = 5.0f;
-        // Trash can body
-        g.drawRoundedRectangle(cx - s, cy - s + 3, s * 2, s * 2 - 2, 1.0f, 1.5f);
-        // Lid
-        g.drawLine(cx - s - 1, cy - s + 2, cx + s + 1, cy - s + 2, 1.5f);
-        // Handle
-        g.drawLine(cx - 2, cy - s, cx + 2, cy - s, 1.5f);
-        g.drawLine(cx - 2, cy - s, cx - 2, cy - s + 2, 1.0f);
-        g.drawLine(cx + 2, cy - s, cx + 2, cy - s + 2, 1.0f);
-    }
-    else if (icon == "eye-slash")
-    {
-        g.setColour(theme.textSecondary.withAlpha(0.6f));
-        float size = 8.0f;
-        g.drawEllipse(cx - size, cy - size / 2, size * 2, size, 1.5f);
-        // Slash through
-        g.drawLine(cx - size, cy + size/2, cx + size, cy - size/2, 1.5f);
-    }
+    g.drawText(trackName_, trackBounds, juce::Justification::topLeft, true);
 }
 
 void OscillatorListItemComponent::resized()
 {
-    // No child components to resize - all painting is custom
+    auto bounds = getLocalBounds();
+    
+    // Right side buttons
+    int topRowY = 0;
+    int buttonY = topRowY + (COMPACT_HEIGHT - ICON_BUTTON_SIZE) / 2;
+    
+    bounds.removeFromRight(4); // Margin
+    
+    deleteButton_->setBounds(bounds.removeFromRight(ICON_BUTTON_SIZE).withY(buttonY).withHeight(ICON_BUTTON_SIZE));
+    bounds.removeFromRight(4);
+    
+    settingsButton_->setBounds(bounds.removeFromRight(ICON_BUTTON_SIZE).withY(buttonY).withHeight(ICON_BUTTON_SIZE));
+    bounds.removeFromRight(4);
+    
+    if (visibilityButton_->isVisible())
+    {
+        visibilityButton_->setBounds(bounds.removeFromRight(ICON_BUTTON_SIZE).withY(buttonY).withHeight(ICON_BUTTON_SIZE));
+    }
+    
+    if (selected_)
+    {
+        auto bottomRow = getLocalBounds().withTop(COMPACT_HEIGHT).reduced(DRAG_HANDLE_WIDTH + 4, 4);
+        
+        // Mode buttons (6 buttons x ~40px each)
+        modeButtons_->setBounds(bottomRow.removeFromLeft(240).withHeight(28));
+        
+        // Toggle
+        bottomRow.removeFromLeft(16);
+        visibilityToggle_->setBounds(bottomRow.removeFromLeft(80).withHeight(28));
+    }
 }
 
-void OscillatorListItemComponent::themeChanged(const ColorTheme&)
-{
-    repaint();
-}
+// ... (Remove custom paint methods: paintCompact, paintExpanded, paintModeButton, paintVisibilityToggle, paintIconButton)
+// ... (Remove hit test methods: isInSettingsButton, isInDeleteButton, isInVisibilityToggle, isInModeButton)
 
+// Update mouseUp to remove custom hit testing logic, now handled by child components
 void OscillatorListItemComponent::mouseEnter(const juce::MouseEvent&)
 {
     isHovered_ = true;
-    repaint();
+    updateVisibility();
 }
 
 void OscillatorListItemComponent::mouseExit(const juce::MouseEvent&)
 {
     isHovered_ = false;
     dragHandleHovered_ = false;
-    settingsHovered_ = false;
-    deleteHovered_ = false;
-    visibilityHovered_ = false;
-    hoveredModeButton_ = -1;
-    repaint();
+    updateVisibility();
 }
 
 void OscillatorListItemComponent::mouseMove(const juce::MouseEvent& e)
@@ -394,52 +295,6 @@ void OscillatorListItemComponent::mouseMove(const juce::MouseEvent& e)
 void OscillatorListItemComponent::mouseDown(const juce::MouseEvent& e)
 {
     dragStartPos_ = e.getPosition();
-}
-
-void OscillatorListItemComponent::mouseUp(const juce::MouseEvent& e)
-{
-    isDragging_ = false;
-    auto pos = e.getPosition();
-
-    // Check button clicks
-    if (isInDeleteButton(pos))
-    {
-        listeners_.call([this](Listener& l) { l.oscillatorDeleteRequested(oscillatorId_); });
-        return;
-    }
-
-    if (isInSettingsButton(pos))
-    {
-        listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); });
-        return;
-    }
-
-    // Only check expanded controls when selected
-    if (selected_)
-    {
-        if (isInVisibilityToggle(pos))
-        {
-            isVisible_ = !isVisible_;
-            repaint();
-            listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
-            return;
-        }
-
-        ProcessingMode clickedMode;
-        if (isInModeButton(pos, clickedMode))
-        {
-            processingMode_ = clickedMode;
-            repaint();
-            listeners_.call([this, clickedMode](Listener& l) { l.oscillatorModeChanged(oscillatorId_, clickedMode); });
-            return;
-        }
-    }
-
-    // Select item if not in drag zone
-    if (!isInDragZone(pos))
-    {
-        listeners_.call([this](Listener& l) { l.oscillatorSelected(oscillatorId_); });
-    }
 }
 
 void OscillatorListItemComponent::mouseDrag(const juce::MouseEvent& e)
@@ -460,54 +315,24 @@ bool OscillatorListItemComponent::isInDragZone(const juce::Point<int>& pos) cons
     return pos.x < DRAG_HANDLE_WIDTH;
 }
 
-bool OscillatorListItemComponent::isInSettingsButton(const juce::Point<int>& pos) const
+void OscillatorListItemComponent::themeChanged(const ColorTheme&)
 {
-    int buttonX = getWidth() - ICON_BUTTON_SIZE * 2 - 4;
-    int topRowBottom = selected_ ? COMPACT_HEIGHT : getHeight();
-    return pos.x >= buttonX && pos.x < buttonX + ICON_BUTTON_SIZE && pos.y < topRowBottom;
+    repaint();
 }
 
-bool OscillatorListItemComponent::isInDeleteButton(const juce::Point<int>& pos) const
+void OscillatorListItemComponent::mouseUp(const juce::MouseEvent& e)
 {
-    int buttonX = getWidth() - ICON_BUTTON_SIZE - 4;
-    int topRowBottom = selected_ ? COMPACT_HEIGHT : getHeight();
-    return pos.x >= buttonX && pos.x < buttonX + ICON_BUTTON_SIZE && pos.y < topRowBottom;
-}
+    isDragging_ = false;
+    auto pos = e.getPosition();
 
-bool OscillatorListItemComponent::isInVisibilityToggle(const juce::Point<int>& pos) const
-{
-    if (!selected_) return false;
-
-    // Toggle is in bottom row, after mode buttons
-    int toggleX = DRAG_HANDLE_WIDTH + 4 + 200 + 16;
-    int toggleY = COMPACT_HEIGHT + 4;
-    int toggleWidth = 56;
-    int toggleHeight = EXPANDED_HEIGHT - COMPACT_HEIGHT - 8;
-
-    return pos.x >= toggleX && pos.x < toggleX + toggleWidth &&
-           pos.y >= toggleY && pos.y < toggleY + toggleHeight;
-}
-
-bool OscillatorListItemComponent::isInModeButton(const juce::Point<int>& pos, ProcessingMode& outMode) const
-{
-    if (!selected_) return false;
-
-    int modeX = DRAG_HANDLE_WIDTH + 4;
-    int modeY = COMPACT_HEIGHT + 4;
-    int modeHeight = EXPANDED_HEIGHT - COMPACT_HEIGHT - 8;
-    float modeButtonWidth = 48.0f;
-
-    if (pos.y < modeY || pos.y >= modeY + modeHeight) return false;
-    if (pos.x < static_cast<float>(modeX) || pos.x >= static_cast<float>(modeX) + modeButtonWidth * 4) return false;
-
-    int buttonIndex = static_cast<int>((pos.x - static_cast<float>(modeX)) / modeButtonWidth);
-    switch (buttonIndex)
+    // Drag logic remains
+    
+    // Select item if not in drag zone and not clicking child components (child components consume click usually, but if they are ignored?)
+    // JUCE handles child clicks before parent mouseUp if children intercept.
+    // So if we are here, we clicked background.
+    if (!isInDragZone(pos))
     {
-        case 0: outMode = ProcessingMode::FullStereo; return true;
-        case 1: outMode = ProcessingMode::Mono; return true;
-        case 2: outMode = ProcessingMode::Mid; return true;
-        case 3: outMode = ProcessingMode::Side; return true;
-        default: return false;
+        listeners_.call([this](Listener& l) { l.oscillatorSelected(oscillatorId_); });
     }
 }
 
@@ -516,7 +341,7 @@ void OscillatorListItemComponent::setSelected(bool selected)
     if (selected_ != selected)
     {
         selected_ = selected;
-        repaint();
+        updateVisibility(); // Triggers repaint and resize
     }
 }
 
@@ -535,9 +360,10 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
             trackName_ = sourceInfo->name;
         }
     }
-
-    repaint();
+    
+    updateVisibility();
 }
+
 
 bool OscillatorListItemComponent::keyPressed(const juce::KeyPress& key)
 {
@@ -559,7 +385,7 @@ bool OscillatorListItemComponent::keyPressed(const juce::KeyPress& key)
     if (key.getTextCharacter() == 'v' || key.getTextCharacter() == 'V')
     {
         isVisible_ = !isVisible_;
-        repaint();
+        updateVisibility();  // Must call updateVisibility to sync child components
         listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
         return true;
     }

@@ -9,13 +9,13 @@
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 #include "ui/ThemeManager.h"
-#include "ui/SegmentedButtonBar.h"
 #include "ui/components/OscilButton.h"
-#include "ui/components/OscilSlider.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilTextField.h"
 #include "ui/components/OscilColorSwatches.h"
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/OscilSlider.h"
+#include "ui/components/OscilTextField.h"
 #include "ui/components/OscilToggle.h"
+#include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
 #include <functional>
 #include <vector>

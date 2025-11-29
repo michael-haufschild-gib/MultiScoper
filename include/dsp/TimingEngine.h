@@ -252,27 +252,27 @@ public:
      * @param buffer Audio buffer to analyze
      * @return True if trigger condition met
      */
-    bool processBlock(const juce::AudioBuffer<float>& buffer);
+    [[nodiscard]] bool processBlock(const juce::AudioBuffer<float>& buffer);
 
     /**
      * Get the number of samples to display based on current settings
      */
-    int getDisplaySampleCount(double sampleRate) const;
+    [[nodiscard]] int getDisplaySampleCount(double sampleRate) const;
 
     /**
      * Get the actual interval in milliseconds based on current settings
      */
-    float getActualIntervalMs() const;
+    [[nodiscard]] float getActualIntervalMs() const;
 
     /**
      * Get the window size in seconds based on current settings
      */
-    double getWindowSizeSeconds() const;
+    [[nodiscard]] double getWindowSizeSeconds() const;
 
     /**
      * Check if a manual trigger was requested and clear the flag
      */
-    bool checkAndClearManualTrigger();
+    [[nodiscard]] bool checkAndClearManualTrigger();
 
     /**
      * Request a manual trigger
@@ -282,7 +282,7 @@ public:
     /**
      * Get the current engine configuration
      */
-    const EngineTimingConfig& getConfig() const { return config_; }
+    [[nodiscard]] const EngineTimingConfig& getConfig() const { return config_; }
 
     /**
      * Set the engine configuration
@@ -292,7 +292,7 @@ public:
     /**
      * Get the current host timing info
      */
-    const HostTimingInfo& getHostInfo() const { return hostInfo_; }
+    [[nodiscard]] const HostTimingInfo& getHostInfo() const { return hostInfo_; }
 
     /**
      * Set sample rate
@@ -325,7 +325,7 @@ public:
      * Export current settings as entity-level TimingConfig
      * Converts engine-internal types to entity types
      */
-    TimingConfig toEntityConfig() const;
+    [[nodiscard]] TimingConfig toEntityConfig() const;
 
     /**
      * Set note interval from entity type (convenience method)
@@ -338,7 +338,7 @@ public:
     /**
      * Get note interval as entity type (convenience method)
      */
-    NoteInterval getNoteIntervalAsEntity() const
+    [[nodiscard]] NoteInterval getNoteIntervalAsEntity() const
     {
         return engineToEntityNoteInterval(config_.noteInterval);
     }
@@ -348,7 +348,7 @@ public:
     /**
      * Serialize configuration to ValueTree
      */
-    juce::ValueTree toValueTree() const;
+    [[nodiscard]] juce::ValueTree toValueTree() const;
 
     /**
      * Load configuration from ValueTree

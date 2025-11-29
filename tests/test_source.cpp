@@ -124,7 +124,7 @@ TEST_F(SourceTest, InvalidStateTransitions)
 TEST_F(SourceTest, ActiveToOrphaned)
 {
     Source source;
-    source.transitionTo(SourceState::ACTIVE);
+    (void)source.transitionTo(SourceState::ACTIVE);
 
     EXPECT_TRUE(source.canTransitionTo(SourceState::ORPHANED));
     EXPECT_TRUE(source.transitionTo(SourceState::ORPHANED));
@@ -134,8 +134,8 @@ TEST_F(SourceTest, ActiveToOrphaned)
 TEST_F(SourceTest, OrphanedToActive)
 {
     Source source;
-    source.transitionTo(SourceState::ACTIVE);
-    source.transitionTo(SourceState::ORPHANED);
+    (void)source.transitionTo(SourceState::ACTIVE);
+    (void)source.transitionTo(SourceState::ORPHANED);
 
     // Can recover from ORPHANED to ACTIVE
     EXPECT_TRUE(source.canTransitionTo(SourceState::ACTIVE));
@@ -235,7 +235,7 @@ TEST_F(SourceTest, SerializationRoundTrip)
     original.setSampleRate(48000.0f);
     original.setChannelConfig(ChannelConfig::STEREO);
     original.setBufferSize(256);
-    original.transitionTo(SourceState::ACTIVE);
+    (void)original.transitionTo(SourceState::ACTIVE);
 
     auto owner = InstanceId::generate();
     original.setOwningInstanceId(owner);
@@ -503,8 +503,8 @@ TEST_F(SourceTest, AllInvalidTransitionsFromDiscovered)
 TEST_F(SourceTest, AllInvalidTransitionsFromOrphaned)
 {
     Source source;
-    source.transitionTo(SourceState::ACTIVE);
-    source.transitionTo(SourceState::ORPHANED);
+    (void)source.transitionTo(SourceState::ACTIVE);
+    (void)source.transitionTo(SourceState::ORPHANED);
 
     // Can only go to ACTIVE from ORPHANED
     EXPECT_FALSE(source.canTransitionTo(SourceState::DISCOVERED));
@@ -901,8 +901,8 @@ TEST_F(SourceTest, UpdateLastAudioTimeTransitionsToActive)
 TEST_F(SourceTest, UpdateLastAudioTimeFromInactive)
 {
     Source source;
-    source.transitionTo(SourceState::ACTIVE);
-    source.transitionTo(SourceState::INACTIVE);
+    (void)source.transitionTo(SourceState::ACTIVE);
+    (void)source.transitionTo(SourceState::INACTIVE);
     EXPECT_EQ(source.getState(), SourceState::INACTIVE);
 
     source.updateLastAudioTime();
@@ -913,8 +913,8 @@ TEST_F(SourceTest, UpdateLastAudioTimeFromInactive)
 TEST_F(SourceTest, UpdateLastAudioTimeFromStale)
 {
     Source source;
-    source.transitionTo(SourceState::ACTIVE);
-    source.transitionTo(SourceState::STALE);
+    (void)source.transitionTo(SourceState::ACTIVE);
+    (void)source.transitionTo(SourceState::STALE);
     EXPECT_EQ(source.getState(), SourceState::STALE);
 
     source.updateLastAudioTime();
@@ -925,8 +925,8 @@ TEST_F(SourceTest, UpdateLastAudioTimeFromStale)
 TEST_F(SourceTest, UpdateLastAudioTimeDoesNotAffectOrphaned)
 {
     Source source;
-    source.transitionTo(SourceState::ACTIVE);
-    source.transitionTo(SourceState::ORPHANED);
+    (void)source.transitionTo(SourceState::ACTIVE);
+    (void)source.transitionTo(SourceState::ORPHANED);
     EXPECT_EQ(source.getState(), SourceState::ORPHANED);
 
     // Orphaned sources don't auto-transition on audio update
@@ -977,7 +977,7 @@ TEST_F(SourceTest, SetCaptureBufferToNull)
 TEST_F(SourceTest, ConcurrentUpdateLastAudioTime)
 {
     Source source;
-    source.transitionTo(SourceState::ACTIVE);
+    (void)source.transitionTo(SourceState::ACTIVE);
 
     std::atomic<int> callCount{ 0 };
     std::vector<std::thread> threads;

@@ -5,6 +5,8 @@
 
 #include "ui/OscillatorConfigPopup.h"
 #include "ui/SourceSelectorComponent.h"
+#include "ui/components/SegmentedButtonBar.h"
+#include "ui/components/ProcessingModeIcons.h"
 
 namespace oscil
 {
@@ -59,12 +61,13 @@ void OscillatorConfigPopup::setupComponents()
     addAndMakeVisible(*modeLabel_);
 
     modeButtons_ = std::make_unique<SegmentedButtonBar>();
-    modeButtons_->addButton("Full Stereo", static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
-    modeButtons_->addButton("Mono", static_cast<int>(ProcessingMode::Mono), "configPopup_modeSelector_mono");
-    modeButtons_->addButton("Mid", static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
-    modeButtons_->addButton("Side", static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
-    modeButtons_->addButton("Left", static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
-    modeButtons_->addButton("Right", static_cast<int>(ProcessingMode::Right), "configPopup_modeSelector_right");
+    modeButtons_->setMinButtonWidth(40);  // Compact buttons for 6 modes
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(16), static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(16), static_cast<int>(ProcessingMode::Mono), "configPopup_modeSelector_mono");
+    modeButtons_->addButton("M", static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
+    modeButtons_->addButton("S", static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
+    modeButtons_->addButton("L", static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
+    modeButtons_->addButton("R", static_cast<int>(ProcessingMode::Right), "configPopup_modeSelector_right");
     modeButtons_->onSelectionChanged = [this](int id) { handleProcessingModeChange(id); };
     addAndMakeVisible(*modeButtons_);
     OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");

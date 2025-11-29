@@ -78,7 +78,7 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsDropdown.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SidebarComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SourceItemComponent.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/SegmentedButtonBar.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/SegmentedButtonBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorListToolbar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorListItem.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorConfigPopup.cpp
@@ -87,7 +87,6 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/sections/MasterControlsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/TriggerSettingsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/DisplayOptionsSection.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/sections/CollapsibleSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/OptionsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/SourceCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/coordinators/ThemeCoordinator.cpp
@@ -136,6 +135,7 @@ target_include_directories(OscilTestHarness PRIVATE
 
 # Link against JUCE and libraries
 target_link_libraries(OscilTestHarness PRIVATE
+    OscilBinaryData
     juce::juce_audio_processors
     juce::juce_audio_utils
     juce::juce_gui_basics

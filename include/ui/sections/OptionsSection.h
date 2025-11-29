@@ -53,6 +53,9 @@ public:
         // Layout and theme events (moved from toolbar)
         virtual void layoutChanged(int /*columnCount*/) {}
         virtual void themeChanged(const juce::String& /*themeName*/) {}
+
+        // Rendering mode events
+        virtual void gpuRenderingChanged(bool /*enabled*/) {}
     };
 
     OptionsSection();
@@ -86,6 +89,10 @@ public:
     void setCurrentTheme(const juce::String& themeName);
     juce::String getCurrentThemeName() const { return currentThemeName_; }
 
+    // GPU rendering state
+    void setGpuRenderingEnabled(bool enabled);
+    bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
+
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
@@ -112,6 +119,7 @@ private:
     void notifyHoldDisplayChanged();
     void notifyLayoutChanged();
     void notifyThemeChanged();
+    void notifyGpuRenderingChanged();
 
     // Gain controls (from Master Controls)
     std::unique_ptr<juce::Label> gainLabel_;
@@ -129,6 +137,10 @@ private:
     std::unique_ptr<juce::Label> themeLabel_;
     std::unique_ptr<OscilDropdown> themeDropdown_;
 
+    // GPU rendering toggle
+    std::unique_ptr<juce::Label> renderingLabel_;
+    std::unique_ptr<OscilToggle> gpuRenderingToggle_;
+
     // State
     float currentGainDb_ = 0.0f;
     bool showGridEnabled_ = true;
@@ -136,6 +148,7 @@ private:
     bool holdDisplayEnabled_ = false;
     int currentColumnCount_ = 1;
     juce::String currentThemeName_ = "Dark";
+    bool gpuRenderingEnabled_ = true;  // Default to GPU mode when available
 
     juce::ListenerList<Listener> listeners_;
 

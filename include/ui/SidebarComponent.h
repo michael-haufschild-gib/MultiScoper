@@ -16,7 +16,7 @@
 #include "ui/AddOscillatorDialog.h"
 #include "ui/sections/TimingSidebarSection.h"
 #include "ui/sections/OptionsSection.h"
-#include "ui/sections/CollapsibleSection.h"
+#include "ui/components/OscilAccordion.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
 #include <vector>
@@ -135,6 +135,9 @@ public:
         // Layout and theme events (from Options section)
         virtual void layoutChanged(int /*columnCount*/) {}
         virtual void themeChanged(const juce::String& /*themeName*/) {}
+
+        // Rendering mode events
+        virtual void gpuRenderingChanged(bool /*enabled*/) {}
     };
 
     explicit SidebarComponent(OscilPluginProcessor& processor);
@@ -174,8 +177,6 @@ public:
     // Section accessors
     TimingSidebarSection* getTimingSection() { return timingSection_.get(); }
     OptionsSection* getOptionsSection() { return optionsSection_.get(); }
-    CollapsibleSection* getTimingCollapsible() { return timingCollapsible_.get(); }
-    CollapsibleSection* getOptionsCollapsible() { return optionsCollapsible_.get(); }
 
     // Get the effective width (collapsed or expanded)
     int getEffectiveWidth() const;
@@ -194,15 +195,16 @@ private:
     std::unique_ptr<OscillatorListToolbar> oscillatorToolbar_;
     std::unique_ptr<juce::Viewport> listViewport_;
     std::unique_ptr<juce::Component> listContainer_;
+    std::unique_ptr<juce::Label> emptyStateLabel_;  // Shown when no oscillators
     std::vector<std::unique_ptr<OscillatorListItemComponent>> oscillatorItems_;
 
-    // Control sections (scrollable content)
-    std::unique_ptr<juce::Viewport> sectionsViewport_;
-    std::unique_ptr<juce::Component> sectionsContainer_;
+    // Accordion for control sections
+    std::unique_ptr<juce::Viewport> accordionViewport_;
+    std::unique_ptr<OscilAccordion> accordion_;
+    
+    // Section contents (owned by Sidebar, displayed by Accordion)
     std::unique_ptr<TimingSidebarSection> timingSection_;
     std::unique_ptr<OptionsSection> optionsSection_;
-    std::unique_ptr<CollapsibleSection> timingCollapsible_;
-    std::unique_ptr<CollapsibleSection> optionsCollapsible_;
 
     // State
     bool collapsed_ = false;
@@ -238,7 +240,6 @@ private:
     void finishDrag(int fromIndex, int toIndex);
 
     void setupSections();
-    void updateSectionsLayout();
     void updateOscillatorCounts();
 
     // OscillatorListItemComponent::Listener overrides
@@ -268,6 +269,7 @@ private:
     void holdDisplayChanged(bool enabled) override;
     void layoutChanged(int columnCount) override;
     void themeChanged(const juce::String& themeName) override;
+    void gpuRenderingChanged(bool enabled) override;
 
     static constexpr int SECTION_HEADER_HEIGHT = 28;
     static constexpr int ITEM_HEIGHT = OscillatorListItemComponent::PREFERRED_HEIGHT;

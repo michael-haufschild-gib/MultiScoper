@@ -113,9 +113,9 @@ TEST_F(InstanceRegistryTest, GetAllSources)
     auto buffer2 = std::make_shared<SharedCaptureBuffer>();
     auto buffer3 = std::make_shared<SharedCaptureBuffer>();
 
-    InstanceRegistry::getInstance().registerInstance("track_1", buffer1, "Track 1");
-    InstanceRegistry::getInstance().registerInstance("track_2", buffer2, "Track 2");
-    InstanceRegistry::getInstance().registerInstance("track_3", buffer3, "Track 3");
+    (void)InstanceRegistry::getInstance().registerInstance("track_1", buffer1, "Track 1");
+    (void)InstanceRegistry::getInstance().registerInstance("track_2", buffer2, "Track 2");
+    (void)InstanceRegistry::getInstance().registerInstance("track_3", buffer3, "Track 3");
 
     auto sources = InstanceRegistry::getInstance().getAllSources();
 
@@ -414,7 +414,7 @@ TEST_F(InstanceRegistryTest, MultipleListeners)
     InstanceRegistry::getInstance().addListener(&listener3);
 
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    InstanceRegistry::getInstance().registerInstance("track_multi", buffer, "Multi Track");
+    (void)InstanceRegistry::getInstance().registerInstance("track_multi", buffer, "Multi Track");
 
     EXPECT_EQ(listener1.addedCount, 1);
     EXPECT_EQ(listener2.addedCount, 1);
@@ -438,7 +438,7 @@ TEST_F(InstanceRegistryTest, RemoveListenerTwice)
 
     // Registering should not notify removed listener
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    InstanceRegistry::getInstance().registerInstance("track_removed", buffer, "Track");
+    (void)InstanceRegistry::getInstance().registerInstance("track_removed", buffer, "Track");
 
     EXPECT_EQ(listener.addedCount, 0);
 }
@@ -467,8 +467,8 @@ TEST_F(InstanceRegistryTest, ListenerRemovesDuringCallback)
     auto buffer1 = std::make_shared<SharedCaptureBuffer>();
     auto buffer2 = std::make_shared<SharedCaptureBuffer>();
 
-    InstanceRegistry::getInstance().registerInstance("track_self1", buffer1, "Track 1");
-    InstanceRegistry::getInstance().registerInstance("track_self2", buffer2, "Track 2");
+    (void)InstanceRegistry::getInstance().registerInstance("track_self1", buffer1, "Track 1");
+    (void)InstanceRegistry::getInstance().registerInstance("track_self2", buffer2, "Track 2");
 
     // Should only have been called once (removed self during first call)
     EXPECT_EQ(listener.callCount, 1);
@@ -689,7 +689,7 @@ TEST_F(InstanceRegistryTest, SourceActiveStateAfterRegistration)
 TEST_F(InstanceRegistryTest, GetAllSourcesReturnsCopies)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    InstanceRegistry::getInstance().registerInstance(
+    (void)InstanceRegistry::getInstance().registerInstance(
         "track_copy", buffer, "Original Name");
 
     auto sources = InstanceRegistry::getInstance().getAllSources();

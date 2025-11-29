@@ -651,7 +651,7 @@ TEST_F(PluginProcessorTest, StateAccessDuringProcessing)
             processor->getStateInformation(stateData);
 
             auto& engine = processor->getTimingEngine();
-            engine.getConfig();
+            (void)engine.getConfig();
         }
     });
 

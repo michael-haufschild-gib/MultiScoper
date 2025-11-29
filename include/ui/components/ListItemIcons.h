@@ -1,0 +1,119 @@
+/*
+    Oscil - List Item Icons
+    SVG-based icons for oscillator list item buttons (delete, settings, visibility)
+    Loaded from BinaryData resources for theme-aware coloring
+*/
+
+#pragma once
+
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "BinaryData.h"
+
+namespace oscil
+{
+namespace ListItemIcons
+{
+
+/**
+ * Load an SVG from BinaryData and create a Drawable
+ * The Drawable can be rendered at any size and recolored for themes
+ */
+inline std::unique_ptr<juce::Drawable> loadSvgDrawable(const char* data, int dataSize)
+{
+    auto xml = juce::XmlDocument::parse(juce::String::fromUTF8(data, dataSize));
+    if (xml != nullptr)
+    {
+        return juce::Drawable::createFromSVG(*xml);
+    }
+    return nullptr;
+}
+
+/**
+ * Create a path from SVG drawable, scaled to target size
+ * This allows the icon to be rendered with theme colors via OscilButton::setIconPath()
+ */
+inline juce::Path getPathFromDrawable(juce::Drawable* drawable, float targetSize)
+{
+    if (drawable == nullptr)
+        return {};
+
+    juce::Path path;
+
+    // Get the drawable's bounds
+    auto bounds = drawable->getDrawableBounds();
+    if (bounds.isEmpty())
+        return {};
+
+    // Calculate scale to fit target size with padding
+    float padding = targetSize * 0.15f;
+    float availableSize = targetSize - (padding * 2);
+    float scale = availableSize / juce::jmax(bounds.getWidth(), bounds.getHeight());
+
+    // Get path from drawable and transform it
+    if (auto* drawablePath = dynamic_cast<juce::DrawablePath*>(drawable))
+    {
+        path = drawablePath->getPath();
+    }
+    else if (auto* composite = dynamic_cast<juce::DrawableComposite*>(drawable))
+    {
+        // Combine paths from all children
+        for (int i = 0; i < composite->getNumChildComponents(); ++i)
+        {
+            if (auto* childDrawable = dynamic_cast<juce::Drawable*>(composite->getChildComponent(i)))
+            {
+                if (auto* childPath = dynamic_cast<juce::DrawablePath*>(childDrawable))
+                {
+                    path.addPath(childPath->getPath());
+                }
+            }
+        }
+    }
+
+    // Transform: scale and center
+    auto transform = juce::AffineTransform::scale(scale)
+                         .translated(padding - bounds.getX() * scale,
+                                    padding - bounds.getY() * scale);
+    path.applyTransform(transform);
+
+    return path;
+}
+
+/**
+ * Get trash/delete icon as a path
+ */
+inline juce::Path createTrashIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::bin_svg, BinaryData::bin_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+/**
+ * Get gear/settings icon as a path
+ */
+inline juce::Path createGearIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::cog_svg, BinaryData::cog_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+/**
+ * Get eye/visibility (visible) icon as a path
+ */
+inline juce::Path createEyeOpenIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::eye_svg, BinaryData::eye_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+/**
+ * Get eye-blocked/hidden icon as a path
+ */
+inline juce::Path createEyeClosedIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::eyeblocked_svg, BinaryData::eyeblocked_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+} // namespace ListItemIcons
+} // namespace oscil

@@ -23,16 +23,10 @@ TimingSidebarSection::~TimingSidebarSection()
 
 void TimingSidebarSection::setupComponents()
 {
-    // Section header
-    sectionLabel_ = std::make_unique<juce::Label>();
-    sectionLabel_->setText("TIMING", juce::dontSendNotification);
-    sectionLabel_->setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(*sectionLabel_);
-
     // TIME/MELODIC toggle
     modeToggle_ = std::make_unique<SegmentedButtonBar>();
-    modeToggle_->addButton("TIME", static_cast<int>(TimingMode::TIME));
-    modeToggle_->addButton("MELODIC", static_cast<int>(TimingMode::MELODIC));
+    modeToggle_->addButton("TIME", static_cast<int>(TimingMode::TIME), "sidebar_timing_modeToggle_time");
+    modeToggle_->addButton("MELODIC", static_cast<int>(TimingMode::MELODIC), "sidebar_timing_modeToggle_melodic");
     modeToggle_->setSelectedId(static_cast<int>(currentMode_));
     modeToggle_->onSelectionChanged = [this](int id)
     {
@@ -61,65 +55,21 @@ void TimingSidebarSection::setupComponents()
     };
     addAndMakeVisible(*waveformModeSelector_);
 
-    // TIME mode controls
-    timeIntervalSlider_ = std::make_unique<OscilSlider>("sidebar_timing_intervalSlider");
-    timeIntervalSlider_->setLabel("Interval");
-    timeIntervalSlider_->setRange(1.0, 1000.0);
-    timeIntervalSlider_->setStep(1.0);
-    timeIntervalSlider_->setValue(currentTimeIntervalMs_, false);
-    timeIntervalSlider_->setSuffix(" ms");
-    timeIntervalSlider_->setSkewFactor(0.3);  // Log-like behavior
-    timeIntervalSlider_->onValueChanged = [this](double value)
-    {
-        currentTimeIntervalMs_ = static_cast<int>(value);
-        timeIntervalField_->setNumericValue(value, false);
-        notifyTimeIntervalChanged();
-    };
-    addAndMakeVisible(*timeIntervalSlider_);
-
+    // TIME mode controls - input field only (full width)
     timeIntervalField_ = std::make_unique<OscilTextField>(TextFieldVariant::Number, "sidebar_timing_intervalField");
-    timeIntervalField_->setRange(1.0, 1000.0);
+    timeIntervalField_->setRange(1.0, 2000.0);
     timeIntervalField_->setStep(1.0);
     timeIntervalField_->setDecimalPlaces(0);
-    timeIntervalField_->setSuffix(" ms");
+    timeIntervalField_->setSuffix("ms");
     timeIntervalField_->setNumericValue(currentTimeIntervalMs_, false);
     timeIntervalField_->onValueChanged = [this](double value)
     {
         currentTimeIntervalMs_ = static_cast<int>(value);
-        timeIntervalSlider_->setValue(value, false);
         notifyTimeIntervalChanged();
     };
     addAndMakeVisible(*timeIntervalField_);
 
-    // MELODIC mode controls - Note interval slider
-    noteIntervalSlider_ = std::make_unique<OscilSlider>("sidebar_timing_noteSlider");
-    noteIntervalSlider_->setLabel("Note Interval");
-    noteIntervalSlider_->setRange(0.0, 16.0);  // 17 note intervals (0-16)
-    noteIntervalSlider_->setStep(1.0);
-    noteIntervalSlider_->setValue(static_cast<double>(currentNoteInterval_), false);
-    noteIntervalSlider_->onValueChanged = [this](double value)
-    {
-        int index = static_cast<int>(value);
-        if (index >= 0 && index <= 16)
-        {
-            currentNoteInterval_ = static_cast<NoteInterval>(index);
-            noteIntervalSelector_->setSelectedIndex(index, false);
-            notifyNoteIntervalChanged();
-        }
-    };
-    // Custom formatter to show note names
-    noteIntervalSlider_->setValueFormatter([](double value) -> juce::String
-    {
-        int index = static_cast<int>(value);
-        if (index >= 0 && index <= 16)
-        {
-            return noteIntervalToString(static_cast<NoteInterval>(index));
-        }
-        return "1/4";
-    });
-    addAndMakeVisible(*noteIntervalSlider_);
-
-    // Note interval dropdown
+    // MELODIC mode controls - dropdown only (full width)
     noteIntervalSelector_ = std::make_unique<OscilDropdown>("Select note...", "sidebar_timing_noteDropdown");
     populateNoteIntervalSelector();
     noteIntervalSelector_->onSelectionChanged = [this](int index)
@@ -127,7 +77,6 @@ void TimingSidebarSection::setupComponents()
         if (index >= 0 && index <= 16)
         {
             currentNoteInterval_ = static_cast<NoteInterval>(index);
-            noteIntervalSlider_->setValue(static_cast<double>(index), false);
             notifyNoteIntervalChanged();
         }
     };
@@ -150,21 +99,6 @@ void TimingSidebarSection::setupComponents()
     bpmLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*bpmLabel_);
 
-    // BPM slider (Free Running mode)
-    bpmSlider_ = std::make_unique<OscilSlider>("sidebar_timing_bpmSlider");
-    bpmSlider_->setLabel("BPM");
-    bpmSlider_->setRange(20.0, 300.0);
-    bpmSlider_->setStep(0.1);
-    bpmSlider_->setValue(internalBPM_, false);
-    bpmSlider_->setDecimalPlaces(1);
-    bpmSlider_->onValueChanged = [this](double value)
-    {
-        internalBPM_ = static_cast<float>(value);
-        bpmField_->setNumericValue(value, false);
-        notifyBpmChanged();
-    };
-    addAndMakeVisible(*bpmSlider_);
-
     // BPM field (Free Running mode)
     bpmField_ = std::make_unique<OscilTextField>(TextFieldVariant::Number, "sidebar_timing_bpmField");
     bpmField_->setRange(20.0, 300.0);
@@ -174,7 +108,6 @@ void TimingSidebarSection::setupComponents()
     bpmField_->onValueChanged = [this](double value)
     {
         internalBPM_ = static_cast<float>(value);
-        bpmSlider_->setValue(value, false);
         notifyBpmChanged();
     };
     addAndMakeVisible(*bpmField_);
@@ -276,13 +209,9 @@ void TimingSidebarSection::resized()
     using namespace SectionLayout;
 
     auto bounds = getLocalBounds().reduced(SECTION_PADDING);
-    int y = 0;
+    int y = bounds.getY();
 
-    // Section header
-    sectionLabel_->setBounds(bounds.getX(), y, bounds.getWidth(), LABEL_HEIGHT);
-    y += LABEL_HEIGHT + SPACING_MEDIUM;
-
-    // MODE toggle (TIME/MELODIC)
+    // MODE toggle (TIME/MELODIC) - First element now
     modeToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
     y += ROW_HEIGHT + SPACING_LARGE;
 
@@ -296,46 +225,37 @@ void TimingSidebarSection::resized()
     // TIME mode controls
     if (currentMode_ == TimingMode::TIME)
     {
-        // Interval slider
-        int sliderWidth = bounds.getWidth() - 70;  // Leave space for text field
-        timeIntervalSlider_->setBounds(bounds.getX(), y, sliderWidth, 40);
-
-        // Text field next to slider
-        timeIntervalField_->setBounds(bounds.getX() + sliderWidth + SPACING_MEDIUM, y, 60, ROW_HEIGHT);
-        y += 40 + SPACING_LARGE;
+        // Input field spans full width
+        int fieldHeight = 32;
+        timeIntervalField_->setBounds(bounds.getX(), y, bounds.getWidth(), fieldHeight);
+        y += fieldHeight + SPACING_LARGE;
     }
     else // MELODIC mode
     {
-        // Note interval slider
-        int sliderWidth = bounds.getWidth() - 70;  // Leave space for dropdown
-        noteIntervalSlider_->setBounds(bounds.getX(), y, sliderWidth, 40);
-
-        // Note interval dropdown next to slider
-        noteIntervalSelector_->setBounds(bounds.getX() + sliderWidth + SPACING_MEDIUM, y, 60, ROW_HEIGHT);
-        y += 40 + SPACING_LARGE;
-
-        // Sync toggle
-        syncToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
+        // Note interval dropdown spans full width
+        noteIntervalSelector_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
         y += ROW_HEIGHT + SPACING_LARGE;
 
-        // BPM controls
+        // BPM row: BPM label + field/value + sync toggle
+        int bpmLabelWidth = 30;
+        int syncToggleWidth = 70;
+        int bpmFieldWidth = bounds.getWidth() - bpmLabelWidth - syncToggleWidth - SPACING_MEDIUM * 2;
+
+        bpmLabel_->setBounds(bounds.getX(), y, bpmLabelWidth, ROW_HEIGHT);
+
         if (hostSyncEnabled_)
         {
-            // Host Sync mode: Show BPM label and read-only value
-            int bpmLabelWidth = 40;
-            int bpmValueWidth = bounds.getWidth() - bpmLabelWidth - SPACING_MEDIUM;
-            bpmLabel_->setBounds(bounds.getX(), y, bpmLabelWidth, ROW_HEIGHT);
-            bpmValueLabel_->setBounds(bounds.getX() + bpmLabelWidth + SPACING_MEDIUM, y, bpmValueWidth, ROW_HEIGHT);
-            y += ROW_HEIGHT + SPACING_MEDIUM;
+            // Host Sync mode: Show read-only BPM value
+            bpmValueLabel_->setBounds(bounds.getX() + bpmLabelWidth + SPACING_MEDIUM, y, bpmFieldWidth, ROW_HEIGHT);
         }
         else
         {
-            // Free Running mode: Show BPM slider and field
-            int sliderWidth = bounds.getWidth() - 70;
-            bpmSlider_->setBounds(bounds.getX(), y, sliderWidth, 40);
-            bpmField_->setBounds(bounds.getX() + sliderWidth + SPACING_MEDIUM, y, 60, ROW_HEIGHT);
-            y += 40 + SPACING_LARGE;
+            // Free Running mode: Show editable BPM field
+            bpmField_->setBounds(bounds.getX() + bpmLabelWidth + SPACING_MEDIUM, y, bpmFieldWidth, ROW_HEIGHT);
         }
+
+        syncToggle_->setBounds(bounds.getX() + bpmLabelWidth + SPACING_MEDIUM + bpmFieldWidth + SPACING_MEDIUM, y, syncToggleWidth, ROW_HEIGHT);
+        y += ROW_HEIGHT + SPACING_LARGE;
     }
 
     // Sync status - hide the label since we draw a styled pill badge in paint()
@@ -346,10 +266,6 @@ void TimingSidebarSection::themeChanged(const ColorTheme& newTheme)
 {
     // Oscil components handle their own theming
     // Style the remaining JUCE Labels
-
-    // Section label
-    sectionLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    sectionLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
 
     // Waveform mode label
     waveformModeLabel_->setColour(juce::Label::textColourId, newTheme.textPrimary);
@@ -370,11 +286,9 @@ void TimingSidebarSection::updateModeVisibility()
     bool isTimeMode = (currentMode_ == TimingMode::TIME);
 
     // TIME mode controls
-    timeIntervalSlider_->setVisible(isTimeMode);
     timeIntervalField_->setVisible(isTimeMode);
 
     // MELODIC mode controls
-    noteIntervalSlider_->setVisible(!isTimeMode);
     noteIntervalSelector_->setVisible(!isTimeMode);
     syncToggle_->setVisible(!isTimeMode);
 
@@ -383,7 +297,6 @@ void TimingSidebarSection::updateModeVisibility()
     bool showHostSyncBPM = !isTimeMode && hostSyncEnabled_;
 
     bpmLabel_->setVisible(!isTimeMode);
-    bpmSlider_->setVisible(showFreeRunningBPM);
     bpmField_->setVisible(showFreeRunningBPM);
     bpmValueLabel_->setVisible(showHostSyncBPM);
 
@@ -407,7 +320,6 @@ void TimingSidebarSection::setTimingMode(TimingMode mode)
 void TimingSidebarSection::setTimeIntervalMs(int ms)
 {
     currentTimeIntervalMs_ = ms;
-    timeIntervalSlider_->setValue(ms, false);
     timeIntervalField_->setNumericValue(ms, false);
 }
 
@@ -415,7 +327,6 @@ void TimingSidebarSection::setNoteInterval(NoteInterval interval)
 {
     currentNoteInterval_ = interval;
     int index = static_cast<int>(interval);
-    noteIntervalSlider_->setValue(index, false);
     noteIntervalSelector_->setSelectedIndex(index, false);
 }
 
@@ -441,7 +352,6 @@ void TimingSidebarSection::setHostBPM(float bpm)
 void TimingSidebarSection::setInternalBPM(float bpm)
 {
     internalBPM_ = bpm;
-    bpmSlider_->setValue(bpm, false);
     bpmField_->setNumericValue(bpm, false);
 }
 
@@ -473,27 +383,17 @@ int TimingSidebarSection::getPreferredHeight() const
     using namespace SectionLayout;
 
     int height = SECTION_PADDING * 2;                    // Top and bottom padding
-    height += LABEL_HEIGHT + SPACING_MEDIUM;             // Section header
     height += ROW_HEIGHT + SPACING_LARGE;                // Mode toggle (TIME/MELODIC)
     height += ROW_HEIGHT + SPACING_LARGE;                // Waveform mode dropdown
 
     if (currentMode_ == TimingMode::TIME)
     {
-        height += 40 + SPACING_LARGE;                    // Interval slider + field
+        height += 32 + SPACING_LARGE;                    // Time interval input field (full width)
     }
     else
     {
-        height += 40 + SPACING_LARGE;                    // Note interval slider + dropdown
-        height += ROW_HEIGHT + SPACING_LARGE;            // Sync toggle
-
-        if (hostSyncEnabled_)
-        {
-            height += ROW_HEIGHT + SPACING_MEDIUM;       // BPM label + value (Host Sync)
-        }
-        else
-        {
-            height += 40 + SPACING_LARGE;                // BPM slider + field (Free Running)
-        }
+        height += ROW_HEIGHT + SPACING_LARGE;            // Note interval dropdown (full width)
+        height += ROW_HEIGHT + SPACING_LARGE;            // BPM label + field + sync toggle row
 
         if (hostSyncEnabled_ && isSynced_)
         {
@@ -532,6 +432,12 @@ void TimingSidebarSection::notifyWaveformModeChanged()
 void TimingSidebarSection::notifyBpmChanged()
 {
     listeners_.call([this](Listener& l) { l.bpmChanged(internalBPM_); });
+}
+
+void TimingSidebarSection::notifyHeightChanged()
+{
+    if (onPreferredHeightChanged)
+        onPreferredHeightChanged();
 }
 
 } // namespace oscil

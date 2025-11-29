@@ -12,6 +12,7 @@
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/sections/DynamicHeightContent.h"
 
 namespace oscil
 {
@@ -37,6 +38,12 @@ public:
     void setIcon(const juce::Image& icon);
     void clearIcon();
 
+    /**
+     * Set the content component to display in this section.
+     * @param content Component to display. NOT owned by this section - caller must
+     *                ensure content lifetime exceeds this section's lifetime.
+     *                Pass nullptr to clear the content.
+     */
     void setContent(juce::Component* content);
     juce::Component* getContent() const { return content_; }
 
@@ -61,6 +68,7 @@ public:
     void resized() override;
 
     void mouseDown(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent& e) override;
 
@@ -74,6 +82,7 @@ public:
 private:
     void timerCallback() override;
     void updateAnimations();
+    void contentHeightChanged();
 
     void paintHeader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds);
@@ -81,14 +90,18 @@ private:
     juce::String title_;
     juce::Image icon_;
     juce::Component* content_ = nullptr;
+    DynamicHeightContent* dynamicContent_ = nullptr;
     bool expanded_ = false;
     bool enabled_ = true;
     bool isHovered_ = false;
     bool hasFocus_ = false;
+    bool mouseDownInHeader_ = false;  // Track if mouseDown occurred in header for proper click detection
 
     SpringAnimation expandSpring_;     // 0 = collapsed, 1 = expanded
     SpringAnimation hoverSpring_;
     SpringAnimation chevronSpring_;    // Rotation animation
+
+    int lastReportedHeight_ = -1;      // For optimizing parent layout updates
 
     ColorTheme theme_;
 

@@ -5,6 +5,7 @@
 
 #include "TestUIController.h"
 #include "ui/components/OscilDropdown.h"
+#include "ui/components/OscilButton.h"
 #include <thread>
 #include <chrono>
 
@@ -47,7 +48,15 @@ bool TestUIController::click(const juce::String& elementId)
 
     juce::MessageManager::callAsync([component, this]()
     {
-        simulateMouseClick(component, false);
+        // For OscilButton, call triggerClick() directly to bypass mouse simulation issues
+        if (auto* oscilButton = dynamic_cast<oscil::OscilButton*>(component))
+        {
+            oscilButton->triggerClick();
+        }
+        else
+        {
+            simulateMouseClick(component, false);
+        }
     });
 
     return true;
@@ -382,6 +391,54 @@ bool TestUIController::selectByText(const juce::String& elementId, const juce::S
     });
 
     return true;
+}
+
+bool TestUIController::selectById(const juce::String& elementId, const juce::String& itemId)
+{
+    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    if (component == nullptr)
+        return false;
+
+    // Handle OscilDropdown
+    if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
+    {
+        // Find the index of the item with the matching ID
+        int targetIndex = -1;
+        for (int i = 0; i < oscilDropdown->getNumItems(); ++i)
+        {
+            if (oscilDropdown->getItem(i).id == itemId)
+            {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex < 0)
+            return false;
+
+        juce::MessageManager::callAsync([oscilDropdown, targetIndex]()
+        {
+            oscilDropdown->setSelectedIndex(targetIndex, true);
+        });
+
+        return true;
+    }
+
+    // Fallback: try as juce::ComboBox with integer ID
+    if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
+    {
+        int intId = itemId.getIntValue();
+        if (intId > 0)
+        {
+            juce::MessageManager::callAsync([comboBox, intId]()
+            {
+                comboBox->setSelectedId(intId, juce::sendNotification);
+            });
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool TestUIController::toggle(const juce::String& elementId, bool value)

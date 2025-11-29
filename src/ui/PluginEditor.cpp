@@ -195,28 +195,25 @@ public:
     void timingModeChanged(TimingMode mode) override
     {
         editor_.getProcessor().getTimingEngine().setTimingMode(mode);
+        updateDisplaySamplesFromTimingEngine();
     }
 
     void noteIntervalChanged(NoteInterval interval) override
     {
         editor_.getProcessor().getTimingEngine().setNoteIntervalFromEntity(interval);
+        updateDisplaySamplesFromTimingEngine();
     }
 
     void timeIntervalChanged(int ms) override
     {
         editor_.getProcessor().getTimingEngine().setTimeIntervalMs(ms);
-        // Calculate display samples from interval: samples = sampleRate * (ms / 1000.0)
-        double sampleRate = editor_.getProcessor().getSampleRate();
-        if (sampleRate > 0)
-        {
-            int displaySamples = static_cast<int>(sampleRate * (static_cast<double>(ms) / 1000.0));
-            editor_.setDisplaySamplesForAllPanes(displaySamples);
-        }
+        updateDisplaySamplesFromTimingEngine();
     }
 
     void hostSyncChanged(bool enabled) override
     {
         editor_.getProcessor().getTimingEngine().setHostSyncEnabled(enabled);
+        updateDisplaySamplesFromTimingEngine();
     }
 
     void waveformModeChanged(WaveformMode mode) override
@@ -228,9 +225,36 @@ public:
 
     void bpmChanged(float bpm) override
     {
-        // TODO: Update internal BPM for free running mode
-        // This will be used when not syncing to host
-        juce::ignoreUnused(bpm);
+        // Update internal BPM in the timing engine for free-running mode
+        auto& timingEngine = editor_.getProcessor().getTimingEngine();
+        auto config = timingEngine.getConfig();
+        // Note: Internal BPM is used when host sync is disabled
+        // The TimingEngine uses hostBPM for calculations, so we update that
+        // when not synced to host
+        if (!config.hostSyncEnabled)
+        {
+            // Create updated config with new BPM
+            EngineTimingConfig updatedConfig = config;
+            updatedConfig.hostBPM = bpm;
+            timingEngine.setConfig(updatedConfig);
+            updateDisplaySamplesFromTimingEngine();
+        }
+    }
+
+private:
+    /**
+     * Update display samples for all panes based on the TimingEngine's
+     * calculated actual interval. This works for both TIME and MELODIC modes.
+     */
+    void updateDisplaySamplesFromTimingEngine()
+    {
+        double sampleRate = editor_.getProcessor().getSampleRate();
+        if (sampleRate > 0)
+        {
+            float actualIntervalMs = editor_.getProcessor().getTimingEngine().getActualIntervalMs();
+            int displaySamples = static_cast<int>(sampleRate * (static_cast<double>(actualIntervalMs) / 1000.0));
+            editor_.setDisplaySamplesForAllPanes(displaySamples);
+        }
     }
 
     // Master controls events
@@ -296,6 +320,11 @@ public:
     {
         editor_.getProcessor().getThemeService().setCurrentTheme(themeName);
         editor_.getProcessor().getState().setThemeName(themeName);
+    }
+
+    void gpuRenderingChanged(bool enabled) override
+    {
+        editor_.setGpuRenderingEnabled(enabled);
     }
 
 private:
@@ -382,6 +411,17 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         timingSection->setHostBPM(timingConfig.hostBPM);
     }
 
+    // Initialize display samples from timing config
+    // This must be done after syncing timing settings since setTimeIntervalMs
+    // doesn't trigger notifications to avoid circular updates
+    // Use actualIntervalMs which is computed correctly for both TIME and MELODIC modes
+    double sampleRate = processor_.getSampleRate();
+    if (sampleRate > 0)
+    {
+        int displaySamples = static_cast<int>(sampleRate * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
+        setDisplaySamplesForAllPanes(displaySamples);
+    }
+
     // Create oscillator config popup (modal overlay)
     configPopup_ = std::make_unique<OscillatorConfigPopup>();
     configPopupAdapter_ = std::make_unique<ConfigPopupListenerAdapter>(*this);
@@ -398,6 +438,9 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     statusBar_ = std::make_unique<StatusBarComponent>();
     addAndMakeVisible(*statusBar_);
 
+    // Listen to state changes for external updates (API, automation)
+    processor_.getState().addListener(this);
+
     // Source coordinator already initialized available sources in its constructor
 
     // Refresh UI
@@ -409,6 +452,13 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     setAutoScaleForAllPanes(state.isAutoScaleEnabled());
     setHoldDisplayForAllPanes(state.isHoldDisplayEnabled());
     setGainDbForAllPanes(state.getGainDb());
+
+    // Apply saved GPU rendering preference
+    bool gpuRenderingEnabled = state.isGpuRenderingEnabled();
+    if (auto* optionsSection = sidebar_->getOptionsSection())
+    {
+        optionsSection->setGpuRenderingEnabled(gpuRenderingEnabled);
+    }
 
     // Set size AFTER all components are created to avoid null pointer crash in resized()
     setResizable(true, true);
@@ -429,10 +479,23 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         DBG("Test server started on port 9876");
     }
 
-    // Attach OpenGL context for GPU-accelerated rendering
+    // Attach OpenGL context based on saved rendering preference
     #if OSCIL_ENABLE_OPENGL
-    openGLContext_.attachTo(*this);
-    DBG("OpenGL context attached for GPU rendering");
+    if (gpuRenderingEnabled)
+    {
+        openGLContext_.attachTo(*this);
+        openGLDetached_ = false;
+        DBG("OpenGL context attached for GPU rendering");
+    }
+    else
+    {
+        openGLDetached_ = true;
+        DBG("Software rendering mode (OpenGL not attached)");
+    }
+    statusBar_->setRenderingMode(gpuRenderingEnabled ? RenderingMode::OpenGL : RenderingMode::Software);
+    #else
+    // OpenGL not available, always software rendering
+    statusBar_->setRenderingMode(RenderingMode::Software);
     #endif
 }
 
@@ -462,6 +525,9 @@ OscilPluginEditor::~OscilPluginEditor()
     // Remove config popup listener
     if (configPopup_ && configPopupAdapter_)
         configPopup_->removeListener(configPopupAdapter_.get());
+
+    // Remove state listener
+    processor_.getState().removeListener(this);
 
     // Coordinators handle their own listener cleanup in their destructors
     // They are destroyed in reverse order of construction
@@ -702,6 +768,25 @@ void OscilPluginEditor::refreshOscillatorPanels()
     }
 
     updateLayout();
+
+    // Re-apply timing settings to newly created pane components
+    // This ensures displaySamples is preserved when panes are recreated
+    // Use actualIntervalMs which is computed correctly for both TIME and MELODIC modes
+    auto timingConfig = processor_.getTimingEngine().toEntityConfig();
+    double sampleRate = processor_.getSampleRate();
+    if (sampleRate > 0)
+    {
+        int displaySamples = static_cast<int>(sampleRate * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
+        setDisplaySamplesForAllPanes(displaySamples);
+    }
+
+    // Re-apply display options to newly created pane components
+    auto& state = processor_.getState();
+    setShowGridForAllPanes(state.isShowGridEnabled());
+    setAutoScaleForAllPanes(state.isAutoScaleEnabled());
+    setHoldDisplayForAllPanes(state.isHoldDisplayEnabled());
+    setGainDbForAllPanes(state.getGainDb());
+
     // Timer restart is handled by RAII TimerGuard destructor
 }
 
@@ -999,7 +1084,7 @@ void OscilPluginEditor::onAddOscillatorResult(const AddOscillatorDialog::Result&
         // Create new pane
         Pane newPane;
         newPane.setName("Pane " + juce::String(layoutManager.getPaneCount() + 1));
-        newPane.setOrderIndex(layoutManager.getPaneCount());
+        newPane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
         layoutManager.addPane(newPane);
         targetPaneId = newPane.getId();
     }
@@ -1093,6 +1178,59 @@ void OscilPluginEditor::onOscillatorVisibilityChanged(const OscillatorId& oscill
     }
 }
 
+// ValueTree::Listener overrides
+void OscilPluginEditor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& /*property*/)
+{
+    // Handle property changes that require full UI refresh
+    if (tree.hasType(StateIds::Oscillator) || tree.hasType(StateIds::Pane))
+    {
+        // Use SafePointer to prevent dangling pointer if editor is destroyed before async callback
+        auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
+        juce::MessageManager::callAsync([safeThis]() {
+            if (safeThis != nullptr)
+                safeThis->refreshOscillatorPanels();
+        });
+    }
+}
+
+void OscilPluginEditor::valueTreeChildAdded(juce::ValueTree& /*parentTree*/, juce::ValueTree& child)
+{
+    if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
+    {
+        auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
+        juce::MessageManager::callAsync([safeThis]() {
+            if (safeThis != nullptr)
+                safeThis->refreshOscillatorPanels();
+        });
+    }
+}
+
+void OscilPluginEditor::valueTreeChildRemoved(juce::ValueTree& /*parentTree*/, juce::ValueTree& child, int)
+{
+    if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
+    {
+        auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
+        juce::MessageManager::callAsync([safeThis]() {
+            if (safeThis != nullptr)
+                safeThis->refreshOscillatorPanels();
+        });
+    }
+}
+
+void OscilPluginEditor::valueTreeChildOrderChanged(juce::ValueTree& parent, int, int)
+{
+    if (parent.hasType(StateIds::Oscillators) || parent.hasType(StateIds::Panes))
+    {
+        auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
+        juce::MessageManager::callAsync([safeThis]() {
+            if (safeThis != nullptr)
+                safeThis->refreshOscillatorPanels();
+        });
+    }
+}
+
+void OscilPluginEditor::valueTreeParentChanged(juce::ValueTree&) {}
+
 void OscilPluginEditor::setShowGridForAllPanes(bool enabled)
 {
     for (auto& pane : paneComponents_)
@@ -1145,6 +1283,47 @@ void OscilPluginEditor::highlightOscillator(const OscillatorId& oscillatorId)
         if (pane)
             pane->highlightOscillator(oscillatorId);
     }
+}
+
+void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
+{
+#if OSCIL_ENABLE_OPENGL
+    if (enabled && !openGLContext_.isAttached())
+    {
+        openGLContext_.attachTo(*this);
+        openGLDetached_ = false;
+    }
+    else if (!enabled && openGLContext_.isAttached() && !openGLDetached_)
+    {
+        openGLContext_.detach();
+        openGLDetached_ = true;
+    }
+#else
+    juce::ignoreUnused(enabled);
+#endif
+
+    // Update status bar
+    if (statusBar_)
+    {
+        statusBar_->setRenderingMode(enabled ? RenderingMode::OpenGL : RenderingMode::Software);
+    }
+
+    // Update sidebar toggle to reflect current state
+    if (sidebar_ && sidebar_->getOptionsSection())
+    {
+        sidebar_->getOptionsSection()->setGpuRenderingEnabled(enabled);
+    }
+
+    // Save state
+    processor_.getState().setGpuRenderingEnabled(enabled);
+
+    // Force repaint of all panes
+    for (auto& pane : paneComponents_)
+    {
+        if (pane)
+            pane->repaint();
+    }
+    repaint();
 }
 
 } // namespace oscil

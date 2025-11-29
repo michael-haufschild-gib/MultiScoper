@@ -4167,25 +4167,34 @@ Expected: there is no automated reordering of oscillators in the oscillator list
 
 
 
+---
+Plan the following:
+- Each pane has a
 
-Fix and confirm via e2e tests:
-Button styles are all over the place. Ensure that we have primary, secondary, tertiary buttons in our ui component library with the four states default, active (clicked), hover and disabled. Each button follows best practices in terms of font size and padding similar to such buttons in a web application. buttons do not have a visible border color but rounded borders. the background color and text color per button type and state can be set in the theme. text is always horizontally and vertically centered.
-then go through the codebase and make sure all popups and the sidebar use these buttons from our ui component library
 
-Fix and confirm via e2e tests:
-The text in input fields is not vertically centered. Make sure that our input fields are correctly built following best practices similar to how they would be done in a web application. make sure they have proper styling, all the states an input typically has, and all styles are set via the theme.
 
-Fix and confirm via e2e tests:
-Where we have a combination of a slider and an input field to its right or a slider and a dropdown to its right, the input field  or dropdown field must be large enough to have their content visible. currently this is not the case.
-
-Fix and confirm via e2e tests that actually click and check via screenshots:
-- the timer settings in "Time" mode should be 1ms to 2000 miliseconds.
-- the slider to set the interval must have the label "ms" - not "Interval"
-- the input field to the right of the slider must show the current value and update whenever the slider value is changed - currently it shows no value. also whenever the user inputs a (valid) number in the input field, the slider must update to show the right position for the entered value
-
+---
 review the codebase and make sure that every popup/dialog/modal is actually using the src/ui/components/OscilModal.cpp component instead of creating its own modal frame. where the OscilModal is missing functionality to make it truly reusable, add this functionality.
 confirm with e2e tests that each modal you refactored is still fully working.
 
-review the codebase and make sure that every button is using src/ui/components/OscilButton.cpp instead of drawing its own buttons
 
 
+
+
+observed bug: the timing interval resets, the waveform reset to this timing settings.
+expected: selecting an oscillator or any other sidebar element unrelated to the timing settings should have no impact on the timing settings.
+
+---
+plan and implement this change for the Timing sidebar section, in the "Melodic" tab:
+1. remove the bpm slider
+2. move the host sync switch into the row with the bpm input field. the row should look like: "BPM" label + bpm input field + sync switch
+
+
+
+plan based on this the following addition to our plugin:
+1. each oscillator has a shader setting
+2. the user can select the shader from the list of available shaders in the oscillator setting config. the shader dropdown is below the color settings.
+3. the user can also select the shader from the list of available shaders in the dialog to add a new oscillator. the dropdown is below the color settings.
+3. this project has an architecture that allows to easily add new shaders.
+4. when the user has GPU rendering enabled (juce opengl), the shader selected for an oscialltor is used for rendering the oscillator waveform.
+5. for start, one default shader exist, that is just rendering the waveform normally using the color, line width and opacity set for the oscillator. but it also adds some neon glow in the same color.

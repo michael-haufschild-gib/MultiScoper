@@ -1,7 +1,6 @@
 /*
     Oscil - Dynamic Height Content Interface
-    Interface for content components that can dynamically change their preferred height
-    Used by CollapsibleSection to respond to content size changes
+    Used by OscilAccordionSection to respond to content size changes
 */
 
 #pragma once
@@ -12,16 +11,15 @@ namespace oscil
 {
 
 /**
- * Interface for content that has dynamic height based on state
- *
- * Components implementing this interface can notify their parent CollapsibleSection
- * when their preferred height changes (e.g., when switching timing modes).
+ * Interface for components that change their height dynamically based on state
+ * Components implementing this interface can notify their parent OscilAccordionSection
+ * to recalculate layout when their size requirements change.
  *
  * Usage:
- * 1. Content component inherits from DynamicHeightContent
- * 2. Content implements getPreferredHeight()
- * 3. Content calls notifyHeightChanged() when its height needs to change
- * 4. CollapsibleSection detects this interface and wires up the callback
+ * 1. Component inherits from DynamicHeightContent
+ * 2. Component implements getPreferredHeight() returning current desired height
+ * 3. When component state changes (e.g., mode switch), it calls onPreferredHeightChanged()
+ * 4. OscilAccordionSection detects this interface and wires up the callback
  */
 class DynamicHeightContent
 {
@@ -29,29 +27,14 @@ public:
     virtual ~DynamicHeightContent() = default;
 
     /**
-     * Get the preferred height for this content based on current state
-     * This should return the ideal height needed to display all content
+     * Calculate the preferred height based on current state
      */
     virtual int getPreferredHeight() const = 0;
 
     /**
-     * Callback set by parent CollapsibleSection to receive height change notifications
-     * The parent uses this to know when to re-layout
+     * Callback set by parent OscilAccordionSection to receive height change notifications
      */
     std::function<void()> onPreferredHeightChanged;
-
-protected:
-    /**
-     * Call this when the content's preferred height changes
-     * E.g., when switching from TIME to MELODIC mode
-     */
-    void notifyHeightChanged()
-    {
-        if (onPreferredHeightChanged)
-        {
-            onPreferredHeightChanged();
-        }
-    }
 };
 
 } // namespace oscil

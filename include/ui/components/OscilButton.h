@@ -62,6 +62,11 @@ public:
     void setIcon(const juce::Image& icon, bool iconOnLeft = true);
     void clearIcon();
 
+    // Path-based icon support (renders with theme colors)
+    void setIconPath(const juce::Path& path);
+    void clearIconPath();
+    bool hasIconPath() const { return !iconPath_.isEmpty(); }
+
     void setShortcut(const juce::KeyPress& key);
     juce::KeyPress getShortcut() const { return shortcutKey_; }
 
@@ -111,10 +116,12 @@ public:
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
+    // Programmatic click - for test harness and accessibility
+    void triggerClick();
+
 private:
     void timerCallback() override;
     void updateAnimations();
-    void triggerClick();
 
     // Rendering helpers
     void paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds);
@@ -127,6 +134,7 @@ private:
     ButtonVariant variant_ = ButtonVariant::Primary;
     juce::String label_;
     juce::Image icon_;
+    juce::Path iconPath_;  // Path-based icon (takes precedence over icon_ and label_)
     bool iconOnLeft_ = true;
     bool enabled_ = true;
     bool isHovered_ = false;

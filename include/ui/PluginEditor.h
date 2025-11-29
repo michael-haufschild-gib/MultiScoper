@@ -55,6 +55,7 @@ class PaneContainerComponent;
  */
 class OscilPluginEditor : public juce::AudioProcessorEditor,
                           public juce::DragAndDropContainer,
+                          public juce::ValueTree::Listener,
                           public TestIdSupport,
                           private juce::Timer
 {
@@ -104,6 +105,16 @@ public:
     void setGainDbForAllPanes(float dB);
     void setDisplaySamplesForAllPanes(int samples);
     void highlightOscillator(const OscillatorId& oscillatorId);
+
+    // Rendering mode control
+    void setGpuRenderingEnabled(bool enabled);
+
+    // ValueTree::Listener overrides
+    void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged, const juce::Identifier& property) override;
+    void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) override;
+    void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int moveFromIndex) override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parentTreeWhoseChildrenHaveMoved, int oldIndex, int newIndex) override;
+    void valueTreeParentChanged(juce::ValueTree& treeWhoseParentHasChanged) override;
 
     // Test access - for automated testing only
     const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const { return paneComponents_; }

@@ -16,7 +16,7 @@ OscilState::OscilState()
 OscilState::OscilState(const juce::String& xmlString)
 {
     initializeDefaultState();
-    fromXmlString(xmlString);
+    (void)fromXmlString(xmlString);
 }
 
 void OscilState::initializeDefaultState()
@@ -125,14 +125,31 @@ void OscilState::addOscillator(const Oscillator& oscillator)
 void OscilState::removeOscillator(const OscillatorId& oscillatorId)
 {
     auto oscillatorsNode = getOrCreateOscillatorsNode();
+    int removedIndex = -1;
 
+    // Find and remove the oscillator
     for (int i = 0; i < oscillatorsNode.getNumChildren(); ++i)
     {
         auto child = oscillatorsNode.getChild(i);
         if (child.getProperty(StateIds::Id).toString() == oscillatorId.id)
         {
+            removedIndex = child.getProperty(StateIds::Order, i);
             oscillatorsNode.removeChild(i, nullptr);
-            return;
+            break;
+        }
+    }
+
+    // Renumber remaining oscillators to maintain contiguous indices
+    if (removedIndex >= 0)
+    {
+        for (int i = 0; i < oscillatorsNode.getNumChildren(); ++i)
+        {
+            auto child = oscillatorsNode.getChild(i);
+            int currentIndex = child.getProperty(StateIds::Order, i);
+            if (currentIndex > removedIndex)
+            {
+                child.setProperty(StateIds::Order, currentIndex - 1, nullptr);
+            }
         }
     }
 }
@@ -314,6 +331,23 @@ void OscilState::setGainDb(float dB)
 {
     auto layoutNode = getOrCreateLayoutNode();
     layoutNode.setProperty(StateIds::GainDb, dB, nullptr);
+}
+
+bool OscilState::isGpuRenderingEnabled() const
+{
+    auto layoutNode = getLayoutNode();
+    // Default to true if OpenGL is available at compile time
+    #if OSCIL_ENABLE_OPENGL
+    return layoutNode.getProperty(StateIds::GpuRenderingEnabled, true);
+    #else
+    return false;
+    #endif
+}
+
+void OscilState::setGpuRenderingEnabled(bool enabled)
+{
+    auto layoutNode = getOrCreateLayoutNode();
+    layoutNode.setProperty(StateIds::GpuRenderingEnabled, enabled, nullptr);
 }
 
 void OscilState::addListener(juce::ValueTree::Listener* listener)

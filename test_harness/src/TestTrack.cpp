@@ -17,9 +17,8 @@ TestTrack::TestTrack(int trackIndex, const juce::String& name, TestTransport& tr
     processor_ = std::make_unique<OscilPluginProcessor>();
     processor_->setPlayHead(this);
 
-    // The processor automatically registers itself in its constructor,
-    // so we retrieve the sourceId from it
-    sourceId_ = processor_->getSourceId();
+    // Note: sourceId_ is retrieved in prepare() after prepareToPlay() is called,
+    // because the processor registers its source during prepareToPlay()
 }
 
 TestTrack::~TestTrack()
@@ -43,6 +42,9 @@ void TestTrack::prepare(double sampleRate, int samplesPerBlock)
 
     // Prepare plugin processor
     processor_->prepareToPlay(sampleRate, samplesPerBlock);
+
+    // Retrieve sourceId after prepareToPlay() registers the source with InstanceRegistry
+    sourceId_ = processor_->getSourceId();
 }
 
 void TestTrack::processBlock()

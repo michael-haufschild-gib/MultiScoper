@@ -161,34 +161,34 @@ public:
     void fromValueTree(const juce::ValueTree& state);
 
     // Getters
-    OscillatorId getId() const { return id_; }
-    SourceId getSourceId() const { return sourceId_; }
-    ProcessingMode getProcessingMode() const { return processingMode_; }
-    juce::Colour getColour() const { return colour_; }
-    float getOpacity() const { return opacity_; }
-    PaneId getPaneId() const { return paneId_; }
-    int getOrderIndex() const { return orderIndex_; }
-    bool isVisible() const { return visible_; }
-    juce::String getName() const { return name_; }
-    OscillatorState getState() const { return state_; }
-    float getLineWidth() const { return lineWidth_; }
-    float getVerticalScale() const { return verticalScale_; }
-    float getVerticalOffset() const { return verticalOffset_; }
-    std::optional<float> getTimeWindow() const { return timeWindow_; }
+    [[nodiscard]] OscillatorId getId() const noexcept { return id_; }
+    [[nodiscard]] SourceId getSourceId() const noexcept { return sourceId_; }
+    [[nodiscard]] ProcessingMode getProcessingMode() const noexcept { return processingMode_; }
+    [[nodiscard]] juce::Colour getColour() const noexcept { return colour_; }
+    [[nodiscard]] float getOpacity() const noexcept { return opacity_; }
+    [[nodiscard]] PaneId getPaneId() const noexcept { return paneId_; }
+    [[nodiscard]] int getOrderIndex() const noexcept { return orderIndex_; }
+    [[nodiscard]] bool isVisible() const noexcept { return visible_; }
+    [[nodiscard]] juce::String getName() const noexcept { return name_; }
+    [[nodiscard]] OscillatorState getState() const noexcept { return state_; }
+    [[nodiscard]] float getLineWidth() const noexcept { return lineWidth_; }
+    [[nodiscard]] float getVerticalScale() const noexcept { return verticalScale_; }
+    [[nodiscard]] float getVerticalOffset() const noexcept { return verticalOffset_; }
+    [[nodiscard]] std::optional<float> getTimeWindow() const noexcept { return timeWindow_; }
 
     // Setters
     void setSourceId(const SourceId& sourceId);
-    void setProcessingMode(ProcessingMode mode) { processingMode_ = mode; }
-    void setColour(juce::Colour colour) { colour_ = colour; }
-    void setOpacity(float opacity) { opacity_ = juce::jlimit(0.0f, 1.0f, opacity); }
-    void setPaneId(const PaneId& paneId) { paneId_ = paneId; }
-    void setOrderIndex(int index) { orderIndex_ = index; }
-    void setVisible(bool visible) { visible_ = visible; }
+    void setProcessingMode(ProcessingMode mode) noexcept { processingMode_ = mode; }
+    void setColour(juce::Colour colour) noexcept { colour_ = colour; }
+    void setOpacity(float opacity) noexcept { opacity_ = juce::jlimit(0.0f, 1.0f, opacity); }
+    void setPaneId(const PaneId& paneId) noexcept { paneId_ = paneId; }
+    void setOrderIndex(int index) noexcept { orderIndex_ = index; }
+    void setVisible(bool visible) noexcept { visible_ = visible; }
     void setName(const juce::String& name);
-    void setLineWidth(float width) { lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, width); }
-    void setVerticalScale(float scale) { verticalScale_ = juce::jlimit(MIN_VERTICAL_SCALE, MAX_VERTICAL_SCALE, scale); }
-    void setVerticalOffset(float offset) { verticalOffset_ = juce::jlimit(MIN_VERTICAL_OFFSET, MAX_VERTICAL_OFFSET, offset); }
-    void setTimeWindow(std::optional<float> window) { timeWindow_ = window; }
+    void setLineWidth(float width) noexcept { lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, width); }
+    void setVerticalScale(float scale) noexcept { verticalScale_ = juce::jlimit(MIN_VERTICAL_SCALE, MAX_VERTICAL_SCALE, scale); }
+    void setVerticalOffset(float offset) noexcept { verticalOffset_ = juce::jlimit(MIN_VERTICAL_OFFSET, MAX_VERTICAL_OFFSET, offset); }
+    void setTimeWindow(std::optional<float> window) noexcept { timeWindow_ = window; }
 
     /**
      * Clear source assignment (transitions to NO_SOURCE state)
@@ -199,17 +199,17 @@ public:
     /**
      * Check if oscillator has a valid source
      */
-    bool hasSource() const { return state_ == OscillatorState::ACTIVE && sourceId_.isValid(); }
+    [[nodiscard]] bool hasSource() const noexcept { return state_ == OscillatorState::ACTIVE && sourceId_.isValid(); }
 
     /**
      * Check if oscillator is in NO_SOURCE state
      */
-    bool isNoSource() const { return state_ == OscillatorState::NO_SOURCE; }
+    [[nodiscard]] bool isNoSource() const noexcept { return state_ == OscillatorState::NO_SOURCE; }
 
     /**
      * Get the effective colour with opacity applied
      */
-    juce::Colour getEffectiveColour() const
+    [[nodiscard]] juce::Colour getEffectiveColour() const noexcept
     {
         return colour_.withAlpha(opacity_);
     }
@@ -218,7 +218,7 @@ public:
      * Check if this oscillator produces a single trace (mono-like modes)
      * vs two traces (FullStereo)
      */
-    bool isSingleTrace() const
+    [[nodiscard]] bool isSingleTrace() const noexcept
     {
         return processingMode_ != ProcessingMode::FullStereo;
     }

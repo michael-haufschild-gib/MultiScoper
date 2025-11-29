@@ -1,6 +1,7 @@
 /*
-    Oscil - E2E Tests for Timing Controls
-    Verifies that timing/master control settings actually affect waveform display
+    Oscil - Timing Calculation Unit Tests
+    Tests timing-related calculations (sample counts, gain conversions, BPM calculations)
+    Note: These are unit tests for mathematical calculations, not E2E UI tests
 */
 
 #include <gtest/gtest.h>
@@ -10,7 +11,7 @@
 
 using namespace oscil;
 
-class TimingControlsE2ETest : public ::testing::Test
+class TimingCalculationsTest : public ::testing::Test
 {
 protected:
     void SetUp() override
@@ -21,7 +22,7 @@ protected:
 };
 
 // Test: Time interval slider affects display samples calculation
-TEST_F(TimingControlsE2ETest, TimeIntervalChangesDisplaySamples)
+TEST_F(TimingCalculationsTest, TimeIntervalChangesDisplaySamples)
 {
     // Given: A sample rate of 44100 Hz and an interval of 50ms
     // Expected: displaySamples = 44100 * 0.050 = 2205 samples
@@ -44,7 +45,7 @@ TEST_F(TimingControlsE2ETest, TimeIntervalChangesDisplaySamples)
 }
 
 // Test: Gain in dB converts correctly for waveform amplitude
-TEST_F(TimingControlsE2ETest, GainDbConvertsCorrectly)
+TEST_F(TimingCalculationsTest, GainDbConvertsCorrectly)
 {
     // Test gain conversion: amplitude = 10^(dB/20)
     float dB0 = 0.0f;
@@ -153,7 +154,7 @@ public:
 };
 
 // Test: MasterControlsSection emits gainChanged when slider value changes
-TEST_F(TimingControlsE2ETest, MasterControlsGainEmitsCallback)
+TEST_F(TimingCalculationsTest, MasterControlsGainEmitsCallback)
 {
     MasterControlsSection section;
     MockMasterListener listener;
@@ -171,7 +172,7 @@ TEST_F(TimingControlsE2ETest, MasterControlsGainEmitsCallback)
 }
 
 // Test: WaveformMode enum values
-TEST_F(TimingControlsE2ETest, WaveformModeEnumValues)
+TEST_F(TimingCalculationsTest, WaveformModeEnumValues)
 {
     // Verify the WaveformMode enum has the expected values
     EXPECT_EQ(static_cast<int>(WaveformMode::FreeRunning), 0);
@@ -180,14 +181,14 @@ TEST_F(TimingControlsE2ETest, WaveformModeEnumValues)
 }
 
 // Test: TimingMode enum values
-TEST_F(TimingControlsE2ETest, TimingModeEnumValues)
+TEST_F(TimingCalculationsTest, TimingModeEnumValues)
 {
     EXPECT_EQ(static_cast<int>(TimingMode::TIME), 0);
     EXPECT_EQ(static_cast<int>(TimingMode::MELODIC), 1);
 }
 
 // Test: Sample rate affects display samples calculation correctly
-TEST_F(TimingControlsE2ETest, SampleRateAffectsDisplaySamples)
+TEST_F(TimingCalculationsTest, SampleRateAffectsDisplaySamples)
 {
     int intervalMs = 50;
 
@@ -208,7 +209,7 @@ TEST_F(TimingControlsE2ETest, SampleRateAffectsDisplaySamples)
 }
 
 // Test: BPM to interval calculation for melodic mode
-TEST_F(TimingControlsE2ETest, BpmToIntervalCalculation)
+TEST_F(TimingCalculationsTest, BpmToIntervalCalculation)
 {
     // At 120 BPM, one beat = 500ms
     float bpm = 120.0f;
@@ -227,7 +228,7 @@ TEST_F(TimingControlsE2ETest, BpmToIntervalCalculation)
 }
 
 // Test: Note interval multipliers
-TEST_F(TimingControlsE2ETest, NoteIntervalMultipliers)
+TEST_F(TimingCalculationsTest, NoteIntervalMultipliers)
 {
     // Test beat divisions relative to quarter note
     // Quarter note = 1.0x
@@ -256,7 +257,7 @@ TEST_F(TimingControlsE2ETest, NoteIntervalMultipliers)
 }
 
 // Test: Display samples clamps to reasonable bounds
-TEST_F(TimingControlsE2ETest, DisplaySamplesBounds)
+TEST_F(TimingCalculationsTest, DisplaySamplesBounds)
 {
     double sampleRate = 44100.0;
 

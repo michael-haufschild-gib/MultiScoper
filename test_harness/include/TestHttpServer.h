@@ -17,6 +17,7 @@
 #include "TestMetrics.h"
 #include <thread>
 #include <atomic>
+#include <future>
 
 namespace oscil::test
 {

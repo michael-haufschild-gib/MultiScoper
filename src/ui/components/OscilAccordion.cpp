@@ -3,6 +3,7 @@
 */
 
 #include "ui/components/OscilAccordion.h"
+#include <iostream>
 
 namespace oscil
 {
@@ -75,15 +76,31 @@ void OscilAccordionSection::setContent(juce::Component* content)
 {
     if (content_ != content)
     {
+        // Clear previous callback
+        if (dynamicContent_ != nullptr)
+        {
+            dynamicContent_->onPreferredHeightChanged = nullptr;
+        }
+
         if (content_)
             removeChildComponent(content_);
 
         content_ = content;
+        dynamicContent_ = nullptr;
 
         if (content_)
         {
             addAndMakeVisible(content_);
             content_->setVisible(expanded_ || expandSpring_.position > 0.01f);
+
+            // Check for dynamic height support
+            dynamicContent_ = dynamic_cast<DynamicHeightContent*>(content_);
+            if (dynamicContent_)
+            {
+                dynamicContent_->onPreferredHeightChanged = [this] {
+                    contentHeightChanged();
+                };
+            }
         }
 
         resized();
@@ -92,6 +109,9 @@ void OscilAccordionSection::setContent(juce::Component* content)
 
 void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 {
+    std::cerr << "OscilAccordionSection::setExpanded() - title: " << title_
+              << ", current: " << expanded_ << ", new: " << expanded << std::endl;
+
     if (expanded_ == expanded)
         return;
 
@@ -123,6 +143,7 @@ void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 
 void OscilAccordionSection::toggle()
 {
+    std::cerr << "OscilAccordionSection::toggle() called - title: " << title_ << ", was expanded: " << expanded_ << std::endl;
     if (enabled_)
         setExpanded(!expanded_);
 }
@@ -141,6 +162,9 @@ int OscilAccordionSection::getContentHeight() const
     if (!content_)
         return 0;
 
+    if (dynamicContent_)
+        return dynamicContent_->getPreferredHeight();
+
     return content_->getHeight();
 }
 
@@ -150,6 +174,16 @@ int OscilAccordionSection::getPreferredHeight() const
     float expandAmount = expandSpring_.position;
 
     return HEADER_HEIGHT + static_cast<int>(static_cast<float>(contentHeight) * expandAmount);
+}
+
+void OscilAccordionSection::contentHeightChanged()
+{
+    // If expanded, we need to update layout
+    if (expanded_ || expandSpring_.position > 0.01f)
+    {
+        if (auto* parent = getParentComponent())
+            parent->resized();
+    }
 }
 
 void OscilAccordionSection::paint(juce::Graphics& g)
@@ -254,9 +288,35 @@ void OscilAccordionSection::resized()
 
 void OscilAccordionSection::mouseDown(const juce::MouseEvent& e)
 {
-    // Only toggle if clicking in header area
-    if (e.y < HEADER_HEIGHT && enabled_)
+    // Track if mouseDown started in header area for proper click detection
+    // This prevents trackpad gestures from triggering false toggles
+    mouseDownInHeader_ = e.mods.isLeftButtonDown() && !e.mods.isPopupMenu() &&
+                         e.y < HEADER_HEIGHT && enabled_;
+
+    DBG("OscilAccordionSection::mouseDown - title: " << title_
+        << ", y: " << e.y
+        << ", leftButton: " << e.mods.isLeftButtonDown()
+        << ", mouseDownInHeader: " << mouseDownInHeader_
+        << ", pressure: " << e.pressure);
+}
+
+void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
+{
+    DBG("OscilAccordionSection::mouseUp - title: " << title_
+        << ", y: " << e.y
+        << ", mouseDownInHeader: " << mouseDownInHeader_
+        << ", wasDragged: " << e.mouseWasDraggedSinceMouseDown());
+
+    // Only toggle if:
+    // 1. MouseDown started in header (mouseDownInHeader_)
+    // 2. MouseUp is still in header area
+    // 3. User didn't drag (not a scroll/pan gesture)
+    if (mouseDownInHeader_ && e.y < HEADER_HEIGHT && !e.mouseWasDraggedSinceMouseDown())
+    {
+        DBG("OscilAccordionSection::mouseUp - TOGGLING!");
         toggle();
+    }
+    mouseDownInHeader_ = false;
 }
 
 void OscilAccordionSection::mouseEnter(const juce::MouseEvent&)
@@ -327,9 +387,14 @@ void OscilAccordionSection::timerCallback()
             content_->setVisible(shouldBeVisible);
     }
 
-    // Notify parent to update layout during animation
-    if (auto* parent = getParentComponent())
-        parent->resized();
+    // Only notify parent when height actually changed to avoid expensive layout recalculations
+    int currentHeight = getPreferredHeight();
+    if (currentHeight != lastReportedHeight_)
+    {
+        lastReportedHeight_ = currentHeight;
+        if (auto* parent = getParentComponent())
+            parent->resized();
+    }
 
     if (expandSpring_.isSettled() && hoverSpring_.isSettled() && chevronSpring_.isSettled())
         stopTimer();
@@ -490,6 +555,12 @@ int OscilAccordion::getPreferredHeight() const
 void OscilAccordion::resized()
 {
     layoutSections();
+
+    // Update own size to match content - this ensures the viewport
+    // can properly scroll when accordion content height changes dynamically
+    int preferredHeight = getPreferredHeight();
+    if (getHeight() != preferredHeight)
+        setSize(getWidth(), preferredHeight);
 }
 
 void OscilAccordion::handleSectionExpanded(int index, bool expanded)

@@ -3,7 +3,7 @@
     Reusable segmented control using OscilButton for consistent styling
 */
 
-#include "ui/SegmentedButtonBar.h"
+#include "ui/components/SegmentedButtonBar.h"
 
 namespace oscil
 {
@@ -63,6 +63,34 @@ void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce
     button->setButtonId(id);
 
     // Set up click handler - use the button ID from getButtonId()
+    button->onClick = [this, id]() { handleButtonClick(id); };
+
+    addAndMakeVisible(*button);
+    buttons_.push_back(std::move(button));
+
+    // Update segment positions for all buttons
+    updateButtonStates();
+
+    // If this is the first button and nothing is selected, select it
+    if (buttons_.size() == 1 && selectedId_ == -1)
+    {
+        setSelectedId(id);
+    }
+
+    resized();
+}
+
+void SegmentedButtonBar::addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId)
+{
+    auto button = std::make_unique<OscilButton>(juce::String{}, testId);
+
+    // Configure as a toggleable segment button with path icon
+    button->setToggleable(true);
+    button->setVariant(ButtonVariant::Secondary);
+    button->setButtonId(id);
+    button->setIconPath(iconPath);
+
+    // Set up click handler
     button->onClick = [this, id]() { handleButtonClick(id); };
 
     addAndMakeVisible(*button);
