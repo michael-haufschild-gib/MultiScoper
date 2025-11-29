@@ -406,6 +406,7 @@ static void buildFlowGeometry(
     float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
     float halfWidth = lineWidth * 0.5f;
     float pathPosition = 0.0f;
+    float invBoundsWidth = 1.0f / boundsWidth;
 
     for (size_t i = 0; i < samples.size(); ++i)
     {
@@ -437,7 +438,7 @@ static void buildFlowGeometry(
             {
                 float segDx = x - prevX;
                 float segDy = y - prevY;
-                pathPosition += std::sqrt(segDx * segDx + segDy * segDy) / boundsWidth;
+                pathPosition += std::sqrt(segDx * segDx + segDy * segDy) * invBoundsWidth;
             }
         }
         else if (i == 0 && samples.size() > 1)
@@ -468,7 +469,7 @@ static void buildFlowGeometry(
                 ny = dx / len;
             }
             
-            pathPosition += std::sqrt(dx * dx + dy * dy) / boundsWidth;
+            pathPosition += std::sqrt(dx * dx + dy * dy) * invBoundsWidth;
         }
 
         // Vertex 1: position + normal offset (top of line)
@@ -521,17 +522,15 @@ void VectorFlowShader::renderSoftware(
         amplitude2 = amplitude1;
     }
 
+    // Pre-calculate animation values outside the lambda
+    float dashLength = segmentLength_ * width;
+    float gapPixels = gapLength_ * width;
+    float patternLength = dashLength + gapPixels;
+    float animatedOffset = std::fmod(time_ * width, patternLength);
+
     // Helper to draw a flowing dashed waveform
     auto drawFlowingWaveform = [&](const std::vector<float>& samples, float centerY, float amplitude)
     {
-        // Calculate dash pattern lengths in pixels
-        float dashLength = segmentLength_ * width;
-        float gapPixels = gapLength_ * width;
-        float patternLength = dashLength + gapPixels;
-        
-        // Animated offset
-        float offset = std::fmod(time_ * width, patternLength);
-        
         // Set up dashed stroke
         juce::Array<float> dashLengths;
         dashLengths.add(dashLength);
@@ -559,7 +558,7 @@ void VectorFlowShader::renderSoftware(
         // Create dashed path
         juce::Path dashedPath;
         strokeType.createDashedStroke(dashedPath, path, dashLengths.data(), 
-            dashLengths.size(), juce::AffineTransform::translation(-offset, 0.0f));
+            dashLengths.size(), juce::AffineTransform::translation(-animatedOffset, 0.0f));
         
         g.fillPath(dashedPath);
     };
