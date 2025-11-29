@@ -70,7 +70,6 @@ private:
 
     // Effect parameters
     static constexpr float MATRIX_INTENSITY = 0.7f;
-    static constexpr float CRYSTAL_SCALE_DEFAULT = 0.05f;
 };
 
 } // namespace oscil
