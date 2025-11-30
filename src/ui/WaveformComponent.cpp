@@ -476,16 +476,45 @@ void WaveformComponent::updateWaveformPath()
     currentRMS_ = SignalProcessor::calculateRMS(processedSignal_.channel1.data(),
                                                  processedSignal_.numSamples);
 
-    // Calculate effective vertical scale (apply autoScale if enabled)
-    effectiveScale_ = verticalScale_;
+    // Calculate target scale based on mode
+    float targetScale = verticalScale_;
+    
     if (autoScale_ && currentPeak_ > 0.001f)
     {
-        // Target 80% of display height for the peak
-        constexpr float targetFill = 0.8f;
+        // Target 90% of display height for the peak
+        constexpr float targetFill = 0.9f;
         float autoScaleFactor = targetFill / currentPeak_;
         // Clamp to reasonable range to prevent extreme scaling
-        autoScaleFactor = juce::jlimit(0.5f, 10.0f, autoScaleFactor);
-        effectiveScale_ = autoScaleFactor;
+        targetScale = juce::jlimit(0.5f, 10.0f, autoScaleFactor);
+    }
+
+    // Apply smoothing to effectiveScale_
+    if (!autoScale_)
+    {
+        // In manual mode, respond instantly
+        effectiveScale_ = targetScale;
+    }
+    else
+    {
+        // Asymmetric smoothing for auto-scale
+        if (targetScale < effectiveScale_)
+        {
+            // Signal is getting LOUDER (scale needs to shrink)
+            // Respond fast to prevent visual clipping
+            // ~0.2 coefficient = reaches target in ~10-15 frames
+            effectiveScale_ += (targetScale - effectiveScale_) * 0.2f;
+        }
+        else
+        {
+            // Signal is getting QUIETER (scale needs to grow)
+            // Respond slow to prevent jitter and pumping
+            // ~0.02 coefficient = reaches target in ~2-3 seconds (at 60fps)
+            effectiveScale_ += (targetScale - effectiveScale_) * 0.02f;
+        }
+
+        // Snap to target if very close to stop micro-updates
+        if (std::abs(targetScale - effectiveScale_) < 0.001f)
+            effectiveScale_ = targetScale;
     }
 
     // Build path for first channel (L or mono)

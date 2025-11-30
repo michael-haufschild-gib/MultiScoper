@@ -138,7 +138,7 @@ private:
     std::unordered_map<int, WaveformRenderData> waveforms_;
 
     // Render state
-    juce::Colour backgroundColour_{ 0xFF1A1A1A };
+    juce::Colour backgroundColour_{ juce::Colours::transparentBlack };
     bool shadersCompiled_ = false;
 
     // Debug rendering resources

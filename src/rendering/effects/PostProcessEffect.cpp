@@ -10,12 +10,13 @@ namespace oscil
 {
 
 // Standard fullscreen quad vertex shader
-// Uses legacy GLSL syntax - JUCE's translateVertexShaderToV3 handles platform compatibility
+// Modernized for GLSL 3.30 Core Profile
 static const char* fullscreenVertexShaderSource = R"(
-    attribute vec2 position;
-    attribute vec2 texCoord;
+    #version 330 core
+    in vec2 position;
+    in vec2 texCoord;
 
-    varying vec2 vTexCoord;
+    out vec2 vTexCoord;
 
     void main()
     {
@@ -33,19 +34,13 @@ bool PostProcessEffect::compileEffectShader(
     juce::OpenGLShaderProgram& program,
     const char* fragmentSource)
 {
-    // Translate shaders for cross-platform compatibility
-    juce::String translatedVertex =
-        juce::OpenGLHelpers::translateVertexShaderToV3(fullscreenVertexShaderSource);
-    juce::String translatedFragment =
-        juce::OpenGLHelpers::translateFragmentShaderToV3(fragmentSource);
-
-    if (!program.addVertexShader(translatedVertex))
+    if (!program.addVertexShader(fullscreenVertexShaderSource))
     {
         DBG("PostProcessEffect: Vertex shader failed: " << program.getLastError());
         return false;
     }
 
-    if (!program.addFragmentShader(translatedFragment))
+    if (!program.addFragmentShader(fragmentSource))
     {
         DBG("PostProcessEffect: Fragment shader failed: " << program.getLastError());
         return false;

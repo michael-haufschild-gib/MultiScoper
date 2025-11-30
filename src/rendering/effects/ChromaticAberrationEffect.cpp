@@ -12,29 +12,34 @@ namespace oscil
 using namespace juce::gl;
 
 // Chromatic aberration fragment shader
-static const char* chromaticAberrationFragmentShader = R"(
+static const char* chromaticFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
     uniform float intensity;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
     void main()
     {
-        // Calculate direction from center
-        vec2 center = vec2(0.5, 0.5);
-        vec2 dir = vTexCoord - center;
-        float dist = length(dir);
+        // Calculate vector from center
+        vec2 dist = vTexCoord - 0.5;
+        
+        // Radial offset: increases with distance from center
+        // Squared distance gives a nice lens curve
+        float r2 = dot(dist, dist);
+        vec2 offset = dist * (r2 * intensity * 2.0);
 
-        // Scale offset based on distance from center (radial aberration)
-        vec2 offset = dir * intensity * dist;
+        // Spectral dispersion
+        // R - G - B separation along the radial vector
+        float r = texture(sourceTexture, vTexCoord - offset).r;
+        float g = texture(sourceTexture, vTexCoord).g;
+        float b = texture(sourceTexture, vTexCoord + offset).b;
+        
+        // Use center alpha
+        float a = texture(sourceTexture, vTexCoord).a;
 
-        // Sample each channel with different offsets
-        float r = texture2D(sourceTexture, vTexCoord + offset).r;
-        float g = texture2D(sourceTexture, vTexCoord).g;
-        float b = texture2D(sourceTexture, vTexCoord - offset).b;
-        float a = texture2D(sourceTexture, vTexCoord).a;
-
-        gl_FragColor = vec4(r, g, b, a);
+        fragColor = vec4(r, g, b, a);
     }
 )";
 
@@ -51,7 +56,7 @@ bool ChromaticAberrationEffect::compile(juce::OpenGLContext& context)
 
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    if (!compileEffectShader(*shader_, chromaticAberrationFragmentShader))
+    if (!compileEffectShader(*shader_, chromaticFragmentShader))
     {
         DBG("ChromaticAberrationEffect: Failed to compile shader");
         shader_.reset();

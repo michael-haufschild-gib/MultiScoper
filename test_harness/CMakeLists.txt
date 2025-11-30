@@ -135,6 +135,7 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ScanlineEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/DistortionEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/GlitchEffect.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/effects/RadialBlurEffect.cpp
     # Particle system
     ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticlePool.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleEmitter.cpp
@@ -145,6 +146,7 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/WireframeMeshShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/VectorFlowShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/StringTheoryShader.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/ElectricFlowerShader.cpp
     # Material shaders
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/MaterialShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/GlassRefractionShader.cpp
@@ -154,6 +156,13 @@ set(PLUGIN_SOURCES
     # UI managers
     ${CMAKE_SOURCE_DIR}/src/ui/managers/OpenGLLifecycleManager.cpp
 )
+
+# Add platform-specific sources
+if(APPLE)
+    list(APPEND PLUGIN_SOURCES
+        ${CMAKE_SOURCE_DIR}/src/ui/components/AnimationSettings.mm
+    )
+endif()
 
 # Create JUCE standalone application
 juce_add_gui_app(OscilTestHarness

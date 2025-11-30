@@ -11,6 +11,179 @@ namespace oscil
 // OscilDropdownPopup Implementation
 //==============================================================================
 
+class OscilDropdownPopup::ItemList : public juce::Component
+{
+public:
+    explicit ItemList(OscilDropdownPopup& owner) : owner_(owner)
+    {
+        setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        float alpha = owner_.showSpring_.position;
+        if (alpha < 0.01f) return;
+
+        int start = g.getClipBounds().getY() / ITEM_HEIGHT;
+        int end = (g.getClipBounds().getBottom() + ITEM_HEIGHT) / ITEM_HEIGHT;
+
+        start = std::max(0, start);
+        end = std::min(end, (int)owner_.filteredIndices_.size());
+
+        for (int i = start; i < end; ++i)
+        {
+            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(i)];
+            const auto& item = owner_.items_[static_cast<size_t>(itemIndex)];
+            auto itemBounds = juce::Rectangle<int>(0, i * ITEM_HEIGHT, getWidth(), ITEM_HEIGHT);
+
+            bool isHovered = (itemIndex == owner_.hoveredIndex_);
+            bool isSelected = owner_.selectedIndices_.count(itemIndex) > 0;
+            bool isFocused = (i == owner_.focusedIndex_);
+
+            paintItem(g, item, itemBounds, isHovered, isSelected, isFocused, alpha);
+        }
+    }
+
+    void paintItem(juce::Graphics& g, const DropdownItem& item,
+                  juce::Rectangle<int> bounds, bool isHovered, bool isSelected, bool isFocused, float alpha)
+    {
+        const auto& theme = owner_.theme_;
+
+        if (item.isSeparator)
+        {
+            g.setColour(theme.controlBorder.withAlpha(alpha * 0.5f));
+            g.fillRect(bounds.reduced(8, ITEM_HEIGHT / 2 - 1).withHeight(1));
+            return;
+        }
+
+        float opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+
+        // Hover/selected/focused background
+        if (isSelected)
+        {
+            g.setColour(theme.controlActive.withAlpha(alpha * 0.15f));
+            g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
+        }
+        else if (isFocused)
+        {
+            g.setColour(theme.controlActive.withAlpha(alpha * 0.1f));
+            g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
+        }
+        
+        if (isHovered && item.enabled && !isSelected)
+        {
+            g.setColour(theme.backgroundSecondary.withAlpha(alpha * 0.8f));
+            g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
+        }
+
+        auto contentBounds = bounds.reduced(8, 0);
+
+        // Icon
+        if (item.icon.isValid())
+        {
+            auto iconBounds = contentBounds.removeFromLeft(20).toFloat();
+            g.setOpacity(alpha * opacity);
+            g.drawImage(item.icon,
+                iconBounds.withSizeKeepingCentre(16, 16),
+                juce::RectanglePlacement::centred);
+            contentBounds.removeFromLeft(4);
+        }
+
+        // Checkbox for multi-select
+        if (owner_.multiSelect_)
+        {
+            auto checkBounds = contentBounds.removeFromLeft(20).toFloat()
+                .withSizeKeepingCentre(16, 16);
+
+            g.setColour(theme.backgroundSecondary.withAlpha(alpha * opacity));
+            g.fillRoundedRectangle(checkBounds, 3.0f);
+
+            g.setColour((isSelected ? theme.controlActive : theme.controlBorder)
+                .withAlpha(alpha * opacity));
+            g.drawRoundedRectangle(checkBounds.reduced(0.5f), 3.0f, 1.0f);
+
+            if (isSelected)
+            {
+                g.setColour(theme.controlActive.withAlpha(alpha * opacity));
+                // Draw checkmark
+                float cx = checkBounds.getCentreX();
+                float cy = checkBounds.getCentreY();
+                juce::Path checkPath;
+                checkPath.startNewSubPath(cx - 4, cy);
+                checkPath.lineTo(cx - 1, cy + 3);
+                checkPath.lineTo(cx + 4, cy - 2);
+                g.strokePath(checkPath, juce::PathStrokeType(1.5f));
+            }
+
+            contentBounds.removeFromLeft(4);
+        }
+
+        // Label
+        g.setColour((isSelected ? theme.controlActive : theme.textPrimary)
+            .withAlpha(alpha * opacity));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
+
+        if (item.description.isNotEmpty())
+        {
+            auto labelBounds = contentBounds.removeFromTop(ITEM_HEIGHT / 2 + 2);
+            g.drawText(item.label, labelBounds, juce::Justification::centredLeft);
+
+            g.setColour(theme.textSecondary.withAlpha(alpha * opacity * 0.8f));
+            g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+            g.drawText(item.description, contentBounds, juce::Justification::centredLeft);
+        }
+        else
+        {
+            g.drawText(item.label, contentBounds, juce::Justification::centredLeft);
+        }
+    }
+
+    void mouseMove(const juce::MouseEvent& e) override
+    {
+        int index = e.y / ITEM_HEIGHT;
+        if (index >= 0 && index < static_cast<int>(owner_.filteredIndices_.size()))
+        {
+            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
+            if (owner_.hoveredIndex_ != itemIndex)
+            {
+                owner_.hoveredIndex_ = itemIndex;
+                repaint();
+            }
+        }
+    }
+
+    void mouseExit(const juce::MouseEvent&) override
+    {
+        if (owner_.hoveredIndex_ != -1)
+        {
+            owner_.hoveredIndex_ = -1;
+            repaint();
+        }
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        int index = e.y / ITEM_HEIGHT;
+        if (index >= 0 && index < static_cast<int>(owner_.filteredIndices_.size()))
+        {
+            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
+            const auto& item = owner_.items_[static_cast<size_t>(itemIndex)];
+
+            if (!item.isSeparator && item.enabled)
+            {
+                if (owner_.onItemClicked)
+                    owner_.onItemClicked(itemIndex);
+
+                if (!owner_.multiSelect_)
+                    owner_.dismiss();
+            }
+        }
+    }
+
+private:
+    OscilDropdownPopup& owner_;
+};
+
 OscilDropdownPopup::OscilDropdownPopup()
     : showSpring_(SpringPresets::snappy())
 {
@@ -22,6 +195,13 @@ OscilDropdownPopup::OscilDropdownPopup()
 
     showSpring_.position = 0.0f;
     showSpring_.target = 0.0f;
+
+    listComponent_ = std::make_unique<ItemList>(*this);
+    viewport_ = std::make_unique<juce::Viewport>();
+    viewport_->setViewedComponent(listComponent_.get(), false);
+    viewport_->setScrollBarsShown(true, false); // Vertical only
+    viewport_->setScrollBarThickness(6);
+    addAndMakeVisible(*viewport_);
 }
 
 OscilDropdownPopup::~OscilDropdownPopup()
@@ -42,13 +222,38 @@ void OscilDropdownPopup::setSelectedIndices(const std::set<int>& indices)
     repaint();
 }
 
+class SearchField : public juce::TextEditor
+{
+public:
+    SearchField(OscilDropdownPopup& owner) : owner_(owner) {}
+    
+    bool keyPressed(const juce::KeyPress& key) override
+    {
+        if (key == juce::KeyPress::upKey || 
+            key == juce::KeyPress::downKey ||
+            key == juce::KeyPress::escapeKey) 
+        {
+            return owner_.keyPressed(key);
+        }
+        
+        if (key == juce::KeyPress::returnKey)
+        {
+            if (owner_.keyPressed(key)) return true;
+        }
+        
+        return juce::TextEditor::keyPressed(key);
+    }
+private:
+    OscilDropdownPopup& owner_;
+};
+
 void OscilDropdownPopup::setSearchable(bool searchable)
 {
     searchable_ = searchable;
 
     if (searchable && !searchField_)
     {
-        searchField_ = std::make_unique<juce::TextEditor>();
+        searchField_ = std::make_unique<SearchField>(*this);
         searchField_->setMultiLine(false);
         searchField_->setTextToShowWhenEmpty("Search...", theme_.textSecondary);
         searchField_->onTextChange = [this]() {
@@ -72,9 +277,15 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
 
     // Calculate popup size
     int numVisible = std::min(static_cast<int>(filteredIndices_.size()), MAX_VISIBLE_ITEMS);
-    int contentHeight = numVisible * ITEM_HEIGHT;
+    // Use minimum height if list is empty but we have search
+    int contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
+    
+    // Calculate max allowed height for viewport
+    int maxViewportHeight = MAX_VISIBLE_ITEMS * ITEM_HEIGHT;
+    int viewportHeight = std::min(contentHeight, maxViewportHeight);
+    
     int searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
-    int totalHeight = contentHeight + searchHeight + POPUP_PADDING * 2;
+    int totalHeight = viewportHeight + searchHeight + POPUP_PADDING * 2;
     int width = buttonBounds.getWidth();
 
     // Position below or above the button
@@ -94,7 +305,40 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
                  juce::ComponentPeer::windowHasDropShadow);
 
     setVisible(true);
+    
+    // Configure List and Viewport
+    if (listComponent_)
+    {
+        // Width accounts for scrollbar if needed? Viewport handles that.
+        // We set the size of the list component to full width. 
+        // If vertical scrollbar appears, it overlaps or we need to reduce width?
+        // JUCE Viewport overlays scrollbars by default or not? 
+        // Default is not overlay. So content width is viewport width - scrollbar width.
+        // We can set list width to viewport width. Viewport will handle layout.
+        // Actually, if we set list width to viewport width, and scrollbar is needed, 
+        // the list might be wider than visible area.
+        // But DropdownItem paints full width.
+        
+        listComponent_->setSize(width - POPUP_PADDING * 2, contentHeight);
+    }
+        
+    resized(); // Updates viewport bounds
+
     grabKeyboardFocus();
+    
+    // Scroll to selection
+    if (!selectedIndices_.empty())
+    {
+         for (size_t i = 0; i < filteredIndices_.size(); ++i)
+         {
+             if (selectedIndices_.count(filteredIndices_[i]))
+             {
+                 focusedIndex_ = static_cast<int>(i);
+                 ensureItemVisible(focusedIndex_);
+                 break;
+             }
+         }
+    }
 
     if (AnimationSettings::shouldUseSpringAnimations())
     {
@@ -145,6 +389,19 @@ void OscilDropdownPopup::updateFilteredItems()
             filteredIndices_.push_back(static_cast<int>(i));
         }
     }
+    
+    if (listComponent_)
+    {
+        int contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
+        // Maintain width
+        listComponent_->setSize(listComponent_->getWidth(), contentHeight);
+    }
+    
+    // Clamp focused index
+    if (focusedIndex_ >= static_cast<int>(filteredIndices_.size()))
+        focusedIndex_ = static_cast<int>(filteredIndices_.size()) - 1;
+    if (focusedIndex_ < 0 && !filteredIndices_.empty())
+        focusedIndex_ = 0;
 }
 
 void OscilDropdownPopup::paint(juce::Graphics& g)
@@ -160,162 +417,46 @@ void OscilDropdownPopup::paint(juce::Graphics& g)
 
     g.setColour(theme_.controlBorder.withAlpha(alpha * 0.5f));
     g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
-
-    // Draw items
-    int searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
-    int y = POPUP_PADDING + searchHeight;
-
-    for (size_t i = 0; i < filteredIndices_.size() && i < MAX_VISIBLE_ITEMS; ++i)
-    {
-        int itemIndex = filteredIndices_[i];
-        const auto& item = items_[static_cast<size_t>(itemIndex)];
-        auto itemBounds = juce::Rectangle<int>(POPUP_PADDING, y,
-            getWidth() - POPUP_PADDING * 2, ITEM_HEIGHT);
-
-        bool isHovered = (static_cast<int>(i) == hoveredIndex_);
-        bool isSelected = selectedIndices_.count(itemIndex) > 0;
-
-        paintItem(g, item, itemBounds, isHovered, isSelected);
-
-        y += ITEM_HEIGHT;
-    }
-}
-
-void OscilDropdownPopup::paintItem(juce::Graphics& g, const DropdownItem& item,
-                                    juce::Rectangle<int> bounds, bool isHovered, bool isSelected)
-{
-    float alpha = showSpring_.position;
-
-    if (item.isSeparator)
-    {
-        g.setColour(theme_.controlBorder.withAlpha(alpha * 0.5f));
-        g.fillRect(bounds.reduced(8, ITEM_HEIGHT / 2 - 1).withHeight(1));
-        return;
-    }
-
-    float opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-
-    // Hover/selected background
-    if (isSelected)
-    {
-        g.setColour(theme_.controlActive.withAlpha(alpha * 0.15f));
-        g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
-    }
-    else if (isHovered && item.enabled)
-    {
-        g.setColour(theme_.backgroundSecondary.withAlpha(alpha * 0.8f));
-        g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
-    }
-
-    auto contentBounds = bounds.reduced(8, 0);
-
-    // Icon
-    if (item.icon.isValid())
-    {
-        auto iconBounds = contentBounds.removeFromLeft(20).toFloat();
-        g.setOpacity(alpha * opacity);
-        g.drawImage(item.icon,
-            iconBounds.withSizeKeepingCentre(16, 16),
-            juce::RectanglePlacement::centred);
-        contentBounds.removeFromLeft(4);
-    }
-
-    // Checkbox for multi-select
-    if (multiSelect_)
-    {
-        auto checkBounds = contentBounds.removeFromLeft(20).toFloat()
-            .withSizeKeepingCentre(16, 16);
-
-        g.setColour(theme_.backgroundSecondary.withAlpha(alpha * opacity));
-        g.fillRoundedRectangle(checkBounds, 3.0f);
-
-        g.setColour((isSelected ? theme_.controlActive : theme_.controlBorder)
-            .withAlpha(alpha * opacity));
-        g.drawRoundedRectangle(checkBounds.reduced(0.5f), 3.0f, 1.0f);
-
-        if (isSelected)
-        {
-            g.setColour(theme_.controlActive.withAlpha(alpha * opacity));
-            // Draw checkmark
-            float cx = checkBounds.getCentreX();
-            float cy = checkBounds.getCentreY();
-            juce::Path checkPath;
-            checkPath.startNewSubPath(cx - 4, cy);
-            checkPath.lineTo(cx - 1, cy + 3);
-            checkPath.lineTo(cx + 4, cy - 2);
-            g.strokePath(checkPath, juce::PathStrokeType(1.5f));
-        }
-
-        contentBounds.removeFromLeft(4);
-    }
-
-    // Label
-    g.setColour((isSelected ? theme_.controlActive : theme_.textPrimary)
-        .withAlpha(alpha * opacity));
-    g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
-
-    if (item.description.isNotEmpty())
-    {
-        auto labelBounds = contentBounds.removeFromTop(ITEM_HEIGHT / 2 + 2);
-        g.drawText(item.label, labelBounds, juce::Justification::centredLeft);
-
-        g.setColour(theme_.textSecondary.withAlpha(alpha * opacity * 0.8f));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
-        g.drawText(item.description, contentBounds, juce::Justification::centredLeft);
-    }
-    else
-    {
-        g.drawText(item.label, contentBounds, juce::Justification::centredLeft);
-    }
+    
+    // Items are painted by listComponent_
 }
 
 void OscilDropdownPopup::resized()
 {
+    int searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
+    int y = POPUP_PADDING;
+    
     if (searchField_)
     {
         searchField_->setBounds(POPUP_PADDING, POPUP_PADDING,
             getWidth() - POPUP_PADDING * 2, SEARCH_HEIGHT - POPUP_PADDING);
+        y += searchHeight;
+    }
+    
+    if (viewport_)
+    {
+        viewport_->setBounds(POPUP_PADDING, y, 
+                             getWidth() - POPUP_PADDING * 2, 
+                             getHeight() - y - POPUP_PADDING);
+        
+        // Ensure list component has correct width (minus scrollbar if needed?)
+        if (listComponent_)
+        {
+             // If scrollbar is visible, we might want to reduce width?
+             // Viewport::getVerticalScrollBar()->isVisible()
+             // But simpler to just let it be full width.
+             listComponent_->setSize(viewport_->getWidth(), listComponent_->getHeight());
+        }
     }
 }
 
 void OscilDropdownPopup::mouseDown(const juce::MouseEvent& e)
 {
-    int index = getItemAtPosition(e.getPosition());
-
-    if (index >= 0 && index < static_cast<int>(filteredIndices_.size()))
-    {
-        int itemIndex = filteredIndices_[static_cast<size_t>(index)];
-        const auto& item = items_[static_cast<size_t>(itemIndex)];
-
-        if (!item.isSeparator && item.enabled)
-        {
-            if (onItemClicked)
-                onItemClicked(itemIndex);
-
-            if (!multiSelect_)
-                dismiss();
-        }
-    }
+    dismiss();
 }
 
-void OscilDropdownPopup::mouseMove(const juce::MouseEvent& e)
-{
-    int newHovered = getItemAtPosition(e.getPosition());
-    if (newHovered != hoveredIndex_)
-    {
-        hoveredIndex_ = newHovered;
-        repaint();
-    }
-}
-
-void OscilDropdownPopup::mouseExit(const juce::MouseEvent&)
-{
-    if (hoveredIndex_ != -1)
-    {
-        hoveredIndex_ = -1;
-        repaint();
-    }
-}
+void OscilDropdownPopup::mouseMove(const juce::MouseEvent&) {}
+void OscilDropdownPopup::mouseExit(const juce::MouseEvent&) {}
 
 bool OscilDropdownPopup::keyPressed(const juce::KeyPress& key)
 {
@@ -328,7 +469,8 @@ bool OscilDropdownPopup::keyPressed(const juce::KeyPress& key)
     if (key == juce::KeyPress::upKey)
     {
         focusedIndex_ = std::max(0, focusedIndex_ - 1);
-        repaint();
+        ensureItemVisible(focusedIndex_);
+        if (listComponent_) listComponent_->repaint();
         return true;
     }
 
@@ -336,20 +478,24 @@ bool OscilDropdownPopup::keyPressed(const juce::KeyPress& key)
     {
         focusedIndex_ = std::min(static_cast<int>(filteredIndices_.size()) - 1,
                                   focusedIndex_ + 1);
-        repaint();
+        ensureItemVisible(focusedIndex_);
+        if (listComponent_) listComponent_->repaint();
         return true;
     }
 
     if (key == juce::KeyPress::returnKey && focusedIndex_ >= 0)
     {
-        int itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
-        const auto& item = items_[static_cast<size_t>(itemIndex)];
-
-        if (!item.isSeparator && item.enabled && onItemClicked)
+        if (focusedIndex_ < static_cast<int>(filteredIndices_.size()))
         {
-            onItemClicked(itemIndex);
-            if (!multiSelect_)
-                dismiss();
+            int itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
+            const auto& item = items_[static_cast<size_t>(itemIndex)];
+
+            if (!item.isSeparator && item.enabled && onItemClicked)
+            {
+                onItemClicked(itemIndex);
+                if (!multiSelect_)
+                    dismiss();
+            }
         }
         return true;
     }
@@ -365,18 +511,29 @@ void OscilDropdownPopup::focusLost(FocusChangeType)
         dismiss();
 }
 
-int OscilDropdownPopup::getItemAtPosition(juce::Point<int> pos) const
+void OscilDropdownPopup::ensureItemVisible(int index)
 {
-    int searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
-    int y = POPUP_PADDING + searchHeight;
-
-    for (size_t i = 0; i < filteredIndices_.size() && i < MAX_VISIBLE_ITEMS; ++i)
+    if (!viewport_ || index < 0) return;
+    
+    int itemY = index * ITEM_HEIGHT;
+    int itemBottom = itemY + ITEM_HEIGHT;
+    
+    int viewY = viewport_->getViewPositionY();
+    int viewH = viewport_->getViewHeight();
+    int viewBottom = viewY + viewH;
+    
+    if (itemY < viewY)
     {
-        if (pos.y >= y && pos.y < y + ITEM_HEIGHT)
-            return static_cast<int>(i);
-        y += ITEM_HEIGHT;
+        viewport_->setViewPosition(viewport_->getViewPositionX(), itemY);
     }
+    else if (itemBottom > viewBottom)
+    {
+        viewport_->setViewPosition(viewport_->getViewPositionX(), itemBottom - viewH);
+    }
+}
 
+int OscilDropdownPopup::getItemAtPosition(juce::Point<int>) const
+{
     return -1;
 }
 
@@ -394,6 +551,7 @@ void OscilDropdownPopup::timerCallback()
         }
     }
 
+    if (listComponent_) listComponent_->repaint();
     repaint();
 }
 

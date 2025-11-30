@@ -71,11 +71,13 @@ public:
     void themeChanged(const ColorTheme& newTheme) override;
 
 private:
+    class ItemList;
+    friend class ItemList;
+
     void timerCallback() override;
     void updateFilteredItems();
     int getItemAtPosition(juce::Point<int> pos) const;
-    void paintItem(juce::Graphics& g, const DropdownItem& item,
-                   juce::Rectangle<int> bounds, bool isHovered, bool isSelected);
+    void ensureItemVisible(int index);
 
     std::vector<DropdownItem> items_;
     std::vector<int> filteredIndices_;
@@ -86,6 +88,8 @@ private:
     int focusedIndex_ = -1;
 
     std::unique_ptr<juce::TextEditor> searchField_;
+    std::unique_ptr<juce::Viewport> viewport_;
+    std::unique_ptr<ItemList> listComponent_;
     juce::String searchText_;
 
     SpringAnimation showSpring_;

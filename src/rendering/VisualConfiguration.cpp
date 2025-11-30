@@ -17,6 +17,7 @@ static const juce::Identifier FILMGRAIN_TYPE("FilmGrain");
 static const juce::Identifier CHROMATIC_TYPE("ChromaticAberration");
 static const juce::Identifier SCANLINES_TYPE("Scanlines");
 static const juce::Identifier DISTORTION_TYPE("Distortion");
+static const juce::Identifier RADIALBLUR_TYPE("RadialBlur");
 static const juce::Identifier PARTICLES_TYPE("Particles");
 static const juce::Identifier SETTINGS3D_TYPE("Settings3D");
 static const juce::Identifier MATERIAL_TYPE("Material");
@@ -39,7 +40,16 @@ juce::ValueTree VisualConfiguration::toValueTree() const
     bloomTree.setProperty("threshold", bloom.threshold, nullptr);
     bloomTree.setProperty("iterations", bloom.iterations, nullptr);
     bloomTree.setProperty("spread", bloom.spread, nullptr);
+    bloomTree.setProperty("softKnee", bloom.softKnee, nullptr);
     tree.addChild(bloomTree, -1, nullptr);
+
+    // Radial Blur
+    juce::ValueTree radialBlurTree(RADIALBLUR_TYPE);
+    radialBlurTree.setProperty("enabled", radialBlur.enabled, nullptr);
+    radialBlurTree.setProperty("amount", radialBlur.amount, nullptr);
+    radialBlurTree.setProperty("glow", radialBlur.glow, nullptr);
+    radialBlurTree.setProperty("samples", radialBlur.samples, nullptr);
+    tree.addChild(radialBlurTree, -1, nullptr);
 
     // Trails
     juce::ValueTree trailsTree(TRAILS_TYPE);
@@ -166,6 +176,17 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
         config.bloom.threshold = bloomTree.getProperty("threshold", 0.8f);
         config.bloom.iterations = bloomTree.getProperty("iterations", 4);
         config.bloom.spread = bloomTree.getProperty("spread", 1.0f);
+        config.bloom.softKnee = bloomTree.getProperty("softKnee", 0.5f);
+    }
+
+    // Radial Blur
+    auto radialBlurTree = tree.getChildWithName(RADIALBLUR_TYPE);
+    if (radialBlurTree.isValid())
+    {
+        config.radialBlur.enabled = radialBlurTree.getProperty("enabled", false);
+        config.radialBlur.amount = radialBlurTree.getProperty("amount", 0.1f);
+        config.radialBlur.glow = radialBlurTree.getProperty("glow", 1.0f);
+        config.radialBlur.samples = radialBlurTree.getProperty("samples", 4);
     }
 
     // Trails
@@ -304,6 +325,7 @@ bool VisualConfiguration::requires3D() const
 bool VisualConfiguration::hasPostProcessing() const
 {
     return bloom.enabled ||
+           radialBlur.enabled ||
            trails.enabled ||
            colorGrade.enabled ||
            vignette.enabled ||
@@ -326,385 +348,337 @@ VisualConfiguration VisualConfiguration::getDefault()
 VisualConfiguration VisualConfiguration::getPreset(const juce::String& presetName)
 {
     VisualConfiguration config;
-
-    // Set the preset identifier
     config.presetId = presetName;
 
     // ==========================================================================
-    // Basic Presets
+    // Clean Baseline
+    // ==========================================================================
+    if (presetName == "default")
+    {
+        config.shaderType = ShaderType::Basic2D;
+        // All effects disabled by default for a clean, technical look
+    }
+
+    // ==========================================================================
+    // High-Impact Visual Presets
     // ==========================================================================
 
-    if (presetName == "default" || presetName == "minimal")
-    {
-        config.shaderType = ShaderType::Basic2D;
-        // All effects disabled by default - clean baseline
-    }
     else if (presetName == "neon")
     {
+        // Pure 80s Neon aesthetic
         config.shaderType = ShaderType::NeonGlow;
+
+        // Bloom enhances the shader's internal glow
         config.bloom.enabled = true;
         config.bloom.intensity = 1.5f;
-        config.bloom.threshold = 0.6f;
-    }
-    else if (presetName == "retro")
-    {
-        config.shaderType = ShaderType::Basic2D;
-        config.scanlines.enabled = true;
-        config.scanlines.intensity = 0.4f;
+        config.bloom.threshold = 0.1f; // Low threshold to pick up the colored halo
+        config.bloom.spread = 1.5f;
+        config.bloom.iterations = 4;
+
+        // Subtle vignette for atmosphere
+        config.vignette.enabled = true;
+        config.vignette.intensity = 0.3f;
+        config.vignette.softness = 0.6f;
+
+        // Punchy colors
         config.colorGrade.enabled = true;
-        config.colorGrade.saturation = 0.8f;
+        config.colorGrade.contrast = 1.1f;
+        config.colorGrade.saturation = 1.2f;
+
+        // Slight trails for persistence
+        config.trails.enabled = true;
+        config.trails.decay = 0.1f;
+        config.trails.opacity = 0.6f;
+    }
+    else if (presetName == "cyberpunk")
+    {
+        // Aggressive neon aesthetic with high contrast and digital artifacts
+        config.shaderType = ShaderType::NeonGlow;
+        
+        // Post-Processing
+        config.bloom.enabled = true;
+        config.bloom.intensity = 1.8f;
+        config.bloom.threshold = 0.4f;
+        config.bloom.spread = 1.2f;
+        
+        config.chromaticAberration.enabled = true;
+        config.chromaticAberration.intensity = 0.015f;
+        
+        config.scanlines.enabled = true;
+        config.scanlines.intensity = 0.5f;
+        config.scanlines.density = 1.5f;
+        config.scanlines.phosphorGlow = true;
+        
         config.filmGrain.enabled = true;
         config.filmGrain.intensity = 0.15f;
-        config.vignette.enabled = true;
+
+        // Particles: Digital sparks
+        config.particles.enabled = true;
+        config.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
+        config.particles.emissionRate = 120.0f;
+        config.particles.particleLife = 1.0f;
+        config.particles.particleSize = 5.0f;
+        config.particles.particleColor = juce::Colour(0xFF00FFFF); // Cyan
+        config.particles.blendMode = ParticleBlendMode::Additive;
+        config.particles.velocityScale = 1.5f;
+        config.particles.audioReactive = true;
     }
-    else if (presetName == "gradient")
+    else if (presetName == "liquid_gold")
     {
-        config.shaderType = ShaderType::GradientFill;
-    }
-    else if (presetName == "outline")
-    {
-        config.shaderType = ShaderType::DualOutline;
+        // Luxurious, physically-based liquid metal
+        config.shaderType = ShaderType::LiquidChrome;
+        
+        // 3D Setup
+        config.settings3D.enabled = true;
+        config.settings3D.cameraDistance = 3.8f;
+        config.settings3D.cameraAngleX = 25.0f;
+        config.settings3D.autoRotate = true;
+        config.settings3D.rotateSpeed = 5.0f; // Slow, heavy rotation
+        
+        // Material: Gold
+        config.material.enabled = true;
+        config.material.reflectivity = 1.0f;
+        config.material.roughness = 0.15f;
+        config.material.refractiveIndex = 0.2f; // Metallic
+        config.material.tintColor = juce::Colour(0xFFFFD700); // Gold
+        config.material.useEnvironmentMap = true;
+        config.material.environmentMapId = "sunset"; // Warm lighting
+        
+        // Post
         config.bloom.enabled = true;
-        config.bloom.intensity = 0.8f;
+        config.bloom.intensity = 1.2f; // Golden glow
+        config.bloom.threshold = 0.7f;
+        
+        config.colorGrade.enabled = true;
+        config.colorGrade.temperature = 0.2f; // Enhance warmth
+        config.colorGrade.contrast = 1.1f;
     }
-    else if (presetName == "plasma")
+    else if (presetName == "deep_ocean")
     {
-        config.shaderType = ShaderType::PlasmaSine;
-    }
-    else if (presetName == "glitch")
-    {
-        config.shaderType = ShaderType::DigitalGlitch;
-        config.chromaticAberration.enabled = true;
-        config.chromaticAberration.intensity = 0.01f;
-        config.distortion.enabled = true;
-        config.distortion.intensity = 0.02f;
-    }
-    else if (presetName == "vector_flow")
-    {
-        config.shaderType = ShaderType::VectorFlow;
+        // Bioluminescent underwater organic look
+        config.shaderType = ShaderType::VolumetricRibbon;
+        
+        // 3D Setup
         config.settings3D.enabled = true;
         config.settings3D.cameraDistance = 5.0f;
         config.settings3D.autoRotate = true;
+        config.settings3D.rotateSpeed = 8.0f;
+        
+        // Post
+        config.distortion.enabled = true; // Water wobble
+        config.distortion.intensity = 0.015f;
+        config.distortion.speed = 0.5f;
+        config.distortion.frequency = 3.0f;
+        
+        config.bloom.enabled = true;
+        config.bloom.intensity = 1.5f; // Bio-glow
+        config.bloom.threshold = 0.3f;
+        config.bloom.spread = 2.0f; // Wide, soft glow
+        
+        config.colorGrade.enabled = true;
+        config.colorGrade.tint = -0.1f; // Shift towards green/teal
+        config.colorGrade.shadows = juce::Colour(0xFF001133); // Deep blue shadows
+        
+        // Particles: Rising bubbles
+        config.particles.enabled = false;
+        config.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
+        config.particles.emissionRate = 80.0f;
+        config.particles.particleLife = 3.0f;
+        config.particles.particleSize = 3.0f;
+        config.particles.particleColor = juce::Colour(0xFF00FFFF); // Cyan/White
+        config.particles.gravity = -10.0f; // Float up
+        config.particles.drag = 0.5f; // Water resistance
     }
-    else if (presetName == "string_theory")
+    else if (presetName == "synthwave")
     {
-        config.shaderType = ShaderType::StringTheory;
+        // Retro-futuristic 80s grid aesthetic with heavy neon glow
+        config.shaderType = ShaderType::WireframeMesh;
+
+        // 3D Setup
         config.settings3D.enabled = true;
         config.settings3D.cameraDistance = 6.0f;
-        config.settings3D.cameraAngleX = 25.0f;
+        config.settings3D.cameraAngleX = 30.0f;
         config.settings3D.autoRotate = true;
+        config.settings3D.rotateSpeed = 12.0f;
+        config.settings3D.meshResolutionX = 64;
+        config.settings3D.meshResolutionZ = 24;
+
+        // Post-processing: Heavy 80s synthwave glow
         config.bloom.enabled = true;
-        config.bloom.intensity = 0.6f;
+        config.bloom.intensity = 3.5f;      // Strong neon glow
+        config.bloom.threshold = 0.2f;      // Low threshold for more glow
+        config.bloom.spread = 2.5f;         // Wide, soft glow spread
+
+        config.chromaticAberration.enabled = true;
+        config.chromaticAberration.intensity = 0.008f; // Subtle RGB separation
+
+        config.scanlines.enabled = true;
+        config.scanlines.intensity = 0.25f;
+
+        config.vignette.enabled = true;
+        config.vignette.intensity = 0.7f;   // Darker corners for focus
+
+        config.colorGrade.enabled = true;
+        config.colorGrade.tint = 0.25f;     // Magenta/pink shift
+        config.colorGrade.saturation = 1.3f; // Vibrant colors
+        config.colorGrade.contrast = 1.15f;  // Punchy contrast
+
+        config.trails.enabled = true;
+        config.trails.decay = 0.15f;        // Short motion trails
+        config.trails.opacity = 0.4f;
     }
-    else if (presetName == "crystal")
+    else if (presetName == "ethereal")
     {
-        config.shaderType = ShaderType::Crystalline;
+        // Dreamy, prismatic glass rendering
+        config.shaderType = ShaderType::GlassRefraction;
+        
+        // 3D Setup
         config.settings3D.enabled = true;
         config.settings3D.cameraDistance = 4.0f;
         config.settings3D.autoRotate = true;
+        
+        // Material: Prismatic Glass
         config.material.enabled = true;
-        config.material.roughness = 0.05f;
-        config.material.reflectivity = 0.8f;
+        config.material.refractiveIndex = 1.8f; // High refraction (Crystal/Diamond)
+        config.material.reflectivity = 0.4f;
+        config.material.fresnelPower = 2.0f;
+        config.material.roughness = 0.0f;
         config.material.useEnvironmentMap = true;
-    }
-
-    // ==========================================================================
-    // Post-Processing Test Presets
-    // ==========================================================================
-
-    else if (presetName == "test_bloom")
-    {
-        // Tests: Bloom post-processing effect
-        // Look for: Bright glow/halo around waveform, soft edges
-        config.shaderType = ShaderType::Basic2D;
-        config.bloom.enabled = true;
-        config.bloom.intensity = 2.0f;      // High intensity for visibility
-        config.bloom.threshold = 0.5f;      // Lower threshold to catch more
-        config.bloom.iterations = 6;        // More blur iterations
-        config.bloom.spread = 1.5f;         // Wider spread
-    }
-    else if (presetName == "test_trails")
-    {
-        // Tests: Trail/persistence effect
-        // Look for: Ghostly trail following waveform, fading afterimages
-        config.shaderType = ShaderType::Basic2D;
-        config.trails.enabled = true;
-        config.trails.decay = 0.05f;        // Slow decay = longer trails
-        config.trails.opacity = 0.9f;       // High trail opacity
-    }
-    else if (presetName == "test_chromatic")
-    {
-        // Tests: Chromatic aberration effect
-        // Look for: RGB color fringing at edges, rainbow separation
-        config.shaderType = ShaderType::Basic2D;
-        config.chromaticAberration.enabled = true;
-        config.chromaticAberration.intensity = 0.015f;  // High intensity
-    }
-    else if (presetName == "test_scanlines")
-    {
-        // Tests: CRT scanline effect
-        // Look for: Horizontal dark lines, retro CRT monitor look
-        config.shaderType = ShaderType::Basic2D;
-        config.scanlines.enabled = true;
-        config.scanlines.intensity = 0.5f;  // Strong lines
-        config.scanlines.density = 2.0f;    // Visible spacing
-        config.scanlines.phosphorGlow = true;
-    }
-    else if (presetName == "test_vignette")
-    {
-        // Tests: Vignette effect
-        // Look for: Dark corners, spotlight/tunnel vision effect
-        config.shaderType = ShaderType::Basic2D;
-        config.vignette.enabled = true;
-        config.vignette.intensity = 0.8f;   // Strong darkening
-        config.vignette.softness = 0.4f;    // Moderate edge softness
-    }
-    else if (presetName == "test_grain")
-    {
-        // Tests: Film grain effect
-        // Look for: Noisy animated texture, film-like grain
-        config.shaderType = ShaderType::Basic2D;
-        config.filmGrain.enabled = true;
-        config.filmGrain.intensity = 0.3f;  // Very visible grain
-        config.filmGrain.speed = 24.0f;     // Film-like animation speed
-    }
-    else if (presetName == "test_distortion")
-    {
-        // Tests: Wave distortion effect
-        // Look for: Wavy/warped display, ripple-like deformation
-        config.shaderType = ShaderType::Basic2D;
-        config.distortion.enabled = true;
-        config.distortion.intensity = 0.03f;   // Visible distortion
-        config.distortion.frequency = 6.0f;    // Multiple waves
-        config.distortion.speed = 2.0f;        // Animated
-    }
-    else if (presetName == "test_color_grade")
-    {
-        // Tests: Color grading effect
-        // Look for: Shifted colors, contrast/saturation changes
-        config.shaderType = ShaderType::Basic2D;
-        config.colorGrade.enabled = true;
-        config.colorGrade.brightness = 0.1f;
-        config.colorGrade.contrast = 1.3f;
-        config.colorGrade.saturation = 1.5f;
-        config.colorGrade.temperature = 0.3f;  // Warm tint
-    }
-    else if (presetName == "test_all_post")
-    {
-        // Tests: Multiple post-processing effects combined
-        // Look for: Cinematic look with bloom, vignette, subtle grain
-        config.shaderType = ShaderType::Basic2D;
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.2f;
-        config.bloom.threshold = 0.7f;
-        config.trails.enabled = true;
-        config.trails.decay = 0.15f;
-        config.vignette.enabled = true;
-        config.vignette.intensity = 0.5f;
-        config.filmGrain.enabled = true;
-        config.filmGrain.intensity = 0.08f;
-        config.colorGrade.enabled = true;
-        config.colorGrade.saturation = 1.2f;
-    }
-
-    // ==========================================================================
-    // Particle System Test Presets
-    // ==========================================================================
-
-    else if (presetName == "test_particles_along")
-    {
-        // Tests: Particles emitted along waveform path
-        // Look for: Stream of particles following waveform shape
-        config.shaderType = ShaderType::Basic2D;
-        config.particles.enabled = true;
-        config.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
-        config.particles.emissionRate = 200.0f;
-        config.particles.particleLife = 2.0f;
-        config.particles.particleSize = 6.0f;
-        config.particles.particleColor = juce::Colour(0xFFFFAA00);  // Orange
-        config.particles.blendMode = ParticleBlendMode::Additive;
-        config.particles.gravity = 0.0f;
-        config.particles.randomness = 0.5f;
-        config.bloom.enabled = true;
-        config.bloom.intensity = 0.8f;
-    }
-    else if (presetName == "test_particles_peaks")
-    {
-        // Tests: Particles emitted at amplitude peaks
-        // Look for: Burst of particles at waveform peaks/transients
-        config.shaderType = ShaderType::Basic2D;
-        config.particles.enabled = true;
-        config.particles.emissionMode = ParticleEmissionMode::AtPeaks;
-        config.particles.emissionRate = 150.0f;
-        config.particles.particleLife = 1.5f;
-        config.particles.particleSize = 8.0f;
-        config.particles.particleColor = juce::Colour(0xFF00FFFF);  // Cyan
-        config.particles.blendMode = ParticleBlendMode::Additive;
-        config.particles.gravity = -50.0f;  // Float upward
-        config.particles.audioReactive = true;
-        config.particles.audioEmissionBoost = 3.0f;
+        config.material.environmentMapId = "abstract"; // Colorful environment for refraction
+        
+        // Post
         config.bloom.enabled = true;
         config.bloom.intensity = 1.0f;
+        config.bloom.spread = 2.0f; // Very soft
+        
+        config.trails.enabled = true;
+        config.trails.decay = 0.1f; // Long, smooth trails
+        config.trails.opacity = 0.7f;
+        
+        config.colorGrade.enabled = true;
+        config.colorGrade.saturation = 0.8f; // Slightly desaturated/pastel
+        config.colorGrade.brightness = 0.1f;
     }
-    else if (presetName == "test_particles_zero")
+    else if (presetName == "matrix")
     {
-        // Tests: Particles emitted at zero crossings
-        // Look for: Particles appearing where waveform crosses center
-        config.shaderType = ShaderType::Basic2D;
+        // Digital rain code aesthetic
+        config.shaderType = ShaderType::DigitalGlitch;
+        
+        // Post
+        config.scanlines.enabled = true;
+        config.scanlines.intensity = 0.4f;
+        config.scanlines.density = 3.0f;
+        
+        config.bloom.enabled = true;
+        config.bloom.intensity = 1.0f;
+        
+        config.colorGrade.enabled = true;
+        config.colorGrade.tint = -0.5f; // Strong Green shift
+        config.colorGrade.contrast = 1.5f; // High contrast
+        config.colorGrade.shadows = juce::Colour(0xFF001100); // Dark green shadows
+        
+        // Particles: Falling code
         config.particles.enabled = true;
-        config.particles.emissionMode = ParticleEmissionMode::AtZeroCrossings;
-        config.particles.emissionRate = 100.0f;
-        config.particles.particleLife = 2.5f;
-        config.particles.particleSize = 5.0f;
-        config.particles.particleColor = juce::Colour(0xFFFF00FF);  // Magenta
+        config.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
+        config.particles.emissionRate = 300.0f;
+        config.particles.particleLife = 1.5f;
+        config.particles.particleSize = 4.0f;
+        config.particles.particleColor = juce::Colour(0xFF00FF00); // Matrix Green
         config.particles.blendMode = ParticleBlendMode::Additive;
-        config.particles.randomness = 0.8f;
+        config.particles.gravity = 80.0f; // Fall down fast
+        config.particles.velocityScale = 0.2f; // Little horizontal movement
     }
-
-    // ==========================================================================
-    // 3D Shader Test Presets
-    // ==========================================================================
-
-    else if (presetName == "test_3d_ribbon")
+    else if (presetName == "plasma_sine")
     {
-        // Tests: 3D volumetric ribbon shader
-        // Look for: Tube-like 3D waveform with lighting
-        config.shaderType = ShaderType::VolumetricRibbon;
+        // Electric plasma beam aesthetic - bright blue glow on dark background
+        config.shaderType = ShaderType::PlasmaSine;
+
+        // Bloom - selective, moderate glow (only brightest parts)
+        config.bloom.enabled = true;
+        config.bloom.intensity = 1.0f;      // Moderate glow (was 1.5)
+        config.bloom.threshold = 0.5f;      // Higher threshold - selective (was 0.2)
+        config.bloom.spread = 1.2f;         // Slightly reduced spread (was 1.5)
+        config.bloom.iterations = 4;
+
+        // Trails - DISABLED (causes brightness accumulation issues)
+        config.trails.enabled = false;
+
+        // Vignette - dark corners for focus on plasma
+        config.vignette.enabled = true;
+        config.vignette.intensity = 0.4f;
+        config.vignette.softness = 0.5f;
+        config.vignette.colour = juce::Colour(0xFF000510);  // Very dark blue-black
+
+        // Color Grade - subtle enhancement for electric look
+        config.colorGrade.enabled = true;
+        config.colorGrade.contrast = 1.15f;
+        config.colorGrade.saturation = 1.1f;    // Slightly vivid colors
+        config.colorGrade.shadows = juce::Colour(0xFF000818);  // Deep blue shadows
+    }
+    else if (presetName == "glitch_art")
+    {
+        // Chaotic, distorted data-moshing
+        config.shaderType = ShaderType::DigitalGlitch;
+
+        // Post
+        config.distortion.enabled = true;
+        config.distortion.intensity = 0.05f; // Heavy distortion
+        config.distortion.frequency = 8.0f;
+        config.distortion.speed = 4.0f;
+
+        config.chromaticAberration.enabled = true;
+        config.chromaticAberration.intensity = 0.03f; // Extreme separation
+
+        config.filmGrain.enabled = true;
+        config.filmGrain.intensity = 0.3f;
+
+        config.bloom.enabled = true;
+        config.bloom.intensity = 0.8f;
+
+        config.trails.enabled = true;
+        config.trails.decay = 0.4f; // Short trails/smear
+    }
+    else if (presetName == "electric_flower")
+    {
+        // Electric flower visualization inspired by webglsamples.org/electricflower
+        // Uses cascaded 3D rotations with irrational multipliers for organic motion
+        // Colors derived from oscillator base color
+        config.shaderType = ShaderType::ElectricFlower;
+
+        // 3D Setup - orbital view for flower pattern
         config.settings3D.enabled = true;
         config.settings3D.cameraDistance = 4.0f;
         config.settings3D.cameraAngleX = 20.0f;
         config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 15.0f;
-        config.bloom.enabled = true;
-        config.bloom.intensity = 0.6f;
-    }
-    else if (presetName == "test_3d_wireframe")
-    {
-        // Tests: 3D wireframe mesh shader
-        // Look for: Retro grid/wireframe 3D mesh, neon lines
-        config.shaderType = ShaderType::WireframeMesh;
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 5.0f;
-        config.settings3D.cameraAngleX = 30.0f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 10.0f;
-        config.settings3D.meshResolutionX = 64;
-        config.settings3D.meshResolutionZ = 24;
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.2f;
-        config.scanlines.enabled = true;
-        config.scanlines.intensity = 0.2f;
-    }
-    else if (presetName == "test_3d_orbit")
-    {
-        // Tests: 3D camera orbit controls
-        // Look for: Smooth auto-rotation around 3D waveform
-        config.shaderType = ShaderType::VolumetricRibbon;
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 3.5f;
-        config.settings3D.cameraAngleX = 45.0f;
-        config.settings3D.cameraAngleY = 30.0f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 25.0f;
-    }
-
-    // ==========================================================================
-    // Material Shader Test Presets
-    // ==========================================================================
-
-    else if (presetName == "test_glass")
-    {
-        // Tests: Glass refraction material shader
-        // Look for: Transparent glass tube with refraction, chromatic dispersion
-        config.shaderType = ShaderType::GlassRefraction;
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 4.0f;
-        config.settings3D.autoRotate = true;
         config.settings3D.rotateSpeed = 8.0f;
-        config.material.enabled = true;
-        config.material.reflectivity = 0.3f;
-        config.material.refractiveIndex = 1.5f;     // Glass IOR
-        config.material.fresnelPower = 3.0f;
-        config.material.useEnvironmentMap = true;
-        config.material.environmentMapId = "neon";
-    }
-    else if (presetName == "test_chrome")
-    {
-        // Tests: Liquid chrome material shader
-        // Look for: Reflective metallic surface with animated ripples
-        config.shaderType = ShaderType::LiquidChrome;
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 4.0f;
-        config.settings3D.cameraAngleX = 25.0f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 12.0f;
-        config.material.enabled = true;
-        config.material.reflectivity = 1.0f;
-        config.material.roughness = 0.05f;
-        config.material.useEnvironmentMap = true;
-        config.material.environmentMapId = "studio";
-    }
-    else if (presetName == "test_chrome_cyber")
-    {
-        // Tests: Chrome with cyber environment
-        // Look for: Neon reflections on liquid metal surface
-        config.shaderType = ShaderType::LiquidChrome;
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 3.5f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 10.0f;
-        config.material.enabled = true;
-        config.material.reflectivity = 1.0f;
-        config.material.roughness = 0.1f;
-        config.material.useEnvironmentMap = true;
-        config.material.environmentMapId = "cyber_space";
-        config.bloom.enabled = true;
-        config.bloom.intensity = 0.8f;
-    }
 
-    // ==========================================================================
-    // Combined Feature Test Presets
-    // ==========================================================================
-
-    else if (presetName == "test_full_demo")
-    {
-        // Tests: Multiple systems working together
-        // Look for: 3D ribbon with particles, bloom, and color effects
-        config.shaderType = ShaderType::VolumetricRibbon;
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 4.5f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 8.0f;
-        config.particles.enabled = true;
-        config.particles.emissionMode = ParticleEmissionMode::AtPeaks;
-        config.particles.emissionRate = 100.0f;
-        config.particles.particleColor = juce::Colour(0xFFFFCC00);
+        // Bloom - soft knee for smooth glow transition
         config.bloom.enabled = true;
-        config.bloom.intensity = 1.0f;
+        config.bloom.intensity = 1.8f;
+        config.bloom.threshold = 0.3f;
+        config.bloom.spread = 2.0f;
+        config.bloom.softKnee = 0.8f;  // Soft threshold like reference
+
+        // Radial blur - zoom-glow effect from center (like reference)
+        config.radialBlur.enabled = true;
+        config.radialBlur.amount = 0.08f;   // Subtle zoom
+        config.radialBlur.glow = 1.2f;      // Slight brightening
+        config.radialBlur.samples = 4;      // Match reference
+
+        // Trails for smooth motion persistence
+        config.trails.enabled = true;
+        config.trails.decay = 0.08f;  // Slow decay for dreamy look
+        config.trails.opacity = 0.7f;
+
+        // Color grading - enhance vibrancy
+        config.colorGrade.enabled = true;
+        config.colorGrade.saturation = 1.2f;
+        config.colorGrade.contrast = 1.1f;
+
+        // Vignette for focus
         config.vignette.enabled = true;
         config.vignette.intensity = 0.4f;
-        config.colorGrade.enabled = true;
-        config.colorGrade.saturation = 1.3f;
-    }
-    else if (presetName == "test_retro_3d")
-    {
-        // Tests: Retro aesthetic with 3D wireframe
-        // Look for: Neon wireframe mesh with CRT effects
-        config.shaderType = ShaderType::WireframeMesh;
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 5.0f;
-        config.settings3D.cameraAngleX = 35.0f;
-        config.settings3D.autoRotate = true;
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.5f;
-        config.scanlines.enabled = true;
-        config.scanlines.intensity = 0.4f;
-        config.chromaticAberration.enabled = true;
-        config.chromaticAberration.intensity = 0.008f;
-        config.vignette.enabled = true;
-        config.vignette.intensity = 0.6f;
-        config.filmGrain.enabled = true;
-        config.filmGrain.intensity = 0.1f;
+        config.vignette.softness = 0.6f;
     }
 
     return config;
@@ -714,47 +688,17 @@ std::vector<std::pair<juce::String, juce::String>> VisualConfiguration::getAvail
 {
     // Returns pairs of (id, displayName)
     return {
-        // Basic presets
-        {"default", "Default (Clean)"},
-        {"neon", "Neon Glow"},
-        {"retro", "Retro CRT"},
-        {"gradient", "Gradient Fill"},
-        {"outline", "Dual Outline"},
-        {"plasma", "Plasma Sine"},
-        {"glitch", "Digital Glitch"},
-        {"vector_flow", "Vector Flow"},
-        {"string_theory", "String Theory"},
-        {"crystal", "Crystalline"},
-
-        // Post-processing tests
-        {"test_bloom", "Test: Bloom Effect"},
-        {"test_trails", "Test: Trails/Persistence"},
-        {"test_chromatic", "Test: Chromatic Aberration"},
-        {"test_scanlines", "Test: Scanlines"},
-        {"test_vignette", "Test: Vignette"},
-        {"test_grain", "Test: Film Grain"},
-        {"test_distortion", "Test: Wave Distortion"},
-        {"test_color_grade", "Test: Color Grading"},
-        {"test_all_post", "Test: All Post-Processing"},
-
-        // Particle tests
-        {"test_particles_along", "Test: Particles Along"},
-        {"test_particles_peaks", "Test: Particles at Peaks"},
-        {"test_particles_zero", "Test: Particles Zero-Cross"},
-
-        // 3D shader tests
-        {"test_3d_ribbon", "Test: 3D Ribbon"},
-        {"test_3d_wireframe", "Test: 3D Wireframe"},
-        {"test_3d_orbit", "Test: 3D Camera Orbit"},
-
-        // Material tests
-        {"test_glass", "Test: Glass Material"},
-        {"test_chrome", "Test: Chrome Material"},
-        {"test_chrome_cyber", "Test: Chrome Cyber"},
-
-        // Combined tests
-        {"test_full_demo", "Test: Full Demo"},
-        {"test_retro_3d", "Test: Retro 3D"}
+        {"default", "Basic (Default)"},
+        {"neon", "Neon"},
+        {"plasma_sine", "Plasma Sine"},
+        {"cyberpunk", "Cyberpunk Edge"},
+        {"liquid_gold", "Liquid Gold"},
+        {"deep_ocean", "Deep Ocean"},
+        {"synthwave", "Synthwave Grid"},
+        {"ethereal", "Ethereal Dream"},
+        {"matrix", "Matrix Rain"},
+        {"glitch_art", "Glitch Art"},
+        {"electric_flower", "Electric Flower"}
     };
 }
 
@@ -772,6 +716,7 @@ juce::String shaderTypeToId(ShaderType type)
         case ShaderType::WireframeMesh:   return "wireframe_mesh";
         case ShaderType::VectorFlow:      return "vector_flow";
         case ShaderType::StringTheory:    return "string_theory";
+        case ShaderType::ElectricFlower:  return "electric_flower";
         case ShaderType::GlassRefraction: return "glass_refraction";
         case ShaderType::LiquidChrome:    return "liquid_chrome";
         case ShaderType::Crystalline:     return "crystalline";
@@ -791,6 +736,7 @@ ShaderType idToShaderType(const juce::String& id)
     if (id == "wireframe_mesh")    return ShaderType::WireframeMesh;
     if (id == "vector_flow")       return ShaderType::VectorFlow;
     if (id == "string_theory")     return ShaderType::StringTheory;
+    if (id == "electric_flower")   return ShaderType::ElectricFlower;
     if (id == "glass_refraction")  return ShaderType::GlassRefraction;
     if (id == "liquid_chrome")     return ShaderType::LiquidChrome;
     if (id == "crystalline")       return ShaderType::Crystalline;

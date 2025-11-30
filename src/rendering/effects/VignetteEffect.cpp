@@ -13,32 +13,37 @@ using namespace juce::gl;
 
 // Vignette fragment shader
 static const char* vignetteFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
     uniform float intensity;
     uniform float softness;
-    uniform vec4 vignetteColor;
+    uniform vec4 colour;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
     void main()
     {
-        vec4 color = texture2D(sourceTexture, vTexCoord);
-
-        // Calculate distance from center (0,0 to 1,1 -> center at 0.5,0.5)
-        vec2 uv = vTexCoord - 0.5;
-
-        // Aspect ratio correction (assume wider than tall)
-        // For proper aspect ratio handling, you'd pass in resolution
-        float dist = length(uv) * 2.0;
-
-        // Smooth falloff from center to edges
-        // softness controls how sharp the transition is
-        float vignette = smoothstep(1.0 - softness, 1.0, dist);
-
-        // Apply vignette
-        vec3 finalColor = mix(color.rgb, vignetteColor.rgb, vignette * intensity);
-
-        gl_FragColor = vec4(finalColor, color.a);
+        vec4 color = texture(sourceTexture, vTexCoord);
+        
+        // Calculate distance from center
+        vec2 position = (vTexCoord - 0.5);
+        
+        // Use squared distance for smooth optical falloff
+        // Multiply by 2.0 to hit corners
+        float len2 = dot(position, position) * 2.0;
+        
+        // Vignette curve
+        // Intensity controls how "dark" the darkest part can get (indirectly via curve steepness)
+        // Softness controls the transition
+        
+        float vignette = 1.0 - smoothstep(1.0 - softness, 1.0 + softness * 0.5, len2);
+        
+        // Mix original color with vignette color
+        // Apply intensity strength to the final mix
+        color.rgb = mix(color.rgb, colour.rgb, (1.0 - vignette) * intensity);
+        
+        fragColor = color;
     }
 )";
 

@@ -11,7 +11,7 @@ namespace oscil
 
 using namespace juce::gl;
 
-bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt, bool withDepth)
+bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt, bool withDepth, bool useDepthTexture)
 {
     if (w <= 0 || h <= 0)
         return false;
@@ -20,6 +20,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt,
     height = h;
     format = fmt;
     hasDepth = withDepth;
+    hasDepthTexture = useDepthTexture && withDepth;
 
     auto& ext = context.extensions;
 
@@ -60,7 +61,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt,
 
     DBG("Framebuffer: Created " << width << "x" << height
         << " FBO=" << (int)fbo << " Texture=" << (int)colorTexture
-        << " Depth=" << (hasDepth ? (int)depthBuffer : 0));
+        << " Depth=" << (hasDepthTexture ? (int)depthTexture : (int)depthBuffer));
 
     // Check status
     GLenum status = context.extensions.glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -124,20 +125,45 @@ bool Framebuffer::createDepthBuffer(juce::OpenGLContext& context)
 {
     auto& ext = context.extensions;
 
-    ext.glGenRenderbuffers(1, &depthBuffer);
-    if (depthBuffer == 0)
+    if (hasDepthTexture)
     {
-        DBG("Framebuffer: Failed to generate depth renderbuffer");
-        return false;
+        // Create sampleable depth texture
+        glGenTextures(1, &depthTexture);
+        if (depthTexture == 0)
+        {
+            DBG("Framebuffer: Failed to generate depth texture");
+            return false;
+        }
+
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        ext.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return true;
     }
+    else
+    {
+        // Create renderbuffer (faster if sampling not needed)
+        ext.glGenRenderbuffers(1, &depthBuffer);
+        if (depthBuffer == 0)
+        {
+            DBG("Framebuffer: Failed to generate depth renderbuffer");
+            return false;
+        }
 
-    ext.glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
-    ext.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
-    ext.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                  GL_RENDERBUFFER, depthBuffer);
-    ext.glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-    return true;
+        ext.glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+        ext.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+        ext.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                      GL_RENDERBUFFER, depthBuffer);
+        ext.glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        return true;
+    }
 }
 
 bool Framebuffer::checkFramebufferComplete()
@@ -174,6 +200,12 @@ void Framebuffer::destroy(juce::OpenGLContext& context)
         depthBuffer = 0;
     }
 
+    if (depthTexture != 0)
+    {
+        glDeleteTextures(1, &depthTexture);
+        depthTexture = 0;
+    }
+
     if (colorTexture != 0)
     {
         glDeleteTextures(1, &colorTexture);
@@ -197,9 +229,10 @@ void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
 
     GLenum savedFormat = format;
     bool savedHasDepth = hasDepth;
+    bool savedHasDepthTexture = hasDepthTexture;
 
     destroy(context);
-    create(context, w, h, savedFormat, savedHasDepth);
+    create(context, w, h, savedFormat, savedHasDepth, savedHasDepthTexture);
 }
 
 void Framebuffer::bind()
@@ -230,6 +263,15 @@ void Framebuffer::bindTexture(int textureUnit)
     {
         glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
         glBindTexture(GL_TEXTURE_2D, colorTexture);
+    }
+}
+
+void Framebuffer::bindDepthTexture(int textureUnit)
+{
+    if (depthTexture != 0)
+    {
+        glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
     }
 }
 

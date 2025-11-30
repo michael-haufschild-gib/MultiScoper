@@ -26,6 +26,7 @@ struct WaveformData3D
     juce::Colour color;              // Waveform color
     float lineThickness = 2.0f;      // Line thickness
     float zOffset = 0.0f;            // Z-axis offset for multi-waveform
+    float yOffset = 0.0f;            // Y-axis offset for stereo separation
     float amplitude = 1.0f;          // Amplitude scaling
     float time = 0.0f;               // Animation time
 };
@@ -162,17 +163,20 @@ protected:
                                     GLint specPowerLoc,
                                     const LightingConfig& lighting);
 
+public:
     /**
      * Generate tube mesh vertices from waveform samples.
      * Creates a tubular mesh around the waveform path.
      * @param samples Sample data
      * @param sampleCount Number of samples
+     * @param xSpread Horizontal spread multiplier (1.0 = -1 to 1)
      * @param radius Tube radius
      * @param segments Segments around tube circumference
      * @param vertices Output vertex buffer (position + normal + uv)
      * @param indices Output index buffer
      */
     static void generateTubeMesh(const float* samples, int sampleCount,
+                                 float xSpread,
                                  float radius, int segments,
                                  std::vector<float>& vertices,
                                  std::vector<GLuint>& indices);
@@ -182,6 +186,7 @@ protected:
      * Creates a flat ribbon that can have width variation.
      */
     static void generateRibbonMesh(const float* samples, int sampleCount,
+                                   float xSpread,
                                    float width,
                                    std::vector<float>& vertices,
                                    std::vector<GLuint>& indices);

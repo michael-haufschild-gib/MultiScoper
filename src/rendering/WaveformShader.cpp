@@ -31,15 +31,15 @@ void WaveformShader::renderSoftware(
         float halfHeight = height * 0.5f;
         centerY1 = bounds.getY() + halfHeight * 0.5f;
         centerY2 = bounds.getY() + halfHeight * 1.5f;
-        amplitude1 = halfHeight * 0.45f;
-        amplitude2 = halfHeight * 0.45f;
+        amplitude1 = halfHeight * 0.45f * params.verticalScale;
+        amplitude2 = halfHeight * 0.45f * params.verticalScale;
     }
     else
     {
         // Mono layout
         centerY1 = bounds.getCentreY();
         centerY2 = centerY1;
-        amplitude1 = height * 0.45f;
+        amplitude1 = height * 0.45f * params.verticalScale;
         amplitude2 = amplitude1;
     }
 
@@ -89,16 +89,13 @@ bool WaveformShader::compileShaderProgram(
     const char* vertexSource,
     const char* fragmentSource)
 {
-    juce::String translatedVertex = juce::OpenGLHelpers::translateVertexShaderToV3(vertexSource);
-    juce::String translatedFragment = juce::OpenGLHelpers::translateFragmentShaderToV3(fragmentSource);
-
-    if (!program.addVertexShader(translatedVertex))
+    if (!program.addVertexShader(vertexSource))
     {
         DBG("Vertex shader compilation failed: " << program.getLastError());
         return false;
     }
 
-    if (!program.addFragmentShader(translatedFragment))
+    if (!program.addFragmentShader(fragmentSource))
     {
         DBG("Fragment shader compilation failed: " << program.getLastError());
         return false;

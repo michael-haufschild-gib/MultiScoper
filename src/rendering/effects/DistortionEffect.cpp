@@ -12,28 +12,34 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* distortionFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
     uniform float intensity;
     uniform float frequency;
+    uniform float speed;
     uniform float time;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
     void main()
     {
-        // Create wave distortion
-        float waveX = sin(vTexCoord.y * frequency * 6.28318 + time) * intensity;
-        float waveY = cos(vTexCoord.x * frequency * 6.28318 + time * 0.7) * intensity;
+        vec2 uv = vTexCoord;
+        
+        // Calculate sine wave displacement
+        // Y displacement based on X coordinate + time
+        float offsetY = sin(uv.x * frequency + time * speed) * intensity;
+        
+        // X displacement based on Y coordinate + time (optional, adds more chaos)
+        float offsetX = cos(uv.y * frequency + time * speed * 1.1) * intensity * 0.5;
+        
+        uv.y += offsetY;
+        uv.x += offsetX;
+        
+        // Wrap or Clamp? Clamp to avoid artifacts
+        uv = clamp(uv, 0.0, 1.0);
 
-        // Apply distortion to UVs
-        vec2 distortedUV = vTexCoord + vec2(waveX, waveY);
-
-        // Clamp to valid UV range
-        distortedUV = clamp(distortedUV, 0.0, 1.0);
-
-        vec4 color = texture2D(sourceTexture, distortedUV);
-
-        gl_FragColor = color;
+        fragColor = texture(sourceTexture, uv);
     }
 )";
 

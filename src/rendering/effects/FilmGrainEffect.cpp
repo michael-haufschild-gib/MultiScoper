@@ -13,56 +13,54 @@ using namespace juce::gl;
 
 // Film grain fragment shader using procedural noise
 static const char* filmGrainFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
     uniform float intensity;
     uniform float time;
     uniform vec2 resolution;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
-    // Simple hash function for pseudo-random noise
+    // High-quality hash (Gold Noise logic or similar)
     float hash(vec2 p)
     {
-        vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+        vec3 p3 = fract(vec3(p.xyx) * .1031);
         p3 += dot(p3, p3.yzx + 33.33);
         return fract((p3.x + p3.y) * p3.z);
     }
 
-    // Multi-octave noise for more natural grain
-    float noise(vec2 uv, float t)
-    {
-        // Add time-varying component for animation
-        vec2 p = uv * resolution + vec2(t * 543.21, t * 987.65);
-
-        // Get base noise
-        float n = hash(floor(p));
-
-        // Add higher frequency detail
-        float n2 = hash(floor(p * 2.0));
-        float n3 = hash(floor(p * 4.0));
-
-        return (n * 0.5 + n2 * 0.3 + n3 * 0.2);
-    }
-
     void main()
     {
-        vec4 color = texture2D(sourceTexture, vTexCoord);
+        vec4 color = texture(sourceTexture, vTexCoord);
+        
+        // Calculate luminance
+        float luma = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
 
-        // Generate animated grain
-        float grain = noise(vTexCoord, time);
+        // Generate noise
+        // Use large coordinates to avoid pattern repetition
+        float noise = hash(vTexCoord * resolution + time * 100.0);
 
-        // Center noise around 0.5 and scale
-        grain = (grain - 0.5) * 2.0 * intensity;
+        // Film Grain logic:
+        // 1. Gaussian-ish distribution (approx by summing uniform noise? or just use uniform)
+        // Uniform is fine for this scale.
+        
+        // 2. Luminance response:
+        // Grain is most visible in mid-tones, less in black (no signal) and white (saturation).
+        // Parabolic curve: 1.0 - (luma - 0.5) * 2.0 squared? 
+        // Or simplified: x * (1 - x) * 4.0
+        float response = luma * (1.0 - luma) * 4.0;
+        // Boost shadows slightly as digital noise often appears there too
+        response = mix(response, 1.0, 0.2);
 
-        // Apply grain additively (preserves color balance)
-        vec3 result = color.rgb + vec3(grain);
-
-        // Subtle luminance-based grain (more visible in midtones)
-        float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-        float midtoneMask = 1.0 - abs(luminance - 0.5) * 2.0;
-        result = mix(color.rgb, result, 0.5 + midtoneMask * 0.5);
-
-        gl_FragColor = vec4(clamp(result, 0.0, 1.0), color.a);
+        // Apply grain
+        // "Overlay" blend mode approximation or Soft Light is best, 
+        // but simple additive/subtractive modulated by intensity works well for speed.
+        
+        float grain = (noise - 0.5) * 2.0; // -1 to 1
+        vec3 grainColor = vec3(grain) * intensity * response;
+        
+        fragColor = vec4(color.rgb + grainColor, color.a);
     }
 )";
 

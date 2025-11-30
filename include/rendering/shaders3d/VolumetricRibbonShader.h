@@ -54,7 +54,7 @@ public:
     [[nodiscard]] float getPulseSpeed() const { return pulseSpeed_; }
 
 private:
-    void updateMesh(const WaveformData3D& data);
+    void updateMesh(const WaveformData3D& data, float xSpread);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

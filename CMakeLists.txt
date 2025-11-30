@@ -174,6 +174,9 @@ target_sources(Oscil
         # UI Managers
         src/ui/managers/OpenGLLifecycleManager.cpp
 
+        # Platform-specific
+        $<$<PLATFORM_ID:Darwin>:src/ui/components/AnimationSettings.mm>
+
         # UI Components (New Component Library)
         src/ui/components/OscilButton.cpp
         src/ui/components/OscilTextField.cpp
@@ -223,6 +226,7 @@ target_sources(Oscil
         src/rendering/effects/ScanlineEffect.cpp
         src/rendering/effects/DistortionEffect.cpp
         src/rendering/effects/GlitchEffect.cpp
+        src/rendering/effects/RadialBlurEffect.cpp
 
         # Rendering (Particles)
         src/rendering/particles/ParticlePool.cpp
@@ -235,6 +239,7 @@ target_sources(Oscil
         src/rendering/shaders3d/WireframeMeshShader.cpp
         src/rendering/shaders3d/VectorFlowShader.cpp
         src/rendering/shaders3d/StringTheoryShader.cpp
+        src/rendering/shaders3d/ElectricFlowerShader.cpp
 
         # Rendering (Materials)
         src/rendering/materials/MaterialShader.cpp
@@ -377,6 +382,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_accordion_sections_e2e.cpp
         tests/test_sidebar_theme_population.cpp
         tests/test_shaders.cpp
+        tests/test_waveform_shader_3d.cpp
 
         # New tests - 100% coverage initiative
         tests/test_window_layout.cpp
@@ -435,7 +441,11 @@ if(OSCIL_BUILD_TESTS)
         src/ui/coordinators/SourceCoordinator.cpp
         src/ui/coordinators/ThemeCoordinator.cpp
         src/ui/coordinators/LayoutCoordinator.cpp
+        # UI Managers
         src/ui/managers/OpenGLLifecycleManager.cpp
+
+        # Platform-specific
+        $<$<PLATFORM_ID:Darwin>:src/ui/components/AnimationSettings.mm>
 
         # UI Component source files for testing
         src/ui/components/OscilButton.cpp
@@ -486,6 +496,7 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/effects/ScanlineEffect.cpp
         src/rendering/effects/DistortionEffect.cpp
         src/rendering/effects/GlitchEffect.cpp
+        src/rendering/effects/RadialBlurEffect.cpp
 
         # Rendering (Particles) for testing
         src/rendering/particles/ParticlePool.cpp
@@ -498,6 +509,7 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/shaders3d/WireframeMeshShader.cpp
         src/rendering/shaders3d/VectorFlowShader.cpp
         src/rendering/shaders3d/StringTheoryShader.cpp
+        src/rendering/shaders3d/ElectricFlowerShader.cpp
 
         # Rendering (Materials) for testing
         src/rendering/materials/MaterialShader.cpp

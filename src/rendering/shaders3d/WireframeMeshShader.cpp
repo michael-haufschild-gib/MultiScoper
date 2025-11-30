@@ -13,54 +13,51 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* wireframeVertexShader = R"(
-    attribute vec3 aPosition;
-    attribute float aDepth;
+    #version 330 core
+    in vec3 position;
+    in float depth;
 
     uniform mat4 uModel;
     uniform mat4 uView;
     uniform mat4 uProjection;
     uniform float uTime;
 
-    varying float vDepth;
-    varying float vGlow;
+    out float vDepth;
 
     void main()
     {
-        vec4 worldPos = uModel * vec4(aPosition, 1.0);
+        vec4 worldPos = uModel * vec4(position, 1.0);
         gl_Position = uProjection * uView * worldPos;
-
-        vDepth = aDepth;
-
-        // Distance-based glow falloff
-        float dist = length(gl_Position.xyz);
-        vGlow = 1.0 / (1.0 + dist * 0.5);
+        vDepth = depth;
     }
 )";
 
 static const char* wireframeFragmentShader = R"(
+    #version 330 core
     uniform vec4 uColor;
     uniform float uGlow;
     uniform float uTime;
 
-    varying float vDepth;
-    varying float vGlow;
+    in float vDepth;
+
+    out vec4 fragColor;
 
     void main()
     {
-        // Depth-based fade (farther = more transparent)
-        float depthFade = 1.0 - vDepth * 0.5;
-        depthFade = max(depthFade, 0.2);
+        // Depth-based fade (farther lines are more transparent)
+        float depthFade = 1.0 - vDepth * 0.4;
+        depthFade = max(depthFade, 0.3);
 
-        // Pulse effect
-        float pulse = sin(uTime * 2.0 + vDepth * 5.0) * 0.1 + 0.9;
+        // Subtle pulse effect for synthwave feel
+        float pulse = sin(uTime * 2.0 + vDepth * 3.0) * 0.1 + 0.95;
 
-        // Calculate final alpha with glow
-        float alpha = uColor.a * depthFade * vGlow * pulse;
+        // Calculate alpha
+        float alpha = uColor.a * depthFade * pulse;
 
-        // Add glow bloom to color
-        vec3 glowColor = uColor.rgb * (1.0 + uGlow * vGlow);
+        // Apply glow boost to color (makes lines brighter)
+        vec3 glowColor = uColor.rgb * (1.0 + uGlow * 0.5 * (1.0 - vDepth));
 
-        gl_FragColor = vec4(glowColor, alpha);
+        fragColor = vec4(glowColor, alpha);
     }
 )";
 
@@ -92,34 +89,9 @@ bool WireframeMeshShader::compile(juce::OpenGLContext& context)
     timeLoc_ = shader_->getUniformIDFromName("uTime");
     glowLoc_ = shader_->getUniformIDFromName("uGlow");
 
-    // Create VAO
+    // Create VAO and VBO (vertex attributes set up in render())
     ext.glGenVertexArrays(1, &vao_);
-    ext.glBindVertexArray(vao_);
-
-    // Create VBO
     ext.glGenBuffers(1, &vbo_);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-
-    // Setup vertex attributes (position: 3, depth: 1)
-    GLint posAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aPosition");
-    GLint depthAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aDepth");
-
-    const int stride = 4 * sizeof(float);
-
-    if (posAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
-    }
-
-    if (depthAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(depthAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(depthAttrib), 1, GL_FLOAT, GL_FALSE, stride,
-                                  reinterpret_cast<void*>(3 * sizeof(float)));
-    }
-
-    ext.glBindVertexArray(0);
 
     compiled_ = true;
     DBG("WireframeMeshShader: Compiled successfully");
@@ -159,8 +131,29 @@ void WireframeMeshShader::render(juce::OpenGLContext& context,
     if (!compiled_ || !data.samples || data.sampleCount < 2)
         return;
 
+    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
+    float xSpread = 1.0f;
+    float halfHeight = 1.0f;
+
+    if (camera.getProjection() == CameraProjection::Orthographic)
+    {
+        float height = camera.getOrthoSize();
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+    else
+    {
+        float dist = (camera.getPosition() - camera.getTarget()).length();
+        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
+        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+
     // Generate wireframe mesh
-    generateWireframeMesh(data);
+    generateWireframeMesh(data, xSpread);
 
     if (vertexCount_ == 0)
         return;
@@ -181,9 +174,10 @@ void WireframeMeshShader::render(juce::OpenGLContext& context,
 
     shader_->use();
 
-    // Set matrix uniforms
-    Matrix4 model = Matrix4::translation(0, 0, data.zOffset) *
-                    Matrix4::scale(1.0f, data.amplitude, 1.0f);
+    // Set matrix uniforms - apply Y offset for stereo separation
+    // Scale amplitude by halfHeight to map normalized amplitude to world space
+    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
     setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
 
     // Set color
@@ -197,10 +191,37 @@ void WireframeMeshShader::render(juce::OpenGLContext& context,
     ext.glUniform1f(timeLoc_, time_);
     ext.glUniform1f(glowLoc_, lineGlow_);
 
-    // Bind VAO and draw
+    // Bind VAO and upload VBO data
     ext.glBindVertexArray(vao_);
+    ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    ext.glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(vertices_.size() * sizeof(float)),
+                     vertices_.data(), GL_DYNAMIC_DRAW);
+
+    // Set up vertex attributes (position: 3, depth: 1)
+    GLint posAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "position");
+    GLint depthAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "depth");
+
+    if (posAttrib < 0) posAttrib = 0;
+    if (depthAttrib < 0) depthAttrib = 1;
+
+    const int stride = 4 * sizeof(float);
+
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
+    ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(depthAttrib));
+    ext.glVertexAttribPointer(static_cast<GLuint>(depthAttrib), 1, GL_FLOAT, GL_FALSE, stride,
+                              reinterpret_cast<void*>(3 * sizeof(float)));
+
+    // Draw
     glDrawArrays(GL_LINES, 0, vertexCount_);
+
+    // Cleanup
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(posAttrib));
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(depthAttrib));
     ext.glBindVertexArray(0);
+    ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glDisable(GL_LINE_SMOOTH);
     glDisable(GL_BLEND);
@@ -213,7 +234,7 @@ void WireframeMeshShader::update(float deltaTime)
         time_ = std::fmod(time_, 1000.0f);
 }
 
-void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data)
+void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data, float xSpread)
 {
     vertices_.clear();
 
@@ -252,8 +273,8 @@ void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data)
             int idx1 = static_cast<int>(t1 * static_cast<float>(data.sampleCount - 1));
             int idx2 = static_cast<int>(t2 * static_cast<float>(data.sampleCount - 1));
 
-            float x1 = t1 * 2.0f - 1.0f;
-            float x2 = t2 * 2.0f - 1.0f;
+            float x1 = (t1 * 2.0f - 1.0f) * xSpread;
+            float x2 = (t2 * 2.0f - 1.0f) * xSpread;
             float y1 = data.samples[idx1];
             float y2 = data.samples[idx2];
 
@@ -276,7 +297,7 @@ void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data)
     for (int x = 0; x < data.sampleCount; x += xStep)
     {
         float t = static_cast<float>(x) / static_cast<float>(data.sampleCount - 1);
-        float xPos = t * 2.0f - 1.0f;
+        float xPos = (t * 2.0f - 1.0f) * xSpread;
         float y = data.samples[x];
 
         for (int z = 0; z < zSegments - 1; ++z)
@@ -309,24 +330,8 @@ void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data)
         }
     }
 
-    if (vertices_.empty())
-    {
-        vertexCount_ = 0;
-        return;
-    }
-
-    // Upload to GPU
-    auto* glContext = juce::OpenGLContext::getCurrentContext();
-    if (!glContext)
-        return;
-
-    auto& ext = glContext->extensions;
-    ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    ext.glBufferData(GL_ARRAY_BUFFER,
-                     static_cast<GLsizeiptr>(vertices_.size() * sizeof(float)),
-                     vertices_.data(), GL_DYNAMIC_DRAW);
-
-    vertexCount_ = static_cast<int>(vertices_.size() / 4);
+    // Set vertex count (VBO upload happens in render())
+    vertexCount_ = vertices_.empty() ? 0 : static_cast<int>(vertices_.size() / 4);
 }
 
 void WireframeMeshShader::setParameter(const juce::String& name, float value)

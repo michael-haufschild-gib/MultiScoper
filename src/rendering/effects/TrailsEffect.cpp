@@ -13,28 +13,35 @@ using namespace juce::gl;
 
 // Trails shader - blends current frame with history
 static const char* trailsFragmentShader = R"(
+    #version 330 core
     uniform sampler2D currentTexture;
     uniform sampler2D historyTexture;
     uniform float decay;
     uniform float opacity;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
     void main()
     {
-        vec4 current = texture2D(currentTexture, vTexCoord);
-        vec4 history = texture2D(historyTexture, vTexCoord);
+        vec4 current = texture(currentTexture, vTexCoord);
+        vec4 history = texture(historyTexture, vTexCoord);
 
-        // Fade history based on decay rate
+        // Apply decay to history
+        // We fade alpha and rgb
         vec4 fadedHistory = history * (1.0 - decay);
 
-        // Blend current over faded history
-        // Using over compositing: C = Ca * Aa + Cb * (1 - Aa)
-        vec3 blended = current.rgb * current.a + fadedHistory.rgb * (1.0 - current.a);
-        float alpha = current.a + fadedHistory.a * (1.0 - current.a);
+        // Combine: current on top of history
+        // Standard alpha blending: src + dst * (1 - src.a)
+        // But here we want max brightness or additive accumulation?
+        // Let's use max for trails to preserve structure
+        
+        vec4 result = max(current, fadedHistory);
+        
+        // Apply master opacity
+        result.a *= opacity;
 
-        // Apply opacity
-        gl_FragColor = vec4(blended, alpha * opacity);
+        fragColor = result;
     }
 )";
 

@@ -13,7 +13,10 @@ using namespace juce::gl;
 
 // Color grading fragment shader
 static const char* colorGradeFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
+    
+    // Settings
     uniform float brightness;
     uniform float contrast;
     uniform float saturation;
@@ -22,60 +25,72 @@ static const char* colorGradeFragmentShader = R"(
     uniform vec3 shadows;
     uniform vec3 highlights;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
-    vec3 rgb2hsv(vec3 c)
+    // Narkowicz ACES Tone Mapping
+    // Standard for "filmic" look in games
+    vec3 ACESFilm(vec3 x)
     {
-        vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-        vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-        vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-        float d = q.x - min(q.w, q.y);
-        float e = 1.0e-10;
-        return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+        float a = 2.51;
+        float b = 0.03;
+        float c = 2.43;
+        float d = 0.59;
+        float e = 0.14;
+        return clamp((x*(a*x+b))/(x*(c*x+d)+e), 0.0, 1.0);
     }
 
-    vec3 hsv2rgb(vec3 c)
+    vec3 adjustContrast(vec3 color, float contrast)
     {
-        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+        return (color - 0.5) * contrast + 0.5;
+    }
+
+    vec3 adjustSaturation(vec3 color, float saturation)
+    {
+        // Better luminance weights (Rec. 709)
+        const vec3 lumaWeights = vec3(0.2126, 0.7152, 0.0722);
+        float luminance = dot(color, lumaWeights);
+        return mix(vec3(luminance), color, saturation);
     }
 
     void main()
     {
-        vec4 color = texture2D(sourceTexture, vTexCoord);
-        vec3 rgb = color.rgb;
+        vec4 texColor = texture(sourceTexture, vTexCoord);
+        vec3 color = texColor.rgb;
 
-        // Apply brightness
-        rgb += vec3(brightness);
+        // 1. Exposure / Brightness (Pre-tonemap)
+        color *= pow(2.0, brightness); // Photographic exposure
 
-        // Apply contrast (around mid gray)
-        rgb = (rgb - 0.5) * contrast + 0.5;
+        // 2. Contrast
+        color = adjustContrast(color, contrast);
 
-        // Apply saturation
-        float luma = dot(rgb, vec3(0.299, 0.587, 0.114));
-        rgb = mix(vec3(luma), rgb, saturation);
+        // 3. Color Balance (Temperature/Tint)
+        // Warmer = add R, sub B. Cooler = sub R, add B.
+        // Tint = Green/Magenta axis.
+        vec3 balance = vec3(temperature, tint, -temperature);
+        color += color * balance * 0.2; // Gentle shift
 
-        // Apply temperature (warm/cool shift)
-        // Warm = more red/yellow, Cool = more blue
-        rgb.r += temperature * 0.1;
-        rgb.b -= temperature * 0.1;
+        // 4. Saturation
+        color = adjustSaturation(color, saturation);
 
-        // Apply tint (green/magenta shift)
-        rgb.g += tint * 0.1;
+        // 5. Shadows/Highlights (Split Toning)
+        float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        
+        // Smooth blending using overlay-style logic
+        vec3 shadowTint = mix(vec3(1.0), shadows, 1.0 - lum);
+        vec3 highlightTint = mix(vec3(1.0), highlights, lum);
+        
+        color *= shadowTint * highlightTint;
 
-        // Apply shadow/highlight color tinting
-        float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
-        float shadowWeight = 1.0 - smoothstep(0.0, 0.5, luminance);
-        float highlightWeight = smoothstep(0.5, 1.0, luminance);
+        // 6. ACES Tone Mapping (The "AAA" Look)
+        // Compresses HDR values into displayable range with nice rolloff
+        color = ACESFilm(color);
 
-        rgb = mix(rgb, rgb * shadows, shadowWeight * 0.5);
-        rgb = mix(rgb, rgb * highlights, highlightWeight * 0.5);
+        // Gamma Correction (Linear -> sRGB)
+        // Assuming input was Linear (from HDR render)
+        color = pow(color, vec3(1.0/2.2));
 
-        // Clamp result
-        rgb = clamp(rgb, 0.0, 1.0);
-
-        gl_FragColor = vec4(rgb, color.a);
+        fragColor = vec4(color, texColor.a);
     }
 )";
 

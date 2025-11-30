@@ -1,5 +1,5 @@
 /*
-    Oscil - Bloom Effect Implementation
+    Oscil - Bloom Effect Implementation (Next-Gen Dual Filter)
 */
 
 #include "rendering/effects/BloomEffect.h"
@@ -11,139 +11,235 @@ namespace oscil
 
 using namespace juce::gl;
 
-// Threshold shader - extracts bright areas
-static const char* thresholdFragmentShader = R"(
+// =============================================================================
+// Shaders
+// =============================================================================
+
+// Prefilter: Extracts bright pixels and performs the first downsample (bilinear)
+// Now with soft knee for smoother threshold transition
+static const char* prefilterFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
     uniform float threshold;
+    uniform float softKnee;  // 0.0 = hard knee, 1.0 = very soft
 
-    varying vec2 vTexCoord;
-
-    void main()
-    {
-        vec4 color = texture2D(sourceTexture, vTexCoord);
-
-        // Calculate luminance
-        float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-
-        // Extract only pixels above threshold
-        float brightness = max(0.0, luminance - threshold);
-        float contribution = brightness / max(luminance, 0.001);
-
-        gl_FragColor = vec4(color.rgb * contribution, 1.0);
-    }
-)";
-
-// Gaussian blur shader - single direction
-static const char* blurFragmentShader = R"(
-    uniform sampler2D sourceTexture;
-    uniform vec2 direction;
-    uniform vec2 resolution;
-
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
     void main()
     {
-        vec2 texelSize = 1.0 / resolution;
-        vec2 offset = texelSize * direction;
+        // Simple bilinear downsample happens automatically via GPU if we sample 'sourceTexture' at half-res
+        vec3 color = texture(sourceTexture, vTexCoord).rgb;
 
-        // 9-tap Gaussian blur weights
-        // sigma = 2.0, calculated weights
-        const float weights[5] = float[5](
-            0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216
-        );
+        // Calculate luminance (Rec. 709)
+        float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
 
-        vec3 result = texture2D(sourceTexture, vTexCoord).rgb * weights[0];
+        // Soft knee threshold for smooth transition
+        // knee controls the width of the soft transition zone
+        float knee = threshold * softKnee;
 
-        for (int i = 1; i < 5; i++)
+        float contribution;
+        if (softKnee > 0.001)
         {
-            vec2 sampleOffset = offset * float(i);
-            result += texture2D(sourceTexture, vTexCoord + sampleOffset).rgb * weights[i];
-            result += texture2D(sourceTexture, vTexCoord - sampleOffset).rgb * weights[i];
+            // Soft knee: quadratic curve for smooth transition
+            float soft = brightness - threshold + knee;
+            soft = clamp(soft, 0.0, 2.0 * knee);
+            contribution = soft * soft / (4.0 * knee + 0.00001);
+
+            // Add linear part above threshold
+            contribution += max(0.0, brightness - threshold - knee);
+        }
+        else
+        {
+            // Hard knee (original behavior)
+            contribution = max(0.0, brightness - threshold);
         }
 
-        gl_FragColor = vec4(result, 1.0);
+        // Normalization to preserve color ratio
+        // Avoid division by zero
+        contribution /= max(brightness, 0.00001);
+
+        fragColor = vec4(color * contribution, 1.0);
     }
 )";
 
-// Combine shader - adds bloom to original
+// Downsample: Dual Filter (13-tap) - Preserves shape better than Gaussian
+// Based on "Next Generation Post Processing in Call of Duty: Advanced Warfare" (Jimenez 2014)
+static const char* downsampleFragmentShader = R"(
+    #version 330 core
+    uniform sampler2D sourceTexture;
+    uniform vec2 srcResolution;
+
+    in vec2 vTexCoord;
+    out vec4 fragColor;
+
+    void main()
+    {
+        vec2 texelSize = 1.0 / srcResolution;
+        float x = texelSize.x;
+        float y = texelSize.y;
+
+        // Take 13 samples
+        // a - b - c
+        // - d - e -
+        // f - g - h
+        // - i - j -
+        // k - l - m
+
+        vec3 a = texture(sourceTexture, vTexCoord + vec2(-2*x, 2*y)).rgb;
+        vec3 b = texture(sourceTexture, vTexCoord + vec2( 0,   2*y)).rgb;
+        vec3 c = texture(sourceTexture, vTexCoord + vec2( 2*x, 2*y)).rgb;
+
+        vec3 d = texture(sourceTexture, vTexCoord + vec2(-1*x, 1*y)).rgb;
+        vec3 e = texture(sourceTexture, vTexCoord + vec2( 1*x, 1*y)).rgb;
+
+        vec3 f = texture(sourceTexture, vTexCoord + vec2(-2*x, 0)).rgb;
+        vec3 g = texture(sourceTexture, vTexCoord).rgb;
+        vec3 h = texture(sourceTexture, vTexCoord + vec2( 2*x, 0)).rgb;
+
+        vec3 i = texture(sourceTexture, vTexCoord + vec2(-1*x, -1*y)).rgb;
+        vec3 j = texture(sourceTexture, vTexCoord + vec2( 1*x, -1*y)).rgb;
+
+        vec3 k = texture(sourceTexture, vTexCoord + vec2(-2*x, -2*y)).rgb;
+        vec3 l = texture(sourceTexture, vTexCoord + vec2( 0,   -2*y)).rgb;
+        vec3 m = texture(sourceTexture, vTexCoord + vec2( 2*x, -2*y)).rgb;
+
+        // Weighted average
+        vec3 result = vec3(0.0);
+        result += (d + e + i + j) * 0.5;      // Inner box
+        result += (a + b + g + f) * 0.125;    // Top-left box
+        result += (b + c + h + g) * 0.125;    // Top-right box
+        result += (f + g + l + k) * 0.125;    // Bottom-left box
+        result += (g + h + m + l) * 0.125;    // Bottom-right box
+
+        fragColor = vec4(result * 0.25, 1.0); // Normalize (sum of weights = 4, so divide by 4)
+    }
+)";
+
+// Upsample: Tent Filter (3x3) - Smooth reconstruction
+static const char* upsampleFragmentShader = R"(
+    #version 330 core
+    uniform sampler2D sourceTexture;
+    uniform float filterRadius;
+    uniform vec2 texelSize;
+
+    in vec2 vTexCoord;
+    out vec4 fragColor;
+
+    void main()
+    {
+        // Scale offset by filterRadius (user setting) and actual texel size
+        // This ensures we sample neighboring pixels correctly at any resolution
+        vec2 offset = texelSize * filterRadius;
+
+        vec3 result = vec3(0.0);
+
+        // 9-tap tent filter
+        // Center
+        result += texture(sourceTexture, vTexCoord).rgb * 4.0;
+
+        // Direct neighbors (Cross)
+        result += texture(sourceTexture, vTexCoord + vec2(-offset.x, 0.0)).rgb * 2.0;
+        result += texture(sourceTexture, vTexCoord + vec2( offset.x, 0.0)).rgb * 2.0;
+        result += texture(sourceTexture, vTexCoord + vec2( 0.0, -offset.y)).rgb * 2.0;
+        result += texture(sourceTexture, vTexCoord + vec2( 0.0,  offset.y)).rgb * 2.0;
+
+        // Diagonals (Corners)
+        result += texture(sourceTexture, vTexCoord + vec2(-offset.x, -offset.y)).rgb * 1.0;
+        result += texture(sourceTexture, vTexCoord + vec2( offset.x, -offset.y)).rgb * 1.0;
+        result += texture(sourceTexture, vTexCoord + vec2(-offset.x,  offset.y)).rgb * 1.0;
+        result += texture(sourceTexture, vTexCoord + vec2( offset.x,  offset.y)).rgb * 1.0;
+
+        fragColor = vec4(result * 0.0625, 1.0); // Divide by 16
+    }
+)";
+
+// Final Combine
 static const char* combineFragmentShader = R"(
+    #version 330 core
     uniform sampler2D originalTexture;
     uniform sampler2D bloomTexture;
     uniform float intensity;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
+
+    // Simple hash for dithering
+    float random(vec2 p) {
+        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+    }
 
     void main()
     {
-        vec4 original = texture2D(originalTexture, vTexCoord);
-        vec3 bloom = texture2D(bloomTexture, vTexCoord).rgb;
+        vec4 original = texture(originalTexture, vTexCoord);
+        vec3 bloom = texture(bloomTexture, vTexCoord).rgb;
 
-        // Additive blend
-        vec3 result = original.rgb + bloom * intensity;
+        // Additive combine of Scene + Bloom in LINEAR space
+        // Tone mapping and gamma correction will happen in the final blit
+        vec3 hdrColor = original.rgb + bloom * intensity;
 
-        gl_FragColor = vec4(result, original.a);
+        // Calculate alpha for compositing over transparent background
+        float bloomAlpha = length(bloom * intensity);
+        float finalAlpha = clamp(original.a + bloomAlpha, 0.0, 1.0);
+
+        fragColor = vec4(hdrColor, finalAlpha);
     }
 )";
 
+// =============================================================================
+// Implementation
+// =============================================================================
+
 BloomEffect::BloomEffect()
-    : brightFBO_(std::make_unique<Framebuffer>())
-    , blurTempFBO_(std::make_unique<Framebuffer>())
 {
+    // Reserve space for chain
+    mipChain_.reserve(kMaxMipLevels);
+    for (int i = 0; i < kMaxMipLevels; ++i)
+        mipChain_.push_back(std::make_unique<Framebuffer>());
 }
 
 BloomEffect::~BloomEffect() = default;
 
 bool BloomEffect::compile(juce::OpenGLContext& context)
 {
-    if (compiled_)
-        return true;
+    if (compiled_) return true;
 
-    // Compile threshold shader
-    thresholdShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*thresholdShader_, thresholdFragmentShader))
-    {
-        DBG("BloomEffect: Failed to compile threshold shader");
-        return false;
-    }
-    thresholdTextureLoc_ = thresholdShader_->getUniformIDFromName("sourceTexture");
-    thresholdValueLoc_ = thresholdShader_->getUniformIDFromName("threshold");
+    // 1. Prefilter
+    prefilterShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
+    if (!compileEffectShader(*prefilterShader_, prefilterFragmentShader)) return false;
+    prefilterThreshLoc_ = prefilterShader_->getUniformIDFromName("threshold");
+    prefilterSoftKneeLoc_ = prefilterShader_->getUniformIDFromName("softKnee");
 
-    // Compile blur shader
-    blurShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*blurShader_, blurFragmentShader))
-    {
-        DBG("BloomEffect: Failed to compile blur shader");
-        return false;
-    }
-    blurTextureLoc_ = blurShader_->getUniformIDFromName("sourceTexture");
-    blurDirectionLoc_ = blurShader_->getUniformIDFromName("direction");
-    blurResolutionLoc_ = blurShader_->getUniformIDFromName("resolution");
+    // 2. Downsample
+    downsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
+    if (!compileEffectShader(*downsampleShader_, downsampleFragmentShader)) return false;
+    downsampleResLoc_ = downsampleShader_->getUniformIDFromName("srcResolution");
 
-    // Compile combine shader
+    // 3. Upsample
+    upsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
+    if (!compileEffectShader(*upsampleShader_, upsampleFragmentShader)) return false;
+    upsampleFilterRadiusLoc_ = upsampleShader_->getUniformIDFromName("filterRadius");
+    upsampleTexelSizeLoc_ = upsampleShader_->getUniformIDFromName("texelSize");
+
+    // 4. Combine
     combineShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*combineShader_, combineFragmentShader))
-    {
-        DBG("BloomEffect: Failed to compile combine shader");
-        return false;
-    }
+    if (!compileEffectShader(*combineShader_, combineFragmentShader)) return false;
     combineOriginalLoc_ = combineShader_->getUniformIDFromName("originalTexture");
     combineBloomLoc_ = combineShader_->getUniformIDFromName("bloomTexture");
     combineIntensityLoc_ = combineShader_->getUniformIDFromName("intensity");
 
     compiled_ = true;
-    DBG("BloomEffect: Compiled successfully");
     return true;
 }
 
 void BloomEffect::release(juce::OpenGLContext& context)
 {
-    if (brightFBO_->isValid())
-        brightFBO_->destroy(context);
-    if (blurTempFBO_->isValid())
-        blurTempFBO_->destroy(context);
+    for (auto& fbo : mipChain_)
+        fbo->destroy(context);
 
-    thresholdShader_.reset();
-    blurShader_.reset();
+    prefilterShader_.reset();
+    downsampleShader_.reset();
+    upsampleShader_.reset();
     combineShader_.reset();
 
     compiled_ = false;
@@ -164,88 +260,113 @@ void BloomEffect::apply(
     float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
+    if (!compiled_ || !source || !destination) return;
 
-    if (!compiled_ || !source || !destination)
-        return;
+    // 1. Check for resize
+    int w = source->width;
+    int h = source->height;
 
-    auto& ext = context.extensions;
-
-    // Create or resize internal FBOs if needed
-    // Use half resolution for bloom for performance
-    int bloomWidth = source->width / 2;
-    int bloomHeight = source->height / 2;
-
-    if (lastWidth_ != bloomWidth || lastHeight_ != bloomHeight)
+    if (w != lastWidth_ || h != lastHeight_)
     {
-        if (brightFBO_->isValid())
-            brightFBO_->destroy(context);
-        if (blurTempFBO_->isValid())
-            blurTempFBO_->destroy(context);
-
-        brightFBO_->create(context, bloomWidth, bloomHeight, GL_RGBA16F, false);
-        blurTempFBO_->create(context, bloomWidth, bloomHeight, GL_RGBA16F, false);
-
-        lastWidth_ = bloomWidth;
-        lastHeight_ = bloomHeight;
+        for (int i = 0; i < kMaxMipLevels; ++i)
+        {
+            // Mip 0 is half res, Mip 1 is quarter, etc.
+            // Use shift to divide by 2^(i+1)
+            int mipW = std::max(1, w >> (i + 1));
+            int mipH = std::max(1, h >> (i + 1));
+            
+            if (mipChain_[static_cast<size_t>(i)]->isValid())
+                mipChain_[static_cast<size_t>(i)]->destroy(context);
+            
+            // Use Linear/Clamp for all mips (default in Framebuffer::create)
+            mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, GL_RGBA16F, false);
+        }
+        lastWidth_ = w;
+        lastHeight_ = h;
     }
 
+    auto& ext = context.extensions;
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
-    // Pass 1: Extract bright areas
-    brightFBO_->bind();
-    brightFBO_->clear(juce::Colours::black, false);
-    thresholdShader_->use();
+    // =========================================================================
+    // Pass 1: Prefilter + Downsample to Mip 0
+    // =========================================================================
+    mipChain_[0]->bind();
+    prefilterShader_->use();
     source->bindTexture(0);
-    ext.glUniform1i(thresholdTextureLoc_, 0);
-    ext.glUniform1f(thresholdValueLoc_, settings_.threshold);
+    ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
+    ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
     pool.renderFullscreenQuad();
-    brightFBO_->unbind();
+    mipChain_[0]->unbind();
 
-    // Iterative blur passes
-    int iterations = juce::jlimit(1, 8, settings_.iterations);
-    float spread = settings_.spread;
-
-    for (int i = 0; i < iterations; i++)
+    // =========================================================================
+    // Pass 2: Downsample Chain (Mip 0 -> 1 -> 2 -> 3 -> 4)
+    // =========================================================================
+    downsampleShader_->use();
+    for (int i = 0; i < kMaxMipLevels - 1; ++i)
     {
-        // Horizontal blur
-        blurTempFBO_->bind();
-        blurShader_->use();
-        brightFBO_->bindTexture(0);
-        ext.glUniform1i(blurTextureLoc_, 0);
-        ext.glUniform2f(blurDirectionLoc_, spread, 0.0f);
-        ext.glUniform2f(blurResolutionLoc_,
-            static_cast<float>(bloomWidth),
-            static_cast<float>(bloomHeight));
-        pool.renderFullscreenQuad();
-        blurTempFBO_->unbind();
+        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
+        Framebuffer* dst = mipChain_[static_cast<size_t>(i)+1].get();
 
-        // Vertical blur
-        brightFBO_->bind();
-        blurTempFBO_->bindTexture(0);
-        ext.glUniform2f(blurDirectionLoc_, 0.0f, spread);
+        dst->bind();
+        src->bindTexture(0);
+        
+        // Pass resolution of SOURCE for the dual filter offset calculations
+        ext.glUniform2f(downsampleResLoc_, (float)src->width, (float)src->height);
+        
         pool.renderFullscreenQuad();
-        brightFBO_->unbind();
+        dst->unbind();
     }
 
-    // Pass 3: Combine bloom with original
+    // =========================================================================
+    // Pass 3: Upsample Chain (Mip 4 -> 3 -> 2 -> 1 -> 0)
+    // =========================================================================
+    // Enable additive blending to accumulate the glow
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+
+    upsampleShader_->use();
+    ext.glUniform1f(upsampleFilterRadiusLoc_, settings_.spread); // Controls tent radius
+
+    for (int i = kMaxMipLevels - 1; i > 0; --i)
+    {
+        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
+        Framebuffer* dst = mipChain_[static_cast<size_t>(i)-1].get();
+
+        dst->bind();
+        src->bindTexture(0);
+        
+        // Pass texel size of the SOURCE (the smaller mip we are upsampling from)
+        // This ensures the filter kernel size is relative to the source pixels
+        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float)src->width, 1.0f / (float)src->height);
+
+        pool.renderFullscreenQuad();
+        dst->unbind();
+    }
+
+    // =========================================================================
+    // Pass 4: Combine
+    // =========================================================================
+    // Switch to standard blending for the final composition
+    glDisable(GL_BLEND); 
+
     destination->bind();
     combineShader_->use();
 
-    // Bind original to texture unit 0
     source->bindTexture(0);
     ext.glUniform1i(combineOriginalLoc_, 0);
 
-    // Bind bloom to texture unit 1
+    // Mip 0 now contains the accumulated bloom from all levels
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, brightFBO_->colorTexture);
+    glBindTexture(GL_TEXTURE_2D, mipChain_[0]->colorTexture);
     ext.glUniform1i(combineBloomLoc_, 1);
 
-    ext.glUniform1f(combineIntensityLoc_, settings_.intensity * intensity_);
+    ext.glUniform1f(combineIntensityLoc_, settings_.intensity);
 
     pool.renderFullscreenQuad();
 
-    // Reset texture unit
+    // Cleanup
     glActiveTexture(GL_TEXTURE0);
     destination->unbind();
 }

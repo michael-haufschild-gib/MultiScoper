@@ -13,6 +13,7 @@
 #include "rendering/shaders3d/WireframeMeshShader.h"
 #include "rendering/shaders3d/VectorFlowShader.h"
 #include "rendering/shaders3d/StringTheoryShader.h"
+#include "rendering/shaders3d/ElectricFlowerShader.h"
 #include "rendering/materials/GlassRefractionShader.h"
 #include "rendering/materials/LiquidChromeShader.h"
 #include "rendering/materials/CrystallineShader.h"
@@ -50,6 +51,7 @@ void ShaderRegistry::registerBuiltInShaders()
     registerShader(std::make_unique<WireframeMeshShader>());
     registerShader(std::make_unique<VectorFlowShader>());
     registerShader(std::make_unique<StringTheoryShader>());
+    registerShader(std::make_unique<ElectricFlowerShader>());
 
     // Register Material shaders
     registerShader(std::make_unique<GlassRefractionShader>());

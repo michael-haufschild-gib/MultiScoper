@@ -50,6 +50,7 @@ Oscil is a professional audio visualization platform designed for engineers and 
     - **`core/`**: Core logic (PluginProcessor, Oscillator, InstanceRegistry).
     - **`dsp/`**: Signal processing and timing engine.
     - **`ui/`**: User interface components (PluginEditor, WaveformComponent).
+    - **`rendering/`**: Advanced rendering engine for GPU rendering with shaders, particle effects and postprocessing effects
 - **`include/`**: Header files (`.h`), mirroring the `src` structure.
 - **`tests/`**: Unit tests using GoogleTest.
 - **`test_harness/`**: E2E test harness application.
@@ -118,14 +119,14 @@ The project includes a standalone `OscilTestHarness` that hosts the plugin and e
     ```python
     import requests, time
     URL = "http://localhost:8765"
-    
+
     # 1. Open Editor (Critical!)
     requests.post(f"{URL}/track/0/showEditor")
     time.sleep(1) # Wait for UI
-    
+
     # 2. Inspect Element
     info = requests.get(f"{URL}/ui/element/my_test_id").json()
-    
+
     # 3. Interact
     requests.post(f"{URL}/ui/click", json={"elementId": "my_button_id"})
     ```
@@ -133,7 +134,8 @@ The project includes a standalone `OscilTestHarness` that hosts the plugin and e
 ## Coding Conventions
 
 - **Standard**: C++20.
-- **Style**: Follow existing JUCE-based patterns.
+- **Style**: Follow existing JUCE-based patterns. Juce 8
+- **Shaders**: GSLS 3.30
 - **Headers**: Use `#pragma once`.
 - **Memory**: Use smart pointers (`std::unique_ptr`, `std::shared_ptr`) where possible; avoid raw pointers for ownership.
 - **JUCE**: Use `juce::` namespace explicitly or strictly follow file-level `using`.

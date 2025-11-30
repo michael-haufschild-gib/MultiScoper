@@ -12,12 +12,13 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* dualVertexShader = R"(
-    attribute vec2 position;
-    attribute float distFromCenter;
+    #version 330 core
+    in vec2 position;
+    in float distFromCenter;
 
     uniform mat4 projection;
 
-    varying float vDistFromCenter;
+    out float vDistFromCenter;
 
     void main()
     {
@@ -27,10 +28,13 @@ static const char* dualVertexShader = R"(
 )";
 
 static const char* dualFragmentShader = R"(
-    varying float vDistFromCenter;
+    #version 330 core
+    in float vDistFromCenter;
 
     uniform vec4 baseColor;
     uniform float opacity;
+
+    out vec4 fragColor;
 
     void main()
     {
@@ -45,7 +49,7 @@ static const char* dualFragmentShader = R"(
         // Combine
         float alpha = (inner + outer * 0.5) * opacity * baseColor.a;
 
-        gl_FragColor = vec4(baseColor.rgb, alpha);
+        fragColor = vec4(baseColor.rgb, alpha);
     }
 )";
 
@@ -78,10 +82,7 @@ bool DualOutlineShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
     
-    juce::String v = juce::OpenGLHelpers::translateVertexShaderToV3(dualVertexShader);
-    juce::String f = juce::OpenGLHelpers::translateFragmentShaderToV3(dualFragmentShader);
-
-    if (!gl_->program->addVertexShader(v) || !gl_->program->addFragmentShader(f) || !gl_->program->link())
+    if (!gl_->program->addVertexShader(dualVertexShader) || !gl_->program->addFragmentShader(dualFragmentShader) || !gl_->program->link())
     {
         gl_->program.reset();
         return false;
@@ -118,7 +119,6 @@ void DualOutlineShader::render(
     const std::vector<float>* channel2,
     const ShaderRenderParams& params)
 {
-    juce::ignoreUnused(channel2);
     if (!gl_->compiled || channel1.size() < 2) return;
 
     auto& ext = context.extensions;
@@ -129,52 +129,92 @@ void DualOutlineShader::render(
 
     auto* target = context.getTargetComponent();
     if (!target) return;
-    
+
     float w = static_cast<float>(target->getWidth());
     float h = static_cast<float>(target->getHeight());
-    
+
     float projection[16] = {
         2.0f / w, 0.0f, 0.0f, 0.0f,
         0.0f, -2.0f / h, 0.0f, 0.0f,
         0.0f, 0.0f, -1.0f, 0.0f,
         -1.0f, 1.0f, 0.0f, 1.0f
     };
-    
+
     ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
-    ext.glUniform4f(gl_->baseColorLoc, 
+    ext.glUniform4f(gl_->baseColorLoc,
         params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
 
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
+    // Calculate layout based on stereo/mono mode
     float height = params.bounds.getHeight();
-    float centerY = params.bounds.getCentreY();
-    float amp = height * 0.45f * params.verticalScale;
+    float centerY1, centerY2;
+    float amp1, amp2;
+
+    if (params.isStereo && channel2 != nullptr)
+    {
+        // Stereo stacked layout: L on top half, R on bottom half
+        float halfHeight = height * 0.5f;
+        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
+        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
+        amp1 = halfHeight * 0.45f * params.verticalScale;
+        amp2 = halfHeight * 0.45f * params.verticalScale;
+    }
+    else
+    {
+        // Mono layout: single channel centered
+        centerY1 = params.bounds.getCentreY();
+        centerY2 = centerY1;
+        amp1 = height * 0.45f * params.verticalScale;
+        amp2 = amp1;
+    }
+
+    // Get attribute locations once
+    GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
+    GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
+    if (posLoc < 0) posLoc = 0;
+    if (distLoc < 0) distLoc = 1;
 
     // Render Channel 1
     {
         std::vector<float> vertices;
         // Make line wide enough to accommodate both inner and outer outlines
-        float width = params.lineWidth * 6.0f;
-        buildLineGeometry(vertices, channel1, centerY, amp, width, params.bounds.getX(), params.bounds.getWidth());
-        
+        float lineGeomWidth = params.lineWidth * 6.0f;
+        buildLineGeometry(vertices, channel1, centerY1, amp1, lineGeomWidth, params.bounds.getX(), params.bounds.getWidth());
+
         ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
-        
-        GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
-        GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-        
-        if (posLoc < 0) posLoc = 0;
-        if (distLoc < 0) distLoc = 1;
 
         ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-        
+
         ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-        
+
         glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-        
+
+        ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
+        ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
+    }
+
+    // Render Channel 2 if stereo
+    if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
+    {
+        std::vector<float> vertices;
+        float lineGeomWidth = params.lineWidth * 6.0f;
+        buildLineGeometry(vertices, *channel2, centerY2, amp2, lineGeomWidth, params.bounds.getX(), params.bounds.getWidth());
+
+        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
+
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
+        ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
+        ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+
         ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
     }

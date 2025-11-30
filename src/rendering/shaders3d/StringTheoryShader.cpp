@@ -12,8 +12,9 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* stringVertexShader = R"(
-    attribute vec3 position;
-    attribute float stringIndex; // Which string is this?
+    #version 330 core
+    in vec3 position;
+    in float stringIndex;
 
     uniform mat4 uModel;
     uniform mat4 uView;
@@ -33,11 +34,13 @@ static const char* stringVertexShader = R"(
 )";
 
 static const char* stringFragmentShader = R"(
+    #version 330 core
     uniform vec4 uColor;
+    out vec4 fragColor;
 
     void main()
     {
-        gl_FragColor = uColor;
+        fragColor = uColor;
     }
 )";
 
@@ -101,7 +104,28 @@ void StringTheoryShader::render(juce::OpenGLContext& context,
     if (!compiled_ || data.sampleCount < 2) return;
     juce::ignoreUnused(lighting);
 
-    generateStringMesh(data);
+    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
+    float xSpread = 1.0f;
+    float halfHeight = 1.0f;
+
+    if (camera.getProjection() == CameraProjection::Orthographic)
+    {
+        float height = camera.getOrthoSize();
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+    else
+    {
+        float dist = (camera.getPosition() - camera.getTarget()).length();
+        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
+        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+
+    generateStringMesh(data, xSpread);
     if (vertices_.empty()) return;
 
     auto& ext = context.extensions;
@@ -111,8 +135,9 @@ void StringTheoryShader::render(juce::OpenGLContext& context,
 
     shader_->use();
     
-    Matrix4 model = Matrix4::translation(0, 0, data.zOffset) *
-                    Matrix4::scale(1.0f, data.amplitude, 1.0f);
+    // Scale amplitude by halfHeight to map normalized amplitude to world space
+    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
     setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
 
     ext.glUniform4f(colorLoc_, data.color.getFloatRed(), data.color.getFloatGreen(), data.color.getFloatBlue(), data.color.getFloatAlpha());
@@ -148,7 +173,7 @@ void StringTheoryShader::render(juce::OpenGLContext& context,
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void StringTheoryShader::generateStringMesh(const WaveformData3D& data)
+void StringTheoryShader::generateStringMesh(const WaveformData3D& data, float xSpread)
 {
     vertices_.clear();
     // Estimate size: samples * count * 2 (for lines) * 4 floats
@@ -165,8 +190,8 @@ void StringTheoryShader::generateStringMesh(const WaveformData3D& data)
             float t1 = static_cast<float>(i) / static_cast<float>(data.sampleCount - 1);
             float t2 = static_cast<float>(i+1) / static_cast<float>(data.sampleCount - 1);
             
-            float x1 = t1 * 2.0f - 1.0f;
-            float x2 = t2 * 2.0f - 1.0f;
+            float x1 = (t1 * 2.0f - 1.0f) * xSpread;
+            float x2 = (t2 * 2.0f - 1.0f) * xSpread;
             
             float y1 = data.samples[i];
             float y2 = data.samples[i+1];

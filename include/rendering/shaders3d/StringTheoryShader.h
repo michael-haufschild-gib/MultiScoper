@@ -44,7 +44,7 @@ public:
     void setPhaseVariance(float var) { phaseVariance_ = var; }
 
 private:
-    void generateStringMesh(const WaveformData3D& data);
+    void generateStringMesh(const WaveformData3D& data, float xSpread);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

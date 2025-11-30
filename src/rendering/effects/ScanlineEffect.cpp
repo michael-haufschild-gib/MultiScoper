@@ -12,38 +12,79 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* scanlineFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
     uniform float intensity;
     uniform float density;
-    uniform vec2 resolution;
-    uniform float phosphorGlow;
+    uniform float width;
+    uniform float height;
+    uniform bool phosphorGlow;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
     void main()
     {
-        vec4 color = texture2D(sourceTexture, vTexCoord);
+        vec4 srcColor = texture(sourceTexture, vTexCoord);
+        vec3 color = srcColor.rgb;
 
-        // Calculate scanline pattern
-        float scanline = sin(vTexCoord.y * resolution.y * density * 3.14159) * 0.5 + 0.5;
-
-        // Apply scanline darkening
-        float darkness = mix(1.0, scanline, intensity);
-
-        // Optional phosphor glow between scanlines
-        float glow = 0.0;
-        if (phosphorGlow > 0.0)
-        {
-            // Sample neighboring pixels for glow
-            vec2 offset = vec2(0.0, 1.0 / resolution.y);
-            vec3 above = texture2D(sourceTexture, vTexCoord - offset).rgb;
-            vec3 below = texture2D(sourceTexture, vTexCoord + offset).rgb;
-            glow = (dot(above, vec3(0.333)) + dot(below, vec3(0.333))) * 0.5 * phosphorGlow;
+        // 1. Vertical Scanlines (The electron beam trace)
+        // Use sine wave aligned to pixel rows
+        float count = height * density;
+        float scanline = sin((vTexCoord.y) * count * 6.2831853);
+        
+        // Sharpen the scanline (make it less sine-like, more beam-like)
+        scanline = pow(scanline * 0.5 + 0.5, 1.5);
+        
+        // 2. RGB Aperture Grille (Trinitron style)
+        // Aligned to horizontal pixels
+        float xPos = vTexCoord.x * width * density;
+        float mask = 1.0;
+        
+        // Create RGB mask pattern
+        // We mix between 1.0 (white) and the Mask Color based on intensity
+        vec3 maskColor = vec3(1.0);
+        
+        // Simple modulo for RGB stripes
+        float m = mod(xPos, 3.0);
+        
+        // Smooth mask to prevent harsh aliasing
+        vec3 rMask = vec3(1.0, 0.0, 0.0);
+        vec3 gMask = vec3(0.0, 1.0, 0.0);
+        vec3 bMask = vec3(0.0, 0.0, 1.0);
+        
+        float strip = sin(xPos * 6.2831853); // Pattern
+        
+        // Apply scanline darkness
+        color *= mix(vec3(1.0), vec3(scanline), intensity);
+        
+        // Apply RGB Mask (if density is high enough to warrant it)
+        if (density > 0.5) {
+            // Calculate mask weights based on position
+            // This is a simplified approximation of a shadow mask
+            float maskWeight = intensity * 0.5;
+            
+            vec3 activeMask = vec3(1.0);
+            if (m < 1.0) activeMask = mix(vec3(1.0), rMask, maskWeight);
+            else if (m < 2.0) activeMask = mix(vec3(1.0), gMask, maskWeight);
+            else activeMask = mix(vec3(1.0), bMask, maskWeight);
+            
+            color *= activeMask;
         }
 
-        vec3 result = color.rgb * darkness + vec3(glow * 0.1);
+        // Phosphor Glow (Bloom/Bleed)
+        if (phosphorGlow) {
+            // Sample neighbors to simulate phosphor persistence/bleed
+            vec2 onePixel = vec2(1.0/width, 1.0/height);
+            vec3 blur = texture(sourceTexture, vTexCoord + vec2(onePixel.x, 0.0)).rgb;
+            blur += texture(sourceTexture, vTexCoord - vec2(onePixel.x, 0.0)).rgb;
+            color += blur * 0.15 * intensity; 
+        }
 
-        gl_FragColor = vec4(result, color.a);
+        // Brightness compensation (scanlines darken image)
+        color *= 1.1 + (intensity * 0.2);
+
+        fragColor = vec4(color, srcColor.a);
     }
 )";
 

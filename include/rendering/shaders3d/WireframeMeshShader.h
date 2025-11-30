@@ -56,7 +56,7 @@ public:
     [[nodiscard]] float getScrollSpeed() const { return scrollSpeed_; }
 
 private:
-    void generateWireframeMesh(const WaveformData3D& data);
+    void generateWireframeMesh(const WaveformData3D& data, float xSpread);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

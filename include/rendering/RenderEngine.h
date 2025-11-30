@@ -252,7 +252,7 @@ private:
     // Context and state
     juce::OpenGLContext* context_ = nullptr;
     QualityLevel qualityLevel_ = QualityLevel::Normal;
-    juce::Colour backgroundColour_{0xFF1A1A1A};
+    juce::Colour backgroundColour_{juce::Colours::transparentBlack};
 
     // Timing
     float deltaTime_ = 0.0f;

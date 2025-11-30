@@ -18,7 +18,8 @@ ParticleEmitter::ParticleEmitter(ParticleEmitterId id)
 void ParticleEmitter::update(ParticlePool& pool,
                              const std::vector<float>& samples,
                              const juce::Rectangle<float>& bounds,
-                             float deltaTime)
+                             float deltaTime,
+                             float verticalScale)
 {
     if (!enabled_ || samples.empty() || bounds.isEmpty())
         return;
@@ -41,7 +42,7 @@ void ParticleEmitter::update(ParticlePool& pool,
             for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
             {
                 size_t idx = static_cast<size_t>(dist01_(rng_) * static_cast<float>(samples.size() - 1));
-                auto pos = getWaveformPosition(samples, bounds, idx);
+                auto pos = getWaveformPosition(samples, bounds, idx, verticalScale);
                 spawnParticle(pool, pos.x, pos.y);
             }
             break;
@@ -55,7 +56,7 @@ void ParticleEmitter::update(ParticlePool& pool,
                 for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
                 {
                     size_t peakIdx = peaks[static_cast<size_t>(dist01_(rng_) * static_cast<float>(peaks.size() - 1))];
-                    auto pos = getWaveformPosition(samples, bounds, peakIdx);
+                    auto pos = getWaveformPosition(samples, bounds, peakIdx, verticalScale);
                     spawnParticle(pool, pos.x, pos.y);
                 }
             }
@@ -70,7 +71,7 @@ void ParticleEmitter::update(ParticlePool& pool,
                 for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
                 {
                     size_t crossIdx = crossings[static_cast<size_t>(dist01_(rng_) * static_cast<float>(crossings.size() - 1))];
-                    auto pos = getWaveformPosition(samples, bounds, crossIdx);
+                    auto pos = getWaveformPosition(samples, bounds, crossIdx, verticalScale);
                     spawnParticle(pool, pos.x, pos.y);
                 }
             }
@@ -98,7 +99,8 @@ void ParticleEmitter::update(ParticlePool& pool,
 
 void ParticleEmitter::triggerBurst(ParticlePool& pool,
                                    const std::vector<float>& samples,
-                                   const juce::Rectangle<float>& bounds)
+                                   const juce::Rectangle<float>& bounds,
+                                   float verticalScale)
 {
     if (!enabled_ || samples.empty() || bounds.isEmpty())
         return;
@@ -108,7 +110,7 @@ void ParticleEmitter::triggerBurst(ParticlePool& pool,
     for (int i = 0; i < count && !pool.isFull(); ++i)
     {
         size_t idx = static_cast<size_t>(dist01_(rng_) * static_cast<float>(samples.size() - 1));
-        auto pos = getWaveformPosition(samples, bounds, idx);
+        auto pos = getWaveformPosition(samples, bounds, idx, verticalScale);
         spawnParticle(pool, pos.x, pos.y);
     }
 }
@@ -163,7 +165,8 @@ void ParticleEmitter::spawnParticle(ParticlePool& pool, float x, float y)
 juce::Point<float> ParticleEmitter::getWaveformPosition(
     const std::vector<float>& samples,
     const juce::Rectangle<float>& bounds,
-    size_t index) const
+    size_t index,
+    float verticalScale) const
 {
     if (samples.empty())
         return bounds.getCentre();
@@ -173,10 +176,14 @@ juce::Point<float> ParticleEmitter::getWaveformPosition(
     float xNorm = static_cast<float>(index) / static_cast<float>(samples.size() - 1);
     float x = bounds.getX() + xNorm * bounds.getWidth();
 
-    // Sample is -1 to 1, map to bounds (inverted Y since screen coords)
+    // Sample is -1 to 1. 
+    // Visual waveform logic: centerY - sample * amplitude
+    // Use 0.45f factor to match WaveformComponent's software rendering logic
     float sample = samples[index];
-    float yNorm = (1.0f - sample) * 0.5f;  // Map -1..1 to 1..0
-    float y = bounds.getY() + yNorm * bounds.getHeight();
+    float centerY = bounds.getCentreY();
+    float amplitude = bounds.getHeight() * 0.45f * verticalScale;
+    
+    float y = centerY - sample * amplitude;
 
     return {x, y};
 }

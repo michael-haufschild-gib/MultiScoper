@@ -674,13 +674,12 @@ TEST_F(AnimationSettingsTest, LerpWithIntegerTypes)
 // Test: updateFromSystem doesn't crash
 TEST_F(AnimationSettingsTest, UpdateFromSystemNoOp)
 {
-    // Currently a no-op but should not crash
+    // Should not crash
     AnimationSettings::updateFromSystem();
     AnimationSettings::updateFromSystem();
     AnimationSettings::updateFromSystem();
 
-    // State should be unchanged
-    AnimationSettings::setAppPreference(true);
-    AnimationSettings::updateFromSystem();
-    EXPECT_TRUE(AnimationSettings::prefersReducedMotion());
+    // We can't assert on the value here because it depends on the actual
+    // system setting (macOS) or is a no-op (other platforms).
+    // The important part is that calling it multiple times is safe.
 }

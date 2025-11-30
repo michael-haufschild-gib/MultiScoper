@@ -12,9 +12,10 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* chromeVertexShader = R"(
-    attribute vec3 aPosition;
-    attribute vec3 aNormal;
-    attribute vec2 aTexCoord;
+    #version 330 core
+    in vec3 aPosition;
+    in vec3 aNormal;
+    in vec2 aTexCoord;
 
     uniform mat4 uModel;
     uniform mat4 uView;
@@ -23,9 +24,9 @@ static const char* chromeVertexShader = R"(
     uniform float uRippleFreq;
     uniform float uRippleAmp;
 
-    varying vec3 vWorldPos;
-    varying vec3 vNormal;
-    varying vec2 vTexCoord;
+    out vec3 vWorldPos;
+    out vec3 vNormal;
+    out vec2 vTexCoord;
 
     void main()
     {
@@ -57,6 +58,7 @@ static const char* chromeVertexShader = R"(
 )";
 
 static const char* chromeFragmentShader = R"(
+    #version 330 core
     uniform vec4 uColor;
     uniform vec3 uCameraPos;
     uniform float uMetallic;
@@ -67,9 +69,11 @@ static const char* chromeFragmentShader = R"(
     uniform vec3 uLightDir;
     uniform vec4 uSpecular;
 
-    varying vec3 vWorldPos;
-    varying vec3 vNormal;
-    varying vec2 vTexCoord;
+    in vec3 vWorldPos;
+    in vec3 vNormal;
+    in vec2 vTexCoord;
+
+    out vec4 fragColor;
 
     // Schlick Fresnel approximation
     vec3 fresnelSchlick(float cosTheta, vec3 F0)
@@ -99,7 +103,7 @@ static const char* chromeFragmentShader = R"(
         reflectDir.y += cos(vTexCoord.y * 8.0 + flowOffset) * 0.03 * (1.0 - uRoughness);
         reflectDir = normalize(reflectDir);
 
-        vec3 envColor = textureCube(uEnvMap, reflectDir).rgb;
+        vec3 envColor = texture(uEnvMap, reflectDir).rgb;
 
         // Roughness affects reflection sharpness (fake blur via mip level)
         // Note: In real PBR we'd sample different mip levels
@@ -114,7 +118,8 @@ static const char* chromeFragmentShader = R"(
         vec3 chromeColor = envColor * fresnel;
 
         // Add base color tint for colored chrome
-        chromeColor = mix(chromeColor, chromeColor * uColor.rgb, 0.3);
+        // Increased mix to 0.8 to ensure user color choice is clearly visible
+        chromeColor = mix(chromeColor, chromeColor * uColor.rgb, 0.8);
 
         // Add specular highlights
         vec3 specColor = uSpecular.rgb * spec * (1.0 - uRoughness);
@@ -129,7 +134,7 @@ static const char* chromeFragmentShader = R"(
         float shimmer = sin(vTexCoord.x * 50.0 + uTime * 4.0) * 0.03 + 0.97;
         chromeColor *= shimmer;
 
-        gl_FragColor = vec4(chromeColor, uColor.a);
+        fragColor = vec4(chromeColor, uColor.a);
     }
 )";
 
@@ -262,8 +267,29 @@ void LiquidChromeShader::render(juce::OpenGLContext& context,
     if (!compiled_ || !data.samples || data.sampleCount < 2)
         return;
 
+    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
+    float xSpread = 1.0f;
+    float halfHeight = 1.0f;
+
+    if (camera.getProjection() == CameraProjection::Orthographic)
+    {
+        float height = camera.getOrthoSize();
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+    else
+    {
+        float dist = (camera.getPosition() - camera.getTarget()).length();
+        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
+        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+
     // Update mesh
-    updateMesh(data);
+    updateMesh(data, xSpread);
 
     if (indexCount_ == 0)
         return;
@@ -283,9 +309,10 @@ void LiquidChromeShader::render(juce::OpenGLContext& context,
 
     shader_->use();
 
-    // Set matrix uniforms
-    Matrix4 model = Matrix4::translation(0, 0, data.zOffset) *
-                    Matrix4::scale(1.0f, data.amplitude, 1.0f);
+    // Set matrix uniforms - apply Y offset for stereo separation
+    // Scale amplitude by halfHeight to map normalized amplitude to world space
+    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
     setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
 
     // Camera position
@@ -340,10 +367,10 @@ void LiquidChromeShader::update(float deltaTime)
         time_ = std::fmod(time_, 1000.0f);
 }
 
-void LiquidChromeShader::updateMesh(const WaveformData3D& data)
+void LiquidChromeShader::updateMesh(const WaveformData3D& data, float xSpread)
 {
     // Generate tube mesh
-    generateTubeMesh(data.samples, data.sampleCount, tubeRadius_, 16,
+    generateTubeMesh(data.samples, data.sampleCount, xSpread, tubeRadius_, 16,
                      vertices_, indices_);
 
     if (vertices_.empty() || indices_.empty())

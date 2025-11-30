@@ -37,6 +37,7 @@ struct ShaderRenderParams
     bool isStereo = false;
     float verticalScale = 1.0f;  // Vertical scale factor (includes auto-scale)
     float time = 0.0f;           // Time in seconds for animation
+    float shaderIntensity = 1.0f; // Intensity multiplier for shader effects (e.g. glow)
 };
 
 /**

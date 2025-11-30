@@ -13,13 +13,14 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* neonVertexShader = R"(
-    attribute vec2 position;
-    attribute float distFromCenter;
-    attribute float t;
+    #version 330 core
+    in vec2 position;
+    in float distFromCenter;
+    in float t;
 
     uniform mat4 projection;
 
-    varying float vDistFromCenter;
+    out float vDistFromCenter;
 
     void main()
     {
@@ -29,39 +30,57 @@ static const char* neonVertexShader = R"(
 )";
 
 static const char* neonFragmentShader = R"(
-    varying float vDistFromCenter;
+    #version 330 core
+    in float vDistFromCenter;
 
     uniform vec4 baseColor;
     uniform float opacity;
     uniform float glowIntensity;
+    uniform float geometryScale;
+
+    out vec4 fragColor;
 
     void main()
     {
         float dist = abs(vDistFromCenter);
+        float d = dist * geometryScale;
 
-        // Neon look: Hot white core, colored falloff
+        // --- Hyperbolic Glow (Soft Electric) ---
+        // Falloff < 1.0 makes the tail very long (gaseous)
+        float glowRadius = 0.25; 
+        float glowFalloff = 0.9; 
+        // Add small epsilon to prevent singularity
+        float glow = pow(glowRadius / (d + 0.05), glowFalloff);
         
-        // Core: Sharp, bright, white-ish center
-        float core = 1.0 - smoothstep(0.05, 0.2, dist);
-        
-        // Glow: Smooth exponential falloff
-        float glow = exp(-dist * 3.5) * glowIntensity;
+        glow *= glowIntensity;
 
-        vec3 colorRGB = baseColor.rgb;
+        // --- Hot Core ---
+        // Thinner core, sharp falloff
+        float coreThickness = 0.2;
+        float core = 1.0 - smoothstep(0.0, coreThickness, d);
+        core = pow(core, 4.0); // Sharpen the core peak
         
-        // Core is mostly white
-        vec3 coreColor = mix(colorRGB, vec3(1.0), 0.7);
-        
-        // Glow is pure color
-        vec3 glowColor = colorRGB;
+        // Core Brightness (HDR)
+        // We use a very high value so it survives the bloom threshold easily
+        vec3 coreColor = vec3(8.0) * core;
 
-        // Combine
-        vec3 finalRGB = mix(glowColor * glow * 1.5, coreColor * 2.0, core);
+        // --- Color Mixing ---
+        vec3 rgb = baseColor.rgb;
         
-        // Alpha
-        float alpha = opacity * (core + glow * 0.8) * baseColor.a;
+        // The core should be "hot" (desaturated towards white) but still retain tint
+        // Mix 30% color, 70% white for the core
+        vec3 hotCore = mix(vec3(1.0), rgb, 0.3) * coreColor;
         
-        gl_FragColor = vec4(finalRGB, alpha);
+        // The glow is pure color
+        vec3 glowColor = rgb * glow;
+
+        // Combine (HDR output)
+        vec3 finalColor = hotCore + glowColor;
+
+        // --- Output ---
+        // Pre-multiply opacity for GL_ONE, GL_ONE blending
+        // We do NOT Tone Map here. We want HDR values to pass to the Bloom effect.
+        fragColor = vec4(finalColor * opacity, 1.0);
     }
 )";
 
@@ -76,6 +95,7 @@ struct NeonGlowShader::GLResources
     GLint baseColorLoc = -1;
     GLint opacityLoc = -1;
     GLint glowIntensityLoc = -1;
+    GLint geometryScaleLoc = -1;
 };
 #endif
 
@@ -95,10 +115,7 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
     
-    juce::String v = juce::OpenGLHelpers::translateVertexShaderToV3(neonVertexShader);
-    juce::String f = juce::OpenGLHelpers::translateFragmentShaderToV3(neonFragmentShader);
-
-    if (!gl_->program->addVertexShader(v) || !gl_->program->addFragmentShader(f) || !gl_->program->link())
+    if (!gl_->program->addVertexShader(neonVertexShader) || !gl_->program->addFragmentShader(neonFragmentShader) || !gl_->program->link())
     {
         DBG("NeonGlowShader compile error: " << gl_->program->getLastError());
         gl_->program.reset();
@@ -109,6 +126,7 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
     gl_->baseColorLoc = gl_->program->getUniformIDFromName("baseColor");
     gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
+    gl_->geometryScaleLoc = gl_->program->getUniformIDFromName("geometryScale");
 
     context.extensions.glGenVertexArrays(1, &gl_->vao);
     context.extensions.glGenBuffers(1, &gl_->vbo);
@@ -137,86 +155,98 @@ void NeonGlowShader::render(
     const std::vector<float>* channel2,
     const ShaderRenderParams& params)
 {
-    juce::ignoreUnused(channel2);
     if (!gl_->compiled || channel1.size() < 2) return;
 
     auto& ext = context.extensions;
 
-    // Additive blending is key for neon
+    // Pure Additive Blending for light simulation
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    glBlendFunc(GL_ONE, GL_ONE); 
 
     gl_->program->use();
 
-    // Setup projection (same as BasicShader logic)
+    // Setup projection (Matches BasicShader)
     auto* target = context.getTargetComponent();
     if (!target) return;
-    
+
     float w = static_cast<float>(target->getWidth());
     float h = static_cast<float>(target->getHeight());
-    
-    // Simple ortho mapping
+
     float projection[16] = {
         2.0f / w, 0.0f, 0.0f, 0.0f,
-        0.0f, -2.0f / h, 0.0f, 0.0f, // Flip Y so 0 is top
+        0.0f, -2.0f / h, 0.0f, 0.0f, // Flip Y
         0.0f, 0.0f, -1.0f, 0.0f,
         -1.0f, 1.0f, 0.0f, 1.0f
     };
-    // Note: BasicShader inverted Y in a specific way. Let's match that:
-    // BasicShader:
-    // 0.0f, 2.0f / (top - bottom), 0.0f, 0.0f,
-    // where top=0, bottom=height. -> 2.0 / -height -> -2.0/h. Correct.
-    // Translation Y: -(top + bottom)/(top-bottom) -> -height / -height = 1.0. Correct.
-    
+
     ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
-    
-    ext.glUniform4f(gl_->baseColorLoc, 
+
+    ext.glUniform4f(gl_->baseColorLoc,
         params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
-    ext.glUniform1f(gl_->glowIntensityLoc, 1.0f); // Strong glow by default
+    ext.glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
+
+    // Wide expansion for the glow tail
+    const float kGeometryScale = 12.0f;
+    ext.glUniform1f(gl_->geometryScaleLoc, kGeometryScale);
 
     // Prepare geometry
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
+    // Layout logic
     float height = params.bounds.getHeight();
-    float centerY = params.bounds.getCentreY();
-    float amp = height * 0.45f * params.verticalScale;
+    float centerY1, centerY2;
+    float amp1, amp2;
 
-    // Render Channel 1
+    if (params.isStereo && channel2 != nullptr)
     {
+        float halfHeight = height * 0.5f;
+        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
+        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
+        amp1 = halfHeight * 0.45f * params.verticalScale;
+        amp2 = halfHeight * 0.45f * params.verticalScale;
+    }
+    else
+    {
+        centerY1 = params.bounds.getCentreY();
+        centerY2 = centerY1;
+        amp1 = height * 0.45f * params.verticalScale;
+        amp2 = amp1;
+    }
+
+    GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
+    GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
+    if (posLoc < 0) posLoc = 0;
+    if (distLoc < 0) distLoc = 1;
+
+    auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {
         std::vector<float> vertices;
-        // Wide geometry for the glow
-        float width = params.lineWidth * 12.0f; 
-        buildLineGeometry(vertices, channel1, centerY, amp, width, params.bounds.getX(), params.bounds.getWidth());
+        // Calculate the visual width including the glow
+        float visualWidth = params.lineWidth * kGeometryScale;
         
+        buildLineGeometry(vertices, data, cy, amp, visualWidth, params.bounds.getX(), params.bounds.getWidth());
+
         ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
-        
-        // Attributes: pos(2), dist(1), t(1)
-        // We only need pos and dist for neon. BasicShader uses 0 and 1.
-        GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
-        GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-        
-        if (posLoc < 0) posLoc = 0;
-        if (distLoc < 0) distLoc = 1;
 
         ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-        
+
         ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-        
-        // Draw multiple passes for extra bloom-like accumulation
-        for(int i=0; i<3; ++i) {
-            ext.glUniform1f(gl_->glowIntensityLoc, 1.0f - (i * 0.2f));
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-        }
-        
+
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+
         ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
+    };
+
+    renderChannel(channel1, centerY1, amp1);
+
+    if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
+    {
+        renderChannel(*channel2, centerY2, amp2);
     }
-    
-    // TODO: Channel 2 support if needed (copy paste logic)
 
     ext.glBindVertexArray(0);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);

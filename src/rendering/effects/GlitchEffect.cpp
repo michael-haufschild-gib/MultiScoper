@@ -12,72 +12,39 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* glitchFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
-    uniform float intensity;
     uniform float time;
-    uniform vec2 resolution;
-    uniform float blockSize;
-    uniform float lineShift;
-    uniform float colorSeparation;
+    uniform float intensity;
 
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
 
-    // Hash functions for pseudo-randomness
-    float hash(float n) { return fract(sin(n) * 43758.5453); }
-    float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float rand(vec2 co) {
+        return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    }
 
     void main()
     {
         vec2 uv = vTexCoord;
-
-        // Time-based glitch trigger (random intervals)
-        float glitchTime = floor(time * 10.0);
-        float glitchRandom = hash(glitchTime);
-
-        // Only apply glitch effect periodically
-        float glitchActive = step(0.7, glitchRandom) * intensity;
-
-        if (glitchActive > 0.0)
-        {
-            // Block-based displacement
-            vec2 block = floor(uv / blockSize) * blockSize;
-            float blockRandom = hash2(block + glitchTime);
-
-            if (blockRandom > 0.8)
-            {
-                // Horizontal shift for this block
-                uv.x += (blockRandom - 0.5) * lineShift * 4.0 * glitchActive;
-            }
-
-            // Scanline-based horizontal shift
-            float lineRandom = hash(floor(uv.y * resolution.y) + glitchTime);
-            if (lineRandom > 0.95)
-            {
-                uv.x += (lineRandom - 0.5) * lineShift * 2.0 * glitchActive;
-            }
+        
+        // Create blocky noise for displacement
+        // Quantize UV for blocks
+        float blockY = floor(uv.y * 20.0);
+        float noise = rand(vec2(blockY, floor(time * 10.0)));
+        
+        // Displace X only occasionally
+        float shift = 0.0;
+        if (noise > (1.0 - intensity)) {
+            shift = (rand(vec2(time, blockY)) - 0.5) * 0.2;
         }
-
-        // Clamp UVs
-        uv = clamp(uv, 0.0, 1.0);
-
-        // Color channel separation
-        float separation = colorSeparation * glitchActive;
-        float r = texture2D(sourceTexture, uv + vec2(separation, 0.0)).r;
-        float g = texture2D(sourceTexture, uv).g;
-        float b = texture2D(sourceTexture, uv - vec2(separation, 0.0)).b;
-
-        // Original alpha
-        float a = texture2D(sourceTexture, uv).a;
-
-        // Occasional color inversion on glitch
-        vec3 color = vec3(r, g, b);
-        float invertRandom = hash(glitchTime + 0.5);
-        if (invertRandom > 0.95 && glitchActive > 0.0)
-        {
-            color = 1.0 - color;
-        }
-
-        gl_FragColor = vec4(color, a);
+        
+        // RGB Split during glitch
+        float r = texture(sourceTexture, uv + vec2(shift, 0.0)).r;
+        float g = texture(sourceTexture, uv + vec2(-shift, 0.0)).g;
+        float b = texture(sourceTexture, uv).b;
+        
+        fragColor = vec4(r, g, b, 1.0);
     }
 )";
 

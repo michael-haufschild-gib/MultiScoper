@@ -36,6 +36,7 @@ enum class ShaderType
     WireframeMesh,
     VectorFlow,
     StringTheory,
+    ElectricFlower,
 
     // Material Shaders
     GlassRefraction,
@@ -68,6 +69,18 @@ struct BloomSettings
     float threshold = 0.8f;      // Brightness threshold for bloom
     int iterations = 4;          // Blur iterations (2-8)
     float spread = 1.0f;         // Blur spread multiplier
+    float softKnee = 0.5f;       // Soft threshold transition (0.0 = hard, 1.0 = very soft)
+};
+
+/**
+ * Radial blur/zoom glow effect settings.
+ */
+struct RadialBlurSettings
+{
+    bool enabled = false;
+    float amount = 0.1f;         // Zoom amount (0.0 - 0.5)
+    float glow = 1.0f;           // Glow intensity multiplier
+    int samples = 4;             // Number of zoom samples (2-8)
 };
 
 /**
@@ -256,6 +269,7 @@ struct VisualConfiguration
 
     // Post-processing
     BloomSettings bloom;
+    RadialBlurSettings radialBlur;
     TrailSettings trails;
     ColorGradeSettings colorGrade;
     VignetteSettings vignette;
@@ -335,6 +349,7 @@ inline bool is3DShader(ShaderType type)
            type == ShaderType::WireframeMesh ||
            type == ShaderType::VectorFlow ||
            type == ShaderType::StringTheory ||
+           type == ShaderType::ElectricFlower ||
            // Material shaders are also 3D shaders
            type == ShaderType::GlassRefraction ||
            type == ShaderType::LiquidChrome ||

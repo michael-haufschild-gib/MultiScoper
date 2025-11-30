@@ -87,11 +87,13 @@ public:
      * @param samples Waveform sample data
      * @param bounds Screen bounds for the waveform
      * @param deltaTime Time step
+     * @param verticalScale Waveform vertical scaling factor
      */
     void updateEmitter(ParticleEmitterId emitterId,
                        const std::vector<float>& samples,
                        const juce::Rectangle<float>& bounds,
-                       float deltaTime);
+                       float deltaTime,
+                       float verticalScale = 1.0f);
 
     /**
      * Render all particles.

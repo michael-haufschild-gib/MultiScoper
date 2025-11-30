@@ -123,6 +123,10 @@ public:
      * - Windows: Reads SPI_GETCLIENTAREAANIMATION
      * - Linux: Reads GNOME/KDE animation settings if available
      */
+#if JUCE_MAC
+    // macOS implementation is in AnimationSettings.mm
+    static void updateFromSystem();
+#else
     static void updateFromSystem()
     {
 #if JUCE_WINDOWS
@@ -135,11 +139,9 @@ public:
         // For now, default to false; proper implementation would use GSettings
         // gsettings get org.gnome.desktop.interface enable-animations
         // Just use the app preference for now
-#elif JUCE_MAC
-        // macOS implementation is in AnimationSettings.mm
-        // This method is overridden there
 #endif
     }
+#endif
 
 private:
     static inline std::atomic<bool> overrideReducedMotion_{ false };

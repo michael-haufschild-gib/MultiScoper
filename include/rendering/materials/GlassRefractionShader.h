@@ -53,7 +53,7 @@ public:
     [[nodiscard]] float getThickness() const { return thickness_; }
 
 private:
-    void updateMesh(const WaveformData3D& data);
+    void updateMesh(const WaveformData3D& data, float xSpread);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

@@ -282,54 +282,12 @@ TEST_F(VisualConfigurationTest, GetPresetDefault)
     EXPECT_EQ(config.presetId, "default");
 }
 
-TEST_F(VisualConfigurationTest, GetPresetNeon)
-{
-    auto config = VisualConfiguration::getPreset("neon");
-
-    EXPECT_EQ(config.shaderType, ShaderType::NeonGlow);
-    EXPECT_TRUE(config.bloom.enabled);
-    EXPECT_FLOAT_EQ(config.bloom.intensity, 1.5f);
-}
-
-TEST_F(VisualConfigurationTest, GetPresetRetro)
-{
-    auto config = VisualConfiguration::getPreset("retro");
-
-    EXPECT_TRUE(config.scanlines.enabled);
-    EXPECT_TRUE(config.colorGrade.enabled);
-    EXPECT_TRUE(config.filmGrain.enabled);
-    EXPECT_TRUE(config.vignette.enabled);
-}
-
 TEST_F(VisualConfigurationTest, GetPresetUnknown)
 {
     auto config = VisualConfiguration::getPreset("nonexistent_preset");
 
     // Unknown preset should return default configuration
     EXPECT_EQ(config.shaderType, ShaderType::Basic2D);
-}
-
-TEST_F(VisualConfigurationTest, GetAvailablePresets)
-{
-    auto presets = VisualConfiguration::getAvailablePresets();
-
-    EXPECT_FALSE(presets.empty());
-
-    // Check that standard presets exist
-    bool foundDefault = false;
-    bool foundNeon = false;
-    bool foundRetro = false;
-
-    for (const auto& preset : presets)
-    {
-        if (preset.first == "default") foundDefault = true;
-        if (preset.first == "neon") foundNeon = true;
-        if (preset.first == "retro") foundRetro = true;
-    }
-
-    EXPECT_TRUE(foundDefault);
-    EXPECT_TRUE(foundNeon);
-    EXPECT_TRUE(foundRetro);
 }
 
 // =============================================================================
@@ -533,48 +491,74 @@ TEST_F(VisualConfigurationTest, SerializationPreservesMaterialDetails)
 // Preset Tests
 // =============================================================================
 
-TEST_F(VisualConfigurationTest, TestBloomPreset)
+TEST_F(VisualConfigurationTest, TestCyberpunkPreset)
 {
-    auto config = VisualConfiguration::getPreset("test_bloom");
+    auto config = VisualConfiguration::getPreset("cyberpunk");
 
+    EXPECT_EQ(config.shaderType, ShaderType::NeonGlow);
     EXPECT_TRUE(config.bloom.enabled);
-    EXPECT_GT(config.bloom.intensity, 1.0f);  // Should be noticeable
-}
-
-TEST_F(VisualConfigurationTest, TestTrailsPreset)
-{
-    auto config = VisualConfiguration::getPreset("test_trails");
-
-    EXPECT_TRUE(config.trails.enabled);
-    EXPECT_LT(config.trails.decay, 0.1f);  // Slow decay for visible trails
-}
-
-TEST_F(VisualConfigurationTest, TestParticlesAlongPreset)
-{
-    auto config = VisualConfiguration::getPreset("test_particles_along");
-
+    EXPECT_FLOAT_EQ(config.bloom.intensity, 1.8f);
+    
+    // Verify fix for particle emission mode
     EXPECT_TRUE(config.particles.enabled);
     EXPECT_EQ(config.particles.emissionMode, ParticleEmissionMode::AlongWaveform);
 }
 
-TEST_F(VisualConfigurationTest, Test3DPresets)
+TEST_F(VisualConfigurationTest, TestLiquidGoldPreset)
 {
-    auto ribbon = VisualConfiguration::getPreset("test_3d_ribbon");
-    EXPECT_TRUE(ribbon.settings3D.enabled);
-    EXPECT_EQ(ribbon.shaderType, ShaderType::VolumetricRibbon);
+    auto config = VisualConfiguration::getPreset("liquid_gold");
 
-    auto wireframe = VisualConfiguration::getPreset("test_3d_wireframe");
-    EXPECT_TRUE(wireframe.settings3D.enabled);
-    EXPECT_EQ(wireframe.shaderType, ShaderType::WireframeMesh);
+    EXPECT_EQ(config.shaderType, ShaderType::LiquidChrome);
+    EXPECT_TRUE(config.material.enabled);
+    EXPECT_TRUE(config.bloom.enabled);
 }
 
-TEST_F(VisualConfigurationTest, TestMaterialPresets)
+TEST_F(VisualConfigurationTest, TestDeepOceanPreset)
 {
-    auto glass = VisualConfiguration::getPreset("test_glass");
-    EXPECT_EQ(glass.shaderType, ShaderType::GlassRefraction);
-    EXPECT_TRUE(glass.material.enabled);
+    auto config = VisualConfiguration::getPreset("deep_ocean");
 
-    auto chrome = VisualConfiguration::getPreset("test_chrome");
-    EXPECT_EQ(chrome.shaderType, ShaderType::LiquidChrome);
-    EXPECT_TRUE(chrome.material.enabled);
+    EXPECT_EQ(config.shaderType, ShaderType::VolumetricRibbon);
+    EXPECT_TRUE(config.distortion.enabled);
+    EXPECT_FALSE(config.particles.enabled);
+}
+
+TEST_F(VisualConfigurationTest, TestSynthwavePreset)
+{
+    auto config = VisualConfiguration::getPreset("synthwave");
+
+    EXPECT_EQ(config.shaderType, ShaderType::WireframeMesh);
+    EXPECT_TRUE(config.scanlines.enabled);
+    EXPECT_TRUE(config.vignette.enabled);
+}
+
+TEST_F(VisualConfigurationTest, TestMatrixPreset)
+{
+    auto config = VisualConfiguration::getPreset("matrix");
+
+    EXPECT_EQ(config.shaderType, ShaderType::DigitalGlitch);
+    EXPECT_TRUE(config.particles.enabled);
+    EXPECT_EQ(config.particles.emissionMode, ParticleEmissionMode::AlongWaveform);
+}
+
+TEST_F(VisualConfigurationTest, GetAvailablePresets)
+{
+    auto presets = VisualConfiguration::getAvailablePresets();
+
+    EXPECT_FALSE(presets.empty());
+
+    // Check that standard presets exist
+    bool foundDefault = false;
+    bool foundCyberpunk = false;
+    bool foundLiquidGold = false;
+
+    for (const auto& preset : presets)
+    {
+        if (preset.first == "default") foundDefault = true;
+        if (preset.first == "cyberpunk") foundCyberpunk = true;
+        if (preset.first == "liquid_gold") foundLiquidGold = true;
+    }
+
+    EXPECT_TRUE(foundDefault);
+    EXPECT_TRUE(foundCyberpunk);
+    EXPECT_TRUE(foundLiquidGold);
 }

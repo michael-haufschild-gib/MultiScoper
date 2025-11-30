@@ -48,26 +48,27 @@ public:
 private:
     BloomSettings settings_;
 
-    // Threshold extraction shader
-    std::unique_ptr<juce::OpenGLShaderProgram> thresholdShader_;
-    GLint thresholdTextureLoc_ = -1;
-    GLint thresholdValueLoc_ = -1;
+    // Shaders
+    std::unique_ptr<juce::OpenGLShaderProgram> prefilterShader_;
+    GLint prefilterThreshLoc_ = -1;
+    GLint prefilterSoftKneeLoc_ = -1;
+    
+    std::unique_ptr<juce::OpenGLShaderProgram> downsampleShader_;
+    GLint downsampleResLoc_ = -1;
 
-    // Gaussian blur shader (used for both horizontal and vertical passes)
-    std::unique_ptr<juce::OpenGLShaderProgram> blurShader_;
-    GLint blurTextureLoc_ = -1;
-    GLint blurDirectionLoc_ = -1;
-    GLint blurResolutionLoc_ = -1;
+    std::unique_ptr<juce::OpenGLShaderProgram> upsampleShader_;
+    GLint upsampleFilterRadiusLoc_ = -1;
+    GLint upsampleTexelSizeLoc_ = -1;
 
-    // Combine shader (adds bloom to original)
     std::unique_ptr<juce::OpenGLShaderProgram> combineShader_;
     GLint combineOriginalLoc_ = -1;
     GLint combineBloomLoc_ = -1;
     GLint combineIntensityLoc_ = -1;
 
-    // Internal framebuffers for blur passes
-    std::unique_ptr<Framebuffer> brightFBO_;
-    std::unique_ptr<Framebuffer> blurTempFBO_;
+    // Internal framebuffers for mip chain (pyramid)
+    // mipChain_[0] is half res, [1] is quarter res, etc.
+    std::vector<std::unique_ptr<Framebuffer>> mipChain_;
+    static const int kMaxMipLevels = 5;
 
     bool compiled_ = false;
     int lastWidth_ = 0;

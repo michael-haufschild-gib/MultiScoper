@@ -12,15 +12,16 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* crystalVertexShader = R"(
-    attribute vec3 position;
-    attribute vec3 normal;
+    #version 330 core
+    in vec3 position;
+    in vec3 normal;
 
     uniform mat4 uModel;
     uniform mat4 uView;
     uniform mat4 uProjection;
 
-    varying vec3 vNormal;
-    varying vec3 vWorldPos;
+    out vec3 vNormal;
+    out vec3 vWorldPos;
 
     void main()
     {
@@ -33,8 +34,9 @@ static const char* crystalVertexShader = R"(
 )";
 
 static const char* crystalFragmentShader = R"(
-    varying vec3 vNormal;
-    varying vec3 vWorldPos;
+    #version 330 core
+    in vec3 vNormal;
+    in vec3 vWorldPos;
 
     uniform vec3 uCameraPos;
     uniform vec3 uLightDir;
@@ -45,6 +47,8 @@ static const char* crystalFragmentShader = R"(
     uniform float uRoughness;
     uniform float uMetallic;
     uniform float uIOR;
+
+    out vec4 fragColor;
 
     void main()
     {
@@ -64,11 +68,11 @@ static const char* crystalFragmentShader = R"(
 
         // Reflection
         vec3 R = reflect(-V, N);
-        vec3 reflection = textureCube(uEnvMap, R).rgb;
+        vec3 reflection = texture(uEnvMap, R).rgb;
         
         // Refraction (fake via transmission approx or simple environment lookup)
         vec3 T = refract(-V, N, 1.0 / uIOR);
-        vec3 refraction = textureCube(uEnvMap, T).rgb;
+        vec3 refraction = texture(uEnvMap, T).rgb;
 
         // Fresnel
         float F0 = 0.04 + 0.96 * uMetallic; // Dielectric vs Metal
@@ -78,7 +82,7 @@ static const char* crystalFragmentShader = R"(
         vec3 finalColor = mix(refraction * uBaseColor.rgb, reflection, fresnel);
         finalColor += spec * vec3(1.0); // Add specular highlight
 
-        gl_FragColor = vec4(finalColor, uBaseColor.a);
+        fragColor = vec4(finalColor, uBaseColor.a);
     }
 )";
 
@@ -159,7 +163,28 @@ void CrystallineShader::render(juce::OpenGLContext& context,
 {
     if (!compiled_ || data.sampleCount < 2) return;
 
-    generateCrystalMesh(data);
+    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
+    float xSpread = 1.0f;
+    float halfHeight = 1.0f;
+
+    if (camera.getProjection() == CameraProjection::Orthographic)
+    {
+        float height = camera.getOrthoSize();
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+    else
+    {
+        float dist = (camera.getPosition() - camera.getTarget()).length();
+        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
+        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+
+    generateCrystalMesh(data, xSpread);
     if (indexCount_ == 0) return;
 
     auto& ext = context.extensions;
@@ -169,8 +194,9 @@ void CrystallineShader::render(juce::OpenGLContext& context,
 
     shader_->use();
     
-    Matrix4 model = Matrix4::translation(0, 0, data.zOffset) *
-                    Matrix4::scale(1.0f, data.amplitude, 1.0f);
+    // Scale amplitude by halfHeight to map normalized amplitude to world space
+    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
     setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
     setLightingUniforms(ext, lightDirLoc_, -1, -1, -1, -1, lighting);
     
@@ -209,7 +235,7 @@ void CrystallineShader::render(juce::OpenGLContext& context,
     ext.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void CrystallineShader::generateCrystalMesh(const WaveformData3D& data)
+void CrystallineShader::generateCrystalMesh(const WaveformData3D& data, float xSpread)
 {
     // Generate a faceted tube or chain of crystals
     vertices_.clear();
@@ -228,8 +254,8 @@ void CrystallineShader::generateCrystalMesh(const WaveformData3D& data)
         float t1 = static_cast<float>(i) / static_cast<float>(data.sampleCount - 1);
         float t2 = static_cast<float>(i+1) / static_cast<float>(data.sampleCount - 1);
         
-        float x1 = t1 * 2.0f - 1.0f;
-        float x2 = t2 * 2.0f - 1.0f;
+        float x1 = (t1 * 2.0f - 1.0f) * xSpread;
+        float x2 = (t2 * 2.0f - 1.0f) * xSpread;
         float y1 = data.samples[i];
         float y2 = data.samples[i+1];
         
@@ -299,7 +325,7 @@ void CrystallineShader::generateCrystalMesh(const WaveformData3D& data)
     for (int i = 0; i < data.sampleCount; ++i)
     {
         float t = static_cast<float>(i) / static_cast<float>(data.sampleCount - 1);
-        float x = t * 2.0f - 1.0f;
+        float x = (t * 2.0f - 1.0f) * xSpread;
         float y = data.samples[i];
         
         for (int j = 0; j < polySegments; ++j)

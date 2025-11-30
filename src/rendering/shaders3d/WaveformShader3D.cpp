@@ -16,16 +16,13 @@ bool WaveformShader3D::compileShaderProgram(juce::OpenGLShaderProgram& shader,
                                             const char* vertexSource,
                                             const char* fragmentSource)
 {
-    juce::String translatedVertex = juce::OpenGLHelpers::translateVertexShaderToV3(vertexSource);
-    juce::String translatedFragment = juce::OpenGLHelpers::translateFragmentShaderToV3(fragmentSource);
-
-    if (!shader.addVertexShader(translatedVertex))
+    if (!shader.addVertexShader(vertexSource))
     {
         DBG("WaveformShader3D: Vertex shader error: " << shader.getLastError());
         return false;
     }
 
-    if (!shader.addFragmentShader(translatedFragment))
+    if (!shader.addFragmentShader(fragmentSource))
     {
         DBG("WaveformShader3D: Fragment shader error: " << shader.getLastError());
         return false;
@@ -51,25 +48,44 @@ void WaveformShader3D::render(juce::OpenGLContext& context,
     data.sampleCount = static_cast<int>(channel1.size());
     data.color = params.colour;
     data.lineThickness = params.lineWidth;
-    data.zOffset = 0.0f; // Could be parameterised if multiple waveforms are stacked
-    data.amplitude = params.verticalScale;
     data.time = time_; // Use internally updated time
 
-    // If stereo, we might want to render the second channel too
-    // For now, just render channel 1. Supporting stereo in 3D would require
-    // specific logic per shader (e.g. separate ribbons, or interleaving)
-    if (params.isStereo && channel2)
+    // For stereo: use Y-offset to separate channels vertically (like 2D stacked mode)
+    // Channel 1 (L) goes in upper half, Channel 2 (R) goes in lower half
+    if (params.isStereo && channel2 && channel2->size() >= 2)
     {
-        // Potential future expansion:
-        // WaveformData3D data2 = data;
-        // data2.samples = channel2->data();
-        // data2.zOffset += 0.1f; // Offset slightly
-        // render(context, data2, camera_, lighting_);
-    }
+        DBG("[WaveformShader3D] STEREO mode: rendering ch1 at yOffset=0.5, ch2 at yOffset=-0.5");
 
-    // Use stored camera and lighting configuration
-    // These must be set via setCamera() and setLighting() before calling render()
-    render(context, data, camera_, lighting_);
+        // Stereo mode: scale amplitude to half and offset vertically
+        data.yOffset = 0.5f;  // Upper half for channel 1
+        data.amplitude = params.verticalScale * 0.45f; // Fit in half the space
+        data.zOffset = 0.0f;
+
+        // Render channel 1 (L)
+        render(context, data, camera_, lighting_);
+
+        // Render channel 2 (R) in lower half
+        WaveformData3D data2;
+        data2.samples = channel2->data();
+        data2.sampleCount = static_cast<int>(channel2->size());
+        data2.color = params.colour;
+        data2.lineThickness = params.lineWidth;
+        data2.yOffset = -0.5f; // Lower half for channel 2
+        data2.amplitude = params.verticalScale * 0.45f;
+        data2.zOffset = 0.0f;
+        data2.time = time_;
+
+        render(context, data2, camera_, lighting_);
+    }
+    else
+    {
+        // Mono mode: full amplitude, centered
+        data.yOffset = 0.0f;
+        data.zOffset = 0.0f;
+        data.amplitude = params.verticalScale;
+
+        render(context, data, camera_, lighting_);
+    }
 }
 
 void WaveformShader3D::setMatrixUniforms(juce::OpenGLExtensionFunctions& ext,
@@ -131,6 +147,7 @@ void WaveformShader3D::setLightingUniforms(juce::OpenGLExtensionFunctions& ext,
 }
 
 void WaveformShader3D::generateTubeMesh(const float* samples, int sampleCount,
+                                        float xSpread,
                                         float radius, int segments,
                                         std::vector<float>& vertices,
                                         std::vector<GLuint>& indices)
@@ -152,7 +169,7 @@ void WaveformShader3D::generateTubeMesh(const float* samples, int sampleCount,
         float t = static_cast<float>(i) / static_cast<float>(sampleCount - 1);
 
         // Position on waveform (x = time, y = amplitude, z = 0 base)
-        float px = t * 2.0f - 1.0f;  // -1 to 1
+        float px = (t * 2.0f - 1.0f) * xSpread;  // -xSpread to xSpread
         float py = samples[i];
         float pz = 0.0f;
 
@@ -160,19 +177,19 @@ void WaveformShader3D::generateTubeMesh(const float* samples, int sampleCount,
         float tx, ty, tz;
         if (i == 0)
         {
-            tx = 1.0f / static_cast<float>(sampleCount);
+            tx = (1.0f / static_cast<float>(sampleCount)) * xSpread;
             ty = samples[1] - samples[0];
             tz = 0.0f;
         }
         else if (i == sampleCount - 1)
         {
-            tx = 1.0f / static_cast<float>(sampleCount);
+            tx = (1.0f / static_cast<float>(sampleCount)) * xSpread;
             ty = samples[i] - samples[i - 1];
             tz = 0.0f;
         }
         else
         {
-            tx = 2.0f / static_cast<float>(sampleCount);
+            tx = (2.0f / static_cast<float>(sampleCount)) * xSpread;
             ty = samples[i + 1] - samples[i - 1];
             tz = 0.0f;
         }
@@ -254,6 +271,7 @@ void WaveformShader3D::generateTubeMesh(const float* samples, int sampleCount,
 }
 
 void WaveformShader3D::generateRibbonMesh(const float* samples, int sampleCount,
+                                          float xSpread,
                                           float width,
                                           std::vector<float>& vertices,
                                           std::vector<GLuint>& indices)
@@ -275,24 +293,24 @@ void WaveformShader3D::generateRibbonMesh(const float* samples, int sampleCount,
     for (int i = 0; i < sampleCount; ++i)
     {
         float t = static_cast<float>(i) / static_cast<float>(sampleCount - 1);
-        float x = t * 2.0f - 1.0f;  // -1 to 1
+        float x = (t * 2.0f - 1.0f) * xSpread;  // -xSpread to xSpread
         float y = samples[i];
 
         // Calculate normal from tangent
         float tx, ty;
         if (i == 0)
         {
-            tx = 1.0f;
+            tx = 1.0f * xSpread;
             ty = (samples[1] - samples[0]) * static_cast<float>(sampleCount);
         }
         else if (i == sampleCount - 1)
         {
-            tx = 1.0f;
+            tx = 1.0f * xSpread;
             ty = (samples[i] - samples[i - 1]) * static_cast<float>(sampleCount);
         }
         else
         {
-            tx = 1.0f;
+            tx = 1.0f * xSpread;
             ty = (samples[i + 1] - samples[i - 1]) * static_cast<float>(sampleCount) * 0.5f;
         }
 

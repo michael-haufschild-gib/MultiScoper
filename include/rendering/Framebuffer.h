@@ -24,10 +24,12 @@ struct Framebuffer
     GLuint fbo = 0;
     GLuint colorTexture = 0;
     GLuint depthBuffer = 0;
+    GLuint depthTexture = 0;
     int width = 0;
     int height = 0;
     GLenum format = GL_RGBA8;
     bool hasDepth = false;
+    bool hasDepthTexture = false;
 
     /**
      * Create the framebuffer with specified dimensions and format.
@@ -36,9 +38,10 @@ struct Framebuffer
      * @param h Height in pixels
      * @param fmt Texture format (GL_RGBA8, GL_RGBA16F, etc.)
      * @param withDepth Whether to create a depth buffer (required for 3D rendering)
+     * @param useDepthTexture Whether to create depth as a sampleable texture (for DoF, etc.) instead of Renderbuffer
      * @return true if creation succeeded
      */
-    bool create(juce::OpenGLContext& context, int w, int h, GLenum fmt = GL_RGBA8, bool withDepth = false);
+    bool create(juce::OpenGLContext& context, int w, int h, GLenum fmt = GL_RGBA8, bool withDepth = false, bool useDepthTexture = false);
 
     /**
      * Destroy the framebuffer and release all resources.
@@ -71,6 +74,12 @@ struct Framebuffer
      * @param textureUnit The texture unit to bind to (0 = GL_TEXTURE0)
      */
     void bindTexture(int textureUnit = 0);
+
+    /**
+     * Bind the depth texture for sampling in a shader (if created with useDepthTexture=true).
+     * @param textureUnit The texture unit to bind to
+     */
+    void bindDepthTexture(int textureUnit = 1);
 
     /**
      * Check if the framebuffer is valid and ready for use.

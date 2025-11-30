@@ -14,16 +14,17 @@ using namespace juce::gl;
 
 // Vertex shader for instanced particle rendering
 static const char* particleVertexShader = R"(
-    attribute vec2 aPosition;
-    attribute vec2 aInstancePos;
-    attribute vec4 aInstanceColor;
-    attribute float aInstanceSize;
-    attribute float aInstanceRotation;
+    #version 330 core
+    in vec2 aPosition;
+    in vec2 aInstancePos;
+    in vec4 aInstanceColor;
+    in float aInstanceSize;
+    in float aInstanceRotation;
 
     uniform mat4 uProjection;
 
-    varying vec4 vColor;
-    varying vec2 vTexCoord;
+    out vec4 vColor;
+    out vec2 vTexCoord;
 
     void main()
     {
@@ -47,8 +48,11 @@ static const char* particleVertexShader = R"(
 
 // Fragment shader for particle rendering
 static const char* particleFragmentShader = R"(
-    varying vec4 vColor;
-    varying vec2 vTexCoord;
+    #version 330 core
+    in vec4 vColor;
+    in vec2 vTexCoord;
+
+    out vec4 fragColor;
 
     void main()
     {
@@ -59,7 +63,7 @@ static const char* particleFragmentShader = R"(
         // Smooth falloff
         float alpha = 1.0 - smoothstep(0.0, 1.0, dist);
 
-        gl_FragColor = vec4(vColor.rgb, vColor.a * alpha);
+        fragColor = vec4(vColor.rgb, vColor.a * alpha);
     }
 )";
 
@@ -72,6 +76,35 @@ ParticleSystem::ParticleSystem(int maxParticles)
 ParticleSystem::~ParticleSystem()
 {
     // OpenGL resources should be released via release() before destruction
+}
+
+void ParticleSystem::release(juce::OpenGLContext& context)
+{
+    if (!initialized_)
+        return;
+
+    auto& ext = context.extensions;
+
+    if (vao_ != 0)
+    {
+        ext.glDeleteVertexArrays(1, &vao_);
+        vao_ = 0;
+    }
+
+    if (quadVBO_ != 0)
+    {
+        ext.glDeleteBuffers(1, &quadVBO_);
+        quadVBO_ = 0;
+    }
+
+    if (instanceVBO_ != 0)
+    {
+        ext.glDeleteBuffers(1, &instanceVBO_);
+        instanceVBO_ = 0;
+    }
+
+    shader_.reset();
+    initialized_ = false;
 }
 
 bool ParticleSystem::initialize(juce::OpenGLContext& context)
@@ -169,49 +202,19 @@ bool ParticleSystem::initialize(juce::OpenGLContext& context)
     return true;
 }
 
-void ParticleSystem::release(juce::OpenGLContext& context)
-{
-    if (!initialized_)
-        return;
-
-    auto& ext = context.extensions;
-
-    if (instanceVBO_ != 0)
-    {
-        ext.glDeleteBuffers(1, &instanceVBO_);
-        instanceVBO_ = 0;
-    }
-
-    if (quadVBO_ != 0)
-    {
-        ext.glDeleteBuffers(1, &quadVBO_);
-        quadVBO_ = 0;
-    }
-
-    if (vao_ != 0)
-    {
-        ext.glDeleteVertexArrays(1, &vao_);
-        vao_ = 0;
-    }
-
-    shader_.reset();
-    initialized_ = false;
-}
+// ...
 
 bool ParticleSystem::compileShader(juce::OpenGLContext& context)
 {
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    juce::String translatedVertex = juce::OpenGLHelpers::translateVertexShaderToV3(particleVertexShader);
-    juce::String translatedFragment = juce::OpenGLHelpers::translateFragmentShaderToV3(particleFragmentShader);
-
-    if (!shader_->addVertexShader(translatedVertex))
+    if (!shader_->addVertexShader(particleVertexShader))
     {
         DBG("ParticleSystem: Vertex shader error: " << shader_->getLastError());
         return false;
     }
 
-    if (!shader_->addFragmentShader(translatedFragment))
+    if (!shader_->addFragmentShader(particleFragmentShader))
     {
         DBG("ParticleSystem: Fragment shader error: " << shader_->getLastError());
         return false;
@@ -262,12 +265,13 @@ void ParticleSystem::update(float deltaTime)
 void ParticleSystem::updateEmitter(ParticleEmitterId emitterId,
                                    const std::vector<float>& samples,
                                    const juce::Rectangle<float>& bounds,
-                                   float deltaTime)
+                                   float deltaTime,
+                                   float verticalScale)
 {
     auto* emitter = getEmitter(emitterId);
     if (emitter)
     {
-        emitter->update(pool_, samples, bounds, deltaTime);
+        emitter->update(pool_, samples, bounds, deltaTime, verticalScale);
     }
 }
 

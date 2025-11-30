@@ -100,21 +100,25 @@ public:
      * @param samples Current waveform sample data (normalized -1 to 1)
      * @param bounds Screen bounds for the waveform
      * @param deltaTime Time step in seconds
+     * @param verticalScale Waveform vertical scaling factor
      */
     void update(ParticlePool& pool,
                 const std::vector<float>& samples,
                 const juce::Rectangle<float>& bounds,
-                float deltaTime);
+                float deltaTime,
+                float verticalScale = 1.0f);
 
     /**
      * Trigger a burst emission.
      * @param pool Particle pool
      * @param samples Waveform data
      * @param bounds Screen bounds
+     * @param verticalScale Waveform vertical scaling factor
      */
     void triggerBurst(ParticlePool& pool,
                       const std::vector<float>& samples,
-                      const juce::Rectangle<float>& bounds);
+                      const juce::Rectangle<float>& bounds,
+                      float verticalScale = 1.0f);
 
     /**
      * Enable/disable the emitter.
@@ -139,7 +143,8 @@ private:
     juce::Point<float> getWaveformPosition(
         const std::vector<float>& samples,
         const juce::Rectangle<float>& bounds,
-        size_t index) const;
+        size_t index,
+        float verticalScale) const;
 
     /**
      * Find peak indices in samples.

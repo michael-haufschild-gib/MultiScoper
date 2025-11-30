@@ -1,7 +1,7 @@
 # Shader Development Guide for LLM Coding Agents
 
 **Purpose**: Instructions for adding GPU-accelerated waveform shaders to Oscil.
-**Tech Stack**: C++20, JUCE 8.0.5 OpenGL, GLSL (legacy syntax with JUCE translation)
+**Tech Stack**: C++20, JUCE 8.0.5 OpenGL, GLSL 3.30 Core (no legacy translation)
 
 ## Quick Reference
 
@@ -41,15 +41,18 @@ WaveformGLRenderer
 
 ### GLSL Syntax Requirements
 
-**CRITICAL**: Use legacy GLSL syntax. JUCE's `translateVertexShaderToV3()` and `translateFragmentShaderToV3()` automatically convert to the correct version for the platform.
+**CRITICAL**: Use modern **GLSL 3.30 Core** syntax. The project is configured for an OpenGL 3.2 Core Profile (or higher). Do **NOT** use legacy keywords like `attribute`, `varying`, or `gl_FragColor`. Do not rely on JUCE's translation helpers for new shaders.
 
 ```cpp
-// CORRECT: Legacy syntax (JUCE translates automatically)
+// CORRECT: Modern GLSL 3.30 Core syntax
 static const char* vertexShader = R"(
-    attribute vec2 position;       // NOT 'in vec2 position'
-    attribute float myAttribute;
-    varying float vMyVarying;      // NOT 'out float vMyVarying'
+    #version 330 core
+    in vec2 position;              // 'in' for attributes
+    in float myAttribute;
+    
     uniform mat4 projection;
+    
+    out float vMyVarying;          // 'out' for varyings to fragment shader
 
     void main() {
         gl_Position = projection * vec4(position, 0.0, 1.0);
@@ -58,11 +61,15 @@ static const char* vertexShader = R"(
 )";
 
 static const char* fragmentShader = R"(
-    varying float vMyVarying;      // NOT 'in float vMyVarying'
+    #version 330 core
+    in float vMyVarying;           // 'in' for varyings from vertex shader
+    
     uniform vec4 baseColor;
+    
+    out vec4 fragColor;            // Custom output variable required
 
     void main() {
-        gl_FragColor = baseColor;  // NOT 'out_color = baseColor'
+        fragColor = baseColor;     // Assign to output variable
     }
 )";
 ```
@@ -197,14 +204,15 @@ namespace oscil
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
 
-// GLSL shaders - use legacy syntax for JUCE translation
+// GLSL shaders - Modern GLSL 3.30 Core
 static const char* vertexShaderSource = R"(
-    attribute vec2 position;
-    attribute float distFromCenter;
+    #version 330 core
+    in vec2 position;
+    in float distFromCenter;
 
     uniform mat4 projection;
 
-    varying float vDistFromCenter;
+    out float vDistFromCenter;
 
     void main()
     {
@@ -214,10 +222,13 @@ static const char* vertexShaderSource = R"(
 )";
 
 static const char* fragmentShaderSource = R"(
-    varying float vDistFromCenter;
+    #version 330 core
+    in float vDistFromCenter;
 
     uniform vec4 baseColor;
     uniform float opacity;
+    
+    out vec4 fragColor;
 
     void main()
     {
@@ -225,7 +236,7 @@ static const char* fragmentShaderSource = R"(
         vec3 color = baseColor.rgb;
         float alpha = opacity * baseColor.a;
 
-        gl_FragColor = vec4(color, alpha);
+        fragColor = vec4(color, alpha);
     }
 )";
 
@@ -261,20 +272,15 @@ bool MyShader::compile(juce::OpenGLContext& context)
     // Create shader program
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    // Use JUCE's shader translation for cross-platform compatibility
-    juce::String translatedVertex =
-        juce::OpenGLHelpers::translateVertexShaderToV3(vertexShaderSource);
-    juce::String translatedFragment =
-        juce::OpenGLHelpers::translateFragmentShaderToV3(fragmentShaderSource);
-
-    if (!gl_->program->addVertexShader(translatedVertex))
+    // Direct compilation - no translation needed for GLSL 3.30
+    if (!gl_->program->addVertexShader(vertexShaderSource))
     {
         DBG("MyShader: Vertex shader failed: " << gl_->program->getLastError());
         gl_->program.reset();
         return false;
     }
 
-    if (!gl_->program->addFragmentShader(translatedFragment))
+    if (!gl_->program->addFragmentShader(fragmentShaderSource))
     {
         DBG("MyShader: Fragment shader failed: " << gl_->program->getLastError());
         gl_->program.reset();
@@ -578,9 +584,10 @@ What visual effect do you want?
 ## Common Mistakes
 
 **GLSL Syntax**
-- Use `attribute` not `in` for vertex inputs
-- Use `varying` not `out`/`in` for shader communication
-- Use `gl_FragColor` not custom output variable
+- Use `in` not `attribute` for vertex inputs
+- Use `out`/`in` not `varying` for shader communication
+- Use custom output variable (e.g. `fragColor`) not `gl_FragColor`
+- Use `texture()` not `texture2D` or `textureCube`
 
 **OpenGL 3.2 Core (macOS)**
 - Always create and bind VAO before vertex operations
@@ -588,7 +595,7 @@ What visual effect do you want?
 - Delete VAO and VBO in `release()`
 
 **JUCE Integration**
-- Call `juce::OpenGLHelpers::translateVertexShaderToV3()` before compiling
+- Do NOT use `translateVertexShaderToV3()` - write GLSL 3.30 directly
 - Get component dimensions from `context.getTargetComponent()`
 - Check `isCompiled()` before rendering
 

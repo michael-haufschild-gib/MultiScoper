@@ -40,7 +40,7 @@ public:
     [[nodiscard]] float getParameter(const juce::String& name) const override;
 
 private:
-    void generateCrystalMesh(const WaveformData3D& data);
+    void generateCrystalMesh(const WaveformData3D& data, float xSpread);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

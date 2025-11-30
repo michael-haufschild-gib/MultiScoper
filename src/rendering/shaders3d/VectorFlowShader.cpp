@@ -12,14 +12,15 @@ namespace oscil
 using namespace juce::gl;
 
 static const char* vectorVertexShader = R"(
-    attribute vec3 position;
-    attribute float tParam; // 0 to 1 along wave
+    #version 330 core
+    in vec3 position;
+    in float tParam;
 
     uniform mat4 uModel;
     uniform mat4 uView;
     uniform mat4 uProjection;
     
-    varying float vT;
+    out float vT;
 
     void main()
     {
@@ -29,11 +30,14 @@ static const char* vectorVertexShader = R"(
 )";
 
 static const char* vectorFragmentShader = R"(
-    varying float vT;
+    #version 330 core
+    in float vT;
 
     uniform vec4 uColor;
     uniform float uTime;
     uniform vec3 uFlowParams; // x=speed, y=segLen, z=gapLen
+
+    out vec4 fragColor;
 
     void main()
     {
@@ -58,7 +62,7 @@ static const char* vectorFragmentShader = R"(
         float edge = min(m, segLen - m);
         float fade = smoothstep(0.0, segLen * 0.1, edge);
         
-        gl_FragColor = vec4(uColor.rgb, alpha * fade);
+        fragColor = vec4(uColor.rgb, alpha * fade);
     }
 )";
 
@@ -123,7 +127,28 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
     if (!compiled_ || data.sampleCount < 2) return;
     juce::ignoreUnused(lighting);
 
-    generateVectorMesh(data);
+    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
+    float xSpread = 1.0f;
+    float halfHeight = 1.0f;
+
+    if (camera.getProjection() == CameraProjection::Orthographic)
+    {
+        float height = camera.getOrthoSize();
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+    else
+    {
+        float dist = (camera.getPosition() - camera.getTarget()).length();
+        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
+        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+
+    generateVectorMesh(data, xSpread);
     if (vertices_.empty()) return;
 
     auto& ext = context.extensions;
@@ -133,8 +158,9 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
 
     shader_->use();
     
-    Matrix4 model = Matrix4::translation(0, 0, data.zOffset) *
-                    Matrix4::scale(1.0f, data.amplitude, 1.0f);
+    // Scale amplitude by halfHeight to map normalized amplitude to world space
+    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
     setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
 
     ext.glUniform4f(colorLoc_, data.color.getFloatRed(), data.color.getFloatGreen(), data.color.getFloatBlue(), data.color.getFloatAlpha());
@@ -173,7 +199,7 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void VectorFlowShader::generateVectorMesh(const WaveformData3D& data)
+void VectorFlowShader::generateVectorMesh(const WaveformData3D& data, float xSpread)
 {
     vertices_.clear();
     vertices_.reserve(static_cast<size_t>(data.sampleCount * 4));
@@ -181,7 +207,7 @@ void VectorFlowShader::generateVectorMesh(const WaveformData3D& data)
     for (int i = 0; i < data.sampleCount; ++i)
     {
         float t = static_cast<float>(i) / static_cast<float>(data.sampleCount - 1);
-        float x = t * 2.0f - 1.0f;
+        float x = (t * 2.0f - 1.0f) * xSpread;
         float y = data.samples[i];
         
         vertices_.push_back(x);

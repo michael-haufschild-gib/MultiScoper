@@ -286,13 +286,6 @@ void AdaptiveDecimator::process(const float* input, int inputLength,
 {
     output.resize(static_cast<size_t>(targetSamples_));
 
-    if (inputLength <= targetSamples_)
-    {
-        output.resize(static_cast<size_t>(inputLength));
-        std::copy(input, input + inputLength, output.begin());
-        return;
-    }
-
     SignalProcessor::decimate(input, inputLength, output.data(), targetSamples_, true);
 }
 

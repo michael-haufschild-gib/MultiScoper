@@ -44,7 +44,7 @@ public:
     void setGapLength(float length) { gapLength_ = length; }
 
 private:
-    void generateVectorMesh(const WaveformData3D& data);
+    void generateVectorMesh(const WaveformData3D& data, float xSpread);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

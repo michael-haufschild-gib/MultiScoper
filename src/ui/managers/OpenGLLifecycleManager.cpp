@@ -41,6 +41,17 @@ void OpenGLLifecycleManager::setGpuRenderingEnabled(bool enabled)
 
     if (enabled && !context_.isAttached())
     {
+        // Configure pixel format for transparency and quality
+        juce::OpenGLPixelFormat format;
+        format.redBits = 8;
+        format.greenBits = 8;
+        format.blueBits = 8;
+        format.alphaBits = 8;
+        format.depthBufferBits = 24;
+        format.stencilBufferBits = 8;
+        format.multisamplingLevel = 0; // We handle AA in shaders/post-proc
+
+        context_.setPixelFormat(format);
         context_.setRenderer(renderer_.get());
         context_.setContinuousRepainting(true);
         context_.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);

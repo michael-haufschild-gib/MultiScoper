@@ -25,9 +25,9 @@ using namespace juce::gl;
 static constexpr bool DEBUG_RENDER_MODE = false;
 
 // Simple solid color shader for debug rendering
-// Use legacy GLSL syntax - JUCE's translateToV3 handles platform compatibility
 static const char* debugVertexShader = R"(
-    attribute vec2 position;
+    #version 330 core
+    in vec2 position;
     uniform mat4 projection;
     void main() {
         gl_Position = projection * vec4(position, 0.0, 1.0);
@@ -35,9 +35,11 @@ static const char* debugVertexShader = R"(
 )";
 
 static const char* debugFragmentShader = R"(
+    #version 330 core
     uniform vec4 color;
+    out vec4 fragColor;
     void main() {
-        gl_FragColor = color;
+        fragColor = color;
     }
 )";
 
@@ -110,14 +112,7 @@ void WaveformGLRenderer::compileDebugShader()
 
     debugShader_ = std::make_unique<juce::OpenGLShaderProgram>(*context_);
 
-    // Use JUCE's shader translation for cross-platform compatibility
-    juce::String vertexShader = juce::OpenGLHelpers::translateVertexShaderToV3(debugVertexShader);
-    juce::String fragmentShader = juce::OpenGLHelpers::translateFragmentShaderToV3(debugFragmentShader);
-
-    GL_LOG("Translated vertex shader length: " << vertexShader.length());
-    GL_LOG("Translated fragment shader length: " << fragmentShader.length());
-
-    if (!debugShader_->addVertexShader(vertexShader))
+    if (!debugShader_->addVertexShader(debugVertexShader))
     {
         GL_LOG("DEBUG SHADER: Vertex shader compilation FAILED: " << debugShader_->getLastError().toStdString());
         debugShader_.reset();
@@ -125,7 +120,7 @@ void WaveformGLRenderer::compileDebugShader()
     }
     GL_LOG("DEBUG SHADER: Vertex shader compiled OK");
 
-    if (!debugShader_->addFragmentShader(fragmentShader))
+    if (!debugShader_->addFragmentShader(debugFragmentShader))
     {
         GL_LOG("DEBUG SHADER: Fragment shader compilation FAILED: " << debugShader_->getLastError().toStdString());
         debugShader_.reset();
@@ -185,6 +180,12 @@ void WaveformGLRenderer::renderOpenGL()
         return;
 
     jassert(juce::OpenGLHelpers::isContextActive());
+
+    // Clear the default framebuffer (screen) to transparent black.
+    // This is CRITICAL because the RenderEngine path blits transparent content
+    // on top of the screen. If we don't clear here, the previous frame persists,
+    // causing infinite accumulation (smearing) of waveforms.
+    juce::OpenGLHelpers::clear(juce::Colours::transparentBlack);
 
     // Calculate delta time for animations
     auto now = std::chrono::steady_clock::now();
@@ -259,7 +260,9 @@ void WaveformGLRenderer::renderOpenGL()
             GL_LOG("  Waveform " << data.id << ": bounds=("
                    << data.bounds.getX() << "," << data.bounds.getY() << ","
                    << data.bounds.getWidth() << "x" << data.bounds.getHeight() << ")"
-                   << ", ch1 size=" << data.channel1.size()
+                   << ", ch1=" << data.channel1.size()
+                   << ", ch2=" << data.channel2.size()
+                   << ", isStereo=" << data.isStereo
                    << ", visible=" << data.visible
                    << ", preset=" << data.visualConfig.presetId.toStdString());
         }

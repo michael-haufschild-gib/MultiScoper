@@ -14,15 +14,15 @@ namespace oscil
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
-// GLSL shader sources - using legacy syntax for JUCE translation
-// JUCE's translateToV3 will convert these for the current OpenGL version
+// GLSL shader sources - Modernized to GLSL 3.30 Core
 static const char* vertexShaderSource = R"(
-    attribute vec2 position;
-    attribute float distFromCenter;
+    #version 330 core
+    in vec2 position;
+    in float distFromCenter;
 
     uniform mat4 projection;
 
-    varying float vDistFromCenter;
+    out float vDistFromCenter;
 
     void main()
     {
@@ -32,11 +32,14 @@ static const char* vertexShaderSource = R"(
 )";
 
 static const char* fragmentShaderSource = R"(
-    varying float vDistFromCenter;
+    #version 330 core
+    in float vDistFromCenter;
 
     uniform vec4 baseColor;
     uniform float opacity;
     uniform float glowIntensity;
+
+    out vec4 fragColor;
 
     void main()
     {
@@ -66,7 +69,7 @@ static const char* fragmentShaderSource = R"(
         // Clamp to prevent over-saturation
         finalColor = clamp(finalColor, 0.0, 1.0);
 
-        gl_FragColor = vec4(finalColor, alpha);
+        fragColor = vec4(finalColor, alpha);
     }
 )";
 
@@ -115,15 +118,9 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     // Create shader program
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    // Use JUCE's shader translation for cross-platform compatibility
-    juce::String translatedVertex = juce::OpenGLHelpers::translateVertexShaderToV3(vertexShaderSource);
-    juce::String translatedFragment = juce::OpenGLHelpers::translateFragmentShaderToV3(fragmentShaderSource);
+    BASIC_LOG("Compiling shaders (GLSL 3.30 Core)...");
 
-    BASIC_LOG("Compiling with JUCE translation...");
-    BASIC_LOG("Vertex shader length: " << translatedVertex.length());
-    BASIC_LOG("Fragment shader length: " << translatedFragment.length());
-
-    if (!gl_->program->addVertexShader(translatedVertex))
+    if (!gl_->program->addVertexShader(vertexShaderSource))
     {
         BASIC_LOG("Vertex shader compilation FAILED: " << gl_->program->getLastError().toStdString());
         gl_->program.reset();
@@ -131,7 +128,7 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     }
     BASIC_LOG("Vertex shader compiled OK");
 
-    if (!gl_->program->addFragmentShader(translatedFragment))
+    if (!gl_->program->addFragmentShader(fragmentShaderSource))
     {
         BASIC_LOG("Fragment shader compilation FAILED: " << gl_->program->getLastError().toStdString());
         gl_->program.reset();
@@ -378,9 +375,15 @@ void BasicShader::render(
     // Render channel 2 if stereo
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
+        if (shouldLog)
+            BASIC_LOG("Drawing ch2: isStereo=" << params.isStereo << ", ch2 size=" << channel2->size());
+
         vertices.clear();
         buildLineGeometry(vertices, *channel2, centerY2, amplitude2,
             glowWidth, params.bounds.getX(), params.bounds.getWidth());
+
+        if (shouldLog)
+            BASIC_LOG("Drawing ch2: " << vertices.size() / 4 << " verts, centerY2=" << centerY2);
 
         ext.glBufferData(GL_ARRAY_BUFFER,
             static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
@@ -393,6 +396,11 @@ void BasicShader::render(
 
             glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
         }
+    }
+    else if (shouldLog && params.isStereo)
+    {
+        BASIC_LOG("ch2 NOT rendered: channel2=" << (channel2 ? "valid" : "null")
+                 << ", ch2 size=" << (channel2 ? channel2->size() : 0));
     }
 
     // Cleanup

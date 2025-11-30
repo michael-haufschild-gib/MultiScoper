@@ -18,6 +18,7 @@
 #include "rendering/effects/ScanlineEffect.h"
 #include "rendering/effects/DistortionEffect.h"
 #include "rendering/effects/GlitchEffect.h"
+#include "rendering/effects/RadialBlurEffect.h"
 #include "rendering/Camera3D.h"
 #include "rendering/particles/ParticleSystem.h"
 #include "rendering/materials/EnvironmentMapManager.h"
@@ -32,9 +33,10 @@ using namespace juce::gl;
 
 // Blit shader for final output to screen
 static const char* blitVertexShader = R"(
-    attribute vec2 position;
-    attribute vec2 texCoord;
-    varying vec2 vTexCoord;
+    #version 330 core
+    in vec2 position;
+    in vec2 texCoord;
+    out vec2 vTexCoord;
     void main() {
         gl_Position = vec4(position, 0.0, 1.0);
         vTexCoord = texCoord;
@@ -42,10 +44,44 @@ static const char* blitVertexShader = R"(
 )";
 
 static const char* blitFragmentShader = R"(
+    #version 330 core
     uniform sampler2D sourceTexture;
-    varying vec2 vTexCoord;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
+
+    // ACES Filmic Tone Mapping Curve
+    // Adapted for real-time rendering (Narkowicz 2015)
+    vec3 aces(vec3 x) {
+        const float a = 2.51;
+        const float b = 0.03;
+        const float c = 2.43;
+        const float d = 0.59;
+        const float e = 0.14;
+        return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+    }
+
+    // Simple hash for dithering
+    float random(vec2 p) {
+        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+    }
+
     void main() {
-        gl_FragColor = texture2D(sourceTexture, vTexCoord);
+        vec4 color = texture(sourceTexture, vTexCoord);
+        vec3 hdrColor = color.rgb;
+
+        // 1. Tone Mapping (HDR -> LDR)
+        // ACES gives a filmic look with nice highlight rolloff
+        vec3 mapped = aces(hdrColor);
+
+        // 2. Gamma Correction (Linear -> sRGB)
+        // Standard 2.2 gamma approximation
+        mapped = pow(mapped, vec3(1.0 / 2.2));
+
+        // 3. Dithering
+        // Prevents banding in dark gradients on 8-bit displays
+        mapped += (random(gl_FragCoord.xy) - 0.5) * (1.0 / 255.0);
+
+        fragColor = vec4(mapped, color.a);
     }
 )";
 
@@ -75,8 +111,10 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
         return false;
     }
 
-    currentWidth_ = targetComponent->getWidth();
-    currentHeight_ = targetComponent->getHeight();
+    // Use physical (scaled) dimensions for internal state and FBOs
+    double scale = context.getRenderingScale();
+    currentWidth_ = static_cast<int>(targetComponent->getWidth() * scale);
+    currentHeight_ = static_cast<int>(targetComponent->getHeight() * scale);
 
     if (currentWidth_ <= 0 || currentHeight_ <= 0)
     {
@@ -101,11 +139,9 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
 
     // Compile blit shader
     blitShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    juce::String translatedVertex = juce::OpenGLHelpers::translateVertexShaderToV3(blitVertexShader);
-    juce::String translatedFragment = juce::OpenGLHelpers::translateFragmentShaderToV3(blitFragmentShader);
-
-    if (!blitShader_->addVertexShader(translatedVertex) ||
-        !blitShader_->addFragmentShader(translatedFragment))
+    
+    if (!blitShader_->addVertexShader(blitVertexShader) ||
+        !blitShader_->addFragmentShader(blitFragmentShader))
     {
         DBG("RenderEngine: Failed to compile blit shader: " << blitShader_->getLastError());
         sceneFBO_->destroy(context);
@@ -494,9 +530,47 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
     waveformFBO->bind();
     waveformFBO->clear(juce::Colours::transparentBlack, true);
 
+    // Store previous viewport state
+    GLint prevViewport[4];
+    glGetIntegerv(GL_VIEWPORT, prevViewport);
+
     // Step 2: Set up camera (2D or 3D)
     if (is3DShader(config.shaderType))
     {
+        // For 3D shaders, we must restrict rendering to the specific pane bounds.
+        // Calculate viewport using Logical dimensions from target component for reliability.
+        float scale = static_cast<float>(context_->getRenderingScale());
+        auto* target = context_->getTargetComponent();
+        float logicalHeight = static_cast<float>(target->getHeight());
+        
+        // Logical bounds
+        float lx = data.bounds.getX();
+        float ly = data.bounds.getY();
+        float lw = data.bounds.getWidth();
+        float lh = data.bounds.getHeight();
+        
+        // Convert to scaled viewport coordinates (Physical)
+        // OpenGL origin is bottom-left, JUCE is top-left.
+        // Y = (LogicalTotalHeight - (TopY + Height)) * Scale
+        int vx = static_cast<int>(lx * scale);
+        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale); 
+        int vw = static_cast<int>(lw * scale);
+        int vh = static_cast<int>(lh * scale);
+        
+        // Clamp to prevent invalid viewports
+        vx = std::max(0, vx);
+        vy = std::max(0, vy);
+        vw = std::max(1, vw);
+        vh = std::max(1, vh);
+
+        glViewport(vx, vy, vw, vh);
+        
+        // Adjust camera aspect ratio for the pane
+        if (camera_)
+        {
+            camera_->setAspectRatio(static_cast<float>(vw) / static_cast<float>(vh));
+        }
+
         setupCamera3D(config.settings3D);
         glEnable(GL_DEPTH_TEST);
     }
@@ -508,6 +582,9 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
 
     // Step 3: Render waveform geometry
     renderWaveformGeometry(data, config);
+
+    // Restore full viewport for particles and post-processing
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
 
     // Step 4: Render particles (if enabled)
     if (config.particles.enabled)
@@ -546,7 +623,7 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
 }
 
 // Helper to convert MaterialSettings to MaterialProperties
-static MaterialProperties convertMaterialSettings(const MaterialSettings& settings)
+static MaterialProperties convertMaterialSettings(const MaterialSettings& settings, juce::Colour overrideColour)
 {
     MaterialProperties props;
 
@@ -556,11 +633,26 @@ static MaterialProperties convertMaterialSettings(const MaterialSettings& settin
     props.ior = settings.refractiveIndex;
     props.fresnelPower = settings.fresnelPower;
 
-    // Use tint color as base color
-    props.baseColorR = settings.tintColor.getFloatRed();
-    props.baseColorG = settings.tintColor.getFloatGreen();
-    props.baseColorB = settings.tintColor.getFloatBlue();
-    props.baseColorA = settings.tintColor.getFloatAlpha();
+    // Use oscillator color directly as base color
+    // This ensures visual consistency with the track color
+    props.baseColorR = overrideColour.getFloatRed();
+    props.baseColorG = overrideColour.getFloatGreen();
+    props.baseColorB = overrideColour.getFloatBlue();
+    props.baseColorA = overrideColour.getFloatAlpha();
+
+    /* 
+    // Previous logic (disabled):
+    // Use tint color from preset multiplied by oscillator color
+    float r = settings.tintColor.getFloatRed() * overrideColour.getFloatRed();
+    float g = settings.tintColor.getFloatGreen() * overrideColour.getFloatGreen();
+    float b = settings.tintColor.getFloatBlue() * overrideColour.getFloatBlue();
+    float a = settings.tintColor.getFloatAlpha() * overrideColour.getFloatAlpha();
+
+    props.baseColorR = r;
+    props.baseColorG = g;
+    props.baseColorB = b;
+    props.baseColorA = a;
+    */
 
     // Material type detection (glass vs chrome)
     // Glass: low metallic, high refraction
@@ -621,6 +713,7 @@ void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const 
     params.isStereo = data.isStereo;
     params.verticalScale = data.verticalScale;
     params.time = accumulatedTime_;
+    params.shaderIntensity = config.bloom.enabled ? config.bloom.intensity : 1.0f;
 
     // Configure 3D shader if applicable
     if (is3DShader(config.shaderType))
@@ -638,7 +731,8 @@ void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const 
             if (auto* materialShader = dynamic_cast<MaterialShader*>(shader))
             {
                 // Convert and set material properties from config
-                MaterialProperties matProps = convertMaterialSettings(config.material);
+                // Pass data.colour to ensure the oscillator's color is used
+                MaterialProperties matProps = convertMaterialSettings(config.material, data.colour);
                 materialShader->setMaterial(matProps);
 
                 // Bind environment map if available
@@ -706,14 +800,20 @@ void RenderEngine::renderWaveformParticles(const WaveformRenderData& data, Wavef
     // Update emitters with waveform data
     for (auto emitterId : state.emitterIds)
     {
-        particleSystem_->updateEmitter(emitterId, data.channel1, data.bounds, deltaTime_);
+        // Pass verticalScale to correct particle positioning on scaled waveforms
+        particleSystem_->updateEmitter(emitterId, data.channel1, data.bounds, deltaTime_, data.verticalScale);
     }
 
     // Determine blend mode from config
     ParticleBlendMode blendMode = config.blendMode;
 
-    // Render particles
-    particleSystem_->render(*context_, currentWidth_, currentHeight_, blendMode);
+    // Render particles using LOGICAL dimensions for projection
+    // This matches the logical coordinates generated by ParticleEmitter
+    auto* target = context_->getTargetComponent();
+    int logicalWidth = target->getWidth();
+    int logicalHeight = target->getHeight();
+
+    particleSystem_->render(*context_, logicalWidth, logicalHeight, blendMode);
 }
 
 Framebuffer* RenderEngine::applyPostProcessing(Framebuffer* source, WaveformRenderState& state)
@@ -736,6 +836,21 @@ Framebuffer* RenderEngine::applyPostProcessing(Framebuffer* source, WaveformRend
             Framebuffer* dest = (current == ping) ? pong : ping;
             dest->bind();
             bloom->apply(*context_, current, dest, *fbPool_, deltaTime_);
+            dest->unbind();
+            current = dest;
+        }
+    }
+
+    // 1.5. Radial Blur (zoom-glow effect from center)
+    if (config.radialBlur.enabled)
+    {
+        auto* radialBlur = dynamic_cast<RadialBlurEffect*>(getEffect("radial_blur"));
+        if (radialBlur && radialBlur->isCompiled())
+        {
+            radialBlur->setSettings(config.radialBlur);
+            Framebuffer* dest = (current == ping) ? pong : ping;
+            dest->bind();
+            radialBlur->apply(*context_, current, dest, *fbPool_, deltaTime_);
             dest->unbind();
             current = dest;
         }
@@ -922,8 +1037,9 @@ void RenderEngine::blitToScreen()
                << ", sceneFBO valid=" << sceneFBO_->isValid()
                << ", blitTextureLoc=" << blitTextureLoc_);
 
-    // Disable blending for final blit
-    glDisable(GL_BLEND);
+    // Enable blending for final blit to ensure transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
 
     // Use blit shader
@@ -984,6 +1100,7 @@ void RenderEngine::initializeEffects()
     effects_["scanlines"] = std::make_unique<ScanlineEffect>();
     effects_["distortion"] = std::make_unique<DistortionEffect>();
     effects_["glitch"] = std::make_unique<GlitchEffect>();
+    effects_["radial_blur"] = std::make_unique<RadialBlurEffect>();
 
     // Compile all registered effects
     int compiledCount = 0;

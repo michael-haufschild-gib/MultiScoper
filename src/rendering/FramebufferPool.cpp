@@ -34,7 +34,8 @@ bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int he
     height_ = height;
 
     // Create waveform FBO with depth buffer (for 3D rendering) and HDR format
-    if (!waveformFBO_->create(context, width, height, GL_RGBA16F, true))
+    // Enable depth texture for post-processing effects like Depth of Field
+    if (!waveformFBO_->create(context, width, height, GL_RGBA16F, true, true))
     {
         DBG("FramebufferPool: Failed to create waveform FBO");
         return false;
