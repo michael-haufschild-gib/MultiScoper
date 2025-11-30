@@ -206,7 +206,7 @@ void NeonGlowShader::render(
         ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
         
         // Draw multiple passes for extra bloom-like accumulation
-        for(int i=0; i<3; ++i) {
+        for (int i = 0; i < 3; ++i) {
             ext.glUniform1f(gl_->glowIntensityLoc, 1.0f - (i * 0.2f));
             glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
         }
