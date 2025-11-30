@@ -4,13 +4,12 @@
 
 #include "rendering/shaders/BasicShader.h"
 #include <cmath>
-#include <iostream>
 
 namespace oscil
 {
 
-// Release-mode logging macro (works in both Debug and Release)
-#define BASIC_LOG(msg) std::cerr << "[BASIC] " << msg << std::endl
+// Debug-only logging macro using JUCE's DBG for consistency
+#define BASIC_LOG(msg) DBG("[BASIC] " << msg)
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
