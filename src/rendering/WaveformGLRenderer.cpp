@@ -192,31 +192,22 @@ void WaveformGLRenderer::renderOpenGL()
     if constexpr (DEBUG_RENDER_MODE)
     {
         if (!debugShaderCompiled_)
-        {
             compileDebugShader();
-        }
     }
     else
     {
         if (!shadersCompiled_)
-        {
             compileShaders();
-        }
     }
 
-    // If shaders still aren't ready, we can't render
+    // Check if shaders are ready (either from newOpenGLContextCreated or lazy compilation)
+    const bool shadersReady = DEBUG_RENDER_MODE ? debugShaderCompiled_ : shadersCompiled_;
+    if (!shadersReady)
+        return;
+
+    // Update contextReady if shaders were compiled lazily
     if (!contextReady_.load())
-    {
-        // Set contextReady if we managed to compile shaders lazily
-        if ((DEBUG_RENDER_MODE && debugShaderCompiled_) || (!DEBUG_RENDER_MODE && shadersCompiled_))
-        {
-            contextReady_.store(true);
-        }
-        else
-        {
-            return;
-        }
-    }
+        contextReady_.store(true);
 
     jassert(juce::OpenGLHelpers::isContextActive());
 

@@ -47,20 +47,17 @@ struct AtomicMetadata
 
     /**
      * Write metadata from audio thread (lock-free)
-     * Note: Single-producer only - must only be called from one thread (audio thread)
+     * IMPORTANT: This is single-producer only - must only be called from
+     * the audio thread. Concurrent calls from multiple threads are NOT supported.
      */
     void write(const CaptureFrameMetadata& meta)
     {
         // Increment sequence to odd (signals write in progress)
-        // Using fetch_add ensures atomicity even if called from multiple threads
-        // (though designed for single-producer use)
-        sequence.fetch_add(1, std::memory_order_relaxed);
-        
-        // Full memory fence to ensure sequence increment is visible
-        // before any field stores begin
-        std::atomic_thread_fence(std::memory_order_release);
+        // Release ordering ensures this is visible before field stores
+        sequence.fetch_add(1, std::memory_order_release);
 
-        // Write all fields with relaxed ordering (fence provides synchronization)
+        // Write all fields with relaxed ordering
+        // The sequence release above establishes synchronization
         sampleRate.store(meta.sampleRate, std::memory_order_relaxed);
         numChannels.store(meta.numChannels, std::memory_order_relaxed);
         timestamp.store(meta.timestamp, std::memory_order_relaxed);
@@ -68,7 +65,7 @@ struct AtomicMetadata
         isPlaying.store(meta.isPlaying, std::memory_order_relaxed);
         bpm.store(meta.bpm, std::memory_order_relaxed);
 
-        // Full memory fence to ensure all field stores complete
+        // Memory fence to ensure all field stores complete
         // before sequence is incremented to even
         std::atomic_thread_fence(std::memory_order_release);
 
