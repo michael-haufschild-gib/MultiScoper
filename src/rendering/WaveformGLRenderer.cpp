@@ -62,6 +62,23 @@ void WaveformGLRenderer::newOpenGLContextCreated()
     GL_LOG("=== newOpenGLContextCreated CALLED ===");
     DBG("WaveformGLRenderer: OpenGL context created");
 
+    // Validate OpenGL context is actually active before using it
+    // On some platforms (especially Windows in headless/validation scenarios),
+    // the context callback may fire before the context is fully usable
+    if (!juce::OpenGLHelpers::isContextActive())
+    {
+        GL_LOG("WARNING: OpenGL context not active yet, deferring shader compilation");
+        DBG("WaveformGLRenderer: Context not active, deferring compilation");
+        return;
+    }
+
+    if (context_ == nullptr)
+    {
+        GL_LOG("WARNING: context_ is nullptr, cannot compile shaders");
+        DBG("WaveformGLRenderer: context_ is nullptr");
+        return;
+    }
+
     if constexpr (DEBUG_RENDER_MODE)
     {
         GL_LOG("DEBUG_RENDER_MODE enabled, compiling debug shader");
@@ -151,6 +168,13 @@ void WaveformGLRenderer::compileShaders()
     if (!context_ || shadersCompiled_)
         return;
 
+    // Double-check the OpenGL context is active before compiling
+    if (!juce::OpenGLHelpers::isContextActive())
+    {
+        DBG("WaveformGLRenderer: Cannot compile shaders - context not active");
+        return;
+    }
+
     DBG("WaveformGLRenderer: Compiling shaders...");
     ShaderRegistry::getInstance().compileAll(*context_);
     shadersCompiled_ = true;
@@ -159,7 +183,18 @@ void WaveformGLRenderer::compileShaders()
 
 void WaveformGLRenderer::renderOpenGL()
 {
-    if (!contextReady_.load())
+    // Ensure we have a valid active OpenGL context
+    if (!juce::OpenGLHelpers::isContextActive())
+        return;
+
+    // Try to compile shaders lazily if not done during newOpenGLContextCreated
+    // (can happen on Windows when context wasn't ready at callback time)
+    if (!shadersCompiled_ && !DEBUG_RENDER_MODE)
+    {
+        compileShaders();
+    }
+
+    if (!contextReady_.load() && !shadersCompiled_)
         return;
 
     jassert(juce::OpenGLHelpers::isContextActive());

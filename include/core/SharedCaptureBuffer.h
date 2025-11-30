@@ -51,7 +51,12 @@ struct AtomicMetadata
     void write(const CaptureFrameMetadata& meta)
     {
         // Increment sequence to odd (signals write in progress)
-        sequence.fetch_add(1, std::memory_order_release);
+        // Use release to ensure this store is visible before subsequent field stores
+        uint32_t current = sequence.load(std::memory_order_relaxed);
+        sequence.store(current + 1, std::memory_order_release);
+
+        // Memory fence to ensure the sequence increment is visible before field stores
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         // Write all fields
         sampleRate.store(meta.sampleRate, std::memory_order_relaxed);
@@ -61,8 +66,11 @@ struct AtomicMetadata
         isPlaying.store(meta.isPlaying, std::memory_order_relaxed);
         bpm.store(meta.bpm, std::memory_order_relaxed);
 
+        // Memory fence to ensure all field stores complete before sequence update
+        std::atomic_thread_fence(std::memory_order_release);
+
         // Increment sequence to even (signals write complete)
-        sequence.fetch_add(1, std::memory_order_release);
+        sequence.store(current + 2, std::memory_order_release);
     }
 
     /**
