@@ -23,7 +23,6 @@ namespace oscil
 
 // Forward declarations
 class WaveformComponent;
-class WaveformGLRenderer;
 class OscillatorPanel;
 class PaneComponent;
 class StatusBarComponent;
@@ -34,6 +33,9 @@ class ThemeCoordinator;
 class LayoutCoordinator;
 class PluginTestServer;
 struct ColorTheme;
+
+// Forward declaration for OpenGLLifecycleManager
+class OpenGLLifecycleManager;
 
 /**
  * Adapter class to bridge SidebarComponent::Listener to OscilPluginEditor
@@ -162,15 +164,8 @@ private:
     double lastFrameTime_ = 0.0;
     float currentFps_ = 0.0f;
 
-#if OSCIL_ENABLE_OPENGL
-    // OpenGL context for GPU-accelerated rendering
-    juce::OpenGLContext openGLContext_;
-    std::unique_ptr<WaveformGLRenderer> glRenderer_;
-    bool openGLDetached_ = false;  // Track if context was detached early
-    bool gpuRenderingEnabled_ = false;  // Track GPU rendering state
-
-    void updateGLWaveformData();  // Update waveform data for GL renderer
-#endif
+    // OpenGL Lifecycle Manager (handles context and renderer)
+    std::unique_ptr<OpenGLLifecycleManager> glManager_;
 
 #if OSCIL_ENABLE_INSPECTOR
     // Melatonin Inspector for UI debugging (toggle with Cmd+I / Ctrl+I)

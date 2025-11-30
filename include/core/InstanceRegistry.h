@@ -10,6 +10,7 @@
 #include <memory>
 #include <unordered_map>
 #include <mutex>
+#include <shared_mutex>
 #include <functional>
 #include <atomic>
 
@@ -173,7 +174,7 @@ private:
     void notifySourceRemoved(const SourceId& sourceId);
     void notifySourceUpdated(const SourceId& sourceId);
 
-    mutable std::mutex mutex_;
+    mutable std::shared_mutex mutex_;
     std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_;
     std::unordered_map<juce::String, SourceId> trackToSourceMap_; // Deduplication map
 

@@ -16,8 +16,6 @@ TimingEngine::TimingEngine()
 
 TimingEngine::~TimingEngine()
 {
-    // Mark as invalid to prevent pending async callbacks from executing
-    isValid_->store(false);
 }
 
 void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& positionInfo)
@@ -471,64 +469,48 @@ void TimingEngine::removeListener(Listener* listener)
     listeners_.remove(listener);
 }
 
+void TimingEngine::dispatchPendingUpdates()
+{
+    // Check flags and notify listeners on the current thread (expected Message Thread)
+    if (pendingTimingModeChange_.exchange(false))
+    {
+        listeners_.call([this](Listener& l) { l.timingModeChanged(config_.timingMode); });
+    }
+
+    if (pendingIntervalChange_.exchange(false))
+    {
+        listeners_.call([this](Listener& l) { l.intervalChanged(config_.actualIntervalMs); });
+    }
+
+    if (pendingHostBPMChange_.exchange(false))
+    {
+        listeners_.call([this](Listener& l) { l.hostBPMChanged(config_.hostBPM); });
+    }
+
+    if (pendingHostSyncChange_.exchange(false))
+    {
+        listeners_.call([this](Listener& l) { l.hostSyncStateChanged(config_.hostSyncEnabled); });
+    }
+}
+
 void TimingEngine::notifyTimingModeChanged()
 {
-    // Capture values and validity flag for async callback safety
-    auto mode = config_.timingMode;
-    auto validFlag = isValid_;
-
-    juce::MessageManager::callAsync([this, mode, validFlag]()
-    {
-        if (validFlag->load())
-        {
-            listeners_.call([mode](Listener& l) { l.timingModeChanged(mode); });
-        }
-    });
+    pendingTimingModeChange_.store(true);
 }
 
 void TimingEngine::notifyIntervalChanged()
 {
-    // Capture values and validity flag for async callback safety
-    auto interval = config_.actualIntervalMs;
-    auto validFlag = isValid_;
-
-    juce::MessageManager::callAsync([this, interval, validFlag]()
-    {
-        if (validFlag->load())
-        {
-            listeners_.call([interval](Listener& l) { l.intervalChanged(interval); });
-        }
-    });
+    pendingIntervalChange_.store(true);
 }
 
 void TimingEngine::notifyHostBPMChanged()
 {
-    // Capture values and validity flag for async callback safety
-    auto bpm = config_.hostBPM;
-    auto validFlag = isValid_;
-
-    juce::MessageManager::callAsync([this, bpm, validFlag]()
-    {
-        if (validFlag->load())
-        {
-            listeners_.call([bpm](Listener& l) { l.hostBPMChanged(bpm); });
-        }
-    });
+    pendingHostBPMChange_.store(true);
 }
 
 void TimingEngine::notifyHostSyncStateChanged()
 {
-    // Capture values and validity flag for async callback safety
-    auto enabled = config_.hostSyncEnabled;
-    auto validFlag = isValid_;
-
-    juce::MessageManager::callAsync([this, enabled, validFlag]()
-    {
-        if (validFlag->load())
-        {
-            listeners_.call([enabled](Listener& l) { l.hostSyncStateChanged(enabled); });
-        }
-    });
+    pendingHostSyncChange_.store(true);
 }
 
 } // namespace oscil

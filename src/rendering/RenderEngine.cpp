@@ -226,11 +226,11 @@ void RenderEngine::resize(int width, int height)
     sceneFBO_->resize(*context_, width, height);
 
     // Resize history FBOs for waveforms with trails
-    for (auto& pair : waveformStates_)
+    for (auto& [key, state] : waveformStates_)
     {
-        if (pair.second.trailsEnabled)
+        if (state.trailsEnabled)
         {
-            pair.second.resizeHistoryFBO(*context_, width, height);
+            state.resizeHistoryFBO(*context_, width, height);
         }
     }
 

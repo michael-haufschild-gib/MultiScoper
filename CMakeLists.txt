@@ -154,6 +154,9 @@ target_sources(Oscil
         src/ui/coordinators/ThemeCoordinator.cpp
         src/ui/coordinators/LayoutCoordinator.cpp
 
+        # UI Managers
+        src/ui/managers/OpenGLLifecycleManager.cpp
+
         # UI Components (New Component Library)
         src/ui/components/OscilButton.cpp
         src/ui/components/OscilTextField.cpp
@@ -349,6 +352,29 @@ if(OSCIL_BUILD_TESTS)
         tests/test_sidebar_theme_population.cpp
         tests/test_shaders.cpp
 
+        # New tests - 100% coverage initiative
+        tests/test_window_layout.cpp
+        tests/test_coordinators.cpp
+        tests/test_camera3d.cpp
+        tests/test_visual_configuration.cpp
+
+        # Updated UI Component tests
+        tests/test_oscil_button.cpp
+        tests/test_oscil_toggle.cpp
+        tests/test_oscil_dropdown.cpp
+        tests/test_oscil_accordion.cpp
+        tests/test_oscil_badge.cpp
+        tests/test_oscil_checkbox.cpp
+        tests/test_oscil_colorpicker.cpp
+        tests/test_oscil_colorswatches.cpp
+        tests/test_oscil_meterbar.cpp
+        tests/test_oscil_modal.cpp
+        tests/test_oscil_radiobutton.cpp
+        tests/test_oscil_slider.cpp
+        tests/test_oscil_tabs.cpp
+        tests/test_oscil_textfield.cpp
+        tests/test_oscil_transportsync.cpp
+
         # Include necessary source files for testing
         src/core/InstanceRegistry.cpp
         src/core/SharedCaptureBuffer.cpp
@@ -383,6 +409,7 @@ if(OSCIL_BUILD_TESTS)
         src/ui/coordinators/SourceCoordinator.cpp
         src/ui/coordinators/ThemeCoordinator.cpp
         src/ui/coordinators/LayoutCoordinator.cpp
+        src/ui/managers/OpenGLLifecycleManager.cpp
 
         # UI Component source files for testing
         src/ui/components/OscilButton.cpp

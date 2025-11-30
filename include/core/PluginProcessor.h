@@ -22,7 +22,8 @@ class OscilPluginProcessor : public juce::AudioProcessor,
                              public IAudioDataProvider
 {
 public:
-    OscilPluginProcessor();
+    // Constructor with dependency injection
+    explicit OscilPluginProcessor(IInstanceRegistry& instanceRegistry);
     ~OscilPluginProcessor() override;
 
     // AudioProcessor interface
@@ -34,15 +35,15 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
 
-    const juce::String getName() const override;
+    [[nodiscard]] const juce::String getName() const override;
 
-    bool acceptsMidi() const override;
-    bool producesMidi() const override;
-    bool isMidiEffect() const override;
-    double getTailLengthSeconds() const override;
+    [[nodiscard]] bool acceptsMidi() const override;
+    [[nodiscard]] bool producesMidi() const override;
+    [[nodiscard]] bool isMidiEffect() const override;
+    [[nodiscard]] double getTailLengthSeconds() const override;
 
-    int getNumPrograms() override;
-    int getCurrentProgram() override;
+    [[nodiscard]] int getNumPrograms() override;
+    [[nodiscard]] int getCurrentProgram() override;
     void setCurrentProgram(int index) override;
     const juce::String getProgramName(int index) override;
     void changeProgramName(int index, const juce::String& newName) override;
@@ -51,9 +52,9 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
     // Oscil-specific methods
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const;
-    SourceId getSourceId() const;
-    TimingEngine& getTimingEngine();
+    [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const;
+    [[nodiscard]] SourceId getSourceId() const;
+    [[nodiscard]] TimingEngine& getTimingEngine();
 
     // Service access for dependency injection
     // UI components should use these instead of accessing singletons directly
@@ -67,6 +68,8 @@ public:
     double getSampleRate() const override { return currentSampleRate_; }
 
 private:
+    IInstanceRegistry& instanceRegistry_; // Injected dependency
+
     std::shared_ptr<SharedCaptureBuffer> captureBuffer_;
     SourceId sourceId_;
     juce::String trackIdentifier_;

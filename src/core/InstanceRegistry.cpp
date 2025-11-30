@@ -29,7 +29,7 @@ SourceId InstanceRegistry::registerInstance(
     bool maxLimitReached = false;
 
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> lock(mutex_);
 
         // Check if we already have a source for this track (deduplication)
         auto existingIt = trackToSourceMap_.find(trackIdentifier);
@@ -93,7 +93,7 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
     bool shouldNotify = false;
 
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
@@ -122,7 +122,7 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
 
 std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
 
     std::vector<SourceInfo> result;
     result.reserve(sources_.size());
@@ -137,7 +137,7 @@ std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 
 std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -148,7 +148,7 @@ std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) 
 
 std::shared_ptr<SharedCaptureBuffer> InstanceRegistry::getCaptureBuffer(const SourceId& sourceId) const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -162,7 +162,7 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
     bool shouldNotify = false;
 
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
@@ -183,19 +183,21 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
 
 size_t InstanceRegistry::getSourceCount() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return sources_.size();
 }
 
 void InstanceRegistry::addListener(InstanceRegistryListener* listener)
 {
-    // ListenerList is thread-safe for add/remove operations
+    // Note: ListenerList::call() is thread-safe, but add()/remove() are NOT.
+    // Registration should happen on the message thread (e.g., during UI construction).
     listeners_.add(listener);
 }
 
 void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
 {
-    // ListenerList is thread-safe for add/remove operations
+    // Note: ListenerList::call() is thread-safe, but add()/remove() are NOT.
+    // Unregistration should happen on the message thread (e.g., during UI destruction).
     listeners_.remove(listener);
 }
 

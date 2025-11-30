@@ -359,18 +359,12 @@ public:
     void fromValueTree(const juce::ValueTree& state);
 
     /**
-     * Listener interface for timing engine events.
-     *
-     * THREAD SAFETY: All listener callbacks are guaranteed to be invoked on the
-     * message thread via MessageManager::callAsync(). This means listener
-     * implementations can safely:
-     * - Perform UI operations (repaint, component updates)
-     * - Access UI state without synchronization
-     *
-     * Note: Because callbacks are async, values may be slightly stale by the time
-     * the callback executes. For real-time critical operations, poll getConfig()
-     * instead of relying on listener updates.
+     * Dispatch any pending updates to listeners.
+     * MUST be called on the message thread (e.g. from a Timer).
+     * This replaces the previous async callback mechanism to ensure real-time safety.
      */
+    void dispatchPendingUpdates();
+
     class Listener
     {
     public:
@@ -398,8 +392,11 @@ private:
 
     juce::ListenerList<Listener> listeners_;
 
-    // Validity flag for async callbacks (prevents use-after-free)
-    std::shared_ptr<std::atomic<bool>> isValid_ = std::make_shared<std::atomic<bool>>(true);
+    // Pending update flags for lock-free notification
+    std::atomic<bool> pendingTimingModeChange_{ false };
+    std::atomic<bool> pendingIntervalChange_{ false };
+    std::atomic<bool> pendingHostBPMChange_{ false };
+    std::atomic<bool> pendingHostSyncChange_{ false };
 
     // Trigger detection
     bool detectTrigger(const float* samples, int numSamples);
@@ -407,6 +404,7 @@ private:
     bool detectFallingEdge(float sample);
     bool detectLevel(float sample);
 
+    // Notification helpers (now just set flags)
     void notifyTimingModeChanged();
     void notifyIntervalChanged();
     void notifyHostBPMChanged();

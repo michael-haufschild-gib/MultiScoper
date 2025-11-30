@@ -826,36 +826,66 @@ public:
     }
 };
 
+TEST_F(TimingEngineTest, Listener_DeterministicNotification)
+{
+    TestTimingListener listener;
+    engine.addListener(&listener);
+
+    // 1. Change mode
+    engine.setTimingMode(TimingMode::MELODIC);
+    
+    // Verify listener NOT called yet (it's pending)
+    EXPECT_EQ(listener.modeChangedCount, 0);
+    
+    // Dispatch updates
+    engine.dispatchPendingUpdates();
+    
+    // Verify listener CALLED
+    EXPECT_EQ(listener.modeChangedCount, 1);
+    EXPECT_EQ(listener.lastMode, TimingMode::MELODIC);
+
+    // 2. Change Interval
+    // Switch back to TIME mode first so timeIntervalMs affects actualIntervalMs
+    engine.setTimingMode(TimingMode::TIME);
+    engine.dispatchPendingUpdates(); // Dispatch mode change and potential interval change (if switching to TIME changed it)
+    
+    // Reset counts for clarity or just check increment
+    int prevIntervalCount = listener.intervalChangedCount;
+    
+    engine.setTimeIntervalMs(123.4f);
+    // Should be pending
+    EXPECT_EQ(listener.intervalChangedCount, prevIntervalCount);
+    
+    engine.dispatchPendingUpdates();
+    // Should have incremented
+    EXPECT_EQ(listener.intervalChangedCount, prevIntervalCount + 1);
+    
+    engine.setTimeIntervalMs(250.0f);
+    engine.dispatchPendingUpdates();
+    EXPECT_EQ(listener.intervalChangedCount, prevIntervalCount + 2);
+    EXPECT_FLOAT_EQ(listener.lastInterval, 250.0f);
+
+    engine.removeListener(&listener);
+}
+
 TEST_F(TimingEngineTest, Listener_AddAndRemove)
 {
     TestTimingListener listener;
-
     engine.addListener(&listener);
 
-    // Change mode to trigger notification
+    // Change mode
     engine.setTimingMode(TimingMode::MELODIC);
-
-    // Note: Notifications are async via MessageManager, so in unit tests
-    // we can't directly verify they were called without a message loop
-    // This test verifies add/remove doesn't crash
+    engine.dispatchPendingUpdates();
+    EXPECT_EQ(listener.modeChangedCount, 1);
 
     engine.removeListener(&listener);
 
-    // After removal, listener should not be notified
+    // Change mode again
     engine.setTimingMode(TimingMode::TIME);
-}
-
-TEST_F(TimingEngineTest, Listener_ModeChangeNotification)
-{
-    // This test verifies the listener is added without crashing
-    // Full async notification testing would require a running message loop
-    TestTimingListener listener;
-    engine.addListener(&listener);
-
-    // Setting the same mode should not trigger notification
-    engine.setTimingMode(TimingMode::TIME);
-
-    engine.removeListener(&listener);
+    engine.dispatchPendingUpdates();
+    
+    // Should NOT have incremented
+    EXPECT_EQ(listener.modeChangedCount, 1);
 }
 
 // =============================================================================

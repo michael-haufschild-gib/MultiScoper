@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include "ui/SidebarComponent.h"
 #include "core/PluginProcessor.h"
+#include "core/InstanceRegistry.h"
 #include "ui/sections/OptionsSection.h"
 #include "ui/ThemeManager.h"
 
@@ -23,7 +24,7 @@ protected:
         auto& themeManager = ThemeManager::getInstance();
         // (ThemeManager usually has default themes initialized)
         
-        processor = std::make_unique<OscilPluginProcessor>();
+        processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance());
         // Initialize sidebar with processor
         sidebar = std::make_unique<SidebarComponent>(*processor);
     }

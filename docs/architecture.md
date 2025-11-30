@@ -13,23 +13,33 @@ Oscil is a multi-track audio oscilloscope VST/AU plugin. All code lives in the `
 include/                    # Header files (.h)
 ├── core/                   # Core logic: processors, state, data models
 ├── dsp/                    # Digital signal processing algorithms
-├── rendering/              # OpenGL shaders and GPU rendering
-│   └── shaders/            # Individual shader implementations
+├── rendering/              # OpenGL rendering system
+│   ├── shaders/            # 2D waveform shaders (extend WaveformShader)
+│   ├── shaders3d/          # 3D waveform shaders (extend WaveformShader3D)
+│   ├── effects/            # Post-processing effects (extend PostProcessEffect)
+│   ├── materials/          # PBR material shaders (extend MaterialShader)
+│   └── particles/          # Particle system components
 ├── ui/                     # UI components (juce::Component subclasses)
 │   ├── components/         # Reusable UI component library (buttons, sliders, etc.)
 │   ├── sections/           # Sidebar collapsible sections
-│   └── coordinators/       # State-UI coordination logic
+│   ├── coordinators/       # State-UI coordination logic
+│   └── managers/           # Lifecycle managers (OpenGL, etc.)
 └── Oscil.h                 # Main umbrella header
 
 src/                        # Implementation files (.cpp)
 ├── core/                   # Core implementations
 ├── dsp/                    # DSP implementations
 ├── rendering/              # GPU rendering implementations
-│   └── shaders/            # Shader implementations
+│   ├── shaders/            # 2D shader implementations
+│   ├── shaders3d/          # 3D shader implementations
+│   ├── effects/            # Post-process effect implementations
+│   ├── materials/          # Material shader implementations
+│   └── particles/          # Particle system implementations
 └── ui/                     # UI implementations
     ├── components/         # Reusable UI component implementations
     ├── sections/           # Sidebar section implementations
-    └── coordinators/       # Coordinator implementations
+    ├── coordinators/       # Coordinator implementations
+    └── managers/           # Manager implementations
 
 tests/                      # GoogleTest unit tests
 └── test_*.cpp              # Test files
@@ -42,11 +52,16 @@ test_harness/               # E2E test harness (separate JUCE app)
 **Decision tree - where does my code go?**
 - Audio processing logic? → `src/dsp/` + `include/dsp/`
 - State management/data models? → `src/core/` + `include/core/`
-- OpenGL shader? → `src/rendering/shaders/` + `include/rendering/shaders/`
-- GPU rendering (non-shader)? → `src/rendering/` + `include/rendering/`
+- 2D waveform shader? → `src/rendering/shaders/` + `include/rendering/shaders/`
+- 3D waveform shader? → `src/rendering/shaders3d/` + `include/rendering/shaders3d/`
+- Post-processing effect? → `src/rendering/effects/` + `include/rendering/effects/`
+- PBR material shader? → `src/rendering/materials/` + `include/rendering/materials/`
+- Particle system? → `src/rendering/particles/` + `include/rendering/particles/`
+- GPU rendering infrastructure? → `src/rendering/` + `include/rendering/`
 - UI rendering/components? → `src/ui/` + `include/ui/`
 - Collapsible sidebar section? → `src/ui/sections/` + `include/ui/sections/`
 - State-UI coordination? → `src/ui/coordinators/` + `include/ui/coordinators/`
+- Lifecycle management (OpenGL, etc.)? → `src/ui/managers/` + `include/ui/managers/`
 - Unit test? → `tests/test_[class_name].cpp`
 - E2E test harness code? → `test_harness/src/` + `test_harness/include/`
 
@@ -413,6 +428,223 @@ src/rendering/shaders/MyShader.cpp
 
 **Key Pattern**: Always provide `renderSoftware()` fallback for when OpenGL is disabled.
 
+## How to Create a 3D Waveform Shader
+
+3D shaders provide depth, lighting, and camera perspectives. Use the `WaveformShader3D` base class.
+
+**Step 1**: Create header at `include/rendering/shaders3d/My3DShader.h`
+
+```cpp
+/*
+    Oscil - My 3D Shader
+    Description of the 3D visualization
+*/
+
+#pragma once
+
+#include "rendering/shaders3d/WaveformShader3D.h"
+
+#if OSCIL_ENABLE_OPENGL
+
+namespace oscil
+{
+
+class My3DShader : public WaveformShader3D
+{
+public:
+    My3DShader() = default;
+    ~My3DShader() override;
+
+    // Identification
+    [[nodiscard]] juce::String getId() const override { return "my_3d_shader"; }
+    [[nodiscard]] juce::String getName() const override { return "My 3D Shader"; }
+
+    // Lifecycle
+    bool compile(juce::OpenGLContext& context) override;
+    void release(juce::OpenGLContext& context) override;
+    [[nodiscard]] bool isCompiled() const override;
+
+    // 3D Rendering
+    void render(juce::OpenGLContext& context,
+                const WaveformData3D& data,
+                const Camera3D& camera,
+                const LightingConfig& lighting) override;
+
+private:
+    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
+    bool compiled_ = false;
+
+    // Uniform locations
+    GLint modelLoc_ = -1, viewLoc_ = -1, projLoc_ = -1;
+    GLint colorLoc_ = -1, timeLoc_ = -1;
+};
+
+} // namespace oscil
+
+#endif
+```
+
+**Step 2**: Create implementation at `src/rendering/shaders3d/My3DShader.cpp`
+
+**Step 3**: Register in `ShaderRegistry::registerBuiltInShaders()`
+
+**Step 4**: Add to `CMakeLists.txt`
+
+**Key Pattern**: Use `setMatrixUniforms()` and `setLightingUniforms()` helpers from base class.
+
+## How to Create a Post-Processing Effect
+
+Post-processing effects apply screen-space transformations after waveform rendering.
+
+**Step 1**: Create header at `include/rendering/effects/MyEffect.h`
+
+```cpp
+/*
+    Oscil - My Effect
+    Description of the screen effect
+*/
+
+#pragma once
+
+#include "rendering/effects/PostProcessEffect.h"
+
+#if OSCIL_ENABLE_OPENGL
+
+namespace oscil
+{
+
+class MyEffect : public PostProcessEffect
+{
+public:
+    MyEffect() = default;
+    ~MyEffect() override = default;
+
+    // Identification
+    [[nodiscard]] juce::String getId() const override { return "my_effect"; }
+    [[nodiscard]] juce::String getDisplayName() const override { return "My Effect"; }
+
+    // Lifecycle
+    bool compile(juce::OpenGLContext& context) override;
+    void release(juce::OpenGLContext& context) override;
+    [[nodiscard]] bool isCompiled() const override;
+
+    // Apply effect
+    void apply(juce::OpenGLContext& context,
+               Framebuffer* source,
+               Framebuffer* destination,
+               FramebufferPool& pool,
+               float deltaTime) override;
+
+private:
+    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
+    bool compiled_ = false;
+
+    // Effect-specific uniforms
+    GLint intensityLoc_ = -1;
+    GLint textureLoc_ = -1;
+};
+
+} // namespace oscil
+
+#endif
+```
+
+**Step 2**: Create implementation using `compileEffectShader()` helper
+
+```cpp
+bool MyEffect::compile(juce::OpenGLContext& context)
+{
+    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
+
+    // Fragment shader with vTexCoord from vertex shader
+    const char* fragmentSource = R"(
+        varying vec2 vTexCoord;
+        uniform sampler2D uTexture;
+        uniform float uIntensity;
+
+        void main()
+        {
+            vec4 color = texture2D(uTexture, vTexCoord);
+            // Apply your effect here
+            gl_FragColor = color * uIntensity;
+        }
+    )";
+
+    if (!compileEffectShader(*shader_, fragmentSource))
+        return false;
+
+    shader_->use();
+    intensityLoc_ = shader_->getUniformIDFromName("uIntensity");
+    textureLoc_ = shader_->getUniformIDFromName("uTexture");
+    compiled_ = true;
+    return true;
+}
+```
+
+**Step 3**: Add to `RenderEngine` effect chain
+
+**Step 4**: Add to `CMakeLists.txt`
+
+**Key Pattern**: Use `compileEffectShader()` which provides the fullscreen quad vertex shader automatically.
+
+## How to Create a Material Shader
+
+Material shaders add physically-based rendering (PBR) properties like reflections and refraction.
+
+**Step 1**: Create header at `include/rendering/materials/MyMaterial.h`
+
+```cpp
+/*
+    Oscil - My Material
+    PBR material description
+*/
+
+#pragma once
+
+#include "rendering/materials/MaterialShader.h"
+
+#if OSCIL_ENABLE_OPENGL
+
+namespace oscil
+{
+
+class MyMaterial : public MaterialShader
+{
+public:
+    MyMaterial() = default;
+    ~MyMaterial() override = default;
+
+    [[nodiscard]] juce::String getId() const override { return "my_material"; }
+    [[nodiscard]] juce::String getName() const override { return "My Material"; }
+
+    bool compile(juce::OpenGLContext& context) override;
+    void release(juce::OpenGLContext& context) override;
+    [[nodiscard]] bool isCompiled() const override;
+
+    void render(juce::OpenGLContext& context,
+                const WaveformData3D& data,
+                const Camera3D& camera,
+                const LightingConfig& lighting) override;
+
+private:
+    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
+    bool compiled_ = false;
+
+    // Material uniform locations
+    GLint metallicLoc_ = -1, roughnessLoc_ = -1, iorLoc_ = -1;
+};
+
+} // namespace oscil
+
+#endif
+```
+
+**Step 2**: Create implementation using `setMaterialUniforms()` helper
+
+**Step 3**: Add to `CMakeLists.txt`
+
+**Key Pattern**: Extend `MaterialShader` (which extends `WaveformShader3D`) for PBR properties. Use `bindEnvironmentMap()` for reflections.
+
 ## How to Add a Theme Color
 
 1. Add property to `ColorTheme` struct in `include/ui/ThemeManager.h`
@@ -438,7 +670,10 @@ src/rendering/shaders/MyShader.cpp
 | `juce::Component` | Creating any visual UI element |
 | `juce::AudioProcessor` | Creating the main plugin (already done: `OscilPluginProcessor`) |
 | `juce::OpenGLRenderer` | GPU-accelerated rendering (see `WaveformGLRenderer`) |
-| `WaveformShader` | Creating custom GPU waveform effects |
+| `WaveformShader` | Creating custom 2D GPU waveform effects |
+| `WaveformShader3D` | Creating 3D waveform visualizations with camera/lighting |
+| `MaterialShader` | PBR material shaders (extends `WaveformShader3D`) |
+| `PostProcessEffect` | Screen-space post-processing effects |
 | `InstanceRegistryListener` | Reacting to source registration/removal |
 | `ThemeManagerListener` | Reacting to theme changes |
 

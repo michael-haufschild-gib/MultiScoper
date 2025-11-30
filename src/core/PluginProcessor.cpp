@@ -12,10 +12,11 @@
 namespace oscil
 {
 
-OscilPluginProcessor::OscilPluginProcessor()
+OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry)
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+    , instanceRegistry_(instanceRegistry)
 {
     // Create capture buffer
     captureBuffer_ = std::make_shared<SharedCaptureBuffer>();
@@ -29,7 +30,7 @@ OscilPluginProcessor::~OscilPluginProcessor()
     // Unregister from instance registry
     if (sourceId_.isValid())
     {
-        InstanceRegistry::getInstance().unregisterInstance(sourceId_);
+        instanceRegistry_.unregisterInstance(sourceId_);
     }
 }
 
@@ -58,7 +59,7 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     timingEngine_.setSampleRate(sampleRate);
 
     // Register with instance registry
-    sourceId_ = InstanceRegistry::getInstance().registerInstance(
+    sourceId_ = instanceRegistry_.registerInstance(
         trackIdentifier_,
         captureBuffer_,
         "Oscil Track",
@@ -201,7 +202,7 @@ TimingEngine& OscilPluginProcessor::getTimingEngine()
 
 IInstanceRegistry& OscilPluginProcessor::getInstanceRegistry()
 {
-    return InstanceRegistry::getInstance();
+    return instanceRegistry_;
 }
 
 IThemeService& OscilPluginProcessor::getThemeService()
@@ -218,7 +219,7 @@ std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& so
     }
 
     // Otherwise, look up in registry
-    return InstanceRegistry::getInstance().getCaptureBuffer(sourceId);
+    return instanceRegistry_.getCaptureBuffer(sourceId);
 }
 
 } // namespace oscil
@@ -226,5 +227,5 @@ std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& so
 // This creates the plugin instance
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new oscil::OscilPluginProcessor();
+    return new oscil::OscilPluginProcessor(oscil::InstanceRegistry::getInstance());
 }

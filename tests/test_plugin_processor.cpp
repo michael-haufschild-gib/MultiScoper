@@ -18,7 +18,7 @@ protected:
 
     void SetUp() override
     {
-        processor = std::make_unique<OscilPluginProcessor>();
+        processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance());
     }
 
     void TearDown() override
@@ -187,7 +187,7 @@ TEST_F(PluginProcessorTest, PrepareToPlay_DifferentSampleRates)
 
     for (double rate : sampleRates)
     {
-        processor = std::make_unique<OscilPluginProcessor>();
+        processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance());
         processor->prepareToPlay(rate, 512);
 
         EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate)
@@ -202,7 +202,7 @@ TEST_F(PluginProcessorTest, PrepareToPlay_DifferentBlockSizes)
 
     for (int blockSize : blockSizes)
     {
-        processor = std::make_unique<OscilPluginProcessor>();
+        processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance());
         processor->prepareToPlay(44100.0, blockSize);
 
         // Should not crash
@@ -375,7 +375,7 @@ TEST_F(PluginProcessorTest, StateInformation_SaveAndRestore)
     EXPECT_GT(savedState.getSize(), 0u);
 
     // Create new processor and restore state
-    auto newProcessor = std::make_unique<OscilPluginProcessor>();
+    auto newProcessor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance());
     newProcessor->prepareToPlay(44100.0, 512);
 
     newProcessor->setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));

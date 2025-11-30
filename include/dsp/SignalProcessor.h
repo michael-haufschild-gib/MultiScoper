@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_events/juce_events.h>
 #include "core/Oscillator.h"
 #include <vector>
 
@@ -29,13 +30,32 @@ struct ProcessedSignal
 
     void resize(int samples, bool stereo)
     {
+        // ProcessedSignal is for UI visualization only.
+        // Allocating memory on the audio thread is strictly forbidden.
+        // Ensure this is called on the message thread.
+        // Note: We use a raw jassert here to avoid including juce_events in a dsp header,
+        // but this check is critical for thread safety.
+        // In a standard JUCE app, MessageManager is available.
+        jassert (juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+        // Optimization: reserve capacity to avoid reallocations if possible
+        if (channel1.capacity() < static_cast<size_t>(samples))
+             channel1.reserve(static_cast<size_t>(samples));
+
         numSamples = samples;
         isStereo = stereo;
         channel1.resize(static_cast<size_t>(samples));
+        
         if (stereo)
+        {
+            if (channel2.capacity() < static_cast<size_t>(samples))
+                 channel2.reserve(static_cast<size_t>(samples));
             channel2.resize(static_cast<size_t>(samples));
+        }
         else
+        {
             channel2.clear();
+        }
     }
 
     void clear()
