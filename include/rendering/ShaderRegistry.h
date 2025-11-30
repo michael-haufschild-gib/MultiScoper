@@ -89,7 +89,7 @@ private:
     void registerBuiltInShaders();
 
     std::unordered_map<std::string, std::unique_ptr<WaveformShader>> shaders_;
-    juce::String defaultShaderId_ = "neon_glow";
+    juce::String defaultShaderId_ = "basic";
 };
 
 } // namespace oscil

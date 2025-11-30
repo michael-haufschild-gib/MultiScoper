@@ -46,6 +46,7 @@ namespace StateIds
     static const juce::Identifier VerticalOffset{ "verticalOffset" };
     static const juce::Identifier TimeWindow{ "timeWindow" };
     static const juce::Identifier ShaderId{ "shaderId" };
+    static const juce::Identifier VisualPresetId{ "visualPresetId" };
 
     // Layout properties
     static const juce::Identifier Columns{ "columns" };

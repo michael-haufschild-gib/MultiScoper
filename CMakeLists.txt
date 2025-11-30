@@ -176,8 +176,52 @@ target_sources(Oscil
         # Rendering (Shaders)
         src/rendering/WaveformShader.cpp
         src/rendering/ShaderRegistry.cpp
+        src/rendering/shaders/BasicShader.cpp
         src/rendering/shaders/NeonGlowShader.cpp
+        src/rendering/shaders/GradientFillShader.cpp
+        src/rendering/shaders/DualOutlineShader.cpp
+        src/rendering/shaders/PlasmaSineShader.cpp
+        src/rendering/shaders/DigitalGlitchShader.cpp
         src/rendering/WaveformGLRenderer.cpp
+
+        # Rendering (Render Engine)
+        src/rendering/Framebuffer.cpp
+        src/rendering/FramebufferPool.cpp
+        src/rendering/RenderEngine.cpp
+        src/rendering/VisualConfiguration.cpp
+        src/rendering/WaveformRenderState.cpp
+        src/rendering/Camera3D.cpp
+
+        # Rendering (Post-Processing Effects)
+        src/rendering/effects/PostProcessEffect.cpp
+        src/rendering/effects/VignetteEffect.cpp
+        src/rendering/effects/FilmGrainEffect.cpp
+        src/rendering/effects/BloomEffect.cpp
+        src/rendering/effects/TrailsEffect.cpp
+        src/rendering/effects/ColorGradeEffect.cpp
+        src/rendering/effects/ChromaticAberrationEffect.cpp
+        src/rendering/effects/ScanlineEffect.cpp
+        src/rendering/effects/DistortionEffect.cpp
+        src/rendering/effects/GlitchEffect.cpp
+
+        # Rendering (Particles)
+        src/rendering/particles/ParticlePool.cpp
+        src/rendering/particles/ParticleEmitter.cpp
+        src/rendering/particles/ParticleSystem.cpp
+
+        # Rendering (3D Shaders)
+        src/rendering/shaders3d/WaveformShader3D.cpp
+        src/rendering/shaders3d/VolumetricRibbonShader.cpp
+        src/rendering/shaders3d/WireframeMeshShader.cpp
+        src/rendering/shaders3d/VectorFlowShader.cpp
+        src/rendering/shaders3d/StringTheoryShader.cpp
+
+        # Rendering (Materials)
+        src/rendering/materials/MaterialShader.cpp
+        src/rendering/materials/EnvironmentMapManager.cpp
+        src/rendering/materials/GlassRefractionShader.cpp
+        src/rendering/materials/LiquidChromeShader.cpp
+        src/rendering/materials/CrystallineShader.cpp
 )
 
 # Include directories
@@ -362,8 +406,52 @@ if(OSCIL_BUILD_TESTS)
         # Rendering source files for testing
         src/rendering/WaveformShader.cpp
         src/rendering/ShaderRegistry.cpp
+        src/rendering/shaders/BasicShader.cpp
         src/rendering/shaders/NeonGlowShader.cpp
+        src/rendering/shaders/GradientFillShader.cpp
+        src/rendering/shaders/DualOutlineShader.cpp
+        src/rendering/shaders/PlasmaSineShader.cpp
+        src/rendering/shaders/DigitalGlitchShader.cpp
         src/rendering/WaveformGLRenderer.cpp
+
+        # Rendering (Render Engine) for testing
+        src/rendering/Framebuffer.cpp
+        src/rendering/FramebufferPool.cpp
+        src/rendering/RenderEngine.cpp
+        src/rendering/VisualConfiguration.cpp
+        src/rendering/WaveformRenderState.cpp
+        src/rendering/Camera3D.cpp
+
+        # Rendering (Post-Processing Effects) for testing
+        src/rendering/effects/PostProcessEffect.cpp
+        src/rendering/effects/VignetteEffect.cpp
+        src/rendering/effects/FilmGrainEffect.cpp
+        src/rendering/effects/BloomEffect.cpp
+        src/rendering/effects/TrailsEffect.cpp
+        src/rendering/effects/ColorGradeEffect.cpp
+        src/rendering/effects/ChromaticAberrationEffect.cpp
+        src/rendering/effects/ScanlineEffect.cpp
+        src/rendering/effects/DistortionEffect.cpp
+        src/rendering/effects/GlitchEffect.cpp
+
+        # Rendering (Particles) for testing
+        src/rendering/particles/ParticlePool.cpp
+        src/rendering/particles/ParticleEmitter.cpp
+        src/rendering/particles/ParticleSystem.cpp
+
+        # Rendering (3D Shaders) for testing
+        src/rendering/shaders3d/WaveformShader3D.cpp
+        src/rendering/shaders3d/VolumetricRibbonShader.cpp
+        src/rendering/shaders3d/WireframeMeshShader.cpp
+        src/rendering/shaders3d/VectorFlowShader.cpp
+        src/rendering/shaders3d/StringTheoryShader.cpp
+
+        # Rendering (Materials) for testing
+        src/rendering/materials/MaterialShader.cpp
+        src/rendering/materials/EnvironmentMapManager.cpp
+        src/rendering/materials/GlassRefractionShader.cpp
+        src/rendering/materials/LiquidChromeShader.cpp
+        src/rendering/materials/CrystallineShader.cpp
     )
 
     target_include_directories(OscilTests
@@ -388,6 +476,7 @@ if(OSCIL_BUILD_TESTS)
             juce::juce_audio_processors
             juce::juce_audio_utils
             nlohmann_json::nlohmann_json
+            $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     )
 
     target_compile_definitions(OscilTests
@@ -395,6 +484,7 @@ if(OSCIL_BUILD_TESTS)
             JUCE_STANDALONE_APPLICATION=1
             JUCE_USE_CURL=0
             JUCE_WEB_BROWSER=0
+            $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
     )
 
     # Apply RTSan to tests (tests are executables, not shared libraries)

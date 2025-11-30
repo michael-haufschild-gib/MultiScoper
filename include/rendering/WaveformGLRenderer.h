@@ -11,6 +11,7 @@
 #if OSCIL_ENABLE_OPENGL
 #include <juce_opengl/juce_opengl.h>
 #include "rendering/WaveformShader.h"
+#include "rendering/VisualConfiguration.h"
 #include <vector>
 #include <unordered_map>
 #include <atomic>
@@ -21,6 +22,7 @@ namespace oscil
 
 // Forward declarations
 class ShaderRegistry;
+class RenderEngine;
 
 /**
  * Data required to render a single waveform on the GL thread.
@@ -36,9 +38,10 @@ struct WaveformRenderData
     float opacity = 1.0f;                // Opacity (0-1)
     float lineWidth = 1.5f;              // Line thickness
     bool isStereo = false;               // Whether to render channel2
-    juce::String shaderId = "neon_glow"; // Shader to use
+    juce::String shaderId = "basic";     // Shader to use (legacy, use visualConfig)
     bool visible = true;                 // Whether to render this waveform
     float verticalScale = 1.0f;          // Vertical scale factor (includes auto-scale)
+    VisualConfiguration visualConfig;    // Full visual configuration for render engine
 };
 
 /**
@@ -106,6 +109,20 @@ public:
      */
     void clearAllWaveforms();
 
+    /**
+     * Enable or disable the advanced render engine.
+     * When enabled, post-processing, particles, and 3D effects are available.
+     * @param enabled Whether to use the render engine
+     */
+    void setRenderEngineEnabled(bool enabled) { useRenderEngine_ = enabled; }
+    [[nodiscard]] bool isRenderEngineEnabled() const { return useRenderEngine_; }
+
+    /**
+     * Get the render engine (for configuration access).
+     * @return Pointer to render engine, or nullptr if not initialized
+     */
+    RenderEngine* getRenderEngine() { return renderEngine_.get(); }
+
 private:
     void compileShaders();
     void compileDebugShader();
@@ -131,6 +148,11 @@ private:
     GLint debugProjectionLoc_ = -1;
     GLint debugColorLoc_ = -1;
     bool debugShaderCompiled_ = false;
+
+    // Advanced render engine for post-processing, particles, 3D
+    std::unique_ptr<RenderEngine> renderEngine_;
+    bool useRenderEngine_ = true;  // Enable by default
+    std::chrono::steady_clock::time_point lastFrameTime_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformGLRenderer)
 };

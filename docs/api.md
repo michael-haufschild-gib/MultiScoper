@@ -444,7 +444,7 @@ struct ProcessedSignal
 ```cpp
 struct ShaderInfo
 {
-    juce::String id;           // Unique identifier (e.g., "neon_glow")
+    juce::String id;           // Unique identifier (e.g., "basic")
     juce::String displayName;  // Human-readable name
     juce::String description;  // Brief description for tooltips
 };
@@ -476,7 +476,7 @@ struct WaveformRenderData
     float opacity = 1.0f;                // Opacity (0-1)
     float lineWidth = 1.5f;              // Line thickness
     bool isStereo = false;               // Whether to render channel2
-    juce::String shaderId = "neon_glow"; // Shader to use
+    juce::String shaderId = "basic"; // Shader to use
     bool visible = true;                 // Whether to render this waveform
 };
 ```

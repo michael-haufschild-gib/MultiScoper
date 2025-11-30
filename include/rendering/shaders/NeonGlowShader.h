@@ -1,6 +1,6 @@
 /*
     Oscil - Neon Glow Shader
-    Default shader with neon glow effect around waveforms
+    Renders waveforms with an intense neon tube look
 */
 
 #pragma once
@@ -12,8 +12,7 @@ namespace oscil
 {
 
 /**
- * Neon Glow shader - renders waveforms with a glowing neon effect.
- * The glow color matches the waveform color and fades outward.
+ * Neon Glow shader - renders a bright white core with intense colored glow.
  */
 class NeonGlowShader : public WaveformShader
 {
@@ -21,12 +20,11 @@ public:
     NeonGlowShader();
     ~NeonGlowShader() override;
 
-    // WaveformShader interface
     [[nodiscard]] juce::String getId() const override { return "neon_glow"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Neon Glow"; }
     [[nodiscard]] juce::String getDescription() const override
     {
-        return "Waveform with glowing neon effect";
+        return "Intense neon tube effect with white core";
     }
 
 #if OSCIL_ENABLE_OPENGL
@@ -42,22 +40,11 @@ public:
     ) override;
 #endif
 
-    void renderSoftware(
-        juce::Graphics& g,
-        const std::vector<float>& channel1,
-        const std::vector<float>* channel2,
-        const ShaderRenderParams& params
-    ) override;
-
 private:
 #if OSCIL_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
 #endif
-
-    // Glow parameters
-    static constexpr float GLOW_INTENSITY = 0.8f;
-    static constexpr int GLOW_PASSES = 3;
 };
 
 } // namespace oscil

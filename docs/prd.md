@@ -4212,21 +4212,21 @@ plan based on this the following addition to our plugin:
 
 Read docs/shaders.md to understand how to add shaders to this Juce 8 multi-platform audio plugin project.
 
-A working example of a simple shader you find in src/rendering/shaders/NeonGlowShader.cpp
+A working example of a simple shader you find in src/rendering/shaders/BasicShader.cpp
 
 In docs/ui-designs/waveforms1.jpeg we have several UI designs of waveforms using shaders for inspiration. They cannot be 100% adapted to our usecase.
 
 Plan the visual and technical approach to adapt from docs/ui-designs/waveforms1.jpeg the "Particle Stream" design into a shader of the same name for our project.
 
-Then write all todos and implement the shader and make it available in the plugin for selection by the user, following docs/shaders.md and the src/rendering/shaders/NeonGlowShader.cpp example.
+Then write all todos and implement the shader and make it available in the plugin for selection by the user, following docs/shaders.md and the src/rendering/shaders/BasicShader.cpp example.
 
-Notes: do not just write a version of the neonglowshader. this particle stream shader is more complex, game-like, with glowing particles and particle effects with some level of random movement. Take the time to plan this carefully. We want a visual "wow".
+Notes: do not just write a version of the BasicShader. this particle stream shader is more complex, game-like, with glowing particles and particle effects with some level of random movement. Take the time to plan this carefully. We want a visual "wow".
 
 
 ---
 Read docs/shaders.md to understand how to add shaders to this Juce 8 multi-platform audio plugin project.
 
-A working example of a simple shader you find in src/rendering/shaders/NeonGlowShader.cpp
+A working example of a simple shader you find in src/rendering/shaders/BasicShader.cpp
 
 In docs/ui-designs/waveforms1.jpeg we have several UI designs of waveforms using shaders for inspiration. They cannot be 100% adapted to our usecase.
 
@@ -4236,7 +4236,7 @@ Plan the visual and technical approach to add a new shader to this project:
 
 You have total freedom, as long as the waveform is still recognizable. Work with different shader types, glow, particles, wireframe, textures, bloom, glitch, anything you can think of.
 
-Then write all todos and implement the shader and make it available in the plugin for selection by the user, following docs/shaders.md and the src/rendering/shaders/NeonGlowShader.cpp example.
+Then write all todos and implement the shader and make it available in the plugin for selection by the user, following docs/shaders.md and the src/rendering/shaders/BasicShader.cpp example.
 
 Remember: the purpose of this shader is to look visually stunning, triple A game
 ---

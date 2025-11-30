@@ -100,7 +100,7 @@ void AddOscillatorDialog::setupComponents()
     {
         shaderDropdown_->addItem(shaderInfo.displayName, shaderInfo.id);
     }
-    // Default to first shader (neon_glow)
+    // Default to first shader (basic)
     if (!availableShaders.empty())
     {
         shaderDropdown_->setSelectedIndex(0, false);
@@ -414,7 +414,7 @@ void AddOscillatorDialog::handleOkClick()
     }
     else
     {
-        // Default to neon_glow if nothing selected
+        // Default to basic if nothing selected
         result.shaderId = ShaderRegistry::getInstance().getDefaultShaderId();
     }
 

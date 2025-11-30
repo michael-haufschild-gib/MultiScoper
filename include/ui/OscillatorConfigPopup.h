@@ -80,7 +80,7 @@ public:
 
     // Preferred dimensions
     static constexpr int POPUP_WIDTH = 360;
-    static constexpr int POPUP_HEIGHT = 570;  // Increased for shader dropdown
+    static constexpr int POPUP_HEIGHT = 580;  // Visual preset dropdown
 
     // Number of default color swatches
     static constexpr int NUM_COLOR_SWATCHES = 10;
@@ -101,7 +101,7 @@ private:
     void handleVerticalScaleChange();
     void handleVerticalOffsetChange();
     void handlePaneChange();
-    void handleShaderChange();
+    void handleVisualPresetChange();
 
     // Current oscillator data
     OscillatorId oscillatorId_;
@@ -134,10 +134,10 @@ private:
     std::unique_ptr<juce::Label> colorLabel_;
     std::unique_ptr<OscilColorSwatches> colorSwatches_;
 
-    // Shader section
-    std::unique_ptr<juce::Label> shaderLabel_;
-    std::unique_ptr<OscilDropdown> shaderDropdown_;
-    juce::String shaderId_ = "neon_glow";
+    // Visual preset section
+    std::unique_ptr<juce::Label> visualPresetLabel_;
+    std::unique_ptr<OscilDropdown> visualPresetDropdown_;
+    juce::String visualPresetId_ = "default";
 
     // Line Width slider
     std::unique_ptr<OscilSlider> lineWidthSlider_;

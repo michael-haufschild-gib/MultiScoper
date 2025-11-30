@@ -39,3 +39,6 @@ screenshots/
 
 # Temporary build logs
 buildwarning*.txt
+
+# stuff
+resources/textures/

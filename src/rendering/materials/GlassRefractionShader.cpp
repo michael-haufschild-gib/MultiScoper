@@ -1,0 +1,378 @@
+/*
+    Oscil - Glass Refraction Shader Implementation
+*/
+
+#include "rendering/materials/GlassRefractionShader.h"
+
+#if OSCIL_ENABLE_OPENGL
+
+namespace oscil
+{
+
+using namespace juce::gl;
+
+static const char* glassVertexShader = R"(
+    attribute vec3 aPosition;
+    attribute vec3 aNormal;
+    attribute vec2 aTexCoord;
+
+    uniform mat4 uModel;
+    uniform mat4 uView;
+    uniform mat4 uProjection;
+
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+    varying vec2 vTexCoord;
+
+    void main()
+    {
+        vec4 worldPos = uModel * vec4(aPosition, 1.0);
+        vWorldPos = worldPos.xyz;
+        vNormal = mat3(uModel) * aNormal;
+        vTexCoord = aTexCoord;
+
+        gl_Position = uProjection * uView * worldPos;
+    }
+)";
+
+static const char* glassFragmentShader = R"(
+    uniform vec4 uColor;
+    uniform vec3 uCameraPos;
+    uniform float uIOR;
+    uniform float uRefractionStrength;
+    uniform float uFresnelPower;
+    uniform float uDispersion;
+    uniform float uTime;
+    uniform samplerCube uEnvMap;
+    uniform vec3 uLightDir;
+    uniform vec4 uSpecular;
+
+    varying vec3 vWorldPos;
+    varying vec3 vNormal;
+    varying vec2 vTexCoord;
+
+    void main()
+    {
+        vec3 normal = normalize(vNormal);
+        vec3 viewDir = normalize(uCameraPos - vWorldPos);
+        vec3 lightDir = normalize(uLightDir);
+
+        // Fresnel effect
+        float fresnel = pow(1.0 - max(dot(viewDir, normal), 0.0), uFresnelPower);
+
+        // Reflection
+        vec3 reflectDir = reflect(-viewDir, normal);
+        vec3 reflectColor = textureCube(uEnvMap, reflectDir).rgb;
+
+        // Refraction with chromatic dispersion
+        float iorR = uIOR - uDispersion;
+        float iorG = uIOR;
+        float iorB = uIOR + uDispersion;
+
+        vec3 refractDirR = refract(-viewDir, normal, 1.0 / iorR);
+        vec3 refractDirG = refract(-viewDir, normal, 1.0 / iorG);
+        vec3 refractDirB = refract(-viewDir, normal, 1.0 / iorB);
+
+        float refractR = textureCube(uEnvMap, refractDirR).r;
+        float refractG = textureCube(uEnvMap, refractDirG).g;
+        float refractB = textureCube(uEnvMap, refractDirB).b;
+        vec3 refractColor = vec3(refractR, refractG, refractB);
+
+        // Blend refraction with base color
+        refractColor = mix(uColor.rgb, refractColor, uRefractionStrength);
+
+        // Specular highlight
+        vec3 halfDir = normalize(lightDir + viewDir);
+        float specAngle = max(dot(normal, halfDir), 0.0);
+        float specular = pow(specAngle, uSpecular.a * 128.0) * uSpecular.r;
+
+        // Combine reflection and refraction based on fresnel
+        vec3 finalColor = mix(refractColor, reflectColor, fresnel);
+
+        // Add specular
+        finalColor += vec3(specular);
+
+        // Subtle edge glow
+        float edgeGlow = fresnel * 0.3;
+        finalColor += uColor.rgb * edgeGlow;
+
+        // Animated shimmer
+        float shimmer = sin(vTexCoord.x * 30.0 + uTime * 2.0) * 0.02 + 0.98;
+        finalColor *= shimmer;
+
+        gl_FragColor = vec4(finalColor, uColor.a * (0.5 + fresnel * 0.5));
+    }
+)";
+
+GlassRefractionShader::GlassRefractionShader()
+{
+    // Set default glass material properties
+    material_.ior = 1.5f;
+    material_.refractionStrength = 0.8f;
+    material_.fresnelPower = 3.0f;
+    material_.reflectivity = 0.5f;
+    material_.roughness = 0.0f;
+}
+
+GlassRefractionShader::~GlassRefractionShader() = default;
+
+bool GlassRefractionShader::compile(juce::OpenGLContext& context)
+{
+    if (compiled_)
+        return true;
+
+    auto& ext = context.extensions;
+
+    // Compile shader
+    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
+    if (!compileShaderProgram(*shader_, glassVertexShader, glassFragmentShader))
+    {
+        DBG("GlassRefractionShader: Failed to compile shader");
+        shader_.reset();
+        return false;
+    }
+
+    // Get uniform locations
+    modelLoc_ = shader_->getUniformIDFromName("uModel");
+    viewLoc_ = shader_->getUniformIDFromName("uView");
+    projLoc_ = shader_->getUniformIDFromName("uProjection");
+    cameraPosLoc_ = shader_->getUniformIDFromName("uCameraPos");
+    colorLoc_ = shader_->getUniformIDFromName("uColor");
+    iorLoc_ = shader_->getUniformIDFromName("uIOR");
+    refractionStrengthLoc_ = shader_->getUniformIDFromName("uRefractionStrength");
+    fresnelPowerLoc_ = shader_->getUniformIDFromName("uFresnelPower");
+    dispersionLoc_ = shader_->getUniformIDFromName("uDispersion");
+    timeLoc_ = shader_->getUniformIDFromName("uTime");
+    envMapLoc_ = shader_->getUniformIDFromName("uEnvMap");
+    lightDirLoc_ = shader_->getUniformIDFromName("uLightDir");
+    specularLoc_ = shader_->getUniformIDFromName("uSpecular");
+
+    // Create VAO
+    ext.glGenVertexArrays(1, &vao_);
+    ext.glBindVertexArray(vao_);
+
+    // Create VBO
+    ext.glGenBuffers(1, &vbo_);
+    ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+
+    // Create IBO
+    ext.glGenBuffers(1, &ibo_);
+    ext.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_);
+
+    // Setup vertex attributes
+    GLint posAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aPosition");
+    GLint normAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aNormal");
+    GLint texAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aTexCoord");
+
+    const int stride = 8 * sizeof(float);
+
+    if (posAttrib >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+    }
+
+    if (normAttrib >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(normAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(normAttrib), 3, GL_FLOAT, GL_FALSE, stride,
+                                  reinterpret_cast<void*>(3 * sizeof(float)));
+    }
+
+    if (texAttrib >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(texAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(texAttrib), 2, GL_FLOAT, GL_FALSE, stride,
+                                  reinterpret_cast<void*>(6 * sizeof(float)));
+    }
+
+    ext.glBindVertexArray(0);
+
+    compiled_ = true;
+    DBG("GlassRefractionShader: Compiled successfully");
+    return true;
+}
+
+void GlassRefractionShader::release(juce::OpenGLContext& context)
+{
+    if (!compiled_)
+        return;
+
+    auto& ext = context.extensions;
+
+    if (ibo_ != 0)
+    {
+        ext.glDeleteBuffers(1, &ibo_);
+        ibo_ = 0;
+    }
+
+    if (vbo_ != 0)
+    {
+        ext.glDeleteBuffers(1, &vbo_);
+        vbo_ = 0;
+    }
+
+    if (vao_ != 0)
+    {
+        ext.glDeleteVertexArrays(1, &vao_);
+        vao_ = 0;
+    }
+
+    shader_.reset();
+    compiled_ = false;
+}
+
+void GlassRefractionShader::render(juce::OpenGLContext& context,
+                                   const WaveformData3D& data,
+                                   const Camera3D& camera,
+                                   const LightingConfig& lighting)
+{
+    if (!compiled_ || !data.samples || data.sampleCount < 2)
+        return;
+
+    // Update mesh
+    updateMesh(data);
+
+    if (indexCount_ == 0)
+        return;
+
+    auto& ext = context.extensions;
+
+    // Enable depth testing
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    // Enable blending for transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Enable face culling (render back faces for glass effect)
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);  // Draw back faces first for better glass effect
+
+    shader_->use();
+
+    // Set matrix uniforms
+    Matrix4 model = Matrix4::translation(0, 0, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude, 1.0f);
+    setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
+
+    // Camera position
+    Vec3 camPos = camera.getPosition();
+    ext.glUniform3f(cameraPosLoc_, camPos.x, camPos.y, camPos.z);
+
+    // Color (tint)
+    ext.glUniform4f(colorLoc_,
+                    data.color.getFloatRed(),
+                    data.color.getFloatGreen(),
+                    data.color.getFloatBlue(),
+                    data.color.getFloatAlpha());
+
+    // Material properties
+    ext.glUniform1f(iorLoc_, material_.ior);
+    ext.glUniform1f(refractionStrengthLoc_, material_.refractionStrength);
+    ext.glUniform1f(fresnelPowerLoc_, material_.fresnelPower);
+    ext.glUniform1f(dispersionLoc_, dispersion_);
+    ext.glUniform1f(timeLoc_, time_);
+
+    // Light
+    float lx = lighting.lightDirX;
+    float ly = lighting.lightDirY;
+    float lz = lighting.lightDirZ;
+    float lLen = std::sqrt(lx*lx + ly*ly + lz*lz);
+    if (lLen > 0) { lx /= lLen; ly /= lLen; lz /= lLen; }
+    ext.glUniform3f(lightDirLoc_, lx, ly, lz);
+    ext.glUniform4f(specularLoc_, lighting.specularR, lighting.specularG,
+                    lighting.specularB, lighting.specularPower);
+
+    // Bind environment map
+    if (hasEnvironmentMap())
+    {
+        bindEnvironmentMap(ext, 0, envMapLoc_);
+    }
+
+    // Draw back faces
+    ext.glBindVertexArray(vao_);
+    glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, nullptr);
+
+    // Draw front faces
+    glCullFace(GL_BACK);
+    glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, nullptr);
+
+    ext.glBindVertexArray(0);
+
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+}
+
+void GlassRefractionShader::update(float deltaTime)
+{
+    time_ += deltaTime;
+    if (time_ > 1000.0f)
+        time_ = std::fmod(time_, 1000.0f);
+}
+
+void GlassRefractionShader::updateMesh(const WaveformData3D& data)
+{
+    // Generate tube mesh using base class helper
+    generateTubeMesh(data.samples, data.sampleCount, thickness_, 12,
+                     vertices_, indices_);
+
+    if (vertices_.empty() || indices_.empty())
+    {
+        indexCount_ = 0;
+        return;
+    }
+
+    // Upload to GPU
+    auto* glContext = juce::OpenGLContext::getCurrentContext();
+    if (!glContext)
+        return;
+
+    auto& ext = glContext->extensions;
+
+    ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    ext.glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(vertices_.size() * sizeof(float)),
+                     vertices_.data(), GL_DYNAMIC_DRAW);
+
+    ext.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_);
+    ext.glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(indices_.size() * sizeof(GLuint)),
+                     indices_.data(), GL_DYNAMIC_DRAW);
+
+    indexCount_ = static_cast<int>(indices_.size());
+}
+
+void GlassRefractionShader::setParameter(const juce::String& name, float value)
+{
+    if (name == "ior" || name == "refractionIndex")
+        material_.ior = value;
+    else if (name == "refractionStrength")
+        material_.refractionStrength = value;
+    else if (name == "fresnelPower")
+        material_.fresnelPower = value;
+    else if (name == "dispersion")
+        dispersion_ = value;
+    else if (name == "thickness")
+        thickness_ = value;
+}
+
+float GlassRefractionShader::getParameter(const juce::String& name) const
+{
+    if (name == "ior" || name == "refractionIndex")
+        return material_.ior;
+    if (name == "refractionStrength")
+        return material_.refractionStrength;
+    if (name == "fresnelPower")
+        return material_.fresnelPower;
+    if (name == "dispersion")
+        return dispersion_;
+    if (name == "thickness")
+        return thickness_;
+    return 0.0f;
+}
+
+} // namespace oscil
+
+#endif // OSCIL_ENABLE_OPENGL

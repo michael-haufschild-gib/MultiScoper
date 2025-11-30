@@ -6,6 +6,7 @@
 #include "ui/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
 #include "rendering/WaveformShader.h"
+#include "rendering/VisualConfiguration.h"
 #if OSCIL_ENABLE_OPENGL
 #include "rendering/WaveformGLRenderer.h"
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -108,6 +109,11 @@ void WaveformComponent::setDisplaySamples(int samples)
 void WaveformComponent::setShaderId(const juce::String& shaderId)
 {
     shaderId_ = shaderId;
+}
+
+void WaveformComponent::setVisualPresetId(const juce::String& presetId)
+{
+    visualPresetId_ = presetId;
 }
 
 void WaveformComponent::setGpuRenderingEnabled(bool enabled)
@@ -275,7 +281,7 @@ void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangl
     params.verticalScale = effectiveScale_;
 
     // Use software rendering path (GPU rendering happens in OpenGL render callback)
-    // The shader's software fallback provides the neon glow effect via multi-pass path rendering
+    // The shader's software fallback provides the basic effect via multi-pass path rendering
     const std::vector<float>* channel2Ptr = params.isStereo ? &displayBuffer2_ : nullptr;
     shader->renderSoftware(g, displayBuffer1_, channel2Ptr, params);
 }
@@ -500,6 +506,9 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     data.shaderId = shaderId_;
     data.visible = isVisible() && !displayBuffer1_.empty();
     data.verticalScale = effectiveScale_;  // Pass auto-scale factor to GPU
+
+    // Populate advanced visual configuration from preset
+    data.visualConfig = VisualConfiguration::getPreset(visualPresetId_);
 #else
     juce::ignoreUnused(data);
 #endif

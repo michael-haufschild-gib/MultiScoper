@@ -3,7 +3,19 @@
 */
 
 #include "rendering/ShaderRegistry.h"
+#include "rendering/shaders/BasicShader.h"
 #include "rendering/shaders/NeonGlowShader.h"
+#include "rendering/shaders/GradientFillShader.h"
+#include "rendering/shaders/DualOutlineShader.h"
+#include "rendering/shaders/PlasmaSineShader.h"
+#include "rendering/shaders/DigitalGlitchShader.h"
+#include "rendering/shaders3d/VolumetricRibbonShader.h"
+#include "rendering/shaders3d/WireframeMeshShader.h"
+#include "rendering/shaders3d/VectorFlowShader.h"
+#include "rendering/shaders3d/StringTheoryShader.h"
+#include "rendering/materials/GlassRefractionShader.h"
+#include "rendering/materials/LiquidChromeShader.h"
+#include "rendering/materials/CrystallineShader.h"
 
 namespace oscil
 {
@@ -24,7 +36,25 @@ ShaderRegistry::~ShaderRegistry() = default;
 void ShaderRegistry::registerBuiltInShaders()
 {
     // Register default shaders
+    registerShader(std::make_unique<BasicShader>());
+
+    // Register 2D shaders
     registerShader(std::make_unique<NeonGlowShader>());
+    registerShader(std::make_unique<GradientFillShader>());
+    registerShader(std::make_unique<DualOutlineShader>());
+    registerShader(std::make_unique<PlasmaSineShader>());
+    registerShader(std::make_unique<DigitalGlitchShader>());
+
+    // Register 3D shaders
+    registerShader(std::make_unique<VolumetricRibbonShader>());
+    registerShader(std::make_unique<WireframeMeshShader>());
+    registerShader(std::make_unique<VectorFlowShader>());
+    registerShader(std::make_unique<StringTheoryShader>());
+
+    // Register Material shaders
+    registerShader(std::make_unique<GlassRefractionShader>());
+    registerShader(std::make_unique<LiquidChromeShader>());
+    registerShader(std::make_unique<CrystallineShader>());
 }
 
 void ShaderRegistry::registerShader(std::unique_ptr<WaveformShader> shader)

@@ -224,7 +224,7 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
     entry.oscillator = oscillator;
     entry.waveform = std::make_unique<WaveformComponent>();
 
-    // Configure waveform
+    // Configure waveform with all oscillator properties
     entry.waveform->setProcessingMode(oscillator.getProcessingMode());
     entry.waveform->setColour(oscillator.getColour());
     entry.waveform->setOpacity(oscillator.getOpacity());
@@ -232,6 +232,7 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
     entry.waveform->setVerticalScale(oscillator.getVerticalScale());
     entry.waveform->setVisible(oscillator.isVisible());
     entry.waveform->setShaderId(oscillator.getShaderId());
+    entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
 
     // Get capture buffer - always try processor's buffer first since it's always available
     // The registry lookup might fail if prepareToPlay() hasn't been called yet
@@ -321,6 +322,32 @@ void PaneComponent::updateOscillator(const OscillatorId& oscillatorId, Processin
             // Update the waveform component
             entry.waveform->setProcessingMode(mode);
             entry.waveform->setVisible(visible);
+
+            // Repaint to reflect changes
+            repaint();
+            break;
+        }
+    }
+}
+
+void PaneComponent::updateOscillatorFull(const Oscillator& oscillator)
+{
+    for (auto& entry : waveforms_)
+    {
+        if (entry.oscillator.getId() == oscillator.getId())
+        {
+            // Update all oscillator data
+            entry.oscillator = oscillator;
+
+            // Update all waveform component properties
+            entry.waveform->setProcessingMode(oscillator.getProcessingMode());
+            entry.waveform->setColour(oscillator.getColour());
+            entry.waveform->setOpacity(oscillator.getOpacity());
+            entry.waveform->setLineWidth(oscillator.getLineWidth());
+            entry.waveform->setVerticalScale(oscillator.getVerticalScale());
+            entry.waveform->setVisible(oscillator.isVisible());
+            entry.waveform->setShaderId(oscillator.getShaderId());
+            entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
 
             // Repaint to reflect changes
             repaint();
