@@ -26,6 +26,7 @@ Framebuffer::Framebuffer(Framebuffer&& other) noexcept
     other.depthBuffer = 0;
     other.width = 0;
     other.height = 0;
+    other.format = GL_RGBA8;
     other.hasDepth = false;
 }
 
@@ -50,6 +51,7 @@ Framebuffer& Framebuffer::operator=(Framebuffer&& other) noexcept
         other.depthBuffer = 0;
         other.width = 0;
         other.height = 0;
+        other.format = GL_RGBA8;
         other.hasDepth = false;
     }
     return *this;
