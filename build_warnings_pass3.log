@@ -1,0 +1,322 @@
+[0/2] Re-checking globbed directories...
+[1/2] Re-running CMake...
+-- Found ccache: /opt/homebrew/bin/ccache
+-- Found clang-tidy: /opt/homebrew/opt/llvm/bin/clang-tidy
+-- CPM: Adding package JUCE@8.0.5 (8.0.5)
+CMake Warning (dev) at /opt/homebrew/share/cmake/Modules/FetchContent.cmake:1963 (message):
+  Calling FetchContent_Populate(JUCE) is deprecated, call
+  FetchContent_MakeAvailable(JUCE) instead.  Policy CMP0169 can be set to OLD
+  to allow FetchContent_Populate(JUCE) to be called directly for now, but the
+  ability to call it with declared details will be removed completely in a
+  future version.
+Call Stack (most recent call first):
+  cmake/CPM.cmake:1074 (FetchContent_Populate)
+  cmake/CPM.cmake:868 (cpm_fetch_package)
+  CMakeLists.txt:69 (CPMAddPackage)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- CPM: Adding package httplib@0.28.0 (v0.28.0)
+CMake Warning (dev) at /opt/homebrew/share/cmake/Modules/FetchContent.cmake:1963 (message):
+  Calling FetchContent_Populate(httplib) is deprecated, call
+  FetchContent_MakeAvailable(httplib) instead.  Policy CMP0169 can be set to
+  OLD to allow FetchContent_Populate(httplib) to be called directly for now,
+  but the ability to call it with declared details will be removed completely
+  in a future version.
+Call Stack (most recent call first):
+  cmake/CPM.cmake:1074 (FetchContent_Populate)
+  cmake/CPM.cmake:868 (cpm_fetch_package)
+  CMakeLists.txt:77 (CPMAddPackage)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- CPM: Adding package json@3.11.3 (v3.11.3)
+CMake Warning (dev) at /opt/homebrew/share/cmake/Modules/FetchContent.cmake:1963 (message):
+  Calling FetchContent_Populate(json) is deprecated, call
+  FetchContent_MakeAvailable(json) instead.  Policy CMP0169 can be set to OLD
+  to allow FetchContent_Populate(json) to be called directly for now, but the
+  ability to call it with declared details will be removed completely in a
+  future version.
+Call Stack (most recent call first):
+  cmake/CPM.cmake:1074 (FetchContent_Populate)
+  cmake/CPM.cmake:868 (cpm_fetch_package)
+  CMakeLists.txt:84 (CPMAddPackage)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Using the multi-header code from /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/json-src/include/
+-- CPM: Adding package melatonin_inspector@ (origin/main)
+CMake Warning (dev) at /opt/homebrew/share/cmake/Modules/FetchContent.cmake:1963 (message):
+  Calling FetchContent_Populate(melatonin_inspector) is deprecated, call
+  FetchContent_MakeAvailable(melatonin_inspector) instead.  Policy CMP0169
+  can be set to OLD to allow FetchContent_Populate(melatonin_inspector) to be
+  called directly for now, but the ability to call it with declared details
+  will be removed completely in a future version.
+Call Stack (most recent call first):
+  cmake/CPM.cmake:1074 (FetchContent_Populate)
+  cmake/CPM.cmake:868 (cpm_fetch_package)
+  CMakeLists.txt:93 (CPMAddPackage)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- CPM: Adding package googletest@1.17.0 (v1.17.0)
+CMake Warning (dev) at /opt/homebrew/share/cmake/Modules/FetchContent.cmake:1963 (message):
+  Calling FetchContent_Populate(googletest) is deprecated, call
+  FetchContent_MakeAvailable(googletest) instead.  Policy CMP0169 can be set
+  to OLD to allow FetchContent_Populate(googletest) to be called directly for
+  now, but the ability to call it with declared details will be removed
+  completely in a future version.
+Call Stack (most recent call first):
+  cmake/CPM.cmake:1074 (FetchContent_Populate)
+  cmake/CPM.cmake:868 (cpm_fetch_package)
+  CMakeLists.txt:336 (CPMAddPackage)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Configuring done (3.5s)
+-- Generating done (0.1s)
+-- Build files have been written to: /Users/Spare/Documents/code/MultiScoper/build/dev
+[0/4] Re-checking globbed directories...
+[1/179] Generating juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData2.cpp, juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData3.cpp, juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData4.cpp, juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData.h
+[2/179] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData1.cpp.o
+[3/179] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData4.cpp.o
+[4/179] Building CXX object _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o
+[5/179] Building CXX object _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o
+[6/179] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData3.cpp.o
+[7/179] Building CXX object _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o
+[8/179] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData2.cpp.o
+[9/179] Building CXX object _deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o
+[10/179] Building CXX object CMakeFiles/Oscil.dir/src/core/InstanceRegistry.cpp.o
+[11/179] Building CXX object CMakeFiles/Oscil.dir/src/core/SharedCaptureBuffer.cpp.o
+[12/179] Building CXX object CMakeFiles/Oscil.dir/src/core/OscilState.cpp.o
+[13/179] Building CXX object CMakeFiles/Oscil.dir/src/core/Oscillator.cpp.o
+[14/179] Building CXX object CMakeFiles/Oscil.dir/src/core/Pane.cpp.o
+[15/179] Building CXX object CMakeFiles/Oscil.dir/src/core/PluginProcessor.cpp.o
+[16/179] Building CXX object CMakeFiles/Oscil.dir/src/core/WindowLayout.cpp.o
+[17/179] Building CXX object CMakeFiles/Oscil.dir/src/core/Source.cpp.o
+[18/179] Building CXX object CMakeFiles/Oscil.dir/src/dsp/TimingEngine.cpp.o
+[19/179] Building CXX object CMakeFiles/Oscil.dir/src/dsp/SignalProcessor.cpp.o
+[20/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/OscillatorPanel.cpp.o
+[21/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/PaneComponent.cpp.o
+[22/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/WaveformComponent.cpp.o
+[23/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/PluginEditor.cpp.o
+In file included from ../../src/ui/PluginEditor.cpp:13:
+In file included from ../../include/ui/PluginTestServer.h:17:
+_deps/httplib-src/httplib.h:2276:11: warning: enumeration value 'SSLPeerCouldBeClosed_' not explicitly handled in switch [-Wswitch-enum]
+ 2276 |   switch (error) {
+      |           ^~~~~
+_deps/httplib-src/httplib.h:2276:11: note: add missing switch cases
+ 2276 |   switch (error) {
+      |           ^
+_deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == or != is unsafe [-Wfloat-equal]
+ 5601 |               if (a.quality != b.quality) {
+      |                   ~~~~~~~~~ ^  ~~~~~~~~~
+2 warnings generated.
+[24/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/ThemeManager.cpp.o
+[25/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/ThemeEditorComponent.cpp.o
+[26/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/ColorPickerComponent.cpp.o
+[27/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/StatusBarComponent.cpp.o
+[28/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/SettingsDropdown.cpp.o
+[29/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/SourceSelectorComponent.cpp.o
+[30/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/SidebarComponent.cpp.o
+[31/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/SourceItemComponent.cpp.o
+[32/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/OscillatorListItem.cpp.o
+[33/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/OscillatorListToolbar.cpp.o
+[34/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/SegmentedButtonBar.cpp.o
+[35/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/OscillatorConfigPopup.cpp.o
+[36/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/AddOscillatorDialog.cpp.o
+[37/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/PluginTestServer.cpp.o
+In file included from ../../src/ui/PluginTestServer.cpp:6:
+In file included from ../../include/ui/PluginTestServer.h:17:
+_deps/httplib-src/httplib.h:2276:11: warning: enumeration value 'SSLPeerCouldBeClosed_' not explicitly handled in switch [-Wswitch-enum]
+ 2276 |   switch (error) {
+      |           ^~~~~
+_deps/httplib-src/httplib.h:2276:11: note: add missing switch cases
+ 2276 |   switch (error) {
+      |           ^
+_deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == or != is unsafe [-Wfloat-equal]
+ 5601 |               if (a.quality != b.quality) {
+      |                   ~~~~~~~~~ ^  ~~~~~~~~~
+2 warnings generated.
+[38/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/sections/TimingSidebarSection.cpp.o
+[39/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/sections/OptionsSection.cpp.o
+[40/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/coordinators/SourceCoordinator.cpp.o
+[41/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/coordinators/ThemeCoordinator.cpp.o
+[42/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/coordinators/LayoutCoordinator.cpp.o
+[43/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/managers/OpenGLLifecycleManager.cpp.o
+[44/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilButton.cpp.o
+[45/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTextField.cpp.o
+[46/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilToggle.cpp.o
+[47/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTooltip.cpp.o
+[48/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilSlider.cpp.o
+[49/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilCheckbox.cpp.o
+[50/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilRadioButton.cpp.o
+[51/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilDropdown.cpp.o
+[52/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTabs.cpp.o
+[53/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilAccordion.cpp.o
+[54/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilModal.cpp.o
+[55/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilBadge.cpp.o
+[56/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilColorSwatches.cpp.o
+[57/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilColorPicker.cpp.o
+[58/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilMeterBar.cpp.o
+[59/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTransportSync.cpp.o
+[60/179] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/UIAudioFeedback.cpp.o
+[61/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/WaveformShader.cpp.o
+[62/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/ShaderRegistry.cpp.o
+[63/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/BasicShader.cpp.o
+[64/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/NeonGlowShader.cpp.o
+[65/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/GradientFillShader.cpp.o
+[66/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/DualOutlineShader.cpp.o
+[67/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/PlasmaSineShader.cpp.o
+[68/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/DigitalGlitchShader.cpp.o
+[69/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/WaveformGLRenderer.cpp.o
+[70/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/Framebuffer.cpp.o
+[71/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/FramebufferPool.cpp.o
+[72/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/VisualConfiguration.cpp.o
+[73/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/WaveformRenderState.cpp.o
+[74/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/RenderEngine.cpp.o
+[75/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/PostProcessEffect.cpp.o
+[76/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/Camera3D.cpp.o
+[77/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/VignetteEffect.cpp.o
+[78/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/FilmGrainEffect.cpp.o
+[79/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/BloomEffect.cpp.o
+[80/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/TrailsEffect.cpp.o
+[81/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/ColorGradeEffect.cpp.o
+[82/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/ScanlineEffect.cpp.o
+[83/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/ChromaticAberrationEffect.cpp.o
+[84/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/DistortionEffect.cpp.o
+[85/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/GlitchEffect.cpp.o
+[86/179] Building CXX object CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[87/179] Building CXX object CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_core/juce_core_CompilationTime.cpp.o
+[88/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/particles/ParticlePool.cpp.o
+[89/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/particles/ParticleSystem.cpp.o
+[90/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/particles/ParticleEmitter.cpp.o
+[91/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/VolumetricRibbonShader.cpp.o
+[92/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/WaveformShader3D.cpp.o
+[93/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/WireframeMeshShader.cpp.o
+[94/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/VectorFlowShader.cpp.o
+../../src/rendering/shaders3d/VectorFlowShader.cpp:146:56: warning: implicit conversion changes signedness: 'unsigned long' to 'GLsizeiptr' (aka 'long') [-Wsign-conversion]
+  146 |     ext.glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(float), vertices_.data(), GL_DYNAMIC_DRAW);
+      |     ~~~                               ~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+../../src/rendering/shaders3d/VectorFlowShader.cpp:179:40: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  179 |     vertices_.reserve(data.sampleCount * 4);
+      |               ~~~~~~~ ~~~~~~~~~~~~~~~~~^~~
+2 warnings generated.
+[95/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/StringTheoryShader.cpp.o
+../../src/rendering/shaders3d/StringTheoryShader.cpp:123:56: warning: implicit conversion changes signedness: 'unsigned long' to 'GLsizeiptr' (aka 'long') [-Wsign-conversion]
+  123 |     ext.glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(float), vertices_.data(), GL_DYNAMIC_DRAW);
+      |     ~~~                               ~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+../../src/rendering/shaders3d/StringTheoryShader.cpp:155:59: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  155 |     vertices_.reserve(data.sampleCount * stringCount_ * 2 * 4);
+      |               ~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+2 warnings generated.
+[96/179] Linking CXX static library libOscilBinaryData.a
+[97/179] Linking CXX static library lib/libgtest.a
+[98/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/MaterialShader.cpp.o
+[99/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/EnvironmentMapManager.cpp.o
+[100/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/GlassRefractionShader.cpp.o
+[101/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/CrystallineShader.cpp.o
+[102/179] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/LiquidChromeShader.cpp.o
+[103/179] Building CXX object CMakeFiles/Oscil.dir/melatonin_inspector/melatonin_inspector.cpp.o
+[104/179] Linking CXX static library Oscil_artefacts/Debug/liboscil4_SharedCode.a
+[105/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_animation_settings.cpp.o
+[106/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_theme_manager.cpp.o
+[107/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_timing_calculations.cpp.o
+[108/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_timing_engine.cpp.o
+[109/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_plugin_processor.cpp.o
+[110/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_accordion.cpp.o
+[111/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_accordion_sections_e2e.cpp.o
+[112/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_button.cpp.o
+[113/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_sidebar_theme_population.cpp.o
+[114/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_add_oscillator_dialog.cpp.o
+[115/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_dropdown.cpp.o
+[116/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_coordinators.cpp.o
+[117/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_toggle.cpp.o
+[118/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_badge.cpp.o
+[119/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_checkbox.cpp.o
+[120/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_colorpicker.cpp.o
+[121/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_meterbar.cpp.o
+[122/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_colorswatches.cpp.o
+[123/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_modal.cpp.o
+[124/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_tabs.cpp.o
+[125/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_radiobutton.cpp.o
+[126/179] Building CXX object CMakeFiles/OscilTests.dir/src/dsp/TimingEngine.cpp.o
+[127/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_slider.cpp.o
+[128/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_transportsync.cpp.o
+[129/179] Building CXX object CMakeFiles/OscilTests.dir/src/core/PluginProcessor.cpp.o
+[130/179] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_textfield.cpp.o
+[131/179] Building CXX object CMakeFiles/OscilTests.dir/src/core/InstanceRegistry.cpp.o
+[132/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/WaveformComponent.cpp.o
+[133/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/ThemeManager.cpp.o
+[134/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/OscillatorPanel.cpp.o
+[135/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/PaneComponent.cpp.o
+[136/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/PluginEditor.cpp.o
+[137/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/ThemeEditorComponent.cpp.o
+[138/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/StatusBarComponent.cpp.o
+[139/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/ColorPickerComponent.cpp.o
+[140/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/SourceSelectorComponent.cpp.o
+[141/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/SegmentedButtonBar.cpp.o
+[142/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/SourceItemComponent.cpp.o
+[143/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/OscillatorListToolbar.cpp.o
+[144/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/SettingsDropdown.cpp.o
+[145/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/SidebarComponent.cpp.o
+[146/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/OscillatorListItem.cpp.o
+[147/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/AddOscillatorDialog.cpp.o
+[148/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/OscillatorConfigPopup.cpp.o
+[149/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/coordinators/ThemeCoordinator.cpp.o
+[150/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/sections/TimingSidebarSection.cpp.o
+[151/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/sections/OptionsSection.cpp.o
+[152/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/managers/OpenGLLifecycleManager.cpp.o
+[153/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilButton.cpp.o
+[154/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilTooltip.cpp.o
+[155/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilCheckbox.cpp.o
+[156/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilToggle.cpp.o
+[157/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilTextField.cpp.o
+[158/179] Linking CXX static library lib/libgmock.a
+[159/179] Linking CXX static library lib/libgtest_main.a
+[160/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilSlider.cpp.o
+[161/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilRadioButton.cpp.o
+[162/179] Linking CXX static library lib/libgmock_main.a
+[163/179] Linking CXX executable Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
+[164/179] Linking CXX CFBundle shared module Oscil_artefacts/Debug/AU/oscil4.component/Contents/MacOS/oscil4
+FAILED: [code=1] Oscil_artefacts/Debug/AU/oscil4.component/Contents/MacOS/oscil4 
+: && /usr/bin/c++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -bundle -Wl,-headerpad_max_install_names -o Oscil_artefacts/Debug/AU/oscil4.component/Contents/MacOS/oscil4 CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o CMakeFiles/Oscil_AU.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o  Oscil_artefacts/Debug/liboscil4_SharedCode.a  libOscilBinaryData.a  -framework DiscRecording  -framework CoreAudio  -framework CoreMIDI  -framework AudioToolbox  -framework Accelerate  -framework Foundation  -framework IOKit  -framework Security  -framework Cocoa  -framework QuartzCore  -weak_framework Metal  -weak_framework MetalKit  -framework WebKit  -framework OpenGL  -framework AudioUnit  -framework CoreAudioKit && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -E copy /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/JuceLibraryCode/Oscil_AU/PkgInfo /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/AU/oscil4.component/Contents && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -Dsrc=/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/AU/oscil4.component -P /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/extras/Build/CMake/checkBundleSigning.cmake && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -Dsrc=/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/AU/oscil4.component -Ddest=/Users/Spare/Library/Audio/Plug-Ins/Components -P /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/extras/Build/CMake/copyDir.cmake
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/AU/oscil4.component: code has no resources but signature indicates they must be present
+-- Replacing invalid signature with ad-hoc signature
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/AU/oscil4.component: replacing existing signature
+-- Destination /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component exists, overwriting
+-- Up-to-date: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component
+CMake Error at _deps/juce-src/extras/Build/CMake/copyDir.cmake:45 (file):
+  file INSTALL cannot set permissions on
+  "/Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component":
+  Operation not permitted.
+
+
+[165/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilTabs.cpp.o
+[166/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilAccordion.cpp.o
+[167/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilDropdown.cpp.o
+[168/179] Linking CXX CFBundle shared module Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/MacOS/oscil4
+FAILED: [code=1] Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/MacOS/oscil4 
+: && /usr/bin/c++ -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -bundle -Wl,-headerpad_max_install_names -o Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/MacOS/oscil4 CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o CMakeFiles/Oscil_VST3.dir/_deps/juce-src/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o  Oscil_artefacts/Debug/liboscil4_SharedCode.a  libOscilBinaryData.a  -framework CoreAudioKit  -framework DiscRecording  -framework CoreAudio  -framework CoreMIDI  -framework AudioToolbox  -framework Accelerate  -framework Foundation  -framework IOKit  -framework Security  -framework Cocoa  -framework QuartzCore  -weak_framework Metal  -weak_framework MetalKit  -framework WebKit  -framework OpenGL && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -E copy /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/JuceLibraryCode/Oscil_VST3/PkgInfo /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -Dsrc=/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3 -P /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/extras/Build/CMake/checkBundleSigning.cmake && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -E echo removing\ moduleinfo.json && /opt/homebrew/bin/cmake -E remove -f /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/moduleinfo.json /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/Resources/moduleinfo.json && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -E echo "creating /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/Resources/moduleinfo.json" && /opt/homebrew/bin/cmake -E make_directory /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/Resources && /Users/Spare/Documents/code/MultiScoper/build/dev/juce_vst3_helper -create -version 1.0.0 -path /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3 -output /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/Resources/moduleinfo.json && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -Dsrc=/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3 -P /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/extras/Build/CMake/checkBundleSigning.cmake && cd /Users/Spare/Documents/code/MultiScoper/build/dev && /opt/homebrew/bin/cmake -Dsrc=/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3 -Ddest=/Users/Spare/Library/Audio/Plug-Ins/VST3 -P /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/extras/Build/CMake/copyDir.cmake
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3: code has no resources but signature indicates they must be present
+-- Replacing invalid signature with ad-hoc signature
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3: replacing existing signature
+removing moduleinfo.json
+creating /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/Resources/moduleinfo.json
+JUCE v8.0.5
+-- Destination /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3 exists, overwriting
+-- Up-to-date: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3
+CMake Error at _deps/juce-src/extras/Build/CMake/copyDir.cmake:45 (file):
+  file INSTALL cannot set permissions on
+  "/Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3": Operation not
+  permitted.
+
+
+[169/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilBadge.cpp.o
+[170/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilColorSwatches.cpp.o
+[171/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilModal.cpp.o
+[172/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/PluginTestServer.cpp.o
+[173/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilColorPicker.cpp.o
+[174/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilMeterBar.cpp.o
+[175/179] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/OscilTransportSync.cpp.o
+ninja: build stopped: subcommand failed.

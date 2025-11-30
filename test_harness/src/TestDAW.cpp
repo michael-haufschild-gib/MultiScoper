@@ -66,14 +66,14 @@ void TestDAW::stop()
 TestTrack* TestDAW::getTrack(int index)
 {
     if (index >= 0 && index < static_cast<int>(tracks_.size()))
-        return tracks_[index].get();
+        return tracks_[static_cast<size_t>(index)].get();
     return nullptr;
 }
 
 const TestTrack* TestDAW::getTrack(int index) const
 {
     if (index >= 0 && index < static_cast<int>(tracks_.size()))
-        return tracks_[index].get();
+        return tracks_[static_cast<size_t>(index)].get();
     return nullptr;
 }
 

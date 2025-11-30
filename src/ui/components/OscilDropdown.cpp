@@ -892,15 +892,47 @@ void OscilDropdown::themeChanged(const ColorTheme& newTheme)
     repaint();
 }
 
+// Custom accessibility handler for dropdown with selection announcements
+class OscilDropdownAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit OscilDropdownAccessibilityHandler(OscilDropdown& dropdown)
+        : juce::AccessibilityHandler(dropdown, juce::AccessibilityRole::comboBox,
+            juce::AccessibilityActions()
+                .addAction(juce::AccessibilityActionType::press, [&dropdown] { if (dropdown.isEnabled()) dropdown.showPopup(); })
+                .addAction(juce::AccessibilityActionType::showMenu, [&dropdown] { if (dropdown.isEnabled()) dropdown.showPopup(); })
+        )
+        , dropdown_(dropdown)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        return dropdown_.getPlaceholder();
+    }
+
+    juce::String getDescription() const override
+    {
+        juce::String selection = dropdown_.getSelectedLabel();
+        if (selection.isEmpty())
+            return "No selection";
+
+        int numItems = dropdown_.getNumItems();
+        return "Selected: " + selection + " (" + juce::String(numItems) + " options available)";
+    }
+
+    juce::String getHelp() const override
+    {
+        return "Press Space or Enter to open dropdown. Use arrow keys to navigate.";
+    }
+
+private:
+    OscilDropdown& dropdown_;
+};
+
 std::unique_ptr<juce::AccessibilityHandler> OscilDropdown::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::comboBox,
-        juce::AccessibilityActions()
-            .addAction(juce::AccessibilityActionType::press,
-                [this] { if (enabled_) showPopup(); })
-    );
+    return std::make_unique<OscilDropdownAccessibilityHandler>(*this);
 }
 
 } // namespace oscil

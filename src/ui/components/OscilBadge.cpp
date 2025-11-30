@@ -124,7 +124,8 @@ void OscilBadge::paint(juce::Graphics& g)
     }
     else
     {
-        g.setColour(bgColour.withAlpha(0.1f));
+        // Outline variant: Use higher alpha for better contrast (WCAG AA)
+        g.setColour(bgColour.withAlpha(0.2f));
         g.fillRoundedRectangle(bounds, bounds.getHeight() / 2.0f);
 
         g.setColour(borderColour);

@@ -50,10 +50,10 @@ namespace ComponentLayout
     static constexpr float BORDER_MEDIUM = 1.5f;
     static constexpr float BORDER_THICK = 2.0f;
 
-    // Focus Ring
+    // Focus Ring - WCAG 2.1 requires 3:1 contrast for focus indicators
     static constexpr float FOCUS_RING_WIDTH = 2.0f;
-    static constexpr float FOCUS_RING_OFFSET = 2.0f;
-    static constexpr float FOCUS_RING_ALPHA = 0.5f;
+    static constexpr float FOCUS_RING_OFFSET = 3.0f;  // Increased for better separation from borders
+    static constexpr float FOCUS_RING_ALPHA = 0.75f;  // Higher alpha for better contrast in all modes
 
     // Animation Timing (milliseconds)
     static constexpr int ANIMATION_INSTANT_MS = 0;

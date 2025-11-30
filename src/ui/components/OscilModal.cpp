@@ -43,6 +43,7 @@ void OscilModal::registerTestId()
 
 OscilModal::~OscilModal()
 {
+    juce::Desktop::getInstance().removeFocusChangeListener(this);
     ThemeManager::getInstance().removeListener(this);
     stopTimer();
 }
@@ -108,6 +109,9 @@ void OscilModal::show(juce::Component* parent)
     // Store previous focus
     previousFocus_ = juce::Component::getCurrentlyFocusedComponent();
 
+    // Register focus change listener for focus trap
+    juce::Desktop::getInstance().addFocusChangeListener(this);
+
     if (parent)
     {
         parent->addAndMakeVisible(this);
@@ -141,6 +145,9 @@ void OscilModal::show(juce::Component* parent)
 
 void OscilModal::hide()
 {
+    // Unregister focus change listener
+    juce::Desktop::getInstance().removeFocusChangeListener(this);
+
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         showSpring_.setTarget(0.0f);
@@ -372,6 +379,23 @@ void OscilModal::mouseDown(const juce::MouseEvent& e)
     }
 }
 
+void OscilModal::collectFocusableChildren(juce::Component* parent, juce::Array<juce::Component*>& result)
+{
+    if (!parent) return;
+
+    for (int i = 0; i < parent->getNumChildComponents(); ++i)
+    {
+        auto* child = parent->getChildComponent(i);
+        if (child->isVisible())
+        {
+            if (child->getWantsKeyboardFocus())
+                result.add(child);
+            // Recursively collect from nested components
+            collectFocusableChildren(child, result);
+        }
+    }
+}
+
 bool OscilModal::keyPressed(const juce::KeyPress& key)
 {
     if (closeOnEscape_ && key == juce::KeyPress::escapeKey)
@@ -380,17 +404,11 @@ bool OscilModal::keyPressed(const juce::KeyPress& key)
         return true;
     }
 
-    // Tab focus trap
+    // Tab focus trap - recursively find all focusable children
     if (key == juce::KeyPress::tabKey && content_)
     {
-        // Get all focusable children
         juce::Array<juce::Component*> focusableChildren;
-        for (int i = 0; i < content_->getNumChildComponents(); ++i)
-        {
-            auto* child = content_->getChildComponent(i);
-            if (child->getWantsKeyboardFocus())
-                focusableChildren.add(child);
-        }
+        collectFocusableChildren(content_, focusableChildren);
 
         if (focusableChildren.isEmpty())
             return false;
@@ -409,6 +427,29 @@ bool OscilModal::keyPressed(const juce::KeyPress& key)
     }
 
     return false;
+}
+
+void OscilModal::globalFocusChanged(juce::Component* focusedComponent)
+{
+    // Focus trap: if focus moves outside the modal, bring it back
+    if (isVisible() && focusedComponent != nullptr)
+    {
+        if (!isParentOf(focusedComponent) && focusedComponent != this)
+        {
+            // Focus escaped - bring it back to first focusable child
+            if (content_)
+            {
+                juce::Array<juce::Component*> focusableChildren;
+                collectFocusableChildren(content_, focusableChildren);
+                if (!focusableChildren.isEmpty())
+                {
+                    focusableChildren.getFirst()->grabKeyboardFocus();
+                    return;
+                }
+            }
+            grabKeyboardFocus();
+        }
+    }
 }
 
 void OscilModal::focusGained(FocusChangeType)
@@ -479,12 +520,49 @@ void OscilModal::themeChanged(const ColorTheme& newTheme)
     repaint();
 }
 
+//==============================================================================
+// Accessibility Handler for OscilModal
+//==============================================================================
+class OscilModalAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit OscilModalAccessibilityHandler(OscilModal& modal)
+        : juce::AccessibilityHandler(modal, juce::AccessibilityRole::window,
+            juce::AccessibilityActions()
+                .addAction(juce::AccessibilityActionType::press,
+                    [&modal] { if (modal.getCloseOnEscape()) modal.hide(); })
+          )
+        , modal_(modal)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        return modal_.getTitle().isNotEmpty() ? modal_.getTitle() : "Dialog";
+    }
+
+    juce::String getDescription() const override
+    {
+        return "Modal dialog";
+    }
+
+    juce::String getHelp() const override
+    {
+        juce::String help = "Use Tab to navigate within this dialog.";
+        if (modal_.getCloseOnEscape())
+            help += " Press Escape to close.";
+        return help;
+    }
+
+private:
+    OscilModal& modal_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilModalAccessibilityHandler)
+};
+
 std::unique_ptr<juce::AccessibilityHandler> OscilModal::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::window
-    );
+    return std::make_unique<OscilModalAccessibilityHandler>(*this);
 }
 
 //==============================================================================

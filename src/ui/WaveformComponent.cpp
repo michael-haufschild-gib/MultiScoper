@@ -18,6 +18,91 @@ namespace oscil
 // Static counter for unique waveform IDs
 std::atomic<int> WaveformComponent::nextWaveformId_{ 1 };
 
+//==============================================================================
+// Accessibility Handler for WaveformComponent
+//==============================================================================
+class WaveformComponentAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit WaveformComponentAccessibilityHandler(WaveformComponent& waveform)
+        : juce::AccessibilityHandler(waveform, juce::AccessibilityRole::image)
+        , waveform_(waveform)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        // Build title based on processing mode
+        switch (waveform_.getProcessingMode())
+        {
+            case ProcessingMode::FullStereo:
+                return "Stereo Waveform Display";
+            case ProcessingMode::Mono:
+                return "Mono Waveform Display";
+            case ProcessingMode::Left:
+                return "Left Channel Waveform";
+            case ProcessingMode::Right:
+                return "Right Channel Waveform";
+            case ProcessingMode::Mid:
+                return "Mid Signal Waveform";
+            case ProcessingMode::Side:
+                return "Side Signal Waveform";
+            default:
+                return "Waveform Display";
+        }
+    }
+
+    juce::String getDescription() const override
+    {
+        if (!waveform_.hasWaveformData())
+        {
+            return "No Signal";
+        }
+
+        // Convert peak and RMS to dB for screen reader
+        float peakLevel = waveform_.getPeakLevel();
+        float rmsLevel = waveform_.getRMSLevel();
+
+        juce::String peakDb, rmsDb;
+        if (peakLevel > 0.0001f)
+        {
+            float peakDbValue = 20.0f * std::log10(peakLevel);
+            peakDb = juce::String(peakDbValue, 1) + " dB";
+        }
+        else
+        {
+            peakDb = "-inf dB";
+        }
+
+        if (rmsLevel > 0.0001f)
+        {
+            float rmsDbValue = 20.0f * std::log10(rmsLevel);
+            rmsDb = juce::String(rmsDbValue, 1) + " dB";
+        }
+        else
+        {
+            rmsDb = "-inf dB";
+        }
+
+        return "Peak: " + peakDb + ", RMS: " + rmsDb;
+    }
+
+    juce::String getHelp() const override
+    {
+        return "Audio waveform visualization. Peak and RMS levels are announced.";
+    }
+
+private:
+    WaveformComponent& waveform_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponentAccessibilityHandler)
+};
+
+std::unique_ptr<juce::AccessibilityHandler> WaveformComponent::createAccessibilityHandler()
+{
+    return std::make_unique<WaveformComponentAccessibilityHandler>(*this);
+}
+
 WaveformComponent::WaveformComponent()
 {
     setOpaque(false);

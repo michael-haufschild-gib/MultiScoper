@@ -307,6 +307,10 @@ void OscilToggle::focusLost(FocusChangeType)
 
 void OscilToggle::triggerCelebration()
 {
+    // Respect reduced motion preference
+    if (!AnimationSettings::shouldUseSpringAnimations())
+        return;
+
     celebrationSpring_.setTarget(ComponentLayout::CELEBRATION_SCALE, 1.0f);
 
     // Schedule return to normal scale
@@ -347,15 +351,59 @@ void OscilToggle::themeChanged(const ColorTheme& newTheme)
     repaint();
 }
 
+//==============================================================================
+// Accessibility Handler for OscilToggle
+//==============================================================================
+class OscilToggleAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit OscilToggleAccessibilityHandler(OscilToggle& toggle)
+        : juce::AccessibilityHandler(toggle, juce::AccessibilityRole::toggleButton,
+            juce::AccessibilityActions()
+                .addAction(juce::AccessibilityActionType::toggle,
+                    [&toggle] { if (toggle.isEnabled()) toggle.toggle(); })
+          )
+        , toggle_(toggle)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        return toggle_.getLabel().isNotEmpty() ? toggle_.getLabel() : "Toggle";
+    }
+
+    juce::String getDescription() const override
+    {
+        juce::String state = toggle_.getValue() ? "On" : "Off";
+        if (!toggle_.isEnabled())
+        {
+            state += " (disabled)";
+        }
+        return state;
+    }
+
+    juce::String getHelp() const override
+    {
+        return "Press Space or Enter to toggle.";
+    }
+
+    juce::AccessibleState getCurrentState() const override
+    {
+        auto state = AccessibilityHandler::getCurrentState();
+        if (toggle_.getValue())
+            state = state.withChecked();
+        return state;
+    }
+
+private:
+    OscilToggle& toggle_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilToggleAccessibilityHandler)
+};
+
 std::unique_ptr<juce::AccessibilityHandler> OscilToggle::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::toggleButton,
-        juce::AccessibilityActions()
-            .addAction(juce::AccessibilityActionType::toggle,
-                [this] { if (enabled_) toggle(); })
-    );
+    return std::make_unique<OscilToggleAccessibilityHandler>(*this);
 }
 
 } // namespace oscil

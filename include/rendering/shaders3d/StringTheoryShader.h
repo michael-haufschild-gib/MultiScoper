@@ -51,7 +51,7 @@ private:
 
     GLuint vao_ = 0;
     GLuint vbo_ = 0;
-    int vertexCount_ = 0;
+    size_t vertexCount_ = 0;
 
     GLint modelLoc_ = -1;
     GLint viewLoc_ = -1;

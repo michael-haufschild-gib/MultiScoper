@@ -24,7 +24,7 @@ protected:
         auto& themeManager = ThemeManager::getInstance();
         // (ThemeManager usually has default themes initialized)
         
-        processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance());
+        processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance(), themeManager);
         // Initialize sidebar with processor
         sidebar = std::make_unique<SidebarComponent>(*processor);
     }

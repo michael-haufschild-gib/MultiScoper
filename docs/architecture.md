@@ -1,7 +1,7 @@
 # Architecture Guide for LLM Coding Agents
 
 **Purpose**: Instructions for where to put code and what patterns to follow in the Oscil codebase.
-**Tech Stack**: C++20, JUCE 8.0.5, CMake, GoogleTest 1.17.0, cpp-httplib 0.27.0, nlohmann/json 3.12.0
+**Tech Stack**: C++20, JUCE 8.0.5, CMake, GoogleTest 1.17.0, cpp-httplib 0.28.0, nlohmann/json 3.11.3
 
 ## Project Overview
 
@@ -684,6 +684,7 @@ Use sparingly. Current singletons:
 - `ThemeManager::getInstance()` - Theme management and persistence
 - `ShaderRegistry::getInstance()` - GPU shader registration and retrieval
 - `GlobalPreferences::getInstance()` - User preferences stored separately from project state (default theme, layout settings)
+- `UIAudioFeedback::getInstance()` - Subtle audio feedback for UI interactions (clicks, toggles)
 
 ## State Persistence
 

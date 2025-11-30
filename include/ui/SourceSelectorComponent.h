@@ -118,6 +118,10 @@ private:
     SourceId selectedSourceId_;
     juce::String currentFilter_;
 
+    // Private helpers to avoid virtual calls in constructor
+    void layoutContent();
+    void updateThemeColors(const ColorTheme& theme);
+
     static constexpr int SEARCH_HEIGHT = 32;
     static constexpr int HEADER_HEIGHT = 24;
 

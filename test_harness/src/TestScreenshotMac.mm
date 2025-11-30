@@ -14,6 +14,10 @@
 namespace oscil::test
 {
 
+// Forward declarations for native window capture functions
+juce::Image captureNativeWindowMac(juce::Component* component, const juce::String& outputPath);
+juce::Image captureNativeWindowMac(juce::Component* component);
+
 juce::Image captureNativeWindowMac(juce::Component* component, const juce::String& outputPath)
 {
     if (component == nullptr)

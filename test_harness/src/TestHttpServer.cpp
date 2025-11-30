@@ -1577,7 +1577,7 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         juce::String xml = file.loadFileAsString();
         if (auto* track = daw_.getTrack(0))
         {
-            track->getProcessor().getState().fromXmlString(xml);
+            (void)track->getProcessor().getState().fromXmlString(xml);
             res.set_content(successResponse().dump(), "application/json");
         }
         else

@@ -89,13 +89,16 @@ bool WaveformShader::compileShaderProgram(
     const char* vertexSource,
     const char* fragmentSource)
 {
-    if (!program.addVertexShader(vertexSource))
+    juce::String translatedVertex = juce::OpenGLHelpers::translateVertexShaderToV3(vertexSource);
+    juce::String translatedFragment = juce::OpenGLHelpers::translateFragmentShaderToV3(fragmentSource);
+
+    if (!program.addVertexShader(translatedVertex))
     {
         DBG("Vertex shader compilation failed: " << program.getLastError());
         return false;
     }
 
-    if (!program.addFragmentShader(fragmentSource))
+    if (!program.addFragmentShader(translatedFragment))
     {
         DBG("Fragment shader compilation failed: " << program.getLastError());
         return false;

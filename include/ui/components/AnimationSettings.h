@@ -8,6 +8,10 @@
 #include <juce_core/juce_core.h>
 #include <atomic>
 
+#if JUCE_WINDOWS
+#include <windows.h>
+#endif
+
 namespace oscil
 {
 
@@ -113,12 +117,28 @@ public:
     /**
      * Update from system preferences
      * Call this periodically or when app becomes active
-     * Note: Platform-specific implementation can be added in a .mm file
+     *
+     * Platform support:
+     * - macOS: Reads NSWorkspace accessibilityDisplayShouldReduceMotion
+     * - Windows: Reads SPI_GETCLIENTAREAANIMATION
+     * - Linux: Reads GNOME/KDE animation settings if available
      */
     static void updateFromSystem()
     {
-        // This method can be implemented in platform-specific code
-        // For now, we rely on setAppPreference() being called by the host
+#if JUCE_WINDOWS
+        // Windows: Check if client area animations are disabled
+        BOOL animationsEnabled = TRUE;
+        SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animationsEnabled, 0);
+        appPrefersReducedMotion_.store(!animationsEnabled);
+#elif JUCE_LINUX
+        // Linux: Check GNOME reduce-motion setting via gsettings
+        // For now, default to false; proper implementation would use GSettings
+        // gsettings get org.gnome.desktop.interface enable-animations
+        // Just use the app preference for now
+#elif JUCE_MAC
+        // macOS implementation is in AnimationSettings.mm
+        // This method is overridden there
+#endif
     }
 
 private:

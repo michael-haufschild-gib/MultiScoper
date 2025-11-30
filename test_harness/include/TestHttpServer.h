@@ -6,8 +6,12 @@
 #pragma once
 
 // Disable SSL and Brotli support - we only need HTTP for local testing
+#ifndef CPPHTTPLIB_OPENSSL_SUPPORT
 #define CPPHTTPLIB_OPENSSL_SUPPORT 0
+#endif
+#ifndef CPPHTTPLIB_BROTLI_SUPPORT
 #define CPPHTTPLIB_BROTLI_SUPPORT 0
+#endif
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>

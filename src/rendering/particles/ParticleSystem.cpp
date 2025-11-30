@@ -202,13 +202,16 @@ bool ParticleSystem::compileShader(juce::OpenGLContext& context)
 {
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    if (!shader_->addVertexShader(particleVertexShader))
+    juce::String translatedVertex = juce::OpenGLHelpers::translateVertexShaderToV3(particleVertexShader);
+    juce::String translatedFragment = juce::OpenGLHelpers::translateFragmentShaderToV3(particleFragmentShader);
+
+    if (!shader_->addVertexShader(translatedVertex))
     {
         DBG("ParticleSystem: Vertex shader error: " << shader_->getLastError());
         return false;
     }
 
-    if (!shader_->addFragmentShader(particleFragmentShader))
+    if (!shader_->addFragmentShader(translatedFragment))
     {
         DBG("ParticleSystem: Fragment shader error: " << shader_->getLastError());
         return false;

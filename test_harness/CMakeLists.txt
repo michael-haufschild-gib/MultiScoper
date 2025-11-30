@@ -11,21 +11,18 @@ if(APPLE)
 endif()
 
 # Fetch cpp-httplib for HTTP server (header-only)
-include(FetchContent)
-FetchContent_Declare(
-    httplib
-    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG v0.14.1
+CPMAddPackage(
+    NAME httplib
+    GITHUB_REPOSITORY yhirose/cpp-httplib
+    GIT_TAG v0.28.0
 )
-FetchContent_MakeAvailable(httplib)
 
 # Fetch nlohmann/json for JSON handling (header-only)
-FetchContent_Declare(
-    json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
+CPMAddPackage(
+    NAME json
+    GITHUB_REPOSITORY nlohmann/json
     GIT_TAG v3.11.3
 )
-FetchContent_MakeAvailable(json)
 
 # Test harness sources
 set(TEST_HARNESS_SOURCES
@@ -154,6 +151,8 @@ set(PLUGIN_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/LiquidChromeShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/EnvironmentMapManager.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/CrystallineShader.cpp
+    # UI managers
+    ${CMAKE_SOURCE_DIR}/src/ui/managers/OpenGLLifecycleManager.cpp
 )
 
 # Create JUCE standalone application

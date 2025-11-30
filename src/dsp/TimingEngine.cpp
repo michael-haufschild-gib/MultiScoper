@@ -29,6 +29,7 @@ void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& posit
         {
             hostInfo_.bpm = newBPM;
             config_.hostBPM = newBPM;
+            atomicHostBPM_.store(newBPM, std::memory_order_relaxed);
 
             // Recalculate interval when BPM changes in MELODIC mode
             if (config_.timingMode == TimingMode::MELODIC)
@@ -65,7 +66,8 @@ void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& posit
     }
 
     // Handle transport state changes for host sync
-    if (config_.hostSyncEnabled && wasPlaying != hostInfo_.isPlaying)
+    // Read from atomic for thread-safe access (UI thread may modify via setHostSyncEnabled)
+    if (atomicHostSyncEnabled_.load(std::memory_order_relaxed) && wasPlaying != hostInfo_.isPlaying)
     {
         // Reset sync timestamp on play/stop transition
         if (auto timeInSamples = positionInfo.getTimeInSamples())
@@ -86,13 +88,18 @@ void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& posit
 
 bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
 {
-    if (config_.triggerMode == WaveformTriggerMode::None)
+    // Read from atomics for thread-safe access (UI thread may modify via setters)
+    auto triggerMode = static_cast<WaveformTriggerMode>(
+        atomicTriggerMode_.load(std::memory_order_relaxed));
+
+    if (triggerMode == WaveformTriggerMode::None)
         return true;
 
-    if (config_.triggerMode == WaveformTriggerMode::Manual)
+    if (triggerMode == WaveformTriggerMode::Manual)
         return checkAndClearManualTrigger();
 
-    int channel = std::min(config_.triggerChannel, buffer.getNumChannels() - 1);
+    int channel = std::min(atomicTriggerChannel_.load(std::memory_order_relaxed),
+                           buffer.getNumChannels() - 1);
     if (channel < 0)
         return false;
 
@@ -108,12 +115,14 @@ int TimingEngine::getDisplaySampleCount(double sampleRate) const
 
 float TimingEngine::getActualIntervalMs() const
 {
-    return config_.actualIntervalMs;
+    // Use atomic for thread-safe read from UI thread
+    return atomicActualIntervalMs_.load(std::memory_order_relaxed);
 }
 
 double TimingEngine::getWindowSizeSeconds() const
 {
-    return config_.actualIntervalMs / 1000.0;
+    // Use atomic for thread-safe read from UI thread
+    return static_cast<double>(atomicActualIntervalMs_.load(std::memory_order_relaxed)) / 1000.0;
 }
 
 void TimingEngine::recalculateInterval()
@@ -150,6 +159,7 @@ void TimingEngine::recalculateInterval()
     if (std::abs(config_.actualIntervalMs - newInterval) > 0.1f)
     {
         config_.actualIntervalMs = newInterval;
+        atomicActualIntervalMs_.store(newInterval, std::memory_order_relaxed);
         notifyIntervalChanged();
     }
 }
@@ -157,6 +167,14 @@ void TimingEngine::recalculateInterval()
 void TimingEngine::setConfig(const EngineTimingConfig& config)
 {
     config_ = config;
+    // Sync all atomics with new config values for thread-safe cross-thread reads
+    atomicHostBPM_.store(config.hostBPM, std::memory_order_relaxed);
+    atomicTimingMode_.store(static_cast<int>(config.timingMode), std::memory_order_relaxed);
+    atomicHostSyncEnabled_.store(config.hostSyncEnabled, std::memory_order_relaxed);
+    atomicTriggerMode_.store(static_cast<int>(config.triggerMode), std::memory_order_relaxed);
+    atomicTriggerChannel_.store(config.triggerChannel, std::memory_order_relaxed);
+    atomicTriggerThreshold_.store(config.triggerThreshold, std::memory_order_relaxed);
+    atomicTriggerHysteresis_.store(config.triggerHysteresis, std::memory_order_relaxed);
     recalculateInterval();
 }
 
@@ -165,6 +183,7 @@ void TimingEngine::setTimingMode(TimingMode mode)
     if (config_.timingMode != mode)
     {
         config_.timingMode = mode;
+        atomicTimingMode_.store(static_cast<int>(mode), std::memory_order_relaxed);
         recalculateInterval();
         notifyTimingModeChanged();
     }
@@ -175,6 +194,7 @@ void TimingEngine::setHostSyncEnabled(bool enabled)
     if (config_.hostSyncEnabled != enabled)
     {
         config_.hostSyncEnabled = enabled;
+        atomicHostSyncEnabled_.store(enabled, std::memory_order_relaxed);
         // Recalculate interval since BPM source changed (host vs internal)
         if (config_.timingMode == TimingMode::MELODIC)
         {
@@ -238,12 +258,16 @@ void TimingEngine::requestManualTrigger()
 
 bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 {
+    // Read trigger mode from atomic once per block for consistency
+    auto triggerMode = static_cast<WaveformTriggerMode>(
+        atomicTriggerMode_.load(std::memory_order_relaxed));
+
     for (int i = 0; i < numSamples; ++i)
     {
         float sample = samples[i];
         bool triggered = false;
 
-        switch (config_.triggerMode)
+        switch (triggerMode)
         {
             case WaveformTriggerMode::RisingEdge:
                 triggered = detectRisingEdge(sample);
@@ -274,32 +298,44 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 
 bool TimingEngine::detectRisingEdge(float sample)
 {
-    bool wasBelow = previousSample_ < (config_.triggerThreshold - config_.triggerHysteresis);
-    bool isAbove = sample >= config_.triggerThreshold;
+    // Read from atomics for thread-safe access
+    float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
+    float hysteresis = atomicTriggerHysteresis_.load(std::memory_order_relaxed);
+
+    bool wasBelow = previousSample_ < (threshold - hysteresis);
+    bool isAbove = sample >= threshold;
 
     return wasBelow && isAbove;
 }
 
 bool TimingEngine::detectFallingEdge(float sample)
 {
-    bool wasAbove = previousSample_ > (config_.triggerThreshold + config_.triggerHysteresis);
-    bool isBelow = sample <= config_.triggerThreshold;
+    // Read from atomics for thread-safe access
+    float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
+    float hysteresis = atomicTriggerHysteresis_.load(std::memory_order_relaxed);
+
+    bool wasAbove = previousSample_ > (threshold + hysteresis);
+    bool isBelow = sample <= threshold;
 
     return wasAbove && isBelow;
 }
 
 bool TimingEngine::detectLevel(float sample)
 {
+    // Read from atomics for thread-safe access
+    float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
+    float hysteresis = atomicTriggerHysteresis_.load(std::memory_order_relaxed);
+
     float absLevel = std::abs(sample);
     bool wasBelow = !previousTriggerState_;
-    bool isAbove = absLevel > config_.triggerThreshold;
+    bool isAbove = absLevel > threshold;
 
     if (wasBelow && isAbove)
     {
         previousTriggerState_ = true;
         return true;
     }
-    else if (!isAbove && absLevel < (config_.triggerThreshold - config_.triggerHysteresis))
+    else if (!isAbove && absLevel < (threshold - hysteresis))
     {
         previousTriggerState_ = false;
     }
@@ -356,8 +392,8 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
     // Apply timing mode (same enum, direct assignment)
     config_.timingMode = entityConfig.timingMode;
 
-    // Apply time interval
-    config_.timeIntervalMs = static_cast<int>(entityConfig.timeIntervalMs);
+    // Apply time interval (both are float, direct assignment)
+    config_.timeIntervalMs = entityConfig.timeIntervalMs;
 
     // Convert entity NoteInterval to engine EngineNoteInterval
     config_.noteInterval = entityToEngineNoteInterval(entityConfig.noteInterval);
@@ -414,9 +450,9 @@ TimingConfig TimingEngine::toEntityConfig() const
     // Convert engine EngineNoteInterval to entity NoteInterval
     entityConfig.noteInterval = engineToEntityNoteInterval(config_.noteInterval);
 
-    // Copy host settings
+    // Copy host settings (use atomic for thread-safe read from UI thread)
     entityConfig.hostSyncEnabled = config_.hostSyncEnabled;
-    entityConfig.hostBPM = config_.hostBPM;
+    entityConfig.hostBPM = atomicHostBPM_.load(std::memory_order_relaxed);
     entityConfig.syncToPlayhead = config_.syncToPlayhead;
 
     // Convert waveform trigger mode to entity trigger mode
@@ -453,43 +489,50 @@ TimingConfig TimingEngine::toEntityConfig() const
     float thresholdDbfs = 20.0f * std::log10(juce::jmax(0.0001f, config_.triggerThreshold));
     entityConfig.triggerThreshold = thresholdDbfs;
 
-    // Copy actual interval
-    entityConfig.actualIntervalMs = config_.actualIntervalMs;
+    // Copy actual interval (use atomic for thread-safe read from UI thread)
+    entityConfig.actualIntervalMs = atomicActualIntervalMs_.load(std::memory_order_relaxed);
 
     return entityConfig;
 }
 
 void TimingEngine::addListener(Listener* listener)
 {
+    std::lock_guard<std::mutex> lock(listenerMutex_);
     listeners_.add(listener);
 }
 
 void TimingEngine::removeListener(Listener* listener)
 {
+    std::lock_guard<std::mutex> lock(listenerMutex_);
     listeners_.remove(listener);
 }
 
 void TimingEngine::dispatchPendingUpdates()
 {
     // Check flags and notify listeners on the current thread (expected Message Thread)
+    // Use atomic reads for thread-safe access to values that may be written from audio thread
     if (pendingTimingModeChange_.exchange(false))
     {
-        listeners_.call([this](Listener& l) { l.timingModeChanged(config_.timingMode); });
+        auto mode = static_cast<TimingMode>(atomicTimingMode_.load(std::memory_order_relaxed));
+        listeners_.call([mode](Listener& l) { l.timingModeChanged(mode); });
     }
 
     if (pendingIntervalChange_.exchange(false))
     {
-        listeners_.call([this](Listener& l) { l.intervalChanged(config_.actualIntervalMs); });
+        float interval = atomicActualIntervalMs_.load(std::memory_order_relaxed);
+        listeners_.call([interval](Listener& l) { l.intervalChanged(interval); });
     }
 
     if (pendingHostBPMChange_.exchange(false))
     {
-        listeners_.call([this](Listener& l) { l.hostBPMChanged(config_.hostBPM); });
+        float bpm = atomicHostBPM_.load(std::memory_order_relaxed);
+        listeners_.call([bpm](Listener& l) { l.hostBPMChanged(bpm); });
     }
 
     if (pendingHostSyncChange_.exchange(false))
     {
-        listeners_.call([this](Listener& l) { l.hostSyncStateChanged(config_.hostSyncEnabled); });
+        bool enabled = atomicHostSyncEnabled_.load(std::memory_order_relaxed);
+        listeners_.call([enabled](Listener& l) { l.hostSyncStateChanged(enabled); });
     }
 }
 

@@ -119,6 +119,102 @@ struct ColorTheme
      * Import from JSON string
      */
     bool fromJson(const juce::String& json);
+
+    //==========================================================================
+    // Accessibility - Contrast Validation
+    //==========================================================================
+
+    /**
+     * Calculate the WCAG relative luminance of a color
+     * Returns a value between 0 (black) and 1 (white)
+     */
+    static float calculateLuminance(juce::Colour colour)
+    {
+        auto linearize = [](float channel) {
+            return channel <= 0.03928f
+                ? channel / 12.92f
+                : std::pow((channel + 0.055f) / 1.055f, 2.4f);
+        };
+
+        float r = linearize(colour.getFloatRed());
+        float g = linearize(colour.getFloatGreen());
+        float b = linearize(colour.getFloatBlue());
+
+        return 0.2126f * r + 0.7152f * g + 0.0722f * b;
+    }
+
+    /**
+     * Calculate WCAG contrast ratio between two colors
+     * Returns a value between 1 (no contrast) and 21 (max contrast)
+     */
+    static float calculateContrastRatio(juce::Colour fg, juce::Colour bg)
+    {
+        float l1 = calculateLuminance(fg);
+        float l2 = calculateLuminance(bg);
+
+        // Ensure l1 is the lighter color
+        if (l1 < l2)
+            std::swap(l1, l2);
+
+        return (l1 + 0.05f) / (l2 + 0.05f);
+    }
+
+    /**
+     * Check if contrast meets WCAG AA standard for normal text (4.5:1)
+     */
+    static bool meetsContrastAA(juce::Colour fg, juce::Colour bg)
+    {
+        return calculateContrastRatio(fg, bg) >= 4.5f;
+    }
+
+    /**
+     * Check if contrast meets WCAG AAA standard for normal text (7:1)
+     */
+    static bool meetsContrastAAA(juce::Colour fg, juce::Colour bg)
+    {
+        return calculateContrastRatio(fg, bg) >= 7.0f;
+    }
+
+    /**
+     * Check if contrast meets WCAG AA standard for large text (3:1)
+     */
+    static bool meetsLargeTextContrastAA(juce::Colour fg, juce::Colour bg)
+    {
+        return calculateContrastRatio(fg, bg) >= 3.0f;
+    }
+
+    /**
+     * Validate all critical text/background pairs in this theme
+     * Returns a list of accessibility issues (empty if all pass)
+     */
+    std::vector<juce::String> validateAccessibility() const
+    {
+        std::vector<juce::String> issues;
+
+        // Check primary text on backgrounds
+        if (!meetsContrastAA(textPrimary, backgroundPrimary))
+            issues.push_back("textPrimary on backgroundPrimary fails AA contrast");
+        if (!meetsContrastAA(textPrimary, backgroundSecondary))
+            issues.push_back("textPrimary on backgroundSecondary fails AA contrast");
+        if (!meetsContrastAA(textSecondary, backgroundPrimary))
+            issues.push_back("textSecondary on backgroundPrimary fails AA contrast");
+
+        // Check button text contrast
+        if (!meetsContrastAA(btnPrimaryText, btnPrimaryBg))
+            issues.push_back("Primary button text fails AA contrast");
+        if (!meetsContrastAA(btnSecondaryText, btnSecondaryBg))
+            issues.push_back("Secondary button text fails AA contrast");
+
+        // Check status colors on background
+        if (!meetsLargeTextContrastAA(statusActive, backgroundPrimary))
+            issues.push_back("statusActive on background fails large text AA contrast");
+        if (!meetsLargeTextContrastAA(statusWarning, backgroundPrimary))
+            issues.push_back("statusWarning on background fails large text AA contrast");
+        if (!meetsLargeTextContrastAA(statusError, backgroundPrimary))
+            issues.push_back("statusError on background fails large text AA contrast");
+
+        return issues;
+    }
 };
 
 /**

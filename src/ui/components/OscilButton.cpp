@@ -237,8 +237,8 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
         g.fillPath(buttonPath);
     }
 
-    // Border only for segmented buttons (not for standard Secondary buttons anymore)
-    if (segmentPosition_ != SegmentPosition::None)
+    // Border for segmented buttons and Secondary variant (for visual definition)
+    if (segmentPosition_ != SegmentPosition::None || variant_ == ButtonVariant::Secondary)
     {
         g.setColour(getBorderColour());
         g.strokePath(buttonPath, juce::PathStrokeType(1.0f));
@@ -248,12 +248,12 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     int horizontalPadding;
     if (segmentPosition_ != SegmentPosition::None)
     {
-        horizontalPadding = 4;
+        horizontalPadding = 6;  // Slightly more padding for better readability
     }
-    else if (bounds.getWidth() < TEXT_PADDING * 3)
+    else if (bounds.getWidth() < TEXT_PADDING * 2.5f)
     {
-        // For narrow buttons, use minimal padding to ensure text fits
-        horizontalPadding = 2;
+        // For narrow buttons, use proportional padding (min 8px for better readability)
+        horizontalPadding = std::max(8, static_cast<int>(bounds.getWidth() * 0.15f));
     }
     else
     {
@@ -653,15 +653,67 @@ void OscilButton::themeChanged(const ColorTheme& newTheme)
     repaint();
 }
 
+// Custom accessibility handler with descriptive text for screen readers
+class OscilButtonAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit OscilButtonAccessibilityHandler(OscilButton& button)
+        : juce::AccessibilityHandler(button,
+            button.isToggleable() ? juce::AccessibilityRole::toggleButton : juce::AccessibilityRole::button,
+            juce::AccessibilityActions()
+                .addAction(juce::AccessibilityActionType::press,
+                    [&button] { if (button.isEnabled()) button.triggerClick(); })
+          )
+        , button_(button)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        return button_.getText().isNotEmpty() ? button_.getText() : "Button";
+    }
+
+    juce::String getDescription() const override
+    {
+        juce::String desc;
+
+        if (!button_.isEnabled())
+            desc = "Disabled";
+        else if (button_.isToggleable())
+            desc = button_.isToggled() ? "Selected" : "Not selected";
+
+        if (button_.getShortcut().isValid())
+        {
+            if (desc.isNotEmpty())
+                desc += ". ";
+            desc += "Shortcut: " + button_.getShortcut().getTextDescription();
+        }
+
+        return desc;
+    }
+
+    juce::String getHelp() const override
+    {
+        return "Press Enter or Space to activate.";
+    }
+
+    juce::AccessibleState getCurrentState() const override
+    {
+        auto state = AccessibilityHandler::getCurrentState();
+        if (button_.isToggleable() && button_.isToggled())
+            state = state.withChecked();
+        return state;
+    }
+
+private:
+    OscilButton& button_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilButtonAccessibilityHandler)
+};
+
 std::unique_ptr<juce::AccessibilityHandler> OscilButton::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::button,
-        juce::AccessibilityActions()
-            .addAction(juce::AccessibilityActionType::press,
-                [this] { if (enabled_ && onClick) onClick(); })
-    );
+    return std::make_unique<OscilButtonAccessibilityHandler>(*this);
 }
 
 } // namespace oscil

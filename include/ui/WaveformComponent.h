@@ -176,6 +176,9 @@ public:
     juce::String getShaderId() const { return shaderId_; }
     bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
 
+    // Accessibility support
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+
 private:
     void drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawWaveform(juce::Graphics& g, juce::Rectangle<int> bounds);

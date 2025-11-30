@@ -9,6 +9,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <atomic>
+#include <mutex>
 
 // Include entity-level TimingConfig for integration
 #include "TimingConfig.h"
@@ -60,6 +61,7 @@ enum class WaveformTriggerMode
 
 /**
  * Convert EngineNoteInterval to beats (quarter notes)
+ * Uses precise fractional calculations for triplets
  */
 inline double engineNoteIntervalToBeats(EngineNoteInterval interval)
 {
@@ -67,7 +69,7 @@ inline double engineNoteIntervalToBeats(EngineNoteInterval interval)
     {
         case EngineNoteInterval::NOTE_1_32ND:        return 0.125;
         case EngineNoteInterval::NOTE_1_16TH:        return 0.25;
-        case EngineNoteInterval::NOTE_1_12TH:        return 0.333333;
+        case EngineNoteInterval::NOTE_1_12TH:        return 1.0 / 3.0;    // Triplet precision
         case EngineNoteInterval::NOTE_1_8TH:         return 0.5;
         case EngineNoteInterval::NOTE_1_4TH:         return 1.0;
         case EngineNoteInterval::NOTE_1_2:           return 2.0;
@@ -77,11 +79,11 @@ inline double engineNoteIntervalToBeats(EngineNoteInterval interval)
         case EngineNoteInterval::NOTE_4_1:           return 16.0;
         case EngineNoteInterval::NOTE_8_1:           return 32.0;
         case EngineNoteInterval::NOTE_DOTTED_1_8TH:  return 0.75;
-        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return 0.666666;
+        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return 2.0 / 3.0;    // Triplet precision
         case EngineNoteInterval::NOTE_DOTTED_1_4TH:  return 1.5;
-        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return 1.333333;
+        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return 4.0 / 3.0;    // Triplet precision
         case EngineNoteInterval::NOTE_DOTTED_1_2:    return 3.0;
-        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return 0.333333;
+        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return 1.0 / 3.0;    // Triplet precision
         default:                                      return 1.0;
     }
 }
@@ -297,9 +299,13 @@ public:
     [[nodiscard]] const HostTimingInfo& getHostInfo() const { return hostInfo_; }
 
     /**
-     * Set sample rate
+     * Set sample rate (thread-safe)
      */
-    void setSampleRate(double sampleRate) { hostInfo_.sampleRate = sampleRate; }
+    void setSampleRate(double sampleRate)
+    {
+        atomicSampleRate_.store(sampleRate, std::memory_order_relaxed);
+        hostInfo_.sampleRate = sampleRate;
+    }
 
     // Configuration setters
     void setTimingMode(TimingMode mode);
@@ -307,8 +313,27 @@ public:
     void setTimeIntervalMs(float ms);
     void setNoteInterval(EngineNoteInterval interval);
     void setInternalBPM(float bpm);  // Set user-specified BPM for free-running mode
-    void setWaveformTriggerMode(WaveformTriggerMode mode) { config_.triggerMode = mode; }
-    void setTriggerThreshold(float threshold) { config_.triggerThreshold = juce::jlimit(0.0f, 1.0f, threshold); }
+    void setWaveformTriggerMode(WaveformTriggerMode mode)
+    {
+        config_.triggerMode = mode;
+        atomicTriggerMode_.store(static_cast<int>(mode), std::memory_order_relaxed);
+    }
+    void setTriggerThreshold(float threshold)
+    {
+        threshold = juce::jlimit(0.0f, 1.0f, threshold);
+        config_.triggerThreshold = threshold;
+        atomicTriggerThreshold_.store(threshold, std::memory_order_relaxed);
+    }
+    void setTriggerChannel(int channel)
+    {
+        config_.triggerChannel = channel;
+        atomicTriggerChannel_.store(channel, std::memory_order_relaxed);
+    }
+    void setTriggerHysteresis(float hysteresis)
+    {
+        config_.triggerHysteresis = hysteresis;
+        atomicTriggerHysteresis_.store(hysteresis, std::memory_order_relaxed);
+    }
     void setSyncToPlayhead(bool enabled) { config_.syncToPlayhead = enabled; }
 
     /**
@@ -382,6 +407,21 @@ private:
     EngineTimingConfig config_;
     HostTimingInfo hostInfo_;
 
+    // Thread-safe copies of values for cross-thread access.
+    // UI thread writes config via setters → stores to atomics
+    // Audio thread reads from atomics in processBlock/updateHostInfo
+    std::atomic<float> atomicHostBPM_{ 120.0f };
+    std::atomic<float> atomicActualIntervalMs_{ 500.0f };
+
+    // Atomics for fields read from audio thread (written by UI thread setters)
+    std::atomic<int> atomicTimingMode_{ static_cast<int>(TimingMode::TIME) };
+    std::atomic<bool> atomicHostSyncEnabled_{ false };
+    std::atomic<int> atomicTriggerMode_{ static_cast<int>(WaveformTriggerMode::None) };
+    std::atomic<int> atomicTriggerChannel_{ 0 };
+    std::atomic<float> atomicTriggerThreshold_{ 0.1f };
+    std::atomic<float> atomicTriggerHysteresis_{ 0.01f };
+    std::atomic<double> atomicSampleRate_{ 44100.0 };
+
     // Trigger state
     std::atomic<bool> manualTrigger_{ false };
     bool previousTriggerState_ = false;
@@ -391,6 +431,7 @@ private:
     float previousBPM_ = 120.0f;
 
     juce::ListenerList<Listener> listeners_;
+    std::mutex listenerMutex_;  // Protects listener add/remove (call() is already thread-safe)
 
     // Pending update flags for lock-free notification
     std::atomic<bool> pendingTimingModeChange_{ false };

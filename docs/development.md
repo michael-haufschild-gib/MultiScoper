@@ -205,8 +205,8 @@ All dependencies are fetched automatically via CMake FetchContent:
 |------------|---------|---------|
 | JUCE | 8.0.5 | Audio plugin framework |
 | GoogleTest | 1.17.0 | Unit testing (if tests enabled) |
-| cpp-httplib | 0.27.0 | HTTP server for E2E test harness |
-| nlohmann/json | 3.12.0 | JSON parsing for test harness API |
+| cpp-httplib | 0.28.0 | HTTP server for E2E test harness |
+| nlohmann/json | 3.11.3 | JSON parsing for test harness API |
 | Melatonin Inspector | main | UI debugging (if inspector enabled) |
 
 First build will download dependencies (requires internet).

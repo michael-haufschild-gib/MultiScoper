@@ -156,6 +156,8 @@ private:
     void notifyStatusBarVisibilityChanged();
     void notifyThemeEditRequested();
 
+    void layoutContent(); // Helper to avoid virtual call in constructor
+
     static constexpr int THEME_ITEM_HEIGHT = 28;
     static constexpr int LAYOUT_ICON_SIZE = 40;
 

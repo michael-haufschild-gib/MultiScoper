@@ -42,43 +42,60 @@ option(OSCIL_ENABLE_INSPECTOR "Enable Melatonin Inspector for UI debugging (deve
 # Detects real-time safety violations: allocations, locks, syscalls in audio thread
 option(OSCIL_ENABLE_RTSAN "Enable RealtimeSanitizer for real-time safety checking" OFF)
 
-# Fetch JUCE
-include(FetchContent)
+# Option for Clang-Tidy Static Analysis
+# Catches performance issues, bugs, and modernization opportunities
+option(OSCIL_ENABLE_CLANG_TIDY "Enable clang-tidy static analysis" OFF)
 
-FetchContent_Declare(
-    JUCE
-    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+if(OSCIL_ENABLE_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXE 
+        NAMES clang-tidy
+        HINTS /opt/homebrew/opt/llvm/bin /usr/local/opt/llvm/bin
+        DOC "Path to clang-tidy executable"
+    )
+
+    if(CLANG_TIDY_EXE)
+        message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
+        # We exclude 'modernize-use-trailing-return-type' as it often conflicts with JUCE style
+        set(OSCIL_CLANG_TIDY_CMD "${CLANG_TIDY_EXE};-checks=bugprone-*,performance-*,modernize-*,-modernize-use-trailing-return-type")
+    else()
+        message(WARNING "OSCIL_ENABLE_CLANG_TIDY is ON but clang-tidy executable was not found in default path or Homebrew locations")
+    endif()
+endif()
+
+# Fetch CPM.cmake
+include(cmake/CPM.cmake)
+
+# JUCE
+CPMAddPackage(
+    NAME JUCE
+    GITHUB_REPOSITORY juce-framework/JUCE
     GIT_TAG 8.0.5
-    GIT_SHALLOW TRUE
+    OPTIONS "JUCE_BUILD_EXAMPLES OFF" "JUCE_BUILD_EXTRAS OFF"
 )
 
-FetchContent_Declare(
-    httplib
-    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG v0.27.0
-    GIT_SHALLOW TRUE
+# cpp-httplib
+CPMAddPackage(
+    NAME httplib
+    GITHUB_REPOSITORY yhirose/cpp-httplib
+    GIT_TAG v0.28.0
 )
 
-FetchContent_Declare(
-    json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.12.0
-    GIT_SHALLOW TRUE
+# nlohmann/json
+CPMAddPackage(
+    NAME json
+    GITHUB_REPOSITORY nlohmann/json
+    GIT_TAG v3.11.3
 )
-
-# Fetch core dependencies first
-FetchContent_MakeAvailable(JUCE httplib json)
 
 # Melatonin Inspector for UI debugging (browser-like devtools for JUCE)
-# Must be declared and made available AFTER JUCE but BEFORE juce_add_plugin
-# Only fetch/build when explicitly enabled - creates separate window that causes CI timeouts
+# Only fetch/build when explicitly enabled
 if(OSCIL_ENABLE_INSPECTOR)
-    FetchContent_Declare(melatonin_inspector
-        GIT_REPOSITORY https://github.com/sudara/melatonin_inspector.git
+    CPMAddPackage(
+        NAME melatonin_inspector
+        GITHUB_REPOSITORY sudara/melatonin_inspector
         GIT_TAG origin/main
         SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/melatonin_inspector
     )
-    FetchContent_MakeAvailable(melatonin_inspector)
 endif()
 
 # Define the plugin
@@ -232,8 +249,8 @@ target_include_directories(Oscil
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${httplib_SOURCE_DIR}
 )
+target_include_directories(Oscil SYSTEM PRIVATE ${httplib_SOURCE_DIR})
 
 # JUCE compile definitions
 # Note: JUCE_DISPLAY_SPLASH_SCREEN removed - JUCE 8+ no longer uses splash screen
@@ -268,6 +285,17 @@ target_link_libraries(Oscil
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+# Apply clang-tidy only to our source files (excluding JUCE)
+if(OSCIL_CLANG_TIDY_CMD)
+    get_target_property(OSCIL_ALL_SOURCES Oscil SOURCES)
+    foreach(source ${OSCIL_ALL_SOURCES})
+        # Only check files in src/ (handles relative and absolute paths)
+        if(source MATCHES "^src/" OR source MATCHES "^${CMAKE_CURRENT_SOURCE_DIR}/src/")
+             set_source_files_properties(${source} PROPERTIES CXX_CLANG_TIDY "${OSCIL_CLANG_TIDY_CMD}")
+        endif()
+    endforeach()
+endif()
 
 # Suppress warnings from JUCE third-party dependencies (Harfbuzz, VST3 SDK)
 # These are internal JUCE libraries we cannot modify
@@ -305,13 +333,11 @@ option(OSCIL_BUILD_TESTS "Build unit tests" ON)
 if(OSCIL_BUILD_TESTS)
     enable_testing()
 
-    FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
+    CPMAddPackage(
+        NAME googletest
+        GITHUB_REPOSITORY google/googletest
         GIT_TAG v1.17.0
-        GIT_SHALLOW TRUE
     )
-    FetchContent_MakeAvailable(googletest)
 
     add_executable(OscilTests
         tests/test_main.cpp
@@ -505,6 +531,16 @@ if(OSCIL_BUILD_TESTS)
             nlohmann_json::nlohmann_json
             $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     )
+
+    # Apply clang-tidy to test sources
+    if(OSCIL_CLANG_TIDY_CMD)
+        get_target_property(TEST_SOURCES OscilTests SOURCES)
+        foreach(source ${TEST_SOURCES})
+            if(source MATCHES "^src/" OR source MATCHES "^tests/" OR source MATCHES "^${CMAKE_CURRENT_SOURCE_DIR}/src/" OR source MATCHES "^${CMAKE_CURRENT_SOURCE_DIR}/tests/")
+                 set_source_files_properties(${source} PROPERTIES CXX_CLANG_TIDY "${OSCIL_CLANG_TIDY_CMD}")
+            endif()
+        endforeach()
+    endif()
 
     target_compile_definitions(OscilTests
         PRIVATE

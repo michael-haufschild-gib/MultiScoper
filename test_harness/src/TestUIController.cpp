@@ -116,7 +116,7 @@ bool TestUIController::hover(const juce::String& elementId, int durationMs)
         simulateMouseHover(component);
 
         // Wait for tooltip to potentially appear
-        juce::Timer::callAfterDelay(durationMs, [component]()
+        juce::Timer::callAfterDelay(durationMs, []()
         {
             // Tooltip should have appeared by now if it exists
             // The test can check for tooltip presence separately

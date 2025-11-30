@@ -143,7 +143,7 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
 
     ext.glBindVertexArray(vao_);
     ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    ext.glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(float), vertices_.data(), GL_DYNAMIC_DRAW);
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices_.size() * sizeof(float)), vertices_.data(), GL_DYNAMIC_DRAW);
 
     // Attribs: pos(3), t(1)
     GLint posLoc = ext.glGetAttribLocation(shader_->getProgramID(), "position");
@@ -165,7 +165,7 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
     // If we use GL_LINE_STRIP, we can set thickness via glLineWidth
     
     glLineWidth(data.lineThickness);
-    glDrawArrays(GL_LINE_STRIP, 0, vertexCount_);
+    glDrawArrays(GL_LINE_STRIP, 0, static_cast<GLsizei>(vertexCount_));
     
     ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
     ext.glDisableVertexAttribArray(static_cast<GLuint>(tLoc));
@@ -176,7 +176,7 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
 void VectorFlowShader::generateVectorMesh(const WaveformData3D& data)
 {
     vertices_.clear();
-    vertices_.reserve(data.sampleCount * 4);
+    vertices_.reserve(static_cast<size_t>(data.sampleCount * 4));
     
     for (int i = 0; i < data.sampleCount; ++i)
     {
@@ -190,7 +190,7 @@ void VectorFlowShader::generateVectorMesh(const WaveformData3D& data)
         vertices_.push_back(t);
     }
     
-    vertexCount_ = data.sampleCount;
+    vertexCount_ = static_cast<size_t>(data.sampleCount);
 }
 
 #endif

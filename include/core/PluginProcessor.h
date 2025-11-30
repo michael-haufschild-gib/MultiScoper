@@ -23,7 +23,7 @@ class OscilPluginProcessor : public juce::AudioProcessor,
 {
 public:
     // Constructor with dependency injection
-    explicit OscilPluginProcessor(IInstanceRegistry& instanceRegistry);
+    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService);
     ~OscilPluginProcessor() override;
 
     // AudioProcessor interface
@@ -45,7 +45,7 @@ public:
     [[nodiscard]] int getNumPrograms() override;
     [[nodiscard]] int getCurrentProgram() override;
     void setCurrentProgram(int index) override;
-    const juce::String getProgramName(int index) override;
+    [[nodiscard]] const juce::String getProgramName(int index) override;
     void changeProgramName(int index, const juce::String& newName) override;
 
     void getStateInformation(juce::MemoryBlock& destData) override;
@@ -69,6 +69,7 @@ public:
 
 private:
     IInstanceRegistry& instanceRegistry_; // Injected dependency
+    IThemeService& themeService_;          // Injected dependency
 
     std::shared_ptr<SharedCaptureBuffer> captureBuffer_;
     SourceId sourceId_;

@@ -79,7 +79,6 @@ juce::AudioPlayHead::PositionInfo TestTransport::getPositionInfo() const
     // Calculate bar position
     double beats = getPositionBeats();
     int bar = static_cast<int>(beats / 4.0) + 1;
-    double beatInBar = std::fmod(beats, 4.0);
     info.setPpqPositionOfLastBarStart((bar - 1) * 4.0);
 
     return info;

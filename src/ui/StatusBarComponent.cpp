@@ -75,7 +75,6 @@ void StatusBarComponent::paint(juce::Graphics& g)
 
     // Source count
     g.drawText(juce::String::formatted("Src: %d", sourceCount_), x, 0, 60, bounds.getHeight(), juce::Justification::centredLeft);
-    x += 70;
 
     // Rendering mode indicator (right-aligned)
     juce::String renderModeText = (renderingMode_ == RenderingMode::OpenGL) ? "OpenGL" : "Software";

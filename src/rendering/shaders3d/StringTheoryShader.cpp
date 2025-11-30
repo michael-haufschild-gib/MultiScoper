@@ -120,7 +120,7 @@ void StringTheoryShader::render(juce::OpenGLContext& context,
 
     ext.glBindVertexArray(vao_);
     ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    ext.glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(float), vertices_.data(), GL_DYNAMIC_DRAW);
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices_.size() * sizeof(float)), vertices_.data(), GL_DYNAMIC_DRAW);
 
     // Attribs: pos(3), stringIndex(1)
     GLint posLoc = ext.glGetAttribLocation(shader_->getProgramID(), "position");
@@ -140,7 +140,7 @@ void StringTheoryShader::render(juce::OpenGLContext& context,
     // But simplest here with a single buffer: generate vertices for lines (segments), i.e., GL_LINES.
     // That means duplicating vertices.
     
-    glDrawArrays(GL_LINES, 0, vertexCount_);
+    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertexCount_));
     
     ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
     ext.glDisableVertexAttribArray(static_cast<GLuint>(idxLoc));
@@ -152,7 +152,7 @@ void StringTheoryShader::generateStringMesh(const WaveformData3D& data)
 {
     vertices_.clear();
     // Estimate size: samples * count * 2 (for lines) * 4 floats
-    vertices_.reserve(data.sampleCount * stringCount_ * 2 * 4);
+    vertices_.reserve(static_cast<size_t>(data.sampleCount * stringCount_ * 2 * 4));
     
     for (int s = 0; s < stringCount_; ++s)
     {
@@ -185,7 +185,7 @@ void StringTheoryShader::generateStringMesh(const WaveformData3D& data)
         }
     }
     
-    vertexCount_ = static_cast<int>(vertices_.size() / 4);
+    vertexCount_ = vertices_.size() / 4;
 }
 
 #endif

@@ -132,6 +132,7 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
+    bool hitTest(int x, int y) override;
 
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
@@ -212,7 +213,7 @@ private:
     static constexpr int THUMB_SIZE = 14;
     static constexpr int TOOLTIP_HEIGHT = 24;
     static constexpr int TOOLTIP_PADDING = 8;
-    static constexpr float THUMB_HIT_EXTRA = 6.0f;
+    static constexpr float THUMB_HIT_EXTRA = 15.0f;  // Increased for WCAG 44px touch target
 
     // TestIdSupport
     void registerTestId() override;

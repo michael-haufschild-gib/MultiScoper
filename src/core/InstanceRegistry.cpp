@@ -189,15 +189,15 @@ size_t InstanceRegistry::getSourceCount() const
 
 void InstanceRegistry::addListener(InstanceRegistryListener* listener)
 {
-    // Note: ListenerList::call() is thread-safe, but add()/remove() are NOT.
-    // Registration should happen on the message thread (e.g., during UI construction).
+    // ListenerList::add() is NOT thread-safe. Must be called from message thread.
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.add(listener);
 }
 
 void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
 {
-    // Note: ListenerList::call() is thread-safe, but add()/remove() are NOT.
-    // Unregistration should happen on the message thread (e.g., during UI destruction).
+    // ListenerList::remove() is NOT thread-safe. Must be called from message thread.
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.remove(listener);
 }
 

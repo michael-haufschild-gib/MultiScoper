@@ -12,11 +12,12 @@
 namespace oscil
 {
 
-OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry)
+OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService)
     : AudioProcessor(BusesProperties()
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
                      .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , instanceRegistry_(instanceRegistry)
+    , themeService_(themeService)
 {
     // Create capture buffer
     captureBuffer_ = std::make_shared<SharedCaptureBuffer>();
@@ -207,7 +208,7 @@ IInstanceRegistry& OscilPluginProcessor::getInstanceRegistry()
 
 IThemeService& OscilPluginProcessor::getThemeService()
 {
-    return ThemeManager::getInstance();
+    return themeService_;
 }
 
 std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& sourceId)
@@ -227,5 +228,7 @@ std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& so
 // This creates the plugin instance
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new oscil::OscilPluginProcessor(oscil::InstanceRegistry::getInstance());
+    return new oscil::OscilPluginProcessor(
+        oscil::InstanceRegistry::getInstance(),
+        oscil::ThemeManager::getInstance());
 }

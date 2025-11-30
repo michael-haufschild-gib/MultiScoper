@@ -252,7 +252,7 @@ SourceSelectorPopup::SourceSelectorPopup()
 
     // Initial population
     refreshSources();
-    themeChanged(ThemeManager::getInstance().getCurrentTheme());
+    updateThemeColors(ThemeManager::getInstance().getCurrentTheme());
 }
 
 SourceSelectorPopup::~SourceSelectorPopup()
@@ -272,6 +272,11 @@ void SourceSelectorPopup::paint(juce::Graphics& g)
 }
 
 void SourceSelectorPopup::resized()
+{
+    layoutContent();
+}
+
+void SourceSelectorPopup::layoutContent()
 {
     auto bounds = getLocalBounds().reduced(8);
 
@@ -335,7 +340,7 @@ void SourceSelectorPopup::refreshSources()
         sourceItems_.push_back(std::move(item));
     }
 
-    resized();
+    layoutContent();
 }
 
 void SourceSelectorPopup::handleFilterChange()
@@ -350,7 +355,7 @@ void SourceSelectorPopup::applyFilter()
     {
         item->setFilterMatch(item->matchesFilter(currentFilter_));
     }
-    resized();
+    layoutContent();
 }
 
 void SourceSelectorPopup::sourceAdded(const SourceId&)
@@ -381,6 +386,11 @@ void SourceSelectorPopup::sourceUpdated(const SourceId&)
 }
 
 void SourceSelectorPopup::themeChanged(const ColorTheme& newTheme)
+{
+    updateThemeColors(newTheme);
+}
+
+void SourceSelectorPopup::updateThemeColors(const ColorTheme& newTheme)
 {
     // OscilTextField handles its own theme colors automatically
 

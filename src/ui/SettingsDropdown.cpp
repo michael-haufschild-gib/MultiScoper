@@ -270,7 +270,7 @@ void SettingsDropdown::refreshThemeList()
         themeItems_.push_back(std::move(item));
     }
 
-    resized();
+    layoutContent();
 }
 
 void SettingsDropdown::selectTheme(const juce::String& themeName)
@@ -319,6 +319,11 @@ void SettingsDropdown::paint(juce::Graphics& g)
 }
 
 void SettingsDropdown::resized()
+{
+    layoutContent();
+}
+
+void SettingsDropdown::layoutContent()
 {
     auto bounds = getLocalBounds().reduced(10);
     const int spacing = 8;

@@ -33,7 +33,8 @@ namespace oscil
 class OscilModal : public juce::Component,
                    public ThemeManagerListener,
                    public TestIdSupport,
-                   private juce::Timer
+                   private juce::Timer,
+                   private juce::FocusChangeListener
 {
 public:
     OscilModal();
@@ -83,6 +84,9 @@ public:
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
 
+    // FocusChangeListener
+    void globalFocusChanged(juce::Component* focusedComponent) override;
+
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
@@ -101,6 +105,7 @@ private:
 
     bool requestClose();
     void updateFocusTrap();
+    void collectFocusableChildren(juce::Component* parent, juce::Array<juce::Component*>& result);
 
     juce::String title_;
     juce::Component* content_ = nullptr;

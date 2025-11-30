@@ -214,7 +214,6 @@ WaveformAnalysis TestScreenshot::analyzeWaveform(const juce::Image& image,
     int height = image.getHeight();
     int centerY = height / 2;
 
-    int waveformPixels = 0;
     int totalNonBackground = 0;
     float maxAmplitude = 0.0f;
 
@@ -250,8 +249,6 @@ WaveformAnalysis TestScreenshot::analyzeWaveform(const juce::Image& image,
                 // Track amplitude
                 float distanceFromCenter = std::abs(y - centerY) / static_cast<float>(centerY);
                 maxAmplitude = std::max(maxAmplitude, distanceFromCenter);
-
-                waveformPixels++;
             }
         }
 
@@ -449,9 +446,9 @@ std::map<uint32_t, int> TestScreenshot::getColorHistogram(const juce::Image& ima
             auto pixel = image.getPixelAt(x, y);
 
             // Bucket the color values
-            uint8_t r = (pixel.getRed() / bucketSize) * bucketSize;
-            uint8_t g = (pixel.getGreen() / bucketSize) * bucketSize;
-            uint8_t b = (pixel.getBlue() / bucketSize) * bucketSize;
+            uint8_t r = static_cast<uint8_t>((pixel.getRed() / bucketSize) * bucketSize);
+            uint8_t g = static_cast<uint8_t>((pixel.getGreen() / bucketSize) * bucketSize);
+            uint8_t b = static_cast<uint8_t>((pixel.getBlue() / bucketSize) * bucketSize);
 
             uint32_t key = (static_cast<uint32_t>(r) << 16) |
                            (static_cast<uint32_t>(g) << 8) |

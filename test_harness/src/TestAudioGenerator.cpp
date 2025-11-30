@@ -79,7 +79,7 @@ float TestAudioGenerator::generateSample()
     switch (wf)
     {
         case Waveform::Sine:
-            return std::sin(phase_ * 2.0 * juce::MathConstants<double>::pi);
+            return static_cast<float>(std::sin(phase_ * 2.0 * juce::MathConstants<double>::pi));
 
         case Waveform::Square:
             return phase_ < 0.5 ? 1.0f : -1.0f;
