@@ -26,7 +26,6 @@ namespace oscil
  */
 class AddOscillatorDialog : public juce::Component,
                              public ThemeManagerListener,
-                             public juce::ChangeListener,
                              public TestIdSupport
 {
 public:
@@ -40,7 +39,7 @@ public:
         bool createNewPane = false;     // True if "New pane" was selected
         juce::String name;
         juce::Colour color;
-        juce::String shaderId;          // Shader to use for rendering
+        juce::String visualPresetId;    // Visual preset to use
     };
 
     /**
@@ -57,9 +56,6 @@ public:
 
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
-
-    // ChangeListener (for ColourSelector)
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
     /**
      * Show the dialog with available sources and panes
@@ -85,7 +81,7 @@ public:
 
     // Preferred dimensions
     static constexpr int DIALOG_WIDTH = 360;
-    static constexpr int DIALOG_HEIGHT = 590;  // Increased for shader dropdown
+    static constexpr int DIALOG_HEIGHT = 550;
 
     // Number of color swatches
     static constexpr int NUM_COLOR_SWATCHES = 10;
@@ -94,6 +90,7 @@ private:
     void setupComponents();
     void populateSourceDropdown();
     void populatePaneDropdown();
+    void populateVisualPresetDropdown();
     void selectRandomColor();
     void updateNameFromSource();
     void handleSourceChange();
@@ -129,13 +126,10 @@ private:
     // Color section
     std::unique_ptr<juce::Label> colorLabel_;
     std::unique_ptr<OscilColorSwatches> colorSwatches_;
-    std::unique_ptr<OscilButton> customColorButton_;
-    juce::Colour customColor_;  // Stores custom color if selected
-    juce::ColourSelector* colourSelector_ = nullptr;  // Weak reference, CallOutBox owns it
 
-    // Shader section
-    std::unique_ptr<juce::Label> shaderLabel_;
-    std::unique_ptr<OscilDropdown> shaderDropdown_;
+    // Visual Preset section
+    std::unique_ptr<juce::Label> visualPresetLabel_;
+    std::unique_ptr<OscilDropdown> visualPresetDropdown_;
 
     // Error message
     std::unique_ptr<juce::Label> errorLabel_;
@@ -168,7 +162,7 @@ private:
     static constexpr int CONTROL_HEIGHT = 32;
     static constexpr int BUTTON_HEIGHT = 36;
     static constexpr int PADDING = 20;
-    static constexpr int COLOR_SECTION_HEIGHT = 80;
+    static constexpr int COLOR_PICKER_HEIGHT = 32;
 
     // Special index for "New pane" option
     static constexpr int NEW_PANE_OPTION_INDEX = 0;

@@ -11,6 +11,7 @@
 #include "rendering/RenderEngine.h"
 #include <iostream>
 #include <chrono>
+#include <unordered_set>
 
 namespace oscil
 {

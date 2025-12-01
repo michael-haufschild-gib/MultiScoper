@@ -61,18 +61,12 @@ void Pane::fromValueTree(const juce::ValueTree& state)
 
 void PaneLayoutManager::setColumnLayout(ColumnLayout layout)
 {
-    bool layoutChanged = (columnLayout_ != layout);
+    if (columnLayout_ == layout)
+        return;  // No change, preserve existing pane arrangement
+
     columnLayout_ = layout;
-
-    // Always redistribute panes to ensure columnIndex values are correct
-    // This handles cases where pane columnIndex values might be out of sync
-    // (e.g., from loading saved state or adding panes with wrong column assignment)
     redistributePanes();
-
-    if (layoutChanged)
-    {
-        notifyColumnLayoutChanged();
-    }
+    notifyColumnLayoutChanged();
 }
 
 void PaneLayoutManager::addPane(const Pane& pane)
@@ -206,22 +200,42 @@ void PaneLayoutManager::movePaneToColumn(const PaneId& paneId, int targetColumn,
     int numColumns = getColumnCount();
     targetColumn = std::clamp(targetColumn, 0, numColumns - 1);
 
-    // Update column assignment
+    // Get target column panes BEFORE moving (excluding the pane being moved)
+    // This ensures we can insert at the correct position
+    std::vector<Pane*> targetPanes;
+    for (auto& p : panes_)
+    {
+        if (p.getColumnIndex() == targetColumn && p.getId() != paneId)
+            targetPanes.push_back(&p);
+    }
+    std::sort(targetPanes.begin(), targetPanes.end(),
+        [](Pane* a, Pane* b) { return a->getOrderIndex() < b->getOrderIndex(); });
+
+    positionInColumn = std::clamp(positionInColumn, 0, static_cast<int>(targetPanes.size()));
+
+    // Insert pane at the requested position in target column
+    targetPanes.insert(targetPanes.begin() + positionInColumn, pane);
     pane->setColumnIndex(targetColumn);
 
-    // Get panes in target column to determine order
-    auto columnPanes = getPanesInColumn(targetColumn);
-    positionInColumn = std::clamp(positionInColumn, 0, static_cast<int>(columnPanes.size()));
-
     // Recalculate order indices for all panes
-    // Panes in same column are ordered together
     int globalIndex = 0;
     for (int col = 0; col < numColumns; ++col)
     {
-        auto panesInCol = getPanesInColumn(col);
-        for (auto* p : panesInCol)
+        if (col == targetColumn)
         {
-            p->setOrderIndex(globalIndex++);
+            // Use our ordered list for target column
+            for (auto* p : targetPanes)
+            {
+                p->setOrderIndex(globalIndex++);
+            }
+        }
+        else
+        {
+            auto panesInCol = getPanesInColumn(col);
+            for (auto* p : panesInCol)
+            {
+                p->setOrderIndex(globalIndex++);
+            }
         }
     }
 
@@ -391,15 +405,14 @@ void PaneLayoutManager::fromValueTree(const juce::ValueTree& state)
 
     sortPanesByOrder();
 
-    // Always redistribute panes to ensure columnIndex values match the loaded columnLayout
-    // This fixes issues where saved state has pane columnIndex values from a different layout
+    // Only clamp invalid column indices, preserve valid saved positions
     if (!panes_.empty())
     {
         int numColumns = getColumnCount();
-        for (size_t i = 0; i < panes_.size(); ++i)
+        for (auto& pane : panes_)
         {
-            int newCol = static_cast<int>(i) % numColumns;
-            panes_[i].setColumnIndex(newCol);
+            if (pane.getColumnIndex() >= numColumns)
+                pane.setColumnIndex(pane.getColumnIndex() % numColumns);
         }
     }
 }

@@ -625,43 +625,6 @@ TEST_F(OscillatorTest, LineWidthDefault)
     EXPECT_EQ(osc.getLineWidth(), Oscillator::DEFAULT_LINE_WIDTH);
 }
 
-// Test: Vertical scale clamping
-TEST_F(OscillatorTest, VerticalScaleClampingLow)
-{
-    Oscillator osc;
-    osc.setVerticalScale(0.0f);
-    EXPECT_EQ(osc.getVerticalScale(), Oscillator::MIN_VERTICAL_SCALE);
-}
-
-TEST_F(OscillatorTest, VerticalScaleClampingHigh)
-{
-    Oscillator osc;
-    osc.setVerticalScale(100.0f);
-    EXPECT_EQ(osc.getVerticalScale(), Oscillator::MAX_VERTICAL_SCALE);
-}
-
-TEST_F(OscillatorTest, VerticalScaleNegative)
-{
-    Oscillator osc;
-    osc.setVerticalScale(-2.0f);
-    EXPECT_EQ(osc.getVerticalScale(), Oscillator::MIN_VERTICAL_SCALE);
-}
-
-// Test: Vertical offset clamping
-TEST_F(OscillatorTest, VerticalOffsetClampingLow)
-{
-    Oscillator osc;
-    osc.setVerticalOffset(-5.0f);
-    EXPECT_EQ(osc.getVerticalOffset(), Oscillator::MIN_VERTICAL_OFFSET);
-}
-
-TEST_F(OscillatorTest, VerticalOffsetClampingHigh)
-{
-    Oscillator osc;
-    osc.setVerticalOffset(5.0f);
-    EXPECT_EQ(osc.getVerticalOffset(), Oscillator::MAX_VERTICAL_OFFSET);
-}
-
 // Test: TimeWindow optional handling
 TEST_F(OscillatorTest, TimeWindowDefault)
 {
@@ -818,16 +781,12 @@ TEST_F(OscillatorTest, DeserializeWithOutOfRangeValues)
 {
     juce::ValueTree state("Oscillator");
     state.setProperty("lineWidth", 1000.0f, nullptr);
-    state.setProperty("verticalScale", -50.0f, nullptr);
-    state.setProperty("verticalOffset", 100.0f, nullptr);
     state.setProperty("opacity", 5.0f, nullptr);
 
     Oscillator osc(state);
 
     // Values should be clamped
     EXPECT_EQ(osc.getLineWidth(), Oscillator::MAX_LINE_WIDTH);
-    EXPECT_EQ(osc.getVerticalScale(), Oscillator::MIN_VERTICAL_SCALE);
-    EXPECT_EQ(osc.getVerticalOffset(), Oscillator::MAX_VERTICAL_OFFSET);
     EXPECT_EQ(osc.getOpacity(), 1.0f);
 }
 

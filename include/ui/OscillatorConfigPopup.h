@@ -80,7 +80,7 @@ public:
 
     // Preferred dimensions
     static constexpr int POPUP_WIDTH = 360;
-    static constexpr int POPUP_HEIGHT = 580;  // Visual preset dropdown
+    static constexpr int POPUP_HEIGHT = 550;
 
     // Layout constants
     static constexpr int PADDING = 16;
@@ -111,8 +111,6 @@ private:
     void handleColorSelect(juce::Colour colour);
     void handleLineWidthChange();
     void handleOpacityChange();
-    void handleVerticalScaleChange();
-    void handleVerticalOffsetChange();
     void handlePaneChange();
     void handleVisualPresetChange();
 
@@ -125,10 +123,9 @@ private:
     bool visible_ = true;
     juce::String name_;
     float lineWidth_ = Oscillator::DEFAULT_LINE_WIDTH;
-    float verticalScale_ = Oscillator::DEFAULT_VERTICAL_SCALE;
-    float verticalOffset_ = Oscillator::DEFAULT_VERTICAL_OFFSET;
     PaneId paneId_;
     int orderIndex_ = 0;  // Track order to preserve during config changes
+    juce::ValueTree visualOverrides_;
 
     // Header section
     std::unique_ptr<OscilTextField> nameEditor_;
@@ -157,12 +154,6 @@ private:
 
     // Opacity slider
     std::unique_ptr<OscilSlider> opacitySlider_;
-
-    // Vertical Scale slider
-    std::unique_ptr<OscilSlider> scaleSlider_;
-
-    // Vertical Offset slider
-    std::unique_ptr<OscilSlider> offsetSlider_;
 
     // Pane selector
     std::unique_ptr<juce::Label> paneLabel_;

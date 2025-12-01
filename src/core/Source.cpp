@@ -227,27 +227,35 @@ void Source::setDisplayName(const juce::String& name)
 
 void Source::updateLastAudioTime()
 {
-    lastAudioTimeMs_.store(juce::Time::currentTimeMillis());
-
-    // If we were not active, transition to active
-    if (state_ == SourceState::DISCOVERED ||
-        state_ == SourceState::INACTIVE ||
-        state_ == SourceState::STALE)
-    {
-        (void)transitionTo(SourceState::ACTIVE);
-    }
+    // Just update the timestamp atomically. 
+    // State transition is handled in updateActivityState() on the message thread
+    // to avoid race conditions and complex locking on the audio thread.
+    lastAudioTimeMs_.store(juce::Time::currentTimeMillis(), std::memory_order_relaxed);
 }
 
 int64_t Source::getTimeSinceLastAudio() const
 {
-    return juce::Time::currentTimeMillis() - lastAudioTimeMs_.load();
+    return juce::Time::currentTimeMillis() - lastAudioTimeMs_.load(std::memory_order_relaxed);
 }
 
 void Source::updateActivityState()
 {
     auto timeSinceAudio = getTimeSinceLastAudio();
+    SourceState currentState = state_.load(std::memory_order_relaxed);
 
-    if (state_ == SourceState::ACTIVE)
+    // Check for transition TO Active
+    // If we have received audio recently and are not ACTIVE, become ACTIVE
+    // Note: Do not auto-transition from ORPHANED state (must be explicitly re-adopted)
+    if (timeSinceAudio < INACTIVE_THRESHOLD_MS)
+    {
+        if (currentState != SourceState::ACTIVE && currentState != SourceState::ORPHANED)
+        {
+            (void)transitionTo(SourceState::ACTIVE);
+        }
+        // Already active or explicitly orphaned, nothing to do
+    }
+    // Check for transitions FROM Active
+    else if (currentState == SourceState::ACTIVE)
     {
         if (timeSinceAudio > STALE_THRESHOLD_MS)
         {
@@ -258,7 +266,8 @@ void Source::updateActivityState()
             (void)transitionTo(SourceState::INACTIVE);
         }
     }
-    else if (state_ == SourceState::INACTIVE)
+    // Check for transitions from Inactive
+    else if (currentState == SourceState::INACTIVE)
     {
         if (timeSinceAudio > STALE_THRESHOLD_MS)
         {

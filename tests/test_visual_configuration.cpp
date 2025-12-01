@@ -203,27 +203,6 @@ TEST_F(MaterialSettingsTest, DefaultValues)
 }
 
 // =============================================================================
-// LensFlareSettings Tests
-// =============================================================================
-
-class LensFlareSettingsTest : public ::testing::Test
-{
-};
-
-TEST_F(LensFlareSettingsTest, DefaultValues)
-{
-    LensFlareSettings flare;
-
-    EXPECT_FALSE(flare.enabled);
-    EXPECT_FLOAT_EQ(flare.intensity, 1.0f);
-    EXPECT_FLOAT_EQ(flare.threshold, 0.8f);
-    EXPECT_FLOAT_EQ(flare.ghostDispersal, 0.6f);
-    EXPECT_EQ(flare.ghostCount, 4);
-    EXPECT_FLOAT_EQ(flare.haloWidth, 0.5f);
-    EXPECT_FLOAT_EQ(flare.chromaticDistortion, 5.0f);
-}
-
-// =============================================================================
 // TiltShiftSettings Tests
 // =============================================================================
 
@@ -421,7 +400,6 @@ TEST_F(VisualConfigurationTest, SerializationPreservesAllPostProcessing)
     original.chromaticAberration.enabled = true;
     original.scanlines.enabled = true;
     original.distortion.enabled = true;
-    original.lensFlare.enabled = true;
     original.tiltShift.enabled = true;
 
     auto tree = original.toValueTree();
@@ -435,7 +413,6 @@ TEST_F(VisualConfigurationTest, SerializationPreservesAllPostProcessing)
     EXPECT_TRUE(restored.chromaticAberration.enabled);
     EXPECT_TRUE(restored.scanlines.enabled);
     EXPECT_TRUE(restored.distortion.enabled);
-    EXPECT_TRUE(restored.lensFlare.enabled);
     EXPECT_TRUE(restored.tiltShift.enabled);
 }
 
@@ -541,15 +518,11 @@ TEST_F(VisualConfigurationTest, TestCyberpunkPreset)
 
     EXPECT_EQ(config.shaderType, ShaderType::NeonGlow);
     EXPECT_TRUE(config.bloom.enabled);
-    EXPECT_FLOAT_EQ(config.bloom.intensity, 1.8f);
+    EXPECT_FLOAT_EQ(config.bloom.intensity, 2.0f); // Boosted bloom
     
     // Verify fix for particle emission mode
     EXPECT_TRUE(config.particles.enabled);
     EXPECT_EQ(config.particles.emissionMode, ParticleEmissionMode::AlongWaveform);
-
-    // Updated: Check for lens flare
-    EXPECT_TRUE(config.lensFlare.enabled);
-    EXPECT_FLOAT_EQ(config.lensFlare.intensity, 1.2f);
 }
 
 TEST_F(VisualConfigurationTest, TestLiquidGoldPreset)
@@ -570,7 +543,6 @@ TEST_F(VisualConfigurationTest, TestCinematicPreset)
     auto config = VisualConfiguration::getPreset("cinematic");
 
     EXPECT_TRUE(config.tiltShift.enabled);
-    EXPECT_TRUE(config.lensFlare.enabled);
     EXPECT_TRUE(config.filmGrain.enabled);
     EXPECT_TRUE(config.vignette.enabled);
     EXPECT_TRUE(config.colorGrade.enabled);
@@ -582,9 +554,8 @@ TEST_F(VisualConfigurationTest, TestSolarStormPreset)
     auto config = VisualConfiguration::getPreset("solar_storm");
 
     EXPECT_EQ(config.shaderType, ShaderType::PlasmaSine);
-    EXPECT_TRUE(config.lensFlare.enabled);
-    EXPECT_FLOAT_EQ(config.lensFlare.intensity, 2.5f);
     EXPECT_TRUE(config.bloom.enabled);
+    EXPECT_FLOAT_EQ(config.bloom.intensity, 3.0f); // Boosted
     EXPECT_TRUE(config.distortion.enabled);
     EXPECT_TRUE(config.colorGrade.enabled);
     EXPECT_FLOAT_EQ(config.colorGrade.temperature, 0.8f);

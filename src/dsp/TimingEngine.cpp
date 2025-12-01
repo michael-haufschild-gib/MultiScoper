@@ -530,6 +530,9 @@ void TimingEngine::removeListener(Listener* listener)
 
 void TimingEngine::dispatchPendingUpdates()
 {
+    // Ensure this is called on the message thread to avoid race conditions with UI listeners
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     // Check flags and notify listeners on the current thread (expected Message Thread)
     // Use atomic reads for thread-safe access to values that may be written from audio thread
     if (pendingTimingModeChange_.exchange(false))

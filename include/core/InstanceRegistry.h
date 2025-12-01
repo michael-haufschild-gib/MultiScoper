@@ -148,6 +148,12 @@ public:
     void updateSource(const SourceId& sourceId, const juce::String& name, int channelCount, double sampleRate) override;
 
     /**
+     * Shutdown the registry, clearing all sources and listeners.
+     * Call during plugin/application teardown.
+     */
+    void shutdown();
+
+    /**
      * Get the number of registered sources
      */
     [[nodiscard]] size_t getSourceCount() const override;

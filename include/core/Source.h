@@ -302,8 +302,8 @@ private:
     int bufferSize_ = 512;
 
     // State
-    SourceState state_ = SourceState::DISCOVERED;
-    bool isActiveFlag_ = false;
+    std::atomic<SourceState> state_{ SourceState::DISCOVERED };
+    std::atomic<bool> isActiveFlag_{ false };
     juce::String displayName_;
 
     // Timestamps

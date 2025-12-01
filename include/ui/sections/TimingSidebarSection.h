@@ -15,38 +15,11 @@
 #include "ui/components/OscilTextField.h"
 #include "ui/components/TestId.h"
 #include "dsp/TimingConfig.h"
+#include "ui/presenters/TimingPresenter.h"
 #include <functional>
 
 namespace oscil
 {
-
-/**
- * Waveform trigger/restart mode
- */
-enum class WaveformMode
-{
-    FreeRunning,    // Waveforms keep running continuously
-    RestartOnPlay,  // Waveforms reset when playback starts
-    RestartOnNote   // Waveforms reset on MIDI note
-};
-
-inline juce::String waveformModeToString(WaveformMode mode)
-{
-    switch (mode)
-    {
-        case WaveformMode::FreeRunning:    return "Free Running";
-        case WaveformMode::RestartOnPlay:  return "Restart on Play";
-        case WaveformMode::RestartOnNote:  return "Restart on Note";
-    }
-    return "Free Running";
-}
-
-inline WaveformMode stringToWaveformMode(const juce::String& str)
-{
-    if (str == "Restart on Play")  return WaveformMode::RestartOnPlay;
-    if (str == "Restart on Note")  return WaveformMode::RestartOnNote;
-    return WaveformMode::FreeRunning;
-}
 
 /**
  * Timing section component for the sidebar
@@ -92,12 +65,12 @@ public:
     void setSyncStatus(bool synced);
 
     // State getters
-    TimingMode getTimingMode() const { return currentMode_; }
-    float getTimeIntervalMs() const { return currentTimeIntervalMs_; }
-    NoteInterval getNoteInterval() const { return currentNoteInterval_; }
-    bool isHostSyncEnabled() const { return hostSyncEnabled_; }
-    WaveformMode getWaveformMode() const { return waveformMode_; }
-    float getInternalBPM() const { return internalBPM_; }
+    TimingMode getTimingMode() const;
+    float getTimeIntervalMs() const;
+    NoteInterval getNoteInterval() const;
+    bool isHostSyncEnabled() const;
+    WaveformMode getWaveformMode() const;
+    float getInternalBPM() const;
 
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
@@ -107,16 +80,12 @@ public:
 
 private:
     void setupComponents();
+    void setupPresenterCallbacks();
     void updateModeVisibility();
+    void updateUi(); // Sync UI from presenter
     void populateNoteIntervalSelector();
     void populateWaveformModeSelector();
 
-    void notifyTimingModeChanged();
-    void notifyNoteIntervalChanged();
-    void notifyTimeIntervalChanged();
-    void notifyHostSyncChanged();
-    void notifyWaveformModeChanged();
-    void notifyBpmChanged();
     void notifyHeightChanged();
 
     // TIME/MELODIC toggle
@@ -143,15 +112,7 @@ private:
     // Sync status indicator
     std::unique_ptr<juce::Label> syncStatusLabel_;
 
-    // State
-    TimingMode currentMode_ = TimingMode::TIME;
-    float currentTimeIntervalMs_ = 500.0f;
-    NoteInterval currentNoteInterval_ = NoteInterval::QUARTER;
-    WaveformMode waveformMode_ = WaveformMode::FreeRunning;
-    float hostBPM_ = 120.0f;
-    float internalBPM_ = 120.0f;
-    bool hostSyncEnabled_ = false;
-    bool isSynced_ = false;
+    std::unique_ptr<TimingPresenter> presenter_;
 
     juce::ListenerList<Listener> listeners_;
 

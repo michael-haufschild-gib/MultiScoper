@@ -238,10 +238,10 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
     entry.waveform->setColour(oscillator.getColour());
     entry.waveform->setOpacity(oscillator.getOpacity());
     entry.waveform->setLineWidth(oscillator.getLineWidth());
-    entry.waveform->setVerticalScale(oscillator.getVerticalScale());
     entry.waveform->setVisible(oscillator.isVisible());
     entry.waveform->setShaderId(oscillator.getShaderId());
     entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
+    entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
 
     // Get capture buffer - always try processor's buffer first since it's always available
     // The registry lookup might fail if prepareToPlay() hasn't been called yet
@@ -250,7 +250,7 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
     // If we have a valid source ID, try to get its specific buffer
     if (oscillator.getSourceId().isValid())
     {
-        auto sourceBuffer = InstanceRegistry::getInstance().getCaptureBuffer(oscillator.getSourceId());
+        auto sourceBuffer = processor_.getInstanceRegistry().getCaptureBuffer(oscillator.getSourceId());
         if (sourceBuffer)
         {
             buffer = sourceBuffer;
@@ -299,7 +299,7 @@ void PaneComponent::updateOscillatorSource(const OscillatorId& oscillatorId, con
 
             if (newSourceId.isValid())
             {
-                newBuffer = InstanceRegistry::getInstance().getCaptureBuffer(newSourceId);
+                newBuffer = processor_.getInstanceRegistry().getCaptureBuffer(newSourceId);
             }
 
             // Fall back to processor's buffer if source not found
@@ -351,15 +351,13 @@ void PaneComponent::updateOscillatorFull(const Oscillator& oscillator)
             // Update all waveform component properties
             entry.waveform->setProcessingMode(oscillator.getProcessingMode());
             entry.waveform->setColour(oscillator.getColour());
-            entry.waveform->setOpacity(oscillator.getOpacity());
-            entry.waveform->setLineWidth(oscillator.getLineWidth());
-            entry.waveform->setVerticalScale(oscillator.getVerticalScale());
-            entry.waveform->setVisible(oscillator.isVisible());
-            entry.waveform->setShaderId(oscillator.getShaderId());
-            entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
-
-            // Repaint to reflect changes
-            repaint();
+                entry.waveform->setOpacity(oscillator.getOpacity());
+                entry.waveform->setLineWidth(oscillator.getLineWidth());
+                            entry.waveform->setVisible(oscillator.isVisible());
+                            entry.waveform->setShaderId(oscillator.getShaderId());            entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
+                            entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
+                
+                            // Repaint to reflect changes            repaint();
             break;
         }
     }

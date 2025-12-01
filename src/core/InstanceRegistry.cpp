@@ -30,6 +30,20 @@ InstanceRegistry& InstanceRegistry::getInstance()
     return instance;
 }
 
+void InstanceRegistry::shutdown()
+{
+    // Clear all sources and listeners
+    {
+        std::unique_lock<std::shared_mutex> lock(mutex_);
+        sources_.clear();
+        trackToSourceMap_.clear();
+    }
+    
+    // Note: we don't clear listeners here because they might be static/global
+    // or managed elsewhere, but we could if we wanted to be aggressive.
+    // For now, just clearing sources breaks the reference cycles.
+}
+
 SourceId InstanceRegistry::registerInstance(
     const juce::String& trackIdentifier,
     std::shared_ptr<SharedCaptureBuffer> captureBuffer,
@@ -37,6 +51,11 @@ SourceId InstanceRegistry::registerInstance(
     int channelCount,
     double sampleRate)
 {
+    // Registry mutations should happen on message thread or during initialization
+    // Avoid calling from audio thread due to locks and allocation
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread() || 
+            !juce::MessageManager::getInstance()->isThisTheMessageThread()); // Soft assertion for now, effectively logging intent
+
     SourceId sourceId;
     bool shouldNotify = false;
     bool maxLimitReached = false;

@@ -12,26 +12,19 @@ namespace oscil
 {
 
 OscillatorPanel::OscillatorPanel(const Oscillator& oscillator)
-    : oscillatorId_(oscillator.getId())
-    , sourceId_(oscillator.getSourceId())
-    , processingMode_(oscillator.getProcessingMode())
-    , colour_(oscillator.getColour())
-    , opacity_(oscillator.getOpacity())
-    , visible_(oscillator.isVisible())
-    , name_(oscillator.getName())
+    : presenter_(std::make_unique<OscillatorPresenter>(oscillator))
 {
     // Header controls
-    nameLabel_ = std::make_unique<juce::Label>("name", name_.isEmpty() ? "Oscillator" : name_);
+    nameLabel_ = std::make_unique<juce::Label>("name", presenter_->getName().isEmpty() ? "Oscillator" : presenter_->getName());
     nameLabel_->setEditable(true);
     nameLabel_->onTextChange = [this]()
     {
-        name_ = nameLabel_->getText();
-        notifyOscillatorChanged();
+        presenter_->setName(nameLabel_->getText());
     };
     addAndMakeVisible(*nameLabel_);
 
     visibilityToggle_ = std::make_unique<OscilToggle>();
-    visibilityToggle_->setValue(visible_, false);
+    visibilityToggle_->setValue(presenter_->isVisible(), false);
     visibilityToggle_->onValueChanged = [this](bool /*value*/) { handleVisibilityToggle(); };
     addAndMakeVisible(*visibilityToggle_);
 
@@ -50,7 +43,7 @@ OscillatorPanel::OscillatorPanel(const Oscillator& oscillator)
     addChildComponent(*sourceLabel_);
 
     sourceSelector_ = std::make_unique<SourceSelectorComponent>();
-    sourceSelector_->setSelectedSourceId(sourceId_);
+    sourceSelector_->setSelectedSourceId(presenter_->getSourceId());
     sourceSelector_->onSelectionChanged([this](const SourceId& sid) { handleSourceChange(sid); });
     addChildComponent(*sourceSelector_);
 
@@ -65,7 +58,7 @@ OscillatorPanel::OscillatorPanel(const Oscillator& oscillator)
     processingModeSelector_->addItem("Left");
     processingModeSelector_->addItem("Right");
     // ProcessingMode enum is 0-based, OscilDropdown is also 0-based
-    processingModeSelector_->setSelectedIndex(static_cast<int>(processingMode_), false);
+    processingModeSelector_->setSelectedIndex(static_cast<int>(presenter_->getProcessingMode()), false);
     processingModeSelector_->onSelectionChanged = [this](int /*index*/) { handleProcessingModeChange(); };
     addChildComponent(*processingModeSelector_);
 
@@ -73,12 +66,59 @@ OscillatorPanel::OscillatorPanel(const Oscillator& oscillator)
     addChildComponent(*colourLabel_);
 
     colorPicker_ = std::make_unique<ColorPickerComponent>();
-    colorPicker_->setColour(colour_.withAlpha(opacity_));
+    colorPicker_->setColour(presenter_->getColour().withAlpha(presenter_->getOpacity()));
     colorPicker_->onColourChanged([this](juce::Colour c) { handleColourChange(c); });
     addChildComponent(*colorPicker_);
+
+    setupPresenterCallbacks();
 }
 
 OscillatorPanel::~OscillatorPanel() = default;
+
+void OscillatorPanel::setupPresenterCallbacks()
+{
+    presenter_->setOnOscillatorChanged([this](const Oscillator& osc) {
+        // Update UI elements if they differ (avoid loops)
+        // But mostly we just forward the notification
+        if (oscillatorChangedCallback_)
+        {
+            oscillatorChangedCallback_(osc);
+        }
+        repaint();
+    });
+
+    presenter_->setOnDeleteRequested([this](const OscillatorId& id) {
+        if (deleteRequestedCallback_)
+        {
+            deleteRequestedCallback_(id);
+        }
+    });
+
+    presenter_->setOnVisibilityToggled([this](const OscillatorId& id, bool visible) {
+        if (visibilityToggledCallback_)
+        {
+            visibilityToggledCallback_(id, visible);
+        }
+    });
+}
+
+void OscillatorPanel::updateUi()
+{
+    if (!presenter_) return;
+
+    auto name = presenter_->getName();
+    nameLabel_->setText(name.isEmpty() ? "Oscillator" : name, juce::dontSendNotification);
+    
+    visibilityToggle_->setValue(presenter_->isVisible(), false);
+    
+    sourceSelector_->setSelectedSourceId(presenter_->getSourceId());
+    
+    processingModeSelector_->setSelectedIndex(static_cast<int>(presenter_->getProcessingMode()), false);
+    
+    colorPicker_->setColour(presenter_->getColour().withAlpha(presenter_->getOpacity()));
+
+    repaint();
+}
 
 void OscillatorPanel::paint(juce::Graphics& g)
 {
@@ -93,9 +133,12 @@ void OscillatorPanel::paint(juce::Graphics& g)
     g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f, 1.0f);
 
     // Draw color indicator on left side
-    auto colorBar = getLocalBounds().removeFromLeft(4);
-    g.setColour(colour_.withAlpha(opacity_));
-    g.fillRoundedRectangle(colorBar.toFloat(), 2.0f);
+    if (presenter_)
+    {
+        auto colorBar = getLocalBounds().removeFromLeft(4);
+        g.setColour(presenter_->getColour().withAlpha(presenter_->getOpacity()));
+        g.fillRoundedRectangle(colorBar.toFloat(), 2.0f);
+    }
 }
 
 void OscillatorPanel::resized()
@@ -148,39 +191,21 @@ void OscillatorPanel::resized()
     }
 }
 
+OscillatorId OscillatorPanel::getOscillatorId() const
+{
+    return presenter_->getOscillatorId();
+}
+
 void OscillatorPanel::setOscillator(const Oscillator& oscillator)
 {
-    oscillatorId_ = oscillator.getId();
-    sourceId_ = oscillator.getSourceId();
-    processingMode_ = oscillator.getProcessingMode();
-    colour_ = oscillator.getColour();
-    opacity_ = oscillator.getOpacity();
-    visible_ = oscillator.isVisible();
-    name_ = oscillator.getName();
-
-    // Update UI
-    nameLabel_->setText(name_.isEmpty() ? "Oscillator" : name_, juce::dontSendNotification);
-    visibilityToggle_->setValue(visible_, false);
-    sourceSelector_->setSelectedSourceId(sourceId_);
-    // ProcessingMode enum is 0-based, OscilDropdown is also 0-based
-    processingModeSelector_->setSelectedIndex(static_cast<int>(processingMode_), false);
-    colorPicker_->setColour(colour_.withAlpha(opacity_));
-
-    repaint();
+    presenter_ = std::make_unique<OscillatorPresenter>(oscillator);
+    setupPresenterCallbacks();
+    updateUi();
 }
 
 Oscillator OscillatorPanel::getOscillator() const
 {
-    Oscillator osc;
-    // Note: We can't set the ID directly as it's generated, but we store it
-    // The caller should use the ID from getOscillatorId()
-    osc.setSourceId(sourceId_);
-    osc.setProcessingMode(processingMode_);
-    osc.setColour(colour_);
-    osc.setOpacity(opacity_);
-    osc.setVisible(visible_);
-    osc.setName(name_);
-    return osc;
+    return presenter_->getOscillator();
 }
 
 void OscillatorPanel::setExpanded(bool expanded)
@@ -207,19 +232,9 @@ void OscillatorPanel::setExpanded(bool expanded)
     }
 }
 
-void OscillatorPanel::notifyOscillatorChanged()
-{
-    if (oscillatorChangedCallback_)
-    {
-        Oscillator osc = getOscillator();
-        oscillatorChangedCallback_(osc);
-    }
-}
-
 void OscillatorPanel::handleSourceChange(const SourceId& sourceId)
 {
-    sourceId_ = sourceId;
-    notifyOscillatorChanged();
+    presenter_->setSourceId(sourceId);
 }
 
 void OscillatorPanel::handleProcessingModeChange()
@@ -227,37 +242,25 @@ void OscillatorPanel::handleProcessingModeChange()
     int selectedIndex = processingModeSelector_->getSelectedIndex();
     if (selectedIndex >= 0 && selectedIndex <= 5)
     {
-        processingMode_ = static_cast<ProcessingMode>(selectedIndex);
-        notifyOscillatorChanged();
+        presenter_->setProcessingMode(static_cast<ProcessingMode>(selectedIndex));
     }
 }
 
 void OscillatorPanel::handleColourChange(juce::Colour colour)
 {
-    colour_ = colour.withAlpha(1.0f);
-    opacity_ = colour.getFloatAlpha();
+    presenter_->setColour(colour.withAlpha(1.0f));
+    presenter_->setOpacity(colour.getFloatAlpha());
     repaint();
-    notifyOscillatorChanged();
 }
 
 void OscillatorPanel::handleVisibilityToggle()
 {
-    visible_ = visibilityToggle_->getValue();
-
-    if (visibilityToggledCallback_)
-    {
-        visibilityToggledCallback_(oscillatorId_, visible_);
-    }
-
-    notifyOscillatorChanged();
+    presenter_->setVisible(visibilityToggle_->getValue());
 }
 
 void OscillatorPanel::handleDeleteClick()
 {
-    if (deleteRequestedCallback_)
-    {
-        deleteRequestedCallback_(oscillatorId_);
-    }
+    presenter_->requestDelete();
 }
 
 void OscillatorPanel::handleExpandToggle()

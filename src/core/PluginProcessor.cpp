@@ -129,7 +129,8 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     metadata.timestamp = timingEngine_.getHostInfo().timeInSamples;
 
     // Capture audio for visualization BEFORE any modifications (read-only operation)
-    captureBuffer_->write(buffer, metadata);
+    // Use tryLock=true to prevent audio thread blocking if test server is injecting data
+    captureBuffer_->write(buffer, metadata, true);
 
     // Process trigger detection (read-only operation)
     (void)timingEngine_.processBlock(buffer);

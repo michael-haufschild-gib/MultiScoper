@@ -20,6 +20,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/PluginEditor.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/WaveformComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/presenters/WaveformPresenter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/presenters/OscillatorPresenter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/presenters/TimingPresenter.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorPanel.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/PaneComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/ThemeManager.cpp

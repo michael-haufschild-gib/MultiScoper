@@ -50,8 +50,6 @@ juce::ValueTree Oscillator::toValueTree() const
 
     // Extended display properties
     state.setProperty(StateIds::LineWidth, lineWidth_, nullptr);
-    state.setProperty(StateIds::VerticalScale, verticalScale_, nullptr);
-    state.setProperty(StateIds::VerticalOffset, verticalOffset_, nullptr);
 
     if (timeWindow_.has_value())
     {
@@ -60,6 +58,12 @@ juce::ValueTree Oscillator::toValueTree() const
 
     state.setProperty(StateIds::ShaderId, shaderId_, nullptr);
     state.setProperty(StateIds::VisualPresetId, visualPresetId_, nullptr);
+
+    // Serialize overrides
+    if (visualOverrides_.getNumProperties() > 0)
+    {
+        state.addChild(visualOverrides_.createCopy(), -1, nullptr);
+    }
 
     return state;
 }
@@ -96,8 +100,6 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
 
     // Extended display properties (with defaults for migration)
     lineWidth_ = state.getProperty(StateIds::LineWidth, DEFAULT_LINE_WIDTH);
-    verticalScale_ = state.getProperty(StateIds::VerticalScale, DEFAULT_VERTICAL_SCALE);
-    verticalOffset_ = state.getProperty(StateIds::VerticalOffset, DEFAULT_VERTICAL_OFFSET);
 
     if (state.hasProperty(StateIds::TimeWindow))
     {
@@ -110,8 +112,6 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
 
     // Validate and clamp values
     lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, lineWidth_);
-    verticalScale_ = juce::jlimit(MIN_VERTICAL_SCALE, MAX_VERTICAL_SCALE, verticalScale_);
-    verticalOffset_ = juce::jlimit(MIN_VERTICAL_OFFSET, MAX_VERTICAL_OFFSET, verticalOffset_);
     opacity_ = juce::jlimit(0.0f, 1.0f, opacity_);
 
     // Shader ID (default to basic for migration)
@@ -120,7 +120,33 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     // Visual preset ID (default to "default" for migration)
     visualPresetId_ = state.getProperty(StateIds::VisualPresetId, "default").toString();
 
+    // Load overrides
+    auto overrides = state.getChildWithName("VisualOverrides");
+    if (overrides.isValid())
+    {
+        visualOverrides_ = overrides.createCopy();
+    }
+    else
+    {
+        visualOverrides_ = juce::ValueTree("VisualOverrides");
+    }
+
     schemaVersion_ = CURRENT_SCHEMA_VERSION;
+}
+
+void Oscillator::setVisualOverride(const juce::Identifier& property, const juce::var& value)
+{
+    visualOverrides_.setProperty(property, value, nullptr);
+}
+
+juce::var Oscillator::getVisualOverride(const juce::Identifier& property) const
+{
+    return visualOverrides_.getProperty(property);
+}
+
+void Oscillator::clearVisualOverrides()
+{
+    visualOverrides_.removeAllProperties(nullptr);
 }
 
 void Oscillator::setSourceId(const SourceId& sourceId)

@@ -12,6 +12,7 @@
 #include "ui/components/OscilToggle.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/TestId.h"
+#include "ui/presenters/OscillatorPresenter.h"
 #include <functional>
 
 namespace oscil
@@ -37,7 +38,7 @@ public:
     /**
      * Get the oscillator ID this panel controls
      */
-    OscillatorId getOscillatorId() const { return oscillatorId_; }
+    OscillatorId getOscillatorId() const;
 
     /**
      * Update the oscillator data
@@ -88,7 +89,9 @@ public:
     void setExpanded(bool expanded);
 
 private:
-    void notifyOscillatorChanged();
+    void setupPresenterCallbacks();
+    void updateUi();
+
     void handleSourceChange(const SourceId& sourceId);
     void handleProcessingModeChange();
     void handleColourChange(juce::Colour colour);
@@ -96,13 +99,7 @@ private:
     void handleDeleteClick();
     void handleExpandToggle();
 
-    OscillatorId oscillatorId_;
-    SourceId sourceId_;
-    ProcessingMode processingMode_ = ProcessingMode::FullStereo;
-    juce::Colour colour_{ juce::Colours::green };
-    float opacity_ = 1.0f;
-    bool visible_ = true;
-    juce::String name_;
+    std::unique_ptr<OscillatorPresenter> presenter_;
     bool expanded_ = false;
 
     // Header controls (always visible)

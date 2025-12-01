@@ -894,6 +894,7 @@ TEST_F(SourceTest, UpdateLastAudioTimeTransitionsToActive)
     EXPECT_EQ(source.getState(), SourceState::DISCOVERED);
 
     source.updateLastAudioTime();
+    source.updateActivityState(); // Process state transition
 
     EXPECT_EQ(source.getState(), SourceState::ACTIVE);
 }
@@ -906,6 +907,7 @@ TEST_F(SourceTest, UpdateLastAudioTimeFromInactive)
     EXPECT_EQ(source.getState(), SourceState::INACTIVE);
 
     source.updateLastAudioTime();
+    source.updateActivityState(); // Process state transition
 
     EXPECT_EQ(source.getState(), SourceState::ACTIVE);
 }
@@ -918,6 +920,7 @@ TEST_F(SourceTest, UpdateLastAudioTimeFromStale)
     EXPECT_EQ(source.getState(), SourceState::STALE);
 
     source.updateLastAudioTime();
+    source.updateActivityState(); // Process state transition
 
     EXPECT_EQ(source.getState(), SourceState::ACTIVE);
 }
@@ -931,6 +934,7 @@ TEST_F(SourceTest, UpdateLastAudioTimeDoesNotAffectOrphaned)
 
     // Orphaned sources don't auto-transition on audio update
     source.updateLastAudioTime();
+    source.updateActivityState(); // Process state transition attempt
 
     // State unchanged - ORPHANED is not in the list of states that auto-transition
     EXPECT_EQ(source.getState(), SourceState::ORPHANED);

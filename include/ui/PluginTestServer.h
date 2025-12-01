@@ -70,8 +70,12 @@ private:
     // Source management handlers
     void handleGetSources(const httplib::Request& req, httplib::Response& res);
     void handleAddSource(const httplib::Request& req, httplib::Response& res);
+    void handleRemoveSource(const httplib::Request& req, httplib::Response& res);
     void handleAssignSource(const httplib::Request& req, httplib::Response& res);
     void handleInjectSourceData(const httplib::Request& req, httplib::Response& res);
+
+    // State management
+    void handleStateReset(const httplib::Request& req, httplib::Response& res);
 
     // Oscillator property update handler
     void handleUpdateOscillator(const httplib::Request& req, httplib::Response& res);
@@ -82,7 +86,39 @@ private:
 
     // Helper to run on message thread
     template<typename Func>
-    auto runOnMessageThread(Func&& func) -> decltype(func());
+    auto runOnMessageThread(Func&& func) -> decltype(func())
+    {
+        if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+        {
+            return func();
+        }
+
+        using ReturnType = decltype(func());
+
+        if constexpr (std::is_void_v<ReturnType>)
+        {
+            juce::WaitableEvent done;
+            juce::MessageManager::callAsync([f = std::forward<Func>(func), &done]() mutable {
+                f();
+                done.signal();
+            });
+            done.wait();
+        }
+        else
+        {
+            ReturnType result{};
+            juce::WaitableEvent done;
+            juce::MessageManager::callAsync([f = std::forward<Func>(func), &result, &done]() mutable {
+                result = f();
+                done.signal();
+            });
+            done.wait();
+            return result;
+        }
+    }
+
+    // Helper to clear test-created sources
+    void clearTestSources();
 
     OscilPluginEditor& editor_;
     std::unique_ptr<httplib::Server> server_;

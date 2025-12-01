@@ -258,7 +258,7 @@ TEST_F(AddOscillatorDialogTest, DialogDimensionsReasonable)
     // DIALOG_WIDTH = 360, DIALOG_HEIGHT = 590 (increased for shader dropdown)
     // These should be visible in the dialog's paint method
     EXPECT_EQ(AddOscillatorDialog::DIALOG_WIDTH, 360);
-    EXPECT_EQ(AddOscillatorDialog::DIALOG_HEIGHT, 590);
+    EXPECT_EQ(AddOscillatorDialog::DIALOG_HEIGHT, 550);
 }
 
 // Test: Multiple sources with same name handled correctly

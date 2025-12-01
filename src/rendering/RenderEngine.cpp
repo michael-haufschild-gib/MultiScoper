@@ -522,6 +522,29 @@ void RenderEngine::clearAllWaveforms()
     waveformStates_.clear();
 }
 
+void RenderEngine::syncWaveforms(const std::unordered_set<int>& activeIds)
+{
+    if (!context_)
+        return;
+
+    // Find waveform states that are no longer active
+    std::vector<int> toRemove;
+    for (const auto& pair : waveformStates_)
+    {
+        if (activeIds.find(pair.first) == activeIds.end())
+        {
+            toRemove.push_back(pair.first);
+        }
+    }
+
+    // Unregister stale waveforms (releases GPU resources)
+    for (int id : toRemove)
+    {
+        unregisterWaveform(id);
+        DBG("RenderEngine: Synced out stale waveform " << id);
+    }
+}
+
 void RenderEngine::setQualityLevel(QualityLevel level)
 {
     qualityLevel_ = level;
@@ -859,26 +882,38 @@ void RenderEngine::renderWaveformParticles(const WaveformRenderData& data, Wavef
     particleSystem_->setGravity(config.gravity);
     particleSystem_->setDrag(config.drag);
 
+    // Create emitter configuration from visual config
+    ParticleEmitterConfig emitterConfig;
+    emitterConfig.mode = config.emissionMode;
+    emitterConfig.emissionRate = config.emissionRate;
+    emitterConfig.particleLifeMin = config.particleLife * 0.8f;
+    emitterConfig.particleLifeMax = config.particleLife * 1.2f;
+    emitterConfig.particleSizeMin = config.particleSize * 0.7f;
+    emitterConfig.particleSizeMax = config.particleSize * 1.3f;
+    emitterConfig.colorStart = config.particleColor;
+    emitterConfig.colorEnd = config.particleColor.withAlpha(0.0f);
+    emitterConfig.gravity = config.gravity;
+    emitterConfig.drag = config.drag;
+    emitterConfig.velocityMin = 10.0f * config.velocityScale;
+    emitterConfig.velocityMax = 50.0f * config.velocityScale;
+    emitterConfig.velocityAngleSpread = config.randomness * 360.0f;
+
     // Create emitter if this waveform needs particles but has none
     if (state.emitterIds.empty())
     {
-        ParticleEmitterConfig emitterConfig;
-        emitterConfig.mode = config.emissionMode;
-        emitterConfig.emissionRate = config.emissionRate;
-        emitterConfig.particleLifeMin = config.particleLife * 0.8f;
-        emitterConfig.particleLifeMax = config.particleLife * 1.2f;
-        emitterConfig.particleSizeMin = config.particleSize * 0.7f;
-        emitterConfig.particleSizeMax = config.particleSize * 1.3f;
-        emitterConfig.colorStart = config.particleColor;
-        emitterConfig.colorEnd = config.particleColor.withAlpha(0.0f);
-        emitterConfig.gravity = config.gravity;
-        emitterConfig.drag = config.drag;
-        emitterConfig.velocityMin = 10.0f * config.velocityScale;
-        emitterConfig.velocityMax = 50.0f * config.velocityScale;
-        emitterConfig.velocityAngleSpread = config.randomness * 360.0f;
-
         ParticleEmitterId emitterId = particleSystem_->createEmitter(emitterConfig);
         state.addParticleEmitter(emitterId);
+    }
+    else
+    {
+        // Update existing emitters with new configuration
+        for (auto emitterId : state.emitterIds)
+        {
+            if (auto* emitter = particleSystem_->getEmitter(emitterId))
+            {
+                emitter->setConfig(emitterConfig);
+            }
+        }
     }
 
     // Update emitters with waveform data
@@ -906,7 +941,43 @@ void RenderEngine::renderWaveformParticles(const WaveformRenderData& data, Wavef
 Framebuffer* RenderEngine::applyPostProcessing(Framebuffer* source, WaveformRenderState& state)
 {
     const auto& config = state.visualConfig;
-    return effectChain_.process(*context_, source, *fbPool_, deltaTime_, config, *this);
+    Framebuffer* current = source;
+
+    // Step 1: Apply trails effect BEFORE the generic effect chain
+    // Trails requires per-waveform history FBO from WaveformRenderState
+    if (config.trails.enabled && state.trailsEnabled &&
+        state.historyFBO && state.historyFBO->isValid())
+    {
+        auto* trailsEffect = dynamic_cast<TrailsEffect*>(getEffect("trails"));
+        if (trailsEffect && trailsEffect->isCompiled())
+        {
+            trailsEffect->setSettings(config.trails);
+
+            // Get a destination FBO from the pool
+            Framebuffer* trailsDest = fbPool_->getPingFBO();
+            if (trailsDest && trailsDest->isValid())
+            {
+                // Apply trails blending current frame with history
+                trailsEffect->applyWithHistory(
+                    *context_,
+                    current,               // Current frame
+                    state.historyFBO.get(), // Previous frame history
+                    trailsDest,            // Output
+                    *fbPool_,
+                    deltaTime_
+                );
+
+                // Copy the result back to historyFBO for the next frame
+                copyFramebuffer(trailsDest, state.historyFBO.get());
+
+                // Use trails output as input for the rest of the chain
+                current = trailsDest;
+            }
+        }
+    }
+
+    // Step 2: Apply the generic effect chain (stateless effects)
+    return effectChain_.process(*context_, current, *fbPool_, deltaTime_, config, *this);
 }
 
 void RenderEngine::compositeToScene(Framebuffer* source, const VisualConfiguration& config)
@@ -1030,6 +1101,25 @@ void RenderEngine::setupCamera3D(const Settings3D& settings)
     }
 }
 
+void RenderEngine::copyFramebuffer(Framebuffer* source, Framebuffer* destination)
+{
+    if (!source || !destination || !source->isValid() || !destination->isValid())
+        return;
+
+    // Use composite shader for simple copy (linear pass-through)
+    destination->bind();
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+
+    compositeShader_->use();
+    source->bindTexture(0);
+    context_->extensions.glUniform1i(compositeTextureLoc_, 0);
+
+    fbPool_->renderFullscreenQuad();
+
+    destination->unbind();
+}
+
 void RenderEngine::initializeEffects()
 {
     // Register all post-processing effects
@@ -1082,92 +1172,11 @@ void RenderEngine::initializeEffects()
         }
     });
 
-    // 2. Trails
-    // Note: Trails effect manages its own history check internally via isEnabled or we check it here?
-    // The previous logic checked `state.historyFBO && state.historyFBO->isValid()`.
-    // EffectChain doesn't have access to `state` in `isEnabled`.
-    // `TrailsEffect::apply` should handle the history logic if configured.
-    // However, `TrailsEffect` currently relies on `setSettings` but doesn't take `state`?
-    // Wait, `TrailsEffect::apply` logic previously used `state.historyFBO` which is passed where?
-    // Ah, I missed that `applyPostProcessing` logic for Trails was:
-    // `if (config.trails.enabled && state.historyFBO && state.historyFBO->isValid())`
-    // The `EffectChain` is generic and doesn't know about `state`.
-    // BUT `RenderEngine` passed `state` to `applyPostProcessing`.
-    // `EffectChain::process` doesn't take `state`?
-    // I defined `EffectChain::process` to take `VisualConfiguration` but NOT `WaveformRenderState`.
-    // This is a problem for Trails.
-    // FIX: `TrailsEffect` needs the history FBO.
-    // In the previous code, `TrailsEffect` didn't take `state` in `apply` either.
-    // Wait, let's look at `apply`: `trails->apply(*context_, current, dest, *fbPool_, deltaTime_);`
-    // Where did it get the history texture?
-    // `TrailsEffect` needs to maintain history? No, `WaveformRenderState` maintains history FBO.
-    // The previous code for Trails was:
-    // `trails->apply(*context_, current, dest, *fbPool_, deltaTime_);`
-    // It seems `TrailsEffect` in this codebase is stateless (ping-pong blend) OR it implicitly uses something?
-    // Actually, checking `TrailsEffect.cpp` (I don't have it open, but based on usage):
-    // `TrailsEffect` likely just blends previous frame. But previous frame is in `state.historyFBO`.
-    // If `TrailsEffect::apply` signature is generic `PostProcessEffect::apply`, it doesn't take `historyFBO`.
-    // So `Trails` implementation here might be using `getPingFBO` as history?
-    // Or maybe I missed how Trails works.
-    // Re-reading `applyPostProcessing` old code:
-    // `if (config.trails.enabled && state.historyFBO && state.historyFBO->isValid())`
-    // `trails->setSettings(config.trails);`
-    // `trails->apply(...)`
-    // It seems the check for `state.historyFBO` was guarding the effect, but `apply` didn't use it?
-    // If `TrailsEffect` implements simple motion blur by blending *current* with *destination* (which has previous frame)?
-    // But `dest` is cleared or overwritten.
-    // If `TrailsEffect` needs history, it must be passed.
-    // This suggests `TrailsEffect` as implemented might be broken or I misunderstood it.
-    // Let's look at `TrailsEffect.h` if possible.
-    // For now, I will skip Trails in the chain if I can't pass state, OR I assume Trails works without explicit state (e.g. global history?).
-    // But `WaveformRenderState` definitely has `historyFBO`.
-    // If `TrailsEffect` expects to blend with a persistent buffer, that buffer must be provided.
-    // The generic `PostProcessEffect::apply` doesn't support arbitrary extra buffers.
-    // This reveals a flaw in the generic `PostProcessEffect` interface for stateful effects.
-    //
-    // DECISION: For this refactor, I will handle Trails as a special case or accept that `EffectChain` might need to be extended to support state.
-    // Or, `TrailsEffect` uses `state.historyFBO` via some side channel? No.
-    // Let's look at `TrailsEffect.cpp` later.
-    // For now, I will implement the chain for stateless effects.
-    // If Trails is problematic, I'll leave it out or hack it?
-    // Actually, I can capture `state` in the lambda if I recreate the chain every frame? No, too expensive.
-    // The chain setup is once in `initialize`.
-    // The `configure` lambda takes `VisualConfiguration`.
-    //
-    // Solution:
-    // Modify `EffectChain::process` to accept `void* userData` or similar?
-    // Or just keep Trails manual?
-    // `EffectChain` is for the *sequence* of post-processing.
-    // Maybe `EffectChain::process` should take `WaveformRenderState& state`?
-    // But `EffectChain` is generic.
-    // Let's just add `WaveformRenderState` to `EffectChain::process` signature?
-    // No, that couples `EffectChain` to `WaveformRenderState`.
-    // `VisualConfiguration` is already coupled.
-    //
-    // Let's check `TrailsEffect.h` content from memory/previous reads?
-    // I read `PostProcessEffect.h` but not `TrailsEffect.h` fully.
-    //
-    // Let's assume for now Trails works like other effects and add it.
-    // If it needs state, it's broken in the new design.
-    //
-    // Wait, `RenderEngine::renderWaveformComplete` passes `state` to `applyPostProcessing`.
-    // I can pass `state` to `effectChain_.process`.
-    // I need to update `EffectChain::process` signature in `EffectChain.h` (I just wrote it).
-    // I should update it to take `const WaveformRenderState* state` (optional).
-    //
-    // Let's update `EffectChain.h` and `.cpp` to accept `void* userData` or specific state.
-    // Since `EffectChain` is specific to this engine (in `oscil` namespace), passing `WaveformRenderState` is fine.
-    
-    // 2. Trails
-    effectChain_.addStep({
-        "trails",
-        [](const VisualConfiguration& c) { return c.trails.enabled; },
-        [](PostProcessEffect* e, const VisualConfiguration& c) {
-            if (auto* t = dynamic_cast<TrailsEffect*>(e)) t->setSettings(c.trails);
-        }
-    });
+    // NOTE: Trails effect is handled specially in applyPostProcessing()
+    // because it requires per-waveform history FBO from WaveformRenderState.
+    // The generic EffectChain only supports stateless effects.
 
-    // 2.5 Tilt Shift
+    // 2. Tilt Shift
     effectChain_.addStep({
         "tilt_shift",
         [](const VisualConfiguration& c) { return c.tiltShift.enabled; },

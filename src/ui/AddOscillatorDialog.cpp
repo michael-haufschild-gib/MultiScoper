@@ -4,7 +4,7 @@
 */
 
 #include "ui/AddOscillatorDialog.h"
-#include "rendering/ShaderRegistry.h"
+#include "rendering/VisualConfiguration.h"
 
 namespace oscil
 {
@@ -59,7 +59,7 @@ void AddOscillatorDialog::setupComponents()
     addAndMakeVisible(*nameField_);
 
     // Color section
-    colorLabel_ = std::make_unique<juce::Label>("", "Color");
+    colorLabel_ = std::make_unique<juce::Label>("", "Color Picker");
     addAndMakeVisible(*colorLabel_);
 
     colorSwatches_ = std::make_unique<OscilColorSwatches>("addOscillatorDialog_colorPicker");
@@ -67,45 +67,13 @@ void AddOscillatorDialog::setupComponents()
     colorSwatches_->setColors(colors);
     addAndMakeVisible(*colorSwatches_);
 
-    // Custom color button (opens color chooser)
-    customColorButton_ = std::make_unique<OscilButton>("Custom...", "addOscillatorDialog_customColorBtn");
-    customColorButton_->setVariant(ButtonVariant::Secondary);
-    customColorButton_->onClick = [this]() {
-        // Use JUCE's ColourSelector via a popup
-        auto* selector = new juce::ColourSelector(
-            juce::ColourSelector::showColourAtTop |
-            juce::ColourSelector::showSliders |
-            juce::ColourSelector::showColourspace);
-        selector->setName("Color Picker");
-        selector->setCurrentColour(customColor_.isTransparent() ? juce::Colours::white : customColor_);
-        selector->setSize(300, 400);
-        selector->addChangeListener(this);
-        colourSelector_ = selector;
+    // Visual Preset section
+    visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
+    addAndMakeVisible(*visualPresetLabel_);
 
-        juce::CallOutBox::launchAsynchronously(
-            std::unique_ptr<juce::Component>(selector),
-            customColorButton_->getScreenBounds(),
-            nullptr);
-    };
-    addAndMakeVisible(*customColorButton_);
-
-    // Shader section
-    shaderLabel_ = std::make_unique<juce::Label>("", "Shader");
-    addAndMakeVisible(*shaderLabel_);
-
-    shaderDropdown_ = std::make_unique<OscilDropdown>("", "addOscillatorDialog_shaderDropdown");
-    // Populate from shader registry
-    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
-    for (const auto& shaderInfo : availableShaders)
-    {
-        shaderDropdown_->addItem(shaderInfo.displayName, shaderInfo.id);
-    }
-    // Default to first shader (basic)
-    if (!availableShaders.empty())
-    {
-        shaderDropdown_->setSelectedIndex(0, false);
-    }
-    addAndMakeVisible(*shaderDropdown_);
+    visualPresetDropdown_ = std::make_unique<OscilDropdown>("", "addOscillatorDialog_visualPresetDropdown");
+    populateVisualPresetDropdown();
+    addAndMakeVisible(*visualPresetDropdown_);
 
     // Error label (hidden by default)
     errorLabel_ = std::make_unique<juce::Label>("", "");
@@ -199,15 +167,13 @@ void AddOscillatorDialog::resized()
     // Color section
     colorLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
     contentBounds.removeFromTop(4);
-    colorSwatches_->setBounds(contentBounds.removeFromTop(COLOR_SECTION_HEIGHT));
-    contentBounds.removeFromTop(4);
-    customColorButton_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
+    colorSwatches_->setBounds(contentBounds.removeFromTop(COLOR_PICKER_HEIGHT));
     contentBounds.removeFromTop(SECTION_SPACING);
 
-    // Shader section
-    shaderLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
+    // Visual Preset section
+    visualPresetLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
     contentBounds.removeFromTop(4);
-    shaderDropdown_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
+    visualPresetDropdown_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
     contentBounds.removeFromTop(8);
 
     // Error label
@@ -244,23 +210,13 @@ void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
     styleLabel(paneLabel_.get());
     styleLabel(nameLabel_.get());
     styleLabel(colorLabel_.get());
-    styleLabel(shaderLabel_.get());
+    styleLabel(visualPresetLabel_.get());
 
     // Error label uses error color
     errorLabel_->setColour(juce::Label::textColourId, newTheme.statusError);
     errorLabel_->setFont(juce::FontOptions(12.0f));
 
     repaint();
-}
-
-void AddOscillatorDialog::changeListenerCallback(juce::ChangeBroadcaster* source)
-{
-    if (auto* selector = dynamic_cast<juce::ColourSelector*>(source))
-    {
-        customColor_ = selector->getCurrentColour();
-        colorSwatches_->setSelectedIndex(-1, false);  // Deselect swatches
-        repaint();
-    }
 }
 
 void AddOscillatorDialog::showDialog(juce::Component* /*parent*/,
@@ -275,6 +231,7 @@ void AddOscillatorDialog::showDialog(juce::Component* /*parent*/,
     // Populate dropdowns
     populateSourceDropdown();
     populatePaneDropdown();
+    // Visual presets are static, populated in setup
 
     // Clear previous state
     nameField_->setText("", false);
@@ -322,6 +279,21 @@ void AddOscillatorDialog::populatePaneDropdown()
 
     // Default to "New pane" selected
     paneDropdown_->setSelectedIndex(NEW_PANE_OPTION_INDEX, false);
+}
+
+void AddOscillatorDialog::populateVisualPresetDropdown()
+{
+    visualPresetDropdown_->clearItems();
+    auto availablePresets = VisualConfiguration::getAvailablePresets();
+    for (const auto& preset : availablePresets)
+    {
+        visualPresetDropdown_->addItem(preset.second, preset.first);
+    }
+    // Default to first preset if available
+    if (visualPresetDropdown_->getNumItems() > 0)
+    {
+        visualPresetDropdown_->setSelectedIndex(0, false);
+    }
 }
 
 void AddOscillatorDialog::selectRandomColor()
@@ -395,27 +367,28 @@ void AddOscillatorDialog::handleOkClick()
         result.name = source.name.isEmpty() ? "Oscillator" : source.name;
     }
 
-    // Get selected color (prefer swatch, fall back to custom color)
+    // Get selected color
     if (colorSwatches_->getSelectedIndex() >= 0)
     {
         result.color = colorSwatches_->getSelectedColor();
     }
     else
     {
-        result.color = customColor_;
+        // Should not happen if validation passes, but safe fallback
+        result.color = defaultColors_[0];
     }
 
-    // Get selected shader
-    int shaderIndex = shaderDropdown_->getSelectedIndex();
-    auto availableShaders = ShaderRegistry::getInstance().getAvailableShaders();
-    if (shaderIndex >= 0 && static_cast<size_t>(shaderIndex) < availableShaders.size())
+    // Get selected visual preset
+    int presetIndex = visualPresetDropdown_->getSelectedIndex();
+    auto availablePresets = VisualConfiguration::getAvailablePresets();
+    if (presetIndex >= 0 && static_cast<size_t>(presetIndex) < availablePresets.size())
     {
-        result.shaderId = availableShaders[static_cast<size_t>(shaderIndex)].id;
+        result.visualPresetId = availablePresets[static_cast<size_t>(presetIndex)].first;
     }
     else
     {
         // Default to basic if nothing selected
-        result.shaderId = ShaderRegistry::getInstance().getDefaultShaderId();
+        result.visualPresetId = "default";
     }
 
     // Call callback and hide
@@ -466,8 +439,8 @@ bool AddOscillatorDialog::validateInput()
         return false;
     }
 
-    // Check color selection (either swatch selected OR custom color chosen)
-    if (colorSwatches_->getSelectedIndex() < 0 && customColor_.isTransparent())
+    // Check color selection
+    if (colorSwatches_->getSelectedIndex() < 0)
     {
         showError("Please select a color.");
         return false;

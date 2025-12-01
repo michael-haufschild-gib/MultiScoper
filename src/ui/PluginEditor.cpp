@@ -1165,7 +1165,7 @@ void OscilPluginEditor::onAddOscillatorResult(const AddOscillatorDialog::Result&
     osc.setPaneId(targetPaneId);
     osc.setProcessingMode(ProcessingMode::FullStereo);
     osc.setColour(result.color);
-    osc.setShaderId(result.shaderId);
+    osc.setVisualPresetId(result.visualPresetId);
 
     // Set name (use result name, or generate default)
     if (result.name.isNotEmpty())

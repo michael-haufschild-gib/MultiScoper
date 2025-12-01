@@ -120,6 +120,12 @@ public:
     /**
      * Get the render engine (for configuration access).
      * @return Pointer to render engine, or nullptr if not initialized
+     * 
+     * CRITICAL THREAD SAFETY WARNING:
+     * This returns a pointer to the engine which is primarily owned/used by the OpenGL thread.
+     * Accessing this from the message thread while rendering is active is unsafe unless
+     * strictly synchronized.
+     * Ideally, use message-thread friendly configuration methods instead of accessing this directly.
      */
     RenderEngine* getRenderEngine() { return renderEngine_.get(); }
 

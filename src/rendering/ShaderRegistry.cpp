@@ -14,6 +14,7 @@
 #include "rendering/shaders3d/VectorFlowShader.h"
 #include "rendering/shaders3d/StringTheoryShader.h"
 #include "rendering/shaders3d/ElectricFlowerShader.h"
+#include "rendering/shaders3d/ElectricFiligreeShader.h"
 #include "rendering/materials/GlassRefractionShader.h"
 #include "rendering/materials/LiquidChromeShader.h"
 #include "rendering/materials/CrystallineShader.h"
@@ -52,6 +53,7 @@ void ShaderRegistry::registerBuiltInShaders()
     registerShaderType<VectorFlowShader>();
     registerShaderType<StringTheoryShader>();
     registerShaderType<ElectricFlowerShader>();
+    registerShaderType<ElectricFiligreeShader>();
 
     // Register Material shaders
     registerShaderType<GlassRefractionShader>();

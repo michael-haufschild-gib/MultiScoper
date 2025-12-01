@@ -218,14 +218,6 @@ private:
     GLuint quadVBO_ = 0;      // Quad vertices (shared)
     GLuint instanceVBO_ = 0;  // Per-particle instance data
 
-    // Attribute locations
-    GLint posAttrib_ = -1;
-    GLint instancePosAttrib_ = -1;
-    GLint instanceColorAttrib_ = -1;
-    GLint instanceSizeAttrib_ = -1;
-    GLint instanceRotationAttrib_ = -1;
-    GLint instanceAgeAttrib_ = -1;
-
     // Instance data buffer for CPU staging
     struct ParticleInstanceData
     {

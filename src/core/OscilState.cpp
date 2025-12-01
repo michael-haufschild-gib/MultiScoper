@@ -163,9 +163,8 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
         auto child = oscillatorsNode.getChild(i);
         if (child.getProperty(StateIds::Id).toString() == oscillator.getId().id)
         {
-            oscillatorsNode.removeChild(i, nullptr);
-            // Insert at the same position to preserve order
-            oscillatorsNode.addChild(oscillator.toValueTree(), i, nullptr);
+            // Update in place to preserve listeners and avoid "child removed" events
+            child.copyPropertiesFrom(oscillator.toValueTree(), nullptr);
             return;
         }
     }

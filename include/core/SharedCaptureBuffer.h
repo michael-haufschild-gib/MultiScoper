@@ -155,23 +155,26 @@ public:
     explicit SharedCaptureBuffer(size_t bufferSamples = DEFAULT_BUFFER_SAMPLES);
 
     /**
-     * Write audio samples from the audio thread.
-     * This is lock-free and safe to call from the real-time audio thread.
+     * Write audio samples to the buffer.
      *
      * @param buffer Audio buffer containing samples
      * @param metadata Frame metadata (sample rate, timestamp, etc.)
+     * @param tryLock If true, attempts to lock and returns immediately if failed (for real-time thread).
+     *                If false, blocks until lock is acquired (for non-real-time injection).
      */
-    void write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata);
+    void write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata, bool tryLock = false);
 
     /**
-     * Write raw sample data from the audio thread.
+     * Write raw sample data to the buffer.
+     *
      * @param samples Pointer to interleaved sample data
      * @param numSamples Number of samples per channel
      * @param numChannels Number of channels
      * @param metadata Frame metadata
+     * @param tryLock If true, attempts to lock and returns immediately if failed.
      */
     void write(const float* const* samples, int numSamples, int numChannels,
-               const CaptureFrameMetadata& metadata);
+               const CaptureFrameMetadata& metadata, bool tryLock = false);
 
     /**
      * Read the most recent samples into a buffer.
@@ -236,6 +239,9 @@ private:
     std::vector<std::vector<float>> buffers_; // One vector per channel
     std::atomic<size_t> writePos_{ 0 };
     std::atomic<size_t> samplesWritten_{ 0 };
+    
+    // SpinLock for thread-safe writing from multiple sources (e.g. audio thread + test injector)
+    juce::SpinLock writeLock_;
 
     // Lock-free metadata using SeqLock pattern (no SpinLock needed)
     mutable AtomicMetadata metadata_;

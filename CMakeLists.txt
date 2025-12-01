@@ -280,6 +280,8 @@ if(OSCIL_BUILD_TESTS)
         tests/test_effect_chain.cpp
         tests/test_framebuffer_pool.cpp
         tests/test_waveform_presenter.cpp
+        tests/test_oscillator_presenter.cpp
+        tests/test_timing_presenter.cpp
         tests/test_pane_layout.cpp
         tests/test_config_structs.cpp
         tests/test_particle_system.cpp
@@ -321,6 +323,8 @@ if(OSCIL_BUILD_TESTS)
         src/ui/PluginEditor.cpp
         src/ui/WaveformComponent.cpp
         src/ui/presenters/WaveformPresenter.cpp
+        src/ui/presenters/OscillatorPresenter.cpp
+        src/ui/presenters/TimingPresenter.cpp
         src/ui/OscillatorPanel.cpp
         src/ui/PaneComponent.cpp
         src/ui/ThemeManager.cpp

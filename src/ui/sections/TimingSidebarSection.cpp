@@ -9,9 +9,11 @@ namespace oscil
 {
 
 TimingSidebarSection::TimingSidebarSection()
+    : presenter_(std::make_unique<TimingPresenter>())
 {
     OSCIL_REGISTER_TEST_ID("sidebar_timing");
     setupComponents();
+    setupPresenterCallbacks();
     ThemeManager::getInstance().addListener(this);
     updateModeVisibility();
 }
@@ -21,18 +23,48 @@ TimingSidebarSection::~TimingSidebarSection()
     ThemeManager::getInstance().removeListener(this);
 }
 
+void TimingSidebarSection::setupPresenterCallbacks()
+{
+    presenter_->setOnTimingModeChanged([this](TimingMode mode) {
+        listeners_.call([mode](Listener& l) { l.timingModeChanged(mode); });
+    });
+
+    presenter_->setOnNoteIntervalChanged([this](NoteInterval interval) {
+        listeners_.call([interval](Listener& l) { l.noteIntervalChanged(interval); });
+    });
+
+    presenter_->setOnTimeIntervalChanged([this](float ms) {
+        listeners_.call([ms](Listener& l) { l.timeIntervalChanged(ms); });
+    });
+
+    presenter_->setOnHostSyncChanged([this](bool enabled) {
+        listeners_.call([enabled](Listener& l) { l.hostSyncChanged(enabled); });
+    });
+
+    presenter_->setOnWaveformModeChanged([this](WaveformMode mode) {
+        listeners_.call([mode](Listener& l) { l.waveformModeChanged(mode); });
+    });
+
+    presenter_->setOnBPMChanged([this](float bpm) {
+        listeners_.call([bpm](Listener& l) { l.bpmChanged(bpm); });
+    });
+
+    presenter_->setOnStateChanged([this]() {
+        updateUi();
+        updateModeVisibility();
+    });
+}
+
 void TimingSidebarSection::setupComponents()
 {
     // TIME/MELODIC toggle
     modeToggle_ = std::make_unique<SegmentedButtonBar>();
     modeToggle_->addButton("TIME", static_cast<int>(TimingMode::TIME), "sidebar_timing_modeToggle_time");
     modeToggle_->addButton("MELODIC", static_cast<int>(TimingMode::MELODIC), "sidebar_timing_modeToggle_melodic");
-    modeToggle_->setSelectedId(static_cast<int>(currentMode_));
+    modeToggle_->setSelectedId(static_cast<int>(presenter_->getTimingMode()));
     modeToggle_->onSelectionChanged = [this](int id)
     {
-        currentMode_ = static_cast<TimingMode>(id);
-        updateModeVisibility();
-        notifyTimingModeChanged();
+        presenter_->setTimingMode(static_cast<TimingMode>(id));
     };
     addAndMakeVisible(*modeToggle_);
     OSCIL_REGISTER_CHILD_TEST_ID(*modeToggle_, "sidebar_timing_modeToggle");
@@ -49,8 +81,7 @@ void TimingSidebarSection::setupComponents()
     {
         if (index >= 0 && index <= 2)
         {
-            waveformMode_ = static_cast<WaveformMode>(index);
-            notifyWaveformModeChanged();
+            presenter_->setWaveformMode(static_cast<WaveformMode>(index));
         }
     };
     addAndMakeVisible(*waveformModeSelector_);
@@ -61,11 +92,10 @@ void TimingSidebarSection::setupComponents()
     timeIntervalField_->setStep(0.1);
     timeIntervalField_->setDecimalPlaces(1);
     timeIntervalField_->setSuffix("ms");
-    timeIntervalField_->setNumericValue(currentTimeIntervalMs_, false);
+    timeIntervalField_->setNumericValue(presenter_->getTimeIntervalMs(), false);
     timeIntervalField_->onValueChanged = [this](double value)
     {
-        currentTimeIntervalMs_ = static_cast<float>(value);
-        notifyTimeIntervalChanged();
+        presenter_->setTimeIntervalMs(static_cast<float>(value));
     };
     addAndMakeVisible(*timeIntervalField_);
 
@@ -76,20 +106,17 @@ void TimingSidebarSection::setupComponents()
     {
         if (index >= 0 && index <= 16)
         {
-            currentNoteInterval_ = static_cast<NoteInterval>(index);
-            notifyNoteIntervalChanged();
+            presenter_->setNoteInterval(static_cast<NoteInterval>(index));
         }
     };
     addAndMakeVisible(*noteIntervalSelector_);
 
     // Sync toggle (MELODIC mode only)
     syncToggle_ = std::make_unique<OscilToggle>("Sync", "sidebar_timing_syncToggle");
-    syncToggle_->setValue(hostSyncEnabled_, false);
+    syncToggle_->setValue(presenter_->isHostSyncEnabled(), false);
     syncToggle_->onValueChanged = [this](bool value)
     {
-        hostSyncEnabled_ = value;
-        updateModeVisibility();  // Update visibility of BPM controls
-        notifyHostSyncChanged();
+        presenter_->setHostSyncEnabled(value);
     };
     addAndMakeVisible(*syncToggle_);
 
@@ -104,17 +131,16 @@ void TimingSidebarSection::setupComponents()
     bpmField_->setRange(20.0, 300.0);
     bpmField_->setStep(0.1);
     bpmField_->setDecimalPlaces(1);
-    bpmField_->setNumericValue(internalBPM_, false);
+    bpmField_->setNumericValue(presenter_->getInternalBPM(), false);
     bpmField_->onValueChanged = [this](double value)
     {
-        internalBPM_ = static_cast<float>(value);
-        notifyBpmChanged();
+        presenter_->setInternalBPM(static_cast<float>(value));
     };
     addAndMakeVisible(*bpmField_);
 
     // BPM value label (Host Sync mode - read-only)
     bpmValueLabel_ = std::make_unique<juce::Label>();
-    bpmValueLabel_->setText(juce::String(hostBPM_, 1), juce::dontSendNotification);
+    bpmValueLabel_->setText(juce::String(presenter_->getHostBPM(), 1), juce::dontSendNotification);
     bpmValueLabel_->setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(*bpmValueLabel_);
     OSCIL_REGISTER_CHILD_TEST_ID(*bpmValueLabel_, "sidebar_timing_bpmDisplay");
@@ -134,7 +160,7 @@ void TimingSidebarSection::populateWaveformModeSelector()
     waveformModeSelector_->addItem("Free Running");
     waveformModeSelector_->addItem("Restart on Play");
     waveformModeSelector_->addItem("Restart on Note");
-    waveformModeSelector_->setSelectedIndex(static_cast<int>(waveformMode_), false);
+    waveformModeSelector_->setSelectedIndex(static_cast<int>(presenter_->getWaveformMode()), false);
 }
 
 void TimingSidebarSection::populateNoteIntervalSelector()
@@ -161,7 +187,7 @@ void TimingSidebarSection::populateNoteIntervalSelector()
     noteIntervalSelector_->addItem("1/2 T");      // 16 = TRIPLET_HALF
 
     // Set current selection
-    noteIntervalSelector_->setSelectedIndex(static_cast<int>(currentNoteInterval_), false);
+    noteIntervalSelector_->setSelectedIndex(static_cast<int>(presenter_->getNoteInterval()), false);
 }
 
 void TimingSidebarSection::paint(juce::Graphics& g)
@@ -178,7 +204,7 @@ void TimingSidebarSection::paint(juce::Graphics& g)
     g.drawHorizontalLine(0, 0.0f, static_cast<float>(getWidth()));
 
     // Draw styled SYNCED pill badge if synced (MELODIC mode + Host Sync)
-    if (currentMode_ == TimingMode::MELODIC && hostSyncEnabled_ && isSynced_)
+    if (presenter_->shouldShowSyncedBadge())
     {
         int y = getPreferredHeight() - SectionLayout::SECTION_PADDING - SectionLayout::LABEL_HEIGHT;
         auto badgeBounds = juce::Rectangle<float>(
@@ -223,7 +249,7 @@ void TimingSidebarSection::resized()
     y += ROW_HEIGHT + SPACING_LARGE;
 
     // TIME mode controls
-    if (currentMode_ == TimingMode::TIME)
+    if (presenter_->isTimeMode())
     {
         // Input field spans full width
         int fieldHeight = 32;
@@ -243,7 +269,7 @@ void TimingSidebarSection::resized()
 
         bpmLabel_->setBounds(bounds.getX(), y, bpmLabelWidth, ROW_HEIGHT);
 
-        if (hostSyncEnabled_)
+        if (presenter_->shouldShowBPMValue())
         {
             // Host Sync mode: Show read-only BPM value
             bpmValueLabel_->setBounds(bounds.getX() + bpmLabelWidth + SPACING_MEDIUM, y, bpmFieldWidth, ROW_HEIGHT);
@@ -276,29 +302,23 @@ void TimingSidebarSection::themeChanged(const ColorTheme& newTheme)
 
     // Sync status
     syncStatusLabel_->setColour(juce::Label::textColourId,
-                                 isSynced_ ? newTheme.statusActive : newTheme.textSecondary);
+                                 presenter_->isSynced() ? newTheme.statusActive : newTheme.textSecondary);
 
     repaint();
 }
 
 void TimingSidebarSection::updateModeVisibility()
 {
-    bool isTimeMode = (currentMode_ == TimingMode::TIME);
-
     // TIME mode controls
-    timeIntervalField_->setVisible(isTimeMode);
+    timeIntervalField_->setVisible(presenter_->isTimeMode());
 
     // MELODIC mode controls
-    noteIntervalSelector_->setVisible(!isTimeMode);
-    syncToggle_->setVisible(!isTimeMode);
+    noteIntervalSelector_->setVisible(presenter_->isMelodicMode());
+    syncToggle_->setVisible(presenter_->shouldShowSyncToggle());
 
-    // BPM controls visibility depends on sync mode
-    bool showFreeRunningBPM = !isTimeMode && !hostSyncEnabled_;
-    bool showHostSyncBPM = !isTimeMode && hostSyncEnabled_;
-
-    bpmLabel_->setVisible(!isTimeMode);
-    bpmField_->setVisible(showFreeRunningBPM);
-    bpmValueLabel_->setVisible(showHostSyncBPM);
+    bpmLabel_->setVisible(presenter_->isMelodicMode());
+    bpmField_->setVisible(presenter_->shouldShowBPMField());
+    bpmValueLabel_->setVisible(presenter_->shouldShowBPMValue());
 
     resized();
     repaint();
@@ -307,65 +327,98 @@ void TimingSidebarSection::updateModeVisibility()
     notifyHeightChanged();
 }
 
+void TimingSidebarSection::updateUi()
+{
+    modeToggle_->setSelectedId(static_cast<int>(presenter_->getTimingMode()));
+    waveformModeSelector_->setSelectedIndex(static_cast<int>(presenter_->getWaveformMode()), false);
+    
+    timeIntervalField_->setNumericValue(presenter_->getTimeIntervalMs(), false);
+    
+    noteIntervalSelector_->setSelectedIndex(static_cast<int>(presenter_->getNoteInterval()), false);
+    
+    syncToggle_->setValue(presenter_->isHostSyncEnabled(), false);
+    
+    bpmField_->setNumericValue(presenter_->getInternalBPM(), false);
+    
+    bpmValueLabel_->setText(juce::String(presenter_->getHostBPM(), 1), juce::dontSendNotification);
+    
+    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    syncStatusLabel_->setColour(juce::Label::textColourId,
+                                 presenter_->isSynced() ? theme.statusActive : theme.textSecondary);
+    syncStatusLabel_->setText(presenter_->isSynced() ? "Synced" : "Not synced", juce::dontSendNotification);
+    
+    // Repaint to show/hide SYNCED pill badge which relies on paint() checking isSynced()
+    repaint();
+}
+
 void TimingSidebarSection::setTimingMode(TimingMode mode)
 {
-    if (currentMode_ != mode)
-    {
-        currentMode_ = mode;
-        modeToggle_->setSelectedId(static_cast<int>(mode));
-        updateModeVisibility();
-    }
+    presenter_->setTimingMode(mode);
 }
 
 void TimingSidebarSection::setTimeIntervalMs(float ms)
 {
-    currentTimeIntervalMs_ = ms;
-    timeIntervalField_->setNumericValue(static_cast<double>(ms), false);
+    presenter_->setTimeIntervalMs(ms);
 }
 
 void TimingSidebarSection::setNoteInterval(NoteInterval interval)
 {
-    currentNoteInterval_ = interval;
-    int index = static_cast<int>(interval);
-    noteIntervalSelector_->setSelectedIndex(index, false);
+    presenter_->setNoteInterval(interval);
 }
 
 void TimingSidebarSection::setHostSyncEnabled(bool enabled)
 {
-    hostSyncEnabled_ = enabled;
-    syncToggle_->setValue(enabled, false);
-    updateModeVisibility();
+    presenter_->setHostSyncEnabled(enabled);
 }
 
 void TimingSidebarSection::setWaveformMode(WaveformMode mode)
 {
-    waveformMode_ = mode;
-    waveformModeSelector_->setSelectedIndex(static_cast<int>(mode), false);
+    presenter_->setWaveformMode(mode);
 }
 
 void TimingSidebarSection::setHostBPM(float bpm)
 {
-    hostBPM_ = bpm;
-    bpmValueLabel_->setText(juce::String(bpm, 1), juce::dontSendNotification);
+    presenter_->setHostBPM(bpm);
 }
 
 void TimingSidebarSection::setInternalBPM(float bpm)
 {
-    internalBPM_ = bpm;
-    bpmField_->setNumericValue(bpm, false);
+    presenter_->setInternalBPM(bpm);
 }
 
 void TimingSidebarSection::setSyncStatus(bool synced)
 {
-    if (isSynced_ != synced)
-    {
-        isSynced_ = synced;
-        const auto& theme = ThemeManager::getInstance().getCurrentTheme();
-        syncStatusLabel_->setColour(juce::Label::textColourId,
-                                     synced ? theme.statusActive : theme.textSecondary);
-        syncStatusLabel_->setText(synced ? "Synced" : "Not synced", juce::dontSendNotification);
-        repaint();  // Repaint to show/hide SYNCED pill badge
-    }
+    presenter_->setSyncStatus(synced);
+}
+
+TimingMode TimingSidebarSection::getTimingMode() const
+{
+    return presenter_->getTimingMode();
+}
+
+float TimingSidebarSection::getTimeIntervalMs() const
+{
+    return presenter_->getTimeIntervalMs();
+}
+
+NoteInterval TimingSidebarSection::getNoteInterval() const
+{
+    return presenter_->getNoteInterval();
+}
+
+bool TimingSidebarSection::isHostSyncEnabled() const
+{
+    return presenter_->isHostSyncEnabled();
+}
+
+WaveformMode TimingSidebarSection::getWaveformMode() const
+{
+    return presenter_->getWaveformMode();
+}
+
+float TimingSidebarSection::getInternalBPM() const
+{
+    return presenter_->getInternalBPM();
 }
 
 void TimingSidebarSection::addListener(Listener* listener)
@@ -386,7 +439,7 @@ int TimingSidebarSection::getPreferredHeight() const
     height += ROW_HEIGHT + SPACING_LARGE;                // Mode toggle (TIME/MELODIC)
     height += ROW_HEIGHT + SPACING_LARGE;                // Waveform mode dropdown
 
-    if (currentMode_ == TimingMode::TIME)
+    if (presenter_->isTimeMode())
     {
         height += 32 + SPACING_LARGE;                    // Time interval input field (full width)
     }
@@ -395,43 +448,13 @@ int TimingSidebarSection::getPreferredHeight() const
         height += ROW_HEIGHT + SPACING_LARGE;            // Note interval dropdown (full width)
         height += ROW_HEIGHT + SPACING_LARGE;            // BPM label + field + sync toggle row
 
-        if (hostSyncEnabled_ && isSynced_)
+        if (presenter_->shouldShowSyncedBadge())
         {
             height += LABEL_HEIGHT;                      // Sync status badge
         }
     }
 
     return height;
-}
-
-void TimingSidebarSection::notifyTimingModeChanged()
-{
-    listeners_.call([this](Listener& l) { l.timingModeChanged(currentMode_); });
-}
-
-void TimingSidebarSection::notifyNoteIntervalChanged()
-{
-    listeners_.call([this](Listener& l) { l.noteIntervalChanged(currentNoteInterval_); });
-}
-
-void TimingSidebarSection::notifyTimeIntervalChanged()
-{
-    listeners_.call([this](Listener& l) { l.timeIntervalChanged(currentTimeIntervalMs_); });
-}
-
-void TimingSidebarSection::notifyHostSyncChanged()
-{
-    listeners_.call([this](Listener& l) { l.hostSyncChanged(hostSyncEnabled_); });
-}
-
-void TimingSidebarSection::notifyWaveformModeChanged()
-{
-    listeners_.call([this](Listener& l) { l.waveformModeChanged(waveformMode_); });
-}
-
-void TimingSidebarSection::notifyBpmChanged()
-{
-    listeners_.call([this](Listener& l) { l.bpmChanged(internalBPM_); });
 }
 
 void TimingSidebarSection::notifyHeightChanged()

@@ -50,6 +50,11 @@ void PluginTestServer::stop()
     if (serverThread_ && serverThread_->joinable())
         serverThread_->join();
 
+    // Clean up test sources to prevent leaks
+    runOnMessageThread([this]() {
+        clearTestSources();
+    });
+
     serverThread_.reset();
     server_.reset();
     running_.store(false);
@@ -140,6 +145,10 @@ void PluginTestServer::setupEndpoints()
         handleGetWaveformState(req, res);
     });
 
+    server_->Post("/state/reset", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateReset(req, res);
+    });
+
     // Source management endpoints
     server_->Get("/sources", [this](const httplib::Request& req, httplib::Response& res) {
         handleGetSources(req, res);
@@ -147,6 +156,10 @@ void PluginTestServer::setupEndpoints()
 
     server_->Post("/source/add", [this](const httplib::Request& req, httplib::Response& res) {
         handleAddSource(req, res);
+    });
+
+    server_->Post("/source/remove", [this](const httplib::Request& req, httplib::Response& res) {
+        handleRemoveSource(req, res);
     });
 
     server_->Post("/oscillator/assign-source", [this](const httplib::Request& req, httplib::Response& res) {
@@ -167,37 +180,12 @@ void PluginTestServer::setupEndpoints()
     });
 }
 
-template<typename Func>
-auto PluginTestServer::runOnMessageThread(Func&& func) -> decltype(func())
-{
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        return func();
-    }
+    // Helper to run on message thread
+    // runOnMessageThread is defined in the header file as an inline template
 
-    using ReturnType = decltype(func());
-
-    if constexpr (std::is_void_v<ReturnType>)
-    {
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([&func, &done]() {
-            func();
-            done.signal();
-        });
-        done.wait();
-    }
-    else
-    {
-        ReturnType result{};
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([&func, &result, &done]() {
-            result = func();
-            done.signal();
-        });
-        done.wait();
-        return result;
-    }
-}
+    // Oscillator reorder handlers
+    void handleReorderOscillator(const httplib::Request& req, httplib::Response& res);
+    void handleTestOscillatorReorder(const httplib::Request& req, httplib::Response& res);
 
 void PluginTestServer::handleHealth(const httplib::Request& /*req*/, httplib::Response& res)
 {
@@ -1120,7 +1108,8 @@ void PluginTestServer::handleInjectTestData(const httplib::Request& req, httplib
             metadata.bpm = 120.0f;
             metadata.timestamp = 0;
 
-            captureBuffer->write(testBuffer, metadata);
+            // Use blocking write (tryLock=false) for reliable test injection
+            captureBuffer->write(testBuffer, metadata, false);
 
             // Force UI update
             editor_.repaint();
@@ -1780,6 +1769,52 @@ void PluginTestServer::handleAddSource(const httplib::Request& req, httplib::Res
     }
 }
 
+void PluginTestServer::handleRemoveSource(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto body = nlohmann::json::parse(req.body);
+        std::string sourceIdStr = body.value("sourceId", "");
+
+        if (sourceIdStr.empty())
+        {
+            nlohmann::json error;
+            error["error"] = "sourceId required";
+            res.status = 400;
+            res.set_content(error.dump(), "application/json");
+            return;
+        }
+
+        auto result = runOnMessageThread([this, sourceIdStr]() -> nlohmann::json {
+            nlohmann::json response;
+            auto& registry = InstanceRegistry::getInstance();
+            SourceId sourceId;
+            sourceId.id = juce::String(sourceIdStr);
+
+            // Unregister from registry
+            registry.unregisterInstance(sourceId);
+
+            // Remove from local buffer cache (fixing leak)
+            testSourceBuffers_.erase(sourceIdStr);
+
+            response["status"] = "ok";
+            response["sourceId"] = sourceIdStr;
+            response["sourceCount"] = static_cast<int>(registry.getSourceCount());
+
+            return response;
+        });
+
+        res.set_content(result.dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        nlohmann::json error;
+        error["error"] = e.what();
+        res.status = 400;
+        res.set_content(error.dump(), "application/json");
+    }
+}
+
 void PluginTestServer::handleAssignSource(const httplib::Request& req, httplib::Response& res)
 {
     try
@@ -1962,7 +1997,8 @@ void PluginTestServer::handleInjectSourceData(const httplib::Request& req, httpl
             metadata.bpm = 120.0f;
             metadata.timestamp = 0;
 
-            captureBuffer->write(testBuffer, metadata);
+            // Use blocking write (tryLock=false) for reliable test injection
+            captureBuffer->write(testBuffer, metadata, false);
 
             // Force UI update
             editor_.repaint();

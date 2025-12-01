@@ -10,6 +10,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <vector>
 #include <random>
+#include <optional>
 
 namespace oscil
 {
@@ -135,7 +136,7 @@ private:
     /**
      * Spawn a single particle at given position.
      */
-    void spawnParticle(ParticlePool& pool, float x, float y);
+    void spawnParticle(ParticlePool& pool, float x, float y, std::optional<float> baseAngle = std::nullopt);
 
     /**
      * Get waveform position at given index.

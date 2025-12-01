@@ -4602,3 +4602,62 @@ shaders are in: resources/unity/ScionPostProcess/Resources/Shaders/
 1. do a full review of our post processing effects.
 2. do a full review of the post processing effects in the unity asset pack.
 3. adapt and enhance our post processing effects based on what you have learned from the unity asset pack.
+
+
+we have several visual presets that are imitating an 80s neon glow effect:
+1. Neon
+2. Cyberpunk Edge
+3. Synthwave Grid
+
+the issue: the light curve for the outer glow is too linear and doesn't follow a natural curve of how light glow works. the light glow should quickly fall off from the light source and then very softly fade out in a wide radius.
+
+research on the web what options we have. one option would be to add another faint layer of background glow for the smooth light fade. another option would be to modify the bloom effect to have the light fall off in a different curve.
+
+
+
+2. lower a bit the bloom on the synthwave grid and soften the glow radius (wider glow radius but fadeoff curce is going low fast, then fades out slow)
+3.
+
+there is an issue with how the bloom is applied for waveforms that show 2 waveforms for stereo processing mode (left + right channel). most obvious it is on the "Synthwave Grid" visual preset. the waveform on top gets much more bloom and glow than the second waveform below.
+
+do a root cause analyis and explain why this happens and what possible solutions are.
+
+there is an issue with how the bloom is applied for waveforms that show 2 waveforms for stereo processing mode (left + right channel). most obvious it is on the "Synthwave Grid" visual preset. the waveform on top gets much more bloom and glow than the second waveform below.
+
+
+do a root cause analyis and explain why this happens and what possible solutions are.
+
+solution:
+
+Clear or reset depth between stereo passes. After rendering the first channel, call glClear(GL_DEPTH_BUFFER_BIT) (or bind a fresh depth attachment) before drawing the second channel when params.isStereo. This preserves depth-based shading for each channel independently while letting both deposit full-intensity color for bloom.
+
+
+there is an issue with how the bloom is applied for waveforms that show 2 waveforms for stereo processing mode (left + right channel). most obvious it is on the "Synthwave Grid" visual preset. the waveform on top gets much more bloom and glow than the second waveform below.
+
+
+Root Cause
+
+Stereo splitting for 3D presets is handled inside WaveformShader3D::render (WaveformShader3D.cpp, ~L59-L110). When params.isStereo is true, the first channel uses data.yOffset = +0.5f and the second -0.5f. Those offsets are applied as a literal world-space translation: the Wireframe shader builds Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) before rendering (WireframeMeshShader.cpp, ~L168-L190).
+The Synthwave preset (VisualConfiguration.cpp, ~L488-L514) drives the camera to a perspective orbit (settings3D.cameraDistance = 6, cameraAngleX = 30°). Because the camera sits above the origin and looks downward (RenderEngine::setupCamera3D, RenderEngine.cpp, ~L1128-L1147), the +Y translation brings the “top” waveform physically closer to the camera while the “bottom” one is pushed farther away.
+Being closer means the top waveform occupies more pixels (thicker lines after projection) and its additive pass accumulates more HDR energy. The bloom pass (BloomEffect.cpp, especially the prefilter and downsample stages around L40-L190) only reacts to brightness, so it extracts far more light from the nearer channel. The effect is most visible on Synthwave Grid because its bloom intensity (c.bloom.intensity = 3.5f, threshold 0.2f) is extreme, so any brightness delta gets magnified.
+Clearing depth between stereo passes (already done at WaveformShader3D::render, ~L86) prevents occlusion but does not equalize distances, so the imbalance persists: the root cause is the stereo separation being performed along the camera-facing axis instead of in screen space.
+
+
+solution:
+Depth-compensated transform: Keep using world-space translation but add a counter zOffset computed from the camera pitch so that distance(camera, waveform) remains constant for both yOffsets. This preserves the perspective grid yet equalizes exposure.
+
+
+
+1. do a full review of this unity asset pack we bought that provides us with several vfx effects, shaders and particle systems: resources/unity/Mirza Beig
+2. review our project here, its render engine, visual presets, post processing effects
+
+formulate and discuss:
+1. what elements are worth to be added to our system?
+2. what can we learn from it to enhance our existing shaders and effects?
+
+then create a plan to add elements and to refactor existing elements based on your preview, and how to change existing visual presets or add new visual presets that showcase the new full power of our rendering engine.
+
+
+ * Investigate the ParticlePoolTest.UpdateAndDeath and ParticleEmitterTest.PhysicsInit failures (likely floating-point precision or coordinate system assumptions).
+   * Integrate the coverage report generation into your CI pipeline.
+   * Continue refactoring OscillatorPanel and other UI components using the Presenter pattern established in WaveformPresenter.

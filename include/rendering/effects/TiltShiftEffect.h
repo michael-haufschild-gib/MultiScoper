@@ -45,14 +45,13 @@ public:
 private:
     TiltShiftSettings settings_;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;
-
+    bool compiled_ = false;
     GLint textureLoc_ = -1;
-    GLint blurRadiusLoc_ = -1;
+
     GLint positionLoc_ = -1;
     GLint rangeLoc_ = -1;
-    GLint directionLoc_ = -1; // Use for separating H/V passes if needed, but single pass approx is faster
-
-    bool compiled_ = false;
+    GLint blurRadiusLoc_ = -1;
+    GLint iterationsLoc_ = -1;
 };
 
 } // namespace oscil

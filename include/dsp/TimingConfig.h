@@ -203,6 +203,34 @@ inline TriggerEdge stringToTriggerEdge(const juce::String& str)
 }
 
 /**
+ * Waveform trigger/restart mode
+ */
+enum class WaveformMode
+{
+    FreeRunning,    // Waveforms keep running continuously
+    RestartOnPlay,  // Waveforms reset when playback starts
+    RestartOnNote   // Waveforms reset on MIDI note
+};
+
+inline juce::String waveformModeToString(WaveformMode mode)
+{
+    switch (mode)
+    {
+        case WaveformMode::FreeRunning:    return "Free Running";
+        case WaveformMode::RestartOnPlay:  return "Restart on Play";
+        case WaveformMode::RestartOnNote:  return "Restart on Note";
+    }
+    return "Free Running";
+}
+
+inline WaveformMode stringToWaveformMode(const juce::String& str)
+{
+    if (str == "Restart on Play")  return WaveformMode::RestartOnPlay;
+    if (str == "Restart on Note")  return WaveformMode::RestartOnNote;
+    return WaveformMode::FreeRunning;
+}
+
+/**
  * Timing configuration structure
  * PRD aligned: Entities -> TimingConfig
  */

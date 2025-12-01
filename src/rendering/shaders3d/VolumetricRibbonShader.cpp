@@ -47,6 +47,7 @@ static const char* ribbonFragmentShader = R"(
     uniform float uTime;
     uniform float uGlowIntensity;
     uniform vec3 uCameraPos;
+    uniform sampler2D uNoiseTexture;
 
     in vec3 vWorldPos;
     in vec3 vNormal;
@@ -71,17 +72,26 @@ static const char* ribbonFragmentShader = R"(
         float rim = 1.0 - max(dot(viewDir, normal), 0.0);
         rim = pow(rim, 2.0) * uGlowIntensity;
 
-        // Pulse effect along the ribbon
-        float pulse = sin(vTexCoord.x * 20.0 - uTime * 3.0) * 0.5 + 0.5;
-        pulse = mix(0.8, 1.0, pulse * uGlowIntensity);
-
+        // Flowing noise effect
+        // Scroll UVs along the tube length (x)
+        vec2 flowUV = vec2(vTexCoord.x * 2.0 - uTime * 0.5, vTexCoord.y);
+        float noise = texture(uNoiseTexture, flowUV).r;
+        
+        // Modulate pulse with noise
+        // Mix between smooth pulse and noisy flow based on glow intensity (higher glow = more turbulent)
+        float pulseBase = sin(vTexCoord.x * 20.0 - uTime * 3.0) * 0.5 + 0.5;
+        float flow = mix(pulseBase, noise, 0.7); 
+        
+        // Enhance contrast
+        flow = pow(flow, 1.5);
+        
         // Combine lighting
         vec3 ambient = uAmbient * uColor.rgb;
         vec3 diffuse = uDiffuse * diff * uColor.rgb;
         vec3 specular = uSpecular.rgb * spec * uSpecular.a;
         vec3 glow = uColor.rgb * rim;
 
-        vec3 result = (ambient + diffuse + specular + glow) * pulse;
+        vec3 result = (ambient + diffuse + specular + glow) * flow;
 
         // Add core brightness
         float coreBrightness = 1.0 + uGlowIntensity * 0.5;
@@ -124,6 +134,7 @@ bool VolumetricRibbonShader::compile(juce::OpenGLContext& context)
     timeLoc_ = shader_->getUniformIDFromName("uTime");
     glowIntensityLoc_ = shader_->getUniformIDFromName("uGlowIntensity");
     cameraPosLoc_ = shader_->getUniformIDFromName("uCameraPos");
+    noiseTextureLoc_ = shader_->getUniformIDFromName("uNoiseTexture");
 
     // Create VAO
     ext.glGenVertexArrays(1, &vao_);
@@ -270,6 +281,14 @@ void VolumetricRibbonShader::render(juce::OpenGLContext& context,
 
     Vec3 camPos = camera.getPosition();
     ext.glUniform3f(cameraPosLoc_, camPos.x, camPos.y, camPos.z);
+
+    // Bind noise texture
+    if (noiseTextureID_ != 0)
+    {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, noiseTextureID_);
+        ext.glUniform1i(noiseTextureLoc_, 0);
+    }
 
     // Bind VAO and draw
     ext.glBindVertexArray(vao_);

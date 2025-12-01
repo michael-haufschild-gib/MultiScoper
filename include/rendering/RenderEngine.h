@@ -17,6 +17,7 @@
 #include "ShaderRegistry.h" // Include full header for unique_ptr
 #include <juce_core/juce_core.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 
 #if OSCIL_ENABLE_OPENGL
@@ -149,6 +150,14 @@ public:
      */
     void clearAllWaveforms();
 
+    /**
+     * Synchronize waveform states with active IDs.
+     * Removes any waveform states not in the provided set.
+     * Thread-safe: Must be called from GL thread during render.
+     * @param activeIds Set of waveform IDs that should remain active
+     */
+    void syncWaveforms(const std::unordered_set<int>& activeIds);
+
     // ========================================================================
     // Subsystem Access
     // ========================================================================
@@ -245,6 +254,9 @@ private:
     // Setup helpers
     void setupCamera2D();
     void setupCamera3D(const Settings3D& settings);
+
+    // Framebuffer utilities
+    void copyFramebuffer(Framebuffer* source, Framebuffer* destination);
 
     // Framebuffer management
     std::unique_ptr<FramebufferPool> fbPool_;

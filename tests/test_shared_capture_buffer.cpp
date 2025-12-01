@@ -259,8 +259,9 @@ TEST_F(SharedCaptureBufferTest, SeqLockMetadataConsistency)
             writeCount++;
             i++;
 
-            // Small delay to allow reads - use yield to avoid busy-wait
-            std::this_thread::yield();
+            // Small delay to allow reads and simulate realistic audio callback timing
+            // Without this, the writer spams updates faster than the reader can complete a SeqLock loop
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
     });
 

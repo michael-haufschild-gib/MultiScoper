@@ -8,6 +8,7 @@
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/ProcessingModeIcons.h"
 #include "rendering/VisualConfiguration.h"
+#include "core/OscilState.h"
 
 namespace oscil
 {
@@ -116,25 +117,6 @@ void OscillatorConfigPopup::setupComponents()
     opacitySlider_->setSuffix(" %");
     opacitySlider_->onValueChanged = [this](double) { handleOpacityChange(); };
     addAndMakeVisible(*opacitySlider_);
-
-    // Vertical Scale slider (OscilSlider with label)
-    scaleSlider_ = std::make_unique<OscilSlider>("configPopup_verticalScaleSlider");
-    scaleSlider_->setLabel("Vertical Scale");
-    scaleSlider_->setRange(Oscillator::MIN_VERTICAL_SCALE, Oscillator::MAX_VERTICAL_SCALE);
-    scaleSlider_->setStep(0.1);
-    scaleSlider_->setValue(Oscillator::DEFAULT_VERTICAL_SCALE, false);
-    scaleSlider_->setSuffix("x");
-    scaleSlider_->onValueChanged = [this](double) { handleVerticalScaleChange(); };
-    addAndMakeVisible(*scaleSlider_);
-
-    // Vertical Offset slider (OscilSlider with label)
-    offsetSlider_ = std::make_unique<OscilSlider>("configPopup_verticalOffsetSlider");
-    offsetSlider_->setLabel("Vertical Offset");
-    offsetSlider_->setRange(Oscillator::MIN_VERTICAL_OFFSET, Oscillator::MAX_VERTICAL_OFFSET);
-    offsetSlider_->setStep(0.01);
-    offsetSlider_->setValue(Oscillator::DEFAULT_VERTICAL_OFFSET, false);
-    offsetSlider_->onValueChanged = [this](double) { handleVerticalOffsetChange(); };
-    addAndMakeVisible(*offsetSlider_);
 
     // Pane selector (OscilDropdown)
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
@@ -252,12 +234,6 @@ void OscillatorConfigPopup::resized()
     contentBounds.removeFromTop(SPACING_SMALL);
 
     opacitySlider_->setBounds(contentBounds.removeFromTop(SLIDER_ROW_HEIGHT));
-    contentBounds.removeFromTop(SPACING_SMALL);
-
-    scaleSlider_->setBounds(contentBounds.removeFromTop(SLIDER_ROW_HEIGHT));
-    contentBounds.removeFromTop(SPACING_SMALL);
-
-    offsetSlider_->setBounds(contentBounds.removeFromTop(SLIDER_ROW_HEIGHT));
     contentBounds.removeFromTop(SPACING_MEDIUM);
 
     // Pane selector
@@ -312,11 +288,15 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
     visible_ = oscillator.isVisible();
     name_ = oscillator.getName();
     lineWidth_ = oscillator.getLineWidth();
-    verticalScale_ = oscillator.getVerticalScale();
-    verticalOffset_ = oscillator.getVerticalOffset();
     paneId_ = oscillator.getPaneId();
     orderIndex_ = oscillator.getOrderIndex();
     visualPresetId_ = oscillator.getVisualPresetId();
+    visualOverrides_ = oscillator.getVisualOverrides().createCopy();
+
+    // Load base config from preset
+    VisualConfiguration config = VisualConfiguration::getPreset(visualPresetId_);
+    // Apply overrides
+    VisualConfiguration::applyOverrides(config, visualOverrides_);
 
     // Update controls using new Oscil component APIs
     nameEditor_->setText(name_, false);  // Don't notify
@@ -324,8 +304,6 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
     modeButtons_->setSelectedId(static_cast<int>(processingMode_));
     lineWidthSlider_->setValue(lineWidth_, false);  // Don't notify
     opacitySlider_->setValue(opacity_ * 100.0, false);  // Don't notify
-    scaleSlider_->setValue(verticalScale_, false);  // Don't notify
-    offsetSlider_->setValue(verticalOffset_, false);  // Don't notify
 
     // Update visibility toggle
     visibilityToggle_->setValue(visible_, false);  // Don't animate on load
@@ -343,7 +321,7 @@ void OscillatorConfigPopup::updateFromOscillator(const Oscillator& oscillator)
             break;
         }
     }
-
+    
     // Update pane selector (OscilDropdown uses setSelectedIndex)
     for (int i = 0; i < paneSelector_->getNumItems(); ++i)
     {
@@ -384,12 +362,16 @@ void OscillatorConfigPopup::notifyConfigChanged()
     state.setProperty("visible", visible_, nullptr);
     state.setProperty("name", name_, nullptr);
     state.setProperty("lineWidth", lineWidth_, nullptr);
-    state.setProperty("verticalScale", verticalScale_, nullptr);
-    state.setProperty("verticalOffset", verticalOffset_, nullptr);
     state.setProperty("paneId", paneId_.id, nullptr);
     state.setProperty("order", orderIndex_, nullptr);
-    state.setProperty("visualPresetId", visualPresetId_, nullptr);
-    state.setProperty("schemaVersion", Oscillator::CURRENT_SCHEMA_VERSION, nullptr);
+    state.setProperty(StateIds::VisualPresetId, visualPresetId_, nullptr);
+    state.setProperty(StateIds::SchemaVersion, Oscillator::CURRENT_SCHEMA_VERSION, nullptr);
+    
+    // Copy visual overrides
+    if (visualOverrides_.isValid() && visualOverrides_.getNumProperties() > 0)
+    {
+        state.addChild(visualOverrides_.createCopy(), -1, nullptr);
+    }
 
     Oscillator updated(state);
 
@@ -458,18 +440,6 @@ void OscillatorConfigPopup::handleOpacityChange()
     notifyConfigChanged();
 }
 
-void OscillatorConfigPopup::handleVerticalScaleChange()
-{
-    verticalScale_ = static_cast<float>(scaleSlider_->getValue());
-    notifyConfigChanged();
-}
-
-void OscillatorConfigPopup::handleVerticalOffsetChange()
-{
-    verticalOffset_ = static_cast<float>(offsetSlider_->getValue());
-    notifyConfigChanged();
-}
-
 void OscillatorConfigPopup::handlePaneChange()
 {
     // OscilDropdown uses getSelectedIndex() instead of getSelectedItemIndex()
@@ -488,6 +458,16 @@ void OscillatorConfigPopup::handleVisualPresetChange()
     if (index >= 0 && static_cast<size_t>(index) < availablePresets.size())
     {
         visualPresetId_ = availablePresets[static_cast<size_t>(index)].first;
+        
+        // When changing preset, clear overrides to show fresh preset defaults?
+        // Or keep overrides?
+        // Usually better to clear overrides so user sees the preset.
+        visualOverrides_.removeAllProperties(nullptr);
+        
+        // Reload UI from new preset + empty overrides
+        // We need to update the controls to match the new preset
+        VisualConfiguration config = VisualConfiguration::getPreset(visualPresetId_);
+        
         notifyConfigChanged();
     }
 }

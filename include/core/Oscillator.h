@@ -129,14 +129,6 @@ public:
     static constexpr float MAX_LINE_WIDTH = 5.0f;
     static constexpr float DEFAULT_LINE_WIDTH = 1.5f;
 
-    static constexpr float MIN_VERTICAL_SCALE = 0.1f;
-    static constexpr float MAX_VERTICAL_SCALE = 10.0f;
-    static constexpr float DEFAULT_VERTICAL_SCALE = 1.0f;
-
-    static constexpr float MIN_VERTICAL_OFFSET = -1.0f;
-    static constexpr float MAX_VERTICAL_OFFSET = 1.0f;
-    static constexpr float DEFAULT_VERTICAL_OFFSET = 0.0f;
-
     static constexpr int MIN_NAME_LENGTH = 1;
     static constexpr int MAX_NAME_LENGTH = 32;
 
@@ -172,8 +164,6 @@ public:
     [[nodiscard]] juce::String getName() const noexcept { return name_; }
     [[nodiscard]] OscillatorState getState() const noexcept { return state_; }
     [[nodiscard]] float getLineWidth() const noexcept { return lineWidth_; }
-    [[nodiscard]] float getVerticalScale() const noexcept { return verticalScale_; }
-    [[nodiscard]] float getVerticalOffset() const noexcept { return verticalOffset_; }
     [[nodiscard]] std::optional<float> getTimeWindow() const noexcept { return timeWindow_; }
     [[nodiscard]] juce::String getShaderId() const noexcept { return shaderId_; }
     [[nodiscard]] juce::String getVisualPresetId() const noexcept { return visualPresetId_; }
@@ -188,11 +178,15 @@ public:
     void setVisible(bool visible) noexcept { visible_ = visible; }
     void setName(const juce::String& name);
     void setLineWidth(float width) noexcept { lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, width); }
-    void setVerticalScale(float scale) noexcept { verticalScale_ = juce::jlimit(MIN_VERTICAL_SCALE, MAX_VERTICAL_SCALE, scale); }
-    void setVerticalOffset(float offset) noexcept { verticalOffset_ = juce::jlimit(MIN_VERTICAL_OFFSET, MAX_VERTICAL_OFFSET, offset); }
     void setTimeWindow(std::optional<float> window) noexcept { timeWindow_ = window; }
     void setShaderId(const juce::String& shaderId) noexcept { shaderId_ = shaderId; }
     void setVisualPresetId(const juce::String& presetId) noexcept { visualPresetId_ = presetId; }
+
+    // Visual overrides
+    void setVisualOverride(const juce::Identifier& property, const juce::var& value);
+    juce::var getVisualOverride(const juce::Identifier& property) const;
+    void clearVisualOverrides();
+    const juce::ValueTree& getVisualOverrides() const { return visualOverrides_; }
 
     /**
      * Clear source assignment (transitions to NO_SOURCE state)
@@ -249,11 +243,10 @@ private:
 
     // PRD extended display properties
     float lineWidth_ = DEFAULT_LINE_WIDTH;
-    float verticalScale_ = DEFAULT_VERTICAL_SCALE;
-    float verticalOffset_ = DEFAULT_VERTICAL_OFFSET;
     std::optional<float> timeWindow_;  // Per-oscillator time window override (seconds)
     juce::String shaderId_ = "basic";  // Shader for GPU rendering
     juce::String visualPresetId_ = "default";  // Visual preset for render effects
+    juce::ValueTree visualOverrides_{"VisualOverrides"}; // Custom visual settings
 
     int schemaVersion_ = CURRENT_SCHEMA_VERSION;
 };

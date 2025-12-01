@@ -8,6 +8,12 @@
 
 Singleton managing all active Oscil plugin instances for multi-instance coordination.
 
+**Lifecycle Policy**:
+- Sources must be registered once when active and explicitly unregistered when no longer needed.
+- This applies to both DAW-provided sources and HTTP-created test sources.
+- Test sources created via `/source/add` persist until `/source/remove` is called or the plugin state is reset.
+- Failure to unregister sources leads to resource leaks (SharedCaptureBuffer memory) and may hit `MAX_TRACKS`.
+
 ```cpp
 class InstanceRegistry
 {

@@ -53,6 +53,8 @@ public:
     void setPulseSpeed(float speed) { pulseSpeed_ = speed; }
     [[nodiscard]] float getPulseSpeed() const { return pulseSpeed_; }
 
+    void setNoiseTexture(GLuint textureID) { noiseTextureID_ = textureID; }
+
 private:
     void updateMesh(const WaveformData3D& data, float xSpread);
 
@@ -64,6 +66,9 @@ private:
     GLuint vbo_ = 0;
     GLuint ibo_ = 0;
     int indexCount_ = 0;
+
+    // Texture
+    GLuint noiseTextureID_ = 0;
 
     // Uniform locations
     GLint modelLoc_ = -1;
@@ -78,6 +83,7 @@ private:
     GLint timeLoc_ = -1;
     GLint glowIntensityLoc_ = -1;
     GLint cameraPosLoc_ = -1;
+    GLint noiseTextureLoc_ = -1; // New texture uniform
 
     // Settings
     float tubeRadius_ = 0.03f;

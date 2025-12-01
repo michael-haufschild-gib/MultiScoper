@@ -56,13 +56,39 @@ void WaveformShader3D::render(juce::OpenGLContext& context,
     {
         DBG("[WaveformShader3D] STEREO mode: rendering ch1 at yOffset=0.5, ch2 at yOffset=-0.5");
 
+        // Calculate view dimensions to determine world-space offset
+        float halfHeight = 1.0f;
+        if (camera_.getProjection() == CameraProjection::Orthographic)
+        {
+            halfHeight = camera_.getOrthoSize() * 0.5f;
+        }
+        else
+        {
+            float dist = (camera_.getPosition() - camera_.getTarget()).length();
+            float fovRad = camera_.getFOV() * 3.14159265f / 180.0f;
+            float height = 2.0f * dist * std::tan(fovRad * 0.5f);
+            halfHeight = height * 0.5f;
+        }
+
+        // Calculate Z-offset to compensate for camera pitch
+        // This keeps the distance from camera to waveform constant despite the Y-shift,
+        // preventing one channel from being closer (brighter bloom) than the other.
+        float pitchRad = camera_.getOrbitPitch() * 3.14159265f / 180.0f;
+        float tanPitch = std::tan(pitchRad);
+
         // Stereo mode: scale amplitude to half and offset vertically
         data.yOffset = 0.5f;  // Upper half for channel 1
         data.amplitude = params.verticalScale * 0.45f; // Fit in half the space
-        data.zOffset = 0.0f;
+        
+        // Apply depth compensation: move in Z to counter the distance change from Y shift
+        data.zOffset = -(data.yOffset * halfHeight) * tanPitch;
 
         // Render channel 1 (L)
         render(context, data, camera_, lighting_);
+
+        // Clear depth buffer between stereo channels to prevent occlusion
+        // This ensures both waveforms render fully even if they overlap in Z-space
+        glClear(GL_DEPTH_BUFFER_BIT);
 
         // Render channel 2 (R) in lower half
         WaveformData3D data2;
@@ -72,7 +98,10 @@ void WaveformShader3D::render(juce::OpenGLContext& context,
         data2.lineThickness = params.lineWidth;
         data2.yOffset = -0.5f; // Lower half for channel 2
         data2.amplitude = params.verticalScale * 0.45f;
-        data2.zOffset = 0.0f;
+        
+        // Apply depth compensation for second channel
+        data2.zOffset = -(data2.yOffset * halfHeight) * tanPitch;
+        
         data2.time = time_;
 
         render(context, data2, camera_, lighting_);
