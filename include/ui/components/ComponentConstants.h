@@ -29,6 +29,13 @@ namespace ComponentLayout
     static constexpr int DROPDOWN_MAX_HEIGHT = 300;
     static constexpr int MODAL_MIN_WIDTH = 280;
 
+    // Typography
+    static constexpr float FONT_SIZE_DEFAULT = 14.0f;
+
+    // Button Internal Layout
+    static constexpr int BUTTON_SEGMENT_PADDING = 6;
+    static constexpr float BUTTON_NARROW_PADDING_RATIO = 0.15f;
+
     // Spacing (8px grid system)
     static constexpr int SPACING_XS = 4;
     static constexpr int SPACING_SM = 8;

@@ -162,12 +162,24 @@ public:
      */
     void removeListener(InstanceRegistryListener* listener) override;
 
+    /**
+     * Dispatcher function type for asynchronous notification handling.
+     */
+    using Dispatcher = std::function<void(std::function<void()>)>;
+
+    /**
+     * Set the dispatcher used for listener notifications.
+     * Default uses juce::MessageManager::callAsync.
+     * Use this to inject synchronous dispatching for unit tests.
+     */
+    void setDispatcher(Dispatcher dispatcher);
+
     // Prevent copying
     InstanceRegistry(const InstanceRegistry&) = delete;
     InstanceRegistry& operator=(const InstanceRegistry&) = delete;
 
 private:
-    InstanceRegistry() = default;
+    InstanceRegistry();
     ~InstanceRegistry() override = default;
 
     void notifySourceAdded(const SourceId& sourceId);
@@ -177,6 +189,9 @@ private:
     mutable std::shared_mutex mutex_;
     std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_;
     std::unordered_map<juce::String, SourceId> trackToSourceMap_; // Deduplication map
+
+    // Dispatcher for notifications
+    Dispatcher dispatcher_;
 
     // Using JUCE ListenerList for safe listener management
     // ListenerList handles removal during iteration and prevents dangling pointer issues

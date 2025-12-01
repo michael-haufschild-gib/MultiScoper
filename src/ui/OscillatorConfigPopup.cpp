@@ -213,65 +213,65 @@ void OscillatorConfigPopup::resized()
         (bounds.getHeight() - POPUP_HEIGHT) / 2
     );
 
-    auto contentBounds = popupBounds.reduced(16);
+    auto contentBounds = popupBounds.reduced(PADDING);
 
     // Header row
-    auto headerRow = contentBounds.removeFromTop(32);
+    auto headerRow = contentBounds.removeFromTop(HEADER_HEIGHT);
     headerRow.removeFromLeft(32);  // Space for color indicator
 
-    closeButton_->setBounds(headerRow.removeFromRight(28).reduced(2));
+    closeButton_->setBounds(headerRow.removeFromRight(CONTROL_HEIGHT).reduced(2));
     visibilityToggle_->setBounds(headerRow.removeFromRight(60));  // OscilToggle needs more width
-    headerRow.removeFromRight(8);
+    headerRow.removeFromRight(SPACING_MEDIUM);
     nameEditor_->setBounds(headerRow);
 
-    contentBounds.removeFromTop(16);
+    contentBounds.removeFromTop(PADDING);
 
     // Source section
-    sourceLabel_->setBounds(contentBounds.removeFromTop(20));
-    sourceSelector_->setBounds(contentBounds.removeFromTop(28));
-    contentBounds.removeFromTop(12);
+    sourceLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
+    sourceSelector_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
+    contentBounds.removeFromTop(SPACING_LARGE);
 
     // Processing mode section
-    modeLabel_->setBounds(contentBounds.removeFromTop(20));
-    modeButtons_->setBounds(contentBounds.removeFromTop(28));
-    contentBounds.removeFromTop(12);
+    modeLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
+    modeButtons_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
+    contentBounds.removeFromTop(SPACING_LARGE);
 
     // Color swatches (single OscilColorSwatches component)
-    colorLabel_->setBounds(contentBounds.removeFromTop(20));
-    colorSwatches_->setBounds(contentBounds.removeFromTop(32));
-    contentBounds.removeFromTop(12);
+    colorLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
+    colorSwatches_->setBounds(contentBounds.removeFromTop(COLOR_PICKER_HEIGHT));
+    contentBounds.removeFromTop(SPACING_LARGE);
 
     // Visual preset dropdown
-    auto presetRow = contentBounds.removeFromTop(32);
+    auto presetRow = contentBounds.removeFromTop(COLOR_PICKER_HEIGHT);
     visualPresetLabel_->setBounds(presetRow.removeFromLeft(100));
     visualPresetDropdown_->setBounds(presetRow);
-    contentBounds.removeFromTop(8);
+    contentBounds.removeFromTop(SPACING_MEDIUM);
 
     // OscilSlider components have integrated labels - use full row height
-    lineWidthSlider_->setBounds(contentBounds.removeFromTop(40));
-    contentBounds.removeFromTop(4);
+    lineWidthSlider_->setBounds(contentBounds.removeFromTop(SLIDER_ROW_HEIGHT));
+    contentBounds.removeFromTop(SPACING_SMALL);
 
-    opacitySlider_->setBounds(contentBounds.removeFromTop(40));
-    contentBounds.removeFromTop(4);
+    opacitySlider_->setBounds(contentBounds.removeFromTop(SLIDER_ROW_HEIGHT));
+    contentBounds.removeFromTop(SPACING_SMALL);
 
-    scaleSlider_->setBounds(contentBounds.removeFromTop(40));
-    contentBounds.removeFromTop(4);
+    scaleSlider_->setBounds(contentBounds.removeFromTop(SLIDER_ROW_HEIGHT));
+    contentBounds.removeFromTop(SPACING_SMALL);
 
-    offsetSlider_->setBounds(contentBounds.removeFromTop(40));
-    contentBounds.removeFromTop(8);
+    offsetSlider_->setBounds(contentBounds.removeFromTop(SLIDER_ROW_HEIGHT));
+    contentBounds.removeFromTop(SPACING_MEDIUM);
 
     // Pane selector
-    auto paneRow = contentBounds.removeFromTop(32);
+    auto paneRow = contentBounds.removeFromTop(COLOR_PICKER_HEIGHT);
     paneLabel_->setBounds(paneRow.removeFromLeft(100));
     paneSelector_->setBounds(paneRow);
-    contentBounds.removeFromTop(16);
+    contentBounds.removeFromTop(SPACING_SECTION);
 
     // Footer buttons at bottom (Delete Oscillator + Close per design)
-    auto footerRow = contentBounds.removeFromBottom(36);
-    int buttonWidth = (footerRow.getWidth() - 8) / 2;
-    deleteButton_->setBounds(footerRow.removeFromLeft(buttonWidth).reduced(0, 4));
-    footerRow.removeFromLeft(8);
-    footerCloseButton_->setBounds(footerRow.reduced(0, 4));
+    auto footerRow = contentBounds.removeFromBottom(FOOTER_HEIGHT);
+    int buttonWidth = (footerRow.getWidth() - SPACING_MEDIUM) / 2;
+    deleteButton_->setBounds(footerRow.removeFromLeft(buttonWidth).reduced(0, SPACING_SMALL));
+    footerRow.removeFromLeft(SPACING_MEDIUM);
+    footerCloseButton_->setBounds(footerRow.reduced(0, SPACING_SMALL));
 }
 
 void OscillatorConfigPopup::themeChanged(const ColorTheme& newTheme)

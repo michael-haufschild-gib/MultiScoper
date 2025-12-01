@@ -23,7 +23,7 @@ void WaveformRenderState::enableTrails(juce::OpenGLContext& context, int width, 
         historyFBO = std::make_unique<Framebuffer>();
 
     // Create history FBO with standard format (no depth needed)
-    if (historyFBO->create(context, width, height, GL_RGBA8, false))
+    if (historyFBO->create(context, width, height, 0, GL_RGBA8, false))
     {
         trailsEnabled = true;
         // Clear the history FBO initially

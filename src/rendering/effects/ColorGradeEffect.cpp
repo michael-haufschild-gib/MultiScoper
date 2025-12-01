@@ -82,13 +82,9 @@ static const char* colorGradeFragmentShader = R"(
         
         color *= shadowTint * highlightTint;
 
-        // 6. ACES Tone Mapping (The "AAA" Look)
-        // Compresses HDR values into displayable range with nice rolloff
-        color = ACESFilm(color);
-
-        // Gamma Correction (Linear -> sRGB)
-        // Assuming input was Linear (from HDR render)
-        color = pow(color, vec3(1.0/2.2));
+        // NOTE: We output LINEAR HDR color here.
+        // Tone Mapping (ACES) and Gamma Correction are handled in the final Blit shader
+        // in RenderEngine.cpp. This prevents double-tone-mapping.
 
         fragColor = vec4(color, texColor.a);
     }

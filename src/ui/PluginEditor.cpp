@@ -219,9 +219,31 @@ public:
 
     void waveformModeChanged(WaveformMode mode) override
     {
-        // TODO: Implement waveform mode handling
-        // This will control when waveforms reset (free running, on play, on note)
-        juce::ignoreUnused(mode);
+        // This controls when waveforms reset (free running, on play, on note)
+        auto& timingEngine = editor_.getProcessor().getTimingEngine();
+
+        switch (mode)
+        {
+            case WaveformMode::FreeRunning:
+                // Disable host sync and set trigger mode to None
+                timingEngine.setHostSyncEnabled(false);
+                timingEngine.setWaveformTriggerMode(WaveformTriggerMode::None);
+                break;
+            case WaveformMode::RestartOnPlay:
+                // Enable host sync (resets on play/stop transitions)
+                // Set trigger mode to None (no audio triggering)
+                timingEngine.setHostSyncEnabled(true);
+                timingEngine.setWaveformTriggerMode(WaveformTriggerMode::None);
+                break;
+            case WaveformMode::RestartOnNote:
+                // For now, map to a basic audio trigger (e.g., RisingEdge)
+                // TODO: Future: Implement proper MIDI note trigger logic in TimingEngine.
+                // This would involve passing MIDI messages from PluginProcessor to TimingEngine.
+                timingEngine.setHostSyncEnabled(false); // Not host sync based
+                timingEngine.setWaveformTriggerMode(WaveformTriggerMode::RisingEdge);
+                break;
+        }
+        updateDisplaySamplesFromTimingEngine();
     }
 
     void bpmChanged(float bpm) override
@@ -616,6 +638,25 @@ void OscilPluginEditor::timerCallback()
     // Update GL renderer with waveform data (if GPU mode enabled)
     if (glManager_)
     {
+        // In GPU mode, paint() is skipped so we must update waveform data manually
+        // This ensures the GL renderer receives fresh audio data
+        if (glManager_->isGpuRenderingEnabled())
+        {
+            for (auto& pane : paneComponents_)
+            {
+                if (pane)
+                {
+                    for (size_t i = 0; i < pane->getOscillatorCount(); ++i)
+                    {
+                        if (auto* waveform = pane->getWaveformAt(i))
+                        {
+                            waveform->processAudioData();
+                        }
+                    }
+                }
+            }
+        }
+        
         glManager_->updateWaveformData(paneComponents_);
     }
 
@@ -1239,6 +1280,17 @@ void OscilPluginEditor::valueTreeChildRemoved(juce::ValueTree& /*parentTree*/, j
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
+        // If an oscillator was removed, check if it's currently being edited in the popup
+        if (child.hasType(StateIds::Oscillator) && configPopup_ && configPopup_->isPopupVisible())
+        {
+            OscillatorId removedId{ child.getProperty(StateIds::Id).toString() };
+            if (configPopup_->getOscillatorId() == removedId)
+            {
+                // Close popup immediately to prevent editing a non-existent oscillator
+                configPopup_->setVisible(false);
+            }
+        }
+
         auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
         juce::MessageManager::callAsync([safeThis]() {
             if (safeThis != nullptr)

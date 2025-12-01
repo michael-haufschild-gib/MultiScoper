@@ -161,6 +161,14 @@ public:
      */
     void forceUpdateWaveformData();
 
+    /**
+     * Process audio data from the capture buffer.
+     * Populates the display buffers and calculates levels (Peak/RMS).
+     * Must be called periodically (e.g. from timer) when GPU rendering is enabled,
+     * as paint() is not called in that mode.
+     */
+    void processAudioData();
+
     // Test access - for automated testing only
     bool isGridVisible() const { return showGrid_; }
     bool isAutoScaleEnabled() const { return autoScale_; }

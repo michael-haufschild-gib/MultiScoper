@@ -11,13 +11,14 @@ namespace oscil
 
 using namespace juce::gl;
 
-bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt, bool withDepth, bool useDepthTexture)
+bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples, GLenum fmt, bool withDepth, bool useDepthTexture)
 {
     if (w <= 0 || h <= 0)
         return false;
 
     width = w;
     height = h;
+    numSamples = samples;
     format = fmt;
     hasDepth = withDepth;
     hasDepthTexture = useDepthTexture && withDepth;
@@ -34,14 +35,19 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt,
 
     ext.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-    // Create color texture
+    if (numSamples > 0)
+    {
+        // MSAA temporarily disabled due to missing extension bindings in current JUCE setup
+        DBG("Framebuffer: MSAA requested but not implemented in this build. Falling back to standard FBO.");
+    }
+
+    // Standard Path: Use Textures (or Renderbuffer for depth if not sampling)
     if (!createColorTexture(context))
     {
         destroy(context);
         return false;
     }
 
-    // Create depth buffer if requested
     if (withDepth && !createDepthBuffer(context))
     {
         destroy(context);
@@ -59,10 +65,6 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt,
     // Unbind
     ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    DBG("Framebuffer: Created " << width << "x" << height
-        << " FBO=" << (int)fbo << " Texture=" << (int)colorTexture
-        << " Depth=" << (hasDepthTexture ? (int)depthTexture : (int)depthBuffer));
-
     // Check status
     GLenum status = context.extensions.glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
@@ -72,8 +74,83 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt,
         return false;
     }
 
-
     return true;
+}
+
+void Framebuffer::blitTo(juce::OpenGLContext& context, Framebuffer* dest)
+{
+    // MSAA resolve not implemented yet
+    juce::ignoreUnused(context, dest);
+}
+
+void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
+{
+    if (w == width && h == height)
+        return;
+
+    GLenum savedFormat = format;
+    bool savedHasDepth = hasDepth;
+    bool savedHasDepthTexture = hasDepthTexture;
+    int savedSamples = numSamples;
+
+    destroy(context);
+    create(context, w, h, savedSamples, savedFormat, savedHasDepth, savedHasDepthTexture);
+}
+
+void Framebuffer::bind()
+{
+    if (fbo != 0)
+    {
+        auto* context = juce::OpenGLContext::getCurrentContext();
+        if (context != nullptr)
+        {
+            context->extensions.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+            glViewport(0, 0, width, height);
+        }
+    }
+}
+
+void Framebuffer::unbind()
+{
+    auto* context = juce::OpenGLContext::getCurrentContext();
+    if (context != nullptr)
+    {
+        context->extensions.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+}
+
+void Framebuffer::bindTexture(int textureUnit)
+{
+    if (colorTexture != 0)
+    {
+        glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
+        glBindTexture(GL_TEXTURE_2D, colorTexture);
+    }
+}
+
+void Framebuffer::bindDepthTexture(int textureUnit)
+{
+    if (depthTexture != 0)
+    {
+        glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
+        glBindTexture(GL_TEXTURE_2D, depthTexture);
+    }
+}
+
+void Framebuffer::clear(juce::Colour colour, bool clearDepth)
+{
+    glClearColor(colour.getFloatRed(),
+                 colour.getFloatGreen(),
+                 colour.getFloatBlue(),
+                 colour.getFloatAlpha());
+
+    GLbitfield clearMask = GL_COLOR_BUFFER_BIT;
+    if (clearDepth && hasDepth)
+    {
+        clearMask |= GL_DEPTH_BUFFER_BIT;
+    }
+
+    glClear(clearMask);
 }
 
 bool Framebuffer::createColorTexture(juce::OpenGLContext& context)
@@ -218,77 +295,14 @@ void Framebuffer::destroy(juce::OpenGLContext& context)
         fbo = 0;
     }
 
+    if (colorRenderbuffer != 0)
+    {
+        ext.glDeleteRenderbuffers(1, &colorRenderbuffer);
+        colorRenderbuffer = 0;
+    }
+
     width = 0;
     height = 0;
-}
-
-void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
-{
-    if (w == width && h == height)
-        return;
-
-    GLenum savedFormat = format;
-    bool savedHasDepth = hasDepth;
-    bool savedHasDepthTexture = hasDepthTexture;
-
-    destroy(context);
-    create(context, w, h, savedFormat, savedHasDepth, savedHasDepthTexture);
-}
-
-void Framebuffer::bind()
-{
-    if (fbo != 0)
-    {
-        auto* context = juce::OpenGLContext::getCurrentContext();
-        if (context != nullptr)
-        {
-            context->extensions.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-            glViewport(0, 0, width, height);
-        }
-    }
-}
-
-void Framebuffer::unbind()
-{
-    auto* context = juce::OpenGLContext::getCurrentContext();
-    if (context != nullptr)
-    {
-        context->extensions.glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-}
-
-void Framebuffer::bindTexture(int textureUnit)
-{
-    if (colorTexture != 0)
-    {
-        glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
-        glBindTexture(GL_TEXTURE_2D, colorTexture);
-    }
-}
-
-void Framebuffer::bindDepthTexture(int textureUnit)
-{
-    if (depthTexture != 0)
-    {
-        glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
-        glBindTexture(GL_TEXTURE_2D, depthTexture);
-    }
-}
-
-void Framebuffer::clear(juce::Colour colour, bool clearDepth)
-{
-    glClearColor(colour.getFloatRed(),
-                 colour.getFloatGreen(),
-                 colour.getFloatBlue(),
-                 colour.getFloatAlpha());
-
-    GLbitfield clearMask = GL_COLOR_BUFFER_BIT;
-    if (clearDepth && hasDepth)
-    {
-        clearMask |= GL_DEPTH_BUFFER_BIT;
-    }
-
-    glClear(clearMask);
 }
 
 } // namespace oscil

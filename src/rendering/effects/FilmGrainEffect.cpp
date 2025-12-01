@@ -47,20 +47,24 @@ static const char* filmGrainFragmentShader = R"(
         
         // 2. Luminance response:
         // Grain is most visible in mid-tones, less in black (no signal) and white (saturation).
-        // Parabolic curve: 1.0 - (luma - 0.5) * 2.0 squared? 
-        // Or simplified: x * (1 - x) * 4.0
+        // Parabolic curve: 4.0 * x * (1.0 - x)
         float response = luma * (1.0 - luma) * 4.0;
-        // Boost shadows slightly as digital noise often appears there too
-        response = mix(response, 1.0, 0.2);
-
-        // Apply grain
-        // "Overlay" blend mode approximation or Soft Light is best, 
-        // but simple additive/subtractive modulated by intensity works well for speed.
         
-        float grain = (noise - 0.5) * 2.0; // -1 to 1
-        vec3 grainColor = vec3(grain) * intensity * response;
+        // 3. Soft Light / Overlay Blending
+        // Standard additive grain lifts blacks. We want to preserve blacks.
+        // Simple "Soft Additive": color + grain * color
+        // Or "Overlay":
         
-        fragColor = vec4(color.rgb + grainColor, color.a);
+        float noiseVal = (noise - 0.5) * 2.0; // -1 to 1
+        vec3 grain = vec3(noiseVal) * intensity * response;
+        
+        // Apply using a "Soft Light" approximation that respects brightness
+        // mix(color, color + grain, ...)
+        // We use the luminance itself to mask the grain in dark areas further
+        
+        vec3 result = color.rgb + color.rgb * grain * 2.0;
+        
+        fragColor = vec4(result, color.a);
     }
 )";
 

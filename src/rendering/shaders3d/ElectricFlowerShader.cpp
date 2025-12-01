@@ -12,12 +12,6 @@ namespace oscil
 
 using namespace juce::gl;
 
-// Irrational constants for non-repeating rotations
-// These create organic, never-exactly-repeating patterns
-static constexpr float PHI = 1.6180339887f;           // Golden ratio
-static constexpr float SQRT2 = 1.4142135623f;         // Square root of 2
-static constexpr float EULER = 2.7182818284f;         // Euler's number
-
 // Vertex shader - preserves waveform geometry, applies Electric Flower visual style
 // Uses irrational constants for organic color/size animation without distorting shape
 static const char* electricFlowerVertexShader = R"(

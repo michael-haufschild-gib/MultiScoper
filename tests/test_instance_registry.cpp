@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include <atomic>
+#include <juce_events/juce_events.h>
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
 
@@ -13,8 +14,18 @@ using namespace oscil;
 class InstanceRegistryTest : public ::testing::Test
 {
 protected:
+    std::mutex dispatcherMutex;
+
     void SetUp() override
     {
+        // Force synchronous dispatch for tests, serialized with a mutex
+        // to mimic MessageManager's single-threaded execution and prevent
+        // ListenerList concurrency assertions during multi-threaded tests.
+        InstanceRegistry::getInstance().setDispatcher([this](std::function<void()> f) {
+            std::lock_guard<std::mutex> lock(dispatcherMutex);
+            f();
+        });
+
         // Clear any existing registrations
         auto sources = InstanceRegistry::getInstance().getAllSources();
         for (const auto& source : sources)
@@ -31,6 +42,11 @@ protected:
         {
             InstanceRegistry::getInstance().unregisterInstance(source.sourceId);
         }
+        
+        // Reset dispatcher to default async behavior
+        InstanceRegistry::getInstance().setDispatcher([](std::function<void()> f) {
+             juce::MessageManager::callAsync(std::move(f));
+        });
     }
 };
 

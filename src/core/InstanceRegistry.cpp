@@ -11,6 +11,19 @@ namespace oscil
 
 // Note: SourceId::generate() and InstanceId::generate() are implemented in Source.cpp
 
+InstanceRegistry::InstanceRegistry()
+{
+    // Default dispatcher uses MessageManager::callAsync
+    dispatcher_ = [](std::function<void()> f) {
+        juce::MessageManager::callAsync(std::move(f));
+    };
+}
+
+void InstanceRegistry::setDispatcher(Dispatcher dispatcher)
+{
+    dispatcher_ = std::move(dispatcher);
+}
+
 InstanceRegistry& InstanceRegistry::getInstance()
 {
     static InstanceRegistry instance;
@@ -203,24 +216,29 @@ void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
 
 void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 {
-    // ListenerList::call safely handles listener removal during iteration
-    // and prevents use-after-free issues
-    listeners_.call([&sourceId](InstanceRegistryListener& l) {
-        l.sourceAdded(sourceId);
+    // Use injected dispatcher (defaults to MessageManager::callAsync)
+    dispatcher_([this, sourceId]() {
+        listeners_.call([&sourceId](InstanceRegistryListener& l) {
+            l.sourceAdded(sourceId);
+        });
     });
 }
 
 void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 {
-    listeners_.call([&sourceId](InstanceRegistryListener& l) {
-        l.sourceRemoved(sourceId);
+    dispatcher_([this, sourceId]() {
+        listeners_.call([&sourceId](InstanceRegistryListener& l) {
+            l.sourceRemoved(sourceId);
+        });
     });
 }
 
 void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
 {
-    listeners_.call([&sourceId](InstanceRegistryListener& l) {
-        l.sourceUpdated(sourceId);
+    dispatcher_([this, sourceId]() {
+        listeners_.call([&sourceId](InstanceRegistryListener& l) {
+            l.sourceUpdated(sourceId);
+        });
     });
 }
 

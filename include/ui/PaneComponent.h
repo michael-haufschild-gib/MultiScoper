@@ -153,6 +153,13 @@ private:
     static constexpr int HEADER_HEIGHT = 24;
     static constexpr int PADDING = 4;
     static constexpr int DRAG_THRESHOLD = 5;
+    
+    // Drag handle styling
+    static constexpr int DRAG_HANDLE_WIDTH = 20;
+    static constexpr int DRAG_HANDLE_LINE_WIDTH = 10;
+    static constexpr int DRAG_HANDLE_LINE_HEIGHT = 2;
+    static constexpr int DRAG_HANDLE_LINE_SPACING = 4;
+    static constexpr int DRAG_HANDLE_LEFT_MARGIN = 4;
 
     // TestIdSupport
     OSCIL_TESTABLE();

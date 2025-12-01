@@ -276,6 +276,11 @@ private:
     static constexpr int RESIZE_HANDLE_WIDTH = 6;
     static constexpr int ADD_BUTTON_HEIGHT = 36;
     static constexpr int OSCILLATOR_TOOLBAR_HEIGHT = OscillatorListToolbar::PREFERRED_HEIGHT;
+    static constexpr int COLLAPSE_BUTTON_SIZE = 24;
+    static constexpr int PADDING_SMALL = 4;
+    static constexpr int PADDING_MEDIUM = 8;
+    static constexpr int MIN_LIST_HEIGHT = 100;
+    static constexpr int MAX_LIST_HEIGHT = 300;
 
     // TestIdSupport
     OSCIL_TESTABLE();

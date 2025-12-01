@@ -67,7 +67,7 @@ struct OscillatorId
     bool operator==(const OscillatorId& other) const { return id == other.id; }
     bool operator!=(const OscillatorId& other) const { return !(*this == other); }
 
-    static OscillatorId generate();
+    [[nodiscard]] static OscillatorId generate();
     static OscillatorId invalid() { return OscillatorId{ "" }; }
     bool isValid() const { return id.isNotEmpty(); }
 };
@@ -82,7 +82,7 @@ struct PaneId
     bool operator==(const PaneId& other) const { return id == other.id; }
     bool operator!=(const PaneId& other) const { return !(*this == other); }
 
-    static PaneId generate();
+    [[nodiscard]] static PaneId generate();
     static PaneId invalid() { return PaneId{ "" }; }
     bool isValid() const { return id.isNotEmpty(); }
 };

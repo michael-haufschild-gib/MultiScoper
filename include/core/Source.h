@@ -90,7 +90,7 @@ struct SourceId
     bool operator!=(const SourceId& other) const { return !(*this == other); }
     bool operator<(const SourceId& other) const { return id < other.id; }
 
-    static SourceId generate();
+    [[nodiscard]] static SourceId generate();
     static SourceId invalid() { return SourceId{ "" }; }
     static SourceId noSource() { return SourceId{ "NO_SOURCE" }; }
     bool isValid() const { return id.isNotEmpty() && id != "NO_SOURCE"; }
@@ -118,7 +118,7 @@ struct InstanceId
     bool operator==(const InstanceId& other) const { return id == other.id; }
     bool operator!=(const InstanceId& other) const { return !(*this == other); }
 
-    static InstanceId generate();
+    [[nodiscard]] static InstanceId generate();
     static InstanceId invalid() { return InstanceId{ "" }; }
     bool isValid() const { return id.isNotEmpty(); }
 };

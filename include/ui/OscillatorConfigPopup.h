@@ -82,6 +82,19 @@ public:
     static constexpr int POPUP_WIDTH = 360;
     static constexpr int POPUP_HEIGHT = 580;  // Visual preset dropdown
 
+    // Layout constants
+    static constexpr int PADDING = 16;
+    static constexpr int HEADER_HEIGHT = 32;
+    static constexpr int LABEL_HEIGHT = 20;
+    static constexpr int CONTROL_HEIGHT = 28;
+    static constexpr int COLOR_PICKER_HEIGHT = 32;
+    static constexpr int SLIDER_ROW_HEIGHT = 40;
+    static constexpr int FOOTER_HEIGHT = 36;
+    static constexpr int SPACING_SMALL = 4;
+    static constexpr int SPACING_MEDIUM = 8;
+    static constexpr int SPACING_LARGE = 12;
+    static constexpr int SPACING_SECTION = 16;
+
     // Number of default color swatches
     static constexpr int NUM_COLOR_SWATCHES = 10;
 

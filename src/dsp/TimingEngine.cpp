@@ -129,20 +129,28 @@ void TimingEngine::recalculateInterval()
 {
     float newInterval = 0.0f;
 
-    switch (config_.timingMode)
+    // Read from atomics for thread safety
+    auto timingMode = static_cast<TimingMode>(atomicTimingMode_.load(std::memory_order_relaxed));
+    
+    switch (timingMode)
     {
         case TimingMode::TIME:
-            newInterval = static_cast<float>(config_.timeIntervalMs);
+            newInterval = atomicTimeIntervalMs_.load(std::memory_order_relaxed);
             break;
 
         case TimingMode::MELODIC:
         {
             // Calculate interval from BPM and note interval
             // Formula: interval_ms = (beats * 60000) / BPM
-            // Use double throughout for precision, then cast to float at the end
-            double beats = engineNoteIntervalToBeats(config_.noteInterval);
+            auto noteInterval = static_cast<EngineNoteInterval>(atomicNoteInterval_.load(std::memory_order_relaxed));
+            double beats = engineNoteIntervalToBeats(noteInterval);
+            
             // Use host BPM when synced, internal BPM when free-running
-            float effectiveBPM = config_.hostSyncEnabled ? config_.hostBPM : config_.internalBPM;
+            bool hostSync = atomicHostSyncEnabled_.load(std::memory_order_relaxed);
+            float effectiveBPM = hostSync ? 
+                atomicHostBPM_.load(std::memory_order_relaxed) : 
+                atomicInternalBPM_.load(std::memory_order_relaxed);
+                
             double bpm = static_cast<double>(juce::jmax(effectiveBPM, EngineTimingConfig::MIN_BPM));
             newInterval = static_cast<float>((beats * 60000.0) / bpm);
             break;
@@ -156,10 +164,17 @@ void TimingEngine::recalculateInterval()
         newInterval
     );
 
-    if (std::abs(config_.actualIntervalMs - newInterval) > 0.1f)
+    // Store computed interval atomically and get previous value for change detection
+    // This avoids reading the non-atomic config_.actualIntervalMs from multiple threads
+    float oldInterval = atomicActualIntervalMs_.exchange(newInterval, std::memory_order_relaxed);
+    
+    // Update non-atomic config copy for serialization consistency
+    // (Best effort, assuming single-writer for serialization or tolerant of glitches)
+    config_.actualIntervalMs = newInterval;
+
+    // Notify if changed significantly
+    if (std::abs(oldInterval - newInterval) > 0.1f)
     {
-        config_.actualIntervalMs = newInterval;
-        atomicActualIntervalMs_.store(newInterval, std::memory_order_relaxed);
         notifyIntervalChanged();
     }
 }
@@ -169,6 +184,9 @@ void TimingEngine::setConfig(const EngineTimingConfig& config)
     config_ = config;
     // Sync all atomics with new config values for thread-safe cross-thread reads
     atomicHostBPM_.store(config.hostBPM, std::memory_order_relaxed);
+    atomicInternalBPM_.store(config.internalBPM, std::memory_order_relaxed);
+    atomicTimeIntervalMs_.store(config.timeIntervalMs, std::memory_order_relaxed);
+    atomicNoteInterval_.store(static_cast<int>(config.noteInterval), std::memory_order_relaxed);
     atomicTimingMode_.store(static_cast<int>(config.timingMode), std::memory_order_relaxed);
     atomicHostSyncEnabled_.store(config.hostSyncEnabled, std::memory_order_relaxed);
     atomicTriggerMode_.store(static_cast<int>(config.triggerMode), std::memory_order_relaxed);
@@ -211,6 +229,7 @@ void TimingEngine::setInternalBPM(float bpm)
     if (std::abs(config_.internalBPM - bpm) > 0.01f)
     {
         config_.internalBPM = bpm;
+        atomicInternalBPM_.store(bpm, std::memory_order_relaxed);
         // Only recalculate if we're in MELODIC mode and NOT synced to host
         if (config_.timingMode == TimingMode::MELODIC && !config_.hostSyncEnabled)
         {
@@ -227,6 +246,7 @@ void TimingEngine::setTimeIntervalMs(float ms)
     if (std::abs(config_.timeIntervalMs - ms) > 0.001f)
     {
         config_.timeIntervalMs = ms;
+        atomicTimeIntervalMs_.store(ms, std::memory_order_relaxed);
         if (config_.timingMode == TimingMode::TIME)
         {
             recalculateInterval();
@@ -239,6 +259,7 @@ void TimingEngine::setNoteInterval(EngineNoteInterval interval)
     if (config_.noteInterval != interval)
     {
         config_.noteInterval = interval;
+        atomicNoteInterval_.store(static_cast<int>(interval), std::memory_order_relaxed);
         if (config_.timingMode == TimingMode::MELODIC)
         {
             recalculateInterval();

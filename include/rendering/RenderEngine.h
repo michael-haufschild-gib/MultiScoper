@@ -12,6 +12,7 @@
 #include "VisualConfiguration.h"
 #include "WaveformGLRenderer.h"
 #include "shaders3d/WaveformShader3D.h" // For LightingConfig
+#include "ShaderRegistry.h" // Include full header for unique_ptr
 #include <juce_core/juce_core.h>
 #include <unordered_map>
 #include <memory>
@@ -245,9 +246,17 @@ private:
     // Post-processing effects
     std::unordered_map<juce::String, std::unique_ptr<PostProcessEffect>> effects_;
 
+    // Compiled per-instance shaders (created from Registry)
+    std::unordered_map<std::string, std::unique_ptr<WaveformShader>> compiledShaders_;
+    
+    // Shader registry (factory)
+    std::unique_ptr<ShaderRegistry> registry_;
+
     // Blit shader for final output
     std::unique_ptr<juce::OpenGLShaderProgram> blitShader_;
     GLint blitTextureLoc_ = -1;
+    std::unique_ptr<juce::OpenGLShaderProgram> compositeShader_;
+    GLint compositeTextureLoc_ = -1;
 
     // Context and state
     juce::OpenGLContext* context_ = nullptr;

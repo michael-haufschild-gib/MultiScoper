@@ -6,25 +6,13 @@
 #pragma once
 
 #include "PostProcessEffect.h"
+#include "rendering/VisualConfiguration.h"
 #include <memory>
 
 #if OSCIL_ENABLE_OPENGL
 
 namespace oscil
 {
-
-/**
- * Glitch settings for the effect.
- */
-struct GlitchSettings
-{
-    bool enabled = false;
-    float intensity = 0.5f;          // Overall glitch strength
-    float blockSize = 0.05f;         // Size of glitch blocks
-    float lineShift = 0.02f;         // Horizontal line displacement
-    float colorSeparation = 0.01f;   // RGB shift amount
-    float flickerRate = 10.0f;       // Flicker frequency
-};
 
 /**
  * Glitch post-processing effect.

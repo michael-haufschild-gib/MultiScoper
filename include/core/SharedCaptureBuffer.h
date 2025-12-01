@@ -82,7 +82,8 @@ struct AtomicMetadata
 
         // Low retry limit since writes are very fast (nanoseconds)
         // If writer crashes mid-update, we don't want to spin long on UI thread
-        static constexpr int MAX_RETRIES = 16;
+        // Increased to 100 to handle thread preemption in high-contention CI environments
+        static constexpr int MAX_RETRIES = 100;
         int retries = 0;
 
         for (;;) {

@@ -276,7 +276,6 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
     updateFilteredItems();
 
     // Calculate popup size
-    int numVisible = std::min(static_cast<int>(filteredIndices_.size()), MAX_VISIBLE_ITEMS);
     // Use minimum height if list is empty but we have search
     int contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
     
@@ -450,7 +449,7 @@ void OscilDropdownPopup::resized()
     }
 }
 
-void OscilDropdownPopup::mouseDown(const juce::MouseEvent& e)
+void OscilDropdownPopup::mouseDown(const juce::MouseEvent&)
 {
     dismiss();
 }

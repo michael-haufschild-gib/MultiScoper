@@ -4595,3 +4595,10 @@ float linesSpeed =  smoothstep( 22.7, 22.71, iChannelTime[0] );
     fragColor=vec4( col, 1.0 );
 }
 1
+
+i bought a unity asset pack with post processing effects. the package is here: resources/unity/ScionPostProcess
+shaders are in: resources/unity/ScionPostProcess/Resources/Shaders/
+
+1. do a full review of our post processing effects.
+2. do a full review of the post processing effects in the unity asset pack.
+3. adapt and enhance our post processing effects based on what you have learned from the unity asset pack.

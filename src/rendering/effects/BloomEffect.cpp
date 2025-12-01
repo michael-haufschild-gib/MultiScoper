@@ -15,51 +15,116 @@ using namespace juce::gl;
 // Shaders
 // =============================================================================
 
-// Prefilter: Extracts bright pixels and performs the first downsample (bilinear)
-// Now with soft knee for smoother threshold transition
+// Prefilter: Extracts bright pixels and performs the first downsample (13-tap Dual Filter)
+// Includes Karis Average to reduce fireflies (temporal instability)
 static const char* prefilterFragmentShader = R"(
     #version 330 core
     uniform sampler2D sourceTexture;
+    uniform vec2 srcResolution;
     uniform float threshold;
-    uniform float softKnee;  // 0.0 = hard knee, 1.0 = very soft
+    uniform float softKnee;
 
     in vec2 vTexCoord;
     out vec4 fragColor;
 
-    void main()
-    {
-        // Simple bilinear downsample happens automatically via GPU if we sample 'sourceTexture' at half-res
-        vec3 color = texture(sourceTexture, vTexCoord).rgb;
+    // Partial Karis Average: weighting by 1/(1+luma)
+    float karisWeight(vec3 color) {
+        float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        return 1.0 / (1.0 + luma);
+    }
 
-        // Calculate luminance (Rec. 709)
+    vec3 applyThreshold(vec3 color) {
         float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
-
-        // Soft knee threshold for smooth transition
-        // knee controls the width of the soft transition zone
         float knee = threshold * softKnee;
-
-        float contribution;
-        if (softKnee > 0.001)
-        {
-            // Soft knee: quadratic curve for smooth transition
+        
+        float contribution = max(0.0, brightness - threshold);
+        
+        if (softKnee > 0.001) {
             float soft = brightness - threshold + knee;
             soft = clamp(soft, 0.0, 2.0 * knee);
             contribution = soft * soft / (4.0 * knee + 0.00001);
-
-            // Add linear part above threshold
             contribution += max(0.0, brightness - threshold - knee);
         }
-        else
-        {
-            // Hard knee (original behavior)
-            contribution = max(0.0, brightness - threshold);
-        }
-
-        // Normalization to preserve color ratio
-        // Avoid division by zero
+        
         contribution /= max(brightness, 0.00001);
+        return color * contribution;
+    }
 
-        fragColor = vec4(color * contribution, 1.0);
+    void main()
+    {
+        vec2 texelSize = 1.0 / srcResolution;
+        float x = texelSize.x;
+        float y = texelSize.y;
+
+        // 13-tap Jimenez Filter with Karis Average
+        // A B C
+        // D E F
+        // G H I
+        // J K L
+        // M N O
+        
+        // Groups:
+        // Center: [F, G, J, K] (Wait, standard dual filter uses 5 groups)
+        // Let's use the standard Jimenez 13-tap locations:
+        // (0,0), (-2,-2), (-2,2), (2,-2), (2,2) ... 
+        
+        // Sample locations from "Next Generation Post Processing"
+        vec3 a = texture(sourceTexture, vTexCoord + vec2(-2*x, 2*y)).rgb;
+        vec3 b = texture(sourceTexture, vTexCoord + vec2( 0,   2*y)).rgb;
+        vec3 c = texture(sourceTexture, vTexCoord + vec2( 2*x, 2*y)).rgb;
+
+        vec3 d = texture(sourceTexture, vTexCoord + vec2(-1*x, 1*y)).rgb;
+        vec3 e = texture(sourceTexture, vTexCoord + vec2( 1*x, 1*y)).rgb;
+
+        vec3 f = texture(sourceTexture, vTexCoord + vec2(-2*x, 0)).rgb;
+        vec3 g = texture(sourceTexture, vTexCoord).rgb;
+        vec3 h = texture(sourceTexture, vTexCoord + vec2( 2*x, 0)).rgb;
+
+        vec3 i = texture(sourceTexture, vTexCoord + vec2(-1*x, -1*y)).rgb;
+        vec3 j = texture(sourceTexture, vTexCoord + vec2( 1*x, -1*y)).rgb;
+
+        vec3 k = texture(sourceTexture, vTexCoord + vec2(-2*x, -2*y)).rgb;
+        vec3 l = texture(sourceTexture, vTexCoord + vec2( 0,   -2*y)).rgb;
+        vec3 m = texture(sourceTexture, vTexCoord + vec2( 2*x, -2*y)).rgb;
+
+        // Weighted average groups with Karis weight
+        // Group 0 (Center)
+        vec3 g0 = (d + e + i + j) * 0.25;
+        // Group 1 (Top Left)
+        vec3 g1 = (a + b + g + f) * 0.25;
+        // Group 2 (Top Right)
+        vec3 g2 = (b + c + h + g) * 0.25;
+        // Group 3 (Bottom Left)
+        vec3 g3 = (f + g + l + k) * 0.25;
+        // Group 4 (Bottom Right)
+        vec3 g4 = (g + h + m + l) * 0.25;
+
+        // Apply Karis weights to groups to suppress fireflies
+        // Note: We apply thresholding *after* downsampling to preserve energy of thin lines,
+        // but we might want to threshold *before* to prevent dimming?
+        // Standard approach: Downsample -> Threshold.
+        // Karis approach: Weighted Average -> Threshold.
+        
+        float w0 = karisWeight(g0);
+        float w1 = karisWeight(g1);
+        float w2 = karisWeight(g2);
+        float w3 = karisWeight(g3);
+        float w4 = karisWeight(g4);
+
+        vec3 sum = g0 * w0 * 0.5;
+        sum += g1 * w1 * 0.125;
+        sum += g2 * w2 * 0.125;
+        sum += g3 * w3 * 0.125;
+        sum += g4 * w4 * 0.125;
+        
+        float totalWeight = w0 * 0.5 + (w1 + w2 + w3 + w4) * 0.125;
+        
+        vec3 avgColor = sum / totalWeight;
+
+        // Finally apply threshold
+        vec3 result = applyThreshold(avgColor);
+
+        fragColor = vec4(result, 1.0);
     }
 )";
 
@@ -209,6 +274,7 @@ bool BloomEffect::compile(juce::OpenGLContext& context)
     if (!compileEffectShader(*prefilterShader_, prefilterFragmentShader)) return false;
     prefilterThreshLoc_ = prefilterShader_->getUniformIDFromName("threshold");
     prefilterSoftKneeLoc_ = prefilterShader_->getUniformIDFromName("softKnee");
+    prefilterResLoc_ = prefilterShader_->getUniformIDFromName("srcResolution");
 
     // 2. Downsample
     downsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
@@ -279,7 +345,7 @@ void BloomEffect::apply(
                 mipChain_[static_cast<size_t>(i)]->destroy(context);
             
             // Use Linear/Clamp for all mips (default in Framebuffer::create)
-            mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, GL_RGBA16F, false);
+            mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false);
         }
         lastWidth_ = w;
         lastHeight_ = h;
@@ -297,11 +363,12 @@ void BloomEffect::apply(
     source->bindTexture(0);
     ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
     ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
+    ext.glUniform2f(prefilterResLoc_, (float)source->width, (float)source->height);
     pool.renderFullscreenQuad();
     mipChain_[0]->unbind();
 
     // =========================================================================
-    // Pass 2: Downsample Chain (Mip 0 -> 1 -> 2 -> 3 -> 4)
+    // Pass 2: Downsample Chain (Mip 0 -> 1 -> 2 -> 3 -> 4 -> 5)
     // =========================================================================
     downsampleShader_->use();
     for (int i = 0; i < kMaxMipLevels - 1; ++i)
@@ -320,7 +387,7 @@ void BloomEffect::apply(
     }
 
     // =========================================================================
-    // Pass 3: Upsample Chain (Mip 4 -> 3 -> 2 -> 1 -> 0)
+    // Pass 3: Upsample Chain (Mip 5 -> 4 -> 3 -> 2 -> 1 -> 0)
     // =========================================================================
     // Enable additive blending to accumulate the glow
     glEnable(GL_BLEND);

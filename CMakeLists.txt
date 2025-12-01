@@ -98,6 +98,9 @@ if(OSCIL_ENABLE_INSPECTOR)
     )
 endif()
 
+# Include source file definitions
+include(cmake/Sources.cmake)
+
 # Define the plugin
 juce_add_plugin(Oscil
     COMPANY_NAME "OscilAudio"
@@ -128,126 +131,7 @@ juce_add_binary_data(OscilBinaryData
 )
 
 # Source files
-target_sources(Oscil
-    PRIVATE
-        # Core
-        src/core/PluginProcessor.cpp
-        src/core/InstanceRegistry.cpp
-        src/core/SharedCaptureBuffer.cpp
-        src/core/OscilState.cpp
-        src/core/Oscillator.cpp
-        src/core/Pane.cpp
-        src/core/WindowLayout.cpp
-        src/core/Source.cpp
-
-        # DSP
-        src/dsp/SignalProcessor.cpp
-        src/dsp/TimingEngine.cpp
-
-        # UI
-        src/ui/PluginEditor.cpp
-        src/ui/WaveformComponent.cpp
-        src/ui/OscillatorPanel.cpp
-        src/ui/PaneComponent.cpp
-        src/ui/ThemeManager.cpp
-        src/ui/ThemeEditorComponent.cpp
-        src/ui/ColorPickerComponent.cpp
-        src/ui/StatusBarComponent.cpp
-        src/ui/SourceSelectorComponent.cpp
-        src/ui/SettingsDropdown.cpp
-        src/ui/SidebarComponent.cpp
-        src/ui/SourceItemComponent.cpp
-        src/ui/components/SegmentedButtonBar.cpp
-        src/ui/OscillatorListToolbar.cpp
-        src/ui/OscillatorListItem.cpp
-        src/ui/OscillatorConfigPopup.cpp
-        src/ui/AddOscillatorDialog.cpp
-        src/ui/PluginTestServer.cpp
-        # UI Sections
-        src/ui/sections/TimingSidebarSection.cpp
-        src/ui/sections/OptionsSection.cpp
-        # UI Coordinators
-        src/ui/coordinators/SourceCoordinator.cpp
-        src/ui/coordinators/ThemeCoordinator.cpp
-        src/ui/coordinators/LayoutCoordinator.cpp
-
-        # UI Managers
-        src/ui/managers/OpenGLLifecycleManager.cpp
-
-        # Platform-specific
-        $<$<PLATFORM_ID:Darwin>:src/ui/components/AnimationSettings.mm>
-
-        # UI Components (New Component Library)
-        src/ui/components/OscilButton.cpp
-        src/ui/components/OscilTextField.cpp
-        src/ui/components/OscilToggle.cpp
-        src/ui/components/OscilTooltip.cpp
-        src/ui/components/OscilSlider.cpp
-        src/ui/components/OscilCheckbox.cpp
-        src/ui/components/OscilRadioButton.cpp
-        src/ui/components/OscilDropdown.cpp
-        src/ui/components/OscilTabs.cpp
-        src/ui/components/OscilAccordion.cpp
-        src/ui/components/OscilBadge.cpp
-        src/ui/components/OscilModal.cpp
-        src/ui/components/OscilColorSwatches.cpp
-        src/ui/components/OscilColorPicker.cpp
-        src/ui/components/OscilMeterBar.cpp
-        src/ui/components/OscilTransportSync.cpp
-        src/ui/components/UIAudioFeedback.cpp
-
-        # Rendering (Shaders)
-        src/rendering/WaveformShader.cpp
-        src/rendering/ShaderRegistry.cpp
-        src/rendering/shaders/BasicShader.cpp
-        src/rendering/shaders/NeonGlowShader.cpp
-        src/rendering/shaders/GradientFillShader.cpp
-        src/rendering/shaders/DualOutlineShader.cpp
-        src/rendering/shaders/PlasmaSineShader.cpp
-        src/rendering/shaders/DigitalGlitchShader.cpp
-        src/rendering/WaveformGLRenderer.cpp
-
-        # Rendering (Render Engine)
-        src/rendering/Framebuffer.cpp
-        src/rendering/FramebufferPool.cpp
-        src/rendering/RenderEngine.cpp
-        src/rendering/VisualConfiguration.cpp
-        src/rendering/WaveformRenderState.cpp
-        src/rendering/Camera3D.cpp
-
-        # Rendering (Post-Processing Effects)
-        src/rendering/effects/PostProcessEffect.cpp
-        src/rendering/effects/VignetteEffect.cpp
-        src/rendering/effects/FilmGrainEffect.cpp
-        src/rendering/effects/BloomEffect.cpp
-        src/rendering/effects/TrailsEffect.cpp
-        src/rendering/effects/ColorGradeEffect.cpp
-        src/rendering/effects/ChromaticAberrationEffect.cpp
-        src/rendering/effects/ScanlineEffect.cpp
-        src/rendering/effects/DistortionEffect.cpp
-        src/rendering/effects/GlitchEffect.cpp
-        src/rendering/effects/RadialBlurEffect.cpp
-
-        # Rendering (Particles)
-        src/rendering/particles/ParticlePool.cpp
-        src/rendering/particles/ParticleEmitter.cpp
-        src/rendering/particles/ParticleSystem.cpp
-
-        # Rendering (3D Shaders)
-        src/rendering/shaders3d/WaveformShader3D.cpp
-        src/rendering/shaders3d/VolumetricRibbonShader.cpp
-        src/rendering/shaders3d/WireframeMeshShader.cpp
-        src/rendering/shaders3d/VectorFlowShader.cpp
-        src/rendering/shaders3d/StringTheoryShader.cpp
-        src/rendering/shaders3d/ElectricFlowerShader.cpp
-
-        # Rendering (Materials)
-        src/rendering/materials/MaterialShader.cpp
-        src/rendering/materials/EnvironmentMapManager.cpp
-        src/rendering/materials/GlassRefractionShader.cpp
-        src/rendering/materials/LiquidChromeShader.cpp
-        src/rendering/materials/CrystallineShader.cpp
-)
+target_sources(Oscil PRIVATE ${OSCIL_SOURCES})
 
 # Include directories
 target_include_directories(Oscil
@@ -360,22 +244,7 @@ if(OSCIL_BUILD_TESTS)
         # UI Component Tests
         tests/test_spring_animation.cpp
         tests/test_animation_settings.cpp
-        # NOTE: Component tests moved to tests/outdated_tests/ - need rewriting to match actual API
-        # tests/test_oscil_button.cpp
-        # tests/test_oscil_toggle.cpp
-        # tests/test_oscil_textfield.cpp
-        # tests/test_oscil_slider.cpp
-        # tests/test_oscil_checkbox.cpp
-        # tests/test_oscil_radiobutton.cpp
-        # tests/test_oscil_dropdown.cpp
-        # tests/test_oscil_tabs.cpp
-        # tests/test_oscil_accordion.cpp
-        # tests/test_oscil_badge.cpp
-        # tests/test_oscil_modal.cpp
-        # tests/test_oscil_colorswatches.cpp
-        # tests/test_oscil_colorpicker.cpp
-        # tests/test_oscil_meterbar.cpp
-        # tests/test_oscil_transportsync.cpp
+        
         tests/test_ui_audio_feedback.cpp
         tests/test_timing_calculations.cpp
         tests/test_add_oscillator_dialog.cpp
@@ -497,6 +366,8 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/effects/DistortionEffect.cpp
         src/rendering/effects/GlitchEffect.cpp
         src/rendering/effects/RadialBlurEffect.cpp
+        src/rendering/effects/LensFlareEffect.cpp
+        src/rendering/effects/TiltShiftEffect.cpp
 
         # Rendering (Particles) for testing
         src/rendering/particles/ParticlePool.cpp

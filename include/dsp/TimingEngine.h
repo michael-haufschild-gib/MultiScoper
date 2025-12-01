@@ -411,10 +411,13 @@ private:
     // UI thread writes config via setters → stores to atomics
     // Audio thread reads from atomics in processBlock/updateHostInfo
     std::atomic<float> atomicHostBPM_{ 120.0f };
+    std::atomic<float> atomicInternalBPM_{ 120.0f };
+    std::atomic<float> atomicTimeIntervalMs_{ 500.0f };
     std::atomic<float> atomicActualIntervalMs_{ 500.0f };
 
     // Atomics for fields read from audio thread (written by UI thread setters)
     std::atomic<int> atomicTimingMode_{ static_cast<int>(TimingMode::TIME) };
+    std::atomic<int> atomicNoteInterval_{ static_cast<int>(EngineNoteInterval::NOTE_1_4TH) };
     std::atomic<bool> atomicHostSyncEnabled_{ false };
     std::atomic<int> atomicTriggerMode_{ static_cast<int>(WaveformTriggerMode::None) };
     std::atomic<int> atomicTriggerChannel_{ 0 };

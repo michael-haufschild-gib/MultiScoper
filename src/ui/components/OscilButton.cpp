@@ -144,7 +144,7 @@ int OscilButton::getPreferredWidth() const
     if (variant_ == ButtonVariant::Icon)
         return ComponentLayout::BUTTON_ICON_SIZE;
 
-    auto font = juce::Font(juce::FontOptions().withHeight(14.0f));
+    auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, label_, 0, 0);
     int textWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -248,12 +248,12 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     int horizontalPadding;
     if (segmentPosition_ != SegmentPosition::None)
     {
-        horizontalPadding = 6;  // Slightly more padding for better readability
+        horizontalPadding = ComponentLayout::BUTTON_SEGMENT_PADDING;  // Slightly more padding for better readability
     }
     else if (bounds.getWidth() < TEXT_PADDING * 2.5f)
     {
         // For narrow buttons, use proportional padding (min 8px for better readability)
-        horizontalPadding = std::max(8, static_cast<int>(bounds.getWidth() * 0.15f));
+        horizontalPadding = std::max(8, static_cast<int>(bounds.getWidth() * ComponentLayout::BUTTON_NARROW_PADDING_RATIO));
     }
     else
     {
@@ -270,7 +270,7 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     if (!iconPath_.isEmpty())
     {
         auto pathBounds = iconPath_.getBounds();
-        float padding = 4.0f;
+        float padding = static_cast<float>(ComponentLayout::SPACING_XS);
         float availableSize = std::min(bounds.getWidth(), bounds.getHeight()) - padding * 2;
 
         // Scale path to fit within available space
@@ -303,7 +303,7 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     }
 
     // Text with optional icon
-    auto font = juce::Font(juce::FontOptions().withHeight(14.0f));
+    auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
     g.setFont(font);
 
     if (icon_.isValid())

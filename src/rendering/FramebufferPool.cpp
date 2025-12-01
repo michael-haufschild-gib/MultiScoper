@@ -35,14 +35,14 @@ bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int he
 
     // Create waveform FBO with depth buffer (for 3D rendering) and HDR format
     // Enable depth texture for post-processing effects like Depth of Field
-    if (!waveformFBO_->create(context, width, height, GL_RGBA16F, true, true))
+    if (!waveformFBO_->create(context, width, height, 0, GL_RGBA16F, true, true))
     {
         DBG("FramebufferPool: Failed to create waveform FBO");
         return false;
     }
 
     // Create ping FBO for effect chain (HDR, no depth)
-    if (!pingFBO_->create(context, width, height, GL_RGBA16F, false))
+    if (!pingFBO_->create(context, width, height, 0, GL_RGBA16F, false))
     {
         DBG("FramebufferPool: Failed to create ping FBO");
         waveformFBO_->destroy(context);
@@ -50,7 +50,7 @@ bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int he
     }
 
     // Create pong FBO for effect chain (HDR, no depth)
-    if (!pongFBO_->create(context, width, height, GL_RGBA16F, false))
+    if (!pongFBO_->create(context, width, height, 0, GL_RGBA16F, false))
     {
         DBG("FramebufferPool: Failed to create pong FBO");
         waveformFBO_->destroy(context);

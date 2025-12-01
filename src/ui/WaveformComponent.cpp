@@ -249,7 +249,97 @@ void WaveformComponent::forceUpdateWaveformData()
 {
     // Force the waveform path update which calculates peak/RMS levels
     // This is useful for testing to ensure data is processed before querying state
-    updateWaveformPath();
+    processAudioData();
+}
+
+void WaveformComponent::processAudioData()
+{
+    if (holdDisplay_ || !captureBuffer_)
+        return;
+
+    // Read samples from capture buffer
+    std::vector<float> leftSamples(static_cast<size_t>(displaySamples_));
+    std::vector<float> rightSamples(static_cast<size_t>(displaySamples_));
+
+    int samplesReadLeft = captureBuffer_->read(leftSamples.data(), displaySamples_, 0);
+    int samplesReadRight = captureBuffer_->read(rightSamples.data(), displaySamples_, 1);
+
+    if (samplesReadLeft <= 0)
+        return;
+
+    // Use minimum of both channels to ensure we only process valid samples
+    int samplesRead = (samplesReadRight > 0) ? std::min(samplesReadLeft, samplesReadRight) : samplesReadLeft;
+
+    // Apply gain to samples
+    if (std::abs(gainLinear_ - 1.0f) > 1e-6f)
+    {
+        for (int i = 0; i < samplesRead; ++i)
+        {
+            leftSamples[static_cast<size_t>(i)] *= gainLinear_;
+            rightSamples[static_cast<size_t>(i)] *= gainLinear_;
+        }
+    }
+
+    // Process samples according to mode
+    signalProcessor_.process(leftSamples.data(), rightSamples.data(), samplesRead,
+                             processingMode_, processedSignal_);
+
+    // Decimate for display
+    decimator_.process(processedSignal_.channel1.data(),
+                       static_cast<int>(processedSignal_.channel1.size()),
+                       displayBuffer1_);
+
+    if (processedSignal_.isStereo)
+    {
+        decimator_.process(processedSignal_.channel2.data(),
+                           static_cast<int>(processedSignal_.channel2.size()),
+                           displayBuffer2_);
+    }
+
+    // Calculate levels
+    currentPeak_ = SignalProcessor::calculatePeak(processedSignal_.channel1.data(),
+                                                   processedSignal_.numSamples);
+    currentRMS_ = SignalProcessor::calculateRMS(processedSignal_.channel1.data(),
+                                                 processedSignal_.numSamples);
+
+    // Calculate target scale based on mode
+    float targetScale = verticalScale_;
+    
+    if (autoScale_ && currentPeak_ > 0.001f)
+    {
+        // Target 90% of display height for the peak
+        constexpr float targetFill = 0.9f;
+        float autoScaleFactor = targetFill / currentPeak_;
+        // Clamp to reasonable range to prevent extreme scaling
+        targetScale = juce::jlimit(0.5f, 10.0f, autoScaleFactor);
+    }
+
+    // Apply smoothing to effectiveScale_
+    if (!autoScale_)
+    {
+        // In manual mode, respond instantly
+        effectiveScale_ = targetScale;
+    }
+    else
+    {
+        // Asymmetric smoothing for auto-scale
+        if (targetScale < effectiveScale_)
+        {
+            // Signal is getting LOUDER (scale needs to shrink)
+            // Respond fast to prevent visual clipping
+            effectiveScale_ += (targetScale - effectiveScale_) * 0.2f;
+        }
+        else
+        {
+            // Signal is getting QUIETER (scale needs to grow)
+            // Respond slow to prevent jitter and pumping
+            effectiveScale_ += (targetScale - effectiveScale_) * 0.02f;
+        }
+
+        // Snap to target if very close to stop micro-updates
+        if (std::abs(targetScale - effectiveScale_) < 0.001f)
+            effectiveScale_ = targetScale;
+    }
 }
 
 void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
@@ -393,7 +483,11 @@ void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*b
 
 void WaveformComponent::updateWaveformPath()
 {
-    // If hold display is enabled, don't update the waveform
+    // Ensure data is fresh (CPU mode needs this called here)
+    // In GPU mode, processAudioData is called externally, but calling it here is fine for CPU fallback
+    processAudioData();
+
+    // If hold display is enabled, don't update the waveform path
     if (holdDisplay_)
         return;
 
@@ -429,92 +523,6 @@ void WaveformComponent::updateWaveformPath()
         centerY2 = static_cast<float>(height) * 0.5f;
         amplitude1 = static_cast<float>(height) * 0.5f;
         amplitude2 = static_cast<float>(height) * 0.5f;
-    }
-
-    // Read samples from capture buffer
-    std::vector<float> leftSamples(static_cast<size_t>(displaySamples_));
-    std::vector<float> rightSamples(static_cast<size_t>(displaySamples_));
-
-    int samplesReadLeft = captureBuffer_->read(leftSamples.data(), displaySamples_, 0);
-    int samplesReadRight = captureBuffer_->read(rightSamples.data(), displaySamples_, 1);
-
-    if (samplesReadLeft <= 0)
-        return;
-
-    // Use minimum of both channels to ensure we only process valid samples
-    int samplesRead = (samplesReadRight > 0) ? std::min(samplesReadLeft, samplesReadRight) : samplesReadLeft;
-
-    // Apply gain to samples
-    if (std::abs(gainLinear_ - 1.0f) > 1e-6f)
-    {
-        for (int i = 0; i < samplesRead; ++i)
-        {
-            leftSamples[static_cast<size_t>(i)] *= gainLinear_;
-            rightSamples[static_cast<size_t>(i)] *= gainLinear_;
-        }
-    }
-
-    // Process samples according to mode
-    signalProcessor_.process(leftSamples.data(), rightSamples.data(), samplesRead,
-                             processingMode_, processedSignal_);
-
-    // Decimate for display
-    decimator_.process(processedSignal_.channel1.data(),
-                       static_cast<int>(processedSignal_.channel1.size()),
-                       displayBuffer1_);
-
-    if (processedSignal_.isStereo)
-    {
-        decimator_.process(processedSignal_.channel2.data(),
-                           static_cast<int>(processedSignal_.channel2.size()),
-                           displayBuffer2_);
-    }
-
-    // Calculate levels
-    currentPeak_ = SignalProcessor::calculatePeak(processedSignal_.channel1.data(),
-                                                   processedSignal_.numSamples);
-    currentRMS_ = SignalProcessor::calculateRMS(processedSignal_.channel1.data(),
-                                                 processedSignal_.numSamples);
-
-    // Calculate target scale based on mode
-    float targetScale = verticalScale_;
-    
-    if (autoScale_ && currentPeak_ > 0.001f)
-    {
-        // Target 90% of display height for the peak
-        constexpr float targetFill = 0.9f;
-        float autoScaleFactor = targetFill / currentPeak_;
-        // Clamp to reasonable range to prevent extreme scaling
-        targetScale = juce::jlimit(0.5f, 10.0f, autoScaleFactor);
-    }
-
-    // Apply smoothing to effectiveScale_
-    if (!autoScale_)
-    {
-        // In manual mode, respond instantly
-        effectiveScale_ = targetScale;
-    }
-    else
-    {
-        // Asymmetric smoothing for auto-scale
-        if (targetScale < effectiveScale_)
-        {
-            // Signal is getting LOUDER (scale needs to shrink)
-            // Respond fast to prevent visual clipping
-            // ~0.2 coefficient = reaches target in ~10-15 frames
-            effectiveScale_ += (targetScale - effectiveScale_) * 0.2f;
-        }
-        else
-        {
-            // Signal is getting QUIETER (scale needs to grow)
-            // Respond slow to prevent jitter and pumping
-            // ~0.02 coefficient = reaches target in ~2-3 seconds (at 60fps)
-            effectiveScale_ += (targetScale - effectiveScale_) * 0.02f;
-        }
-
-        // Snap to target if very close to stop micro-updates
-        if (std::abs(targetScale - effectiveScale_) < 0.001f)
-            effectiveScale_ = targetScale;
     }
 
     // Build path for first channel (L or mono)

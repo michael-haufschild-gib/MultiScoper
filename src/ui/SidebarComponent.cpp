@@ -332,7 +332,7 @@ void SidebarComponent::resized()
     if (collapsed_)
     {
         // Collapsed state - only show collapse button centered
-        collapseButton_->setBounds(bounds.withSizeKeepingCentre(24, 24));
+        collapseButton_->setBounds(bounds.withSizeKeepingCentre(COLLAPSE_BUTTON_SIZE, COLLAPSE_BUTTON_SIZE));
         addOscillatorButton_->setVisible(false);
         oscillatorToolbar_->setVisible(false);
         listViewport_->setVisible(false);
@@ -350,11 +350,11 @@ void SidebarComponent::resized()
         accordionViewport_->setVisible(true);
 
         // Collapse button at top right
-        auto topRow = bounds.removeFromTop(SECTION_HEADER_HEIGHT).reduced(4, 4);
-        collapseButton_->setBounds(topRow.removeFromRight(24));
+        auto topRow = bounds.removeFromTop(SECTION_HEADER_HEIGHT).reduced(PADDING_SMALL, PADDING_SMALL);
+        collapseButton_->setBounds(topRow.removeFromRight(COLLAPSE_BUTTON_SIZE));
 
         // Add Oscillator button at top
-        auto buttonArea = bounds.removeFromTop(ADD_BUTTON_HEIGHT).reduced(8, 4);
+        auto buttonArea = bounds.removeFromTop(ADD_BUTTON_HEIGHT).reduced(PADDING_MEDIUM, PADDING_SMALL);
         addOscillatorButton_->setBounds(buttonArea);
 
         // Oscillators toolbar
@@ -364,7 +364,7 @@ void SidebarComponent::resized()
         // Empty state label position (same area as oscillators list)
         if (!hasOscillators)
         {
-            auto emptyArea = bounds.reduced(8, 0).withHeight(100);
+            auto emptyArea = bounds.reduced(PADDING_MEDIUM, 0).withHeight(MIN_LIST_HEIGHT);
             emptyStateLabel_->setBounds(emptyArea);
         }
 
@@ -376,14 +376,14 @@ void SidebarComponent::resized()
         }
 
         // Calculate oscillators area height - flexible height for items
-        int oscillatorsHeight = std::max(100, std::min(300, oscillatorsContentHeight + 8));
+        int oscillatorsHeight = std::max(MIN_LIST_HEIGHT, std::min(MAX_LIST_HEIGHT, oscillatorsContentHeight + PADDING_MEDIUM));
 
         // Oscillators list area
-        auto oscillatorsArea = bounds.removeFromTop(oscillatorsHeight).reduced(4, 0);
+        auto oscillatorsArea = bounds.removeFromTop(oscillatorsHeight).reduced(PADDING_SMALL, 0);
         listViewport_->setBounds(oscillatorsArea);
 
         // Update oscillators container size
-        listContainer_->setSize(listViewport_->getWidth() - 8,
+        listContainer_->setSize(listViewport_->getWidth() - PADDING_MEDIUM,
                                  std::max(oscillatorsContentHeight, oscillatorsArea.getHeight()));
 
         // Position oscillator items using their preferred heights
@@ -396,12 +396,12 @@ void SidebarComponent::resized()
         }
 
         // Control sections viewport - takes remaining space
-        accordionViewport_->setBounds(bounds.reduced(4, 0));
+        accordionViewport_->setBounds(bounds.reduced(PADDING_SMALL, 0));
         
         // Update accordion width to match viewport
         if (accordion_)
         {
-            int width = accordionViewport_->getWidth() - (accordionViewport_->getScrollBarThickness() + 4);
+            int width = accordionViewport_->getWidth() - (accordionViewport_->getScrollBarThickness() + PADDING_SMALL);
             accordion_->setSize(width, accordion_->getPreferredHeight());
         }
     }

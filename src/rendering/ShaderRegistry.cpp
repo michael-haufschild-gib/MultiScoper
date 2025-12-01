@@ -37,30 +37,33 @@ ShaderRegistry::~ShaderRegistry() = default;
 void ShaderRegistry::registerBuiltInShaders()
 {
     // Register default shaders
-    registerShader(std::make_unique<BasicShader>());
+    registerShaderType<BasicShader>();
 
     // Register 2D shaders
-    registerShader(std::make_unique<NeonGlowShader>());
-    registerShader(std::make_unique<GradientFillShader>());
-    registerShader(std::make_unique<DualOutlineShader>());
-    registerShader(std::make_unique<PlasmaSineShader>());
-    registerShader(std::make_unique<DigitalGlitchShader>());
+    registerShaderType<NeonGlowShader>();
+    registerShaderType<GradientFillShader>();
+    registerShaderType<DualOutlineShader>();
+    registerShaderType<PlasmaSineShader>();
+    registerShaderType<DigitalGlitchShader>();
 
     // Register 3D shaders
-    registerShader(std::make_unique<VolumetricRibbonShader>());
-    registerShader(std::make_unique<WireframeMeshShader>());
-    registerShader(std::make_unique<VectorFlowShader>());
-    registerShader(std::make_unique<StringTheoryShader>());
-    registerShader(std::make_unique<ElectricFlowerShader>());
+    registerShaderType<VolumetricRibbonShader>();
+    registerShaderType<WireframeMeshShader>();
+    registerShaderType<VectorFlowShader>();
+    registerShaderType<StringTheoryShader>();
+    registerShaderType<ElectricFlowerShader>();
 
     // Register Material shaders
-    registerShader(std::make_unique<GlassRefractionShader>());
-    registerShader(std::make_unique<LiquidChromeShader>());
-    registerShader(std::make_unique<CrystallineShader>());
+    registerShaderType<GlassRefractionShader>();
+    registerShaderType<LiquidChromeShader>();
+    registerShaderType<CrystallineShader>();
 }
 
 void ShaderRegistry::registerShader(std::unique_ptr<WaveformShader> shader)
 {
+    // Deprecated: prefer registerShaderType for factory support
+    // This overload only stores a prototype and cannot support per-instance GL compilation
+    // Kept for compatibility if needed, but createShader will fail for these
     if (shader)
     {
         auto id = shader->getId().toStdString();
@@ -80,6 +83,16 @@ const WaveformShader* ShaderRegistry::getShader(const juce::String& shaderId) co
     return (it != shaders_.end()) ? it->second.get() : nullptr;
 }
 
+std::unique_ptr<WaveformShader> ShaderRegistry::createShader(const juce::String& shaderId) const
+{
+    auto it = factories_.find(shaderId.toStdString());
+    if (it != factories_.end())
+    {
+        return it->second();
+    }
+    return nullptr;
+}
+
 std::vector<ShaderInfo> ShaderRegistry::getAvailableShaders() const
 {
     std::vector<ShaderInfo> result;
@@ -97,32 +110,5 @@ bool ShaderRegistry::hasShader(const juce::String& shaderId) const
 {
     return shaders_.find(shaderId.toStdString()) != shaders_.end();
 }
-
-#if OSCIL_ENABLE_OPENGL
-void ShaderRegistry::compileAll(juce::OpenGLContext& context)
-{
-    for (auto& [id, shader] : shaders_)
-    {
-        if (shader && !shader->isCompiled())
-        {
-            if (!shader->compile(context))
-            {
-                DBG("Failed to compile shader: " << juce::String(id));
-            }
-        }
-    }
-}
-
-void ShaderRegistry::releaseAll(juce::OpenGLContext& context)
-{
-    for (auto& [id, shader] : shaders_)
-    {
-        if (shader && shader->isCompiled())
-        {
-            shader->release(context);
-        }
-    }
-}
-#endif
 
 } // namespace oscil

@@ -165,13 +165,10 @@ void WaveformGLRenderer::compileDebugShader()
 
 void WaveformGLRenderer::compileShaders()
 {
+    // Legacy method removed - shaders are now managed by RenderEngine
     if (!context_ || shadersCompiled_)
         return;
-
-    DBG("WaveformGLRenderer: Compiling shaders...");
-    ShaderRegistry::getInstance().compileAll(*context_);
     shadersCompiled_ = true;
-    DBG("WaveformGLRenderer: Shaders compiled successfully");
 }
 
 void WaveformGLRenderer::renderOpenGL()
@@ -318,14 +315,9 @@ void WaveformGLRenderer::renderOpenGL()
     else
     {
         // ========== BASIC FALLBACK RENDER PATH ==========
-        // Clear the framebuffer with the background color.
+        // RenderEngine failed or not initialized.
+        // Fallback to clear screen (no shaders available without RenderEngine)
         juce::OpenGLHelpers::clear(backgroundColour_);
-
-        // Normal mode: render waveforms with shaders directly
-        for (const auto& data : waveformsToRender)
-        {
-            renderWaveform(data);
-        }
     }
 }
 
@@ -481,37 +473,9 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     glDisable(GL_BLEND);
 }
 
-void WaveformGLRenderer::renderWaveform(const WaveformRenderData& data)
+void WaveformGLRenderer::renderWaveform(const WaveformRenderData& /*data*/)
 {
-    if (!context_ || data.channel1.size() < 2)
-        return;
-
-    // Get shader from registry
-    auto* shader = ShaderRegistry::getInstance().getShader(data.shaderId);
-    if (!shader)
-    {
-        shader = ShaderRegistry::getInstance().getShader(
-            ShaderRegistry::getInstance().getDefaultShaderId());
-    }
-
-    if (!shader || !shader->isCompiled())
-    {
-        DBG("WaveformGLRenderer: Shader not available or not compiled: " << data.shaderId);
-        return;
-    }
-
-    // Set up render parameters
-    ShaderRenderParams params;
-    params.colour = data.colour;
-    params.opacity = data.opacity;
-    params.lineWidth = data.lineWidth;
-    params.bounds = data.bounds;
-    params.isStereo = data.isStereo;
-    params.verticalScale = data.verticalScale;
-
-    // Render using the GPU shader
-    const std::vector<float>* channel2Ptr = data.isStereo ? &data.channel2 : nullptr;
-    shader->render(*context_, data.channel1, channel2Ptr, params);
+    // Legacy method removed - use RenderEngine
 }
 
 void WaveformGLRenderer::openGLContextClosing()
@@ -548,10 +512,7 @@ void WaveformGLRenderer::openGLContextClosing()
     debugShaderCompiled_ = false;
 
     // Release all shader resources (context is still active at this point)
-    if (context_ != nullptr)
-    {
-        ShaderRegistry::getInstance().releaseAll(*context_);
-    }
+    // Shaders are now managed by RenderEngine, which is already shut down above.
     shadersCompiled_ = false;
 }
 

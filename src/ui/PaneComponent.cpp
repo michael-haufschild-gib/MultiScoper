@@ -73,12 +73,21 @@ void PaneComponent::paint(juce::Graphics& g)
     g.fillRect(headerBounds);
 
     // Draw drag handle indicator (three horizontal lines)
-    auto handleBounds = headerBounds.removeFromLeft(20);
+    auto handleBounds = headerBounds.removeFromLeft(DRAG_HANDLE_WIDTH);
     g.setColour(theme.textSecondary.withAlpha(0.5f));
-    int lineY = handleBounds.getCentreY() - 4;
+    
+    // Center vertically based on total height of 3 lines and spacing
+    int totalIconHeight = (3 * DRAG_HANDLE_LINE_HEIGHT) + (2 * DRAG_HANDLE_LINE_SPACING);
+    int startY = handleBounds.getCentreY() - (totalIconHeight / 2);
+    
     for (int i = 0; i < 3; ++i)
     {
-        g.fillRect(handleBounds.getX() + 4, lineY + i * 4, 10, 2);
+        g.fillRect(
+            handleBounds.getX() + DRAG_HANDLE_LEFT_MARGIN, 
+            startY + i * (DRAG_HANDLE_LINE_HEIGHT + DRAG_HANDLE_LINE_SPACING), 
+            DRAG_HANDLE_LINE_WIDTH, 
+            DRAG_HANDLE_LINE_HEIGHT
+        );
     }
 
     // Draw "Processing:" label and colored mode indicator per design

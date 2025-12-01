@@ -52,6 +52,7 @@ private:
     std::unique_ptr<juce::OpenGLShaderProgram> prefilterShader_;
     GLint prefilterThreshLoc_ = -1;
     GLint prefilterSoftKneeLoc_ = -1;
+    GLint prefilterResLoc_ = -1;
     
     std::unique_ptr<juce::OpenGLShaderProgram> downsampleShader_;
     GLint downsampleResLoc_ = -1;
@@ -68,7 +69,7 @@ private:
     // Internal framebuffers for mip chain (pyramid)
     // mipChain_[0] is half res, [1] is quarter res, etc.
     std::vector<std::unique_ptr<Framebuffer>> mipChain_;
-    static const int kMaxMipLevels = 5;
+    static const int kMaxMipLevels = 6;
 
     bool compiled_ = false;
     int lastWidth_ = 0;

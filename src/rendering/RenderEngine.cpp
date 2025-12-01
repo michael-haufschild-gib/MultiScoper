@@ -9,11 +9,24 @@
 
 // Release-mode logging macro for render engine debugging
 #define RE_LOG(msg) std::cerr << "[RenderEngine] " << msg << std::endl
+
+// Rate-limited logging macro (logs every N frames)
+#define RE_LOG_THROTTLED(interval_frames, msg) \
+    do { \
+        static int _log_counter = 0; \
+        if (++_log_counter >= interval_frames) { \
+            _log_counter = 0; \
+            RE_LOG(msg); \
+        } \
+    } while (0)
+
 #include "rendering/effects/VignetteEffect.h"
 #include "rendering/effects/FilmGrainEffect.h"
 #include "rendering/effects/BloomEffect.h"
+#include "rendering/effects/LensFlareEffect.h"
 #include "rendering/effects/TrailsEffect.h"
 #include "rendering/effects/ColorGradeEffect.h"
+#include "rendering/effects/TiltShiftEffect.h"
 #include "rendering/effects/ChromaticAberrationEffect.h"
 #include "rendering/effects/ScanlineEffect.h"
 #include "rendering/effects/DistortionEffect.h"
@@ -85,9 +98,22 @@ static const char* blitFragmentShader = R"(
     }
 )";
 
+// Simple pass-through shader for compositing into the scene FBO while staying in linear HDR space
+static const char* compositeFragmentShader = R"(
+    #version 330 core
+    uniform sampler2D sourceTexture;
+    in vec2 vTexCoord;
+    out vec4 fragColor;
+
+    void main() {
+        fragColor = texture(sourceTexture, vTexCoord);
+    }
+)";
+
 RenderEngine::RenderEngine()
     : fbPool_(std::make_unique<FramebufferPool>())
     , sceneFBO_(std::make_unique<Framebuffer>())
+    , registry_(std::make_unique<ShaderRegistry>())
 {
 }
 
@@ -122,6 +148,26 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
         return false;
     }
 
+    // Initialize per-instance shaders
+    // Create fresh instances from the registry factory and compile them for THIS context
+    auto availableShaders = registry_->getAvailableShaders();
+    for (const auto& info : availableShaders)
+    {
+        auto shader = registry_->createShader(info.id);
+        if (shader)
+        {
+            if (shader->compile(context))
+            {
+                compiledShaders_[info.id.toStdString()] = std::move(shader);
+            }
+            else
+            {
+                DBG("RenderEngine: Failed to compile shader: " << info.id);
+            }
+        }
+    }
+    DBG("RenderEngine: Compiled " << compiledShaders_.size() << " waveform shaders");
+
     // Initialize framebuffer pool
     if (!fbPool_->initialize(context, currentWidth_, currentHeight_))
     {
@@ -130,14 +176,15 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
     }
 
     // Create scene FBO (where all waveforms are composited)
-    if (!sceneFBO_->create(context, currentWidth_, currentHeight_, GL_RGBA16F, false))
+    // Pass 0 for samples (no MSAA)
+    if (!sceneFBO_->create(context, currentWidth_, currentHeight_, 0, GL_RGBA16F, false))
     {
         DBG("RenderEngine: Failed to create scene FBO");
         fbPool_->shutdown(context);
         return false;
     }
 
-    // Compile blit shader
+    // Compile blit shader (tone map + gamma) for final output
     blitShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     
     if (!blitShader_->addVertexShader(blitVertexShader) ||
@@ -165,6 +212,36 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
 
     blitTextureLoc_ = blitShader_->getUniformIDFromName("sourceTexture");
     DBG("RenderEngine: Blit shader compiled, sourceTexture uniform=" << blitTextureLoc_);
+
+    // Compile composite shader (linear pass-through) for layering waveforms into scene FBO
+    compositeShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
+
+    if (!compositeShader_->addVertexShader(blitVertexShader) ||
+        !compositeShader_->addFragmentShader(compositeFragmentShader))
+    {
+        DBG("RenderEngine: Failed to compile composite shader: " << compositeShader_->getLastError());
+        blitShader_.reset();
+        sceneFBO_->destroy(context);
+        fbPool_->shutdown(context);
+        return false;
+    }
+
+    GLuint compositeProgramId = compositeShader_->getProgramID();
+    context.extensions.glBindAttribLocation(compositeProgramId, 0, "position");
+    context.extensions.glBindAttribLocation(compositeProgramId, 1, "texCoord");
+
+    if (!compositeShader_->link())
+    {
+        DBG("RenderEngine: Failed to link composite shader: " << compositeShader_->getLastError());
+        compositeShader_.reset();
+        blitShader_.reset();
+        sceneFBO_->destroy(context);
+        fbPool_->shutdown(context);
+        return false;
+    }
+
+    compositeTextureLoc_ = compositeShader_->getUniformIDFromName("sourceTexture");
+    DBG("RenderEngine: Composite shader compiled, sourceTexture uniform=" << compositeTextureLoc_);
 
     // Initialize post-processing effects
     initializeEffects();
@@ -204,6 +281,13 @@ void RenderEngine::shutdown()
     if (!initialized_ || !context_)
         return;
 
+    // Release compiled shaders
+    for (auto& pair : compiledShaders_)
+    {
+        pair.second->release(*context_);
+    }
+    compiledShaders_.clear();
+
     // Release all waveform states
     for (auto& pair : waveformStates_)
     {
@@ -231,7 +315,8 @@ void RenderEngine::shutdown()
     // Release camera
     camera_.reset();
 
-    // Release blit shader
+    // Release shaders
+    compositeShader_.reset();
     blitShader_.reset();
 
     // Release scene FBO
@@ -281,21 +366,7 @@ void RenderEngine::beginFrame(float deltaTime)
     deltaTime_ = deltaTime;
     accumulatedTime_ += deltaTime;
 
-    // Log once per second
-    static int frameCount = 0;
-    static bool shouldLog = false;
-    if (++frameCount >= 60)
-    {
-        frameCount = 0;
-        shouldLog = true;
-    }
-    else
-    {
-        shouldLog = false;
-    }
-
-    if (shouldLog)
-        RE_LOG("beginFrame: dt=" << deltaTime << ", sceneFBO valid=" << sceneFBO_->isValid()
+    RE_LOG_THROTTLED(60, "beginFrame: dt=" << deltaTime << ", sceneFBO valid=" << sceneFBO_->isValid()
                << " (" << sceneFBO_->width << "x" << sceneFBO_->height << ")");
 
     // Update particle system
@@ -314,13 +385,7 @@ void RenderEngine::beginFrame(float deltaTime)
 
 void RenderEngine::renderWaveform(const WaveformRenderData& data)
 {
-    // Log once per second
-    static int logCounter = 0;
-    bool shouldLog = (++logCounter >= 60);
-    if (shouldLog) logCounter = 0;
-
-    if (shouldLog)
-        RE_LOG("renderWaveform: id=" << data.id << ", visible=" << data.visible
+    RE_LOG_THROTTLED(60, "renderWaveform: id=" << data.id << ", visible=" << data.visible
                << ", ch1 size=" << data.channel1.size()
                << ", bounds=(" << data.bounds.getX() << "," << data.bounds.getY()
                << "," << data.bounds.getWidth() << "x" << data.bounds.getHeight() << ")"
@@ -328,8 +393,8 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
 
     if (!initialized_ || !data.visible || data.channel1.size() < 2)
     {
-        if (shouldLog)
-            RE_LOG("  -> early exit: init=" << initialized_ << ", vis=" << data.visible
+        // Only log early exit occasionally to avoid spam
+        RE_LOG_THROTTLED(60, "  -> early exit: init=" << initialized_ << ", vis=" << data.visible
                    << ", samples=" << data.channel1.size());
         return;
     }
@@ -344,8 +409,7 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
 
     if (it != waveformStates_.end())
     {
-        if (shouldLog)
-            RE_LOG("  -> calling renderWaveformComplete");
+        RE_LOG_THROTTLED(60, "  -> calling renderWaveformComplete");
         renderWaveformComplete(data, it->second);
     }
 }
@@ -502,18 +566,11 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
 {
     const auto& config = state.visualConfig;
 
-    // Log config details once per second
-    static int completeLogCounter = 0;
-    bool shouldLog = (++completeLogCounter >= 60);
-    if (shouldLog)
-    {
-        completeLogCounter = 0;
-        RE_LOG("renderWaveformComplete: presetId=" << config.presetId.toStdString()
+    RE_LOG_THROTTLED(60, "renderWaveformComplete: presetId=" << config.presetId.toStdString()
                << ", shaderType=" << static_cast<int>(config.shaderType)
                << ", bloom=" << config.bloom.enabled
                << ", trails=" << config.trails.enabled
                << ", vignette=" << config.vignette.enabled);
-    }
 
     // Update state timing
     state.updateTiming(deltaTime_);
@@ -596,13 +653,10 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
 
     // Step 5: Apply post-processing effects
     Framebuffer* current = waveformFBO;
-    static int ppLogCounter = 0;
-    bool ppShouldLog = (++ppLogCounter >= 60);
-    if (ppShouldLog) ppLogCounter = 0;
 
     if (config.hasPostProcessing())
     {
-        if (ppShouldLog) RE_LOG("Applying post-processing effects...");
+        RE_LOG_THROTTLED(60, "Applying post-processing effects...");
         current = applyPostProcessing(current, state);
         if (!current)
         {
@@ -612,7 +666,7 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
     }
 
     // Step 6: Composite onto scene
-    if (ppShouldLog) RE_LOG("Compositing to scene, current FBO valid=" << (current && current->isValid()));
+    RE_LOG_THROTTLED(60, "Compositing to scene, current FBO valid=" << (current && current->isValid()));
     compositeToScene(current, config);
 
     // Step 7: Update sample history for 3D temporal effects
@@ -675,25 +729,28 @@ static MaterialProperties convertMaterialSettings(const MaterialSettings& settin
 
 void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config)
 {
-    // Log once per second
-    static int geomLogCounter = 0;
-    bool shouldLog = (++geomLogCounter >= 60);
-    if (shouldLog) geomLogCounter = 0;
-
-    // Get shader from registry using string ID (for compatibility)
+    // Get shader from local map using string ID (for compatibility)
     juce::String shaderId = shaderTypeToId(config.shaderType);
-    auto* shader = ShaderRegistry::getInstance().getShader(shaderId);
+    WaveformShader* shader = nullptr;
+    
+    auto it = compiledShaders_.find(shaderId.toStdString());
+    if (it != compiledShaders_.end())
+    {
+        shader = it->second.get();
+    }
 
-    if (shouldLog)
-        RE_LOG("renderWaveformGeometry: shaderId=" << shaderId.toStdString()
+    RE_LOG_THROTTLED(60, "renderWaveformGeometry: shaderId=" << shaderId.toStdString()
                << ", shader=" << (shader ? "found" : "null"));
 
     // Fallback to basic shader if requested shader not found
     if (!shader)
     {
-        shader = ShaderRegistry::getInstance().getShader("basic");
-        if (shouldLog)
-            RE_LOG("  -> fallback to basic: " << (shader ? "found" : "null"));
+        auto basicIt = compiledShaders_.find("basic");
+        if (basicIt != compiledShaders_.end())
+        {
+            shader = basicIt->second.get();
+            RE_LOG_THROTTLED(60, "  -> fallback to basic: found");
+        }
     }
 
     if (!shader || !shader->isCompiled())
@@ -750,8 +807,7 @@ void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const 
         }
     }
 
-    if (shouldLog)
-        RE_LOG("  -> rendering with shader, bounds=(" << params.bounds.getX() << ","
+    RE_LOG_THROTTLED(60, "  -> rendering with shader, bounds=(" << params.bounds.getX() << ","
                << params.bounds.getY() << "," << params.bounds.getWidth() << "x"
                << params.bounds.getHeight() << ")");
 
@@ -826,6 +882,22 @@ Framebuffer* RenderEngine::applyPostProcessing(Framebuffer* source, WaveformRend
     Framebuffer* current = source;
 
     // Apply effects in order (as specified in render-engine.md)
+
+    // 0. Lens Flare (Before Bloom so flares get bloomed)
+    if (config.lensFlare.enabled)
+    {
+        auto* lensFlare = dynamic_cast<LensFlareEffect*>(getEffect("lens_flare"));
+        if (lensFlare && lensFlare->isCompiled())
+        {
+            lensFlare->setSettings(config.lensFlare);
+            Framebuffer* dest = (current == ping) ? pong : ping;
+            dest->bind();
+            lensFlare->apply(*context_, current, dest, *fbPool_, deltaTime_);
+            dest->unbind();
+            current = dest;
+        }
+    }
+
     // 1. Bloom
     if (config.bloom.enabled)
     {
@@ -867,6 +939,21 @@ Framebuffer* RenderEngine::applyPostProcessing(Framebuffer* source, WaveformRend
             Framebuffer* dest = (current == ping) ? pong : ping;
             dest->bind();
             trails->apply(*context_, current, dest, *fbPool_, deltaTime_);
+            dest->unbind();
+            current = dest;
+        }
+    }
+
+    // 2.5. Tilt Shift
+    if (config.tiltShift.enabled)
+    {
+        auto* tiltShift = dynamic_cast<TiltShiftEffect*>(getEffect("tilt_shift"));
+        if (tiltShift && tiltShift->isCompiled())
+        {
+            tiltShift->setSettings(config.tiltShift);
+            Framebuffer* dest = (current == ping) ? pong : ping;
+            dest->bind();
+            tiltShift->apply(*context_, current, dest, *fbPool_, deltaTime_);
             dest->unbind();
             current = dest;
         }
@@ -990,10 +1077,10 @@ void RenderEngine::compositeToScene(Framebuffer* source, const VisualConfigurati
             break;
     }
 
-    // Use blit shader to composite
-    blitShader_->use();
+    // Use composite shader to keep linear HDR data in the scene FBO
+    compositeShader_->use();
     source->bindTexture(0);
-    context_->extensions.glUniform1i(blitTextureLoc_, 0);
+    context_->extensions.glUniform1i(compositeTextureLoc_, 0);
 
     // Render fullscreen quad
     fbPool_->renderFullscreenQuad();
@@ -1011,11 +1098,6 @@ void RenderEngine::applyGlobalEffects()
 
 void RenderEngine::blitToScreen()
 {
-    // Log once per second
-    static int blitLogCounter = 0;
-    bool shouldLog = (++blitLogCounter >= 60);
-    if (shouldLog) blitLogCounter = 0;
-
     // Bind default framebuffer
     context_->extensions.glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -1032,25 +1114,28 @@ void RenderEngine::blitToScreen()
     auto height = static_cast<GLsizei>(static_cast<float>(targetComponent->getHeight()) * desktopScale);
     glViewport(0, 0, width, height);
 
-    if (shouldLog)
-        RE_LOG("blitToScreen: viewport=" << width << "x" << height
+    RE_LOG_THROTTLED(60, "blitToScreen: viewport=" << width << "x" << height
                << ", sceneFBO valid=" << sceneFBO_->isValid()
                << ", blitTextureLoc=" << blitTextureLoc_);
 
     // Enable blending for final blit to ensure transparency
+    // Use PREMULTIPLIED alpha blending (GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+    // This is essential for HDR/Bloom effects where the RGB values represent
+    // accumulated light energy and should not be multiplied by alpha again.
+    // Standard blending (GL_SRC_ALPHA) causes double-darkening of faint glows.
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
 
-    // Use blit shader
+    // Use tone-mapping blit shader for final presentation
     blitShader_->use();
     sceneFBO_->bindTexture(0);
     context_->extensions.glUniform1i(blitTextureLoc_, 0);
 
     // Check for GL errors
     GLenum err = glGetError();
-    if (err != GL_NO_ERROR && shouldLog)
-        RE_LOG("  GL error before quad draw: " << err);
+    if (err != GL_NO_ERROR)
+        RE_LOG_THROTTLED(60, "  GL error before quad draw: " << err);
 
     // Render fullscreen quad to screen
     fbPool_->renderFullscreenQuad();
@@ -1058,8 +1143,8 @@ void RenderEngine::blitToScreen()
     err = glGetError();
     if (err != GL_NO_ERROR)
         RE_LOG("  GL error after quad draw: " << err);
-    else if (shouldLog)
-        RE_LOG("  quad draw OK");
+    else
+        RE_LOG_THROTTLED(60, "  quad draw OK");
 }
 
 void RenderEngine::setupCamera2D()
@@ -1094,7 +1179,9 @@ void RenderEngine::initializeEffects()
     effects_["vignette"] = std::make_unique<VignetteEffect>();
     effects_["film_grain"] = std::make_unique<FilmGrainEffect>();
     effects_["bloom"] = std::make_unique<BloomEffect>();
+    effects_["lens_flare"] = std::make_unique<LensFlareEffect>();
     effects_["trails"] = std::make_unique<TrailsEffect>();
+    effects_["tilt_shift"] = std::make_unique<TiltShiftEffect>();
     effects_["color_grade"] = std::make_unique<ColorGradeEffect>();
     effects_["chromatic_aberration"] = std::make_unique<ChromaticAberrationEffect>();
     effects_["scanlines"] = std::make_unique<ScanlineEffect>();

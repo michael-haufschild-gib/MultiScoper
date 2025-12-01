@@ -3,6 +3,7 @@
 */
 
 #include "rendering/VisualConfiguration.h"
+#include <map>
 
 namespace oscil
 {
@@ -17,6 +18,8 @@ static const juce::Identifier FILMGRAIN_TYPE("FilmGrain");
 static const juce::Identifier CHROMATIC_TYPE("ChromaticAberration");
 static const juce::Identifier SCANLINES_TYPE("Scanlines");
 static const juce::Identifier DISTORTION_TYPE("Distortion");
+static const juce::Identifier LENSFLARE_TYPE("LensFlare");
+static const juce::Identifier TILTSHIFT_TYPE("TiltShift");
 static const juce::Identifier RADIALBLUR_TYPE("RadialBlur");
 static const juce::Identifier PARTICLES_TYPE("Particles");
 static const juce::Identifier SETTINGS3D_TYPE("Settings3D");
@@ -106,6 +109,25 @@ juce::ValueTree VisualConfiguration::toValueTree() const
     distortionTree.setProperty("frequency", distortion.frequency, nullptr);
     distortionTree.setProperty("speed", distortion.speed, nullptr);
     tree.addChild(distortionTree, -1, nullptr);
+
+    // Lens Flare
+    juce::ValueTree flareTree(LENSFLARE_TYPE);
+    flareTree.setProperty("enabled", lensFlare.enabled, nullptr);
+    flareTree.setProperty("intensity", lensFlare.intensity, nullptr);
+    flareTree.setProperty("threshold", lensFlare.threshold, nullptr);
+    flareTree.setProperty("ghostDispersal", lensFlare.ghostDispersal, nullptr);
+    flareTree.setProperty("ghostCount", lensFlare.ghostCount, nullptr);
+    flareTree.setProperty("haloWidth", lensFlare.haloWidth, nullptr);
+    flareTree.setProperty("chromaticDistortion", lensFlare.chromaticDistortion, nullptr);
+    tree.addChild(flareTree, -1, nullptr);
+
+    // Tilt Shift
+    juce::ValueTree tiltTree(TILTSHIFT_TYPE);
+    tiltTree.setProperty("enabled", tiltShift.enabled, nullptr);
+    tiltTree.setProperty("position", tiltShift.position, nullptr);
+    tiltTree.setProperty("range", tiltShift.range, nullptr);
+    tiltTree.setProperty("blurRadius", tiltShift.blurRadius, nullptr);
+    tree.addChild(tiltTree, -1, nullptr);
 
     // Particles
     juce::ValueTree particlesTree(PARTICLES_TYPE);
@@ -262,6 +284,29 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
         config.distortion.speed = distortionTree.getProperty("speed", 1.0f);
     }
 
+    // Lens Flare
+    auto flareTree = tree.getChildWithName(LENSFLARE_TYPE);
+    if (flareTree.isValid())
+    {
+        config.lensFlare.enabled = flareTree.getProperty("enabled", false);
+        config.lensFlare.intensity = flareTree.getProperty("intensity", 1.0f);
+        config.lensFlare.threshold = flareTree.getProperty("threshold", 0.8f);
+        config.lensFlare.ghostDispersal = flareTree.getProperty("ghostDispersal", 0.6f);
+        config.lensFlare.ghostCount = flareTree.getProperty("ghostCount", 4);
+        config.lensFlare.haloWidth = flareTree.getProperty("haloWidth", 0.5f);
+        config.lensFlare.chromaticDistortion = flareTree.getProperty("chromaticDistortion", 5.0f);
+    }
+
+    // Tilt Shift
+    auto tiltTree = tree.getChildWithName(TILTSHIFT_TYPE);
+    if (tiltTree.isValid())
+    {
+        config.tiltShift.enabled = tiltTree.getProperty("enabled", false);
+        config.tiltShift.position = tiltTree.getProperty("position", 0.5f);
+        config.tiltShift.range = tiltTree.getProperty("range", 0.3f);
+        config.tiltShift.blurRadius = tiltTree.getProperty("blurRadius", 2.0f);
+    }
+
     // Particles
     auto particlesTree = tree.getChildWithName(PARTICLES_TYPE);
     if (particlesTree.isValid())
@@ -325,7 +370,9 @@ bool VisualConfiguration::requires3D() const
 bool VisualConfiguration::hasPostProcessing() const
 {
     return bloom.enabled ||
+           lensFlare.enabled ||
            radialBlur.enabled ||
+           tiltShift.enabled ||
            trails.enabled ||
            colorGrade.enabled ||
            vignette.enabled ||
@@ -347,340 +394,305 @@ VisualConfiguration VisualConfiguration::getDefault()
 
 VisualConfiguration VisualConfiguration::getPreset(const juce::String& presetName)
 {
+    static const std::map<juce::String, VisualConfiguration> presets = []() {
+        std::map<juce::String, VisualConfiguration> m;
+
+        auto addPreset = [&](const juce::String& id, std::function<void(VisualConfiguration&)> setup) {
+            VisualConfiguration c;
+            c.presetId = id;
+            setup(c);
+            m[id] = c;
+        };
+
+        addPreset("default", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::Basic2D;
+        });
+
+        addPreset("neon", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::NeonGlow;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.5f;
+            c.bloom.threshold = 0.1f;
+            c.bloom.spread = 1.5f;
+            c.bloom.iterations = 4;
+            c.vignette.enabled = true;
+            c.vignette.intensity = 0.3f;
+            c.vignette.softness = 0.6f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.contrast = 1.1f;
+            c.colorGrade.saturation = 1.2f;
+            c.trails.enabled = true;
+            c.trails.decay = 0.1f;
+            c.trails.opacity = 0.6f;
+            // Updated: Add subtle lens flare for extra "neon" pop
+            c.lensFlare.enabled = true;
+            c.lensFlare.intensity = 0.8f;
+            c.lensFlare.threshold = 0.8f;
+        });
+
+        addPreset("cyberpunk", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::NeonGlow;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.8f;
+            c.bloom.threshold = 0.4f;
+            c.bloom.spread = 1.2f;
+            c.chromaticAberration.enabled = true;
+            c.chromaticAberration.intensity = 0.015f;
+            c.scanlines.enabled = true;
+            c.scanlines.intensity = 0.5f;
+            c.scanlines.density = 1.5f;
+            c.scanlines.phosphorGlow = true;
+            c.filmGrain.enabled = true;
+            c.filmGrain.intensity = 0.15f;
+            c.particles.enabled = true;
+            c.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
+            c.particles.emissionRate = 120.0f;
+            c.particles.particleLife = 1.0f;
+            c.particles.particleSize = 5.0f;
+            c.particles.particleColor = juce::Colour(0xFF00FFFF);
+            c.particles.blendMode = ParticleBlendMode::Additive;
+            c.particles.velocityScale = 1.5f;
+            c.particles.audioReactive = true;
+            // Updated: Add strong lens flare for cyberpunk aesthetic
+            c.lensFlare.enabled = true;
+            c.lensFlare.intensity = 1.2f;
+            c.lensFlare.threshold = 0.6f;
+            c.lensFlare.chromaticDistortion = 8.0f;
+        });
+
+        addPreset("liquid_gold", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::LiquidChrome;
+            c.settings3D.enabled = true;
+            c.settings3D.cameraDistance = 3.8f;
+            c.settings3D.cameraAngleX = 25.0f;
+            c.settings3D.autoRotate = true;
+            c.settings3D.rotateSpeed = 5.0f;
+            c.material.enabled = true;
+            c.material.reflectivity = 1.0f;
+            c.material.roughness = 0.15f;
+            c.material.refractiveIndex = 0.2f;
+            c.material.tintColor = juce::Colour(0xFFFFD700);
+            c.material.useEnvironmentMap = true;
+            c.material.environmentMapId = "sunset";
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.2f;
+            c.bloom.threshold = 0.7f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.temperature = 0.2f;
+            c.colorGrade.contrast = 1.1f;
+            // Updated: Add tilt shift for "miniature" gold look
+            c.tiltShift.enabled = true;
+            c.tiltShift.blurRadius = 1.5f;
+            c.tiltShift.range = 0.4f;
+        });
+
+        addPreset("deep_ocean", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::VolumetricRibbon;
+            c.settings3D.enabled = true;
+            c.settings3D.cameraDistance = 5.0f;
+            c.settings3D.autoRotate = true;
+            c.settings3D.rotateSpeed = 8.0f;
+            c.distortion.enabled = true;
+            c.distortion.intensity = 0.015f;
+            c.distortion.speed = 0.5f;
+            c.distortion.frequency = 3.0f;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.5f;
+            c.bloom.threshold = 0.3f;
+            c.bloom.spread = 2.0f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.tint = -0.1f;
+            c.colorGrade.shadows = juce::Colour(0xFF001133);
+            c.particles.enabled = false;
+            c.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
+            c.particles.emissionRate = 80.0f;
+            c.particles.particleLife = 3.0f;
+            c.particles.particleSize = 3.0f;
+            c.particles.particleColor = juce::Colour(0xFF00FFFF);
+            c.particles.gravity = -10.0f;
+            c.particles.drag = 0.5f;
+        });
+
+        addPreset("synthwave", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::WireframeMesh;
+            c.settings3D.enabled = true;
+            c.settings3D.cameraDistance = 6.0f;
+            c.settings3D.cameraAngleX = 30.0f;
+            c.settings3D.autoRotate = true;
+            c.settings3D.rotateSpeed = 12.0f;
+            c.settings3D.meshResolutionX = 64;
+            c.settings3D.meshResolutionZ = 24;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 3.5f;
+            c.bloom.threshold = 0.2f;
+            c.bloom.spread = 2.5f;
+            c.chromaticAberration.enabled = true;
+            c.chromaticAberration.intensity = 0.008f;
+            c.scanlines.enabled = true;
+            c.scanlines.intensity = 0.25f;
+            c.vignette.enabled = true;
+            c.vignette.intensity = 0.7f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.tint = 0.25f;
+            c.colorGrade.saturation = 1.3f;
+            c.colorGrade.contrast = 1.15f;
+            c.trails.enabled = true;
+            c.trails.decay = 0.15f;
+            c.trails.opacity = 0.4f;
+        });
+
+        addPreset("ethereal", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::GlassRefraction;
+            c.settings3D.enabled = true;
+            c.settings3D.cameraDistance = 4.0f;
+            c.settings3D.autoRotate = true;
+            c.material.enabled = true;
+            c.material.refractiveIndex = 1.8f;
+            c.material.reflectivity = 0.4f;
+            c.material.fresnelPower = 2.0f;
+            c.material.roughness = 0.0f;
+            c.material.useEnvironmentMap = true;
+            c.material.environmentMapId = "abstract";
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.0f;
+            c.bloom.spread = 2.0f;
+            c.trails.enabled = true;
+            c.trails.decay = 0.1f;
+            c.trails.opacity = 0.7f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.saturation = 0.8f;
+            c.colorGrade.brightness = 0.1f;
+        });
+
+        addPreset("matrix", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::DigitalGlitch;
+            c.scanlines.enabled = true;
+            c.scanlines.intensity = 0.4f;
+            c.scanlines.density = 3.0f;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.0f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.tint = -0.5f;
+            c.colorGrade.contrast = 1.5f;
+            c.colorGrade.shadows = juce::Colour(0xFF001100);
+            c.particles.enabled = true;
+            c.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
+            c.particles.emissionRate = 300.0f;
+            c.particles.particleLife = 1.5f;
+            c.particles.particleSize = 4.0f;
+            c.particles.particleColor = juce::Colour(0xFF00FF00);
+            c.particles.blendMode = ParticleBlendMode::Additive;
+            c.particles.gravity = 80.0f;
+            c.particles.velocityScale = 0.2f;
+        });
+
+        addPreset("plasma_sine", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::PlasmaSine;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.0f;
+            c.bloom.threshold = 0.5f;
+            c.bloom.spread = 1.2f;
+            c.bloom.iterations = 4;
+            c.trails.enabled = false;
+            c.vignette.enabled = true;
+            c.vignette.intensity = 0.4f;
+            c.vignette.softness = 0.5f;
+            c.vignette.colour = juce::Colour(0xFF000510);
+            c.colorGrade.enabled = true;
+            c.colorGrade.contrast = 1.15f;
+            c.colorGrade.saturation = 1.1f;
+            c.colorGrade.shadows = juce::Colour(0xFF000818);
+        });
+
+        addPreset("glitch_art", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::DigitalGlitch;
+            c.distortion.enabled = true;
+            c.distortion.intensity = 0.05f;
+            c.distortion.frequency = 8.0f;
+            c.distortion.speed = 4.0f;
+            c.chromaticAberration.enabled = true;
+            c.chromaticAberration.intensity = 0.03f;
+            c.filmGrain.enabled = true;
+            c.filmGrain.intensity = 0.3f;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 0.8f;
+            c.trails.enabled = true;
+            c.trails.decay = 0.4f;
+        });
+
+        addPreset("electric_flower", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::ElectricFlower;
+            c.settings3D.enabled = true;
+            c.settings3D.cameraDistance = 4.0f;
+            c.settings3D.cameraAngleX = 20.0f;
+            c.settings3D.autoRotate = true;
+            c.settings3D.rotateSpeed = 8.0f;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 1.8f;
+            c.bloom.threshold = 0.3f;
+            c.bloom.spread = 2.0f;
+            c.bloom.softKnee = 0.8f;
+            c.radialBlur.enabled = true;
+            c.radialBlur.amount = 0.08f;
+            c.radialBlur.glow = 1.2f;
+            c.radialBlur.samples = 4;
+            c.trails.enabled = true;
+            c.trails.decay = 0.08f;
+            c.trails.opacity = 0.7f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.saturation = 1.2f;
+            c.colorGrade.contrast = 1.1f;
+            c.vignette.enabled = true;
+            c.vignette.intensity = 0.4f;
+            c.vignette.softness = 0.6f;
+        });
+
+        addPreset("cinematic", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::Basic2D; // Or a clean line shader
+            c.tiltShift.enabled = true;
+            c.tiltShift.blurRadius = 3.0f;
+            c.tiltShift.position = 0.5f;
+            c.tiltShift.range = 0.3f;
+            c.lensFlare.enabled = true;
+            c.lensFlare.intensity = 1.0f;
+            c.lensFlare.threshold = 0.7f;
+            c.filmGrain.enabled = true;
+            c.filmGrain.intensity = 0.15f;
+            c.colorGrade.enabled = true;
+            c.colorGrade.contrast = 1.2f;
+            c.colorGrade.saturation = 0.9f; // Desaturated cinematic look
+            c.colorGrade.brightness = -0.05f;
+            c.vignette.enabled = true;
+            c.vignette.intensity = 0.6f;
+        });
+
+        addPreset("solar_storm", [](VisualConfiguration& c) {
+            c.shaderType = ShaderType::PlasmaSine;
+            c.lensFlare.enabled = true;
+            c.lensFlare.intensity = 2.5f; // Very bright flares
+            c.lensFlare.threshold = 0.4f; // Trigger easily
+            c.lensFlare.ghostCount = 6;
+            c.lensFlare.haloWidth = 0.8f;
+            c.bloom.enabled = true;
+            c.bloom.intensity = 2.0f;
+            c.bloom.threshold = 0.2f;
+            c.distortion.enabled = true;
+            c.distortion.intensity = 0.02f; // Heat haze
+            c.colorGrade.enabled = true;
+            c.colorGrade.temperature = 0.8f; // Very warm
+            c.colorGrade.tint = 0.1f;
+        });
+
+        return m;
+    }();
+
+    auto it = presets.find(presetName);
+    if (it != presets.end())
+        return it->second;
+
+    // Fallback for unknown presets
     VisualConfiguration config;
     config.presetId = presetName;
-
-    // ==========================================================================
-    // Clean Baseline
-    // ==========================================================================
-    if (presetName == "default")
-    {
-        config.shaderType = ShaderType::Basic2D;
-        // All effects disabled by default for a clean, technical look
-    }
-
-    // ==========================================================================
-    // High-Impact Visual Presets
-    // ==========================================================================
-
-    else if (presetName == "neon")
-    {
-        // Pure 80s Neon aesthetic
-        config.shaderType = ShaderType::NeonGlow;
-
-        // Bloom enhances the shader's internal glow
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.5f;
-        config.bloom.threshold = 0.1f; // Low threshold to pick up the colored halo
-        config.bloom.spread = 1.5f;
-        config.bloom.iterations = 4;
-
-        // Subtle vignette for atmosphere
-        config.vignette.enabled = true;
-        config.vignette.intensity = 0.3f;
-        config.vignette.softness = 0.6f;
-
-        // Punchy colors
-        config.colorGrade.enabled = true;
-        config.colorGrade.contrast = 1.1f;
-        config.colorGrade.saturation = 1.2f;
-
-        // Slight trails for persistence
-        config.trails.enabled = true;
-        config.trails.decay = 0.1f;
-        config.trails.opacity = 0.6f;
-    }
-    else if (presetName == "cyberpunk")
-    {
-        // Aggressive neon aesthetic with high contrast and digital artifacts
-        config.shaderType = ShaderType::NeonGlow;
-        
-        // Post-Processing
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.8f;
-        config.bloom.threshold = 0.4f;
-        config.bloom.spread = 1.2f;
-        
-        config.chromaticAberration.enabled = true;
-        config.chromaticAberration.intensity = 0.015f;
-        
-        config.scanlines.enabled = true;
-        config.scanlines.intensity = 0.5f;
-        config.scanlines.density = 1.5f;
-        config.scanlines.phosphorGlow = true;
-        
-        config.filmGrain.enabled = true;
-        config.filmGrain.intensity = 0.15f;
-
-        // Particles: Digital sparks
-        config.particles.enabled = true;
-        config.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
-        config.particles.emissionRate = 120.0f;
-        config.particles.particleLife = 1.0f;
-        config.particles.particleSize = 5.0f;
-        config.particles.particleColor = juce::Colour(0xFF00FFFF); // Cyan
-        config.particles.blendMode = ParticleBlendMode::Additive;
-        config.particles.velocityScale = 1.5f;
-        config.particles.audioReactive = true;
-    }
-    else if (presetName == "liquid_gold")
-    {
-        // Luxurious, physically-based liquid metal
-        config.shaderType = ShaderType::LiquidChrome;
-        
-        // 3D Setup
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 3.8f;
-        config.settings3D.cameraAngleX = 25.0f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 5.0f; // Slow, heavy rotation
-        
-        // Material: Gold
-        config.material.enabled = true;
-        config.material.reflectivity = 1.0f;
-        config.material.roughness = 0.15f;
-        config.material.refractiveIndex = 0.2f; // Metallic
-        config.material.tintColor = juce::Colour(0xFFFFD700); // Gold
-        config.material.useEnvironmentMap = true;
-        config.material.environmentMapId = "sunset"; // Warm lighting
-        
-        // Post
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.2f; // Golden glow
-        config.bloom.threshold = 0.7f;
-        
-        config.colorGrade.enabled = true;
-        config.colorGrade.temperature = 0.2f; // Enhance warmth
-        config.colorGrade.contrast = 1.1f;
-    }
-    else if (presetName == "deep_ocean")
-    {
-        // Bioluminescent underwater organic look
-        config.shaderType = ShaderType::VolumetricRibbon;
-        
-        // 3D Setup
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 5.0f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 8.0f;
-        
-        // Post
-        config.distortion.enabled = true; // Water wobble
-        config.distortion.intensity = 0.015f;
-        config.distortion.speed = 0.5f;
-        config.distortion.frequency = 3.0f;
-        
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.5f; // Bio-glow
-        config.bloom.threshold = 0.3f;
-        config.bloom.spread = 2.0f; // Wide, soft glow
-        
-        config.colorGrade.enabled = true;
-        config.colorGrade.tint = -0.1f; // Shift towards green/teal
-        config.colorGrade.shadows = juce::Colour(0xFF001133); // Deep blue shadows
-        
-        // Particles: Rising bubbles
-        config.particles.enabled = false;
-        config.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
-        config.particles.emissionRate = 80.0f;
-        config.particles.particleLife = 3.0f;
-        config.particles.particleSize = 3.0f;
-        config.particles.particleColor = juce::Colour(0xFF00FFFF); // Cyan/White
-        config.particles.gravity = -10.0f; // Float up
-        config.particles.drag = 0.5f; // Water resistance
-    }
-    else if (presetName == "synthwave")
-    {
-        // Retro-futuristic 80s grid aesthetic with heavy neon glow
-        config.shaderType = ShaderType::WireframeMesh;
-
-        // 3D Setup
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 6.0f;
-        config.settings3D.cameraAngleX = 30.0f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 12.0f;
-        config.settings3D.meshResolutionX = 64;
-        config.settings3D.meshResolutionZ = 24;
-
-        // Post-processing: Heavy 80s synthwave glow
-        config.bloom.enabled = true;
-        config.bloom.intensity = 3.5f;      // Strong neon glow
-        config.bloom.threshold = 0.2f;      // Low threshold for more glow
-        config.bloom.spread = 2.5f;         // Wide, soft glow spread
-
-        config.chromaticAberration.enabled = true;
-        config.chromaticAberration.intensity = 0.008f; // Subtle RGB separation
-
-        config.scanlines.enabled = true;
-        config.scanlines.intensity = 0.25f;
-
-        config.vignette.enabled = true;
-        config.vignette.intensity = 0.7f;   // Darker corners for focus
-
-        config.colorGrade.enabled = true;
-        config.colorGrade.tint = 0.25f;     // Magenta/pink shift
-        config.colorGrade.saturation = 1.3f; // Vibrant colors
-        config.colorGrade.contrast = 1.15f;  // Punchy contrast
-
-        config.trails.enabled = true;
-        config.trails.decay = 0.15f;        // Short motion trails
-        config.trails.opacity = 0.4f;
-    }
-    else if (presetName == "ethereal")
-    {
-        // Dreamy, prismatic glass rendering
-        config.shaderType = ShaderType::GlassRefraction;
-        
-        // 3D Setup
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 4.0f;
-        config.settings3D.autoRotate = true;
-        
-        // Material: Prismatic Glass
-        config.material.enabled = true;
-        config.material.refractiveIndex = 1.8f; // High refraction (Crystal/Diamond)
-        config.material.reflectivity = 0.4f;
-        config.material.fresnelPower = 2.0f;
-        config.material.roughness = 0.0f;
-        config.material.useEnvironmentMap = true;
-        config.material.environmentMapId = "abstract"; // Colorful environment for refraction
-        
-        // Post
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.0f;
-        config.bloom.spread = 2.0f; // Very soft
-        
-        config.trails.enabled = true;
-        config.trails.decay = 0.1f; // Long, smooth trails
-        config.trails.opacity = 0.7f;
-        
-        config.colorGrade.enabled = true;
-        config.colorGrade.saturation = 0.8f; // Slightly desaturated/pastel
-        config.colorGrade.brightness = 0.1f;
-    }
-    else if (presetName == "matrix")
-    {
-        // Digital rain code aesthetic
-        config.shaderType = ShaderType::DigitalGlitch;
-        
-        // Post
-        config.scanlines.enabled = true;
-        config.scanlines.intensity = 0.4f;
-        config.scanlines.density = 3.0f;
-        
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.0f;
-        
-        config.colorGrade.enabled = true;
-        config.colorGrade.tint = -0.5f; // Strong Green shift
-        config.colorGrade.contrast = 1.5f; // High contrast
-        config.colorGrade.shadows = juce::Colour(0xFF001100); // Dark green shadows
-        
-        // Particles: Falling code
-        config.particles.enabled = true;
-        config.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
-        config.particles.emissionRate = 300.0f;
-        config.particles.particleLife = 1.5f;
-        config.particles.particleSize = 4.0f;
-        config.particles.particleColor = juce::Colour(0xFF00FF00); // Matrix Green
-        config.particles.blendMode = ParticleBlendMode::Additive;
-        config.particles.gravity = 80.0f; // Fall down fast
-        config.particles.velocityScale = 0.2f; // Little horizontal movement
-    }
-    else if (presetName == "plasma_sine")
-    {
-        // Electric plasma beam aesthetic - bright blue glow on dark background
-        config.shaderType = ShaderType::PlasmaSine;
-
-        // Bloom - selective, moderate glow (only brightest parts)
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.0f;      // Moderate glow (was 1.5)
-        config.bloom.threshold = 0.5f;      // Higher threshold - selective (was 0.2)
-        config.bloom.spread = 1.2f;         // Slightly reduced spread (was 1.5)
-        config.bloom.iterations = 4;
-
-        // Trails - DISABLED (causes brightness accumulation issues)
-        config.trails.enabled = false;
-
-        // Vignette - dark corners for focus on plasma
-        config.vignette.enabled = true;
-        config.vignette.intensity = 0.4f;
-        config.vignette.softness = 0.5f;
-        config.vignette.colour = juce::Colour(0xFF000510);  // Very dark blue-black
-
-        // Color Grade - subtle enhancement for electric look
-        config.colorGrade.enabled = true;
-        config.colorGrade.contrast = 1.15f;
-        config.colorGrade.saturation = 1.1f;    // Slightly vivid colors
-        config.colorGrade.shadows = juce::Colour(0xFF000818);  // Deep blue shadows
-    }
-    else if (presetName == "glitch_art")
-    {
-        // Chaotic, distorted data-moshing
-        config.shaderType = ShaderType::DigitalGlitch;
-
-        // Post
-        config.distortion.enabled = true;
-        config.distortion.intensity = 0.05f; // Heavy distortion
-        config.distortion.frequency = 8.0f;
-        config.distortion.speed = 4.0f;
-
-        config.chromaticAberration.enabled = true;
-        config.chromaticAberration.intensity = 0.03f; // Extreme separation
-
-        config.filmGrain.enabled = true;
-        config.filmGrain.intensity = 0.3f;
-
-        config.bloom.enabled = true;
-        config.bloom.intensity = 0.8f;
-
-        config.trails.enabled = true;
-        config.trails.decay = 0.4f; // Short trails/smear
-    }
-    else if (presetName == "electric_flower")
-    {
-        // Electric flower visualization inspired by webglsamples.org/electricflower
-        // Uses cascaded 3D rotations with irrational multipliers for organic motion
-        // Colors derived from oscillator base color
-        config.shaderType = ShaderType::ElectricFlower;
-
-        // 3D Setup - orbital view for flower pattern
-        config.settings3D.enabled = true;
-        config.settings3D.cameraDistance = 4.0f;
-        config.settings3D.cameraAngleX = 20.0f;
-        config.settings3D.autoRotate = true;
-        config.settings3D.rotateSpeed = 8.0f;
-
-        // Bloom - soft knee for smooth glow transition
-        config.bloom.enabled = true;
-        config.bloom.intensity = 1.8f;
-        config.bloom.threshold = 0.3f;
-        config.bloom.spread = 2.0f;
-        config.bloom.softKnee = 0.8f;  // Soft threshold like reference
-
-        // Radial blur - zoom-glow effect from center (like reference)
-        config.radialBlur.enabled = true;
-        config.radialBlur.amount = 0.08f;   // Subtle zoom
-        config.radialBlur.glow = 1.2f;      // Slight brightening
-        config.radialBlur.samples = 4;      // Match reference
-
-        // Trails for smooth motion persistence
-        config.trails.enabled = true;
-        config.trails.decay = 0.08f;  // Slow decay for dreamy look
-        config.trails.opacity = 0.7f;
-
-        // Color grading - enhance vibrancy
-        config.colorGrade.enabled = true;
-        config.colorGrade.saturation = 1.2f;
-        config.colorGrade.contrast = 1.1f;
-
-        // Vignette for focus
-        config.vignette.enabled = true;
-        config.vignette.intensity = 0.4f;
-        config.vignette.softness = 0.6f;
-    }
-
     return config;
 }
 
@@ -698,7 +710,9 @@ std::vector<std::pair<juce::String, juce::String>> VisualConfiguration::getAvail
         {"ethereal", "Ethereal Dream"},
         {"matrix", "Matrix Rain"},
         {"glitch_art", "Glitch Art"},
-        {"electric_flower", "Electric Flower"}
+        {"electric_flower", "Electric Flower"},
+        {"cinematic", "Cinematic"},
+        {"solar_storm", "Solar Storm"}
     };
 }
 

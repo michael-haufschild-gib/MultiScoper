@@ -23,10 +23,12 @@ struct Framebuffer
 {
     GLuint fbo = 0;
     GLuint colorTexture = 0;
+    GLuint colorRenderbuffer = 0; // For MSAA
     GLuint depthBuffer = 0;
     GLuint depthTexture = 0;
     int width = 0;
     int height = 0;
+    int numSamples = 0;
     GLenum format = GL_RGBA8;
     bool hasDepth = false;
     bool hasDepthTexture = false;
@@ -36,12 +38,13 @@ struct Framebuffer
      * @param context The OpenGL context
      * @param w Width in pixels
      * @param h Height in pixels
+     * @param samples Number of MSAA samples (0 = disable MSAA)
      * @param fmt Texture format (GL_RGBA8, GL_RGBA16F, etc.)
      * @param withDepth Whether to create a depth buffer (required for 3D rendering)
      * @param useDepthTexture Whether to create depth as a sampleable texture (for DoF, etc.) instead of Renderbuffer
      * @return true if creation succeeded
      */
-    bool create(juce::OpenGLContext& context, int w, int h, GLenum fmt = GL_RGBA8, bool withDepth = false, bool useDepthTexture = false);
+    bool create(juce::OpenGLContext& context, int w, int h, int samples = 0, GLenum fmt = GL_RGBA8, bool withDepth = false, bool useDepthTexture = false);
 
     /**
      * Destroy the framebuffer and release all resources.
@@ -59,6 +62,14 @@ struct Framebuffer
     void resize(juce::OpenGLContext& context, int w, int h);
 
     /**
+     * Blit (copy/resolve) this framebuffer to another framebuffer.
+     * Used to resolve MSAA buffers to standard textures.
+     * @param context The OpenGL context
+     * @param dest The destination framebuffer (can be nullptr for default framebuffer)
+     */
+    void blitTo(juce::OpenGLContext& context, Framebuffer* dest);
+
+    /**
      * Bind this framebuffer for rendering.
      * All subsequent draw calls will render to this FBO.
      */
@@ -71,6 +82,7 @@ struct Framebuffer
 
     /**
      * Bind the color texture for sampling in a shader.
+     * Fails if this is an MSAA framebuffer (must resolve first).
      * @param textureUnit The texture unit to bind to (0 = GL_TEXTURE0)
      */
     void bindTexture(int textureUnit = 0);
@@ -84,7 +96,7 @@ struct Framebuffer
     /**
      * Check if the framebuffer is valid and ready for use.
      */
-    [[nodiscard]] bool isValid() const { return fbo != 0 && colorTexture != 0; }
+    [[nodiscard]] bool isValid() const { return fbo != 0; }
 
     /**
      * Clear the framebuffer with the specified color.

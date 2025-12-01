@@ -160,6 +160,45 @@ struct DistortionSettings
     float speed = 1.0f;          // Animation speed
 };
 
+/**
+ * Glitch settings for the effect.
+ */
+struct GlitchSettings
+{
+    bool enabled = false;
+    float intensity = 0.5f;          // Overall glitch strength
+    float blockSize = 0.05f;         // Size of glitch blocks
+    float lineShift = 0.02f;         // Horizontal line displacement
+    float colorSeparation = 0.01f;   // RGB shift amount
+    float flickerRate = 10.0f;       // Flicker frequency
+};
+
+/**
+ * Tilt Shift (Fake Depth of Field) settings.
+ */
+struct TiltShiftSettings
+{
+    bool enabled = false;
+    float position = 0.5f;       // Center position (0.0 - 1.0)
+    float range = 0.3f;          // In-focus range width (0.0 - 1.0)
+    float blurRadius = 2.0f;     // Blur amount
+    int iterations = 3;          // Blur quality
+};
+
+/**
+ * Lens Flare effect settings.
+ */
+struct LensFlareSettings
+{
+    bool enabled = false;
+    float intensity = 1.0f;      // Overall brightness
+    float threshold = 0.8f;      // Brightness threshold (0.0-1.0)
+    float ghostDispersal = 0.6f; // How far ghosts spread
+    int ghostCount = 4;          // Number of ghosts
+    float haloWidth = 0.5f;      // Halo radius
+    float chromaticDistortion = 5.0f; // Chromatic aberration amount for flare
+};
+
 // ============================================================================
 // Particle System Settings
 // ============================================================================
@@ -277,6 +316,9 @@ struct VisualConfiguration
     ChromaticAberrationSettings chromaticAberration;
     ScanlineSettings scanlines;
     DistortionSettings distortion;
+    GlitchSettings glitch;
+    TiltShiftSettings tiltShift;
+    LensFlareSettings lensFlare;
 
     // Particle system
     ParticleSettings particles;

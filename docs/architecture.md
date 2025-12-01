@@ -682,9 +682,10 @@ private:
 Use sparingly. Current singletons:
 - `InstanceRegistry::getInstance()` - Multi-instance coordination across plugin instances
 - `ThemeManager::getInstance()` - Theme management and persistence
-- `ShaderRegistry::getInstance()` - GPU shader registration and retrieval
 - `GlobalPreferences::getInstance()` - User preferences stored separately from project state (default theme, layout settings)
 - `UIAudioFeedback::getInstance()` - Subtle audio feedback for UI interactions (clicks, toggles)
+
+**Note**: `ShaderRegistry` is NOT a singleton. It uses a Factory pattern. Each `RenderEngine` instance owns its own `ShaderRegistry` to ensure OpenGL resources (compiled shaders) are isolated per-context.
 
 ## State Persistence
 
