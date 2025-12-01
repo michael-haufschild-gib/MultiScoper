@@ -153,15 +153,17 @@ juce_add_binary_data(OscilBinaryData
         resources/icomoon/SVG/cog.svg
         resources/icomoon/SVG/eye.svg
         resources/icomoon/SVG/eye-blocked.svg
-        resources/textures/particle_cloud.png
-        resources/textures/particle_smoke_sheet.png
-        resources/textures/particle_fire_sheet.png
-        resources/textures/particle_electric_sheet.png
-        resources/textures/particle_sparkle.png
-        resources/textures/particle_halo.png
-        resources/textures/particle_shockwave.png
-        resources/textures/particle_point_soft.png
-        resources/textures/particle_wisp.png
+        # Particle textures commented out - files don't exist in repository
+        # TODO: Add particle texture files when available
+        # resources/textures/particle_cloud.png
+        # resources/textures/particle_smoke_sheet.png
+        # resources/textures/particle_fire_sheet.png
+        # resources/textures/particle_electric_sheet.png
+        # resources/textures/particle_sparkle.png
+        # resources/textures/particle_halo.png
+        # resources/textures/particle_shockwave.png
+        # resources/textures/particle_point_soft.png
+        # resources/textures/particle_wisp.png
 )
 
 # Source files
