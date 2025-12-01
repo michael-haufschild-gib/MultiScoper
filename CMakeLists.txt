@@ -7,6 +7,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Windows-specific compile definitions to prevent header conflicts
+# - WIN32_LEAN_AND_MEAN: Excludes old socket APIs (prevents winsock.h vs winsock2.h conflict)
+# - NOMINMAX: Prevents Windows macros from conflicting with C++ std::min/std::max
+# - _CRT_SECURE_NO_WARNINGS: Suppresses deprecation warnings for standard C functions
+if(WIN32)
+    add_compile_definitions(
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
+        _CRT_SECURE_NO_WARNINGS
+    )
+endif()
+
 # ============================================================================
 # Compiler Cache (ccache) - Speeds up rebuilds by caching compiled objects
 # Supports Ninja and Makefile generators. Install: brew install ccache (macOS)
