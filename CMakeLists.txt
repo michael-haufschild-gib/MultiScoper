@@ -62,6 +62,22 @@ if(OSCIL_ENABLE_CLANG_TIDY)
     endif()
 endif()
 
+# Option for Code Coverage
+option(OSCIL_ENABLE_COVERAGE "Enable code coverage generation" OFF)
+
+if(OSCIL_ENABLE_COVERAGE)
+    message(STATUS "Code Coverage Enabled")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        add_compile_options(--coverage)
+        add_link_options(--coverage)
+    else()
+        message(WARNING "Code coverage not supported for this compiler: ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+endif()
+
 # Fetch CPM.cmake
 include(cmake/CPM.cmake)
 
@@ -128,6 +144,15 @@ juce_add_binary_data(OscilBinaryData
         resources/icomoon/SVG/cog.svg
         resources/icomoon/SVG/eye.svg
         resources/icomoon/SVG/eye-blocked.svg
+        resources/textures/particle_cloud.png
+        resources/textures/particle_smoke_sheet.png
+        resources/textures/particle_fire_sheet.png
+        resources/textures/particle_electric_sheet.png
+        resources/textures/particle_sparkle.png
+        resources/textures/particle_halo.png
+        resources/textures/particle_shockwave.png
+        resources/textures/particle_point_soft.png
+        resources/textures/particle_wisp.png
 )
 
 # Source files
@@ -252,6 +277,12 @@ if(OSCIL_BUILD_TESTS)
         tests/test_sidebar_theme_population.cpp
         tests/test_shaders.cpp
         tests/test_waveform_shader_3d.cpp
+        tests/test_effect_chain.cpp
+        tests/test_framebuffer_pool.cpp
+        tests/test_waveform_presenter.cpp
+        tests/test_pane_layout.cpp
+        tests/test_config_structs.cpp
+        tests/test_particle_system.cpp
 
         # New tests - 100% coverage initiative
         tests/test_window_layout.cpp
@@ -289,6 +320,7 @@ if(OSCIL_BUILD_TESTS)
         src/core/PluginProcessor.cpp
         src/ui/PluginEditor.cpp
         src/ui/WaveformComponent.cpp
+        src/ui/presenters/WaveformPresenter.cpp
         src/ui/OscillatorPanel.cpp
         src/ui/PaneComponent.cpp
         src/ui/ThemeManager.cpp
@@ -305,6 +337,7 @@ if(OSCIL_BUILD_TESTS)
         src/ui/OscillatorConfigPopup.cpp
         src/ui/AddOscillatorDialog.cpp
         src/ui/PluginTestServer.cpp
+        src/ui/PluginTestServer_Lifecycle.cpp
         src/ui/sections/TimingSidebarSection.cpp
         src/ui/sections/OptionsSection.cpp
         src/ui/coordinators/SourceCoordinator.cpp
@@ -345,6 +378,7 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/shaders/PlasmaSineShader.cpp
         src/rendering/shaders/DigitalGlitchShader.cpp
         src/rendering/WaveformGLRenderer.cpp
+        src/rendering/EffectChain.cpp
 
         # Rendering (Render Engine) for testing
         src/rendering/Framebuffer.cpp
@@ -366,7 +400,6 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/effects/DistortionEffect.cpp
         src/rendering/effects/GlitchEffect.cpp
         src/rendering/effects/RadialBlurEffect.cpp
-        src/rendering/effects/LensFlareEffect.cpp
         src/rendering/effects/TiltShiftEffect.cpp
 
         # Rendering (Particles) for testing
@@ -381,10 +414,12 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/shaders3d/VectorFlowShader.cpp
         src/rendering/shaders3d/StringTheoryShader.cpp
         src/rendering/shaders3d/ElectricFlowerShader.cpp
+        src/rendering/shaders3d/ElectricFiligreeShader.cpp
 
         # Rendering (Materials) for testing
         src/rendering/materials/MaterialShader.cpp
         src/rendering/materials/EnvironmentMapManager.cpp
+        src/rendering/materials/TextureManager.cpp
         src/rendering/materials/GlassRefractionShader.cpp
         src/rendering/materials/LiquidChromeShader.cpp
         src/rendering/materials/CrystallineShader.cpp

@@ -51,6 +51,43 @@ public:
     void updateAll(float deltaTime, float gravity = 0.0f, float drag = 0.0f);
 
     /**
+     * Update all alive particles with a custom force callback.
+     * @param deltaTime Time step
+     * @param gravity Global gravity
+     * @param drag Global drag
+     * @param forceCallback Function called for each particle before integration: void(Particle&, float dt)
+     */
+    template<typename Func>
+    void updateAllWithCallback(float deltaTime, float gravity, float drag, Func&& forceCallback)
+    {
+        int newAliveCount = 0;
+
+        for (size_t i = 0; i < particles_.size(); ++i)
+        {
+            Particle& p = particles_[i];
+
+            if (p.isAlive())
+            {
+                // Apply custom forces
+                forceCallback(p, deltaTime);
+
+                // Standard integration
+                p.update(deltaTime, gravity, drag);
+
+                if (p.isAlive())
+                {
+                    ++newAliveCount;
+                }
+                else
+                {
+                    freeIndices_.push_back(static_cast<int>(i));
+                }
+            }
+        }
+        aliveCount_ = newAliveCount;
+    }
+
+    /**
      * Iterate over all alive particles.
      * @param func Function to call for each alive particle
      */

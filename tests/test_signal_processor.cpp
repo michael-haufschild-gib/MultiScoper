@@ -7,6 +7,7 @@
 #endif
 #include <cmath>
 #include <limits>
+#include <random>
 #include <gtest/gtest.h>
 #include "dsp/SignalProcessor.h"
 
@@ -32,6 +33,18 @@ protected:
     std::vector<float> generateDC(int numSamples, float level)
     {
         return std::vector<float>(numSamples, level);
+    }
+    
+    // Generate random signal
+    std::vector<float> generateRandom(int numSamples, float min, float max, int seed = 12345)
+    {
+        std::vector<float> samples(numSamples);
+        std::mt19937 gen(seed);
+        std::uniform_real_distribution<float> dist(min, max);
+        for(int i=0; i<numSamples; ++i) {
+            samples[i] = dist(gen);
+        }
+        return samples;
     }
 };
 
@@ -718,6 +731,59 @@ TEST_F(SignalProcessorTest, AdaptiveDecimatorEnvelope)
     for (size_t i = 0; i < minEnv.size(); ++i)
     {
         EXPECT_GE(maxEnv[i], minEnv[i]);
+    }
+}
+
+// =============================================================================
+// Fuzz Testing & Stress Tests
+// =============================================================================
+
+TEST_F(SignalProcessorTest, FuzzTest_RandomBuffers)
+{
+    // Iterate many times with random data
+    for(int i=0; i<100; ++i) {
+        int numSamples = 10 + (i * 10); // Variable size
+        
+        // Generate very loud noise, possibly outside [-1, 1]
+        auto left = generateRandom(numSamples, -2.0f, 2.0f, 1000 + i);
+        auto right = generateRandom(numSamples, -2.0f, 2.0f, 2000 + i);
+        
+        // Random mode
+        ProcessingMode mode = static_cast<ProcessingMode>(i % 6);
+        
+        processor.process(left.data(), right.data(), numSamples, mode, output);
+        
+        ASSERT_EQ(output.numSamples, numSamples);
+        
+        // Basic sanity check
+        if (output.numSamples > 0) {
+            EXPECT_TRUE(std::isfinite(output.channel1[0]));
+        }
+    }
+}
+
+TEST_F(SignalProcessorTest, DenormalStress)
+{
+    // Denormal numbers (very small values near zero) can cause performance issues
+    // on some architectures if not handled (flush-to-zero).
+    // We just want to ensure they don't cause crashes or weird output logic.
+    
+    const int numSamples = 1024;
+    std::vector<float> denormals(numSamples);
+    
+    // Create denormal values: ~ 1e-40
+    float val = 1.0e-30f;
+    for(int i=0; i<numSamples; ++i) {
+        denormals[i] = val;
+        val *= 0.9f; // Quickly becomes denormal
+    }
+    
+    processor.process(denormals.data(), denormals.data(), numSamples, ProcessingMode::FullStereo, output);
+    
+    // Verify output is finite and consistent
+    for(int i=0; i<numSamples; ++i) {
+        EXPECT_TRUE(std::isfinite(output.channel1[i]));
+        // If FTZ is on, these might become zero, which is fine.
     }
 }
 

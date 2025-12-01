@@ -104,11 +104,14 @@ std::unique_ptr<juce::AccessibilityHandler> WaveformComponent::createAccessibili
 }
 
 WaveformComponent::WaveformComponent()
+    : presenter_(std::make_unique<WaveformPresenter>())
 {
     setOpaque(false);
     // Auto-assign a unique ID
     waveformId_ = nextWaveformId_.fetch_add(1);
 }
+
+WaveformComponent::~WaveformComponent() = default;
 
 void WaveformComponent::paint(juce::Graphics& g)
 {
@@ -157,17 +160,20 @@ void WaveformComponent::paint(juce::Graphics& g)
 
 void WaveformComponent::resized()
 {
-    decimator_.setDisplayWidth(getWidth());
+    if (presenter_)
+        presenter_->setDisplayWidth(getWidth());
 }
 
 void WaveformComponent::setCaptureBuffer(std::shared_ptr<SharedCaptureBuffer> buffer)
 {
-    captureBuffer_ = buffer;
+    if (presenter_)
+        presenter_->setCaptureBuffer(buffer);
 }
 
 void WaveformComponent::setProcessingMode(ProcessingMode mode)
 {
-    processingMode_ = mode;
+    if (presenter_)
+        presenter_->setProcessingMode(mode);
 }
 
 void WaveformComponent::setColour(juce::Colour colour)
@@ -188,7 +194,8 @@ void WaveformComponent::setLineWidth(float width)
 
 void WaveformComponent::setDisplaySamples(int samples)
 {
-    displaySamples_ = std::max(64, samples);
+    if (presenter_)
+        presenter_->setDisplaySamples(samples);
 }
 
 void WaveformComponent::setShaderId(const juce::String& shaderId)
@@ -199,6 +206,11 @@ void WaveformComponent::setShaderId(const juce::String& shaderId)
 void WaveformComponent::setVisualPresetId(const juce::String& presetId)
 {
     visualPresetId_ = presetId;
+}
+
+void WaveformComponent::setVisualOverrides(const juce::ValueTree& overrides)
+{
+    visualOverrides_ = overrides.createCopy();
 }
 
 void WaveformComponent::setGpuRenderingEnabled(bool enabled)
@@ -213,7 +225,8 @@ void WaveformComponent::setShowGrid(bool show)
 
 void WaveformComponent::setAutoScale(bool enabled)
 {
-    autoScale_ = enabled;
+    if (presenter_)
+        presenter_->setAutoScale(enabled);
 }
 
 void WaveformComponent::setHoldDisplay(bool enabled)
@@ -223,10 +236,8 @@ void WaveformComponent::setHoldDisplay(bool enabled)
 
 void WaveformComponent::setGainDb(float dB)
 {
-    // Clamp to reasonable range: -60 dB to +24 dB
-    dB = juce::jlimit(-60.0f, 24.0f, dB);
-    // Convert dB to linear: 10^(dB/20)
-    gainLinear_ = std::pow(10.0f, dB / 20.0f);
+    if (presenter_)
+        presenter_->setGainDb(dB);
 }
 
 void WaveformComponent::setHighlighted(bool highlighted)
@@ -240,11 +251,6 @@ void WaveformComponent::setStereoDisplayMode(StereoDisplayMode mode)
     stereoDisplayMode_ = mode;
 }
 
-void WaveformComponent::setVerticalScale(float scale)
-{
-    verticalScale_ = std::max(0.1f, scale);
-}
-
 void WaveformComponent::forceUpdateWaveformData()
 {
     // Force the waveform path update which calculates peak/RMS levels
@@ -254,92 +260,10 @@ void WaveformComponent::forceUpdateWaveformData()
 
 void WaveformComponent::processAudioData()
 {
-    if (holdDisplay_ || !captureBuffer_)
+    if (holdDisplay_ || !presenter_)
         return;
 
-    // Read samples from capture buffer
-    std::vector<float> leftSamples(static_cast<size_t>(displaySamples_));
-    std::vector<float> rightSamples(static_cast<size_t>(displaySamples_));
-
-    int samplesReadLeft = captureBuffer_->read(leftSamples.data(), displaySamples_, 0);
-    int samplesReadRight = captureBuffer_->read(rightSamples.data(), displaySamples_, 1);
-
-    if (samplesReadLeft <= 0)
-        return;
-
-    // Use minimum of both channels to ensure we only process valid samples
-    int samplesRead = (samplesReadRight > 0) ? std::min(samplesReadLeft, samplesReadRight) : samplesReadLeft;
-
-    // Apply gain to samples
-    if (std::abs(gainLinear_ - 1.0f) > 1e-6f)
-    {
-        for (int i = 0; i < samplesRead; ++i)
-        {
-            leftSamples[static_cast<size_t>(i)] *= gainLinear_;
-            rightSamples[static_cast<size_t>(i)] *= gainLinear_;
-        }
-    }
-
-    // Process samples according to mode
-    signalProcessor_.process(leftSamples.data(), rightSamples.data(), samplesRead,
-                             processingMode_, processedSignal_);
-
-    // Decimate for display
-    decimator_.process(processedSignal_.channel1.data(),
-                       static_cast<int>(processedSignal_.channel1.size()),
-                       displayBuffer1_);
-
-    if (processedSignal_.isStereo)
-    {
-        decimator_.process(processedSignal_.channel2.data(),
-                           static_cast<int>(processedSignal_.channel2.size()),
-                           displayBuffer2_);
-    }
-
-    // Calculate levels
-    currentPeak_ = SignalProcessor::calculatePeak(processedSignal_.channel1.data(),
-                                                   processedSignal_.numSamples);
-    currentRMS_ = SignalProcessor::calculateRMS(processedSignal_.channel1.data(),
-                                                 processedSignal_.numSamples);
-
-    // Calculate target scale based on mode
-    float targetScale = verticalScale_;
-    
-    if (autoScale_ && currentPeak_ > 0.001f)
-    {
-        // Target 90% of display height for the peak
-        constexpr float targetFill = 0.9f;
-        float autoScaleFactor = targetFill / currentPeak_;
-        // Clamp to reasonable range to prevent extreme scaling
-        targetScale = juce::jlimit(0.5f, 10.0f, autoScaleFactor);
-    }
-
-    // Apply smoothing to effectiveScale_
-    if (!autoScale_)
-    {
-        // In manual mode, respond instantly
-        effectiveScale_ = targetScale;
-    }
-    else
-    {
-        // Asymmetric smoothing for auto-scale
-        if (targetScale < effectiveScale_)
-        {
-            // Signal is getting LOUDER (scale needs to shrink)
-            // Respond fast to prevent visual clipping
-            effectiveScale_ += (targetScale - effectiveScale_) * 0.2f;
-        }
-        else
-        {
-            // Signal is getting QUIETER (scale needs to grow)
-            // Respond slow to prevent jitter and pumping
-            effectiveScale_ += (targetScale - effectiveScale_) * 0.02f;
-        }
-
-        // Snap to target if very close to stop micro-updates
-        if (std::abs(targetScale - effectiveScale_) < 0.001f)
-            effectiveScale_ = targetScale;
-    }
+    presenter_->process();
 }
 
 void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
@@ -349,7 +273,9 @@ void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
     int width = bounds.getWidth();
     int height = bounds.getHeight();
 
-    if (processingMode_ == ProcessingMode::FullStereo)
+    ProcessingMode mode = presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
+
+    if (mode == ProcessingMode::FullStereo)
     {
         // Stereo stacked: draw grid for both channels
         float halfHeight = static_cast<float>(height) * 0.5f;
@@ -446,24 +372,27 @@ void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangl
         return;
     }
 
+    if (!presenter_) return;
+
     // Set up render parameters
     ShaderRenderParams params;
     params.colour = colour_;
     params.opacity = opacity_;
     params.lineWidth = lineWidth_;
     params.bounds = bounds.toFloat();
-    params.isStereo = (processingMode_ == ProcessingMode::FullStereo);
-    params.verticalScale = effectiveScale_;
+    params.isStereo = presenter_->isStereo();
+    params.verticalScale = presenter_->getEffectiveScale();
 
     // Use software rendering path (GPU rendering happens in OpenGL render callback)
     // The shader's software fallback provides the basic effect via multi-pass path rendering
-    const std::vector<float>* channel2Ptr = params.isStereo ? &displayBuffer2_ : nullptr;
-    shader->renderSoftware(g, displayBuffer1_, channel2Ptr, params);
+    const auto& buffer2 = presenter_->getDisplayBuffer2();
+    const std::vector<float>* channel2Ptr = params.isStereo ? &buffer2 : nullptr;
+    shader->renderSoftware(g, presenter_->getDisplayBuffer1(), channel2Ptr, params);
 }
 
 void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*bounds*/)
 {
-    if (!captureBuffer_)
+    if (!presenter_ || !presenter_->hasData())
         return;
 
     // Draw first channel (L or mono)
@@ -474,7 +403,7 @@ void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*b
     }
 
     // Draw second channel for stereo mode (stacked: same color, channels visually separated)
-    if (processingMode_ == ProcessingMode::FullStereo && !waveformPath2_.isEmpty())
+    if (presenter_->isStereo() && !waveformPath2_.isEmpty())
     {
         g.setColour(colour_.withAlpha(opacity_));
         g.strokePath(waveformPath2_, juce::PathStrokeType(lineWidth_));
@@ -484,17 +413,18 @@ void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*b
 void WaveformComponent::updateWaveformPath()
 {
     // Ensure data is fresh (CPU mode needs this called here)
-    // In GPU mode, processAudioData is called externally, but calling it here is fine for CPU fallback
     processAudioData();
 
-    // If hold display is enabled, don't update the waveform path
-    if (holdDisplay_)
+    if (holdDisplay_ || !presenter_)
         return;
 
     waveformPath1_.clear();
     waveformPath2_.clear();
 
-    if (!captureBuffer_)
+    const auto& displayBuffer1 = presenter_->getDisplayBuffer1();
+    const auto& displayBuffer2 = presenter_->getDisplayBuffer2();
+    
+    if (displayBuffer1.empty())
         return;
 
     int width = getWidth();
@@ -507,7 +437,10 @@ void WaveformComponent::updateWaveformPath()
     float centerY1, centerY2;
     float amplitude1, amplitude2;  // Amplitude range for each channel
 
-    if (processingMode_ == ProcessingMode::FullStereo)
+    bool isStereo = presenter_->isStereo();
+    float effectiveScale = presenter_->getEffectiveScale();
+
+    if (isStereo)
     {
         // Stereo stacked: L on top half, R on bottom half
         float halfHeight = static_cast<float>(height) * 0.5f;
@@ -527,20 +460,20 @@ void WaveformComponent::updateWaveformPath()
 
     // Build path for first channel (L or mono)
     // Need at least 2 samples to draw a line
-    if (displayBuffer1_.size() >= 2)
+    if (displayBuffer1.size() >= 2)
     {
-        float xScale = static_cast<float>(width) / static_cast<float>(displayBuffer1_.size() - 1);
+        float xScale = static_cast<float>(width) / static_cast<float>(displayBuffer1.size() - 1);
 
-        float yStart = centerY1 - displayBuffer1_[0] * amplitude1 * effectiveScale_;
+        float yStart = centerY1 - displayBuffer1[0] * amplitude1 * effectiveScale;
         waveformPath1_.startNewSubPath(0, yStart);
 
-        for (size_t i = 1; i < displayBuffer1_.size(); ++i)
+        for (size_t i = 1; i < displayBuffer1.size(); ++i)
         {
             float x = static_cast<float>(i) * xScale;
-            float y = centerY1 - displayBuffer1_[i] * amplitude1 * effectiveScale_;
+            float y = centerY1 - displayBuffer1[i] * amplitude1 * effectiveScale;
 
             // Clamp to appropriate region
-            if (processingMode_ == ProcessingMode::FullStereo)
+            if (isStereo)
             {
                 // Stereo stacked: L channel in top half
                 y = juce::jlimit(0.0f, static_cast<float>(height) * 0.5f, y);
@@ -557,17 +490,17 @@ void WaveformComponent::updateWaveformPath()
 
     // Build path for second channel (R in stereo mode)
     // Need at least 2 samples to draw a line
-    if (processedSignal_.isStereo && displayBuffer2_.size() >= 2)
+    if (isStereo && displayBuffer2.size() >= 2)
     {
-        float xScale = static_cast<float>(width) / static_cast<float>(displayBuffer2_.size() - 1);
+        float xScale = static_cast<float>(width) / static_cast<float>(displayBuffer2.size() - 1);
 
-        float yStart = centerY2 - displayBuffer2_[0] * amplitude2 * effectiveScale_;
+        float yStart = centerY2 - displayBuffer2[0] * amplitude2 * effectiveScale;
         waveformPath2_.startNewSubPath(0, yStart);
 
-        for (size_t i = 1; i < displayBuffer2_.size(); ++i)
+        for (size_t i = 1; i < displayBuffer2.size(); ++i)
         {
             float x = static_cast<float>(i) * xScale;
-            float y = centerY2 - displayBuffer2_[i] * amplitude2 * effectiveScale_;
+            float y = centerY2 - displayBuffer2[i] * amplitude2 * effectiveScale;
 
             // Stereo stacked: R channel in bottom half
             y = juce::jlimit(static_cast<float>(height) * 0.5f, static_cast<float>(height), y);
@@ -587,13 +520,8 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
 #if OSCIL_ENABLE_OPENGL
     data.id = waveformId_;
 
-    // Convert component bounds to coordinates relative to the AudioProcessorEditor
-    // (where the OpenGL context is attached), NOT the top-level window.
-    // In a plugin, getTopLevelComponent() returns the DAW's window, which is wrong.
-    // We need to find the AudioProcessorEditor ancestor and get bounds relative to that.
     juce::Rectangle<int> relativeBounds;
 
-    // Find the AudioProcessorEditor ancestor (where OpenGL context is attached)
     juce::Component* editorComponent = nullptr;
     for (auto* p = getParentComponent(); p != nullptr; p = p->getParentComponent())
     {
@@ -606,34 +534,53 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
 
     if (editorComponent != nullptr)
     {
-        // Get our bounds in the coordinate space of the plugin editor
         relativeBounds = editorComponent->getLocalArea(this, getLocalBounds());
     }
     else
     {
-        // Fallback to local bounds if no editor found (shouldn't happen in normal use)
         relativeBounds = getLocalBounds();
     }
     data.bounds = relativeBounds.toFloat();
 
-    // Copy display buffer data
-    data.channel1 = displayBuffer1_;
-    data.channel2 = displayBuffer2_;
+    // Copy display buffer data from presenter
+    if (presenter_) {
+        data.channel1 = presenter_->getDisplayBuffer1();
+        data.channel2 = presenter_->getDisplayBuffer2();
+        data.isStereo = presenter_->isStereo();
+        data.verticalScale = presenter_->getEffectiveScale();
+    }
 
     // Copy render parameters
     data.colour = colour_;
     data.opacity = opacity_;
     data.lineWidth = lineWidth_;
-    data.isStereo = (processingMode_ == ProcessingMode::FullStereo);
     data.shaderId = shaderId_;
-    data.visible = isVisible() && !displayBuffer1_.empty();
-    data.verticalScale = effectiveScale_;  // Pass auto-scale factor to GPU
+    data.visible = isVisible() && !data.channel1.empty();
+    
 
     // Populate advanced visual configuration from preset
     data.visualConfig = VisualConfiguration::getPreset(visualPresetId_);
+    
+    // Apply overrides if present
+    if (visualOverrides_.isValid())
+    {
+        VisualConfiguration::applyOverrides(data.visualConfig, visualOverrides_);
+    }
 #else
     juce::ignoreUnused(data);
 #endif
 }
+
+// Getters
+float WaveformComponent::getPeakLevel() const { return presenter_ ? presenter_->getPeakLevel() : 0.0f; }
+float WaveformComponent::getRMSLevel() const { return presenter_ ? presenter_->getRMSLevel() : 0.0f; }
+ProcessingMode WaveformComponent::getProcessingMode() const { 
+    return presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo; 
+}
+
+bool WaveformComponent::isAutoScaleEnabled() const { return presenter_ ? presenter_->isAutoScaleEnabled() : true; }
+float WaveformComponent::getGainLinear() const { return presenter_ ? presenter_->getGainLinear() : 1.0f; }
+int WaveformComponent::getDisplaySamples() const { return presenter_ ? presenter_->getDisplaySamples() : 2048; }
+std::shared_ptr<SharedCaptureBuffer> WaveformComponent::getCaptureBuffer() const { return presenter_ ? presenter_->getCaptureBuffer() : nullptr; }
 
 } // namespace oscil

@@ -125,6 +125,15 @@
         "OSCIL_ENABLE_RTSAN": "ON",
         "OSCIL_ENABLE_INSPECTOR": "OFF"
       }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage (Debug + Clang Profile)",
+      "description": "Build with code coverage instrumentation",
+      "inherits": "dev",
+      "cacheVariables": {
+        "OSCIL_ENABLE_COVERAGE": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -161,6 +170,11 @@
     {
       "name": "ci-windows",
       "configurePreset": "ci-windows",
+      "jobs": 0
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage",
       "jobs": 0
     }
   ],
@@ -203,6 +217,14 @@
       "output": {
         "outputOnFailure": true,
         "verbosity": "verbose"
+      }
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
       }
     }
   ]

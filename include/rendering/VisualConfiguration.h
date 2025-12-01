@@ -37,6 +37,7 @@ enum class ShaderType
     VectorFlow,
     StringTheory,
     ElectricFlower,
+    ElectricFiligree,
 
     // Material Shaders
     GlassRefraction,
@@ -68,6 +69,7 @@ struct BloomSettings
     float intensity = 1.0f;      // 0.0 - 2.0
     float threshold = 0.8f;      // Brightness threshold for bloom
     int iterations = 4;          // Blur iterations (2-8)
+    int downsampleSteps = 6;     // Number of Mip levels (2-8)
     float spread = 1.0f;         // Blur spread multiplier
     float softKnee = 0.5f;       // Soft threshold transition (0.0 = hard, 1.0 = very soft)
 };
@@ -185,20 +187,6 @@ struct TiltShiftSettings
     int iterations = 3;          // Blur quality
 };
 
-/**
- * Lens Flare effect settings.
- */
-struct LensFlareSettings
-{
-    bool enabled = false;
-    float intensity = 1.0f;      // Overall brightness
-    float threshold = 0.8f;      // Brightness threshold (0.0-1.0)
-    float ghostDispersal = 0.6f; // How far ghosts spread
-    int ghostCount = 4;          // Number of ghosts
-    float haloWidth = 0.5f;      // Halo radius
-    float chromaticDistortion = 5.0f; // Chromatic aberration amount for flare
-};
-
 // ============================================================================
 // Particle System Settings
 // ============================================================================
@@ -248,6 +236,19 @@ struct ParticleSettings
     // Audio reactivity
     bool audioReactive = true;
     float audioEmissionBoost = 2.0f;       // Multiplier on transients
+
+    // Advanced Rendering
+    juce::String textureId = "";           // Texture name from TextureManager
+    int textureRows = 1;                   // Sprite sheet rows
+    int textureCols = 1;                   // Sprite sheet columns
+    bool softParticles = false;            // Enable depth-based fading
+    float softDepthSensitivity = 1.0f;     // How soft the intersection is
+
+    // Turbulence / Force Fields
+    bool useTurbulence = false;
+    float turbulenceStrength = 0.0f;       // Force strength
+    float turbulenceScale = 0.5f;          // Noise frequency
+    float turbulenceSpeed = 0.5f;          // Noise scrolling speed
 };
 
 // ============================================================================
@@ -318,7 +319,6 @@ struct VisualConfiguration
     DistortionSettings distortion;
     GlitchSettings glitch;
     TiltShiftSettings tiltShift;
-    LensFlareSettings lensFlare;
 
     // Particle system
     ParticleSettings particles;
@@ -376,6 +376,12 @@ struct VisualConfiguration
      * Returns pairs of (presetId, displayName).
      */
     static std::vector<std::pair<juce::String, juce::String>> getAvailablePresets();
+
+    /**
+     * Apply overrides from a ValueTree.
+     * Only updates properties that are present in the tree.
+     */
+    static void applyOverrides(VisualConfiguration& config, const juce::ValueTree& overrides);
 };
 
 // ============================================================================
@@ -392,6 +398,7 @@ inline bool is3DShader(ShaderType type)
            type == ShaderType::VectorFlow ||
            type == ShaderType::StringTheory ||
            type == ShaderType::ElectricFlower ||
+           type == ShaderType::ElectricFiligree ||
            // Material shaders are also 3D shaders
            type == ShaderType::GlassRefraction ||
            type == ShaderType::LiquidChrome ||

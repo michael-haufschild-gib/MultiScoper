@@ -21,6 +21,8 @@ using namespace juce::gl;
  */
 struct Framebuffer
 {
+    virtual ~Framebuffer() = default;
+
     GLuint fbo = 0;
     GLuint colorTexture = 0;
     GLuint colorRenderbuffer = 0; // For MSAA
@@ -44,13 +46,13 @@ struct Framebuffer
      * @param useDepthTexture Whether to create depth as a sampleable texture (for DoF, etc.) instead of Renderbuffer
      * @return true if creation succeeded
      */
-    bool create(juce::OpenGLContext& context, int w, int h, int samples = 0, GLenum fmt = GL_RGBA8, bool withDepth = false, bool useDepthTexture = false);
+    virtual bool create(juce::OpenGLContext& context, int w, int h, int samples = 0, GLenum fmt = GL_RGBA8, bool withDepth = false, bool useDepthTexture = false);
 
     /**
      * Destroy the framebuffer and release all resources.
      * @param context The OpenGL context (must be active)
      */
-    void destroy(juce::OpenGLContext& context);
+    virtual void destroy(juce::OpenGLContext& context);
 
     /**
      * Resize the framebuffer to new dimensions.
@@ -59,7 +61,7 @@ struct Framebuffer
      * @param w New width
      * @param h New height
      */
-    void resize(juce::OpenGLContext& context, int w, int h);
+    virtual void resize(juce::OpenGLContext& context, int w, int h);
 
     /**
      * Blit (copy/resolve) this framebuffer to another framebuffer.
@@ -67,36 +69,36 @@ struct Framebuffer
      * @param context The OpenGL context
      * @param dest The destination framebuffer (can be nullptr for default framebuffer)
      */
-    void blitTo(juce::OpenGLContext& context, Framebuffer* dest);
+    virtual void blitTo(juce::OpenGLContext& context, Framebuffer* dest);
 
     /**
      * Bind this framebuffer for rendering.
      * All subsequent draw calls will render to this FBO.
      */
-    void bind();
+    virtual void bind();
 
     /**
      * Unbind this framebuffer, returning to the default framebuffer.
      */
-    void unbind();
+    virtual void unbind();
 
     /**
      * Bind the color texture for sampling in a shader.
      * Fails if this is an MSAA framebuffer (must resolve first).
      * @param textureUnit The texture unit to bind to (0 = GL_TEXTURE0)
      */
-    void bindTexture(int textureUnit = 0);
+    virtual void bindTexture(int textureUnit = 0);
 
     /**
      * Bind the depth texture for sampling in a shader (if created with useDepthTexture=true).
      * @param textureUnit The texture unit to bind to
      */
-    void bindDepthTexture(int textureUnit = 1);
+    virtual void bindDepthTexture(int textureUnit = 1);
 
     /**
      * Check if the framebuffer is valid and ready for use.
      */
-    [[nodiscard]] bool isValid() const { return fbo != 0; }
+    [[nodiscard]] virtual bool isValid() const { return fbo != 0; }
 
     /**
      * Clear the framebuffer with the specified color.
@@ -104,7 +106,7 @@ struct Framebuffer
      * @param colour The clear color
      * @param clearDepth Whether to also clear the depth buffer
      */
-    void clear(juce::Colour colour, bool clearDepth = true);
+    virtual void clear(juce::Colour colour, bool clearDepth = true);
 
 private:
     bool createColorTexture(juce::OpenGLContext& context);

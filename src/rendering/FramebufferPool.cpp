@@ -12,9 +12,6 @@ namespace oscil
 using namespace juce::gl;
 
 FramebufferPool::FramebufferPool()
-    : waveformFBO_(std::make_unique<Framebuffer>())
-    , pingFBO_(std::make_unique<Framebuffer>())
-    , pongFBO_(std::make_unique<Framebuffer>())
 {
 }
 
@@ -22,6 +19,11 @@ FramebufferPool::~FramebufferPool()
 {
     // Note: shutdown() should be called explicitly before destruction
     // while OpenGL context is still active
+}
+
+std::unique_ptr<Framebuffer> FramebufferPool::createFramebuffer()
+{
+    return std::make_unique<Framebuffer>();
 }
 
 bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int height)
@@ -32,6 +34,11 @@ bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int he
     context_ = &context;
     width_ = width;
     height_ = height;
+
+    // Ensure FBOs are created
+    if (!waveformFBO_) waveformFBO_ = createFramebuffer();
+    if (!pingFBO_) pingFBO_ = createFramebuffer();
+    if (!pongFBO_) pongFBO_ = createFramebuffer();
 
     // Create waveform FBO with depth buffer (for 3D rendering) and HDR format
     // Enable depth texture for post-processing effects like Depth of Field

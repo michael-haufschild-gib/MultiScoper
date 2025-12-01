@@ -11,6 +11,8 @@
 #include "WaveformRenderState.h"
 #include "VisualConfiguration.h"
 #include "WaveformGLRenderer.h"
+#include "EffectChain.h"
+#include "IEffectProvider.h"
 #include "shaders3d/WaveformShader3D.h" // For LightingConfig
 #include "ShaderRegistry.h" // Include full header for unique_ptr
 #include <juce_core/juce_core.h>
@@ -27,6 +29,7 @@ namespace oscil
 class PostProcessEffect;
 class ParticleSystem;
 class EnvironmentMapManager;
+class TextureManager;
 // Camera3D is included via WaveformShader3D.h
 
 /**
@@ -43,12 +46,19 @@ enum class QualityLevel
  * Central orchestrator for all rendering subsystems.
  * Manages framebuffers, post-processing effects, particles,
  * 3D rendering, and per-waveform visual states.
+ * 
+ * THREAD SAFETY:
+ * This class is designed to be used EXCLUSIVELY from the OpenGL rendering thread.
+ * Methods should not be called from the message thread or audio thread, as they
+ * access OpenGL context resources and mutable shared state without internal locking.
+ * Cross-thread configuration should be handled via synchronized data structures
+ * (like VisualConfiguration) passed to the renderer, not by calling methods here directly.
  */
-class RenderEngine
+class RenderEngine : public IEffectProvider
 {
 public:
     RenderEngine();
-    ~RenderEngine();
+    ~RenderEngine() override;
 
     // ========================================================================
     // Lifecycle
@@ -163,6 +173,11 @@ public:
      */
     EnvironmentMapManager* getEnvironmentMapManager() { return envMapManager_.get(); }
 
+    /**
+     * Get the texture manager.
+     */
+    TextureManager* getTextureManager() { return textureManager_.get(); }
+
     // ========================================================================
     // Global Settings
     // ========================================================================
@@ -198,7 +213,7 @@ public:
     /**
      * Get a post-process effect by ID.
      */
-    PostProcessEffect* getEffect(const juce::String& effectId);
+    PostProcessEffect* getEffect(const juce::String& effectId) override;
 
     /**
      * Enable or disable global post-processing.
@@ -242,15 +257,19 @@ private:
     std::unique_ptr<ParticleSystem> particleSystem_;
     std::unique_ptr<Camera3D> camera_;
     std::unique_ptr<EnvironmentMapManager> envMapManager_;
+    std::unique_ptr<TextureManager> textureManager_;
 
     // Post-processing effects
     std::unordered_map<juce::String, std::unique_ptr<PostProcessEffect>> effects_;
 
     // Compiled per-instance shaders (created from Registry)
     std::unordered_map<std::string, std::unique_ptr<WaveformShader>> compiledShaders_;
-    
+
     // Shader registry (factory)
     std::unique_ptr<ShaderRegistry> registry_;
+
+    // Effect Chain
+    EffectChain effectChain_;
 
     // Blit shader for final output
     std::unique_ptr<juce::OpenGLShaderProgram> blitShader_;

@@ -222,6 +222,95 @@ jobs:
           path: build/${{ matrix.cmake_preset }}/Oscil_artefacts/Release/Standalone/
           if-no-files-found: error
 
+  # Code Coverage job
+  # Generates HTML coverage report using Clang source-based code coverage
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-24.04
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: coverage-${{ github.ref_name }}
+          restore-keys: |
+            coverage-${{ github.ref_name }}
+            coverage-main
+            coverage-
+          max-size: 1G
+          verbose: 2
+
+      # Install Dependencies (Clang and Linux Audio Libs)
+      - name: Install Dependencies
+        run: |
+          sudo apt-get install -y \
+            clang \
+            llvm \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            ladspa-sdk \
+            libcurl4-openssl-dev \
+            libfreetype6-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            libwebkit2gtk-4.1-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev
+
+      - name: Configure CMake (Coverage)
+        run: |
+          cmake --preset coverage \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build
+        run: cmake --build --preset coverage
+
+      - name: Run Tests
+        run: |
+          export LLVM_PROFILE_FILE="coverage-%p.profraw"
+          ctest --preset coverage
+
+      - name: Generate Coverage Report
+        run: |
+          # Merge profile data
+          llvm-profdata merge -sparse coverage-*.profraw -o coverage.profdata
+          
+          # Generate HTML report
+          # We verify the executable path based on the preset binaryDir
+          llvm-cov show ./build/coverage/OscilTests \
+            -instr-profile=coverage.profdata \
+            -format=html \
+            -output-dir=coverage_report \
+            -ignore-filename-regex="(_deps|JuceLibraryCode|tests/|test_harness/)" \
+            -show-line-counts-or-regions \
+            -Xdemangler=c++filt
+
+          # Also generate a summary for the console
+          llvm-cov report ./build/coverage/OscilTests \
+            -instr-profile=coverage.profdata \
+            -ignore-filename-regex="(_deps|JuceLibraryCode|tests/|test_harness/)"
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage_report/
+          if-no-files-found: error
+
   # RealtimeSanitizer job - detects real-time safety violations in audio code
   # Catches: allocations, mutex locks, blocking syscalls in processBlock()
   # Note: Requires LLVM's official Clang 20+ (Ubuntu's packaged Clang doesn't include RTSan)

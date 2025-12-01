@@ -8,14 +8,28 @@
 #include "Particle.h"
 #include "ParticlePool.h"
 #include "ParticleEmitter.h"
+#include "rendering/VisualConfiguration.h"
+#include "rendering/materials/TextureManager.h"
 #include <juce_opengl/juce_opengl.h>
 #include <unordered_map>
 #include <memory>
+#include <vector>
 
 #if OSCIL_ENABLE_OPENGL
 
 namespace oscil
 {
+
+// Simple Perlin Noise helper for turbulence
+class Noise3D
+{
+public:
+    static float perlin(float x, float y, float z);
+private:
+    static float fade(float t);
+    static float lerp(float t, float a, float b);
+    static float grad(int hash, float x, float y, float z);
+};
 
 /**
  * GPU-accelerated particle system with instanced rendering.
@@ -41,6 +55,11 @@ public:
      * Must be called on the OpenGL thread.
      */
     bool initialize(juce::OpenGLContext& context);
+
+    /**
+     * Set texture manager reference.
+     */
+    void setTextureManager(TextureManager* tm) { textureManager_ = tm; }
 
     /**
      * Release OpenGL resources.
@@ -96,7 +115,7 @@ public:
                        float verticalScale = 1.0f);
 
     /**
-     * Render all particles.
+     * Render particles for specific emitters.
      * @param context OpenGL context
      * @param viewportWidth Viewport width in pixels
      * @param viewportHeight Viewport height in pixels
@@ -106,6 +125,13 @@ public:
                 int viewportWidth,
                 int viewportHeight,
                 ParticleBlendMode blendMode = ParticleBlendMode::Additive);
+
+    // New render method with filtering and extended config
+    void render(juce::OpenGLContext& context,
+                int viewportWidth,
+                int viewportHeight,
+                const std::vector<ParticleEmitterId>& emitterIds,
+                const ParticleSettings& settings);
 
     /**
      * Get the particle pool.
@@ -125,6 +151,16 @@ public:
     void setDrag(float drag) { drag_ = drag; }
 
     /**
+     * Set turbulence parameters.
+     */
+    void setTurbulence(float strength, float scale, float speed)
+    {
+        turbulenceStrength_ = strength;
+        turbulenceScale_ = scale;
+        turbulenceSpeed_ = speed;
+    }
+
+    /**
      * Clear all particles immediately.
      */
     void clearAllParticles();
@@ -133,12 +169,12 @@ private:
     /**
      * Upload particle data to GPU.
      */
-    void uploadParticleData(juce::OpenGLContext& context);
+    void uploadParticleData(juce::OpenGLContext& context, const std::vector<ParticleEmitterId>& emitterIds);
 
     /**
-     * Compile particle shader.
+     * Compile particle shaders.
      */
-    bool compileShader(juce::OpenGLContext& context);
+    bool compileShaders(juce::OpenGLContext& context);
 
     ParticlePool pool_;
     std::unordered_map<ParticleEmitterId, std::unique_ptr<ParticleEmitter>> emitters_;
@@ -147,16 +183,40 @@ private:
     // Physics
     float gravity_ = 0.0f;
     float drag_ = 0.0f;
+    
+    // Turbulence
+    float turbulenceStrength_ = 0.0f;
+    float turbulenceScale_ = 0.5f;
+    float turbulenceSpeed_ = 0.5f;
+    
+    // Turbulence time
+    float time_ = 0.0f;
+
+    // Dependencies
+    TextureManager* textureManager_ = nullptr;
 
     // OpenGL resources
     bool initialized_ = false;
-    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
+    
+    // Shader variants
+    struct ShaderProgram
+    {
+        std::unique_ptr<juce::OpenGLShaderProgram> program;
+        GLint projectionLoc = -1;
+        GLint textureLoc = -1;
+        GLint depthLoc = -1;
+        GLint viewportSizeLoc = -1;
+        GLint softDepthParamLoc = -1;
+        GLint frameInfoLoc = -1; // rows, cols
+    };
+    
+    ShaderProgram basicShader_;
+    ShaderProgram texturedShader_;
+    ShaderProgram softShader_;
+    
     GLuint vao_ = 0;
     GLuint quadVBO_ = 0;      // Quad vertices (shared)
     GLuint instanceVBO_ = 0;  // Per-particle instance data
-
-    // Shader uniforms
-    GLint projectionLoc_ = -1;
 
     // Attribute locations
     GLint posAttrib_ = -1;
@@ -164,6 +224,7 @@ private:
     GLint instanceColorAttrib_ = -1;
     GLint instanceSizeAttrib_ = -1;
     GLint instanceRotationAttrib_ = -1;
+    GLint instanceAgeAttrib_ = -1;
 
     // Instance data buffer for CPU staging
     struct ParticleInstanceData
@@ -172,6 +233,7 @@ private:
         float r, g, b, a; // Color
         float size;       // Size
         float rotation;   // Rotation angle
+        float age;        // Normalized age (0-1) for animation
     };
     std::vector<ParticleInstanceData> instanceData_;
 };

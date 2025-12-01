@@ -42,8 +42,6 @@ namespace StateIds
     // Extended oscillator properties (PRD aligned)
     static const juce::Identifier OscillatorState{ "oscillatorState" };
     static const juce::Identifier LineWidth{ "lineWidth" };
-    static const juce::Identifier VerticalScale{ "verticalScale" };
-    static const juce::Identifier VerticalOffset{ "verticalOffset" };
     static const juce::Identifier TimeWindow{ "timeWindow" };
     static const juce::Identifier ShaderId{ "shaderId" };
     static const juce::Identifier VisualPresetId{ "visualPresetId" };

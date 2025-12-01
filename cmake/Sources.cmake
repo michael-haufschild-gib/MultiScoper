@@ -19,6 +19,7 @@ set(OSCIL_SOURCES
     # UI
     ${CMAKE_SOURCE_DIR}/src/ui/PluginEditor.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/WaveformComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/presenters/WaveformPresenter.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorPanel.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/PaneComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/ThemeManager.cpp
@@ -35,6 +36,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorConfigPopup.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/AddOscillatorDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/PluginTestServer.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/PluginTestServer_Lifecycle.cpp
     # UI Sections
     ${CMAKE_SOURCE_DIR}/src/ui/sections/TimingSidebarSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/sections/OptionsSection.cpp
@@ -75,6 +77,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/PlasmaSineShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/DigitalGlitchShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformGLRenderer.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/EffectChain.cpp
 
     # Rendering (Render Engine)
     ${CMAKE_SOURCE_DIR}/src/rendering/Framebuffer.cpp
@@ -96,7 +99,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/DistortionEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/GlitchEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/RadialBlurEffect.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/effects/LensFlareEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/TiltShiftEffect.cpp
 
     # Rendering (Particles)
@@ -111,10 +113,12 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/VectorFlowShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/StringTheoryShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/ElectricFlowerShader.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/ElectricFiligreeShader.cpp
 
     # Rendering (Materials)
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/MaterialShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/EnvironmentMapManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/materials/TextureManager.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/GlassRefractionShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/LiquidChromeShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/CrystallineShader.cpp

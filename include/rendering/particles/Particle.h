@@ -40,6 +40,9 @@ struct Particle
     // Rotation (radians)
     float rotation = 0.0f;
     float rotationSpeed = 0.0f;
+    
+    // Emitter ID
+    int emitterId = -1;
 
     /**
      * Check if particle is alive.
@@ -87,7 +90,7 @@ struct Particle
      * Initialize particle with position and velocity.
      */
     void spawn(float px, float py, float pvx, float pvy,
-               float psize, float plife, juce::Colour colour)
+               float psize, float plife, juce::Colour colour, int pEmitterId = -1)
     {
         x = px;
         y = py;
@@ -102,6 +105,7 @@ struct Particle
         a = colour.getFloatAlpha();
         rotation = 0.0f;
         rotationSpeed = 0.0f;
+        emitterId = pEmitterId;
     }
 };
 

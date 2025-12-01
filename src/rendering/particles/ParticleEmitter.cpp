@@ -153,7 +153,7 @@ void ParticleEmitter::spawnParticle(ParticlePool& pool, float x, float y)
     juce::Colour color = config_.useWaveformColor ? waveformColor_ : config_.colorStart;
 
     // Spawn the particle
-    p->spawn(x, y, vx, vy, size, life, color);
+    p->spawn(x, y, vx, vy, size, life, color, id_);
 
     // Set rotation
     p->rotationSpeed = config_.rotationSpeedMin +

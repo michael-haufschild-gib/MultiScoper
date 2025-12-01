@@ -17,6 +17,7 @@ ParticlePool::ParticlePool(int maxParticles)
     // Initialize free list with all indices (in reverse for efficient pop_back)
     for (int i = maxParticles - 1; i >= 0; --i)
     {
+        particles_[static_cast<size_t>(i)].life = 0.0f; // Ensure dead initially
         freeIndices_.push_back(i);
     }
 

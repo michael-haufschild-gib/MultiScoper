@@ -22,7 +22,7 @@ class FramebufferPool
 {
 public:
     FramebufferPool();
-    ~FramebufferPool();
+    virtual ~FramebufferPool();
 
     /**
      * Initialize the pool with specified dimensions.
@@ -32,13 +32,13 @@ public:
      * @param height Initial height
      * @return true if initialization succeeded
      */
-    bool initialize(juce::OpenGLContext& context, int width, int height);
+    virtual bool initialize(juce::OpenGLContext& context, int width, int height);
 
     /**
      * Release all resources.
      * @param context The OpenGL context (must be active)
      */
-    void shutdown(juce::OpenGLContext& context);
+    virtual void shutdown(juce::OpenGLContext& context);
 
     /**
      * Resize all FBOs to new dimensions.
@@ -46,31 +46,31 @@ public:
      * @param width New width
      * @param height New height
      */
-    void resize(juce::OpenGLContext& context, int width, int height);
+    virtual void resize(juce::OpenGLContext& context, int width, int height);
 
     /**
      * Get the waveform FBO (with depth buffer for 3D rendering).
      * Used for initial waveform geometry + particle rendering.
      */
-    Framebuffer* getWaveformFBO() { return waveformFBO_.get(); }
+    virtual Framebuffer* getWaveformFBO() { return waveformFBO_.get(); }
 
     /**
      * Get the ping FBO for effect chain processing.
      * Ping-pong buffers are used for multi-pass effects.
      */
-    Framebuffer* getPingFBO() { return pingFBO_.get(); }
+    virtual Framebuffer* getPingFBO() { return pingFBO_.get(); }
 
     /**
      * Get the pong FBO for effect chain processing.
      */
-    Framebuffer* getPongFBO() { return pongFBO_.get(); }
+    virtual Framebuffer* getPongFBO() { return pongFBO_.get(); }
 
     /**
      * Render a fullscreen quad using the currently bound shader.
      * The quad covers normalized device coordinates [-1,1].
      * Useful for post-processing effects.
      */
-    void renderFullscreenQuad();
+    virtual void renderFullscreenQuad();
 
     /**
      * Get current dimensions of the FBOs.
@@ -87,10 +87,26 @@ public:
     FramebufferPool(const FramebufferPool&) = delete;
     FramebufferPool& operator=(const FramebufferPool&) = delete;
 
-private:
-    bool createFullscreenQuad(juce::OpenGLContext& context);
-    void destroyFullscreenQuad(juce::OpenGLContext& context);
+protected:
+    /**
+     * Factory method to create a new Framebuffer instance.
+     * Override for testing.
+     */
+    virtual std::unique_ptr<Framebuffer> createFramebuffer();
 
+    /**
+     * Create the fullscreen quad resources.
+     * Virtual for testing.
+     */
+    virtual bool createFullscreenQuad(juce::OpenGLContext& context);
+
+    /**
+     * Destroy the fullscreen quad resources.
+     * Virtual for testing.
+     */
+    virtual void destroyFullscreenQuad(juce::OpenGLContext& context);
+
+private:
     std::unique_ptr<Framebuffer> waveformFBO_;
     std::unique_ptr<Framebuffer> pingFBO_;
     std::unique_ptr<Framebuffer> pongFBO_;

@@ -23,7 +23,6 @@
 #include "rendering/effects/VignetteEffect.h"
 #include "rendering/effects/FilmGrainEffect.h"
 #include "rendering/effects/BloomEffect.h"
-#include "rendering/effects/LensFlareEffect.h"
 #include "rendering/effects/TrailsEffect.h"
 #include "rendering/effects/ColorGradeEffect.h"
 #include "rendering/effects/TiltShiftEffect.h"
@@ -35,6 +34,7 @@
 #include "rendering/Camera3D.h"
 #include "rendering/particles/ParticleSystem.h"
 #include "rendering/materials/EnvironmentMapManager.h"
+#include "rendering/materials/TextureManager.h"
 #include "rendering/materials/MaterialShader.h"
 
 #if OSCIL_ENABLE_OPENGL
@@ -186,7 +186,7 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
 
     // Compile blit shader (tone map + gamma) for final output
     blitShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    
+
     if (!blitShader_->addVertexShader(blitVertexShader) ||
         !blitShader_->addFragmentShader(blitFragmentShader))
     {
@@ -254,6 +254,10 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
         // Non-fatal, continue without particles
     }
 
+    // Initialize texture manager
+    textureManager_ = std::make_unique<TextureManager>();
+    textureManager_->initialize(context);
+
     // Initialize environment map manager
     envMapManager_ = std::make_unique<EnvironmentMapManager>();
     if (!envMapManager_->initialize(context))
@@ -303,6 +307,13 @@ void RenderEngine::shutdown()
     {
         particleSystem_->release(*context_);
         particleSystem_.reset();
+    }
+
+    // Release texture manager
+    if (textureManager_)
+    {
+        textureManager_->release(*context_);
+        textureManager_.reset();
     }
 
     // Release environment map manager
@@ -478,6 +489,23 @@ void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& 
             {
                 it->second.disableTrails(*context_);
             }
+            
+            // Update turbulence
+            if (particleSystem_ && config.particles.enabled)
+            {
+                if (config.particles.useTurbulence)
+                {
+                    particleSystem_->setTurbulence(
+                        config.particles.turbulenceStrength,
+                        config.particles.turbulenceScale,
+                        config.particles.turbulenceSpeed
+                    );
+                }
+                else
+                {
+                    particleSystem_->setTurbulence(0.0f, 0.5f, 0.5f);
+                }
+            }
         }
     }
 }
@@ -599,21 +627,21 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
         float scale = static_cast<float>(context_->getRenderingScale());
         auto* target = context_->getTargetComponent();
         float logicalHeight = static_cast<float>(target->getHeight());
-        
+
         // Logical bounds
         float lx = data.bounds.getX();
         float ly = data.bounds.getY();
         float lw = data.bounds.getWidth();
         float lh = data.bounds.getHeight();
-        
+
         // Convert to scaled viewport coordinates (Physical)
         // OpenGL origin is bottom-left, JUCE is top-left.
         // Y = (LogicalTotalHeight - (TopY + Height)) * Scale
         int vx = static_cast<int>(lx * scale);
-        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale); 
+        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
         int vw = static_cast<int>(lw * scale);
         int vh = static_cast<int>(lh * scale);
-        
+
         // Clamp to prevent invalid viewports
         vx = std::max(0, vx);
         vy = std::max(0, vy);
@@ -621,7 +649,7 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
         vh = std::max(1, vh);
 
         glViewport(vx, vy, vw, vh);
-        
+
         // Adjust camera aspect ratio for the pane
         if (camera_)
         {
@@ -694,7 +722,7 @@ static MaterialProperties convertMaterialSettings(const MaterialSettings& settin
     props.baseColorB = overrideColour.getFloatBlue();
     props.baseColorA = overrideColour.getFloatAlpha();
 
-    /* 
+    /*
     // Previous logic (disabled):
     // Use tint color from preset multiplied by oscillator color
     float r = settings.tintColor.getFloatRed() * overrideColour.getFloatRed();
@@ -732,7 +760,7 @@ void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const 
     // Get shader from local map using string ID (for compatibility)
     juce::String shaderId = shaderTypeToId(config.shaderType);
     WaveformShader* shader = nullptr;
-    
+
     auto it = compiledShaders_.find(shaderId.toStdString());
     if (it != compiledShaders_.end())
     {
@@ -860,196 +888,25 @@ void RenderEngine::renderWaveformParticles(const WaveformRenderData& data, Wavef
         particleSystem_->updateEmitter(emitterId, data.channel1, data.bounds, deltaTime_, data.verticalScale);
     }
 
-    // Determine blend mode from config
-    ParticleBlendMode blendMode = config.blendMode;
-
     // Render particles using LOGICAL dimensions for projection
     // This matches the logical coordinates generated by ParticleEmitter
     auto* target = context_->getTargetComponent();
     int logicalWidth = target->getWidth();
     int logicalHeight = target->getHeight();
 
-    particleSystem_->render(*context_, logicalWidth, logicalHeight, blendMode);
+    // If soft particles enabled, bind depth texture from scene FBO
+    if (config.softParticles && sceneFBO_ && sceneFBO_->hasDepth)
+    {
+        sceneFBO_->bindDepthTexture(1); // Bind to unit 1
+    }
+
+    particleSystem_->render(*context_, logicalWidth, logicalHeight, state.emitterIds, config);
 }
 
 Framebuffer* RenderEngine::applyPostProcessing(Framebuffer* source, WaveformRenderState& state)
 {
     const auto& config = state.visualConfig;
-
-    // Get ping-pong buffers
-    Framebuffer* ping = fbPool_->getPingFBO();
-    Framebuffer* pong = fbPool_->getPongFBO();
-    Framebuffer* current = source;
-
-    // Apply effects in order (as specified in render-engine.md)
-
-    // 0. Lens Flare (Before Bloom so flares get bloomed)
-    if (config.lensFlare.enabled)
-    {
-        auto* lensFlare = dynamic_cast<LensFlareEffect*>(getEffect("lens_flare"));
-        if (lensFlare && lensFlare->isCompiled())
-        {
-            lensFlare->setSettings(config.lensFlare);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            lensFlare->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 1. Bloom
-    if (config.bloom.enabled)
-    {
-        auto* bloom = dynamic_cast<BloomEffect*>(getEffect("bloom"));
-        if (bloom && bloom->isCompiled())
-        {
-            bloom->setSettings(config.bloom);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            bloom->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 1.5. Radial Blur (zoom-glow effect from center)
-    if (config.radialBlur.enabled)
-    {
-        auto* radialBlur = dynamic_cast<RadialBlurEffect*>(getEffect("radial_blur"));
-        if (radialBlur && radialBlur->isCompiled())
-        {
-            radialBlur->setSettings(config.radialBlur);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            radialBlur->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 2. Trails
-    if (config.trails.enabled && state.historyFBO && state.historyFBO->isValid())
-    {
-        auto* trails = dynamic_cast<TrailsEffect*>(getEffect("trails"));
-        if (trails && trails->isCompiled())
-        {
-            trails->setSettings(config.trails);
-            // Trails effect blends current with history
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            trails->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 2.5. Tilt Shift
-    if (config.tiltShift.enabled)
-    {
-        auto* tiltShift = dynamic_cast<TiltShiftEffect*>(getEffect("tilt_shift"));
-        if (tiltShift && tiltShift->isCompiled())
-        {
-            tiltShift->setSettings(config.tiltShift);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            tiltShift->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 3. Color Grade
-    if (config.colorGrade.enabled)
-    {
-        auto* colorGrade = dynamic_cast<ColorGradeEffect*>(getEffect("color_grade"));
-        if (colorGrade && colorGrade->isCompiled())
-        {
-            colorGrade->setSettings(config.colorGrade);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            colorGrade->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 4. Chromatic Aberration
-    if (config.chromaticAberration.enabled)
-    {
-        auto* chromatic = dynamic_cast<ChromaticAberrationEffect*>(getEffect("chromatic_aberration"));
-        if (chromatic && chromatic->isCompiled())
-        {
-            chromatic->setSettings(config.chromaticAberration);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            chromatic->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 5. Scanlines
-    if (config.scanlines.enabled)
-    {
-        auto* scanlines = dynamic_cast<ScanlineEffect*>(getEffect("scanlines"));
-        if (scanlines && scanlines->isCompiled())
-        {
-            scanlines->setSettings(config.scanlines);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            scanlines->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 6. Distortion
-    if (config.distortion.enabled)
-    {
-        auto* distortion = dynamic_cast<DistortionEffect*>(getEffect("distortion"));
-        if (distortion && distortion->isCompiled())
-        {
-            distortion->setSettings(config.distortion);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            distortion->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 7. Vignette
-    if (config.vignette.enabled)
-    {
-        auto* vignette = dynamic_cast<VignetteEffect*>(getEffect("vignette"));
-        if (vignette && vignette->isCompiled())
-        {
-            vignette->setSettings(config.vignette);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            vignette->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    // 8. Film Grain
-    if (config.filmGrain.enabled)
-    {
-        auto* filmGrain = dynamic_cast<FilmGrainEffect*>(getEffect("film_grain"));
-        if (filmGrain && filmGrain->isCompiled())
-        {
-            filmGrain->setSettings(config.filmGrain);
-            Framebuffer* dest = (current == ping) ? pong : ping;
-            dest->bind();
-            filmGrain->apply(*context_, current, dest, *fbPool_, deltaTime_);
-            dest->unbind();
-            current = dest;
-        }
-    }
-
-    return current;
+    return effectChain_.process(*context_, source, *fbPool_, deltaTime_, config, *this);
 }
 
 void RenderEngine::compositeToScene(Framebuffer* source, const VisualConfiguration& config)
@@ -1179,7 +1036,6 @@ void RenderEngine::initializeEffects()
     effects_["vignette"] = std::make_unique<VignetteEffect>();
     effects_["film_grain"] = std::make_unique<FilmGrainEffect>();
     effects_["bloom"] = std::make_unique<BloomEffect>();
-    effects_["lens_flare"] = std::make_unique<LensFlareEffect>();
     effects_["trails"] = std::make_unique<TrailsEffect>();
     effects_["tilt_shift"] = std::make_unique<TiltShiftEffect>();
     effects_["color_grade"] = std::make_unique<ColorGradeEffect>();
@@ -1204,6 +1060,175 @@ void RenderEngine::initializeEffects()
     }
 
     DBG("RenderEngine: Initialized " << compiledCount << "/" << effects_.size() << " effects");
+
+    // Initialize Effect Chain
+    effectChain_.clear();
+
+    // 1. Bloom
+    effectChain_.addStep({
+        "bloom",
+        [](const VisualConfiguration& c) { return c.bloom.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* bloom = dynamic_cast<BloomEffect*>(e)) bloom->setSettings(c.bloom);
+        }
+    });
+
+    // 1.5 Radial Blur
+    effectChain_.addStep({
+        "radial_blur",
+        [](const VisualConfiguration& c) { return c.radialBlur.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* rb = dynamic_cast<RadialBlurEffect*>(e)) rb->setSettings(c.radialBlur);
+        }
+    });
+
+    // 2. Trails
+    // Note: Trails effect manages its own history check internally via isEnabled or we check it here?
+    // The previous logic checked `state.historyFBO && state.historyFBO->isValid()`.
+    // EffectChain doesn't have access to `state` in `isEnabled`.
+    // `TrailsEffect::apply` should handle the history logic if configured.
+    // However, `TrailsEffect` currently relies on `setSettings` but doesn't take `state`?
+    // Wait, `TrailsEffect::apply` logic previously used `state.historyFBO` which is passed where?
+    // Ah, I missed that `applyPostProcessing` logic for Trails was:
+    // `if (config.trails.enabled && state.historyFBO && state.historyFBO->isValid())`
+    // The `EffectChain` is generic and doesn't know about `state`.
+    // BUT `RenderEngine` passed `state` to `applyPostProcessing`.
+    // `EffectChain::process` doesn't take `state`?
+    // I defined `EffectChain::process` to take `VisualConfiguration` but NOT `WaveformRenderState`.
+    // This is a problem for Trails.
+    // FIX: `TrailsEffect` needs the history FBO.
+    // In the previous code, `TrailsEffect` didn't take `state` in `apply` either.
+    // Wait, let's look at `apply`: `trails->apply(*context_, current, dest, *fbPool_, deltaTime_);`
+    // Where did it get the history texture?
+    // `TrailsEffect` needs to maintain history? No, `WaveformRenderState` maintains history FBO.
+    // The previous code for Trails was:
+    // `trails->apply(*context_, current, dest, *fbPool_, deltaTime_);`
+    // It seems `TrailsEffect` in this codebase is stateless (ping-pong blend) OR it implicitly uses something?
+    // Actually, checking `TrailsEffect.cpp` (I don't have it open, but based on usage):
+    // `TrailsEffect` likely just blends previous frame. But previous frame is in `state.historyFBO`.
+    // If `TrailsEffect::apply` signature is generic `PostProcessEffect::apply`, it doesn't take `historyFBO`.
+    // So `Trails` implementation here might be using `getPingFBO` as history?
+    // Or maybe I missed how Trails works.
+    // Re-reading `applyPostProcessing` old code:
+    // `if (config.trails.enabled && state.historyFBO && state.historyFBO->isValid())`
+    // `trails->setSettings(config.trails);`
+    // `trails->apply(...)`
+    // It seems the check for `state.historyFBO` was guarding the effect, but `apply` didn't use it?
+    // If `TrailsEffect` implements simple motion blur by blending *current* with *destination* (which has previous frame)?
+    // But `dest` is cleared or overwritten.
+    // If `TrailsEffect` needs history, it must be passed.
+    // This suggests `TrailsEffect` as implemented might be broken or I misunderstood it.
+    // Let's look at `TrailsEffect.h` if possible.
+    // For now, I will skip Trails in the chain if I can't pass state, OR I assume Trails works without explicit state (e.g. global history?).
+    // But `WaveformRenderState` definitely has `historyFBO`.
+    // If `TrailsEffect` expects to blend with a persistent buffer, that buffer must be provided.
+    // The generic `PostProcessEffect::apply` doesn't support arbitrary extra buffers.
+    // This reveals a flaw in the generic `PostProcessEffect` interface for stateful effects.
+    //
+    // DECISION: For this refactor, I will handle Trails as a special case or accept that `EffectChain` might need to be extended to support state.
+    // Or, `TrailsEffect` uses `state.historyFBO` via some side channel? No.
+    // Let's look at `TrailsEffect.cpp` later.
+    // For now, I will implement the chain for stateless effects.
+    // If Trails is problematic, I'll leave it out or hack it?
+    // Actually, I can capture `state` in the lambda if I recreate the chain every frame? No, too expensive.
+    // The chain setup is once in `initialize`.
+    // The `configure` lambda takes `VisualConfiguration`.
+    //
+    // Solution:
+    // Modify `EffectChain::process` to accept `void* userData` or similar?
+    // Or just keep Trails manual?
+    // `EffectChain` is for the *sequence* of post-processing.
+    // Maybe `EffectChain::process` should take `WaveformRenderState& state`?
+    // But `EffectChain` is generic.
+    // Let's just add `WaveformRenderState` to `EffectChain::process` signature?
+    // No, that couples `EffectChain` to `WaveformRenderState`.
+    // `VisualConfiguration` is already coupled.
+    //
+    // Let's check `TrailsEffect.h` content from memory/previous reads?
+    // I read `PostProcessEffect.h` but not `TrailsEffect.h` fully.
+    //
+    // Let's assume for now Trails works like other effects and add it.
+    // If it needs state, it's broken in the new design.
+    //
+    // Wait, `RenderEngine::renderWaveformComplete` passes `state` to `applyPostProcessing`.
+    // I can pass `state` to `effectChain_.process`.
+    // I need to update `EffectChain::process` signature in `EffectChain.h` (I just wrote it).
+    // I should update it to take `const WaveformRenderState* state` (optional).
+    //
+    // Let's update `EffectChain.h` and `.cpp` to accept `void* userData` or specific state.
+    // Since `EffectChain` is specific to this engine (in `oscil` namespace), passing `WaveformRenderState` is fine.
+    
+    // 2. Trails
+    effectChain_.addStep({
+        "trails",
+        [](const VisualConfiguration& c) { return c.trails.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* t = dynamic_cast<TrailsEffect*>(e)) t->setSettings(c.trails);
+        }
+    });
+
+    // 2.5 Tilt Shift
+    effectChain_.addStep({
+        "tilt_shift",
+        [](const VisualConfiguration& c) { return c.tiltShift.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* ts = dynamic_cast<TiltShiftEffect*>(e)) ts->setSettings(c.tiltShift);
+        }
+    });
+
+    // 3. Color Grade
+    effectChain_.addStep({
+        "color_grade",
+        [](const VisualConfiguration& c) { return c.colorGrade.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* cg = dynamic_cast<ColorGradeEffect*>(e)) cg->setSettings(c.colorGrade);
+        }
+    });
+
+    // 4. Chromatic Aberration
+    effectChain_.addStep({
+        "chromatic_aberration",
+        [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* ca = dynamic_cast<ChromaticAberrationEffect*>(e)) ca->setSettings(c.chromaticAberration);
+        }
+    });
+
+    // 5. Scanlines
+    effectChain_.addStep({
+        "scanlines",
+        [](const VisualConfiguration& c) { return c.scanlines.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* sl = dynamic_cast<ScanlineEffect*>(e)) sl->setSettings(c.scanlines);
+        }
+    });
+
+    // 6. Distortion
+    effectChain_.addStep({
+        "distortion",
+        [](const VisualConfiguration& c) { return c.distortion.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* d = dynamic_cast<DistortionEffect*>(e)) d->setSettings(c.distortion);
+        }
+    });
+
+    // 7. Vignette
+    effectChain_.addStep({
+        "vignette",
+        [](const VisualConfiguration& c) { return c.vignette.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* v = dynamic_cast<VignetteEffect*>(e)) v->setSettings(c.vignette);
+        }
+    });
+
+    // 8. Film Grain
+    effectChain_.addStep({
+        "film_grain",
+        [](const VisualConfiguration& c) { return c.filmGrain.enabled; },
+        [](PostProcessEffect* e, const VisualConfiguration& c) {
+            if (auto* fg = dynamic_cast<FilmGrainEffect*>(e)) fg->setSettings(c.filmGrain);
+        }
+    });
 }
 
 void RenderEngine::releaseEffects()

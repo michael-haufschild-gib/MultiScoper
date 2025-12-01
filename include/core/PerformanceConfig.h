@@ -7,6 +7,8 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <string>
 
 namespace oscil
 {
@@ -247,14 +249,20 @@ struct PerformanceConfig
         if (!tree.isValid()) return;
 
         qualityMode = stringToQualityMode(tree.getProperty("qualityMode", "BALANCED").toString());
-        refreshRate = static_cast<float>(tree.getProperty("refreshRate", 60.0f));
-        decimationLevel = static_cast<int>(tree.getProperty("decimationLevel", 0));
+        refreshRate = juce::jlimit(MIN_REFRESH_RATE, MAX_REFRESH_RATE,
+                                   static_cast<float>(tree.getProperty("refreshRate", 60.0f)));
+        decimationLevel = juce::jlimit(MIN_DECIMATION, MAX_DECIMATION,
+                                       static_cast<int>(tree.getProperty("decimationLevel", 0)));
         statusBarVisible = static_cast<bool>(tree.getProperty("statusBarVisible", true));
         measurePerformance = static_cast<bool>(tree.getProperty("measurePerformance", true));
-        cpuWarningThreshold = static_cast<float>(tree.getProperty("cpuWarningThreshold", 10.0f));
-        cpuCriticalThreshold = static_cast<float>(tree.getProperty("cpuCriticalThreshold", 15.0f));
-        memoryWarningThreshold = static_cast<int>(tree.getProperty("memoryWarningThreshold", 500));
-        memoryCriticalThreshold = static_cast<int>(tree.getProperty("memoryCriticalThreshold", 800));
+        cpuWarningThreshold = juce::jlimit(MIN_CPU_WARNING, MAX_CPU_WARNING,
+                                           static_cast<float>(tree.getProperty("cpuWarningThreshold", 10.0f)));
+        cpuCriticalThreshold = juce::jlimit(MIN_CPU_CRITICAL, MAX_CPU_CRITICAL,
+                                            static_cast<float>(tree.getProperty("cpuCriticalThreshold", 15.0f)));
+        memoryWarningThreshold = juce::jlimit(MIN_MEMORY_WARNING, MAX_MEMORY_WARNING,
+                                              static_cast<int>(tree.getProperty("memoryWarningThreshold", 500)));
+        memoryCriticalThreshold = juce::jlimit(MIN_MEMORY_CRITICAL, MAX_MEMORY_CRITICAL,
+                                               static_cast<int>(tree.getProperty("memoryCriticalThreshold", 800)));
         autoQualityReduction = static_cast<bool>(tree.getProperty("autoQualityReduction", true));
     }
 };

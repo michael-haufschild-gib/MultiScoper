@@ -9,7 +9,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
-#include "dsp/SignalProcessor.h"
+#include "ui/presenters/WaveformPresenter.h"
 #include <vector>
 #include <atomic>
 
@@ -37,7 +37,7 @@ class WaveformComponent : public juce::Component
 {
 public:
     WaveformComponent();
-    ~WaveformComponent() override = default;
+    ~WaveformComponent() override; // Not default anymore, needs to destroy unique_ptr
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -81,6 +81,11 @@ public:
      * Set the visual preset ID for advanced rendering effects
      */
     void setVisualPresetId(const juce::String& presetId);
+
+    /**
+     * Set visual configuration overrides.
+     */
+    void setVisualOverrides(const juce::ValueTree& overrides);
 
     /**
      * Enable/disable GPU shader rendering
@@ -141,19 +146,14 @@ public:
     StereoDisplayMode getStereoDisplayMode() const { return stereoDisplayMode_; }
 
     /**
-     * Set vertical scale factor
-     */
-    void setVerticalScale(float scale);
-
-    /**
      * Get current peak level
      */
-    float getPeakLevel() const { return currentPeak_; }
+    float getPeakLevel() const;
 
     /**
      * Get current RMS level
      */
-    float getRMSLevel() const { return currentRMS_; }
+    float getRMSLevel() const;
 
     /**
      * Force update of waveform data (reads from buffer and calculates levels)
@@ -171,16 +171,16 @@ public:
 
     // Test access - for automated testing only
     bool isGridVisible() const { return showGrid_; }
-    bool isAutoScaleEnabled() const { return autoScale_; }
+    bool isAutoScaleEnabled() const;
     bool isHoldDisplayEnabled() const { return holdDisplay_; }
-    float getGainLinear() const { return gainLinear_; }
+    float getGainLinear() const;
     float getOpacity() const { return opacity_; }
     float getLineWidth() const { return lineWidth_; }
     juce::Colour getColour() const { return colour_; }
-    ProcessingMode getProcessingMode() const { return processingMode_; }
+    ProcessingMode getProcessingMode() const;
     bool hasWaveformData() const { return !waveformPath1_.isEmpty(); }
-    int getDisplaySamples() const { return displaySamples_; }
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const { return captureBuffer_; }
+    int getDisplaySamples() const;
+    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const;
     juce::String getShaderId() const { return shaderId_; }
     bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
 
@@ -193,39 +193,26 @@ private:
     void drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void updateWaveformPath();
 
-    std::shared_ptr<SharedCaptureBuffer> captureBuffer_;
-    ProcessingMode processingMode_ = ProcessingMode::FullStereo;
+    std::unique_ptr<WaveformPresenter> presenter_;
+    
     juce::Colour colour_{ 0xFF00FF00 };
     float opacity_ = 1.0f;
     float lineWidth_ = 1.5f;  // Default line width
-    int displaySamples_ = 2048;
     bool showGrid_ = true;
-    bool autoScale_ = true;
     bool holdDisplay_ = false;
-    float verticalScale_ = 1.0f;
-    float gainLinear_ = 1.0f;  // Linear gain multiplier (converted from dB)
     bool highlighted_ = false;
     StereoDisplayMode stereoDisplayMode_ = StereoDisplayMode::Stacked;
 
     // Shader rendering
     juce::String shaderId_ = "basic";
     juce::String visualPresetId_ = "default";  // Visual preset for advanced rendering
+    juce::ValueTree visualOverrides_; // Custom visual settings overrides
     bool gpuRenderingEnabled_ = false;
     int waveformId_ = 0;  // Unique ID for GL renderer registration
     static std::atomic<int> nextWaveformId_;  // Counter for generating unique IDs
 
-    SignalProcessor signalProcessor_;
-    AdaptiveDecimator decimator_;
-    ProcessedSignal processedSignal_;
-
-    std::vector<float> displayBuffer1_;
-    std::vector<float> displayBuffer2_;
     juce::Path waveformPath1_;
     juce::Path waveformPath2_;
-
-    float currentPeak_ = 0.0f;
-    float currentRMS_ = 0.0f;
-    float effectiveScale_ = 1.0f;  // Computed scale factor (includes auto-scale)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)
 };
