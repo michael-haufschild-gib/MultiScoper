@@ -233,6 +233,9 @@ void ParticleEmitter::spawnParticle(ParticlePool& pool, float x, float y, std::o
     // Spawn the particle
     p->spawn(x, y, vx, vy, size, life, color, id_);
 
+    // Randomize initial rotation (0 to 2pi) to prevent axis-aligned "square" look
+    p->rotation = dist01_(rng_) * 6.2831853f;
+
     // Set rotation
     p->rotationSpeed = config_.rotationSpeedMin +
                        dist01_(rng_) * (config_.rotationSpeedMax - config_.rotationSpeedMin);

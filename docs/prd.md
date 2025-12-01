@@ -4658,6 +4658,12 @@ formulate and discuss:
 then create a plan to add elements and to refactor existing elements based on your preview, and how to change existing visual presets or add new visual presets that showcase the new full power of our rendering engine.
 
 
- * Investigate the ParticlePoolTest.UpdateAndDeath and ParticleEmitterTest.PhysicsInit failures (likely floating-point precision or coordinate system assumptions).
-   * Integrate the coverage report generation into your CI pipeline.
-   * Continue refactoring OscillatorPanel and other UI components using the Presenter pattern established in WaveformPresenter.
+
+----
+
+Remove all visual presets except:
+1. Default
+2. Vector Scope
+3. String Theory
+4. Crystalline
+

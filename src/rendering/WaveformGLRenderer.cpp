@@ -291,6 +291,17 @@ void WaveformGLRenderer::renderOpenGL()
         // ========== ADVANCED RENDER ENGINE PATH ==========
         // Use the full render engine with post-processing, particles, etc.
 
+        // Sync RenderEngine state: remove any waveform states for IDs
+        // that are no longer in the local waveforms_ map. This prevents
+        // GPU resource leaks (history FBOs, particle emitters) when
+        // oscillators are removed or panes are rebuilt.
+        {
+            std::unordered_set<int> activeIds;
+            for (const auto& data : waveformsToRender)
+                activeIds.insert(data.id);
+            renderEngine_->syncWaveforms(activeIds);
+        }
+
         // Begin frame (clears scene FBO, updates timing)
         renderEngine_->beginFrame(deltaTime);
 

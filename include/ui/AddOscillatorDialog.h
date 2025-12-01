@@ -84,7 +84,7 @@ public:
     static constexpr int DIALOG_HEIGHT = 550;
 
     // Number of color swatches
-    static constexpr int NUM_COLOR_SWATCHES = 10;
+    static constexpr int NUM_COLOR_SWATCHES = 12;
 
 private:
     void setupComponents();
@@ -143,16 +143,18 @@ private:
 
     // Default color swatches (same as OscillatorConfigPopup)
     std::array<juce::Colour, NUM_COLOR_SWATCHES> defaultColors_ = {{
-        juce::Colour(0xFF00FF00),  // Green
-        juce::Colour(0xFF00BFFF),  // Deep Sky Blue
-        juce::Colour(0xFFFF6B6B),  // Coral Red
-        juce::Colour(0xFFFFD93D),  // Gold
-        juce::Colour(0xFFFF00FF),  // Magenta
-        juce::Colour(0xFF00FFFF),  // Cyan
-        juce::Colour(0xFFFF8C00),  // Dark Orange
-        juce::Colour(0xFF9370DB),  // Medium Purple
-        juce::Colour(0xFF32CD32),  // Lime Green
-        juce::Colour(0xFFFF1493)   // Deep Pink
+        juce::Colour(0xFFFF355E),  // Radical Red
+        juce::Colour(0xFFFF6037),  // Outrun Orange
+        juce::Colour(0xFFFFCC00),  // VHS Gold
+        juce::Colour(0xFFCCFF00),  // Mutant Green
+        juce::Colour(0xFF39FF14),  // Arcade Green
+        juce::Colour(0xFF00FF99),  // Turbo Teal
+        juce::Colour(0xFF40E0D0),  // Poolside Aqua
+        juce::Colour(0xFF00FFFF),  // Miami Cyan
+        juce::Colour(0xFF1E90FF),  // Dodger Blue
+        juce::Colour(0xFF3333FF),  // Video Blue
+        juce::Colour(0xFF9933FF),  // Electric Violet
+        juce::Colour(0xFFFF00CC)   // Hot Magenta
     }};
 
     // Layout constants

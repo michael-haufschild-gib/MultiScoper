@@ -321,3 +321,5 @@ Win: pitch-locked cycle view, note-grid, cycle stats, history & persistence, hig
 Live / streaming electronic musicians
 
 Win: performance mode, MIDI controllable visuals, print-to-video, low-UI full-screen.
+
+
