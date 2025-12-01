@@ -461,11 +461,11 @@ void ParticleSystem::update(float deltaTime)
 
     if (strength > 0.001f)
     {
-        pool_.updateAllWithCallback(deltaTime, gravity_, drag_, [&](Particle& p, float dt) {
+        pool_.updateAllWithCallback(deltaTime, gravity_, drag_, [&](Particle& particle, float dt) {
             // Curl noise approximation or simple vector field
             // 2D curl noise from 3D perlin slice
-            float x = p.x * 0.01f * scale;
-            float y = p.y * 0.01f * scale;
+            float x = particle.x * 0.01f * scale;
+            float y = particle.y * 0.01f * scale;
             float z = time_ * speed;
 
             // Sample noise for angle
@@ -476,8 +476,8 @@ void ParticleSystem::update(float deltaTime)
             float fy = std::sin(angle) * strength;
             
             // Apply force to velocity
-            p.vx += fx * dt * 60.0f; // Scale to be noticeable
-            p.vy += fy * dt * 60.0f;
+            particle.vx += fx * dt * 60.0f; // Scale to be noticeable
+            particle.vy += fy * dt * 60.0f;
         });
     }
     else

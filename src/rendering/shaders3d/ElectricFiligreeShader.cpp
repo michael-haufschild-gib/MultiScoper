@@ -210,18 +210,18 @@ bool ElectricFiligreeShader::compile(juce::OpenGLContext& context)
     const int stride = 8 * sizeof(float);
     if (posAttrib >= 0)
     {
-        ext.glEnableVertexAttribArray(posAttrib);
-        ext.glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
     }
     if (normAttrib >= 0)
     {
-        ext.glEnableVertexAttribArray(normAttrib);
-        ext.glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(normAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(normAttrib), 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
     }
     if (texAttrib >= 0)
     {
-        ext.glEnableVertexAttribArray(texAttrib);
-        ext.glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(texAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(texAttrib), 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
     }
 
     ext.glBindVertexArray(0);
@@ -245,6 +245,8 @@ void ElectricFiligreeShader::render(juce::OpenGLContext& context,
                                     const Camera3D& camera,
                                     const LightingConfig& lighting)
 {
+    juce::ignoreUnused(lighting);
+
     if (!compiled_ || !data.samples || data.sampleCount < 2) return;
 
     float xSpread = 1.0f; // Adjust based on projection like other shaders
@@ -275,9 +277,9 @@ void ElectricFiligreeShader::render(juce::OpenGLContext& context,
 
     auto& ext = context.extensions;
     ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    ext.glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(float), vertices_.data(), GL_DYNAMIC_DRAW);
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices_.size() * sizeof(float)), vertices_.data(), GL_DYNAMIC_DRAW);
     ext.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_);
-    ext.glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(GLuint), indices_.data(), GL_DYNAMIC_DRAW);
+    ext.glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices_.size() * sizeof(GLuint)), indices_.data(), GL_DYNAMIC_DRAW);
     indexCount_ = (int)indices_.size();
 
     // Render
@@ -326,6 +328,7 @@ float ElectricFiligreeShader::getParameter(const juce::String& name) const
 
 void ElectricFiligreeShader::updateMesh(const WaveformData3D& data, float xSpread)
 {
+    juce::ignoreUnused(data, xSpread);
     // Implemented inline in render for now
 }
 

@@ -81,6 +81,10 @@ target_include_directories(OscilTestHarness PRIVATE
     ${httplib_SOURCE_DIR}
 )
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(OscilTestHarness PRIVATE -Wno-switch-enum)
+endif()
+
 # Link against JUCE and libraries
 target_link_libraries(OscilTestHarness PRIVATE
     OscilBinaryData
@@ -106,7 +110,6 @@ target_compile_definitions(OscilTestHarness PRIVATE
     JUCE_STANDALONE_APPLICATION=1
     JUCE_USE_CURL=0
     JUCE_WEB_BROWSER=0
-    JUCE_DISPLAY_SPLASH_SCREEN=0
     JUCE_REPORT_APP_USAGE=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1
     TEST_HARNESS=1
