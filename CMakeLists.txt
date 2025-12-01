@@ -7,6 +7,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Windows-specific compile definitions
+if(WIN32)
+    add_compile_definitions(
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
+        _CRT_SECURE_NO_WARNINGS
+    )
+endif()
+
 # ============================================================================
 # Compiler Cache (ccache) - Speeds up rebuilds by caching compiled objects
 # Supports Ninja and Makefile generators. Install: brew install ccache (macOS)
