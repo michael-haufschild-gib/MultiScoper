@@ -127,6 +127,16 @@ void AddOscillatorDialog::paint(juce::Graphics& g)
                headerBounds.getWidth(), headerBounds.getHeight() - 8);
 }
 
+bool AddOscillatorDialog::keyPressed(const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress::escapeKey)
+    {
+        handleCancelClick();
+        return true;
+    }
+    return false;
+}
+
 void AddOscillatorDialog::resized()
 {
     auto bounds = getLocalBounds();
@@ -242,6 +252,8 @@ void AddOscillatorDialog::showDialog(juce::Component* /*parent*/,
 
     setVisible(true);
     toFront(true);
+    setWantsKeyboardFocus(true);
+    grabKeyboardFocus();
 }
 
 void AddOscillatorDialog::hideDialog()

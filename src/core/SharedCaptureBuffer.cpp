@@ -57,79 +57,20 @@ void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int
     if (numSamples <= 0 || numChannels <= 0)
         return;
 
-    // Handle locking based on tryLock parameter
-    if (tryLock)
-    {
-        // Real-time audio thread: try to acquire lock, skip if contended
-        const juce::SpinLock::ScopedTryLockType sl(writeLock_);
-        if (!sl.isLocked())
-            return; // Skip this write to avoid blocking audio thread
-            
-        // Lock acquired, proceed with write
-        // (The scope of 'sl' will naturally end at function exit, but we need to keep logic inside block if we want scoped lock)
-        // To avoid code duplication, we'll use a separate private method or just put logic here.
-        // Since scoped locks unlock on destruction, we need to wrap the write logic or use goto/do-while.
-        // Let's duplicate the logic slightly or use a common implementation that assumes lock held?
-        // No, 'write' IS the implementation.
-        // We can't use RAII for conditional locking easily without duplicate code or a lambda.
-        // Lambda approach:
-        auto performWrite = [&]() {
-            numChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
+    // Clamp channels once
+    const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
 
-            // Get current write position
-            size_t writePos = writePos_.load(std::memory_order_relaxed);
-
-            // Write samples to ring buffer
-            for (int i = 0; i < numSamples; ++i)
-            {
-                size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
-
-                for (int ch = 0; ch < numChannels; ++ch)
-                {
-                    size_t chIdx = static_cast<size_t>(ch);
-                    if (samples[ch] != nullptr)
-                    {
-                        buffers_[chIdx][pos] = samples[ch][i];
-                    }
-                }
-
-                // Zero out unused channels
-                for (size_t ch = static_cast<size_t>(numChannels); ch < MAX_CHANNELS; ++ch)
-                {
-                    buffers_[ch][pos] = 0.0f;
-                }
-            }
-
-            // Update write position atomically
-            writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
-
-            // Update total samples written
-            samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_relaxed);
-
-            // Update metadata using lock-free SeqLock pattern
-            CaptureFrameMetadata meta = metadata;
-            meta.numSamples = numSamples;
-            meta.numChannels = numChannels;
-            metadata_.write(meta);
-        };
-        
-        performWrite();
-    }
-    else
-    {
-        // Non-real-time thread: block until lock acquired
-        const juce::SpinLock::ScopedLockType sl(writeLock_);
-        
-        // Same write logic
-        numChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
-
+    // Shared write logic
+    auto performWrite = [&]() {
+        // Get current write position
         size_t writePos = writePos_.load(std::memory_order_relaxed);
 
+        // Write samples to ring buffer
         for (int i = 0; i < numSamples; ++i)
         {
             size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
 
-            for (int ch = 0; ch < numChannels; ++ch)
+            for (int ch = 0; ch < actualChannels; ++ch)
             {
                 size_t chIdx = static_cast<size_t>(ch);
                 if (samples[ch] != nullptr)
@@ -138,19 +79,42 @@ void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int
                 }
             }
 
-            for (size_t ch = static_cast<size_t>(numChannels); ch < MAX_CHANNELS; ++ch)
+            // Zero out unused channels
+            for (size_t ch = static_cast<size_t>(actualChannels); ch < MAX_CHANNELS; ++ch)
             {
                 buffers_[ch][pos] = 0.0f;
             }
         }
 
+        // Update write position atomically
         writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
+
+        // Update total samples written
         samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_relaxed);
 
+        // Update metadata using lock-free SeqLock pattern
         CaptureFrameMetadata meta = metadata;
         meta.numSamples = numSamples;
-        meta.numChannels = numChannels;
+        meta.numChannels = actualChannels;
         metadata_.write(meta);
+    };
+
+    // Handle locking based on tryLock parameter
+    if (tryLock)
+    {
+        // Real-time audio thread: try to acquire lock, skip if contended
+        const juce::SpinLock::ScopedTryLockType sl(writeLock_);
+        if (sl.isLocked())
+        {
+            performWrite();
+        }
+        // else: Skip this write to avoid blocking audio thread
+    }
+    else
+    {
+        // Non-real-time thread: block until lock acquired
+        const juce::SpinLock::ScopedLockType sl(writeLock_);
+        performWrite();
     }
 }
 

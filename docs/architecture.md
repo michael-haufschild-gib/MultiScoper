@@ -93,22 +93,33 @@ test_harness/               # E2E test harness (separate JUCE app)
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/ThemeManager.h"
+#include "ui/components/TestId.h"
 
 namespace oscil
 {
 
-class MyComponent : public juce::Component
+class MyComponent : public juce::Component,
+                    public ThemeManagerListener,
+                    public TestIdSupport
 {
 public:
     MyComponent();
-    ~MyComponent() override = default;
+    ~MyComponent() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    // ThemeManagerListener - react to theme changes
+    void themeChanged(const ColorTheme& newTheme) override;
+
 private:
     // Member variables with trailing underscore
     float someValue_ = 0.0f;
+    ColorTheme theme_;
+
+    // TestIdSupport for E2E testing
+    OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MyComponent)
 };
@@ -131,17 +142,35 @@ namespace oscil
 
 MyComponent::MyComponent()
 {
-    // Constructor implementation
+    // Register for theme changes
+    ThemeManager::getInstance().addListener(this);
+    theme_ = ThemeManager::getInstance().getCurrentTheme();
+
+    // Set test ID for E2E testing
+    setTestId("my-component");
+}
+
+MyComponent::~MyComponent()
+{
+    ThemeManager::getInstance().removeListener(this);
 }
 
 void MyComponent::paint(juce::Graphics& g)
 {
-    // Rendering
+    // Use theme colors for consistent styling
+    g.setColour(theme_.backgroundColour);
+    g.fillAll();
 }
 
 void MyComponent::resized()
 {
     // Layout
+}
+
+void MyComponent::themeChanged(const ColorTheme& newTheme)
+{
+    theme_ = newTheme;
+    repaint();
 }
 
 } // namespace oscil
@@ -651,17 +680,67 @@ private:
 2. Update `toValueTree()` and `fromValueTree()` in `src/ui/ThemeManager.cpp`
 3. Use in components via `ThemeManager::getInstance().getCurrentTheme()`
 
+## Dependency Injection Pattern
+
+Use interface classes for testability and decoupling. The processor accepts dependencies via constructor:
+
+```cpp
+// Interface definition in include/core/IAudioDataProvider.h
+class IAudioDataProvider
+{
+public:
+    virtual ~IAudioDataProvider() = default;
+    virtual std::shared_ptr<IAudioBuffer> getBuffer(const SourceId& sourceId) = 0;
+    virtual OscilState& getState() = 0;
+    virtual float getCpuUsage() const = 0;
+    virtual double getSampleRate() const = 0;
+};
+
+// Concrete implementation
+class OscilPluginProcessor : public juce::AudioProcessor,
+                             public IAudioDataProvider
+{
+public:
+    OscilPluginProcessor(IInstanceRegistry& registry, IThemeService& theme);
+    // ... implements IAudioDataProvider
+};
+```
+
+**Rule**: Prefer constructor injection over singletons for new dependencies.
+
 ## Thread Safety Rules
 
 **Audio Thread** (in `processBlock()`):
 - Use ONLY lock-free operations
 - NO allocations after `prepareToPlay()`
 - Use `SharedCaptureBuffer::write()` for data passing
+- Use `std::atomic` for flags and simple state
+- Use lock-free ring buffers for sample data
 
 **UI Thread**:
 - Use `SharedCaptureBuffer::read()` for reading audio
-- Use message queue for cross-thread communication
+- Use `juce::MessageManager::callAsync()` for cross-thread communication
 - All JUCE Component methods are UI-thread only
+- ProcessedSignal allocations happen here (never in audio thread)
+
+**Example: Thread-safe data passing**:
+```cpp
+// Audio thread - write samples
+void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) override
+{
+    // Lock-free write to ring buffer
+    captureBuffer_->write(buffer.getReadPointer(0), buffer.getNumSamples());
+}
+
+// UI thread - read samples for display
+void timerCallback() override
+{
+    // Safe to allocate and read
+    std::vector<float> samples(1024);
+    captureBuffer_->read(samples.data(), samples.size(), 0);
+    // Process for visualization...
+}
+```
 
 ## Key Base Classes and When to Use Them
 

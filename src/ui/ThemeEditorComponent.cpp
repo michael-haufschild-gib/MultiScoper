@@ -10,6 +10,9 @@
 namespace oscil
 {
 
+static constexpr int kLeftPanelWidth = 170;
+static constexpr int kSeparatorPadding = 10;
+
 //==============================================================================
 // ColorSwatchButton
 //==============================================================================
@@ -279,7 +282,7 @@ void ThemeEditorComponent::paint(juce::Graphics& g)
 
     // Draw separator between list and editor
     g.setColour(theme.gridMajor);
-    g.drawVerticalLine(180, 0.0f, static_cast<float>(getHeight()));
+    g.drawVerticalLine(kLeftPanelWidth + kSeparatorPadding, 0.0f, static_cast<float>(getHeight()));
 }
 
 void ThemeEditorComponent::resized()
@@ -287,7 +290,7 @@ void ThemeEditorComponent::resized()
     auto bounds = getLocalBounds().reduced(10);
 
     // Left side - theme list and buttons
-    auto leftPanel = bounds.removeFromLeft(170);
+    auto leftPanel = bounds.removeFromLeft(kLeftPanelWidth);
 
     auto listButtons = leftPanel.removeFromBottom(70);
     listButtons.removeFromTop(5);
@@ -307,7 +310,7 @@ void ThemeEditorComponent::resized()
 
     themeList_->setBounds(leftPanel);
 
-    bounds.removeFromLeft(20);  // Spacing
+    bounds.removeFromLeft(kSeparatorPadding * 2);  // Spacing
 
     // Bottom buttons
     auto bottomButtons = bounds.removeFromBottom(30);

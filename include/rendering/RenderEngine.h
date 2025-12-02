@@ -13,6 +13,8 @@
 #include "WaveformGLRenderer.h"
 #include "EffectChain.h"
 #include "IEffectProvider.h"
+#include "GridRenderer.h"
+#include "ParticleRenderer.h"
 #include "shaders3d/WaveformShader3D.h" // For LightingConfig
 #include "ShaderRegistry.h" // Include full header for unique_ptr
 #include <juce_core/juce_core.h>
@@ -237,6 +239,7 @@ public:
 private:
     // Internal rendering methods
     void renderWaveformComplete(const WaveformRenderData& data, WaveformRenderState& state);
+    void renderGrid(const WaveformRenderData& data);
     void renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config);
     void renderWaveformParticles(const WaveformRenderData& data, WaveformRenderState& state);
     Framebuffer* applyPostProcessing(Framebuffer* source, WaveformRenderState& state);
@@ -288,6 +291,12 @@ private:
     GLint blitTextureLoc_ = -1;
     std::unique_ptr<juce::OpenGLShaderProgram> compositeShader_;
     GLint compositeTextureLoc_ = -1;
+    
+    // Grid Renderer
+    std::unique_ptr<GridRenderer> gridRenderer_;
+
+    // Particle Renderer
+    std::unique_ptr<ParticleRenderer> particleRenderer_;
 
     // Context and state
     juce::OpenGLContext* context_ = nullptr;

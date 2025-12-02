@@ -12,6 +12,7 @@
 #include <juce_opengl/juce_opengl.h>
 #include "rendering/WaveformShader.h"
 #include "rendering/VisualConfiguration.h"
+#include "dsp/TimingConfig.h"
 #include <vector>
 #include <unordered_map>
 #include <atomic>
@@ -23,6 +24,16 @@ namespace oscil
 // Forward declarations
 class ShaderRegistry;
 class RenderEngine;
+
+/**
+ * Grid colors copied from theme on message thread for thread-safe GL access.
+ */
+struct GridColors
+{
+    juce::Colour gridMinor{ 0x33FFFFFF };
+    juce::Colour gridMajor{ 0x66FFFFFF };
+    juce::Colour gridZeroLine{ 0x99FFFFFF };
+};
 
 /**
  * Data required to render a single waveform on the GL thread.
@@ -42,6 +53,8 @@ struct WaveformRenderData
     bool visible = true;                 // Whether to render this waveform
     float verticalScale = 1.0f;          // Vertical scale factor (includes auto-scale)
     VisualConfiguration visualConfig;    // Full visual configuration for render engine
+    GridConfiguration gridConfig;        // Grid configuration
+    GridColors gridColors;               // Grid colors (copied from theme on message thread)
 };
 
 /**

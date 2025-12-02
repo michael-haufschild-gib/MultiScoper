@@ -366,7 +366,6 @@ if(OSCIL_BUILD_TESTS)
         src/ui/components/OscilButton.cpp
         src/ui/components/OscilTextField.cpp
         src/ui/components/OscilToggle.cpp
-        src/ui/components/OscilTooltip.cpp
         src/ui/components/OscilSlider.cpp
         src/ui/components/OscilCheckbox.cpp
         src/ui/components/OscilRadioButton.cpp
@@ -380,6 +379,7 @@ if(OSCIL_BUILD_TESTS)
         src/ui/components/OscilMeterBar.cpp
         src/ui/components/OscilTransportSync.cpp
         src/ui/components/UIAudioFeedback.cpp
+        src/ui/components/PaneContainerComponent.cpp
 
         # Rendering source files for testing
         src/rendering/WaveformShader.cpp
@@ -392,6 +392,8 @@ if(OSCIL_BUILD_TESTS)
         src/rendering/shaders/DigitalGlitchShader.cpp
         src/rendering/WaveformGLRenderer.cpp
         src/rendering/EffectChain.cpp
+        src/rendering/GridRenderer.cpp
+        src/rendering/ParticleRenderer.cpp
 
         # Rendering (Render Engine) for testing
         src/rendering/Framebuffer.cpp

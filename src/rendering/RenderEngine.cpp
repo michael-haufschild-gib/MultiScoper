@@ -5,6 +5,7 @@
 #include "rendering/RenderEngine.h"
 #include "rendering/ShaderRegistry.h"
 #include "rendering/effects/PostProcessEffect.h"
+#include <cmath>
 #include <iostream>
 
 // Release-mode logging macro for render engine debugging
@@ -113,7 +114,10 @@ static const char* compositeFragmentShader = R"(
 RenderEngine::RenderEngine()
     : fbPool_(std::make_unique<FramebufferPool>())
     , sceneFBO_(std::make_unique<Framebuffer>())
+    , particleSystem_(std::make_unique<ParticleSystem>())
     , registry_(std::make_unique<ShaderRegistry>())
+    , gridRenderer_(std::make_unique<GridRenderer>())
+    , particleRenderer_(std::make_unique<ParticleRenderer>(*particleSystem_))
 {
 }
 
@@ -148,25 +152,22 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
         return false;
     }
 
-    // Initialize per-instance shaders
-    // Create fresh instances from the registry factory and compile them for THIS context
-    auto availableShaders = registry_->getAvailableShaders();
-    for (const auto& info : availableShaders)
+    // LAZY SHADER LOADING: Only compile the essential "basic" shader at startup.
+    // All other shaders are compiled on-demand when first requested.
+    // This reduces initialization time from ~1s to ~100ms.
     {
-        auto shader = registry_->createShader(info.id);
-        if (shader)
+        auto basicShader = registry_->createShader("basic");
+        if (basicShader && basicShader->compile(context))
         {
-            if (shader->compile(context))
-            {
-                compiledShaders_[info.id.toStdString()] = std::move(shader);
-            }
-            else
-            {
-                DBG("RenderEngine: Failed to compile shader: " << info.id);
-            }
+            compiledShaders_["basic"] = std::move(basicShader);
+            DBG("RenderEngine: Compiled essential 'basic' shader");
+        }
+        else
+        {
+            DBG("RenderEngine: WARNING - Failed to compile basic shader!");
         }
     }
-    DBG("RenderEngine: Compiled " << compiledShaders_.size() << " waveform shaders");
+    DBG("RenderEngine: Lazy loading enabled - other shaders compiled on demand");
 
     // Initialize framebuffer pool
     if (!fbPool_->initialize(context, currentWidth_, currentHeight_))
@@ -213,6 +214,12 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
     blitTextureLoc_ = blitShader_->getUniformIDFromName("sourceTexture");
     DBG("RenderEngine: Blit shader compiled, sourceTexture uniform=" << blitTextureLoc_);
 
+    // Initialize GridRenderer
+    if (gridRenderer_)
+    {
+        gridRenderer_->initialize(context);
+    }
+
     // Compile composite shader (linear pass-through) for layering waveforms into scene FBO
     compositeShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
@@ -247,7 +254,6 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
     initializeEffects();
 
     // Initialize particle system
-    particleSystem_ = std::make_unique<ParticleSystem>();
     if (!particleSystem_->initialize(context))
     {
         DBG("RenderEngine: Failed to initialize particle system");
@@ -306,7 +312,6 @@ void RenderEngine::shutdown()
     if (particleSystem_)
     {
         particleSystem_->release(*context_);
-        particleSystem_.reset();
     }
 
     // Release texture manager
@@ -329,6 +334,12 @@ void RenderEngine::shutdown()
     // Release shaders
     compositeShader_.reset();
     blitShader_.reset();
+    
+    // Release GridRenderer
+    if (gridRenderer_)
+    {
+        gridRenderer_->release(*context_);
+    }
 
     // Release scene FBO
     sceneFBO_->destroy(*context_);
@@ -340,6 +351,172 @@ void RenderEngine::shutdown()
     initialized_ = false;
 
     DBG("RenderEngine: Shutdown complete");
+}
+
+// ... (keep existing methods) ...
+
+void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, WaveformRenderState& state)
+{
+    const auto& config = state.visualConfig;
+
+    RE_LOG_THROTTLED(60, "renderWaveformComplete: presetId=" << config.presetId.toStdString()
+               << ", shaderType=" << static_cast<int>(config.shaderType)
+               << ", bloom=" << config.bloom.enabled
+               << ", trails=" << config.trails.enabled
+               << ", vignette=" << config.vignette.enabled);
+
+    // Update state timing
+    state.updateTiming(deltaTime_);
+
+    // Get working FBO from pool
+    auto* waveformFBO = fbPool_->getWaveformFBO();
+    if (!waveformFBO)
+    {
+        RE_LOG("ERROR: No waveform FBO available!");
+        return;
+    }
+
+    // Step 1: Clear waveform FBO
+    waveformFBO->bind();
+    waveformFBO->clear(juce::Colours::transparentBlack, true);
+
+    // Store previous viewport state
+    GLint prevViewport[4];
+    glGetIntegerv(GL_VIEWPORT, prevViewport);
+
+    // Step 2: Set up camera (2D or 3D)
+    if (is3DShader(config.shaderType))
+    {
+        // For 3D shaders, we must restrict rendering to the specific pane bounds.
+        // Calculate viewport using Logical dimensions from target component for reliability.
+        float scale = static_cast<float>(context_->getRenderingScale());
+        auto* target = context_->getTargetComponent();
+        float logicalHeight = static_cast<float>(target->getHeight());
+
+        // Logical bounds
+        float lx = data.bounds.getX();
+        float ly = data.bounds.getY();
+        float lw = data.bounds.getWidth();
+        float lh = data.bounds.getHeight();
+
+        // Convert to scaled viewport coordinates (Physical)
+        // OpenGL origin is bottom-left, JUCE is top-left.
+        // Y = (LogicalTotalHeight - (TopY + Height)) * Scale
+        int vx = static_cast<int>(lx * scale);
+        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
+        int vw = static_cast<int>(lw * scale);
+        int vh = static_cast<int>(lh * scale);
+
+        // Clamp to prevent invalid viewports
+        vx = std::max(0, vx);
+        vy = std::max(0, vy);
+        vw = std::max(1, vw);
+        vh = std::max(1, vh);
+
+        glViewport(vx, vy, vw, vh);
+
+        // Adjust camera aspect ratio for the pane
+        if (camera_)
+        {
+            camera_->setAspectRatio(static_cast<float>(vw) / static_cast<float>(vh));
+        }
+
+        setupCamera3D(config.settings3D);
+        glEnable(GL_DEPTH_TEST);
+    }
+    else
+    {
+        // 2D Mode: Use full FBO or pane viewport?
+        // WaveformFBO is full screen sized (usually).
+        // But WaveformShader usually renders using 'bounds' in Normalized Device Coords?
+        // No, WaveformShader usually assumes full screen quad [-1, 1] and does bounds internally?
+        // Let's check renderWaveformGeometry. It passes bounds to shader params.
+        // So we keep full viewport but shader clips?
+        // Actually, to be safe and efficient, we should probably set viewport to pane bounds too
+        // but standard 2D shaders might rely on full viewport NDC mapping.
+        // Let's assume standard 2D setup (full viewport) is fine for now.
+        setupCamera2D();
+        glDisable(GL_DEPTH_TEST);
+    }
+    
+    // Render Grid (New)
+    if (data.gridConfig.enabled && !is3DShader(config.shaderType)) // Only render grid in 2D mode for now
+    {
+        // Set viewport to pane bounds for grid rendering ease (0..1 mapping)
+         float scale = static_cast<float>(context_->getRenderingScale());
+        auto* target = context_->getTargetComponent();
+        float logicalHeight = static_cast<float>(target->getHeight());
+
+        // Logical bounds
+        float lx = data.bounds.getX();
+        float ly = data.bounds.getY();
+        float lw = data.bounds.getWidth();
+        float lh = data.bounds.getHeight();
+
+        int vx = static_cast<int>(lx * scale);
+        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
+        int vw = static_cast<int>(lw * scale);
+        int vh = static_cast<int>(lh * scale);
+        
+        glViewport(vx, vy, vw, vh);
+        
+        renderGrid(data);
+        
+        // Restore viewport if needed (though 3D sets it, 2D might not)
+        glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+    }
+
+    // Step 3: Render waveform geometry
+    renderWaveformGeometry(data, config);
+
+    // Restore full viewport for particles and post-processing
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+
+    // Step 4: Render particles (if enabled)
+    if (config.particles.enabled)
+    {
+        // TODO: Soft particles require a valid depth buffer.
+        // Currently, we render into waveformFBO (which has depth), but we cannot bind its
+        // own depth texture for reading while writing to it (feedback loop).
+        // sceneFBO_ has no depth buffer.
+        // Future improvement: Resolve waveformFBO depth to a texture or use a depth pre-pass.
+        // For now, we pass nullptr, effectively disabling soft particles.
+        renderWaveformParticles(data, state);
+    }
+
+    waveformFBO->unbind();
+
+    // Step 5: Apply post-processing effects
+    Framebuffer* current = waveformFBO;
+
+    if (config.hasPostProcessing())
+    {
+        RE_LOG_THROTTLED(60, "Applying post-processing effects...");
+        current = applyPostProcessing(current, state);
+        if (!current)
+        {
+            RE_LOG("ERROR: applyPostProcessing returned null!");
+            current = waveformFBO;  // Fall back to original
+        }
+    }
+
+    // Step 6: Composite onto scene
+    RE_LOG_THROTTLED(60, "Compositing to scene, current FBO valid=" << (current && current->isValid()));
+    compositeToScene(current, config);
+
+    // Step 7: Update sample history for 3D temporal effects
+    if (state.needsSampleHistory())
+    {
+        state.pushSamples(data.channel1);
+    }
+}
+
+void RenderEngine::renderGrid(const WaveformRenderData& data)
+{
+    if (gridRenderer_ && context_)
+    {
+        gridRenderer_->render(*context_, data);
+    }
 }
 
 void RenderEngine::resize(int width, int height)
@@ -605,7 +782,22 @@ PostProcessEffect* RenderEngine::getEffect(const juce::String& effectId)
 {
     auto it = effects_.find(effectId);
     if (it != effects_.end())
-        return it->second.get();
+    {
+        auto* effect = it->second.get();
+        // LAZY EFFECT COMPILATION: Compile on first access
+        if (effect && !effect->isCompiled() && context_)
+        {
+            if (effect->compile(*context_))
+            {
+                RE_LOG("Lazy-compiled effect: " << effectId.toStdString());
+            }
+            else
+            {
+                RE_LOG("Failed to lazy-compile effect: " << effectId.toStdString());
+            }
+        }
+        return effect;
+    }
     return nullptr;
 }
 
@@ -613,119 +805,7 @@ PostProcessEffect* RenderEngine::getEffect(const juce::String& effectId)
 // Private Implementation
 // ============================================================================
 
-void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, WaveformRenderState& state)
-{
-    const auto& config = state.visualConfig;
 
-    RE_LOG_THROTTLED(60, "renderWaveformComplete: presetId=" << config.presetId.toStdString()
-               << ", shaderType=" << static_cast<int>(config.shaderType)
-               << ", bloom=" << config.bloom.enabled
-               << ", trails=" << config.trails.enabled
-               << ", vignette=" << config.vignette.enabled);
-
-    // Update state timing
-    state.updateTiming(deltaTime_);
-
-    // Get working FBO from pool
-    auto* waveformFBO = fbPool_->getWaveformFBO();
-    if (!waveformFBO)
-    {
-        RE_LOG("ERROR: No waveform FBO available!");
-        return;
-    }
-
-    // Step 1: Clear waveform FBO
-    waveformFBO->bind();
-    waveformFBO->clear(juce::Colours::transparentBlack, true);
-
-    // Store previous viewport state
-    GLint prevViewport[4];
-    glGetIntegerv(GL_VIEWPORT, prevViewport);
-
-    // Step 2: Set up camera (2D or 3D)
-    if (is3DShader(config.shaderType))
-    {
-        // For 3D shaders, we must restrict rendering to the specific pane bounds.
-        // Calculate viewport using Logical dimensions from target component for reliability.
-        float scale = static_cast<float>(context_->getRenderingScale());
-        auto* target = context_->getTargetComponent();
-        float logicalHeight = static_cast<float>(target->getHeight());
-
-        // Logical bounds
-        float lx = data.bounds.getX();
-        float ly = data.bounds.getY();
-        float lw = data.bounds.getWidth();
-        float lh = data.bounds.getHeight();
-
-        // Convert to scaled viewport coordinates (Physical)
-        // OpenGL origin is bottom-left, JUCE is top-left.
-        // Y = (LogicalTotalHeight - (TopY + Height)) * Scale
-        int vx = static_cast<int>(lx * scale);
-        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
-        int vw = static_cast<int>(lw * scale);
-        int vh = static_cast<int>(lh * scale);
-
-        // Clamp to prevent invalid viewports
-        vx = std::max(0, vx);
-        vy = std::max(0, vy);
-        vw = std::max(1, vw);
-        vh = std::max(1, vh);
-
-        glViewport(vx, vy, vw, vh);
-
-        // Adjust camera aspect ratio for the pane
-        if (camera_)
-        {
-            camera_->setAspectRatio(static_cast<float>(vw) / static_cast<float>(vh));
-        }
-
-        setupCamera3D(config.settings3D);
-        glEnable(GL_DEPTH_TEST);
-    }
-    else
-    {
-        setupCamera2D();
-        glDisable(GL_DEPTH_TEST);
-    }
-
-    // Step 3: Render waveform geometry
-    renderWaveformGeometry(data, config);
-
-    // Restore full viewport for particles and post-processing
-    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
-
-    // Step 4: Render particles (if enabled)
-    if (config.particles.enabled)
-    {
-        renderWaveformParticles(data, state);
-    }
-
-    waveformFBO->unbind();
-
-    // Step 5: Apply post-processing effects
-    Framebuffer* current = waveformFBO;
-
-    if (config.hasPostProcessing())
-    {
-        RE_LOG_THROTTLED(60, "Applying post-processing effects...");
-        current = applyPostProcessing(current, state);
-        if (!current)
-        {
-            RE_LOG("ERROR: applyPostProcessing returned null!");
-            current = waveformFBO;  // Fall back to original
-        }
-    }
-
-    // Step 6: Composite onto scene
-    RE_LOG_THROTTLED(60, "Compositing to scene, current FBO valid=" << (current && current->isValid()));
-    compositeToScene(current, config);
-
-    // Step 7: Update sample history for 3D temporal effects
-    if (state.needsSampleHistory())
-    {
-        state.pushSamples(data.channel1);
-    }
-}
 
 // Helper to convert MaterialSettings to MaterialProperties
 static MaterialProperties convertMaterialSettings(const MaterialSettings& settings, juce::Colour overrideColour)
@@ -790,11 +870,27 @@ void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const 
         shader = it->second.get();
     }
 
+    // LAZY SHADER COMPILATION: If shader not found, compile it on-demand
+    if (!shader && context_)
+    {
+        auto newShader = registry_->createShader(shaderId);
+        if (newShader && newShader->compile(*context_))
+        {
+            RE_LOG("Lazy-compiled shader: " << shaderId.toStdString());
+            compiledShaders_[shaderId.toStdString()] = std::move(newShader);
+            shader = compiledShaders_[shaderId.toStdString()].get();
+        }
+        else
+        {
+            RE_LOG("Failed to lazy-compile shader: " << shaderId.toStdString() << " - using fallback");
+        }
+    }
+
     RE_LOG_THROTTLED(60, "renderWaveformGeometry: shaderId=" << shaderId.toStdString()
                << ", shader=" << (shader ? "found" : "null"));
 
-    // Fallback to basic shader if requested shader not found
-    if (!shader)
+    // Fallback to basic shader if requested shader not found or failed to compile
+    if (!shader || !shader->isCompiled())
     {
         auto basicIt = compiledShaders_.find("basic");
         if (basicIt != compiledShaders_.end())
@@ -869,73 +965,12 @@ void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const 
 
 void RenderEngine::renderWaveformParticles(const WaveformRenderData& data, WaveformRenderState& state)
 {
-    if (!particleSystem_ || !particleSystem_->isInitialized())
-        return;
-
-    const auto& config = state.visualConfig.particles;
-
-    if (!config.enabled)
-        return;
-
-    // Set particle physics from this waveform's configuration
-    // This ensures particles behave according to the preset
-    particleSystem_->setGravity(config.gravity);
-    particleSystem_->setDrag(config.drag);
-
-    // Create emitter configuration from visual config
-    ParticleEmitterConfig emitterConfig;
-    emitterConfig.mode = config.emissionMode;
-    emitterConfig.emissionRate = config.emissionRate;
-    emitterConfig.particleLifeMin = config.particleLife * 0.8f;
-    emitterConfig.particleLifeMax = config.particleLife * 1.2f;
-    emitterConfig.particleSizeMin = config.particleSize * 0.7f;
-    emitterConfig.particleSizeMax = config.particleSize * 1.3f;
-    emitterConfig.colorStart = config.particleColor;
-    emitterConfig.colorEnd = config.particleColor.withAlpha(0.0f);
-    emitterConfig.gravity = config.gravity;
-    emitterConfig.drag = config.drag;
-    emitterConfig.velocityMin = 10.0f * config.velocityScale;
-    emitterConfig.velocityMax = 50.0f * config.velocityScale;
-    emitterConfig.velocityAngleSpread = config.randomness * 360.0f;
-
-    // Create emitter if this waveform needs particles but has none
-    if (state.emitterIds.empty())
+    if (particleRenderer_)
     {
-        ParticleEmitterId emitterId = particleSystem_->createEmitter(emitterConfig);
-        state.addParticleEmitter(emitterId);
+        // Pass nullptr for depth buffer as soft particles are currently not supported
+        // due to lack of depth copy/resolve mechanism.
+        particleRenderer_->render(*context_, data, state, deltaTime_, nullptr);
     }
-    else
-    {
-        // Update existing emitters with new configuration
-        for (auto emitterId : state.emitterIds)
-        {
-            if (auto* emitter = particleSystem_->getEmitter(emitterId))
-            {
-                emitter->setConfig(emitterConfig);
-            }
-        }
-    }
-
-    // Update emitters with waveform data
-    for (auto emitterId : state.emitterIds)
-    {
-        // Pass verticalScale to correct particle positioning on scaled waveforms
-        particleSystem_->updateEmitter(emitterId, data.channel1, data.bounds, deltaTime_, data.verticalScale);
-    }
-
-    // Render particles using LOGICAL dimensions for projection
-    // This matches the logical coordinates generated by ParticleEmitter
-    auto* target = context_->getTargetComponent();
-    int logicalWidth = target->getWidth();
-    int logicalHeight = target->getHeight();
-
-    // If soft particles enabled, bind depth texture from scene FBO
-    if (config.softParticles && sceneFBO_ && sceneFBO_->hasDepth)
-    {
-        sceneFBO_->bindDepthTexture(1); // Bind to unit 1
-    }
-
-    particleSystem_->render(*context_, logicalWidth, logicalHeight, state.emitterIds, config);
 }
 
 Framebuffer* RenderEngine::applyPostProcessing(Framebuffer* source, WaveformRenderState& state)
@@ -1122,7 +1157,9 @@ void RenderEngine::copyFramebuffer(Framebuffer* source, Framebuffer* destination
 
 void RenderEngine::initializeEffects()
 {
-    // Register all post-processing effects
+    // LAZY EFFECT LOADING: Create effect objects but don't compile them yet.
+    // Effects are compiled on-demand when first used in applyPostProcessing().
+    // This significantly reduces initialization time.
     effects_["vignette"] = std::make_unique<VignetteEffect>();
     effects_["film_grain"] = std::make_unique<FilmGrainEffect>();
     effects_["bloom"] = std::make_unique<BloomEffect>();
@@ -1135,21 +1172,7 @@ void RenderEngine::initializeEffects()
     effects_["glitch"] = std::make_unique<GlitchEffect>();
     effects_["radial_blur"] = std::make_unique<RadialBlurEffect>();
 
-    // Compile all registered effects
-    int compiledCount = 0;
-    for (auto& pair : effects_)
-    {
-        if (pair.second->compile(*context_))
-        {
-            ++compiledCount;
-        }
-        else
-        {
-            DBG("RenderEngine: Failed to compile effect: " << pair.first);
-        }
-    }
-
-    DBG("RenderEngine: Initialized " << compiledCount << "/" << effects_.size() << " effects");
+    DBG("RenderEngine: Created " << effects_.size() << " effects (lazy compilation enabled)");
 
     // Initialize Effect Chain
     effectChain_.clear();

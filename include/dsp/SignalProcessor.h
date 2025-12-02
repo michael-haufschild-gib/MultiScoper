@@ -9,6 +9,7 @@
 #include <juce_events/juce_events.h>
 #include "core/Oscillator.h"
 #include <vector>
+#include <span>
 
 namespace oscil
 {
@@ -81,15 +82,13 @@ public:
     /**
      * Process audio samples according to the specified mode.
      *
-     * @param leftChannel  Pointer to left channel samples
-     * @param rightChannel Pointer to right channel samples (can be nullptr for mono sources)
-     * @param numSamples   Number of samples to process
+     * @param leftChannel  Span of left channel samples
+     * @param rightChannel Span of right channel samples (can be empty for mono sources)
      * @param mode         Processing mode to apply
      * @param output       Output structure to receive processed samples
      */
-    void process(const float* leftChannel,
-                 const float* rightChannel,
-                 int numSamples,
+    void process(std::span<const float> leftChannel,
+                 std::span<const float> rightChannel,
                  ProcessingMode mode,
                  ProcessedSignal& output) const;
 
@@ -104,48 +103,42 @@ public:
      * Calculate stereo correlation coefficient for the given samples.
      * Returns a value from -1.0 (out of phase) to 1.0 (in phase).
      *
-     * @param leftChannel  Pointer to left channel samples
-     * @param rightChannel Pointer to right channel samples
-     * @param numSamples   Number of samples
+     * @param leftChannel  Span of left channel samples
+     * @param rightChannel Span of right channel samples
      * @return Correlation coefficient (-1.0 to 1.0)
      */
-    [[nodiscard]] static float calculateCorrelation(const float* leftChannel,
-                                      const float* rightChannel,
-                                      int numSamples);
+    [[nodiscard]] static float calculateCorrelation(std::span<const float> leftChannel,
+                                                    std::span<const float> rightChannel);
 
     /**
      * Calculate peak level of samples
      */
-    [[nodiscard]] static float calculatePeak(const float* samples, int numSamples);
+    [[nodiscard]] static float calculatePeak(std::span<const float> samples);
 
     /**
      * Calculate RMS level of samples
      */
-    [[nodiscard]] static float calculateRMS(const float* samples, int numSamples);
+    [[nodiscard]] static float calculateRMS(std::span<const float> samples);
 
     /**
      * Decimate samples for display (reduce sample count while preserving visual characteristics)
      *
      * @param input        Input samples
-     * @param inputLength  Number of input samples
      * @param output       Output buffer (must be pre-allocated)
-     * @param outputLength Desired output length
      * @param preservePeaks If true, preserves peak values during decimation
      */
-    static void decimate(const float* input,
-                         int inputLength,
-                         float* output,
-                         int outputLength,
+    static void decimate(std::span<const float> input,
+                         std::span<float> output,
                          bool preservePeaks = true);
 
 private:
     // Processing implementations for each mode
-    void processFullStereo(const float* left, const float* right, int numSamples, ProcessedSignal& output) const;
-    void processMono(const float* left, const float* right, int numSamples, ProcessedSignal& output) const;
-    void processMid(const float* left, const float* right, int numSamples, ProcessedSignal& output) const;
-    void processSide(const float* left, const float* right, int numSamples, ProcessedSignal& output) const;
-    void processLeft(const float* left, int numSamples, ProcessedSignal& output) const;
-    void processRight(const float* right, int numSamples, ProcessedSignal& output) const;
+    void processFullStereo(std::span<const float> left, std::span<const float> right, ProcessedSignal& output) const;
+    void processMono(std::span<const float> left, std::span<const float> right, ProcessedSignal& output) const;
+    void processMid(std::span<const float> left, std::span<const float> right, ProcessedSignal& output) const;
+    void processSide(std::span<const float> left, std::span<const float> right, ProcessedSignal& output) const;
+    void processLeft(std::span<const float> left, ProcessedSignal& output) const;
+    void processRight(std::span<const float> right, ProcessedSignal& output) const;
 };
 
 /**
@@ -170,13 +163,13 @@ public:
     /**
      * Decimate samples for display
      */
-    void process(const float* input, int inputLength,
+    void process(std::span<const float> input,
                  std::vector<float>& output) const;
 
     /**
      * Decimate with min/max envelope for peak preservation
      */
-    void processWithEnvelope(const float* input, int inputLength,
+    void processWithEnvelope(std::span<const float> input,
                              std::vector<float>& minEnvelope,
                              std::vector<float>& maxEnvelope) const;
 

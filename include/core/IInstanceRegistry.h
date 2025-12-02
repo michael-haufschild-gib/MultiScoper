@@ -9,15 +9,67 @@
 #include <memory>
 #include <vector>
 #include <optional>
+#include <atomic>
+#include "Source.h"
 
 namespace oscil
 {
 
 // Forward declarations
 class SharedCaptureBuffer;
-class InstanceRegistryListener;
-struct SourceInfo;
-struct SourceId;
+
+/**
+ * Information about a registered audio source.
+ */
+struct SourceInfo
+{
+    SourceId sourceId;
+    juce::String name;                          // User-friendly name (DAW track name if available)
+    int channelCount = 2;                       // Number of channels (1 = mono, 2 = stereo)
+    double sampleRate = 44100.0;
+    std::weak_ptr<SharedCaptureBuffer> buffer;  // Weak reference to capture buffer
+    std::atomic<bool> active{ true };
+
+    SourceInfo() = default;
+
+    // Copy constructor
+    SourceInfo(const SourceInfo& other)
+        : sourceId(other.sourceId)
+        , name(other.name)
+        , channelCount(other.channelCount)
+        , sampleRate(other.sampleRate)
+        , buffer(other.buffer)
+        , active(other.active.load(std::memory_order_relaxed))
+    {}
+
+    // Assignment operator
+    SourceInfo& operator=(const SourceInfo& other)
+    {
+        if (this != &other)
+        {
+            sourceId = other.sourceId;
+            name = other.name;
+            channelCount = other.channelCount;
+            sampleRate = other.sampleRate;
+            buffer = other.buffer;
+            active.store(other.active.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
+        }
+        return *this;
+    }
+};
+
+/**
+ * Listener interface for registry changes
+ */
+class InstanceRegistryListener
+{
+public:
+    virtual ~InstanceRegistryListener() = default;
+    virtual void sourceAdded(const SourceId& sourceId) = 0;
+    virtual void sourceRemoved(const SourceId& sourceId) = 0;
+    virtual void sourceUpdated(const SourceId& sourceId) = 0;
+};
 
 /**
  * Abstract interface for the instance registry.

@@ -17,12 +17,13 @@
 #include "core/WindowLayout.h"
 #include "ui/components/TestId.h"
 #include "ui/AddOscillatorDialog.h"
+#include "ui/WaveformComponent.h"
+#include "ui/components/PaneContainerComponent.h"
 
 namespace oscil
 {
 
 // Forward declarations
-class WaveformComponent;
 class OscillatorPanel;
 class PaneComponent;
 class StatusBarComponent;
@@ -47,9 +48,6 @@ class SidebarListenerAdapter;
  * Adapter class to bridge OscillatorConfigPopup::Listener to OscilPluginEditor
  */
 class ConfigPopupListenerAdapter;
-
-// Forward declaration
-class PaneContainerComponent;
 
 /**
  * Main plugin editor component.
@@ -103,6 +101,7 @@ public:
 
     // Display options - apply to all panes
     void setShowGridForAllPanes(bool enabled);
+    void setGridConfigForAllPanes(const GridConfiguration& config);
     void setAutoScaleForAllPanes(bool enabled);
     void setHoldDisplayForAllPanes(bool enabled);
     void setGainDbForAllPanes(float dB);
@@ -122,12 +121,19 @@ public:
     // Test access - for automated testing only
     const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const { return paneComponents_; }
     void refreshPanels() { refreshOscillatorPanels(); }
+    
+    // Public refresh methods for adapters
+    void refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators);
 
 private:
     void timerCallback() override;
     void updateLayout();
     void refreshOscillatorPanels();
+    void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
+    void reapplyGlobalSettings();
     void createDefaultOscillator();
+    void updatePerformanceMetrics();
+    void updateRendering();
     void handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId);
     void handleEmptyColumnDrop(const PaneId& movedPaneId, int targetColumn);
 
@@ -175,6 +181,11 @@ private:
     static constexpr int STATUS_BAR_HEIGHT = 24;
     static constexpr int DEFAULT_WIDTH = 1200;
     static constexpr int DEFAULT_HEIGHT = 800;
+    static constexpr int TIMER_REFRESH_RATE_HZ = 60;
+    static constexpr int TEST_SERVER_PORT = 9876;
+    static constexpr int MIN_CONTENT_WIDTH = 400;
+    static constexpr int MIN_CONTENT_HEIGHT = 300;
+    static constexpr int MIN_PANE_HEIGHT = 200;
 
     // TestIdSupport
     OSCIL_TESTABLE();

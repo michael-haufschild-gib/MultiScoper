@@ -4661,9 +4661,6 @@ then create a plan to add elements and to refactor existing elements based on yo
 
 ----
 
-Remove all visual presets except:
-1. Default
-2. Vector Scope
-3. String Theory
-4. Crystalline
-
+ * RenderEngine: Continue refactoring by extracting effect management or specific render passes (e.g., ParticleRenderer).
+   * EffectChain: Could be further decoupled from RenderEngine.
+   * UI Components: Continue identifying large UI components that can be broken down.

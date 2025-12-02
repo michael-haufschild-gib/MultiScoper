@@ -10,6 +10,7 @@
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
 #include "ui/presenters/WaveformPresenter.h"
+#include "dsp/TimingConfig.h"
 #include <vector>
 #include <atomic>
 
@@ -71,6 +72,11 @@ public:
      * Set the number of samples to display
      */
     void setDisplaySamples(int samples);
+
+    /**
+     * Set the grid configuration
+     */
+    void setGridConfig(const GridConfiguration& config);
 
     /**
      * Set the shader ID for GPU rendering
@@ -199,6 +205,7 @@ private:
     float opacity_ = 1.0f;
     float lineWidth_ = 1.5f;  // Default line width
     bool showGrid_ = true;
+    GridConfiguration gridConfig_;
     bool holdDisplay_ = false;
     bool highlighted_ = false;
     StereoDisplayMode stereoDisplayMode_ = StereoDisplayMode::Stacked;

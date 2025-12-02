@@ -3,7 +3,6 @@
 */
 
 #include "ui/components/OscilAccordion.h"
-#include <iostream>
 
 namespace oscil
 {
@@ -109,9 +108,6 @@ void OscilAccordionSection::setContent(juce::Component* content)
 
 void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 {
-    std::cerr << "OscilAccordionSection::setExpanded() - title: " << title_
-              << ", current: " << expanded_ << ", new: " << expanded << std::endl;
-
     if (expanded_ == expanded)
         return;
 
@@ -147,7 +143,6 @@ void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 
 void OscilAccordionSection::toggle()
 {
-    std::cerr << "OscilAccordionSection::toggle() called - title: " << title_ << ", was expanded: " << expanded_ << std::endl;
     if (enabled_)
         setExpanded(!expanded_);
 }
@@ -307,7 +302,6 @@ void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
     // 3. User didn't drag (not a scroll/pan gesture)
     if (mouseDownInHeader_ && e.y < HEADER_HEIGHT && !e.mouseWasDraggedSinceMouseDown())
     {
-        DBG("OscilAccordionSection::mouseUp - TOGGLING!");
         toggle();
     }
     mouseDownInHeader_ = false;

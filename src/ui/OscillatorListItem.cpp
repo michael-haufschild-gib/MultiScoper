@@ -6,13 +6,14 @@
 #include "ui/OscillatorListItem.h"
 #include "ui/components/ProcessingModeIcons.h"
 #include "ui/components/ListItemIcons.h"
-#include "core/InstanceRegistry.h"
+#include "core/IInstanceRegistry.h"
 
 namespace oscil
 {
 
-OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscillator)
+OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscillator, IInstanceRegistry& instanceRegistry)
     : oscillatorId_(oscillator.getId())
+    , instanceRegistry_(instanceRegistry)
     , displayName_(oscillator.getName())
     , colour_(oscillator.getColour())
     , processingMode_(oscillator.getProcessingMode())
@@ -25,7 +26,7 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
     // Get track name from source registry
     if (oscillator.getSourceId().isValid())
     {
-        auto sourceInfo = InstanceRegistry::getInstance().getSource(oscillator.getSourceId());
+        auto sourceInfo = instanceRegistry_.getSource(oscillator.getSourceId());
         if (sourceInfo.has_value())
         {
             trackName_ = sourceInfo->name;
@@ -354,7 +355,7 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
 
     if (oscillator.getSourceId().isValid())
     {
-        auto sourceInfo = InstanceRegistry::getInstance().getSource(oscillator.getSourceId());
+        auto sourceInfo = instanceRegistry_.getSource(oscillator.getSourceId());
         if (sourceInfo.has_value())
         {
             trackName_ = sourceInfo->name;

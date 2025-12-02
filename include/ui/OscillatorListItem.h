@@ -17,6 +17,8 @@
 namespace oscil
 {
 
+class IInstanceRegistry;
+
 /**
  * Oscillator list item component
  * Shows compact view for non-selected items, expands when selected to show mode/visibility controls
@@ -42,7 +44,7 @@ public:
         virtual void oscillatorMoveRequested(const OscillatorId& /*id*/, int /*direction*/) {}
     };
 
-    explicit OscillatorListItemComponent(const Oscillator& oscillator);
+    explicit OscillatorListItemComponent(const Oscillator& oscillator, IInstanceRegistry& instanceRegistry);
     ~OscillatorListItemComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -87,6 +89,7 @@ private:
 
     // Data
     OscillatorId oscillatorId_;
+    IInstanceRegistry& instanceRegistry_;
     juce::String displayName_;
     juce::String trackName_;
     juce::Colour colour_;

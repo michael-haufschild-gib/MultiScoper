@@ -55,8 +55,14 @@ juce::String OscilState::toXmlString() const
 
 void OscilState::syncLayoutManagerToState() const
 {
+    // Sync layoutManager_ back to state_ before serialization.
+    // Although this method modifies the underlying ValueTree data of state_,
+    // it is conceptually preserving "logical constness" by ensuring the 
+    // serialized representation matches the current runtime state (layoutManager_).
+    // juce::ValueTree is a reference-counted wrapper, so modifying its content
+    // does not require the wrapper itself to be mutable.
+
     // Remove existing Panes node and replace with current layoutManager state
-    // Note: state_ is mutable because this is conceptually a cache sync, not a state change
     auto existingPanes = state_.getChildWithName(StateIds::Panes);
     if (existingPanes.isValid())
     {

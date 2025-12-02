@@ -1,36 +1,82 @@
 # Building Guide for LLM Coding Agents
 
 **Purpose**: Instructions for building, running, and developing the Oscil plugin locally.
-**Tech Stack**: CMake 3.20+, C++20, JUCE 8.0.5, GoogleTest 1.17.0
+**Tech Stack**: CMake 3.21+, C++20, JUCE 8.0.5, GoogleTest 1.17.0, Ninja
 
-## Quick Reference
+## Quick Reference (Using CMake Presets)
 
 ```bash
-# Build plugin (VST3, AU, Standalone)
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target Oscil_All -j$(nproc)
+# Development build (Debug + tests + Melatonin Inspector)
+cmake --preset dev
+cmake --build --preset dev
 
-# Build and run tests
-cmake -B build -DOSCIL_BUILD_TESTS=ON
-cmake --build build --target OscilTests -j$(nproc)
-./build/OscilTests
+# Run tests
+ctest --preset dev
 
-# Build everything (plugin + tests)
-cmake -B build -DOSCIL_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
-cmake --build build -j$(nproc)
+# Release build
+cmake --preset release
+cmake --build --preset release
+
+# Test harness for E2E testing
+cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target OscilTestHarness
 ```
+
+**Preferred**: Always use CMake presets for consistent builds.
 
 ## Prerequisites
 
 | Requirement | Version | Install (macOS) |
 |-------------|---------|-----------------|
-| CMake | 3.20+ | `brew install cmake` |
+| CMake | 3.21+ | `brew install cmake` |
+| Ninja | Any | `brew install ninja` |
 | Clang/GCC | C++20 support | Xcode Command Line Tools |
-| ccache (optional) | Any | `brew install ccache` |
+| ccache (recommended) | Any | `brew install ccache` |
 
 **macOS**: Install Xcode Command Line Tools: `xcode-select --install`
 
-## CMake Options
+## CMake Presets (Recommended)
+
+The project uses CMake presets for consistent builds across all developers.
+
+| Preset | Description | Use Case |
+|--------|-------------|----------|
+| `dev` | Debug + tests + Inspector | Daily development |
+| `dev-release` | RelWithDebInfo + tests | Profiling |
+| `release` | Optimized, no tests | Distribution |
+| `ci` | Release + tests | CI/CD pipelines |
+| `rtsan` | Debug + RealtimeSanitizer | Audio thread safety |
+| `coverage` | Debug + coverage | Code coverage reports |
+
+### Using Presets
+
+```bash
+# Configure (creates build/dev/ directory)
+cmake --preset dev
+
+# Build (auto-detects parallelism)
+cmake --build --preset dev
+
+# Run tests
+ctest --preset dev
+
+# Build specific target
+cmake --build --preset dev --target OscilTests
+cmake --build --preset dev --target Oscil_VST3
+```
+
+### Plugin Output Locations (dev preset)
+
+```
+build/dev/Oscil_artefacts/Debug/
+├── VST3/oscil4.vst3
+├── AU/oscil4.component
+└── Standalone/oscil4.app
+```
+
+## CMake Options (Advanced)
+
+Only use these when overriding presets:
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -39,89 +85,53 @@ cmake --build build -j$(nproc)
 | `OSCIL_ENABLE_INSPECTOR` | OFF | Enable Melatonin Inspector (dev only) |
 | `OSCIL_ENABLE_RTSAN` | OFF | Enable RealtimeSanitizer (Clang 20+) |
 | `OSCIL_BUILD_TEST_HARNESS` | OFF | Build E2E test harness app |
-| `CMAKE_BUILD_TYPE` | - | Debug, Release, RelWithDebInfo |
+| `OSCIL_ENABLE_COVERAGE` | OFF | Enable code coverage |
 
-## Build Commands
+## Build Without Presets (Legacy)
 
-### Debug Build (Development)
-
-```bash
-# Configure with tests and debug symbols
-cmake -B build -DOSCIL_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
-
-# Build everything
-cmake --build build -j$(nproc)
-
-# Plugin outputs:
-# - build/Oscil_artefacts/Debug/VST3/oscil4.vst3
-# - build/Oscil_artefacts/Debug/AU/oscil4.component
-# - build/Oscil_artefacts/Debug/Standalone/oscil4.app
-```
-
-### Release Build
+If CMake presets aren't available:
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target Oscil_All -j$(nproc)
+# Debug build
+cmake -B build -DOSCIL_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja
+cmake --build build -j
 
-# Plugin outputs:
-# - build/Oscil_artefacts/Release/VST3/oscil4.vst3
-# - build/Oscil_artefacts/Release/AU/oscil4.component
-```
-
-### Build Specific Target
-
-```bash
-# Just the plugin
-cmake --build build --target Oscil_All
-
-# Just tests
-cmake --build build --target OscilTests
-
-# Just VST3
-cmake --build build --target Oscil_VST3
-
-# Just AU
-cmake --build build --target Oscil_AU
-
-# Just Standalone
-cmake --build build --target Oscil_Standalone
+# Release build
+cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja
+cmake --build build -j
 ```
 
 ## Running Tests
 
-### All Tests
+### Using CTest Presets (Recommended)
 
 ```bash
-./build/OscilTests
-```
-
-### Specific Test Suite
-
-```bash
-# Run tests matching pattern
-./build/OscilTests --gtest_filter="SignalProcessorTest.*"
-./build/OscilTests --gtest_filter="ThemeManagerTest.*"
-./build/OscilTests --gtest_filter="*Shader*"
-
-# Run specific test
-./build/OscilTests --gtest_filter="SignalProcessorTest.MonoSumming"
-
-# Exclude tests
-./build/OscilTests --gtest_filter="-*Slow*"
-```
-
-### Test Output Formats
-
-```bash
-# XML output for CI
-./build/OscilTests --gtest_output=xml:test-results/results.xml
+# Run all tests with preset
+ctest --preset dev
 
 # Verbose output
-./build/OscilTests --gtest_print_time=1
+ctest --preset dev -V
+```
 
-# Run via CTest
-cd build && ctest --output-on-failure
+### Direct Test Execution
+
+```bash
+# Run all tests
+./build/dev/OscilTests
+
+# Run tests matching pattern
+./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*"
+./build/dev/OscilTests --gtest_filter="ThemeManagerTest.*"
+./build/dev/OscilTests --gtest_filter="*Shader*"
+
+# Run specific test
+./build/dev/OscilTests --gtest_filter="SignalProcessorTest.MonoSumming"
+
+# Exclude tests
+./build/dev/OscilTests --gtest_filter="-*Slow*"
+
+# XML output for CI
+./build/dev/OscilTests --gtest_output=xml:test-results/results.xml
 ```
 
 ## Plugin Installation
@@ -153,11 +163,11 @@ After installing, rescan plugins in your DAW:
 ## Running Standalone App
 
 ```bash
-# macOS
-open build/Oscil_artefacts/Debug/Standalone/oscil4.app
+# macOS (using dev preset)
+open build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app
 
 # Or directly
-./build/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
+./build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
 ```
 
 ## E2E Test Harness
@@ -167,15 +177,16 @@ The test harness is a standalone app that simulates a DAW for automated testing.
 ### Build Test Harness
 
 ```bash
-cmake -B build -DOSCIL_BUILD_TEST_HARNESS=ON -DOSCIL_BUILD_TESTS=ON
-cmake --build build --target OscilTestHarness
+# Configure with test harness enabled
+cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target OscilTestHarness
 ```
 
 ### Run Test Harness
 
 ```bash
 # Start test harness (HTTP server on port 8765)
-./build/OscilTestHarness_artefacts/OscilTestHarness.app/Contents/MacOS/OscilTestHarness
+"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"
 
 # Test that it's running
 curl http://localhost:8765/health
@@ -187,49 +198,54 @@ See `docs/testing.md` for the full HTTP API reference.
 
 ### Incremental Builds
 
-ccache significantly speeds up rebuilds:
+ccache significantly speeds up rebuilds (auto-configured by presets):
 
 ```bash
 # Install ccache
-brew install ccache
+brew install ccache ninja
 
-# CMake auto-detects ccache - just rebuild
-cmake --build build -j$(nproc)
+# Just rebuild - ccache is already configured
+cmake --build --preset dev
 ```
 
 ### Clean Build
 
 ```bash
-# Remove build directory
+# Remove preset build directory
+rm -rf build/dev
+
+# Or remove all builds
 rm -rf build
 
-# Or clean specific targets
-cmake --build build --target clean
+# Reconfigure
+cmake --preset dev
+cmake --build --preset dev
 ```
 
 ### Rebuild After Header Changes
 
-Header changes require rebuilding dependent files:
+Ninja handles dependencies automatically:
 
 ```bash
-# Touch the header to force rebuild
-touch include/core/PluginProcessor.h
-cmake --build build -j$(nproc)
+# Just rebuild - Ninja detects header changes
+cmake --build --preset dev
 ```
 
 ## Debugging
 
 ### Debug Build with Symbols
 
+The `dev` preset includes debug symbols by default:
+
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
+cmake --preset dev
+cmake --build --preset dev
 ```
 
 ### Xcode Project Generation
 
 ```bash
-cmake -B build-xcode -G Xcode
+cmake -B build-xcode -G Xcode -DOSCIL_BUILD_TESTS=ON
 open build-xcode/Oscil.xcodeproj
 ```
 
@@ -237,22 +253,25 @@ open build-xcode/Oscil.xcodeproj
 
 ```bash
 # Debug standalone app
-lldb ./build/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
+lldb ./build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
 
 # Debug tests
-lldb ./build/OscilTests
+lldb ./build/dev/OscilTests
 ```
 
 ### Melatonin Inspector (UI Debugging)
 
-Enable browser-like dev tools for JUCE components:
+The `dev` preset includes Melatonin Inspector for browser-like dev tools:
 
 ```bash
-cmake -B build -DOSCIL_ENABLE_INSPECTOR=ON -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
+# Already enabled in dev preset
+cmake --preset dev
+cmake --build --preset dev
+
+# Toggle inspector: Cmd+I (macOS) / Ctrl+I (Windows/Linux)
 ```
 
-**Note**: Inspector creates a separate window that can timeout in headless environments. Disabled by default for CI.
+**Note**: Inspector creates a separate window. Disabled in CI builds.
 
 ## Troubleshooting
 
@@ -323,22 +342,30 @@ auval -v aufx Osc1 Osci
 ## CI/CD Commands
 
 ```bash
-# Full CI build
-cmake -B build -DOSCIL_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
-./build/OscilTests --gtest_output=xml:test-results/results.xml
+# Full CI build using preset
+cmake --preset ci
+cmake --build --preset ci
+ctest --preset ci
+
+# macOS universal binary CI build
+cmake --preset ci-macos
+cmake --build --preset ci-macos
+ctest --preset ci-macos
 ```
 
 ## Common Mistakes
 
-**Don't**: Run cmake from wrong directory
-**Do**: Always run from project root or specify paths
+❌ **Don't**: Use raw cmake commands with `-D` flags
+✅ **Do**: Use CMake presets (`cmake --preset dev`)
 
-**Don't**: Forget to add new .cpp files to CMakeLists.txt
-**Do**: Add every source file to `target_sources(Oscil PRIVATE ...)`
+❌ **Don't**: Run cmake from wrong directory
+✅ **Do**: Always run from project root
 
-**Don't**: Build without tests during development
-**Do**: Always use `-DOSCIL_BUILD_TESTS=ON` for development
+❌ **Don't**: Forget to add new .cpp files to CMakeLists.txt
+✅ **Do**: Add every source file to `target_sources(Oscil PRIVATE ...)`
 
-**Don't**: Commit build directory
-**Do**: Ensure `build/` is in `.gitignore`
+❌ **Don't**: Use Makefile generator
+✅ **Do**: Use Ninja (configured by presets)
+
+❌ **Don't**: Commit build directory
+✅ **Do**: Ensure `build/` is in `.gitignore`

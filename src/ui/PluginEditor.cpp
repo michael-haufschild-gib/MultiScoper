@@ -4,6 +4,7 @@
 */
 
 #include "ui/PluginEditor.h"
+#include "ui/PluginEditor_Adapters.h"
 #include "ui/WaveformComponent.h"
 #include "ui/PaneComponent.h"
 #include "ui/StatusBarComponent.h"
@@ -20,356 +21,6 @@
 
 namespace oscil
 {
-
-/**
- * Custom content component that acts as a DragAndDropTarget proxy.
- * When drops occur, it forwards them to the appropriate child PaneComponent.
- */
-class PaneContainerComponent : public juce::Component, public juce::DragAndDropTarget
-{
-public:
-    using PaneDropCallback = std::function<void(const PaneId& movedPaneId, const PaneId& targetPaneId)>;
-    using EmptyColumnDropCallback = std::function<void(const PaneId& movedPaneId, int targetColumn)>;
-
-    PaneContainerComponent() = default;
-
-    void setPaneDropCallback(PaneDropCallback callback)
-    {
-        paneDropCallback_ = std::move(callback);
-    }
-
-    void setEmptyColumnDropCallback(EmptyColumnDropCallback callback)
-    {
-        emptyColumnDropCallback_ = std::move(callback);
-    }
-
-    void setColumnCount(int count)
-    {
-        columnCount_ = count;
-    }
-
-    // DragAndDropTarget interface
-    bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override
-    {
-        // Accept drags from PaneComponents
-        if (auto* sourcePane = dynamic_cast<PaneComponent*>(dragSourceDetails.sourceComponent.get()))
-        {
-            juce::ignoreUnused(sourcePane);
-            return true;
-        }
-        return false;
-    }
-
-    void itemDragEnter(const SourceDetails& dragSourceDetails) override
-    {
-        updateDropTarget(dragSourceDetails);
-    }
-
-    void itemDragMove(const SourceDetails& dragSourceDetails) override
-    {
-        updateDropTarget(dragSourceDetails);
-    }
-
-    void itemDragExit(const SourceDetails& /*dragSourceDetails*/) override
-    {
-        clearDropHighlight();
-    }
-
-    void itemDropped(const SourceDetails& dragSourceDetails) override
-    {
-        clearDropHighlight();
-
-        if (!dragSourceDetails.description.isString())
-            return;
-
-        PaneId movedPaneId;
-        movedPaneId.id = dragSourceDetails.description.toString();
-
-        // Find which PaneComponent we dropped on
-        PaneComponent* targetPane = findPaneAt(dragSourceDetails.localPosition);
-        if (targetPane && targetPane->getPaneId().id != movedPaneId.id)
-        {
-            if (paneDropCallback_)
-            {
-                paneDropCallback_(movedPaneId, targetPane->getPaneId());
-            }
-        }
-        else if (!targetPane && columnCount_ > 1 && emptyColumnDropCallback_)
-        {
-            // Dropped on empty column area - calculate target column from X position
-            int componentWidth = getWidth();
-            if (componentWidth > 0)
-            {
-                int targetColumn = (dragSourceDetails.localPosition.x * columnCount_) / componentWidth;
-                targetColumn = juce::jlimit(0, columnCount_ - 1, targetColumn);
-                emptyColumnDropCallback_(movedPaneId, targetColumn);
-            }
-        }
-    }
-
-private:
-    PaneComponent* findPaneAt(juce::Point<int> position)
-    {
-        for (int i = 0; i < getNumChildComponents(); ++i)
-        {
-            if (auto* pane = dynamic_cast<PaneComponent*>(getChildComponent(i)))
-            {
-                if (pane->getBounds().contains(position))
-                {
-                    return pane;
-                }
-            }
-        }
-        return nullptr;
-    }
-
-    void updateDropTarget(const SourceDetails& dragSourceDetails)
-    {
-        // Find target pane and highlight it
-        if (auto* targetPane = findPaneAt(dragSourceDetails.localPosition))
-        {
-            if (auto* sourcePane = dynamic_cast<PaneComponent*>(dragSourceDetails.sourceComponent.get()))
-            {
-                if (targetPane->getPaneId().id != sourcePane->getPaneId().id)
-                {
-                    // Would trigger itemDragEnter on the target pane
-                    // For now just let the visual feedback come from the target itself
-                }
-            }
-        }
-    }
-
-    void clearDropHighlight()
-    {
-        // Clear any drop highlighting
-    }
-
-    PaneDropCallback paneDropCallback_;
-    EmptyColumnDropCallback emptyColumnDropCallback_;
-    int columnCount_ = 1;
-};
-
-/**
- * Adapter class to forward SidebarComponent::Listener events to OscilPluginEditor
- */
-class SidebarListenerAdapter : public SidebarComponent::Listener
-{
-public:
-    explicit SidebarListenerAdapter(OscilPluginEditor& editor) : editor_(editor) {}
-
-    void sidebarWidthChanged(int newWidth) override
-    {
-        editor_.onSidebarWidthChanged(newWidth);
-    }
-
-    void sidebarCollapsedStateChanged(bool collapsed) override
-    {
-        editor_.onSidebarCollapsedStateChanged(collapsed);
-    }
-
-    void oscillatorSelected(const OscillatorId& oscillatorId) override
-    {
-        editor_.onOscillatorSelected(oscillatorId);
-    }
-
-    void oscillatorConfigRequested(const OscillatorId& oscillatorId) override
-    {
-        editor_.onOscillatorConfigRequested(oscillatorId);
-    }
-
-    void oscillatorDeleteRequested(const OscillatorId& oscillatorId) override
-    {
-        editor_.onOscillatorDeleteRequested(oscillatorId);
-    }
-
-    void oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode) override
-    {
-        editor_.onOscillatorModeChanged(oscillatorId, mode);
-    }
-
-    void oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible) override
-    {
-        editor_.onOscillatorVisibilityChanged(oscillatorId, visible);
-    }
-
-    // Timing section events - forward to processor's TimingEngine
-    void timingModeChanged(TimingMode mode) override
-    {
-        editor_.getProcessor().getTimingEngine().setTimingMode(mode);
-        updateDisplaySamplesFromTimingEngine();
-    }
-
-    void noteIntervalChanged(NoteInterval interval) override
-    {
-        editor_.getProcessor().getTimingEngine().setNoteIntervalFromEntity(interval);
-        updateDisplaySamplesFromTimingEngine();
-    }
-
-    void timeIntervalChanged(float ms) override
-    {
-        editor_.getProcessor().getTimingEngine().setTimeIntervalMs(ms);
-        updateDisplaySamplesFromTimingEngine();
-    }
-
-    void hostSyncChanged(bool enabled) override
-    {
-        editor_.getProcessor().getTimingEngine().setHostSyncEnabled(enabled);
-        updateDisplaySamplesFromTimingEngine();
-    }
-
-    void waveformModeChanged(WaveformMode mode) override
-    {
-        // This controls when waveforms reset (free running, on play, on note)
-        auto& timingEngine = editor_.getProcessor().getTimingEngine();
-
-        switch (mode)
-        {
-            case WaveformMode::FreeRunning:
-                // Disable host sync and set trigger mode to None
-                timingEngine.setHostSyncEnabled(false);
-                timingEngine.setWaveformTriggerMode(WaveformTriggerMode::None);
-                break;
-            case WaveformMode::RestartOnPlay:
-                // Enable host sync (resets on play/stop transitions)
-                // Set trigger mode to None (no audio triggering)
-                timingEngine.setHostSyncEnabled(true);
-                timingEngine.setWaveformTriggerMode(WaveformTriggerMode::None);
-                break;
-            case WaveformMode::RestartOnNote:
-                // For now, map to a basic audio trigger (e.g., RisingEdge)
-                // TODO: Future: Implement proper MIDI note trigger logic in TimingEngine.
-                // This would involve passing MIDI messages from PluginProcessor to TimingEngine.
-                timingEngine.setHostSyncEnabled(false); // Not host sync based
-                timingEngine.setWaveformTriggerMode(WaveformTriggerMode::RisingEdge);
-                break;
-        }
-        updateDisplaySamplesFromTimingEngine();
-    }
-
-    void bpmChanged(float bpm) override
-    {
-        // Update internal BPM in the timing engine
-        // The engine handles whether to recalculate based on sync state
-        editor_.getProcessor().getTimingEngine().setInternalBPM(bpm);
-        updateDisplaySamplesFromTimingEngine();
-    }
-
-private:
-    /**
-     * Update display samples for all panes based on the TimingEngine's
-     * calculated actual interval. This works for both TIME and MELODIC modes.
-     */
-    void updateDisplaySamplesFromTimingEngine()
-    {
-        double sampleRate = editor_.getProcessor().getSampleRate();
-        if (sampleRate > 0)
-        {
-            float actualIntervalMs = editor_.getProcessor().getTimingEngine().getActualIntervalMs();
-            int displaySamples = static_cast<int>(sampleRate * (static_cast<double>(actualIntervalMs) / 1000.0));
-            editor_.setDisplaySamplesForAllPanes(displaySamples);
-        }
-    }
-
-    // Master controls events
-    void gainChanged(float dB) override
-    {
-        editor_.setGainDbForAllPanes(dB);
-        editor_.getProcessor().getState().setGainDb(dB);
-    }
-
-    // Display options events
-    void showGridChanged(bool enabled) override
-    {
-        editor_.setShowGridForAllPanes(enabled);
-        editor_.getProcessor().getState().setShowGridEnabled(enabled);
-    }
-
-    void autoScaleChanged(bool enabled) override
-    {
-        editor_.setAutoScaleForAllPanes(enabled);
-        editor_.getProcessor().getState().setAutoScaleEnabled(enabled);
-    }
-
-    void holdDisplayChanged(bool enabled) override
-    {
-        editor_.setHoldDisplayForAllPanes(enabled);
-        editor_.getProcessor().getState().setHoldDisplayEnabled(enabled);
-    }
-
-    void oscillatorsReordered(int fromIndex, int toIndex) override
-    {
-        // Reorder oscillators in state
-        editor_.getProcessor().getState().reorderOscillators(fromIndex, toIndex);
-
-        // Refresh the UI to show the new order
-        auto oscillators = editor_.getProcessor().getState().getOscillators();
-
-        // Sort by orderIndex to get the display order
-        std::sort(oscillators.begin(), oscillators.end(),
-                  [](const Oscillator& a, const Oscillator& b) {
-                      return a.getOrderIndex() < b.getOrderIndex();
-                  });
-
-        // Refresh the sidebar with updated oscillator list
-        editor_.refreshPanels();
-    }
-
-    void addOscillatorDialogRequested() override
-    {
-        editor_.onAddOscillatorDialogRequested();
-    }
-
-    // Layout and theme events (from Options section)
-    void layoutChanged(int columnCount) override
-    {
-        auto& state = editor_.getProcessor().getState();
-        ColumnLayout layout = static_cast<ColumnLayout>(juce::jlimit(1, 3, columnCount));
-        state.getLayoutManager().setColumnLayout(layout);
-        state.setColumnLayout(layout);
-        editor_.refreshPanels();
-    }
-
-    void themeChanged(const juce::String& themeName) override
-    {
-        editor_.getProcessor().getThemeService().setCurrentTheme(themeName);
-        editor_.getProcessor().getState().setThemeName(themeName);
-    }
-
-    void gpuRenderingChanged(bool enabled) override
-    {
-        editor_.setGpuRenderingEnabled(enabled);
-    }
-
-private:
-    OscilPluginEditor& editor_;
-};
-
-/**
- * Adapter class to forward OscillatorConfigPopup::Listener events to OscilPluginEditor
- */
-class ConfigPopupListenerAdapter : public OscillatorConfigPopup::Listener
-{
-public:
-    explicit ConfigPopupListenerAdapter(OscilPluginEditor& editor) : editor_(editor) {}
-
-    void oscillatorConfigChanged(const OscillatorId& oscillatorId, const Oscillator& updated) override
-    {
-        editor_.onOscillatorConfigChanged(oscillatorId, updated);
-    }
-
-    void oscillatorDeleteRequested(const OscillatorId& oscillatorId) override
-    {
-        editor_.onOscillatorDeleteRequested(oscillatorId);
-    }
-
-    void configPopupClosed() override
-    {
-        editor_.onConfigPopupClosed();
-    }
-
-private:
-    OscilPluginEditor& editor_;
-};
 
 OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     : AudioProcessorEditor(&p)
@@ -484,7 +135,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
     // Start timer for UI updates (60fps target)
-    startTimerHz(60);
+    startTimerHz(TIMER_REFRESH_RATE_HZ);
 
     // Start test server for automated UI testing (standalone only)
     // Use runtime check because compile-time JUCE_STANDALONE_APPLICATION is 1
@@ -492,8 +143,8 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     if (juce::PluginHostType::getPluginLoadedAs() == juce::AudioProcessor::wrapperType_Standalone)
     {
         testServer_ = std::make_unique<PluginTestServer>(*this);
-        testServer_->start(9876);
-        DBG("Test server started on port 9876");
+        testServer_->start(TEST_SERVER_PORT);
+        DBG("Test server started on port " << TEST_SERVER_PORT);
     }
 
     // Initialize OpenGL Lifecycle Manager
@@ -599,6 +250,12 @@ void OscilPluginEditor::timerCallback()
     // This replaces the previous async callback mechanism for real-time safety
     processor_.getTimingEngine().dispatchPendingUpdates();
 
+    updatePerformanceMetrics();
+    updateRendering();
+}
+
+void OscilPluginEditor::updatePerformanceMetrics()
+{
     // Calculate FPS
     auto currentTime = juce::Time::getMillisecondCounterHiRes();
     frameCount_++;
@@ -634,7 +291,10 @@ void OscilPluginEditor::timerCallback()
             statusBar_->repaint();
         }
     }
+}
 
+void OscilPluginEditor::updateRendering()
+{
     // Update GL renderer with waveform data (if GPU mode enabled)
     if (glManager_)
     {
@@ -706,8 +366,8 @@ void OscilPluginEditor::updateLayout()
     auto availableArea = viewport_->getLocalBounds();
 
     // Ensure minimum dimensions to prevent zero-size components
-    int availableWidth = std::max(400, availableArea.getWidth());
-    int availableHeight = std::max(300, availableArea.getHeight());
+    int availableWidth = std::max(MIN_CONTENT_WIDTH, availableArea.getWidth());
+    int availableHeight = std::max(MIN_CONTENT_HEIGHT, availableArea.getHeight());
     availableArea = juce::Rectangle<int>(0, 0, availableWidth, availableHeight);
 
     // Calculate content size based on number of panes
@@ -721,7 +381,7 @@ void OscilPluginEditor::updateLayout()
     int numCols = layoutManager.getColumnCount();
     contentComponent_->setColumnCount(numCols);
     int numRows = (numPanes + numCols - 1) / numCols;
-    int paneHeight = std::max(200, availableArea.getHeight() / std::max(1, numRows));
+    int paneHeight = std::max(MIN_PANE_HEIGHT, availableArea.getHeight() / std::max(1, numRows));
 
     contentComponent_->setSize(availableArea.getWidth(), paneHeight * numRows);
 
@@ -742,7 +402,7 @@ void OscilPluginEditor::refreshOscillatorPanels()
     {
         juce::Timer& timer;
         explicit TimerGuard(juce::Timer& t) : timer(t) { timer.stopTimer(); }
-        ~TimerGuard() { timer.startTimerHz(60); }
+        ~TimerGuard() { timer.startTimerHz(TIMER_REFRESH_RATE_HZ); }
     } timerGuard(*this);
 
     // FIX: Clear all waveforms from GL renderer BEFORE clearing pane components.
@@ -760,6 +420,51 @@ void OscilPluginEditor::refreshOscillatorPanels()
     auto oscillators = processor_.getState().getOscillators();
     auto& layoutManager = processor_.getState().getLayoutManager();
 
+    // Create pane components
+    createPaneComponents(oscillators, layoutManager);
+
+    // If no panes exist, create a default one with the current source
+    const auto& availableSources = sourceCoordinator_->getAvailableSources();
+    if (paneComponents_.empty() && !availableSources.empty())
+    {
+        createDefaultOscillator();
+    }
+
+    // Refresh sidebar
+    if (sidebar_)
+    {
+        // Refresh source list from registry
+        auto sources = processor_.getInstanceRegistry().getAllSources();
+        sidebar_->refreshSourceList(sources);
+
+        // Refresh pane list for source dropdowns (deferred to avoid modifying
+        // dropdowns during their callback execution - prevents reentrancy crash)
+        auto panes = layoutManager.getPanes();
+        juce::MessageManager::callAsync([this, panes]() {
+            if (sidebar_)
+                sidebar_->refreshPaneList(panes);
+        });
+
+        // Sort oscillators by orderIndex for display
+        std::sort(oscillators.begin(), oscillators.end(),
+                  [](const Oscillator& a, const Oscillator& b) {
+                      return a.getOrderIndex() < b.getOrderIndex();
+                  });
+
+        // Refresh oscillator list
+        sidebar_->refreshOscillatorList(oscillators);
+    }
+
+    updateLayout();
+
+    // Re-apply settings
+    reapplyGlobalSettings();
+
+    // Timer restart is handled by RAII TimerGuard destructor
+}
+
+void OscilPluginEditor::createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager)
+{
     // Group oscillators by pane
     std::map<juce::String, std::vector<Oscillator>> oscillatorsByPane;
     for (const auto& osc : oscillators)
@@ -767,7 +472,6 @@ void OscilPluginEditor::refreshOscillatorPanels()
         oscillatorsByPane[osc.getPaneId().id].push_back(osc);
     }
 
-    // Create pane components
     int paneIndex = 0;
     for (const auto& pane : layoutManager.getPanes())
     {
@@ -804,41 +508,10 @@ void OscilPluginEditor::refreshOscillatorPanels()
         contentComponent_->addAndMakeVisible(*paneComponent);
         paneComponents_.push_back(std::move(paneComponent));
     }
+}
 
-    // If no panes exist, create a default one with the current source
-    const auto& availableSources = sourceCoordinator_->getAvailableSources();
-    if (paneComponents_.empty() && !availableSources.empty())
-    {
-        createDefaultOscillator();
-    }
-
-    // Refresh sidebar
-    if (sidebar_)
-    {
-        // Refresh source list from registry
-        auto sources = processor_.getInstanceRegistry().getAllSources();
-        sidebar_->refreshSourceList(sources);
-
-        // Refresh pane list for source dropdowns (deferred to avoid modifying
-        // dropdowns during their callback execution - prevents reentrancy crash)
-        auto panes = layoutManager.getPanes();
-        juce::MessageManager::callAsync([this, panes]() {
-            if (sidebar_)
-                sidebar_->refreshPaneList(panes);
-        });
-
-        // Sort oscillators by orderIndex for display
-        std::sort(oscillators.begin(), oscillators.end(),
-                  [](const Oscillator& a, const Oscillator& b) {
-                      return a.getOrderIndex() < b.getOrderIndex();
-                  });
-
-        // Refresh oscillator list
-        sidebar_->refreshOscillatorList(oscillators);
-    }
-
-    updateLayout();
-
+void OscilPluginEditor::reapplyGlobalSettings()
+{
     // Re-apply timing settings to newly created pane components
     // This ensures displaySamples is preserved when panes are recreated
     // Use actualIntervalMs which is computed correctly for both TIME and MELODIC modes
@@ -856,8 +529,6 @@ void OscilPluginEditor::refreshOscillatorPanels()
     setAutoScaleForAllPanes(state.isAutoScaleEnabled());
     setHoldDisplayForAllPanes(state.isHoldDisplayEnabled());
     setGainDbForAllPanes(state.getGainDb());
-
-    // Timer restart is handled by RAII TimerGuard destructor
 }
 
 void OscilPluginEditor::createDefaultOscillator()
@@ -905,7 +576,7 @@ void OscilPluginEditor::createDefaultOscillator()
 
     state.addOscillator(osc);
 
-    refreshOscillatorPanels();
+    // No need to call refreshOscillatorPanels() directly as state listener will trigger it
 }
 
 void OscilPluginEditor::handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId)
@@ -1322,6 +993,15 @@ void OscilPluginEditor::setShowGridForAllPanes(bool enabled)
     }
 }
 
+void OscilPluginEditor::setGridConfigForAllPanes(const GridConfiguration& config)
+{
+    for (auto& pane : paneComponents_)
+    {
+        if (pane)
+            pane->setGridConfig(config);
+    }
+}
+
 void OscilPluginEditor::setAutoScaleForAllPanes(bool enabled)
 {
     for (auto& pane : paneComponents_)
@@ -1406,6 +1086,14 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
             pane->repaint();
     }
     repaint();
+}
+
+void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators)
+{
+    if (sidebar_)
+    {
+        sidebar_->refreshOscillatorList(oscillators);
+    }
 }
 
 } // namespace oscil

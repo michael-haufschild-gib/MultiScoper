@@ -512,82 +512,6 @@ TEST_F(VisualConfigurationTest, SerializationPreservesMaterialDetails)
 // Preset Tests
 // =============================================================================
 
-TEST_F(VisualConfigurationTest, TestCyberpunkPreset)
-{
-    auto config = VisualConfiguration::getPreset("cyberpunk");
-
-    EXPECT_EQ(config.shaderType, ShaderType::NeonGlow);
-    EXPECT_TRUE(config.bloom.enabled);
-    EXPECT_FLOAT_EQ(config.bloom.intensity, 2.0f); // Boosted bloom
-    
-    // Verify fix for particle emission mode
-    EXPECT_TRUE(config.particles.enabled);
-    EXPECT_EQ(config.particles.emissionMode, ParticleEmissionMode::AlongWaveform);
-}
-
-TEST_F(VisualConfigurationTest, TestLiquidGoldPreset)
-{
-    auto config = VisualConfiguration::getPreset("liquid_gold");
-
-    EXPECT_EQ(config.shaderType, ShaderType::LiquidChrome);
-    EXPECT_TRUE(config.material.enabled);
-    EXPECT_TRUE(config.bloom.enabled);
-    
-    // Updated: Check for tilt shift
-    EXPECT_TRUE(config.tiltShift.enabled);
-    EXPECT_FLOAT_EQ(config.tiltShift.blurRadius, 1.5f);
-}
-
-TEST_F(VisualConfigurationTest, TestCinematicPreset)
-{
-    auto config = VisualConfiguration::getPreset("cinematic");
-
-    EXPECT_TRUE(config.tiltShift.enabled);
-    EXPECT_TRUE(config.filmGrain.enabled);
-    EXPECT_TRUE(config.vignette.enabled);
-    EXPECT_TRUE(config.colorGrade.enabled);
-    EXPECT_FLOAT_EQ(config.colorGrade.saturation, 0.9f);
-}
-
-TEST_F(VisualConfigurationTest, TestSolarStormPreset)
-{
-    auto config = VisualConfiguration::getPreset("solar_storm");
-
-    EXPECT_EQ(config.shaderType, ShaderType::PlasmaSine);
-    EXPECT_TRUE(config.bloom.enabled);
-    EXPECT_FLOAT_EQ(config.bloom.intensity, 3.0f); // Boosted
-    EXPECT_TRUE(config.distortion.enabled);
-    EXPECT_TRUE(config.colorGrade.enabled);
-    EXPECT_FLOAT_EQ(config.colorGrade.temperature, 0.8f);
-}
-
-TEST_F(VisualConfigurationTest, TestDeepOceanPreset)
-{
-    auto config = VisualConfiguration::getPreset("deep_ocean");
-
-    EXPECT_EQ(config.shaderType, ShaderType::VolumetricRibbon);
-    EXPECT_TRUE(config.distortion.enabled);
-    EXPECT_FALSE(config.particles.enabled);
-}
-
-TEST_F(VisualConfigurationTest, TestSynthwavePreset)
-{
-    auto config = VisualConfiguration::getPreset("synthwave");
-
-    EXPECT_EQ(config.shaderType, ShaderType::WireframeMesh);
-    EXPECT_TRUE(config.scanlines.enabled);
-    EXPECT_TRUE(config.vignette.enabled);
-}
-
-TEST_F(VisualConfigurationTest, TestMatrixPreset)
-{
-    auto config = VisualConfiguration::getPreset("matrix");
-
-    EXPECT_EQ(config.shaderType, ShaderType::DigitalGlitch);
-    EXPECT_TRUE(config.particles.enabled);
-    EXPECT_EQ(config.particles.emissionMode, ParticleEmissionMode::AlongWaveform);
-}
-
 TEST_F(VisualConfigurationTest, GetAvailablePresets)
 {
     auto presets = VisualConfiguration::getAvailablePresets();
@@ -600,6 +524,9 @@ TEST_F(VisualConfigurationTest, GetAvailablePresets)
     bool foundLiquidGold = false;
     bool foundCinematic = false;
     bool foundSolarStorm = false;
+    bool foundDeepOcean = false;
+    bool foundSynthwave = false;
+    bool foundMatrix = false;
 
     for (const auto& preset : presets)
     {
@@ -608,11 +535,17 @@ TEST_F(VisualConfigurationTest, GetAvailablePresets)
         if (preset.first == "liquid_gold") foundLiquidGold = true;
         if (preset.first == "cinematic") foundCinematic = true;
         if (preset.first == "solar_storm") foundSolarStorm = true;
+        if (preset.first == "deep_ocean") foundDeepOcean = true;
+        if (preset.first == "synthwave") foundSynthwave = true;
+        if (preset.first == "matrix") foundMatrix = true;
     }
 
     EXPECT_TRUE(foundDefault);
-    EXPECT_TRUE(foundCyberpunk);
-    EXPECT_TRUE(foundLiquidGold);
-    EXPECT_TRUE(foundCinematic);
-    EXPECT_TRUE(foundSolarStorm);
+    EXPECT_FALSE(foundCyberpunk); // Cyberpunk was removed
+    EXPECT_FALSE(foundLiquidGold);
+    EXPECT_FALSE(foundCinematic);
+    EXPECT_FALSE(foundSolarStorm);
+    EXPECT_FALSE(foundDeepOcean);
+    EXPECT_FALSE(foundSynthwave);
+    EXPECT_FALSE(foundMatrix);
 }

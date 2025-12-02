@@ -486,7 +486,7 @@ void SidebarComponent::refreshOscillatorList(const std::vector<Oscillator>& osci
     // Create items for filtered oscillators
     for (const auto& osc : filteredOscillators)
     {
-        auto item = std::make_unique<OscillatorListItemComponent>(osc);
+        auto item = std::make_unique<OscillatorListItemComponent>(osc, processor_.getInstanceRegistry());
         item->setSelected(osc.getId() == selectedOscillatorId_);
         item->addListener(this);
         listContainer_->addAndMakeVisible(*item);

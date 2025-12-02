@@ -79,26 +79,30 @@ void WaveformPresenter::process()
     }
 
     // Process samples according to mode
-    signalProcessor_.process(leftSamples.data(), rightSamples.data(), samplesRead,
-                             processingMode_, processedSignal_);
+    std::span<const float> leftSpan(leftSamples.data(), static_cast<size_t>(samplesRead));
+    std::span<const float> rightSpan;
+    if (samplesReadRight > 0)
+    {
+        rightSpan = std::span<const float>(rightSamples.data(), static_cast<size_t>(samplesRead));
+    }
+
+    signalProcessor_.process(leftSpan, rightSpan, processingMode_, processedSignal_);
 
     // Decimate for display
-    decimator_.process(processedSignal_.channel1.data(),
-                       static_cast<int>(processedSignal_.channel1.size()),
-                       displayBuffer1_);
+    std::span<const float> processedLeft(processedSignal_.channel1.data(), processedSignal_.channel1.size());
+    decimator_.process(processedLeft, displayBuffer1_);
 
     if (processedSignal_.isStereo)
     {
-        decimator_.process(processedSignal_.channel2.data(),
-                           static_cast<int>(processedSignal_.channel2.size()),
-                           displayBuffer2_);
+        std::span<const float> processedRight(processedSignal_.channel2.data(), processedSignal_.channel2.size());
+        decimator_.process(processedRight, displayBuffer2_);
     }
 
     // Calculate levels
-    currentPeak_ = SignalProcessor::calculatePeak(processedSignal_.channel1.data(),
-                                                   processedSignal_.numSamples);
-    currentRMS_ = SignalProcessor::calculateRMS(processedSignal_.channel1.data(),
-                                                 processedSignal_.numSamples);
+    // Note: calculatePeak/RMS now take a span
+    std::span<const float> outputSpan(processedSignal_.channel1.data(), static_cast<size_t>(processedSignal_.numSamples));
+    currentPeak_ = SignalProcessor::calculatePeak(outputSpan);
+    currentRMS_ = SignalProcessor::calculateRMS(outputSpan);
 
     // Calculate target scale based on mode
     float targetScale = 1.0f;

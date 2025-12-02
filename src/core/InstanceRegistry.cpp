@@ -52,9 +52,8 @@ SourceId InstanceRegistry::registerInstance(
     double sampleRate)
 {
     // Registry mutations should happen on message thread or during initialization
-    // Avoid calling from audio thread due to locks and allocation
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread() || 
-            !juce::MessageManager::getInstance()->isThisTheMessageThread()); // Soft assertion for now, effectively logging intent
+    // Avoid calling from audio thread due to locks and allocation.
+    // We use locks to ensure safety if called from audio thread (e.g. prepareToPlay).
 
     SourceId sourceId;
     bool shouldNotify = false;

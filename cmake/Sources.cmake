@@ -54,7 +54,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButton.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextField.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilToggle.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTooltip.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSlider.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilCheckbox.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButton.cpp
@@ -68,6 +67,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilMeterBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTransportSync.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/UIAudioFeedback.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/PaneContainerComponent.cpp
 
     # Rendering (Shaders)
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformShader.cpp
@@ -80,6 +80,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/DigitalGlitchShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformGLRenderer.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/EffectChain.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/GridRenderer.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/ParticleRenderer.cpp
 
     # Rendering (Render Engine)
     ${CMAKE_SOURCE_DIR}/src/rendering/Framebuffer.cpp

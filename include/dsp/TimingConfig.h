@@ -425,4 +425,20 @@ struct TimingConfig
     }
 };
 
+/**
+ * Configuration for the background grid display
+ */
+struct GridConfiguration
+{
+    bool enabled = true;
+    TimingMode timingMode = TimingMode::TIME;
+    float visibleDurationMs = 500.0f;
+    
+    // Musical mode specific
+    NoteInterval noteInterval = NoteInterval::QUARTER;
+    float bpm = 120.0f;
+    int timeSigNumerator = 4;
+    int timeSigDenominator = 4;
+};
+
 } // namespace oscil

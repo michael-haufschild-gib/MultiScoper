@@ -10,6 +10,7 @@
 #include <random>
 #include <gtest/gtest.h>
 #include "dsp/SignalProcessor.h"
+#include <span>
 
 using namespace oscil;
 
@@ -55,7 +56,7 @@ TEST_F(SignalProcessorTest, FullStereoPassthrough)
     auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
     auto right = generateSineWave(numSamples, 880.0f, 44100.0f);
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::FullStereo, output);
+    processor.process(left, right, ProcessingMode::FullStereo, output);
 
     ASSERT_EQ(output.numSamples, numSamples);
     ASSERT_TRUE(output.isStereo);
@@ -80,7 +81,7 @@ TEST_F(SignalProcessorTest, MonoSumming)
     auto left = generateDC(numSamples, 0.5f);
     auto right = generateDC(numSamples, 0.3f);
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Mono, output);
+    processor.process(left, right, ProcessingMode::Mono, output);
 
     ASSERT_EQ(output.numSamples, numSamples);
     ASSERT_FALSE(output.isStereo);
@@ -98,7 +99,7 @@ TEST_F(SignalProcessorTest, MidComponent)
     auto left = generateDC(numSamples, 1.0f);
     auto right = generateDC(numSamples, 1.0f);
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Mid, output);
+    processor.process(left, right, ProcessingMode::Mid, output);
 
     ASSERT_FALSE(output.isStereo);
 
@@ -116,7 +117,7 @@ TEST_F(SignalProcessorTest, SideComponent)
     auto left = generateDC(numSamples, 1.0f);
     auto right = generateDC(numSamples, -1.0f); // Inverted
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Side, output);
+    processor.process(left, right, ProcessingMode::Side, output);
 
     ASSERT_FALSE(output.isStereo);
 
@@ -134,7 +135,7 @@ TEST_F(SignalProcessorTest, SideZeroForMono)
     auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
     auto right = left; // Same as left
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Side, output);
+    processor.process(left, right, ProcessingMode::Side, output);
 
     // Identical signals should have zero side content
     for (int i = 0; i < numSamples; ++i)
@@ -150,7 +151,7 @@ TEST_F(SignalProcessorTest, LeftChannelOnly)
     auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
     auto right = generateSineWave(numSamples, 880.0f, 44100.0f);
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Left, output);
+    processor.process(left, right, ProcessingMode::Left, output);
 
     ASSERT_FALSE(output.isStereo);
 
@@ -167,7 +168,7 @@ TEST_F(SignalProcessorTest, RightChannelOnly)
     auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
     auto right = generateSineWave(numSamples, 880.0f, 44100.0f);
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Right, output);
+    processor.process(left, right, ProcessingMode::Right, output);
 
     ASSERT_FALSE(output.isStereo);
 
@@ -183,8 +184,7 @@ TEST_F(SignalProcessorTest, CorrelationIdenticalSignals)
     const int numSamples = 1024;
     auto signal = generateSineWave(numSamples, 440.0f, 44100.0f);
 
-    float correlation = SignalProcessor::calculateCorrelation(
-        signal.data(), signal.data(), numSamples);
+    float correlation = SignalProcessor::calculateCorrelation(signal, signal);
 
     EXPECT_NEAR(correlation, 1.0f, 0.01f);
 }
@@ -202,8 +202,7 @@ TEST_F(SignalProcessorTest, CorrelationInvertedSignals)
         right[i] = -left[i];
     }
 
-    float correlation = SignalProcessor::calculateCorrelation(
-        left.data(), right.data(), numSamples);
+    float correlation = SignalProcessor::calculateCorrelation(left, right);
 
     EXPECT_NEAR(correlation, -1.0f, 0.01f);
 }
@@ -216,7 +215,7 @@ TEST_F(SignalProcessorTest, PeakLevelCalculation)
     samples[50] = 0.75f;  // Peak positive
     samples[75] = -0.5f;  // Peak negative
 
-    float peak = SignalProcessor::calculatePeak(samples.data(), numSamples);
+    float peak = SignalProcessor::calculatePeak(samples);
 
     EXPECT_FLOAT_EQ(peak, 0.75f);
 }
@@ -227,7 +226,7 @@ TEST_F(SignalProcessorTest, RMSLevelCalculation)
     const int numSamples = 1000;
     std::vector<float> samples(numSamples, 0.5f); // Constant DC
 
-    float rms = SignalProcessor::calculateRMS(samples.data(), numSamples);
+    float rms = SignalProcessor::calculateRMS(samples);
 
     EXPECT_FLOAT_EQ(rms, 0.5f);
 }
@@ -243,7 +242,7 @@ TEST_F(SignalProcessorTest, DecimationPreservesPeaks)
 
     std::vector<float> output(outputLength);
 
-    SignalProcessor::decimate(input.data(), inputLength, output.data(), outputLength, true);
+    SignalProcessor::decimate(input, output, true);
 
     // Peak should be preserved somewhere in output
     float maxOutput = 0.0f;
@@ -265,7 +264,7 @@ TEST_F(SignalProcessorTest, ProcessZeroSamples)
     std::vector<float> left;
     std::vector<float> right;
 
-    processor.process(left.data(), right.data(), 0, ProcessingMode::FullStereo, output);
+    processor.process(left, right, ProcessingMode::FullStereo, output);
 
     EXPECT_EQ(output.numSamples, 0);
 }
@@ -276,7 +275,7 @@ TEST_F(SignalProcessorTest, ProcessOneSample)
     std::vector<float> left = { 0.5f };
     std::vector<float> right = { -0.3f };
 
-    processor.process(left.data(), right.data(), 1, ProcessingMode::FullStereo, output);
+    processor.process(left, right, ProcessingMode::FullStereo, output);
 
     ASSERT_EQ(output.numSamples, 1);
     EXPECT_FLOAT_EQ(output.channel1[0], 0.5f);
@@ -289,7 +288,7 @@ TEST_F(SignalProcessorTest, ProcessSilentBuffer)
     const int numSamples = 1024;
     std::vector<float> silence(numSamples, 0.0f);
 
-    processor.process(silence.data(), silence.data(), numSamples, ProcessingMode::Mono, output);
+    processor.process(silence, silence, ProcessingMode::Mono, output);
 
     ASSERT_EQ(output.numSamples, numSamples);
 
@@ -302,21 +301,21 @@ TEST_F(SignalProcessorTest, ProcessSilentBuffer)
 // Test: Calculate peak of empty buffer
 TEST_F(SignalProcessorTest, PeakEmptyBuffer)
 {
-    float peak = SignalProcessor::calculatePeak(nullptr, 0);
+    float peak = SignalProcessor::calculatePeak({});
     EXPECT_FLOAT_EQ(peak, 0.0f);
 }
 
 // Test: Calculate RMS of empty buffer
 TEST_F(SignalProcessorTest, RMSEmptyBuffer)
 {
-    float rms = SignalProcessor::calculateRMS(nullptr, 0);
+    float rms = SignalProcessor::calculateRMS({});
     EXPECT_FLOAT_EQ(rms, 0.0f);
 }
 
 // Test: Correlation with zero samples
 TEST_F(SignalProcessorTest, CorrelationZeroSamples)
 {
-    float correlation = SignalProcessor::calculateCorrelation(nullptr, nullptr, 0);
+    float correlation = SignalProcessor::calculateCorrelation({}, {});
     // Should return a neutral value (0.0 or handle gracefully)
     EXPECT_TRUE(std::isfinite(correlation));
 }
@@ -337,7 +336,7 @@ TEST_F(SignalProcessorTest, ProcessWithNaN)
     right[75] = std::nanf("");
 
     // Should not crash
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::FullStereo, output);
+    processor.process(left, right, ProcessingMode::FullStereo, output);
 
     EXPECT_EQ(output.numSamples, numSamples);
 }
@@ -353,7 +352,7 @@ TEST_F(SignalProcessorTest, ProcessWithInfinity)
     right[75] = -std::numeric_limits<float>::infinity();
 
     // Should not crash
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Mid, output);
+    processor.process(left, right, ProcessingMode::Mid, output);
 
     EXPECT_EQ(output.numSamples, numSamples);
 }
@@ -363,7 +362,7 @@ TEST_F(SignalProcessorTest, PeakWithNaN)
 {
     std::vector<float> samples = { 0.1f, 0.5f, std::nanf(""), 0.3f };
 
-    float peak = SignalProcessor::calculatePeak(samples.data(), static_cast<int>(samples.size()));
+    float peak = SignalProcessor::calculatePeak(samples);
 
     // Should handle NaN gracefully - result may be NaN or should ignore it
     // Implementation-dependent, but shouldn't crash
@@ -375,7 +374,7 @@ TEST_F(SignalProcessorTest, PeakWithInfinity)
 {
     std::vector<float> samples = { 0.1f, 0.5f, std::numeric_limits<float>::infinity(), 0.3f };
 
-    float peak = SignalProcessor::calculatePeak(samples.data(), static_cast<int>(samples.size()));
+    float peak = SignalProcessor::calculatePeak(samples);
 
     // Peak should be infinity or handled appropriately
     EXPECT_TRUE(peak == std::numeric_limits<float>::infinity() || std::isfinite(peak));
@@ -386,7 +385,7 @@ TEST_F(SignalProcessorTest, RMSWithNaN)
 {
     std::vector<float> samples = { 0.5f, 0.5f, std::nanf(""), 0.5f };
 
-    float rms = SignalProcessor::calculateRMS(samples.data(), static_cast<int>(samples.size()));
+    float rms = SignalProcessor::calculateRMS(samples);
 
     // Should handle gracefully - result may be NaN
     EXPECT_TRUE(true);
@@ -398,8 +397,7 @@ TEST_F(SignalProcessorTest, CorrelationWithNaN)
     std::vector<float> left = { 0.5f, 0.5f, std::nanf(""), 0.5f };
     std::vector<float> right = { 0.5f, 0.5f, 0.5f, 0.5f };
 
-    float correlation = SignalProcessor::calculateCorrelation(
-        left.data(), right.data(), static_cast<int>(left.size()));
+    float correlation = SignalProcessor::calculateCorrelation(left, right);
 
     // Should not crash
     EXPECT_TRUE(true);
@@ -416,7 +414,7 @@ TEST_F(SignalProcessorTest, ProcessOutOfRangeValues)
     std::vector<float> left(numSamples, 2.0f);   // Above normal range
     std::vector<float> right(numSamples, -3.0f); // Below normal range
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::FullStereo, output);
+    processor.process(left, right, ProcessingMode::FullStereo, output);
 
     ASSERT_EQ(output.numSamples, numSamples);
 
@@ -430,7 +428,7 @@ TEST_F(SignalProcessorTest, PeakNegativeValues)
 {
     std::vector<float> samples = { -0.9f, -0.5f, -0.1f };
 
-    float peak = SignalProcessor::calculatePeak(samples.data(), static_cast<int>(samples.size()));
+    float peak = SignalProcessor::calculatePeak(samples);
 
     // Peak should be the maximum absolute value
     EXPECT_FLOAT_EQ(peak, 0.9f);
@@ -443,7 +441,7 @@ TEST_F(SignalProcessorTest, MidSideExtremeValues)
     std::vector<float> left(numSamples, 100.0f);
     std::vector<float> right(numSamples, -100.0f);
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Mid, output);
+    processor.process(left, right, ProcessingMode::Mid, output);
 
     // Mid = (100 + (-100)) / 2 = 0
     for (int i = 0; i < numSamples; ++i)
@@ -451,7 +449,7 @@ TEST_F(SignalProcessorTest, MidSideExtremeValues)
         EXPECT_NEAR(output.channel1[i], 0.0f, 0.001f);
     }
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Side, output);
+    processor.process(left, right, ProcessingMode::Side, output);
 
     // Side = (100 - (-100)) / 2 = 100
     for (int i = 0; i < numSamples; ++i)
@@ -479,7 +477,7 @@ TEST_F(SignalProcessorTest, DCOffsetMono)
         right[i] = dcOffset + 0.5f * std::sin(2.0f * M_PI * 440.0f * i / 44100.0f);
     }
 
-    processor.process(left.data(), right.data(), numSamples, ProcessingMode::Mono, output);
+    processor.process(left, right, ProcessingMode::Mono, output);
 
     // Calculate average (should preserve DC offset)
     float sum = 0.0f;
@@ -508,7 +506,7 @@ TEST_F(SignalProcessorTest, DecimateSameLength)
         input[i] = static_cast<float>(i) / length;
     }
 
-    SignalProcessor::decimate(input.data(), length, output.data(), length, true);
+    SignalProcessor::decimate(input, output, true);
 
     // Should be roughly the same
     for (int i = 0; i < length; ++i)
@@ -531,7 +529,7 @@ TEST_F(SignalProcessorTest, DecimateToOneSample)
 
     std::vector<float> output(1);
 
-    SignalProcessor::decimate(input.data(), inputLength, output.data(), 1, true);
+    SignalProcessor::decimate(input, output, true);
 
     // Should have the peak
     EXPECT_FLOAT_EQ(output[0], 1.0f);
@@ -543,7 +541,7 @@ TEST_F(SignalProcessorTest, DecimateFromOneSample)
     std::vector<float> input = { 0.75f };
     std::vector<float> output(10, 0.0f);
 
-    SignalProcessor::decimate(input.data(), 1, output.data(), 10, true);
+    SignalProcessor::decimate(input, output, true);
 
     // All output samples should be filled with the input value (sample-and-hold)
     for (int i = 0; i < 10; ++i)
@@ -557,7 +555,7 @@ TEST_F(SignalProcessorTest, DecimateZeroSamples)
 {
     std::vector<float> output(10, 1.0f);
 
-    SignalProcessor::decimate(nullptr, 0, output.data(), 10, true);
+    SignalProcessor::decimate({}, output, true);
 
     // Output might be unchanged or zeroed - implementation dependent
     // Main test is no crash
@@ -575,7 +573,7 @@ TEST_F(SignalProcessorTest, DecimateWithoutPeakPreservation)
 
     std::vector<float> output(outputLength);
 
-    SignalProcessor::decimate(input.data(), inputLength, output.data(), outputLength, false);
+    SignalProcessor::decimate(input, output, false);
 
     // Without peak preservation, peak might be averaged away
     // Test should not crash
@@ -603,7 +601,7 @@ TEST_F(SignalProcessorTest, AllModesMinimalBuffer)
 
     for (auto mode : modes)
     {
-        processor.process(left.data(), right.data(), 2, mode, output);
+        processor.process(left, right, mode, output);
         EXPECT_EQ(output.numSamples, 2) << "Mode failed: " << static_cast<int>(mode);
     }
 }
@@ -614,7 +612,7 @@ TEST_F(SignalProcessorTest, ProcessNullRightChannel)
     const int numSamples = 100;
     std::vector<float> left(numSamples, 0.5f);
 
-    processor.process(left.data(), nullptr, numSamples, ProcessingMode::Left, output);
+    processor.process(left, {}, ProcessingMode::Left, output);
 
     EXPECT_EQ(output.numSamples, numSamples);
     EXPECT_FALSE(output.isStereo);
@@ -702,7 +700,7 @@ TEST_F(SignalProcessorTest, AdaptiveDecimatorProcess)
     }
 
     std::vector<float> output;
-    decimator.process(input.data(), 1000, output);
+    decimator.process(input, output);
 
     // Output should be reduced from input, exact ratio depends on implementation
     EXPECT_GT(output.size(), 0u);
@@ -722,7 +720,7 @@ TEST_F(SignalProcessorTest, AdaptiveDecimatorEnvelope)
     }
 
     std::vector<float> minEnv, maxEnv;
-    decimator.processWithEnvelope(input.data(), 500, minEnv, maxEnv);
+    decimator.processWithEnvelope(input, minEnv, maxEnv);
 
     EXPECT_EQ(minEnv.size(), maxEnv.size());
     EXPECT_GT(minEnv.size(), 0u);
@@ -751,7 +749,7 @@ TEST_F(SignalProcessorTest, FuzzTest_RandomBuffers)
         // Random mode
         ProcessingMode mode = static_cast<ProcessingMode>(i % 6);
         
-        processor.process(left.data(), right.data(), numSamples, mode, output);
+        processor.process(left, right, mode, output);
         
         ASSERT_EQ(output.numSamples, numSamples);
         
@@ -778,7 +776,7 @@ TEST_F(SignalProcessorTest, DenormalStress)
         val *= 0.9f; // Quickly becomes denormal
     }
     
-    processor.process(denormals.data(), denormals.data(), numSamples, ProcessingMode::FullStereo, output);
+    processor.process(denormals, denormals, ProcessingMode::FullStereo, output);
     
     // Verify output is finite and consistent
     for(int i=0; i<numSamples; ++i) {

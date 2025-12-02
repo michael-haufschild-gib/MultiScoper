@@ -53,6 +53,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    bool keyPressed(const juce::KeyPress& key) override;
 
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;

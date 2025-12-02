@@ -37,6 +37,8 @@ public:
     // Mouse events for drag initiation
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseMove(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
 
     // DragAndDropTarget interface
     bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override;
@@ -106,6 +108,7 @@ public:
 
     // Display options - apply to all waveforms in this pane
     void setShowGrid(bool enabled);
+    void setGridConfig(const GridConfiguration& config);
     void setAutoScale(bool enabled);
     void setHoldDisplay(bool enabled);
     void setGainDb(float dB);

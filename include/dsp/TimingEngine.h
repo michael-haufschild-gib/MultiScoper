@@ -285,8 +285,9 @@ public:
 
     /**
      * Get the current engine configuration
+     * Constructs configuration from atomic values for thread safety
      */
-    [[nodiscard]] const EngineTimingConfig& getConfig() const { return config_; }
+    [[nodiscard]] EngineTimingConfig getConfig() const;
 
     /**
      * Set the engine configuration
@@ -295,8 +296,9 @@ public:
 
     /**
      * Get the current host timing info
+     * Constructs info from atomic values for thread safety
      */
-    [[nodiscard]] const HostTimingInfo& getHostInfo() const { return hostInfo_; }
+    [[nodiscard]] HostTimingInfo getHostInfo() const;
 
     /**
      * Set sample rate (thread-safe)
@@ -304,7 +306,6 @@ public:
     void setSampleRate(double sampleRate)
     {
         atomicSampleRate_.store(sampleRate, std::memory_order_relaxed);
-        hostInfo_.sampleRate = sampleRate;
     }
 
     // Configuration setters
@@ -315,26 +316,22 @@ public:
     void setInternalBPM(float bpm);  // Set user-specified BPM for free-running mode
     void setWaveformTriggerMode(WaveformTriggerMode mode)
     {
-        config_.triggerMode = mode;
         atomicTriggerMode_.store(static_cast<int>(mode), std::memory_order_relaxed);
     }
     void setTriggerThreshold(float threshold)
     {
         threshold = juce::jlimit(0.0f, 1.0f, threshold);
-        config_.triggerThreshold = threshold;
         atomicTriggerThreshold_.store(threshold, std::memory_order_relaxed);
     }
     void setTriggerChannel(int channel)
     {
-        config_.triggerChannel = channel;
         atomicTriggerChannel_.store(channel, std::memory_order_relaxed);
     }
     void setTriggerHysteresis(float hysteresis)
     {
-        config_.triggerHysteresis = hysteresis;
         atomicTriggerHysteresis_.store(hysteresis, std::memory_order_relaxed);
     }
-    void setSyncToPlayhead(bool enabled) { config_.syncToPlayhead = enabled; }
+    void setSyncToPlayhead(bool enabled) { atomicSyncToPlayhead_.store(enabled, std::memory_order_relaxed); }
 
     /**
      * Recalculate actual interval based on current mode and BPM
@@ -368,7 +365,7 @@ public:
      */
     [[nodiscard]] NoteInterval getNoteIntervalAsEntity() const
     {
-        return engineToEntityNoteInterval(config_.noteInterval);
+        return engineToEntityNoteInterval(static_cast<EngineNoteInterval>(atomicNoteInterval_.load(std::memory_order_relaxed)));
     }
 
     // === Serialization ===
@@ -404,9 +401,6 @@ public:
     void removeListener(Listener* listener);
 
 private:
-    EngineTimingConfig config_;
-    HostTimingInfo hostInfo_;
-
     // Thread-safe copies of values for cross-thread access.
     // UI thread writes config via setters → stores to atomics
     // Audio thread reads from atomics in processBlock/updateHostInfo
@@ -424,14 +418,24 @@ private:
     std::atomic<float> atomicTriggerThreshold_{ 0.1f };
     std::atomic<float> atomicTriggerHysteresis_{ 0.01f };
     std::atomic<double> atomicSampleRate_{ 44100.0 };
+    std::atomic<bool> atomicSyncToPlayhead_{ false };
+    std::atomic<double> atomicLastSyncTimestamp_{ 0.0 };
 
-    // Trigger state
+    // Host info atomics
+    std::atomic<double> atomicPpqPosition_{ 0.0 };
+    std::atomic<bool> atomicIsPlaying_{ false };
+    std::atomic<int64_t> atomicTimeInSamples_{ 0 };
+    std::atomic<int> atomicTimeSigNumerator_{ 4 };
+    std::atomic<int> atomicTimeSigDenominator_{ 4 };
+    std::atomic<int> atomicTransportState_{ static_cast<int>(HostTimingInfo::TransportState::STOPPED) };
+
+    // Trigger state (thread-safe)
     std::atomic<bool> manualTrigger_{ false };
+
+    // Audio-thread-only state (accessed only from processBlock, not synchronized)
     bool previousTriggerState_ = false;
     float previousSample_ = 0.0f;
-
-    // Previous BPM for change detection
-    float previousBPM_ = 120.0f;
+    float previousBPM_ = 120.0f;  // For change detection
 
     juce::ListenerList<Listener> listeners_;
     std::mutex listenerMutex_;  // Protects listener add/remove (call() is already thread-safe)

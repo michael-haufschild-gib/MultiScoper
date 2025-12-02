@@ -218,9 +218,18 @@ void WaveformComponent::setGpuRenderingEnabled(bool enabled)
     gpuRenderingEnabled_ = enabled;
 }
 
+void WaveformComponent::setGridConfig(const GridConfiguration& config)
+{
+    gridConfig_ = config;
+    showGrid_ = config.enabled;
+    repaint();
+}
+
 void WaveformComponent::setShowGrid(bool show)
 {
     showGrid_ = show;
+    gridConfig_.enabled = show;
+    repaint();
 }
 
 void WaveformComponent::setAutoScale(bool enabled)
@@ -269,88 +278,167 @@ void WaveformComponent::processAudioData()
 void WaveformComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     const auto& theme = ThemeManager::getInstance().getCurrentTheme();
-
-    int width = bounds.getWidth();
-    int height = bounds.getHeight();
-
-    ProcessingMode mode = presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
-
-    if (mode == ProcessingMode::FullStereo)
+    
+    // Helper to draw a grid for a specific channel area
+    auto drawChannelGrid = [&](juce::Rectangle<int> area)
     {
-        // Stereo stacked: draw grid for both channels
-        float halfHeight = static_cast<float>(height) * 0.5f;
-        float topCenterY = halfHeight * 0.5f;     // Center of top half (L channel)
-        float bottomCenterY = halfHeight * 1.5f;  // Center of bottom half (R channel)
-
-        // Draw minor vertical grid lines (full height)
-        g.setColour(theme.gridMinor);
-        const int numVerticalLines = 10;
-        for (int i = 1; i < numVerticalLines; ++i)
-        {
-            float x = (static_cast<float>(i) / numVerticalLines) * static_cast<float>(width);
-            g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(height));
-        }
-
-        // Draw horizontal grid lines for top half (L channel)
-        const int numMinorLines = 4;
-        for (int i = 1; i < numMinorLines; ++i)
-        {
-            float y = (static_cast<float>(i) / numMinorLines) * halfHeight;
-            g.drawHorizontalLine(static_cast<int>(y), 0.0f, static_cast<float>(width));
-        }
-
-        // Draw horizontal grid lines for bottom half (R channel)
-        for (int i = 1; i < numMinorLines; ++i)
-        {
-            float y = halfHeight + (static_cast<float>(i) / numMinorLines) * halfHeight;
-            g.drawHorizontalLine(static_cast<int>(y), 0.0f, static_cast<float>(width));
-        }
-
-        // Draw zero lines for both channels
-        g.setColour(theme.gridZeroLine);
-        g.drawHorizontalLine(static_cast<int>(topCenterY), 0.0f, static_cast<float>(width));
-        g.drawHorizontalLine(static_cast<int>(bottomCenterY), 0.0f, static_cast<float>(width));
-
-        // Draw separator line between channels
-        g.setColour(theme.gridMajor);
-        g.drawHorizontalLine(static_cast<int>(halfHeight), 0.0f, static_cast<float>(width));
-
-        // Draw channel labels
-        g.setColour(theme.textSecondary.withAlpha(0.6f));
-        g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
-        g.drawText("L", juce::Rectangle<int>(4, 2, 20, 14), juce::Justification::centredLeft);
-        g.drawText("R", juce::Rectangle<int>(4, static_cast<int>(halfHeight) + 2, 20, 14), juce::Justification::centredLeft);
-    }
-    else
-    {
-        // Mono/other modes: standard single-center grid
-        float centerY = static_cast<float>(height) * 0.5f;
-
-        // Draw minor grid lines (horizontal)
+        int width = area.getWidth();
+        int height = area.getHeight();
+        float centerY = area.getCentreY(); // Center relative to parent, not area
+        // Actually, getCentreY() returns y + height/2, which is correct for drawing in 'g' (relative to component)
+        
+        // --- Horizontal Lines ---
+        
+        // Minor horizontal lines (8 divisions)
         g.setColour(theme.gridMinor);
         const int numMinorLines = 8;
         for (int i = 1; i < numMinorLines; ++i)
         {
-            float y = (static_cast<float>(i) / numMinorLines) * static_cast<float>(height);
-            g.drawHorizontalLine(static_cast<int>(y), 0.0f, static_cast<float>(width));
+            float y = area.getY() + (static_cast<float>(i) / numMinorLines) * static_cast<float>(height);
+            if (std::abs(y - centerY) > 1.0f) // Don't draw over zero line
+                g.drawHorizontalLine(static_cast<int>(y), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
         }
 
-        // Draw minor vertical grid lines
-        const int numVerticalLines = 10;
-        for (int i = 1; i < numVerticalLines; ++i)
-        {
-            float x = (static_cast<float>(i) / numVerticalLines) * static_cast<float>(width);
-            g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(height));
-        }
-
-        // Draw zero line
-        g.setColour(theme.gridZeroLine);
-        g.drawHorizontalLine(static_cast<int>(centerY), 0.0f, static_cast<float>(width));
-
-        // Draw major grid lines
+        // Major horizontal lines (top/bottom quarters)
         g.setColour(theme.gridMajor);
-        g.drawHorizontalLine(static_cast<int>(centerY * 0.5f), 0.0f, static_cast<float>(width));
-        g.drawHorizontalLine(static_cast<int>(centerY * 1.5f), 0.0f, static_cast<float>(width));
+        g.drawHorizontalLine(static_cast<int>(area.getY() + height * 0.25f), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+        g.drawHorizontalLine(static_cast<int>(area.getY() + height * 0.75f), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+        
+        // Zero line
+        g.setColour(theme.gridZeroLine);
+        g.drawHorizontalLine(static_cast<int>(centerY), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+        
+        // --- Vertical Lines ---
+        
+        if (gridConfig_.timingMode == TimingMode::TIME)
+        {
+            // Time-based grid
+            float durationMs = gridConfig_.visibleDurationMs;
+            if (durationMs <= 0.0001f) durationMs = 1.0f;
+
+            float targetStep = durationMs / 8.0f;
+            float magnitude = std::pow(10.0f, std::floor(std::log10(targetStep)));
+            float normalizedStep = targetStep / magnitude;
+
+            float stepSize;
+            if (normalizedStep < 2.0f) stepSize = 1.0f * magnitude;
+            else if (normalizedStep < 5.0f) stepSize = 2.0f * magnitude;
+            else stepSize = 5.0f * magnitude;
+
+            g.setColour(theme.gridMajor.withAlpha(0.5f));
+            
+            for (float t = stepSize; t < durationMs; t += stepSize)
+            {
+                float x = area.getX() + (t / durationMs) * static_cast<float>(width);
+                g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()), static_cast<float>(area.getBottom()));
+                
+                // Labels (only if space permits and it's the top channel or mono)
+                // For now, keeping it simple: labels might clutter if drawn on every grid
+            }
+        }
+        else // MELODIC Mode
+        {
+            int subDivisions = 4;
+            bool showSubBeats = false;
+
+            switch (gridConfig_.noteInterval)
+            {
+                case NoteInterval::THIRTY_SECOND:
+                case NoteInterval::SIXTEENTH:
+                case NoteInterval::TWELFTH:
+                    subDivisions = 1; break;
+                case NoteInterval::EIGHTH:
+                case NoteInterval::TRIPLET_EIGHTH:
+                case NoteInterval::DOTTED_EIGHTH:
+                    subDivisions = 2; break;
+                case NoteInterval::QUARTER:
+                case NoteInterval::TRIPLET_QUARTER:
+                case NoteInterval::DOTTED_QUARTER:
+                    subDivisions = 4; break;
+                case NoteInterval::HALF:
+                case NoteInterval::TRIPLET_HALF:
+                case NoteInterval::DOTTED_HALF:
+                    subDivisions = 2; showSubBeats = true; break;
+                case NoteInterval::WHOLE:
+                    subDivisions = gridConfig_.timeSigNumerator; showSubBeats = true; break;
+                case NoteInterval::TWO_BARS:
+                    subDivisions = 2; showSubBeats = true; break;
+                case NoteInterval::FOUR_BARS:
+                    subDivisions = 4; showSubBeats = true; break;
+                case NoteInterval::EIGHT_BARS:
+                    subDivisions = 8; showSubBeats = true; break;
+                case NoteInterval::THREE_BARS:
+                    subDivisions = 3; showSubBeats = true; break;
+                default: subDivisions = 4; break;
+            }
+
+            float widthPerDiv = static_cast<float>(width) / static_cast<float>(subDivisions);
+            
+            for (int i = 1; i < subDivisions; ++i)
+            {
+                float x = area.getX() + i * widthPerDiv;
+                
+                if (gridConfig_.noteInterval >= NoteInterval::TWO_BARS)
+                    g.setColour(theme.gridMajor); 
+                else if (gridConfig_.noteInterval == NoteInterval::WHOLE)
+                    g.setColour(theme.gridMajor.withAlpha(0.6f));
+                else
+                    g.setColour(theme.gridMinor);
+                
+                g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()), static_cast<float>(area.getBottom()));
+            }
+
+            if (showSubBeats && widthPerDiv > 40.0f)
+            {
+                int minorDivs = 4; 
+                if (gridConfig_.noteInterval >= NoteInterval::TWO_BARS)
+                    minorDivs = gridConfig_.timeSigNumerator;
+                
+                float minorWidth = widthPerDiv / static_cast<float>(minorDivs);
+                g.setColour(theme.gridMinor.withAlpha(0.3f));
+                
+                for (int i = 0; i < subDivisions; ++i)
+                {
+                    float baseX = area.getX() + i * widthPerDiv;
+                    for (int j = 1; j < minorDivs; ++j)
+                    {
+                        float x = baseX + j * minorWidth;
+                        g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()), static_cast<float>(area.getBottom()));
+                    }
+                }
+            }
+        }
+    };
+
+    ProcessingMode mode = presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
+    
+    if (mode == ProcessingMode::FullStereo)
+    {
+        // Stereo: Two separate grids
+        int halfHeight = bounds.getHeight() / 2;
+        
+        // Left Channel (Top)
+        auto topBounds = bounds.removeFromTop(halfHeight);
+        drawChannelGrid(topBounds);
+        
+        // Right Channel (Bottom)
+        auto bottomBounds = bounds; // Remaining
+        drawChannelGrid(bottomBounds);
+        
+        // Separator
+        g.setColour(theme.gridMajor);
+        g.drawHorizontalLine(topBounds.getBottom(), static_cast<float>(bounds.getX()), static_cast<float>(bounds.getRight()));
+        
+        // Labels
+        g.setColour(theme.textSecondary.withAlpha(0.6f));
+        g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+        g.drawText("L", topBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2), juce::Justification::centredLeft);
+        g.drawText("R", bottomBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2), juce::Justification::centredLeft);
+    }
+    else
+    {
+        // Mono: Single grid
+        drawChannelGrid(bounds);
     }
 }
 
@@ -556,7 +644,13 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     data.lineWidth = lineWidth_;
     data.shaderId = shaderId_;
     data.visible = isVisible() && !data.channel1.empty();
-    
+    data.gridConfig = gridConfig_;
+
+    // Copy grid colors from theme (thread-safe: this runs on message thread)
+    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    data.gridColors.gridMinor = theme.gridMinor;
+    data.gridColors.gridMajor = theme.gridMajor;
+    data.gridColors.gridZeroLine = theme.gridZeroLine;
 
     // Populate advanced visual configuration from preset
     data.visualConfig = VisualConfiguration::getPreset(visualPresetId_);

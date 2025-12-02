@@ -144,6 +144,25 @@ void PaneComponent::resized()
     updateLayout();
 }
 
+void PaneComponent::mouseMove(const juce::MouseEvent& event)
+{
+    // Show drag cursor when hovering over header (drag zone)
+    if (isInDragZone(event.getPosition()))
+    {
+        setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    }
+    else
+    {
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
+}
+
+void PaneComponent::mouseExit(const juce::MouseEvent& /*event*/)
+{
+    // Reset cursor when mouse leaves component
+    setMouseCursor(juce::MouseCursor::NormalCursor);
+}
+
 void PaneComponent::mouseDown(const juce::MouseEvent& event)
 {
     // Record drag start position
@@ -262,7 +281,9 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
         entry.waveform->setCaptureBuffer(buffer);
     }
 
-    addAndMakeVisible(*entry.waveform);
+    // Use addChildComponent (not addAndMakeVisible) to preserve the visibility
+    // state set at line 241 from oscillator.isVisible()
+    addChildComponent(*entry.waveform);
     waveforms_.push_back(std::move(entry));
 
     updateLayout();
@@ -351,13 +372,15 @@ void PaneComponent::updateOscillatorFull(const Oscillator& oscillator)
             // Update all waveform component properties
             entry.waveform->setProcessingMode(oscillator.getProcessingMode());
             entry.waveform->setColour(oscillator.getColour());
-                entry.waveform->setOpacity(oscillator.getOpacity());
-                entry.waveform->setLineWidth(oscillator.getLineWidth());
-                            entry.waveform->setVisible(oscillator.isVisible());
-                            entry.waveform->setShaderId(oscillator.getShaderId());            entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
-                            entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
-                
-                            // Repaint to reflect changes            repaint();
+            entry.waveform->setOpacity(oscillator.getOpacity());
+            entry.waveform->setLineWidth(oscillator.getLineWidth());
+            entry.waveform->setVisible(oscillator.isVisible());
+            entry.waveform->setShaderId(oscillator.getShaderId());
+            entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
+            entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
+
+            // Repaint to reflect changes
+            repaint();
             break;
         }
     }
@@ -388,6 +411,15 @@ void PaneComponent::setShowGrid(bool enabled)
     {
         if (entry.waveform)
             entry.waveform->setShowGrid(enabled);
+    }
+}
+
+void PaneComponent::setGridConfig(const GridConfiguration& config)
+{
+    for (auto& entry : waveforms_)
+    {
+        if (entry.waveform)
+            entry.waveform->setGridConfig(config);
     }
 }
 

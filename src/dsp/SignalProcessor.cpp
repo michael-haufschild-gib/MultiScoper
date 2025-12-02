@@ -9,36 +9,45 @@
 namespace oscil
 {
 
-void SignalProcessor::process(const float* leftChannel,
-                               const float* rightChannel,
-                               int numSamples,
+void SignalProcessor::process(std::span<const float> leftChannel,
+                               std::span<const float> rightChannel,
                                ProcessingMode mode,
                                ProcessedSignal& output) const
 {
+    // Validate input
+    if (leftChannel.empty())
+    {
+        output.clear();
+        return;
+    }
+
+    // If right channel is provided, ensure size matches left
+    // If mismatch, use minimum size (or treat as mono if right is empty)
+    
     switch (mode)
     {
         case ProcessingMode::FullStereo:
-            processFullStereo(leftChannel, rightChannel, numSamples, output);
+            processFullStereo(leftChannel, rightChannel, output);
             break;
 
         case ProcessingMode::Mono:
-            processMono(leftChannel, rightChannel, numSamples, output);
+            processMono(leftChannel, rightChannel, output);
             break;
 
         case ProcessingMode::Mid:
-            processMid(leftChannel, rightChannel, numSamples, output);
+            processMid(leftChannel, rightChannel, output);
             break;
 
         case ProcessingMode::Side:
-            processSide(leftChannel, rightChannel, numSamples, output);
+            processSide(leftChannel, rightChannel, output);
             break;
 
         case ProcessingMode::Left:
-            processLeft(leftChannel, numSamples, output);
+            processLeft(leftChannel, output);
             break;
 
         case ProcessingMode::Right:
-            processRight(rightChannel, numSamples, output);
+            processRight(rightChannel, output);
             break;
     }
 }
@@ -54,111 +63,120 @@ void SignalProcessor::process(const juce::AudioBuffer<float>& input,
         return;
     }
 
-    const float* left = input.getReadPointer(0);
-    const float* right = input.getNumChannels() > 1 ? input.getReadPointer(1) : left;
+    // Construct spans from buffer
+    std::span<const float> left(input.getReadPointer(0), static_cast<size_t>(input.getNumSamples()));
+    std::span<const float> right;
+    
+    if (input.getNumChannels() > 1)
+    {
+        right = std::span<const float>(input.getReadPointer(1), static_cast<size_t>(input.getNumSamples()));
+    }
 
-    process(left, right, input.getNumSamples(), mode, output);
+    process(left, right, mode, output);
 }
 
-void SignalProcessor::processFullStereo(const float* left, const float* right,
-                                         int numSamples, ProcessedSignal& output) const
+void SignalProcessor::processFullStereo(std::span<const float> left, std::span<const float> right,
+                                         ProcessedSignal& output) const
 {
+    int numSamples = static_cast<int>(left.size());
     output.resize(numSamples, true);
 
-    if (left != nullptr)
+    std::copy(left.begin(), left.end(), output.channel1.begin());
+
+    if (!right.empty())
     {
-        std::copy(left, left + numSamples, output.channel1.begin());
+        // Ensure right has enough samples, copy available
+        size_t copyCount = std::min(right.size(), static_cast<size_t>(numSamples));
+        std::copy(right.begin(), right.begin() + static_cast<std::ptrdiff_t>(copyCount), output.channel2.begin());
+        
+        // Fill remaining with silence if right is shorter (unlikely in normal usage)
+        if (copyCount < static_cast<size_t>(numSamples))
+        {
+            std::fill(output.channel2.begin() + static_cast<std::ptrdiff_t>(copyCount), output.channel2.end(), 0.0f);
+        }
     }
     else
     {
-        output.clear();
-    }
-
-    if (right != nullptr)
-    {
-        std::copy(right, right + numSamples, output.channel2.begin());
-    }
-    else if (left != nullptr)
-    {
         // Mono source: duplicate left to right
-        std::copy(left, left + numSamples, output.channel2.begin());
+        std::copy(left.begin(), left.end(), output.channel2.begin());
     }
 }
 
-void SignalProcessor::processMono(const float* left, const float* right,
-                                   int numSamples, ProcessedSignal& output) const
+void SignalProcessor::processMono(std::span<const float> left, std::span<const float> right,
+                                   ProcessedSignal& output) const
 {
+    int numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
+
+    bool hasRight = !right.empty();
+    size_t rightSize = right.size();
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float l = (left != nullptr) ? left[i] : 0.0f;
-        float r = (right != nullptr) ? right[i] : l;
+        float l = left[static_cast<size_t>(i)];
+        float r = (hasRight && static_cast<size_t>(i) < rightSize) ? right[static_cast<size_t>(i)] : l;
         output.channel1[static_cast<size_t>(i)] = (l + r) * 0.5f;
     }
 }
 
-void SignalProcessor::processMid(const float* left, const float* right,
-                                  int numSamples, ProcessedSignal& output) const
+void SignalProcessor::processMid(std::span<const float> left, std::span<const float> right,
+                                  ProcessedSignal& output) const
 {
     // Mid = (L+R)/2 - identical to mono
-    processMono(left, right, numSamples, output);
+    processMono(left, right, output);
 }
 
-void SignalProcessor::processSide(const float* left, const float* right,
-                                   int numSamples, ProcessedSignal& output) const
+void SignalProcessor::processSide(std::span<const float> left, std::span<const float> right,
+                                   ProcessedSignal& output) const
 {
+    int numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
+
+    bool hasRight = !right.empty();
+    size_t rightSize = right.size();
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float l = (left != nullptr) ? left[i] : 0.0f;
-        float r = (right != nullptr) ? right[i] : l;
+        float l = left[static_cast<size_t>(i)];
+        float r = (hasRight && static_cast<size_t>(i) < rightSize) ? right[static_cast<size_t>(i)] : l;
         output.channel1[static_cast<size_t>(i)] = (l - r) * 0.5f;
     }
 }
 
-void SignalProcessor::processLeft(const float* left, int numSamples, ProcessedSignal& output) const
+void SignalProcessor::processLeft(std::span<const float> left, ProcessedSignal& output) const
 {
+    int numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
-
-    if (left != nullptr)
-    {
-        std::copy(left, left + numSamples, output.channel1.begin());
-    }
-    else
-    {
-        output.clear();
-    }
+    std::copy(left.begin(), left.end(), output.channel1.begin());
 }
 
-void SignalProcessor::processRight(const float* right, int numSamples, ProcessedSignal& output) const
+void SignalProcessor::processRight(std::span<const float> right, ProcessedSignal& output) const
 {
-    output.resize(numSamples, false);
-
-    if (right != nullptr)
-    {
-        std::copy(right, right + numSamples, output.channel1.begin());
-    }
-    else
+    if (right.empty())
     {
         output.clear();
+        return;
     }
+
+    int numSamples = static_cast<int>(right.size());
+    output.resize(numSamples, false);
+    std::copy(right.begin(), right.end(), output.channel1.begin());
 }
 
-float SignalProcessor::calculateCorrelation(const float* leftChannel,
-                                             const float* rightChannel,
-                                             int numSamples)
+float SignalProcessor::calculateCorrelation(std::span<const float> leftChannel,
+                                             std::span<const float> rightChannel)
 {
-    // Need at least 2 samples for meaningful correlation calculation
-    // With 1 sample, variance is undefined (division by zero risk)
-    if (leftChannel == nullptr || rightChannel == nullptr || numSamples < 2)
+    if (leftChannel.empty() || rightChannel.empty())
+        return 0.0f;
+
+    size_t numSamples = std::min(leftChannel.size(), rightChannel.size());
+    if (numSamples < 2)
         return 0.0f;
 
     double sumL = 0.0, sumR = 0.0, sumLR = 0.0;
     double sumL2 = 0.0, sumR2 = 0.0;
 
-    for (int i = 0; i < numSamples; ++i)
+    for (size_t i = 0; i < numSamples; ++i)
     {
         double l = leftChannel[i];
         double r = rightChannel[i];
@@ -187,60 +205,69 @@ float SignalProcessor::calculateCorrelation(const float* leftChannel,
     return static_cast<float>(numerator / denominator);
 }
 
-float SignalProcessor::calculatePeak(const float* samples, int numSamples)
+float SignalProcessor::calculatePeak(std::span<const float> samples)
 {
-    if (samples == nullptr || numSamples <= 0)
+    if (samples.empty())
         return 0.0f;
 
     float peak = 0.0f;
-    for (int i = 0; i < numSamples; ++i)
+    for (float sample : samples)
     {
-        float absVal = std::abs(samples[i]);
+        float absVal = std::abs(sample);
         if (absVal > peak)
             peak = absVal;
     }
     return peak;
 }
 
-float SignalProcessor::calculateRMS(const float* samples, int numSamples)
+float SignalProcessor::calculateRMS(std::span<const float> samples)
 {
-    if (samples == nullptr || numSamples <= 0)
+    if (samples.empty())
         return 0.0f;
 
     double sumSquares = 0.0;
-    for (int i = 0; i < numSamples; ++i)
+    for (float sample : samples)
     {
-        sumSquares += samples[i] * samples[i];
+        sumSquares += sample * sample;
     }
-    return static_cast<float>(std::sqrt(sumSquares / numSamples));
+    return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samples.size())));
 }
 
-void SignalProcessor::decimate(const float* input, int inputLength,
-                                float* output, int outputLength, bool preservePeaks)
+void SignalProcessor::decimate(std::span<const float> input,
+                                std::span<float> output,
+                                bool preservePeaks)
 {
-    if (input == nullptr || output == nullptr || inputLength <= 0 || outputLength <= 0)
+    if (input.empty() || output.empty())
         return;
+
+    size_t inputLength = input.size();
+    size_t outputLength = output.size();
 
     if (inputLength <= outputLength)
     {
         // Upsampling or same size - copy input and fill remaining with last value
-        std::copy(input, input + inputLength, output);
+        size_t copyCount = std::min(inputLength, outputLength);
+        std::copy(input.begin(), input.begin() + static_cast<std::ptrdiff_t>(copyCount), output.begin());
 
         // Fill remaining output with the last input value (sample-and-hold)
-        if (inputLength < outputLength && inputLength > 0)
+        if (copyCount < outputLength && copyCount > 0)
         {
-            float lastValue = input[inputLength - 1];
-            std::fill(output + inputLength, output + outputLength, lastValue);
+            float lastValue = input[copyCount - 1];
+            std::fill(output.begin() + static_cast<std::ptrdiff_t>(copyCount), output.end(), lastValue);
+        }
+        else if (copyCount < outputLength)
+        {
+             std::fill(output.begin() + static_cast<std::ptrdiff_t>(copyCount), output.end(), 0.0f);
         }
         return;
     }
 
     float samplesPerOutput = static_cast<float>(inputLength) / static_cast<float>(outputLength);
 
-    for (int i = 0; i < outputLength; ++i)
+    for (size_t i = 0; i < outputLength; ++i)
     {
-        int startIdx = static_cast<int>(static_cast<float>(i) * samplesPerOutput);
-        int endIdx = static_cast<int>(static_cast<float>(i + 1) * samplesPerOutput);
+        size_t startIdx = static_cast<size_t>(static_cast<float>(i) * samplesPerOutput);
+        size_t endIdx = static_cast<size_t>(static_cast<float>(i + 1) * samplesPerOutput);
         endIdx = std::min(endIdx, inputLength);
 
         if (preservePeaks)
@@ -248,7 +275,7 @@ void SignalProcessor::decimate(const float* input, int inputLength,
             // Find max absolute value in range
             float maxVal = 0.0f;
             float maxSample = 0.0f;
-            for (int j = startIdx; j < endIdx; ++j)
+            for (size_t j = startIdx; j < endIdx; ++j)
             {
                 float absVal = std::abs(input[j]);
                 if (absVal > maxVal)
@@ -263,8 +290,8 @@ void SignalProcessor::decimate(const float* input, int inputLength,
         {
             // Average samples in range
             float sum = 0.0f;
-            int count = endIdx - startIdx;
-            for (int j = startIdx; j < endIdx; ++j)
+            size_t count = endIdx - startIdx;
+            for (size_t j = startIdx; j < endIdx; ++j)
             {
                 sum += input[j];
             }
@@ -281,40 +308,49 @@ void AdaptiveDecimator::setDisplayWidth(int widthPixels)
     targetSamples_ = displayWidth_ * 2; // 2 samples per pixel for good visual quality
 }
 
-void AdaptiveDecimator::process(const float* input, int inputLength,
+void AdaptiveDecimator::process(std::span<const float> input,
                                  std::vector<float>& output) const
 {
     output.resize(static_cast<size_t>(targetSamples_));
-
-    SignalProcessor::decimate(input, inputLength, output.data(), targetSamples_, true);
+    // Wrap output vector in span
+    std::span<float> outSpan(output.data(), output.size());
+    SignalProcessor::decimate(input, outSpan, true);
 }
 
-void AdaptiveDecimator::processWithEnvelope(const float* input, int inputLength,
+void AdaptiveDecimator::processWithEnvelope(std::span<const float> input,
                                              std::vector<float>& minEnvelope,
                                              std::vector<float>& maxEnvelope) const
 {
     minEnvelope.resize(static_cast<size_t>(displayWidth_));
     maxEnvelope.resize(static_cast<size_t>(displayWidth_));
 
-    if (inputLength <= 0)
+    if (input.empty())
     {
         std::fill(minEnvelope.begin(), minEnvelope.end(), 0.0f);
         std::fill(maxEnvelope.begin(), maxEnvelope.end(), 0.0f);
         return;
     }
 
+    size_t inputLength = input.size();
     float samplesPerPixel = static_cast<float>(inputLength) / static_cast<float>(displayWidth_);
 
     for (int i = 0; i < displayWidth_; ++i)
     {
-        int startIdx = static_cast<int>(static_cast<float>(i) * samplesPerPixel);
-        int endIdx = static_cast<int>(static_cast<float>(i + 1) * samplesPerPixel);
+        size_t startIdx = static_cast<size_t>(static_cast<float>(i) * samplesPerPixel);
+        size_t endIdx = static_cast<size_t>(static_cast<float>(i + 1) * samplesPerPixel);
         endIdx = std::min(endIdx, inputLength);
+
+        if (startIdx >= endIdx) // Should not happen if calculation is correct
+        {
+             minEnvelope[static_cast<size_t>(i)] = 0.0f;
+             maxEnvelope[static_cast<size_t>(i)] = 0.0f;
+             continue;
+        }
 
         float minVal = input[startIdx];
         float maxVal = input[startIdx];
 
-        for (int j = startIdx + 1; j < endIdx; ++j)
+        for (size_t j = startIdx + 1; j < endIdx; ++j)
         {
             minVal = std::min(minVal, input[j]);
             maxVal = std::max(maxVal, input[j]);

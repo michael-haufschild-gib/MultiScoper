@@ -6,17 +6,21 @@
 ## Quick Reference
 
 ```bash
-# Build tests
-cd build && cmake -DOSCIL_BUILD_TESTS=ON .. && cmake --build . --target OscilTests
+# Build with tests (dev preset includes tests)
+cmake --preset dev
+cmake --build --preset dev
 
-# Run all tests
-./build/OscilTests
+# Run all tests via CTest
+ctest --preset dev
+
+# Run tests directly
+./build/dev/OscilTests
 
 # Run specific test
-./build/OscilTests --gtest_filter="SignalProcessorTest.*"
+./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*"
 
-# Run with XML output
-./build/OscilTests --gtest_output=xml:test-results/results.xml
+# Run with XML output for CI
+./build/dev/OscilTests --gtest_output=xml:test-results/results.xml
 ```
 
 ## Where to Put Tests
@@ -226,26 +230,29 @@ TEST_F(CaptureBufferTest, ThreadSafetyConcurrentAccess)
 
 ```bash
 # All tests in a fixture
-./build/OscilTests --gtest_filter="SignalProcessorTest.*"
+./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*"
 
 # Specific test
-./build/OscilTests --gtest_filter="SignalProcessorTest.MonoSumming"
+./build/dev/OscilTests --gtest_filter="SignalProcessorTest.MonoSumming"
 
 # Multiple patterns
-./build/OscilTests --gtest_filter="Signal*:Instance*"
+./build/dev/OscilTests --gtest_filter="Signal*:Instance*"
 
 # Exclude tests
-./build/OscilTests --gtest_filter="-*Slow*"
+./build/dev/OscilTests --gtest_filter="-*Slow*"
 ```
 
-## CMake Test Integration
+## CTest Presets
 
 ```bash
-# Run via CTest
-cd build && ctest --output-on-failure
+# Run via CTest with preset
+ctest --preset dev
 
-# Verbose
-cd build && ctest -V
+# Verbose output
+ctest --preset dev -V
+
+# Output on failure only
+ctest --preset dev --output-on-failure
 ```
 
 ## Common Mistakes
@@ -287,13 +294,11 @@ The E2E test harness is a standalone JUCE application that simulates a DAW envir
 
 ```bash
 # Configure with test harness enabled
-cd build && cmake -DOSCIL_BUILD_TEST_HARNESS=ON -DOSCIL_BUILD_TESTS=ON ..
-
-# Build test harness
-cmake --build . --target OscilTestHarness
+cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target OscilTestHarness
 
 # Run test harness (starts HTTP server on port 8765)
-./OscilTestHarness_artefacts/OscilTestHarness.app/Contents/MacOS/OscilTestHarness
+"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"
 ```
 
 ### Test Harness HTTP API

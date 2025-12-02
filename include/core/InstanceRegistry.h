@@ -14,9 +14,6 @@
 #include <functional>
 #include <atomic>
 
-// Include Source.h for SourceId, InstanceId, and related types
-// Must be before namespace oscil to avoid double-namespace
-#include "Source.h"
 #include "IInstanceRegistry.h"
 
 namespace oscil
@@ -25,68 +22,6 @@ namespace oscil
 // Forward declarations
 class SharedCaptureBuffer;
 class OscilPluginProcessor;
-
-/**
- * Information about a registered audio source.
- *
- * Thread safety note: The copy constructor and assignment operator read from
- * the `active` atomic without external synchronization. These operations are
- * only safe when called while holding InstanceRegistry::mutex_ (which is the
- * case for all internal usage). Direct access to SourceInfo outside the
- * registry should use const references from getAllSources() which returns
- * copies made under the lock.
- */
-struct SourceInfo
-{
-    SourceId sourceId;
-    juce::String name;                          // User-friendly name (DAW track name if available)
-    int channelCount = 2;                       // Number of channels (1 = mono, 2 = stereo)
-    double sampleRate = 44100.0;
-    std::weak_ptr<SharedCaptureBuffer> buffer;  // Weak reference to capture buffer
-    std::atomic<bool> active{ true };
-
-    SourceInfo() = default;
-
-    // Copy constructor - safe when called under InstanceRegistry::mutex_
-    // Uses relaxed ordering since mutex provides synchronization
-    SourceInfo(const SourceInfo& other)
-        : sourceId(other.sourceId)
-        , name(other.name)
-        , channelCount(other.channelCount)
-        , sampleRate(other.sampleRate)
-        , buffer(other.buffer)
-        , active(other.active.load(std::memory_order_relaxed))
-    {}
-
-    // Assignment operator - safe when called under InstanceRegistry::mutex_
-    // Uses relaxed ordering since mutex provides synchronization
-    SourceInfo& operator=(const SourceInfo& other)
-    {
-        if (this != &other)
-        {
-            sourceId = other.sourceId;
-            name = other.name;
-            channelCount = other.channelCount;
-            sampleRate = other.sampleRate;
-            buffer = other.buffer;
-            active.store(other.active.load(std::memory_order_relaxed),
-                        std::memory_order_relaxed);
-        }
-        return *this;
-    }
-};
-
-/**
- * Listener interface for registry changes
- */
-class InstanceRegistryListener
-{
-public:
-    virtual ~InstanceRegistryListener() = default;
-    virtual void sourceAdded(const SourceId& sourceId) = 0;
-    virtual void sourceRemoved(const SourceId& sourceId) = 0;
-    virtual void sourceUpdated(const SourceId& sourceId) = 0;
-};
 
 /**
  * Singleton registry for all active Oscil plugin instances.
