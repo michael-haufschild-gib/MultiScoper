@@ -293,7 +293,7 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     if (hasError())
     {
         g.setColour(theme_.statusError.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_CAPTION)));
         g.drawText(errorMessage_,
             bounds.translated(0, bounds.getHeight() + 2).withHeight(14),
             juce::Justification::left);
@@ -311,9 +311,9 @@ void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<fl
     float radius = 5.0f;
 
     g.setColour(theme_.textSecondary.withAlpha(opacity));
-    g.drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2, 1.5f);
+    g.drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2, ComponentLayout::BORDER_MEDIUM);
     g.drawLine(cx + radius * 0.7f, cy + radius * 0.7f,
-               cx + radius * 1.5f, cy + radius * 1.5f, 1.5f);
+               cx + radius * 1.5f, cy + radius * 1.5f, ComponentLayout::BORDER_MEDIUM);
 }
 
 void OscilTextField::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
@@ -429,7 +429,7 @@ void OscilTextField::updateEditorStyle()
     editor_->setColour(juce::TextEditor::highlightColourId, theme_.controlActive.withAlpha(0.3f));
     editor_->setColour(juce::CaretComponent::caretColourId, theme_.controlActive);
 
-    editor_->setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
+    editor_->setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
     editor_->setTextToShowWhenEmpty(placeholder_, theme_.textSecondary);
 }
 

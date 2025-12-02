@@ -4,6 +4,8 @@
 
 #include "TestElementRegistry.h"
 
+#include <iostream>
+
 namespace oscil::test
 {
 

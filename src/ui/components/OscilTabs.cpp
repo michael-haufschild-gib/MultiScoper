@@ -7,6 +7,9 @@
 namespace oscil
 {
 
+static constexpr float kTabFontSize = 13.0f;
+static constexpr float kBadgeFontSize = 10.0f;
+
 OscilTabs::OscilTabs()
     : indicatorXSpring_(SpringPresets::snappy())
     , indicatorWidthSpring_(SpringPresets::snappy())
@@ -242,7 +245,7 @@ int OscilTabs::getPreferredWidth() const
             }
             else
             {
-                auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+                auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
                 juce::GlyphArrangement glyphs;
                 glyphs.addLineOfText(font, tab.label, 0, 0);
                 int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -258,7 +261,7 @@ int OscilTabs::getPreferredWidth() const
         int maxWidth = 0;
         for (const auto& tab : tabs_)
         {
-            auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+            auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
             juce::GlyphArrangement glyphs;
             glyphs.addLineOfText(font, tab.label, 0, 0);
             int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -339,7 +342,7 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     int contentWidth = 0;
 
     // Calculate total content width for centering
-    auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+    auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, tab.label, 0, 0);
     int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -443,7 +446,7 @@ void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int c
     g.fillEllipse(bounds.toFloat());
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(kBadgeFontSize)).boldened());
 
     juce::String text = count > 99 ? "99+" : juce::String(count);
     g.drawText(text, bounds, juce::Justification::centred);
@@ -500,7 +503,7 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
         {
             // Calculate position based on preceding tab widths
             int x = 0;
-            auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+            auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
 
             for (size_t i = 0; i < static_cast<size_t>(index); ++i)
             {

@@ -31,6 +31,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/SourceSelectorComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SettingsDropdown.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SidebarComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/OscillatorListComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/SourceItemComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/SegmentedButtonBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/OscillatorListToolbar.cpp

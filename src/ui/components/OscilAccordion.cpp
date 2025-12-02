@@ -241,7 +241,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 
     // Title
     g.setColour(theme_.textPrimary.withAlpha(opacity));
-    g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).boldened());
     g.drawText(title_, contentBounds, juce::Justification::centredLeft);
 
     // Focus ring
@@ -271,7 +271,7 @@ void OscilAccordionSection::paintChevron(juce::Graphics& g, juce::Rectangle<floa
 
     chevron.applyTransform(juce::AffineTransform::rotation(rotation, cx, cy));
 
-    g.strokePath(chevron, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved,
+    g.strokePath(chevron, juce::PathStrokeType(ComponentLayout::BORDER_MEDIUM, juce::PathStrokeType::curved,
                                                 juce::PathStrokeType::rounded));
 }
 

@@ -76,5 +76,124 @@ inline juce::Path createMonoIcon(float size, float strokeWidth = 1.5f)
     return path;
 }
 
+/**
+ * Create a Mid icon (M shape)
+ * Represents the Mid component (L+R)/2
+ */
+inline juce::Path createMidIcon(float size, float strokeWidth = 1.5f)
+{
+    juce::Path path;
+    
+    float pad = size * 0.25f;
+    float w = size - 2 * pad;
+    float h = size - 2 * pad;
+    float x = pad;
+    float y = pad;
+    
+    path.startNewSubPath(x, y + h);
+    path.lineTo(x, y);
+    path.lineTo(x + w * 0.5f, y + h * 0.8f);
+    path.lineTo(x + w, y);
+    path.lineTo(x + w, y + h);
+
+    juce::Path stroked;
+    juce::PathStrokeType stroke(strokeWidth);
+    stroke.setJointStyle(juce::PathStrokeType::mitered);
+    stroke.createStrokedPath(stroked, path);
+    
+    return stroked;
+}
+
+/**
+ * Create a Side icon (S shape)
+ * Represents the Side component (L-R)/2
+ */
+inline juce::Path createSideIcon(float size, float strokeWidth = 1.5f)
+{
+    juce::Path path;
+    
+    float pad = size * 0.25f;
+    float w = size - 2 * pad;
+    float h = size - 2 * pad;
+    float x = pad;
+    float y = pad;
+    
+    // Simplified S shape (3 segments)
+    path.startNewSubPath(x + w, y);
+    path.lineTo(x, y);
+    path.lineTo(x, y + h * 0.5f);
+    path.lineTo(x + w, y + h * 0.5f);
+    path.lineTo(x + w, y + h);
+    path.lineTo(x, y + h);
+
+    juce::Path stroked;
+    juce::PathStrokeType stroke(strokeWidth);
+    stroke.setJointStyle(juce::PathStrokeType::curved); // Use curved joins for S feel
+    stroke.createStrokedPath(stroked, path);
+    
+    return stroked;
+}
+
+/**
+ * Create a Left icon (L shape)
+ * Represents the Left channel
+ */
+inline juce::Path createLeftIcon(float size, float strokeWidth = 1.5f)
+{
+    juce::Path path;
+    
+    float pad = size * 0.25f;
+    float w = size - 2 * pad;
+    float h = size - 2 * pad;
+    float x = pad;
+    float y = pad;
+    
+    path.startNewSubPath(x, y);
+    path.lineTo(x, y + h);
+    path.lineTo(x + w, y + h);
+
+    juce::Path stroked;
+    juce::PathStrokeType stroke(strokeWidth);
+    stroke.setJointStyle(juce::PathStrokeType::mitered);
+    stroke.createStrokedPath(stroked, path);
+    
+    return stroked;
+}
+
+/**
+ * Create a Right icon (R shape)
+ * Represents the Right channel
+ */
+inline juce::Path createRightIcon(float size, float strokeWidth = 1.5f)
+{
+    juce::Path path;
+    
+    float pad = size * 0.25f;
+    float w = size - 2 * pad;
+    float h = size - 2 * pad;
+    float x = pad;
+    float y = pad;
+    
+    // Vertical line
+    path.startNewSubPath(x, y + h);
+    path.lineTo(x, y);
+    
+    // Loop (P shape)
+    path.lineTo(x + w * 0.8f, y);
+    path.lineTo(x + w * 0.8f, y + h * 0.5f);
+    path.lineTo(x, y + h * 0.5f);
+    
+    // Leg
+    path.startNewSubPath(x + w * 0.2f, y + h * 0.5f);
+    path.lineTo(x + w, y + h);
+
+    juce::Path stroked;
+    juce::PathStrokeType stroke(strokeWidth);
+    stroke.setJointStyle(juce::PathStrokeType::mitered);
+    stroke.createStrokedPath(stroked, path);
+    
+    return stroked;
+}
+
 } // namespace ProcessingModeIcons
 } // namespace oscil

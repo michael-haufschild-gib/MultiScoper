@@ -6,6 +6,7 @@
 #include "ui/OscillatorListItem.h"
 #include "ui/components/ProcessingModeIcons.h"
 #include "ui/components/ListItemIcons.h"
+#include "ui/components/ComponentConstants.h"
 #include "core/IInstanceRegistry.h"
 
 namespace oscil
@@ -100,10 +101,10 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
     modeButtons_->setMinButtonWidth(36);  // Compact buttons for 6 modes
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(14), static_cast<int>(ProcessingMode::FullStereo));
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(14), static_cast<int>(ProcessingMode::Mono));
-    modeButtons_->addButton("M", static_cast<int>(ProcessingMode::Mid));
-    modeButtons_->addButton("S", static_cast<int>(ProcessingMode::Side));
-    modeButtons_->addButton("L", static_cast<int>(ProcessingMode::Left));
-    modeButtons_->addButton("R", static_cast<int>(ProcessingMode::Right));
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMidIcon(14), static_cast<int>(ProcessingMode::Mid));
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createSideIcon(14), static_cast<int>(ProcessingMode::Side));
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createLeftIcon(14), static_cast<int>(ProcessingMode::Left));
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(14), static_cast<int>(ProcessingMode::Right));
     if (suffix.isNotEmpty()) 
     {
         // SegmentedButtonBar doesn't easily support setting IDs for internal buttons via this API
@@ -177,23 +178,23 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
     if (selected_)
     {
         g.setColour(theme.backgroundSecondary.brighter(0.05f));
-        g.fillRoundedRectangle(bounds.reduced(2), 8.0f);
+        g.fillRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_LG);
         
         g.setColour(hasFocus_ ? theme.controlActive.withAlpha(0.8f) : theme.controlBorder.withAlpha(0.5f));
-        g.drawRoundedRectangle(bounds.reduced(2), 8.0f, hasFocus_ ? 2.0f : 1.0f);
+        g.drawRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_LG, hasFocus_ ? 2.0f : 1.0f);
     }
     else
     {
         if (isHovered_)
         {
             g.setColour(theme.controlHighlight.withAlpha(0.2f));
-            g.fillRoundedRectangle(bounds.reduced(2), 6.0f);
+            g.fillRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_MD);
         }
         
         if (hasFocus_)
         {
             g.setColour(theme.controlActive.withAlpha(0.6f));
-            g.drawRoundedRectangle(bounds.reduced(2), 6.0f, 2.0f);
+            g.drawRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_MD, 2.0f);
         }
     }
 
@@ -224,11 +225,11 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
     auto trackBounds = juce::Rectangle<float>(textX, nameBounds.getBottom(), textW, topH * 0.45f);
     
     g.setColour((selected_ ? theme.textHighlight : theme.textPrimary).withAlpha(alpha));
-    g.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
+    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT).withStyle("Bold"));
     g.drawText(displayName_, nameBounds, juce::Justification::bottomLeft, true);
 
     g.setColour(theme.textSecondary.withAlpha(alpha));
-    g.setFont(juce::FontOptions(12.0f));
+    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
     g.drawText(trackName_, trackBounds, juce::Justification::topLeft, true);
 }
 

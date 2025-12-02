@@ -141,7 +141,7 @@ int OscilToggle::getPreferredWidth() const
 
     if (label_.isNotEmpty())
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -154,7 +154,7 @@ int OscilToggle::getPreferredWidth() const
 int OscilToggle::getPreferredHeight() const
 {
     return std::max(ComponentLayout::TOGGLE_HEIGHT,
-                    static_cast<int>(juce::Font(juce::FontOptions().withHeight(13.0f)).getHeight()));
+                    static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
 }
 
 void OscilToggle::paint(juce::Graphics& g)
@@ -180,12 +180,12 @@ void OscilToggle::paint(juce::Graphics& g)
             .withLeft(ComponentLayout::TOGGLE_WIDTH + ComponentLayout::SPACING_SM);
 
         g.setColour(theme_.textPrimary.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());

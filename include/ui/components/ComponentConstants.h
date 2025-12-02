@@ -30,7 +30,10 @@ namespace ComponentLayout
     static constexpr int MODAL_MIN_WIDTH = 280;
 
     // Typography
+    static constexpr float FONT_SIZE_CAPTION = 11.0f;
+    static constexpr float FONT_SIZE_SMALL = 12.0f;
     static constexpr float FONT_SIZE_DEFAULT = 14.0f;
+    static constexpr float FONT_SIZE_HEADER = 16.0f;
 
     // Button Internal Layout
     static constexpr int BUTTON_SEGMENT_PADDING = 6;

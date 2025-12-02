@@ -107,7 +107,7 @@ int OscilRadioButton::getPreferredWidth() const
 
     if (label_.isNotEmpty())
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -119,7 +119,7 @@ int OscilRadioButton::getPreferredWidth() const
 
 int OscilRadioButton::getPreferredHeight() const
 {
-    return std::max(RADIO_SIZE, static_cast<int>(juce::Font(juce::FontOptions().withHeight(13.0f)).getHeight()));
+    return std::max(RADIO_SIZE, static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
 }
 
 void OscilRadioButton::paint(juce::Graphics& g)
@@ -145,12 +145,12 @@ void OscilRadioButton::paint(juce::Graphics& g)
             .withLeft(RADIO_SIZE + ComponentLayout::SPACING_SM);
 
         g.setColour(theme_.textPrimary.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
+        g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -194,7 +194,7 @@ void OscilRadioButton::paintCircle(juce::Graphics& g, const juce::Rectangle<floa
     // Border
     auto borderColour = selected_ ? theme_.controlActive : theme_.controlBorder;
     g.setColour(borderColour.withAlpha(opacity));
-    g.drawEllipse(bounds.reduced(0.5f), 1.0f);
+    g.drawEllipse(bounds.reduced(0.5f), ComponentLayout::BORDER_THIN);
 }
 
 void OscilRadioButton::paintDot(juce::Graphics& g, const juce::Rectangle<float>& bounds)

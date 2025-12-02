@@ -317,6 +317,10 @@ if(OSCIL_BUILD_TESTS)
         tests/test_oscil_tabs.cpp
         tests/test_oscil_textfield.cpp
         tests/test_oscil_transportsync.cpp
+        tests/test_oscillator_list_component.cpp
+
+        # Test Harness Dependencies
+        test_harness/src/TestElementRegistry.cpp
 
         # Include necessary source files for testing
         src/core/InstanceRegistry.cpp
@@ -343,6 +347,7 @@ if(OSCIL_BUILD_TESTS)
         src/ui/SourceSelectorComponent.cpp
         src/ui/SettingsDropdown.cpp
         src/ui/SidebarComponent.cpp
+        src/ui/OscillatorListComponent.cpp
         src/ui/SourceItemComponent.cpp
         src/ui/components/SegmentedButtonBar.cpp
         src/ui/OscillatorListToolbar.cpp
@@ -444,6 +449,7 @@ if(OSCIL_BUILD_TESTS)
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_harness/include
             ${httplib_SOURCE_DIR}
     )
 
@@ -480,6 +486,7 @@ if(OSCIL_BUILD_TESTS)
             JUCE_STANDALONE_APPLICATION=1
             JUCE_USE_CURL=0
             JUCE_WEB_BROWSER=0
+            OSCIL_ENABLE_TEST_IDS=1
             $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
     )
 

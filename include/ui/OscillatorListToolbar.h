@@ -33,7 +33,8 @@ enum class OscillatorFilterMode
  * Provides filter and count display
  */
 class OscillatorListToolbar : public juce::Component,
-                               public ThemeManagerListener
+                               public ThemeManagerListener,
+                               public TestIdSupport
 {
 public:
     /**
@@ -81,6 +82,8 @@ private:
 
     juce::ListenerList<Listener> listeners_;
 
+    // TestIdSupport
+    void registerTestId() override;
     OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListToolbar)

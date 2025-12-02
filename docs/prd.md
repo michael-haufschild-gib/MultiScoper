@@ -4661,6 +4661,75 @@ then create a plan to add elements and to refactor existing elements based on yo
 
 ----
 
- * RenderEngine: Continue refactoring by extracting effect management or specific render passes (e.g., ParticleRenderer).
-   * EffectChain: Could be further decoupled from RenderEngine.
-   * UI Components: Continue identifying large UI components that can be broken down.
+
+  * Standardize colors using ThemeManager constants where any hardcoded hex values remain.
+
+ Continue reviewing other large components for similar refactoring opportunities (e.g., OscilPluginEditor.cpp).
+   * add unit tests specifically for the new OscillatorListComponent logic if not covered by existing E2E tests.
+
+
+plan the refactoring of OscilPluginEditor.cpp to break it into smaller components
+
+
+1. in the src/ui/components/OscilModal.cpp component, for the x icon in the top right corner to close the modal, use the image resources/icomoon/SVG/cross.svg
+2. make sure the icon is in the correct position following best ui practices (currently it sits in the first line next to other components).
+2. make sure every modal / dialog uses the src/ui/components/OscilModal.cpp and is not duplicating functionality we have already implemented in src/ui/components/OscilModal.cpp
+
+---
+plan and then implement the following new feature:
+1. every pan has in its header bar, utmost right, an x icon using resources/icomoon/SVG/cross.svg
+2. when clicked, the pane gets removed
+3. removing the pane will set all oscillators using this pane to have no pane, and they are set to invisible
+
+---
+plan and then implement the following new feature:
+1. an oscillator in the sidebar oscillator list is always set to invisible when it is not assigned to a valid pane.
+2. if the user tries to set the oscillator to visible, a modal appears.
+3. the modal has:
+   1. a title "Select Pane"
+   2. an x close button in the top right (already provided in src/ui/components/OscilModal.cpp)
+   3. a dropdown to select a pane or create a new pane
+   4. an ok button
+4. when closing the modal via the header x close icon, the process gets canceled
+5. when clicking the ok button without a valid pane selected or "new pane" selected, an error message is displayed
+6. when clicking the ok button with a valid existing pane selected:
+   1. the oscillator is assigned to this pane
+   2. the oscillator is set visible
+7. when clicking the ok button with "new pane" selected:
+   1. a new pane is created
+   2. the oscillator is assigned to this new pane
+   3. the oscillator is set visible
+8. Pane dropdown selection and creation is already available in two places in this project: the "add oscillator" dialog and the oscillator config popup. consolidate the code so we do not have duplicated code/functionality.
+
+
+---
+
+High – RenderEngine.cpp (~1.3K LOC, esp. init/render/shutdown sections) bundles OpenGL context bootstrapping, shader compilation, framebuffer pooling, per-frame orchestration, waveform compositing, and diagnostics. Extract subsystems (RenderBootstrapper, EffectPipeline, WaveformPass, HUD/Stats) to keep real-time rendering code auditable and avoid regressions when touching one concern.
+
+High – PluginEditor.cpp (~1.1K LOC across constructor/timer/layout handlers) currently couples coordinator creation, sidebar wiring, OpenGL toggling, test-server lifecycle, metrics reporting, drag-drop handling, and pane refresh logic. Break into presenter/controller units (PluginEditorLayout, PerformanceMetricsController, GpuRenderCoordinator) so UI changes stop cascading through unrelated behaviors.
+
+High – OscilDropdown.cpp (~1.1K LOC) owns popup chrome, filtering, search field, painting, keyboard navigation, and animation tweening inside one translation unit. Extract DropdownList, DropdownSearch, and painting helpers, and move shared painting constants to a style module to keep custom component logic digestible.
+High – test_oscillator.cpp (~1.3K LOC) exercises construction, modulation, routing, and UI contracts in a single mega fixture. Split into thematic suites (creation/state, UI bindings, DSP edge cases) to shorten arrange/act/assert blocks and speed bisecting when regressions appear.
+
+
+Medium – OscilSlider.cpp (~900 LOC) implements multiple slider variants, painting modes, gesture logic, spring animations, APVTS attachment, and tooltip rendering inside one class. Separate variant-specific drawing/interaction into strategy classes (e.g., HorizontalSliderSkin, RangeGestureHandler) and move APVTS glue into a lightweight adapter.
+
+Medium – OscilButton.cpp, OscilTabs.cpp, OscilRadioButton.cpp, OscilModal.cpp, OscilAccordion.cpp, OscilTextField.cpp, src/ui/components/OscilDropdown companions (each 520–720 LOC) all mix painting constants, animation state machines, accessibility hooks, and JUCE input callbacks. Adopt a shared “design system” module for colors/metrics and per-feature subcomponents (e.g., ModalBackdrop, TabsScroller) to cut duplication and keep each widget under ~300 LOC.
+
+Medium – WaveformComponent.cpp (~680 LOC) conflates data ingestion, OpenGL vs software rendering toggles, gesture handling, overlay drawing, and metrics logging. Introduce a renderer abstraction and move gesture/selection logic to dedicated helpers so waveform rendering stays deterministic.
+
+Medium – ThemeManager.cpp & ThemeEditorComponent.cpp (~665 & 709 LOC) currently entangle persistence, preset expansion, live preview, color validation, and UI wiring. Split into ThemeRepository, ThemePreview, and UI-level editors to reduce the risk of threading mistakes when touching theme state.
+
+Medium – SourceSelectorComponent.cpp, OscillatorConfigPopup.cpp, SidebarComponent.cpp, WaveformComponent.cpp (≈500–600 LOC) each orchestrate multiple sub-controls inline. Break them into child components per section (e.g., “sources header”, “filter row”, “pane list”) to keep responsibilities narrow.
+
+Medium – Rendering/DSP support files ParticleSystem.cpp, WaveformGLRenderer.cpp, VisualConfiguration.cpp, BasicShader.cpp, TimingEngine.cpp, OscilState.cpp (560–680 LOC) combine shader strings, CPU data structures, serialization, and runtime logic. Extract shader sources into .glsl assets or dedicated headers, move math helpers into utility modules, and isolate serialization/state-diff code so real-time paths stay lean and testable.
+
+High – PluginTestServer.cpp (~2.3K LOC, entire file) mixes HTTP wiring, JSON parsing, UI-thread marshaling, rendering diagnostics, and audio-state mutation in one monolith. Split into focused handlers (layout, sources, oscillators, rendering tests, screenshots) plus a thin HTTP router so each class stays <300 LOC and gains unit-test seams.
+
+High – test_source.cpp, test_timing_engine.cpp, test_state_persistence.cpp, test_signal_processor.cpp, test_shared_capture_buffer.cpp, test_timing_config.cpp, test_spring_animation.cpp, test_instance_registry.cpp, test_theme_manager.cpp, test_animation_settings.cpp, test_plugin_processor.cpp (≈680–1,090 LOC each) follow the same anti-pattern: dozens of scenarios per file, repeated setup blobs, and mixed UI/DSP expectations. Factor common builders into helpers and split per domain (e.g., “state persistence happy paths vs migration tests”) to keep failure scopes obvious.
+
+Medium – test_camera3d.cpp, test_visual_configuration.cpp, test_coordinators.cpp, test_theme_manager.cpp (~520–560 LOC) should be trimmed similarly to the larger suites: isolate camera math tests from interaction tests, move fixtures into shared helpers, and split per feature flag to keep flakiness down.
+
+
+Summary
+The largest translation units (threshold ≈500 LOC) span UI, rendering, DSP, and tests. Each currently mixes unrelated responsibilities (HTTP control + UI mutation, GPU bootstrap + per-frame drawing, widget painting + interaction logic, multiple test suites per file), which makes regressions easy to introduce and hard to detect. Prioritize splitting the 1K+ LOC files first, then work through the ≥500 LOC groupings, carving out cohesive submodules (handlers, coordinators, renderer passes, component skins, focused test fixtures). Natural next steps: establish a target LOC/concern guideline, create per-domain subdirectories (e.g., ui/components/dropdown/), and move shared helpers into reusable headers before refactoring each file into smaller units.

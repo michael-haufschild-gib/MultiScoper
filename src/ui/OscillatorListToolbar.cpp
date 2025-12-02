@@ -10,7 +10,8 @@ namespace oscil
 
 OscillatorListToolbar::OscillatorListToolbar()
 {
-    OSCIL_REGISTER_TEST_ID("sidebar_oscillators_toolbar");
+    setTestId("sidebar_oscillators_toolbar");
+    
     setupComponents();
     ThemeManager::getInstance().addListener(this);
 }
@@ -18,6 +19,11 @@ OscillatorListToolbar::OscillatorListToolbar()
 OscillatorListToolbar::~OscillatorListToolbar()
 {
     ThemeManager::getInstance().removeListener(this);
+}
+
+void OscillatorListToolbar::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
 }
 
 void OscillatorListToolbar::setupComponents()

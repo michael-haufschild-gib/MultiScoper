@@ -7,6 +7,7 @@
 #include "ui/SourceSelectorComponent.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/ProcessingModeIcons.h"
+#include "ui/components/ComponentConstants.h"
 #include "rendering/VisualConfiguration.h"
 #include "core/OscilState.h"
 
@@ -66,6 +67,10 @@ void OscillatorConfigPopup::setupComponents()
     modeButtons_->setMinButtonWidth(40);  // Compact buttons for 6 modes
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(16), static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(16), static_cast<int>(ProcessingMode::Mono), "configPopup_modeSelector_mono");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMidIcon(16), static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createSideIcon(16), static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createLeftIcon(16), static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(16), static_cast<int>(ProcessingMode::Right), "configPopup_modeSelector_right");
     modeButtons_->addButton("M", static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
     modeButtons_->addButton("S", static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
     modeButtons_->addButton("L", static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
@@ -158,19 +163,19 @@ void OscillatorConfigPopup::paint(juce::Graphics& g)
     );
 
     g.setColour(theme.backgroundPrimary);
-    g.fillRoundedRectangle(popupBounds, 8.0f);
+    g.fillRoundedRectangle(popupBounds, ComponentLayout::RADIUS_LG);
 
     // Border
     g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(popupBounds, 8.0f, 1.0f);
+    g.drawRoundedRectangle(popupBounds, ComponentLayout::RADIUS_LG, 1.0f);
 
     // Header background
     auto headerBounds = popupBounds.removeFromTop(48);
     g.setColour(theme.backgroundSecondary);
     g.fillRoundedRectangle(headerBounds.getX(), headerBounds.getY(),
-                           headerBounds.getWidth(), headerBounds.getHeight() + 8, 8.0f);
-    g.fillRect(headerBounds.getX(), headerBounds.getY() + 8,
-               headerBounds.getWidth(), headerBounds.getHeight() - 8);
+                           headerBounds.getWidth(), headerBounds.getHeight() + ComponentLayout::RADIUS_LG, ComponentLayout::RADIUS_LG);
+    g.fillRect(headerBounds.getX(), headerBounds.getY() + ComponentLayout::RADIUS_LG,
+               headerBounds.getWidth(), headerBounds.getHeight() - ComponentLayout::RADIUS_LG);
 
     // Section dividers
     g.setColour(theme.controlBorder.withAlpha(0.3f));
@@ -258,7 +263,7 @@ void OscillatorConfigPopup::themeChanged(const ColorTheme& newTheme)
 
     auto styleLabel = [&newTheme](juce::Label* label, bool isHeader = false) {
         label->setColour(juce::Label::textColourId, isHeader ? newTheme.textPrimary : newTheme.textSecondary);
-        label->setFont(juce::FontOptions(isHeader ? 13.0f : 12.0f));
+        label->setFont(juce::FontOptions(isHeader ? ComponentLayout::FONT_SIZE_DEFAULT : ComponentLayout::FONT_SIZE_SMALL));
     };
 
     styleLabel(sourceLabel_.get(), true);
