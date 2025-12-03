@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "ui/presenters/TimingPresenter.h"
-#include "dsp/TimingConfig.h"
+#include "ui/panels/TimingPresenter.h"
+#include "core/dsp/TimingConfig.h"
 
 using namespace oscil;
 

@@ -6,7 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/TestId.h"

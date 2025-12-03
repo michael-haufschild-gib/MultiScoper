@@ -10,7 +10,8 @@
 #include <atomic>
 #include <vector>
 #include <cstring>
-#include "IAudioBuffer.h"
+#include <span>
+#include "core/interfaces/IAudioBuffer.h"
 
 namespace oscil
 {
@@ -186,6 +187,16 @@ public:
      * @return Actual number of samples read
      */
     int read(float* output, int numSamples, int channel = 0) const override;
+
+    /**
+     * Read the most recent samples into a span.
+     * Safe to call from any thread (UI thread typically).
+     *
+     * @param output Span to write samples into
+     * @param channel Channel index (0 = left, 1 = right)
+     * @return Actual number of samples read
+     */
+    int read(std::span<float> output, int channel = 0) const;
 
     /**
      * Read the most recent samples for all channels.

@@ -3,7 +3,7 @@
 */
 
 #include <gtest/gtest.h>
-#include "dsp/TimingConfig.h"
+#include "core/dsp/TimingConfig.h"
 #include <limits>
 #include <cmath>
 

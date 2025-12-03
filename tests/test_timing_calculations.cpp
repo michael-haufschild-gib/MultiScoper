@@ -5,8 +5,8 @@
 */
 
 #include <gtest/gtest.h>
-#include "ui/sections/TimingSidebarSection.h"
-#include "dsp/TimingConfig.h"
+#include "ui/layout/sections/TimingSidebarSection.h"
+#include "core/dsp/TimingConfig.h"
 
 using namespace oscil;
 

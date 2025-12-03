@@ -23,14 +23,14 @@
 #include "core/SharedCaptureBuffer.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
-#include "core/Pane.h"
+#include "ui/layout/Pane.h"
 
 // DSP includes
-#include "dsp/SignalProcessor.h"
-#include "dsp/TimingEngine.h"
+#include "core/dsp/SignalProcessor.h"
+#include "core/dsp/TimingEngine.h"
 
 // UI includes
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {

@@ -6,7 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/TestId.h"
@@ -146,6 +146,8 @@ private:
     static constexpr int STEREO_WIDTH = 24;
     static constexpr int SCALE_WIDTH = 24;
     static constexpr float SMOOTH_FACTOR = 0.3f;
+    static constexpr int TIMER_HZ = 30;
+    static constexpr float FRAME_TIME_SEC = 1.0f / static_cast<float>(TIMER_HZ);
 
     // TestIdSupport
     void registerTestId() override;

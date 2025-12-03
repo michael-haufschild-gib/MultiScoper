@@ -8,7 +8,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "TestAudioGenerator.h"
 #include "TestTransport.h"
-#include "core/PluginProcessor.h"
+#include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
 
 namespace oscil::test

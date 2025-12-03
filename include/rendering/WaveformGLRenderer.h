@@ -12,7 +12,7 @@
 #include <juce_opengl/juce_opengl.h>
 #include "rendering/WaveformShader.h"
 #include "rendering/VisualConfiguration.h"
-#include "dsp/TimingConfig.h"
+#include "core/dsp/TimingConfig.h"
 #include <vector>
 #include <unordered_map>
 #include <atomic>
@@ -45,7 +45,7 @@ struct WaveformRenderData
     juce::Rectangle<float> bounds;       // Screen position and size
     std::vector<float> channel1;         // First channel samples
     std::vector<float> channel2;         // Second channel (stereo only)
-    juce::Colour colour{ 0xFF00FF00 };   // Waveform color
+    juce::Colour colour{ 0xFF00FFFF };   // Waveform color (default, overwritten by oscillator)
     float opacity = 1.0f;                // Opacity (0-1)
     float lineWidth = 1.5f;              // Line thickness
     bool isStereo = false;               // Whether to render channel2
@@ -131,21 +131,23 @@ public:
     [[nodiscard]] bool isRenderEngineEnabled() const { return useRenderEngine_; }
 
     /**
-     * Get the render engine (for configuration access).
-     * @return Pointer to render engine, or nullptr if not initialized
+     * Execute an operation on the RenderEngine safely.
+     * The operation is executed under a lock to ensure thread safety between
+     * the OpenGL thread (rendering) and the Message thread (configuration).
      * 
-     * CRITICAL THREAD SAFETY WARNING:
-     * This returns a pointer to the engine which is primarily owned/used by the OpenGL thread.
-     * Accessing this from the message thread while rendering is active is unsafe unless
-     * strictly synchronized.
-     * Ideally, use message-thread friendly configuration methods instead of accessing this directly.
+     * @param func A function/lambda that takes RenderEngine& as argument.
+     *             If the engine is not initialized, the function is not called.
      */
-    RenderEngine* getRenderEngine() { return renderEngine_.get(); }
+    template <typename Func>
+    void performRenderEngineOperation(Func&& func)
+    {
+        const juce::ScopedReadLock lock(engineLock_);
+        if (renderEngine_)
+            func(*renderEngine_);
+    }
 
 private:
-    void compileShaders();
     void compileDebugShader();
-    void renderWaveform(const WaveformRenderData& data);
     void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);
 
     juce::OpenGLContext* context_ = nullptr;
@@ -169,6 +171,8 @@ private:
     bool debugShaderCompiled_ = false;
 
     // Advanced render engine for post-processing, particles, 3D
+    // Protected by engineLock_ for thread-safe access/lifecycle management
+    juce::ReadWriteLock engineLock_;
     std::unique_ptr<RenderEngine> renderEngine_;
     bool useRenderEngine_ = true;  // Enable by default
     std::chrono::steady_clock::time_point lastFrameTime_;

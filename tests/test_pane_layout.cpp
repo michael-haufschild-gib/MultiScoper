@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "core/Pane.h"
+#include "ui/layout/Pane.h"
 #include <juce_core/juce_core.h>
 
 using namespace oscil;

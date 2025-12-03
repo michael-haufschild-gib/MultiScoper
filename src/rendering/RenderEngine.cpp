@@ -6,10 +6,10 @@
 #include "rendering/ShaderRegistry.h"
 #include "rendering/effects/PostProcessEffect.h"
 #include <cmath>
-#include <iostream>
 
 // Release-mode logging macro for render engine debugging
-#define RE_LOG(msg) std::cerr << "[RenderEngine] " << msg << std::endl
+// Uses JUCE DBG macro which outputs to the debugger/console correctly on all platforms
+#define RE_LOG(msg) DBG("[RenderEngine] " << msg)
 
 // Rate-limited logging macro (logs every N frames)
 #define RE_LOG_THROTTLED(interval_frames, msg) \
@@ -361,9 +361,9 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
 
     RE_LOG_THROTTLED(60, "renderWaveformComplete: presetId=" << config.presetId.toStdString()
                << ", shaderType=" << static_cast<int>(config.shaderType)
-               << ", bloom=" << config.bloom.enabled
-               << ", trails=" << config.trails.enabled
-               << ", vignette=" << config.vignette.enabled);
+               << ", bloom=" << (config.bloom.enabled ? "true" : "false")
+               << ", trails=" << (config.trails.enabled ? "true" : "false")
+               << ", vignette=" << (config.vignette.enabled ? "true" : "false"));
 
     // Update state timing
     state.updateTiming(deltaTime_);
@@ -501,7 +501,7 @@ void RenderEngine::renderWaveformComplete(const WaveformRenderData& data, Wavefo
     }
 
     // Step 6: Composite onto scene
-    RE_LOG_THROTTLED(60, "Compositing to scene, current FBO valid=" << (current && current->isValid()));
+    RE_LOG_THROTTLED(60, "Compositing to scene, current FBO valid=" << ((current && current->isValid()) ? "true" : "false"));
     compositeToScene(current, config);
 
     // Step 7: Update sample history for 3D temporal effects
@@ -554,7 +554,7 @@ void RenderEngine::beginFrame(float deltaTime)
     deltaTime_ = deltaTime;
     accumulatedTime_ += deltaTime;
 
-    RE_LOG_THROTTLED(60, "beginFrame: dt=" << deltaTime << ", sceneFBO valid=" << sceneFBO_->isValid()
+    RE_LOG_THROTTLED(60, "beginFrame: dt=" << deltaTime << ", sceneFBO valid=" << (sceneFBO_->isValid() ? "true" : "false")
                << " (" << sceneFBO_->width << "x" << sceneFBO_->height << ")");
 
     // Update particle system
@@ -573,16 +573,16 @@ void RenderEngine::beginFrame(float deltaTime)
 
 void RenderEngine::renderWaveform(const WaveformRenderData& data)
 {
-    RE_LOG_THROTTLED(60, "renderWaveform: id=" << data.id << ", visible=" << data.visible
+    RE_LOG_THROTTLED(60, "renderWaveform: id=" << data.id << ", visible=" << (data.visible ? "true" : "false")
                << ", ch1 size=" << data.channel1.size()
                << ", bounds=(" << data.bounds.getX() << "," << data.bounds.getY()
                << "," << data.bounds.getWidth() << "x" << data.bounds.getHeight() << ")"
-               << ", initialized=" << initialized_);
+               << ", initialized=" << (initialized_ ? "true" : "false"));
 
     if (!initialized_ || !data.visible || data.channel1.size() < 2)
     {
         // Only log early exit occasionally to avoid spam
-        RE_LOG_THROTTLED(60, "  -> early exit: init=" << initialized_ << ", vis=" << data.visible
+        RE_LOG_THROTTLED(60, "  -> early exit: init=" << (initialized_ ? "true" : "false") << ", vis=" << (data.visible ? "true" : "false")
                    << ", samples=" << data.channel1.size());
         return;
     }
@@ -904,7 +904,7 @@ void RenderEngine::renderWaveformGeometry(const WaveformRenderData& data, const 
     {
         RE_LOG("ERROR: Shader not available or not compiled: " << shaderId.toStdString()
                << " (shader=" << (shader ? "exists" : "null")
-               << ", compiled=" << (shader ? shader->isCompiled() : false) << ")");
+               << ", compiled=" << (shader ? (shader->isCompiled() ? "true" : "false") : "false") << ")");
         return;
     }
 
@@ -1078,7 +1078,7 @@ void RenderEngine::blitToScreen()
     glViewport(0, 0, width, height);
 
     RE_LOG_THROTTLED(60, "blitToScreen: viewport=" << width << "x" << height
-               << ", sceneFBO valid=" << sceneFBO_->isValid()
+               << ", sceneFBO valid=" << (sceneFBO_->isValid() ? "true" : "false")
                << ", blitTextureLoc=" << blitTextureLoc_);
 
     // Enable blending for final blit to ensure transparency
@@ -1098,14 +1098,14 @@ void RenderEngine::blitToScreen()
     // Check for GL errors
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
-        RE_LOG_THROTTLED(60, "  GL error before quad draw: " << err);
+        RE_LOG_THROTTLED(60, "  GL error before quad draw: " << (int)err);
 
     // Render fullscreen quad to screen
     fbPool_->renderFullscreenQuad();
 
     err = glGetError();
     if (err != GL_NO_ERROR)
-        RE_LOG("  GL error after quad draw: " << err);
+        RE_LOG("  GL error after quad draw: " << (int)err);
     else
         RE_LOG_THROTTLED(60, "  quad draw OK");
 }

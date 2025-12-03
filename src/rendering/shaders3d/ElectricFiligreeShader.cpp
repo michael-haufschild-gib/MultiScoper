@@ -37,7 +37,7 @@ static const char* filigreeVertexShader = R"(
 // Fragment shader with Ridged Multifractal Noise
 static const char* filigreeFragmentShader = R"(
     #version 330 core
-    
+
     uniform vec4 uColor;
     uniform float uTime;
     uniform float uNoiseScale;
@@ -48,6 +48,11 @@ static const char* filigreeFragmentShader = R"(
     in vec2 vTexCoord;
 
     out vec4 fragColor;
+
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
 
     // Simplex noise 3D implementation
     vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -162,9 +167,10 @@ static const char* filigreeFragmentShader = R"(
         core = pow(core, 4.0);
         
         float combined = core + intensity * 2.0;
-        
-        fragColor = uColor * combined;
-        fragColor.a = uColor.a * clamp(combined, 0.0, 1.0);
+
+        // Convert to linear for correct tonemapping
+        vec3 linearColor = sRGBToLinear(uColor.rgb);
+        fragColor = vec4(linearColor * combined, uColor.a * clamp(combined, 0.0, 1.0));
     }
 )";
 

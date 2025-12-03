@@ -3,8 +3,8 @@
 */
 
 #include "TestTrack.h"
-#include "ui/PluginEditor.h"
-#include "ui/ThemeManager.h"
+#include "plugin/PluginEditor.h"
+#include "ui/theme/ThemeManager.h"
 
 namespace oscil::test
 {

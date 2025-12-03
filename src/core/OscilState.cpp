@@ -438,22 +438,6 @@ GlobalPreferences::GlobalPreferences()
 
 GlobalPreferences::~GlobalPreferences()
 {
-    // Wrap in try-catch to prevent exceptions during destruction
-    // File I/O can fail (disk full, permissions, etc.) but destructors
-    // must not throw exceptions
-    try
-    {
-        save();
-    }
-    catch (const std::exception& e)
-    {
-        // Log the error so users/developers can see something went wrong
-        DBG("GlobalPreferences: Failed to save preferences on shutdown: " << e.what());
-    }
-    catch (...)
-    {
-        DBG("GlobalPreferences: Unknown error saving preferences on shutdown");
-    }
 }
 
 juce::File GlobalPreferences::getPreferencesFile() const
@@ -493,6 +477,7 @@ juce::String GlobalPreferences::getDefaultTheme() const
 void GlobalPreferences::setDefaultTheme(const juce::String& themeName)
 {
     preferences_.setProperty("defaultTheme", themeName, nullptr);
+    save();
 }
 
 int GlobalPreferences::getDefaultColumnLayout() const
@@ -503,6 +488,7 @@ int GlobalPreferences::getDefaultColumnLayout() const
 void GlobalPreferences::setDefaultColumnLayout(int columns)
 {
     preferences_.setProperty("defaultColumns", columns, nullptr);
+    save();
 }
 
 bool GlobalPreferences::getShowStatusBar() const
@@ -513,6 +499,7 @@ bool GlobalPreferences::getShowStatusBar() const
 void GlobalPreferences::setShowStatusBar(bool show)
 {
     preferences_.setProperty("showStatusBar", show, nullptr);
+    save();
 }
 
 bool GlobalPreferences::getReducedMotion() const
@@ -523,6 +510,7 @@ bool GlobalPreferences::getReducedMotion() const
 void GlobalPreferences::setReducedMotion(bool reduced)
 {
     preferences_.setProperty("reducedMotion", reduced, nullptr);
+    save();
 }
 
 bool GlobalPreferences::getUIAudioFeedback() const
@@ -533,6 +521,7 @@ bool GlobalPreferences::getUIAudioFeedback() const
 void GlobalPreferences::setUIAudioFeedback(bool enabled)
 {
     preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
+    save();
 }
 
 bool GlobalPreferences::getTooltipsEnabled() const
@@ -543,6 +532,7 @@ bool GlobalPreferences::getTooltipsEnabled() const
 void GlobalPreferences::setTooltipsEnabled(bool enabled)
 {
     preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
+    save();
 }
 
 int GlobalPreferences::getDefaultSidebarWidth() const
@@ -553,6 +543,7 @@ int GlobalPreferences::getDefaultSidebarWidth() const
 void GlobalPreferences::setDefaultSidebarWidth(int width)
 {
     preferences_.setProperty("defaultSidebarWidth", width, nullptr);
+    save();
 }
 
 } // namespace oscil

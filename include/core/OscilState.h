@@ -7,8 +7,8 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "Oscillator.h"
-#include "Pane.h"
+#include "core/Oscillator.h"
+#include "ui/layout/Pane.h"
 #include <vector>
 
 namespace oscil

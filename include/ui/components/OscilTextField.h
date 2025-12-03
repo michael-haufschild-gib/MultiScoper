@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -155,6 +155,7 @@ private:
 
     // Theme
     ColorTheme theme_;
+    juce::Font cachedErrorFont_;
 
     // Layout constants
     static constexpr int ICON_WIDTH = 32;

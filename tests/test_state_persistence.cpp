@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
-#include "core/Pane.h"
+#include "ui/layout/Pane.h"
 
 using namespace oscil;
 

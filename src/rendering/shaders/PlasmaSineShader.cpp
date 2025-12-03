@@ -83,6 +83,13 @@ static const char* plasmaFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space
+    // Input colors from juce::Colour are in sRGB, but we need linear for correct
+    // blending and tonemapping in the rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     // High Quality Noise for Texture
     vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
     vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -128,12 +135,15 @@ static const char* plasmaFragmentShader = R"(
     void main()
     {
         float dist = abs(vV);
-        
+
         // Soft edge for all layers to avoid hard polygon look
         float edgeFade = pow(max(1.0 - dist, 0.0), 2.0);
-        
+
         // Waveform end fades
         float endFade = smoothstep(0.0, 0.05, vT) * (1.0 - smoothstep(0.95, 1.0, vT));
+
+        // Convert sRGB input to linear for correct color operations
+        vec3 linearBaseColor = sRGBToLinear(baseColor.rgb);
 
         vec4 finalColor = vec4(0.0);
 
@@ -142,29 +152,29 @@ static const char* plasmaFragmentShader = R"(
             // Slow flowing smoke
             float n = fbm(vec2(vT * 5.0 - time * 0.2, vV * 2.0));
             n = n * 0.5 + 0.5; // 0..1
-            
-            vec3 col = baseColor.rgb * 0.8; // Deep base color
+
+            vec3 col = linearBaseColor * 0.8; // Deep base color
             float a = 0.1 * n * edgeFade; // Low opacity
             finalColor = vec4(col * a, a);
         }
-        
+
         // --- PASS 1: ARCS (Electric Jitter) ---
         else if (passIndex == 1) {
             // High contrast electric texture
             float n = snoise(vec2(vT * 20.0 - time * 1.0, vV * 5.0));
             float spark = 1.0 - abs(n);
             spark = pow(spark, 4.0); // Sharp lines
-            
-            vec3 col = mix(baseColor.rgb, vec3(1.0), 0.5); // Brighter
+
+            vec3 col = mix(linearBaseColor, vec3(1.0), 0.5); // Brighter
             float a = 0.6 * spark * edgeFade;
             finalColor = vec4(col * a, a);
         }
-        
+
         // --- PASS 2: CORE (Solid Beam) ---
         else if (passIndex == 2) {
             // Solid core with glow
             float core = smoothstep(0.6, 0.0, dist); // Sharp center
-            vec3 col = vec3(1.0); // White
+            vec3 col = vec3(1.0); // White (already linear)
             float a = core * 0.9;
             finalColor = vec4(col * a, a);
         }
@@ -206,10 +216,11 @@ bool PlasmaSineShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
     
-    if (!gl_->program->addVertexShader(plasmaVertexShader) || 
-        !gl_->program->addFragmentShader(plasmaFragmentShader) || 
+    if (!gl_->program->addVertexShader(plasmaVertexShader) ||
+        !gl_->program->addFragmentShader(plasmaFragmentShader) ||
         !gl_->program->link())
     {
+        DBG("PlasmaSineShader: Shader compilation failed: " << gl_->program->getLastError());
         gl_->program.reset();
         return false;
     }

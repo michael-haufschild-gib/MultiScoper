@@ -39,6 +39,11 @@ static const char* vectorFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
         float speed = uFlowParams.x;
@@ -48,10 +53,10 @@ static const char* vectorFragmentShader = R"(
 
         // Moving coordinate
         float pos = vT - uTime * speed;
-        
+
         // Modulo to create repeating pattern
         float m = mod(pos, period);
-        
+
         // Discard gaps
         if (m > segLen) {
             discard;
@@ -61,8 +66,10 @@ static const char* vectorFragmentShader = R"(
         float alpha = uColor.a;
         float edge = min(m, segLen - m);
         float fade = smoothstep(0.0, segLen * 0.1, edge);
-        
-        fragColor = vec4(uColor.rgb, alpha * fade);
+
+        // Convert to linear for correct tonemapping
+        vec3 linearColor = sRGBToLinear(uColor.rgb);
+        fragColor = vec4(linearColor, alpha * fade);
     }
 )";
 

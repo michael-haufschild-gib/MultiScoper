@@ -4,7 +4,7 @@
 */
 
 #include <gtest/gtest.h>
-#include "dsp/TimingEngine.h"
+#include "core/dsp/TimingEngine.h"
 #include <thread>
 #include <atomic>
 #include <cmath>

@@ -14,7 +14,7 @@
 #include <functional>
 #include <atomic>
 
-#include "IInstanceRegistry.h"
+#include "core/interfaces/IInstanceRegistry.h"
 
 namespace oscil
 {

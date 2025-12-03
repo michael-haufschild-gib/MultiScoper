@@ -182,11 +182,48 @@ void OscilButton::paint(juce::Graphics& g)
         paintFocusRing(g, getLocalBounds().toFloat());
 }
 
-void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds)
+void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 {
+    cachedButtonPath_.clear();
     float cornerRadius = variant_ == ButtonVariant::Icon
         ? ComponentLayout::RADIUS_MD
         : ComponentLayout::RADIUS_LG;
+
+    if (segmentPosition_ == SegmentPosition::None || segmentPosition_ == SegmentPosition::Only)
+    {
+        // Standard rounded rectangle
+        cachedButtonPath_.addRoundedRectangle(bounds, cornerRadius);
+    }
+    else if (segmentPosition_ == SegmentPosition::First)
+    {
+        // Round left corners only
+        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(),
+                                        bounds.getWidth(), bounds.getHeight(),
+                                        cornerRadius, cornerRadius,
+                                        true, false, true, false);
+    }
+    else if (segmentPosition_ == SegmentPosition::Last)
+    {
+        // Round right corners only
+        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(),
+                                        bounds.getWidth(), bounds.getHeight(),
+                                        cornerRadius, cornerRadius,
+                                        false, true, false, true);
+    }
+    else // Middle
+    {
+        // No rounded corners
+        cachedButtonPath_.addRectangle(bounds);
+    }
+}
+
+void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds)
+{
+    // Update path cache if bounds changed (simple check, assuming animation updates bounds every frame)
+    // Since bounds can change every frame during animation, we might still be regenerating path.
+    // However, avoiding allocation of juce::Path object itself is good.
+    // We'll update the cached path here since it depends on the animated bounds passed in paint.
+    updatePathCache(bounds);
 
     // Background
     auto bgColour = getBackgroundColour();
@@ -196,52 +233,22 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     if (!enabled_)
         bgColour = bgColour.withAlpha(ComponentLayout::DISABLED_OPACITY);
 
-    // Create path based on segment position
-    juce::Path buttonPath;
-
-    if (segmentPosition_ == SegmentPosition::None || segmentPosition_ == SegmentPosition::Only)
-    {
-        // Standard rounded rectangle
-        buttonPath.addRoundedRectangle(bounds, cornerRadius);
-    }
-    else if (segmentPosition_ == SegmentPosition::First)
-    {
-        // Round left corners only
-        buttonPath.addRoundedRectangle(bounds.getX(), bounds.getY(),
-                                        bounds.getWidth(), bounds.getHeight(),
-                                        cornerRadius, cornerRadius,
-                                        true, false, true, false);
-    }
-    else if (segmentPosition_ == SegmentPosition::Last)
-    {
-        // Round right corners only
-        buttonPath.addRoundedRectangle(bounds.getX(), bounds.getY(),
-                                        bounds.getWidth(), bounds.getHeight(),
-                                        cornerRadius, cornerRadius,
-                                        false, true, false, true);
-    }
-    else // Middle
-    {
-        // No rounded corners
-        buttonPath.addRectangle(bounds);
-    }
-
     if (variant_ != ButtonVariant::Ghost && variant_ != ButtonVariant::Tertiary && variant_ != ButtonVariant::Icon)
     {
         g.setColour(bgColour);
-        g.fillPath(buttonPath);
+        g.fillPath(cachedButtonPath_);
     }
     else if ((isHovered_ || isPressed_ || isToggled_) && (variant_ == ButtonVariant::Ghost || variant_ == ButtonVariant::Tertiary || variant_ == ButtonVariant::Icon))
     {
         g.setColour(bgColour);
-        g.fillPath(buttonPath);
+        g.fillPath(cachedButtonPath_);
     }
 
     // Border for segmented buttons and Secondary variant (for visual definition)
     if (segmentPosition_ != SegmentPosition::None || variant_ == ButtonVariant::Secondary)
     {
         g.setColour(getBorderColour());
-        g.strokePath(buttonPath, juce::PathStrokeType(1.0f));
+        g.strokePath(cachedButtonPath_, juce::PathStrokeType(1.0f));
     }
 
     // Content - use reduced padding for segmented buttons and narrow buttons

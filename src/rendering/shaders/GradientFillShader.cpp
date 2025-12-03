@@ -37,17 +37,27 @@ static const char* fillFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space
+    // Input colors from juce::Colour are in sRGB, but we need linear for correct
+    // blending and tonemapping in the rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
-        // Gradient from baseColor (at top) to transparent (at bottom)
-        vec4 topColor = baseColor;
-        vec4 bottomColor = vec4(baseColor.rgb, 0.0);
-        
+        // Convert sRGB input to linear for correct rendering
+        vec3 linearColor = sRGBToLinear(baseColor.rgb);
+
+        // Gradient from linearColor (at top) to transparent (at bottom)
+        vec4 topColor = vec4(linearColor, baseColor.a);
+        vec4 bottomColor = vec4(linearColor, 0.0);
+
         // Apply opacity
         topColor.a *= opacity;
         bottomColor.a *= opacity;
 
-        // Simple linear interpolation
+        // Simple linear interpolation (in linear space)
         fragColor = mix(bottomColor, topColor, vV);
     }
 )";
@@ -83,6 +93,7 @@ bool GradientFillShader::compile(juce::OpenGLContext& context)
     
     if (!gl_->program->addVertexShader(fillVertexShader) || !gl_->program->addFragmentShader(fillFragmentShader) || !gl_->program->link())
     {
+        DBG("GradientFillShader: Shader compilation failed: " << gl_->program->getLastError());
         gl_->program.reset();
         return false;
     }

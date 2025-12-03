@@ -1,48 +1,45 @@
 # Testing Guide for LLM Coding Agents
 
-**Purpose**: Instructions for writing and running tests in the Oscil codebase.
-**Test Stack**: GoogleTest (gtest) v1.17.0
+**Purpose**: Teach agents HOW to write and run tests for this JUCE audio plugin.
 
-## Quick Reference
+**Tech Stack**: GoogleTest (unit tests), Test Harness HTTP API (E2E tests)
 
-```bash
-# Build with tests (dev preset includes tests)
-cmake --preset dev
-cmake --build --preset dev
+---
 
-# Run all tests via CTest
-ctest --preset dev
+## Testing Architecture
 
-# Run tests directly
-./build/dev/OscilTests
+```
+tests/                      # Unit tests (GoogleTest)
+├── test_oscillator.cpp     # Model tests
+├── test_signal_processor.cpp
+├── test_timing_engine.cpp
+├── test_oscil_button.cpp   # UI component tests
+└── ...
 
-# Run specific test
-./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*"
-
-# Run with XML output for CI
-./build/dev/OscilTests --gtest_output=xml:test-results/results.xml
+test_harness/               # E2E test infrastructure
+├── src/
+│   ├── TestTrack.cpp
+│   ├── TestHttpServer.cpp
+│   └── TestUIController.cpp
+└── include/
 ```
 
-## Where to Put Tests
+---
 
-**Location**: `tests/test_[class_name_snake_case].cpp`
+## Unit Testing (GoogleTest)
 
-**Examples**:
-- Testing `SignalProcessor` → `tests/test_signal_processor.cpp`
-- Testing `InstanceRegistry` → `tests/test_instance_registry.cpp`
-- Testing `ThemeManager` → `tests/test_theme_manager.cpp`
+### How to Write a Unit Test
 
-## How to Write a Test
+**Location**: `tests/test_{name}.cpp`
 
-**Step 1**: Create test file at `tests/test_my_class.cpp`
-
+**Template**:
 ```cpp
 /*
-    Oscil - My Class Tests
+    Oscil - {ClassName} Tests
 */
 
 #include <gtest/gtest.h>
-#include "core/MyClass.h"  // or dsp/ or ui/
+#include "core/MyClass.h"  // Include what you're testing
 
 using namespace oscil;
 
@@ -51,414 +48,393 @@ class MyClassTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Initialize test resources before each test
+        // Called before each test
     }
 
     void TearDown() override
     {
-        // Clean up after each test
+        // Called after each test
     }
 
-    // Test helpers
-    MyClass myClass_;
+    // Test fixtures
+    MyClass instance_;
 };
 
-TEST_F(MyClassTest, MethodDoesExpectedThing)
+// Test naming: {Behavior}_{Condition}
+TEST_F(MyClassTest, DefaultConstruction)
 {
-    // Arrange
-    int input = 5;
+    MyClass obj;
+    EXPECT_TRUE(obj.getId().isValid());
+    EXPECT_EQ(obj.getValue(), 0);
+}
 
-    // Act
-    int result = myClass_.someMethod(input);
+TEST_F(MyClassTest, SetterUpdatesValue)
+{
+    instance_.setValue(42);
+    EXPECT_EQ(instance_.getValue(), 42);
+}
 
-    // Assert
-    EXPECT_EQ(result, 10);
+TEST_F(MyClassTest, InvalidInput_ReturnsError)
+{
+    EXPECT_FALSE(instance_.setInvalidValue(-1));
 }
 ```
 
-**Step 2**: Add to `CMakeLists.txt` under `add_executable(OscilTests ...)`
+**Key Points**:
+- Use `TEST_F` with fixture class for shared setup
+- Use `TEST` for standalone tests
+- Name tests descriptively: `{What}_{Condition}` or `{Action}_{ExpectedResult}`
 
-```cmake
-tests/test_my_class.cpp
-```
+### UI Component Test Pattern
 
-**Step 3**: If testing a new source file, also add the source to `OscilTests`:
-
-```cmake
-src/core/MyClass.cpp
-```
-
-## Test Template: DSP Processing
+UI components require JUCE initialization:
 
 ```cpp
-class MyProcessorTest : public ::testing::Test
+#include <gtest/gtest.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/components/OscilButton.h"
+#include "TestElementRegistry.h"
+
+using namespace oscil;
+
+class OscilButtonTest : public ::testing::Test
 {
 protected:
-    MyProcessor processor;
-
-    std::vector<float> generateSineWave(int numSamples, float frequency, float sampleRate)
-    {
-        std::vector<float> samples(numSamples);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            samples[i] = std::sin(2.0f * M_PI * frequency * i / sampleRate);
-        }
-        return samples;
-    }
-
-    std::vector<float> generateDC(int numSamples, float level)
-    {
-        return std::vector<float>(numSamples, level);
-    }
+    // No SetUp needed - global JuceTestEnvironment handles initialization
 };
 
-TEST_F(MyProcessorTest, ProcessesSignalCorrectly)
+TEST_F(OscilButtonTest, Construction)
 {
-    const int numSamples = 1024;
-    auto input = generateSineWave(numSamples, 440.0f, 44100.0f);
-    std::vector<float> output(numSamples);
+    OscilButton button("Click Me", "test_button");
 
-    processor.process(input.data(), output.data(), numSamples);
+    EXPECT_EQ(button.getText(), "Click Me");
+    EXPECT_TRUE(button.isEnabled());
+}
 
-    // Use EXPECT_NEAR for floating point with tolerance
-    for (int i = 0; i < numSamples; ++i)
-    {
-        EXPECT_NEAR(output[i], expectedValue, 0.001f);
-    }
+TEST_F(OscilButtonTest, TestIdRegistration)
+{
+    OscilButton button("Test", "my_test_id");
+
+    auto* found = oscil::test::TestElementRegistry::getInstance()
+                      .findElement("my_test_id");
+    EXPECT_EQ(found, &button);
+}
+
+TEST_F(OscilButtonTest, ClickCallback)
+{
+    OscilButton button;
+    bool clicked = false;
+
+    button.onClick = [&clicked]() { clicked = true; };
+    button.triggerClick();
+
+    EXPECT_TRUE(clicked);
 }
 ```
 
-## Test Template: State/Serialization
+### Mock/Dummy Pattern
+
+For testing with dependencies:
 
 ```cpp
-class MyStateTest : public ::testing::Test
+// Dummy implementation of interface
+class DummyRegistry : public IInstanceRegistry
 {
-protected:
-    OscilState state;
+public:
+    SourceId registerInstance(const juce::String&,
+                              std::shared_ptr<SharedCaptureBuffer>,
+                              const juce::String&, int, double) override
+    {
+        return SourceId::generate();
+    }
+
+    void unregisterInstance(const SourceId&) override {}
+
+    std::vector<SourceInfo> getAllSources() const override
+    {
+        return testSources_;  // Return test data
+    }
+
+    // ... implement other methods ...
+
+    // Test control
+    std::vector<SourceInfo> testSources_;
 };
 
-TEST_F(MyStateTest, RoundTripSerialization)
+TEST_F(MyComponentTest, UsesRegistry)
 {
-    // Create and populate state
-    Oscillator osc;
-    osc.setName("Test");
-    osc.setOpacity(0.75f);
-    state.addOscillator(osc);
+    DummyRegistry registry;
+    registry.testSources_ = { /* test data */ };
 
-    // Serialize
-    juce::String xml = state.toXmlString();
-    EXPECT_FALSE(xml.isEmpty());
-
-    // Deserialize
-    OscilState restored;
-    EXPECT_TRUE(restored.fromXmlString(xml));
-
-    // Verify
-    auto oscillators = restored.getOscillators();
-    ASSERT_EQ(oscillators.size(), 1);
-    EXPECT_EQ(oscillators[0].getName(), "Test");
-    EXPECT_FLOAT_EQ(oscillators[0].getOpacity(), 0.75f);
+    MyComponent component(registry);
+    // Test component behavior with mock data
 }
 ```
-
-## Test Template: Thread Safety
-
-```cpp
-TEST_F(CaptureBufferTest, ThreadSafetyConcurrentAccess)
-{
-    std::atomic<bool> running{true};
-    std::atomic<int> writeCount{0};
-    std::atomic<int> readCount{0};
-
-    std::thread writer([&]() {
-        while (running)
-        {
-            buffer->write(testData, metadata);
-            ++writeCount;
-        }
-    });
-
-    std::thread reader([&]() {
-        while (running)
-        {
-            buffer->read(output.data(), 64, 0);
-            ++readCount;
-        }
-    });
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    running = false;
-
-    writer.join();
-    reader.join();
-
-    // Verify no crashes, data integrity
-    EXPECT_GT(writeCount.load(), 0);
-    EXPECT_GT(readCount.load(), 0);
-}
-```
-
-## Assertion Reference
-
-| Assertion | Use When |
-|-----------|----------|
-| `EXPECT_EQ(a, b)` | Exact equality (integers, pointers) |
-| `EXPECT_FLOAT_EQ(a, b)` | Float equality with ULP tolerance |
-| `EXPECT_NEAR(a, b, tol)` | Float within specific tolerance |
-| `EXPECT_TRUE(expr)` | Boolean true |
-| `EXPECT_FALSE(expr)` | Boolean false |
-| `ASSERT_*` variants | Stop test on failure (use for preconditions) |
-
-## Decision Tree: What to Test
-
-- Testing signal math? → Use `EXPECT_NEAR` with tolerance (typically 0.001f)
-- Testing exact values? → Use `EXPECT_EQ` or `EXPECT_FLOAT_EQ`
-- Testing preconditions? → Use `ASSERT_*` variants
-- Testing thread safety? → Use atomics + short sleep + verify no crashes
-
-## Test Data Patterns
-
-| Signal | Generator | Use Case |
-|--------|-----------|----------|
-| Sine wave | `generateSineWave(samples, freq, sr)` | General waveform tests |
-| DC level | `generateDC(samples, level)` | Level/gain tests |
-| Zeros | `std::vector<float>(n, 0.0f)` | Silence handling |
-| Identical L/R | Same vector for both | Mono/correlation tests |
-| Inverted L/R | Negate one channel | Phase correlation tests |
-
-## Running Specific Tests
-
-```bash
-# All tests in a fixture
-./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*"
-
-# Specific test
-./build/dev/OscilTests --gtest_filter="SignalProcessorTest.MonoSumming"
-
-# Multiple patterns
-./build/dev/OscilTests --gtest_filter="Signal*:Instance*"
-
-# Exclude tests
-./build/dev/OscilTests --gtest_filter="-*Slow*"
-```
-
-## CTest Presets
-
-```bash
-# Run via CTest with preset
-ctest --preset dev
-
-# Verbose output
-ctest --preset dev -V
-
-# Output on failure only
-ctest --preset dev --output-on-failure
-```
-
-## Common Mistakes
-
-❌ **Don't**: Use `EXPECT_EQ` for floating point comparison
-✅ **Do**: Use `EXPECT_NEAR(a, b, tolerance)` or `EXPECT_FLOAT_EQ`
-
-❌ **Don't**: Forget to add test file to `CMakeLists.txt`
-✅ **Do**: Add to `add_executable(OscilTests ...)` section
-
-❌ **Don't**: Forget to add source file being tested to OscilTests
-✅ **Do**: Add the `.cpp` file if it's not already in the test executable
-
-❌ **Don't**: Test with hard-coded magic numbers
-✅ **Do**: Use named constants or calculated expected values
-
-❌ **Don't**: Use `ASSERT_*` when test can continue
-✅ **Do**: Use `EXPECT_*` for most assertions, `ASSERT_*` only for preconditions
-
-❌ **Don't**: Write tests that depend on execution order
-✅ **Do**: Each test must be independent (use SetUp/TearDown)
-
-❌ **Don't**: Use long sleeps in thread tests
-✅ **Do**: Use 50-100ms max with atomics for thread synchronization
-
-❌ **Don't**: Allocate JUCE objects without proper initialization
-✅ **Do**: Include JUCE headers and ensure event loop for UI tests
-
-❌ **Don't**: Forget namespace
-✅ **Do**: Use `using namespace oscil;` at top of test file
 
 ---
 
-## E2E Test Harness
+## Running Tests
 
-The E2E test harness is a standalone JUCE application that simulates a DAW environment for testing the plugin UI and behavior.
-
-### Building the Test Harness
-
+### All Unit Tests
 ```bash
-# Configure with test harness enabled
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-cmake --build --preset dev --target OscilTestHarness
-
-# Run test harness (starts HTTP server on port 8765)
-"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"
+ctest --preset dev
 ```
 
-### Test Harness HTTP API
-
-The test harness exposes a REST API on `http://localhost:8765` for automation.
-
-**Transport Control**:
+### Specific Test
 ```bash
-# Start playback
-curl -X POST http://localhost:8765/transport/play
+# Run tests matching pattern
+ctest --preset dev -R "Oscillator"
 
-# Stop playback
-curl -X POST http://localhost:8765/transport/stop
-
-# Set BPM
-curl -X POST http://localhost:8765/transport/bpm -H "Content-Type: application/json" -d '{"bpm": 120}'
-
-# Get transport state
-curl http://localhost:8765/transport/state
+# Run single test binary with filter
+./build/dev/OscilTests --gtest_filter="OscillatorTest.*"
 ```
 
-**Track Audio Control**:
+### Verbose Output
 ```bash
-# Set track audio waveform (sine, square, sawtooth, triangle, noise, dc, silence)
-curl -X POST http://localhost:8765/track/{id}/audio -H "Content-Type: application/json" \
-  -d '{"waveform": "sine", "frequency": 440, "amplitude": 0.5}'
-
-# Send audio burst
-curl -X POST http://localhost:8765/track/{id}/burst -H "Content-Type: application/json" \
-  -d '{"duration_ms": 100, "waveform": "sine"}'
-
-# Get track info
-curl http://localhost:8765/track/{id}/info
+ctest --preset dev --output-on-failure
 ```
 
-**UI Control**:
+### List Available Tests
 ```bash
-# Click element by test ID
-curl -X POST http://localhost:8765/ui/click -H "Content-Type: application/json" \
-  -d '{"elementId": "sidebar-timing-section"}'
-
-# Set slider value
-curl -X POST http://localhost:8765/ui/slider -H "Content-Type: application/json" \
-  -d '{"elementId": "time-interval-slider", "value": 0.5}'
-
-# Toggle button
-curl -X POST http://localhost:8765/ui/toggle -H "Content-Type: application/json" \
-  -d '{"elementId": "host-sync-toggle", "state": true}'
-
-# Get element state
-curl http://localhost:8765/ui/element/{elementId}
+./build/dev/OscilTests --gtest_list_tests
 ```
 
-**Screenshot/Verification**:
-```bash
-# Take screenshot (saves to specified path)
-curl -X POST http://localhost:8765/screenshot -H "Content-Type: application/json" \
-  -d '{"path": "/tmp/screenshot.png"}'
+---
 
-# Verify waveform is rendering
-curl http://localhost:8765/verify/waveform
-```
+## Test Naming Conventions
 
-**State Management**:
-```bash
-# Reset to default state
-curl -X POST http://localhost:8765/state/reset
+| Pattern | Example | When to Use |
+|---------|---------|-------------|
+| `test_{class}.cpp` | `test_oscillator.cpp` | One class per file |
+| `test_{feature}_{aspect}.cpp` | `test_timing_config.cpp` | Feature-specific tests |
 
-# Get oscillators state
-curl http://localhost:8765/state/oscillators
-
-# Get panes state
-curl http://localhost:8765/state/panes
-
-# Get sources state
-curl http://localhost:8765/state/sources
-```
-
-**Health Check**:
-```bash
-curl http://localhost:8765/health
-```
-
-### Adding Test Element IDs
-
-To make UI elements testable, implement the `TestableComponent` interface:
+### Test Case Naming
 
 ```cpp
-#include "TestableComponent.h"
+// Good: Descriptive behavior
+TEST_F(OscillatorTest, IdGeneration)
+TEST_F(OscillatorTest, DefaultValues)
+TEST_F(OscillatorTest, SettersAndGetters)
+TEST_F(OscillatorTest, ProcessingModeConversion)
 
-class MyComponent : public juce::Component, public TestableComponent
-{
-public:
-    // Implement TestableComponent
-    juce::String getTestId() const override { return "my-component-id"; }
-
-    // Optional: provide element state for automation
-    json getTestState() const override
-    {
-        return {
-            {"visible", isVisible()},
-            {"enabled", isEnabled()},
-            {"customValue", myValue_}
-        };
-    }
-};
+// Bad: Vague names
+TEST_F(OscillatorTest, Test1)
+TEST_F(OscillatorTest, Works)
 ```
 
-### Writing E2E Test Scripts
+---
 
-E2E tests are typically written in Python or shell scripts that interact with the HTTP API:
+## Adding a New Test File
 
+### Step 1: Create Test File
+```cpp
+// tests/test_myfeature.cpp
+
+#include <gtest/gtest.h>
+#include "core/MyFeature.h"
+
+using namespace oscil;
+
+class MyFeatureTest : public ::testing::Test { };
+
+TEST_F(MyFeatureTest, BasicBehavior)
+{
+    // ...
+}
+```
+
+### Step 2: Update CMakeLists.txt
+Tests are auto-discovered via glob in CMakeLists.txt, but verify:
+```cmake
+# In CMakeLists.txt, tests section
+file(GLOB TEST_SOURCES "tests/test_*.cpp")
+```
+
+### Step 3: Build and Run
+```bash
+cmake --build --preset dev
+ctest --preset dev -R "MyFeature"
+```
+
+---
+
+## E2E Testing with Test Harness
+
+### Build Test Harness
+```bash
+cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target OscilTestHarness
+```
+
+### Start Harness
+```bash
+"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &
+```
+
+### Python E2E Test Pattern
 ```python
 import requests
 import time
+import pytest
 
 BASE_URL = "http://localhost:8765"
 
-def test_waveform_displays_on_play():
-    # Reset to known state
-    requests.post(f"{BASE_URL}/state/reset")
+@pytest.fixture(scope="module")
+def editor():
+    """Ensure editor is open before tests."""
+    requests.post(f"{BASE_URL}/track/0/showEditor")
+    time.sleep(1)
+    yield
+    # Cleanup if needed
 
-    # Configure track with sine wave
-    requests.post(f"{BASE_URL}/track/0/audio", json={
-        "waveform": "sine",
-        "frequency": 440,
-        "amplitude": 0.8
+def test_oscillator_creation(editor):
+    # Get initial count
+    initial = requests.get(f"{BASE_URL}/oscillators").json()
+    initial_count = len(initial["oscillators"])
+
+    # Add oscillator
+    requests.post(f"{BASE_URL}/oscillator/add", json={
+        "name": "Test Osc",
+        "processingMode": "Mono"
     })
 
-    # Start playback
-    requests.post(f"{BASE_URL}/transport/play")
-    time.sleep(0.1)  # Wait for buffer to fill
+    # Verify
+    after = requests.get(f"{BASE_URL}/oscillators").json()
+    assert len(after["oscillators"]) == initial_count + 1
 
-    # Verify waveform is rendering
-    response = requests.get(f"{BASE_URL}/verify/waveform")
-    assert response.json()["success"] == True
-
-    # Take screenshot for visual verification
-    requests.post(f"{BASE_URL}/screenshot", json={
-        "path": "screenshots/test_waveform_play.png"
+def test_ui_click_button(editor):
+    # Click add button
+    response = requests.post(f"{BASE_URL}/ui/click", json={
+        "elementId": "sidebar_oscillators_add"
     })
-
-    # Stop playback
-    requests.post(f"{BASE_URL}/transport/stop")
-
-if __name__ == "__main__":
-    test_waveform_displays_on_play()
-    print("Test passed!")
+    assert response.status_code == 200
+    time.sleep(0.5)
 ```
 
-### E2E Test Common Mistakes
+---
 
-❌ **Don't**: Run E2E tests without starting the test harness first
-✅ **Do**: Start `OscilTestHarness` before running test scripts
+## Testing Patterns
 
-❌ **Don't**: Use hard-coded pixel coordinates for UI interaction
-✅ **Do**: Use test element IDs with the `TestableComponent` interface
+### 1. Model Tests
+Test domain logic in isolation:
+```cpp
+TEST_F(OscillatorTest, ProcessingModeAffectsOutput)
+{
+    Oscillator osc;
+    osc.setProcessingMode(ProcessingMode::Mono);
+    EXPECT_EQ(osc.getProcessingMode(), ProcessingMode::Mono);
+}
+```
 
-❌ **Don't**: Assume immediate state changes after HTTP calls
-✅ **Do**: Add short delays (50-100ms) after transport/audio changes
+### 2. State Serialization Tests
+Ensure state survives save/load:
+```cpp
+TEST_F(OscilStateTest, SerializationRoundTrip)
+{
+    OscilState state;
+    state.addOscillator(createTestOscillator());
 
-❌ **Don't**: Leave test harness running after tests complete
-✅ **Do**: Clean up by stopping the test harness process
+    // Serialize
+    auto data = state.serialize();
+
+    // Deserialize
+    OscilState restored;
+    restored.deserialize(data);
+
+    EXPECT_EQ(restored.getOscillatorCount(), 1);
+}
+```
+
+### 3. Listener Tests
+Verify callbacks are triggered:
+```cpp
+class MockListener : public MyComponent::Listener
+{
+public:
+    int callCount = 0;
+    void onValueChanged(float value) override { callCount++; lastValue = value; }
+    float lastValue = 0;
+};
+
+TEST_F(MyComponentTest, NotifiesListeners)
+{
+    MyComponent component;
+    MockListener listener;
+    component.addListener(&listener);
+
+    component.setValue(42.0f);
+
+    EXPECT_EQ(listener.callCount, 1);
+    EXPECT_EQ(listener.lastValue, 42.0f);
+
+    component.removeListener(&listener);
+}
+```
+
+### 4. Boundary Tests
+Test edge cases:
+```cpp
+TEST_F(OscillatorTest, OpacityClamping)
+{
+    Oscillator osc;
+
+    osc.setOpacity(-0.5f);
+    EXPECT_GE(osc.getOpacity(), 0.0f);
+
+    osc.setOpacity(1.5f);
+    EXPECT_LE(osc.getOpacity(), 1.0f);
+}
+```
+
+---
+
+## Common Mistakes
+
+**Don't**: Test implementation details
+```cpp
+// Bad: Testing private state
+EXPECT_EQ(component.internalBuffer_.size(), 1024);
+```
+**Do**: Test public behavior
+```cpp
+// Good: Testing observable behavior
+EXPECT_EQ(component.getBufferCapacity(), 1024);
+```
+
+---
+
+**Don't**: Forget to clean up listeners
+```cpp
+// Bad: Listener outlives component
+component.addListener(&listener);
+// listener goes out of scope while still registered
+```
+**Do**: Always remove listeners
+```cpp
+component.addListener(&listener);
+// ... test ...
+component.removeListener(&listener);
+```
+
+---
+
+**Don't**: Write flaky timing-dependent tests
+```cpp
+// Bad: Arbitrary sleep
+component.startAnimation();
+std::this_thread::sleep_for(100ms);
+EXPECT_TRUE(component.isAnimating());  // May fail!
+```
+**Do**: Test state directly or use proper synchronization
+
+---
+
+## Quick Reference
+
+| Command | Purpose |
+|---------|---------|
+| `ctest --preset dev` | Run all tests |
+| `ctest --preset dev -R "Pattern"` | Run matching tests |
+| `ctest --preset dev -V` | Verbose output |
+| `./build/dev/OscilTests --gtest_filter="*"` | Run with GoogleTest filter |
+| `./build/dev/OscilTests --gtest_list_tests` | List all tests |

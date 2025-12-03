@@ -108,19 +108,44 @@ Oscil is a professional audio visualization platform designed for engineers and 
 
 ## Directory Structure
 
-- **`src/`**: Implementation files (`.cpp`).
-    - **`core/`**: Core logic (PluginProcessor, Oscillator, InstanceRegistry).
-    - **`dsp/`**: Signal processing and timing engine.
-    - **`ui/`**: User interface components (PluginEditor, WaveformComponent).
-    - **`rendering/`**: Advanced rendering engine for GPU rendering with shaders, particle effects and postprocessing effects
-- **`include/`**: Header files (`.h`), mirroring the `src` structure.
-- **`tests/`**: Unit tests using GoogleTest.
-- **`test_harness/`**: E2E test harness application.
-- **`docs/`**: Documentation (PRD, Architecture, Development Guide).
-- **`cmake-build-test/`** & **`build/`**: Build artifacts (do not edit).
-- **`CMakeLists.txt`**: Main build configuration.
-- **`CLAUDE.md`**: Original agent context and instructions.
-- **`screenshots`**: Any screenshot
+```
+src/                        # Implementation files (.cpp, .mm)
+├── core/                   # Business logic (Oscillator, OscilState, InstanceRegistry, Source)
+│   └── dsp/                # Signal processing (SignalProcessor, TimingEngine)
+├── platform/macos/         # Platform-specific implementations
+├── plugin/                 # Plugin entry points (PluginProcessor, PluginEditor)
+├── rendering/              # OpenGL visualization engine
+│   ├── effects/            # Post-processing (Bloom, Glitch, Scanline, etc.)
+│   ├── materials/          # Material shaders (Glass, Chrome, Crystalline)
+│   ├── particles/          # Particle system
+│   ├── shaders/            # 2D waveform shaders
+│   └── shaders3d/          # 3D visualization shaders
+├── tools/                  # Test infrastructure (PluginTestServer)
+│   └── test_server/
+└── ui/                     # User interface
+    ├── components/         # Reusable widgets (OscilButton, OscilSlider, etc.)
+    ├── dialogs/            # Modal dialogs (AddOscillator, ColorPicker)
+    ├── layout/             # Layout management (Sidebar, Pane, Coordinators)
+    │   └── sections/       # Accordion sections
+    ├── panels/             # Content panels (OscillatorList, Waveform, Config)
+    └── theme/              # Theming (ThemeManager, ColorPicker)
+
+include/                    # Header files (.h), mirrors src/ structure
+├── Oscil.h                 # Main convenience header
+├── core/                   # Core headers
+│   ├── dsp/                # DSP headers (TimingConfig, TimingEngine)
+│   └── interfaces/         # Abstract interfaces (IInstanceRegistry, IAudioBuffer)
+├── plugin/                 # Plugin headers
+├── rendering/              # Rendering headers (same subdirs as src/)
+├── tools/                  # Test infrastructure headers
+└── ui/                     # UI headers (same subdirs as src/)
+
+tests/                      # Unit tests (GoogleTest)
+test_harness/               # E2E test harness application
+docs/                       # Documentation
+build/                      # Build artifacts (do not edit)
+cmake/                      # CMake modules (Sources.cmake)
+```
 
 ## Development Workflow
 

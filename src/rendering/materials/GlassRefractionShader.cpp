@@ -55,6 +55,11 @@ static const char* glassFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
         vec3 normal = normalize(vNormal);
@@ -82,8 +87,11 @@ static const char* glassFragmentShader = R"(
         float refractB = texture(uEnvMap, refractDirB).b;
         vec3 refractColor = vec3(refractR, refractG, refractB);
 
+        // Convert to linear for correct color operations
+        vec3 linearColor = sRGBToLinear(uColor.rgb);
+
         // Blend refraction with base color
-        refractColor = mix(uColor.rgb, refractColor, uRefractionStrength);
+        refractColor = mix(linearColor, refractColor, uRefractionStrength);
 
         // Specular highlight
         vec3 halfDir = normalize(lightDir + viewDir);
@@ -98,7 +106,7 @@ static const char* glassFragmentShader = R"(
 
         // Subtle edge glow
         float edgeGlow = fresnel * 0.3;
-        finalColor += uColor.rgb * edgeGlow;
+        finalColor += linearColor * edgeGlow;
 
         // Animated shimmer
         float shimmer = sin(vTexCoord.x * 30.0 + uTime * 2.0) * 0.02 + 0.98;

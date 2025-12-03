@@ -5,8 +5,8 @@
 
 #include <gtest/gtest.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/OscillatorListComponent.h"
-#include "core/IInstanceRegistry.h"
+#include "ui/panels/OscillatorListComponent.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "core/Oscillator.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "TestElementRegistry.h"

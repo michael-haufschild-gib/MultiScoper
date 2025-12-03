@@ -379,9 +379,21 @@ bool ParticleSystem::compileShaders(juce::OpenGLContext& context)
 {
     auto compile = [&](ShaderProgram& shader, const char* fragSource) -> bool {
         shader.program = std::make_unique<juce::OpenGLShaderProgram>(context);
-        shader.program->addVertexShader(particleVertexShader);
-        shader.program->addFragmentShader(fragSource);
-        
+
+        if (!shader.program->addVertexShader(particleVertexShader))
+        {
+            DBG("ParticleSystem: Failed to compile vertex shader: " << shader.program->getLastError());
+            shader.program.reset();
+            return false;
+        }
+
+        if (!shader.program->addFragmentShader(fragSource))
+        {
+            DBG("ParticleSystem: Failed to compile fragment shader: " << shader.program->getLastError());
+            shader.program.reset();
+            return false;
+        }
+
         // Explicitly bind attribute locations before linking
         // This ensures consistency across all shaders and matches VAO setup
         context.extensions.glBindAttribLocation(shader.program->getProgramID(), 0, "aPosition");
@@ -393,10 +405,11 @@ bool ParticleSystem::compileShaders(juce::OpenGLContext& context)
 
         if (!shader.program->link())
         {
-            DBG("ParticleSystem: Shader compile error: " << shader.program->getLastError());
+            DBG("ParticleSystem: Failed to link shader program: " << shader.program->getLastError());
+            shader.program.reset();
             return false;
         }
-        
+
         shader.projectionLoc = shader.program->getUniformIDFromName("uProjection");
         shader.textureLoc = shader.program->getUniformIDFromName("uTexture");
         shader.depthLoc = shader.program->getUniformIDFromName("uDepthMap");
@@ -441,19 +454,6 @@ void ParticleSystem::destroyAllEmitters()
 void ParticleSystem::update(float deltaTime)
 {
     time_ += deltaTime;
-    
-    // Use turbulence if we can access settings?
-    // Currently settings are passed in render().
-    // We need stored settings or assume a global turbulence for now.
-    // Let's implement a basic turbulence field that is always active but scales with a "strength" we can set later.
-    // Ideally, `ParticleSystem` should store current config or have `setTurbulence(strength, scale, speed)`.
-    
-    // For now, hardcode a small turbulence or use 0 if not set.
-    // Let's add member variables for turbulence to ParticleSystem class in header first?
-    // No, let's just implement the mechanism. 
-    // We will use a default strength of 0 unless set. 
-    // Wait, I haven't added setters for turbulence yet.
-    // Let's assume 0 for now, but write the code so it works when I add setters.
     
     float strength = turbulenceStrength_; 
     float scale = turbulenceScale_;

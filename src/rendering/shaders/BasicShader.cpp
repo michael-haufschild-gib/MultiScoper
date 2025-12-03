@@ -41,10 +41,18 @@ static const char* fragmentShaderSource = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space
+    // Input colors from juce::Colour are in sRGB, but we need linear for correct
+    // blending and tonemapping in the rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        // Approximate sRGB to linear conversion (gamma 2.2)
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
-        // Use the actual base color from the oscillator
-        vec3 neonColor = baseColor.rgb;
+        // Convert sRGB input color to linear space for correct rendering
+        vec3 neonColor = sRGBToLinear(baseColor.rgb);
 
         float dist = abs(vDistFromCenter);
 
@@ -66,9 +74,7 @@ static const char* fragmentShaderSource = R"(
         // Alpha: solid core, fading glow
         float alpha = opacity * (core + glow * 0.7) * baseColor.a;
 
-        // Clamp to prevent over-saturation
-        finalColor = clamp(finalColor, 0.0, 1.0);
-
+        // Output in linear space - blit shader will tonemap and apply gamma
         fragColor = vec4(finalColor, alpha);
     }
 )";

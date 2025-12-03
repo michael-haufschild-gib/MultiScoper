@@ -121,7 +121,9 @@ public:
         // Label
         g.setColour((isSelected ? theme.controlActive : theme.textPrimary)
             .withAlpha(alpha * opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
+            
+        static const juce::Font itemFont(juce::FontOptions().withHeight(13.0f));
+        g.setFont(itemFont);
 
         if (item.description.isNotEmpty())
         {
@@ -129,7 +131,8 @@ public:
             g.drawText(item.label, labelBounds, juce::Justification::centredLeft);
 
             g.setColour(theme.textSecondary.withAlpha(alpha * opacity * 0.8f));
-            g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+            static const juce::Font descFont(juce::FontOptions().withHeight(11.0f));
+            g.setFont(descFont);
             g.drawText(item.description, contentBounds, juce::Justification::centredLeft);
         }
         else

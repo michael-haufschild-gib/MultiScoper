@@ -9,7 +9,7 @@
 #include <limits>
 #include <random>
 #include <gtest/gtest.h>
-#include "dsp/SignalProcessor.h"
+#include "core/dsp/SignalProcessor.h"
 #include <span>
 
 using namespace oscil;

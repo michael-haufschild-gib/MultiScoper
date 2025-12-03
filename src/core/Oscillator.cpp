@@ -91,7 +91,7 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     }
 
     processingMode_ = stringToProcessingMode(state.getProperty(StateIds::ProcessingMode, "FullStereo"));
-    colour_ = juce::Colour(static_cast<juce::uint32>(static_cast<int>(state.getProperty(StateIds::Colour, static_cast<int>(0xFF00FF00)))));
+    colour_ = juce::Colour(static_cast<juce::uint32>(static_cast<int>(state.getProperty(StateIds::Colour, static_cast<int>(WaveformColorPalette::getRandomColor().getARGB())))));
     opacity_ = state.getProperty(StateIds::Opacity, 1.0f);
     paneId_.id = state.getProperty(StateIds::PaneId, "");
     orderIndex_ = state.getProperty(StateIds::Order, 0);

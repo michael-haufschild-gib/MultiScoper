@@ -41,7 +41,7 @@ static const char* crystalFragmentShader = R"(
     uniform vec3 uCameraPos;
     uniform vec3 uLightDir;
     uniform samplerCube uEnvMap;
-    
+
     // Material
     uniform vec4 uBaseColor;
     uniform float uRoughness;
@@ -49,6 +49,11 @@ static const char* crystalFragmentShader = R"(
     uniform float uIOR;
 
     out vec4 fragColor;
+
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
 
     void main()
     {
@@ -78,8 +83,11 @@ static const char* crystalFragmentShader = R"(
         float F0 = 0.04 + 0.96 * uMetallic; // Dielectric vs Metal
         float fresnel = F0 + (1.0 - F0) * pow(1.0 - NdotV, 5.0);
 
+        // Convert to linear for correct tonemapping
+        vec3 linearBaseColor = sRGBToLinear(uBaseColor.rgb);
+
         // Combine
-        vec3 finalColor = mix(refraction * uBaseColor.rgb, reflection, fresnel);
+        vec3 finalColor = mix(refraction * linearBaseColor, reflection, fresnel);
         finalColor += spec * vec3(1.0); // Add specular highlight
 
         fragColor = vec4(finalColor, uBaseColor.a);

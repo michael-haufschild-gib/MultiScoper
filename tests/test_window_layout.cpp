@@ -4,7 +4,7 @@
 */
 
 #include <gtest/gtest.h>
-#include "core/WindowLayout.h"
+#include "ui/layout/WindowLayout.h"
 
 using namespace oscil;
 

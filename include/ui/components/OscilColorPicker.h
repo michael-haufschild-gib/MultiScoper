@@ -6,7 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -130,6 +130,12 @@ private:
     static constexpr int SLIDER_HEIGHT = 16;
     static constexpr int SLIDER_SPACING = 12;
     static constexpr int PREVIEW_HEIGHT = 32;
+
+    // Cached gradient
+    juce::Image cachedGradientImage_;
+    float cachedHue_ = -1.0f;
+    juce::Rectangle<int> cachedGradientBounds_;
+    void updateGradientCache(const juce::Rectangle<int>& bounds);
 
     // TestIdSupport
     void registerTestId() override;

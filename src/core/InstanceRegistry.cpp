@@ -92,6 +92,7 @@ SourceId InstanceRegistry::registerInstance(
             SourceInfo info;
             info.sourceId = sourceId;
             info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
+            info.trackIdentifier = trackIdentifier;
             info.channelCount = channelCount;
             info.sampleRate = sampleRate;
             info.buffer = captureBuffer;
@@ -130,15 +131,8 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
         if (it == sources_.end())
             return;
 
-        // Remove from track map
-        for (auto trackIt = trackToSourceMap_.begin(); trackIt != trackToSourceMap_.end(); ++trackIt)
-        {
-            if (trackIt->second == sourceId)
-            {
-                trackToSourceMap_.erase(trackIt);
-                break;
-            }
-        }
+        // Remove from track map using stored identifier (O(1))
+        trackToSourceMap_.erase(it->second.trackIdentifier);
 
         sources_.erase(it);
         shouldNotify = true;

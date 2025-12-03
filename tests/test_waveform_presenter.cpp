@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "ui/presenters/WaveformPresenter.h"
+#include "ui/panels/WaveformPresenter.h"
 #include "core/SharedCaptureBuffer.h"
 #include <vector>
 

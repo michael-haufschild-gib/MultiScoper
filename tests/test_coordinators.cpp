@@ -4,11 +4,11 @@
 */
 
 #include <gtest/gtest.h>
-#include "ui/coordinators/SourceCoordinator.h"
-#include "ui/coordinators/ThemeCoordinator.h"
-#include "ui/coordinators/LayoutCoordinator.h"
+#include "ui/layout/SourceCoordinator.h"
+#include "ui/theme/ThemeCoordinator.h"
+#include "ui/layout/LayoutCoordinator.h"
 #include "core/InstanceRegistry.h"
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 #include <atomic>
 #include <chrono>
 #include <thread>

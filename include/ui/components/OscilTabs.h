@@ -6,7 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -163,6 +163,10 @@ private:
     static constexpr int TAB_PADDING_H = 16;
     static constexpr int ICON_SIZE = 16;
     static constexpr int BADGE_SIZE = 18;
+
+    // Cached layout
+    std::vector<juce::Rectangle<int>> cachedTabBounds_;
+    void updateLayoutCache();
 
     // TestIdSupport
     void registerTestId() override;

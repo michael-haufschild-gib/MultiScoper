@@ -42,6 +42,11 @@ static const char* wireframeFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
         // Depth-based fade (farther lines are more transparent)
@@ -54,8 +59,11 @@ static const char* wireframeFragmentShader = R"(
         // Calculate alpha
         float alpha = uColor.a * depthFade * pulse;
 
+        // Convert to linear for correct tonemapping
+        vec3 linearColor = sRGBToLinear(uColor.rgb);
+
         // Apply glow boost to color (makes lines brighter)
-        vec3 glowColor = uColor.rgb * (1.0 + uGlow * 0.5 * (1.0 - vDepth));
+        vec3 glowColor = linearColor * (1.0 + uGlow * 0.5 * (1.0 - vDepth));
 
         fragColor = vec4(glowColor, alpha);
     }

@@ -4,10 +4,10 @@
 */
 
 #include <gtest/gtest.h>
-#include "core/PluginProcessor.h"
+#include "plugin/PluginProcessor.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 

@@ -7,7 +7,8 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
-#include "Source.h"
+#include "core/Source.h"
+#include "ui/theme/WaveformColorPalette.h"
 #include <optional>
 
 namespace oscil
@@ -234,7 +235,7 @@ private:
     SourceId sourceId_;
     OscillatorState state_ = OscillatorState::NO_SOURCE;
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
-    juce::Colour colour_{ 0xFF00FF00 }; // Default green
+    juce::Colour colour_{ WaveformColorPalette::getRandomColor() };
     float opacity_ = 1.0f;
     PaneId paneId_;
     int orderIndex_ = 0;

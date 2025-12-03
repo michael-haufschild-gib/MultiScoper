@@ -293,7 +293,7 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     if (hasError())
     {
         g.setColour(theme_.statusError.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_CAPTION)));
+        g.setFont(cachedErrorFont_);
         g.drawText(errorMessage_,
             bounds.translated(0, bounds.getHeight() + 2).withHeight(14),
             juce::Justification::left);
@@ -431,6 +431,8 @@ void OscilTextField::updateEditorStyle()
 
     editor_->setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
     editor_->setTextToShowWhenEmpty(placeholder_, theme_.textSecondary);
+    
+    cachedErrorFont_ = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_CAPTION));
 }
 
 void OscilTextField::validateAndUpdate()

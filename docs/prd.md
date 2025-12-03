@@ -4700,7 +4700,25 @@ plan and then implement the following new feature:
    2. the oscillator is assigned to this new pane
    3. the oscillator is set visible
 8. Pane dropdown selection and creation is already available in two places in this project: the "add oscillator" dialog and the oscillator config popup. consolidate the code so we do not have duplicated code/functionality.
+---
 
+Plan and implement these changes to the Oscillator Config Popup:
+1. Remove the visibile/hide toggle switch from the popup
+2. Remove the delete button from the popup
+
+---
+Plan and implement these changes:
+1. Decide based on best practices: either enhance the existing input ui component or create a new component that allows to display a text value as label and when double-clicked turns into an input field with save and cancel icon buttons, so we have inline editing. Use best practices to decide on additional common functionality such a component needs.
+2. The header title of a pane showing the name of a pane can be inline edited.
+3. The name of an oscillator in the sidebar's oscillator list can be inline edited.
+
+---
+Plan and implement these changes:
+1. When double clicking on the Color indicator of an OsccillatorListItem, a modal opens.
+2. The modal has a title and x close button on the top right and an ok button.
+3. The modal shows the color picker functionality we also use in the oscillator config popup, so the user can quickly select a new color for the oscillator or add a new custom color for it. The functionality is exactly the same as in the add oscillator popup and the oscillator config popup. If this is not already a separate component shared across these popups, create the component and update the popups.
+4. When closing the modal through the x close icon in the top right, the request gets canceled and the oscillators color stays unchanged.
+5. When clicking the Ok button, the selected colors stays as new color of the oscillator and the modal closes.
 
 ---
 
@@ -4723,6 +4741,9 @@ Medium – ThemeManager.cpp & ThemeEditorComponent.cpp (~665 & 709 LOC) currentl
 Medium – SourceSelectorComponent.cpp, OscillatorConfigPopup.cpp, SidebarComponent.cpp, WaveformComponent.cpp (≈500–600 LOC) each orchestrate multiple sub-controls inline. Break them into child components per section (e.g., “sources header”, “filter row”, “pane list”) to keep responsibilities narrow.
 
 Medium – Rendering/DSP support files ParticleSystem.cpp, WaveformGLRenderer.cpp, VisualConfiguration.cpp, BasicShader.cpp, TimingEngine.cpp, OscilState.cpp (560–680 LOC) combine shader strings, CPU data structures, serialization, and runtime logic. Extract shader sources into .glsl assets or dedicated headers, move math helpers into utility modules, and isolate serialization/state-diff code so real-time paths stay lean and testable.
+----
+
+we have several "god files" in our project. here is the result of a review of such files in our test setup that need refactoring. review what is to do, plan the refactoring project, write the todos and delegate the refactoring to subagents with detailed prompts that give them all the context they need (but not unnecessary information):
 
 High – PluginTestServer.cpp (~2.3K LOC, entire file) mixes HTTP wiring, JSON parsing, UI-thread marshaling, rendering diagnostics, and audio-state mutation in one monolith. Split into focused handlers (layout, sources, oscillators, rendering tests, screenshots) plus a thin HTTP router so each class stays <300 LOC and gains unit-test seams.
 

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "ui/presenters/OscillatorPresenter.h"
+#include "ui/panels/OscillatorPresenter.h"
 #include "core/Oscillator.h"
 
 using namespace oscil;

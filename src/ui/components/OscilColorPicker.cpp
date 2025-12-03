@@ -146,22 +146,13 @@ void OscilColorPicker::paintSquareMode(juce::Graphics& g)
 {
     auto bounds = getGradientBounds();
 
-    // Create SV gradient with current hue
-    juce::Image gradient(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
-
-    for (int y = 0; y < bounds.getHeight(); ++y)
+    // Update cache if needed
+    if (std::abs(cachedHue_ - hue_) > 0.001f || cachedGradientBounds_ != bounds || !cachedGradientImage_.isValid())
     {
-        float brightness = 1.0f - (static_cast<float>(y) / static_cast<float>(bounds.getHeight()));
-
-        for (int x = 0; x < bounds.getWidth(); ++x)
-        {
-            float saturation = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
-            auto color = juce::Colour::fromHSV(hue_, saturation, brightness, 1.0f);
-            gradient.setPixelAt(x, y, color);
-        }
+        updateGradientCache(bounds);
     }
 
-    g.drawImage(gradient, bounds.toFloat());
+    g.drawImage(cachedGradientImage_, bounds.toFloat());
 
     // Border
     g.setColour(theme_.controlBorder);
@@ -180,27 +171,88 @@ void OscilColorPicker::paintSquareMode(juce::Graphics& g)
 void OscilColorPicker::paintWheelMode(juce::Graphics& g)
 {
     auto bounds = getGradientBounds();
-    float radius = static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f;
-
-    // Draw color wheel
-    for (int y = 0; y < bounds.getHeight(); ++y)
+    
+    // Reuse cache mechanism for wheel mode (though hue dependency is different - wheel shows all hues)
+    // Wheel mode doesn't depend on 'hue_' property for the background, so we use a sentinel hue value or separate flag
+    // Here we just check bounds validity for wheel mode.
+    
+    // Check if we are in wheel mode and cache is stale (either bounds changed or we were in square mode)
+    if (cachedGradientBounds_ != bounds || !cachedGradientImage_.isValid() || cachedHue_ > -2.0f) // cachedHue_ > -2.0f implies we might have been in square mode or unitialized
     {
-        for (int x = 0; x < bounds.getWidth(); ++x)
+        // Mark as wheel mode in cache by setting hue to a sentinel (e.g. -10.0f)
+        // But updateGradientCache logic needs to know the mode.
+        updateGradientCache(bounds);
+    }
+
+    g.drawImage(cachedGradientImage_, bounds.toFloat());
+    
+    // Indicator
+    float radius = static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f;
+    float indicatorAngle = (hue_ * 2.0f * juce::MathConstants<float>::pi) - juce::MathConstants<float>::pi;
+    float indicatorDist = saturation_ * radius;
+    
+    float cx = bounds.getCentreX();
+    float cy = bounds.getCentreY();
+    
+    float indicatorX = cx + std::cos(indicatorAngle) * indicatorDist;
+    float indicatorY = cy + std::sin(indicatorAngle) * indicatorDist;
+
+    g.setColour(juce::Colours::white);
+    g.drawEllipse(indicatorX - 6, indicatorY - 6, 12, 12, 2.0f);
+    g.setColour(juce::Colours::black);
+    g.drawEllipse(indicatorX - 5, indicatorY - 5, 10, 10, 1.0f);
+}
+
+void OscilColorPicker::updateGradientCache(const juce::Rectangle<int>& bounds)
+{
+    cachedGradientImage_ = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+    cachedGradientBounds_ = bounds;
+    
+    if (mode_ == Mode::Square)
+    {
+        cachedHue_ = hue_;
+        
+        juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
+        
+        for (int y = 0; y < bounds.getHeight(); ++y)
         {
-            float dx = static_cast<float>(x) - radius;
-            float dy = static_cast<float>(y) - radius;
-            float distance = std::sqrt(dx * dx + dy * dy);
-
-            if (distance <= radius)
+            float brightness = 1.0f - (static_cast<float>(y) / static_cast<float>(bounds.getHeight()));
+            
+            for (int x = 0; x < bounds.getWidth(); ++x)
             {
-                float angle = std::atan2(dy, dx);
-                float hue = (angle + juce::MathConstants<float>::pi) /
-                           (2.0f * juce::MathConstants<float>::pi);
-                float sat = distance / radius;
+                float saturation = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
+                auto color = juce::Colour::fromHSV(hue_, saturation, brightness, 1.0f);
+                data.setPixelColour(x, y, color);
+            }
+        }
+    }
+    else
+    {
+        cachedHue_ = -10.0f; // Sentinel for wheel mode
+        float radius = static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f;
+        float cx = static_cast<float>(bounds.getWidth()) / 2.0f;
+        float cy = static_cast<float>(bounds.getHeight()) / 2.0f;
+        
+        juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
 
-                auto color = juce::Colour::fromHSV(hue, sat, brightness_, 1.0f);
-                g.setColour(color);
-                g.fillRect(static_cast<float>(bounds.getX() + x), static_cast<float>(bounds.getY() + y), 1.0f, 1.0f);
+        for (int y = 0; y < bounds.getHeight(); ++y)
+        {
+            for (int x = 0; x < bounds.getWidth(); ++x)
+            {
+                float dx = static_cast<float>(x) - cx;
+                float dy = static_cast<float>(y) - cy;
+                float distance = std::sqrt(dx * dx + dy * dy);
+
+                if (distance <= radius)
+                {
+                    float angle = std::atan2(dy, dx);
+                    float hue = (angle + juce::MathConstants<float>::pi) /
+                               (2.0f * juce::MathConstants<float>::pi);
+                    float sat = distance / radius;
+
+                    auto color = juce::Colour::fromHSV(hue, sat, brightness_, 1.0f);
+                    data.setPixelColour(x, y, color);
+                }
             }
         }
     }

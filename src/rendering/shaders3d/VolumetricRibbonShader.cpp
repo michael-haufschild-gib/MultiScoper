@@ -55,6 +55,11 @@ static const char* ribbonFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
         vec3 normal = normalize(vNormal);
@@ -85,11 +90,14 @@ static const char* ribbonFragmentShader = R"(
         // Enhance contrast
         flow = pow(flow, 1.5);
         
+        // Convert to linear for correct tonemapping
+        vec3 linearColor = sRGBToLinear(uColor.rgb);
+
         // Combine lighting
-        vec3 ambient = uAmbient * uColor.rgb;
-        vec3 diffuse = uDiffuse * diff * uColor.rgb;
+        vec3 ambient = uAmbient * linearColor;
+        vec3 diffuse = uDiffuse * diff * linearColor;
         vec3 specular = uSpecular.rgb * spec * uSpecular.a;
-        vec3 glow = uColor.rgb * rim;
+        vec3 glow = linearColor * rim;
 
         vec3 result = (ambient + diffuse + specular + glow) * flow;
 

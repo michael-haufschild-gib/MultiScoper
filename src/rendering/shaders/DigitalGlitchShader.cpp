@@ -54,14 +54,24 @@ static const char* glitchFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space
+    // Input colors from juce::Colour are in sRGB, but we need linear for correct
+    // blending and tonemapping in the rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
         float dist = abs(vDistFromCenter);
-        
+
         // Techy/Scanline look
         float alpha = 1.0 - smoothstep(0.8, 1.0, dist);
-        
-        fragColor = vec4(baseColor.rgb, alpha * opacity);
+
+        // Convert sRGB input to linear for correct rendering
+        vec3 linearColor = sRGBToLinear(baseColor.rgb);
+
+        fragColor = vec4(linearColor, alpha * opacity);
     }
 )";
 
@@ -97,6 +107,7 @@ bool DigitalGlitchShader::compile(juce::OpenGLContext& context)
     
     if (!gl_->program->addVertexShader(glitchVertexShader) || !gl_->program->addFragmentShader(glitchFragmentShader) || !gl_->program->link())
     {
+        DBG("DigitalGlitchShader: Shader compilation failed: " << gl_->program->getLastError());
         gl_->program.reset();
         return false;
     }

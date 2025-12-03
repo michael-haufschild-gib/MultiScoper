@@ -18,8 +18,12 @@ namespace oscil
 
 using namespace juce::gl;
 
-// Release-mode logging macro (works in both Debug and Release)
-#define GL_LOG(msg) std::cerr << "[GL] " << msg << std::endl
+// Log to stderr only in Debug builds to avoid spamming Release output
+#if JUCE_DEBUG
+    #define GL_LOG(msg) std::cerr << "[GL] " << msg << std::endl
+#else
+    #define GL_LOG(msg)
+#endif
 
 // Debug mode: set to true to draw colored rectangles instead of waveforms
 // This bypasses shaders and tests basic GL rendering pipeline
@@ -72,14 +76,11 @@ void WaveformGLRenderer::newOpenGLContextCreated()
         GL_LOG("DEBUG_RENDER_MODE enabled, compiling debug shader");
         compileDebugShader();
     }
-    else
-    {
-        compileShaders();
-    }
 
     // Initialize the advanced render engine
     if (useRenderEngine_ && context_)
     {
+        const juce::ScopedWriteLock lock(engineLock_);
         renderEngine_ = std::make_unique<RenderEngine>();
         if (!renderEngine_->initialize(*context_))
         {
@@ -164,14 +165,6 @@ void WaveformGLRenderer::compileDebugShader()
     GL_LOG("DEBUG SHADER: Compiled successfully, VAO=" << debugVAO_ << ", VBO=" << debugVBO_);
 }
 
-void WaveformGLRenderer::compileShaders()
-{
-    // Legacy method removed - shaders are now managed by RenderEngine
-    if (!context_ || shadersCompiled_)
-        return;
-    shadersCompiled_ = true;
-}
-
 void WaveformGLRenderer::renderOpenGL()
 {
     if (!contextReady_.load())
@@ -245,7 +238,8 @@ void WaveformGLRenderer::renderOpenGL()
         }
     }
 
-    // Debug log once per second (use GL_LOG for release-mode visibility)
+    // Debug log once per second
+#if JUCE_DEBUG
     static int frameCounter = 0;
     if (++frameCounter >= 60)
     {
@@ -265,6 +259,7 @@ void WaveformGLRenderer::renderOpenGL()
                    << ", preset=" << data.visualConfig.presetId.toStdString());
         }
     }
+#endif
 
     if constexpr (DEBUG_RENDER_MODE)
     {
@@ -286,50 +281,56 @@ void WaveformGLRenderer::renderOpenGL()
             renderDebugRect(data.bounds, data.colour);
         }
     }
-    else if (renderEngine_ && renderEngine_->isInitialized())
-    {
-        // ========== ADVANCED RENDER ENGINE PATH ==========
-        // Use the full render engine with post-processing, particles, etc.
-
-        // Sync RenderEngine state: remove any waveform states for IDs
-        // that are no longer in the local waveforms_ map. This prevents
-        // GPU resource leaks (history FBOs, particle emitters) when
-        // oscillators are removed or panes are rebuilt.
-        {
-            std::unordered_set<int> activeIds;
-            for (const auto& data : waveformsToRender)
-                activeIds.insert(data.id);
-            renderEngine_->syncWaveforms(activeIds);
-        }
-
-        // Begin frame (clears scene FBO, updates timing)
-        renderEngine_->beginFrame(deltaTime);
-
-        // Register/update waveform configs with render engine
-        for (const auto& data : waveformsToRender)
-        {
-            // Ensure waveform is registered
-            if (!renderEngine_->getWaveformConfig(data.id))
-            {
-                renderEngine_->registerWaveform(data.id);
-            }
-
-            // Update the visual configuration for this waveform
-            renderEngine_->setWaveformConfig(data.id, data.visualConfig);
-
-            // Render the waveform through the engine
-            renderEngine_->renderWaveform(data);
-        }
-
-        // End frame (applies global effects, blits to screen)
-        renderEngine_->endFrame();
-    }
     else
     {
-        // ========== BASIC FALLBACK RENDER PATH ==========
-        // RenderEngine failed or not initialized.
-        // Fallback to clear screen (no shaders available without RenderEngine)
-        juce::OpenGLHelpers::clear(backgroundColour_);
+        // Lock the engine for the duration of the frame
+        const juce::ScopedWriteLock lock(engineLock_);
+        
+        if (renderEngine_ && renderEngine_->isInitialized())
+        {
+            // ========== ADVANCED RENDER ENGINE PATH ==========
+            // Use the full render engine with post-processing, particles, etc.
+
+            // Sync RenderEngine state: remove any waveform states for IDs
+            // that are no longer in the local waveforms_ map. This prevents
+            // GPU resource leaks (history FBOs, particle emitters) when
+            // oscillators are removed or panes are rebuilt.
+            {
+                std::unordered_set<int> activeIds;
+                for (const auto& data : waveformsToRender)
+                    activeIds.insert(data.id);
+                renderEngine_->syncWaveforms(activeIds);
+            }
+
+            // Begin frame (clears scene FBO, updates timing)
+            renderEngine_->beginFrame(deltaTime);
+
+            // Register/update waveform configs with render engine
+            for (const auto& data : waveformsToRender)
+                {
+                    // Ensure waveform is registered
+                    if (!renderEngine_->getWaveformConfig(data.id))
+                    {
+                        renderEngine_->registerWaveform(data.id);
+                    }
+
+                    // Update the visual configuration for this waveform
+                    renderEngine_->setWaveformConfig(data.id, data.visualConfig);
+
+                    // Render the waveform through the engine
+                    renderEngine_->renderWaveform(data);
+                }
+
+            // End frame (applies global effects, blits to screen)
+            renderEngine_->endFrame();
+        }
+        else
+        {
+            // ========== BASIC FALLBACK RENDER PATH ==========
+            // RenderEngine failed or not initialized.
+            // Fallback to clear screen (no shaders available without RenderEngine)
+            juce::OpenGLHelpers::clear(backgroundColour_);
+        }
     }
 }
 
@@ -485,22 +486,20 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     glDisable(GL_BLEND);
 }
 
-void WaveformGLRenderer::renderWaveform(const WaveformRenderData& /*data*/)
-{
-    // Legacy method removed - use RenderEngine
-}
-
 void WaveformGLRenderer::openGLContextClosing()
 {
     DBG("WaveformGLRenderer: OpenGL context closing");
     contextReady_.store(false);
 
     // Shutdown render engine first (it has its own resources)
-    if (renderEngine_)
     {
-        renderEngine_->shutdown();
-        renderEngine_.reset();
-        DBG("WaveformGLRenderer: RenderEngine shutdown complete");
+        const juce::ScopedWriteLock lock(engineLock_);
+        if (renderEngine_)
+        {
+            renderEngine_->shutdown();
+            renderEngine_.reset();
+            DBG("WaveformGLRenderer: RenderEngine shutdown complete");
+        }
     }
 
     // Release debug shader resources

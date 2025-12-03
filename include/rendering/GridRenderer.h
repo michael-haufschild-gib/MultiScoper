@@ -32,7 +32,16 @@ private:
     GLuint gridVBO_ = 0;
     static constexpr size_t gridBufferCapacity_ = 4096; // Max vertices for grid lines
 
+    // Reusable buffers to avoid per-frame allocation
+    std::vector<float> minorLines_;
+    std::vector<float> majorLines_;
+    std::vector<float> zeroLines_;
+    std::vector<float> timeMajorLines_;
+    std::vector<float> timeMinorLines_;
+
     bool initialized_ = false;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GridRenderer)
 };
 
 } // namespace oscil

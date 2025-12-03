@@ -59,11 +59,18 @@ void OscilTabs::addTab(const juce::String& label, const juce::String& id)
     if (tabs_.size() == 1)
     {
         selectedIndex_ = 0;
+        // Need to update cache first
+        updateLayoutCache();
+        
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
         indicatorXSpring_.position = targetIndicatorX_;
         indicatorWidthSpring_.position = targetIndicatorWidth_;
+    }
+    else
+    {
+        updateLayoutCache();
     }
 
     resized();
@@ -76,11 +83,18 @@ void OscilTabs::addTab(const TabItem& tab)
     if (tabs_.size() == 1)
     {
         selectedIndex_ = 0;
+        // Need to update cache first
+        updateLayoutCache();
+        
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
         indicatorXSpring_.position = targetIndicatorX_;
         indicatorWidthSpring_.position = targetIndicatorWidth_;
+    }
+    else
+    {
+        updateLayoutCache();
     }
 
     resized();
@@ -89,13 +103,44 @@ void OscilTabs::addTab(const TabItem& tab)
 void OscilTabs::addTabs(const std::vector<juce::String>& labels)
 {
     for (const auto& label : labels)
-        addTab(label);
+    {
+        TabItem tab;
+        tab.id = label;
+        tab.label = label;
+        tabs_.push_back(tab);
+    }
+    
+    updateLayoutCache();
+    
+    if (tabs_.size() > 0 && selectedIndex_ == 0)
+    {
+        auto bounds = getTabBounds(0);
+        targetIndicatorX_ = static_cast<float>(bounds.getX());
+        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
+        indicatorXSpring_.position = targetIndicatorX_;
+        indicatorWidthSpring_.position = targetIndicatorWidth_;
+    }
+    
+    resized();
 }
 
 void OscilTabs::addTabs(const std::vector<TabItem>& tabs)
 {
     for (const auto& tab : tabs)
-        addTab(tab);
+        tabs_.push_back(tab);
+        
+    updateLayoutCache();
+    
+    if (tabs_.size() > 0 && selectedIndex_ == 0)
+    {
+        auto bounds = getTabBounds(0);
+        targetIndicatorX_ = static_cast<float>(bounds.getX());
+        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
+        indicatorXSpring_.position = targetIndicatorX_;
+        indicatorWidthSpring_.position = targetIndicatorWidth_;
+    }
+    
+    resized();
 }
 
 void OscilTabs::clearTabs()
@@ -103,6 +148,7 @@ void OscilTabs::clearTabs()
     tabs_.clear();
     selectedIndex_ = 0;
     hoveredIndex_ = -1;
+    updateLayoutCache();
     resized();
 }
 
@@ -189,6 +235,7 @@ void OscilTabs::setOrientation(Orientation orientation)
     if (orientation_ != orientation)
     {
         orientation_ = orientation;
+        updateLayoutCache();
         resized();
     }
 }
@@ -207,6 +254,7 @@ void OscilTabs::setTabWidth(int width)
     if (tabWidth_ != width)
     {
         tabWidth_ = width;
+        updateLayoutCache();
         resized();
     }
 }
@@ -216,6 +264,7 @@ void OscilTabs::setTabHeight(int height)
     if (tabHeight_ != height)
     {
         tabHeight_ = height;
+        updateLayoutCache();
         resized();
     }
 }
@@ -225,6 +274,7 @@ void OscilTabs::setStretchTabs(bool stretch)
     if (stretchTabs_ != stretch)
     {
         stretchTabs_ = stretch;
+        updateLayoutCache();
         resized();
     }
 }
@@ -454,6 +504,9 @@ void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int c
 
 void OscilTabs::resized()
 {
+    // Recompute layout on resize (especially for stretch/auto modes)
+    updateLayoutCache();
+
     // Update indicator position after resize
     if (!tabs_.empty() && selectedIndex_ >= 0)
     {
@@ -469,22 +522,23 @@ void OscilTabs::resized()
     }
 }
 
-int OscilTabs::getTabAtPosition(juce::Point<int> pos) const
-{
-    for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
-    {
-        if (getTabBounds(i).contains(pos))
-            return i;
-    }
-    return -1;
-}
-
 juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
 {
-    if (index < 0 || index >= static_cast<int>(tabs_.size()))
+    if (index < 0 || index >= static_cast<int>(cachedTabBounds_.size()))
         return {};
 
+    return cachedTabBounds_[static_cast<size_t>(index)];
+}
+
+void OscilTabs::updateLayoutCache()
+{
+    cachedTabBounds_.clear();
+    
+    if (tabs_.empty())
+        return;
+
     auto bounds = getLocalBounds();
+    cachedTabBounds_.reserve(tabs_.size());
 
     if (orientation_ == Orientation::Horizontal)
     {
@@ -493,19 +547,25 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
         if (stretchTabs_)
         {
             int tabWidth = bounds.getWidth() / static_cast<int>(tabs_.size());
-            return juce::Rectangle<int>(index * tabWidth, 0, tabWidth, height);
+            for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
+            {
+                cachedTabBounds_.emplace_back(i * tabWidth, 0, tabWidth, height);
+            }
         }
         else if (tabWidth_ > 0)
         {
-            return juce::Rectangle<int>(index * tabWidth_, 0, tabWidth_, height);
+            for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
+            {
+                cachedTabBounds_.emplace_back(i * tabWidth_, 0, tabWidth_, height);
+            }
         }
         else
         {
-            // Calculate position based on preceding tab widths
+            // Calculate position based on measured widths
             int x = 0;
             auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
 
-            for (size_t i = 0; i < static_cast<size_t>(index); ++i)
+            for (size_t i = 0; i < tabs_.size(); ++i)
             {
                 const auto& tab = tabs_[i];
                 juce::GlyphArrangement glyphs;
@@ -513,18 +573,11 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
                 int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
                 int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
                 int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
-                x += labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
+                int width = labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
+                
+                cachedTabBounds_.emplace_back(x, 0, width, height);
+                x += width;
             }
-
-            const auto& tab = tabs_[static_cast<size_t>(index)];
-            juce::GlyphArrangement glyphs;
-            glyphs.addLineOfText(font, tab.label, 0, 0);
-            int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-            int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
-            int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
-            int width = labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
-
-            return juce::Rectangle<int>(x, 0, width, height);
         }
     }
     else
@@ -533,7 +586,10 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
         int width = tabWidth_ > 0 ? tabWidth_ : bounds.getWidth();
         int height = tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
 
-        return juce::Rectangle<int>(0, index * height, width, height);
+        for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
+        {
+            cachedTabBounds_.emplace_back(0, i * height, width, height);
+        }
     }
 }
 
@@ -555,6 +611,16 @@ juce::Rectangle<float> OscilTabs::getIndicatorBounds() const
             static_cast<float>(width), indicatorWidthSpring_.position
         );
     }
+}
+
+int OscilTabs::getTabAtPosition(juce::Point<int> pos) const
+{
+    for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
+    {
+        if (getTabBounds(i).contains(pos))
+            return i;
+    }
+    return -1;
 }
 
 void OscilTabs::mouseDown(const juce::MouseEvent& e)

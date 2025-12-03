@@ -83,6 +83,11 @@ static const char* electricFlowerFragmentShader = R"(
     const float PHI = 1.6180339887;
     const float SQRT2 = 1.4142135623;
 
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
         // Create soft point with smooth edge falloff
@@ -101,7 +106,10 @@ static const char* electricFlowerFragmentShader = R"(
         float colorCycle = sin(uTime * PHI * 0.3 + vIndex * 6.283185) * 0.2 + 0.5;
         colorMix = mix(colorMix, colorCycle, 0.3);
 
-        vec3 color = mix(uColor.rgb, uColor2.rgb, colorMix);
+        // Convert colors to linear for correct blending
+        vec3 linearColor1 = sRGBToLinear(uColor.rgb);
+        vec3 linearColor2 = sRGBToLinear(uColor2.rgb);
+        vec3 color = mix(linearColor1, linearColor2, colorMix);
 
         // Amplitude affects brightness - louder = brighter
         float brightness = 1.0 + ampFactor * 0.8;

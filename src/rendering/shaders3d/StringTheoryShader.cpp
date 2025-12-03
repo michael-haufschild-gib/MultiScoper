@@ -38,9 +38,15 @@ static const char* stringFragmentShader = R"(
     uniform vec4 uColor;
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main()
     {
-        fragColor = uColor;
+        vec3 linearColor = sRGBToLinear(uColor.rgb);
+        fragColor = vec4(linearColor, uColor.a);
     }
 )";
 

@@ -5,10 +5,10 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilAccordion.h"
-#include "ui/sections/OptionsSection.h"
-#include "ui/sections/TimingSidebarSection.h"
-#include "ui/sections/DynamicHeightContent.h"
-#include "dsp/TimingConfig.h"
+#include "ui/layout/sections/OptionsSection.h"
+#include "ui/layout/sections/TimingSidebarSection.h"
+#include "ui/layout/sections/DynamicHeightContent.h"
+#include "core/dsp/TimingConfig.h"
 
 using namespace oscil;
 

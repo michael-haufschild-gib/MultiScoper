@@ -6,7 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -122,6 +122,10 @@ public:
 private:
     void timerCallback() override;
     void updateAnimations();
+
+    // Path caching
+    juce::Path cachedButtonPath_;
+    void updatePathCache(const juce::Rectangle<float>& bounds);
 
     // Rendering helpers
     void paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds);

@@ -3,7 +3,7 @@
 */
 
 #include "rendering/GridRenderer.h"
-#include "ui/ThemeManager.h" // For grid colors if needed
+#include "ui/theme/ThemeManager.h" // For grid colors if needed
 #include <cmath>
 
 namespace oscil
@@ -24,8 +24,15 @@ static const char* colorFragmentShader = R"(
     #version 330 core
     uniform vec4 color;
     out vec4 fragColor;
+
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     void main() {
-        fragColor = color;
+        vec3 linearColor = sRGBToLinear(color.rgb);
+        fragColor = vec4(linearColor, color.a);
     }
 )";
 
@@ -45,6 +52,14 @@ void GridRenderer::initialize(juce::OpenGLContext& context)
 
     compileShaders(context);
     createBuffers(context);
+
+    // Pre-reserve vector capacity
+    // Estimating typical usage to avoid reallocations
+    minorLines_.reserve(gridBufferCapacity_);
+    majorLines_.reserve(gridBufferCapacity_);
+    zeroLines_.reserve(gridBufferCapacity_);
+    timeMajorLines_.reserve(gridBufferCapacity_);
+    timeMinorLines_.reserve(gridBufferCapacity_);
 
     initialized_ = true;
 }
@@ -90,22 +105,30 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
 {
     // Compile color shader
     colorShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!colorShader_->addVertexShader(colorVertexShader) ||
-        !colorShader_->addFragmentShader(colorFragmentShader))
+    if (!colorShader_->addVertexShader(colorVertexShader))
     {
-        // Handle error (log it)
-        return; 
-    }
-    
-    GLuint colorProgramID = colorShader_->getProgramID();
-    context.extensions.glBindAttribLocation(colorProgramID, 0, "position");
-    
-    if (!colorShader_->link())
-    {
-        // Handle error
+        DBG("GridRenderer: Failed to compile vertex shader: " << colorShader_->getLastError());
+        colorShader_.reset();
         return;
     }
-    
+
+    if (!colorShader_->addFragmentShader(colorFragmentShader))
+    {
+        DBG("GridRenderer: Failed to compile fragment shader: " << colorShader_->getLastError());
+        colorShader_.reset();
+        return;
+    }
+
+    GLuint colorProgramID = colorShader_->getProgramID();
+    context.extensions.glBindAttribLocation(colorProgramID, 0, "position");
+
+    if (!colorShader_->link())
+    {
+        DBG("GridRenderer: Failed to link shader program: " << colorShader_->getLastError());
+        colorShader_.reset();
+        return;
+    }
+
     colorUniformLoc_ = colorShader_->getUniformIDFromName("color");
 }
 
@@ -127,7 +150,8 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
         size_t vertexCount = verts.size() / 2;
         if (vertexCount > gridBufferCapacity_)
         {
-            // Too many vertices - truncate
+            DBG("GridRenderer: Vertex count (" << vertexCount << ") exceeds buffer capacity ("
+                << gridBufferCapacity_ << "), truncating");
             vertexCount = gridBufferCapacity_;
         }
 
@@ -149,12 +173,12 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
         context.extensions.glBindVertexArray(0);
     };
 
-    // Storage for vertices by color/type
-    std::vector<float> minorLines;
-    std::vector<float> majorLines;
-    std::vector<float> zeroLines;
-    std::vector<float> timeMajorLines;
-    std::vector<float> timeMinorLines;
+    // Clear reusable buffers
+    minorLines_.clear();
+    majorLines_.clear();
+    zeroLines_.clear();
+    timeMajorLines_.clear();
+    timeMinorLines_.clear();
 
     // Helper to generate grid for a specific vertical range (NDC yTop to yBottom)
     // yTop > yBottom (e.g. 1.0 to 0.0)
@@ -176,17 +200,17 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
             float ratio = i / 8.0f;
             float y = yTop - ratio * height; // Top-down
             if (std::abs(y - yCenter) > 0.01f) // Skip zero line
-                addLineTo(minorLines, -1.0f, y, 1.0f, y);
+                addLineTo(minorLines_, -1.0f, y, 1.0f, y);
         }
         
         // Major (quarters)
         float yQ1 = yTop - 0.25f * height;
         float yQ3 = yTop - 0.75f * height;
-        addLineTo(majorLines, -1.0f, yQ1, 1.0f, yQ1);
-        addLineTo(majorLines, -1.0f, yQ3, 1.0f, yQ3);
+        addLineTo(majorLines_, -1.0f, yQ1, 1.0f, yQ1);
+        addLineTo(majorLines_, -1.0f, yQ3, 1.0f, yQ3);
         
         // Zero line
-        addLineTo(zeroLines, -1.0f, yCenter, 1.0f, yCenter);
+        addLineTo(zeroLines_, -1.0f, yCenter, 1.0f, yCenter);
         
         // --- Vertical Lines ---
         
@@ -215,72 +239,83 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
             for (float t = stepSize; t < durationMs; t += stepSize) {
                 float xRatio = t / durationMs;
                 float x = -1.0f + xRatio * 2.0f;
-                addLineTo(timeMajorLines, x, yTop, x, yBottom);
+                addLineTo(timeMajorLines_, x, yTop, x, yBottom);
             }
         } else {
-            // Musical Mode
-            int subDivisions = 4;
-            bool showSubBeats = false;
-            
+            // Musical Mode - grid divisions aligned with labels
+            int numDivisions = 4;  // Number of major grid divisions
+            bool isBarBased = false;
+            int beatsPerBar = config.timeSigNumerator;
+
             switch (config.noteInterval) {
+                // Single note intervals - show 4 subdivisions within the note
                 case NoteInterval::THIRTY_SECOND:
                 case NoteInterval::SIXTEENTH:
                 case NoteInterval::TWELFTH:
-                    subDivisions = 1; break;
                 case NoteInterval::EIGHTH:
                 case NoteInterval::TRIPLET_EIGHTH:
                 case NoteInterval::DOTTED_EIGHTH:
-                    subDivisions = 2; break;
                 case NoteInterval::QUARTER:
                 case NoteInterval::TRIPLET_QUARTER:
                 case NoteInterval::DOTTED_QUARTER:
-                    subDivisions = 4; break;
                 case NoteInterval::HALF:
                 case NoteInterval::TRIPLET_HALF:
                 case NoteInterval::DOTTED_HALF:
-                    subDivisions = 2; showSubBeats = true; break;
+                    numDivisions = 4;
+                    break;
+                // Bar-based intervals - show beats or bars
                 case NoteInterval::WHOLE:
-                    subDivisions = config.timeSigNumerator; showSubBeats = true; break;
+                    numDivisions = beatsPerBar; // Show beat divisions within the bar
+                    isBarBased = true;
+                    break;
                 case NoteInterval::TWO_BARS:
-                    subDivisions = 2; showSubBeats = true; break;
-                case NoteInterval::FOUR_BARS:
-                    subDivisions = 4; showSubBeats = true; break;
-                case NoteInterval::EIGHT_BARS:
-                    subDivisions = 8; showSubBeats = true; break;
+                    numDivisions = 2;
+                    isBarBased = true;
+                    break;
                 case NoteInterval::THREE_BARS:
-                    subDivisions = 3; showSubBeats = true; break;
-                default: subDivisions = 4; break;
+                    numDivisions = 3;
+                    isBarBased = true;
+                    break;
+                case NoteInterval::FOUR_BARS:
+                    numDivisions = 4;
+                    isBarBased = true;
+                    break;
+                case NoteInterval::EIGHT_BARS:
+                    numDivisions = 8;
+                    isBarBased = true;
+                    break;
+                default:
+                    numDivisions = 4;
+                    break;
             }
-            
-            float widthPerDiv = 2.0f / static_cast<float>(subDivisions);
-            
-            for (int i=1; i<subDivisions; ++i) {
+
+            float widthPerDiv = 2.0f / static_cast<float>(numDivisions);
+
+            // Draw major division lines (between divisions, not at edges)
+            for (int i = 1; i < numDivisions; ++i) {
                 float x = -1.0f + i * widthPerDiv;
-                
-                if (config.noteInterval >= NoteInterval::TWO_BARS) {
-                     addLineTo(majorLines, x, yTop, x, yBottom);
-                } else if (config.noteInterval == NoteInterval::WHOLE) {
-                     // Beat lines (medium) - treating as major for now or could separate
-                     addLineTo(timeMajorLines, x, yTop, x, yBottom);
+
+                if (isBarBased) {
+                    // Bar/beat boundaries are major lines
+                    addLineTo(majorLines_, x, yTop, x, yBottom);
                 } else {
-                     addLineTo(minorLines, x, yTop, x, yBottom);
+                    // Subdivision lines are minor
+                    addLineTo(timeMajorLines_, x, yTop, x, yBottom);
                 }
             }
-            
-            if (showSubBeats) {
-                int minorDivs = 4;
-                if (config.noteInterval >= NoteInterval::TWO_BARS)
-                    minorDivs = config.timeSigNumerator;
-                    
-                 float minorWidth = widthPerDiv / minorDivs;
-                 
-                 for (int i=0; i<subDivisions; ++i) {
-                     float baseX = -1.0f + i * widthPerDiv;
-                     for (int j=1; j<minorDivs; ++j) {
-                         float x = baseX + j * minorWidth;
-                         addLineTo(timeMinorLines, x, yTop, x, yBottom);
-                     }
-                 }
+
+            // For bar-based modes, add sub-beat lines within each bar
+            if (isBarBased && config.noteInterval >= NoteInterval::TWO_BARS) {
+                int subBeatsPerDiv = beatsPerBar;
+                float subBeatWidth = widthPerDiv / static_cast<float>(subBeatsPerDiv);
+
+                for (int i = 0; i < numDivisions; ++i) {
+                    float baseX = -1.0f + i * widthPerDiv;
+                    for (int j = 1; j < subBeatsPerDiv; ++j) {
+                        float x = baseX + j * subBeatWidth;
+                        addLineTo(timeMinorLines_, x, yTop, x, yBottom);
+                    }
+                }
             }
         }
     };
@@ -293,8 +328,8 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
         generateChannelGrid(0.0f, -1.0f);
         
         // Separator
-        majorLines.push_back(-1.0f); majorLines.push_back(0.0f);
-        majorLines.push_back(1.0f); majorLines.push_back(0.0f);
+        majorLines_.push_back(-1.0f); majorLines_.push_back(0.0f);
+        majorLines_.push_back(1.0f); majorLines_.push_back(0.0f);
         
     } else {
         // Full: +1.0 to -1.0
@@ -304,14 +339,14 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
     // Render passes
     // Order: Minor, TimeMinor, TimeMajor, Major, Zero
 
-    drawLines(minorLines, gridColors.gridMinor);
-    drawLines(timeMinorLines, gridColors.gridMinor.withAlpha(0.3f));
+    drawLines(minorLines_, gridColors.gridMinor);
+    drawLines(timeMinorLines_, gridColors.gridMinor.withAlpha(0.3f));
 
     // Time Major (Beats/Time Steps) - usually a bit fainter than structural major lines
-    drawLines(timeMajorLines, gridColors.gridMajor.withAlpha(0.6f));
+    drawLines(timeMajorLines_, gridColors.gridMajor.withAlpha(0.6f));
 
-    drawLines(majorLines, gridColors.gridMajor);
-    drawLines(zeroLines, gridColors.gridZeroLine);
+    drawLines(majorLines_, gridColors.gridMajor);
+    drawLines(zeroLines_, gridColors.gridZeroLine);
 }
 
 } // namespace oscil

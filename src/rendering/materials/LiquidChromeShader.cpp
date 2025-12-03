@@ -75,6 +75,11 @@ static const char* chromeFragmentShader = R"(
 
     out vec4 fragColor;
 
+    // Convert sRGB to linear color space for correct rendering pipeline
+    vec3 sRGBToLinear(vec3 srgb) {
+        return pow(srgb, vec3(2.2));
+    }
+
     // Schlick Fresnel approximation
     vec3 fresnelSchlick(float cosTheta, vec3 F0)
     {
@@ -87,8 +92,11 @@ static const char* chromeFragmentShader = R"(
         vec3 viewDir = normalize(uCameraPos - vWorldPos);
         vec3 lightDir = normalize(uLightDir);
 
+        // Convert to linear for correct color operations
+        vec3 linearColor = sRGBToLinear(uColor.rgb);
+
         // Base reflectance for chrome (very high)
-        vec3 F0 = mix(vec3(0.04), uColor.rgb, uMetallic);
+        vec3 F0 = mix(vec3(0.04), linearColor, uMetallic);
 
         // Fresnel
         float NdotV = max(dot(normal, viewDir), 0.0);
@@ -119,7 +127,7 @@ static const char* chromeFragmentShader = R"(
 
         // Add base color tint for colored chrome
         // Increased mix to 0.8 to ensure user color choice is clearly visible
-        chromeColor = mix(chromeColor, chromeColor * uColor.rgb, 0.8);
+        chromeColor = mix(chromeColor, chromeColor * linearColor, 0.8);
 
         // Add specular highlights
         vec3 specColor = uSpecular.rgb * spec * (1.0 - uRoughness);
@@ -128,7 +136,7 @@ static const char* chromeFragmentShader = R"(
         // Metallic edge highlight
         float edgeFactor = 1.0 - NdotV;
         edgeFactor = pow(edgeFactor, uFresnelPower);
-        chromeColor += uColor.rgb * edgeFactor * 0.2;
+        chromeColor += linearColor * edgeFactor * 0.2;
 
         // Animated shimmer for liquid effect
         float shimmer = sin(vTexCoord.x * 50.0 + uTime * 4.0) * 0.03 + 0.97;

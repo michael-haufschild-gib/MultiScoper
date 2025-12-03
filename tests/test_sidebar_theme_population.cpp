@@ -4,11 +4,11 @@
 */
 
 #include <gtest/gtest.h>
-#include "ui/SidebarComponent.h"
-#include "core/PluginProcessor.h"
+#include "ui/layout/SidebarComponent.h"
+#include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
-#include "ui/sections/OptionsSection.h"
-#include "ui/ThemeManager.h"
+#include "ui/layout/sections/OptionsSection.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -26,7 +26,7 @@ protected:
         
         processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance(), themeManager);
         // Initialize sidebar with processor
-        sidebar = std::make_unique<SidebarComponent>(*processor);
+        sidebar = std::make_unique<SidebarComponent>(InstanceRegistry::getInstance());
     }
 
     void TearDown() override

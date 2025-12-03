@@ -265,20 +265,46 @@ if(OSCIL_BUILD_TESTS)
     add_executable(OscilTests
         tests/test_main.cpp
         tests/test_signal_processor.cpp
-        tests/test_instance_registry.cpp
-        tests/test_shared_capture_buffer.cpp
+
+        # Refactored core tests - split for better isolation
+        tests/test_source_id.cpp
+        tests/test_source_state.cpp
+        tests/test_source_ownership.cpp
+        tests/test_source_buffer.cpp
+        tests/test_instance_registry_crud.cpp
+        tests/test_instance_registry_sync.cpp
+        tests/test_instance_registry_lifecycle.cpp
+        tests/test_plugin_processor_lifecycle.cpp
+        tests/test_plugin_processor_state.cpp
+        tests/test_plugin_processor_audio.cpp
+
+        # Refactored capture buffer tests - split for better isolation
+        tests/test_capture_buffer_core.cpp
+        tests/test_capture_buffer_threading.cpp
+        tests/test_capture_buffer_lifecycle.cpp
+
         tests/test_oscillator.cpp
-        tests/test_theme_manager.cpp
-        tests/test_state_persistence.cpp
-        tests/test_source.cpp
+        tests/test_theme_manager_crud.cpp
+        tests/test_theme_manager_apply.cpp
+        tests/test_theme_manager_persistence.cpp
+
+        # Refactored state persistence tests - split for better isolation
+        tests/test_state_persistence_save.cpp
+        tests/test_state_persistence_load.cpp
+        tests/test_state_persistence_migration.cpp
+        tests/test_state_persistence_edge.cpp
+
         tests/test_timing_config.cpp
         tests/test_timing_engine.cpp
-        tests/test_plugin_processor.cpp
 
-        # UI Component Tests
-        tests/test_spring_animation.cpp
-        tests/test_animation_settings.cpp
-        
+        # Refactored UI component tests - split for better isolation
+        tests/test_spring_physics.cpp
+        tests/test_spring_interaction.cpp
+        tests/test_spring_edge.cpp
+        tests/test_animation_settings_validation.cpp
+        tests/test_animation_settings_presets.cpp
+        tests/test_animation_settings_persistence.cpp
+
         tests/test_ui_audio_feedback.cpp
         tests/test_timing_calculations.cpp
         tests/test_add_oscillator_dialog.cpp
@@ -297,9 +323,15 @@ if(OSCIL_BUILD_TESTS)
 
         # New tests - 100% coverage initiative
         tests/test_window_layout.cpp
-        tests/test_coordinators.cpp
-        tests/test_camera3d.cpp
-        tests/test_visual_configuration.cpp
+        tests/test_coordinator_lifecycle.cpp
+        tests/test_coordinator_events.cpp
+        tests/test_coordinator_state.cpp
+        tests/test_camera3d_math.cpp
+        tests/test_camera3d_interaction.cpp
+        tests/test_camera3d_animation.cpp
+        tests/test_visual_config_validation.cpp
+        tests/test_visual_config_application.cpp
+        tests/test_visual_config_presets.cpp
 
         # Updated UI Component tests
         tests/test_oscil_button.cpp
@@ -316,139 +348,21 @@ if(OSCIL_BUILD_TESTS)
         tests/test_oscil_slider.cpp
         tests/test_oscil_tabs.cpp
         tests/test_oscil_textfield.cpp
-        tests/test_oscil_transportsync.cpp
         tests/test_oscillator_list_component.cpp
+        tests/test_oscillator_color_dialog.cpp
 
         # Test Harness Dependencies
         test_harness/src/TestElementRegistry.cpp
 
-        # Include necessary source files for testing
-        src/core/InstanceRegistry.cpp
-        src/core/SharedCaptureBuffer.cpp
-        src/core/OscilState.cpp
-        src/core/Oscillator.cpp
-        src/core/Pane.cpp
-        src/core/WindowLayout.cpp
-        src/core/Source.cpp
-        src/dsp/SignalProcessor.cpp
-        src/dsp/TimingEngine.cpp
-        src/core/PluginProcessor.cpp
-        src/ui/PluginEditor.cpp
-        src/ui/WaveformComponent.cpp
-        src/ui/presenters/WaveformPresenter.cpp
-        src/ui/presenters/OscillatorPresenter.cpp
-        src/ui/presenters/TimingPresenter.cpp
-        src/ui/OscillatorPanel.cpp
-        src/ui/PaneComponent.cpp
-        src/ui/ThemeManager.cpp
-        src/ui/ThemeEditorComponent.cpp
-        src/ui/ColorPickerComponent.cpp
-        src/ui/StatusBarComponent.cpp
-        src/ui/SourceSelectorComponent.cpp
-        src/ui/SettingsDropdown.cpp
-        src/ui/SidebarComponent.cpp
-        src/ui/OscillatorListComponent.cpp
-        src/ui/SourceItemComponent.cpp
-        src/ui/components/SegmentedButtonBar.cpp
-        src/ui/OscillatorListToolbar.cpp
-        src/ui/OscillatorListItem.cpp
-        src/ui/OscillatorConfigPopup.cpp
-        src/ui/AddOscillatorDialog.cpp
-        src/ui/PluginTestServer.cpp
-        src/ui/PluginTestServer_Lifecycle.cpp
-        src/ui/sections/TimingSidebarSection.cpp
-        src/ui/sections/OptionsSection.cpp
-        src/ui/coordinators/SourceCoordinator.cpp
-        src/ui/coordinators/ThemeCoordinator.cpp
-        src/ui/coordinators/LayoutCoordinator.cpp
-        # UI Managers
-        src/ui/managers/OpenGLLifecycleManager.cpp
-
-        # Platform-specific
-        $<$<PLATFORM_ID:Darwin>:src/ui/components/AnimationSettings.mm>
-
-        # UI Component source files for testing
-        src/ui/components/OscilButton.cpp
-        src/ui/components/OscilTextField.cpp
-        src/ui/components/OscilToggle.cpp
-        src/ui/components/OscilSlider.cpp
-        src/ui/components/OscilCheckbox.cpp
-        src/ui/components/OscilRadioButton.cpp
-        src/ui/components/OscilDropdown.cpp
-        src/ui/components/OscilTabs.cpp
-        src/ui/components/OscilAccordion.cpp
-        src/ui/components/OscilBadge.cpp
-        src/ui/components/OscilModal.cpp
-        src/ui/components/OscilColorSwatches.cpp
-        src/ui/components/OscilColorPicker.cpp
-        src/ui/components/OscilMeterBar.cpp
-        src/ui/components/OscilTransportSync.cpp
-        src/ui/components/UIAudioFeedback.cpp
-        src/ui/components/PaneContainerComponent.cpp
-
-        # Rendering source files for testing
-        src/rendering/WaveformShader.cpp
-        src/rendering/ShaderRegistry.cpp
-        src/rendering/shaders/BasicShader.cpp
-        src/rendering/shaders/NeonGlowShader.cpp
-        src/rendering/shaders/GradientFillShader.cpp
-        src/rendering/shaders/DualOutlineShader.cpp
-        src/rendering/shaders/PlasmaSineShader.cpp
-        src/rendering/shaders/DigitalGlitchShader.cpp
-        src/rendering/WaveformGLRenderer.cpp
-        src/rendering/EffectChain.cpp
-        src/rendering/GridRenderer.cpp
-        src/rendering/ParticleRenderer.cpp
-
-        # Rendering (Render Engine) for testing
-        src/rendering/Framebuffer.cpp
-        src/rendering/FramebufferPool.cpp
-        src/rendering/RenderEngine.cpp
-        src/rendering/VisualConfiguration.cpp
-        src/rendering/WaveformRenderState.cpp
-        src/rendering/Camera3D.cpp
-
-        # Rendering (Post-Processing Effects) for testing
-        src/rendering/effects/PostProcessEffect.cpp
-        src/rendering/effects/VignetteEffect.cpp
-        src/rendering/effects/FilmGrainEffect.cpp
-        src/rendering/effects/BloomEffect.cpp
-        src/rendering/effects/TrailsEffect.cpp
-        src/rendering/effects/ColorGradeEffect.cpp
-        src/rendering/effects/ChromaticAberrationEffect.cpp
-        src/rendering/effects/ScanlineEffect.cpp
-        src/rendering/effects/DistortionEffect.cpp
-        src/rendering/effects/GlitchEffect.cpp
-        src/rendering/effects/RadialBlurEffect.cpp
-        src/rendering/effects/TiltShiftEffect.cpp
-
-        # Rendering (Particles) for testing
-        src/rendering/particles/ParticlePool.cpp
-        src/rendering/particles/ParticleEmitter.cpp
-        src/rendering/particles/ParticleSystem.cpp
-
-        # Rendering (3D Shaders) for testing
-        src/rendering/shaders3d/WaveformShader3D.cpp
-        src/rendering/shaders3d/VolumetricRibbonShader.cpp
-        src/rendering/shaders3d/WireframeMeshShader.cpp
-        src/rendering/shaders3d/VectorFlowShader.cpp
-        src/rendering/shaders3d/StringTheoryShader.cpp
-        src/rendering/shaders3d/ElectricFlowerShader.cpp
-        src/rendering/shaders3d/ElectricFiligreeShader.cpp
-
-        # Rendering (Materials) for testing
-        src/rendering/materials/MaterialShader.cpp
-        src/rendering/materials/EnvironmentMapManager.cpp
-        src/rendering/materials/TextureManager.cpp
-        src/rendering/materials/GlassRefractionShader.cpp
-        src/rendering/materials/LiquidChromeShader.cpp
-        src/rendering/materials/CrystallineShader.cpp
+        # Source files (from Sources.cmake)
+        ${OSCIL_SOURCES}
     )
 
     target_include_directories(OscilTests
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/helpers
             ${CMAKE_CURRENT_SOURCE_DIR}/test_harness/include
             ${httplib_SOURCE_DIR}
     )

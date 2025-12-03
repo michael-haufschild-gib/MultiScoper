@@ -3,7 +3,7 @@
 */
 
 #include <gtest/gtest.h>
-#include "ui/ThemeManager.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 

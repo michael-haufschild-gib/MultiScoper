@@ -4,10 +4,10 @@
 */
 
 #include <gtest/gtest.h>
-#include "ui/AddOscillatorDialog.h"
-#include "ui/ThemeManager.h"
+#include "ui/dialogs/AddOscillatorDialog.h"
+#include "ui/theme/ThemeManager.h"
 #include "core/Oscillator.h"
-#include "core/Pane.h"
+#include "ui/layout/Pane.h"
 #include "core/Source.h"
 
 using namespace oscil;
