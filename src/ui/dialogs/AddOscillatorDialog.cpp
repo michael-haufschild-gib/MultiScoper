@@ -1,6 +1,6 @@
 /*
     Oscil - Add Oscillator Dialog Implementation
-    Modal popup for creating a new oscillator with source and pane selection
+    Content component for adding a new oscillator (hosted in OscilModal)
 */
 
 #include "ui/dialogs/AddOscillatorDialog.h"
@@ -9,36 +9,31 @@
 namespace oscil
 {
 
-AddOscillatorDialog::AddOscillatorDialog()
+AddOscillatorDialog::AddOscillatorDialog(IThemeService& themeService)
+    : themeService_(themeService)
 {
     OSCIL_REGISTER_TEST_ID("addOscillatorDialog");
     setupComponents();
-    ThemeManager::getInstance().addListener(this);
+    themeService_.addListener(this);
 }
+
+// AddOscillatorDialog::AddOscillatorDialog()
+//     : AddOscillatorDialog(ThemeManager::getInstance())
+// {
+// }
 
 AddOscillatorDialog::~AddOscillatorDialog()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
 }
 
 void AddOscillatorDialog::setupComponents()
 {
-    // Title label
-    titleLabel_ = std::make_unique<juce::Label>("", "Add Oscillator");
-    titleLabel_->setFont(juce::FontOptions(16.0f).withStyle("Bold"));
-    addAndMakeVisible(*titleLabel_);
-
-    // Close button (X) - use unicode × for cleaner look, Secondary variant for visibility
-    closeButton_ = std::make_unique<OscilButton>(juce::CharPointer_UTF8("\xc3\x97"), "addOscillatorDialog_closeBtn");
-    closeButton_->setVariant(ButtonVariant::Secondary);
-    closeButton_->onClick = [this]() { handleCloseClick(); };
-    addAndMakeVisible(*closeButton_);
-
     // Source section
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
     addAndMakeVisible(*sourceLabel_);
 
-    sourceDropdown_ = std::make_unique<OscilDropdown>("Select source...", "addOscillatorDialog_sourceDropdown");
+    sourceDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select source...", "addOscillatorDialog_sourceDropdown");
     sourceDropdown_->onSelectionChanged = [this](int) { handleSourceChange(); };
     addAndMakeVisible(*sourceDropdown_);
 
@@ -46,23 +41,23 @@ void AddOscillatorDialog::setupComponents()
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
     addAndMakeVisible(*paneLabel_);
 
-    paneDropdown_ = std::make_unique<OscilDropdown>("Select pane...", "addOscillatorDialog_paneDropdown");
-    paneDropdown_->onSelectionChanged = [this](int) { handlePaneChange(); };
-    addAndMakeVisible(*paneDropdown_);
+    paneSelector_ = std::make_unique<PaneSelectorComponent>(themeService_, true, "addOscillatorDialog_paneSelector");
+    paneSelector_->onSelectionChanged = [this](const PaneId&, bool) { clearError(); };
+    addAndMakeVisible(*paneSelector_);
 
     // Name section
     nameLabel_ = std::make_unique<juce::Label>("", "Name");
     addAndMakeVisible(*nameLabel_);
 
-    nameField_ = std::make_unique<OscilTextField>(TextFieldVariant::Text, "addOscillatorDialog_nameField");
+    nameField_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "addOscillatorDialog_nameField");
     nameField_->setPlaceholder("Oscillator name");
     addAndMakeVisible(*nameField_);
 
     // Color section
-    colorLabel_ = std::make_unique<juce::Label>("", "Color Picker");
+    colorLabel_ = std::make_unique<juce::Label>("", "Color");
     addAndMakeVisible(*colorLabel_);
 
-    colorSwatches_ = std::make_unique<OscilColorSwatches>("addOscillatorDialog_colorPicker");
+    colorSwatches_ = std::make_unique<OscilColorSwatches>(themeService_, "addOscillatorDialog_colorPicker");
     colorSwatches_->setColors(getDefaultColors());
     addAndMakeVisible(*colorSwatches_);
 
@@ -70,7 +65,7 @@ void AddOscillatorDialog::setupComponents()
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
 
-    visualPresetDropdown_ = std::make_unique<OscilDropdown>("", "addOscillatorDialog_visualPresetDropdown");
+    visualPresetDropdown_ = std::make_unique<OscilDropdown>(themeService_, "", "addOscillatorDialog_visualPresetDropdown");
     populateVisualPresetDropdown();
     addAndMakeVisible(*visualPresetDropdown_);
 
@@ -80,141 +75,85 @@ void AddOscillatorDialog::setupComponents()
     addAndMakeVisible(*errorLabel_);
 
     // OK button (Primary)
-    okButton_ = std::make_unique<OscilButton>("OK", "addOscillatorDialog_okBtn");
+    okButton_ = std::make_unique<OscilButton>(themeService_, "OK", "addOscillatorDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() { handleOkClick(); };
     addAndMakeVisible(*okButton_);
 
     // Cancel button (Secondary)
-    cancelButton_ = std::make_unique<OscilButton>("Cancel", "addOscillatorDialog_cancelBtn");
+    cancelButton_ = std::make_unique<OscilButton>(themeService_, "Cancel", "addOscillatorDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() { handleCancelClick(); };
     addAndMakeVisible(*cancelButton_);
 
     // Apply initial theme
-    themeChanged(ThemeManager::getInstance().getCurrentTheme());
+    themeChanged(themeService_.getCurrentTheme());
+
+    // Set size for OscilModal
+    setSize(getPreferredWidth(), getPreferredHeight());
 }
 
-void AddOscillatorDialog::paint(juce::Graphics& g)
+void AddOscillatorDialog::paint(juce::Graphics&)
 {
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
-    auto bounds = getLocalBounds().toFloat();
-
-    // Semi-transparent overlay for modal effect
-    g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.fillRect(bounds);
-
-    // Dialog background
-    auto dialogBounds = bounds.reduced(
-        (bounds.getWidth() - DIALOG_WIDTH) / 2,
-        (bounds.getHeight() - DIALOG_HEIGHT) / 2
-    );
-
-    g.setColour(theme.backgroundPrimary);
-    g.fillRoundedRectangle(dialogBounds, 8.0f);
-
-    // Border
-    g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(dialogBounds, 8.0f, 1.0f);
-
-    // Header background
-    auto headerBounds = dialogBounds.removeFromTop(HEADER_HEIGHT);
-    g.setColour(theme.backgroundSecondary);
-    g.fillRoundedRectangle(headerBounds.getX(), headerBounds.getY(),
-                           headerBounds.getWidth(), headerBounds.getHeight() + 8, 8.0f);
-    g.fillRect(headerBounds.getX(), headerBounds.getY() + 8,
-               headerBounds.getWidth(), headerBounds.getHeight() - 8);
-}
-
-bool AddOscillatorDialog::keyPressed(const juce::KeyPress& key)
-{
-    if (key == juce::KeyPress::escapeKey)
-    {
-        handleCancelClick();
-        return true;
-    }
-    return false;
+    // No custom painting - OscilModal handles backdrop/frame
+    // Child components handle their own painting
 }
 
 void AddOscillatorDialog::resized()
 {
     auto bounds = getLocalBounds();
 
-    // Center the dialog content
-    auto dialogBounds = bounds.reduced(
-        (bounds.getWidth() - DIALOG_WIDTH) / 2,
-        (bounds.getHeight() - DIALOG_HEIGHT) / 2
-    );
-
-    auto contentBounds = dialogBounds.reduced(PADDING);
-
-    // Header row
-    auto headerRow = contentBounds.removeFromTop(HEADER_HEIGHT - PADDING);
-    closeButton_->setBounds(headerRow.removeFromRight(28).reduced(2));
-    titleLabel_->setBounds(headerRow);
-
-    contentBounds.removeFromTop(SECTION_SPACING);
-
     // Source section
-    sourceLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
-    contentBounds.removeFromTop(4);
-    sourceDropdown_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
-    contentBounds.removeFromTop(SECTION_SPACING);
+    sourceLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
+    bounds.removeFromTop(4);
+    sourceDropdown_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
+    bounds.removeFromTop(SECTION_SPACING);
 
     // Pane section
-    paneLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
-    contentBounds.removeFromTop(4);
-    paneDropdown_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
-    contentBounds.removeFromTop(SECTION_SPACING);
+    paneLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
+    bounds.removeFromTop(4);
+    paneSelector_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
+    bounds.removeFromTop(SECTION_SPACING);
 
     // Name section
-    nameLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
-    contentBounds.removeFromTop(4);
-    nameField_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
-    contentBounds.removeFromTop(SECTION_SPACING);
+    nameLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
+    bounds.removeFromTop(4);
+    nameField_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
+    bounds.removeFromTop(SECTION_SPACING);
 
     // Color section
-    colorLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
-    contentBounds.removeFromTop(4);
-    colorSwatches_->setBounds(contentBounds.removeFromTop(COLOR_PICKER_HEIGHT));
-    contentBounds.removeFromTop(SECTION_SPACING);
+    colorLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
+    bounds.removeFromTop(4);
+    colorSwatches_->setBounds(bounds.removeFromTop(COLOR_PICKER_HEIGHT));
+    bounds.removeFromTop(SECTION_SPACING);
 
     // Visual Preset section
-    visualPresetLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
-    contentBounds.removeFromTop(4);
-    visualPresetDropdown_->setBounds(contentBounds.removeFromTop(CONTROL_HEIGHT));
-    contentBounds.removeFromTop(8);
+    visualPresetLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
+    bounds.removeFromTop(4);
+    visualPresetDropdown_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
+    bounds.removeFromTop(8);
 
     // Error label
-    errorLabel_->setBounds(contentBounds.removeFromTop(LABEL_HEIGHT));
-    contentBounds.removeFromTop(8);
+    errorLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
+    bounds.removeFromTop(8);
 
     // Footer buttons at bottom
-    auto footerRow = contentBounds.removeFromBottom(BUTTON_HEIGHT);
+    auto footerRow = bounds.removeFromBottom(BUTTON_HEIGHT);
     int buttonWidth = (footerRow.getWidth() - 8) / 2;
-    cancelButton_->setBounds(footerRow.removeFromLeft(buttonWidth).reduced(0, 2));
+    cancelButton_->setBounds(footerRow.removeFromLeft(buttonWidth));
     footerRow.removeFromLeft(8);
-    okButton_->setBounds(footerRow.reduced(0, 2));
+    okButton_->setBounds(footerRow);
 }
 
 void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
 {
     theme_ = newTheme;
 
-    auto styleLabel = [&newTheme](juce::Label* label, bool isTitle = false) {
-        if (isTitle)
-        {
-            label->setColour(juce::Label::textColourId, newTheme.textPrimary);
-            label->setFont(juce::FontOptions(16.0f).withStyle("Bold"));
-        }
-        else
-        {
-            label->setColour(juce::Label::textColourId, newTheme.textSecondary);
-            label->setFont(juce::FontOptions(12.0f));
-        }
+    auto styleLabel = [&newTheme](juce::Label* label) {
+        label->setColour(juce::Label::textColourId, newTheme.textSecondary);
+        label->setFont(juce::FontOptions(12.0f));
     };
 
-    styleLabel(titleLabel_.get(), true);
     styleLabel(sourceLabel_.get());
     styleLabel(paneLabel_.get());
     styleLabel(nameLabel_.get());
@@ -228,37 +167,27 @@ void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
     repaint();
 }
 
-void AddOscillatorDialog::showDialog(juce::Component* /*parent*/,
-                                      const std::vector<SourceInfo>& sources,
-                                      const std::vector<Pane>& panes,
-                                      Callback onComplete)
+void AddOscillatorDialog::setData(const std::vector<SourceInfo>& sources,
+                                   const std::vector<Pane>& panes)
 {
     sources_ = sources;
     panes_ = panes;
-    callback_ = std::move(onComplete);
 
     // Populate dropdowns
     populateSourceDropdown();
-    populatePaneDropdown();
-    // Visual presets are static, populated in setup
+    paneSelector_->setAvailablePanes(panes);
 
-    // Clear previous state
-    nameField_->setText("", false);
-    clearError();
-
-    // Select a random color
-    selectRandomColor();
-
-    setVisible(true);
-    toFront(true);
-    setWantsKeyboardFocus(true);
-    grabKeyboardFocus();
+    // Reset state
+    reset();
 }
 
-void AddOscillatorDialog::hideDialog()
+void AddOscillatorDialog::reset()
 {
-    setVisible(false);
-    callback_ = nullptr;
+    nameField_->setText("", false);
+    clearError();
+    selectRandomColor();
+    sourceDropdown_->setSelectedIndex(-1, false);
+    paneSelector_->selectNewPane(false);
 }
 
 void AddOscillatorDialog::populateSourceDropdown()
@@ -273,23 +202,6 @@ void AddOscillatorDialog::populateSourceDropdown()
 
     // Don't auto-select anything - user must choose
     sourceDropdown_->setSelectedIndex(-1, false);
-}
-
-void AddOscillatorDialog::populatePaneDropdown()
-{
-    paneDropdown_->clearItems();
-
-    // First option is always "New pane"
-    paneDropdown_->addItem("New pane", "new_pane");
-
-    // Add existing panes
-    for (const auto& pane : panes_)
-    {
-        paneDropdown_->addItem(pane.getName(), pane.getId().id);
-    }
-
-    // Default to "New pane" selected
-    paneDropdown_->setSelectedIndex(NEW_PANE_OPTION_INDEX, false);
 }
 
 void AddOscillatorDialog::populateVisualPresetDropdown()
@@ -333,11 +245,6 @@ void AddOscillatorDialog::handleSourceChange()
     updateNameFromSource();
 }
 
-void AddOscillatorDialog::handlePaneChange()
-{
-    clearError();
-}
-
 void AddOscillatorDialog::handleOkClick()
 {
     if (!validateInput())
@@ -352,22 +259,15 @@ void AddOscillatorDialog::handleOkClick()
     int sourceIndex = sourceDropdown_->getSelectedIndex();
     result.sourceId = sources_[static_cast<size_t>(sourceIndex)].sourceId;
 
-    // Get selected pane
-    int paneIndex = paneDropdown_->getSelectedIndex();
-    if (paneIndex == NEW_PANE_OPTION_INDEX)
+    // Get selected pane from PaneSelectorComponent
+    result.createNewPane = paneSelector_->isNewPaneSelected();
+    if (result.createNewPane)
     {
-        result.createNewPane = true;
         result.paneId = PaneId{};  // Empty, will create new
     }
     else
     {
-        result.createNewPane = false;
-        // Adjust for "New pane" option at index 0
-        size_t actualPaneIndex = static_cast<size_t>(paneIndex - 1);
-        if (actualPaneIndex < panes_.size())
-        {
-            result.paneId = panes_[actualPaneIndex].getId();
-        }
+        result.paneId = paneSelector_->getSelectedPaneId();
     }
 
     // Get name (or use source name as fallback)
@@ -402,22 +302,19 @@ void AddOscillatorDialog::handleOkClick()
         result.visualPresetId = "default";
     }
 
-    // Call callback and hide
+    // Call callback
     if (callback_)
     {
         callback_(result);
     }
-    hideDialog();
 }
 
 void AddOscillatorDialog::handleCancelClick()
 {
-    hideDialog();
-}
-
-void AddOscillatorDialog::handleCloseClick()
-{
-    hideDialog();
+    if (cancelCallback_)
+    {
+        cancelCallback_();
+    }
 }
 
 void AddOscillatorDialog::showError(const juce::String& message)
@@ -442,9 +339,8 @@ bool AddOscillatorDialog::validateInput()
         return false;
     }
 
-    // Check pane selection (pane dropdown always has at least "New pane")
-    int paneIndex = paneDropdown_->getSelectedIndex();
-    if (paneIndex < 0)
+    // Check pane selection
+    if (!paneSelector_->hasValidSelection())
     {
         showError("Please select a pane.");
         return false;

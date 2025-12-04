@@ -8,36 +8,46 @@
 namespace oscil
 {
 
-OscilTextField::OscilTextField()
+OscilTextField::OscilTextField(IThemeService& themeService)
     : focusSpring_(SpringPresets::stiff())
+    , themeService_(themeService)
+    , cachedErrorFont_(juce::FontOptions())
 {
     setupComponents();
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     focusSpring_.position = 0.0f;
     focusSpring_.target = 0.0f;
 }
 
-OscilTextField::OscilTextField(TextFieldVariant variant)
-    : OscilTextField()
+
+
+OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant)
+    : OscilTextField(themeService)
 {
     setVariant(variant);
 }
 
-OscilTextField::OscilTextField(const juce::String& testId)
-    : OscilTextField()
+
+
+OscilTextField::OscilTextField(IThemeService& themeService, const juce::String& testId)
+    : OscilTextField(themeService)
 {
     setTestId(testId);
 }
 
-OscilTextField::OscilTextField(TextFieldVariant variant, const juce::String& testId)
-    : OscilTextField()
+
+
+OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant, const juce::String& testId)
+    : OscilTextField(themeService)
 {
     setVariant(variant);
     setTestId(testId);
 }
+
+
 
 void OscilTextField::registerTestId()
 {
@@ -46,7 +56,7 @@ void OscilTextField::registerTestId()
 
 OscilTextField::~OscilTextField()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -78,12 +88,12 @@ void OscilTextField::setupComponents()
 
     // Stepper buttons for Number variant (created but not visible by default)
     // Using Primary variant (blue) for clear visibility
-    decrementButton_ = std::make_unique<OscilButton>("-");
+    decrementButton_ = std::make_unique<OscilButton>(themeService_, "-");
     decrementButton_->setVariant(ButtonVariant::Primary);
     decrementButton_->onClick = [this] { decrementValue(); };
     addChildComponent(*decrementButton_);
 
-    incrementButton_ = std::make_unique<OscilButton>("+");
+    incrementButton_ = std::make_unique<OscilButton>(themeService_, "+");
     incrementButton_->setVariant(ButtonVariant::Primary);
     incrementButton_->onClick = [this] { incrementValue(); };
     addChildComponent(*incrementButton_);

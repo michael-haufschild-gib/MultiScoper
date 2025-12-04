@@ -10,6 +10,9 @@
 #include "ui/layout/Pane.h"
 #include "ui/panels/WaveformComponent.h"
 #include "ui/components/TestId.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/InlineEditLabel.h"
+#include "core/ServiceContext.h"
 #include <vector>
 #include <memory>
 #include <functional>
@@ -28,7 +31,7 @@ class PaneComponent : public juce::Component,
                        public TestIdSupport
 {
 public:
-    PaneComponent(OscilPluginProcessor& processor, const PaneId& paneId);
+    PaneComponent(OscilPluginProcessor& processor, ServiceContext& context, const PaneId& paneId);
     ~PaneComponent() override = default;
 
     void paint(juce::Graphics& g) override;
@@ -38,6 +41,7 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseMove(const juce::MouseEvent& event) override;
+    void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
 
     // DragAndDropTarget interface
@@ -77,6 +81,20 @@ public:
     void updateOscillator(const OscillatorId& oscillatorId, ProcessingMode mode, bool visible);
 
     /**
+     * Update an oscillator's name
+     * @param oscillatorId The oscillator to update
+     * @param name The new name
+     */
+    void updateOscillatorName(const OscillatorId& oscillatorId, const juce::String& name);
+
+    /**
+     * Update an oscillator's color
+     * @param oscillatorId The oscillator to update
+     * @param color The new color
+     */
+    void updateOscillatorColor(const OscillatorId& oscillatorId, juce::Colour color);
+
+    /**
      * Update all properties of an oscillator (used when config popup changes are made)
      * @param oscillator The oscillator with updated properties
      */
@@ -99,6 +117,32 @@ public:
     {
         paneReorderedCallback_ = std::move(callback);
     }
+
+    /**
+     * Set callback for when pane close is requested
+     */
+    void onPaneCloseRequested(std::function<void(const PaneId& paneId)> callback)
+    {
+        paneCloseCallback_ = std::move(callback);
+    }
+
+    /**
+     * Set callback for when pane name is changed
+     */
+    void onPaneNameChanged(std::function<void(const PaneId& paneId, const juce::String& newName)> callback)
+    {
+        paneNameChangedCallback_ = std::move(callback);
+    }
+
+    /**
+     * Set the pane name
+     */
+    void setPaneName(const juce::String& name);
+
+    /**
+     * Get the pane name
+     */
+    juce::String getPaneName() const;
 
     /**
      * Get pane index for drag-and-drop
@@ -135,6 +179,7 @@ private:
     bool isInDragZone(const juce::Point<int>& position) const;
 
     OscilPluginProcessor& processor_;
+    IThemeService& themeService_;
     PaneId paneId_;
     int paneIndex_ = 0;
 
@@ -150,8 +195,22 @@ private:
     bool isDragOver_ = false;
     juce::Point<int> dragStartPos_;
 
+    // Mouse hover state for crosshair
+    bool isMouseHovering_ = false;
+    int mouseX_ = 0;
+    int mouseY_ = 0;
+
     // Callbacks
     std::function<void(const PaneId& movedPaneId, const PaneId& targetPaneId)> paneReorderedCallback_;
+    std::function<void(const PaneId& paneId)> paneCloseCallback_;
+    std::function<void(const PaneId& paneId, const juce::String& newName)> paneNameChangedCallback_;
+
+    // Close button
+    std::unique_ptr<OscilButton> closeButton_;
+
+    // Pane name editor
+    std::unique_ptr<InlineEditLabel> nameLabel_;
+    juce::String paneName_;
 
     static constexpr int HEADER_HEIGHT = 24;
     static constexpr int PADDING = 4;

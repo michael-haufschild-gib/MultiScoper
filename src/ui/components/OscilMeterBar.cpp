@@ -8,16 +8,17 @@
 namespace oscil
 {
 
-OscilMeterBar::OscilMeterBar()
+OscilMeterBar::OscilMeterBar(IThemeService& themeService)
+    : themeService_(themeService)
 {
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     startTimerHz(TIMER_HZ);
 }
 
-OscilMeterBar::OscilMeterBar(const juce::String& testId)
-    : OscilMeterBar()
+OscilMeterBar::OscilMeterBar(IThemeService& themeService, const juce::String& testId)
+    : OscilMeterBar(themeService)
 {
     setTestId(testId);
 }
@@ -29,7 +30,7 @@ void OscilMeterBar::registerTestId()
 
 OscilMeterBar::~OscilMeterBar()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 

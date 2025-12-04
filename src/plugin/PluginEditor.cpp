@@ -4,20 +4,22 @@
 */
 
 #include "plugin/PluginEditor.h"
-#include "tools/PluginEditor_Adapters.h"
-#include "ui/panels/WaveformComponent.h"
-#include "ui/layout/PaneComponent.h"
-#include "ui/panels/StatusBarComponent.h"
-#include "ui/layout/SidebarComponent.h"
-#include "ui/panels/OscillatorConfigPopup.h"
-#include "ui/theme/ThemeManager.h"
-#include "tools/test_server/PluginTestServer.h"
-#include "ui/layout/SourceCoordinator.h"
-#include "ui/theme/ThemeCoordinator.h"
-#include "ui/layout/LayoutCoordinator.h"
+
 #include "core/InstanceRegistry.h"
-#include "ui/theme/WaveformColorPalette.h"
-#include "plugin/OpenGLLifecycleManager.h"
+#include "ui/layout/LayoutCoordinator.h"
+#include "ui/layout/PaneComponent.h"
+#include "ui/layout/SidebarComponent.h"
+#include "ui/layout/SourceCoordinator.h"
+#include "ui/managers/DialogManager.h"
+#include "ui/managers/DisplaySettingsManager.h"
+#include "ui/panels/StatusBarComponent.h"
+#include "ui/panels/WaveformComponent.h"
+#include "ui/theme/ThemeCoordinator.h"
+#include "ui/theme/ThemeManager.h"
+
+#include "tools/PluginEditor_Adapters.h"
+#include "tools/test_server/PluginTestServer.h"
+
 #include <cmath>
 
 namespace oscil
@@ -26,6 +28,7 @@ namespace oscil
 OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processor_(p)
+    , serviceContext_{ processor_.getInstanceRegistry(), processor_.getThemeService() }
 {
     // Create coordinators with callbacks
     sourceCoordinator_ = std::make_unique<SourceCoordinator>(
@@ -44,15 +47,20 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     auto savedThemeName = processor_.getState().getThemeName();
     processor_.getThemeService().setCurrentTheme(savedThemeName);
 
+    // Create dialog manager
+    dialogManager_ = std::make_unique<DialogManager>(*this, processor_.getThemeService(), processor_.getInstanceRegistry());
+
+    // Create config popup adapter and register with manager
+    configPopupAdapter_ = std::make_unique<ConfigPopupListenerAdapter>(*this);
+    dialogManager_->addConfigPopupListener(configPopupAdapter_.get());
+
     // Create viewport and content
     viewport_ = std::make_unique<juce::Viewport>();
     contentComponent_ = std::make_unique<PaneContainerComponent>();
-    contentComponent_->setPaneDropCallback([this](const PaneId& movedPaneId, const PaneId& targetPaneId)
-    {
+    contentComponent_->setPaneDropCallback([this](const PaneId& movedPaneId, const PaneId& targetPaneId) {
         handlePaneReordered(movedPaneId, targetPaneId);
     });
-    contentComponent_->setEmptyColumnDropCallback([this](const PaneId& movedPaneId, int targetColumn)
-    {
+    contentComponent_->setEmptyColumnDropCallback([this](const PaneId& movedPaneId, int targetColumn) {
         handleEmptyColumnDrop(movedPaneId, targetColumn);
     });
     viewport_->setViewedComponent(contentComponent_.get(), false);
@@ -60,7 +68,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     addAndMakeVisible(*viewport_);
 
     // Create sidebar
-    sidebar_ = std::make_unique<SidebarComponent>(processor_.getInstanceRegistry());
+    sidebar_ = std::make_unique<SidebarComponent>(serviceContext_);
     sidebarAdapter_ = std::make_unique<SidebarListenerAdapter>(*this);
     sidebar_->addListener(sidebarAdapter_.get());
     addAndMakeVisible(*sidebar_);
@@ -91,32 +99,32 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         setDisplaySamplesForAllPanes(displaySamples);
     }
 
-    // Create oscillator config popup (modal overlay)
-    configPopup_ = std::make_unique<OscillatorConfigPopup>(processor_.getThemeService());
-    configPopupAdapter_ = std::make_unique<ConfigPopupListenerAdapter>(*this);
-    configPopup_->addListener(configPopupAdapter_.get());
-    configPopup_->setVisible(false);
-    addChildComponent(*configPopup_);
-
-    // Create add oscillator dialog (modal overlay)
-    addOscillatorDialog_ = std::make_unique<AddOscillatorDialog>();
-    addOscillatorDialog_->setVisible(false);
-    addChildComponent(*addOscillatorDialog_);
-
-    // Create color selection modal
-    colorDialogContent_ = std::make_unique<OscillatorColorDialog>();
-    colorModal_ = std::make_unique<OscilModal>("Select Color", "colorDialogModal");
-    colorModal_->setContent(colorDialogContent_.get());
-    // Modal manages its own visibility and attachment when shown
-
     // Create status bar
-    statusBar_ = std::make_unique<StatusBarComponent>();
+    statusBar_ = std::make_unique<StatusBarComponent>(processor_.getThemeService());
     addAndMakeVisible(*statusBar_);
+
+    // Create sub-components
+    metricsController_ = std::make_unique<PerformanceMetricsController>(processor_, *statusBar_);
+    editorLayout_ = std::make_unique<PluginEditorLayout>(*this, *viewport_, *contentComponent_, *sidebar_, *statusBar_, processor_);
+    renderCoordinator_ = std::make_unique<GpuRenderCoordinator>(*this, *statusBar_);
 
     // Listen to state changes for external updates (API, automation)
     processor_.getState().addListener(this);
 
     // Source coordinator already initialized available sources in its constructor
+
+    // Initialize default state if needed (e.g. first run)
+    // We do this BEFORE refreshing panels so the default state is reflected immediately.
+    // We check for empty layout AND empty oscillators to ensure we don't override a loaded preset.
+    auto& state = processor_.getState();
+    if (state.getLayoutManager().getPaneCount() == 0 && state.getOscillators().empty())
+    {
+        const auto& availableSources = sourceCoordinator_->getAvailableSources();
+        if (!availableSources.empty())
+        {
+            createDefaultOscillator();
+        }
+    }
 
     // CRITICAL: Initialize GPU rendering state from saved preference BEFORE building panels
     // This ensures WaveformComponents get correct GPU state when created in refreshOscillatorPanels()
@@ -124,19 +132,29 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     // Refresh UI - now WaveformComponents will be created with correct GPU state
     refreshOscillatorPanels();
+    DBG("Panels refreshed");
+
+    // Create display settings manager after panes are created
+    displaySettingsManager_ = std::make_unique<DisplaySettingsManager>(paneComponents_);
 
     // Apply saved display options
-    auto& state = processor_.getState();
     setShowGridForAllPanes(state.isShowGridEnabled());
     setAutoScaleForAllPanes(state.isAutoScaleEnabled());
     setHoldDisplayForAllPanes(state.isHoldDisplayEnabled());
     setGainDbForAllPanes(state.getGainDb());
+    DBG("Display options applied");
 
     // Apply saved GPU rendering preference
     bool gpuRenderingEnabled = state.isGpuRenderingEnabled();
     if (auto* optionsSection = sidebar_->getOptionsSection())
     {
         optionsSection->setGpuRenderingEnabled(gpuRenderingEnabled);
+
+        // Apply saved capture quality settings
+        auto qualityConfig = state.getCaptureQualityConfig();
+        optionsSection->setQualityPreset(qualityConfig.qualityPreset);
+        optionsSection->setBufferDuration(qualityConfig.bufferDuration);
+        optionsSection->setAutoAdjustQuality(qualityConfig.autoAdjustQuality);
     }
 
     // Set size AFTER all components are created to avoid null pointer crash in resized()
@@ -158,28 +176,13 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         DBG("Test server started on port " << TEST_SERVER_PORT);
     }
 
-    // Initialize OpenGL Lifecycle Manager
-    glManager_ = std::make_unique<OpenGLLifecycleManager>(*this);
-    glManager_->setGpuRenderingEnabled(gpuRenderingEnabled);
-    
+    // Initialize GPU Rendering
+    renderCoordinator_->setGpuRenderingEnabled(gpuRenderingEnabled);
+
     // CRITICAL: Propagate GPU rendering state to all waveform components
     // This must happen AFTER OpenGL context setup and AFTER panes are built
     // Otherwise WaveformComponents won't know they should render via GPU
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-        {
-            for (size_t i = 0; i < pane->getOscillatorCount(); ++i)
-            {
-                if (auto* waveform = pane->getWaveformAt(i))
-                {
-                    waveform->setGpuRenderingEnabled(gpuRenderingEnabled);
-                }
-            }
-        }
-    }
-
-    statusBar_->setRenderingMode(gpuRenderingEnabled ? RenderingMode::OpenGL : RenderingMode::Software);
+    renderCoordinator_->propagateGpuStateToPanes(paneComponents_);
 }
 
 OscilPluginEditor::~OscilPluginEditor()
@@ -189,8 +192,8 @@ OscilPluginEditor::~OscilPluginEditor()
     stopTimer();
 
     // Detach OpenGL context after timer is stopped
-    if (glManager_)
-        glManager_->detach();
+    if (renderCoordinator_)
+        renderCoordinator_->detach();
 
     // Stop test server (if it was started)
     if (testServer_)
@@ -200,9 +203,9 @@ OscilPluginEditor::~OscilPluginEditor()
     if (sidebar_ && sidebarAdapter_)
         sidebar_->removeListener(sidebarAdapter_.get());
 
-    // Remove config popup listener
-    if (configPopup_ && configPopupAdapter_)
-        configPopup_->removeListener(configPopupAdapter_.get());
+    // Remove config popup listener (via manager)
+    if (dialogManager_ && configPopupAdapter_)
+        dialogManager_->removeConfigPopupListener(configPopupAdapter_.get());
 
     // Remove timing engine listener
     if (timingEngineAdapter_)
@@ -220,10 +223,10 @@ void OscilPluginEditor::parentHierarchyChanged()
     juce::AudioProcessorEditor::parentHierarchyChanged();
 
     // Detach OpenGL context early when component is being removed from hierarchy
-    if (getParentComponent() == nullptr && glManager_)
+    if (getParentComponent() == nullptr && renderCoordinator_)
     {
-        stopTimer();  // Stop timer first to prevent render callbacks
-        glManager_->detach();
+        stopTimer(); // Stop timer first to prevent render callbacks
+        renderCoordinator_->detach();
         DBG("OpenGL context detached early (parentHierarchyChanged)");
     }
 }
@@ -233,7 +236,7 @@ void OscilPluginEditor::paint(juce::Graphics& g)
     // FIX: In GPU mode, the OpenGL renderer clears the background.
     // Only fill the background in software rendering mode to avoid
     // overwriting the GPU-rendered waveforms.
-    if (!glManager_ || !glManager_->isGpuRenderingEnabled())
+    if (!renderCoordinator_ || !renderCoordinator_->isGpuRenderingEnabled())
     {
         const auto& theme = themeCoordinator_->getCurrentTheme();
         g.fillAll(theme.backgroundPrimary);
@@ -242,21 +245,11 @@ void OscilPluginEditor::paint(juce::Graphics& g)
 
 void OscilPluginEditor::resized()
 {
-    auto bounds = getLocalBounds();
-
-    // Status bar
-    auto statusBarBounds = bounds.removeFromBottom(STATUS_BAR_HEIGHT);
-    statusBar_->setBounds(statusBarBounds);
-
-    // Sidebar on right
-    int sidebarWidth = sidebar_->getEffectiveWidth();
-    auto sidebarBounds = bounds.removeFromRight(sidebarWidth);
-    sidebar_->setBounds(sidebarBounds);
-
-    // Main content area (left of sidebar)
-    viewport_->setBounds(bounds);
-
-    updateLayout();
+    if (editorLayout_)
+    {
+        editorLayout_->resized();
+        editorLayout_->updateLayout(paneComponents_);
+    }
 }
 
 void OscilPluginEditor::timerCallback()
@@ -265,132 +258,14 @@ void OscilPluginEditor::timerCallback()
     // This replaces the previous async callback mechanism for real-time safety
     processor_.getTimingEngine().dispatchPendingUpdates();
 
-    updatePerformanceMetrics();
-    updateRendering();
+    if (metricsController_)
+        metricsController_->update();
+
+    if (renderCoordinator_)
+        renderCoordinator_->updateRendering(paneComponents_);
 }
 
-void OscilPluginEditor::updatePerformanceMetrics()
-{
-    // Calculate FPS
-    auto currentTime = juce::Time::getMillisecondCounterHiRes();
-    frameCount_++;
-
-    if (currentTime - lastFrameTime_ >= 1000.0)
-    {
-        currentFps_ = static_cast<float>(frameCount_) * 1000.0f / static_cast<float>(currentTime - lastFrameTime_);
-        frameCount_ = 0;
-        lastFrameTime_ = currentTime;
-
-        // Update status bar with all metrics
-        if (statusBar_)
-        {
-            statusBar_->setFps(currentFps_);
-
-            // CPU usage from processor (approximation based on audio callback time)
-            statusBar_->setCpuUsage(processor_.getCpuUsage());
-
-            // Memory usage - estimate based on capture buffer and oscillators
-            // Each capture buffer ~0.5MB, plus UI overhead
-            size_t sourceCount = processor_.getInstanceRegistry().getSourceCount();
-            size_t oscillatorCount = processor_.getState().getOscillators().size();
-            float memoryMB = 0.5f * static_cast<float>(sourceCount)
-                           + 0.1f * static_cast<float>(oscillatorCount)
-                           + 5.0f; // Base UI overhead
-            statusBar_->setMemoryUsage(memoryMB);
-
-            // Oscillator and source counts
-            statusBar_->setOscillatorCount(static_cast<int>(oscillatorCount));
-            statusBar_->setSourceCount(static_cast<int>(sourceCount));
-
-            // Trigger repaint to display updated values
-            statusBar_->repaint();
-        }
-    }
-}
-
-void OscilPluginEditor::updateRendering()
-{
-    // Update GL renderer with waveform data (if GPU mode enabled)
-    if (glManager_)
-    {
-        // Note: glManager_->updateWaveformData() triggers processAudioData() internally
-        // so we don't need to call it explicitly here.
-        glManager_->updateWaveformData(paneComponents_);
-    }
-
-    // Trigger repaint of waveform components (only needed for software rendering)
-    if (!glManager_ || !glManager_->isGpuRenderingEnabled())
-    {
-        for (auto& pane : paneComponents_)
-        {
-            if (pane)
-                pane->repaint();
-        }
-    }
-}
-
-// Coordinator callbacks
-
-void OscilPluginEditor::onSourcesChanged()
-{
-    // Called by SourceCoordinator when sources change
-    // The coordinator already manages the availableSources list
-    refreshOscillatorPanels();
-}
-
-void OscilPluginEditor::onThemeChanged(const ColorTheme& /*newTheme*/)
-{
-    // Called by ThemeCoordinator when theme changes
-    repaint();
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->repaint();
-    }
-}
-
-void OscilPluginEditor::onLayoutChanged()
-{
-    // Called by LayoutCoordinator when layout changes
-    resized();
-}
-
-void OscilPluginEditor::updateLayout()
-{
-    auto& layoutManager = processor_.getState().getLayoutManager();
-
-    // Use viewport's own bounds - this is the space available for content
-    // Note: getViewArea() returns the visible portion of CONTENT, not viewport size
-    auto availableArea = viewport_->getLocalBounds();
-
-    // Ensure minimum dimensions to prevent zero-size components
-    int availableWidth = std::max(MIN_CONTENT_WIDTH, availableArea.getWidth());
-    int availableHeight = std::max(MIN_CONTENT_HEIGHT, availableArea.getHeight());
-    availableArea = juce::Rectangle<int>(0, 0, availableWidth, availableHeight);
-
-    // Calculate content size based on number of panes
-    int numPanes = static_cast<int>(paneComponents_.size());
-    if (numPanes == 0)
-    {
-        contentComponent_->setSize(availableArea.getWidth(), availableArea.getHeight());
-        return;
-    }
-
-    int numCols = layoutManager.getColumnCount();
-    contentComponent_->setColumnCount(numCols);
-    int numRows = (numPanes + numCols - 1) / numCols;
-    int paneHeight = std::max(MIN_PANE_HEIGHT, availableArea.getHeight() / std::max(1, numRows));
-
-    contentComponent_->setSize(availableArea.getWidth(), paneHeight * numRows);
-
-    // Position panes
-    for (int i = 0; i < numPanes; ++i)
-    {
-        auto bounds = layoutManager.getPaneBounds(i,
-            juce::Rectangle<int>(0, 0, contentComponent_->getWidth(), contentComponent_->getHeight()));
-        paneComponents_[static_cast<size_t>(i)]->setBounds(bounds);
-    }
-}
+#include <iostream>
 
 void OscilPluginEditor::refreshOscillatorPanels()
 {
@@ -399,16 +274,17 @@ void OscilPluginEditor::refreshOscillatorPanels()
     struct TimerGuard
     {
         juce::Timer& timer;
-        explicit TimerGuard(juce::Timer& t) : timer(t) { timer.stopTimer(); }
+        explicit TimerGuard(juce::Timer& t)
+            : timer(t) { timer.stopTimer(); }
         ~TimerGuard() { timer.startTimerHz(TIMER_REFRESH_RATE_HZ); }
     } timerGuard(*this);
 
     // FIX: Clear all waveforms from GL renderer BEFORE clearing pane components.
     // This prevents stale waveform entries (with old colors) from persisting
     // and being rendered alongside new waveforms when panels are recreated.
-    if (glManager_)
+    if (renderCoordinator_)
     {
-        glManager_->clearAllWaveforms();
+        renderCoordinator_->clearWaveforms();
     }
 
     // Clear existing panes
@@ -420,13 +296,6 @@ void OscilPluginEditor::refreshOscillatorPanels()
 
     // Create pane components
     createPaneComponents(oscillators, layoutManager);
-
-    // If no panes exist, create a default one with the current source
-    const auto& availableSources = sourceCoordinator_->getAvailableSources();
-    if (paneComponents_.empty() && !availableSources.empty())
-    {
-        createDefaultOscillator();
-    }
 
     // Refresh sidebar
     if (sidebar_)
@@ -453,10 +322,17 @@ void OscilPluginEditor::refreshOscillatorPanels()
         sidebar_->refreshOscillatorList(oscillators);
     }
 
-    updateLayout();
+    if (editorLayout_)
+        editorLayout_->updateLayout(paneComponents_);
 
     // Re-apply settings
     reapplyGlobalSettings();
+
+    // Re-propagate GPU rendering state to newly created pane components
+    // This is critical for oscillators added after initial setup - without this,
+    // new WaveformComponents won't have gpuRenderingEnabled_ set and won't render
+    if (renderCoordinator_)
+        renderCoordinator_->propagateGpuStateToPanes(paneComponents_);
 
     // Timer restart is handled by RAII TimerGuard destructor
 }
@@ -473,13 +349,17 @@ void OscilPluginEditor::createPaneComponents(const std::vector<Oscillator>& osci
     int paneIndex = 0;
     for (const auto& pane : layoutManager.getPanes())
     {
-        auto paneComponent = std::make_unique<PaneComponent>(processor_, pane.getId());
+        auto paneComponent = std::make_unique<PaneComponent>(processor_, serviceContext_, pane.getId());
         paneComponent->setPaneIndex(paneIndex++);
 
         // Set up drag-and-drop reorder callback
-        paneComponent->onPaneReordered([this](const PaneId& movedPaneId, const PaneId& targetPaneId)
-        {
+        paneComponent->onPaneReordered([this](const PaneId& movedPaneId, const PaneId& targetPaneId) {
             handlePaneReordered(movedPaneId, targetPaneId);
+        });
+
+        // Set up pane close callback
+        paneComponent->onPaneCloseRequested([this](const PaneId& paneIdToClose) {
+            handlePaneClose(paneIdToClose);
         });
 
         // Add oscillators to pane
@@ -494,7 +374,7 @@ void OscilPluginEditor::createPaneComponents(const std::vector<Oscillator>& osci
 
         // CRITICAL: Set GPU rendering state on all waveforms IMMEDIATELY after creation
         // This must happen before addAndMakeVisible triggers any paint calls
-        bool gpuEnabled = glManager_ && glManager_->isGpuRenderingEnabled();
+        bool gpuEnabled = renderCoordinator_ && renderCoordinator_->isGpuRenderingEnabled();
         for (size_t i = 0; i < paneComponent->getOscillatorCount(); ++i)
         {
             if (auto* waveform = paneComponent->getWaveformAt(i))
@@ -643,6 +523,35 @@ void OscilPluginEditor::handleEmptyColumnDrop(const PaneId& movedPaneId, int tar
     refreshOscillatorPanels();
 }
 
+void OscilPluginEditor::handlePaneClose(const PaneId& paneId)
+{
+    auto& state = processor_.getState();
+    auto& layoutManager = state.getLayoutManager();
+
+    // Update all oscillators that were using this pane:
+    // Set their paneId to invalid and make them invisible
+    auto oscillators = state.getOscillators();
+    for (auto& osc : oscillators)
+    {
+        if (osc.getPaneId() == paneId)
+        {
+            osc.setPaneId(PaneId::invalid());
+            osc.setVisible(false);
+            state.updateOscillator(osc);
+        }
+    }
+
+    // Remove the pane from the layout manager
+    layoutManager.removePane(paneId);
+
+    // Refresh the UI
+    refreshOscillatorPanels();
+    if (sidebar_)
+    {
+        sidebar_->refreshOscillatorList(state.getOscillators());
+    }
+}
+
 // Sidebar control
 
 void OscilPluginEditor::toggleSidebar()
@@ -690,14 +599,11 @@ void OscilPluginEditor::onOscillatorConfigRequested(const OscillatorId& oscillat
             {
                 paneList.emplace_back(pane.getId(), pane.getName());
             }
-            if (configPopup_)
-            {
-                configPopup_->setAvailablePanes(paneList);
 
-                // Show the popup for this oscillator
-                configPopup_->showForOscillator(osc);
-                configPopup_->setBounds(getLocalBounds());
-                configPopup_->toFront(true);
+            if (dialogManager_)
+            {
+                // Show the popup via manager
+                dialogManager_->showConfigPopup(osc, paneList, nullptr);
             }
             break;
         }
@@ -706,49 +612,32 @@ void OscilPluginEditor::onOscillatorConfigRequested(const OscillatorId& oscillat
 
 void OscilPluginEditor::onOscillatorColorConfigRequested(const OscillatorId& oscillatorId)
 {
-    if (!colorModal_ || !colorDialogContent_)
+    if (!dialogManager_)
         return;
 
     // Find the oscillator to get current color
     auto& state = processor_.getState();
     auto oscillators = state.getOscillators();
-    
+
     for (const auto& osc : oscillators)
     {
         if (osc.getId() == oscillatorId)
         {
-            // Set up dialog content
-            colorDialogContent_->setColors(WaveformColorPalette::getAllColors()); // Use standard palette for swatches
-            colorDialogContent_->setSelectedColor(osc.getColour());
-            
-            // Define callbacks
-            colorDialogContent_->setOnColorSelected([this, oscillatorId](juce::Colour color) {
+            // Show color dialog via manager
+            dialogManager_->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
                 // Update oscillator
-                auto& state = processor_.getState();
-                auto oscillators = state.getOscillators();
-                for (auto& o : oscillators) {
-                    if (o.getId() == oscillatorId) {
+                auto& oscilState = processor_.getState();
+                auto oscList = oscilState.getOscillators();
+                for (auto& o : oscList)
+                {
+                    if (o.getId() == oscillatorId)
+                    {
                         o.setColour(color);
-                        state.updateOscillator(o);
+                        oscilState.updateOscillator(o);
                         break;
                     }
                 }
-                
-                // UI update is handled via state listener (onOscillatorConfigChanged)
-                // But we can force specific refresh if needed
-                // refreshOscillatorPanels(); // State listener handles this
-                
-                if (colorModal_)
-                    colorModal_->hide();
             });
-            
-            colorDialogContent_->setOnCancel([this]() {
-                if (colorModal_)
-                    colorModal_->hide();
-            });
-            
-            // Show modal
-            colorModal_->show(this);
             break;
         }
     }
@@ -833,13 +722,13 @@ void OscilPluginEditor::onOscillatorDeleteRequested(const OscillatorId& oscillat
 
 void OscilPluginEditor::onConfigPopupClosed()
 {
-    if (configPopup_)
-        configPopup_->setVisible(false);
+    if (dialogManager_)
+        dialogManager_->closeConfigPopup();
 }
 
 void OscilPluginEditor::onAddOscillatorDialogRequested()
 {
-    if (!addOscillatorDialog_)
+    if (!dialogManager_)
         return;
 
     // Gather sources from registry
@@ -849,15 +738,10 @@ void OscilPluginEditor::onAddOscillatorDialogRequested()
     auto& layoutManager = processor_.getState().getLayoutManager();
     auto panes = layoutManager.getPanes();
 
-    // Show dialog with callback
-    addOscillatorDialog_->showDialog(this, sources, panes,
-        [this](const AddOscillatorDialog::Result& result) {
-            onAddOscillatorResult(result);
-        });
-
-    // Position dialog to cover entire editor
-    addOscillatorDialog_->setBounds(getLocalBounds());
-    addOscillatorDialog_->toFront(true);
+    // Show dialog via manager
+    dialogManager_->showAddOscillatorDialog(sources, panes, [this](const AddOscillatorDialog::Result& result) {
+        onAddOscillatorResult(result);
+    });
 }
 
 void OscilPluginEditor::onAddOscillatorResult(const AddOscillatorDialog::Result& result)
@@ -898,12 +782,7 @@ void OscilPluginEditor::onAddOscillatorResult(const AddOscillatorDialog::Result&
 
     state.addOscillator(osc);
 
-    // Hide dialog
-    if (addOscillatorDialog_)
-        addOscillatorDialog_->hideDialog();
-
-    // Refresh UI
-    refreshOscillatorPanels();
+    // UI refresh is handled by valueTreeChildAdded listener
 }
 
 void OscilPluginEditor::onOscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)
@@ -915,20 +794,9 @@ void OscilPluginEditor::onOscillatorModeChanged(const OscillatorId& oscillatorId
     {
         if (osc.getId() == oscillatorId)
         {
-            // Update the oscillator in state
+            // Update the oscillator in state - this will trigger valueTreePropertyChanged
             osc.setProcessingMode(mode);
             state.updateOscillator(osc);
-
-            // Update the PaneComponent that contains this oscillator
-            for (auto& pane : paneComponents_)
-            {
-                if (pane && pane->getPaneId() == osc.getPaneId())
-                {
-                    pane->updateOscillator(oscillatorId, mode, osc.isVisible());
-                    break;
-                }
-            }
-
             break;
         }
     }
@@ -943,38 +811,141 @@ void OscilPluginEditor::onOscillatorVisibilityChanged(const OscillatorId& oscill
     {
         if (osc.getId() == oscillatorId)
         {
-            // Update the oscillator in state
+            // Update the oscillator in state - this will trigger valueTreePropertyChanged
             osc.setVisible(visible);
             state.updateOscillator(osc);
-
-            // Update the PaneComponent that contains this oscillator
-            for (auto& pane : paneComponents_)
-            {
-                if (pane && pane->getPaneId() == osc.getPaneId())
-                {
-                    pane->updateOscillator(oscillatorId, osc.getProcessingMode(), visible);
-                    break;
-                }
-            }
-
-            // Refresh sidebar to update oscillator list (counts may have changed)
-            if (sidebar_)
-            {
-                sidebar_->refreshOscillatorList(state.getOscillators());
-            }
-
             break;
         }
     }
 }
 
-// ValueTree::Listener overrides
-void OscilPluginEditor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& /*property*/)
+void OscilPluginEditor::onOscillatorPaneSelectionRequested(const OscillatorId& oscillatorId)
 {
-    // Handle property changes that require full UI refresh
-    if (tree.hasType(StateIds::Oscillator) || tree.hasType(StateIds::Pane))
+    if (!dialogManager_)
+        return;
+
+    // Store the oscillator ID for when the dialog completes
+    pendingVisibilityOscillatorId_ = oscillatorId;
+
+    // Gather panes from layout manager
+    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto panes = layoutManager.getPanes();
+
+    // Show dialog via manager
+    dialogManager_->showSelectPaneDialog(panes, [this](const SelectPaneDialog::Result& result) {
+        auto& stateRef = processor_.getState();
+        auto& layoutMgr = stateRef.getLayoutManager();
+
+        // Determine target pane
+        PaneId targetPaneId = result.paneId;
+
+        if (result.createNewPane)
+        {
+            // Create new pane
+            Pane newPane;
+            newPane.setName("Pane " + juce::String(layoutMgr.getPaneCount() + 1));
+            newPane.setOrderIndex(static_cast<int>(layoutMgr.getPaneCount()));
+            layoutMgr.addPane(newPane);
+            targetPaneId = newPane.getId();
+        }
+
+        // Find and update the oscillator
+        auto oscList = stateRef.getOscillators();
+        for (auto& osc : oscList)
+        {
+            if (osc.getId() == pendingVisibilityOscillatorId_)
+            {
+                // Assign pane and set visible
+                osc.setPaneId(targetPaneId);
+                osc.setVisible(true);
+                stateRef.updateOscillator(osc);
+                break;
+            }
+        }
+
+        // Clear pending oscillator
+        pendingVisibilityOscillatorId_ = OscillatorId::invalid();
+
+        // UI refresh handled by state listener
+    });
+}
+
+// ValueTree::Listener overrides
+void OscilPluginEditor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
+{
+    // Handle property changes
+    if (tree.hasType(StateIds::Oscillator))
     {
-        // Use SafePointer to prevent dangling pointer if editor is destroyed before async callback
+        // Optimize: For simple properties, update existing components instead of full rebuild
+        if (property == StateIds::Name ||
+            property == StateIds::Colour ||
+            property == StateIds::ProcessingMode ||
+            property == StateIds::Visible ||
+            property == StateIds::SourceId) // Source change might be simple enough to handle in-place
+        {
+            OscillatorId oscId{tree.getProperty(StateIds::Id).toString()};
+
+            // Find the oscillator object to get full state
+            auto oscillators = processor_.getState().getOscillators();
+            for (const auto& osc : oscillators)
+            {
+                if (osc.getId() == oscId)
+                {
+                    // Update Sidebar list item
+                    if (sidebar_)
+                    {
+                        // We can't easily update just one item in the list without exposing more internal logic,
+                        // but we can try to implement a specific update method or just refresh the list (cheaper than panes)
+                        // sidebar_->updateOscillator(osc); // Not implemented yet
+                        juce::MessageManager::callAsync([safeThis = juce::Component::SafePointer<OscilPluginEditor>(this)]() {
+                            if (safeThis != nullptr && safeThis->sidebar_)
+                                safeThis->sidebar_->refreshOscillatorList(safeThis->processor_.getState().getOscillators());
+                        });
+                    }
+
+                    // Update PaneComponent
+                    for (auto& pane : paneComponents_)
+                    {
+                        if (pane && pane->getPaneId() == osc.getPaneId())
+                        {
+                            // Found the pane containing this oscillator
+                            if (property == StateIds::Name)
+                            {
+                                pane->updateOscillatorName(oscId, osc.getName());
+                            }
+                            else if (property == StateIds::Colour)
+                            {
+                                pane->updateOscillatorColor(oscId, osc.getColour());
+                            }
+                            else if (property == StateIds::ProcessingMode || property == StateIds::Visible)
+                            {
+                                pane->updateOscillator(oscId, osc.getProcessingMode(), osc.isVisible());
+                            }
+                            else if (property == StateIds::SourceId)
+                            {
+                                pane->updateOscillatorSource(oscId, osc.getSourceId());
+                            }
+                            return; // Done, no full rebuild needed
+                        }
+                    }
+
+                    // If we didn't find the pane (e.g. it was just assigned), we might need a rebuild
+                    // But if it's just property change on existing, we should have found it.
+                    // If the PaneId changed, that's a different property key, so it will fall through to full rebuild.
+                    break;
+                }
+            }
+        }
+
+        // Fallback for structural changes (PaneId, Order) or if optimization failed
+        auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
+        juce::MessageManager::callAsync([safeThis]() {
+            if (safeThis != nullptr)
+                safeThis->refreshOscillatorPanels();
+        });
+    }
+    else if (tree.hasType(StateIds::Pane))
+    {
         auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
         juce::MessageManager::callAsync([safeThis]() {
             if (safeThis != nullptr)
@@ -1000,14 +971,10 @@ void OscilPluginEditor::valueTreeChildRemoved(juce::ValueTree& /*parentTree*/, j
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
         // If an oscillator was removed, check if it's currently being edited in the popup
-        if (child.hasType(StateIds::Oscillator) && configPopup_ && configPopup_->isPopupVisible())
+        if (child.hasType(StateIds::Oscillator) && dialogManager_ && dialogManager_->isConfigPopupVisibleFor(OscillatorId{child.getProperty(StateIds::Id).toString()}))
         {
-            OscillatorId removedId{ child.getProperty(StateIds::Id).toString() };
-            if (configPopup_->getOscillatorId() == removedId)
-            {
-                // Close popup immediately to prevent editing a non-existent oscillator
-                configPopup_->setVisible(false);
-            }
+            // Close popup immediately to prevent editing a non-existent oscillator
+            dialogManager_->closeConfigPopup();
         }
 
         auto safeThis = juce::Component::SafePointer<OscilPluginEditor>(this);
@@ -1034,71 +1001,50 @@ void OscilPluginEditor::valueTreeParentChanged(juce::ValueTree&) {}
 
 void OscilPluginEditor::setShowGridForAllPanes(bool enabled)
 {
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->setShowGrid(enabled);
-    }
+    if (displaySettingsManager_)
+        displaySettingsManager_->setShowGridForAll(enabled);
 }
 
 void OscilPluginEditor::setGridConfigForAllPanes(const GridConfiguration& config)
 {
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->setGridConfig(config);
-    }
+    if (displaySettingsManager_)
+        displaySettingsManager_->setGridConfigForAll(config);
 }
 
 void OscilPluginEditor::setAutoScaleForAllPanes(bool enabled)
 {
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->setAutoScale(enabled);
-    }
+    if (displaySettingsManager_)
+        displaySettingsManager_->setAutoScaleForAll(enabled);
 }
 
 void OscilPluginEditor::setHoldDisplayForAllPanes(bool enabled)
 {
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->setHoldDisplay(enabled);
-    }
+    if (displaySettingsManager_)
+        displaySettingsManager_->setHoldDisplayForAll(enabled);
 }
 
 void OscilPluginEditor::setGainDbForAllPanes(float dB)
 {
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->setGainDb(dB);
-    }
+    if (displaySettingsManager_)
+        displaySettingsManager_->setGainDbForAll(dB);
 }
 
 void OscilPluginEditor::setDisplaySamplesForAllPanes(int samples)
 {
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->setDisplaySamples(samples);
-    }
+    if (displaySettingsManager_)
+        displaySettingsManager_->setDisplaySamplesForAll(samples);
 }
 
 void OscilPluginEditor::highlightOscillator(const OscillatorId& oscillatorId)
 {
-    for (auto& pane : paneComponents_)
-    {
-        if (pane)
-            pane->highlightOscillator(oscillatorId);
-    }
+    if (displaySettingsManager_)
+        displaySettingsManager_->highlightOscillator(oscillatorId);
 }
 
 void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
 {
-    if (glManager_)
-        glManager_->setGpuRenderingEnabled(enabled);
+    if (renderCoordinator_)
+        renderCoordinator_->setGpuRenderingEnabled(enabled);
 
     // Update all waveform components' GPU mode
     for (auto& pane : paneComponents_)
@@ -1110,12 +1056,6 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
                 waveform->setGpuRenderingEnabled(enabled);
             }
         }
-    }
-
-    // Update status bar
-    if (statusBar_)
-    {
-        statusBar_->setRenderingMode(enabled ? RenderingMode::OpenGL : RenderingMode::Software);
     }
 
     // Update sidebar toggle to reflect current state
@@ -1142,6 +1082,37 @@ void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillato
     {
         sidebar_->refreshOscillatorList(oscillators);
     }
+}
+
+void OscilPluginEditor::onSourcesChanged()
+{
+    if (sidebar_)
+    {
+        auto sources = processor_.getInstanceRegistry().getAllSources();
+        sidebar_->refreshSourceList(sources);
+    }
+}
+
+void OscilPluginEditor::onThemeChanged(const ColorTheme& /*newTheme*/)
+{
+    repaint();
+
+    if (statusBar_)
+        statusBar_->repaint();
+
+    if (sidebar_)
+        sidebar_->repaint();
+
+    for (auto& pane : paneComponents_)
+    {
+        if (pane)
+            pane->repaint();
+    }
+}
+
+void OscilPluginEditor::onLayoutChanged()
+{
+    resized();
 }
 
 } // namespace oscil

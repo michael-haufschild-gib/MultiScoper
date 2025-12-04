@@ -9,7 +9,7 @@
 [2/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/SegmentedButtonBar.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/SegmentedButtonBar.cpp:44:24: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     7 |     for (size_t i = 0; i < static_cast<size_t>(numButtons); ++i)
-      |                        ^ ~~~~~~~~~~~~~~~~~~~~~~           
+      |                        ^ ~~~~~~~~~~~~~~~~~~~~~~
       |                        std::cmp_less( ,                   )
 [3/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/SourceItemComponent.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/SourceItemComponent.cpp:124:14: warning: use emplace_back instead of push_back [modernize-use-emplace]
@@ -79,16 +79,16 @@
     7 | #include "core/PluginProcessor.h"
     8 | #include "core/InstanceRegistry.h"
     9 | #include "ui/components/TestId.h"
-   10 | 
+   10 |
    11 | namespace oscil
    12 | {
-   13 | 
+   13 |
    14 | PaneComponent::PaneComponent(OscilPluginProcessor& processor, const PaneId& paneId)
       |                                                               ^~~~~~~~~~~~~
-      |                                                               PaneId 
+      |                                                               PaneId
    15 |     : processor_(processor)
    16 |     , paneId_(paneId)
-      |                     
+      |
       |               std::move( )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PaneComponent.cpp:265:9: warning: use a ranges version of this algorithm [modernize-use-ranges]
     6 |         std::remove_if(waveforms_.begin(), waveforms_.end(),
@@ -146,19 +146,19 @@
 [10/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/SettingsDropdown.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/SettingsDropdown.cpp:16:30: warning: pass by value and use std::move [modernize-pass-by-value]
     7 | #include "core/PluginProcessor.h"
-    8 | 
+    8 |
     9 | namespace oscil
    10 | {
-   11 | 
+   11 |
    12 | //==============================================================================
    13 | // ThemeListItem implementation
    14 | //==============================================================================
-   15 | 
+   15 |
    16 | ThemeListItem::ThemeListItem(const juce::String& themeName)
       |                              ^~~~~~~~~~~~~~~~~~~
-      |                              juce::String 
+      |                              juce::String
    17 |     : themeName_(themeName)
-      |                           
+      |
       |                  std::move( )
 /Users/Spare/Documents/code/MultiScoper/src/ui/SettingsDropdown.cpp:273:5: warning: Call to virtual method 'SettingsDropdown::resized' during construction bypasses virtual dispatch [clang-analyzer-optin.cplusplus.VirtualCall]
   273 |     resized();
@@ -180,34 +180,34 @@
 /Users/Spare/Documents/code/MultiScoper/src/ui/ThemeEditorComponent.cpp:17:38: warning: pass by value and use std::move [modernize-pass-by-value]
     7 | #include "ui/ThemeManager.h"
     8 | #include "ui/components/TestId.h"
-    9 | 
+    9 |
    10 | namespace oscil
    11 | {
-   12 | 
+   12 |
    13 | //==============================================================================
    14 | // ColorSwatchButton
    15 | //==============================================================================
-   16 | 
+   16 |
    17 | ColorSwatchButton::ColorSwatchButton(const juce::String& label, juce::Colour initialColor)
       |                                      ^~~~~~~~~~~~~~~~~~~
-      |                                      juce::String 
+      |                                      juce::String
    18 |     : label_(label)
-      |                   
+      |
       |              std::move( )
 /Users/Spare/Documents/code/MultiScoper/src/ui/ThemeEditorComponent.cpp:107:38: warning: pass by value and use std::move [modernize-pass-by-value]
   107 | ThemeColorSection::ThemeColorSection(const juce::String& title)
       |                                      ^~~~~~~~~~~~~~~~~~~
-      |                                      juce::String 
+      |                                      juce::String
   108 |     : title_(title)
-      |                   
+      |
       |              std::move( )
 /Users/Spare/Documents/code/MultiScoper/src/ui/ThemeEditorComponent.cpp:382:27: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     7 |     if (rowNumber >= 0 && rowNumber < static_cast<int>(themeNames_.size()))
-      |                           ^         ~~~~~~~~~~~~~~~~~~~                   
+      |                           ^         ~~~~~~~~~~~~~~~~~~~
       |                           std::cmp_less( ,                                )
 /Users/Spare/Documents/code/MultiScoper/src/ui/ThemeEditorComponent.cpp:400:33: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   400 |     if (lastRowSelected >= 0 && lastRowSelected < static_cast<int>(themeNames_.size()))
-      |                                 ^               ~~~~~~~~~~~~~~~~~~~                   
+      |                                 ^               ~~~~~~~~~~~~~~~~~~~
       |                                 std::cmp_less(  ,                                     )
 [13/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/coordinators/LayoutCoordinator.cpp.o
 [14/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/coordinators/SourceCoordinator.cpp.o
@@ -218,7 +218,7 @@
 [15/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/SidebarComponent.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/SidebarComponent.cpp:278:49: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     7 |         for (int i = 0; i < dragTargetIndex_ && i < static_cast<int>(oscillatorItems_.size()); ++i)
-      |                                                 ^ ~~~~~~~~~~~~~~~~~~~                        
+      |                                                 ^ ~~~~~~~~~~~~~~~~~~~
       |                                                 std::cmp_less( ,                             )
 /Users/Spare/Documents/code/MultiScoper/src/ui/SidebarComponent.cpp:288:9: warning: use auto when initializing with a cast to avoid duplicating the type name [modernize-use-auto]
   288 |         float lineY = static_cast<float>(indicatorY);
@@ -234,7 +234,7 @@
       |         auto
 /Users/Spare/Documents/code/MultiScoper/src/ui/SidebarComponent.cpp:748:28: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   748 |     if (targetIndex < 0 || targetIndex >= static_cast<int>(oscillatorItems_.size()))
-      |                            ^           ~~~~~~~~~~~~~~~~~~~~                        
+      |                            ^           ~~~~~~~~~~~~~~~~~~~~
       |                            std::cmp_greater_equal( ,                               )
 [16/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/coordinators/ThemeCoordinator.cpp.o
 [17/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/OscillatorConfigPopup.cpp.o
@@ -334,15 +334,15 @@
       |     ^~~~~~~~~
 [21/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilButton.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilButton.cpp:10:26: warning: pass by value and use std::move [modernize-pass-by-value]
-    6 | 
+    6 |
     7 | namespace oscil
     8 | {
-    9 | 
+    9 |
    10 | OscilButton::OscilButton(const juce::String& text)
       |                          ^~~~~~~~~~~~~~~~~~~
-      |                          juce::String 
+      |                          juce::String
    11 |     : label_(text)
-      |                  
+      |
       |              std::move( )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilButton.cpp:27:26: warning: 2 adjacent parameters of 'OscilButton' of similar type ('const juce::String &') are easily swapped by mistake [bugprone-easily-swappable-parameters]
    27 | OscilButton::OscilButton(const juce::String& text, const juce::String& testId)
@@ -431,19 +431,19 @@
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilButton.cpp:671:5: warning: function 'getTitle' should be marked [[nodiscard]] [modernize-use-nodiscard]
   671 |     juce::String getTitle() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilButton.cpp:676:5: warning: function 'getDescription' should be marked [[nodiscard]] [modernize-use-nodiscard]
   676 |     juce::String getDescription() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilButton.cpp:695:5: warning: function 'getHelp' should be marked [[nodiscard]] [modernize-use-nodiscard]
   695 |     juce::String getHelp() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilButton.cpp:700:5: warning: function 'getCurrentState' should be marked [[nodiscard]] [modernize-use-nodiscard]
   700 |     juce::AccessibleState getCurrentState() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 [22/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/OscillatorListItem.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/OscillatorListItem.cpp:166:5: warning: Call to virtual method 'OscillatorListItemComponent::resized' during construction bypasses virtual dispatch [clang-analyzer-optin.cplusplus.VirtualCall]
   166 |     resized();
@@ -483,16 +483,16 @@
    89 |     if (suffix.isNotEmpty()) visibilityToggle_->setTestId(getTestId() + "_vis_toggle");
       |     ^
 /Users/Spare/Documents/code/MultiScoper/src/ui/OscillatorListItem.cpp:106:9: note: Assuming the condition is false
-  106 |     if (suffix.isNotEmpty()) 
+  106 |     if (suffix.isNotEmpty())
       |         ^~~~~~~~~~~~~~~~~~~
 /Users/Spare/Documents/code/MultiScoper/src/ui/OscillatorListItem.cpp:106:5: note: Taking false branch
-  106 |     if (suffix.isNotEmpty()) 
+  106 |     if (suffix.isNotEmpty())
       |     ^
 /Users/Spare/Documents/code/MultiScoper/src/ui/OscillatorListItem.cpp:118:5: note: Calling 'OscillatorListItemComponent::updateVisibility'
   118 |     updateVisibility();
       |     ^~~~~~~~~~~~~~~~~~
 /Users/Spare/Documents/code/MultiScoper/src/ui/OscillatorListItem.cpp:139:26: note: Assuming field 'selected_' is true
-  139 |     float buttonAlpha = (selected_ || isHovered_) ? 1.0f : 0.4f;
+  139 |     float buttonAlpha = (selected_ || isHovered_) ? 1.0f : 0.4f; instetten555!
       |                          ^~~~~~~~~
 /Users/Spare/Documents/code/MultiScoper/src/ui/OscillatorListItem.cpp:139:36: note: Left side of '||' is true
   139 |     float buttonAlpha = (selected_ || isHovered_) ? 1.0f : 0.4f;
@@ -524,7 +524,7 @@
 [23/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTextField.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTextField.cpp:216:18: warning: parameter 'validator' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
     6 |     validator_ = validator;
-      |                  ^        
+      |                  ^
       |                  std::move( )
 [24/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/PluginEditor.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginEditor.cpp:286:9: warning: use a ranges version of this algorithm [modernize-use-ranges]
@@ -576,19 +576,19 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilToggle.cpp:370:5: warning: function 'getTitle' should be marked [[nodiscard]] [modernize-use-nodiscard]
   370 |     juce::String getTitle() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilToggle.cpp:375:5: warning: function 'getDescription' should be marked [[nodiscard]] [modernize-use-nodiscard]
   375 |     juce::String getDescription() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilToggle.cpp:385:5: warning: function 'getHelp' should be marked [[nodiscard]] [modernize-use-nodiscard]
   385 |     juce::String getHelp() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilToggle.cpp:390:5: warning: function 'getCurrentState' should be marked [[nodiscard]] [modernize-use-nodiscard]
   390 |     juce::AccessibleState getCurrentState() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 [27/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilCheckbox.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilCheckbox.cpp:32:30: warning: 2 adjacent parameters of 'OscilCheckbox' of similar type ('const juce::String &') are easily swapped by mistake [bugprone-easily-swappable-parameters]
    32 | OscilCheckbox::OscilCheckbox(const juce::String& label, const juce::String& testId)
@@ -611,7 +611,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |         std::ranges::find magneticPoints_
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilSlider.cpp:204:23: warning: parameter 'formatter' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
     7 |     valueFormatter_ = formatter;
-      |                       ^        
+      |                       ^
       |                       std::move( )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilSlider.cpp:325:5: warning: use auto when initializing with a cast to avoid duplicating the type name [modernize-use-auto]
   325 |     float fillProportion = static_cast<float>(valueToProportionOfLength(value_));
@@ -644,15 +644,15 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilSlider.cpp:872:5: warning: function 'getTitle' should be marked [[nodiscard]] [modernize-use-nodiscard]
   872 |     juce::String getTitle() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilSlider.cpp:879:5: warning: function 'getDescription' should be marked [[nodiscard]] [modernize-use-nodiscard]
   879 |     juce::String getDescription() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilSlider.cpp:892:5: warning: function 'getHelp' should be marked [[nodiscard]] [modernize-use-nodiscard]
   892 |     juce::String getHelp() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 [30/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilBadge.cpp.o
 [31/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilColorPicker.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorPicker.cpp:307:12: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
@@ -720,15 +720,15 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 [34/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilColorSwatches.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:42:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     6 |     if (selectedIndex_ >= static_cast<int>(colors_.size()))
-      |         ^              ~~~~~~~~~~~~~~~~~~~~               
+      |         ^              ~~~~~~~~~~~~~~~~~~~~
       |         std::cmp_greater_equal( ,                         )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:64:23: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
    64 |     if (index < -1 || index >= static_cast<int>(colors_.size()))
-      |                       ^     ~~~~~~~~~~~~~~~~~~~~               
+      |                       ^     ~~~~~~~~~~~~~~~~~~~~
       |                       std::cmp_greater_equal( ,                )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:79:32: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
    79 |     if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(colors_.size()))
-      |                                ^              ~~~~~~~~~~~~~~~~~~~               
+      |                                ^              ~~~~~~~~~~~~~~~~~~~
       |                                std::cmp_less( ,                                 )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:82:12: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
    82 |     return juce::Colour();
@@ -736,15 +736,15 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |            {}
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:87:21: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
    87 |     for (int i = 0; i < static_cast<int>(colors_.size()); ++i)
-      |                     ^ ~~~~~~~~~~~~~~~~~~~               
+      |                     ^ ~~~~~~~~~~~~~~~~~~~
       |                     std::cmp_less( ,                    )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:167:21: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   167 |     for (int i = 0; i < static_cast<int>(colors_.size()); ++i)
-      |                     ^ ~~~~~~~~~~~~~~~~~~~               
+      |                     ^ ~~~~~~~~~~~~~~~~~~~
       |                     std::cmp_less( ,                    )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:174:44: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   174 |     if (hasFocus_ && focusedIndex_ >= 0 && focusedIndex_ < static_cast<int>(colors_.size()))
-      |                                            ^             ~~~~~~~~~~~~~~~~~~~               
+      |                                            ^             ~~~~~~~~~~~~~~~~~~~
       |                                            std::cmp_less(,                                 )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:242:5: warning: use auto when initializing with a cast to avoid duplicating the type name [modernize-use-auto]
   242 |     float cx = static_cast<float>(bounds.getCentreX());
@@ -756,7 +756,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |     auto
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:272:22: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   272 |     if (index < 0 || index >= static_cast<int>(colors_.size()))
-      |                      ^     ~~~~~~~~~~~~~~~~~~~~               
+      |                      ^     ~~~~~~~~~~~~~~~~~~~~
       |                      std::cmp_greater_equal( ,                )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilColorSwatches.cpp:293:12: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
   293 |     return juce::Rectangle<int>(x, y, swatchSize_, swatchSize_);
@@ -862,15 +862,15 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilModal.cpp:539:5: warning: function 'getTitle' should be marked [[nodiscard]] [modernize-use-nodiscard]
   539 |     juce::String getTitle() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilModal.cpp:544:5: warning: function 'getDescription' should be marked [[nodiscard]] [modernize-use-nodiscard]
   544 |     juce::String getDescription() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilModal.cpp:549:5: warning: function 'getHelp' should be marked [[nodiscard]] [modernize-use-nodiscard]
   549 |     juce::String getHelp() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilModal.cpp:572:28: warning: 2 adjacent parameters of 'show' of similar type ('const juce::String &') are easily swapped by mistake [bugprone-easily-swappable-parameters]
   572 | void OscilAlertModal::show(const juce::String& title,
       |                            ^~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1040,34 +1040,34 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 [39/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTabs.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:108:23: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     6 |     if (index >= 0 && index < static_cast<int>(tabs_.size()))
-      |                       ^     ~~~~~~~~~~~~~~~~~~~             
+      |                       ^     ~~~~~~~~~~~~~~~~~~~
       |                       std::cmp_less( ,                      )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:117:23: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   117 |     if (index >= 0 && index < static_cast<int>(tabs_.size()))
-      |                       ^     ~~~~~~~~~~~~~~~~~~~             
+      |                       ^     ~~~~~~~~~~~~~~~~~~~
       |                       std::cmp_less( ,                      )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:126:22: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   126 |     if (index < 0 || index >= static_cast<int>(tabs_.size()))
-      |                      ^     ~~~~~~~~~~~~~~~~~~~~             
+      |                      ^     ~~~~~~~~~~~~~~~~~~~~
       |                      std::cmp_greater_equal( ,              )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:167:32: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   167 |     if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(tabs_.size()))
-      |                                ^              ~~~~~~~~~~~~~~~~~~~             
+      |                                ^              ~~~~~~~~~~~~~~~~~~~
       |                                std::cmp_less( ,                               )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:301:21: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   301 |     for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
-      |                     ^ ~~~~~~~~~~~~~~~~~~~             
+      |                     ^ ~~~~~~~~~~~~~~~~~~~
       |                     std::cmp_less( ,                  )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:363:65: warning: result of integer division used in a floating point context; possible loss of precision [bugprone-integer-division]
   363 |                                    static_cast<float>(centerY - ICON_SIZE / 2),
       |                                                                 ^
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:471:21: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   471 |     for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
-      |                     ^ ~~~~~~~~~~~~~~~~~~~             
+      |                     ^ ~~~~~~~~~~~~~~~~~~~
       |                     std::cmp_less( ,                  )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:481:22: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   481 |     if (index < 0 || index >= static_cast<int>(tabs_.size()))
-      |                      ^     ~~~~~~~~~~~~~~~~~~~~             
+      |                      ^     ~~~~~~~~~~~~~~~~~~~~
       |                      std::cmp_greater_equal( ,              )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:493:20: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
   493 |             return juce::Rectangle<int>(index * tabWidth, 0, tabWidth, height);
@@ -1079,7 +1079,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |                    {                                                           }
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:505:32: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   505 |             for (size_t i = 0; i < static_cast<size_t>(index); ++i)
-      |                                ^ ~~~~~~~~~~~~~~~~~~~~~~      
+      |                                ^ ~~~~~~~~~~~~~~~~~~~~~~
       |                                std::cmp_less( ,              )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTabs.cpp:524:20: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
   524 |             return juce::Rectangle<int>(x, 0, width, height);
@@ -1118,11 +1118,11 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 [40/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilDropdown.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:175:27: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     6 |         bool isHovered = (static_cast<int>(i) == hoveredIndex_);
-      |                           ^~~~~~~~~~~~~~~~~ ~~~~              
+      |                           ^~~~~~~~~~~~~~~~~ ~~~~
       |                           std::cmp_equal(   ,                 )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:285:23: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   285 |     if (index >= 0 && index < static_cast<int>(filteredIndices_.size()))
-      |                       ^     ~~~~~~~~~~~~~~~~~~~                        
+      |                       ^     ~~~~~~~~~~~~~~~~~~~
       |                       std::cmp_less( ,                                 )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:434:30: warning: 2 adjacent parameters of 'OscilDropdown' of similar type ('const juce::String &') are easily swapped by mistake [bugprone-easily-swappable-parameters]
   434 | OscilDropdown::OscilDropdown(const juce::String& placeholder, const juce::String& testId)
@@ -1135,28 +1135,28 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |                                                                                   ^~~~~~
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:488:23: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   488 |     if (index >= 0 && index < static_cast<int>(items_.size()))
-      |                       ^     ~~~~~~~~~~~~~~~~~~~              
+      |                       ^     ~~~~~~~~~~~~~~~~~~~
       |                       std::cmp_less( ,                       )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:537:27: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   537 |         if (index >= 0 && index < static_cast<int>(items_.size()))
-      |                           ^     ~~~~~~~~~~~~~~~~~~~              
+      |                           ^     ~~~~~~~~~~~~~~~~~~~
       |                           std::cmp_less( ,                       )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:546:27: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   546 |         if (index >= 0 && index < static_cast<int>(items_.size()))
-      |                           ^     ~~~~~~~~~~~~~~~~~~~              
+      |                           ^     ~~~~~~~~~~~~~~~~~~~
       |                           std::cmp_less( ,                       )
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:909:5: warning: function 'getTitle' should be marked [[nodiscard]] [modernize-use-nodiscard]
   909 |     juce::String getTitle() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:914:5: warning: function 'getDescription' should be marked [[nodiscard]] [modernize-use-nodiscard]
   914 |     juce::String getDescription() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:924:5: warning: function 'getHelp' should be marked [[nodiscard]] [modernize-use-nodiscard]
   924 |     juce::String getHelp() const override
       |     ^
-      |     [[nodiscard]] 
+      |     [[nodiscard]]
 [41/285] Building CXX object CMakeFiles/Oscil.dir/src/rendering/ShaderRegistry.cpp.o
 [42/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTransportSync.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilTransportSync.cpp:76:38: warning: 2 adjacent parameters of 'setBPMRange' of similar type ('double') are easily swapped by mistake [bugprone-easily-swappable-parameters]
@@ -1467,11 +1467,11 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 [49/285] Building CXX object CMakeFiles/Oscil.dir/src/ui/PluginTestServer.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:391:36: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
    16 |             else if (index >= 0 && index < static_cast<int>(oscillators.size()))
-      |                                    ^     ~~~~~~~~~~~~~~~~~~~                   
+      |                                    ^     ~~~~~~~~~~~~~~~~~~~
       |                                    std::cmp_less( ,                            )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:456:46: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   456 |             else if (oscillatorIndex >= 0 && oscillatorIndex < static_cast<int>(oscillators.size()))
-      |                                              ^               ~~~~~~~~~~~~~~~~~~~                   
+      |                                              ^               ~~~~~~~~~~~~~~~~~~~
       |                                              std::cmp_less(  ,                                     )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:537:17: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   537 |             if (fromIndex >= static_cast<int>(panes.size()) || toIndex >= static_cast<int>(panes.size()))
@@ -1479,15 +1479,15 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |                 std::cmp_greater_equal( ,                  )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:537:64: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   537 |             if (fromIndex >= static_cast<int>(panes.size()) || toIndex >= static_cast<int>(panes.size()))
-      |                                                                ^       ~~~~~~~~~~~~~~~~~~~~             
+      |                                                                ^       ~~~~~~~~~~~~~~~~~~~~
       |                                                                std::cmp_greater_equal( ,                )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:758:34: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
   758 |         response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-      |                                  ^           ~~~~~~~~~~~~~~~~~~~~             
+      |                                  ^           ~~~~~~~~~~~~~~~~~~~~
       |                                  std::cmp_equal( ,                            )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1036:34: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
  1036 |         response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-      |                                  ^           ~~~~~~~~~~~~~~~~~~~~             
+      |                                  ^           ~~~~~~~~~~~~~~~~~~~~
       |                                  std::cmp_equal( ,                            )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1095:32: warning: narrowing conversion from 'int' to 'float' [bugprone-narrowing-conversions]
  1095 |                     sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
@@ -1503,11 +1503,11 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |                                ^~~~~~~~~~~ ~
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1391:34: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
  1391 |         response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-      |                                  ^           ~~~~~~~~~~~~~~~~~~~~             
+      |                                  ^           ~~~~~~~~~~~~~~~~~~~~
       |                                  std::cmp_equal( ,                            )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1569:34: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
  1569 |         response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-      |                                  ^           ~~~~~~~~~~~~~~~~~~~~             
+      |                                  ^           ~~~~~~~~~~~~~~~~~~~~
       |                                  std::cmp_equal( ,                            )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1636:13: warning: use range-based for loop instead [modernize-loop-convert]
  1636 |             for (size_t i = 0; i < paneComponents.size(); ++i)
@@ -1519,11 +1519,11 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |                              paneComponent
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1696:34: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
  1696 |         response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-      |                                  ^           ~~~~~~~~~~~~~~~~~~~~             
+      |                                  ^           ~~~~~~~~~~~~~~~~~~~~
       |                                  std::cmp_equal( ,                            )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1812:46: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
  1812 |             else if (oscillatorIndex >= 0 && oscillatorIndex < static_cast<int>(oscillators.size()))
-      |                                              ^               ~~~~~~~~~~~~~~~~~~~                   
+      |                                              ^               ~~~~~~~~~~~~~~~~~~~
       |                                              std::cmp_less(  ,                                     )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:1945:32: warning: narrowing conversion from 'int' to 'float' [bugprone-narrowing-conversions]
  1945 |                     sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
@@ -1543,7 +1543,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |                 std::cmp_greater_equal( ,                              )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:2014:17: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
  2014 |                 toIndex >= static_cast<int>(oscillatorsBefore.size()))
-      |                 ^       ~~~~~~~~~~~~~~~~~~~~                         
+      |                 ^       ~~~~~~~~~~~~~~~~~~~~
       |                 std::cmp_greater_equal( ,                            )
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:2030:13: warning: use a ranges version of this algorithm [modernize-use-ranges]
    15 |             std::sort(oscillatorsAfter.begin(), oscillatorsAfter.end(),
@@ -1555,7 +1555,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |             std::ranges::sort oscs
 /Users/Spare/Documents/code/MultiScoper/src/ui/PluginTestServer.cpp:2248:34: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
  2248 |         response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-      |                                  ^           ~~~~~~~~~~~~~~~~~~~~             
+      |                                  ^           ~~~~~~~~~~~~~~~~~~~~
       |                                  std::cmp_equal( ,                            )
 In file included from ../../src/ui/PluginTestServer.cpp:6:
 In file included from ../../include/ui/PluginTestServer.h:17:
@@ -1579,7 +1579,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 /Users/Spare/Documents/code/MultiScoper/src/rendering/Framebuffer.cpp:14:77: note: the last parameter in the range is 'fmt'
    14 | bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt, bool withDepth)
       |                                                                             ^~~
-/Users/Spare/Documents/code/MultiScoper/src/rendering/Framebuffer.cpp:14:63: note: 
+/Users/Spare/Documents/code/MultiScoper/src/rendering/Framebuffer.cpp:14:63: note:
    14 | bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, GLenum fmt, bool withDepth)
       |                                                               ^
 /Users/Spare/Documents/code/MultiScoper/src/rendering/Framebuffer.cpp:14:70: note: 'int' and 'GLenum' may be implicitly converted: 'int' -> 'GLenum' (as 'unsigned int'), 'GLenum' (as 'unsigned int') -> 'int'
@@ -1597,10 +1597,10 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |                               ^
 [52/285] Building CXX object CMakeFiles/Oscil.dir/src/rendering/Camera3D.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/rendering/Camera3D.cpp:11:29: warning: prefer 'std::numbers::pi_v<float>' to this literal, differs by '8.74e-08' [modernize-use-std-numbers]
-    7 | 
+    7 |
     8 | namespace oscil
     9 | {
-   10 | 
+   10 |
    11 | static constexpr float PI = 3.14159265358979323846f;
       |                             ^~~~~~~~~~~~~~~~~~~~~~~
       |                             std::numbers::pi_v<float>
@@ -1884,7 +1884,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
       |               std::ranges::find emitterIds
 /Users/Spare/Documents/code/MultiScoper/src/rendering/WaveformRenderState.cpp:94:12: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     7 |     while (static_cast<int>(sampleHistory.size()) > maxHistoryDepth)
-      |            ^~~~~~~~~~~~~~~~~                    ~~~                
+      |            ^~~~~~~~~~~~~~~~~                    ~~~
       |            std::cmp_greater(                    ,                  )
 [56/285] Building CXX object CMakeFiles/Oscil.dir/src/rendering/RenderEngine.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/rendering/RenderEngine.cpp:11:55: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
@@ -2047,7 +2047,7 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
 [63/285] Building CXX object CMakeFiles/Oscil.dir/src/rendering/particles/ParticlePool.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/rendering/particles/ParticlePool.cpp:48:22: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
     8 |     if (index < 0 || index >= static_cast<ptrdiff_t>(particles_.size()))
-      |                      ^     ~~~~~~~~~~~~~~~~~~~~~~~~~~                  
+      |                      ^     ~~~~~~~~~~~~~~~~~~~~~~~~~~
       |                      std::cmp_greater_equal( ,                         )
 [64/285] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/ScanlineEffect.cpp.o
 /Users/Spare/Documents/code/MultiScoper/src/rendering/effects/ScanlineEffect.cpp:50:17: warning: use '= default' to define a trivial default constructor [modernize-use-equals-default]
@@ -2077,27 +2077,27 @@ _deps/httplib-src/httplib.h:5601:29: warning: comparing floating point with == o
    42 | }
       | ~
 [67/285] Building CXX object CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
-FAILED: [code=1] CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o 
+FAILED: [code=1] CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
 /opt/homebrew/bin/cmake -E __run_co_compile --launcher=/opt/homebrew/bin/ccache --tidy="/opt/homebrew/opt/llvm/bin/clang-tidy;-checks=bugprone-*,performance-*,modernize-*,-modernize-use-trailing-return-type;--extra-arg-before=--driver-mode=g++" --source=/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp -- /usr/bin/c++ -DDEBUG=1 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_plugin_client=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_MODULE_AVAILABLE_juce_opengl=1 -DJUCE_MODULE_AVAILABLE_melatonin_inspector=1 -DJUCE_REPORT_APP_USAGE=0 -DJUCE_SHARED_CODE=1 -DJUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_TARGET_HAS_BINARY_DATA=1 -DJUCE_USE_CURL=0 -DJUCE_VST3_CAN_REPLACE_VST2=0 -DJUCE_WEB_BROWSER=0 -DJucePlugin_AAXCategory=0 -DJucePlugin_AAXDisableBypass=0 -DJucePlugin_AAXDisableMultiMono=0 -DJucePlugin_AAXIdentifier=com.oscilaudio.oscil4 -DJucePlugin_AAXManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AAXProductId=JucePlugin_PluginCode -DJucePlugin_ARACompatibleArchiveIDs=\"\" -DJucePlugin_ARAContentTypes=0 -DJucePlugin_ARADocumentArchiveID=\"com.oscilaudio.oscil4.aradocumentarchive.1\" -DJucePlugin_ARAFactoryID=\"com.oscilaudio.oscil4.arafactory.1.0.0\" -DJucePlugin_ARATransformationFlags=0 -DJucePlugin_AUExportPrefix=oscil4AU -DJucePlugin_AUExportPrefixQuoted=\"oscil4AU\" -DJucePlugin_AUMainType="'aufx'" -DJucePlugin_AUManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AUSubType=JucePlugin_PluginCode -DJucePlugin_Build_AAX=0 -DJucePlugin_Build_AU=1 -DJucePlugin_Build_AUv3=0 -DJucePlugin_Build_LV2=0 -DJucePlugin_Build_Standalone=1 -DJucePlugin_Build_Unity=0 -DJucePlugin_Build_VST3=1 -DJucePlugin_Build_VST=0 -DJucePlugin_CFBundleIdentifier=com.oscilaudio.oscil4 -DJucePlugin_Desc=\"oscil4\" -DJucePlugin_EditorRequiresKeyboardFocus=0 -DJucePlugin_Enable_ARA=0 -DJucePlugin_IsMidiEffect=0 -DJucePlugin_IsSynth=0 -DJucePlugin_Manufacturer=\"OscilAudio\" -DJucePlugin_ManufacturerCode=0x4f736369 -DJucePlugin_ManufacturerEmail=\"\" -DJucePlugin_ManufacturerWebsite=\"\" -DJucePlugin_Name=\"oscil4\" -DJucePlugin_PluginCode=0x4f736331 -DJucePlugin_ProducesMidiOutput=0 -DJucePlugin_VSTCategory=kPlugCategEffect -DJucePlugin_VSTNumMidiInputs=16 -DJucePlugin_VSTNumMidiOutputs=16 -DJucePlugin_VSTUniqueID=JucePlugin_PluginCode -DJucePlugin_Version=1.0.0 -DJucePlugin_VersionCode=0x10000 -DJucePlugin_VersionString=\"1.0.0\" -DJucePlugin_Vst3Category="\"Fx|Analyzer\"" -DJucePlugin_WantsMidiInput=0 -DOSCIL_ENABLE_INSPECTOR=1 -DOSCIL_ENABLE_OPENGL=1 -D_DEBUG=1 -I/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/include -I/Users/Spare/Documents/code/MultiScoper/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/httplib-src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/VST3_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lv2 -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/serd -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sratom -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/juce_binarydata_OscilBinaryData/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/json-src/include -I/Users/Spare/Documents/code/MultiScoper/build/dev -g -std=c++20 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Wno-unknown-warning-option -Wno-nontrivial-memcall -Wno-nontrivial-memaccess -g -O0 -Wall -Wshadow-all -Wshorten-64-to-32 -Wstrict-aliasing -Wuninitialized -Wunused-parameter -Wconversion -Wsign-compare -Wint-conversion -Wconditional-uninitialized -Wconstant-conversion -Wsign-conversion -Wbool-conversion -Wextra-semi -Wunreachable-code -Wcast-align -Wshift-sign-overflow -Wmissing-prototypes -Wnullable-to-nonnull-conversion -Wno-ignored-qualifiers -Wswitch-enum -Wpedantic -Wdeprecated -Wfloat-equal -Wmissing-field-initializers -Wzero-as-null-pointer-constant -Wunused-private-field -Woverloaded-virtual -Wreorder -Winconsistent-missing-destructor-override -MD -MT CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o -MF CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o.d -o CMakeFiles/Oscil.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o -c /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp
 /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_core/system/juce_PlatformDefs.h:157:114: error: macro argument should be enclosed in parentheses [bugprone-macro-parentheses,-warnings-as-errors]
   157 |   #define DBG(textToWrite)              JUCE_BLOCK_WITH_FORCED_SEMICOLON (juce::String tempDbgBuf; tempDbgBuf << textToWrite; juce::Logger::outputDebugString (tempDbgBuf);)
-      |                                                                                                                  ^          
+      |                                                                                                                  ^
       |                                                                                                                  (          )
 /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_core/system/juce_PlatformDefs.h:247:5: error: macro argument should be enclosed in parentheses [bugprone-macro-parentheses,-warnings-as-errors]
   247 |     className& operator= (const className&) = delete;
-      |     ^        
+      |     ^
       |     (        )
 /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_core/system/juce_PlatformDefs.h:253:16: error: macro argument should be enclosed in parentheses [bugprone-macro-parentheses,-warnings-as-errors]
   253 |     className (className&&) = delete;\
-      |                ^        
+      |                ^
       |                (        )
 /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_core/system/juce_PlatformDefs.h:254:5: error: macro argument should be enclosed in parentheses [bugprone-macro-parentheses,-warnings-as-errors]
   254 |     className& operator= (className&&) = delete;
-      |     ^        
+      |     ^
       |     (        )
 /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_core/system/juce_PlatformDefs.h:254:27: error: macro argument should be enclosed in parentheses [bugprone-macro-parentheses,-warnings-as-errors]
   254 |     className& operator= (className&&) = delete;
-      |                           ^        
+      |                           ^
       |                           (        )
 1925 warnings generated.
 Suppressed 1920 warnings (1920 in non-user code).

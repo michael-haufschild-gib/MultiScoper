@@ -11,15 +11,16 @@ namespace oscil
 // OscilRadioButton Implementation
 //==============================================================================
 
-OscilRadioButton::OscilRadioButton()
+OscilRadioButton::OscilRadioButton(IThemeService& themeService)
     : selectionSpring_(SpringPresets::bouncy())
     , hoverSpring_(SpringPresets::stiff())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     selectionSpring_.position = 0.0f;
     selectionSpring_.target = 0.0f;
@@ -27,14 +28,14 @@ OscilRadioButton::OscilRadioButton()
     hoverSpring_.target = 0.0f;
 }
 
-OscilRadioButton::OscilRadioButton(const juce::String& label)
-    : OscilRadioButton()
+OscilRadioButton::OscilRadioButton(IThemeService& themeService, const juce::String& label)
+    : OscilRadioButton(themeService)
 {
     label_ = label;
 }
 
-OscilRadioButton::OscilRadioButton(const juce::String& label, const juce::String& testId)
-    : OscilRadioButton()
+OscilRadioButton::OscilRadioButton(IThemeService& themeService, const juce::String& label, const juce::String& testId)
+    : OscilRadioButton(themeService)
 {
     label_ = label;
     setTestId(testId);
@@ -47,7 +48,7 @@ void OscilRadioButton::registerTestId()
 
 OscilRadioButton::~OscilRadioButton()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -381,27 +382,28 @@ std::unique_ptr<juce::AccessibilityHandler> OscilRadioButton::createAccessibilit
 // OscilRadioGroup Implementation
 //==============================================================================
 
-OscilRadioGroup::OscilRadioGroup()
+OscilRadioGroup::OscilRadioGroup(IThemeService& themeService)
+    : themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 }
 
-OscilRadioGroup::OscilRadioGroup(Orientation orientation)
-    : OscilRadioGroup()
+OscilRadioGroup::OscilRadioGroup(IThemeService& themeService, Orientation orientation)
+    : OscilRadioGroup(themeService)
 {
     orientation_ = orientation;
 }
 
 OscilRadioGroup::~OscilRadioGroup()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
 }
 
 void OscilRadioGroup::addOption(const juce::String& label)
 {
-    auto button = std::make_unique<OscilRadioButton>(label);
+    auto button = std::make_unique<OscilRadioButton>(themeService_, label);
     button->parentGroup_ = this;
 
     int index = static_cast<int>(buttons_.size());

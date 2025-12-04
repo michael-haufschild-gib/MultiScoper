@@ -11,6 +11,8 @@ set(OSCIL_SOURCES
     # Core (business logic)
     ${CMAKE_SOURCE_DIR}/src/core/InstanceRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/core/SharedCaptureBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Oscillator.cpp
@@ -32,6 +34,11 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/VisualConfiguration.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/Camera3D.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/GpuRenderCoordinator.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/RenderBootstrapper.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/EffectPipeline.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/WaveformPass.cpp
+
 
     # Rendering (shaders)
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/BasicShader.cpp
@@ -82,9 +89,12 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextField.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilToggle.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSlider.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MagneticSnapController.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilCheckbox.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButton.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdown.cpp
+    # NOTE: dropdown/ helper files removed - not properly integrated yet
+    # TODO: Properly extract DropdownList, DropdownSearch, DropdownPainter, DropdownSelectionManager
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabs.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordion.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilBadge.cpp
@@ -94,30 +104,36 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilMeterBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/SegmentedButtonBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/UIAudioFeedback.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/PaneSelectorComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/InlineEditLabel.cpp
 
     # UI (panels)
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListComponent.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorPanel.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorPresenter.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListToolbar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListItem.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorConfigPopup.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/dialogs/OscillatorConfigDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/StatusBarComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/SourceSelectorComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/SourceItemComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/WaveformComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/WaveformPresenter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/panels/SoftwareGridRenderer.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/TimingPresenter.cpp
 
     # UI (dialogs)
     ${CMAKE_SOURCE_DIR}/src/ui/dialogs/AddOscillatorDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/dialogs/OscillatorColorDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/dialogs/SelectPaneDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/managers/DialogManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/managers/DisplaySettingsManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/managers/PerformanceMetricsController.cpp
 
     # UI (layout)
     ${CMAKE_SOURCE_DIR}/src/ui/layout/Pane.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/WindowLayout.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/PaneComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/PaneContainerComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/PluginEditorLayout.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/SidebarComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/TimingSidebarSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/OptionsSection.cpp

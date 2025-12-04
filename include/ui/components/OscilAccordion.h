@@ -26,9 +26,8 @@ class OscilAccordionSection : public juce::Component,
                               private juce::Timer
 {
 public:
-    OscilAccordionSection();
-    explicit OscilAccordionSection(const juce::String& title);
-    OscilAccordionSection(const juce::String& title, const juce::String& testId);
+    explicit OscilAccordionSection(IThemeService& themeService, const juce::String& title = "");
+    OscilAccordionSection(IThemeService& themeService, const juce::String& title, const juce::String& testId);
     ~OscilAccordionSection() override;
 
     // Configuration
@@ -57,6 +56,7 @@ public:
 
     // Callbacks
     std::function<void(bool)> onExpandedChanged;
+    std::function<void()> onHeightChanged;
 
     // Size
     int getHeaderHeight() const { return HEADER_HEIGHT; }
@@ -87,6 +87,7 @@ private:
     void paintHeader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds);
 
+    IThemeService& themeService_;
     juce::String title_;
     juce::Image icon_;
     juce::Component* content_ = nullptr;
@@ -130,7 +131,7 @@ class OscilAccordion : public juce::Component,
                        public ThemeManagerListener
 {
 public:
-    OscilAccordion();
+    explicit OscilAccordion(IThemeService& themeService);
     ~OscilAccordion() override;
 
     // Section management
@@ -158,6 +159,7 @@ public:
 
     // Size
     int getPreferredHeight() const;
+    void updateContentHeight();
 
     // Component overrides
     void resized() override;
@@ -169,6 +171,7 @@ private:
     void handleSectionExpanded(int index, bool expanded);
     void layoutSections();
 
+    IThemeService& themeService_;
     juce::OwnedArray<OscilAccordionSection> sections_;
     bool allowMultiExpand_ = false;
     int spacing_ = 1;

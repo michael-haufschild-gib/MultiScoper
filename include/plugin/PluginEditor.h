@@ -8,39 +8,49 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #if OSCIL_ENABLE_OPENGL
-#include <juce_opengl/juce_opengl.h>
+    #include <juce_opengl/juce_opengl.h>
 #endif
 #if OSCIL_ENABLE_INSPECTOR
-#include <melatonin_inspector/melatonin_inspector.h>
+    #include <melatonin_inspector/melatonin_inspector.h>
 #endif
-#include "plugin/PluginProcessor.h"
-#include "ui/layout/WindowLayout.h"
+#include "ui/components/OscilModal.h"
 #include "ui/components/TestId.h"
-#include "ui/panels/OscillatorConfigPopup.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/dialogs/OscillatorColorDialog.h"
-#include "ui/components/OscilModal.h"
+#include "ui/dialogs/SelectPaneDialog.h"
+#include "ui/layout/PaneContainerComponent.h"
+#include "ui/layout/PluginEditorLayout.h"
+#include "ui/layout/WindowLayout.h"
+#include "ui/managers/DialogManager.h"
+#include "ui/managers/DisplaySettingsManager.h"
+#include "ui/managers/PerformanceMetricsController.h"
+#include "ui/dialogs/OscillatorConfigDialog.h"
 #include "ui/panels/StatusBarComponent.h"
 #include "ui/panels/WaveformComponent.h"
-#include "ui/layout/PaneContainerComponent.h"
+#include "ui/theme/ThemeManager.h"
+
+#include "plugin/PluginProcessor.h"
+#include "rendering/GpuRenderCoordinator.h"
+#include "core/ServiceContext.h"
 
 namespace oscil
 {
 
 // Forward declarations
-class OscillatorPanel;
 class PaneComponent;
 class StatusBarComponent;
 class SidebarComponent;
-class OscillatorConfigPopup;
 class SourceCoordinator;
 class ThemeCoordinator;
 class LayoutCoordinator;
 class PluginTestServer;
-struct ColorTheme;
 
 // Forward declaration for OpenGLLifecycleManager
 class OpenGLLifecycleManager;
+
+class PluginEditorLayout;
+class PerformanceMetricsController;
+class GpuRenderCoordinator;
 
 /**
  * Adapter class to bridge SidebarComponent::Listener to OscilPluginEditor
@@ -49,7 +59,7 @@ class OpenGLLifecycleManager;
 class SidebarListenerAdapter;
 
 /**
- * Adapter class to bridge OscillatorConfigPopup::Listener to OscilPluginEditor
+ * Adapter class to bridge OscillatorConfigDialog::Listener to OscilPluginEditor
  */
 class ConfigPopupListenerAdapter;
 
@@ -63,11 +73,11 @@ class TimingEngineListenerAdapter;
  * Uses coordinator classes to handle listener callbacks, reducing direct
  * coupling and improving testability.
  */
-class OscilPluginEditor : public juce::AudioProcessorEditor,
-                          public juce::DragAndDropContainer,
-                          public juce::ValueTree::Listener,
-                          public TestIdSupport,
-                          private juce::Timer
+class OscilPluginEditor : public juce::AudioProcessorEditor
+    , public juce::DragAndDropContainer
+    , public juce::ValueTree::Listener
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     explicit OscilPluginEditor(OscilPluginProcessor& processor);
@@ -97,6 +107,7 @@ public:
     // Oscillator property change handlers (from sidebar)
     void onOscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode);
     void onOscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible);
+    void onOscillatorPaneSelectionRequested(const OscillatorId& oscillatorId);
 
     // Accessor for adapter classes to reach processor
     OscilPluginProcessor& getProcessor() { return processor_; }
@@ -129,21 +140,20 @@ public:
     // Test access - for automated testing only
     const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const { return paneComponents_; }
     void refreshPanels() { refreshOscillatorPanels(); }
-    
+
     // Public refresh methods for adapters
     void refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators);
 
 private:
     void timerCallback() override;
-    void updateLayout();
     void refreshOscillatorPanels();
     void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
     void reapplyGlobalSettings();
     void createDefaultOscillator();
-    void updatePerformanceMetrics();
-    void updateRendering();
+
     void handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId);
     void handleEmptyColumnDrop(const PaneId& movedPaneId, int targetColumn);
+    void handlePaneClose(const PaneId& paneId);
 
     // Coordinator callbacks
     void onSourcesChanged();
@@ -151,6 +161,7 @@ private:
     void onLayoutChanged();
 
     OscilPluginProcessor& processor_;
+    ServiceContext serviceContext_;
     WindowLayout windowLayout_;
 
     // Coordinators (manage listener registrations)
@@ -166,28 +177,35 @@ private:
     std::unique_ptr<SidebarComponent> sidebar_;
     std::unique_ptr<SidebarListenerAdapter> sidebarAdapter_;
     std::unique_ptr<TimingEngineListenerAdapter> timingEngineAdapter_;
-    std::unique_ptr<OscillatorConfigPopup> configPopup_;
+
+    // Dialog Manager
+    std::unique_ptr<DialogManager> dialogManager_;
     std::unique_ptr<ConfigPopupListenerAdapter> configPopupAdapter_;
-    std::unique_ptr<AddOscillatorDialog> addOscillatorDialog_;
-    
-    // Color Dialog Modal
-    std::unique_ptr<OscilModal> colorModal_;
-    std::unique_ptr<OscillatorColorDialog> colorDialogContent_;
+
+    // Display Settings Manager
+    std::unique_ptr<DisplaySettingsManager> displaySettingsManager_;
+
+    // Select Pane Modal (for visibility toggle without pane assignment)
+    OscillatorId pendingVisibilityOscillatorId_; // Oscillator awaiting pane selection
 
     // Test server (for automated UI testing)
     std::unique_ptr<PluginTestServer> testServer_;
 
     // State
-    int frameCount_ = 0;
-    double lastFrameTime_ = 0.0;
-    float currentFps_ = 0.0f;
+    // Metrics handled by PerformanceMetricsController
 
-    // OpenGL Lifecycle Manager (handles context and renderer)
-    std::unique_ptr<OpenGLLifecycleManager> glManager_;
+    // Render Coordinator (handles OpenGL lifecycle)
+    std::unique_ptr<GpuRenderCoordinator> renderCoordinator_;
+
+    // Layout Engine
+    std::unique_ptr<PluginEditorLayout> editorLayout_;
+
+    // Metrics Controller
+    std::unique_ptr<PerformanceMetricsController> metricsController_;
 
 #if OSCIL_ENABLE_INSPECTOR
     // Melatonin Inspector for UI debugging (toggle with Cmd+I / Ctrl+I)
-    melatonin::Inspector inspector_ { *this };
+    melatonin::Inspector inspector_{*this};
 #endif
 
     static constexpr int STATUS_BAR_HEIGHT = 24;

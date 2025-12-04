@@ -7,7 +7,7 @@
 #pragma once
 
 #include "core/Oscillator.h"
-#include "core/SharedCaptureBuffer.h"
+#include "core/interfaces/IAudioBuffer.h"
 #include "core/dsp/SignalProcessor.h"
 #include <memory>
 #include <vector>
@@ -15,6 +15,8 @@
 
 namespace oscil
 {
+
+class SharedCaptureBuffer; // Forward declare just in case
 
 class WaveformPresenter
 {
@@ -25,7 +27,7 @@ public:
     /**
      * Set the capture buffer to read audio data from.
      */
-    void setCaptureBuffer(std::shared_ptr<SharedCaptureBuffer> buffer);
+    void setCaptureBuffer(std::shared_ptr<IAudioBuffer> buffer);
 
     /**
      * Set the processing mode (Stereo, Mono, L, R, etc.).
@@ -72,10 +74,10 @@ public:
     bool isAutoScaleEnabled() const { return autoScale_; }
     float getGainLinear() const { return gainLinear_; }
     int getDisplaySamples() const { return displaySamples_; }
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const { return captureBuffer_; }
+    std::shared_ptr<IAudioBuffer> getCaptureBuffer() const { return captureBuffer_; }
 
 private:
-    std::shared_ptr<SharedCaptureBuffer> captureBuffer_;
+    std::shared_ptr<IAudioBuffer> captureBuffer_;
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
     int displaySamples_ = 2048;
     float gainLinear_ = 1.0f;

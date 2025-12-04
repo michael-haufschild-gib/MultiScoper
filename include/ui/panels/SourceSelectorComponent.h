@@ -14,13 +14,16 @@
 namespace oscil
 {
 
+// Forward declarations
+class IInstanceRegistry;
+
 /**
  * Individual source item in the selector popup
  */
 class SourceListItem : public juce::Component
 {
 public:
-    SourceListItem(const SourceInfo& source);
+    SourceListItem(IThemeService& themeService, const SourceInfo& source);
 
     void paint(juce::Graphics& g) override;
     void mouseEnter(const juce::MouseEvent& e) override;
@@ -37,6 +40,7 @@ public:
     static constexpr int ITEM_HEIGHT = 36;
 
 private:
+    IThemeService& themeService_;
     SourceId sourceId_;
     juce::String name_;
     int channelCount_;
@@ -57,7 +61,7 @@ private:
 class NoSourceItem : public juce::Component
 {
 public:
-    NoSourceItem();
+    explicit NoSourceItem(IThemeService& themeService);
 
     void paint(juce::Graphics& g) override;
     void mouseEnter(const juce::MouseEvent& e) override;
@@ -69,6 +73,7 @@ public:
     static constexpr int ITEM_HEIGHT = 32;
 
 private:
+    IThemeService& themeService_;
     bool hovered_ = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NoSourceItem)
@@ -82,7 +87,7 @@ class SourceSelectorPopup : public juce::Component,
                              public ThemeManagerListener
 {
 public:
-    SourceSelectorPopup();
+    SourceSelectorPopup(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
     ~SourceSelectorPopup() override;
 
     void paint(juce::Graphics& g) override;
@@ -105,6 +110,9 @@ public:
     int getPreferredHeight() const;
 
 private:
+    IThemeService& themeService_; // Dependency
+    IInstanceRegistry& instanceRegistry_; // Dependency
+    
     void handleFilterChange();
     void applyFilter();
 
@@ -136,7 +144,7 @@ class SourceSelectorComponent : public juce::Component,
                                  public InstanceRegistryListener
 {
 public:
-    SourceSelectorComponent();
+    explicit SourceSelectorComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
     ~SourceSelectorComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -178,6 +186,8 @@ private:
     void showPopup();
     void updateDisplayText();
 
+    IThemeService& themeService_; // Dependency
+    IInstanceRegistry& instanceRegistry_; // Dependency
     SourceId selectedSourceId_;
     juce::String displayText_;
     int channelCount_ = 0;

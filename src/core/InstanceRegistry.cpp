@@ -46,7 +46,7 @@ void InstanceRegistry::shutdown()
 
 SourceId InstanceRegistry::registerInstance(
     const juce::String& trackIdentifier,
-    std::shared_ptr<SharedCaptureBuffer> captureBuffer,
+    std::shared_ptr<IAudioBuffer> captureBuffer,
     const juce::String& name,
     int channelCount,
     double sampleRate)
@@ -104,10 +104,9 @@ SourceId InstanceRegistry::registerInstance(
         }
     }
 
-    // Log outside mutex to avoid I/O while holding lock
+    // Return invalid ID if max limit reached (no logging in audio-adjacent paths)
     if (maxLimitReached)
     {
-        DBG("InstanceRegistry: Maximum source limit (" << MAX_TRACKS << ") reached");
         return SourceId::invalid();
     }
 
@@ -171,7 +170,7 @@ std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) 
     return std::nullopt;
 }
 
-std::shared_ptr<SharedCaptureBuffer> InstanceRegistry::getCaptureBuffer(const SourceId& sourceId) const
+std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId& sourceId) const
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
 

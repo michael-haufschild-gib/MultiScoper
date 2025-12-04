@@ -14,9 +14,7 @@ TimingEngine::TimingEngine()
     recalculateInterval();
 }
 
-TimingEngine::~TimingEngine()
-{
-}
+TimingEngine::~TimingEngine() = default;
 
 void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& positionInfo)
 {
@@ -132,6 +130,9 @@ HostTimingInfo TimingEngine::getHostInfo() const
 
 bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
 {
+    // Protect against denormal numbers which can cause 100x slowdown on some CPUs
+    juce::ScopedNoDenormals noDenormals;
+
     // Read from atomics for thread-safe access (UI thread may modify via setters)
     auto triggerMode = static_cast<WaveformTriggerMode>(
         atomicTriggerMode_.load(std::memory_order_relaxed));
@@ -140,7 +141,14 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
         return true;
 
     if (triggerMode == WaveformTriggerMode::Manual)
-        return checkAndClearManualTrigger();
+    {
+        // checkAndClearManualTrigger is called by polling, not here
+        return manualTrigger_.load(std::memory_order_relaxed);
+    }
+
+    // In MIDI mode, we don't check audio buffer for triggers
+    if (triggerMode == WaveformTriggerMode::Midi)
+        return triggered_.load(std::memory_order_relaxed);
 
     int channel = std::min(atomicTriggerChannel_.load(std::memory_order_relaxed),
                            buffer.getNumChannels() - 1);
@@ -148,7 +156,13 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
         return false;
 
     const float* samples = buffer.getReadPointer(channel);
-    return detectTrigger(samples, buffer.getNumSamples());
+    if (detectTrigger(samples, buffer.getNumSamples()))
+    {
+        triggered_.store(true, std::memory_order_relaxed);
+        return true;
+    }
+
+    return false;
 }
 
 int TimingEngine::getDisplaySampleCount(double sampleRate) const
@@ -318,14 +332,59 @@ void TimingEngine::setNoteInterval(EngineNoteInterval interval)
     }
 }
 
+bool TimingEngine::processMidi(const juce::MidiBuffer& midiMessages)
+{
+    // Only process if in MIDI trigger mode
+    auto triggerMode = static_cast<WaveformTriggerMode>(
+        atomicTriggerMode_.load(std::memory_order_relaxed));
+
+    if (triggerMode != WaveformTriggerMode::Midi)
+        return false;
+
+    int triggerNote = atomicMidiTriggerNote_.load(std::memory_order_relaxed);
+    int triggerChannel = atomicMidiTriggerChannel_.load(std::memory_order_relaxed);
+
+    for (const auto metadata : midiMessages)
+    {
+        auto msg = metadata.getMessage();
+        if (msg.isNoteOn())
+        {
+            // Check channel (0 = omni, or 1-16)
+            if (triggerChannel != 0 && msg.getChannel() != triggerChannel)
+                continue;
+
+            // Check note (-1 = any, or 0-127)
+            if (triggerNote != -1 && msg.getNoteNumber() != triggerNote)
+                continue;
+
+            // Trigger detected
+            triggered_.store(true, std::memory_order_relaxed);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool TimingEngine::checkAndClearManualTrigger()
 {
     return manualTrigger_.exchange(false);
 }
 
+bool TimingEngine::checkAndClearTrigger()
+{
+    // Check manual trigger
+    if (manualTrigger_.exchange(false))
+        return true;
+
+    // Check auto/midi trigger
+    return triggered_.exchange(false);
+}
+
 void TimingEngine::requestManualTrigger()
 {
     manualTrigger_.store(true);
+    triggered_.store(true); // Set general flag too
 }
 
 bool TimingEngine::detectTrigger(const float* samples, int numSamples)
@@ -355,6 +414,7 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 
             case WaveformTriggerMode::None:
             case WaveformTriggerMode::Manual:
+            case WaveformTriggerMode::Midi:
                 // These modes don't use sample-based detection
                 break;
         }
@@ -426,6 +486,8 @@ juce::ValueTree TimingEngine::toValueTree() const
     state.setProperty(TimingIds::NoteInterval, atomicNoteInterval_.load(std::memory_order_relaxed), nullptr);
     state.setProperty(TimingIds::TriggerMode, atomicTriggerMode_.load(std::memory_order_relaxed), nullptr);
     state.setProperty(TimingIds::TriggerThreshold, atomicTriggerThreshold_.load(std::memory_order_relaxed), nullptr);
+    state.setProperty(TimingIds::MidiTriggerNote, atomicMidiTriggerNote_.load(std::memory_order_relaxed), nullptr);
+    state.setProperty(TimingIds::MidiTriggerChannel, atomicMidiTriggerChannel_.load(std::memory_order_relaxed), nullptr);
 
     return state;
 }
@@ -452,6 +514,8 @@ void TimingEngine::fromValueTree(const juce::ValueTree& state)
     atomicNoteInterval_.store(static_cast<int>(state.getProperty(TimingIds::NoteInterval, 4)), std::memory_order_relaxed); // Default NOTE_1_4TH
     atomicTriggerMode_.store(static_cast<int>(state.getProperty(TimingIds::TriggerMode, 0)), std::memory_order_relaxed);
     atomicTriggerThreshold_.store(state.getProperty(TimingIds::TriggerThreshold, 0.1f), std::memory_order_relaxed);
+    atomicMidiTriggerNote_.store(state.getProperty(TimingIds::MidiTriggerNote, -1), std::memory_order_relaxed);
+    atomicMidiTriggerChannel_.store(state.getProperty(TimingIds::MidiTriggerChannel, 0), std::memory_order_relaxed);
 
     recalculateInterval();
 }
@@ -496,6 +560,10 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
                 break;
         }
     }
+    else if (entityConfig.triggerMode == TriggerMode::MIDI)
+    {
+        newTriggerMode = WaveformTriggerMode::Midi;
+    }
     
     atomicTriggerMode_.store(static_cast<int>(newTriggerMode), std::memory_order_relaxed);
 
@@ -504,6 +572,10 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
     // Convert: linear = 10^(dBFS/20)
     float thresholdLinear = std::pow(10.0f, entityConfig.triggerThreshold / 20.0f);
     atomicTriggerThreshold_.store(juce::jlimit(0.0f, 1.0f, thresholdLinear), std::memory_order_relaxed);
+
+    // Apply MIDI config
+    atomicMidiTriggerNote_.store(entityConfig.midiTriggerNote, std::memory_order_relaxed);
+    atomicMidiTriggerChannel_.store(entityConfig.midiTriggerChannel, std::memory_order_relaxed);
 
     recalculateInterval();
 }
@@ -532,24 +604,31 @@ TimingConfig TimingEngine::toEntityConfig() const
     if (triggerMode != WaveformTriggerMode::None &&
         triggerMode != WaveformTriggerMode::Manual)
     {
-        entityConfig.triggerMode = TriggerMode::TRIGGERED;
-        // Convert WaveformTriggerMode to TriggerEdge
-        switch (triggerMode)
+        if (triggerMode == WaveformTriggerMode::Midi)
         {
-            case WaveformTriggerMode::RisingEdge:
-                entityConfig.triggerEdge = TriggerEdge::Rising;
-                break;
-            case WaveformTriggerMode::FallingEdge:
-                entityConfig.triggerEdge = TriggerEdge::Falling;
-                break;
-            case WaveformTriggerMode::Level:
-                entityConfig.triggerEdge = TriggerEdge::Both;
-                break;
-            case WaveformTriggerMode::None:
-            case WaveformTriggerMode::Manual:
-                // Already filtered above, but handle explicitly for enum completeness
-                entityConfig.triggerEdge = TriggerEdge::Rising;
-                break;
+            entityConfig.triggerMode = TriggerMode::MIDI;
+        }
+        else
+        {
+            entityConfig.triggerMode = TriggerMode::TRIGGERED;
+            // Convert WaveformTriggerMode to TriggerEdge
+            switch (triggerMode)
+            {
+                case WaveformTriggerMode::RisingEdge:
+                    entityConfig.triggerEdge = TriggerEdge::Rising;
+                    break;
+                case WaveformTriggerMode::FallingEdge:
+                    entityConfig.triggerEdge = TriggerEdge::Falling;
+                    break;
+                case WaveformTriggerMode::Level:
+                    entityConfig.triggerEdge = TriggerEdge::Both;
+                    break;
+                case WaveformTriggerMode::None:
+                case WaveformTriggerMode::Midi:
+                case WaveformTriggerMode::Manual:
+                    // These modes are handled elsewhere or use defaults
+                    break;
+            }
         }
     }
     else
@@ -562,6 +641,10 @@ TimingConfig TimingEngine::toEntityConfig() const
     float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
     float thresholdDbfs = 20.0f * std::log10(juce::jmax(0.0001f, threshold));
     entityConfig.triggerThreshold = thresholdDbfs;
+
+    // Copy MIDI settings
+    entityConfig.midiTriggerNote = atomicMidiTriggerNote_.load(std::memory_order_relaxed);
+    entityConfig.midiTriggerChannel = atomicMidiTriggerChannel_.load(std::memory_order_relaxed);
 
     // Copy actual interval (use atomic for thread-safe read from UI thread)
     entityConfig.actualIntervalMs = atomicActualIntervalMs_.load(std::memory_order_relaxed);

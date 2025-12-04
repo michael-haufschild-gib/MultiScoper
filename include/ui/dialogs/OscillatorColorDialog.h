@@ -9,7 +9,10 @@
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilColorSwatches.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include <functional>
+
+#include "ui/theme/IThemeService.h"
 
 namespace oscil
 {
@@ -20,7 +23,7 @@ class OscillatorColorDialog : public juce::Component,
 public:
     using ColorSelectedCallback = std::function<void(juce::Colour)>;
 
-    OscillatorColorDialog();
+    explicit OscillatorColorDialog(IThemeService& themeService);
     ~OscillatorColorDialog() override;
 
     void setColors(const std::vector<juce::Colour>& colors);
@@ -38,6 +41,7 @@ public:
 private:
     void setupComponents();
 
+    IThemeService& themeService_;
     std::unique_ptr<OscilColorSwatches> colorSwatches_;
     std::unique_ptr<OscilButton> okButton_;
     std::unique_ptr<OscilButton> cancelButton_;

@@ -7,8 +7,9 @@
 
 #include "plugin/PluginEditor.h"
 #include "ui/layout/SidebarComponent.h"
-#include "ui/panels/OscillatorConfigPopup.h"
+#include "ui/dialogs/OscillatorConfigDialog.h"
 #include "core/dsp/TimingEngine.h"
+#include "core/MemoryBudgetManager.h"
 
 namespace oscil
 {
@@ -59,6 +60,11 @@ public:
     void oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible) override
     {
         editor_.onOscillatorVisibilityChanged(oscillatorId, visible);
+    }
+
+    void oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId) override
+    {
+        editor_.onOscillatorPaneSelectionRequested(oscillatorId);
     }
 
     // Timing section events - forward to processor's TimingEngine
@@ -236,14 +242,57 @@ private:
         editor_.setGpuRenderingEnabled(enabled);
     }
 
+    // Capture quality events
+    void qualityPresetChanged(QualityPreset preset) override
+    {
+        auto& state = editor_.getProcessor().getState();
+        auto config = state.getCaptureQualityConfig();
+        config.qualityPreset = preset;
+        state.setCaptureQualityConfig(config);
+
+        // Update MemoryBudgetManager
+        auto& memoryManager = MemoryBudgetManager::getInstance();
+        memoryManager.setGlobalConfig(config, static_cast<int>(editor_.getProcessor().getSampleRate()));
+    }
+
+    void bufferDurationChanged(BufferDuration duration) override
+    {
+        auto& state = editor_.getProcessor().getState();
+        auto config = state.getCaptureQualityConfig();
+        config.bufferDuration = duration;
+        state.setCaptureQualityConfig(config);
+
+        // Update MemoryBudgetManager
+        auto& memoryManager = MemoryBudgetManager::getInstance();
+        memoryManager.setGlobalConfig(config, static_cast<int>(editor_.getProcessor().getSampleRate()));
+    }
+
+    void autoAdjustQualityChanged(bool enabled) override
+    {
+        auto& state = editor_.getProcessor().getState();
+        auto config = state.getCaptureQualityConfig();
+        config.autoAdjustQuality = enabled;
+        state.setCaptureQualityConfig(config);
+
+        // Update MemoryBudgetManager
+        auto& memoryManager = MemoryBudgetManager::getInstance();
+        memoryManager.setGlobalConfig(config, static_cast<int>(editor_.getProcessor().getSampleRate()));
+
+        // If auto-adjust is enabled, apply recommended quality
+        if (enabled)
+        {
+            memoryManager.applyRecommendedQuality();
+        }
+    }
+
 private:
     OscilPluginEditor& editor_;
 };
 
 /**
- * Adapter class to forward OscillatorConfigPopup::Listener events to OscilPluginEditor
+ * Adapter class to forward OscillatorConfigDialog::Listener events to OscilPluginEditor
  */
-class ConfigPopupListenerAdapter : public OscillatorConfigPopup::Listener
+class ConfigPopupListenerAdapter : public OscillatorConfigDialog::Listener
 {
 public:
     explicit ConfigPopupListenerAdapter(OscilPluginEditor& editor) : editor_(editor) {}
@@ -258,7 +307,7 @@ public:
         editor_.onOscillatorDeleteRequested(oscillatorId);
     }
 
-    void configPopupClosed() override
+    void configDialogClosed() override
     {
         editor_.onConfigPopupClosed();
     }

@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "core/ServiceContext.h"
 #include "ui/layout/WindowLayout.h"
 #include "core/Oscillator.h"
 #include "core/InstanceRegistry.h"
@@ -16,6 +17,7 @@
 #include "ui/layout/sections/TimingSidebarSection.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/components/OscilAccordion.h"
+#include "core/dsp/CaptureQualityConfig.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
 #include <vector>
@@ -33,7 +35,7 @@ class SidebarResizeHandle : public juce::Component,
                             public TestIdSupport
 {
 public:
-    SidebarResizeHandle();
+    explicit SidebarResizeHandle(IThemeService& themeService);
 
     void paint(juce::Graphics& g) override;
     void mouseEnter(const juce::MouseEvent& e) override;
@@ -47,6 +49,7 @@ public:
     std::function<void()> onResizeEnd;
 
 private:
+    IThemeService& themeService_;
     bool isHovered_ = false;
     bool isDragging_ = false;
     int dragStartX_ = 0;
@@ -63,7 +66,7 @@ private:
 class SidebarCollapseButton : public juce::Component
 {
 public:
-    SidebarCollapseButton();
+    explicit SidebarCollapseButton(IThemeService& themeService);
 
     void paint(juce::Graphics& g) override;
     void mouseEnter(const juce::MouseEvent& e) override;
@@ -76,6 +79,7 @@ public:
     std::function<void()> onClick;
 
 private:
+    IThemeService& themeService_;
     bool collapsed_ = false;
     bool isHovered_ = false;
 
@@ -111,6 +115,11 @@ public:
         virtual void oscillatorsReordered(int /*fromIndex*/, int /*toIndex*/) {}
         virtual void addOscillatorRequested(const AddOscillatorDialog::Result& /*result*/) {}
         virtual void addOscillatorDialogRequested() {}
+        /**
+         * Called when user tries to set an oscillator visible but it has no valid pane assignment.
+         * Parent should show a pane selection dialog.
+         */
+        virtual void oscillatorPaneSelectionRequested(const OscillatorId& /*oscillatorId*/) {}
 
         // Timing section events
         virtual void timingModeChanged(TimingMode /*mode*/) {}
@@ -134,9 +143,14 @@ public:
 
         // Rendering mode events
         virtual void gpuRenderingChanged(bool /*enabled*/) {}
+
+        // Capture quality events
+        virtual void qualityPresetChanged(QualityPreset /*preset*/) {}
+        virtual void bufferDurationChanged(BufferDuration /*duration*/) {}
+        virtual void autoAdjustQualityChanged(bool /*enabled*/) {}
     };
 
-    explicit SidebarComponent(IInstanceRegistry& instanceRegistry);
+    explicit SidebarComponent(ServiceContext& context);
     ~SidebarComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -174,6 +188,7 @@ public:
     int getEffectiveWidth() const;
 
 private:
+    IThemeService& themeService_;
     IInstanceRegistry& instanceRegistry_;
 
     // Child components
@@ -215,6 +230,7 @@ private:
     void oscillatorColorConfigRequested(const OscillatorId& id) override;
     void oscillatorDeleteRequested(const OscillatorId& id) override;
     void oscillatorsReordered(int fromIndex, int toIndex) override;
+    void oscillatorPaneSelectionRequested(const OscillatorId& id) override;
 
     // TimingSidebarSection::Listener overrides
     void timingModeChanged(TimingMode mode) override;
@@ -232,6 +248,9 @@ private:
     void layoutChanged(int columnCount) override;
     void themeChanged(const juce::String& themeName) override;
     void gpuRenderingChanged(bool enabled) override;
+    void qualityPresetChanged(QualityPreset preset) override;
+    void bufferDurationChanged(BufferDuration duration) override;
+    void autoAdjustQualityChanged(bool enabled) override;
 
     static constexpr int SECTION_HEADER_HEIGHT = 28;
     static constexpr int RESIZE_HANDLE_WIDTH = 6;

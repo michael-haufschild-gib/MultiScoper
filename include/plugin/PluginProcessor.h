@@ -5,21 +5,26 @@
 
 #pragma once
 
-#include <juce_audio_processors/juce_audio_processors.h>
+#include "core/DecimatingCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
-#include "core/SharedCaptureBuffer.h"
+#include "core/MemoryBudgetManager.h"
 #include "core/OscilState.h"
+#include "core/SharedCaptureBuffer.h"
 #include "core/dsp/TimingEngine.h"
-#include "core/interfaces/IInstanceRegistry.h"
 #include "core/interfaces/IAudioDataProvider.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "ui/theme/IThemeService.h"
+
+#include <juce_audio_processors/juce_audio_processors.h>
+
 #include <memory>
 
 namespace oscil
 {
 
-class OscilPluginProcessor : public juce::AudioProcessor,
-                             public IAudioDataProvider
+class OscilPluginProcessor : public juce::AudioProcessor
+    , public IAudioDataProvider
+    , public juce::ValueTree::Listener
 {
 public:
     // Constructor with dependency injection
@@ -67,21 +72,39 @@ public:
     float getCpuUsage() const override { return cpuUsage_.load(std::memory_order_relaxed); }
     double getSampleRate() const override { return currentSampleRate_; }
 
+    // ValueTree::Listener overrides
+    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
+    void valueTreeChildAdded(juce::ValueTree& /*parentTree*/, juce::ValueTree& /*child*/) override {}
+    void valueTreeChildRemoved(juce::ValueTree& /*parentTree*/, juce::ValueTree& /*child*/, int /*index*/) override {}
+    void valueTreeChildOrderChanged(juce::ValueTree& /*parentTree*/, int /*oldIndex*/, int /*newIndex*/) override {}
+    void valueTreeParentChanged(juce::ValueTree& /*tree*/) override {}
+
 private:
     IInstanceRegistry& instanceRegistry_; // Injected dependency
-    IThemeService& themeService_;          // Injected dependency
+    IThemeService& themeService_;         // Injected dependency
 
-    std::shared_ptr<SharedCaptureBuffer> captureBuffer_;
+    std::shared_ptr<DecimatingCaptureBuffer> captureBuffer_;
     SourceId sourceId_;
     juce::String trackIdentifier_;
     OscilState state_;
     TimingEngine timingEngine_;
 
-    double currentSampleRate_ = 44100.0;
-    int currentBlockSize_ = 512;
+    std::atomic<double> currentSampleRate_{44100.0};
+    std::atomic<int> currentBlockSize_{512};
 
     // CPU usage tracking
-    std::atomic<float> cpuUsage_{ 0.0f };
+    std::atomic<float> cpuUsage_{0.0f};
+
+    // Pre-calculated conversion factor for CPU timing (real-time safe)
+    double ticksToSecondsScale_{0.0};
+
+    // Cached state for real-time safe getStateInformation()
+    // Updated on message thread, read by audio thread when needed
+    juce::String cachedStateXml_;
+    mutable juce::SpinLock cachedStateLock_;
+
+    // Helper to update cached state (call from message thread only)
+    void updateCachedState();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilPluginProcessor)
 };

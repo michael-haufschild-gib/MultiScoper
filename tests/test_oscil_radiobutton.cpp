@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilRadioButton.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilRadioButtonTest, DefaultConstruction)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
 
     EXPECT_FALSE(radio.isSelected());
     EXPECT_TRUE(radio.isEnabled());
@@ -29,7 +30,7 @@ TEST_F(OscilRadioButtonTest, DefaultConstruction)
 
 TEST_F(OscilRadioButtonTest, ConstructionWithLabel)
 {
-    OscilRadioButton radio("Option A");
+    OscilRadioButton radio(ThemeManager::getInstance(), "Option A");
 
     EXPECT_EQ(radio.getLabel(), juce::String("Option A"));
     EXPECT_FALSE(radio.isSelected());
@@ -37,14 +38,14 @@ TEST_F(OscilRadioButtonTest, ConstructionWithLabel)
 
 TEST_F(OscilRadioButtonTest, ConstructionWithLabelAndTestId)
 {
-    OscilRadioButton radio("Option A", "radio-1");
+    OscilRadioButton radio(ThemeManager::getInstance(), "Option A", "radio-1");
 
     EXPECT_EQ(radio.getLabel(), juce::String("Option A"));
 }
 
 TEST_F(OscilRadioButtonTest, SetSelected)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
 
     radio.setSelected(true, false);
     EXPECT_TRUE(radio.isSelected());
@@ -55,7 +56,7 @@ TEST_F(OscilRadioButtonTest, SetSelected)
 
 TEST_F(OscilRadioButtonTest, SetLabel)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
     radio.setLabel("Option A");
 
     EXPECT_EQ(radio.getLabel(), juce::String("Option A"));
@@ -63,14 +64,14 @@ TEST_F(OscilRadioButtonTest, SetLabel)
 
 TEST_F(OscilRadioButtonTest, DefaultLabelOnRight)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
 
     EXPECT_TRUE(radio.isLabelOnRight());
 }
 
 TEST_F(OscilRadioButtonTest, SetLabelOnRight)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
 
     radio.setLabelOnRight(false);
     EXPECT_FALSE(radio.isLabelOnRight());
@@ -81,7 +82,7 @@ TEST_F(OscilRadioButtonTest, SetLabelOnRight)
 
 TEST_F(OscilRadioButtonTest, EnabledState)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
 
     EXPECT_TRUE(radio.isEnabled());
 
@@ -94,7 +95,7 @@ TEST_F(OscilRadioButtonTest, EnabledState)
 
 TEST_F(OscilRadioButtonTest, OnSelectedCallback)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
     int selectCount = 0;
 
     radio.onSelected = [&selectCount]() {
@@ -107,7 +108,7 @@ TEST_F(OscilRadioButtonTest, OnSelectedCallback)
 
 TEST_F(OscilRadioButtonTest, NoCallbackWhenNotifyFalse)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
     int selectCount = 0;
 
     radio.onSelected = [&selectCount]() {
@@ -120,7 +121,7 @@ TEST_F(OscilRadioButtonTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilRadioButtonTest, PreferredWidthPositive)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
     radio.setLabel("Test Option");
 
     int width = radio.getPreferredWidth();
@@ -129,7 +130,7 @@ TEST_F(OscilRadioButtonTest, PreferredWidthPositive)
 
 TEST_F(OscilRadioButtonTest, PreferredHeightPositive)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
 
     int height = radio.getPreferredHeight();
     EXPECT_GT(height, 0);
@@ -137,7 +138,7 @@ TEST_F(OscilRadioButtonTest, PreferredHeightPositive)
 
 TEST_F(OscilRadioButtonTest, ThemeChangeDoesNotThrow)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
     radio.setSelected(true, false);
 
     ColorTheme newTheme;
@@ -150,7 +151,7 @@ TEST_F(OscilRadioButtonTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilRadioButtonTest, WantsKeyboardFocus)
 {
-    OscilRadioButton radio;
+    OscilRadioButton radio(ThemeManager::getInstance());
 
     EXPECT_TRUE(radio.getWantsKeyboardFocus());
 }
@@ -163,11 +164,12 @@ class OscilRadioGroupTest : public ::testing::Test
 {
 protected:
     void SetUp() override {}
+    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
 };
 
 TEST_F(OscilRadioGroupTest, DefaultConstruction)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
 
     EXPECT_EQ(group.getNumOptions(), 0);
     EXPECT_EQ(group.getSelectedIndex(), -1);
@@ -176,14 +178,14 @@ TEST_F(OscilRadioGroupTest, DefaultConstruction)
 
 TEST_F(OscilRadioGroupTest, ConstructionWithOrientation)
 {
-    OscilRadioGroup group(OscilRadioGroup::Orientation::Horizontal);
+    OscilRadioGroup group(getThemeService(), OscilRadioGroup::Orientation::Horizontal);
 
     EXPECT_EQ(group.getOrientation(), OscilRadioGroup::Orientation::Horizontal);
 }
 
 TEST_F(OscilRadioGroupTest, AddOption)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
 
     group.addOption("Option A");
     group.addOption("Option B");
@@ -194,7 +196,7 @@ TEST_F(OscilRadioGroupTest, AddOption)
 
 TEST_F(OscilRadioGroupTest, AddOptionsInitializerList)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
 
     group.addOptions({"Option A", "Option B", "Option C"});
 
@@ -203,7 +205,7 @@ TEST_F(OscilRadioGroupTest, AddOptionsInitializerList)
 
 TEST_F(OscilRadioGroupTest, ClearOptions)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -213,7 +215,7 @@ TEST_F(OscilRadioGroupTest, ClearOptions)
 
 TEST_F(OscilRadioGroupTest, SetSelectedIndex)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
     group.addOption("Option C");
@@ -224,7 +226,7 @@ TEST_F(OscilRadioGroupTest, SetSelectedIndex)
 
 TEST_F(OscilRadioGroupTest, GetSelectedLabel)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -234,7 +236,7 @@ TEST_F(OscilRadioGroupTest, GetSelectedLabel)
 
 TEST_F(OscilRadioGroupTest, MutualExclusivity)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
     group.addOption("Option C");
@@ -249,7 +251,7 @@ TEST_F(OscilRadioGroupTest, MutualExclusivity)
 
 TEST_F(OscilRadioGroupTest, OnSelectionChangedCallback)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -268,7 +270,7 @@ TEST_F(OscilRadioGroupTest, OnSelectionChangedCallback)
 
 TEST_F(OscilRadioGroupTest, OnSelectionChangedLabelCallback)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -287,7 +289,7 @@ TEST_F(OscilRadioGroupTest, OnSelectionChangedLabelCallback)
 
 TEST_F(OscilRadioGroupTest, NoCallbackWhenNotifyFalse)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -303,7 +305,7 @@ TEST_F(OscilRadioGroupTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilRadioGroupTest, SetOrientationVertical)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
 
     group.setOrientation(OscilRadioGroup::Orientation::Vertical);
     EXPECT_EQ(group.getOrientation(), OscilRadioGroup::Orientation::Vertical);
@@ -311,7 +313,7 @@ TEST_F(OscilRadioGroupTest, SetOrientationVertical)
 
 TEST_F(OscilRadioGroupTest, SetOrientationHorizontal)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
 
     group.setOrientation(OscilRadioGroup::Orientation::Horizontal);
     EXPECT_EQ(group.getOrientation(), OscilRadioGroup::Orientation::Horizontal);
@@ -319,7 +321,7 @@ TEST_F(OscilRadioGroupTest, SetOrientationHorizontal)
 
 TEST_F(OscilRadioGroupTest, SetSpacing)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
 
     group.setSpacing(20);
     EXPECT_EQ(group.getSpacing(), 20);
@@ -327,7 +329,7 @@ TEST_F(OscilRadioGroupTest, SetSpacing)
 
 TEST_F(OscilRadioGroupTest, SetEnabled)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
 
     group.setEnabled(false);
     EXPECT_FALSE(group.isEnabled());
@@ -338,7 +340,7 @@ TEST_F(OscilRadioGroupTest, SetEnabled)
 
 TEST_F(OscilRadioGroupTest, InvalidIndexHandling)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.setSelectedIndex(0, false);
 
@@ -348,7 +350,7 @@ TEST_F(OscilRadioGroupTest, InvalidIndexHandling)
 
 TEST_F(OscilRadioGroupTest, GetButton)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -359,7 +361,7 @@ TEST_F(OscilRadioGroupTest, GetButton)
 
 TEST_F(OscilRadioGroupTest, GetButtonInvalidIndex)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
 
     auto* button = group.getButton(999);
@@ -368,7 +370,7 @@ TEST_F(OscilRadioGroupTest, GetButtonInvalidIndex)
 
 TEST_F(OscilRadioGroupTest, PreferredWidthPositive)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -378,7 +380,7 @@ TEST_F(OscilRadioGroupTest, PreferredWidthPositive)
 
 TEST_F(OscilRadioGroupTest, PreferredHeightPositive)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.addOption("Option B");
 
@@ -388,7 +390,7 @@ TEST_F(OscilRadioGroupTest, PreferredHeightPositive)
 
 TEST_F(OscilRadioGroupTest, ThemeChangeDoesNotThrow)
 {
-    OscilRadioGroup group;
+    OscilRadioGroup group(getThemeService());
     group.addOption("Option A");
     group.setSelectedIndex(0, false);
 

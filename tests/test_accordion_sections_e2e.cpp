@@ -8,6 +8,7 @@
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
+#include "ui/theme/ThemeManager.h"
 #include "core/dsp/TimingConfig.h"
 
 using namespace oscil;
@@ -19,9 +20,10 @@ using namespace oscil;
 class AccordionSectionTest : public ::testing::Test
 {
 protected:
+    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
     void SetUp() override
     {
-        section_ = std::make_unique<OscilAccordionSection>("Test Section", "test_section");
+        section_ = std::make_unique<OscilAccordionSection>(getThemeService(), "Test Section", "test_section");
         content_ = std::make_unique<juce::Component>();
         content_->setSize(200, 100);
     }
@@ -153,9 +155,10 @@ TEST_F(AccordionSectionTest, ContentVisibilityFollowsExpandedState)
 class OptionsSectionTest : public ::testing::Test
 {
 protected:
+    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
     void SetUp() override
     {
-        section_ = std::make_unique<OptionsSection>();
+        section_ = std::make_unique<OptionsSection>(getThemeService());
     }
 
     void TearDown() override
@@ -183,10 +186,11 @@ TEST_F(OptionsSectionTest, DefaultGainIsZero)
 class AccordionOptionsSectionTest : public ::testing::Test
 {
 protected:
+    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
     void SetUp() override
     {
-        accordionSection_ = std::make_unique<OscilAccordionSection>("OPTIONS", "sidebar_options");
-        options_ = std::make_unique<OptionsSection>();
+        accordionSection_ = std::make_unique<OscilAccordionSection>(getThemeService(), "OPTIONS", "sidebar_options");
+        options_ = std::make_unique<OptionsSection>(getThemeService());
         accordionSection_->setContent(options_.get());
         accordionSection_->setBounds(0, 0, 200, 400);
     }
@@ -222,10 +226,11 @@ TEST_F(AccordionOptionsSectionTest, OptionsHiddenWhenCollapsed)
 class AccordionTimingSectionTest : public ::testing::Test
 {
 protected:
+    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
     void SetUp() override
     {
-        accordionSection_ = std::make_unique<OscilAccordionSection>("TIMING", "sidebar_timing");
-        timing_ = std::make_unique<TimingSidebarSection>();
+        accordionSection_ = std::make_unique<OscilAccordionSection>(getThemeService(), "TIMING", "sidebar_timing");
+        timing_ = std::make_unique<TimingSidebarSection>(getThemeService());
         accordionSection_->setContent(timing_.get());
         accordionSection_->setBounds(0, 0, 200, 400);
     }

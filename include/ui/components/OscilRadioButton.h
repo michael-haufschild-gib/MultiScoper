@@ -13,6 +13,8 @@
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
 
+#include "ui/theme/IThemeService.h"
+
 namespace oscil
 {
 
@@ -34,9 +36,9 @@ class OscilRadioButton : public juce::Component,
                          private juce::Timer
 {
 public:
-    OscilRadioButton();
-    explicit OscilRadioButton(const juce::String& label);
-    OscilRadioButton(const juce::String& label, const juce::String& testId);
+    explicit OscilRadioButton(IThemeService& themeService);
+    OscilRadioButton(IThemeService& themeService, const juce::String& label);
+    OscilRadioButton(IThemeService& themeService, const juce::String& label, const juce::String& testId);
     ~OscilRadioButton() override;
 
     // State
@@ -108,6 +110,7 @@ private:
 
     // Theme
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     static constexpr int RADIO_SIZE = 18;
     static constexpr int DOT_SIZE = 8;
@@ -138,8 +141,8 @@ public:
         Vertical
     };
 
-    OscilRadioGroup();
-    explicit OscilRadioGroup(Orientation orientation);
+    explicit OscilRadioGroup(IThemeService& themeService);
+    OscilRadioGroup(IThemeService& themeService, Orientation orientation);
     ~OscilRadioGroup() override;
 
     // Options management
@@ -195,6 +198,7 @@ private:
     void updateButtonStates();
     void layoutButtons();
 
+    IThemeService& themeService_;
     juce::OwnedArray<OscilRadioButton> buttons_;
     int selectedIndex_ = -1;
     Orientation orientation_ = Orientation::Vertical;

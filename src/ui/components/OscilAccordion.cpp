@@ -11,31 +11,26 @@ namespace oscil
 // OscilAccordionSection Implementation
 //==============================================================================
 
-OscilAccordionSection::OscilAccordionSection()
-    : expandSpring_(SpringPresets::snappy())
+OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title)
+    : themeService_(themeService)
+    , title_(title)
+    , expandSpring_(SpringPresets::snappy())
     , hoverSpring_(SpringPresets::stiff())
     , chevronSpring_(SpringPresets::bouncy())
 {
     setWantsKeyboardFocus(true);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     expandSpring_.position = 0.0f;
     hoverSpring_.position = 0.0f;
     chevronSpring_.position = 0.0f;
 }
 
-OscilAccordionSection::OscilAccordionSection(const juce::String& title)
-    : OscilAccordionSection()
+OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title, const juce::String& testId)
+    : OscilAccordionSection(themeService, title)
 {
-    title_ = title;
-}
-
-OscilAccordionSection::OscilAccordionSection(const juce::String& title, const juce::String& testId)
-    : OscilAccordionSection()
-{
-    title_ = title;
     setTestId(testId);
 }
 
@@ -46,7 +41,7 @@ void OscilAccordionSection::registerTestId()
 
 OscilAccordionSection::~OscilAccordionSection()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -180,7 +175,9 @@ void OscilAccordionSection::contentHeightChanged()
     // If expanded, we need to update layout
     if (expanded_ || expandSpring_.position > 0.01f)
     {
-        if (auto* parent = getParentComponent())
+        if (onHeightChanged)
+            onHeightChanged();
+        else if (auto* parent = getParentComponent())
             parent->resized();
     }
 }
@@ -380,7 +377,9 @@ void OscilAccordionSection::timerCallback()
     if (currentHeight != lastReportedHeight_)
     {
         lastReportedHeight_ = currentHeight;
-        if (auto* parent = getParentComponent())
+        if (onHeightChanged)
+            onHeightChanged();
+        else if (auto* parent = getParentComponent())
             parent->resized();
     }
 
@@ -408,25 +407,29 @@ void OscilAccordionSection::themeChanged(const ColorTheme& newTheme)
 // OscilAccordion Implementation
 //==============================================================================
 
-OscilAccordion::OscilAccordion()
+OscilAccordion::OscilAccordion(IThemeService& themeService)
+    : themeService_(themeService)
 {
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 }
 
 OscilAccordion::~OscilAccordion()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
 }
 
 OscilAccordionSection* OscilAccordion::addSection(const juce::String& title)
 {
-    auto section = std::make_unique<OscilAccordionSection>(title);
+    auto section = std::make_unique<OscilAccordionSection>(themeService_, title);
     auto* sectionPtr = section.get();
 
     int index = static_cast<int>(sections_.size());
     section->onExpandedChanged = [this, index](bool expanded) {
         handleSectionExpanded(index, expanded);
+    };
+    section->onHeightChanged = [this]() {
+        updateContentHeight();
     };
 
     addAndMakeVisible(*section);
@@ -540,15 +543,18 @@ int OscilAccordion::getPreferredHeight() const
     return totalHeight;
 }
 
-void OscilAccordion::resized()
+void OscilAccordion::updateContentHeight()
 {
-    layoutSections();
-
-    // Update own size to match content - this ensures the viewport
-    // can properly scroll when accordion content height changes dynamically
     int preferredHeight = getPreferredHeight();
     if (getHeight() != preferredHeight)
         setSize(getWidth(), preferredHeight);
+    
+    layoutSections();
+}
+
+void OscilAccordion::resized()
+{
+    layoutSections();
 }
 
 void OscilAccordion::handleSectionExpanded(int index, bool expanded)

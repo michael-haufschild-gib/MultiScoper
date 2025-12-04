@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilMeterBar.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilMeterBarTest, DefaultConstruction)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     EXPECT_FLOAT_EQ(meter.getLevel(), 0.0f);
     EXPECT_FALSE(meter.isClipping());
@@ -29,7 +30,7 @@ TEST_F(OscilMeterBarTest, DefaultConstruction)
 
 TEST_F(OscilMeterBarTest, ConstructionWithTestId)
 {
-    OscilMeterBar meter("meter-1");
+    OscilMeterBar meter(ThemeManager::getInstance(), "meter-1");
 
     EXPECT_FLOAT_EQ(meter.getLevel(), 0.0f);
 }
@@ -40,7 +41,7 @@ TEST_F(OscilMeterBarTest, ConstructionWithTestId)
 
 TEST_F(OscilMeterBarTest, SetLevel)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setLevel(0.5f);
     // Level may decay, but should have been set
@@ -49,7 +50,7 @@ TEST_F(OscilMeterBarTest, SetLevel)
 
 TEST_F(OscilMeterBarTest, SetStereoLevels)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
     meter.setStereo(true);
 
     meter.setLevels(0.6f, 0.4f);
@@ -59,7 +60,7 @@ TEST_F(OscilMeterBarTest, SetStereoLevels)
 
 TEST_F(OscilMeterBarTest, SetRMSLevel)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setRMSLevel(0.3f);
     EXPECT_GE(meter.getRMSLevel(), 0.0f);
@@ -67,7 +68,7 @@ TEST_F(OscilMeterBarTest, SetRMSLevel)
 
 TEST_F(OscilMeterBarTest, SetRMSLevelsStereo)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
     meter.setStereo(true);
 
     meter.setRMSLevels(0.4f, 0.3f);
@@ -80,7 +81,7 @@ TEST_F(OscilMeterBarTest, SetRMSLevelsStereo)
 
 TEST_F(OscilMeterBarTest, ClipDetection)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setLevel(1.5f);  // Over 1.0
     EXPECT_TRUE(meter.isClipping());
@@ -88,7 +89,7 @@ TEST_F(OscilMeterBarTest, ClipDetection)
 
 TEST_F(OscilMeterBarTest, NoClipAtUnityGain)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setLevel(1.0f);
     // 1.0 is at the edge, may or may not clip depending on implementation
@@ -97,7 +98,7 @@ TEST_F(OscilMeterBarTest, NoClipAtUnityGain)
 
 TEST_F(OscilMeterBarTest, ResetClip)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
     meter.setLevel(1.5f);
     EXPECT_TRUE(meter.isClipping());
 
@@ -107,7 +108,7 @@ TEST_F(OscilMeterBarTest, ResetClip)
 
 TEST_F(OscilMeterBarTest, ResetPeakHold)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
     meter.setLevel(0.8f);
 
     meter.resetPeakHold();
@@ -120,14 +121,14 @@ TEST_F(OscilMeterBarTest, ResetPeakHold)
 
 TEST_F(OscilMeterBarTest, DefaultOrientationVertical)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     EXPECT_EQ(meter.getOrientation(), OscilMeterBar::Orientation::Vertical);
 }
 
 TEST_F(OscilMeterBarTest, SetOrientationHorizontal)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setOrientation(OscilMeterBar::Orientation::Horizontal);
     EXPECT_EQ(meter.getOrientation(), OscilMeterBar::Orientation::Horizontal);
@@ -135,7 +136,7 @@ TEST_F(OscilMeterBarTest, SetOrientationHorizontal)
 
 TEST_F(OscilMeterBarTest, SetOrientationVertical)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
     meter.setOrientation(OscilMeterBar::Orientation::Horizontal);
 
     meter.setOrientation(OscilMeterBar::Orientation::Vertical);
@@ -148,7 +149,7 @@ TEST_F(OscilMeterBarTest, SetOrientationVertical)
 
 TEST_F(OscilMeterBarTest, SetMeterTypePeak)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setMeterType(OscilMeterBar::MeterType::Peak);
     EXPECT_EQ(meter.getMeterType(), OscilMeterBar::MeterType::Peak);
@@ -156,7 +157,7 @@ TEST_F(OscilMeterBarTest, SetMeterTypePeak)
 
 TEST_F(OscilMeterBarTest, SetMeterTypeRMS)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setMeterType(OscilMeterBar::MeterType::RMS);
     EXPECT_EQ(meter.getMeterType(), OscilMeterBar::MeterType::RMS);
@@ -164,7 +165,7 @@ TEST_F(OscilMeterBarTest, SetMeterTypeRMS)
 
 TEST_F(OscilMeterBarTest, SetMeterTypePeakWithRMS)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setMeterType(OscilMeterBar::MeterType::PeakWithRMS);
     EXPECT_EQ(meter.getMeterType(), OscilMeterBar::MeterType::PeakWithRMS);
@@ -176,14 +177,14 @@ TEST_F(OscilMeterBarTest, SetMeterTypePeakWithRMS)
 
 TEST_F(OscilMeterBarTest, DefaultNotStereo)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     EXPECT_FALSE(meter.isStereo());
 }
 
 TEST_F(OscilMeterBarTest, SetStereo)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setStereo(true);
     EXPECT_TRUE(meter.isStereo());
@@ -198,7 +199,7 @@ TEST_F(OscilMeterBarTest, SetStereo)
 
 TEST_F(OscilMeterBarTest, SetPeakHoldTime)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setPeakHoldTime(3000);
     EXPECT_EQ(meter.getPeakHoldTime(), 3000);
@@ -206,7 +207,7 @@ TEST_F(OscilMeterBarTest, SetPeakHoldTime)
 
 TEST_F(OscilMeterBarTest, SetPeakDecayRate)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setPeakDecayRate(0.8f);
     EXPECT_NEAR(meter.getPeakDecayRate(), 0.8f, 0.01f);
@@ -214,7 +215,7 @@ TEST_F(OscilMeterBarTest, SetPeakDecayRate)
 
 TEST_F(OscilMeterBarTest, SetMinDb)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setMinDb(-48.0f);
     EXPECT_NEAR(meter.getMinDb(), -48.0f, 0.01f);
@@ -222,7 +223,7 @@ TEST_F(OscilMeterBarTest, SetMinDb)
 
 TEST_F(OscilMeterBarTest, SetMaxDb)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setMaxDb(6.0f);
     EXPECT_NEAR(meter.getMaxDb(), 6.0f, 0.01f);
@@ -230,7 +231,7 @@ TEST_F(OscilMeterBarTest, SetMaxDb)
 
 TEST_F(OscilMeterBarTest, SetShowScale)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setShowScale(true);
     EXPECT_TRUE(meter.getShowScale());
@@ -245,21 +246,21 @@ TEST_F(OscilMeterBarTest, SetShowScale)
 
 TEST_F(OscilMeterBarTest, PreferredWidthPositive)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     EXPECT_GT(meter.getPreferredWidth(), 0);
 }
 
 TEST_F(OscilMeterBarTest, PreferredHeightPositive)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     EXPECT_GT(meter.getPreferredHeight(), 0);
 }
 
 TEST_F(OscilMeterBarTest, StereoWiderThanMono)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setStereo(false);
     int monoWidth = meter.getPreferredWidth();
@@ -272,7 +273,7 @@ TEST_F(OscilMeterBarTest, StereoWiderThanMono)
 
 TEST_F(OscilMeterBarTest, ScaleAddsWidth)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
 
     meter.setShowScale(false);
     int widthWithoutScale = meter.getPreferredWidth();
@@ -289,7 +290,7 @@ TEST_F(OscilMeterBarTest, ScaleAddsWidth)
 
 TEST_F(OscilMeterBarTest, ThemeChangeDoesNotThrow)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
     meter.setLevel(0.5f);
 
     ColorTheme newTheme;
@@ -302,7 +303,7 @@ TEST_F(OscilMeterBarTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilMeterBarTest, ThemeChangePreservesSettings)
 {
-    OscilMeterBar meter;
+    OscilMeterBar meter(ThemeManager::getInstance());
     meter.setStereo(true);
     meter.setMeterType(OscilMeterBar::MeterType::RMS);
 

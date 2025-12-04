@@ -152,6 +152,7 @@ private:
 
     juce::OpenGLContext* context_ = nullptr;
     std::atomic<bool> contextReady_{ false };
+    std::atomic<bool> cleanupPerformed_{ false };  // Guard for idempotent cleanup
 
     // Thread-safe waveform data storage
     // Using SpinLock for fast synchronization (short critical sections)

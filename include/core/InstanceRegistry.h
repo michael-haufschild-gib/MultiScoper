@@ -16,12 +16,48 @@
 
 #include "core/interfaces/IInstanceRegistry.h"
 
+// Forward declarations for test classes (global namespace)
+class InstanceRegistryTest;
+class InstanceRegistryCrudTest;
+class InstanceRegistryLifecycleTest;
+class InstanceRegistrySyncTest;
+class PluginProcessorTest;
+class PluginProcessorAudioTest;
+class PluginProcessorLifecycleTest;
+class PluginProcessorStateTest;
+class SidebarThemePopulationTest;
+class PluginEditorTest;
+class PaneClosingBugTest;
+
 namespace oscil
 {
+
+// Forward declarations for test namespace
+namespace test {
+class TestTrack;
+class TestHttpServer;
+class OscilPluginTestFixture;
+class OscilComponentTestFixture;
+class OscilAudioTestFixture;
+}
 
 // Forward declarations
 class SharedCaptureBuffer;
 class OscilPluginProcessor;
+class PluginFactory;
+class SidebarComponent;
+class OscillatorListComponent;
+class SourceSelectorComponent;
+class OscillatorListItemComponent;
+class OscilPluginEditor;
+class AddOscillatorDialog;
+class DialogManager;
+class OptionsSection;
+class TimingSidebarSection;
+class PaneComponent;
+class WaveformComponent;
+class StateHandler;
+class SourceHandler;
 
 /**
  * Singleton registry for all active Oscil plugin instances.
@@ -35,11 +71,6 @@ class InstanceRegistry : public IInstanceRegistry
 {
 public:
     /**
-     * Get the singleton instance
-     */
-    [[nodiscard]] static InstanceRegistry& getInstance();
-
-    /**
      * Register a new plugin instance as a signal source.
      * Returns the assigned SourceId (may be existing if deduplication applies).
      *
@@ -51,7 +82,7 @@ public:
      */
     [[nodiscard]] SourceId registerInstance(
         const juce::String& trackIdentifier,
-        std::shared_ptr<SharedCaptureBuffer> captureBuffer,
+        std::shared_ptr<IAudioBuffer> captureBuffer,
         const juce::String& name = "Track",
         int channelCount = 2,
         double sampleRate = 44100.0) override;
@@ -75,7 +106,7 @@ public:
     /**
      * Get the capture buffer for a source
      */
-    [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer(const SourceId& sourceId) const override;
+    [[nodiscard]] std::shared_ptr<IAudioBuffer> getCaptureBuffer(const SourceId& sourceId) const override;
 
     /**
      * Update source metadata (name, sample rate, etc.)
@@ -120,6 +151,38 @@ public:
     InstanceRegistry& operator=(const InstanceRegistry&) = delete;
 
 private:
+    // Only these classes can access the singleton directly
+    friend class oscil::OscilPluginProcessor;
+    friend class oscil::PluginFactory; // Factory needs access to inject into processor
+
+    // Test classes that need singleton access
+    friend class ::InstanceRegistryTest;
+    friend class ::InstanceRegistryCrudTest;
+    friend class ::InstanceRegistryLifecycleTest;
+    friend class ::InstanceRegistrySyncTest;
+    friend class ::PluginProcessorTest;
+    friend class ::PluginProcessorAudioTest;
+    friend class ::PluginProcessorLifecycleTest;
+    friend class ::PluginProcessorStateTest;
+    friend class ::SidebarThemePopulationTest;
+    friend class ::PluginEditorTest;
+    friend class ::PaneClosingBugTest;
+
+    // Also allow test harness access
+    // Test fixtures need access to getInstance()
+    friend class test::OscilPluginTestFixture;
+    friend class test::OscilComponentTestFixture;
+    friend class test::OscilAudioTestFixture;
+    friend class test::TestTrack;
+    friend class test::TestHttpServer;
+    friend class StateHandler;
+    friend class SourceHandler;
+
+    /**
+     * Get the singleton instance (Private/Friend access only)
+     */
+    [[nodiscard]] static InstanceRegistry& getInstance();
+
     InstanceRegistry();
     ~InstanceRegistry() override = default;
 

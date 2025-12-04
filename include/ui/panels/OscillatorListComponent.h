@@ -10,6 +10,8 @@
 #include "ui/panels/OscillatorListToolbar.h"
 #include "core/Oscillator.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
+#include "core/ServiceContext.h"
 #include "ui/components/TestId.h"
 
 namespace oscil
@@ -25,23 +27,35 @@ class OscillatorListComponent : public juce::Component,
                                 public ThemeManagerListener,
                                 public OscillatorListItemComponent::Listener,
                                 public OscillatorListToolbar::Listener,
-                                public TestIdSupport
+                                public TestIdSupport,
+                                public juce::DragAndDropContainer,
+                                public juce::DragAndDropTarget
 {
 public:
     class Listener
     {
     public:
         virtual ~Listener() = default;
-        virtual void oscillatorSelected(const OscillatorId& id) {}
-        virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
-        virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
-        virtual void oscillatorConfigRequested(const OscillatorId& id) {}
-        virtual void oscillatorColorConfigRequested(const OscillatorId& id) {}
-        virtual void oscillatorDeleteRequested(const OscillatorId& id) {}
-        virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+        virtual void oscillatorSelected(const OscillatorId& /*id*/) {}
+        virtual void oscillatorVisibilityChanged(const OscillatorId& /*id*/, bool /*visible*/) {}
+        virtual void oscillatorModeChanged(const OscillatorId& /*id*/, ProcessingMode /*mode*/) {}
+        virtual void oscillatorConfigRequested(const OscillatorId& /*id*/) {}
+        virtual void oscillatorColorConfigRequested(const OscillatorId& /*id*/) {}
+        virtual void oscillatorDeleteRequested(const OscillatorId& /*id*/) {}
+        virtual void oscillatorsReordered(int /*fromIndex*/, int /*toIndex*/) {}
+        /**
+         * Called when user tries to set an oscillator visible but it has no valid pane assignment.
+         * Parent should show a pane selection dialog.
+         */
+        virtual void oscillatorPaneSelectionRequested(const OscillatorId& /*id*/) {}
+        /**
+         * Called when user edits the oscillator name inline.
+         */
+        virtual void oscillatorNameChanged(const OscillatorId& /*id*/, const juce::String& /*newName*/) {}
     };
 
-    explicit OscillatorListComponent(IInstanceRegistry& instanceRegistry);
+    explicit OscillatorListComponent(ServiceContext& context);
+    OscillatorListComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
     ~OscillatorListComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -62,10 +76,15 @@ public:
     void oscillatorDeleteRequested(const OscillatorId& id) override;
     void oscillatorDragStarted(const OscillatorId& id) override;
     void oscillatorMoveRequested(const OscillatorId& id, int direction) override;
+    void oscillatorPaneSelectionRequested(const OscillatorId& id) override;
+    void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) override;
 
-    // MouseListener overrides for drag-and-drop
-    void mouseDrag(const juce::MouseEvent& e) override;
-    void mouseUp(const juce::MouseEvent& e) override;
+    // DragAndDropTarget overrides
+    bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override;
+    void itemDragEnter(const SourceDetails& dragSourceDetails) override;
+    void itemDragMove(const SourceDetails& dragSourceDetails) override;
+    void itemDragExit(const SourceDetails& dragSourceDetails) override;
+    void itemDropped(const SourceDetails& dragSourceDetails) override;
 
     /**
      * Refreshes the list with the provided oscillators.
@@ -90,13 +109,13 @@ private:
     void updateOscillatorCounts();
     int getItemIndexAtY(int y) const;
     void updateDragIndicator(int targetIndex);
-    void finishDrag(int fromIndex, int toIndex);
 
     // TestIdSupport
     void registerTestId() override;
     OSCIL_TESTABLE();
 
     IInstanceRegistry& instanceRegistry_;
+    IThemeService& themeService_;
     juce::ListenerList<Listener> listeners_;
 
     std::unique_ptr<OscillatorListToolbar> toolbar_;
@@ -110,12 +129,7 @@ private:
     OscillatorId selectedOscillatorId_;
 
     // Drag and drop state
-    bool isDraggingItem_ = false;
-    OscillatorId draggedOscillatorId_;
-    int dragSourceIndex_ = -1;
     int dragTargetIndex_ = -1;
-    juce::Image dragImage_;
-    juce::Point<int> dragMousePosition_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListComponent)
 };

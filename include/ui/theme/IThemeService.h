@@ -71,6 +71,16 @@ public:
     virtual bool cloneTheme(const juce::String& sourceName, const juce::String& newName) = 0;
 
     /**
+     * Import a theme from JSON string
+     */
+    virtual bool importTheme(const juce::String& json) = 0;
+
+    /**
+     * Export a theme to JSON string
+     */
+    virtual juce::String exportTheme(const juce::String& name) const = 0;
+
+    /**
      * Add a listener for theme changes
      */
     virtual void addListener(ThemeManagerListener* listener) = 0;

@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilButton.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilButtonTest, DefaultConstruction)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_EQ(button.getVariant(), ButtonVariant::Primary);
     EXPECT_TRUE(button.isEnabled());
@@ -31,14 +32,14 @@ TEST_F(OscilButtonTest, DefaultConstruction)
 
 TEST_F(OscilButtonTest, ConstructionWithText)
 {
-    OscilButton button("Click Me");
+    OscilButton button(ThemeManager::getInstance(), "Click Me");
 
     EXPECT_EQ(button.getText(), juce::String("Click Me"));
 }
 
 TEST_F(OscilButtonTest, ConstructionWithTextAndTestId)
 {
-    OscilButton button("Click Me", "test-button-1");
+    OscilButton button(ThemeManager::getInstance(), "Click Me", "test-button-1");
 
     EXPECT_EQ(button.getText(), juce::String("Click Me"));
 }
@@ -49,7 +50,7 @@ TEST_F(OscilButtonTest, ConstructionWithTextAndTestId)
 
 TEST_F(OscilButtonTest, SetText)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setText("New Label");
 
     EXPECT_EQ(button.getText(), juce::String("New Label"));
@@ -57,7 +58,7 @@ TEST_F(OscilButtonTest, SetText)
 
 TEST_F(OscilButtonTest, SetEmptyText)
 {
-    OscilButton button("Initial");
+    OscilButton button(ThemeManager::getInstance(), "Initial");
     button.setText("");
 
     EXPECT_EQ(button.getText(), juce::String());
@@ -69,7 +70,7 @@ TEST_F(OscilButtonTest, SetEmptyText)
 
 TEST_F(OscilButtonTest, SetVariantPrimary)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setVariant(ButtonVariant::Primary);
 
     EXPECT_EQ(button.getVariant(), ButtonVariant::Primary);
@@ -77,7 +78,7 @@ TEST_F(OscilButtonTest, SetVariantPrimary)
 
 TEST_F(OscilButtonTest, SetVariantSecondary)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setVariant(ButtonVariant::Secondary);
 
     EXPECT_EQ(button.getVariant(), ButtonVariant::Secondary);
@@ -85,7 +86,7 @@ TEST_F(OscilButtonTest, SetVariantSecondary)
 
 TEST_F(OscilButtonTest, SetVariantDanger)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setVariant(ButtonVariant::Danger);
 
     EXPECT_EQ(button.getVariant(), ButtonVariant::Danger);
@@ -93,7 +94,7 @@ TEST_F(OscilButtonTest, SetVariantDanger)
 
 TEST_F(OscilButtonTest, SetVariantGhost)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setVariant(ButtonVariant::Ghost);
 
     EXPECT_EQ(button.getVariant(), ButtonVariant::Ghost);
@@ -101,7 +102,7 @@ TEST_F(OscilButtonTest, SetVariantGhost)
 
 TEST_F(OscilButtonTest, SetVariantIcon)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setVariant(ButtonVariant::Icon);
 
     EXPECT_EQ(button.getVariant(), ButtonVariant::Icon);
@@ -113,14 +114,14 @@ TEST_F(OscilButtonTest, SetVariantIcon)
 
 TEST_F(OscilButtonTest, DefaultEnabled)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_TRUE(button.isEnabled());
 }
 
 TEST_F(OscilButtonTest, SetDisabled)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setEnabled(false);
 
     EXPECT_FALSE(button.isEnabled());
@@ -128,7 +129,7 @@ TEST_F(OscilButtonTest, SetDisabled)
 
 TEST_F(OscilButtonTest, SetEnabledAfterDisabled)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setEnabled(false);
     button.setEnabled(true);
 
@@ -141,14 +142,14 @@ TEST_F(OscilButtonTest, SetEnabledAfterDisabled)
 
 TEST_F(OscilButtonTest, DefaultNotToggleable)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_FALSE(button.isToggleable());
 }
 
 TEST_F(OscilButtonTest, SetToggleable)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setToggleable(true);
 
     EXPECT_TRUE(button.isToggleable());
@@ -156,7 +157,7 @@ TEST_F(OscilButtonTest, SetToggleable)
 
 TEST_F(OscilButtonTest, ToggleState)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setToggleable(true);
 
     EXPECT_FALSE(button.isToggled());
@@ -170,7 +171,7 @@ TEST_F(OscilButtonTest, ToggleState)
 
 TEST_F(OscilButtonTest, ToggleCallbackNotified)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setToggleable(true);
 
     bool callbackInvoked = false;
@@ -189,7 +190,7 @@ TEST_F(OscilButtonTest, ToggleCallbackNotified)
 
 TEST_F(OscilButtonTest, ToggleCallbackNotNotifiedWhenNoNotify)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setToggleable(true);
 
     bool callbackInvoked = false;
@@ -209,14 +210,14 @@ TEST_F(OscilButtonTest, ToggleCallbackNotNotifiedWhenNoNotify)
 
 TEST_F(OscilButtonTest, DefaultNoIconPath)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_FALSE(button.hasIconPath());
 }
 
 TEST_F(OscilButtonTest, SetIconPath)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     juce::Path iconPath;
     iconPath.addEllipse(0, 0, 10, 10);
@@ -228,7 +229,7 @@ TEST_F(OscilButtonTest, SetIconPath)
 
 TEST_F(OscilButtonTest, ClearIconPath)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     juce::Path iconPath;
     iconPath.addEllipse(0, 0, 10, 10);
@@ -247,14 +248,14 @@ TEST_F(OscilButtonTest, ClearIconPath)
 
 TEST_F(OscilButtonTest, DefaultNoShortcut)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_FALSE(button.getShortcut().isValid());
 }
 
 TEST_F(OscilButtonTest, SetShortcut)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     juce::KeyPress shortcut('s', juce::ModifierKeys::commandModifier, 0);
 
     button.setShortcut(shortcut);
@@ -268,14 +269,14 @@ TEST_F(OscilButtonTest, SetShortcut)
 
 TEST_F(OscilButtonTest, DefaultNoTooltip)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_TRUE(button.getTooltip().isEmpty());
 }
 
 TEST_F(OscilButtonTest, SetTooltip)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setTooltip("This is a tooltip");
 
     EXPECT_EQ(button.getTooltip(), juce::String("This is a tooltip"));
@@ -287,14 +288,14 @@ TEST_F(OscilButtonTest, SetTooltip)
 
 TEST_F(OscilButtonTest, DefaultSegmentPositionNone)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_EQ(button.getSegmentPosition(), SegmentPosition::None);
 }
 
 TEST_F(OscilButtonTest, SetSegmentPositionFirst)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setSegmentPosition(SegmentPosition::First);
 
     EXPECT_EQ(button.getSegmentPosition(), SegmentPosition::First);
@@ -302,7 +303,7 @@ TEST_F(OscilButtonTest, SetSegmentPositionFirst)
 
 TEST_F(OscilButtonTest, SetSegmentPositionMiddle)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setSegmentPosition(SegmentPosition::Middle);
 
     EXPECT_EQ(button.getSegmentPosition(), SegmentPosition::Middle);
@@ -310,7 +311,7 @@ TEST_F(OscilButtonTest, SetSegmentPositionMiddle)
 
 TEST_F(OscilButtonTest, SetSegmentPositionLast)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setSegmentPosition(SegmentPosition::Last);
 
     EXPECT_EQ(button.getSegmentPosition(), SegmentPosition::Last);
@@ -322,14 +323,14 @@ TEST_F(OscilButtonTest, SetSegmentPositionLast)
 
 TEST_F(OscilButtonTest, DefaultButtonId)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_EQ(button.getButtonId(), -1);
 }
 
 TEST_F(OscilButtonTest, SetButtonId)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     button.setButtonId(42);
 
     EXPECT_EQ(button.getButtonId(), 42);
@@ -341,7 +342,7 @@ TEST_F(OscilButtonTest, SetButtonId)
 
 TEST_F(OscilButtonTest, OnClickCallback)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
     int clickCount = 0;
 
     button.onClick = [&]() {
@@ -364,22 +365,22 @@ TEST_F(OscilButtonTest, OnClickCallback)
 
 TEST_F(OscilButtonTest, PreferredWidthPositive)
 {
-    OscilButton button("Test Button");
+    OscilButton button(ThemeManager::getInstance(), "Test Button");
 
     EXPECT_GT(button.getPreferredWidth(), 0);
 }
 
 TEST_F(OscilButtonTest, PreferredHeightPositive)
 {
-    OscilButton button("Test Button");
+    OscilButton button(ThemeManager::getInstance(), "Test Button");
 
     EXPECT_GT(button.getPreferredHeight(), 0);
 }
 
 TEST_F(OscilButtonTest, LongerTextHasGreaterWidth)
 {
-    OscilButton shortButton("Hi");
-    OscilButton longButton("This is a much longer button text");
+    OscilButton shortButton(ThemeManager::getInstance(), "Hi");
+    OscilButton longButton(ThemeManager::getInstance(), "This is a much longer button text");
 
     EXPECT_GT(longButton.getPreferredWidth(), shortButton.getPreferredWidth());
 }
@@ -390,7 +391,7 @@ TEST_F(OscilButtonTest, LongerTextHasGreaterWidth)
 
 TEST_F(OscilButtonTest, ThemeChangeDoesNotThrow)
 {
-    OscilButton button("Test");
+    OscilButton button(ThemeManager::getInstance(), "Test");
 
     ColorTheme newTheme;
     newTheme.name = "Custom Theme";
@@ -416,7 +417,7 @@ TEST_F(OscilButtonTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilButtonTest, WantsKeyboardFocus)
 {
-    OscilButton button;
+    OscilButton button(ThemeManager::getInstance());
 
     EXPECT_TRUE(button.getWantsKeyboardFocus());
 }

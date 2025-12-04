@@ -6,16 +6,45 @@
 #include "ui/theme/ThemeManager.h"
 #include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
+#include "core/interfaces/IAudioBuffer.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ListItemIcons.h"
+#include "ui/components/InlineEditLabel.h"
 
 namespace oscil
 {
 
-PaneComponent::PaneComponent(OscilPluginProcessor& processor, const PaneId& paneId)
+PaneComponent::PaneComponent(OscilPluginProcessor& processor, ServiceContext& context, const PaneId& paneId)
     : processor_(processor)
+    , themeService_(context.themeService)
     , paneId_(paneId)
+    , paneName_("Pane")
 {
     setOpaque(true);
+
+    // Create pane name label (inline editable)
+    nameLabel_ = std::make_unique<InlineEditLabel>(themeService_, "pane_nameLabel");
+    nameLabel_->setText(paneName_, false);
+    nameLabel_->setPlaceholder("Pane name...");
+    nameLabel_->setFont(juce::FontOptions(12.0f).withStyle("Bold"));
+    nameLabel_->setTextJustification(juce::Justification::centredLeft);
+    nameLabel_->onTextChanged = [this](const juce::String& newName) {
+        paneName_ = newName;
+        if (paneNameChangedCallback_)
+            paneNameChangedCallback_(paneId_, newName);
+    };
+    addAndMakeVisible(*nameLabel_);
+
+    // Create close button for header
+    closeButton_ = std::make_unique<OscilButton>(themeService_, "", "pane_closeBtn");
+    closeButton_->setVariant(ButtonVariant::Icon);
+    closeButton_->setIconPath(ListItemIcons::createCloseIcon(14.0f));
+    closeButton_->setTooltip("Close pane");
+    closeButton_->onClick = [this]() {
+        if (paneCloseCallback_)
+            paneCloseCallback_(paneId_);
+    };
+    addAndMakeVisible(*closeButton_);
 }
 
 void PaneComponent::setPaneIndex(int index)
@@ -32,7 +61,7 @@ void PaneComponent::setPaneIndex(int index)
 void PaneComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
 
     // FIX: In GPU mode, the OpenGL renderer handles the background.
     // Only fill the pane background in software rendering mode.
@@ -72,8 +101,16 @@ void PaneComponent::paint(juce::Graphics& g)
     }
     g.fillRect(headerBounds);
 
+    // Reserve space for close button on the right
+    static constexpr int CLOSE_BUTTON_AREA = 24;
+    headerBounds.removeFromRight(CLOSE_BUTTON_AREA);
+
     // Draw drag handle indicator (three horizontal lines)
     auto handleBounds = headerBounds.removeFromLeft(DRAG_HANDLE_WIDTH);
+
+    // Skip space for name label (InlineEditLabel handles its own rendering)
+    static constexpr int NAME_LABEL_AREA = 124; // width + padding
+    headerBounds.removeFromLeft(NAME_LABEL_AREA);
     g.setColour(theme.textSecondary.withAlpha(0.5f));
     
     // Center vertically based on total height of 3 lines and spacing
@@ -127,33 +164,79 @@ void PaneComponent::paint(juce::Graphics& g)
                        contentBounds, juce::Justification::centredLeft);
         }
     }
-    else
-    {
-        g.setColour(theme.textSecondary);
-        g.setFont(juce::FontOptions(12.0f));
-        g.drawText("Empty Pane", headerBounds.reduced(PADDING, 0), juce::Justification::centredLeft);
-    }
+    // Note: Empty pane state is now handled by nameLabel_ (InlineEditLabel)
 
     // Draw separator line
     g.setColour(theme.controlBorder);
     g.drawHorizontalLine(HEADER_HEIGHT - 1, 0.0f, static_cast<float>(getWidth()));
+
+    // Draw hover crosshair
+    if (isMouseHovering_)
+    {
+        g.setColour(theme.crosshairLine);
+        
+        // Draw vertical line (constrained to body area)
+        if (mouseY_ >= HEADER_HEIGHT)
+        {
+            g.drawVerticalLine(mouseX_, (float)HEADER_HEIGHT, (float)getHeight());
+            g.drawHorizontalLine(mouseY_, 0.0f, (float)getWidth());
+        }
+    }
 }
 
 void PaneComponent::resized()
 {
+    static constexpr int CLOSE_BUTTON_SIZE = 20;
+    static constexpr int CLOSE_BUTTON_MARGIN = 2;
+    static constexpr int NAME_LABEL_WIDTH = 120;
+
+    // Position close button in header (right side)
+    if (closeButton_)
+    {
+        int buttonX = getWidth() - CLOSE_BUTTON_SIZE - CLOSE_BUTTON_MARGIN;
+        int buttonY = (HEADER_HEIGHT - CLOSE_BUTTON_SIZE) / 2;
+        closeButton_->setBounds(buttonX, buttonY, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE);
+    }
+
+    // Position name label in header (after drag handle)
+    if (nameLabel_)
+    {
+        int labelX = DRAG_HANDLE_WIDTH + PADDING;
+        int labelY = (HEADER_HEIGHT - nameLabel_->getPreferredHeight()) / 2;
+        int labelWidth = juce::jmin(NAME_LABEL_WIDTH, getWidth() - labelX - CLOSE_BUTTON_SIZE - CLOSE_BUTTON_MARGIN - PADDING);
+        nameLabel_->setBounds(labelX, labelY, labelWidth, nameLabel_->getPreferredHeight());
+    }
+
     updateLayout();
 }
 
 void PaneComponent::mouseMove(const juce::MouseEvent& event)
 {
     // Show drag cursor when hovering over header (drag zone)
-    if (isInDragZone(event.getPosition()))
+    bool inHeader = isInDragZone(event.getPosition());
+    if (inHeader)
     {
         setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+        isMouseHovering_ = false; // Don't show crosshair in header
     }
     else
     {
         setMouseCursor(juce::MouseCursor::NormalCursor);
+        isMouseHovering_ = true;
+        mouseX_ = event.getPosition().x;
+        mouseY_ = event.getPosition().y;
+    }
+    repaint();
+}
+
+void PaneComponent::mouseEnter(const juce::MouseEvent& event)
+{
+    if (!isInDragZone(event.getPosition()))
+    {
+        isMouseHovering_ = true;
+        mouseX_ = event.getPosition().x;
+        mouseY_ = event.getPosition().y;
+        repaint();
     }
 }
 
@@ -161,6 +244,10 @@ void PaneComponent::mouseExit(const juce::MouseEvent& /*event*/)
 {
     // Reset cursor when mouse leaves component
     setMouseCursor(juce::MouseCursor::NormalCursor);
+    
+    // Clear hover state
+    isMouseHovering_ = false;
+    repaint();
 }
 
 void PaneComponent::mouseDown(const juce::MouseEvent& event)
@@ -250,7 +337,7 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
 {
     OscillatorEntry entry;
     entry.oscillator = oscillator;
-    entry.waveform = std::make_unique<WaveformComponent>();
+    entry.waveform = std::make_unique<WaveformComponent>(themeService_);
 
     // Configure waveform with all oscillator properties
     entry.waveform->setProcessingMode(oscillator.getProcessingMode());
@@ -264,7 +351,7 @@ void PaneComponent::addOscillator(const Oscillator& oscillator)
 
     // Get capture buffer - always try processor's buffer first since it's always available
     // The registry lookup might fail if prepareToPlay() hasn't been called yet
-    auto buffer = processor_.getCaptureBuffer();
+    std::shared_ptr<IAudioBuffer> buffer = processor_.getCaptureBuffer();
 
     // If we have a valid source ID, try to get its specific buffer
     if (oscillator.getSourceId().isValid())
@@ -316,7 +403,7 @@ void PaneComponent::updateOscillatorSource(const OscillatorId& oscillatorId, con
             entry.oscillator.setSourceId(newSourceId);
 
             // Get the new buffer from registry
-            std::shared_ptr<SharedCaptureBuffer> newBuffer;
+            std::shared_ptr<IAudioBuffer> newBuffer;
 
             if (newSourceId.isValid())
             {
@@ -355,6 +442,34 @@ void PaneComponent::updateOscillator(const OscillatorId& oscillatorId, Processin
 
             // Repaint to reflect changes
             repaint();
+            break;
+        }
+    }
+}
+
+void PaneComponent::updateOscillatorName(const OscillatorId& oscillatorId, const juce::String& name)
+{
+    for (auto& entry : waveforms_)
+    {
+        if (entry.oscillator.getId() == oscillatorId)
+        {
+            entry.oscillator.setName(name);
+            // Name might be displayed in header if it's the primary oscillator, or tooltip
+            repaint();
+            break;
+        }
+    }
+}
+
+void PaneComponent::updateOscillatorColor(const OscillatorId& oscillatorId, juce::Colour color)
+{
+    for (auto& entry : waveforms_)
+    {
+        if (entry.oscillator.getId() == oscillatorId)
+        {
+            entry.oscillator.setColour(color);
+            entry.waveform->setColour(color);
+            repaint(); // Update badge in header
             break;
         }
     }
@@ -469,6 +584,18 @@ void PaneComponent::highlightOscillator(const OscillatorId& oscillatorId)
             entry.waveform->setHighlighted(shouldHighlight);
         }
     }
+}
+
+void PaneComponent::setPaneName(const juce::String& name)
+{
+    paneName_ = name;
+    if (nameLabel_)
+        nameLabel_->setText(name, false);
+}
+
+juce::String PaneComponent::getPaneName() const
+{
+    return paneName_;
 }
 
 } // namespace oscil

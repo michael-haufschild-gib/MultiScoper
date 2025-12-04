@@ -56,6 +56,10 @@ WaveformGLRenderer::WaveformGLRenderer()
 
 WaveformGLRenderer::~WaveformGLRenderer()
 {
+    // Ensure cleanup happens even if openGLContextClosing() callback wasn't invoked
+    // (e.g., in headless test environments where JUCE callbacks may not fire)
+    openGLContextClosing();
+
     GL_LOG("WaveformGLRenderer DESTROYED");
     DBG("WaveformGLRenderer destroyed");
 }
@@ -488,6 +492,14 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
 
 void WaveformGLRenderer::openGLContextClosing()
 {
+    // Guard against multiple cleanup calls (e.g., callback + destructor)
+    bool expected = false;
+    if (!cleanupPerformed_.compare_exchange_strong(expected, true))
+    {
+        DBG("WaveformGLRenderer: Cleanup already performed, skipping");
+        return;
+    }
+
     DBG("WaveformGLRenderer: OpenGL context closing");
     contextReady_.store(false);
 

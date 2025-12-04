@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -123,6 +124,8 @@ public:
     OscilDropdown();
     explicit OscilDropdown(const juce::String& placeholder);
     OscilDropdown(const juce::String& placeholder, const juce::String& testId);
+    // Constructor with IThemeService for API compatibility (themeService not used - uses ThemeManager singleton)
+    OscilDropdown(IThemeService& themeService, const juce::String& placeholder, const juce::String& testId);
     ~OscilDropdown() override;
 
     // Items management

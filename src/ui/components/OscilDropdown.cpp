@@ -598,6 +598,12 @@ OscilDropdown::OscilDropdown(const juce::String& placeholder, const juce::String
     setTestId(testId);
 }
 
+OscilDropdown::OscilDropdown(IThemeService& /*themeService*/, const juce::String& placeholder, const juce::String& testId)
+    : OscilDropdown(placeholder, testId)
+{
+    // themeService parameter unused - class uses ThemeManager singleton internally
+}
+
 void OscilDropdown::registerTestId()
 {
     OSCIL_REGISTER_TEST_ID(testId_);

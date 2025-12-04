@@ -1,6 +1,7 @@
 /*
     Oscil - E2E Tests for AddOscillatorDialog
     Tests the Add Oscillator dialog functionality via direct component interaction
+    Note: AddOscillatorDialog is now a content component designed to be hosted in OscilModal
 */
 
 #include <gtest/gtest.h>
@@ -18,11 +19,11 @@ protected:
     void SetUp() override
     {
         // Ensure theme manager is initialized
-        ThemeManager::getInstance();
+        auto& themeManager = ThemeManager::getInstance();
 
-        // Create dialog
-        dialog_ = std::make_unique<AddOscillatorDialog>();
-        dialog_->setSize(800, 600);  // Give it space for the modal
+        // Create dialog with theme service
+        dialog_ = std::make_unique<AddOscillatorDialog>(themeManager);
+        dialog_->setSize(dialog_->getPreferredWidth(), dialog_->getPreferredHeight());
 
         // Create test sources using default constructor and setting properties
         testSources_.clear();
@@ -68,9 +69,10 @@ protected:
         dialog_.reset();
     }
 
-    void showDialogWithCallback(AddOscillatorDialog::Callback callback)
+    void setupDialogWithCallback(AddOscillatorDialog::Callback callback)
     {
-        dialog_->showDialog(nullptr, testSources_, testPanes_, std::move(callback));
+        dialog_->setData(testSources_, testPanes_);
+        dialog_->setOnComplete(std::move(callback));
     }
 
     std::unique_ptr<AddOscillatorDialog> dialog_;
@@ -78,38 +80,13 @@ protected:
     std::vector<Pane> testPanes_;
 };
 
-// Test: Dialog is initially not visible
-TEST_F(AddOscillatorDialogTest, DialogInitiallyNotVisible)
+// Test: Dialog has valid preferred dimensions
+TEST_F(AddOscillatorDialogTest, DialogHasValidPreferredDimensions)
 {
-    EXPECT_FALSE(dialog_->isVisible());
-}
-
-// Test: Dialog becomes visible when showDialog is called
-TEST_F(AddOscillatorDialogTest, DialogVisibleAfterShow)
-{
-    bool callbackCalled = false;
-    showDialogWithCallback([&callbackCalled](const AddOscillatorDialog::Result&) {
-        callbackCalled = true;
-    });
-
-    EXPECT_TRUE(dialog_->isVisible());
-    EXPECT_FALSE(callbackCalled);  // Callback not called until OK is clicked
-}
-
-// Test: hideDialog makes dialog invisible
-TEST_F(AddOscillatorDialogTest, DialogHiddenAfterHide)
-{
-    bool callbackCalled = false;
-    showDialogWithCallback([&callbackCalled](const AddOscillatorDialog::Result&) {
-        callbackCalled = true;
-    });
-
-    EXPECT_TRUE(dialog_->isVisible());
-
-    dialog_->hideDialog();
-
-    EXPECT_FALSE(dialog_->isVisible());
-    EXPECT_FALSE(callbackCalled);  // Callback not called on hide
+    // As a content component, AddOscillatorDialog provides preferred dimensions
+    // for the parent modal to use
+    EXPECT_GT(dialog_->getPreferredWidth(), 0);
+    EXPECT_GT(dialog_->getPreferredHeight(), 0);
 }
 
 // Test: Dialog test ID support is properly configured
@@ -125,26 +102,23 @@ TEST_F(AddOscillatorDialogTest, DialogHasTestIdSupport)
     SUCCEED();
 }
 
-// Test: Dialog can be shown multiple times (state resets)
-TEST_F(AddOscillatorDialogTest, DialogCanBeReshown)
+// Test: Dialog can be reset for reuse
+TEST_F(AddOscillatorDialogTest, DialogCanBeReset)
 {
     int callbackCount = 0;
 
-    // First show
-    showDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) {
+    // Set up dialog
+    setupDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) {
         callbackCount++;
     });
-    EXPECT_TRUE(dialog_->isVisible());
 
-    // Hide
-    dialog_->hideDialog();
-    EXPECT_FALSE(dialog_->isVisible());
+    // Reset
+    dialog_->reset();
 
-    // Show again with new callback
-    showDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) {
+    // Set up again
+    setupDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) {
         callbackCount++;
     });
-    EXPECT_TRUE(dialog_->isVisible());
 
     // Verify callback count is still 0 (no OK clicked)
     EXPECT_EQ(callbackCount, 0);
@@ -153,21 +127,17 @@ TEST_F(AddOscillatorDialogTest, DialogCanBeReshown)
 // Test: Dialog source list contains expected sources
 TEST_F(AddOscillatorDialogTest, SourcesPopulatedCorrectly)
 {
-    showDialogWithCallback([](const AddOscillatorDialog::Result&) {});
-
-    // The dialog should have received 3 sources
-    // We can verify this indirectly by checking the dialog is visible
-    // (actual dropdown verification would require simulating clicks)
-    EXPECT_TRUE(dialog_->isVisible());
+    setupDialogWithCallback([](const AddOscillatorDialog::Result&) {});
 
     // Verify we passed 3 sources
     EXPECT_EQ(testSources_.size(), 3u);
+    // No crash means sources were accepted
 }
 
 // Test: Dialog pane list contains expected panes plus "New pane" option
 TEST_F(AddOscillatorDialogTest, PanesPopulatedCorrectly)
 {
-    showDialogWithCallback([](const AddOscillatorDialog::Result&) {});
+    setupDialogWithCallback([](const AddOscillatorDialog::Result&) {});
 
     // The dialog should have received 2 panes + "New pane" option = 3 items
     // Verify we passed 2 panes
@@ -192,9 +162,9 @@ TEST_F(AddOscillatorDialogTest, HandlesEmptySourcesList)
 {
     std::vector<SourceInfo> emptySources;
 
-    dialog_->showDialog(nullptr, emptySources, testPanes_, [](const AddOscillatorDialog::Result&) {});
-
-    EXPECT_TRUE(dialog_->isVisible());
+    // Should not crash with empty sources
+    dialog_->setData(emptySources, testPanes_);
+    SUCCEED();
 }
 
 // Test: Dialog handles empty panes list
@@ -202,10 +172,9 @@ TEST_F(AddOscillatorDialogTest, HandlesEmptyPanesList)
 {
     std::vector<Pane> emptyPanes;
 
-    dialog_->showDialog(nullptr, testSources_, emptyPanes, [](const AddOscillatorDialog::Result&) {});
-
-    // Should still have "New pane" option
-    EXPECT_TRUE(dialog_->isVisible());
+    // Should still work with empty panes (has "New pane" option)
+    dialog_->setData(testSources_, emptyPanes);
+    SUCCEED();
 }
 
 // Test: Result struct has correct default values
@@ -225,10 +194,10 @@ TEST_F(AddOscillatorDialogTest, ResultStructDefaults)
 // Test: Paint doesn't crash
 TEST_F(AddOscillatorDialogTest, PaintDoesNotCrash)
 {
-    showDialogWithCallback([](const AddOscillatorDialog::Result&) {});
+    setupDialogWithCallback([](const AddOscillatorDialog::Result&) {});
 
     // Create a dummy graphics context
-    juce::Image image(juce::Image::ARGB, 800, 600, true);
+    juce::Image image(juce::Image::ARGB, 400, 500, true);
     juce::Graphics g(image);
 
     // Should not crash
@@ -238,27 +207,27 @@ TEST_F(AddOscillatorDialogTest, PaintDoesNotCrash)
 // Test: Resized doesn't crash
 TEST_F(AddOscillatorDialogTest, ResizedDoesNotCrash)
 {
-    showDialogWithCallback([](const AddOscillatorDialog::Result&) {});
+    setupDialogWithCallback([](const AddOscillatorDialog::Result&) {});
 
     // Resize to different sizes
-    dialog_->setSize(1024, 768);
+    dialog_->setSize(400, 500);
     dialog_->resized();
 
-    dialog_->setSize(640, 480);
+    dialog_->setSize(320, 420);
     dialog_->resized();
 
-    // Should not crash
-    EXPECT_TRUE(dialog_->isVisible());
+    // Should not crash - verified by reaching this point
+    SUCCEED();
 }
 
-// Test: Dialog dimensions are reasonable
+// Test: Dialog has reasonable preferred dimensions
 TEST_F(AddOscillatorDialogTest, DialogDimensionsReasonable)
 {
-    // Dialog has internal constants for size
-    // DIALOG_WIDTH = 360, DIALOG_HEIGHT = 590 (increased for shader dropdown)
-    // These should be visible in the dialog's paint method
-    EXPECT_EQ(AddOscillatorDialog::DIALOG_WIDTH, 360);
-    EXPECT_EQ(AddOscillatorDialog::DIALOG_HEIGHT, 550);
+    // Dialog exposes preferred dimensions via getPreferredWidth/Height
+    EXPECT_GT(dialog_->getPreferredWidth(), 0);
+    EXPECT_GT(dialog_->getPreferredHeight(), 0);
+    EXPECT_LE(dialog_->getPreferredWidth(), 500);   // Reasonable max
+    EXPECT_LE(dialog_->getPreferredHeight(), 600);  // Reasonable max
 }
 
 // Test: Multiple sources with same name handled correctly
@@ -270,9 +239,25 @@ TEST_F(AddOscillatorDialogTest, HandlesDuplicateSourceNames)
     source4.name = "Track 1";  // Duplicate name
     testSources_.push_back(source4);
 
-    showDialogWithCallback([](const AddOscillatorDialog::Result&) {});
+    setupDialogWithCallback([](const AddOscillatorDialog::Result&) {});
 
-    EXPECT_TRUE(dialog_->isVisible());
+    // Verify sources count
     EXPECT_EQ(testSources_.size(), 4u);  // Now 4 sources
+    // No crash with duplicate names
 }
 
+// Test: Cancel callback is called when cancel is requested
+TEST_F(AddOscillatorDialogTest, CancelCallbackCalled)
+{
+    bool cancelCalled = false;
+
+    dialog_->setData(testSources_, testPanes_);
+    dialog_->setOnCancel([&cancelCalled]() {
+        cancelCalled = true;
+    });
+
+    // The cancel callback would be triggered by the cancel button click
+    // We can't easily simulate that without more test infrastructure
+    // but we verify the callback can be set
+    EXPECT_FALSE(cancelCalled);  // Not called yet
+}

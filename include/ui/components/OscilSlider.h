@@ -8,11 +8,13 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/MagneticSnapController.h"
 #include <vector>
 
 namespace oscil
@@ -39,10 +41,10 @@ class OscilSlider : public juce::Component,
                     private juce::Timer
 {
 public:
-    OscilSlider();
-    explicit OscilSlider(SliderVariant variant);
-    explicit OscilSlider(const juce::String& testId);
-    OscilSlider(SliderVariant variant, const juce::String& testId);
+    OscilSlider(IThemeService& themeService);
+    OscilSlider(IThemeService& themeService, SliderVariant variant);
+    OscilSlider(IThemeService& themeService, const juce::String& testId);
+    OscilSlider(IThemeService& themeService, SliderVariant variant, const juce::String& testId);
     ~OscilSlider() override;
 
     // Variant
@@ -87,7 +89,7 @@ public:
 
     // Magnetic snapping
     void setMagneticSnappingEnabled(bool enabled);
-    bool isMagneticSnappingEnabled() const { return enableMagneticSnap_; }
+    bool isMagneticSnappingEnabled() const { return snapController_.isEnabled(); }
 
     void setMagneticPoints(const std::vector<double>& points);
     void addMagneticPoint(double point);
@@ -148,7 +150,6 @@ private:
     double constrainValue(double value) const;
     double valueToProportionOfLength(double value) const;
     double proportionOfLengthToValue(double proportion) const;
-    void applyMagneticSnapping(double& value);
     void triggerSnapFeedback();
 
     // Rendering
@@ -181,9 +182,8 @@ private:
     bool showValueOnHover_ = true;
 
     // Magnetic snapping
-    bool enableMagneticSnap_ = true;
-    std::vector<double> magneticPoints_;
-    bool justSnapped_ = false;
+    MagneticSnapController snapController_;
+    bool justSnapped_ = false;  // Local flag for animation feedback
 
     // State
     bool isHovered_ = false;
@@ -207,6 +207,7 @@ private:
 
     // Theme
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     // Layout constants
     static constexpr int TRACK_HEIGHT = 4;

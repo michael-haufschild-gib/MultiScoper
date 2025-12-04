@@ -73,6 +73,9 @@ public:
         return true;
     }
 
+    bool importTheme(const juce::String& /*json*/) override { return true; }
+    juce::String exportTheme(const juce::String& /*name*/) const override { return "{}"; }
+
     void setTheme(const ColorTheme& theme)
     {
         currentTheme_ = theme;

@@ -6,9 +6,12 @@
 #include <gtest/gtest.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/panels/OscillatorListComponent.h"
+#include "ui/panels/OscillatorListItem.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "core/Oscillator.h"
 #include "ui/components/SegmentedButtonBar.h"
+#include "ui/components/InlineEditLabel.h"
+#include "ui/theme/ThemeManager.h"
 #include "TestElementRegistry.h"
 
 using namespace oscil;
@@ -17,11 +20,11 @@ using namespace oscil;
 class DummyRegistry : public IInstanceRegistry
 {
 public:
-    SourceId registerInstance(const juce::String&, std::shared_ptr<SharedCaptureBuffer>, const juce::String&, int, double) override { return SourceId::generate(); }
+    SourceId registerInstance(const juce::String&, std::shared_ptr<IAudioBuffer>, const juce::String&, int, double) override { return SourceId::generate(); }
     void unregisterInstance(const SourceId&) override {}
     std::vector<SourceInfo> getAllSources() const override { return {}; }
     std::optional<SourceInfo> getSource(const SourceId&) const override { return std::nullopt; }
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer(const SourceId&) const override { return nullptr; }
+    std::shared_ptr<IAudioBuffer> getCaptureBuffer(const SourceId&) const override { return nullptr; }
     void updateSource(const SourceId&, const juce::String&, int, double) override {}
     size_t getSourceCount() const override { return 0; }
     void addListener(InstanceRegistryListener*) override {}
@@ -32,11 +35,12 @@ class OscillatorListComponentTest : public ::testing::Test
 {
 protected:
     // No SetUp needed, using global JuceTestEnvironment
+    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
 };
 
 TEST_F(OscillatorListComponentTest, ToolbarConstruction)
 {
-    OscillatorListToolbar toolbar;
+    OscillatorListToolbar toolbar(getThemeService());
     // OscillatorListToolbar registers itself with TestElementRegistry
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_toolbar"), &toolbar);
 }
@@ -46,7 +50,7 @@ TEST_F(OscillatorListComponentTest, Construction)
     std::cout << "Constructing registry..." << std::endl;
     DummyRegistry registry;
     std::cout << "Constructing list..." << std::endl;
-    auto* list = new OscillatorListComponent(registry);
+    auto* list = new OscillatorListComponent(getThemeService(), registry);
     std::cout << "Verifying list ID..." << std::endl;
     // OscillatorListComponent inherits TestIdSupport and sets testId="oscillatorList"
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), list);
@@ -58,7 +62,7 @@ TEST_F(OscillatorListComponentTest, Construction)
 TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)
 {
     DummyRegistry registry;
-    OscillatorListComponent list(registry);
+    OscillatorListComponent list(getThemeService(), registry);
     list.setSize(300, 400); 
 
     std::vector<Oscillator> oscillators;
@@ -82,7 +86,7 @@ TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)
 TEST_F(OscillatorListComponentTest, FilteringVisiblity)
 {
     DummyRegistry registry;
-    OscillatorListComponent list(registry);
+    OscillatorListComponent list(getThemeService(), registry);
     
     Oscillator visibleOsc;
     visibleOsc.setName("Visible");
@@ -137,7 +141,7 @@ public:
 TEST_F(OscillatorListComponentTest, SelectionPropagatesToListener)
 {
     DummyRegistry registry;
-    OscillatorListComponent list(registry);
+    OscillatorListComponent list(getThemeService(), registry);
     SimpleMockListener listener;
     list.addListener(&listener);
 
@@ -158,7 +162,7 @@ TEST_F(OscillatorListComponentTest, SelectionPropagatesToListener)
 TEST_F(OscillatorListComponentTest, DeletionPropagatesToListener)
 {
     DummyRegistry registry;
-    OscillatorListComponent list(registry);
+    OscillatorListComponent list(getThemeService(), registry);
     SimpleMockListener listener;
     list.addListener(&listener);
 
@@ -171,4 +175,84 @@ TEST_F(OscillatorListComponentTest, DeletionPropagatesToListener)
     list.oscillatorDeleteRequested(osc1.getId());
     
     // Async callback verification skipped
+}
+
+TEST_F(OscillatorListComponentTest, LabelUpdates)
+{
+    DummyRegistry registry;
+    Oscillator osc;
+    osc.setName("Initial Name");
+
+    OscillatorListItemComponent item(osc, registry, getThemeService());
+
+    // Find InlineEditLabel by iterating through children
+    InlineEditLabel* nameLabel = nullptr;
+    for (int i = 0; i < item.getNumChildComponents(); ++i)
+    {
+        if (auto* label = dynamic_cast<InlineEditLabel*>(item.getChildComponent(i)))
+        {
+            nameLabel = label;
+            break;
+        }
+    }
+    ASSERT_NE(nameLabel, nullptr);
+    EXPECT_EQ(nameLabel->getText(), "Initial Name");
+
+    // Update oscillator
+    osc.setName("Updated Name");
+    item.updateFromOscillator(osc);
+
+    EXPECT_EQ(nameLabel->getText(), "Updated Name");
+}
+
+TEST_F(OscillatorListComponentTest, ItemExpansionUpdatesListLayout)
+{
+    DummyRegistry registry;
+    OscillatorListComponent list(getThemeService(), registry);
+    list.setSize(300, 400);
+
+    std::vector<Oscillator> oscillators;
+    Oscillator osc1;
+    osc1.setName("Osc 1");
+    oscillators.push_back(osc1);
+
+    list.refreshList(oscillators);
+
+    // Access container via viewport
+    // Child 0 is toolbar, Child 1 is Viewport
+    auto* viewport = dynamic_cast<juce::Viewport*>(list.getChildComponent(1));
+    ASSERT_NE(viewport, nullptr);
+    auto* container = viewport->getViewedComponent();
+    ASSERT_NE(container, nullptr);
+
+    // Initial height should be COMPACT_HEIGHT (56)
+    EXPECT_EQ(container->getHeight(), OscillatorListItemComponent::COMPACT_HEIGHT);
+
+    // Select item
+    list.oscillatorSelected(osc1.getId());
+
+    // Height should now be EXPANDED_HEIGHT (100)
+    EXPECT_EQ(container->getHeight(), OscillatorListItemComponent::EXPANDED_HEIGHT);
+}
+
+TEST_F(OscillatorListComponentTest, NameLabelIsVisible)
+{
+    DummyRegistry registry;
+    Oscillator osc;
+    osc.setName("Visible Test");
+
+    OscillatorListItemComponent item(osc, registry, getThemeService());
+
+    InlineEditLabel* nameLabel = nullptr;
+    for (int i = 0; i < item.getNumChildComponents(); ++i)
+    {
+        if (auto* label = dynamic_cast<InlineEditLabel*>(item.getChildComponent(i)))
+        {
+            nameLabel = label;
+            break;
+        }
+    }
+    ASSERT_NE(nameLabel, nullptr);
+    
+    EXPECT_TRUE(nameLabel->isVisible());
 }

@@ -11,7 +11,8 @@ namespace oscil
 
 // SidebarResizeHandle implementation
 
-SidebarResizeHandle::SidebarResizeHandle()
+SidebarResizeHandle::SidebarResizeHandle(IThemeService& themeService)
+    : themeService_(themeService)
 {
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
 
@@ -22,7 +23,7 @@ SidebarResizeHandle::SidebarResizeHandle()
 
 void SidebarResizeHandle::paint(juce::Graphics& g)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
 
     if (isDragging_ || isHovered_)
     {
@@ -83,14 +84,15 @@ void SidebarResizeHandle::mouseUp(const juce::MouseEvent&)
 
 // SidebarCollapseButton implementation
 
-SidebarCollapseButton::SidebarCollapseButton()
+SidebarCollapseButton::SidebarCollapseButton(IThemeService& themeService)
+    : themeService_(themeService)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 void SidebarCollapseButton::paint(juce::Graphics& g)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background
@@ -153,17 +155,18 @@ void SidebarCollapseButton::setCollapsed(bool collapsed)
 
 // SidebarComponent implementation
 
-SidebarComponent::SidebarComponent(IInstanceRegistry& instanceRegistry)
-    : instanceRegistry_(instanceRegistry)
+SidebarComponent::SidebarComponent(ServiceContext& context)
+    : themeService_(context.themeService)
+    , instanceRegistry_(context.instanceRegistry)
 {
-    ThemeManager::getInstance().addListener(this);
+    themeService_.addListener(this);
 
 #if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
     OSCIL_REGISTER_TEST_ID("sidebar");
 #endif
 
     // Create resize handle
-    resizeHandle_ = std::make_unique<SidebarResizeHandle>();
+    resizeHandle_ = std::make_unique<SidebarResizeHandle>(themeService_);
     resizeHandle_->onResizeStart = []() {};
     resizeHandle_->onResizeDrag = [this](int deltaX)
     {
@@ -182,12 +185,12 @@ SidebarComponent::SidebarComponent(IInstanceRegistry& instanceRegistry)
     addAndMakeVisible(resizeHandle_.get());
 
     // Create collapse button
-    collapseButton_ = std::make_unique<SidebarCollapseButton>();
+    collapseButton_ = std::make_unique<SidebarCollapseButton>(themeService_);
     collapseButton_->onClick = [this]() { toggleCollapsed(); };
     addAndMakeVisible(collapseButton_.get());
 
     // Add Oscillator button
-    addOscillatorButton_ = std::make_unique<OscilButton>("+ Add Oscillator", "sidebar_addOscillator");
+    addOscillatorButton_ = std::make_unique<OscilButton>(themeService_, "+ Add Oscillator", "sidebar_addOscillator");
     addOscillatorButton_->setVariant(ButtonVariant::Primary);
     addOscillatorButton_->onClick = [this]() {
         listeners_.call([](Listener& l) { l.addOscillatorDialogRequested(); });
@@ -195,13 +198,13 @@ SidebarComponent::SidebarComponent(IInstanceRegistry& instanceRegistry)
     addAndMakeVisible(addOscillatorButton_.get());
 
     // Oscillator List
-    oscillatorList_ = std::make_unique<OscillatorListComponent>(instanceRegistry_);
+    oscillatorList_ = std::make_unique<OscillatorListComponent>(context);
     oscillatorList_->addListener(this);
     addAndMakeVisible(oscillatorList_.get());
 
     // Control sections in scrollable viewport
     accordionViewport_ = std::make_unique<juce::Viewport>();
-    accordion_ = std::make_unique<OscilAccordion>();
+    accordion_ = std::make_unique<OscilAccordion>(themeService_);
 
     accordionViewport_->setViewedComponent(accordion_.get(), false);
     accordionViewport_->setScrollBarsShown(true, false);
@@ -213,14 +216,14 @@ SidebarComponent::SidebarComponent(IInstanceRegistry& instanceRegistry)
 
 SidebarComponent::~SidebarComponent()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     if (oscillatorList_)
         oscillatorList_->removeListener(this);
 }
 
 void SidebarComponent::paint(juce::Graphics& g)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
 
     // Background
     g.fillAll(theme.backgroundSecondary);
@@ -375,7 +378,7 @@ void SidebarComponent::setupSections()
     accordion_->setAllowMultiExpand(true);
 
     // Create timing section
-    timingSection_ = std::make_unique<TimingSidebarSection>();
+    timingSection_ = std::make_unique<TimingSidebarSection>(themeService_);
     timingSection_->addListener(this);
 
     auto* timing = accordion_->addSection("TIMING", timingSection_.get());
@@ -386,12 +389,11 @@ void SidebarComponent::setupSections()
     }
 
     // Create options section
-    optionsSection_ = std::make_unique<OptionsSection>();
+    optionsSection_ = std::make_unique<OptionsSection>(themeService_);
     optionsSection_->addListener(this);
 
-    auto& themeManager = ThemeManager::getInstance();
-    optionsSection_->setAvailableThemes(themeManager.getAvailableThemes());
-    optionsSection_->setCurrentTheme(themeManager.getCurrentTheme().name);
+    optionsSection_->setAvailableThemes(themeService_.getAvailableThemes());
+    optionsSection_->setCurrentTheme(themeService_.getCurrentTheme().name);
 
     auto* options = accordion_->addSection("OPTIONS", optionsSection_.get());
     if (options)
@@ -436,6 +438,11 @@ void SidebarComponent::oscillatorDeleteRequested(const OscillatorId& id)
 void SidebarComponent::oscillatorsReordered(int fromIndex, int toIndex)
 {
     listeners_.call([fromIndex, toIndex](Listener& l) { l.oscillatorsReordered(fromIndex, toIndex); });
+}
+
+void SidebarComponent::oscillatorPaneSelectionRequested(const OscillatorId& id)
+{
+    listeners_.call([id](Listener& l) { l.oscillatorPaneSelectionRequested(id); });
 }
 
 // TimingSidebarSection::Listener implementation
@@ -503,6 +510,21 @@ void SidebarComponent::themeChanged(const juce::String& themeName)
 void SidebarComponent::gpuRenderingChanged(bool enabled)
 {
     listeners_.call([enabled](Listener& l) { l.gpuRenderingChanged(enabled); });
+}
+
+void SidebarComponent::qualityPresetChanged(QualityPreset preset)
+{
+    listeners_.call([preset](Listener& l) { l.qualityPresetChanged(preset); });
+}
+
+void SidebarComponent::bufferDurationChanged(BufferDuration duration)
+{
+    listeners_.call([duration](Listener& l) { l.bufferDurationChanged(duration); });
+}
+
+void SidebarComponent::autoAdjustQualityChanged(bool enabled)
+{
+    listeners_.call([enabled](Listener& l) { l.autoAdjustQualityChanged(enabled); });
 }
 
 } // namespace oscil

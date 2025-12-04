@@ -355,6 +355,55 @@ void OscilState::setGpuRenderingEnabled(bool enabled)
     layoutNode.setProperty(StateIds::GpuRenderingEnabled, enabled, nullptr);
 }
 
+CaptureQualityConfig OscilState::getCaptureQualityConfig() const
+{
+    auto qualityNode = getCaptureQualityNode();
+    if (!qualityNode.isValid())
+    {
+        return CaptureQualityConfig();  // Return defaults
+    }
+
+    CaptureQualityConfig config;
+
+    // Load quality preset
+    int presetInt = qualityNode.getProperty(StateIds::QualityPreset,
+                                             static_cast<int>(QualityPreset::Standard));
+    config.qualityPreset = static_cast<QualityPreset>(
+        std::clamp(presetInt, 0, static_cast<int>(QualityPreset::Ultra)));
+
+    // Load buffer duration
+    int durationInt = qualityNode.getProperty(StateIds::BufferDuration,
+                                               static_cast<int>(BufferDuration::Medium));
+    config.bufferDuration = static_cast<BufferDuration>(
+        std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
+
+    // Load auto-adjust setting
+    config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
+
+    // Load memory budget if present
+    int budgetBytes = qualityNode.getProperty(StateIds::MemoryBudgetBytes, 0);
+    if (budgetBytes > 0)
+    {
+        config.memoryBudget.totalBudgetBytes = static_cast<size_t>(budgetBytes);
+    }
+
+    return config;
+}
+
+void OscilState::setCaptureQualityConfig(const CaptureQualityConfig& config)
+{
+    auto qualityNode = getOrCreateCaptureQualityNode();
+
+    qualityNode.setProperty(StateIds::QualityPreset,
+                            static_cast<int>(config.qualityPreset), nullptr);
+    qualityNode.setProperty(StateIds::BufferDuration,
+                            static_cast<int>(config.bufferDuration), nullptr);
+    qualityNode.setProperty(StateIds::AutoAdjustQuality,
+                            config.autoAdjustQuality, nullptr);
+    qualityNode.setProperty(StateIds::MemoryBudgetBytes,
+                            static_cast<int>(config.memoryBudget.totalBudgetBytes), nullptr);
+}
+
 void OscilState::addListener(juce::ValueTree::Listener* listener)
 {
     state_.addListener(listener);
@@ -420,6 +469,28 @@ juce::ValueTree OscilState::getOrCreateLayoutNode()
         state_.appendChild(node, nullptr);
     }
     return node;
+}
+
+juce::ValueTree OscilState::getOrCreateCaptureQualityNode()
+{
+    auto node = state_.getChildWithName(StateIds::CaptureQuality);
+    if (!node.isValid())
+    {
+        node = juce::ValueTree(StateIds::CaptureQuality);
+        // Set defaults
+        node.setProperty(StateIds::QualityPreset,
+                         static_cast<int>(QualityPreset::Standard), nullptr);
+        node.setProperty(StateIds::BufferDuration,
+                         static_cast<int>(BufferDuration::Medium), nullptr);
+        node.setProperty(StateIds::AutoAdjustQuality, true, nullptr);
+        state_.appendChild(node, nullptr);
+    }
+    return node;
+}
+
+juce::ValueTree OscilState::getCaptureQualityNode() const
+{
+    return state_.getChildWithName(StateIds::CaptureQuality);
 }
 
 // GlobalPreferences implementation

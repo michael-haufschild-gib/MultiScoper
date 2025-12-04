@@ -8,19 +8,31 @@
 namespace oscil
 {
 
-TimingSidebarSection::TimingSidebarSection()
+TimingSidebarSection::TimingSidebarSection(ServiceContext& context)
     : presenter_(std::make_unique<TimingPresenter>())
+    , themeService_(context.themeService)
 {
     OSCIL_REGISTER_TEST_ID("sidebar_timing");
     setupComponents();
     setupPresenterCallbacks();
-    ThemeManager::getInstance().addListener(this);
+    themeService_.addListener(this);
+    updateModeVisibility();
+}
+
+TimingSidebarSection::TimingSidebarSection(IThemeService& themeService)
+    : presenter_(std::make_unique<TimingPresenter>())
+    , themeService_(themeService)
+{
+    OSCIL_REGISTER_TEST_ID("sidebar_timing");
+    setupComponents();
+    setupPresenterCallbacks();
+    themeService_.addListener(this);
     updateModeVisibility();
 }
 
 TimingSidebarSection::~TimingSidebarSection()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
 }
 
 void TimingSidebarSection::setupPresenterCallbacks()
@@ -58,7 +70,7 @@ void TimingSidebarSection::setupPresenterCallbacks()
 void TimingSidebarSection::setupComponents()
 {
     // TIME/MELODIC toggle
-    modeToggle_ = std::make_unique<SegmentedButtonBar>();
+    modeToggle_ = std::make_unique<SegmentedButtonBar>(themeService_);
     modeToggle_->addButton("TIME", static_cast<int>(TimingMode::TIME), "sidebar_timing_modeToggle_time");
     modeToggle_->addButton("MELODIC", static_cast<int>(TimingMode::MELODIC), "sidebar_timing_modeToggle_melodic");
     modeToggle_->setSelectedId(static_cast<int>(presenter_->getTimingMode()));
@@ -75,7 +87,7 @@ void TimingSidebarSection::setupComponents()
     waveformModeLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*waveformModeLabel_);
 
-    waveformModeSelector_ = std::make_unique<OscilDropdown>("Select mode...", "sidebar_timing_waveformModeDropdown");
+    waveformModeSelector_ = std::make_unique<OscilDropdown>(themeService_, "Select mode...", "sidebar_timing_waveformModeDropdown");
     populateWaveformModeSelector();
     waveformModeSelector_->onSelectionChanged = [this](int index)
     {
@@ -87,7 +99,7 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*waveformModeSelector_);
 
     // TIME mode controls - input field only (full width)
-    timeIntervalField_ = std::make_unique<OscilTextField>(TextFieldVariant::Number, "sidebar_timing_intervalField");
+    timeIntervalField_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Number, "sidebar_timing_intervalField");
     timeIntervalField_->setRange(0.1, 4000.0);
     timeIntervalField_->setStep(0.1);
     timeIntervalField_->setDecimalPlaces(1);
@@ -100,7 +112,7 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*timeIntervalField_);
 
     // MELODIC mode controls - dropdown only (full width)
-    noteIntervalSelector_ = std::make_unique<OscilDropdown>("Select note...", "sidebar_timing_noteDropdown");
+    noteIntervalSelector_ = std::make_unique<OscilDropdown>(themeService_, "Select note...", "sidebar_timing_noteDropdown");
     populateNoteIntervalSelector();
     noteIntervalSelector_->onSelectionChanged = [this](int index)
     {
@@ -112,7 +124,7 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*noteIntervalSelector_);
 
     // Sync toggle (MELODIC mode only)
-    syncToggle_ = std::make_unique<OscilToggle>("Sync", "sidebar_timing_syncToggle");
+    syncToggle_ = std::make_unique<OscilToggle>(themeService_, "Sync", "sidebar_timing_syncToggle");
     syncToggle_->setValue(presenter_->isHostSyncEnabled(), false);
     syncToggle_->onValueChanged = [this](bool value)
     {
@@ -127,7 +139,7 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*bpmLabel_);
 
     // BPM field (Free Running mode)
-    bpmField_ = std::make_unique<OscilTextField>(TextFieldVariant::Number, "sidebar_timing_bpmField");
+    bpmField_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Number, "sidebar_timing_bpmField");
     bpmField_->setRange(20.0, 300.0);
     bpmField_->setStep(0.1);
     bpmField_->setDecimalPlaces(1);
@@ -151,7 +163,7 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*syncStatusLabel_);
 
     // Apply initial theme
-    themeChanged(ThemeManager::getInstance().getCurrentTheme());
+    themeChanged(themeService_.getCurrentTheme());
 }
 
 void TimingSidebarSection::populateWaveformModeSelector()
@@ -192,7 +204,7 @@ void TimingSidebarSection::populateNoteIntervalSelector()
 
 void TimingSidebarSection::paint(juce::Graphics& g)
 {
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds();
 
     // Background
@@ -342,7 +354,7 @@ void TimingSidebarSection::updateUi()
     
     bpmValueLabel_->setText(juce::String(presenter_->getHostBPM(), 1), juce::dontSendNotification);
     
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     syncStatusLabel_->setColour(juce::Label::textColourId,
                                  presenter_->isSynced() ? theme.statusActive : theme.textSecondary);
     syncStatusLabel_->setText(presenter_->isSynced() ? "Synced" : "Not synced", juce::dontSendNotification);

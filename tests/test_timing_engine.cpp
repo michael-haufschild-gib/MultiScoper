@@ -448,7 +448,12 @@ TEST_F(TimingEngineTest, ManualTrigger_ProcessBlockReturnsTriggerState)
     engine.requestManualTrigger();
     EXPECT_TRUE(engine.processBlock(buffer));
 
-    // Cleared after processing
+    // Manual trigger persists until explicitly cleared (e.g. by visualizer)
+    // This prevents the audio thread from consuming a trigger meant for the UI/Render thread
+    EXPECT_TRUE(engine.processBlock(buffer));
+
+    // Clear it explicitly
+    (void)engine.checkAndClearManualTrigger();
     EXPECT_FALSE(engine.processBlock(buffer));
 }
 

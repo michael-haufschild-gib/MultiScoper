@@ -13,6 +13,8 @@
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
 
+#include "ui/theme/IThemeService.h"
+
 namespace oscil
 {
 
@@ -37,9 +39,9 @@ class OscilModal : public juce::Component,
                    private juce::FocusChangeListener
 {
 public:
-    OscilModal();
-    explicit OscilModal(const juce::String& title);
-    OscilModal(const juce::String& title, const juce::String& testId);
+    explicit OscilModal(IThemeService& themeService);
+    OscilModal(IThemeService& themeService, const juce::String& title);
+    OscilModal(IThemeService& themeService, const juce::String& title, const juce::String& testId);
     ~OscilModal() override;
 
     // Configuration
@@ -107,11 +109,15 @@ private:
     void updateFocusTrap();
     void collectFocusableChildren(juce::Component* parent, juce::Array<juce::Component*>& result);
 
+    IThemeService& themeService_;
+
     juce::String title_;
     juce::Component* content_ = nullptr;
     ModalSize modalSize_ = ModalSize::Medium;
     int customWidth_ = 0;
     int customHeight_ = 0;
+    int contentPreferredWidth_ = 0;
+    int contentPreferredHeight_ = 0;
 
     bool showCloseButton_ = true;
     bool closeOnEscape_ = true;
@@ -155,12 +161,14 @@ public:
         Confirm
     };
 
-    static void show(const juce::String& title,
+    static void show(IThemeService& themeService,
+                     const juce::String& title,
                      const juce::String& message,
                      Type type = Type::Info,
                      std::function<void()> onOk = nullptr);
 
-    static void confirm(const juce::String& title,
+    static void confirm(IThemeService& themeService,
+                        const juce::String& title,
                         const juce::String& message,
                         std::function<void(bool)> onResult);
 

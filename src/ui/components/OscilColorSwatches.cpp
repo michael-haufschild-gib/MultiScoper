@@ -7,21 +7,19 @@
 namespace oscil
 {
 
-OscilColorSwatches::OscilColorSwatches()
+OscilColorSwatches::OscilColorSwatches(IThemeService& themeService, const juce::String& testId)
     : hoverSpring_(SpringPresets::stiff())
+    , themeService_(themeService)
 {
+    if (testId.isNotEmpty())
+        setTestId(testId);
+
     setWantsKeyboardFocus(true);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     hoverSpring_.position = 0.0f;
-}
-
-OscilColorSwatches::OscilColorSwatches(const juce::String& testId)
-    : OscilColorSwatches()
-{
-    setTestId(testId);
 }
 
 void OscilColorSwatches::registerTestId()
@@ -31,7 +29,7 @@ void OscilColorSwatches::registerTestId()
 
 OscilColorSwatches::~OscilColorSwatches()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 

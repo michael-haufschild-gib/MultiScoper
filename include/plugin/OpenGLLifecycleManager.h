@@ -35,8 +35,8 @@ public:
 
 private:
     OscilPluginEditor& editor_;
-    juce::OpenGLContext context_;
     std::unique_ptr<WaveformGLRenderer> renderer_;
+    juce::OpenGLContext context_;
     bool gpuRenderingEnabled_ = false;
     bool isDetached_ = true;
 };

@@ -22,6 +22,7 @@ static const juce::Identifier TILTSHIFT_TYPE("TiltShift");
 static const juce::Identifier RADIALBLUR_TYPE("RadialBlur");
 static const juce::Identifier PARTICLES_TYPE("Particles");
 static const juce::Identifier SETTINGS3D_TYPE("Settings3D");
+static const juce::Identifier LIGHTING_TYPE("Lighting");
 static const juce::Identifier MATERIAL_TYPE("Material");
 
 // Force rebuild
@@ -157,6 +158,24 @@ juce::ValueTree VisualConfiguration::toValueTree() const
     settings3DTree.setProperty("meshResolutionZ", settings3D.meshResolutionZ, nullptr);
     settings3DTree.setProperty("meshScale", settings3D.meshScale, nullptr);
     tree.addChild(settings3DTree, -1, nullptr);
+
+    // Lighting
+    juce::ValueTree lightingTree(LIGHTING_TYPE);
+    lightingTree.setProperty("lightDirX", lighting.lightDirX, nullptr);
+    lightingTree.setProperty("lightDirY", lighting.lightDirY, nullptr);
+    lightingTree.setProperty("lightDirZ", lighting.lightDirZ, nullptr);
+    lightingTree.setProperty("ambientR", lighting.ambientR, nullptr);
+    lightingTree.setProperty("ambientG", lighting.ambientG, nullptr);
+    lightingTree.setProperty("ambientB", lighting.ambientB, nullptr);
+    lightingTree.setProperty("diffuseR", lighting.diffuseR, nullptr);
+    lightingTree.setProperty("diffuseG", lighting.diffuseG, nullptr);
+    lightingTree.setProperty("diffuseB", lighting.diffuseB, nullptr);
+    lightingTree.setProperty("specularR", lighting.specularR, nullptr);
+    lightingTree.setProperty("specularG", lighting.specularG, nullptr);
+    lightingTree.setProperty("specularB", lighting.specularB, nullptr);
+    lightingTree.setProperty("specularPower", lighting.specularPower, nullptr);
+    lightingTree.setProperty("specularIntensity", lighting.specularIntensity, nullptr);
+    tree.addChild(lightingTree, -1, nullptr);
 
     // Material
     juce::ValueTree materialTree(MATERIAL_TYPE);
@@ -338,6 +357,26 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
         config.settings3D.meshResolutionX = settings3DTree.getProperty("meshResolutionX", 128);
         config.settings3D.meshResolutionZ = settings3DTree.getProperty("meshResolutionZ", 32);
         config.settings3D.meshScale = settings3DTree.getProperty("meshScale", 1.0f);
+    }
+
+    // Lighting
+    auto lightingTree = tree.getChildWithName(LIGHTING_TYPE);
+    if (lightingTree.isValid())
+    {
+        config.lighting.lightDirX = lightingTree.getProperty("lightDirX", 0.5f);
+        config.lighting.lightDirY = lightingTree.getProperty("lightDirY", 1.0f);
+        config.lighting.lightDirZ = lightingTree.getProperty("lightDirZ", 0.3f);
+        config.lighting.ambientR = lightingTree.getProperty("ambientR", 0.1f);
+        config.lighting.ambientG = lightingTree.getProperty("ambientG", 0.1f);
+        config.lighting.ambientB = lightingTree.getProperty("ambientB", 0.15f);
+        config.lighting.diffuseR = lightingTree.getProperty("diffuseR", 1.0f);
+        config.lighting.diffuseG = lightingTree.getProperty("diffuseG", 1.0f);
+        config.lighting.diffuseB = lightingTree.getProperty("diffuseB", 1.0f);
+        config.lighting.specularR = lightingTree.getProperty("specularR", 1.0f);
+        config.lighting.specularG = lightingTree.getProperty("specularG", 1.0f);
+        config.lighting.specularB = lightingTree.getProperty("specularB", 1.0f);
+        config.lighting.specularPower = lightingTree.getProperty("specularPower", 32.0f);
+        config.lighting.specularIntensity = lightingTree.getProperty("specularIntensity", 0.5f);
     }
 
     // Material

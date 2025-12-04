@@ -8,9 +8,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
 #include "core/Oscillator.h"
-#include "core/SharedCaptureBuffer.h"
+#include "core/interfaces/IAudioBuffer.h"
 #include "ui/panels/WaveformPresenter.h"
+#include "ui/panels/SoftwareGridRenderer.h"
 #include "core/dsp/TimingConfig.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
 #include <vector>
 #include <atomic>
 
@@ -20,6 +23,7 @@ namespace oscil
 // Forward declarations
 class WaveformShader;
 struct WaveformRenderData;
+class SharedCaptureBuffer;
 
 /**
  * Display mode for stereo waveforms
@@ -37,7 +41,7 @@ class OscilPluginProcessor;
 class WaveformComponent : public juce::Component
 {
 public:
-    WaveformComponent();
+    explicit WaveformComponent(IThemeService& themeService);
     ~WaveformComponent() override; // Not default anymore, needs to destroy unique_ptr
 
     void paint(juce::Graphics& g) override;
@@ -46,7 +50,7 @@ public:
     /**
      * Set the capture buffer to read audio data from
      */
-    void setCaptureBuffer(std::shared_ptr<SharedCaptureBuffer> buffer);
+    void setCaptureBuffer(std::shared_ptr<IAudioBuffer> buffer);
 
     /**
      * Set the processing mode for this waveform
@@ -176,7 +180,7 @@ public:
     void processAudioData();
 
     // Test access - for automated testing only
-    bool isGridVisible() const { return showGrid_; }
+    bool isGridVisible() const;
     bool isAutoScaleEnabled() const;
     bool isHoldDisplayEnabled() const { return holdDisplay_; }
     float getGainLinear() const;
@@ -186,7 +190,7 @@ public:
     ProcessingMode getProcessingMode() const;
     bool hasWaveformData() const { return !waveformPath1_.isEmpty(); }
     int getDisplaySamples() const;
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const;
+    std::shared_ptr<IAudioBuffer> getCaptureBuffer() const;
     juce::String getShaderId() const { return shaderId_; }
     bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
 
@@ -194,24 +198,17 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds);
-    void drawGridLabels(juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawWaveform(juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void updateWaveformPath();
 
-    // Helper to format time value for display
-    static juce::String formatTimeLabel(float ms);
-    // Helper to calculate nice grid step size
-    static float calculateGridStepSize(float totalDuration, int targetDivisions);
-
+    IThemeService& themeService_;
     std::unique_ptr<WaveformPresenter> presenter_;
+    std::unique_ptr<SoftwareGridRenderer> gridRenderer_;
     
     juce::Colour colour_{ 0xFF00FFFF }; // Default, overwritten by oscillator
     float opacity_ = 1.0f;
     float lineWidth_ = 1.5f;  // Default line width
-    bool showGrid_ = true;
-    GridConfiguration gridConfig_;
     bool holdDisplay_ = false;
     bool highlighted_ = false;
     StereoDisplayMode stereoDisplayMode_ = StereoDisplayMode::Stacked;
@@ -226,6 +223,8 @@ private:
 
     juce::Path waveformPath1_;
     juce::Path waveformPath2_;
+
+    std::unique_ptr<juce::VBlankAttachment> vBlankAttachment_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformComponent)
 };

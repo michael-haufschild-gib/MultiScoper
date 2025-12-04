@@ -81,10 +81,6 @@ target_include_directories(OscilTestHarness PRIVATE
     ${httplib_SOURCE_DIR}
 )
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(OscilTestHarness PRIVATE -Wno-switch-enum)
-endif()
-
 # Link against JUCE and libraries
 target_link_libraries(OscilTestHarness PRIVATE
     OscilBinaryData
@@ -97,12 +93,14 @@ target_link_libraries(OscilTestHarness PRIVATE
     juce::juce_data_structures
     juce::juce_events
     juce::juce_audio_basics
+    juce::juce_dsp
     $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     httplib::httplib
     nlohmann_json::nlohmann_json
     PUBLIC
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
+    OscilWarningSuppressions
 )
 
 # Compile definitions

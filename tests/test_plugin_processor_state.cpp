@@ -4,6 +4,7 @@
 */
 
 #include <gtest/gtest.h>
+#include "OscilTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
@@ -12,16 +13,20 @@
 #include <atomic>
 
 using namespace oscil;
+using namespace oscil::test;
 
 class PluginProcessorStateTest : public ::testing::Test
 {
 protected:
     std::unique_ptr<OscilPluginProcessor> processor;
 
+    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
+    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
+
     void SetUp() override
     {
         processor = std::make_unique<OscilPluginProcessor>(
-            InstanceRegistry::getInstance(),
+            getRegistry(),
             ThemeManager::getInstance());
     }
 
@@ -49,7 +54,7 @@ TEST_F(PluginProcessorStateTest, StateInformation_SaveAndRestore)
 
     // Create new processor and restore state
     auto newProcessor = std::make_unique<OscilPluginProcessor>(
-        InstanceRegistry::getInstance(),
+        getRegistry(),
         ThemeManager::getInstance());
     newProcessor->prepareToPlay(44100.0, 512);
 
@@ -176,7 +181,7 @@ TEST_F(PluginProcessorStateTest, StateInformation_VeryLargeState)
 
     // Create new processor and restore
     auto newProcessor = std::make_unique<OscilPluginProcessor>(
-        InstanceRegistry::getInstance(),
+        getRegistry(),
         ThemeManager::getInstance());
     newProcessor->prepareToPlay(44100.0, 512);
 
@@ -246,5 +251,6 @@ TEST_F(PluginProcessorStateTest, StateInformation_SetBeforePrepare)
 
     // Should still be functional
     processor->prepareToPlay(44100.0, 512);
+    pumpMessageQueue(200);
     EXPECT_TRUE(processor->getSourceId().isValid());
 }

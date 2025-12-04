@@ -5,12 +5,14 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilAccordion.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
 class OscilAccordionTest : public ::testing::Test
 {
 protected:
+    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
     void SetUp() override {}
 };
 
@@ -20,7 +22,7 @@ protected:
 
 TEST_F(OscilAccordionTest, SectionDefaultConstruction)
 {
-    OscilAccordionSection section("Test Section");
+    OscilAccordionSection section(getThemeService(), "Test Section");
 
     EXPECT_EQ(section.getTitle(), juce::String("Test Section"));
     EXPECT_FALSE(section.isExpanded());
@@ -29,7 +31,7 @@ TEST_F(OscilAccordionTest, SectionDefaultConstruction)
 
 TEST_F(OscilAccordionTest, SectionSetExpanded)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     section.setExpanded(true, false);
     EXPECT_TRUE(section.isExpanded());
@@ -40,7 +42,7 @@ TEST_F(OscilAccordionTest, SectionSetExpanded)
 
 TEST_F(OscilAccordionTest, SectionToggleExpanded)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     EXPECT_FALSE(section.isExpanded());
 
@@ -53,7 +55,7 @@ TEST_F(OscilAccordionTest, SectionToggleExpanded)
 
 TEST_F(OscilAccordionTest, SectionSetContent)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     juce::Component content;
     section.setContent(&content);
@@ -62,7 +64,7 @@ TEST_F(OscilAccordionTest, SectionSetContent)
 
 TEST_F(OscilAccordionTest, SectionClearContent)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     juce::Component content;
     section.setContent(&content);
@@ -72,7 +74,7 @@ TEST_F(OscilAccordionTest, SectionClearContent)
 
 TEST_F(OscilAccordionTest, SectionSetTitle)
 {
-    OscilAccordionSection section("Original");
+    OscilAccordionSection section(getThemeService(), "Original");
 
     section.setTitle("Updated Title");
     EXPECT_EQ(section.getTitle(), juce::String("Updated Title"));
@@ -80,7 +82,7 @@ TEST_F(OscilAccordionTest, SectionSetTitle)
 
 TEST_F(OscilAccordionTest, SectionEnabled)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     EXPECT_TRUE(section.isEnabled());
 
@@ -93,7 +95,7 @@ TEST_F(OscilAccordionTest, SectionEnabled)
 
 TEST_F(OscilAccordionTest, SectionCallback)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     int changeCount = 0;
     bool lastState = false;
@@ -114,7 +116,7 @@ TEST_F(OscilAccordionTest, SectionCallback)
 
 TEST_F(OscilAccordionTest, SectionExpandedCallbackCalledWithAnimation)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     int changeCount = 0;
 
@@ -129,14 +131,14 @@ TEST_F(OscilAccordionTest, SectionExpandedCallbackCalledWithAnimation)
 
 TEST_F(OscilAccordionTest, SectionHeaderHeight)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     EXPECT_GT(section.getHeaderHeight(), 0);
 }
 
 TEST_F(OscilAccordionTest, SectionPreferredHeight)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     EXPECT_GT(section.getPreferredHeight(), 0);
 }
@@ -147,7 +149,7 @@ TEST_F(OscilAccordionTest, SectionPreferredHeight)
 
 TEST_F(OscilAccordionTest, AccordionDefaultConstruction)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
 
     EXPECT_EQ(accordion.getNumSections(), 0);
     EXPECT_FALSE(accordion.getAllowMultiExpand());
@@ -155,7 +157,7 @@ TEST_F(OscilAccordionTest, AccordionDefaultConstruction)
 
 TEST_F(OscilAccordionTest, AddSections)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
 
     accordion.addSection("Section A");
     accordion.addSection("Section B");
@@ -166,7 +168,7 @@ TEST_F(OscilAccordionTest, AddSections)
 
 TEST_F(OscilAccordionTest, AddSectionWithContent)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
 
     juce::Component content;
     auto* section = accordion.addSection("Section A", &content);
@@ -177,7 +179,7 @@ TEST_F(OscilAccordionTest, AddSectionWithContent)
 
 TEST_F(OscilAccordionTest, GetSectionByIndex)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.addSection("Section A");
     accordion.addSection("Section B");
 
@@ -188,7 +190,7 @@ TEST_F(OscilAccordionTest, GetSectionByIndex)
 
 TEST_F(OscilAccordionTest, GetSectionOutOfBounds)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.addSection("Section A");
 
     auto* section = accordion.getSection(999);
@@ -197,7 +199,7 @@ TEST_F(OscilAccordionTest, GetSectionOutOfBounds)
 
 TEST_F(OscilAccordionTest, RemoveSection)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.addSection("Section A");
     accordion.addSection("Section B");
     accordion.addSection("Section C");
@@ -208,7 +210,7 @@ TEST_F(OscilAccordionTest, RemoveSection)
 
 TEST_F(OscilAccordionTest, ClearSections)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.addSection("Section A");
     accordion.addSection("Section B");
 
@@ -218,7 +220,7 @@ TEST_F(OscilAccordionTest, ClearSections)
 
 TEST_F(OscilAccordionTest, AllowMultiExpand)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
 
     accordion.setAllowMultiExpand(true);
     EXPECT_TRUE(accordion.getAllowMultiExpand());
@@ -229,7 +231,7 @@ TEST_F(OscilAccordionTest, AllowMultiExpand)
 
 TEST_F(OscilAccordionTest, SingleExpandMode)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.setAllowMultiExpand(false);
 
     accordion.addSection("Section A");
@@ -246,7 +248,7 @@ TEST_F(OscilAccordionTest, SingleExpandMode)
 
 TEST_F(OscilAccordionTest, MultipleExpandMode)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.setAllowMultiExpand(true);
 
     accordion.addSection("Section A");
@@ -261,7 +263,7 @@ TEST_F(OscilAccordionTest, MultipleExpandMode)
 
 TEST_F(OscilAccordionTest, CollapseSection)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.addSection("Section A");
 
     accordion.expandSection(0);
@@ -273,7 +275,7 @@ TEST_F(OscilAccordionTest, CollapseSection)
 
 TEST_F(OscilAccordionTest, CollapseAll)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.setAllowMultiExpand(true);
 
     accordion.addSection("Section A");
@@ -290,7 +292,7 @@ TEST_F(OscilAccordionTest, CollapseAll)
 
 TEST_F(OscilAccordionTest, ExpandAll)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.setAllowMultiExpand(true);
 
     accordion.addSection("Section A");
@@ -304,7 +306,7 @@ TEST_F(OscilAccordionTest, ExpandAll)
 
 TEST_F(OscilAccordionTest, SectionSpacing)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
 
     accordion.setSpacing(12);
     EXPECT_EQ(accordion.getSpacing(), 12);
@@ -312,7 +314,7 @@ TEST_F(OscilAccordionTest, SectionSpacing)
 
 TEST_F(OscilAccordionTest, PreferredHeight)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.addSection("Section A");
     accordion.addSection("Section B");
 
@@ -322,7 +324,7 @@ TEST_F(OscilAccordionTest, PreferredHeight)
 
 TEST_F(OscilAccordionTest, ThemeChanges)
 {
-    OscilAccordion accordion;
+    OscilAccordion accordion(getThemeService());
     accordion.addSection("Section A");
     accordion.expandSection(0);
 
@@ -336,7 +338,7 @@ TEST_F(OscilAccordionTest, ThemeChanges)
 
 TEST_F(OscilAccordionTest, SectionThemeChanges)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
     section.setExpanded(true, false);
 
     ColorTheme newTheme;
@@ -349,7 +351,7 @@ TEST_F(OscilAccordionTest, SectionThemeChanges)
 
 TEST_F(OscilAccordionTest, SectionWantsKeyboardFocus)
 {
-    OscilAccordionSection section("Test");
+    OscilAccordionSection section(getThemeService(), "Test");
 
     // Accordion sections should be focusable for keyboard navigation
     EXPECT_TRUE(section.getWantsKeyboardFocus());

@@ -17,13 +17,13 @@ TestElementRegistry& TestElementRegistry::getInstance()
 
 void TestElementRegistry::registerElement(const juce::String& testId, juce::Component* component)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     elements_[testId] = component;
 }
 
 void TestElementRegistry::unregisterElement(juce::Component* component)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     for (auto it = elements_.begin(); it != elements_.end(); )
     {
         if (it->second == component)
@@ -35,13 +35,13 @@ void TestElementRegistry::unregisterElement(juce::Component* component)
 
 void TestElementRegistry::unregisterElement(const juce::String& testId)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     elements_.erase(testId);
 }
 
 juce::Component* TestElementRegistry::findElement(const juce::String& testId)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     auto it = elements_.find(testId);
     if (it != elements_.end())
         return it->second;
@@ -50,19 +50,19 @@ juce::Component* TestElementRegistry::findElement(const juce::String& testId)
 
 std::map<juce::String, juce::Component*> TestElementRegistry::getAllElements()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return elements_;
 }
 
 void TestElementRegistry::clear()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     elements_.clear();
 }
 
 bool TestElementRegistry::hasElement(const juce::String& testId)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return elements_.find(testId) != elements_.end();
 }
 

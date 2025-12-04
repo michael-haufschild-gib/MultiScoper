@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilTextField.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilTextFieldTest, DefaultConstruction)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     EXPECT_TRUE(field.getText().isEmpty());
     EXPECT_TRUE(field.isEnabled());
@@ -29,21 +30,21 @@ TEST_F(OscilTextFieldTest, DefaultConstruction)
 
 TEST_F(OscilTextFieldTest, ConstructionWithVariant)
 {
-    OscilTextField field(TextFieldVariant::Search);
+    OscilTextField field(ThemeManager::getInstance(), TextFieldVariant::Search);
 
     EXPECT_EQ(field.getVariant(), TextFieldVariant::Search);
 }
 
 TEST_F(OscilTextFieldTest, ConstructionWithTestId)
 {
-    OscilTextField field("field-1");
+    OscilTextField field(ThemeManager::getInstance(), "field-1");
 
     EXPECT_TRUE(field.getText().isEmpty());
 }
 
 TEST_F(OscilTextFieldTest, ConstructionWithVariantAndTestId)
 {
-    OscilTextField field(TextFieldVariant::Number, "field-1");
+    OscilTextField field(ThemeManager::getInstance(), TextFieldVariant::Number, "field-1");
 
     EXPECT_EQ(field.getVariant(), TextFieldVariant::Number);
 }
@@ -54,7 +55,7 @@ TEST_F(OscilTextFieldTest, ConstructionWithVariantAndTestId)
 
 TEST_F(OscilTextFieldTest, SetText)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setText("Hello World", false);
 
     EXPECT_EQ(field.getText(), juce::String("Hello World"));
@@ -62,7 +63,7 @@ TEST_F(OscilTextFieldTest, SetText)
 
 TEST_F(OscilTextFieldTest, SetEmptyText)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setText("Initial", false);
     field.setText("", false);
 
@@ -71,7 +72,7 @@ TEST_F(OscilTextFieldTest, SetEmptyText)
 
 TEST_F(OscilTextFieldTest, SetPlaceholder)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setPlaceholder("Enter text...");
 
     EXPECT_EQ(field.getPlaceholder(), juce::String("Enter text..."));
@@ -83,7 +84,7 @@ TEST_F(OscilTextFieldTest, SetPlaceholder)
 
 TEST_F(OscilTextFieldTest, SetVariantText)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     field.setVariant(TextFieldVariant::Text);
     EXPECT_EQ(field.getVariant(), TextFieldVariant::Text);
@@ -91,7 +92,7 @@ TEST_F(OscilTextFieldTest, SetVariantText)
 
 TEST_F(OscilTextFieldTest, SetVariantSearch)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     field.setVariant(TextFieldVariant::Search);
     EXPECT_EQ(field.getVariant(), TextFieldVariant::Search);
@@ -99,7 +100,7 @@ TEST_F(OscilTextFieldTest, SetVariantSearch)
 
 TEST_F(OscilTextFieldTest, SetVariantNumber)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     field.setVariant(TextFieldVariant::Number);
     EXPECT_EQ(field.getVariant(), TextFieldVariant::Number);
@@ -111,14 +112,14 @@ TEST_F(OscilTextFieldTest, SetVariantNumber)
 
 TEST_F(OscilTextFieldTest, DefaultEnabled)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     EXPECT_TRUE(field.isEnabled());
 }
 
 TEST_F(OscilTextFieldTest, SetDisabled)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setEnabled(false);
 
     EXPECT_FALSE(field.isEnabled());
@@ -126,7 +127,7 @@ TEST_F(OscilTextFieldTest, SetDisabled)
 
 TEST_F(OscilTextFieldTest, SetEnabledAfterDisabled)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setEnabled(false);
     field.setEnabled(true);
 
@@ -139,14 +140,14 @@ TEST_F(OscilTextFieldTest, SetEnabledAfterDisabled)
 
 TEST_F(OscilTextFieldTest, DefaultNoError)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     EXPECT_FALSE(field.hasError());
 }
 
 TEST_F(OscilTextFieldTest, SetError)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     field.setError("Invalid input");
     EXPECT_TRUE(field.hasError());
@@ -154,7 +155,7 @@ TEST_F(OscilTextFieldTest, SetError)
 
 TEST_F(OscilTextFieldTest, ClearError)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setError("Invalid input");
 
     field.clearError();
@@ -167,7 +168,7 @@ TEST_F(OscilTextFieldTest, ClearError)
 
 TEST_F(OscilTextFieldTest, SetNumericValue)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Number);
     field.setStep(0.5);  // Set step to allow non-integer values
 
@@ -177,7 +178,7 @@ TEST_F(OscilTextFieldTest, SetNumericValue)
 
 TEST_F(OscilTextFieldTest, SetNumericRange)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Number);
     field.setRange(0.0, 100.0);
 
@@ -194,7 +195,7 @@ TEST_F(OscilTextFieldTest, SetNumericRange)
 
 TEST_F(OscilTextFieldTest, SetNumericStep)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Number);
 
     field.setStep(0.1);
@@ -203,7 +204,7 @@ TEST_F(OscilTextFieldTest, SetNumericStep)
 
 TEST_F(OscilTextFieldTest, SetNumericDecimalPlaces)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Number);
 
     field.setDecimalPlaces(2);
@@ -212,7 +213,7 @@ TEST_F(OscilTextFieldTest, SetNumericDecimalPlaces)
 
 TEST_F(OscilTextFieldTest, SetNumericSuffix)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Number);
 
     field.setSuffix("dB");
@@ -221,7 +222,7 @@ TEST_F(OscilTextFieldTest, SetNumericSuffix)
 
 TEST_F(OscilTextFieldTest, SetNumericDefaultValue)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Number);
 
     field.setDefaultValue(50.0);
@@ -234,7 +235,7 @@ TEST_F(OscilTextFieldTest, SetNumericDefaultValue)
 
 TEST_F(OscilTextFieldTest, SetValidator)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     bool validationCalled = false;
     field.setValidator([&validationCalled](const juce::String& text) {
@@ -252,7 +253,7 @@ TEST_F(OscilTextFieldTest, SetValidator)
 
 TEST_F(OscilTextFieldTest, OnTextChangedCallbackCanBeSet)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     int changeCount = 0;
     juce::String lastText;
@@ -270,7 +271,7 @@ TEST_F(OscilTextFieldTest, OnTextChangedCallbackCanBeSet)
 
 TEST_F(OscilTextFieldTest, NoCallbackWhenNotifyFalse)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     int changeCount = 0;
 
@@ -284,7 +285,7 @@ TEST_F(OscilTextFieldTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilTextFieldTest, OnValueChangedCallback)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Number);
 
     int changeCount = 0;
@@ -302,7 +303,7 @@ TEST_F(OscilTextFieldTest, OnValueChangedCallback)
 
 TEST_F(OscilTextFieldTest, OnReturnPressedCallback)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     bool returnPressed = false;
     field.onReturnPressed = [&returnPressed]() {
@@ -316,7 +317,7 @@ TEST_F(OscilTextFieldTest, OnReturnPressedCallback)
 
 TEST_F(OscilTextFieldTest, OnEscapePressedCallback)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     bool escapePressed = false;
     field.onEscapePressed = [&escapePressed]() {
@@ -334,7 +335,7 @@ TEST_F(OscilTextFieldTest, OnEscapePressedCallback)
 
 TEST_F(OscilTextFieldTest, PreferredHeightPositive)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     int height = field.getPreferredHeight();
     EXPECT_GT(height, 0);
@@ -346,7 +347,7 @@ TEST_F(OscilTextFieldTest, PreferredHeightPositive)
 
 TEST_F(OscilTextFieldTest, ThemeChangeDoesNotThrow)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setText("Test", false);
 
     ColorTheme newTheme;
@@ -359,7 +360,7 @@ TEST_F(OscilTextFieldTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilTextFieldTest, ThemeChangePreservesVariant)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
     field.setVariant(TextFieldVariant::Search);
 
     ColorTheme newTheme;
@@ -375,7 +376,7 @@ TEST_F(OscilTextFieldTest, ThemeChangePreservesVariant)
 
 TEST_F(OscilTextFieldTest, DoesNotWantKeyboardFocusDirectly)
 {
-    OscilTextField field;
+    OscilTextField field(ThemeManager::getInstance());
 
     // TextField uses internal TextEditor for keyboard focus, not the component itself
     EXPECT_FALSE(field.getWantsKeyboardFocus());

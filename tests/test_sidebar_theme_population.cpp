@@ -7,6 +7,7 @@
 #include "ui/layout/SidebarComponent.h"
 #include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
+#include "core/ServiceContext.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -18,15 +19,20 @@ protected:
     std::unique_ptr<OscilPluginProcessor> processor;
     std::unique_ptr<SidebarComponent> sidebar;
 
+    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
+    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
+    static ThemeManager& getThemeManager() { return ThemeManager::getInstance(); }
+
     void SetUp() override
     {
         // Ensure some themes exist
-        auto& themeManager = ThemeManager::getInstance();
+        auto& themeManager = getThemeManager();
         // (ThemeManager usually has default themes initialized)
-        
-        processor = std::make_unique<OscilPluginProcessor>(InstanceRegistry::getInstance(), themeManager);
-        // Initialize sidebar with processor
-        sidebar = std::make_unique<SidebarComponent>(InstanceRegistry::getInstance());
+
+        processor = std::make_unique<OscilPluginProcessor>(getRegistry(), themeManager);
+        // Initialize sidebar with ServiceContext
+        ServiceContext context{getRegistry(), themeManager};
+        sidebar = std::make_unique<SidebarComponent>(context);
     }
 
     void TearDown() override

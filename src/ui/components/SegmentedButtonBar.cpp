@@ -8,15 +8,18 @@
 namespace oscil
 {
 
-SegmentedButtonBar::SegmentedButtonBar()
+SegmentedButtonBar::SegmentedButtonBar(IThemeService& themeService)
+    : themeService_(themeService)
 {
-    ThemeManager::getInstance().addListener(this);
+    themeService_.addListener(this);
     setWantsKeyboardFocus(true);
 }
 
+
+
 SegmentedButtonBar::~SegmentedButtonBar()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
 }
 
 void SegmentedButtonBar::paint(juce::Graphics& g)
@@ -55,7 +58,7 @@ void SegmentedButtonBar::themeChanged(const ColorTheme&)
 
 void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce::String& testId)
 {
-    auto button = std::make_unique<OscilButton>(label, testId);
+    auto button = std::make_unique<OscilButton>(themeService_, label, testId);
 
     // Configure as a toggleable segment button
     button->setToggleable(true);
@@ -82,7 +85,7 @@ void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce
 
 void SegmentedButtonBar::addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId)
 {
-    auto button = std::make_unique<OscilButton>(juce::String{}, testId);
+    auto button = std::make_unique<OscilButton>(themeService_, juce::String{}, testId);
 
     // Configure as a toggleable segment button with path icon
     button->setToggleable(true);

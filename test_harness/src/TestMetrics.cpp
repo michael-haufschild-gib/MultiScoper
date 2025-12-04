@@ -61,7 +61,7 @@ void TestMetrics::collectSample()
     snapshot.sourceCount = sourceCount_.load();
     snapshot.timestamp = juce::Time::currentTimeMillis();
 
-    std::lock_guard<std::mutex> lock(snapshotMutex_);
+    std::scoped_lock lock(snapshotMutex_);
     snapshots_.push_back(snapshot);
     while (snapshots_.size() > MAX_SNAPSHOTS)
         snapshots_.pop_front();
@@ -69,7 +69,7 @@ void TestMetrics::collectSample()
 
 PerformanceSnapshot TestMetrics::getCurrentSnapshot()
 {
-    std::lock_guard<std::mutex> lock(snapshotMutex_);
+    std::scoped_lock lock(snapshotMutex_);
     if (snapshots_.empty())
     {
         // Return a live snapshot if no collected data
@@ -88,7 +88,7 @@ PerformanceSnapshot TestMetrics::getCurrentSnapshot()
 
 PerformanceStats TestMetrics::getStats()
 {
-    std::lock_guard<std::mutex> lock(snapshotMutex_);
+    std::scoped_lock lock(snapshotMutex_);
 
     PerformanceStats stats;
     if (snapshots_.empty())
@@ -128,7 +128,7 @@ PerformanceStats TestMetrics::getStats()
 
 PerformanceStats TestMetrics::getStatsForPeriod(int periodMs)
 {
-    std::lock_guard<std::mutex> lock(snapshotMutex_);
+    std::scoped_lock lock(snapshotMutex_);
 
     PerformanceStats stats;
     if (snapshots_.empty())
@@ -178,11 +178,11 @@ PerformanceStats TestMetrics::getStatsForPeriod(int periodMs)
 void TestMetrics::reset()
 {
     {
-        std::lock_guard<std::mutex> lock(snapshotMutex_);
+        std::scoped_lock lock(snapshotMutex_);
         snapshots_.clear();
     }
     {
-        std::lock_guard<std::mutex> lock(frameTimeMutex_);
+        std::scoped_lock lock(frameTimeMutex_);
         frameTimes_.clear();
     }
     lastCpuTime_ = 0;
@@ -194,7 +194,7 @@ void TestMetrics::recordFrame()
     auto now = std::chrono::steady_clock::now().time_since_epoch();
     auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
 
-    std::lock_guard<std::mutex> lock(frameTimeMutex_);
+    std::scoped_lock lock(frameTimeMutex_);
     frameTimes_.push_back(nowMs);
     while (frameTimes_.size() > MAX_FRAME_TIMES)
         frameTimes_.pop_front();
@@ -207,7 +207,7 @@ double TestMetrics::getCurrentFps()
 
 double TestMetrics::calculateFps()
 {
-    std::lock_guard<std::mutex> lock(frameTimeMutex_);
+    std::scoped_lock lock(frameTimeMutex_);
 
     if (frameTimes_.size() < 2)
         return 0.0;

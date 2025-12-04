@@ -4,33 +4,35 @@
 
 #include "ui/components/OscilModal.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/ListItemIcons.h"
 
 namespace oscil
 {
 
-OscilModal::OscilModal()
-    : showSpring_(SpringPresets::snappy())
+OscilModal::OscilModal(IThemeService& themeService)
+    : themeService_(themeService)
+    , showSpring_(SpringPresets::snappy())
     , scaleSpring_(SpringPresets::bouncy())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
     setVisible(false);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     showSpring_.position = 0.0f;
     scaleSpring_.position = 0.8f;  // Start scaled down
 }
 
-OscilModal::OscilModal(const juce::String& title)
-    : OscilModal()
+OscilModal::OscilModal(IThemeService& themeService, const juce::String& title)
+    : OscilModal(themeService)
 {
     title_ = title;
 }
 
-OscilModal::OscilModal(const juce::String& title, const juce::String& testId)
-    : OscilModal()
+OscilModal::OscilModal(IThemeService& themeService, const juce::String& title, const juce::String& testId)
+    : OscilModal(themeService)
 {
     title_ = title;
     setTestId(testId);
@@ -44,7 +46,7 @@ void OscilModal::registerTestId()
 OscilModal::~OscilModal()
 {
     juce::Desktop::getInstance().removeFocusChangeListener(this);
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -67,7 +69,11 @@ void OscilModal::setContent(juce::Component* content)
         content_ = content;
 
         if (content_)
+        {
+            contentPreferredWidth_ = content_->getWidth();
+            contentPreferredHeight_ = content_->getHeight();
             addAndMakeVisible(content_);
+        }
 
         resized();
     }
@@ -131,6 +137,18 @@ void OscilModal::show(juce::Component* parent)
 
     if (AnimationSettings::shouldUseSpringAnimations())
     {
+        // Initialize state before showing
+        if (content_)
+        {
+            content_->setAlpha(showSpring_.position);
+            
+            // Apply initial scale transform
+            float scale = scaleSpring_.position;
+            auto modalBounds = getModalBounds();
+            auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
+            content_->setTransform(juce::AffineTransform::scale(scale, scale, pivot.x, pivot.y));
+        }
+
         showSpring_.setTarget(1.0f);
         scaleSpring_.setTarget(1.0f);
         startTimerHz(ComponentLayout::ANIMATION_FPS);
@@ -139,6 +157,13 @@ void OscilModal::show(juce::Component* parent)
     {
         showSpring_.position = 1.0f;
         scaleSpring_.position = 1.0f;
+        
+        if (content_)
+        {
+            content_->setAlpha(1.0f);
+            content_->setTransform({});
+        }
+        
         repaint();
     }
 }
@@ -159,6 +184,12 @@ void OscilModal::hide()
         showSpring_.position = 0.0f;
         scaleSpring_.position = 0.8f;
         setVisible(false);
+        
+        if (content_)
+        {
+            content_->setAlpha(1.0f);
+            content_->setTransform({});
+        }
 
         // Restore focus
         if (previousFocus_ && previousFocus_->isShowing())
@@ -266,14 +297,18 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
             g.fillRoundedRectangle(closeBounds, ComponentLayout::RADIUS_SM);
         }
 
-        // X icon
+        // Close icon from SVG - centered within button bounds
         g.setColour(theme_.textSecondary.withAlpha(alpha));
-        float cx = closeBounds.getCentreX();
-        float cy = closeBounds.getCentreY();
-        float size = 6.0f;
+        float iconSize = 14.0f;  // Icon size within the button
+        auto iconPath = ListItemIcons::createCloseIcon(iconSize);
 
-        g.drawLine(cx - size, cy - size, cx + size, cy + size, 1.5f);
-        g.drawLine(cx + size, cy - size, cx - size, cy + size, 1.5f);
+        // Center the icon within the close button bounds
+        auto iconBounds = iconPath.getBounds();
+        float offsetX = closeBounds.getCentreX() - iconBounds.getCentreX();
+        float offsetY = closeBounds.getCentreY() - iconBounds.getCentreY();
+        iconPath.applyTransform(juce::AffineTransform::translation(offsetX, offsetY));
+
+        g.fillPath(iconPath);
     }
 
     // Separator
@@ -314,7 +349,7 @@ juce::Rectangle<int> OscilModal::getModalBounds() const
 
         // Calculate height based on content
         int titleHeight = title_.isNotEmpty() ? TITLE_BAR_HEIGHT : 0;
-        int contentHeight = content_ ? content_->getHeight() : 200;
+        int contentHeight = content_ ? contentPreferredHeight_ : 200;
         height = titleHeight + contentHeight + MODAL_PADDING * 2;
 
         // Limit height
@@ -436,6 +471,15 @@ void OscilModal::globalFocusChanged(juce::Component* focusedComponent)
     {
         if (!isParentOf(focusedComponent) && focusedComponent != this)
         {
+            // Allow focus if it's a known popup (or child of one)
+            auto* comp = focusedComponent;
+            while (comp != nullptr)
+            {
+                if (comp->getProperties().contains("isOscilPopup"))
+                    return;
+                comp = comp->getParentComponent();
+            }
+
             // Focus escaped - bring it back to first focusable child
             if (content_)
             {
@@ -482,6 +526,12 @@ void OscilModal::timerCallback()
         if (showSpring_.position < 0.1f)
         {
             setVisible(false);
+            
+            if (content_)
+            {
+                content_->setAlpha(1.0f);
+                content_->setTransform({});
+            }
 
             // Restore focus
             if (previousFocus_ && previousFocus_->isShowing())
@@ -501,6 +551,21 @@ void OscilModal::updateAnimations()
     float dt = AnimationTiming::FRAME_DURATION_60FPS;
     showSpring_.update(dt);
     scaleSpring_.update(dt);
+    
+    if (content_)
+    {
+        // Sync content alpha
+        content_->setAlpha(showSpring_.position);
+        
+        // Sync content scale
+        float scale = scaleSpring_.position;
+        // Calculate pivot relative to content position
+        // Modal background scales around its center
+        auto modalBounds = getModalBounds();
+        auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
+        
+        content_->setTransform(juce::AffineTransform::scale(scale, scale, pivot.x, pivot.y));
+    }
 }
 
 void OscilModal::updateFocusTrap()
@@ -569,7 +634,8 @@ std::unique_ptr<juce::AccessibilityHandler> OscilModal::createAccessibilityHandl
 // OscilAlertModal Implementation (static helper)
 //==============================================================================
 
-void OscilAlertModal::show(const juce::String& title,
+void OscilAlertModal::show(IThemeService& themeService,
+                            const juce::String& title,
                             const juce::String& message,
                             [[maybe_unused]] Type type,
                             [[maybe_unused]] std::function<void()> onOk)
@@ -584,13 +650,13 @@ void OscilAlertModal::show(const juce::String& title,
     label->setBounds(0, 0, 400, 60);
     content->addAndMakeVisible(*label);
 
-    auto okButton = std::make_unique<OscilButton>("OK");
+    auto okButton = std::make_unique<OscilButton>(themeService, "OK");
     okButton->setVariant(ButtonVariant::Primary);
     okButton->setBounds(400 - 80, 70, 80, 30);
     content->addAndMakeVisible(*okButton);
 
     // Create and show modal
-    auto modal = std::make_unique<OscilModal>(title);
+    auto modal = std::make_unique<OscilModal>(themeService, title);
     modal->setContent(content.get());
     modal->setSize(ModalSize::Small);
 
@@ -599,7 +665,8 @@ void OscilAlertModal::show(const juce::String& title,
     modal->show();
 }
 
-void OscilAlertModal::confirm([[maybe_unused]] const juce::String& title,
+void OscilAlertModal::confirm([[maybe_unused]] IThemeService& themeService,
+                               [[maybe_unused]] const juce::String& title,
                                [[maybe_unused]] const juce::String& message,
                                [[maybe_unused]] std::function<void(bool)> onResult)
 {

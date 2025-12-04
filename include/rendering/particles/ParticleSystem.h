@@ -20,16 +20,7 @@
 namespace oscil
 {
 
-// Simple Perlin Noise helper for turbulence
-class Noise3D
-{
-public:
-    static float perlin(float x, float y, float z);
-private:
-    static float fade(float t);
-    static float lerp(float t, float a, float b);
-    static float grad(int hash, float x, float y, float z);
-};
+
 
 /**
  * GPU-accelerated particle system with instanced rendering.
@@ -198,6 +189,8 @@ private:
     // OpenGL resources
     bool initialized_ = false;
     
+    GLuint noiseTextureID_ = 0;
+
     // Shader variants
     struct ShaderProgram
     {
@@ -205,9 +198,12 @@ private:
         GLint projectionLoc = -1;
         GLint textureLoc = -1;
         GLint depthLoc = -1;
+        GLint noiseTextureLoc = -1; // New
         GLint viewportSizeLoc = -1;
         GLint softDepthParamLoc = -1;
-        GLint frameInfoLoc = -1; // rows, cols
+        GLint frameInfoLoc = -1;
+        GLint turbulenceLoc = -1; // vec3(strength, scale, speed)
+        GLint timeLoc = -1;
     };
     
     ShaderProgram basicShader_;

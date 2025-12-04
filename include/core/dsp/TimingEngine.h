@@ -55,6 +55,7 @@ enum class WaveformTriggerMode
     RisingEdge,     // Trigger on rising edge crossing threshold
     FallingEdge,    // Trigger on falling edge crossing threshold
     Level,          // Trigger when level exceeds threshold
+    Midi,           // Trigger on MIDI Note On
     Manual          // Manual trigger only
 };
 
@@ -216,6 +217,8 @@ struct EngineTimingConfig
     float triggerThreshold = 0.1f;      // Trigger threshold (0.0 - 1.0)
     int triggerChannel = 0;             // Channel for triggering
     float triggerHysteresis = 0.01f;    // Hysteresis to prevent retriggering
+    int midiTriggerNote = -1;           // MIDI note to trigger on
+    int midiTriggerChannel = 0;         // MIDI channel (0=Omni)
 
     // Sync state
     double lastSyncTimestamp = 0.0;     // Sample timestamp of last sync point
@@ -272,6 +275,13 @@ public:
     [[nodiscard]] bool processBlock(const juce::AudioBuffer<float>& buffer);
 
     /**
+     * Process MIDI buffer for trigger detection
+     * @param midiMessages MIDI buffer to analyze
+     * @return True if trigger condition met
+     */
+    [[nodiscard]] bool processMidi(const juce::MidiBuffer& midiMessages);
+
+    /**
      * Get the number of samples to display based on current settings
      */
     [[nodiscard]] int getDisplaySampleCount(double sampleRate) const;
@@ -290,6 +300,11 @@ public:
      * Check if a manual trigger was requested and clear the flag
      */
     [[nodiscard]] bool checkAndClearManualTrigger();
+
+    /**
+     * Check if any trigger (Audio, MIDI, Manual) occurred and clear the flag
+     */
+    [[nodiscard]] bool checkAndClearTrigger();
 
     /**
      * Request a manual trigger
@@ -343,6 +358,14 @@ public:
     void setTriggerHysteresis(float hysteresis)
     {
         atomicTriggerHysteresis_.store(hysteresis, std::memory_order_relaxed);
+    }
+    void setMidiTriggerNote(int note)
+    {
+        atomicMidiTriggerNote_.store(note, std::memory_order_relaxed);
+    }
+    void setMidiTriggerChannel(int channel)
+    {
+        atomicMidiTriggerChannel_.store(channel, std::memory_order_relaxed);
     }
     void setSyncToPlayhead(bool enabled) { atomicSyncToPlayhead_.store(enabled, std::memory_order_relaxed); }
 
@@ -431,6 +454,8 @@ private:
     std::atomic<int> atomicTriggerChannel_{ 0 };
     std::atomic<float> atomicTriggerThreshold_{ 0.1f };
     std::atomic<float> atomicTriggerHysteresis_{ 0.01f };
+    std::atomic<int> atomicMidiTriggerNote_{ -1 };
+    std::atomic<int> atomicMidiTriggerChannel_{ 0 };
     std::atomic<double> atomicSampleRate_{ 44100.0 };
     std::atomic<bool> atomicSyncToPlayhead_{ false };
     std::atomic<double> atomicLastSyncTimestamp_{ 0.0 };
@@ -445,6 +470,7 @@ private:
 
     // Trigger state (thread-safe)
     std::atomic<bool> manualTrigger_{ false };
+    std::atomic<bool> triggered_{ false };  // Unified trigger flag
 
     // Audio-thread-only state (accessed only from processBlock, not synchronized)
     bool previousTriggerState_ = false;
@@ -484,6 +510,8 @@ namespace TimingIds
     static const juce::Identifier NoteInterval{ "noteInterval" };
     static const juce::Identifier TriggerMode{ "triggerMode" };
     static const juce::Identifier TriggerThreshold{ "triggerThreshold" };
+    static const juce::Identifier MidiTriggerNote{ "midiTriggerNote" };
+    static const juce::Identifier MidiTriggerChannel{ "midiTriggerChannel" };
 }
 
 } // namespace oscil

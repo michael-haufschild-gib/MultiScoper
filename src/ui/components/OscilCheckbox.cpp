@@ -7,15 +7,16 @@
 namespace oscil
 {
 
-OscilCheckbox::OscilCheckbox()
+OscilCheckbox::OscilCheckbox(IThemeService& themeService)
     : checkSpring_(SpringPresets::bouncy())
     , hoverSpring_(SpringPresets::stiff())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     checkSpring_.position = 0.0f;
     checkSpring_.target = 0.0f;
@@ -23,14 +24,14 @@ OscilCheckbox::OscilCheckbox()
     hoverSpring_.target = 0.0f;
 }
 
-OscilCheckbox::OscilCheckbox(const juce::String& label)
-    : OscilCheckbox()
+OscilCheckbox::OscilCheckbox(IThemeService& themeService, const juce::String& label)
+    : OscilCheckbox(themeService)
 {
     label_ = label;
 }
 
-OscilCheckbox::OscilCheckbox(const juce::String& label, const juce::String& testId)
-    : OscilCheckbox()
+OscilCheckbox::OscilCheckbox(IThemeService& themeService, const juce::String& label, const juce::String& testId)
+    : OscilCheckbox(themeService)
 {
     label_ = label;
     setTestId(testId);
@@ -43,7 +44,7 @@ void OscilCheckbox::registerTestId()
 
 OscilCheckbox::~OscilCheckbox()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 

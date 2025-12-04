@@ -7,10 +7,12 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/TestId.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilToggle.h"
 #include "ui/components/SegmentedButtonBar.h"
+#include "ui/components/InlineEditLabel.h"
 #include "core/Oscillator.h"
 #include <functional>
 
@@ -43,9 +45,18 @@ public:
         virtual void oscillatorDeleteRequested(const OscillatorId& /*id*/) {}
         virtual void oscillatorDragStarted(const OscillatorId& /*id*/) {}
         virtual void oscillatorMoveRequested(const OscillatorId& /*id*/, int /*direction*/) {}
+        /**
+         * Called when user tries to set an oscillator visible but it has no valid pane assignment.
+         * Parent should show a pane selection dialog.
+         */
+        virtual void oscillatorPaneSelectionRequested(const OscillatorId& /*id*/) {}
+        /**
+         * Called when user edits the oscillator name inline.
+         */
+        virtual void oscillatorNameChanged(const OscillatorId& /*id*/, const juce::String& /*newName*/) {}
     };
 
-    explicit OscillatorListItemComponent(const Oscillator& oscillator, IInstanceRegistry& instanceRegistry);
+    OscillatorListItemComponent(const Oscillator& oscillator, IInstanceRegistry& instanceRegistry, IThemeService& themeService);
     ~OscillatorListItemComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -92,11 +103,13 @@ private:
     // Data
     OscillatorId oscillatorId_;
     IInstanceRegistry& instanceRegistry_;
+    IThemeService& themeService_;
     juce::String displayName_;
     juce::String trackName_;
     juce::Colour colour_;
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
     bool isVisible_ = true;
+    PaneId paneId_;  // For checking if oscillator has valid pane assignment
 
     // UI state
     bool selected_ = false;
@@ -107,6 +120,8 @@ private:
     juce::Point<int> dragStartPos_;
 
     // Child components
+    std::unique_ptr<InlineEditLabel> nameLabel_;
+    std::unique_ptr<juce::Label> trackLabel_;
     std::unique_ptr<OscilButton> deleteButton_;
     std::unique_ptr<OscilButton> settingsButton_;
     std::unique_ptr<OscilButton> visibilityButton_; // Used for icon-only visibility toggle in compact mode

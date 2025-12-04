@@ -11,10 +11,15 @@
 #include <juce_events/juce_events.h>
 #include <vector>
 #include <unordered_map>
+#include <set>
 #include "IThemeService.h"
 
 namespace oscil
 {
+
+// Forward declarations
+class ThemeCoordinator;
+class PluginFactory;
 
 /**
  * Color theme definition
@@ -33,6 +38,9 @@ struct ColorTheme
     juce::Colour gridMajor{ 0xFF3A3A3A };
     juce::Colour gridMinor{ 0xFF2A2A2A };
     juce::Colour gridZeroLine{ 0xFF4A4A4A };
+
+    // Crosshair color
+    juce::Colour crosshairLine{ 0x80FFFFFF };
 
     // Text colors
     juce::Colour textPrimary{ 0xFFE0E0E0 };
@@ -232,7 +240,9 @@ public:
  *
  * Implements IThemeService interface for dependency injection support.
  */
-class ThemeManager : public IThemeService
+class ThemeManager : public IThemeService,
+                     private juce::Timer,
+                     public juce::DeletedAtShutdown
 {
 public:
     static ThemeManager& getInstance();
@@ -285,12 +295,12 @@ public:
     /**
      * Import theme from JSON
      */
-    bool importTheme(const juce::String& json);
+    bool importTheme(const juce::String& json) override;
 
     /**
      * Export theme to JSON
      */
-    juce::String exportTheme(const juce::String& name) const;
+    juce::String exportTheme(const juce::String& name) const override;
 
     /**
      * Get the themes directory
@@ -312,6 +322,12 @@ public:
      */
     void addListener(ThemeManagerListener* listener) override;
     void removeListener(ThemeManagerListener* listener) override;
+
+    // Timer callback for async saving
+    void timerCallback() override;
+
+    // Flush any pending saves immediately (e.g. on shutdown)
+    void flushPendingSaves();
 
     // Prevent copying
     ThemeManager(const ThemeManager&) = delete;
@@ -337,6 +353,7 @@ private:
 
     ColorTheme currentTheme_;
     std::unordered_map<juce::String, ColorTheme> themes_;
+    std::set<juce::String> pendingSaves_;
     juce::ListenerList<ThemeManagerListener> listeners_;
 };
 

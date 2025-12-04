@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -32,8 +33,7 @@ class OscilColorSwatches : public juce::Component,
                            private juce::Timer
 {
 public:
-    OscilColorSwatches();
-    explicit OscilColorSwatches(const juce::String& testId);
+    explicit OscilColorSwatches(IThemeService& themeService, const juce::String& testId = "");
     ~OscilColorSwatches() override;
 
     // Colors
@@ -115,6 +115,7 @@ private:
     SpringAnimation hoverSpring_;
 
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     // TestIdSupport
     void registerTestId() override;

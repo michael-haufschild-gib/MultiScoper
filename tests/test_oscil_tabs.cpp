@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilTabs.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilTabsTest, DefaultConstruction)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     EXPECT_EQ(tabs.getNumTabs(), 0);
     EXPECT_EQ(tabs.getSelectedIndex(), 0);  // Default selected index
@@ -28,14 +29,14 @@ TEST_F(OscilTabsTest, DefaultConstruction)
 
 TEST_F(OscilTabsTest, ConstructionWithOrientation)
 {
-    OscilTabs tabs(OscilTabs::Orientation::Vertical);
+    OscilTabs tabs(ThemeManager::getInstance(), OscilTabs::Orientation::Vertical);
 
     EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Vertical);
 }
 
 TEST_F(OscilTabsTest, ConstructionWithOrientationAndTestId)
 {
-    OscilTabs tabs(OscilTabs::Orientation::Horizontal, "tabs-1");
+    OscilTabs tabs(ThemeManager::getInstance(), OscilTabs::Orientation::Horizontal, "tabs-1");
 
     EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Horizontal);
 }
@@ -46,7 +47,7 @@ TEST_F(OscilTabsTest, ConstructionWithOrientationAndTestId)
 
 TEST_F(OscilTabsTest, AddTabWithLabel)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.addTab("Tab A");
     tabs.addTab("Tab B");
@@ -57,7 +58,7 @@ TEST_F(OscilTabsTest, AddTabWithLabel)
 
 TEST_F(OscilTabsTest, AddTabWithLabelAndId)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
@@ -67,7 +68,7 @@ TEST_F(OscilTabsTest, AddTabWithLabelAndId)
 
 TEST_F(OscilTabsTest, AddTabItem)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     TabItem item;
     item.id = "test";
@@ -80,7 +81,7 @@ TEST_F(OscilTabsTest, AddTabItem)
 
 TEST_F(OscilTabsTest, AddMultipleTabs)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.addTabs({"One", "Two", "Three"});
 
@@ -89,7 +90,7 @@ TEST_F(OscilTabsTest, AddMultipleTabs)
 
 TEST_F(OscilTabsTest, ClearTabs)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A");
     tabs.addTab("Tab B");
 
@@ -99,7 +100,7 @@ TEST_F(OscilTabsTest, ClearTabs)
 
 TEST_F(OscilTabsTest, GetTab)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -110,7 +111,7 @@ TEST_F(OscilTabsTest, GetTab)
 
 TEST_F(OscilTabsTest, SetTabBadge)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
 
     tabs.setTabBadge(0, 5);
@@ -119,7 +120,7 @@ TEST_F(OscilTabsTest, SetTabBadge)
 
 TEST_F(OscilTabsTest, SetTabEnabled)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
 
     tabs.setTabEnabled(0, false);
@@ -135,7 +136,7 @@ TEST_F(OscilTabsTest, SetTabEnabled)
 
 TEST_F(OscilTabsTest, SetSelectedIndex)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
     tabs.addTab("Tab C", "c");
@@ -146,7 +147,7 @@ TEST_F(OscilTabsTest, SetSelectedIndex)
 
 TEST_F(OscilTabsTest, GetSelectedId)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -156,7 +157,7 @@ TEST_F(OscilTabsTest, GetSelectedId)
 
 TEST_F(OscilTabsTest, SetSelectedById)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -166,7 +167,7 @@ TEST_F(OscilTabsTest, SetSelectedById)
 
 TEST_F(OscilTabsTest, FirstTabAutoSelected)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.addTab("Tab A", "a");
     // First tab should be auto-selected (index 0)
@@ -175,7 +176,7 @@ TEST_F(OscilTabsTest, FirstTabAutoSelected)
 
 TEST_F(OscilTabsTest, InvalidIndexHandling)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.setSelectedIndex(0, false);
 
@@ -189,7 +190,7 @@ TEST_F(OscilTabsTest, InvalidIndexHandling)
 
 TEST_F(OscilTabsTest, SetOrientationHorizontal)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setOrientation(OscilTabs::Orientation::Horizontal);
     EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Horizontal);
@@ -197,7 +198,7 @@ TEST_F(OscilTabsTest, SetOrientationHorizontal)
 
 TEST_F(OscilTabsTest, SetOrientationVertical)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setOrientation(OscilTabs::Orientation::Vertical);
     EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Vertical);
@@ -205,7 +206,7 @@ TEST_F(OscilTabsTest, SetOrientationVertical)
 
 TEST_F(OscilTabsTest, SetVariantDefault)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setVariant(OscilTabs::Variant::Default);
     EXPECT_EQ(tabs.getVariant(), OscilTabs::Variant::Default);
@@ -213,7 +214,7 @@ TEST_F(OscilTabsTest, SetVariantDefault)
 
 TEST_F(OscilTabsTest, SetVariantPills)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setVariant(OscilTabs::Variant::Pills);
     EXPECT_EQ(tabs.getVariant(), OscilTabs::Variant::Pills);
@@ -221,7 +222,7 @@ TEST_F(OscilTabsTest, SetVariantPills)
 
 TEST_F(OscilTabsTest, SetVariantBordered)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setVariant(OscilTabs::Variant::Bordered);
     EXPECT_EQ(tabs.getVariant(), OscilTabs::Variant::Bordered);
@@ -229,7 +230,7 @@ TEST_F(OscilTabsTest, SetVariantBordered)
 
 TEST_F(OscilTabsTest, SetTabWidth)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setTabWidth(100);
     EXPECT_EQ(tabs.getTabWidth(), 100);
@@ -237,7 +238,7 @@ TEST_F(OscilTabsTest, SetTabWidth)
 
 TEST_F(OscilTabsTest, SetTabWidthZeroForAuto)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setTabWidth(0);  // Auto width
     EXPECT_EQ(tabs.getTabWidth(), 0);
@@ -245,7 +246,7 @@ TEST_F(OscilTabsTest, SetTabWidthZeroForAuto)
 
 TEST_F(OscilTabsTest, SetTabHeight)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setTabHeight(50);
     EXPECT_EQ(tabs.getTabHeight(), 50);
@@ -253,7 +254,7 @@ TEST_F(OscilTabsTest, SetTabHeight)
 
 TEST_F(OscilTabsTest, SetStretchTabs)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     tabs.setStretchTabs(true);
     EXPECT_TRUE(tabs.isStretchTabs());
@@ -268,7 +269,7 @@ TEST_F(OscilTabsTest, SetStretchTabs)
 
 TEST_F(OscilTabsTest, OnTabChangedCallback)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -287,7 +288,7 @@ TEST_F(OscilTabsTest, OnTabChangedCallback)
 
 TEST_F(OscilTabsTest, OnTabChangedIdCallback)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -306,7 +307,7 @@ TEST_F(OscilTabsTest, OnTabChangedIdCallback)
 
 TEST_F(OscilTabsTest, NoCallbackWhenNotifyFalse)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -326,7 +327,7 @@ TEST_F(OscilTabsTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilTabsTest, PreferredWidthPositive)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -336,7 +337,7 @@ TEST_F(OscilTabsTest, PreferredWidthPositive)
 
 TEST_F(OscilTabsTest, PreferredHeightPositive)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.addTab("Tab B", "b");
 
@@ -350,7 +351,7 @@ TEST_F(OscilTabsTest, PreferredHeightPositive)
 
 TEST_F(OscilTabsTest, ThemeChangeDoesNotThrow)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.addTab("Tab A", "a");
     tabs.setSelectedIndex(0, false);
 
@@ -364,7 +365,7 @@ TEST_F(OscilTabsTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilTabsTest, ThemeChangePreservesOrientation)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
     tabs.setOrientation(OscilTabs::Orientation::Vertical);
 
     ColorTheme newTheme;
@@ -380,7 +381,7 @@ TEST_F(OscilTabsTest, ThemeChangePreservesOrientation)
 
 TEST_F(OscilTabsTest, WantsKeyboardFocus)
 {
-    OscilTabs tabs;
+    OscilTabs tabs(ThemeManager::getInstance());
 
     EXPECT_TRUE(tabs.getWantsKeyboardFocus());
 }

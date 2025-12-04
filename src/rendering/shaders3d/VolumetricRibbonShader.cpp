@@ -60,52 +60,86 @@ static const char* ribbonFragmentShader = R"(
         return pow(srgb, vec3(2.2));
     }
 
+    // 2D Noise helper (texture based)
+    float noise(vec2 p) {
+        return texture(uNoiseTexture, p).r;
+    }
+
+    // FBM (Fractal Brownian Motion) for haze
+    float fbm(vec2 p) {
+        float f = 0.0;
+        float w = 0.5;
+        for (int i = 0; i < 4; i++) {
+            f += w * noise(p);
+            p *= 2.0;
+            w *= 0.5;
+        }
+        return f;
+    }
+
+    // Domain Warping for turbulence
+    float warp(vec2 p) {
+        vec2 q = vec2(fbm(p), fbm(p + vec2(5.2, 1.3)));
+        vec2 r = vec2(fbm(p + 4.0 * q + vec2(1.7, 9.2)), fbm(p + 4.0 * q + vec2(8.3, 2.8)));
+        return fbm(p + 4.0 * r);
+    }
+
+    // Ridged Noise for electric filigree
+    float ridgedNoise(vec2 p) {
+        return 1.0 - abs(noise(p) * 2.0 - 1.0);
+    }
+
     void main()
     {
         vec3 normal = normalize(vNormal);
         vec3 lightDir = normalize(uLightDir);
         vec3 viewDir = normalize(uCameraPos - vWorldPos);
 
-        // Diffuse lighting
+        // --- Pass 1: Background Haze (FBM) ---
+        vec2 hazeUV = vTexCoord * vec2(2.0, 1.0) + vec2(uTime * 0.1, 0.0);
+        float haze = fbm(hazeUV);
+        haze = smoothstep(0.2, 0.8, haze) * 0.5;
+
+        // --- Pass 2: Inner Turbulence (Domain Warp) ---
+        vec2 turbUV = vTexCoord * vec2(3.0, 1.0) - vec2(uTime * 0.2, 0.0);
+        float turbulence = warp(turbUV);
+        turbulence = pow(turbulence, 2.0); // Contrast
+
+        // --- Pass 3: Electric Filigree (Ridged Noise) ---
+        vec2 filigreeUV = vTexCoord * vec2(10.0, 4.0) + vec2(uTime * 0.5, 0.0);
+        // Distort filigree with turbulence
+        filigreeUV += vec2(turbulence * 0.2, 0.0);
+        float filigree = ridgedNoise(filigreeUV);
+        filigree = pow(filigree, 16.0); // Sharp ridges
+        filigree *= (1.0 + uGlowIntensity); // Boost with glow param
+
+        // --- Pass 4: Core (Fiber Bundle) ---
+        // Textured core using noise as fibers stretched along X
+        vec2 coreUV = vTexCoord * vec2(20.0, 1.0);
+        float coreNoise = noise(coreUV + vec2(uTime, 0.0));
+        // Center intensity fade
+        float coreFade = 1.0 - abs(vTexCoord.y - 0.5) * 2.0;
+        coreFade = pow(coreFade, 4.0); // Tight core
+        float core = coreNoise * coreFade * 3.0;
+
+        // --- Composition ---
+        float combined = haze + turbulence + filigree + core;
+        
+        // Lighting (Basic Rim + Diffuse)
         float diff = max(dot(normal, lightDir), 0.0);
-
-        // Specular lighting (Blinn-Phong)
-        vec3 halfDir = normalize(lightDir + viewDir);
-        float spec = pow(max(dot(normal, halfDir), 0.0), uSpecPower);
-
-        // Fresnel-like rim lighting for glow effect
         float rim = 1.0 - max(dot(viewDir, normal), 0.0);
-        rim = pow(rim, 2.0) * uGlowIntensity;
+        rim = pow(rim, 3.0);
 
-        // Flowing noise effect
-        // Scroll UVs along the tube length (x)
-        vec2 flowUV = vec2(vTexCoord.x * 2.0 - uTime * 0.5, vTexCoord.y);
-        float noise = texture(uNoiseTexture, flowUV).r;
-        
-        // Modulate pulse with noise
-        // Mix between smooth pulse and noisy flow based on glow intensity (higher glow = more turbulent)
-        float pulseBase = sin(vTexCoord.x * 20.0 - uTime * 3.0) * 0.5 + 0.5;
-        float flow = mix(pulseBase, noise, 0.7); 
-        
-        // Enhance contrast
-        flow = pow(flow, 1.5);
-        
-        // Convert to linear for correct tonemapping
         vec3 linearColor = sRGBToLinear(uColor.rgb);
+        vec3 finalColor = linearColor * combined;
+        
+        // Apply lighting tint
+        finalColor += uDiffuse * diff * 0.2;
+        finalColor += uAmbient * 0.1;
+        finalColor += linearColor * rim * uGlowIntensity;
 
-        // Combine lighting
-        vec3 ambient = uAmbient * linearColor;
-        vec3 diffuse = uDiffuse * diff * linearColor;
-        vec3 specular = uSpecular.rgb * spec * uSpecular.a;
-        vec3 glow = linearColor * rim;
-
-        vec3 result = (ambient + diffuse + specular + glow) * flow;
-
-        // Add core brightness
-        float coreBrightness = 1.0 + uGlowIntensity * 0.5;
-        result *= coreBrightness;
-
-        fragColor = vec4(result, uColor.a);
+        // Clamp and alpha
+        fragColor = vec4(finalColor, uColor.a * clamp(combined * 2.0, 0.0, 1.0));
     }
 )";
 

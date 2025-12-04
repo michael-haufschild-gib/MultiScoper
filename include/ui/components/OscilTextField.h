@@ -8,6 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -36,10 +37,10 @@ class OscilTextField : public juce::Component,
                        private juce::Timer
 {
 public:
-    OscilTextField();
-    explicit OscilTextField(TextFieldVariant variant);
-    explicit OscilTextField(const juce::String& testId);
-    OscilTextField(TextFieldVariant variant, const juce::String& testId);
+    OscilTextField(IThemeService& themeService);
+    OscilTextField(IThemeService& themeService, TextFieldVariant variant);
+    OscilTextField(IThemeService& themeService, const juce::String& testId);
+    OscilTextField(IThemeService& themeService, TextFieldVariant variant, const juce::String& testId);
     ~OscilTextField() override;
 
     // Variant configuration
@@ -155,6 +156,7 @@ private:
 
     // Theme
     ColorTheme theme_;
+    IThemeService& themeService_;
     juce::Font cachedErrorFont_;
 
     // Layout constants

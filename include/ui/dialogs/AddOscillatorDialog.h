@@ -1,6 +1,7 @@
 /*
     Oscil - Add Oscillator Dialog
-    Modal popup for creating a new oscillator with source and pane selection
+    Content component for adding a new oscillator
+    Designed to be hosted in OscilModal
 */
 
 #pragma once
@@ -10,10 +11,12 @@
 #include "ui/layout/Pane.h"
 #include "ui/theme/WaveformColorPalette.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilTextField.h"
 #include "ui/components/OscilColorSwatches.h"
+#include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/TestId.h"
 #include <functional>
 #include <vector>
@@ -22,8 +25,8 @@ namespace oscil
 {
 
 /**
- * Modal dialog for adding a new oscillator
- * Allows selection of source, pane, name, and color
+ * Content component for the add oscillator dialog
+ * Designed to be hosted inside an OscilModal
  */
 class AddOscillatorDialog : public juce::Component,
                              public ThemeManagerListener,
@@ -48,42 +51,44 @@ public:
      * Called with the result when OK is clicked with valid data
      */
     using Callback = std::function<void(const Result&)>;
+    using CancelCallback = std::function<void()>;
 
-    AddOscillatorDialog();
+    AddOscillatorDialog(IThemeService& themeService);
+    // AddOscillatorDialog(); // Legacy
     ~AddOscillatorDialog() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-    bool keyPressed(const juce::KeyPress& key) override;
 
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
 
     /**
-     * Show the dialog with available sources and panes
-     * @param parent Component to show dialog over (for modal positioning)
+     * Set up the dialog with available sources and panes
      * @param sources List of available audio sources
      * @param panes List of available panes
-     * @param onComplete Callback when oscillator creation is confirmed
      */
-    void showDialog(juce::Component* parent,
-                    const std::vector<SourceInfo>& sources,
-                    const std::vector<Pane>& panes,
-                    Callback onComplete);
+    void setData(const std::vector<SourceInfo>& sources,
+                 const std::vector<Pane>& panes);
 
     /**
-     * Hide the dialog without completing
+     * Set the callback for when OK is clicked with valid data
      */
-    void hideDialog();
+    void setOnComplete(Callback callback) { callback_ = std::move(callback); }
 
     /**
-     * Check if the dialog is currently visible
+     * Set the callback for when Cancel is clicked
      */
-    bool isDialogVisible() const { return isVisible(); }
+    void setOnCancel(CancelCallback callback) { cancelCallback_ = std::move(callback); }
 
-    // Preferred dimensions
-    static constexpr int DIALOG_WIDTH = 360;
-    static constexpr int DIALOG_HEIGHT = 550;
+    /**
+     * Reset the dialog state for reuse
+     */
+    void reset();
+
+    // Preferred dimensions for OscilModal
+    int getPreferredWidth() const { return CONTENT_WIDTH; }
+    int getPreferredHeight() const { return CONTENT_HEIGHT; }
 
     // Number of color swatches (from centralized palette)
     static constexpr size_t NUM_COLOR_SWATCHES = WaveformColorPalette::NUM_COLORS;
@@ -91,15 +96,12 @@ public:
 private:
     void setupComponents();
     void populateSourceDropdown();
-    void populatePaneDropdown();
     void populateVisualPresetDropdown();
     void selectRandomColor();
     void updateNameFromSource();
     void handleSourceChange();
-    void handlePaneChange();
     void handleOkClick();
     void handleCancelClick();
-    void handleCloseClick();
     void showError(const juce::String& message);
     void clearError();
     bool validateInput();
@@ -108,10 +110,7 @@ private:
     std::vector<SourceInfo> sources_;
     std::vector<Pane> panes_;
     Callback callback_;
-
-    // Header
-    std::unique_ptr<juce::Label> titleLabel_;
-    std::unique_ptr<OscilButton> closeButton_;
+    CancelCallback cancelCallback_;
 
     // Source section
     std::unique_ptr<juce::Label> sourceLabel_;
@@ -119,7 +118,7 @@ private:
 
     // Pane section
     std::unique_ptr<juce::Label> paneLabel_;
-    std::unique_ptr<OscilDropdown> paneDropdown_;
+    std::unique_ptr<PaneSelectorComponent> paneSelector_;
 
     // Name section
     std::unique_ptr<juce::Label> nameLabel_;
@@ -142,21 +141,19 @@ private:
 
     // Theme cache
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     // Get default colors from centralized palette
     std::vector<juce::Colour> getDefaultColors() const { return WaveformColorPalette::getAllColors(); }
 
-    // Layout constants
-    static constexpr int HEADER_HEIGHT = 40;
-    static constexpr int SECTION_SPACING = 16;
-    static constexpr int LABEL_HEIGHT = 20;
+    // Layout constants - content only (no header, OscilModal provides title bar)
+    static constexpr int CONTENT_WIDTH = 320;
+    static constexpr int CONTENT_HEIGHT = 420;
+    static constexpr int SECTION_SPACING = 12;
+    static constexpr int LABEL_HEIGHT = 18;
     static constexpr int CONTROL_HEIGHT = 32;
     static constexpr int BUTTON_HEIGHT = 36;
-    static constexpr int PADDING = 20;
     static constexpr int COLOR_PICKER_HEIGHT = 32;
-
-    // Special index for "New pane" option
-    static constexpr int NEW_PANE_OPTION_INDEX = 0;
 
     OSCIL_TESTABLE();
 

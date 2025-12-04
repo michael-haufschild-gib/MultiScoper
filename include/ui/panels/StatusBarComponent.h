@@ -11,6 +11,8 @@
 namespace oscil
 {
 
+class IThemeService;
+
 /**
  * Rendering mode enumeration
  */
@@ -27,17 +29,18 @@ class StatusBarComponent : public juce::Component,
                            public TestIdSupport
 {
 public:
-    StatusBarComponent();
+    explicit StatusBarComponent(IThemeService& themeService);
     ~StatusBarComponent() override = default;
 
     void paint(juce::Graphics& g) override;
+    void resized() override;
 
-    void setFps(float fps) { currentFps_ = fps; }
-    void setCpuUsage(float cpu) { cpuUsage_ = cpu; }
-    void setMemoryUsage(float memory) { memoryUsage_ = memory; }
-    void setOscillatorCount(int count) { oscillatorCount_ = count; }
-    void setSourceCount(int count) { sourceCount_ = count; }
-    void setRenderingMode(RenderingMode mode) { renderingMode_ = mode; }
+    void setFps(float fps);
+    void setCpuUsage(float cpu);
+    void setMemoryUsage(float memory);
+    void setOscillatorCount(int count);
+    void setSourceCount(int count);
+    void setRenderingMode(RenderingMode mode);
 
     RenderingMode getRenderingMode() const { return renderingMode_; }
 
@@ -47,12 +50,27 @@ public:
     static RenderingMode detectRenderingMode();
 
 private:
+    void updateFpsLabel();
+    void updateCpuLabel();
+    void updateMemoryLabel();
+    void updateOscillatorLabel();
+    void updateSourceLabel();
+    void updateRenderModeLabel();
+
+    IThemeService& themeService_;
     float currentFps_ = 0.0f;
     float cpuUsage_ = 0.0f;
     float memoryUsage_ = 0.0f;
     int oscillatorCount_ = 0;
     int sourceCount_ = 0;
     RenderingMode renderingMode_ = RenderingMode::Software;
+
+    std::unique_ptr<juce::Label> fpsLabel_;
+    std::unique_ptr<juce::Label> cpuLabel_;
+    std::unique_ptr<juce::Label> memoryLabel_;
+    std::unique_ptr<juce::Label> oscillatorLabel_;
+    std::unique_ptr<juce::Label> sourceLabel_;
+    std::unique_ptr<juce::Label> renderModeLabel_;
 
     // TestIdSupport
     OSCIL_TESTABLE();

@@ -83,8 +83,8 @@ struct AtomicMetadata
 
         // Low retry limit since writes are very fast (nanoseconds)
         // If writer crashes mid-update, we don't want to spin long on UI thread
-        // Increased to 100 to handle thread preemption in high-contention CI environments
-        static constexpr int MAX_RETRIES = 100;
+        // Increased to 1000 to handle thread preemption in high-contention CI environments
+        static constexpr int MAX_RETRIES = 1000;
         int retries = 0;
 
         for (;;) {
@@ -144,9 +144,11 @@ struct AtomicMetadata
 class SharedCaptureBuffer : public IAudioBuffer
 {
 public:
-    // Default buffer capacity: ~1 second at 192kHz stereo = 192000 * 2 * 4 bytes = 1.5MB
-    // We'll use a smaller window for visualization purposes
-    static constexpr size_t DEFAULT_BUFFER_SAMPLES = 65536; // ~1.5s at 44.1kHz
+    // Buffer capacity must accommodate MAX_TIME_INTERVAL_MS (4000ms) at max sample rate (192kHz)
+    // Calculation: 4000ms × 192kHz = 768,000 samples minimum
+    // Using next power of 2: 1,048,576 (2^20) = ~5.5s @ 192kHz, ~24s @ 44.1kHz
+    // Memory: 2 channels × 4 bytes × 1M samples = ~8MB per buffer
+    static constexpr size_t DEFAULT_BUFFER_SAMPLES = 1048576;
     static constexpr size_t MAX_CHANNELS = 2;
 
     /**
@@ -247,7 +249,7 @@ public:
 
 private:
     size_t capacity_;
-    std::vector<std::vector<float>> buffers_; // One vector per channel
+    std::vector<float> buffer_; // Flat buffer: [Channel 0][Channel 1]...
     std::atomic<size_t> writePos_{ 0 };
     std::atomic<size_t> samplesWritten_{ 0 };
     

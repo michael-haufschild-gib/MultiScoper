@@ -7,16 +7,17 @@
 namespace oscil
 {
 
-OscilButton::OscilButton(const juce::String& text)
+OscilButton::OscilButton(IThemeService& themeService, const juce::String& text)
     : label_(text)
     , scaleSpring_(SpringPresets::snappy())
     , brightnessSpring_(SpringPresets::stiff())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     scaleSpring_.position = 1.0f;
     scaleSpring_.target = 1.0f;
@@ -24,18 +25,24 @@ OscilButton::OscilButton(const juce::String& text)
     brightnessSpring_.target = 0.0f;
 }
 
-OscilButton::OscilButton(const juce::String& text, const juce::String& testId)
-    : OscilButton(text)
+
+
+OscilButton::OscilButton(IThemeService& themeService, const juce::String& text, const juce::String& testId)
+    : OscilButton(themeService, text)
 {
     setTestId(testId);
 }
 
-OscilButton::OscilButton(const juce::Image& icon)
-    : OscilButton(juce::String{})
+
+
+OscilButton::OscilButton(IThemeService& themeService, const juce::Image& icon)
+    : OscilButton(themeService, juce::String{})
 {
     icon_ = icon;
     variant_ = ButtonVariant::Icon;
 }
+
+
 
 void OscilButton::registerTestId()
 {
@@ -44,7 +51,7 @@ void OscilButton::registerTestId()
 
 OscilButton::~OscilButton()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 

@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -57,9 +58,9 @@ public:
         Bordered    // Border around selected tab
     };
 
-    OscilTabs();
-    explicit OscilTabs(Orientation orientation);
-    OscilTabs(Orientation orientation, const juce::String& testId);
+    explicit OscilTabs(IThemeService& themeService);
+    OscilTabs(IThemeService& themeService, Orientation orientation);
+    OscilTabs(IThemeService& themeService, Orientation orientation, const juce::String& testId);
     ~OscilTabs() override;
 
     // Tab management
@@ -157,6 +158,7 @@ private:
     float targetIndicatorWidth_ = 0;
 
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     static constexpr int DEFAULT_TAB_HEIGHT = 40;
     static constexpr int INDICATOR_HEIGHT = 3;

@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilBadge.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilBadgeTest, DefaultConstruction)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     EXPECT_TRUE(badge.getText().isEmpty());
     EXPECT_EQ(badge.getColor(), BadgeColor::Default);
@@ -30,14 +31,14 @@ TEST_F(OscilBadgeTest, DefaultConstruction)
 
 TEST_F(OscilBadgeTest, ConstructionWithText)
 {
-    OscilBadge badge("New");
+    OscilBadge badge(ThemeManager::getInstance(), "New");
 
     EXPECT_EQ(badge.getText(), juce::String("New"));
 }
 
 TEST_F(OscilBadgeTest, ConstructionWithTextAndColor)
 {
-    OscilBadge badge("Success", BadgeColor::Success);
+    OscilBadge badge(ThemeManager::getInstance(), "Success", BadgeColor::Success);
 
     EXPECT_EQ(badge.getText(), juce::String("Success"));
     EXPECT_EQ(badge.getColor(), BadgeColor::Success);
@@ -45,7 +46,7 @@ TEST_F(OscilBadgeTest, ConstructionWithTextAndColor)
 
 TEST_F(OscilBadgeTest, ConstructionWithTestId)
 {
-    OscilBadge badge("Test", BadgeColor::Default, "badge-1");
+    OscilBadge badge(ThemeManager::getInstance(), "Test", BadgeColor::Default, "badge-1");
 
     EXPECT_EQ(badge.getText(), juce::String("Test"));
 }
@@ -56,7 +57,7 @@ TEST_F(OscilBadgeTest, ConstructionWithTestId)
 
 TEST_F(OscilBadgeTest, SetText)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setText("New");
 
     EXPECT_EQ(badge.getText(), juce::String("New"));
@@ -64,7 +65,7 @@ TEST_F(OscilBadgeTest, SetText)
 
 TEST_F(OscilBadgeTest, SetEmptyText)
 {
-    OscilBadge badge("Initial");
+    OscilBadge badge(ThemeManager::getInstance(), "Initial");
     badge.setText("");
 
     EXPECT_TRUE(badge.getText().isEmpty());
@@ -72,7 +73,7 @@ TEST_F(OscilBadgeTest, SetEmptyText)
 
 TEST_F(OscilBadgeTest, SetIcon)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     juce::Image icon(juce::Image::ARGB, 16, 16, true);
     badge.setIcon(icon);
@@ -82,7 +83,7 @@ TEST_F(OscilBadgeTest, SetIcon)
 
 TEST_F(OscilBadgeTest, ClearIcon)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     juce::Image icon(juce::Image::ARGB, 16, 16, true);
     badge.setIcon(icon);
@@ -97,7 +98,7 @@ TEST_F(OscilBadgeTest, ClearIcon)
 
 TEST_F(OscilBadgeTest, SetColorDefault)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setColor(BadgeColor::Default);
     EXPECT_EQ(badge.getColor(), BadgeColor::Default);
@@ -105,7 +106,7 @@ TEST_F(OscilBadgeTest, SetColorDefault)
 
 TEST_F(OscilBadgeTest, SetColorSuccess)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setColor(BadgeColor::Success);
     EXPECT_EQ(badge.getColor(), BadgeColor::Success);
@@ -113,7 +114,7 @@ TEST_F(OscilBadgeTest, SetColorSuccess)
 
 TEST_F(OscilBadgeTest, SetColorWarning)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setColor(BadgeColor::Warning);
     EXPECT_EQ(badge.getColor(), BadgeColor::Warning);
@@ -121,7 +122,7 @@ TEST_F(OscilBadgeTest, SetColorWarning)
 
 TEST_F(OscilBadgeTest, SetColorError)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setColor(BadgeColor::Error);
     EXPECT_EQ(badge.getColor(), BadgeColor::Error);
@@ -129,7 +130,7 @@ TEST_F(OscilBadgeTest, SetColorError)
 
 TEST_F(OscilBadgeTest, SetColorInfo)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setColor(BadgeColor::Info);
     EXPECT_EQ(badge.getColor(), BadgeColor::Info);
@@ -141,7 +142,7 @@ TEST_F(OscilBadgeTest, SetColorInfo)
 
 TEST_F(OscilBadgeTest, SetVariantFilled)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setVariant(BadgeVariant::Filled);
     EXPECT_EQ(badge.getVariant(), BadgeVariant::Filled);
@@ -149,7 +150,7 @@ TEST_F(OscilBadgeTest, SetVariantFilled)
 
 TEST_F(OscilBadgeTest, SetVariantOutline)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setVariant(BadgeVariant::Outline);
     EXPECT_EQ(badge.getVariant(), BadgeVariant::Outline);
@@ -161,7 +162,7 @@ TEST_F(OscilBadgeTest, SetVariantOutline)
 
 TEST_F(OscilBadgeTest, SetCompact)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
 
     badge.setCompact(true);
     EXPECT_TRUE(badge.isCompact());
@@ -172,7 +173,7 @@ TEST_F(OscilBadgeTest, SetCompact)
 
 TEST_F(OscilBadgeTest, CompactModeAffectsSize)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setText("Status");
 
     badge.setCompact(false);
@@ -191,7 +192,7 @@ TEST_F(OscilBadgeTest, CompactModeAffectsSize)
 
 TEST_F(OscilBadgeTest, PreferredWidthPositive)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setText("Status");
 
     int width = badge.getPreferredWidth();
@@ -200,7 +201,7 @@ TEST_F(OscilBadgeTest, PreferredWidthPositive)
 
 TEST_F(OscilBadgeTest, PreferredHeightPositive)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setText("Status");
 
     int height = badge.getPreferredHeight();
@@ -209,10 +210,10 @@ TEST_F(OscilBadgeTest, PreferredHeightPositive)
 
 TEST_F(OscilBadgeTest, PreferredWidthIncreasesWithText)
 {
-    OscilBadge shortBadge;
+    OscilBadge shortBadge(ThemeManager::getInstance());
     shortBadge.setText("OK");
 
-    OscilBadge longBadge;
+    OscilBadge longBadge(ThemeManager::getInstance());
     longBadge.setText("Very Long Badge Text");
 
     EXPECT_GT(longBadge.getPreferredWidth(), shortBadge.getPreferredWidth());
@@ -220,7 +221,7 @@ TEST_F(OscilBadgeTest, PreferredWidthIncreasesWithText)
 
 TEST_F(OscilBadgeTest, EmptyTextHasMinimumWidth)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setText("");
 
     EXPECT_GT(badge.getPreferredWidth(), 0);
@@ -232,7 +233,7 @@ TEST_F(OscilBadgeTest, EmptyTextHasMinimumWidth)
 
 TEST_F(OscilBadgeTest, ThemeChangeDoesNotThrow)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setText("Test");
     badge.setColor(BadgeColor::Success);
 
@@ -247,7 +248,7 @@ TEST_F(OscilBadgeTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilBadgeTest, ThemeChangePreservesVariant)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setVariant(BadgeVariant::Outline);
 
     ColorTheme newTheme;
@@ -259,7 +260,7 @@ TEST_F(OscilBadgeTest, ThemeChangePreservesVariant)
 
 TEST_F(OscilBadgeTest, ThemeChangePreservesCompact)
 {
-    OscilBadge badge;
+    OscilBadge badge(ThemeManager::getInstance());
     badge.setCompact(true);
 
     ColorTheme newTheme;

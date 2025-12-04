@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilModal.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilModalTest, DefaultConstruction)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     EXPECT_FALSE(modal.isShowing());
     EXPECT_TRUE(modal.getTitle().isEmpty());
@@ -28,14 +29,14 @@ TEST_F(OscilModalTest, DefaultConstruction)
 
 TEST_F(OscilModalTest, ConstructionWithTitle)
 {
-    OscilModal modal("Confirm Action");
+    OscilModal modal(ThemeManager::getInstance(), "Confirm Action");
 
     EXPECT_EQ(modal.getTitle(), juce::String("Confirm Action"));
 }
 
 TEST_F(OscilModalTest, ConstructionWithTitleAndTestId)
 {
-    OscilModal modal("Confirm", "modal-1");
+    OscilModal modal(ThemeManager::getInstance(), "Confirm", "modal-1");
 
     EXPECT_EQ(modal.getTitle(), juce::String("Confirm"));
 }
@@ -46,7 +47,7 @@ TEST_F(OscilModalTest, ConstructionWithTitleAndTestId)
 
 TEST_F(OscilModalTest, SetTitle)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
     modal.setTitle("Confirm Action");
 
     EXPECT_EQ(modal.getTitle(), juce::String("Confirm Action"));
@@ -54,7 +55,7 @@ TEST_F(OscilModalTest, SetTitle)
 
 TEST_F(OscilModalTest, SetEmptyTitle)
 {
-    OscilModal modal("Initial");
+    OscilModal modal(ThemeManager::getInstance(), "Initial");
     modal.setTitle("");
 
     EXPECT_TRUE(modal.getTitle().isEmpty());
@@ -66,7 +67,7 @@ TEST_F(OscilModalTest, SetEmptyTitle)
 
 TEST_F(OscilModalTest, SetContent)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     juce::Component content;
     modal.setContent(&content);
@@ -75,7 +76,7 @@ TEST_F(OscilModalTest, SetContent)
 
 TEST_F(OscilModalTest, ClearContent)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     juce::Component content;
     modal.setContent(&content);
@@ -89,7 +90,7 @@ TEST_F(OscilModalTest, ClearContent)
 
 TEST_F(OscilModalTest, SetSizeSmall)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setSize(ModalSize::Small);
     EXPECT_EQ(modal.getModalSize(), ModalSize::Small);
@@ -97,7 +98,7 @@ TEST_F(OscilModalTest, SetSizeSmall)
 
 TEST_F(OscilModalTest, SetSizeMedium)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setSize(ModalSize::Medium);
     EXPECT_EQ(modal.getModalSize(), ModalSize::Medium);
@@ -105,7 +106,7 @@ TEST_F(OscilModalTest, SetSizeMedium)
 
 TEST_F(OscilModalTest, SetSizeLarge)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setSize(ModalSize::Large);
     EXPECT_EQ(modal.getModalSize(), ModalSize::Large);
@@ -113,7 +114,7 @@ TEST_F(OscilModalTest, SetSizeLarge)
 
 TEST_F(OscilModalTest, SetSizeFullScreen)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setSize(ModalSize::FullScreen);
     EXPECT_EQ(modal.getModalSize(), ModalSize::FullScreen);
@@ -121,7 +122,7 @@ TEST_F(OscilModalTest, SetSizeFullScreen)
 
 TEST_F(OscilModalTest, SetCustomSize)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setCustomSize(400, 300);
     // Just verify it doesn't crash - custom size is internal
@@ -133,7 +134,7 @@ TEST_F(OscilModalTest, SetCustomSize)
 
 TEST_F(OscilModalTest, SetShowCloseButton)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setShowCloseButton(true);
     EXPECT_TRUE(modal.getShowCloseButton());
@@ -144,7 +145,7 @@ TEST_F(OscilModalTest, SetShowCloseButton)
 
 TEST_F(OscilModalTest, SetCloseOnEscape)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setCloseOnEscape(true);
     EXPECT_TRUE(modal.getCloseOnEscape());
@@ -155,7 +156,7 @@ TEST_F(OscilModalTest, SetCloseOnEscape)
 
 TEST_F(OscilModalTest, SetCloseOnBackdropClick)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.setCloseOnBackdropClick(true);
     EXPECT_TRUE(modal.getCloseOnBackdropClick());
@@ -170,7 +171,7 @@ TEST_F(OscilModalTest, SetCloseOnBackdropClick)
 
 TEST_F(OscilModalTest, ShowModal)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     // Note: show() requires a parent, so just test without one
     // The modal animation system means isShowing() depends on spring state
@@ -180,7 +181,7 @@ TEST_F(OscilModalTest, ShowModal)
 
 TEST_F(OscilModalTest, HideModal)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.hide();
     // Just verify it doesn't crash
@@ -188,7 +189,7 @@ TEST_F(OscilModalTest, HideModal)
 
 TEST_F(OscilModalTest, HideWhenNotShown)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     // Should not crash when hiding a non-visible modal
     modal.hide();
@@ -200,7 +201,7 @@ TEST_F(OscilModalTest, HideWhenNotShown)
 
 TEST_F(OscilModalTest, OnCloseCallback)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     bool closeCalled = false;
     modal.onClose = [&closeCalled]() {
@@ -214,7 +215,7 @@ TEST_F(OscilModalTest, OnCloseCallback)
 
 TEST_F(OscilModalTest, OnCloseRequestedCallback)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     bool requestCalled = false;
     modal.onCloseRequested = [&requestCalled]() {
@@ -229,7 +230,7 @@ TEST_F(OscilModalTest, OnCloseRequestedCallback)
 
 TEST_F(OscilModalTest, OnCloseRequestedPreventClose)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     modal.onCloseRequested = []() {
         return false;  // Prevent close
@@ -245,7 +246,7 @@ TEST_F(OscilModalTest, OnCloseRequestedPreventClose)
 
 TEST_F(OscilModalTest, ThemeChangeDoesNotThrow)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
     modal.setTitle("Test Modal");
 
     ColorTheme newTheme;
@@ -258,7 +259,7 @@ TEST_F(OscilModalTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilModalTest, ThemeChangePreservesSize)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
     modal.setSize(ModalSize::Large);
 
     ColorTheme newTheme;
@@ -270,7 +271,7 @@ TEST_F(OscilModalTest, ThemeChangePreservesSize)
 
 TEST_F(OscilModalTest, ThemeChangePreservesConfiguration)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
     modal.setShowCloseButton(false);
     modal.setCloseOnEscape(false);
 
@@ -288,7 +289,7 @@ TEST_F(OscilModalTest, ThemeChangePreservesConfiguration)
 
 TEST_F(OscilModalTest, WantsKeyboardFocus)
 {
-    OscilModal modal;
+    OscilModal modal(ThemeManager::getInstance());
 
     // Modal should capture focus for keyboard navigation
     EXPECT_TRUE(modal.getWantsKeyboardFocus());

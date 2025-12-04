@@ -7,15 +7,16 @@
 namespace oscil
 {
 
-OscilToggle::OscilToggle()
+OscilToggle::OscilToggle(IThemeService& themeService)
     : positionSpring_(SpringPresets::bouncy())
     , celebrationSpring_(SpringPresets::snappy())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     positionSpring_.position = 0.0f;
     positionSpring_.target = 0.0f;
@@ -33,18 +34,24 @@ OscilToggle::OscilToggle()
     };
 }
 
-OscilToggle::OscilToggle(const juce::String& label)
-    : OscilToggle()
+
+
+OscilToggle::OscilToggle(IThemeService& themeService, const juce::String& label)
+    : OscilToggle(themeService)
 {
     label_ = label;
 }
 
-OscilToggle::OscilToggle(const juce::String& label, const juce::String& testId)
-    : OscilToggle()
+
+
+OscilToggle::OscilToggle(IThemeService& themeService, const juce::String& label, const juce::String& testId)
+    : OscilToggle(themeService)
 {
     label_ = label;
     setTestId(testId);
 }
+
+
 
 void OscilToggle::registerTestId()
 {
@@ -53,7 +60,7 @@ void OscilToggle::registerTestId()
 
 OscilToggle::~OscilToggle()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 

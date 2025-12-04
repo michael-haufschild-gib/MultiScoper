@@ -4,17 +4,17 @@
 */
 
 #include "ui/theme/ColorPickerComponent.h"
-#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
 
-ColorPickerComponent::ColorPickerComponent()
+ColorPickerComponent::ColorPickerComponent(IThemeService& themeService)
+    : themeService_(themeService)
 {
     // Create sliders for RGBA channels
     auto createSlider = [this](std::unique_ptr<OscilSlider>& slider)
     {
-        slider = std::make_unique<OscilSlider>();
+        slider = std::make_unique<OscilSlider>(themeService_);
         slider->setRange(0, 255);
         slider->setStep(1);
         slider->setDecimalPlaces(0);
@@ -43,7 +43,7 @@ ColorPickerComponent::ColorPickerComponent()
     createLabel(hexLabel_, "Hex:");
 
     // Create hex input
-    hexInput_ = std::make_unique<OscilTextField>();
+    hexInput_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "");
     hexInput_->setPlaceholder("#RRGGBBAA");
     hexInput_->onReturnPressed = [this]() { updateFromHex(); };
     addAndMakeVisible(*hexInput_);
@@ -54,7 +54,7 @@ ColorPickerComponent::ColorPickerComponent()
 
 void ColorPickerComponent::paint(juce::Graphics& g)
 {
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
 
     // Draw background
     g.setColour(theme.backgroundSecondary);

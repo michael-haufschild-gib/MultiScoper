@@ -7,6 +7,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
+#include "core/ServiceContext.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/layout/sections/SectionConstants.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
@@ -45,7 +47,8 @@ public:
         virtual void bpmChanged(float /*bpm*/) {}
     };
 
-    TimingSidebarSection();
+    explicit TimingSidebarSection(ServiceContext& context);
+    explicit TimingSidebarSection(IThemeService& themeService);
     ~TimingSidebarSection() override;
 
     void paint(juce::Graphics& g) override;
@@ -115,6 +118,8 @@ private:
     std::unique_ptr<TimingPresenter> presenter_;
 
     juce::ListenerList<Listener> listeners_;
+
+    IThemeService& themeService_;
 
     OSCIL_TESTABLE();
 

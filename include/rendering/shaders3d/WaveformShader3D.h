@@ -7,6 +7,7 @@
 
 #include "rendering/Camera3D.h"
 #include "rendering/WaveformShader.h"
+#include "rendering/LightingConfig.h"
 #include <juce_opengl/juce_opengl.h>
 #include <vector>
 #include <memory>
@@ -29,25 +30,6 @@ struct WaveformData3D
     float yOffset = 0.0f;            // Y-axis offset for stereo separation
     float amplitude = 1.0f;          // Amplitude scaling
     float time = 0.0f;               // Animation time
-};
-
-/**
- * Lighting configuration for 3D shaders.
- */
-struct LightingConfig
-{
-    // Directional light
-    float lightDirX = 0.5f;
-    float lightDirY = 1.0f;
-    float lightDirZ = 0.3f;
-
-    // Colors
-    float ambientR = 0.1f, ambientG = 0.1f, ambientB = 0.15f;
-    float diffuseR = 1.0f, diffuseG = 1.0f, diffuseB = 1.0f;
-    float specularR = 1.0f, specularG = 1.0f, specularB = 1.0f;
-
-    float specularPower = 32.0f;
-    float specularIntensity = 0.5f;
 };
 
 /**

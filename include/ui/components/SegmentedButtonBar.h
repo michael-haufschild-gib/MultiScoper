@@ -8,6 +8,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/OscilButton.h"
 #include <vector>
 
@@ -25,7 +26,7 @@ class SegmentedButtonBar : public juce::Component,
                             public ThemeManagerListener
 {
 public:
-    SegmentedButtonBar();
+    SegmentedButtonBar(IThemeService& themeService);
     ~SegmentedButtonBar() override;
 
     void paint(juce::Graphics& g) override;
@@ -97,6 +98,8 @@ private:
     int selectedId_ = -1;
     bool enabled_ = true;
     int minButtonWidth_ = 60;
+
+    IThemeService& themeService_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SegmentedButtonBar)
 };

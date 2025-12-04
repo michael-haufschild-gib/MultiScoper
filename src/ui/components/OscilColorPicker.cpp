@@ -7,10 +7,14 @@
 namespace oscil
 {
 
-OscilColorPicker::OscilColorPicker()
+OscilColorPicker::OscilColorPicker(IThemeService& themeService, const juce::String& testId)
+    : themeService_(themeService)
 {
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    if (testId.isNotEmpty())
+        setTestId(testId);
+
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     currentColor_ = juce::Colours::red;
     originalColor_ = currentColor_;
@@ -37,12 +41,6 @@ OscilColorPicker::OscilColorPicker()
     updateHexField();
 }
 
-OscilColorPicker::OscilColorPicker(const juce::String& testId)
-    : OscilColorPicker()
-{
-    setTestId(testId);
-}
-
 void OscilColorPicker::registerTestId()
 {
     OSCIL_REGISTER_TEST_ID(testId_);
@@ -50,7 +48,7 @@ void OscilColorPicker::registerTestId()
 
 OscilColorPicker::~OscilColorPicker()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 

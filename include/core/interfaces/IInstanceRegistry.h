@@ -11,6 +11,7 @@
 #include <optional>
 #include <atomic>
 #include "core/Source.h"
+#include "core/interfaces/IAudioBuffer.h"
 
 namespace oscil
 {
@@ -28,7 +29,7 @@ struct SourceInfo
     juce::String trackIdentifier;               // DAW-provided track identifier
     int channelCount = 2;                       // Number of channels (1 = mono, 2 = stereo)
     double sampleRate = 44100.0;
-    std::weak_ptr<SharedCaptureBuffer> buffer;  // Weak reference to capture buffer
+    std::weak_ptr<IAudioBuffer> buffer;         // Weak reference to capture buffer
     std::atomic<bool> active{ true };
 
     SourceInfo() = default;
@@ -89,7 +90,7 @@ public:
      */
     virtual SourceId registerInstance(
         const juce::String& trackIdentifier,
-        std::shared_ptr<SharedCaptureBuffer> captureBuffer,
+        std::shared_ptr<IAudioBuffer> captureBuffer,
         const juce::String& name = "Track",
         int channelCount = 2,
         double sampleRate = 44100.0) = 0;
@@ -112,7 +113,7 @@ public:
     /**
      * Get the capture buffer for a source
      */
-    virtual std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer(const SourceId& sourceId) const = 0;
+    virtual std::shared_ptr<IAudioBuffer> getCaptureBuffer(const SourceId& sourceId) const = 0;
 
     /**
      * Update source metadata

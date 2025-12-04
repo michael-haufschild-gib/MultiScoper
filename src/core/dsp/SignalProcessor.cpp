@@ -245,19 +245,29 @@ void SignalProcessor::decimate(std::span<const float> input,
 
     if (inputLength <= outputLength)
     {
-        // Upsampling or same size - copy input and fill remaining with last value
-        size_t copyCount = std::min(inputLength, outputLength);
-        std::copy(input.begin(), input.begin() + static_cast<std::ptrdiff_t>(copyCount), output.begin());
-
-        // Fill remaining output with the last input value (sample-and-hold)
-        if (copyCount < outputLength && copyCount > 0)
+        if (inputLength == 0) 
         {
-            float lastValue = input[copyCount - 1];
-            std::fill(output.begin() + static_cast<std::ptrdiff_t>(copyCount), output.end(), lastValue);
+            std::fill(output.begin(), output.end(), 0.0f);
+            return;
         }
-        else if (copyCount < outputLength)
+
+        // Upsampling with linear interpolation
+        if (inputLength == 1)
         {
-             std::fill(output.begin() + static_cast<std::ptrdiff_t>(copyCount), output.end(), 0.0f);
+            std::fill(output.begin(), output.end(), input[0]);
+            return;
+        }
+
+        double scale = static_cast<double>(inputLength - 1) / static_cast<double>(outputLength - 1);
+        
+        for (size_t i = 0; i < outputLength; ++i)
+        {
+            double pos = static_cast<double>(i) * scale;
+            size_t idx0 = static_cast<size_t>(pos);
+            size_t idx1 = std::min(idx0 + 1, inputLength - 1);
+            float frac = static_cast<float>(pos - static_cast<double>(idx0));
+            
+            output[i] = input[idx0] * (1.0f - frac) + input[idx1] * frac;
         }
         return;
     }

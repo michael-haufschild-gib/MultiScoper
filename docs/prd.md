@@ -4659,21 +4659,6 @@ then create a plan to add elements and to refactor existing elements based on yo
 
 
 
-----
-
-
-  * Standardize colors using ThemeManager constants where any hardcoded hex values remain.
-
- Continue reviewing other large components for similar refactoring opportunities (e.g., OscilPluginEditor.cpp).
-   * add unit tests specifically for the new OscillatorListComponent logic if not covered by existing E2E tests.
-
-
-plan the refactoring of OscilPluginEditor.cpp to break it into smaller components
-
-
-1. in the src/ui/components/OscilModal.cpp component, for the x icon in the top right corner to close the modal, use the image resources/icomoon/SVG/cross.svg
-2. make sure the icon is in the correct position following best ui practices (currently it sits in the first line next to other components).
-2. make sure every modal / dialog uses the src/ui/components/OscilModal.cpp and is not duplicating functionality we have already implemented in src/ui/components/OscilModal.cpp
 
 ---
 plan and then implement the following new feature:
@@ -4702,9 +4687,6 @@ plan and then implement the following new feature:
 8. Pane dropdown selection and creation is already available in two places in this project: the "add oscillator" dialog and the oscillator config popup. consolidate the code so we do not have duplicated code/functionality.
 ---
 
-Plan and implement these changes to the Oscillator Config Popup:
-1. Remove the visibile/hide toggle switch from the popup
-2. Remove the delete button from the popup
 
 ---
 Plan and implement these changes:
@@ -4722,11 +4704,17 @@ Plan and implement these changes:
 
 ---
 
-High – RenderEngine.cpp (~1.3K LOC, esp. init/render/shutdown sections) bundles OpenGL context bootstrapping, shader compilation, framebuffer pooling, per-frame orchestration, waveform compositing, and diagnostics. Extract subsystems (RenderBootstrapper, EffectPipeline, WaveformPass, HUD/Stats) to keep real-time rendering code auditable and avoid regressions when touching one concern.
+We have a "god class/file" which needs refactoring. Review and plan and implement. Update tests.
+File:
+RenderEngine.cpp (~1.3K LOC, esp. init/render/shutdown sections) bundles OpenGL context bootstrapping, shader compilation, framebuffer pooling, per-frame orchestration, waveform compositing, and diagnostics. Extract subsystems (RenderBootstrapper, EffectPipeline, WaveformPass, HUD/Stats) to keep real-time rendering code auditable and avoid regressions when touching one concern.
 
-High – PluginEditor.cpp (~1.1K LOC across constructor/timer/layout handlers) currently couples coordinator creation, sidebar wiring, OpenGL toggling, test-server lifecycle, metrics reporting, drag-drop handling, and pane refresh logic. Break into presenter/controller units (PluginEditorLayout, PerformanceMetricsController, GpuRenderCoordinator) so UI changes stop cascading through unrelated behaviors.
+We have a "god class/file" which needs refactoring. Review and plan and implement. Update tests.
+File:
+PluginEditor.cpp (~1.1K LOC across constructor/timer/layout handlers) currently couples coordinator creation, sidebar wiring, OpenGL toggling, test-server lifecycle, metrics reporting, drag-drop handling, and pane refresh logic. Break into presenter/controller units (PluginEditorLayout, PerformanceMetricsController, GpuRenderCoordinator) so UI changes stop cascading through unrelated behaviors.
 
-High – OscilDropdown.cpp (~1.1K LOC) owns popup chrome, filtering, search field, painting, keyboard navigation, and animation tweening inside one translation unit. Extract DropdownList, DropdownSearch, and painting helpers, and move shared painting constants to a style module to keep custom component logic digestible.
+We have a "god class/file" which needs refactoring. Review and plan and implement. Update tests.
+File:
+OscilDropdown.cpp (~1.1K LOC) owns popup chrome, filtering, search field, painting, keyboard navigation, and animation tweening inside one translation unit. Extract DropdownList, DropdownSearch, and painting helpers, and move shared painting constants to a style module to keep custom component logic digestible.
 High – test_oscillator.cpp (~1.3K LOC) exercises construction, modulation, routing, and UI contracts in a single mega fixture. Split into thematic suites (creation/state, UI bindings, DSP edge cases) to shorten arrange/act/assert blocks and speed bisecting when regressions appear.
 
 
@@ -4754,3 +4742,51 @@ Medium – test_camera3d.cpp, test_visual_configuration.cpp, test_coordinators.c
 
 Summary
 The largest translation units (threshold ≈500 LOC) span UI, rendering, DSP, and tests. Each currently mixes unrelated responsibilities (HTTP control + UI mutation, GPU bootstrap + per-frame drawing, widget painting + interaction logic, multiple test suites per file), which makes regressions easy to introduce and hard to detect. Prioritize splitting the 1K+ LOC files first, then work through the ≥500 LOC groupings, carving out cohesive submodules (handlers, coordinators, renderer passes, component skins, focused test fixtures). Natural next steps: establish a target LOC/concern guideline, create per-domain subdirectories (e.g., ui/components/dropdown/), and move shared helpers into reusable headers before refactoring each file into smaller units.
+
+
+----
+
+   1. Strict DI Enforcement: Stop using ThemeManager::getInstance() in UI components. Pass a ThemeContext struct down the component tree (or use a Service Locator pattern that is scoped to the Editor, not the
+      Process).
+   2. Deconstruct PluginEditor: Break PluginEditor.cpp into smaller LayoutManagers or ViewControllers to reduce its size and complexity.
+   3. Keep the Core Pure: Maintain the strict core vs ui separation. This is your project's strongest architectural asset.
+
+
+
+
+
+
+---
+
+
+
+  We have 4 god classes that need to be split:
+  - PluginEditor
+  - WaveformComponent
+  - OscilSlider
+  - OscilDropdown
+  Do a review, discuss and decide for each class how to best split the class for the benefit of our project, plan the todos, implement, update tests, test.
+
+  If save to do, parallize the work and distribute the refactoring with detailed instructions to 4 subagents
+
+
+  - Mixed DI/singleton patterns
+-
+Add this feature:
+1. When hovering over a pane's body, a horizontal line from the left side to the right side of the pane is shown. Also a vertical line from the top to the bottom of the pane body is shown. Both lines go through the mouse position
+2. The lines disappear when the mouse is leaving the pane's body
+3. The lines are getting their own color in the theme's color scheme. the colors are not shared with other elemenets.
+
+
+⊶  Shell cmake --build --preset dev --target OscilTests && ./build/dev/OscilTests --gtest_filter=PaneClosingBugTest.* [current working directory /Users/Spare/Documents/code/MultiScoper]               (Focused) │
+│                                                                                                                                                                                                                   │
+│ ninja: warning: premature end of file; recovering                                                                                                                                                                 │
+│ [0/2] Re-checking globbed directories...                                                                                                                                                                          │
+│ [235/236] Linking CXX executable OscilTests                                                                                                                                                                       │
+│ JUCE v8.0.5                                                                                                                                                                                                       │
+│ JUCE v8.0.5                                                                                                                                                                                                       │
+│ Note: Google Test filter = PaneClosingBugTest.*                                                                                                                                                                   │
+│ [==========] Running 1 test from 1 test suite.                                                                                                                                                                    │
+│ [----------] Global test environment set-up.                                                                                                                                                                      │
+│ [----------] 1 test from PaneClosingBugTest                                                                                                                                                                       │
+│ [ RUN      ] PaneClosingBugTest.ClosingPaneRemovesItAndHidesOscillator

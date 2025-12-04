@@ -8,6 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -34,9 +35,9 @@ class OscilToggle : public juce::Component,
                     private juce::Timer
 {
 public:
-    OscilToggle();
-    explicit OscilToggle(const juce::String& label);
-    OscilToggle(const juce::String& label, const juce::String& testId);
+    OscilToggle(IThemeService& themeService);
+    OscilToggle(IThemeService& themeService, const juce::String& label);
+    OscilToggle(IThemeService& themeService, const juce::String& label, const juce::String& testId);
     ~OscilToggle() override;
 
     // Value control
@@ -112,6 +113,7 @@ private:
 
     // Theme
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     // Internal toggle button for APVTS attachment compatibility
     juce::ToggleButton internalButton_;

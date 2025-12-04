@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilColorPicker.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilColorPickerTest, DefaultConstruction)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     // Should have a default color
     EXPECT_NE(picker.getColor().getARGB(), 0u);
@@ -28,7 +29,7 @@ TEST_F(OscilColorPickerTest, DefaultConstruction)
 
 TEST_F(OscilColorPickerTest, ConstructionWithTestId)
 {
-    OscilColorPicker picker("colorpicker-1");
+    OscilColorPicker picker(ThemeManager::getInstance(), "colorpicker-1");
 
     EXPECT_NE(picker.getColor().getARGB(), 0u);
 }
@@ -39,7 +40,7 @@ TEST_F(OscilColorPickerTest, ConstructionWithTestId)
 
 TEST_F(OscilColorPickerTest, SetColor)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setColor(juce::Colours::purple, false);
     EXPECT_EQ(picker.getColor().getARGB(), juce::Colours::purple.getARGB());
@@ -47,7 +48,7 @@ TEST_F(OscilColorPickerTest, SetColor)
 
 TEST_F(OscilColorPickerTest, SetOriginalColor)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setOriginalColor(juce::Colours::red);
     EXPECT_EQ(picker.getOriginalColor().getARGB(), juce::Colours::red.getARGB());
@@ -55,7 +56,7 @@ TEST_F(OscilColorPickerTest, SetOriginalColor)
 
 TEST_F(OscilColorPickerTest, ColorWithAlpha)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
     picker.setShowAlpha(true);
 
     auto colorWithAlpha = juce::Colours::blue.withAlpha(0.5f);
@@ -70,7 +71,7 @@ TEST_F(OscilColorPickerTest, ColorWithAlpha)
 
 TEST_F(OscilColorPickerTest, SetModeSquare)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setMode(OscilColorPicker::Mode::Square);
     EXPECT_EQ(picker.getMode(), OscilColorPicker::Mode::Square);
@@ -78,7 +79,7 @@ TEST_F(OscilColorPickerTest, SetModeSquare)
 
 TEST_F(OscilColorPickerTest, SetModeWheel)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setMode(OscilColorPicker::Mode::Wheel);
     EXPECT_EQ(picker.getMode(), OscilColorPicker::Mode::Wheel);
@@ -90,7 +91,7 @@ TEST_F(OscilColorPickerTest, SetModeWheel)
 
 TEST_F(OscilColorPickerTest, ShowAlpha)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setShowAlpha(true);
     EXPECT_TRUE(picker.getShowAlpha());
@@ -101,7 +102,7 @@ TEST_F(OscilColorPickerTest, ShowAlpha)
 
 TEST_F(OscilColorPickerTest, ShowHexInput)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setShowHexInput(true);
     EXPECT_TRUE(picker.getShowHexInput());
@@ -112,7 +113,7 @@ TEST_F(OscilColorPickerTest, ShowHexInput)
 
 TEST_F(OscilColorPickerTest, ShowPreview)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setShowPreview(true);
     EXPECT_TRUE(picker.getShowPreview());
@@ -127,7 +128,7 @@ TEST_F(OscilColorPickerTest, ShowPreview)
 
 TEST_F(OscilColorPickerTest, OnColorChangedCallback)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     int changeCount = 0;
     juce::Colour lastColor;
@@ -144,7 +145,7 @@ TEST_F(OscilColorPickerTest, OnColorChangedCallback)
 
 TEST_F(OscilColorPickerTest, NoCallbackWhenNotifyFalse)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     int changeCount = 0;
 
@@ -158,7 +159,7 @@ TEST_F(OscilColorPickerTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilColorPickerTest, OnColorChangingCallback)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     bool changingCalled = false;
     picker.onColorChanging = [&changingCalled](juce::Colour) {
@@ -176,21 +177,21 @@ TEST_F(OscilColorPickerTest, OnColorChangingCallback)
 
 TEST_F(OscilColorPickerTest, PreferredWidthPositive)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     EXPECT_GT(picker.getPreferredWidth(), 0);
 }
 
 TEST_F(OscilColorPickerTest, PreferredHeightPositive)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     EXPECT_GT(picker.getPreferredHeight(), 0);
 }
 
 TEST_F(OscilColorPickerTest, PreferredHeightDependsOnOptions)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
 
     picker.setShowAlpha(false);
     picker.setShowPreview(false);
@@ -209,7 +210,7 @@ TEST_F(OscilColorPickerTest, PreferredHeightDependsOnOptions)
 
 TEST_F(OscilColorPickerTest, ThemeChangeDoesNotThrow)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
     picker.setColor(juce::Colours::blue, false);
 
     ColorTheme newTheme;
@@ -222,7 +223,7 @@ TEST_F(OscilColorPickerTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilColorPickerTest, ThemeChangePreservesMode)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
     picker.setMode(OscilColorPicker::Mode::Wheel);
 
     ColorTheme newTheme;
@@ -234,7 +235,7 @@ TEST_F(OscilColorPickerTest, ThemeChangePreservesMode)
 
 TEST_F(OscilColorPickerTest, ThemeChangePreservesDisplayOptions)
 {
-    OscilColorPicker picker;
+    OscilColorPicker picker(ThemeManager::getInstance());
     picker.setShowAlpha(false);
     picker.setShowPreview(false);
 

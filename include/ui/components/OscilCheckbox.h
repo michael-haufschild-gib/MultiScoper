@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -31,9 +32,9 @@ class OscilCheckbox : public juce::Component,
                       private juce::Timer
 {
 public:
-    OscilCheckbox();
-    explicit OscilCheckbox(const juce::String& label);
-    OscilCheckbox(const juce::String& label, const juce::String& testId);
+    explicit OscilCheckbox(IThemeService& themeService);
+    OscilCheckbox(IThemeService& themeService, const juce::String& label);
+    OscilCheckbox(IThemeService& themeService, const juce::String& label, const juce::String& testId);
     ~OscilCheckbox() override;
 
     // State control
@@ -108,6 +109,7 @@ private:
 
     // Theme
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     // TestIdSupport
     void registerTestId() override;

@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilDropdown.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 

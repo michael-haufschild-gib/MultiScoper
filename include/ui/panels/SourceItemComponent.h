@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "core/InstanceRegistry.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/layout/Pane.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/TestId.h"
@@ -23,7 +24,7 @@ namespace oscil
 class SourceItemComponent : public juce::Component
 {
 public:
-    explicit SourceItemComponent(const SourceInfo& sourceInfo);
+    SourceItemComponent(IThemeService& themeService, const SourceInfo& sourceInfo);
     ~SourceItemComponent() override = default;
 
     void paint(juce::Graphics& g) override;
@@ -66,6 +67,7 @@ public:
 private:
     void handleAddToPaneSelection();
 
+    IThemeService& themeService_;
     SourceId sourceId_;
     juce::String displayName_;
     juce::String trackName_;

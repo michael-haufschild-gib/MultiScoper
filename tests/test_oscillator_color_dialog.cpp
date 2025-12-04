@@ -10,7 +10,7 @@ class OscillatorColorDialogTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        dialog = std::make_unique<OscillatorColorDialog>();
+        dialog = std::make_unique<OscillatorColorDialog>(ThemeManager::getInstance());
     }
 
     void TearDown() override

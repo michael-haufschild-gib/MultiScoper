@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -33,19 +34,19 @@ class OscilButton : public juce::Component,
 {
 public:
     /**
-     * Create a button with a text label
+     * Create a button with a text label (DI)
      */
-    explicit OscilButton(const juce::String& text = {});
+    explicit OscilButton(IThemeService& themeService, const juce::String& text = {});
 
     /**
-     * Create a button with a text label and testId
+     * Create a button with a text label and testId (DI)
      */
-    OscilButton(const juce::String& text, const juce::String& testId);
+    OscilButton(IThemeService& themeService, const juce::String& text, const juce::String& testId);
 
     /**
-     * Create an icon-only button
+     * Create an icon-only button (DI)
      */
-    explicit OscilButton(const juce::Image& icon);
+    explicit OscilButton(IThemeService& themeService, const juce::Image& icon);
 
     ~OscilButton() override;
 
@@ -163,6 +164,7 @@ private:
 
     // Theme cache
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     // Constants
     static constexpr int ICON_PADDING = 8;

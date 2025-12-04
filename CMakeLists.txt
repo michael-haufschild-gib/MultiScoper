@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Enable C and CXX languages explicitly for JUCE
-project(Oscil VERSION 1.0.0 LANGUAGES C CXX)
+project(Oscil VERSION 1.0.0 LANGUAGES C CXX OBJCXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,7 +56,7 @@ option(OSCIL_ENABLE_RTSAN "Enable RealtimeSanitizer for real-time safety checkin
 option(OSCIL_ENABLE_CLANG_TIDY "Enable clang-tidy static analysis" OFF)
 
 if(OSCIL_ENABLE_CLANG_TIDY)
-    find_program(CLANG_TIDY_EXE 
+    find_program(CLANG_TIDY_EXE
         NAMES clang-tidy
         HINTS /opt/homebrew/opt/llvm/bin /usr/local/opt/llvm/bin
         DOC "Path to clang-tidy executable"
@@ -153,6 +153,8 @@ juce_add_binary_data(OscilBinaryData
         resources/icomoon/SVG/cog.svg
         resources/icomoon/SVG/eye.svg
         resources/icomoon/SVG/eye-blocked.svg
+        resources/icomoon/SVG/cross.svg
+        resources/icomoon/SVG/checkmark.svg
         resources/textures/particle_cloud.png
         resources/textures/particle_smoke_sheet.png
         resources/textures/particle_fire_sheet.png
@@ -188,6 +190,17 @@ target_compile_definitions(Oscil
         $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:OSCIL_ENABLE_INSPECTOR=1>
 )
 
+# Define interface library for warning suppressions to ensure they come last
+add_library(OscilWarningSuppressions INTERFACE)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(OscilWarningSuppressions INTERFACE
+        -Wno-unknown-warning-option
+        -Wno-nontrivial-memcall
+        -Wno-nontrivial-memaccess
+        -Wno-switch-enum
+    )
+endif()
+
 # Link JUCE modules
 target_link_libraries(Oscil
     PRIVATE
@@ -200,6 +213,7 @@ target_link_libraries(Oscil
         juce::juce_core
         juce::juce_data_structures
         juce::juce_events
+        juce::juce_dsp
         nlohmann_json::nlohmann_json
         $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:melatonin_inspector>
         $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
@@ -207,6 +221,7 @@ target_link_libraries(Oscil
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
+        OscilWarningSuppressions # Must be after JUCE warnings to override
 )
 
 # Apply clang-tidy only to our source files (excluding JUCE)
@@ -221,17 +236,7 @@ if(OSCIL_CLANG_TIDY_CMD)
 endif()
 
 # Suppress warnings from JUCE third-party dependencies (Harfbuzz, VST3 SDK)
-# These are internal JUCE libraries we cannot modify
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    # First suppress unknown warning option warnings, then use both flag variants:
-    # - LLVM Clang 20+ uses -Wno-nontrivial-memcall
-    # - Apple Clang uses -Wno-nontrivial-memaccess
-    target_compile_options(Oscil PRIVATE
-        -Wno-unknown-warning-option  # Suppress warnings about unrecognized flags
-        -Wno-nontrivial-memcall      # LLVM Clang: Harfbuzz memcpy warnings
-        -Wno-nontrivial-memaccess    # Apple Clang: Harfbuzz memcpy warnings
-    )
-endif()
+# Handled by OscilWarningSuppressions interface library above
 
 # RealtimeSanitizer flags (LLVM Clang 20+ only - not Apple Clang, not Ubuntu's packaged Clang)
 # Catches allocations, mutex locks, and blocking syscalls in audio thread
@@ -283,7 +288,9 @@ if(OSCIL_BUILD_TESTS)
         tests/test_capture_buffer_threading.cpp
         tests/test_capture_buffer_lifecycle.cpp
 
-        tests/test_oscillator.cpp
+        tests/test_oscillator_core.cpp
+        tests/test_oscillator_dsp.cpp
+        tests/test_pane.cpp
         tests/test_theme_manager_crud.cpp
         tests/test_theme_manager_apply.cpp
         tests/test_theme_manager_persistence.cpp
@@ -296,6 +303,9 @@ if(OSCIL_BUILD_TESTS)
 
         tests/test_timing_config.cpp
         tests/test_timing_engine.cpp
+        tests/test_capture_quality_config.cpp
+        tests/test_decimating_capture_buffer.cpp
+        tests/test_memory_budget_manager.cpp
 
         # Refactored UI component tests - split for better isolation
         tests/test_spring_physics.cpp
@@ -315,7 +325,6 @@ if(OSCIL_BUILD_TESTS)
         tests/test_effect_chain.cpp
         tests/test_framebuffer_pool.cpp
         tests/test_waveform_presenter.cpp
-        tests/test_oscillator_presenter.cpp
         tests/test_timing_presenter.cpp
         tests/test_pane_layout.cpp
         tests/test_config_structs.cpp
@@ -331,7 +340,10 @@ if(OSCIL_BUILD_TESTS)
         tests/test_camera3d_animation.cpp
         tests/test_visual_config_validation.cpp
         tests/test_visual_config_application.cpp
+        tests/test_visual_config_validation.cpp
+        tests/test_visual_config_application.cpp
         tests/test_visual_config_presets.cpp
+        tests/test_plugin_editor.cpp
 
         # Updated UI Component tests
         tests/test_oscil_button.cpp
@@ -350,6 +362,9 @@ if(OSCIL_BUILD_TESTS)
         tests/test_oscil_textfield.cpp
         tests/test_oscillator_list_component.cpp
         tests/test_oscillator_color_dialog.cpp
+        tests/test_pane_closing_bug.cpp
+        tests/test_pane_selector.cpp
+        tests/test_select_pane_dialog.cpp
 
         # Test Harness Dependencies
         test_harness/src/TestElementRegistry.cpp
@@ -381,8 +396,10 @@ if(OSCIL_BUILD_TESTS)
             juce::juce_audio_devices
             juce::juce_audio_processors
             juce::juce_audio_utils
+            juce::juce_dsp
             nlohmann_json::nlohmann_json
             $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
+            OscilWarningSuppressions
     )
 
     # Apply clang-tidy to test sources

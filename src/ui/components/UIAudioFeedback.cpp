@@ -16,7 +16,7 @@ public:
 
     void playBuffer(const juce::AudioBuffer<float>& buffer, float volume)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock lock(mutex_);
 
         // Copy buffer for playback
         playbackBuffer_.makeCopyOf(buffer);
@@ -33,13 +33,13 @@ public:
 
     void releaseResources() override
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock lock(mutex_);
         isPlaying_ = false;
     }
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock lock(mutex_);
 
         bufferToFill.clearActiveBufferRegion();
 
@@ -112,19 +112,19 @@ UIAudioFeedback::~UIAudioFeedback()
 
 void UIAudioFeedback::setEnabled(bool enabled)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     enabled_ = enabled;
 }
 
 void UIAudioFeedback::setVolume(float volume)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     volume_ = std::clamp(volume, 0.0f, 1.0f);
 }
 
 void UIAudioFeedback::playSound(SoundType type)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
 
     if (!enabled_ || !soundEnabled_[type])
         return;
@@ -138,7 +138,7 @@ void UIAudioFeedback::playSound(SoundType type)
 
 void UIAudioFeedback::setSoundEnabled(SoundType type, bool enabled)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     soundEnabled_[type] = enabled;
 }
 
@@ -150,7 +150,7 @@ bool UIAudioFeedback::isSoundEnabled(SoundType type) const
 
 void UIAudioFeedback::setAudioDevice(juce::AudioDeviceManager* deviceManager)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     deviceManager_ = deviceManager;
 
     if (deviceManager_ && deviceManager_->getCurrentAudioDevice())
@@ -162,7 +162,7 @@ void UIAudioFeedback::setAudioDevice(juce::AudioDeviceManager* deviceManager)
 
 void UIAudioFeedback::shutdown()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     player_.reset();
     sounds_.clear();
 }

@@ -8,17 +8,27 @@
 namespace oscil
 {
 
-OscillatorListToolbar::OscillatorListToolbar()
+OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context)
+    : themeService_(context.themeService)
 {
     setTestId("sidebar_oscillators_toolbar");
     
     setupComponents();
-    ThemeManager::getInstance().addListener(this);
+    themeService_.addListener(this);
+}
+
+OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService)
+    : themeService_(themeService)
+{
+    setTestId("sidebar_oscillators_toolbar");
+
+    setupComponents();
+    themeService_.addListener(this);
 }
 
 OscillatorListToolbar::~OscillatorListToolbar()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
 }
 
 void OscillatorListToolbar::registerTestId()
@@ -29,7 +39,7 @@ void OscillatorListToolbar::registerTestId()
 void OscillatorListToolbar::setupComponents()
 {
     // Filter tabs
-    filterTabs_ = std::make_unique<SegmentedButtonBar>();
+    filterTabs_ = std::make_unique<SegmentedButtonBar>(themeService_);
     filterTabs_->addButton("All", static_cast<int>(OscillatorFilterMode::All), "sidebar_oscillators_toolbar_allTab");
     filterTabs_->addButton("Visible", static_cast<int>(OscillatorFilterMode::Visible), "sidebar_oscillators_toolbar_visibleTab");
     filterTabs_->addButton("Hidden", static_cast<int>(OscillatorFilterMode::Hidden), "sidebar_oscillators_toolbar_hiddenTab");
@@ -44,7 +54,7 @@ void OscillatorListToolbar::setupComponents()
 
 void OscillatorListToolbar::paint(juce::Graphics& g)
 {
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
 
     // Background
     g.setColour(theme.backgroundSecondary);

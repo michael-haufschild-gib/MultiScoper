@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/TestId.h"
@@ -44,8 +45,8 @@ public:
         PeakWithRMS
     };
 
-    OscilMeterBar();
-    explicit OscilMeterBar(const juce::String& testId);
+    explicit OscilMeterBar(IThemeService& themeService);
+    OscilMeterBar(IThemeService& themeService, const juce::String& testId);
     ~OscilMeterBar() override;
 
     // Level input (0.0 to 1.0, can exceed for clip detection)
@@ -141,6 +142,7 @@ private:
     bool showScale_ = false;
 
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     static constexpr int MONO_WIDTH = 12;
     static constexpr int STEREO_WIDTH = 24;

@@ -8,12 +8,15 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
+#include "core/ServiceContext.h"
 #include "ui/layout/sections/SectionConstants.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilToggle.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/TestId.h"
+#include "core/dsp/CaptureQualityConfig.h"
 #include <functional>
 
 namespace oscil
@@ -56,9 +59,15 @@ public:
 
         // Rendering mode events
         virtual void gpuRenderingChanged(bool /*enabled*/) {}
+
+        // Capture quality events
+        virtual void qualityPresetChanged(QualityPreset /*preset*/) {}
+        virtual void bufferDurationChanged(BufferDuration /*duration*/) {}
+        virtual void autoAdjustQualityChanged(bool /*enabled*/) {}
     };
 
-    OptionsSection();
+    explicit OptionsSection(ServiceContext& context);
+    explicit OptionsSection(IThemeService& themeService);
     ~OptionsSection() override;
 
     void paint(juce::Graphics& g) override;
@@ -93,6 +102,16 @@ public:
     void setGpuRenderingEnabled(bool enabled);
     bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
 
+    // Capture quality state
+    void setQualityPreset(QualityPreset preset);
+    QualityPreset getQualityPreset() const { return currentQualityPreset_; }
+
+    void setBufferDuration(BufferDuration duration);
+    BufferDuration getBufferDuration() const { return currentBufferDuration_; }
+
+    void setAutoAdjustQuality(bool enabled);
+    bool isAutoAdjustQualityEnabled() const { return autoAdjustQualityEnabled_; }
+
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
@@ -120,6 +139,9 @@ private:
     void notifyLayoutChanged();
     void notifyThemeChanged();
     void notifyGpuRenderingChanged();
+    void notifyQualityPresetChanged();
+    void notifyBufferDurationChanged();
+    void notifyAutoAdjustQualityChanged();
 
     // Gain controls (from Master Controls)
     std::unique_ptr<juce::Label> gainLabel_;
@@ -141,6 +163,12 @@ private:
     std::unique_ptr<juce::Label> renderingLabel_;
     std::unique_ptr<OscilToggle> gpuRenderingToggle_;
 
+    // Capture quality controls
+    std::unique_ptr<juce::Label> qualityLabel_;
+    std::unique_ptr<OscilDropdown> qualityPresetDropdown_;
+    std::unique_ptr<OscilDropdown> bufferDurationDropdown_;
+    std::unique_ptr<OscilToggle> autoAdjustQualityToggle_;
+
     // State
     float currentGainDb_ = 0.0f;
     bool showGridEnabled_ = true;
@@ -149,8 +177,13 @@ private:
     int currentColumnCount_ = 1;
     juce::String currentThemeName_ = "Dark";
     bool gpuRenderingEnabled_ = true;  // Default to GPU mode when available
+    QualityPreset currentQualityPreset_ = QualityPreset::Standard;
+    BufferDuration currentBufferDuration_ = BufferDuration::Medium;
+    bool autoAdjustQualityEnabled_ = true;
 
     juce::ListenerList<Listener> listeners_;
+
+    IThemeService& themeService_;
 
     OSCIL_TESTABLE();
 

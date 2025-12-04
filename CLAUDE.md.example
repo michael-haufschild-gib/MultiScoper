@@ -149,7 +149,7 @@ WHY: Prevents cognitive overload, ensures systematic approach
 
 ### For Task Management
 ```
-USE: todo_write
+USE: write_todo
 WHEN: Coding tasks, any task with 2+ steps
 WHY: Tracks progress, maintains focus
 ```
@@ -221,9 +221,9 @@ WHY: We use laravel sail. The server is running in a docker container.
 2. Investigate context
 3. Investigate impact on other parts of the app
 4. Plan implementiation and split into smaller tasks
-5. Create tasks with todo_write tool
-6. Plan updates to tests and new tests with todo_write tool
-7. Implement tasks in todo_write tool in order
+5. Create tasks with write_todo tool
+6. Plan updates to tests and new tests with write_todo tool
+7. Implement tasks in write_todo tool in order
 8. Implement tests
 9. Run tests and fix issues
 10. Update documentation

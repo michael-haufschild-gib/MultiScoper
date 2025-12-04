@@ -1,101 +1,107 @@
 === CRITICAL INSTRUCTION BLOCK (CIB-001): MANDATORY TOOLS ===
 
-## MANDATORY TOOLS
+## REQUIRED TOOLS
 
-### For Coding, Research, Analysis, Debugging
-```
-USE: mcp__mcp_docker__sequentialthinking
-WHEN: Coding tasks, research, complex reasoning
-WHY: Prevents cognitive overload, ensures systematic approach
-```
+| Tool | When to Use |
+|------|-------------|
+| `mcp__mcp_docker__sequentialthinking` | Coding, research, debugging, any complex reasoning |
+| `TodoWrite` | Any task with 2+ steps (track progress) |
+| `Task` (subagent) | See CIB-001 delegation decision tree |
 
-### For Task Management
-```
-USE: todo_write
-WHEN: Coding tasks, any task with 2+ steps
-WHY: Tracks progress, maintains focus
-```
+## TESTING REQUIREMENTS
 
-### For Task Execution
-For each task:
-
-1. **Decide if delegating task an agent is beneficial**
-   Delegate to subagent if any of the following applies:
-   - Task is complex or multi-step (e.g., write tests, debug a module, generate docs).
-   - Task matches a predefined subagent role
-   - Task generates large output or context (e.g., scanning 50 files, web research).
-   - Task can run independently (no need for constant oversight).
-   - Task can be executed in parallel (run multiple subagents at once).
-
-   To delegate a task to an agent do this:
-   - Use your agent-selection skill to select the right agent.
-   - Call the subagent and provide all the context that they need to do the task at highest quality in the context of the whole codebase.
-   - Never send a one-liner prompt to a subagent! Always provide them with all context they need to do the job. Do not let them start from scratch.
-   - Always include references to required documentation:
-     - `docs/architecture.md`
-     - `docs/api.md`
-     - `docs/testing.md`
-     - include other or more documentation references in the agent prompt if needed for the task
-   - **NEVER** just handover the task you have been given to an agent without passing on the work you have already done! Do not waste token on letting agents repeat the research or work you have already done!
-   - Be conscious of token usage! Do not duplicate work in the agent that you or another agent have already done!
-
-2. **Testing requirements:**
-   - Tests must be meaningful (test actual functionality)
-   - Tests must verify correct information, not just rendering
-
-3. **Fix until green:**
-   - Run tests after each fix
-   - If tests fail, iterate and fix and test again
-   - Verify no regressions
+- Tests must verify actual functionality, not just that code renders
+- Run tests after each fix: `ctest --preset dev`
+- Iterate until green - no partial fixes
 
 === END CIB-001 ===
 
-=== CRITICAL INSTRUCTION BLOCK (CIB-002): INVESTIGATION-FIRST DEVELOPMENT ===
+=== CRITICAL INSTRUCTION BLOCK (CIB-002): SUBAGENT DELEGATION ===
 
-## FORBIDDEN: Code-First Development
+## DELEGATION-FIRST PRINCIPLE
 
-❌ **NEVER** change code based on assumptions
-❌ **NEVER** change code without investigating side effects
-❌ **NEVER** fix tests without running actual features
-❌ **NEVER** declare victory without visual verification
-❌ **NEVER** remove code without understanding why it exists
+You have specialized subagents. Use them. Doing complex work yourself when a subagent exists is inefficient.
 
-## REQUIRED: Investigation-First Workflow
+### MANDATORY: Check Delegation Before Every Task
 
-✅ **ALWAYS** trace code execution path
-✅ **ALWAYS** what the purpose of the code is you are about to change
-✅ **ALWAYS** analyse impact of a change on whole codebase
-✅ **ALWAYS** verify fixes with visual proof
+Before starting ANY task, evaluate:
 
-**If you skip investigation, you are creating more bugs and unusable code.STOP AND INVESTIGATE.**
-
-## MANDATORY WORKFLOW
 ```
-1. Analyse and understand user request with sequentialthinking tool
-2. Investigate context
-3. Investigate impact on other parts of the app
-4. Plan implementiation and split into smaller tasks
-5. Create tasks with todo_write tool
-6. Plan updates to tests and new tests with todo_write tool
-7. Implement tasks in todo_write tool in order
-8. Implement tests
-9. Run tests and fix issues
-10. Update documentation
-11. Conduct final review
-12. Give a short one paragraph summary in chat. NEVER write summary documents. NEVER output long summaries in chat.
+DELEGATE IF ANY IS TRUE:
+├─ Task matches a subagent specialty? → DELEGATE
+├─ Task has 3+ steps? → DELEGATE
+├─ Task involves searching/exploring codebase? → DELEGATE (use Explore agent)
+├─ Task can run while you do other work? → DELEGATE
+├─ Task involves code review? → DELEGATE (use code-reviewer agent)
+├─ Task involves debugging? → DELEGATE (use debugger agent)
+├─ Task involves writing tests? → DELEGATE (use qa-engineer agent)
+├─ Task involves DSP/audio code? → DELEGATE (use dsp-engineer agent)
+├─ Task involves UI components? → DELEGATE (use ui-designer agent)
+├─ Task involves OpenGL/rendering? → DELEGATE (use render-specialist agent)
+├─ Task involves architecture decisions? → DELEGATE (use architecture-guardian agent)
+└─ Task involves documentation? → DELEGATE (use technical-writer agent)
 ```
 
-## ABSOLUTE PROHIBITIONS
-- Never skip steps in the workflow to save time or tokens.
-- Never simplify or summarize steps in the workflow.
-- Never invent things to save time or tokens.
+### HOW TO DELEGATE
 
-## NO TOKEN OR TIME BUDGET
-There is no limit on token or time a task can take. Be thorough. Reason: If you make a mistake now, it will later cost much more time and token to fix it.
+1. **Select agent**: Use your `agent-selection` skill (read `.claude/skills/agent-selection/`)
+2. **Write a complete prompt** that includes:
+   - Full context of what you've already learned
+   - Specific files and line numbers relevant to the task
+   - References to docs: `docs/architecture.md`, `docs/testing.md`, `docs/prd.md`
+   - Clear success criteria
+3. **Never send one-liners** - Agents start fresh with no memory of your conversation
+
+### QUALITY GATE: Before NOT Delegating
+
+If you decide to do a task yourself, verify:
+- [ ] No subagent specialty matches this task
+- [ ] Task is truly simple (< 3 steps)
+- [ ] Task cannot run in parallel with other work
+
+If you cannot check all boxes, DELEGATE.
 
 === END CIB-002 ===
 
+=== CRITICAL INSTRUCTION BLOCK (CIB-003): INVESTIGATION-FIRST DEVELOPMENT ===
+
+## FORBIDDEN
+
+- Changing code based on assumptions
+- Changing code without investigating side effects
+- Fixing tests without running actual features
+- Declaring victory without verification
+- Removing code without understanding why it exists
+
+## REQUIRED
+
+- Trace code execution path before changes
+- Understand purpose of code you're changing
+- Analyze impact on whole codebase
+- Verify fixes work
+
+## WORKFLOW
+
+```
+1. Analyze request → use sequentialthinking tool
+2. Investigate context → delegate to Explore agent if needed
+3. Investigate impact → what else does this affect?
+4. Plan → create tasks with TodoWrite
+5. Implement → one task at a time
+6. Test → run tests, fix failures
+7. Verify → confirm it works
+8. Summarize → one short paragraph in chat
+```
+
+=== END CIB-003 ===
+
 ## Project Overview
+
+**Project**: Oscil Multi-Track Oscilloscope
+**Type**: Professional Audio Plugin (VST3, AU, CLAP, Standalone)
+**Language**: C++20
+**Framework**: JUCE 8.0.5
+**Build System**: CMake 3.21+ (with Ninja & ccache support)
 
 Oscil is a professional audio visualization platform designed for engineers and producers to analyze multi-track audio signals. It offers real-time oscilloscope visualization with cross-DAW compatibility, allowing multiple plugin instances to communicate and display signals on a single aggregator interface.
 
@@ -147,16 +153,6 @@ build/                      # Build artifacts (do not edit)
 cmake/                      # CMake modules (Sources.cmake)
 ```
 
-## Development Workflow
-
-**IMPORTANT**: Follow the **Investigation-First Workflow**. Never change code based on assumptions.
-
-1.  **Analyze**: Understand the request using `mcp__mcp_docker__sequentialthinking`.
-2.  **Investigate**: Use `codebase_investigator` to map relevant files and dependencies.
-3.  **Plan**: Break down the task using `write_todo`.
-4.  **Implement**: Write code and corresponding tests.
-5.  **Verify**: Run tests to ensure correctness (`ctest`).
-
 ## Build and Run
 
 The project uses CMake Presets for configuration.
@@ -185,7 +181,7 @@ The project uses CMake Presets for configuration.
 
 - **Unit Tests**: Located in `tests/`. Built automatically with `OSCIL_BUILD_TESTS=ON` (default in `dev` preset).
 - **E2E Tests**: Located in `test_harness/`.
-- **Requirement**: All new features and bug fixes must be accompanied by meaningful tests. Run tests after every change to ensure no regressions.
+- **Requirement**: All new features and bug fixes must be accompanied by meaningful tests.
 
 ### E2E Testing
 
@@ -221,15 +217,18 @@ The project includes a standalone `OscilTestHarness` that hosts the plugin and e
 
 ## Coding Conventions
 
-- **Standard**: C++20.
-- **Style**: Follow existing JUCE-based patterns. Juce 8
-- **Shaders**: GSLS 3.30
-- **Headers**: Use `#pragma once`.
-- **Memory**: Use smart pointers (`std::unique_ptr`, `std::shared_ptr`) where possible; avoid raw pointers for ownership.
-- **JUCE**: Use `juce::` namespace explicitly or strictly follow file-level `using`.
+- **Standard**: C++20
+- **Style**: Follow existing JUCE-based patterns (JUCE 8)
+- **Shaders**: GLSL 3.30
+- **Headers**: Use `#pragma once`
+- **Memory**: Use smart pointers (`std::unique_ptr`, `std::shared_ptr`) where possible
+- **JUCE**: Use `juce::` namespace explicitly
 
-## Completiong Checklist
-- Followed CIB-001 instruction block fully
-- Followed CIB-002 instruction block fully
-- No legacy code left
-- No placeholder or todo code left
+## Completion Checklist
+
+Before declaring any task complete:
+- [ ] CIB-001: Used required tools (sequentialthinking, TodoWrite)
+- [ ] CIB-002: Evaluated delegation for all subtasks
+- [ ] CIB-003: Followed investigation-first workflow
+- [ ] Tests pass: `ctest --preset dev`
+- [ ] No placeholder or TODO code left

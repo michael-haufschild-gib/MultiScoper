@@ -3,13 +3,13 @@
 */
 
 #include "ui/panels/SourceItemComponent.h"
-#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
 
-SourceItemComponent::SourceItemComponent(const SourceInfo& sourceInfo)
-    : sourceId_(sourceInfo.sourceId)
+SourceItemComponent::SourceItemComponent(IThemeService& themeService, const SourceInfo& sourceInfo)
+    : themeService_(themeService)
+    , sourceId_(sourceInfo.sourceId)
     , displayName_(sourceInfo.name)
     , trackName_("")  // SourceInfo doesn't have separate track name
 {
@@ -19,14 +19,14 @@ SourceItemComponent::SourceItemComponent(const SourceInfo& sourceInfo)
 
     // Create add-to-pane dropdown with test ID
     juce::String dropdownTestId = "sidebar_sources_item_" + sourceId_.id + "_paneDropdown";
-    addToPaneDropdown_ = std::make_unique<OscilDropdown>("Add...", dropdownTestId);
+    addToPaneDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Add...", dropdownTestId);
     addToPaneDropdown_->onSelectionChanged = [this](int /*index*/) { handleAddToPaneSelection(); };
     addAndMakeVisible(addToPaneDropdown_.get());
 }
 
 void SourceItemComponent::paint(juce::Graphics& g)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background

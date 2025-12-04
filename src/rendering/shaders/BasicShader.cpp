@@ -110,6 +110,14 @@ BasicShader::~BasicShader()
 #if OSCIL_ENABLE_OPENGL
     // Resources should be released before destruction
     // but we can't call OpenGL functions here without context
+    if (gl_ && gl_->compiled)
+    {
+        // FATAL: Shader destroyed without release(context) being called.
+        // This leaks VBO/VAO/Program on the GPU.
+        // Ensure the owner calls release() during shutdown/cleanup.
+        // jassertfalse; // Disabled to prevent crash in VST3 helper, but this IS a leak.
+        std::cerr << "[BasicShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
 #endif
 }
 

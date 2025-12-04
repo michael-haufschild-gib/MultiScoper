@@ -35,7 +35,7 @@ public:
         return sources_;
     }
 
-    std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer(const SourceId& sourceId) const override
+    std::shared_ptr<IAudioBuffer> getCaptureBuffer(const SourceId& sourceId) const override
     {
         for (const auto& source : sources_)
         {
@@ -47,7 +47,7 @@ public:
 
     // Additional required interface methods
     SourceId registerInstance(const juce::String& /*trackIdentifier*/,
-                               std::shared_ptr<SharedCaptureBuffer> /*captureBuffer*/,
+                               std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
                                const juce::String& /*name*/,
                                int /*channelCount*/,
                                double /*sampleRate*/) override
@@ -184,6 +184,9 @@ public:
     {
         return true;
     }
+
+    bool importTheme(const juce::String& /*json*/) override { return true; }
+    juce::String exportTheme(const juce::String& /*name*/) const override { return "{}"; }
 
     void setTheme(const ColorTheme& theme)
     {

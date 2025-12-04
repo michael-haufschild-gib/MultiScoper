@@ -115,5 +115,23 @@ inline juce::Path createEyeClosedIcon(float size)
     return getPathFromDrawable(drawable.get(), size);
 }
 
+/**
+ * Get close/cross icon as a path (for modal close buttons)
+ */
+inline juce::Path createCloseIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::cross_svg, BinaryData::cross_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+/**
+ * Get checkmark/confirm icon as a path (for save/confirm buttons)
+ */
+inline juce::Path createCheckmarkIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::checkmark_svg, BinaryData::checkmark_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
 } // namespace ListItemIcons
 } // namespace oscil

@@ -1,0 +1,590 @@
+ninja: warning: premature end of file; recovering
+[0/2] Re-checking globbed directories...
+[1/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData1.cpp.o
+[2/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData6.cpp.o
+[3/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData8.cpp.o
+[4/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData5.cpp.o
+[5/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData9.cpp.o
+[6/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData7.cpp.o
+[7/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData10.cpp.o
+[8/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData12.cpp.o
+[9/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData13.cpp.o
+[10/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData15.cpp.o
+[11/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData11.cpp.o
+[12/513] Building CXX object CMakeFiles/OscilBinaryData.dir/juce_binarydata_OscilBinaryData/JuceLibraryCode/BinaryData14.cpp.o
+[13/513] Building CXX object CMakeFiles/Oscil.dir/src/core/DecimatingCaptureBuffer.cpp.o
+In file included from ../../src/core/DecimatingCaptureBuffer.cpp:6:
+In file included from ../../include/core/DecimatingCaptureBuffer.h:10:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+1 warning generated.
+[14/513] Building CXX object CMakeFiles/Oscil.dir/src/core/OscilState.cpp.o
+In file included from ../../src/core/OscilState.cpp:5:
+In file included from ../../include/core/OscilState.h:11:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+1 warning generated.
+[15/513] Building CXX object CMakeFiles/Oscil.dir/src/core/MemoryBudgetManager.cpp.o
+In file included from ../../src/core/MemoryBudgetManager.cpp:5:
+In file included from ../../include/core/MemoryBudgetManager.h:9:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+1 warning generated.
+[16/513] Building CXX object CMakeFiles/Oscil.dir/src/core/dsp/SignalProcessor.cpp.o
+[17/513] Building CXX object CMakeFiles/Oscil.dir/src/core/InstanceRegistry.cpp.o
+In file included from ../../src/core/InstanceRegistry.cpp:7:
+In file included from ../../include/Oscil.h:24:
+In file included from ../../include/core/OscilState.h:11:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+1 warning generated.
+[18/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/EffectChain.cpp.o
+[19/513] Building CXX object CMakeFiles/Oscil.dir/src/core/Oscillator.cpp.o
+In file included from ../../src/core/Oscillator.cpp:7:
+In file included from ../../include/core/OscilState.h:11:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+1 warning generated.
+[20/513] Building CXX object CMakeFiles/Oscil.dir/src/plugin/PluginFactory.cpp.o
+In file included from ../../src/plugin/PluginFactory.cpp:5:
+In file included from ../../include/plugin/PluginFactory.h:9:
+In file included from ../../include/plugin/PluginProcessor.h:8:
+In file included from ../../include/core/DecimatingCaptureBuffer.h:10:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+In file included from ../../src/plugin/PluginFactory.cpp:5:
+In file included from ../../include/plugin/PluginFactory.h:9:
+../../include/plugin/PluginProcessor.h:77:47: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                               ^
+../../include/plugin/PluginProcessor.h:77:76: warning: unused parameter 'child' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                                                            ^
+../../include/plugin/PluginProcessor.h:78:49: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                 ^
+../../include/plugin/PluginProcessor.h:78:78: warning: unused parameter 'child' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                              ^
+../../include/plugin/PluginProcessor.h:78:89: warning: unused parameter 'index' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                                         ^
+../../include/plugin/PluginProcessor.h:79:54: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                      ^
+../../include/plugin/PluginProcessor.h:79:70: warning: unused parameter 'oldIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                      ^
+../../include/plugin/PluginProcessor.h:79:84: warning: unused parameter 'newIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                                    ^
+../../include/plugin/PluginProcessor.h:80:50: warning: unused parameter 'tree' [-Wunused-parameter]
+   80 |     void valueTreeParentChanged(juce::ValueTree& tree) override {}
+      |                                                  ^
+10 warnings generated.
+[21/513] Building CXX object CMakeFiles/Oscil.dir/src/core/dsp/TimingEngine.cpp.o
+[22/513] Building CXX object CMakeFiles/Oscil.dir/src/core/SharedCaptureBuffer.cpp.o
+[23/513] Building CXX object CMakeFiles/Oscil.dir/src/core/Source.cpp.o
+[24/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/Framebuffer.cpp.o
+[25/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/FramebufferPool.cpp.o
+[26/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/GridRenderer.cpp.o
+[27/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/ParticleRenderer.cpp.o
+[28/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/RenderEngine.cpp.o
+[29/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/ShaderRegistry.cpp.o
+[30/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/WaveformGLRenderer.cpp.o
+[31/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/WaveformRenderState.cpp.o
+[32/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/WaveformShader.cpp.o
+[33/513] Building CXX object CMakeFiles/Oscil.dir/src/plugin/OpenGLLifecycleManager.cpp.o
+In file included from ../../src/plugin/OpenGLLifecycleManager.cpp:6:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:10:
+In file included from ../../include/ui/layout/SidebarComponent.h:14:
+../../include/ui/panels/OscillatorListComponent.h:35:61: warning: unused parameter 'id' [-Wunused-parameter]
+   35 |         virtual void oscillatorSelected(const OscillatorId& id) {}
+      |                                                             ^
+../../include/ui/panels/OscillatorListComponent.h:36:70: warning: unused parameter 'id' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                      ^
+../../include/ui/panels/OscillatorListComponent.h:36:79: warning: unused parameter 'visible' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                               ^
+../../include/ui/panels/OscillatorListComponent.h:37:64: warning: unused parameter 'id' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:37:83: warning: unused parameter 'mode' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                                   ^
+../../include/ui/panels/OscillatorListComponent.h:38:68: warning: unused parameter 'id' [-Wunused-parameter]
+   38 |         virtual void oscillatorConfigRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:39:73: warning: unused parameter 'id' [-Wunused-parameter]
+   39 |         virtual void oscillatorColorConfigRequested(const OscillatorId& id) {}
+      |                                                                         ^
+../../include/ui/panels/OscillatorListComponent.h:40:68: warning: unused parameter 'id' [-Wunused-parameter]
+   40 |         virtual void oscillatorDeleteRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:41:47: warning: unused parameter 'fromIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                               ^
+../../include/ui/panels/OscillatorListComponent.h:41:62: warning: unused parameter 'toIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                                              ^
+../../include/ui/panels/OscillatorListComponent.h:46:75: warning: unused parameter 'id' [-Wunused-parameter]
+   46 |         virtual void oscillatorPaneSelectionRequested(const OscillatorId& id) {}
+      |                                                                           ^
+../../include/ui/panels/OscillatorListComponent.h:50:64: warning: unused parameter 'id' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:50:88: warning: unused parameter 'newName' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                                        ^
+In file included from ../../src/plugin/OpenGLLifecycleManager.cpp:6:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:10:
+In file included from ../../include/ui/layout/SidebarComponent.h:17:
+In file included from ../../include/ui/layout/sections/OptionsSection.h:17:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+In file included from ../../src/plugin/OpenGLLifecycleManager.cpp:6:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:13:
+../../include/plugin/PluginProcessor.h:77:47: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                               ^
+../../include/plugin/PluginProcessor.h:77:76: warning: unused parameter 'child' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                                                            ^
+../../include/plugin/PluginProcessor.h:78:49: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                 ^
+../../include/plugin/PluginProcessor.h:78:78: warning: unused parameter 'child' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                              ^
+../../include/plugin/PluginProcessor.h:78:89: warning: unused parameter 'index' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                                         ^
+../../include/plugin/PluginProcessor.h:79:54: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                      ^
+../../include/plugin/PluginProcessor.h:79:70: warning: unused parameter 'oldIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                      ^
+../../include/plugin/PluginProcessor.h:79:84: warning: unused parameter 'newIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                                    ^
+../../include/plugin/PluginProcessor.h:80:50: warning: unused parameter 'tree' [-Wunused-parameter]
+   80 |     void valueTreeParentChanged(juce::ValueTree& tree) override {}
+      |                                                  ^
+23 warnings generated.
+[34/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/VisualConfiguration.cpp.o
+[35/513] Building CXX object CMakeFiles/Oscil.dir/src/plugin/PluginEditor.cpp.o
+In file included from ../../src/plugin/PluginEditor.cpp:6:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:10:
+In file included from ../../include/ui/layout/SidebarComponent.h:14:
+../../include/ui/panels/OscillatorListComponent.h:35:61: warning: unused parameter 'id' [-Wunused-parameter]
+   35 |         virtual void oscillatorSelected(const OscillatorId& id) {}
+      |                                                             ^
+../../include/ui/panels/OscillatorListComponent.h:36:70: warning: unused parameter 'id' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                      ^
+../../include/ui/panels/OscillatorListComponent.h:36:79: warning: unused parameter 'visible' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                               ^
+../../include/ui/panels/OscillatorListComponent.h:37:64: warning: unused parameter 'id' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:37:83: warning: unused parameter 'mode' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                                   ^
+../../include/ui/panels/OscillatorListComponent.h:38:68: warning: unused parameter 'id' [-Wunused-parameter]
+   38 |         virtual void oscillatorConfigRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:39:73: warning: unused parameter 'id' [-Wunused-parameter]
+   39 |         virtual void oscillatorColorConfigRequested(const OscillatorId& id) {}
+      |                                                                         ^
+../../include/ui/panels/OscillatorListComponent.h:40:68: warning: unused parameter 'id' [-Wunused-parameter]
+   40 |         virtual void oscillatorDeleteRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:41:47: warning: unused parameter 'fromIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                               ^
+../../include/ui/panels/OscillatorListComponent.h:41:62: warning: unused parameter 'toIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                                              ^
+../../include/ui/panels/OscillatorListComponent.h:46:75: warning: unused parameter 'id' [-Wunused-parameter]
+   46 |         virtual void oscillatorPaneSelectionRequested(const OscillatorId& id) {}
+      |                                                                           ^
+../../include/ui/panels/OscillatorListComponent.h:50:64: warning: unused parameter 'id' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:50:88: warning: unused parameter 'newName' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                                        ^
+In file included from ../../src/plugin/PluginEditor.cpp:6:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:10:
+In file included from ../../include/ui/layout/SidebarComponent.h:17:
+In file included from ../../include/ui/layout/sections/OptionsSection.h:17:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+In file included from ../../src/plugin/PluginEditor.cpp:6:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:13:
+../../include/plugin/PluginProcessor.h:77:47: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                               ^
+../../include/plugin/PluginProcessor.h:77:76: warning: unused parameter 'child' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                                                            ^
+../../include/plugin/PluginProcessor.h:78:49: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                 ^
+../../include/plugin/PluginProcessor.h:78:78: warning: unused parameter 'child' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                              ^
+../../include/plugin/PluginProcessor.h:78:89: warning: unused parameter 'index' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                                         ^
+../../include/plugin/PluginProcessor.h:79:54: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                      ^
+../../include/plugin/PluginProcessor.h:79:70: warning: unused parameter 'oldIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                      ^
+../../include/plugin/PluginProcessor.h:79:84: warning: unused parameter 'newIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                                    ^
+../../include/plugin/PluginProcessor.h:80:50: warning: unused parameter 'tree' [-Wunused-parameter]
+   80 |     void valueTreeParentChanged(juce::ValueTree& tree) override {}
+      |                                                  ^
+../../src/plugin/PluginEditor.cpp:609:23: warning: declaration shadows a local variable [-Wshadow-uncaptured-local]
+  609 |                 auto& state = processor_.getState();
+      |                       ^
+../../src/plugin/PluginEditor.cpp:599:11: note: previous declaration is here
+  599 |     auto& state = processor_.getState();
+      |           ^
+../../src/plugin/PluginEditor.cpp:610:22: warning: declaration shadows a local variable [-Wshadow-uncaptured-local]
+  610 |                 auto oscillators = state.getOscillators();
+      |                      ^
+../../src/plugin/PluginEditor.cpp:600:10: note: previous declaration is here
+  600 |     auto oscillators = state.getOscillators();
+      |          ^
+../../src/plugin/PluginEditor.cpp:817:15: warning: declaration shadows a local variable [-Wshadow-uncaptured-local]
+  817 |         auto& layoutManager = state.getLayoutManager();
+      |               ^
+../../src/plugin/PluginEditor.cpp:811:11: note: previous declaration is here
+  811 |     auto& layoutManager = processor_.getState().getLayoutManager();
+      |           ^
+26 warnings generated.
+[36/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/Camera3D.cpp.o
+[37/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/BasicShader.cpp.o
+[38/513] Building CXX object CMakeFiles/Oscil.dir/src/plugin/PluginProcessor.cpp.o
+In file included from ../../src/plugin/PluginProcessor.cpp:6:
+In file included from ../../include/plugin/PluginProcessor.h:8:
+In file included from ../../include/core/DecimatingCaptureBuffer.h:10:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+In file included from ../../src/plugin/PluginProcessor.cpp:6:
+../../include/plugin/PluginProcessor.h:77:47: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                               ^
+../../include/plugin/PluginProcessor.h:77:76: warning: unused parameter 'child' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                                                            ^
+../../include/plugin/PluginProcessor.h:78:49: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                 ^
+../../include/plugin/PluginProcessor.h:78:78: warning: unused parameter 'child' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                              ^
+../../include/plugin/PluginProcessor.h:78:89: warning: unused parameter 'index' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                                         ^
+../../include/plugin/PluginProcessor.h:79:54: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                      ^
+../../include/plugin/PluginProcessor.h:79:70: warning: unused parameter 'oldIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                      ^
+../../include/plugin/PluginProcessor.h:79:84: warning: unused parameter 'newIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                                    ^
+../../include/plugin/PluginProcessor.h:80:50: warning: unused parameter 'tree' [-Wunused-parameter]
+   80 |     void valueTreeParentChanged(juce::ValueTree& tree) override {}
+      |                                                  ^
+In file included from ../../src/plugin/PluginProcessor.cpp:12:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:10:
+In file included from ../../include/ui/layout/SidebarComponent.h:14:
+../../include/ui/panels/OscillatorListComponent.h:35:61: warning: unused parameter 'id' [-Wunused-parameter]
+   35 |         virtual void oscillatorSelected(const OscillatorId& id) {}
+      |                                                             ^
+../../include/ui/panels/OscillatorListComponent.h:36:70: warning: unused parameter 'id' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                      ^
+../../include/ui/panels/OscillatorListComponent.h:36:79: warning: unused parameter 'visible' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                               ^
+../../include/ui/panels/OscillatorListComponent.h:37:64: warning: unused parameter 'id' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:37:83: warning: unused parameter 'mode' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                                   ^
+../../include/ui/panels/OscillatorListComponent.h:38:68: warning: unused parameter 'id' [-Wunused-parameter]
+   38 |         virtual void oscillatorConfigRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:39:73: warning: unused parameter 'id' [-Wunused-parameter]
+   39 |         virtual void oscillatorColorConfigRequested(const OscillatorId& id) {}
+      |                                                                         ^
+../../include/ui/panels/OscillatorListComponent.h:40:68: warning: unused parameter 'id' [-Wunused-parameter]
+   40 |         virtual void oscillatorDeleteRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:41:47: warning: unused parameter 'fromIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                               ^
+../../include/ui/panels/OscillatorListComponent.h:41:62: warning: unused parameter 'toIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                                              ^
+../../include/ui/panels/OscillatorListComponent.h:46:75: warning: unused parameter 'id' [-Wunused-parameter]
+   46 |         virtual void oscillatorPaneSelectionRequested(const OscillatorId& id) {}
+      |                                                                           ^
+../../include/ui/panels/OscillatorListComponent.h:50:64: warning: unused parameter 'id' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:50:88: warning: unused parameter 'newName' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                                        ^
+../../src/plugin/PluginProcessor.cpp:257:100: warning: unused parameter 'property' [-Wunused-parameter]
+  257 | void OscilPluginProcessor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
+      |                                                                                                    ^
+24 warnings generated.
+[39/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/NeonGlowShader.cpp.o
+[40/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/GradientFillShader.cpp.o
+[41/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/DualOutlineShader.cpp.o
+[42/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/PlasmaSineShader.cpp.o
+[43/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders/DigitalGlitchShader.cpp.o
+[44/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/WaveformShader3D.cpp.o
+[45/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/VolumetricRibbonShader.cpp.o
+[46/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/WireframeMeshShader.cpp.o
+[47/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/StringTheoryShader.cpp.o
+[48/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/VectorFlowShader.cpp.o
+[49/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/GpuRenderCoordinator.cpp.o
+In file included from ../../src/rendering/GpuRenderCoordinator.cpp:7:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:10:
+In file included from ../../include/ui/layout/SidebarComponent.h:14:
+../../include/ui/panels/OscillatorListComponent.h:35:61: warning: unused parameter 'id' [-Wunused-parameter]
+   35 |         virtual void oscillatorSelected(const OscillatorId& id) {}
+      |                                                             ^
+../../include/ui/panels/OscillatorListComponent.h:36:70: warning: unused parameter 'id' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                      ^
+../../include/ui/panels/OscillatorListComponent.h:36:79: warning: unused parameter 'visible' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                               ^
+../../include/ui/panels/OscillatorListComponent.h:37:64: warning: unused parameter 'id' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:37:83: warning: unused parameter 'mode' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                                   ^
+../../include/ui/panels/OscillatorListComponent.h:38:68: warning: unused parameter 'id' [-Wunused-parameter]
+   38 |         virtual void oscillatorConfigRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:39:73: warning: unused parameter 'id' [-Wunused-parameter]
+   39 |         virtual void oscillatorColorConfigRequested(const OscillatorId& id) {}
+      |                                                                         ^
+../../include/ui/panels/OscillatorListComponent.h:40:68: warning: unused parameter 'id' [-Wunused-parameter]
+   40 |         virtual void oscillatorDeleteRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:41:47: warning: unused parameter 'fromIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                               ^
+../../include/ui/panels/OscillatorListComponent.h:41:62: warning: unused parameter 'toIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                                              ^
+../../include/ui/panels/OscillatorListComponent.h:46:75: warning: unused parameter 'id' [-Wunused-parameter]
+   46 |         virtual void oscillatorPaneSelectionRequested(const OscillatorId& id) {}
+      |                                                                           ^
+../../include/ui/panels/OscillatorListComponent.h:50:64: warning: unused parameter 'id' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:50:88: warning: unused parameter 'newName' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                                        ^
+In file included from ../../src/rendering/GpuRenderCoordinator.cpp:7:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:10:
+In file included from ../../include/ui/layout/SidebarComponent.h:17:
+In file included from ../../include/ui/layout/sections/OptionsSection.h:17:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+In file included from ../../src/rendering/GpuRenderCoordinator.cpp:7:
+In file included from ../../include/plugin/PluginEditor.h:22:
+In file included from ../../include/ui/layout/PluginEditorLayout.h:13:
+../../include/plugin/PluginProcessor.h:77:47: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                               ^
+../../include/plugin/PluginProcessor.h:77:76: warning: unused parameter 'child' [-Wunused-parameter]
+   77 |     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& child) override {}
+      |                                                                            ^
+../../include/plugin/PluginProcessor.h:78:49: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                 ^
+../../include/plugin/PluginProcessor.h:78:78: warning: unused parameter 'child' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                              ^
+../../include/plugin/PluginProcessor.h:78:89: warning: unused parameter 'index' [-Wunused-parameter]
+   78 |     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& child, int index) override {}
+      |                                                                                         ^
+../../include/plugin/PluginProcessor.h:79:54: warning: unused parameter 'parentTree' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                      ^
+../../include/plugin/PluginProcessor.h:79:70: warning: unused parameter 'oldIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                      ^
+../../include/plugin/PluginProcessor.h:79:84: warning: unused parameter 'newIndex' [-Wunused-parameter]
+   79 |     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {}
+      |                                                                                    ^
+../../include/plugin/PluginProcessor.h:80:50: warning: unused parameter 'tree' [-Wunused-parameter]
+   80 |     void valueTreeParentChanged(juce::ValueTree& tree) override {}
+      |                                                  ^
+23 warnings generated.
+[50/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/ElectricFlowerShader.cpp.o
+[51/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/shaders3d/ElectricFiligreeShader.cpp.o
+[52/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/MaterialShader.cpp.o
+[53/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/EnvironmentMapManager.cpp.o
+[54/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/GlassRefractionShader.cpp.o
+[55/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/TextureManager.cpp.o
+[56/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/LiquidChromeShader.cpp.o
+[57/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/materials/CrystallineShader.cpp.o
+[58/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/PostProcessEffect.cpp.o
+[59/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/VignetteEffect.cpp.o
+[60/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/FilmGrainEffect.cpp.o
+[61/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/BloomEffect.cpp.o
+[62/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/TrailsEffect.cpp.o
+[63/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/ColorGradeEffect.cpp.o
+[64/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/ChromaticAberrationEffect.cpp.o
+[65/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/DistortionEffect.cpp.o
+[66/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/ScanlineEffect.cpp.o
+[67/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/GlitchEffect.cpp.o
+[68/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/TiltShiftEffect.cpp.o
+[69/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/effects/RadialBlurEffect.cpp.o
+[70/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/particles/ParticlePool.cpp.o
+[71/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/particles/ParticleEmitter.cpp.o
+[72/513] Building CXX object CMakeFiles/Oscil.dir/src/rendering/particles/ParticleSystem.cpp.o
+[73/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilButton.cpp.o
+[74/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTextField.cpp.o
+../../src/ui/components/OscilTextField.cpp:11:17: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   11 | OscilTextField::OscilTextField()
+      |                 ^
+_deps/juce-src/modules/juce_graphics/fonts/juce_Font.h:110:7: note: 'Font' has been explicitly marked deprecated here
+  110 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+1 warning generated.
+[75/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilToggle.cpp.o
+[76/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilSlider.cpp.o
+[77/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilCheckbox.cpp.o
+[78/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilRadioButton.cpp.o
+[79/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilTabs.cpp.o
+[80/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilAccordion.cpp.o
+[81/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilBadge.cpp.o
+[82/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilModal.cpp.o
+[83/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/UIAudioFeedback.cpp.o
+[84/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilColorSwatches.cpp.o
+[85/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilColorPicker.cpp.o
+[86/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilDropdown.cpp.o
+FAILED: [code=1] CMakeFiles/Oscil.dir/src/ui/components/OscilDropdown.cpp.o 
+/opt/homebrew/bin/ccache /usr/bin/c++ -DDEBUG=1 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_plugin_client=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_MODULE_AVAILABLE_juce_opengl=1 -DJUCE_MODULE_AVAILABLE_melatonin_inspector=1 -DJUCE_REPORT_APP_USAGE=0 -DJUCE_SHARED_CODE=1 -DJUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_TARGET_HAS_BINARY_DATA=1 -DJUCE_USE_CURL=0 -DJUCE_VST3_CAN_REPLACE_VST2=0 -DJUCE_WEB_BROWSER=0 -DJucePlugin_AAXCategory=0 -DJucePlugin_AAXDisableBypass=0 -DJucePlugin_AAXDisableMultiMono=0 -DJucePlugin_AAXIdentifier=com.oscilaudio.oscil4 -DJucePlugin_AAXManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AAXProductId=JucePlugin_PluginCode -DJucePlugin_ARACompatibleArchiveIDs=\"\" -DJucePlugin_ARAContentTypes=0 -DJucePlugin_ARADocumentArchiveID=\"com.oscilaudio.oscil4.aradocumentarchive.1\" -DJucePlugin_ARAFactoryID=\"com.oscilaudio.oscil4.arafactory.1.0.0\" -DJucePlugin_ARATransformationFlags=0 -DJucePlugin_AUExportPrefix=oscil4AU -DJucePlugin_AUExportPrefixQuoted=\"oscil4AU\" -DJucePlugin_AUMainType="'aufx'" -DJucePlugin_AUManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AUSubType=JucePlugin_PluginCode -DJucePlugin_Build_AAX=0 -DJucePlugin_Build_AU=1 -DJucePlugin_Build_AUv3=0 -DJucePlugin_Build_LV2=0 -DJucePlugin_Build_Standalone=1 -DJucePlugin_Build_Unity=0 -DJucePlugin_Build_VST3=1 -DJucePlugin_Build_VST=0 -DJucePlugin_CFBundleIdentifier=com.oscilaudio.oscil4 -DJucePlugin_Desc=\"oscil4\" -DJucePlugin_EditorRequiresKeyboardFocus=0 -DJucePlugin_Enable_ARA=0 -DJucePlugin_IsMidiEffect=0 -DJucePlugin_IsSynth=0 -DJucePlugin_Manufacturer=\"OscilAudio\" -DJucePlugin_ManufacturerCode=0x4f736369 -DJucePlugin_ManufacturerEmail=\"\" -DJucePlugin_ManufacturerWebsite=\"\" -DJucePlugin_Name=\"oscil4\" -DJucePlugin_PluginCode=0x4f736331 -DJucePlugin_ProducesMidiOutput=0 -DJucePlugin_VSTCategory=kPlugCategEffect -DJucePlugin_VSTNumMidiInputs=16 -DJucePlugin_VSTNumMidiOutputs=16 -DJucePlugin_VSTUniqueID=JucePlugin_PluginCode -DJucePlugin_Version=1.0.0 -DJucePlugin_VersionCode=0x10000 -DJucePlugin_VersionString=\"1.0.0\" -DJucePlugin_Vst3Category="\"Fx|Analyzer\"" -DJucePlugin_WantsMidiInput=0 -DOSCIL_ENABLE_INSPECTOR=1 -DOSCIL_ENABLE_OPENGL=1 -D_DEBUG=1 -I/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/include -I/Users/Spare/Documents/code/MultiScoper/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/VST3_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lv2 -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/serd -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sratom -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/juce_binarydata_OscilBinaryData/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/json-src/include -I/Users/Spare/Documents/code/MultiScoper/build/dev -isystem /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/httplib-src -g -std=c++20 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Wno-unknown-warning-option -Wno-nontrivial-memcall -Wno-nontrivial-memaccess -g -O0 -Wall -Wshadow-all -Wshorten-64-to-32 -Wstrict-aliasing -Wuninitialized -Wunused-parameter -Wconversion -Wsign-compare -Wint-conversion -Wconditional-uninitialized -Wconstant-conversion -Wsign-conversion -Wbool-conversion -Wextra-semi -Wunreachable-code -Wcast-align -Wshift-sign-overflow -Wmissing-prototypes -Wnullable-to-nonnull-conversion -Wno-ignored-qualifiers -Wswitch-enum -Wpedantic -Wdeprecated -Wfloat-equal -Wmissing-field-initializers -Wzero-as-null-pointer-constant -Wunused-private-field -Woverloaded-virtual -Wreorder -Winconsistent-missing-destructor-override -MD -MT CMakeFiles/Oscil.dir/src/ui/components/OscilDropdown.cpp.o -MF CMakeFiles/Oscil.dir/src/ui/components/OscilDropdown.cpp.o.d -o CMakeFiles/Oscil.dir/src/ui/components/OscilDropdown.cpp.o -c /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp
+In file included from /Users/Spare/Documents/code/MultiScoper/src/ui/components/OscilDropdown.cpp:9:
+/Users/Spare/Documents/code/MultiScoper/src/ui/components/dropdown/DropdownPainter.h:8:10: fatal error: 'ui/theme/ColorTheme.h' file not found
+    8 | #include "ui/theme/ColorTheme.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+[87/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownList.cpp.o
+FAILED: [code=1] CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownList.cpp.o 
+/opt/homebrew/bin/ccache /usr/bin/c++ -DDEBUG=1 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_plugin_client=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_MODULE_AVAILABLE_juce_opengl=1 -DJUCE_MODULE_AVAILABLE_melatonin_inspector=1 -DJUCE_REPORT_APP_USAGE=0 -DJUCE_SHARED_CODE=1 -DJUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_TARGET_HAS_BINARY_DATA=1 -DJUCE_USE_CURL=0 -DJUCE_VST3_CAN_REPLACE_VST2=0 -DJUCE_WEB_BROWSER=0 -DJucePlugin_AAXCategory=0 -DJucePlugin_AAXDisableBypass=0 -DJucePlugin_AAXDisableMultiMono=0 -DJucePlugin_AAXIdentifier=com.oscilaudio.oscil4 -DJucePlugin_AAXManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AAXProductId=JucePlugin_PluginCode -DJucePlugin_ARACompatibleArchiveIDs=\"\" -DJucePlugin_ARAContentTypes=0 -DJucePlugin_ARADocumentArchiveID=\"com.oscilaudio.oscil4.aradocumentarchive.1\" -DJucePlugin_ARAFactoryID=\"com.oscilaudio.oscil4.arafactory.1.0.0\" -DJucePlugin_ARATransformationFlags=0 -DJucePlugin_AUExportPrefix=oscil4AU -DJucePlugin_AUExportPrefixQuoted=\"oscil4AU\" -DJucePlugin_AUMainType="'aufx'" -DJucePlugin_AUManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AUSubType=JucePlugin_PluginCode -DJucePlugin_Build_AAX=0 -DJucePlugin_Build_AU=1 -DJucePlugin_Build_AUv3=0 -DJucePlugin_Build_LV2=0 -DJucePlugin_Build_Standalone=1 -DJucePlugin_Build_Unity=0 -DJucePlugin_Build_VST3=1 -DJucePlugin_Build_VST=0 -DJucePlugin_CFBundleIdentifier=com.oscilaudio.oscil4 -DJucePlugin_Desc=\"oscil4\" -DJucePlugin_EditorRequiresKeyboardFocus=0 -DJucePlugin_Enable_ARA=0 -DJucePlugin_IsMidiEffect=0 -DJucePlugin_IsSynth=0 -DJucePlugin_Manufacturer=\"OscilAudio\" -DJucePlugin_ManufacturerCode=0x4f736369 -DJucePlugin_ManufacturerEmail=\"\" -DJucePlugin_ManufacturerWebsite=\"\" -DJucePlugin_Name=\"oscil4\" -DJucePlugin_PluginCode=0x4f736331 -DJucePlugin_ProducesMidiOutput=0 -DJucePlugin_VSTCategory=kPlugCategEffect -DJucePlugin_VSTNumMidiInputs=16 -DJucePlugin_VSTNumMidiOutputs=16 -DJucePlugin_VSTUniqueID=JucePlugin_PluginCode -DJucePlugin_Version=1.0.0 -DJucePlugin_VersionCode=0x10000 -DJucePlugin_VersionString=\"1.0.0\" -DJucePlugin_Vst3Category="\"Fx|Analyzer\"" -DJucePlugin_WantsMidiInput=0 -DOSCIL_ENABLE_INSPECTOR=1 -DOSCIL_ENABLE_OPENGL=1 -D_DEBUG=1 -I/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/include -I/Users/Spare/Documents/code/MultiScoper/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/VST3_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lv2 -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/serd -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sratom -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/juce_binarydata_OscilBinaryData/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/json-src/include -I/Users/Spare/Documents/code/MultiScoper/build/dev -isystem /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/httplib-src -g -std=c++20 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Wno-unknown-warning-option -Wno-nontrivial-memcall -Wno-nontrivial-memaccess -g -O0 -Wall -Wshadow-all -Wshorten-64-to-32 -Wstrict-aliasing -Wuninitialized -Wunused-parameter -Wconversion -Wsign-compare -Wint-conversion -Wconditional-uninitialized -Wconstant-conversion -Wsign-conversion -Wbool-conversion -Wextra-semi -Wunreachable-code -Wcast-align -Wshift-sign-overflow -Wmissing-prototypes -Wnullable-to-nonnull-conversion -Wno-ignored-qualifiers -Wswitch-enum -Wpedantic -Wdeprecated -Wfloat-equal -Wmissing-field-initializers -Wzero-as-null-pointer-constant -Wunused-private-field -Woverloaded-virtual -Wreorder -Winconsistent-missing-destructor-override -MD -MT CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownList.cpp.o -MF CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownList.cpp.o.d -o CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownList.cpp.o -c /Users/Spare/Documents/code/MultiScoper/src/ui/components/dropdown/DropdownList.cpp
+In file included from /Users/Spare/Documents/code/MultiScoper/src/ui/components/dropdown/DropdownList.cpp:8:
+/Users/Spare/Documents/code/MultiScoper/src/ui/components/dropdown/DropdownPainter.h:8:10: fatal error: 'ui/theme/ColorTheme.h' file not found
+    8 | #include "ui/theme/ColorTheme.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+[88/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/OscilMeterBar.cpp.o
+[89/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownPainter.cpp.o
+FAILED: [code=1] CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownPainter.cpp.o 
+/opt/homebrew/bin/ccache /usr/bin/c++ -DDEBUG=1 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_plugin_client=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_MODULE_AVAILABLE_juce_opengl=1 -DJUCE_MODULE_AVAILABLE_melatonin_inspector=1 -DJUCE_REPORT_APP_USAGE=0 -DJUCE_SHARED_CODE=1 -DJUCE_STANDALONE_APPLICATION=JucePlugin_Build_Standalone -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_TARGET_HAS_BINARY_DATA=1 -DJUCE_USE_CURL=0 -DJUCE_VST3_CAN_REPLACE_VST2=0 -DJUCE_WEB_BROWSER=0 -DJucePlugin_AAXCategory=0 -DJucePlugin_AAXDisableBypass=0 -DJucePlugin_AAXDisableMultiMono=0 -DJucePlugin_AAXIdentifier=com.oscilaudio.oscil4 -DJucePlugin_AAXManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AAXProductId=JucePlugin_PluginCode -DJucePlugin_ARACompatibleArchiveIDs=\"\" -DJucePlugin_ARAContentTypes=0 -DJucePlugin_ARADocumentArchiveID=\"com.oscilaudio.oscil4.aradocumentarchive.1\" -DJucePlugin_ARAFactoryID=\"com.oscilaudio.oscil4.arafactory.1.0.0\" -DJucePlugin_ARATransformationFlags=0 -DJucePlugin_AUExportPrefix=oscil4AU -DJucePlugin_AUExportPrefixQuoted=\"oscil4AU\" -DJucePlugin_AUMainType="'aufx'" -DJucePlugin_AUManufacturerCode=JucePlugin_ManufacturerCode -DJucePlugin_AUSubType=JucePlugin_PluginCode -DJucePlugin_Build_AAX=0 -DJucePlugin_Build_AU=1 -DJucePlugin_Build_AUv3=0 -DJucePlugin_Build_LV2=0 -DJucePlugin_Build_Standalone=1 -DJucePlugin_Build_Unity=0 -DJucePlugin_Build_VST3=1 -DJucePlugin_Build_VST=0 -DJucePlugin_CFBundleIdentifier=com.oscilaudio.oscil4 -DJucePlugin_Desc=\"oscil4\" -DJucePlugin_EditorRequiresKeyboardFocus=0 -DJucePlugin_Enable_ARA=0 -DJucePlugin_IsMidiEffect=0 -DJucePlugin_IsSynth=0 -DJucePlugin_Manufacturer=\"OscilAudio\" -DJucePlugin_ManufacturerCode=0x4f736369 -DJucePlugin_ManufacturerEmail=\"\" -DJucePlugin_ManufacturerWebsite=\"\" -DJucePlugin_Name=\"oscil4\" -DJucePlugin_PluginCode=0x4f736331 -DJucePlugin_ProducesMidiOutput=0 -DJucePlugin_VSTCategory=kPlugCategEffect -DJucePlugin_VSTNumMidiInputs=16 -DJucePlugin_VSTNumMidiOutputs=16 -DJucePlugin_VSTUniqueID=JucePlugin_PluginCode -DJucePlugin_Version=1.0.0 -DJucePlugin_VersionCode=0x10000 -DJucePlugin_VersionString=\"1.0.0\" -DJucePlugin_Vst3Category="\"Fx|Analyzer\"" -DJucePlugin_WantsMidiInput=0 -DOSCIL_ENABLE_INSPECTOR=1 -DOSCIL_ENABLE_OPENGL=1 -D_DEBUG=1 -I/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/include -I/Users/Spare/Documents/code/MultiScoper/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/VST3_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lv2 -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/serd -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sord/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/sratom -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/juce-src/modules/juce_audio_processors/format_types/LV2_SDK/lilv/src -I/Users/Spare/Documents/code/MultiScoper/build/dev/juce_binarydata_OscilBinaryData/JuceLibraryCode -I/Users/Spare/Documents/code/MultiScoper/build/dev/_deps/json-src/include -I/Users/Spare/Documents/code/MultiScoper/build/dev -isystem /Users/Spare/Documents/code/MultiScoper/build/dev/_deps/httplib-src -g -std=c++20 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk -fPIC -fvisibility=hidden -fvisibility-inlines-hidden -Wno-unknown-warning-option -Wno-nontrivial-memcall -Wno-nontrivial-memaccess -g -O0 -Wall -Wshadow-all -Wshorten-64-to-32 -Wstrict-aliasing -Wuninitialized -Wunused-parameter -Wconversion -Wsign-compare -Wint-conversion -Wconditional-uninitialized -Wconstant-conversion -Wsign-conversion -Wbool-conversion -Wextra-semi -Wunreachable-code -Wcast-align -Wshift-sign-overflow -Wmissing-prototypes -Wnullable-to-nonnull-conversion -Wno-ignored-qualifiers -Wswitch-enum -Wpedantic -Wdeprecated -Wfloat-equal -Wmissing-field-initializers -Wzero-as-null-pointer-constant -Wunused-private-field -Woverloaded-virtual -Wreorder -Winconsistent-missing-destructor-override -MD -MT CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownPainter.cpp.o -MF CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownPainter.cpp.o.d -o CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownPainter.cpp.o -c /Users/Spare/Documents/code/MultiScoper/src/ui/components/dropdown/DropdownPainter.cpp
+In file included from /Users/Spare/Documents/code/MultiScoper/src/ui/components/dropdown/DropdownPainter.cpp:5:
+/Users/Spare/Documents/code/MultiScoper/src/ui/components/dropdown/DropdownPainter.h:8:10: fatal error: 'ui/theme/ColorTheme.h' file not found
+    8 | #include "ui/theme/ColorTheme.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+[90/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/SegmentedButtonBar.cpp.o
+[91/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/PaneSelectorComponent.cpp.o
+[92/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/InlineEditLabel.cpp.o
+[93/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/panels/OscillatorListItem.cpp.o
+[94/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/panels/OscillatorListComponent.cpp.o
+In file included from ../../src/ui/panels/OscillatorListComponent.cpp:5:
+../../include/ui/panels/OscillatorListComponent.h:35:61: warning: unused parameter 'id' [-Wunused-parameter]
+   35 |         virtual void oscillatorSelected(const OscillatorId& id) {}
+      |                                                             ^
+../../include/ui/panels/OscillatorListComponent.h:36:70: warning: unused parameter 'id' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                      ^
+../../include/ui/panels/OscillatorListComponent.h:36:79: warning: unused parameter 'visible' [-Wunused-parameter]
+   36 |         virtual void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) {}
+      |                                                                               ^
+../../include/ui/panels/OscillatorListComponent.h:37:64: warning: unused parameter 'id' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:37:83: warning: unused parameter 'mode' [-Wunused-parameter]
+   37 |         virtual void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) {}
+      |                                                                                   ^
+../../include/ui/panels/OscillatorListComponent.h:38:68: warning: unused parameter 'id' [-Wunused-parameter]
+   38 |         virtual void oscillatorConfigRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:39:73: warning: unused parameter 'id' [-Wunused-parameter]
+   39 |         virtual void oscillatorColorConfigRequested(const OscillatorId& id) {}
+      |                                                                         ^
+../../include/ui/panels/OscillatorListComponent.h:40:68: warning: unused parameter 'id' [-Wunused-parameter]
+   40 |         virtual void oscillatorDeleteRequested(const OscillatorId& id) {}
+      |                                                                    ^
+../../include/ui/panels/OscillatorListComponent.h:41:47: warning: unused parameter 'fromIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                               ^
+../../include/ui/panels/OscillatorListComponent.h:41:62: warning: unused parameter 'toIndex' [-Wunused-parameter]
+   41 |         virtual void oscillatorsReordered(int fromIndex, int toIndex) {}
+      |                                                              ^
+../../include/ui/panels/OscillatorListComponent.h:46:75: warning: unused parameter 'id' [-Wunused-parameter]
+   46 |         virtual void oscillatorPaneSelectionRequested(const OscillatorId& id) {}
+      |                                                                           ^
+../../include/ui/panels/OscillatorListComponent.h:50:64: warning: unused parameter 'id' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                ^
+../../include/ui/panels/OscillatorListComponent.h:50:88: warning: unused parameter 'newName' [-Wunused-parameter]
+   50 |         virtual void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) {}
+      |                                                                                        ^
+13 warnings generated.
+[95/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/panels/OscillatorConfigPopup.cpp.o
+In file included from ../../src/ui/panels/OscillatorConfigPopup.cpp:13:
+In file included from ../../include/core/OscilState.h:11:
+../../include/core/dsp/CaptureQualityConfig.h:312:72: warning: unused parameter 'sourceRate' [-Wunused-parameter]
+  312 |     [[nodiscard]] QualityPreset getEffectiveQuality(int numTracks, int sourceRate) const
+      |                                                                        ^
+1 warning generated.
+[96/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/panels/OscillatorListToolbar.cpp.o
+[97/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/components/dropdown/DropdownSearch.cpp.o
+[98/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/panels/StatusBarComponent.cpp.o
+[99/513] Building CXX object CMakeFiles/Oscil.dir/src/ui/panels/SourceSelectorComponent.cpp.o
+ninja: build stopped: subcommand failed.

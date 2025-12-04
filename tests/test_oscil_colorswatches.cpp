@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/OscilColorSwatches.h"
+#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
 
@@ -20,7 +21,7 @@ protected:
 
 TEST_F(OscilColorSwatchesTest, DefaultConstruction)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     EXPECT_EQ(swatches.getColors().size(), 0u);
     EXPECT_EQ(swatches.getSelectedIndex(), -1);
@@ -28,7 +29,7 @@ TEST_F(OscilColorSwatchesTest, DefaultConstruction)
 
 TEST_F(OscilColorSwatchesTest, ConstructionWithTestId)
 {
-    OscilColorSwatches swatches("swatches-1");
+    OscilColorSwatches swatches(ThemeManager::getInstance(), "swatches-1");
 
     EXPECT_EQ(swatches.getColors().size(), 0u);
 }
@@ -39,7 +40,7 @@ TEST_F(OscilColorSwatchesTest, ConstructionWithTestId)
 
 TEST_F(OscilColorSwatchesTest, SetColors)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     std::vector<juce::Colour> colors = {
         juce::Colours::red,
@@ -53,7 +54,7 @@ TEST_F(OscilColorSwatchesTest, SetColors)
 
 TEST_F(OscilColorSwatchesTest, AddColor)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::green);
@@ -63,7 +64,7 @@ TEST_F(OscilColorSwatchesTest, AddColor)
 
 TEST_F(OscilColorSwatchesTest, GetColorAtIndex)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::blue);
@@ -75,7 +76,7 @@ TEST_F(OscilColorSwatchesTest, GetColorAtIndex)
 
 TEST_F(OscilColorSwatchesTest, ClearColors)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::green);
 
@@ -89,7 +90,7 @@ TEST_F(OscilColorSwatchesTest, ClearColors)
 
 TEST_F(OscilColorSwatchesTest, SelectByIndex)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::green);
     swatches.addColor(juce::Colours::blue);
@@ -101,7 +102,7 @@ TEST_F(OscilColorSwatchesTest, SelectByIndex)
 
 TEST_F(OscilColorSwatchesTest, SelectByColor)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::green);
     swatches.addColor(juce::Colours::blue);
@@ -112,7 +113,7 @@ TEST_F(OscilColorSwatchesTest, SelectByColor)
 
 TEST_F(OscilColorSwatchesTest, GetSelectedColorWhenNoSelection)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
 
     // No selection yet
@@ -122,7 +123,7 @@ TEST_F(OscilColorSwatchesTest, GetSelectedColorWhenNoSelection)
 
 TEST_F(OscilColorSwatchesTest, SelectInvalidIndex)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.setSelectedIndex(0, false);
 
@@ -136,7 +137,7 @@ TEST_F(OscilColorSwatchesTest, SelectInvalidIndex)
 
 TEST_F(OscilColorSwatchesTest, SetSwatchSize)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     swatches.setSwatchSize(32);
     EXPECT_EQ(swatches.getSwatchSize(), 32);
@@ -144,7 +145,7 @@ TEST_F(OscilColorSwatchesTest, SetSwatchSize)
 
 TEST_F(OscilColorSwatchesTest, SetSpacing)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     swatches.setSpacing(8);
     EXPECT_EQ(swatches.getSpacing(), 8);
@@ -152,7 +153,7 @@ TEST_F(OscilColorSwatchesTest, SetSpacing)
 
 TEST_F(OscilColorSwatchesTest, SetColumns)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     swatches.setColumns(8);
     EXPECT_EQ(swatches.getColumns(), 8);
@@ -160,7 +161,7 @@ TEST_F(OscilColorSwatchesTest, SetColumns)
 
 TEST_F(OscilColorSwatchesTest, SetColumnsZeroForAuto)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     swatches.setColumns(0);  // Auto columns
     EXPECT_EQ(swatches.getColumns(), 0);
@@ -168,7 +169,7 @@ TEST_F(OscilColorSwatchesTest, SetColumnsZeroForAuto)
 
 TEST_F(OscilColorSwatchesTest, SetShowCheckmark)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     swatches.setShowCheckmark(true);
     EXPECT_TRUE(swatches.getShowCheckmark());
@@ -183,7 +184,7 @@ TEST_F(OscilColorSwatchesTest, SetShowCheckmark)
 
 TEST_F(OscilColorSwatchesTest, OnColorSelectedCallback)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::green);
 
@@ -205,7 +206,7 @@ TEST_F(OscilColorSwatchesTest, OnColorSelectedCallback)
 
 TEST_F(OscilColorSwatchesTest, NoCallbackWhenNotifyFalse)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
 
     int changeCount = 0;
@@ -220,7 +221,7 @@ TEST_F(OscilColorSwatchesTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilColorSwatchesTest, OnColorHoveredCallback)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
 
     bool hoverCalled = false;
@@ -239,7 +240,7 @@ TEST_F(OscilColorSwatchesTest, OnColorHoveredCallback)
 
 TEST_F(OscilColorSwatchesTest, PreferredWidthPositive)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::green);
     swatches.addColor(juce::Colours::blue);
@@ -250,7 +251,7 @@ TEST_F(OscilColorSwatchesTest, PreferredWidthPositive)
 
 TEST_F(OscilColorSwatchesTest, PreferredHeightPositive)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::green);
     swatches.addColor(juce::Colours::blue);
@@ -261,7 +262,7 @@ TEST_F(OscilColorSwatchesTest, PreferredHeightPositive)
 
 TEST_F(OscilColorSwatchesTest, EmptySwatchesReturnSize)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     // Empty swatches may return 0 or negative values
     // Just verify the methods don't crash
@@ -275,7 +276,7 @@ TEST_F(OscilColorSwatchesTest, EmptySwatchesReturnSize)
 
 TEST_F(OscilColorSwatchesTest, ThemeChangeDoesNotThrow)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.setSelectedIndex(0, false);
 
@@ -289,7 +290,7 @@ TEST_F(OscilColorSwatchesTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilColorSwatchesTest, ThemeChangePreservesColors)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
     swatches.addColor(juce::Colours::red);
     swatches.addColor(juce::Colours::blue);
 
@@ -306,7 +307,7 @@ TEST_F(OscilColorSwatchesTest, ThemeChangePreservesColors)
 
 TEST_F(OscilColorSwatchesTest, WantsKeyboardFocus)
 {
-    OscilColorSwatches swatches;
+    OscilColorSwatches swatches(ThemeManager::getInstance());
 
     EXPECT_TRUE(swatches.getWantsKeyboardFocus());
 }

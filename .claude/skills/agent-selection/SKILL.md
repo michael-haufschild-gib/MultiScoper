@@ -1,116 +1,108 @@
----
-name: agent-selection
-description: Systematic framework for selecting the optimal specialized agent for C++/JUCE VST plugin development. Use when delegating to subagents via the Task tool to ensure the most appropriate specialist is chosen based on the development phase and task type.
----
+# Agent Selection Skill
 
-# Agent Selection (C++/JUCE VST Plugin)
+Guide for delegating tasks to specialized subagents in the Oscil audio visualization plugin.
 
-## Overview
+## Decision Tree
 
-Select the optimal specialized agent for C++/JUCE VST plugin development tasks. This skill provides a structured approach to matching tasks with agent expertise across the plugin development lifecycle.
+Analyze the task and match to the FIRST applicable agent:
 
-## When to Use This Skill
+### Implementation Agents (Write Code)
+| Signal | Agent | Use When |
+|--------|-------|----------|
+| Audio processing, DSP, `processBlock()`, lock-free, timing | `dsp-engineer` | Implementing audio logic, buffer management, cross-thread data |
+| UI components, layouts, dialogs, themes, mouse/keyboard | `ui-designer` | Creating/modifying Components, panels, styling |
+| OpenGL, shaders, GLSL, FBOs, particles, visualization | `render-specialist` | Writing shaders, render pipeline, GPU resources |
+| Tests, build errors, crashes, mocks, GoogleTest | `qa-engineer` | Writing tests, fixing build failures, debugging crashes |
 
-Invoke this skill before using the Task tool to delegate work to a specialized agent. Specifically use when:
+### Analysis Agents (Review/Investigate, No Code Changes)
+| Signal | Agent | Use When |
+|--------|-------|----------|
+| File placement, dependencies, layers, thread boundaries | `architecture-guardian` | Validating architecture decisions, reviewing structure |
+| Code review, real-time safety, thread safety, patterns | `code-reviewer` | Reviewing code changes before commit |
+| Bug investigation, root cause, hypothesis testing | `debugger` | Analyzing bugs WITHOUT fixing (investigation only) |
+| Documentation for LLM agents, patterns, decision trees | `technical-writer` | Writing/updating docs in `docs/` |
 
-- Starting a new development phase (Requirements, Architecture, Implementation)
-- Delegating complex technical tasks (DSP, UI, OpenGL, Threading)
-- Performing quality assurance (Code Review, Testing, Profiling)
-- Investigating issues (Bugs, Memory Leaks, Performance)
-- Writing documentation
+## Quick Reference
 
-## Agent Selection Process
+```
+Task involves...                          → Use agent
+─────────────────────────────────────────────────────
+processBlock(), audio buffers, atomics    → dsp-engineer
+Components, paint(), resized(), dialogs   → ui-designer
+Shaders, OpenGL, GLSL, render pipeline    → render-specialist
+Tests, build errors, ctest, GoogleTest    → qa-engineer
+"Is this the right place for X?"          → architecture-guardian
+"Review this code for issues"             → code-reviewer
+"Why is X happening?" (no fix needed)     → debugger
+"Update the docs for Y"                   → technical-writer
+```
 
-Follow this systematic process to select the appropriate agent:
+## Multi-Domain Tasks
 
-### Step 1: Identify Development Phase
+When a task crosses domains, sequence agents:
 
-Determine which phase of the plugin lifecycle the task belongs to:
+**Example**: "Add a knob that changes filter frequency"
+1. `dsp-engineer` → Add parameter, filter DSP logic
+2. `ui-designer` → Add knob component, wire to parameter
 
-1.  **Requirements & Analysis**: Defining what to build.
-2.  **Architecture & Design**: Planning how to build it.
-3.  **Implementation**: Writing the code.
-4.  **Quality & Optimization**: Testing and refining.
-5.  **Documentation**: Explaining the system.
+**Example**: "Add new shader with UI controls"
+1. `render-specialist` → Implement shader
+2. `ui-designer` → Add shader selector/controls
 
-### Step 2: Apply Selection Logic
+**Example**: "Fix bug and add tests"
+1. `debugger` → Investigate root cause (analysis only)
+2. `dsp-engineer` or `ui-designer` → Implement fix
+3. `qa-engineer` → Add tests
 
-Use this decision tree to select the agent:
+## Context to Provide Subagents
 
-#### 1. Requirements Phase
-- **New plugin concept / PRD creation** → `plugin-requirements-analyst`
-- **Analyzing existing JUCE code** → `juce-analyzer`
+**ALWAYS** include in your subagent prompt:
+```
+1. Specific task description (not just "fix it")
+2. Relevant file paths to read/modify
+3. Any investigation you've already done
+4. Reference docs: docs/architecture.md, docs/testing.md
+5. Expected deliverable format
+```
 
-#### 2. Architecture Phase
-- **Overall plugin architecture / Threading model** → `juce-architect`
-- **Parameter system design (APVTS)** → `parameter-architect`
-- **UI/UX Design & Component Hierarchy** → `ui-designer` (if available) or `ui-engineer` for technical design
+**Example prompt to subagent**:
+```
+Task: Add gain parameter to SignalProcessor
 
-#### 3. Implementation Phase
-- **Core Plugin (Processor, DSP, State, Host Integration)** → `plugin-engineer`
-- **Standard UI (Editor, Components, Layouts, LookAndFeel)** → `ui-engineer`
-- **Advanced Visualizations (OpenGL, Shaders, Real-time)** → `opengl-specialist`
-- **Complex Animations** → `animation-specialist`
+Files to modify:
+- include/core/dsp/SignalProcessor.h
+- src/core/dsp/SignalProcessor.cpp
 
-#### 4. Quality & Optimization Phase
-- **Code Review (General)** → `code-reviewer`
-- **Performance Issues / CPU Usage** → `performance-profiler`
-- **Memory Leaks / Lifetime Issues** → `memory-leak-detector`
-- **Security / Input Validation** → `security-auditor`
-- **Testing Strategy / Unit Tests** → `testing-architect`
-- **Debugging Crashes / Logic Errors** → `debugger`
+Context: User wants real-time gain control. Must be atomic for thread safety.
 
-#### 5. Documentation Phase
-- **Technical Documentation / User Manuals** → `technical-writer`
+Reference: docs/architecture.md for patterns
 
-### Step 3: Verify Selection
+Deliverable: Working implementation with test coverage
+```
 
-Before delegating, verify the selection makes sense:
+## Anti-Patterns
 
-1.  **Expertise match**: Does the agent's expertise align with task requirements?
-2.  **Scope appropriateness**: Is the task complex enough to warrant delegation?
-3.  **Context availability**: Can the task be completed independently by the agent?
+| Don't | Do Instead |
+|-------|------------|
+| "Refactor the entire app" | Delegate specific files/modules |
+| Send one-liner prompts | Provide full context and file paths |
+| Let agent repeat your research | Pass investigation results |
+| Use debugger to fix bugs | Use debugger to analyze, then implementation agent to fix |
+| Use code-reviewer to implement | Use code-reviewer to review, then fix separately |
 
-### Step 4: Delegate with Clear Context
+## Parallel Delegation
 
-When using the Task tool:
--   **Provide Context**: Always include references to `docs/prd.md`, `docs/architecture.md`, and relevant `.e/` status files.
--   **Respect Boundaries**: Don't ask `ui-engineer` to write DSP code, or `plugin-engineer` to write UI code.
--   **Parallel Work**: Note that Implementation Phase agents (`plugin-engineer`, `ui-engineer`, `opengl-specialist`) are designed to work in parallel using the `.e/` folder coordination system.
+When tasks are independent, delegate in parallel:
+```
+Independent: tests + docs update    → qa-engineer + technical-writer (parallel)
+Dependent: DSP then UI              → dsp-engineer, wait, then ui-designer (sequential)
+```
 
-## Quick Reference Patterns
+## Quality Gate
 
-**"Create a PRD for a new delay plugin"**
-→ `plugin-requirements-analyst`
-
-**"Design the thread-safe architecture for this synth"**
-→ `juce-architect`
-
-**"Implement the delay algorithm and parameter smoothing"**
-→ `plugin-engineer`
-
-**"Build the main editor window and knobs"**
-→ `ui-engineer`
-
-**"Create a real-time spectrum analyzer using OpenGL"**
-→ `opengl-specialist`
-
-**"Fix the memory leak in the voice allocation"**
-→ `memory-leak-detector`
-
-**"Optimize the filter for lower CPU usage"**
-→ `performance-profiler`
-
-**"Review the new oscillator code"**
-→ `code-reviewer`
-
-**"Write unit tests for the envelope generator"**
-→ `testing-architect`
-
-## Edge Cases
-
--   **Hybrid Tasks**: If a task involves both DSP and UI (e.g., "Add a visualizer that reacts to audio"), break it down:
-    1.  Task 1 (`plugin-engineer`): Expose audio data safely.
-    2.  Task 2 (`ui-engineer` / `opengl-specialist`): Visualize the data.
--   **General C++ Issues**: If it's a generic C++ error not specific to JUCE/Audio, `debugger` or `code-reviewer` are good choices.
-
+Before delegating, verify:
+- [ ] Task matches ONE agent's domain clearly
+- [ ] Specific files/scope identified
+- [ ] Context and investigation results included
+- [ ] Reference docs specified
+- [ ] Expected deliverable defined

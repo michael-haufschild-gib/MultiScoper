@@ -8,6 +8,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include "core/Oscillator.h"
+#include "core/dsp/CaptureQualityConfig.h"
 #include "ui/layout/Pane.h"
 #include <vector>
 
@@ -76,6 +77,13 @@ namespace StateIds
 
     // Rendering mode
     static const juce::Identifier GpuRenderingEnabled{ "gpuRenderingEnabled" };
+
+    // Capture quality configuration
+    static const juce::Identifier CaptureQuality{ "CaptureQuality" };
+    static const juce::Identifier QualityPreset{ "qualityPreset" };
+    static const juce::Identifier BufferDuration{ "bufferDuration" };
+    static const juce::Identifier AutoAdjustQuality{ "autoAdjustQuality" };
+    static const juce::Identifier MemoryBudgetBytes{ "memoryBudgetBytes" };
 }
 
 /**
@@ -195,6 +203,13 @@ public:
     void setGpuRenderingEnabled(bool enabled);
 
     /**
+     * Get/set capture quality configuration
+     * Controls waveform buffer resolution and memory usage
+     */
+    [[nodiscard]] CaptureQualityConfig getCaptureQualityConfig() const;
+    void setCaptureQualityConfig(const CaptureQualityConfig& config);
+
+    /**
      * Add a listener for state changes
      */
     void addListener(juce::ValueTree::Listener* listener);
@@ -227,11 +242,13 @@ private:
     juce::ValueTree getOrCreateOscillatorsNode();
     juce::ValueTree getOrCreatePanesNode();
     juce::ValueTree getOrCreateLayoutNode();
+    juce::ValueTree getOrCreateCaptureQualityNode();
 
     // Const versions for reading - return empty if not found
     juce::ValueTree getOscillatorsNode() const;
     juce::ValueTree getPanesNode() const;
     juce::ValueTree getLayoutNode() const;
+    juce::ValueTree getCaptureQualityNode() const;
 };
 
 /**

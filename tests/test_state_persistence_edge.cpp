@@ -147,3 +147,99 @@ TEST_F(StatePersistenceEdgeTest, SidebarWidthExtremeValues)
     state->setSidebarWidth(-100);
     EXPECT_EQ(state->getSidebarWidth(), -100);
 }
+
+// =============================================================================
+// PANE CLOSE TESTS - Oscillator state updates when pane is removed
+// =============================================================================
+
+TEST_F(StatePersistenceEdgeTest, PaneCloseUpdatesOscillatorState)
+{
+    auto& layoutManager = state->getLayoutManager();
+
+    // Create two panes
+    Pane pane1, pane2;
+    pane1.setName("Pane 1");
+    pane1.setOrderIndex(0);
+    pane2.setName("Pane 2");
+    pane2.setOrderIndex(1);
+    layoutManager.addPane(pane1);
+    layoutManager.addPane(pane2);
+
+    // Create oscillators assigned to pane1 (default is visible=true)
+    auto osc1 = OscillatorBuilder()
+        .withName("Osc 1 in Pane 1")
+        .withPaneId(pane1.getId())
+        .build();
+
+    auto osc2 = OscillatorBuilder()
+        .withName("Osc 2 in Pane 1")
+        .withPaneId(pane1.getId())
+        .build();
+
+    // osc3 is in pane2 - should not be affected
+    auto osc3 = OscillatorBuilder()
+        .withName("Osc 3 in Pane 2")
+        .withPaneId(pane2.getId())
+        .build();
+
+    state->addOscillator(osc1);
+    state->addOscillator(osc2);
+    state->addOscillator(osc3);
+
+    // Simulate pane close: update oscillators in pane1 to have invalid paneId and invisible
+    auto oscillators = state->getOscillators();
+    for (auto& osc : oscillators)
+    {
+        if (osc.getPaneId() == pane1.getId())
+        {
+            osc.setPaneId(PaneId::invalid());
+            osc.setVisible(false);
+            state->updateOscillator(osc);
+        }
+    }
+
+    // Remove the pane
+    layoutManager.removePane(pane1.getId());
+
+    // Verify: pane1 should be removed
+    EXPECT_EQ(layoutManager.getPaneCount(), 1);
+    EXPECT_NE(layoutManager.getPane(pane2.getId()), nullptr);
+    EXPECT_EQ(layoutManager.getPane(pane1.getId()), nullptr);
+
+    // Verify: oscillators in pane1 should have invalid paneId and be invisible
+    oscillators = state->getOscillators();
+    EXPECT_EQ(oscillators.size(), 3);
+
+    for (const auto& osc : oscillators)
+    {
+        if (osc.getName() == "Osc 1 in Pane 1" || osc.getName() == "Osc 2 in Pane 1")
+        {
+            EXPECT_FALSE(osc.getPaneId().isValid()) << "Oscillator " << osc.getName() << " should have invalid paneId";
+            EXPECT_FALSE(osc.isVisible()) << "Oscillator " << osc.getName() << " should be invisible";
+        }
+        else if (osc.getName() == "Osc 3 in Pane 2")
+        {
+            EXPECT_TRUE(osc.getPaneId().isValid()) << "Osc 3 should still have valid paneId";
+            EXPECT_EQ(osc.getPaneId(), pane2.getId()) << "Osc 3 should still be in pane2";
+            EXPECT_TRUE(osc.isVisible()) << "Osc 3 should still be visible";
+        }
+    }
+}
+
+TEST_F(StatePersistenceEdgeTest, PaneCloseWithNoOscillatorsInPane)
+{
+    auto& layoutManager = state->getLayoutManager();
+
+    // Create a pane with no oscillators
+    Pane pane;
+    pane.setName("Empty Pane");
+    layoutManager.addPane(pane);
+
+    EXPECT_EQ(layoutManager.getPaneCount(), 1);
+
+    // Remove the pane
+    layoutManager.removePane(pane.getId());
+
+    EXPECT_EQ(layoutManager.getPaneCount(), 0);
+    EXPECT_TRUE(state->getOscillators().empty());
+}

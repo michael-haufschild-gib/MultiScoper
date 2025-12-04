@@ -22,6 +22,8 @@ PaneId PaneId::generate()
 Oscillator::Oscillator()
     : id_(OscillatorId::generate())
     , state_(OscillatorState::NO_SOURCE)
+    , shaderId_("basic")
+    , visualPresetId_("default")
 {
 }
 

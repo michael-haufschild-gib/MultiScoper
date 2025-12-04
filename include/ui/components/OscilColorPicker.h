@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -39,8 +40,7 @@ public:
         Wheel       // HSV color wheel
     };
 
-    OscilColorPicker();
-    explicit OscilColorPicker(const juce::String& testId);
+    explicit OscilColorPicker(IThemeService& themeService, const juce::String& testId = "");
     ~OscilColorPicker() override;
 
     // Color
@@ -125,6 +125,7 @@ private:
     std::unique_ptr<juce::TextEditor> hexInput_;
 
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     static constexpr int GRADIENT_SIZE = 180;
     static constexpr int SLIDER_HEIGHT = 16;

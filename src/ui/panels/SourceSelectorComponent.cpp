@@ -12,8 +12,9 @@ namespace oscil
 // SourceListItem implementation
 //==============================================================================
 
-SourceListItem::SourceListItem(const SourceInfo& source)
-    : sourceId_(source.sourceId)
+SourceListItem::SourceListItem(IThemeService& themeService, const SourceInfo& source)
+    : themeService_(themeService)
+    , sourceId_(source.sourceId)
     , name_(source.name.isEmpty() ? source.sourceId.id : source.name)
     , channelCount_(source.channelCount)
     , isActive_(source.active.load())
@@ -26,7 +27,7 @@ void SourceListItem::paint(juce::Graphics& g)
     if (!matchesFilter_)
         return;
 
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background
@@ -83,7 +84,7 @@ void SourceListItem::paint(juce::Graphics& g)
 
 void SourceListItem::drawSourceIcon(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
     g.setColour(theme.textSecondary);
     g.setFont(juce::FontOptions(16.0f));
 
@@ -164,14 +165,15 @@ bool SourceListItem::matchesFilter(const juce::String& filter) const
 // NoSourceItem implementation
 //==============================================================================
 
-NoSourceItem::NoSourceItem()
+NoSourceItem::NoSourceItem(IThemeService& themeService)
+    : themeService_(themeService)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 void NoSourceItem::paint(juce::Graphics& g)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background on hover
@@ -217,10 +219,12 @@ void NoSourceItem::mouseUp(const juce::MouseEvent& e)
 // SourceSelectorPopup implementation
 //==============================================================================
 
-SourceSelectorPopup::SourceSelectorPopup()
+SourceSelectorPopup::SourceSelectorPopup(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
+    : themeService_(themeService)
+    , instanceRegistry_(instanceRegistry)
 {
     // Search input with magnifier icon
-    searchInput_ = std::make_unique<OscilTextField>(TextFieldVariant::Search);
+    searchInput_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Search, "");
     searchInput_->setPlaceholder("Search sources...");
     searchInput_->onTextChanged = [this](const juce::String& /*text*/) { handleFilterChange(); };
     addAndMakeVisible(*searchInput_);
@@ -238,7 +242,7 @@ SourceSelectorPopup::SourceSelectorPopup()
     addAndMakeVisible(*listViewport_);
 
     // No Source option
-    noSourceItem_ = std::make_unique<NoSourceItem>();
+    noSourceItem_ = std::make_unique<NoSourceItem>(themeService_);
     noSourceItem_->onClick = [this]()
     {
         if (onDisconnect)
@@ -247,23 +251,23 @@ SourceSelectorPopup::SourceSelectorPopup()
     addAndMakeVisible(*noSourceItem_);
 
     // Register listeners
-    InstanceRegistry::getInstance().addListener(this);
-    ThemeManager::getInstance().addListener(this);
+    instanceRegistry_.addListener(this);
+    themeService_.addListener(this);
 
     // Initial population
     refreshSources();
-    updateThemeColors(ThemeManager::getInstance().getCurrentTheme());
+    updateThemeColors(themeService_.getCurrentTheme());
 }
 
 SourceSelectorPopup::~SourceSelectorPopup()
 {
-    InstanceRegistry::getInstance().removeListener(this);
-    ThemeManager::getInstance().removeListener(this);
+    instanceRegistry_.removeListener(this);
+    themeService_.removeListener(this);
 }
 
 void SourceSelectorPopup::paint(juce::Graphics& g)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
     g.fillAll(theme.backgroundPrimary);
 
     // Border
@@ -325,11 +329,11 @@ void SourceSelectorPopup::refreshSources()
     // Clear existing items
     sourceItems_.clear();
 
-    auto sources = InstanceRegistry::getInstance().getAllSources();
+    auto sources = instanceRegistry_.getAllSources();
 
     for (const auto& source : sources)
     {
-        auto item = std::make_unique<SourceListItem>(source);
+        auto item = std::make_unique<SourceListItem>(themeService_, source);
         item->setSelected(source.sourceId == selectedSourceId_);
         item->onClick = [this](const SourceId& id)
         {
@@ -416,12 +420,14 @@ int SourceSelectorPopup::getPreferredHeight() const
 // SourceSelectorComponent implementation
 //==============================================================================
 
-SourceSelectorComponent::SourceSelectorComponent()
+SourceSelectorComponent::SourceSelectorComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
+    : themeService_(themeService)
+    , instanceRegistry_(instanceRegistry)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
     // Register as listener for source changes
-    InstanceRegistry::getInstance().addListener(this);
+    instanceRegistry_.addListener(this);
 
     // Initial state
     updateDisplayText();
@@ -429,12 +435,12 @@ SourceSelectorComponent::SourceSelectorComponent()
 
 SourceSelectorComponent::~SourceSelectorComponent()
 {
-    InstanceRegistry::getInstance().removeListener(this);
+    instanceRegistry_.removeListener(this);
 }
 
 void SourceSelectorComponent::paint(juce::Graphics& g)
 {
-    auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background
@@ -496,7 +502,7 @@ void SourceSelectorComponent::mouseUp(const juce::MouseEvent& e)
 void SourceSelectorComponent::showPopup()
 {
     // Use unique_ptr immediately to prevent memory leak if setup throws
-    auto popup = std::make_unique<SourceSelectorPopup>();
+    auto popup = std::make_unique<SourceSelectorPopup>(themeService_, instanceRegistry_);
     popup->setSelectedSourceId(selectedSourceId_);
     popup->setSize(280, popup->getPreferredHeight());
 
@@ -545,7 +551,7 @@ void SourceSelectorComponent::updateDisplayText()
         return;
     }
 
-    auto sources = InstanceRegistry::getInstance().getAllSources();
+    auto sources = instanceRegistry_.getAllSources();
     for (const auto& source : sources)
     {
         if (source.sourceId == selectedSourceId_)

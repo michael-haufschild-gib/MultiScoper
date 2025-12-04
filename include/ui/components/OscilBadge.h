@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/TestId.h"
@@ -28,10 +29,10 @@ class OscilBadge : public juce::Component,
                    public TestIdSupport
 {
 public:
-    OscilBadge();
-    explicit OscilBadge(const juce::String& text);
-    OscilBadge(const juce::String& text, BadgeColor color);
-    OscilBadge(const juce::String& text, BadgeColor color, const juce::String& testId);
+    OscilBadge(IThemeService& themeService);
+    OscilBadge(IThemeService& themeService, const juce::String& text);
+    OscilBadge(IThemeService& themeService, const juce::String& text, BadgeColor color);
+    OscilBadge(IThemeService& themeService, const juce::String& text, BadgeColor color, const juce::String& testId);
     ~OscilBadge() override;
 
     // Content
@@ -73,6 +74,7 @@ private:
     bool compact_ = false;
 
     ColorTheme theme_;
+    IThemeService& themeService_;
 
     static constexpr int ICON_SIZE = 12;
     static constexpr int PADDING_H = 8;

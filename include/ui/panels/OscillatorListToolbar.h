@@ -7,6 +7,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/IThemeService.h"
+#include "core/ServiceContext.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilTextField.h"
@@ -47,7 +49,8 @@ public:
         virtual void filterModeChanged(OscillatorFilterMode /*mode*/) {}
     };
 
-    OscillatorListToolbar();
+    explicit OscillatorListToolbar(ServiceContext& context);
+    explicit OscillatorListToolbar(IThemeService& themeService);
     ~OscillatorListToolbar() override;
 
     void paint(juce::Graphics& g) override;
@@ -81,6 +84,8 @@ private:
     int visibleCount_ = 0;
 
     juce::ListenerList<Listener> listeners_;
+
+    IThemeService& themeService_;
 
     // TestIdSupport
     void registerTestId() override;

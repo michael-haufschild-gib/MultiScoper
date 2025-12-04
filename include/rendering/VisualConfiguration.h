@@ -8,6 +8,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include "rendering/LightingConfig.h"
 #include <vector>
 #include <utility>
 
@@ -325,6 +326,7 @@ struct VisualConfiguration
 
     // 3D rendering
     Settings3D settings3D;
+    LightingConfig lighting;
 
     // Material properties
     MaterialSettings material;

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/theme/IThemeService.h"
 #include "ThemeManager.h"
 #include "ColorPickerComponent.h"
 #include "ui/components/OscilButton.h"
@@ -23,7 +24,7 @@ namespace oscil
 class ColorSwatchButton : public juce::Component
 {
 public:
-    ColorSwatchButton(const juce::String& label, juce::Colour initialColor);
+    ColorSwatchButton(IThemeService& themeService, const juce::String& label, juce::Colour initialColor);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -40,6 +41,7 @@ public:
     static constexpr int PREFERRED_HEIGHT = 28;
 
 private:
+    IThemeService& themeService_;
     juce::String label_;
     juce::Colour colour_;
     std::function<void(juce::Colour)> colourChangedCallback_;
@@ -53,7 +55,7 @@ private:
 class ThemeColorSection : public juce::Component
 {
 public:
-    ThemeColorSection(const juce::String& title);
+    ThemeColorSection(IThemeService& themeService, const juce::String& title);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -70,6 +72,7 @@ public:
     }
 
 private:
+    IThemeService& themeService_;
     juce::String title_;
     std::vector<std::unique_ptr<ColorSwatchButton>> swatches_;
     std::vector<juce::Colour*> colorRefs_;
@@ -89,7 +92,7 @@ class ThemeEditorComponent : public juce::Component,
                               public TestIdSupport
 {
 public:
-    ThemeEditorComponent();
+    explicit ThemeEditorComponent(IThemeService& themeService);
     ~ThemeEditorComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -123,6 +126,8 @@ private:
     void handleExportTheme();
     void handleApplyTheme();
     void handleColorChanged();
+
+    IThemeService& themeService_;
 
     // Theme list
     std::unique_ptr<juce::ListBox> themeList_;

@@ -8,6 +8,7 @@
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
+#include "core/DecimatingCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
 #include <cmath>
 
@@ -322,7 +323,19 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             metadata.timestamp = 0;
 
             // Use blocking write (tryLock=false) for reliable test injection
-            captureBuffer->write(testBuffer, metadata, false);
+            if (auto decBuffer = std::dynamic_pointer_cast<DecimatingCaptureBuffer>(captureBuffer))
+            {
+                decBuffer->write(testBuffer, metadata);
+            }
+            else if (auto sharedBuffer = std::dynamic_pointer_cast<SharedCaptureBuffer>(captureBuffer))
+            {
+                sharedBuffer->write(testBuffer, metadata, false);
+            }
+            else
+            {
+                response["error"] = "Buffer is not writable (unknown type)";
+                return response;
+            }
 
             // Force UI update
             editor_.repaint();

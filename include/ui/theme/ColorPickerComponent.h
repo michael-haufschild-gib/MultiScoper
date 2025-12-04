@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/theme/IThemeService.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilTextField.h"
 #include <functional>
@@ -20,7 +21,7 @@ namespace oscil
 class ColorPickerComponent : public juce::Component
 {
 public:
-    ColorPickerComponent();
+    explicit ColorPickerComponent(IThemeService& themeService);
     ~ColorPickerComponent() override = default;
 
     void paint(juce::Graphics& g) override;
@@ -74,6 +75,7 @@ private:
     void updateControls();
     void notifyColourChanged();
 
+    IThemeService& themeService_;
     juce::Colour currentColour_{ juce::Colours::green };
 
     // RGBA Sliders

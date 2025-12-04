@@ -13,7 +13,7 @@ WaveformPresenter::WaveformPresenter()
 {
 }
 
-void WaveformPresenter::setCaptureBuffer(std::shared_ptr<SharedCaptureBuffer> buffer)
+void WaveformPresenter::setCaptureBuffer(std::shared_ptr<IAudioBuffer> buffer)
 {
     captureBuffer_ = buffer;
 }
@@ -96,6 +96,10 @@ void WaveformPresenter::process()
     {
         std::span<const float> processedRight(processedSignal_.channel2.data(), processedSignal_.channel2.size());
         decimator_.process(processedRight, displayBuffer2_);
+    }
+    else
+    {
+        displayBuffer2_.clear();
     }
 
     // Calculate levels

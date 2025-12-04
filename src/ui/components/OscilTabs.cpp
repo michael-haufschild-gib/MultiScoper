@@ -10,29 +10,30 @@ namespace oscil
 static constexpr float kTabFontSize = 13.0f;
 static constexpr float kBadgeFontSize = 10.0f;
 
-OscilTabs::OscilTabs()
+OscilTabs::OscilTabs(IThemeService& themeService)
     : indicatorXSpring_(SpringPresets::snappy())
     , indicatorWidthSpring_(SpringPresets::snappy())
     , hoverSpring_(SpringPresets::stiff())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     indicatorXSpring_.position = 0.0f;
     indicatorWidthSpring_.position = 0.0f;
     hoverSpring_.position = 0.0f;
 }
 
-OscilTabs::OscilTabs(Orientation orientation)
-    : OscilTabs()
+OscilTabs::OscilTabs(IThemeService& themeService, Orientation orientation)
+    : OscilTabs(themeService)
 {
     orientation_ = orientation;
 }
 
-OscilTabs::OscilTabs(Orientation orientation, const juce::String& testId)
-    : OscilTabs()
+OscilTabs::OscilTabs(IThemeService& themeService, Orientation orientation, const juce::String& testId)
+    : OscilTabs(themeService)
 {
     orientation_ = orientation;
     setTestId(testId);
@@ -45,7 +46,7 @@ void OscilTabs::registerTestId()
 
 OscilTabs::~OscilTabs()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 

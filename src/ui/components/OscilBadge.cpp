@@ -7,30 +7,38 @@
 namespace oscil
 {
 
-OscilBadge::OscilBadge()
+OscilBadge::OscilBadge(IThemeService& themeService)
+    : themeService_(themeService)
 {
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 }
 
-OscilBadge::OscilBadge(const juce::String& text)
-    : OscilBadge()
+
+
+OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text)
+    : OscilBadge(themeService)
 {
     text_ = text;
 }
 
-OscilBadge::OscilBadge(const juce::String& text, BadgeColor color)
-    : OscilBadge(text)
+
+
+OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text, BadgeColor color)
+    : OscilBadge(themeService, text)
 {
     color_ = color;
 }
 
-OscilBadge::OscilBadge(const juce::String& text, BadgeColor color, const juce::String& testId)
-    : OscilBadge(text)
+
+
+OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text, BadgeColor color, const juce::String& testId)
+    : OscilBadge(themeService, text, color)
 {
-    color_ = color;
     setTestId(testId);
 }
+
+
 
 void OscilBadge::registerTestId()
 {
@@ -39,7 +47,7 @@ void OscilBadge::registerTestId()
 
 OscilBadge::~OscilBadge()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
 }
 
 void OscilBadge::setText(const juce::String& text)

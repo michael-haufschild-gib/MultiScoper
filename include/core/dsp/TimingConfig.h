@@ -153,7 +153,8 @@ enum class TriggerMode
 {
     FREE_RUNNING,  // Continuous display without sync
     HOST_SYNC,     // Sync to host transport (play/stop)
-    TRIGGERED      // Trigger on signal threshold
+    TRIGGERED,     // Trigger on signal threshold
+    MIDI           // Trigger on MIDI Note On
 };
 
 inline juce::String triggerModeToString(TriggerMode mode)
@@ -163,6 +164,7 @@ inline juce::String triggerModeToString(TriggerMode mode)
         case TriggerMode::FREE_RUNNING: return "FREE_RUNNING";
         case TriggerMode::HOST_SYNC:    return "HOST_SYNC";
         case TriggerMode::TRIGGERED:    return "TRIGGERED";
+        case TriggerMode::MIDI:         return "MIDI";
         default:                        return "FREE_RUNNING";
     }
 }
@@ -171,6 +173,7 @@ inline TriggerMode stringToTriggerMode(const juce::String& str)
 {
     if (str == "HOST_SYNC")  return TriggerMode::HOST_SYNC;
     if (str == "TRIGGERED")  return TriggerMode::TRIGGERED;
+    if (str == "MIDI")       return TriggerMode::MIDI;
     return TriggerMode::FREE_RUNNING;
 }
 
@@ -254,6 +257,8 @@ struct TimingConfig
     // Trigger settings
     float triggerThreshold = -20.0f;  // dBFS trigger level
     TriggerEdge triggerEdge = TriggerEdge::Rising;  // Edge detection mode
+    int midiTriggerNote = -1;         // -1 for any note, 0-127 for specific note
+    int midiTriggerChannel = 0;       // 0 for omni, 1-16 for specific channel
 
     // Computed values (read-only, updated by calculateActualInterval)
     float actualIntervalMs = 500.0f;   // Final calculated interval in ms
@@ -408,6 +413,8 @@ struct TimingConfig
         tree.setProperty("syncToPlayhead", syncToPlayhead, nullptr);
         tree.setProperty("triggerThreshold", triggerThreshold, nullptr);
         tree.setProperty("triggerEdge", triggerEdgeToString(triggerEdge), nullptr);
+        tree.setProperty("midiTriggerNote", midiTriggerNote, nullptr);
+        tree.setProperty("midiTriggerChannel", midiTriggerChannel, nullptr);
         return tree;
     }
 
@@ -427,6 +434,8 @@ struct TimingConfig
         syncToPlayhead = static_cast<bool>(tree.getProperty("syncToPlayhead", false));
         triggerThreshold = static_cast<float>(tree.getProperty("triggerThreshold", -20.0f));
         triggerEdge = stringToTriggerEdge(tree.getProperty("triggerEdge", "Rising").toString());
+        midiTriggerNote = static_cast<int>(tree.getProperty("midiTriggerNote", -1));
+        midiTriggerChannel = static_cast<int>(tree.getProperty("midiTriggerChannel", 0));
 
         calculateActualInterval();
     }

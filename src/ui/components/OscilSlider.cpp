@@ -8,15 +8,16 @@
 namespace oscil
 {
 
-OscilSlider::OscilSlider()
+OscilSlider::OscilSlider(IThemeService& themeService)
     : thumbScale_(SpringPresets::snappy())
     , snapPulse_(SpringPresets::bouncy())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     thumbScale_.position = 1.0f;
     thumbScale_.target = 1.0f;
@@ -35,28 +36,36 @@ OscilSlider::OscilSlider()
     };
 
     // Default magnetic points
-    magneticPoints_ = { minValue_, maxValue_ * 0.25, maxValue_ * 0.5,
-                        maxValue_ * 0.75, maxValue_, defaultValue_ };
+    snapController_.setMagneticPoints({ minValue_, maxValue_ * 0.25, maxValue_ * 0.5,
+                                        maxValue_ * 0.75, maxValue_, defaultValue_ });
 }
 
-OscilSlider::OscilSlider(SliderVariant variant)
-    : OscilSlider()
+
+
+OscilSlider::OscilSlider(IThemeService& themeService, SliderVariant variant)
+    : OscilSlider(themeService)
 {
     setVariant(variant);
 }
 
-OscilSlider::OscilSlider(const juce::String& testId)
-    : OscilSlider()
+
+
+OscilSlider::OscilSlider(IThemeService& themeService, const juce::String& testId)
+    : OscilSlider(themeService)
 {
     setTestId(testId);
 }
 
-OscilSlider::OscilSlider(SliderVariant variant, const juce::String& testId)
-    : OscilSlider()
+
+
+OscilSlider::OscilSlider(IThemeService& themeService, SliderVariant variant, const juce::String& testId)
+    : OscilSlider(themeService)
 {
     setVariant(variant);
     setTestId(testId);
 }
+
+
 
 void OscilSlider::registerTestId()
 {
@@ -65,7 +74,7 @@ void OscilSlider::registerTestId()
 
 OscilSlider::~OscilSlider()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -122,9 +131,9 @@ void OscilSlider::setRange(double min, double max)
     internalSlider_.setRange(min, max, step_);
 
     // Update magnetic points
-    magneticPoints_ = { minValue_, (minValue_ + maxValue_) * 0.25,
-                        (minValue_ + maxValue_) * 0.5,
-                        (minValue_ + maxValue_) * 0.75, maxValue_, defaultValue_ };
+    snapController_.setMagneticPoints({ minValue_, (minValue_ + maxValue_) * 0.25,
+                                        (minValue_ + maxValue_) * 0.5,
+                                        (minValue_ + maxValue_) * 0.75, maxValue_, defaultValue_ });
 
     setValue(constrainValue(value_), false);
 }
@@ -139,11 +148,7 @@ void OscilSlider::setDefaultValue(double defaultValue)
 {
     defaultValue_ = defaultValue;
     // Add to magnetic points if not already there
-    if (std::find(magneticPoints_.begin(), magneticPoints_.end(), defaultValue)
-        == magneticPoints_.end())
-    {
-        magneticPoints_.push_back(defaultValue);
-    }
+    snapController_.addMagneticPoint(defaultValue);
 }
 
 void OscilSlider::setSkewFactor(double skew)
@@ -177,26 +182,22 @@ void OscilSlider::setShowValueOnHover(bool show)
 
 void OscilSlider::setMagneticSnappingEnabled(bool enabled)
 {
-    enableMagneticSnap_ = enabled;
+    snapController_.setEnabled(enabled);
 }
 
 void OscilSlider::setMagneticPoints(const std::vector<double>& points)
 {
-    magneticPoints_ = points;
+    snapController_.setMagneticPoints(points);
 }
 
 void OscilSlider::addMagneticPoint(double point)
 {
-    if (std::find(magneticPoints_.begin(), magneticPoints_.end(), point)
-        == magneticPoints_.end())
-    {
-        magneticPoints_.push_back(point);
-    }
+    snapController_.addMagneticPoint(point);
 }
 
 void OscilSlider::clearMagneticPoints()
 {
-    magneticPoints_.clear();
+    snapController_.clearMagneticPoints();
 }
 
 void OscilSlider::setValueFormatter(Callbacks::FormatCallback formatter)
@@ -584,8 +585,13 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     double newValue = proportionOfLengthToValue(proportion);
 
     // Apply magnetic snapping (unless Shift held for coarse mode)
-    if (enableMagneticSnap_ && !e.mods.isShiftDown())
-        applyMagneticSnapping(newValue);
+    if (!e.mods.isShiftDown())
+    {
+        bool didSnap = false;
+        newValue = snapController_.applySnapping(newValue, minValue_, maxValue_, didSnap);
+        if (didSnap)
+            triggerSnapFeedback();
+    }
 
     if (variant_ == SliderVariant::Range)
     {
@@ -772,24 +778,6 @@ double OscilSlider::proportionOfLengthToValue(double proportion) const
     return minValue_ + proportion * (maxValue_ - minValue_);
 }
 
-void OscilSlider::applyMagneticSnapping(double& value)
-{
-    double range = maxValue_ - minValue_;
-    double snapThreshold = range * ComponentLayout::MAGNETIC_SNAP_THRESHOLD;
-
-    for (double point : magneticPoints_)
-    {
-        if (std::abs(value - point) < snapThreshold)
-        {
-            value = point;
-            if (!justSnapped_)
-                triggerSnapFeedback();
-            return;
-        }
-    }
-
-    justSnapped_ = false;
-}
 
 void OscilSlider::triggerSnapFeedback()
 {

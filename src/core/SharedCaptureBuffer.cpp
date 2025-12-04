@@ -29,11 +29,9 @@ static size_t nextPowerOfTwo(size_t n)
 SharedCaptureBuffer::SharedCaptureBuffer(size_t bufferSamples)
     : capacity_(nextPowerOfTwo(bufferSamples))
 {
-    buffers_.resize(MAX_CHANNELS);
-    for (auto& buffer : buffers_)
-    {
-        buffer.resize(capacity_, 0.0f);
-    }
+    // Allocate flat buffer for all channels
+    // Layout: [Channel 0 Data] [Channel 1 Data] ...
+    buffer_.resize(capacity_ * MAX_CHANNELS, 0.0f);
 }
 
 void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata, bool tryLock)
@@ -57,32 +55,43 @@ void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int
     if (numSamples <= 0 || numChannels <= 0)
         return;
 
-    // Clamp channels once
-    const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
+    // Handle locking based on tryLock parameter
+    // For real-time audio (tryLock=true), we must not block.
+    // If we can't get the lock, we drop the frame.
+    if (tryLock)
+    {
+        const juce::SpinLock::ScopedTryLockType sl(writeLock_);
+        if (!sl.isLocked())
+            return;
+            
+        // Lock acquired, proceed
+        // Clamp channels once
+        const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
 
-    // Shared write logic
-    auto performWrite = [&]() {
         // Get current write position
         size_t writePos = writePos_.load(std::memory_order_relaxed);
 
         // Write samples to ring buffer
+        // Optimization: Write all channels in the loop to maximize cache hits if possible,
+        // but since we used planar layout, we write to distant memory regions.
+        // However, flat buffer removes the pointer indirection overhead.
+        
         for (int i = 0; i < numSamples; ++i)
         {
             size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
 
             for (int ch = 0; ch < actualChannels; ++ch)
             {
-                size_t chIdx = static_cast<size_t>(ch);
                 if (samples[ch] != nullptr)
                 {
-                    buffers_[chIdx][pos] = samples[ch][i];
+                    buffer_[static_cast<size_t>(ch) * capacity_ + pos] = samples[ch][i];
                 }
             }
 
             // Zero out unused channels
-            for (size_t ch = static_cast<size_t>(actualChannels); ch < MAX_CHANNELS; ++ch)
+            for (int ch = actualChannels; ch < static_cast<int>(MAX_CHANNELS); ++ch)
             {
-                buffers_[ch][pos] = 0.0f;
+                buffer_[static_cast<size_t>(ch) * capacity_ + pos] = 0.0f;
             }
         }
 
@@ -92,29 +101,46 @@ void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int
         // Update total samples written
         samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_release);
 
-        // Update metadata using lock-free SeqLock pattern
+        // Update metadata
         CaptureFrameMetadata meta = metadata;
         meta.numSamples = numSamples;
         meta.numChannels = actualChannels;
         metadata_.write(meta);
-    };
-
-    // Handle locking based on tryLock parameter
-    if (tryLock)
-    {
-        // Real-time audio thread: try to acquire lock, skip if contended
-        const juce::SpinLock::ScopedTryLockType sl(writeLock_);
-        if (sl.isLocked())
-        {
-            performWrite();
-        }
-        // else: Skip this write to avoid blocking audio thread
     }
     else
     {
         // Non-real-time thread: block until lock acquired
         const juce::SpinLock::ScopedLockType sl(writeLock_);
-        performWrite();
+        
+        // Duplicate logic (could extract to private method, but keeping inline for perf)
+        const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
+        size_t writePos = writePos_.load(std::memory_order_relaxed);
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
+
+            for (int ch = 0; ch < actualChannels; ++ch)
+            {
+                if (samples[ch] != nullptr)
+                {
+                    buffer_[static_cast<size_t>(ch) * capacity_ + pos] = samples[ch][i];
+                }
+            }
+
+            for (int ch = actualChannels; ch < static_cast<int>(MAX_CHANNELS); ++ch)
+            {
+                buffer_[static_cast<size_t>(ch) * capacity_ + pos] = 0.0f;
+            }
+        }
+
+        writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
+        samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_release);
+        
+        CaptureFrameMetadata meta = metadata;
+        meta.numSamples = numSamples;
+        meta.numChannels = actualChannels;
+        metadata_.write(meta);
     }
 }
 
@@ -135,7 +161,6 @@ int SharedCaptureBuffer::read(std::span<float> output, int channel) const
     size_t requestedSamples = output.size();
     
     // Clamp read request to available samples
-    // Also ensure we don't try to read more than capacity (though available <= capacity should hold)
     size_t safeAvailable = std::min(available, capacity_);
     size_t samplesToRead = std::min(requestedSamples, safeAvailable);
 
@@ -145,23 +170,22 @@ int SharedCaptureBuffer::read(std::span<float> output, int channel) const
     // Read from the most recent samples (before write position)
     size_t writePos = writePos_.load(std::memory_order_acquire);
     
-    // Calculate read start position, ensuring it handles wrap-around correctly
-    // We add capacity_ before subtracting to avoid underflow, then modulo
-    // writePos is monotonic increasing, but we use wrapPosition for access
-    
     size_t readStart = (writePos + capacity_ - samplesToRead) & (capacity_ - 1);
-    size_t channelIdx = static_cast<size_t>(channel);
+    size_t channelOffset = static_cast<size_t>(channel) * capacity_;
     
-    // Validate buffer existence (paranoia check)
-    if (channelIdx >= buffers_.size() || buffers_[channelIdx].size() != capacity_)
-        return 0;
+    // Optimization: Split into two memcpy's if wrapping, or one if contiguous
+    // Since we are reading a ring buffer, it might wrap around the end.
+    
+    size_t firstChunk = std::min(samplesToRead, capacity_ - readStart);
+    size_t secondChunk = samplesToRead - firstChunk;
 
-    const auto& channelBuffer = buffers_[channelIdx];
+    // Copy first chunk
+    std::memcpy(output.data(), &buffer_[channelOffset + readStart], firstChunk * sizeof(float));
 
-    for (size_t i = 0; i < samplesToRead; ++i)
+    // Copy second chunk (wrapped)
+    if (secondChunk > 0)
     {
-        size_t pos = (readStart + i) & (capacity_ - 1);
-        output[i] = channelBuffer[pos];
+        std::memcpy(output.data() + firstChunk, &buffer_[channelOffset], secondChunk * sizeof(float));
     }
 
     return static_cast<int>(samplesToRead);
@@ -195,10 +219,7 @@ size_t SharedCaptureBuffer::getAvailableSamples() const
 
 void SharedCaptureBuffer::clear()
 {
-    for (auto& buffer : buffers_)
-    {
-        std::fill(buffer.begin(), buffer.end(), 0.0f);
-    }
+    std::fill(buffer_.begin(), buffer_.end(), 0.0f);
     writePos_.store(0, std::memory_order_release);
     samplesWritten_.store(0, std::memory_order_release);
 }
@@ -216,17 +237,26 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
         return 0.0f;
 
     size_t writePos = writePos_.load(std::memory_order_acquire);
-    // Use bitwise AND for power-of-2 wrapping (faster than modulo)
     size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
+    size_t channelOffset = static_cast<size_t>(channel) * capacity_;
 
-    size_t channelIdx = static_cast<size_t>(channel);
     float peak = 0.0f;
-    for (int i = 0; i < samplesToAnalyze; ++i)
+    
+    // Analyze in chunks to handle wrap-around
+    auto analyzeChunk = [&](size_t start, size_t count) {
+        for (size_t i = 0; i < count; ++i)
+        {
+            float val = std::abs(buffer_[channelOffset + start + i]);
+            if (val > peak) peak = val;
+        }
+    };
+
+    size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
+    analyzeChunk(readStart, firstChunk);
+    
+    if (firstChunk < static_cast<size_t>(samplesToAnalyze))
     {
-        size_t pos = wrapPosition(readStart + static_cast<size_t>(i));
-        float absVal = std::abs(buffers_[channelIdx][pos]);
-        if (absVal > peak)
-            peak = absVal;
+        analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
     }
 
     return peak;
@@ -245,16 +275,25 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
         return 0.0f;
 
     size_t writePos = writePos_.load(std::memory_order_acquire);
-    // Use bitwise AND for power-of-2 wrapping
     size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
+    size_t channelOffset = static_cast<size_t>(channel) * capacity_;
 
-    size_t channelIdx = static_cast<size_t>(channel);
     double sumSquares = 0.0;
-    for (int i = 0; i < samplesToAnalyze; ++i)
+
+    auto analyzeChunk = [&](size_t start, size_t count) {
+        for (size_t i = 0; i < count; ++i)
+        {
+            float val = buffer_[channelOffset + start + i];
+            sumSquares += val * val;
+        }
+    };
+
+    size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
+    analyzeChunk(readStart, firstChunk);
+
+    if (firstChunk < static_cast<size_t>(samplesToAnalyze))
     {
-        size_t pos = wrapPosition(readStart + static_cast<size_t>(i));
-        float val = buffers_[channelIdx][pos];
-        sumSquares += val * val;
+        analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
     }
 
     return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
