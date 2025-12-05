@@ -16,12 +16,25 @@ using namespace oscil;
 class OscilRadioButtonTest : public ::testing::Test
 {
 protected:
-    void SetUp() override {}
+    void SetUp() override
+    {
+        themeManager_ = std::make_unique<ThemeManager>();
+    }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 TEST_F(OscilRadioButtonTest, DefaultConstruction)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
 
     EXPECT_FALSE(radio.isSelected());
     EXPECT_TRUE(radio.isEnabled());
@@ -30,7 +43,7 @@ TEST_F(OscilRadioButtonTest, DefaultConstruction)
 
 TEST_F(OscilRadioButtonTest, ConstructionWithLabel)
 {
-    OscilRadioButton radio(ThemeManager::getInstance(), "Option A");
+    OscilRadioButton radio(getThemeManager(), "Option A");
 
     EXPECT_EQ(radio.getLabel(), juce::String("Option A"));
     EXPECT_FALSE(radio.isSelected());
@@ -38,14 +51,14 @@ TEST_F(OscilRadioButtonTest, ConstructionWithLabel)
 
 TEST_F(OscilRadioButtonTest, ConstructionWithLabelAndTestId)
 {
-    OscilRadioButton radio(ThemeManager::getInstance(), "Option A", "radio-1");
+    OscilRadioButton radio(getThemeManager(), "Option A", "radio-1");
 
     EXPECT_EQ(radio.getLabel(), juce::String("Option A"));
 }
 
 TEST_F(OscilRadioButtonTest, SetSelected)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
 
     radio.setSelected(true, false);
     EXPECT_TRUE(radio.isSelected());
@@ -56,7 +69,7 @@ TEST_F(OscilRadioButtonTest, SetSelected)
 
 TEST_F(OscilRadioButtonTest, SetLabel)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
     radio.setLabel("Option A");
 
     EXPECT_EQ(radio.getLabel(), juce::String("Option A"));
@@ -64,14 +77,14 @@ TEST_F(OscilRadioButtonTest, SetLabel)
 
 TEST_F(OscilRadioButtonTest, DefaultLabelOnRight)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
 
     EXPECT_TRUE(radio.isLabelOnRight());
 }
 
 TEST_F(OscilRadioButtonTest, SetLabelOnRight)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
 
     radio.setLabelOnRight(false);
     EXPECT_FALSE(radio.isLabelOnRight());
@@ -82,7 +95,7 @@ TEST_F(OscilRadioButtonTest, SetLabelOnRight)
 
 TEST_F(OscilRadioButtonTest, EnabledState)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
 
     EXPECT_TRUE(radio.isEnabled());
 
@@ -95,7 +108,7 @@ TEST_F(OscilRadioButtonTest, EnabledState)
 
 TEST_F(OscilRadioButtonTest, OnSelectedCallback)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
     int selectCount = 0;
 
     radio.onSelected = [&selectCount]() {
@@ -108,7 +121,7 @@ TEST_F(OscilRadioButtonTest, OnSelectedCallback)
 
 TEST_F(OscilRadioButtonTest, NoCallbackWhenNotifyFalse)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
     int selectCount = 0;
 
     radio.onSelected = [&selectCount]() {
@@ -121,7 +134,7 @@ TEST_F(OscilRadioButtonTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilRadioButtonTest, PreferredWidthPositive)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
     radio.setLabel("Test Option");
 
     int width = radio.getPreferredWidth();
@@ -130,7 +143,7 @@ TEST_F(OscilRadioButtonTest, PreferredWidthPositive)
 
 TEST_F(OscilRadioButtonTest, PreferredHeightPositive)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
 
     int height = radio.getPreferredHeight();
     EXPECT_GT(height, 0);
@@ -138,7 +151,7 @@ TEST_F(OscilRadioButtonTest, PreferredHeightPositive)
 
 TEST_F(OscilRadioButtonTest, ThemeChangeDoesNotThrow)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
     radio.setSelected(true, false);
 
     ColorTheme newTheme;
@@ -151,7 +164,7 @@ TEST_F(OscilRadioButtonTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilRadioButtonTest, WantsKeyboardFocus)
 {
-    OscilRadioButton radio(ThemeManager::getInstance());
+    OscilRadioButton radio(getThemeManager());
 
     EXPECT_TRUE(radio.getWantsKeyboardFocus());
 }
@@ -163,8 +176,21 @@ TEST_F(OscilRadioButtonTest, WantsKeyboardFocus)
 class OscilRadioGroupTest : public ::testing::Test
 {
 protected:
-    void SetUp() override {}
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
+    void SetUp() override
+    {
+        themeManager_ = std::make_unique<ThemeManager>();
+    }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+    IThemeService& getThemeService() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 TEST_F(OscilRadioGroupTest, DefaultConstruction)

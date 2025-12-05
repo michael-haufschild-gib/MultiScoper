@@ -73,16 +73,6 @@ void OptionsSection::setupComponents()
     };
     addAndMakeVisible(*autoScaleToggle_);
 
-    // Hold Display toggle
-    holdDisplayToggle_ = std::make_unique<OscilToggle>(themeService_, "Hold", "sidebar_options_holdToggle");
-    holdDisplayToggle_->setValue(holdDisplayEnabled_, false);
-    holdDisplayToggle_->onValueChanged = [this](bool value)
-    {
-        holdDisplayEnabled_ = value;
-        notifyHoldDisplayChanged();
-    };
-    addAndMakeVisible(*holdDisplayToggle_);
-
     // Layout section label
     layoutLabel_ = std::make_unique<juce::Label>();
     layoutLabel_->setText("LAYOUT", juce::dontSendNotification);
@@ -212,9 +202,6 @@ void OptionsSection::resized()
     y += ROW_HEIGHT + SPACING_MEDIUM;
 
     autoScaleToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
-    y += ROW_HEIGHT + SPACING_MEDIUM;
-
-    holdDisplayToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
     y += ROW_HEIGHT + SPACING_LARGE;
 
     // Layout section label and dropdown
@@ -299,12 +286,6 @@ void OptionsSection::setAutoScale(bool enabled)
     gainSlider_->setEnabled(!enabled);
 }
 
-void OptionsSection::setHoldDisplay(bool enabled)
-{
-    holdDisplayEnabled_ = enabled;
-    holdDisplayToggle_->setValue(enabled, false);
-}
-
 void OptionsSection::addListener(Listener* listener)
 {
     listeners_.add(listener);
@@ -314,7 +295,6 @@ void OptionsSection::removeListener(Listener* listener)
 {
     listeners_.remove(listener);
 }
-
 int OptionsSection::getPreferredHeight() const
 {
     using namespace SectionLayout;
@@ -323,8 +303,7 @@ int OptionsSection::getPreferredHeight() const
     height += 40 + SPACING_LARGE;                    // Gain slider
     height += LABEL_HEIGHT + SPACING_MEDIUM;         // Display label
     height += ROW_HEIGHT + SPACING_MEDIUM;           // Show Grid
-    height += ROW_HEIGHT + SPACING_MEDIUM;           // Auto-Scale
-    height += ROW_HEIGHT + SPACING_LARGE;            // Hold
+    height += ROW_HEIGHT + SPACING_LARGE;            // Auto-Scale
     height += LABEL_HEIGHT + SPACING_MEDIUM;         // Layout label
     height += DROPDOWN_HEIGHT + SPACING_LARGE;       // Layout dropdown
     height += LABEL_HEIGHT + SPACING_MEDIUM;         // Theme label
@@ -400,15 +379,9 @@ void OptionsSection::notifyShowGridChanged()
 {
     listeners_.call([this](Listener& l) { l.showGridChanged(showGridEnabled_); });
 }
-
 void OptionsSection::notifyAutoScaleChanged()
 {
     listeners_.call([this](Listener& l) { l.autoScaleChanged(autoScaleEnabled_); });
-}
-
-void OptionsSection::notifyHoldDisplayChanged()
-{
-    listeners_.call([this](Listener& l) { l.holdDisplayChanged(holdDisplayEnabled_); });
 }
 
 void OptionsSection::setGpuRenderingEnabled(bool enabled)

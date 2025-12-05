@@ -117,7 +117,6 @@ TEST_F(StatePersistenceLoadTest, DisplayOptionsDefaults)
     // Check defaults
     EXPECT_TRUE(state->isShowGridEnabled());
     EXPECT_TRUE(state->isAutoScaleEnabled());
-    EXPECT_FALSE(state->isHoldDisplayEnabled());
     EXPECT_FLOAT_EQ(state->getGainDb(), 0.0f);
 }
 
@@ -129,69 +128,4 @@ TEST_F(StatePersistenceLoadTest, SidebarDefaults)
     EXPECT_TRUE(state->isStatusBarVisible());
 }
 
-// Test: Global preferences defaults
-TEST_F(StatePersistenceLoadTest, GlobalPreferencesDefaults)
-{
-    auto& prefs = GlobalPreferences::getInstance();
-
-    // Check that defaults are reasonable
-    EXPECT_EQ(prefs.getDefaultTheme(), "Dark Professional");
-    EXPECT_EQ(prefs.getDefaultColumnLayout(), 1);
-    EXPECT_TRUE(prefs.getShowStatusBar());
-    EXPECT_FALSE(prefs.getReducedMotion());
-    EXPECT_FALSE(prefs.getUIAudioFeedback());
-    EXPECT_TRUE(prefs.getTooltipsEnabled());
-    EXPECT_EQ(prefs.getDefaultSidebarWidth(), 280);
-}
-
-// Test: Global preferences setters and getters
-TEST_F(StatePersistenceLoadTest, GlobalPreferencesSettersAndGetters)
-{
-    auto& prefs = GlobalPreferences::getInstance();
-
-    // Save original values
-    auto originalTheme = prefs.getDefaultTheme();
-    auto originalColumns = prefs.getDefaultColumnLayout();
-    auto originalSidebarWidth = prefs.getDefaultSidebarWidth();
-
-    // Test setters
-    prefs.setDefaultTheme("Test Theme");
-    EXPECT_EQ(prefs.getDefaultTheme(), "Test Theme");
-
-    prefs.setDefaultColumnLayout(2);
-    EXPECT_EQ(prefs.getDefaultColumnLayout(), 2);
-
-    prefs.setShowStatusBar(false);
-    EXPECT_FALSE(prefs.getShowStatusBar());
-
-    prefs.setReducedMotion(true);
-    EXPECT_TRUE(prefs.getReducedMotion());
-
-    prefs.setUIAudioFeedback(true);
-    EXPECT_TRUE(prefs.getUIAudioFeedback());
-
-    prefs.setTooltipsEnabled(false);
-    EXPECT_FALSE(prefs.getTooltipsEnabled());
-
-    prefs.setDefaultSidebarWidth(350);
-    EXPECT_EQ(prefs.getDefaultSidebarWidth(), 350);
-
-    // Restore original values
-    prefs.setDefaultTheme(originalTheme);
-    prefs.setDefaultColumnLayout(originalColumns);
-    prefs.setShowStatusBar(true);
-    prefs.setReducedMotion(false);
-    prefs.setUIAudioFeedback(false);
-    prefs.setTooltipsEnabled(true);
-    prefs.setDefaultSidebarWidth(originalSidebarWidth);
-}
-
-// Test: Global preferences singleton
-TEST_F(StatePersistenceLoadTest, GlobalPreferencesSingleton)
-{
-    auto& prefs1 = GlobalPreferences::getInstance();
-    auto& prefs2 = GlobalPreferences::getInstance();
-
-    // Should be the same instance
-    EXPECT_EQ(&prefs1, &prefs2);
-}
+// Note: GlobalPreferences tests are in test_state_persistence.cpp (GlobalPreferencesTest fixture)

@@ -11,7 +11,7 @@ namespace oscil
 OscilTextField::OscilTextField(IThemeService& themeService)
     : focusSpring_(SpringPresets::stiff())
     , themeService_(themeService)
-    , cachedErrorFont_(juce::FontOptions())
+    , cachedErrorFont_(juce::FontOptions{})
 {
     setupComponents();
 

@@ -570,7 +570,15 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
     // Apply trigger threshold (convert dBFS to linear if needed)
     // Entity uses dBFS (-20.0f default), engine uses linear (0.0-1.0)
     // Convert: linear = 10^(dBFS/20)
-    float thresholdLinear = std::pow(10.0f, entityConfig.triggerThreshold / 20.0f);
+    float thresholdDbfs = entityConfig.triggerThreshold;
+    if (!std::isfinite(thresholdDbfs))
+        thresholdDbfs = -20.0f;  // Default if NaN/Inf
+    // Clamp dBFS to valid range to prevent Inf from pow() (0 dB = 1.0 linear)
+    thresholdDbfs = juce::jlimit(-60.0f, 0.0f, thresholdDbfs);
+    float thresholdLinear = std::pow(10.0f, thresholdDbfs / 20.0f);
+    // Additional safety check for pow() output
+    if (!std::isfinite(thresholdLinear))
+        thresholdLinear = 0.1f;
     atomicTriggerThreshold_.store(juce::jlimit(0.0f, 1.0f, thresholdLinear), std::memory_order_relaxed);
 
     // Apply MIDI config

@@ -5,17 +5,19 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
 #include "core/Oscillator.h"
-#include "core/interfaces/IAudioBuffer.h"
-#include "ui/panels/WaveformPresenter.h"
-#include "ui/panels/SoftwareGridRenderer.h"
 #include "core/dsp/TimingConfig.h"
+#include "core/interfaces/IAudioBuffer.h"
+#include "ui/panels/SoftwareGridRenderer.h"
+#include "ui/panels/WaveformPresenter.h"
 #include "ui/theme/IThemeService.h"
 #include "ui/theme/ThemeManager.h"
-#include <vector>
+
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <atomic>
+#include <vector>
 
 namespace oscil
 {
@@ -24,13 +26,14 @@ namespace oscil
 class WaveformShader;
 struct WaveformRenderData;
 class SharedCaptureBuffer;
+class ShaderRegistry;
 
 /**
  * Display mode for stereo waveforms
  */
 enum class StereoDisplayMode
 {
-    Stacked    // L channel on top, R channel on bottom
+    Stacked // L channel on top, R channel on bottom
 };
 
 class OscilPluginProcessor;
@@ -41,7 +44,7 @@ class OscilPluginProcessor;
 class WaveformComponent : public juce::Component
 {
 public:
-    explicit WaveformComponent(IThemeService& themeService);
+    WaveformComponent(IThemeService& themeService, ShaderRegistry& shaderRegistry);
     ~WaveformComponent() override; // Not default anymore, needs to destroy unique_ptr
 
     void paint(juce::Graphics& g) override;
@@ -203,23 +206,24 @@ private:
     void updateWaveformPath();
 
     IThemeService& themeService_;
+    ShaderRegistry& shaderRegistry_;
     std::unique_ptr<WaveformPresenter> presenter_;
     std::unique_ptr<SoftwareGridRenderer> gridRenderer_;
-    
-    juce::Colour colour_{ 0xFF00FFFF }; // Default, overwritten by oscillator
+
+    juce::Colour colour_{0xFF00FFFF}; // Default, overwritten by oscillator
     float opacity_ = 1.0f;
-    float lineWidth_ = 1.5f;  // Default line width
+    float lineWidth_ = 1.5f; // Default line width
     bool holdDisplay_ = false;
     bool highlighted_ = false;
     StereoDisplayMode stereoDisplayMode_ = StereoDisplayMode::Stacked;
 
     // Shader rendering
     juce::String shaderId_ = "basic";
-    juce::String visualPresetId_ = "default";  // Visual preset for advanced rendering
-    juce::ValueTree visualOverrides_; // Custom visual settings overrides
+    juce::String visualPresetId_ = "default"; // Visual preset for advanced rendering
+    juce::ValueTree visualOverrides_;         // Custom visual settings overrides
     bool gpuRenderingEnabled_ = false;
-    int waveformId_ = 0;  // Unique ID for GL renderer registration
-    static std::atomic<int> nextWaveformId_;  // Counter for generating unique IDs
+    int waveformId_ = 0;                     // Unique ID for GL renderer registration
+    static std::atomic<int> nextWaveformId_; // Counter for generating unique IDs
 
     juce::Path waveformPath1_;
     juce::Path waveformPath2_;

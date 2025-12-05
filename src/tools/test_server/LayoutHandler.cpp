@@ -6,7 +6,7 @@
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
 #include "core/OscilState.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 
 namespace oscil
 {

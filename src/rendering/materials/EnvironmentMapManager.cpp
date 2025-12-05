@@ -227,9 +227,12 @@ void EnvironmentMapManager::generateFaceData(std::vector<float>& data,
 
             // Normalize direction
             float len = std::sqrt(dx*dx + dy*dy + dz*dz);
-            dx /= len;
-            dy /= len;
-            dz /= len;
+            if (len > 1e-6f)
+            {
+                dx /= len;
+                dy /= len;
+                dz /= len;
+            }
 
             // Calculate vertical angle (for sky gradient)
             float vertAngle = std::asin(dy);  // -PI/2 to PI/2

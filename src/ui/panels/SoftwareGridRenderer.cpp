@@ -104,7 +104,10 @@ void SoftwareGridRenderer::drawChannelGrid(juce::Graphics& g, juce::Rectangle<in
         if (durationMs <= 0.0001f) durationMs = 1.0f;
 
         float targetStep = durationMs / 8.0f;
+        // Guard against log10 of zero/negative and division by zero
+        if (targetStep <= 0.0f) targetStep = 1.0f;
         float magnitude = std::pow(10.0f, std::floor(std::log10(targetStep)));
+        if (magnitude <= 0.0f || !std::isfinite(magnitude)) magnitude = 1.0f;
         float normalizedStep = targetStep / magnitude;
 
         float stepSize;
@@ -169,6 +172,8 @@ void SoftwareGridRenderer::drawChannelGrid(juce::Graphics& g, juce::Rectangle<in
                 break;
         }
 
+        // Guard against division by zero
+        if (numDivisions <= 0) numDivisions = 1;
         float widthPerDiv = static_cast<float>(width) / static_cast<float>(numDivisions);
 
         // Draw major division lines
@@ -188,6 +193,8 @@ void SoftwareGridRenderer::drawChannelGrid(juce::Graphics& g, juce::Rectangle<in
         if (isBarBased && gridConfig_.noteInterval >= NoteInterval::TWO_BARS && widthPerDiv > 40.0f)
         {
             int subBeatsPerDiv = beatsPerBar;
+            // Guard against division by zero
+            if (subBeatsPerDiv <= 0) subBeatsPerDiv = 1;
             float subBeatWidth = widthPerDiv / static_cast<float>(subBeatsPerDiv);
             g.setColour(theme.gridMinor.withAlpha(0.3f));
 
@@ -368,6 +375,8 @@ void SoftwareGridRenderer::renderLabels(juce::Graphics& g,
                 break;
         }
 
+        // Guard against division by zero
+        if (numDivisions <= 0) numDivisions = 1;
         float widthPerDiv = static_cast<float>(width) / static_cast<float>(numDivisions);
 
         // Draw division labels if there's enough space

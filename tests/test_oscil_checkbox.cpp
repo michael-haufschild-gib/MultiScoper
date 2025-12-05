@@ -12,7 +12,17 @@ using namespace oscil;
 class OscilCheckboxTest : public ::testing::Test
 {
 protected:
-    void SetUp() override {}
+    std::unique_ptr<ThemeManager> themeManager_;
+
+    void SetUp() override {
+        themeManager_ = std::make_unique<ThemeManager>();
+    }
+
+    void TearDown() override {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
 };
 
 // =============================================================================
@@ -21,7 +31,7 @@ protected:
 
 TEST_F(OscilCheckboxTest, DefaultConstruction)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     EXPECT_EQ(checkbox.getState(), CheckState::Unchecked);
     EXPECT_FALSE(checkbox.isChecked());
@@ -31,7 +41,7 @@ TEST_F(OscilCheckboxTest, DefaultConstruction)
 
 TEST_F(OscilCheckboxTest, ConstructionWithLabel)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance(), "Accept Terms");
+    OscilCheckbox checkbox(getThemeManager(), "Accept Terms");
 
     EXPECT_EQ(checkbox.getLabel(), juce::String("Accept Terms"));
     EXPECT_FALSE(checkbox.isChecked());
@@ -39,7 +49,7 @@ TEST_F(OscilCheckboxTest, ConstructionWithLabel)
 
 TEST_F(OscilCheckboxTest, ConstructionWithLabelAndTestId)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance(), "Accept Terms", "checkbox-1");
+    OscilCheckbox checkbox(getThemeManager(), "Accept Terms", "checkbox-1");
 
     EXPECT_EQ(checkbox.getLabel(), juce::String("Accept Terms"));
 }
@@ -50,7 +60,7 @@ TEST_F(OscilCheckboxTest, ConstructionWithLabelAndTestId)
 
 TEST_F(OscilCheckboxTest, SetCheckedTrue)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     checkbox.setChecked(true, false);
     EXPECT_TRUE(checkbox.isChecked());
@@ -59,7 +69,7 @@ TEST_F(OscilCheckboxTest, SetCheckedTrue)
 
 TEST_F(OscilCheckboxTest, SetCheckedFalse)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setChecked(true, false);
 
     checkbox.setChecked(false, false);
@@ -69,7 +79,7 @@ TEST_F(OscilCheckboxTest, SetCheckedFalse)
 
 TEST_F(OscilCheckboxTest, SetStateUnchecked)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     checkbox.setState(CheckState::Unchecked, false);
     EXPECT_EQ(checkbox.getState(), CheckState::Unchecked);
@@ -78,7 +88,7 @@ TEST_F(OscilCheckboxTest, SetStateUnchecked)
 
 TEST_F(OscilCheckboxTest, SetStateChecked)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     checkbox.setState(CheckState::Checked, false);
     EXPECT_EQ(checkbox.getState(), CheckState::Checked);
@@ -87,7 +97,7 @@ TEST_F(OscilCheckboxTest, SetStateChecked)
 
 TEST_F(OscilCheckboxTest, SetStateIndeterminate)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     checkbox.setState(CheckState::Indeterminate, false);
     EXPECT_EQ(checkbox.getState(), CheckState::Indeterminate);
@@ -96,7 +106,7 @@ TEST_F(OscilCheckboxTest, SetStateIndeterminate)
 
 TEST_F(OscilCheckboxTest, ToggleFromUnchecked)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setState(CheckState::Unchecked, false);
 
     checkbox.toggle();
@@ -105,7 +115,7 @@ TEST_F(OscilCheckboxTest, ToggleFromUnchecked)
 
 TEST_F(OscilCheckboxTest, ToggleFromChecked)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setState(CheckState::Checked, false);
 
     checkbox.toggle();
@@ -114,7 +124,7 @@ TEST_F(OscilCheckboxTest, ToggleFromChecked)
 
 TEST_F(OscilCheckboxTest, ToggleFromIndeterminate)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setState(CheckState::Indeterminate, false);
 
     checkbox.toggle();
@@ -128,7 +138,7 @@ TEST_F(OscilCheckboxTest, ToggleFromIndeterminate)
 
 TEST_F(OscilCheckboxTest, SetLabel)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setLabel("Accept Terms");
 
     EXPECT_EQ(checkbox.getLabel(), juce::String("Accept Terms"));
@@ -136,14 +146,14 @@ TEST_F(OscilCheckboxTest, SetLabel)
 
 TEST_F(OscilCheckboxTest, DefaultLabelOnRight)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     EXPECT_TRUE(checkbox.isLabelOnRight());
 }
 
 TEST_F(OscilCheckboxTest, SetLabelOnRight)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     checkbox.setLabelOnRight(false);
     EXPECT_FALSE(checkbox.isLabelOnRight());
@@ -158,14 +168,14 @@ TEST_F(OscilCheckboxTest, SetLabelOnRight)
 
 TEST_F(OscilCheckboxTest, DefaultEnabled)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     EXPECT_TRUE(checkbox.isEnabled());
 }
 
 TEST_F(OscilCheckboxTest, SetDisabled)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setEnabled(false);
 
     EXPECT_FALSE(checkbox.isEnabled());
@@ -173,7 +183,7 @@ TEST_F(OscilCheckboxTest, SetDisabled)
 
 TEST_F(OscilCheckboxTest, SetEnabledAfterDisabled)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setEnabled(false);
     checkbox.setEnabled(true);
 
@@ -186,7 +196,7 @@ TEST_F(OscilCheckboxTest, SetEnabledAfterDisabled)
 
 TEST_F(OscilCheckboxTest, OnCheckedChangedCallback)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     int changeCount = 0;
     bool lastState = false;
@@ -203,7 +213,7 @@ TEST_F(OscilCheckboxTest, OnCheckedChangedCallback)
 
 TEST_F(OscilCheckboxTest, OnStateChangedCallback)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     int changeCount = 0;
     CheckState lastState = CheckState::Unchecked;
@@ -224,7 +234,7 @@ TEST_F(OscilCheckboxTest, OnStateChangedCallback)
 
 TEST_F(OscilCheckboxTest, NoCallbackWhenNotifyFalse)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     int changeCount = 0;
 
@@ -242,22 +252,22 @@ TEST_F(OscilCheckboxTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilCheckboxTest, PreferredWidthPositive)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     EXPECT_GT(checkbox.getPreferredWidth(), 0);
 }
 
 TEST_F(OscilCheckboxTest, PreferredHeightPositive)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     EXPECT_GT(checkbox.getPreferredHeight(), 0);
 }
 
 TEST_F(OscilCheckboxTest, CheckboxWithLabelHasGreaterWidth)
 {
-    OscilCheckbox noLabel(ThemeManager::getInstance());
-    OscilCheckbox withLabel(ThemeManager::getInstance(), "A Very Long Label Here");
+    OscilCheckbox noLabel(getThemeManager());
+    OscilCheckbox withLabel(getThemeManager(), "A Very Long Label Here");
 
     EXPECT_GT(withLabel.getPreferredWidth(), noLabel.getPreferredWidth());
 }
@@ -268,7 +278,7 @@ TEST_F(OscilCheckboxTest, CheckboxWithLabelHasGreaterWidth)
 
 TEST_F(OscilCheckboxTest, ThemeChangeDoesNotThrow)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setState(CheckState::Checked, false);
 
     ColorTheme newTheme;
@@ -281,7 +291,7 @@ TEST_F(OscilCheckboxTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilCheckboxTest, ThemeChangePreservesLabel)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
     checkbox.setLabel("Test Label");
 
     ColorTheme newTheme;
@@ -297,7 +307,7 @@ TEST_F(OscilCheckboxTest, ThemeChangePreservesLabel)
 
 TEST_F(OscilCheckboxTest, WantsKeyboardFocus)
 {
-    OscilCheckbox checkbox(ThemeManager::getInstance());
+    OscilCheckbox checkbox(getThemeManager());
 
     EXPECT_TRUE(checkbox.getWantsKeyboardFocus());
 }

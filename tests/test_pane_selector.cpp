@@ -18,9 +18,17 @@ protected:
     {
         // Initialize JUCE message manager for tests
         juce::MessageManager::getInstance();
+        themeManager_ = std::make_unique<ThemeManager>();
     }
 
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    IThemeService& getThemeService() { return *themeManager_; }
+
+    std::unique_ptr<ThemeManager> themeManager_;
 
     std::vector<Pane> createTestPanes(int count)
     {

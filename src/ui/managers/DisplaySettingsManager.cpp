@@ -43,15 +43,6 @@ void DisplaySettingsManager::setAutoScaleForAll(bool autoScale)
     }
 }
 
-void DisplaySettingsManager::setHoldDisplayForAll(bool hold)
-{
-    for (auto& pane : panes_)
-    {
-        if (pane)
-            pane->setHoldDisplay(hold);
-    }
-}
-
 void DisplaySettingsManager::setGainDbForAll(float gainDb)
 {
     for (auto& pane : panes_)

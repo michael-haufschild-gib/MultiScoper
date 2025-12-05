@@ -101,12 +101,9 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
     settingsButton_->onClick = [this]() { listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); }); };
     addChildComponent(*settingsButton_);
 
-    // Visibility button (Compact mode) - eye icon
+    // Visibility button - eye icon
     visibilityButton_ = std::make_unique<OscilButton>(themeService_, "");
     visibilityButton_->setVariant(ButtonVariant::Icon);
-    visibilityButton_->setIconPath(isVisible_ ?
-        ListItemIcons::createEyeOpenIcon(static_cast<float>(ICON_BUTTON_SIZE)) :
-        ListItemIcons::createEyeClosedIcon(static_cast<float>(ICON_BUTTON_SIZE)));
     if (suffix.isNotEmpty()) visibilityButton_->setTestId(getTestId() + "_vis_btn");
     visibilityButton_->onClick = [this]() {
         // If trying to make visible but no valid pane, request pane selection
@@ -120,24 +117,6 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
         listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
     };
     addChildComponent(*visibilityButton_);
-
-    // Visibility toggle (Expanded mode)
-    visibilityToggle_ = std::make_unique<OscilToggle>(themeService_, "Visible");
-    if (suffix.isNotEmpty()) visibilityToggle_->setTestId(getTestId() + "_vis_toggle");
-    visibilityToggle_->onValueChanged = [this](bool visible) {
-        // If trying to make visible but no valid pane, request pane selection
-        if (visible && !paneId_.isValid())
-        {
-            // Revert toggle state since we're not actually changing visibility
-            visibilityToggle_->setValue(false, false);
-            listeners_.call([this](Listener& l) { l.oscillatorPaneSelectionRequested(oscillatorId_); });
-            return;
-        }
-        isVisible_ = visible;
-        updateVisibility();
-        listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
-    };
-    addChildComponent(*visibilityToggle_);
 
     // Mode buttons - using icons for Stereo/Mono, short text for others
     modeButtons_ = std::make_unique<SegmentedButtonBar>(themeService_);
@@ -200,25 +179,21 @@ void OscillatorListItemComponent::updateVisibility()
             theme.textSecondary.withAlpha(alpha));
     }
 
+    // Always update button icon and tooltip based on current state
+    visibilityButton_->setIconPath(isVisible_ ?
+        ListItemIcons::createEyeOpenIcon(static_cast<float>(ICON_BUTTON_SIZE)) :
+        ListItemIcons::createEyeClosedIcon(static_cast<float>(ICON_BUTTON_SIZE)));
+    visibilityButton_->setTooltip(isVisible_ ? "Hide Oscillator (V)" : "Show Oscillator (V)");
+    visibilityButton_->setVisible(true);
+
     // Visibility controls
     if (selected_)
     {
-        visibilityButton_->setVisible(false);
-        visibilityToggle_->setVisible(true);
-        visibilityToggle_->setValue(isVisible_, false);
         modeButtons_->setVisible(true);
         modeButtons_->setSelectedId(static_cast<int>(processingMode_));
     }
     else
     {
-        // In compact mode, always show visibility button so users can toggle visibility
-        // Update button icon and tooltip based on current state
-        visibilityButton_->setIconPath(isVisible_ ?
-            ListItemIcons::createEyeOpenIcon(static_cast<float>(ICON_BUTTON_SIZE)) :
-            ListItemIcons::createEyeClosedIcon(static_cast<float>(ICON_BUTTON_SIZE)));
-        visibilityButton_->setTooltip(isVisible_ ? "Hide Oscillator (V)" : "Show Oscillator (V)");
-        visibilityButton_->setVisible(true);
-        visibilityToggle_->setVisible(false);
         modeButtons_->setVisible(false);
     }
     
@@ -291,10 +266,7 @@ void OscillatorListItemComponent::resized()
     settingsButton_->setBounds(bounds.removeFromRight(ICON_BUTTON_SIZE).withY(buttonY).withHeight(ICON_BUTTON_SIZE));
     bounds.removeFromRight(4);
     
-    if (visibilityButton_->isVisible())
-    {
-        visibilityButton_->setBounds(bounds.removeFromRight(ICON_BUTTON_SIZE).withY(buttonY).withHeight(ICON_BUTTON_SIZE));
-    }
+    visibilityButton_->setBounds(bounds.removeFromRight(ICON_BUTTON_SIZE).withY(buttonY).withHeight(ICON_BUTTON_SIZE));
 
     // Text Area (Left side)
     // Bounds start from 0, but we have drag handle (24) + margin (4) + indicator (14) + margin (10)
@@ -314,10 +286,6 @@ void OscillatorListItemComponent::resized()
         
         // Mode buttons (6 buttons x ~40px each)
         modeButtons_->setBounds(bottomRow.removeFromLeft(240).withHeight(28));
-        
-        // Toggle
-        bottomRow.removeFromLeft(16);
-        visibilityToggle_->setBounds(bottomRow.removeFromLeft(80).withHeight(28));
     }
 }
 

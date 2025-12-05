@@ -134,6 +134,19 @@ void OscilButton::setToggled(bool toggled, bool notify)
 
         if (notify && onToggle)
             onToggle(isToggled_);
+
+        if (notify && onToggleStateChanged)
+            onToggleStateChanged(isToggled_);
+    }
+}
+
+void OscilButton::setBorder(juce::Colour color, float thickness)
+{
+    if (borderColor_ != color || borderWidth_ != thickness)
+    {
+        borderColor_ = color;
+        borderWidth_ = thickness;
+        repaint();
     }
 }
 
@@ -256,6 +269,13 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     {
         g.setColour(getBorderColour());
         g.strokePath(cachedButtonPath_, juce::PathStrokeType(1.0f));
+    }
+
+    // Custom border
+    if (borderWidth_ > 0.0f && borderColor_.getAlpha() > 0)
+    {
+        g.setColour(borderColor_);
+        g.strokePath(cachedButtonPath_, juce::PathStrokeType(borderWidth_));
     }
 
     // Content - use reduced padding for segmented buttons and narrow buttons

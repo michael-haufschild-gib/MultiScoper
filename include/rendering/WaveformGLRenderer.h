@@ -49,7 +49,6 @@ struct WaveformRenderData
     float opacity = 1.0f;                // Opacity (0-1)
     float lineWidth = 1.5f;              // Line thickness
     bool isStereo = false;               // Whether to render channel2
-    juce::String shaderId = "basic";     // Shader to use (legacy, use visualConfig)
     bool visible = true;                 // Whether to render this waveform
     float verticalScale = 1.0f;          // Vertical scale factor (includes auto-scale)
     VisualConfiguration visualConfig;    // Full visual configuration for render engine

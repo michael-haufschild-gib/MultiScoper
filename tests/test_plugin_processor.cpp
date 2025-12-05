@@ -7,26 +7,39 @@
 #include "plugin/PluginProcessor.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
+#include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
+#include "rendering/ShaderRegistry.h"
 
 using namespace oscil;
 
 class PluginProcessorTest : public ::testing::Test
 {
 protected:
+    std::unique_ptr<InstanceRegistry> registry_;
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<OscilPluginProcessor> processor;
-
-    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
-    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
 
     void SetUp() override
     {
-        processor = std::make_unique<OscilPluginProcessor>(getRegistry(), ThemeManager::getInstance());
+        registry_ = std::make_unique<InstanceRegistry>();
+        themeManager_ = std::make_unique<ThemeManager>();
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
+
+        processor = std::make_unique<OscilPluginProcessor>(
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
     }
 
     void TearDown() override
     {
         processor.reset();
+        memoryBudgetManager_.reset();
+        shaderRegistry_.reset();
+        themeManager_.reset();
+        registry_.reset();
     }
 
     // Helper to generate audio buffer with specific values
@@ -190,7 +203,8 @@ TEST_F(PluginProcessorTest, PrepareToPlay_DifferentSampleRates)
 
     for (double rate : sampleRates)
     {
-        processor = std::make_unique<OscilPluginProcessor>(getRegistry(), ThemeManager::getInstance());
+        processor = std::make_unique<OscilPluginProcessor>(
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
         processor->prepareToPlay(rate, 512);
 
         EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate)
@@ -205,7 +219,8 @@ TEST_F(PluginProcessorTest, PrepareToPlay_DifferentBlockSizes)
 
     for (int blockSize : blockSizes)
     {
-        processor = std::make_unique<OscilPluginProcessor>(getRegistry(), ThemeManager::getInstance());
+        processor = std::make_unique<OscilPluginProcessor>(
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, blockSize);
 
         // Should not crash
@@ -378,7 +393,8 @@ TEST_F(PluginProcessorTest, StateInformation_SaveAndRestore)
     EXPECT_GT(savedState.getSize(), 0u);
 
     // Create new processor and restore state
-    auto newProcessor = std::make_unique<OscilPluginProcessor>(getRegistry(), ThemeManager::getInstance());
+    auto newProcessor = std::make_unique<OscilPluginProcessor>(
+        *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
     newProcessor->prepareToPlay(44100.0, 512);
 
     newProcessor->setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
@@ -556,14 +572,14 @@ TEST_F(PluginProcessorTest, DestructorUnregistersFromRegistry)
     SourceId sourceId = processor->getSourceId();
 
     // Verify registered
-    auto buffer = getRegistry().getCaptureBuffer(sourceId);
+    auto buffer = registry_->getCaptureBuffer(sourceId);
     EXPECT_NE(buffer, nullptr);
 
     // Destroy processor
     processor.reset();
 
     // Should be unregistered (buffer should be nullptr or registry should not find it)
-    buffer = getRegistry().getCaptureBuffer(sourceId);
+    buffer = registry_->getCaptureBuffer(sourceId);
     EXPECT_EQ(buffer, nullptr);
 }
 

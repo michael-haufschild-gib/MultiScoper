@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/components/OscilDropdown.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/IThemeService.h"
 #include <functional>

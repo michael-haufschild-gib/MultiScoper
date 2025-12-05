@@ -24,21 +24,18 @@ void InstanceRegistry::setDispatcher(Dispatcher dispatcher)
     dispatcher_ = std::move(dispatcher);
 }
 
-InstanceRegistry& InstanceRegistry::getInstance()
-{
-    static InstanceRegistry instance;
-    return instance;
-}
-
 void InstanceRegistry::shutdown()
 {
+    // Set shutdown flag first to prevent new async notifications
+    shuttingDown_.store(true, std::memory_order_release);
+
     // Clear all sources and listeners
     {
         std::unique_lock<std::shared_mutex> lock(mutex_);
         sources_.clear();
         trackToSourceMap_.clear();
     }
-    
+
     // Note: we don't clear listeners here because they might be static/global
     // or managed elsewhere, but we could if we wanted to be aggressive.
     // For now, just clearing sources breaks the reference cycles.
@@ -49,7 +46,8 @@ SourceId InstanceRegistry::registerInstance(
     std::shared_ptr<IAudioBuffer> captureBuffer,
     const juce::String& name,
     int channelCount,
-    double sampleRate)
+    double sampleRate,
+    std::shared_ptr<AnalysisEngine> analysisEngine)
 {
     // Registry mutations should happen on message thread or during initialization
     // Avoid calling from audio thread due to locks and allocation.
@@ -71,6 +69,7 @@ SourceId InstanceRegistry::registerInstance(
             if (sourceIt != sources_.end())
             {
                 sourceIt->second.buffer = captureBuffer;
+                sourceIt->second.analysisEngine = analysisEngine;
                 sourceIt->second.channelCount = channelCount;
                 sourceIt->second.sampleRate = sampleRate;
                 if (name.isNotEmpty())
@@ -96,6 +95,7 @@ SourceId InstanceRegistry::registerInstance(
             info.channelCount = channelCount;
             info.sampleRate = sampleRate;
             info.buffer = captureBuffer;
+            info.analysisEngine = analysisEngine;
             info.active = true;
 
             sources_[sourceId] = info;
@@ -229,6 +229,9 @@ void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 {
     // Use injected dispatcher (defaults to MessageManager::callAsync)
     dispatcher_([this, sourceId]() {
+        // Guard against use-after-free during shutdown
+        if (shuttingDown_.load(std::memory_order_acquire))
+            return;
         listeners_.call([&sourceId](InstanceRegistryListener& l) {
             l.sourceAdded(sourceId);
         });
@@ -238,6 +241,9 @@ void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 {
     dispatcher_([this, sourceId]() {
+        // Guard against use-after-free during shutdown
+        if (shuttingDown_.load(std::memory_order_acquire))
+            return;
         listeners_.call([&sourceId](InstanceRegistryListener& l) {
             l.sourceRemoved(sourceId);
         });
@@ -247,6 +253,9 @@ void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
 {
     dispatcher_([this, sourceId]() {
+        // Guard against use-after-free during shutdown
+        if (shuttingDown_.load(std::memory_order_acquire))
+            return;
         listeners_.call([&sourceId](InstanceRegistryListener& l) {
             l.sourceUpdated(sourceId);
         });

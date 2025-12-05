@@ -80,6 +80,8 @@ public:
 
     void setToggled(bool toggled, bool notify = true);
     bool isToggled() const { return isToggled_; }
+    
+    void setBorder(juce::Colour color, float thickness); // New: Custom border
 
     // Segment position for segmented button bars
     void setSegmentPosition(SegmentPosition position);
@@ -93,6 +95,7 @@ public:
     std::function<void()> onClick;
     std::function<void()> onRightClick;
     std::function<void(bool)> onToggle;
+    std::function<void(bool)> onToggleStateChanged; // New: Callback for toggle state changes
 
     // Size hints
     int getPreferredWidth() const;
@@ -147,6 +150,10 @@ private:
     bool hasFocus_ = false;
     juce::KeyPress shortcutKey_;
     juce::String tooltipText_;
+
+    // Custom border
+    juce::Colour borderColor_ = juce::Colours::transparentBlack;
+    float borderWidth_ = 0.0f;
 
     // Toggleable state
     bool toggleable_ = false;

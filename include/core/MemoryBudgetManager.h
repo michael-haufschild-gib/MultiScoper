@@ -90,14 +90,11 @@ public:
     };
 
     /**
-     * Get the singleton instance
+     * Constructor - creates a new MemoryBudgetManager instance.
+     * Typically owned by PluginFactory and passed via dependency injection.
      */
-    [[nodiscard]] static MemoryBudgetManager& getInstance();
-
-    /**
-     * Reset the singleton instance to default state (for testing)
-     */
-    static void resetInstance();
+    MemoryBudgetManager();
+    ~MemoryBudgetManager() = default;
 
     // Non-copyable
     MemoryBudgetManager(const MemoryBudgetManager&) = delete;
@@ -257,14 +254,10 @@ public:
     void refreshMemoryUsage();
 
 private:
-    // Private constructor for singleton
-    MemoryBudgetManager();
-    ~MemoryBudgetManager() = default;
-
     void notifyMemoryUsageChanged();
     void notifyBufferCountChanged();
     void notifyEffectiveQualityChanged(QualityPreset newQuality);
-    void updateCachedUsage();
+    void updateCachedUsage() const;
 
     // Internal helper to calculate recommended quality without locking
     // Use this when you already hold buffersMutex_
@@ -274,7 +267,7 @@ private:
     int sourceRate_ = 44100;
 
     mutable std::mutex buffersMutex_;
-    std::map<juce::String, BufferInfo> buffers_;
+    mutable std::map<juce::String, BufferInfo> buffers_; // mutable for cache updates in const methods
 
     // Cached values for quick access
     mutable size_t cachedTotalUsage_ = 0;

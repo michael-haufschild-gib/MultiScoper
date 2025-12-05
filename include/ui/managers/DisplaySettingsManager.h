@@ -52,12 +52,6 @@ public:
     void setAutoScaleForAll(bool autoScale);
 
     /**
-     * Enable/disable hold display for all panes
-     * @param hold True to enable hold display
-     */
-    void setHoldDisplayForAll(bool hold);
-
-    /**
      * Set gain in dB for all panes
      * @param gainDb Gain value in decibels
      */

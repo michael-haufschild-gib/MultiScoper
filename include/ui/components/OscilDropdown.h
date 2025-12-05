@@ -45,7 +45,7 @@ class OscilDropdownPopup : public juce::Component,
                            private juce::Timer
 {
 public:
-    OscilDropdownPopup();
+    explicit OscilDropdownPopup(IThemeService& themeService);
     ~OscilDropdownPopup() override;
 
     void setItems(const std::vector<DropdownItem>& items);
@@ -94,6 +94,7 @@ private:
     juce::String searchText_;
 
     SpringAnimation showSpring_;
+    IThemeService& themeService_;
     ColorTheme theme_;
 
     static constexpr int ITEM_HEIGHT = 32;
@@ -121,10 +122,8 @@ class OscilDropdown : public juce::Component,
                       private juce::Timer
 {
 public:
-    OscilDropdown();
-    explicit OscilDropdown(const juce::String& placeholder);
-    OscilDropdown(const juce::String& placeholder, const juce::String& testId);
-    // Constructor with IThemeService for API compatibility (themeService not used - uses ThemeManager singleton)
+    OscilDropdown(IThemeService& themeService);
+    OscilDropdown(IThemeService& themeService, const juce::String& placeholder);
     OscilDropdown(IThemeService& themeService, const juce::String& placeholder, const juce::String& testId);
     ~OscilDropdown() override;
 
@@ -218,6 +217,7 @@ private:
 
     std::unique_ptr<OscilDropdownPopup> popup_;
 
+    IThemeService& themeService_;
     ColorTheme theme_;
 
     static constexpr int CHEVRON_SIZE = 16;

@@ -5,6 +5,7 @@
 #include "TestHttpServer.h"
 #include "TestElementRegistry.h"
 #include "core/OscilState.h"
+#include "plugin/PluginFactory.h"
 
 namespace oscil::test
 {
@@ -1877,7 +1878,7 @@ void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Respon
 {
     json sources = json::array();
 
-    auto allSources = InstanceRegistry::getInstance().getAllSources();
+    auto allSources = PluginFactory::getInstance().getInstanceRegistry().getAllSources();
     for (const auto& source : allSources)
     {
         json sourceJson;

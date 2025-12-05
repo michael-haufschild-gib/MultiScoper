@@ -321,10 +321,15 @@ void OscilToggle::triggerCelebration()
     celebrationSpring_.setTarget(ComponentLayout::CELEBRATION_SCALE, 1.0f);
 
     // Schedule return to normal scale
-    juce::Timer::callAfterDelay(100, [this] {
-        celebrationSpring_.setTarget(1.0f);
-        if (!isTimerRunning())
-            startTimerHz(ComponentLayout::ANIMATION_FPS);
+    // Use SafePointer to prevent use-after-free if component is destroyed before callback
+    juce::Component::SafePointer<OscilToggle> safeThis(this);
+    juce::Timer::callAfterDelay(100, [safeThis] {
+        if (auto* toggle = safeThis.getComponent())
+        {
+            toggle->celebrationSpring_.setTarget(1.0f);
+            if (!toggle->isTimerRunning())
+                toggle->startTimerHz(ComponentLayout::ANIMATION_FPS);
+        }
     });
 }
 

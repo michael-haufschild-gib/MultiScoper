@@ -5,10 +5,12 @@
 
 #pragma once
 
+#include "core/Source.h"
+#include "core/WaveformColorPalette.h"
+
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
-#include "core/Source.h"
-#include "ui/theme/WaveformColorPalette.h"
+
 #include <optional>
 
 namespace oscil
@@ -19,12 +21,12 @@ namespace oscil
  */
 enum class ProcessingMode
 {
-    FullStereo,  // Pass-through L/R visualization (two traces)
-    Mono,        // (L+R)/2 summed mono representation
-    Mid,         // Mid component M=(L+R)/2 (single trace)
-    Side,        // Side component S=(L-R)/2 (single trace)
-    Left,        // Left channel only
-    Right        // Right channel only
+    FullStereo, // Pass-through L/R visualization (two traces)
+    Mono,       // (L+R)/2 summed mono representation
+    Mid,        // Mid component M=(L+R)/2 (single trace)
+    Side,       // Side component S=(L-R)/2 (single trace)
+    Left,       // Left channel only
+    Right       // Right channel only
 };
 
 /**
@@ -34,13 +36,20 @@ inline juce::String processingModeToString(ProcessingMode mode)
 {
     switch (mode)
     {
-        case ProcessingMode::FullStereo: return "FullStereo";
-        case ProcessingMode::Mono:       return "Mono";
-        case ProcessingMode::Mid:        return "Mid";
-        case ProcessingMode::Side:       return "Side";
-        case ProcessingMode::Left:       return "Left";
-        case ProcessingMode::Right:      return "Right";
-        default:                         return "FullStereo";
+        case ProcessingMode::FullStereo:
+            return "FullStereo";
+        case ProcessingMode::Mono:
+            return "Mono";
+        case ProcessingMode::Mid:
+            return "Mid";
+        case ProcessingMode::Side:
+            return "Side";
+        case ProcessingMode::Left:
+            return "Left";
+        case ProcessingMode::Right:
+            return "Right";
+        default:
+            return "FullStereo";
     }
 }
 
@@ -49,12 +58,18 @@ inline juce::String processingModeToString(ProcessingMode mode)
  */
 inline ProcessingMode stringToProcessingMode(const juce::String& str)
 {
-    if (str == "FullStereo") return ProcessingMode::FullStereo;
-    if (str == "Mono")       return ProcessingMode::Mono;
-    if (str == "Mid")        return ProcessingMode::Mid;
-    if (str == "Side")       return ProcessingMode::Side;
-    if (str == "Left")       return ProcessingMode::Left;
-    if (str == "Right")      return ProcessingMode::Right;
+    if (str == "FullStereo")
+        return ProcessingMode::FullStereo;
+    if (str == "Mono")
+        return ProcessingMode::Mono;
+    if (str == "Mid")
+        return ProcessingMode::Mid;
+    if (str == "Side")
+        return ProcessingMode::Side;
+    if (str == "Left")
+        return ProcessingMode::Left;
+    if (str == "Right")
+        return ProcessingMode::Right;
     return ProcessingMode::FullStereo;
 }
 
@@ -69,7 +84,7 @@ struct OscillatorId
     bool operator!=(const OscillatorId& other) const { return !(*this == other); }
 
     [[nodiscard]] static OscillatorId generate();
-    static OscillatorId invalid() { return OscillatorId{ "" }; }
+    static OscillatorId invalid() { return OscillatorId{""}; }
     bool isValid() const { return id.isNotEmpty(); }
 };
 
@@ -84,7 +99,7 @@ struct PaneId
     bool operator!=(const PaneId& other) const { return !(*this == other); }
 
     [[nodiscard]] static PaneId generate();
-    static PaneId invalid() { return PaneId{ "" }; }
+    static PaneId invalid() { return PaneId{""}; }
     bool isValid() const { return id.isNotEmpty(); }
 };
 
@@ -112,8 +127,8 @@ struct PaneIdHash
  */
 enum class OscillatorState
 {
-    ACTIVE,     // Source is assigned and providing data
-    NO_SOURCE   // Source disconnected, preserving config for reconnection
+    ACTIVE,   // Source is assigned and providing data
+    NO_SOURCE // Source disconnected, preserving config for reconnection
 };
 
 /**
@@ -235,7 +250,7 @@ private:
     SourceId sourceId_;
     OscillatorState state_ = OscillatorState::NO_SOURCE;
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
-    juce::Colour colour_{ WaveformColorPalette::getRandomColor() };
+    juce::Colour colour_{WaveformColorPalette::getRandomColor()};
     float opacity_ = 1.0f;
     PaneId paneId_;
     int orderIndex_ = 0;
@@ -244,9 +259,9 @@ private:
 
     // PRD extended display properties
     float lineWidth_ = DEFAULT_LINE_WIDTH;
-    std::optional<float> timeWindow_;  // Per-oscillator time window override (seconds)
-    juce::String shaderId_ = "basic";  // Shader for GPU rendering
-    juce::String visualPresetId_ = "default";  // Visual preset for render effects
+    std::optional<float> timeWindow_;                    // Per-oscillator time window override (seconds)
+    juce::String shaderId_ = "basic";                    // Shader for GPU rendering
+    juce::String visualPresetId_ = "default";            // Visual preset for render effects
     juce::ValueTree visualOverrides_{"VisualOverrides"}; // Custom visual settings
 
     int schemaVersion_ = CURRENT_SCHEMA_VERSION;

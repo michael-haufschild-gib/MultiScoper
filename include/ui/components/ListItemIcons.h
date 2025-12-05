@@ -133,5 +133,41 @@ inline juce::Path createCheckmarkIcon(float size)
     return getPathFromDrawable(drawable.get(), size);
 }
 
+/**
+ * Get stats bars icon as a path (for statistics toggle)
+ */
+inline juce::Path createStatsIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::statsbars_svg, BinaryData::statsbars_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+/**
+ * Get pause icon as a path
+ */
+inline juce::Path createPauseIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::pause2_svg, BinaryData::pause2_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+/**
+ * Get play icon as a path
+ */
+inline juce::Path createPlayIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::play3_svg, BinaryData::play3_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
+/**
+ * Get redo/reset icon as a path
+ */
+inline juce::Path createRedoIcon(float size)
+{
+    auto drawable = loadSvgDrawable(BinaryData::redo_svg, BinaryData::redo_svgSize);
+    return getPathFromDrawable(drawable.get(), size);
+}
+
 } // namespace ListItemIcons
 } // namespace oscil

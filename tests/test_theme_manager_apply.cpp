@@ -11,9 +11,21 @@ using namespace oscil;
 class ThemeManagerApplyTest : public ::testing::Test
 {
 protected:
+    std::unique_ptr<ThemeManager> themeManager_;
+
     void SetUp() override
     {
-        // Ensure system themes are loaded
+        themeManager_ = std::make_unique<ThemeManager>();
+    }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager()
+    {
+        return *themeManager_;
     }
 };
 
@@ -24,7 +36,7 @@ protected:
 // Test: Theme waveform colors
 TEST_F(ThemeManagerApplyTest, WaveformColors)
 {
-    auto* theme = ThemeManager::getInstance().getTheme("Dark Professional");
+    auto* theme = getThemeManager().getTheme("Dark Professional");
     ASSERT_NE(theme, nullptr);
 
     // Should have 64 waveform colors
@@ -75,22 +87,22 @@ public:
 TEST_F(ThemeManagerApplyTest, ListenerNotifications)
 {
     TestThemeListener listener;
-    ThemeManager::getInstance().addListener(&listener);
+    getThemeManager().addListener(&listener);
 
-    ThemeManager::getInstance().setCurrentTheme("High Contrast");
+    getThemeManager().setCurrentTheme("High Contrast");
 
     EXPECT_EQ(listener.changeCount, 1);
     EXPECT_EQ(listener.lastThemeName, "High Contrast");
 
-    ThemeManager::getInstance().setCurrentTheme("Light Mode");
+    getThemeManager().setCurrentTheme("Light Mode");
 
     EXPECT_EQ(listener.changeCount, 2);
     EXPECT_EQ(listener.lastThemeName, "Light Mode");
 
-    ThemeManager::getInstance().removeListener(&listener);
+    getThemeManager().removeListener(&listener);
 
     // After removal, listener should not be notified
-    ThemeManager::getInstance().setCurrentTheme("Dark Professional");
+    getThemeManager().setCurrentTheme("Dark Professional");
     EXPECT_EQ(listener.changeCount, 2);
 }
 
@@ -101,19 +113,19 @@ TEST_F(ThemeManagerApplyTest, MultipleListeners)
     TestThemeListener listener2;
     TestThemeListener listener3;
 
-    ThemeManager::getInstance().addListener(&listener1);
-    ThemeManager::getInstance().addListener(&listener2);
-    ThemeManager::getInstance().addListener(&listener3);
+    getThemeManager().addListener(&listener1);
+    getThemeManager().addListener(&listener2);
+    getThemeManager().addListener(&listener3);
 
-    ThemeManager::getInstance().setCurrentTheme("Classic Amber");
+    getThemeManager().setCurrentTheme("Classic Amber");
 
     EXPECT_EQ(listener1.changeCount, 1);
     EXPECT_EQ(listener2.changeCount, 1);
     EXPECT_EQ(listener3.changeCount, 1);
 
-    ThemeManager::getInstance().removeListener(&listener1);
-    ThemeManager::getInstance().removeListener(&listener2);
-    ThemeManager::getInstance().removeListener(&listener3);
+    getThemeManager().removeListener(&listener1);
+    getThemeManager().removeListener(&listener2);
+    getThemeManager().removeListener(&listener3);
 }
 
 // Test: Remove listener twice
@@ -121,12 +133,12 @@ TEST_F(ThemeManagerApplyTest, RemoveListenerTwice)
 {
     TestThemeListener listener;
 
-    ThemeManager::getInstance().addListener(&listener);
-    ThemeManager::getInstance().removeListener(&listener);
-    ThemeManager::getInstance().removeListener(&listener); // Second removal
+    getThemeManager().addListener(&listener);
+    getThemeManager().removeListener(&listener);
+    getThemeManager().removeListener(&listener); // Second removal
 
     // Should not crash
-    ThemeManager::getInstance().setCurrentTheme("Classic Green");
+    getThemeManager().setCurrentTheme("Classic Green");
 
     EXPECT_EQ(listener.changeCount, 0);
 }
@@ -136,21 +148,24 @@ class SelfRemovingThemeListener : public ThemeManagerListener
 {
 public:
     int callCount = 0;
+    ThemeManager* themeManager = nullptr;
 
     void themeChanged(const ColorTheme&) override
     {
         callCount++;
-        ThemeManager::getInstance().removeListener(this);
+        if (themeManager)
+            themeManager->removeListener(this);
     }
 };
 
 TEST_F(ThemeManagerApplyTest, ListenerRemovesDuringCallback)
 {
     SelfRemovingThemeListener listener;
-    ThemeManager::getInstance().addListener(&listener);
+    listener.themeManager = &getThemeManager();
+    getThemeManager().addListener(&listener);
 
-    ThemeManager::getInstance().setCurrentTheme("Classic Amber");
-    ThemeManager::getInstance().setCurrentTheme("High Contrast");
+    getThemeManager().setCurrentTheme("Classic Amber");
+    getThemeManager().setCurrentTheme("High Contrast");
 
     // Should only be called once (removed itself)
     EXPECT_EQ(listener.callCount, 1);
@@ -163,7 +178,7 @@ TEST_F(ThemeManagerApplyTest, ListenerRemovesDuringCallback)
 // Test: Get waveform color with negative index (should handle gracefully)
 TEST_F(ThemeManagerApplyTest, WaveformColorNegativeIndex)
 {
-    auto* theme = ThemeManager::getInstance().getTheme("Dark Professional");
+    auto* theme = getThemeManager().getTheme("Dark Professional");
     ASSERT_NE(theme, nullptr);
 
     // Negative index - behavior depends on implementation
@@ -176,7 +191,7 @@ TEST_F(ThemeManagerApplyTest, WaveformColorNegativeIndex)
 // Test: Get waveform color with very large index
 TEST_F(ThemeManagerApplyTest, WaveformColorLargeIndex)
 {
-    auto* theme = ThemeManager::getInstance().getTheme("Dark Professional");
+    auto* theme = getThemeManager().getTheme("Dark Professional");
     ASSERT_NE(theme, nullptr);
 
     // Should cycle properly
@@ -205,7 +220,7 @@ TEST_F(ThemeManagerApplyTest, EmptyWaveformColors)
 // Test: Theme has all required color properties
 TEST_F(ThemeManagerApplyTest, ThemeHasAllProperties)
 {
-    auto* theme = ThemeManager::getInstance().getTheme("Dark Professional");
+    auto* theme = getThemeManager().getTheme("Dark Professional");
     ASSERT_NE(theme, nullptr);
 
     // Check all color properties have valid values
@@ -224,10 +239,10 @@ TEST_F(ThemeManagerApplyTest, ThemeHasAllProperties)
 // Test: Custom theme preserves all properties from source
 TEST_F(ThemeManagerApplyTest, ClonePreservesAllProperties)
 {
-    ThemeManager::getInstance().cloneTheme("Dark Professional", "PropertyTest");
+    getThemeManager().cloneTheme("Dark Professional", "PropertyTest");
 
-    auto* original = ThemeManager::getInstance().getTheme("Dark Professional");
-    auto* cloned = ThemeManager::getInstance().getTheme("PropertyTest");
+    auto* original = getThemeManager().getTheme("Dark Professional");
+    auto* cloned = getThemeManager().getTheme("PropertyTest");
 
     ASSERT_NE(original, nullptr);
     ASSERT_NE(cloned, nullptr);
@@ -239,5 +254,5 @@ TEST_F(ThemeManagerApplyTest, ClonePreservesAllProperties)
     EXPECT_EQ(cloned->statusActive.getARGB(), original->statusActive.getARGB());
     EXPECT_EQ(cloned->waveformColors.size(), original->waveformColors.size());
 
-    ThemeManager::getInstance().deleteTheme("PropertyTest");
+    getThemeManager().deleteTheme("PropertyTest");
 }

@@ -8,6 +8,7 @@
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
+#include "rendering/ShaderRegistry.h"
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
@@ -15,24 +16,26 @@
 namespace oscil
 {
 
-OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService)
+OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, MemoryBudgetManager& memoryBudgetManager)
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , instanceRegistry_(instanceRegistry)
     , themeService_(themeService)
+    , shaderRegistry_(shaderRegistry)
+    , memoryBudgetManager_(memoryBudgetManager)
 {
     // Create capture buffer
     captureBuffer_ = std::make_shared<DecimatingCaptureBuffer>();
+    analysisEngine_ = std::make_shared<AnalysisEngine>();
 
     // Generate unique track identifier
     trackIdentifier_ = juce::Uuid().toString();
 
     // Initialize MemoryBudgetManager with config from state
     // Use default sample rate until prepareToPlay is called
-    auto& memoryManager = MemoryBudgetManager::getInstance();
-    memoryManager.setGlobalConfig(state_.getCaptureQualityConfig(),
-                                  static_cast<int>(currentSampleRate_));
+    memoryBudgetManager_.setGlobalConfig(state_.getCaptureQualityConfig(),
+                                         static_cast<int>(currentSampleRate_));
 
     // Listen for state changes (quality settings)
     state_.getState().addListener(this);
@@ -46,7 +49,7 @@ OscilPluginProcessor::~OscilPluginProcessor()
     state_.getState().removeListener(this);
 
     // Unregister from MemoryBudgetManager
-    MemoryBudgetManager::getInstance().unregisterBuffer(trackIdentifier_);
+    memoryBudgetManager_.unregisterBuffer(trackIdentifier_);
 
     // Unregister from instance registry
     if (sourceId_.isValid())
@@ -82,6 +85,9 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     // TimingEngine setup is lock-free, safe to call from audio thread
     timingEngine_.setSampleRate(sampleRate);
+    
+    if (analysisEngine_)
+        analysisEngine_->reset();
 
     // Memory allocation and mutex-protected operations must happen on message thread
     // This is critical because prepareToPlay can be called from audio thread in some hosts
@@ -94,14 +100,13 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
                            trackId = trackIdentifier_,
                            channelCount = getTotalNumInputChannels()]() {
         // Update MemoryBudgetManager with actual sample rate from host
-        auto& memoryManager = MemoryBudgetManager::getInstance();
-        memoryManager.setGlobalConfig(captureConfig, static_cast<int>(sampleRate));
+        memoryBudgetManager_.setGlobalConfig(captureConfig, static_cast<int>(sampleRate));
 
         // Configure capture buffer (allocates memory)
         captureBuffer_->configure(captureConfig, static_cast<int>(sampleRate));
 
         // Register buffer with MemoryBudgetManager for auto-quality adjustment
-        memoryManager.registerBuffer(trackId, captureBuffer_);
+        memoryBudgetManager_.registerBuffer(trackId, captureBuffer_);
 
         // Register with instance registry (uses mutex, allocates)
         // Only register if not already registered (handles re-entrancy from host)
@@ -112,7 +117,8 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
                 captureBuffer_,
                 "Oscil Track",
                 channelCount,
-                sampleRate);
+                sampleRate,
+                analysisEngine_);
         }
         else
         {
@@ -190,6 +196,10 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // DecimatingCaptureBuffer handles downsampling internally
     captureBuffer_->write(buffer, metadata);
 
+    // Run analysis (Real-time stats)
+    if (analysisEngine_)
+        analysisEngine_->process(buffer, currentSampleRate_);
+
     // Process triggers (MIDI and Audio)
     // Note: TimingEngine uses internal atomic flags to store trigger state
     // processMidi checks for Note On events if in MIDI mode
@@ -266,10 +276,16 @@ void OscilPluginProcessor::updateCachedState()
 void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     auto xmlString = juce::String::createStringFromData(data, sizeInBytes);
-    (void) state_.fromXmlString(xmlString);
+    if (!state_.fromXmlString(xmlString))
+    {
+        DBG("PluginProcessor::setStateInformation - Failed to parse state XML");
+        return;
+    }
 
     // Apply restored state (TimingEngine uses atomics, safe from any thread)
-    timingEngine_.fromValueTree(state_.getState().getChildWithName(StateIds::Timing));
+    auto timingTree = state_.getState().getChildWithName(StateIds::Timing);
+    if (timingTree.isValid())
+        timingEngine_.fromValueTree(timingTree);
 
     // CRITICAL: Defer memory-allocating operations to message thread
     // Some DAW hosts (Pro Tools, Reaper) may call setStateInformation from audio thread
@@ -279,8 +295,7 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
 
     auto doConfigure = [this, captureConfig, sampleRate]() {
         // Sync restored capture quality config to MemoryBudgetManager
-        auto& memoryManager = MemoryBudgetManager::getInstance();
-        memoryManager.setGlobalConfig(captureConfig, sampleRate);
+        memoryBudgetManager_.setGlobalConfig(captureConfig, sampleRate);
 
         // Update capture buffer config (allocates memory)
         captureBuffer_->configure(captureConfig, sampleRate);
@@ -328,6 +343,11 @@ IInstanceRegistry& OscilPluginProcessor::getInstanceRegistry()
 IThemeService& OscilPluginProcessor::getThemeService()
 {
     return themeService_;
+}
+
+ShaderRegistry& OscilPluginProcessor::getShaderRegistry()
+{
+    return shaderRegistry_;
 }
 
 std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& sourceId)

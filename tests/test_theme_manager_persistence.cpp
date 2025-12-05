@@ -13,8 +13,20 @@ class ThemeManagerPersistenceTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Ensure system themes are loaded
+        // Create ThemeManager instance for each test
+        themeManager_ = std::make_unique<ThemeManager>();
     }
+
+    void TearDown() override
+    {
+        // Clean up ThemeManager instance
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 // =============================================================================
@@ -24,28 +36,28 @@ protected:
 // Test: Import invalid JSON
 TEST_F(ThemeManagerPersistenceTest, ImportInvalidJson)
 {
-    bool result = ThemeManager::getInstance().importTheme("not valid json");
+    bool result = getThemeManager().importTheme("not valid json");
     EXPECT_FALSE(result);
 }
 
 // Test: Import empty JSON
 TEST_F(ThemeManagerPersistenceTest, ImportEmptyJson)
 {
-    bool result = ThemeManager::getInstance().importTheme("");
+    bool result = getThemeManager().importTheme("");
     EXPECT_FALSE(result);
 }
 
 // Test: Import JSON with missing required fields
 TEST_F(ThemeManagerPersistenceTest, ImportIncompleteJson)
 {
-    bool result = ThemeManager::getInstance().importTheme("{}");
+    bool result = getThemeManager().importTheme("{}");
     EXPECT_FALSE(result);
 }
 
 // Test: Export non-existent theme
 TEST_F(ThemeManagerPersistenceTest, ExportNonexistentTheme)
 {
-    juce::String json = ThemeManager::getInstance().exportTheme("NonExistentTheme");
+    juce::String json = getThemeManager().exportTheme("NonExistentTheme");
     EXPECT_TRUE(json.isEmpty());
 }
 
@@ -53,17 +65,17 @@ TEST_F(ThemeManagerPersistenceTest, ExportNonexistentTheme)
 TEST_F(ThemeManagerPersistenceTest, JsonRoundtrip)
 {
     // Export an existing theme
-    juce::String exported = ThemeManager::getInstance().exportTheme("Dark Professional");
+    juce::String exported = getThemeManager().exportTheme("Dark Professional");
     EXPECT_FALSE(exported.isEmpty());
 
     // Create a theme for testing
-    ThemeManager::getInstance().createTheme("RoundtripTest");
+    getThemeManager().createTheme("RoundtripTest");
 
     // The imported theme would overwrite...
     // Just verify export worked
     EXPECT_TRUE(exported.contains("Dark Professional") || exported.contains("backgroundPrimary"));
 
-    ThemeManager::getInstance().deleteTheme("RoundtripTest");
+    getThemeManager().deleteTheme("RoundtripTest");
 }
 
 // Test: ColorTheme JSON fromJson with valid JSON

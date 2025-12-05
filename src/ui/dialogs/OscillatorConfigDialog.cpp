@@ -62,10 +62,6 @@ void OscillatorConfigDialog::setupComponents()
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createSideIcon(16), static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createLeftIcon(16), static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(16), static_cast<int>(ProcessingMode::Right), "configPopup_modeSelector_right");
-    modeButtons_->addButton("M", static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
-    modeButtons_->addButton("S", static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
-    modeButtons_->addButton("L", static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
-    modeButtons_->addButton("R", static_cast<int>(ProcessingMode::Right), "configPopup_modeSelector_right");
     modeButtons_->onSelectionChanged = [this](int id) { handleProcessingModeChange(id); };
     addAndMakeVisible(*modeButtons_);
     OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");

@@ -187,14 +187,18 @@ private:
     OscilDropdownPopup& owner_;
 };
 
-OscilDropdownPopup::OscilDropdownPopup()
+OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
     : showSpring_(SpringPresets::snappy())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    // Mark as popup so modal focus traps don't steal focus
+    getProperties().set("isOscilPopup", true);
+
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     showSpring_.position = 0.0f;
     showSpring_.target = 0.0f;
@@ -209,7 +213,7 @@ OscilDropdownPopup::OscilDropdownPopup()
 
 OscilDropdownPopup::~OscilDropdownPopup()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -292,8 +296,14 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
 
     // Position below or above the button
     auto screenBounds = parent->getScreenBounds();
-    auto displayBounds = juce::Desktop::getInstance().getDisplays()
-        .getDisplayForPoint(screenBounds.getCentre())->userArea;
+    // Guard against null display (getDisplayForPoint could return nullptr)
+    auto* display = juce::Desktop::getInstance().getDisplays()
+        .getDisplayForPoint(screenBounds.getCentre());
+    if (display == nullptr)
+        display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
+    if (display == nullptr)
+        return;  // No display available, cannot show popup
+    auto displayBounds = display->userArea;
 
     int x = screenBounds.getX() + buttonBounds.getX();
     int y = screenBounds.getY() + buttonBounds.getBottom();
@@ -569,15 +579,16 @@ void OscilDropdownPopup::themeChanged(const ColorTheme& newTheme)
 // OscilDropdown Implementation
 //==============================================================================
 
-OscilDropdown::OscilDropdown()
+OscilDropdown::OscilDropdown(IThemeService& themeService)
     : hoverSpring_(SpringPresets::stiff())
     , chevronSpring_(SpringPresets::bouncy())
+    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    theme_ = ThemeManager::getInstance().getCurrentTheme();
-    ThemeManager::getInstance().addListener(this);
+    theme_ = themeService_.getCurrentTheme();
+    themeService_.addListener(this);
 
     hoverSpring_.position = 0.0f;
     hoverSpring_.target = 0.0f;
@@ -585,23 +596,17 @@ OscilDropdown::OscilDropdown()
     chevronSpring_.target = 0.0f;
 }
 
-OscilDropdown::OscilDropdown(const juce::String& placeholder)
-    : OscilDropdown()
+OscilDropdown::OscilDropdown(IThemeService& themeService, const juce::String& placeholder)
+    : OscilDropdown(themeService)
 {
     placeholder_ = placeholder;
 }
 
-OscilDropdown::OscilDropdown(const juce::String& placeholder, const juce::String& testId)
-    : OscilDropdown()
+OscilDropdown::OscilDropdown(IThemeService& themeService, const juce::String& placeholder, const juce::String& testId)
+    : OscilDropdown(themeService)
 {
     placeholder_ = placeholder;
     setTestId(testId);
-}
-
-OscilDropdown::OscilDropdown(IThemeService& /*themeService*/, const juce::String& placeholder, const juce::String& testId)
-    : OscilDropdown(placeholder, testId)
-{
-    // themeService parameter unused - class uses ThemeManager singleton internally
 }
 
 void OscilDropdown::registerTestId()
@@ -611,7 +616,7 @@ void OscilDropdown::registerTestId()
 
 OscilDropdown::~OscilDropdown()
 {
-    ThemeManager::getInstance().removeListener(this);
+    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -665,13 +670,15 @@ int OscilDropdown::getSelectedIndex() const
 juce::String OscilDropdown::getSelectedId() const
 {
     int index = getSelectedIndex();
-    return (index >= 0) ? items_[static_cast<size_t>(index)].id : juce::String();
+    return (index >= 0 && index < static_cast<int>(items_.size()))
+        ? items_[static_cast<size_t>(index)].id : juce::String();
 }
 
 juce::String OscilDropdown::getSelectedLabel() const
 {
     int index = getSelectedIndex();
-    return (index >= 0) ? items_[static_cast<size_t>(index)].label : juce::String();
+    return (index >= 0 && index < static_cast<int>(items_.size()))
+        ? items_[static_cast<size_t>(index)].label : juce::String();
 }
 
 void OscilDropdown::setSelectedIndices(const std::set<int>& indices, bool notify)
@@ -761,7 +768,7 @@ void OscilDropdown::showPopup()
 
     popupVisible_ = true;
 
-    popup_ = std::make_unique<OscilDropdownPopup>();
+    popup_ = std::make_unique<OscilDropdownPopup>(themeService_);
     popup_->setItems(items_);
     popup_->setSelectedIndices(selectedIndices_);
     popup_->setMultiSelect(multiSelect_);
@@ -834,7 +841,10 @@ void OscilDropdown::updateDisplayText()
     else if (selectedIndices_.size() == 1)
     {
         int index = *selectedIndices_.begin();
-        displayText_ = items_[static_cast<size_t>(index)].label;
+        if (index >= 0 && index < static_cast<int>(items_.size()))
+            displayText_ = items_[static_cast<size_t>(index)].label;
+        else
+            displayText_ = placeholder_;
     }
     else
     {

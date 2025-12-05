@@ -9,7 +9,7 @@
 #include "helpers/Fixtures.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 
 using namespace oscil;
 using namespace oscil::test;
@@ -241,7 +241,6 @@ TEST_F(StatePersistenceSaveTest, DisplayOptionsPersistence)
     auto original = StateBuilder()
         .withoutGrid()
         .withoutAutoScaling()
-        .withHold()
         .withGainDb(-12.0f)
         .buildUnique();
 
@@ -252,7 +251,6 @@ TEST_F(StatePersistenceSaveTest, DisplayOptionsPersistence)
 
     EXPECT_FALSE(restored.isShowGridEnabled());
     EXPECT_FALSE(restored.isAutoScaleEnabled());
-    EXPECT_TRUE(restored.isHoldDisplayEnabled());
     EXPECT_FLOAT_EQ(restored.getGainDb(), -12.0f);
 }
 

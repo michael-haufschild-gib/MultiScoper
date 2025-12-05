@@ -124,8 +124,7 @@ private:
     std::unique_ptr<juce::Label> trackLabel_;
     std::unique_ptr<OscilButton> deleteButton_;
     std::unique_ptr<OscilButton> settingsButton_;
-    std::unique_ptr<OscilButton> visibilityButton_; // Used for icon-only visibility toggle in compact mode
-    std::unique_ptr<OscilToggle> visibilityToggle_; // Used in expanded mode
+    std::unique_ptr<OscilButton> visibilityButton_; // Used for icon-only visibility toggle
     std::unique_ptr<SegmentedButtonBar> modeButtons_;
 
     juce::ListenerList<Listener> listeners_;

@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 
 using namespace oscil;
 
@@ -804,66 +804,63 @@ TEST_F(StatePersistenceTest, ConstructFromEmptyString)
 // GLOBAL PREFERENCES TESTS
 // =============================================================================
 
-TEST_F(StatePersistenceTest, GlobalPreferencesDefaults)
+class GlobalPreferencesTest : public ::testing::Test
 {
-    auto& prefs = GlobalPreferences::getInstance();
+protected:
+    std::unique_ptr<GlobalPreferences> prefs_;
 
+    void SetUp() override
+    {
+        prefs_ = std::make_unique<GlobalPreferences>();
+    }
+
+    void TearDown() override
+    {
+        prefs_.reset();
+    }
+};
+
+TEST_F(GlobalPreferencesTest, Defaults)
+{
     // Check that defaults are reasonable
-    EXPECT_EQ(prefs.getDefaultTheme(), "Dark Professional");
-    EXPECT_EQ(prefs.getDefaultColumnLayout(), 1);
-    EXPECT_TRUE(prefs.getShowStatusBar());
-    EXPECT_FALSE(prefs.getReducedMotion());
-    EXPECT_FALSE(prefs.getUIAudioFeedback());
-    EXPECT_TRUE(prefs.getTooltipsEnabled());
-    EXPECT_EQ(prefs.getDefaultSidebarWidth(), 280);
+    EXPECT_EQ(prefs_->getDefaultTheme(), "Dark Professional");
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 1);
+    EXPECT_TRUE(prefs_->getShowStatusBar());
+    EXPECT_FALSE(prefs_->getReducedMotion());
+    EXPECT_FALSE(prefs_->getUIAudioFeedback());
+    EXPECT_TRUE(prefs_->getTooltipsEnabled());
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 280);
 }
 
-TEST_F(StatePersistenceTest, GlobalPreferencesSettersAndGetters)
+TEST_F(GlobalPreferencesTest, SettersAndGetters)
 {
-    auto& prefs = GlobalPreferences::getInstance();
-
-    // Save original values
-    auto originalTheme = prefs.getDefaultTheme();
-    auto originalColumns = prefs.getDefaultColumnLayout();
-    auto originalSidebarWidth = prefs.getDefaultSidebarWidth();
-
     // Test setters
-    prefs.setDefaultTheme("Test Theme");
-    EXPECT_EQ(prefs.getDefaultTheme(), "Test Theme");
+    prefs_->setDefaultTheme("Test Theme");
+    EXPECT_EQ(prefs_->getDefaultTheme(), "Test Theme");
 
-    prefs.setDefaultColumnLayout(2);
-    EXPECT_EQ(prefs.getDefaultColumnLayout(), 2);
+    prefs_->setDefaultColumnLayout(2);
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 2);
 
-    prefs.setShowStatusBar(false);
-    EXPECT_FALSE(prefs.getShowStatusBar());
+    prefs_->setShowStatusBar(false);
+    EXPECT_FALSE(prefs_->getShowStatusBar());
 
-    prefs.setReducedMotion(true);
-    EXPECT_TRUE(prefs.getReducedMotion());
+    prefs_->setReducedMotion(true);
+    EXPECT_TRUE(prefs_->getReducedMotion());
 
-    prefs.setUIAudioFeedback(true);
-    EXPECT_TRUE(prefs.getUIAudioFeedback());
+    prefs_->setUIAudioFeedback(true);
+    EXPECT_TRUE(prefs_->getUIAudioFeedback());
 
-    prefs.setTooltipsEnabled(false);
-    EXPECT_FALSE(prefs.getTooltipsEnabled());
+    prefs_->setTooltipsEnabled(false);
+    EXPECT_FALSE(prefs_->getTooltipsEnabled());
 
-    prefs.setDefaultSidebarWidth(350);
-    EXPECT_EQ(prefs.getDefaultSidebarWidth(), 350);
-
-    // Restore original values
-    prefs.setDefaultTheme(originalTheme);
-    prefs.setDefaultColumnLayout(originalColumns);
-    prefs.setShowStatusBar(true);
-    prefs.setReducedMotion(false);
-    prefs.setUIAudioFeedback(false);
-    prefs.setTooltipsEnabled(true);
-    prefs.setDefaultSidebarWidth(originalSidebarWidth);
+    prefs_->setDefaultSidebarWidth(350);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 350);
 }
 
-TEST_F(StatePersistenceTest, GlobalPreferencesSingleton)
+TEST_F(GlobalPreferencesTest, ReferenceAccess)
 {
-    auto& prefs1 = GlobalPreferences::getInstance();
-    auto& prefs2 = GlobalPreferences::getInstance();
-
-    // Should be the same instance
-    EXPECT_EQ(&prefs1, &prefs2);
+    // Verify that modifying through a reference updates the instance
+    GlobalPreferences& prefsRef = *prefs_;
+    prefsRef.setDefaultColumnLayout(3);
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 3);
 }

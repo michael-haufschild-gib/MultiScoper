@@ -18,7 +18,15 @@ protected:
     {
         // Initialize JUCE message manager for tests
         juce::MessageManager::getInstance();
+        themeManager_ = std::make_unique<ThemeManager>();
     }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
 
     std::vector<Pane> createTestPanes(int count)
     {
@@ -43,18 +51,21 @@ protected:
         }
         return panes;
     }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 TEST_F(SelectPaneDialogTest, Construction)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     EXPECT_GT(dialog.getPreferredWidth(), 0);
     EXPECT_GT(dialog.getPreferredHeight(), 0);
 }
 
 TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPaneVector)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanes(3);
 
     EXPECT_NO_THROW({
@@ -64,7 +75,7 @@ TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPaneVector)
 
 TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPairVector)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanePairs(3);
 
     EXPECT_NO_THROW({
@@ -74,7 +85,7 @@ TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPairVector)
 
 TEST_F(SelectPaneDialogTest, Reset)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanes(2);
     dialog.setAvailablePanes(panes);
 
@@ -85,7 +96,7 @@ TEST_F(SelectPaneDialogTest, Reset)
 
 TEST_F(SelectPaneDialogTest, SetOnCompleteCallback)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     bool callbackSet = false;
 
     dialog.setOnComplete([&callbackSet](const SelectPaneDialog::Result&) {
@@ -98,7 +109,7 @@ TEST_F(SelectPaneDialogTest, SetOnCompleteCallback)
 
 TEST_F(SelectPaneDialogTest, SetOnCancelCallback)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     bool callbackSet = false;
 
     dialog.setOnCancel([&callbackSet]() {
@@ -111,14 +122,14 @@ TEST_F(SelectPaneDialogTest, SetOnCancelCallback)
 
 TEST_F(SelectPaneDialogTest, PreferredDimensionsPositive)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     EXPECT_GT(dialog.getPreferredWidth(), 0);
     EXPECT_GT(dialog.getPreferredHeight(), 0);
 }
 
 TEST_F(SelectPaneDialogTest, ThemeChangeDoesNotThrow)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
 
     // Theme changes should not throw
     EXPECT_NO_THROW({
@@ -128,7 +139,7 @@ TEST_F(SelectPaneDialogTest, ThemeChangeDoesNotThrow)
 
 TEST_F(SelectPaneDialogTest, ResizeDoesNotThrow)
 {
-    SelectPaneDialog dialog(ThemeManager::getInstance());
+    SelectPaneDialog dialog(getThemeManager());
     dialog.setSize(dialog.getPreferredWidth(), dialog.getPreferredHeight());
 
     EXPECT_NO_THROW({

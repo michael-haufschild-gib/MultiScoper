@@ -169,8 +169,17 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
         auto child = oscillatorsNode.getChild(i);
         if (child.getProperty(StateIds::Id).toString() == oscillator.getId().id)
         {
-            // Update in place to preserve listeners and avoid "child removed" events
+            // Update properties
             child.copyPropertiesFrom(oscillator.toValueTree(), nullptr);
+            
+            // Update children (e.g. VisualOverrides)
+            // copyPropertiesFrom does NOT copy children, so we must do it manually
+            child.removeAllChildren(nullptr);
+            auto srcTree = oscillator.toValueTree();
+            for (int j = 0; j < srcTree.getNumChildren(); ++j)
+            {
+                child.appendChild(srcTree.getChild(j).createCopy(), nullptr);
+            }
             return;
         }
     }
@@ -312,18 +321,6 @@ void OscilState::setAutoScaleEnabled(bool enabled)
 {
     auto layoutNode = getOrCreateLayoutNode();
     layoutNode.setProperty(StateIds::AutoScale, enabled, nullptr);
-}
-
-bool OscilState::isHoldDisplayEnabled() const
-{
-    auto layoutNode = getLayoutNode();
-    return layoutNode.getProperty(StateIds::HoldDisplay, false);
-}
-
-void OscilState::setHoldDisplayEnabled(bool enabled)
-{
-    auto layoutNode = getOrCreateLayoutNode();
-    layoutNode.setProperty(StateIds::HoldDisplay, enabled, nullptr);
 }
 
 float OscilState::getGainDb() const
@@ -494,12 +491,6 @@ juce::ValueTree OscilState::getCaptureQualityNode() const
 }
 
 // GlobalPreferences implementation
-
-GlobalPreferences& GlobalPreferences::getInstance()
-{
-    static GlobalPreferences instance;
-    return instance;
-}
 
 GlobalPreferences::GlobalPreferences()
 {

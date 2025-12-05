@@ -8,6 +8,8 @@
 #include "rendering/shaders3d/WaveformShader3D.h"
 #include "rendering/subsystems/RenderStats.h"
 
+#include <iostream>
+
 namespace oscil
 {
 
@@ -51,10 +53,26 @@ WaveformPass::WaveformPass()
 
 WaveformPass::~WaveformPass()
 {
+    // If we're being destroyed while still initialized, shaders will leak.
+    // This happens when shutdown() wasn't called before destruction.
+    // We can't call OpenGL functions here (no context), so we just warn.
+    if (initialized_ && !compiledShaders_.empty())
+    {
+        std::cerr << "[WaveformPass] LEAK: Destructor called without shutdown(). "
+                  << compiledShaders_.size() << " compiled shaders will leak GPU resources."
+                  << std::endl;
+    }
 }
 
 bool WaveformPass::initialize(juce::OpenGLContext& context, int width, int height)
 {
+    // Guard against invalid dimensions that would cause division by zero
+    if (width <= 0 || height <= 0)
+    {
+        RE_LOG("WaveformPass: Invalid dimensions " << width << "x" << height);
+        return false;
+    }
+
     context_ = &context;
     currentWidth_ = width;
     currentHeight_ = height;
@@ -95,11 +113,15 @@ bool WaveformPass::initialize(juce::OpenGLContext& context, int width, int heigh
     camera_ = std::make_unique<Camera3D>();
     camera_->setAspectRatio(static_cast<float>(width) / static_cast<float>(height));
 
+    initialized_ = true;
     return true;
 }
 
 void WaveformPass::shutdown(juce::OpenGLContext& context)
 {
+    if (!initialized_)
+        return;
+
     for (auto& pair : compiledShaders_)
         pair.second->release(context);
     compiledShaders_.clear();
@@ -115,6 +137,48 @@ void WaveformPass::shutdown(juce::OpenGLContext& context)
 
     camera_.reset();
     context_ = nullptr;
+    initialized_ = false;
+}
+
+void WaveformPass::prepareRender(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime)
+{
+    const auto& config = state.visualConfig;
+    state.updateTiming(deltaTime);
+
+    if (is3DShader(config.shaderType))
+    {
+        float scale = static_cast<float>(context_->getRenderingScale());
+        auto* target = context_->getTargetComponent();
+        float logicalHeight = static_cast<float>(target->getHeight());
+
+        float lx = data.bounds.getX();
+        float ly = data.bounds.getY();
+        float lw = data.bounds.getWidth();
+        float lh = data.bounds.getHeight();
+
+        int vx = static_cast<int>(lx * scale);
+        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
+        int vw = static_cast<int>(lw * scale);
+        int vh = static_cast<int>(lh * scale);
+
+        vx = std::max(0, vx);
+        vy = std::max(0, vy);
+        vw = std::max(1, vw);
+        vh = std::max(1, vh);
+
+        glViewport(vx, vy, vw, vh);
+
+        if (camera_)
+            camera_->setAspectRatio(static_cast<float>(vw) / static_cast<float>(vh));
+
+        setupCamera3D(config.settings3D, deltaTime);
+        glEnable(GL_DEPTH_TEST);
+    }
+    else
+    {
+        setupCamera2D();
+        glDisable(GL_DEPTH_TEST);
+    }
 }
 
 Framebuffer* WaveformPass::renderWaveform(const WaveformRenderData& data, WaveformRenderState& state,
@@ -234,6 +298,26 @@ Framebuffer* WaveformPass::renderWaveform(const WaveformRenderData& data, Wavefo
 
 void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime)
 {
+    // Ensure viewport is set correctly for 3D shaders (which rely on it for projection)
+    if (is3DShader(config.shaderType) && context_)
+    {
+        float scale = static_cast<float>(context_->getRenderingScale());
+        auto* target = context_->getTargetComponent();
+        float logicalHeight = static_cast<float>(target->getHeight());
+
+        float lx = data.bounds.getX();
+        float ly = data.bounds.getY();
+        float lw = data.bounds.getWidth();
+        float lh = data.bounds.getHeight();
+
+        int vx = static_cast<int>(lx * scale);
+        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
+        int vw = static_cast<int>(lw * scale);
+        int vh = static_cast<int>(lh * scale);
+
+        glViewport(vx, vy, vw, vh);
+    }
+
     juce::String shaderId = shaderTypeToId(config.shaderType);
     WaveformShader* shader = nullptr;
 
@@ -307,6 +391,26 @@ void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const 
 
 void WaveformPass::renderWaveformParticles(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime)
 {
+    // Ensure viewport is set correctly for particles
+    if (context_)
+    {
+        float scale = static_cast<float>(context_->getRenderingScale());
+        auto* target = context_->getTargetComponent();
+        float logicalHeight = static_cast<float>(target->getHeight());
+
+        float lx = data.bounds.getX();
+        float ly = data.bounds.getY();
+        float lw = data.bounds.getWidth();
+        float lh = data.bounds.getHeight();
+
+        int vx = static_cast<int>(lx * scale);
+        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
+        int vw = static_cast<int>(lw * scale);
+        int vh = static_cast<int>(lh * scale);
+
+        glViewport(vx, vy, vw, vh);
+    }
+
     if (particleRenderer_)
     {
         particleRenderer_->render(*context_, data, state, deltaTime, nullptr);
@@ -315,10 +419,32 @@ void WaveformPass::renderWaveformParticles(const WaveformRenderData& data, Wavef
 
 void WaveformPass::renderGrid(const WaveformRenderData& data)
 {
-    if (gridRenderer_ && context_)
-    {
-        gridRenderer_->render(*context_, data);
-    }
+    if (!gridRenderer_ || !context_)
+        return;
+
+    // Store previous viewport
+    GLint prevViewport[4];
+    glGetIntegerv(GL_VIEWPORT, prevViewport);
+
+    float scale = static_cast<float>(context_->getRenderingScale());
+    auto* target = context_->getTargetComponent();
+    float logicalHeight = static_cast<float>(target->getHeight());
+
+    float lx = data.bounds.getX();
+    float ly = data.bounds.getY();
+    float lw = data.bounds.getWidth();
+    float lh = data.bounds.getHeight();
+
+    int vx = static_cast<int>(lx * scale);
+    int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
+    int vw = static_cast<int>(lw * scale);
+    int vh = static_cast<int>(lh * scale);
+
+    glViewport(vx, vy, vw, vh);
+
+    gridRenderer_->render(*context_, data);
+
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
 }
 
 void WaveformPass::setupCamera2D()

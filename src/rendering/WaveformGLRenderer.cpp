@@ -373,6 +373,10 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     float viewportWidth = static_cast<float>(targetComponent->getWidth());
     float viewportHeight = static_cast<float>(targetComponent->getHeight());
 
+    // Guard against division by zero in projection matrix
+    if (viewportWidth < 1.0f) viewportWidth = 1.0f;
+    if (viewportHeight < 1.0f) viewportHeight = 1.0f;
+
     if (shouldLog)
         GL_LOG("renderDebugRect: viewport=" << viewportWidth << "x" << viewportHeight
                << ", bounds=(" << bounds.getX() << "," << bounds.getY()

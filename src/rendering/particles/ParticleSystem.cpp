@@ -526,6 +526,9 @@ void ParticleSystem::render(juce::OpenGLContext& context,
     if (!initialized_ || pool_.getAliveCount() == 0)
         return;
 
+    if (viewportWidth <= 0 || viewportHeight <= 0)
+        return;
+
     uploadParticleData(context, emitterIds);
     
     if (instanceData_.empty())

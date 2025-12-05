@@ -76,14 +76,14 @@ private:
 struct PaneDragState
 {
     bool isDragging = false;
-    PaneId draggedPaneId;
+    PaneId draggedPaneId = PaneId::invalid();
     int dragStartIndex = -1;
     int dragStartColumn = -1;
     juce::Point<int> dragStartPosition;
     juce::Point<int> currentPosition;
 
     // Drop target
-    PaneId dropTargetPaneId;
+    PaneId dropTargetPaneId = PaneId::invalid();
     int dropTargetIndex = -1;
     int dropTargetColumn = -1;
     bool isValidDropTarget = false;

@@ -28,6 +28,7 @@
 #include "ui/panels/StatusBarComponent.h"
 #include "ui/panels/WaveformComponent.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/controllers/OscillatorPanelController.h"
 
 #include "plugin/PluginProcessor.h"
 #include "rendering/GpuRenderCoordinator.h"
@@ -122,7 +123,6 @@ public:
     void setShowGridForAllPanes(bool enabled);
     void setGridConfigForAllPanes(const GridConfiguration& config);
     void setAutoScaleForAllPanes(bool enabled);
-    void setHoldDisplayForAllPanes(bool enabled);
     void setGainDbForAllPanes(float dB);
     void setDisplaySamplesForAllPanes(int samples);
     void highlightOscillator(const OscillatorId& oscillatorId);
@@ -138,23 +138,16 @@ public:
     void valueTreeParentChanged(juce::ValueTree& treeWhoseParentHasChanged) override;
 
     // Test access - for automated testing only
-    const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const { return paneComponents_; }
-    void refreshPanels() { refreshOscillatorPanels(); }
+    // Delegated to controller
+    const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const;
+    void refreshPanels();
 
     // Public refresh methods for adapters
     void refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators);
 
 private:
     void timerCallback() override;
-    void refreshOscillatorPanels();
-    void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
-    void reapplyGlobalSettings();
-    void createDefaultOscillator();
-
-    void handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId);
-    void handleEmptyColumnDrop(const PaneId& movedPaneId, int targetColumn);
-    void handlePaneClose(const PaneId& paneId);
-
+    
     // Coordinator callbacks
     void onSourcesChanged();
     void onThemeChanged(const ColorTheme& newTheme);
@@ -172,7 +165,10 @@ private:
     // UI Components
     std::unique_ptr<juce::Viewport> viewport_;
     std::unique_ptr<PaneContainerComponent> contentComponent_;
-    std::vector<std::unique_ptr<PaneComponent>> paneComponents_;
+    
+    // Controller now manages pane components
+    std::unique_ptr<OscillatorPanelController> oscillatorPanelController_;
+
     std::unique_ptr<StatusBarComponent> statusBar_;
     std::unique_ptr<SidebarComponent> sidebar_;
     std::unique_ptr<SidebarListenerAdapter> sidebarAdapter_;

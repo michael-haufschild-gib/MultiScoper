@@ -18,6 +18,7 @@ namespace oscil
 
 // Forward declarations
 class SharedCaptureBuffer;
+class AnalysisEngine;
 
 /**
  * Information about a registered audio source.
@@ -30,6 +31,7 @@ struct SourceInfo
     int channelCount = 2;                       // Number of channels (1 = mono, 2 = stereo)
     double sampleRate = 44100.0;
     std::weak_ptr<IAudioBuffer> buffer;         // Weak reference to capture buffer
+    std::shared_ptr<AnalysisEngine> analysisEngine; // Analysis engine for this source
     std::atomic<bool> active{ true };
 
     SourceInfo() = default;
@@ -42,6 +44,7 @@ struct SourceInfo
         , channelCount(other.channelCount)
         , sampleRate(other.sampleRate)
         , buffer(other.buffer)
+        , analysisEngine(other.analysisEngine)
         , active(other.active.load(std::memory_order_relaxed))
     {}
 
@@ -56,6 +59,7 @@ struct SourceInfo
             channelCount = other.channelCount;
             sampleRate = other.sampleRate;
             buffer = other.buffer;
+            analysisEngine = other.analysisEngine;
             active.store(other.active.load(std::memory_order_relaxed),
                         std::memory_order_relaxed);
         }
@@ -93,7 +97,8 @@ public:
         std::shared_ptr<IAudioBuffer> captureBuffer,
         const juce::String& name = "Track",
         int channelCount = 2,
-        double sampleRate = 44100.0) = 0;
+        double sampleRate = 44100.0,
+        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) = 0;
 
     /**
      * Unregister a plugin instance.

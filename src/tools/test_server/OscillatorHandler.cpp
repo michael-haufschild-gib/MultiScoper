@@ -7,7 +7,7 @@
 #include "plugin/PluginProcessor.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include <algorithm>
 
 namespace oscil

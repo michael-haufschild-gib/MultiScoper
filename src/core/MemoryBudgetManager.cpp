@@ -8,25 +8,6 @@
 namespace oscil
 {
 
-MemoryBudgetManager& MemoryBudgetManager::getInstance()
-{
-    static MemoryBudgetManager instance;
-    return instance;
-}
-
-void MemoryBudgetManager::resetInstance()
-{
-    auto& instance = getInstance();
-    std::scoped_lock lock(instance.buffersMutex_);
-
-    instance.buffers_.clear();
-    instance.globalConfig_ = CaptureQualityConfig();
-    instance.sourceRate_ = 44100;
-    instance.cachedTotalUsage_ = 0;
-    instance.usageCacheDirty_ = true;
-    instance.lastEffectiveQuality_ = QualityPreset::Standard;
-}
-
 MemoryBudgetManager::MemoryBudgetManager() = default;
 
 void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, int sourceRate)
@@ -144,7 +125,7 @@ size_t MemoryBudgetManager::getTotalMemoryUsage() const
 {
     if (usageCacheDirty_)
     {
-        const_cast<MemoryBudgetManager*>(this)->updateCachedUsage();
+        updateCachedUsage();
     }
     return cachedTotalUsage_;
 }
@@ -379,7 +360,7 @@ void MemoryBudgetManager::refreshMemoryUsage()
     notifyMemoryUsageChanged();
 }
 
-void MemoryBudgetManager::updateCachedUsage()
+void MemoryBudgetManager::updateCachedUsage() const
 {
     std::scoped_lock lock(buffersMutex_);
 

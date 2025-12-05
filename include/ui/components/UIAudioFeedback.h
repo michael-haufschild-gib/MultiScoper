@@ -39,8 +39,8 @@ public:
         Notification    // Alerts/notifications
     };
 
-    // Singleton access
-    static UIAudioFeedback& getInstance();
+    UIAudioFeedback();
+    ~UIAudioFeedback();
 
     // Enable/disable
     void setEnabled(bool enabled);
@@ -63,12 +63,10 @@ public:
     // Cleanup
     void shutdown();
 
-private:
-    UIAudioFeedback();
-    ~UIAudioFeedback();
-
     UIAudioFeedback(const UIAudioFeedback&) = delete;
     UIAudioFeedback& operator=(const UIAudioFeedback&) = delete;
+
+private:
 
     // Generate synthesized sounds
     void generateSounds();

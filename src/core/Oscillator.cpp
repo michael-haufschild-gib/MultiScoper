@@ -4,6 +4,7 @@
 */
 
 #include "core/Oscillator.h"
+
 #include "core/OscilState.h"
 
 namespace oscil
@@ -11,12 +12,12 @@ namespace oscil
 
 OscillatorId OscillatorId::generate()
 {
-    return OscillatorId{ juce::Uuid().toString() };
+    return OscillatorId{juce::Uuid().toString()};
 }
 
 PaneId PaneId::generate()
 {
-    return PaneId{ juce::Uuid().toString() };
+    return PaneId{juce::Uuid().toString()};
 }
 
 Oscillator::Oscillator()

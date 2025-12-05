@@ -5,8 +5,9 @@
 #include "tools/test_server/StateHandler.h"
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
+#include "plugin/PluginFactory.h"
 #include "core/OscilState.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include "core/InstanceRegistry.h"
 
 namespace oscil
@@ -62,7 +63,7 @@ void StateHandler::handleStateReset(const httplib::Request& /*req*/, httplib::Re
 
 void StateHandler::clearTestSources()
 {
-    auto& registry = InstanceRegistry::getInstance();
+    auto& registry = PluginFactory::getInstance().getInstanceRegistry();
     for (const auto& pair : testSourceBuffers_)
     {
         SourceId id;

@@ -125,6 +125,16 @@ void DecimatingCaptureBuffer::setQualityPreset(QualityPreset preset, int sourceR
 
 void DecimatingCaptureBuffer::reconfigure()
 {
+    // Reconfigure should only be called from the message thread to avoid
+    // potential allocation on the audio thread via graveyard_.push_back()
+    jassert(!juce::MessageManager::existsAndIsCurrentThread() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread() ||
+            !juce::MessageManager::getInstanceWithoutCreating());
+
+    // Pre-allocate graveyard to avoid allocation during reconfigure
+    if (graveyard_.capacity() < 10)
+        graveyard_.reserve(10);
+
     // Calculate capture rate and decimation ratio
     captureRate_ = config_.getCaptureRate(sourceRate_);
     decimationRatio_ = config_.getDecimationRatio(sourceRate_);
@@ -133,8 +143,9 @@ void DecimatingCaptureBuffer::reconfigure()
     size_t bufferSamples = config_.calculateBufferSizeSamples(captureRate_);
 
     // Round up to next power of 2 for efficient ring buffer
+    // Guard against overflow: stop when powerOf2Size would overflow
     size_t powerOf2Size = 1;
-    while (powerOf2Size < bufferSamples)
+    while (powerOf2Size < bufferSamples && powerOf2Size <= (SIZE_MAX / 2))
         powerOf2Size *= 2;
 
     // Create new buffer with appropriate size
@@ -166,9 +177,37 @@ void DecimatingCaptureBuffer::reconfigure()
     {
         // Protect swap with lock
         const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
+        
+        // CRITICAL: Prevent destruction on audio thread
+        // We move the OLD resources to a graveyard to be cleaned up later
+        // when we are sure the audio thread is done with them.
+        if (buffer_ || context_)
+        {
+            graveyard_.push_back({buffer_, context_, juce::Time::getMillisecondCounterHiRes()});
+        }
+
         buffer_ = newBuffer;
         context_ = newContext;
     }
+
+    cleanUpGarbage();
+}
+
+void DecimatingCaptureBuffer::cleanUpGarbage()
+{
+    double now = juce::Time::getMillisecondCounterHiRes();
+    // Keep items for at least 2 seconds to be safe
+    // This ensures that even if the audio thread held a reference just before the swap,
+    // it will have finished its block long before we delete the object.
+    static constexpr double RETENTION_MS = 2000.0;
+
+    // Remove old items
+    graveyard_.erase(
+        std::remove_if(graveyard_.begin(), graveyard_.end(),
+            [now](const GraveyardItem& item) {
+                return (now - item.timestampMs) > RETENTION_MS;
+            }),
+        graveyard_.end());
 }
 
 void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer,

@@ -35,7 +35,6 @@ public:
         , statusBarVisible_(true)
         , showGrid_(true)
         , autoScale_(true)
-        , holdDisplay_(false)
         , gainDb_(0.0f)
         , gpuRenderingEnabled_(true)
     {
@@ -222,24 +221,6 @@ public:
     }
 
     /**
-     * Set hold display option
-     */
-    StateBuilder& withHoldDisplay(bool hold)
-    {
-        holdDisplay_ = hold;
-        return *this;
-    }
-
-    /**
-     * Enable hold display
-     */
-    StateBuilder& withHold()
-    {
-        holdDisplay_ = true;
-        return *this;
-    }
-
-    /**
      * Set gain in dB
      */
     StateBuilder& withGainDb(float gainDb)
@@ -290,7 +271,6 @@ public:
         state->setStatusBarVisible(statusBarVisible_);
         state->setShowGridEnabled(showGrid_);
         state->setAutoScaleEnabled(autoScale_);
-        state->setHoldDisplayEnabled(holdDisplay_);
         state->setGainDb(gainDb_);
         state->setGpuRenderingEnabled(gpuRenderingEnabled_);
 
@@ -339,7 +319,6 @@ private:
     bool statusBarVisible_;
     bool showGrid_;
     bool autoScale_;
-    bool holdDisplay_;
     float gainDb_;
     bool gpuRenderingEnabled_;
 };

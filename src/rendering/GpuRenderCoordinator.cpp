@@ -4,12 +4,10 @@
 
 #include "rendering/GpuRenderCoordinator.h"
 
-#include "plugin/PluginEditor.h" // Needed for OscilPluginEditor definition
-
 namespace oscil
 {
 
-GpuRenderCoordinator::GpuRenderCoordinator(OscilPluginEditor& editor, StatusBarComponent& statusBar)
+GpuRenderCoordinator::GpuRenderCoordinator(juce::AudioProcessorEditor& editor, StatusBarComponent& statusBar)
     : statusBar_(statusBar)
 {
     // Initialize OpenGL Lifecycle Manager

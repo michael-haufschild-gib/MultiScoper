@@ -23,6 +23,9 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
         float amplitude = body.value("amplitude", 0.8f);
         int numSamples = body.value("samples", 4096);
         float sampleRate = body.value("sampleRate", 44100.0f);
+        // Guard against invalid sample rate from request body
+        if (sampleRate <= 0.0f)
+            sampleRate = 44100.0f;
 
         auto result = runOnMessageThread([this, waveformType, frequency, amplitude, numSamples, sampleRate]() -> nlohmann::json {
             nlohmann::json response;

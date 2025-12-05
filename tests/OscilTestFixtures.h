@@ -16,21 +16,18 @@
 
 #include "core/InstanceRegistry.h"
 #include "core/interfaces/IInstanceRegistry.h"
+#include "core/MemoryBudgetManager.h"
 #include "core/ServiceContext.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/theme/IThemeService.h"
 #include "plugin/PluginProcessor.h"
 #include "plugin/PluginEditor.h"
+#include "rendering/ShaderRegistry.h"
 
 #include "OscilTestUtils.h"
 
 namespace oscil::test
 {
-
-// Forward declarations - these are friends of InstanceRegistry
-class OscilPluginTestFixture;
-class OscilComponentTestFixture;
-class OscilAudioTestFixture;
 
 // =============================================================================
 // Mock Implementations for Isolated Testing
@@ -43,27 +40,15 @@ class OscilAudioTestFixture;
 class MockInstanceRegistry : public IInstanceRegistry
 {
 public:
-    SourceId registerInstance(const juce::String& trackId,
-                              std::shared_ptr<IAudioBuffer> buffer,
-                              const juce::String& name,
-                              int numChannels,
-                              double sampleRate) override
+    SourceId registerInstance(
+        const juce::String& trackIdentifier,
+        std::shared_ptr<IAudioBuffer> captureBuffer,
+        const juce::String& name = "Track",
+        int channelCount = 2,
+        double sampleRate = 44100.0,
+        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) override
     {
-        SourceId id = SourceId::generate();
-        SourceInfo info;
-        info.sourceId = id;
-        info.trackIdentifier = trackId;
-        info.name = name;
-        info.channelCount = numChannels;
-        info.sampleRate = sampleRate;
-        sources_[id.id] = info;
-        buffers_[id.id] = buffer;
-
-        // Notify listeners
-        for (auto* listener : listeners_)
-            listener->sourceAdded(id);
-
-        return id;
+        return SourceId::generate();
     }
 
     void unregisterInstance(const SourceId& sourceId) override
@@ -217,28 +202,27 @@ private:
 /**
  * Base fixture for tests that need the full JUCE plugin infrastructure.
  *
- * Uses REAL singletons (InstanceRegistry, ThemeManager) because the codebase
- * has many direct singleton accesses that bypass dependency injection.
- * This ensures consistent state between injected services and singleton access.
+ * Owns service instances (InstanceRegistry, ThemeManager, ShaderRegistry) via
+ * dependency injection. No singletons are used.
  *
  * Use this for:
  * - Tests involving OscilPluginEditor
  * - Integration tests that need full plugin behavior
- * - Tests that would hang with mocks due to singleton bypass
+ * - Any test requiring real services
  */
 class OscilPluginTestFixture : public ::testing::Test
 {
 protected:
-    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
-    static ThemeManager& getThemeManager() { return ThemeManager::getInstance(); }
-
     void SetUp() override
     {
-        // Reset singleton state for clean tests
-        getRegistry().shutdown();
+        // Create owned service instances (no singletons)
+        registry_ = std::make_unique<InstanceRegistry>();
+        themeManager_ = std::make_unique<ThemeManager>();
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        // Create processor with real singletons
-        processor = std::make_unique<OscilPluginProcessor>(getRegistry(), getThemeManager());
+        // Create processor with owned services
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
 
         // Disable GPU rendering for headless test environment
         // OpenGL context operations crash without a real display/window
@@ -262,6 +246,15 @@ protected:
         // Destroy processor
         processor.reset();
 
+        // Pump before destroying services
+        pumpMessageQueue(50);
+
+        // Destroy services in reverse order
+        memoryBudgetManager_.reset();
+        shaderRegistry_.reset();
+        themeManager_.reset();
+        registry_.reset();
+
         // Final cleanup
         pumpMessageQueue(50);
     }
@@ -276,6 +269,18 @@ protected:
         // Pump to let editor initialize
         pumpMessageQueue(100);
     }
+
+    // Accessors for test code that needs direct service access
+    InstanceRegistry& getRegistry() { return *registry_; }
+    ThemeManager& getThemeManager() { return *themeManager_; }
+    ShaderRegistry& getShaderRegistry() { return *shaderRegistry_; }
+    MemoryBudgetManager& getMemoryBudgetManager() { return *memoryBudgetManager_; }
+
+    // Owned services
+    std::unique_ptr<InstanceRegistry> registry_;
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
 
     std::unique_ptr<OscilPluginProcessor> processor;
     std::unique_ptr<OscilPluginEditor> editor;
@@ -299,6 +304,7 @@ protected:
     {
         mockRegistry = std::make_unique<MockInstanceRegistry>();
         mockThemeService = std::make_unique<MockThemeService>();
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
     }
 
     void TearDown() override
@@ -306,6 +312,7 @@ protected:
         // Pump to process any pending callbacks
         pumpMessageQueue(50);
 
+        shaderRegistry_.reset();
         mockThemeService.reset();
         mockRegistry.reset();
     }
@@ -316,11 +323,12 @@ protected:
      */
     ServiceContext createServiceContext()
     {
-        return ServiceContext{*mockRegistry, *mockThemeService};
+        return ServiceContext{*mockRegistry, *mockThemeService, *shaderRegistry_};
     }
 
     std::unique_ptr<MockInstanceRegistry> mockRegistry;
     std::unique_ptr<MockThemeService> mockThemeService;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
 };
 
 /**

@@ -3,20 +3,23 @@
 */
 
 #include "ui/panels/WaveformComponent.h"
+
 #include "ui/theme/ThemeManager.h"
+
 #include "rendering/ShaderRegistry.h"
-#include "rendering/WaveformShader.h"
 #include "rendering/VisualConfiguration.h"
+#include "rendering/WaveformShader.h"
 #if OSCIL_ENABLE_OPENGL
-#include "rendering/WaveformGLRenderer.h"
-#include <juce_audio_processors/juce_audio_processors.h>
+    #include "rendering/WaveformGLRenderer.h"
+
+    #include <juce_audio_processors/juce_audio_processors.h>
 #endif
 
 namespace oscil
 {
 
 // Static counter for unique waveform IDs
-std::atomic<int> WaveformComponent::nextWaveformId_{ 1 };
+std::atomic<int> WaveformComponent::nextWaveformId_{1};
 
 //==============================================================================
 // Accessibility Handler for WaveformComponent
@@ -103,8 +106,9 @@ std::unique_ptr<juce::AccessibilityHandler> WaveformComponent::createAccessibili
     return std::make_unique<WaveformComponentAccessibilityHandler>(*this);
 }
 
-WaveformComponent::WaveformComponent(IThemeService& themeService)
+WaveformComponent::WaveformComponent(IThemeService& themeService, ShaderRegistry& shaderRegistry)
     : themeService_(themeService)
+    , shaderRegistry_(shaderRegistry)
     , presenter_(std::make_unique<WaveformPresenter>())
     , gridRenderer_(std::make_unique<SoftwareGridRenderer>(themeService))
     , visualPresetId_("default")
@@ -119,8 +123,6 @@ WaveformComponent::WaveformComponent(IThemeService& themeService)
         repaint();
     });
 }
-
-
 
 WaveformComponent::~WaveformComponent() = default;
 
@@ -294,16 +296,15 @@ void WaveformComponent::processAudioData()
     presenter_->process();
 }
 
-
 void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     // Get shader from registry
-    auto* shader = ShaderRegistry::getInstance().getShader(shaderId_);
+    auto* shader = shaderRegistry_.getShader(shaderId_);
     if (!shader)
     {
         // Fallback to default shader
-        shader = ShaderRegistry::getInstance().getShader(
-            ShaderRegistry::getInstance().getDefaultShaderId());
+        shader = shaderRegistry_.getShader(
+            shaderRegistry_.getDefaultShaderId());
     }
 
     if (!shader)
@@ -313,7 +314,8 @@ void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangl
         return;
     }
 
-    if (!presenter_) return;
+    if (!presenter_)
+        return;
 
     // Set up render parameters
     ShaderRenderParams params;
@@ -364,7 +366,7 @@ void WaveformComponent::updateWaveformPath()
 
     const auto& displayBuffer1 = presenter_->getDisplayBuffer1();
     const auto& displayBuffer2 = presenter_->getDisplayBuffer2();
-    
+
     if (displayBuffer1.empty())
         return;
 
@@ -376,7 +378,7 @@ void WaveformComponent::updateWaveformPath()
 
     // Calculate center Y positions based on processing mode
     float centerY1, centerY2;
-    float amplitude1, amplitude2;  // Amplitude range for each channel
+    float amplitude1, amplitude2; // Amplitude range for each channel
 
     bool isStereo = presenter_->isStereo();
     float effectiveScale = presenter_->getEffectiveScale();
@@ -385,9 +387,9 @@ void WaveformComponent::updateWaveformPath()
     {
         // Stereo stacked: L on top half, R on bottom half
         float halfHeight = static_cast<float>(height) * 0.5f;
-        centerY1 = halfHeight * 0.5f;      // Center of top half (L channel)
-        centerY2 = halfHeight * 1.5f;      // Center of bottom half (R channel)
-        amplitude1 = halfHeight * 0.5f;    // Amplitude fits in quarter height
+        centerY1 = halfHeight * 0.5f;   // Center of top half (L channel)
+        centerY2 = halfHeight * 1.5f;   // Center of bottom half (R channel)
+        amplitude1 = halfHeight * 0.5f; // Amplitude fits in quarter height
         amplitude2 = halfHeight * 0.5f;
     }
     else
@@ -484,7 +486,8 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     data.bounds = relativeBounds.toFloat();
 
     // Copy display buffer data from presenter
-    if (presenter_) {
+    if (presenter_)
+    {
         data.channel1 = presenter_->getDisplayBuffer1();
         data.channel2 = presenter_->getDisplayBuffer2();
         data.isStereo = presenter_->isStereo();
@@ -495,7 +498,6 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     data.colour = colour_;
     data.opacity = opacity_;
     data.lineWidth = lineWidth_;
-    data.shaderId = shaderId_;
     data.visible = isVisible() && !data.channel1.empty();
     data.gridConfig = gridRenderer_ ? gridRenderer_->getGridConfig() : GridConfiguration{};
 
@@ -507,7 +509,7 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
 
     // Populate advanced visual configuration from preset
     data.visualConfig = VisualConfiguration::getPreset(visualPresetId_);
-    
+
     // Apply overrides if present
     if (visualOverrides_.isValid())
     {
@@ -521,7 +523,8 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
 // Getters
 float WaveformComponent::getPeakLevel() const { return presenter_ ? presenter_->getPeakLevel() : 0.0f; }
 float WaveformComponent::getRMSLevel() const { return presenter_ ? presenter_->getRMSLevel() : 0.0f; }
-ProcessingMode WaveformComponent::getProcessingMode() const {
+ProcessingMode WaveformComponent::getProcessingMode() const
+{
     return presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
 }
 

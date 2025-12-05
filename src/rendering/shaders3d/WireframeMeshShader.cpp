@@ -250,7 +250,7 @@ void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data, floa
     // We generate horizontal lines (along waveform) and vertical lines (grid depth)
 
     int xSegments = std::min(data.sampleCount, gridDensity_ * 4);
-    int zSegments = gridDensity_;
+    int zSegments = std::max(2, gridDensity_);  // Minimum 2 to avoid division by zero
 
     // Reserve space for lines
     // Horizontal lines: zSegments lines, each with xSegments-1 segments = 2 vertices per segment

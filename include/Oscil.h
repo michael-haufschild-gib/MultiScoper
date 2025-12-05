@@ -23,7 +23,7 @@
 #include "core/SharedCaptureBuffer.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 
 // DSP includes
 #include "core/dsp/SignalProcessor.h"

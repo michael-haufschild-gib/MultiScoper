@@ -12,7 +12,20 @@ using namespace oscil;
 class OscilSliderTest : public ::testing::Test
 {
 protected:
-    void SetUp() override {}
+    void SetUp() override
+    {
+        themeManager_ = std::make_unique<ThemeManager>();
+    }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 // =============================================================================
@@ -21,7 +34,7 @@ protected:
 
 TEST_F(OscilSliderTest, DefaultConstruction)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     EXPECT_TRUE(slider.isEnabled());
     EXPECT_EQ(slider.getVariant(), SliderVariant::Single);
@@ -29,21 +42,21 @@ TEST_F(OscilSliderTest, DefaultConstruction)
 
 TEST_F(OscilSliderTest, ConstructionWithVariant)
 {
-    OscilSlider slider(ThemeManager::getInstance(), SliderVariant::Vertical);
+    OscilSlider slider(getThemeManager(), SliderVariant::Vertical);
 
     EXPECT_EQ(slider.getVariant(), SliderVariant::Vertical);
 }
 
 TEST_F(OscilSliderTest, ConstructionWithTestId)
 {
-    OscilSlider slider(ThemeManager::getInstance(), "slider-1");
+    OscilSlider slider(getThemeManager(), "slider-1");
 
     EXPECT_TRUE(slider.isEnabled());
 }
 
 TEST_F(OscilSliderTest, ConstructionWithVariantAndTestId)
 {
-    OscilSlider slider(ThemeManager::getInstance(), SliderVariant::Range, "slider-1");
+    OscilSlider slider(getThemeManager(), SliderVariant::Range, "slider-1");
 
     EXPECT_EQ(slider.getVariant(), SliderVariant::Range);
 }
@@ -54,7 +67,7 @@ TEST_F(OscilSliderTest, ConstructionWithVariantAndTestId)
 
 TEST_F(OscilSliderTest, SetValue)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     slider.setValue(50.0, false);
@@ -63,7 +76,7 @@ TEST_F(OscilSliderTest, SetValue)
 
 TEST_F(OscilSliderTest, ValueClamping)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     slider.setValue(150.0, false);
@@ -75,7 +88,7 @@ TEST_F(OscilSliderTest, ValueClamping)
 
 TEST_F(OscilSliderTest, SetRange)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(10.0, 90.0);
 
     EXPECT_NEAR(slider.getMinimum(), 10.0, 0.01);
@@ -88,7 +101,7 @@ TEST_F(OscilSliderTest, SetRange)
 
 TEST_F(OscilSliderTest, SetRangeValues)
 {
-    OscilSlider slider(ThemeManager::getInstance(), SliderVariant::Range);
+    OscilSlider slider(getThemeManager(), SliderVariant::Range);
     slider.setRange(0.0, 100.0);
 
     slider.setRangeValues(20.0, 80.0, false);
@@ -102,7 +115,7 @@ TEST_F(OscilSliderTest, SetRangeValues)
 
 TEST_F(OscilSliderTest, SetVariantSingle)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     slider.setVariant(SliderVariant::Single);
     EXPECT_EQ(slider.getVariant(), SliderVariant::Single);
@@ -110,7 +123,7 @@ TEST_F(OscilSliderTest, SetVariantSingle)
 
 TEST_F(OscilSliderTest, SetVariantRange)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     slider.setVariant(SliderVariant::Range);
     EXPECT_EQ(slider.getVariant(), SliderVariant::Range);
@@ -118,7 +131,7 @@ TEST_F(OscilSliderTest, SetVariantRange)
 
 TEST_F(OscilSliderTest, SetVariantVertical)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     slider.setVariant(SliderVariant::Vertical);
     EXPECT_EQ(slider.getVariant(), SliderVariant::Vertical);
@@ -130,7 +143,7 @@ TEST_F(OscilSliderTest, SetVariantVertical)
 
 TEST_F(OscilSliderTest, SetStep)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     slider.setStep(10.0);
@@ -139,7 +152,7 @@ TEST_F(OscilSliderTest, SetStep)
 
 TEST_F(OscilSliderTest, SetDefaultValue)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     slider.setDefaultValue(50.0);
@@ -148,7 +161,7 @@ TEST_F(OscilSliderTest, SetDefaultValue)
 
 TEST_F(OscilSliderTest, SetSkewFactor)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     slider.setSkewFactor(0.5);
     EXPECT_NEAR(slider.getSkewFactor(), 0.5, 0.01);
@@ -156,7 +169,7 @@ TEST_F(OscilSliderTest, SetSkewFactor)
 
 TEST_F(OscilSliderTest, SetLabel)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setLabel("Volume");
 
     EXPECT_EQ(slider.getLabel(), juce::String("Volume"));
@@ -164,7 +177,7 @@ TEST_F(OscilSliderTest, SetLabel)
 
 TEST_F(OscilSliderTest, SetSuffix)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setSuffix("dB");
 
     EXPECT_EQ(slider.getSuffix(), juce::String("dB"));
@@ -172,7 +185,7 @@ TEST_F(OscilSliderTest, SetSuffix)
 
 TEST_F(OscilSliderTest, SetDecimalPlaces)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     slider.setDecimalPlaces(2);
     EXPECT_EQ(slider.getDecimalPlaces(), 2);
@@ -180,7 +193,7 @@ TEST_F(OscilSliderTest, SetDecimalPlaces)
 
 TEST_F(OscilSliderTest, SetShowValueOnHover)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     slider.setShowValueOnHover(true);
     EXPECT_TRUE(slider.getShowValueOnHover());
@@ -195,7 +208,7 @@ TEST_F(OscilSliderTest, SetShowValueOnHover)
 
 TEST_F(OscilSliderTest, SetMagneticSnappingEnabled)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     slider.setMagneticSnappingEnabled(true);
     EXPECT_TRUE(slider.isMagneticSnappingEnabled());
@@ -206,7 +219,7 @@ TEST_F(OscilSliderTest, SetMagneticSnappingEnabled)
 
 TEST_F(OscilSliderTest, SetMagneticPoints)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     std::vector<double> points = {0.0, 25.0, 50.0, 75.0, 100.0};
@@ -217,7 +230,7 @@ TEST_F(OscilSliderTest, SetMagneticPoints)
 
 TEST_F(OscilSliderTest, AddMagneticPoint)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     slider.addMagneticPoint(50.0);
@@ -226,7 +239,7 @@ TEST_F(OscilSliderTest, AddMagneticPoint)
 
 TEST_F(OscilSliderTest, ClearMagneticPoints)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
     slider.addMagneticPoint(50.0);
 
@@ -240,7 +253,7 @@ TEST_F(OscilSliderTest, ClearMagneticPoints)
 
 TEST_F(OscilSliderTest, SetEnabled)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     EXPECT_TRUE(slider.isEnabled());
 
@@ -257,14 +270,14 @@ TEST_F(OscilSliderTest, SetEnabled)
 
 TEST_F(OscilSliderTest, DefaultNotAttached)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     EXPECT_FALSE(slider.isAttachedToParameter());
 }
 
 TEST_F(OscilSliderTest, DetachWhenNotAttached)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     // Should not crash
     slider.detachFromParameter();
@@ -277,7 +290,7 @@ TEST_F(OscilSliderTest, DetachWhenNotAttached)
 
 TEST_F(OscilSliderTest, OnValueChangedCallback)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     int changeCount = 0;
@@ -295,7 +308,7 @@ TEST_F(OscilSliderTest, OnValueChangedCallback)
 
 TEST_F(OscilSliderTest, NoCallbackWhenNotifyFalse)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
 
     int changeCount = 0;
@@ -310,7 +323,7 @@ TEST_F(OscilSliderTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilSliderTest, OnRangeChangedCallback)
 {
-    OscilSlider slider(ThemeManager::getInstance(), SliderVariant::Range);
+    OscilSlider slider(getThemeManager(), SliderVariant::Range);
     slider.setRange(0.0, 100.0);
 
     int changeCount = 0;
@@ -325,7 +338,7 @@ TEST_F(OscilSliderTest, OnRangeChangedCallback)
 
 TEST_F(OscilSliderTest, OnDragStartCallback)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     bool dragStarted = false;
     slider.onDragStart = [&dragStarted]() {
@@ -339,7 +352,7 @@ TEST_F(OscilSliderTest, OnDragStartCallback)
 
 TEST_F(OscilSliderTest, OnDragEndCallback)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     bool dragEnded = false;
     slider.onDragEnd = [&dragEnded]() {
@@ -357,7 +370,7 @@ TEST_F(OscilSliderTest, OnDragEndCallback)
 
 TEST_F(OscilSliderTest, PreferredWidthPositive)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     int width = slider.getPreferredWidth();
     EXPECT_GT(width, 0);
@@ -365,7 +378,7 @@ TEST_F(OscilSliderTest, PreferredWidthPositive)
 
 TEST_F(OscilSliderTest, PreferredHeightPositive)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     int height = slider.getPreferredHeight();
     EXPECT_GT(height, 0);
@@ -377,7 +390,7 @@ TEST_F(OscilSliderTest, PreferredHeightPositive)
 
 TEST_F(OscilSliderTest, ThemeChangeDoesNotThrow)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
     slider.setValue(50.0, false);
 
@@ -391,7 +404,7 @@ TEST_F(OscilSliderTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilSliderTest, ThemeChangePreservesConfiguration)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
     slider.setLabel("Volume");
     slider.setSuffix("dB");
 
@@ -409,7 +422,7 @@ TEST_F(OscilSliderTest, ThemeChangePreservesConfiguration)
 
 TEST_F(OscilSliderTest, WantsKeyboardFocus)
 {
-    OscilSlider slider(ThemeManager::getInstance());
+    OscilSlider slider(getThemeManager());
 
     EXPECT_TRUE(slider.getWantsKeyboardFocus());
 }

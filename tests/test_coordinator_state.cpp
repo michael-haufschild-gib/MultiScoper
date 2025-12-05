@@ -50,7 +50,8 @@ public:
                                std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
                                const juce::String& /*name*/,
                                int /*channelCount*/,
-                               double /*sampleRate*/) override
+                               double /*sampleRate*/,
+                               std::shared_ptr<AnalysisEngine> /*analysisEngine*/) override
     {
         return SourceId::generate();
     }

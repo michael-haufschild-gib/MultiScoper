@@ -265,6 +265,8 @@ private:
     {
         jassert(capacity_ > 0);
         jassert((capacity_ & (capacity_ - 1)) == 0);  // Assert power of 2
+        // Runtime safety check in case capacity_ is 0 (should never happen)
+        if (capacity_ == 0) return 0;
         return pos & (capacity_ - 1);
     }
 };

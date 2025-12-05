@@ -762,7 +762,12 @@ double OscilSlider::constrainValue(double value) const
 
 double OscilSlider::valueToProportionOfLength(double value) const
 {
-    double proportion = (value - minValue_) / (maxValue_ - minValue_);
+    // Guard against division by zero when min == max
+    double range = maxValue_ - minValue_;
+    if (std::abs(range) < 1e-10)
+        return 0.0;
+
+    double proportion = (value - minValue_) / range;
 
     if (std::abs(skewFactor_ - 1.0) > 1e-9)
         proportion = std::pow(proportion, 1.0 / skewFactor_);
@@ -787,10 +792,15 @@ void OscilSlider::triggerSnapFeedback()
     {
         snapPulse_.setTarget(1.15f, 1.0f);
 
-        juce::Timer::callAfterDelay(100, [this] {
-            snapPulse_.setTarget(1.0f);
-            if (!isTimerRunning())
-                startTimerHz(ComponentLayout::ANIMATION_FPS);
+        // Use SafePointer to prevent use-after-free if component is destroyed before callback
+        juce::Component::SafePointer<OscilSlider> safeThis(this);
+        juce::Timer::callAfterDelay(100, [safeThis] {
+            if (auto* slider = safeThis.getComponent())
+            {
+                slider->snapPulse_.setTarget(1.0f);
+                if (!slider->isTimerRunning())
+                    slider->startTimerHz(ComponentLayout::ANIMATION_FPS);
+            }
         });
 
         startTimerHz(ComponentLayout::ANIMATION_FPS);

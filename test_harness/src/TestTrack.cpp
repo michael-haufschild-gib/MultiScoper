@@ -4,7 +4,7 @@
 
 #include "TestTrack.h"
 #include "plugin/PluginEditor.h"
-#include "ui/theme/ThemeManager.h"
+#include "plugin/PluginFactory.h"
 
 namespace oscil::test
 {
@@ -14,10 +14,10 @@ TestTrack::TestTrack(int trackIndex, const juce::String& name, TestTransport& tr
     , name_(name)
     , transport_(transport)
 {
-    // Create the plugin processor with required dependencies
-    processor_ = std::make_unique<OscilPluginProcessor>(
-        InstanceRegistry::getInstance(),
-        ThemeManager::getInstance());
+    // Create the plugin processor via PluginFactory (composition root)
+    auto& factory = PluginFactory::getInstance();
+    processor_ = std::unique_ptr<OscilPluginProcessor>(
+        static_cast<OscilPluginProcessor*>(factory.createPluginProcessor().release()));
     processor_->setPlayHead(this);
 
     // Note: sourceId_ is retrieved in prepare() after prepareToPlay() is called,

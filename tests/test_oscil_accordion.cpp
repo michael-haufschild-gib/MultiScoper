@@ -12,8 +12,21 @@ using namespace oscil;
 class OscilAccordionTest : public ::testing::Test
 {
 protected:
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
-    void SetUp() override {}
+    void SetUp() override
+    {
+        themeManager_ = std::make_unique<ThemeManager>();
+    }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+    IThemeService& getThemeService() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 // =============================================================================

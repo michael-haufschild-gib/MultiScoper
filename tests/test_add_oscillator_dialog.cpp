@@ -8,7 +8,7 @@
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/theme/ThemeManager.h"
 #include "core/Oscillator.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include "core/Source.h"
 
 using namespace oscil;
@@ -18,11 +18,11 @@ class AddOscillatorDialogTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Ensure theme manager is initialized
-        auto& themeManager = ThemeManager::getInstance();
+        // Initialize theme manager for this test
+        themeManager_ = std::make_unique<ThemeManager>();
 
         // Create dialog with theme service
-        dialog_ = std::make_unique<AddOscillatorDialog>(themeManager);
+        dialog_ = std::make_unique<AddOscillatorDialog>(getThemeManager());
         dialog_->setSize(dialog_->getPreferredWidth(), dialog_->getPreferredHeight());
 
         // Create test sources using default constructor and setting properties
@@ -67,7 +67,10 @@ protected:
     void TearDown() override
     {
         dialog_.reset();
+        themeManager_.reset();
     }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
 
     void setupDialogWithCallback(AddOscillatorDialog::Callback callback)
     {
@@ -75,6 +78,7 @@ protected:
         dialog_->setOnComplete(std::move(callback));
     }
 
+    std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<AddOscillatorDialog> dialog_;
     std::vector<SourceInfo> testSources_;
     std::vector<Pane> testPanes_;
@@ -148,7 +152,7 @@ TEST_F(AddOscillatorDialogTest, PanesPopulatedCorrectly)
 TEST_F(AddOscillatorDialogTest, ThemeChangesApplied)
 {
     // Get current theme
-    const auto& theme = ThemeManager::getInstance().getCurrentTheme();
+    const auto& theme = getThemeManager().getCurrentTheme();
 
     // Dialog should respond to theme (no crash)
     dialog_->themeChanged(theme);

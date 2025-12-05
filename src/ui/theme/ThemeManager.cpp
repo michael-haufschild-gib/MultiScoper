@@ -202,12 +202,6 @@ bool ColorTheme::fromJson(const juce::String& json)
 
 // ThemeManager implementation
 
-ThemeManager& ThemeManager::getInstance()
-{
-    static ThemeManager* instance = new ThemeManager();
-    return *instance;
-}
-
 ThemeManager::ThemeManager()
 {
     initializeSystemThemes();
@@ -468,11 +462,15 @@ void ThemeManager::loadThemes()
     {
         if (auto xml = juce::XmlDocument::parse(file))
         {
-            ColorTheme theme;
-            theme.fromValueTree(juce::ValueTree::fromXml(*xml));
-            if (theme.name.isNotEmpty() && !theme.isSystemTheme)
+            auto loadedTree = juce::ValueTree::fromXml(*xml);
+            if (loadedTree.isValid())
             {
-                themes_[theme.name] = theme;
+                ColorTheme theme;
+                theme.fromValueTree(loadedTree);
+                if (theme.name.isNotEmpty() && !theme.isSystemTheme)
+                {
+                    themes_[theme.name] = theme;
+                }
             }
         }
     }

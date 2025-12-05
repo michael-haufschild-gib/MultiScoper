@@ -12,7 +12,20 @@ using namespace oscil;
 class OscilToggleTest : public ::testing::Test
 {
 protected:
-    void SetUp() override {}
+    void SetUp() override
+    {
+        themeManager_ = std::make_unique<ThemeManager>();
+    }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 // =============================================================================
@@ -21,7 +34,7 @@ protected:
 
 TEST_F(OscilToggleTest, DefaultConstruction)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_FALSE(toggle.getValue());
     EXPECT_TRUE(toggle.isEnabled());
@@ -30,7 +43,7 @@ TEST_F(OscilToggleTest, DefaultConstruction)
 
 TEST_F(OscilToggleTest, ConstructionWithLabel)
 {
-    OscilToggle toggle(ThemeManager::getInstance(), "Enable Feature");
+    OscilToggle toggle(getThemeManager(), "Enable Feature");
 
     EXPECT_EQ(toggle.getLabel(), juce::String("Enable Feature"));
     EXPECT_FALSE(toggle.getValue());
@@ -38,7 +51,7 @@ TEST_F(OscilToggleTest, ConstructionWithLabel)
 
 TEST_F(OscilToggleTest, ConstructionWithLabelAndTestId)
 {
-    OscilToggle toggle(ThemeManager::getInstance(), "Enable Feature", "toggle-feature");
+    OscilToggle toggle(getThemeManager(), "Enable Feature", "toggle-feature");
 
     EXPECT_EQ(toggle.getLabel(), juce::String("Enable Feature"));
 }
@@ -49,7 +62,7 @@ TEST_F(OscilToggleTest, ConstructionWithLabelAndTestId)
 
 TEST_F(OscilToggleTest, SetValueOn)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     toggle.setValue(true);
     EXPECT_TRUE(toggle.getValue());
@@ -57,7 +70,7 @@ TEST_F(OscilToggleTest, SetValueOn)
 
 TEST_F(OscilToggleTest, SetValueOff)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
     toggle.setValue(true);
 
     toggle.setValue(false);
@@ -66,7 +79,7 @@ TEST_F(OscilToggleTest, SetValueOff)
 
 TEST_F(OscilToggleTest, SetValueWithoutAnimation)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     toggle.setValue(true, false);  // No animation
     EXPECT_TRUE(toggle.getValue());
@@ -74,7 +87,7 @@ TEST_F(OscilToggleTest, SetValueWithoutAnimation)
 
 TEST_F(OscilToggleTest, ToggleMethod)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_FALSE(toggle.getValue());
 
@@ -91,7 +104,7 @@ TEST_F(OscilToggleTest, ToggleMethod)
 
 TEST_F(OscilToggleTest, SetLabel)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
     toggle.setLabel("Test Label");
 
     EXPECT_EQ(toggle.getLabel(), juce::String("Test Label"));
@@ -99,14 +112,14 @@ TEST_F(OscilToggleTest, SetLabel)
 
 TEST_F(OscilToggleTest, DefaultLabelOnRight)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_TRUE(toggle.isLabelOnRight());
 }
 
 TEST_F(OscilToggleTest, SetLabelOnRight)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     toggle.setLabelOnRight(false);
     EXPECT_FALSE(toggle.isLabelOnRight());
@@ -121,14 +134,14 @@ TEST_F(OscilToggleTest, SetLabelOnRight)
 
 TEST_F(OscilToggleTest, DefaultEnabled)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_TRUE(toggle.isEnabled());
 }
 
 TEST_F(OscilToggleTest, SetDisabled)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
     toggle.setEnabled(false);
 
     EXPECT_FALSE(toggle.isEnabled());
@@ -136,7 +149,7 @@ TEST_F(OscilToggleTest, SetDisabled)
 
 TEST_F(OscilToggleTest, SetEnabledAfterDisabled)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
     toggle.setEnabled(false);
     toggle.setEnabled(true);
 
@@ -145,7 +158,7 @@ TEST_F(OscilToggleTest, SetEnabledAfterDisabled)
 
 TEST_F(OscilToggleTest, ToggleWhenDisabledDoesNothing)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
     toggle.setValue(false);
     toggle.setEnabled(false);
 
@@ -161,7 +174,7 @@ TEST_F(OscilToggleTest, ToggleWhenDisabledDoesNothing)
 
 TEST_F(OscilToggleTest, OnValueChangedCallback)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
     int changeCount = 0;
     bool lastState = false;
 
@@ -181,22 +194,22 @@ TEST_F(OscilToggleTest, OnValueChangedCallback)
 
 TEST_F(OscilToggleTest, PreferredWidthPositive)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_GT(toggle.getPreferredWidth(), 0);
 }
 
 TEST_F(OscilToggleTest, PreferredHeightPositive)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_GT(toggle.getPreferredHeight(), 0);
 }
 
 TEST_F(OscilToggleTest, ToggleWithLabelHasGreaterWidth)
 {
-    OscilToggle noLabel(ThemeManager::getInstance());
-    OscilToggle withLabel(ThemeManager::getInstance(), "A Very Long Label Here");
+    OscilToggle noLabel(getThemeManager());
+    OscilToggle withLabel(getThemeManager(), "A Very Long Label Here");
 
     EXPECT_GT(withLabel.getPreferredWidth(), noLabel.getPreferredWidth());
 }
@@ -207,7 +220,7 @@ TEST_F(OscilToggleTest, ToggleWithLabelHasGreaterWidth)
 
 TEST_F(OscilToggleTest, ThemeChangeDoesNotThrow)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
     toggle.setValue(true);
 
     ColorTheme newTheme;
@@ -234,7 +247,7 @@ TEST_F(OscilToggleTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilToggleTest, WantsKeyboardFocus)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_TRUE(toggle.getWantsKeyboardFocus());
 }
@@ -245,14 +258,14 @@ TEST_F(OscilToggleTest, WantsKeyboardFocus)
 
 TEST_F(OscilToggleTest, DefaultNotAttached)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     EXPECT_FALSE(toggle.isAttachedToParameter());
 }
 
 TEST_F(OscilToggleTest, DetachWhenNotAttached)
 {
-    OscilToggle toggle(ThemeManager::getInstance());
+    OscilToggle toggle(getThemeManager());
 
     // Should not crash
     toggle.detachFromParameter();

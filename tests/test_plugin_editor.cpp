@@ -82,7 +82,6 @@ TEST_F(PluginEditorTest, DisplayOptionsDoNotCrash)
     // All display options should be callable without crashing
     EXPECT_NO_THROW(editor->setShowGridForAllPanes(true));
     EXPECT_NO_THROW(editor->setAutoScaleForAllPanes(true));
-    EXPECT_NO_THROW(editor->setHoldDisplayForAllPanes(true));
     EXPECT_NO_THROW(editor->setGainDbForAllPanes(6.0f));
     EXPECT_NO_THROW(editor->setDisplaySamplesForAllPanes(2048));
 

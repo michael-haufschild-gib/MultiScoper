@@ -11,7 +11,7 @@
 #include "ui/layout/WindowLayout.h"
 #include "core/Oscillator.h"
 #include "core/InstanceRegistry.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include "ui/panels/OscillatorListComponent.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
@@ -135,7 +135,6 @@ public:
         // Display options events
         virtual void showGridChanged(bool /*enabled*/) {}
         virtual void autoScaleChanged(bool /*enabled*/) {}
-        virtual void holdDisplayChanged(bool /*enabled*/) {}
 
         // Layout and theme events (from Options section)
         virtual void layoutChanged(int /*columnCount*/) {}
@@ -244,7 +243,6 @@ private:
     void gainChanged(float dB) override;
     void showGridChanged(bool enabled) override;
     void autoScaleChanged(bool enabled) override;
-    void holdDisplayChanged(bool enabled) override;
     void layoutChanged(int columnCount) override;
     void themeChanged(const juce::String& themeName) override;
     void gpuRenderingChanged(bool enabled) override;

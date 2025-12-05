@@ -17,11 +17,6 @@ AddOscillatorDialog::AddOscillatorDialog(IThemeService& themeService)
     themeService_.addListener(this);
 }
 
-// AddOscillatorDialog::AddOscillatorDialog()
-//     : AddOscillatorDialog(ThemeManager::getInstance())
-// {
-// }
-
 AddOscillatorDialog::~AddOscillatorDialog()
 {
     themeService_.removeListener(this);

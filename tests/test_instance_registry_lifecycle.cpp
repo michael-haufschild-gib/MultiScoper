@@ -13,40 +13,26 @@ using namespace oscil;
 class InstanceRegistryLifecycleTest : public ::testing::Test
 {
 protected:
+    std::unique_ptr<InstanceRegistry> registry_;
     std::mutex dispatcherMutex;
 
-    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
-    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
+    InstanceRegistry& getRegistry() { return *registry_; }
 
     void SetUp() override
     {
+        // Create owned instance
+        registry_ = std::make_unique<InstanceRegistry>();
+
         // Force synchronous dispatch for tests
         getRegistry().setDispatcher([this](std::function<void()> f) {
             std::scoped_lock lock(dispatcherMutex);
             f();
         });
-
-        // Clear any existing registrations
-        auto sources = getRegistry().getAllSources();
-        for (const auto& source : sources)
-        {
-            getRegistry().unregisterInstance(source.sourceId);
-        }
     }
 
     void TearDown() override
     {
-        // Clean up
-        auto sources = getRegistry().getAllSources();
-        for (const auto& source : sources)
-        {
-            getRegistry().unregisterInstance(source.sourceId);
-        }
-
-        // Reset dispatcher to default async behavior
-        getRegistry().setDispatcher([](std::function<void()> f) {
-             juce::MessageManager::callAsync(std::move(f));
-        });
+        registry_.reset();
     }
 };
 

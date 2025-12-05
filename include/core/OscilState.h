@@ -9,7 +9,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include "core/Oscillator.h"
 #include "core/dsp/CaptureQualityConfig.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include <vector>
 
 namespace oscil
@@ -44,6 +44,7 @@ namespace StateIds
     static const juce::Identifier OscillatorState{ "oscillatorState" };
     static const juce::Identifier LineWidth{ "lineWidth" };
     static const juce::Identifier TimeWindow{ "timeWindow" };
+    static const juce::Identifier Persistence{ "persistence" };
     static const juce::Identifier ShaderId{ "shaderId" };
     static const juce::Identifier VisualPresetId{ "visualPresetId" };
 
@@ -72,7 +73,11 @@ namespace StateIds
     // Display options
     static const juce::Identifier ShowGrid{ "showGrid" };
     static const juce::Identifier AutoScale{ "autoScale" };
-    static const juce::Identifier HoldDisplay{ "holdDisplay" };
+
+    // Value Tree structure
+    static const juce::Identifier ConfigNode{ "config" };
+    static const juce::Identifier LayoutNode{ "layout" };
+
     static const juce::Identifier GainDb{ "gainDb" };
 
     // Rendering mode
@@ -189,11 +194,13 @@ public:
     [[nodiscard]] bool isAutoScaleEnabled() const;
     void setAutoScaleEnabled(bool enabled);
 
-    [[nodiscard]] bool isHoldDisplayEnabled() const;
-    void setHoldDisplayEnabled(bool enabled);
-
     [[nodiscard]] float getGainDb() const;
     void setGainDb(float dB);
+
+    /**
+     * Performance settings
+     */
+    [[nodiscard]] float getCpuWarningThreshold() const;
 
     /**
      * Get/set GPU rendering mode
@@ -257,7 +264,8 @@ private:
 class GlobalPreferences
 {
 public:
-    [[nodiscard]] static GlobalPreferences& getInstance();
+    GlobalPreferences();
+    ~GlobalPreferences();
 
     /**
      * Get the preferences file
@@ -301,9 +309,6 @@ public:
     GlobalPreferences& operator=(const GlobalPreferences&) = delete;
 
 private:
-    GlobalPreferences();
-    ~GlobalPreferences();
-
     juce::ValueTree preferences_;
 };
 

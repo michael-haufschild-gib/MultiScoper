@@ -20,7 +20,7 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
         label = std::make_unique<juce::Label>();
         label->setFont(juce::FontOptions(11.0f));
         label->setJustificationType(juce::Justification::centredLeft);
-        addChildComponent(*label);
+        addAndMakeVisible(*label);
         
 #if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
         label->setComponentID(testId);
@@ -38,7 +38,7 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
     renderModeLabel_ = std::make_unique<juce::Label>();
     renderModeLabel_->setFont(juce::FontOptions(11.0f));
     renderModeLabel_->setJustificationType(juce::Justification::centredRight);
-    addChildComponent(*renderModeLabel_);
+    addAndMakeVisible(*renderModeLabel_);
 #if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
     renderModeLabel_->setComponentID("statusBar_mode");
 #endif

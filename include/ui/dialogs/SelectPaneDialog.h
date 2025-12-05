@@ -9,7 +9,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/OscilButton.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/IThemeService.h"

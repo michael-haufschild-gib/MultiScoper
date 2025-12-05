@@ -492,11 +492,6 @@ void SidebarComponent::autoScaleChanged(bool enabled)
     listeners_.call([enabled](Listener& l) { l.autoScaleChanged(enabled); });
 }
 
-void SidebarComponent::holdDisplayChanged(bool enabled)
-{
-    listeners_.call([enabled](Listener& l) { l.holdDisplayChanged(enabled); });
-}
-
 void SidebarComponent::layoutChanged(int columnCount)
 {
     listeners_.call([columnCount](Listener& l) { l.layoutChanged(columnCount); });

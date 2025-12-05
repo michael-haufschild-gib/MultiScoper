@@ -8,8 +8,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "core/InstanceRegistry.h"
-#include "ui/layout/Pane.h"
-#include "ui/theme/WaveformColorPalette.h"
+#include "core/Pane.h"
+#include "core/WaveformColorPalette.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/theme/IThemeService.h"
 #include "ui/components/OscilButton.h"
@@ -54,7 +54,6 @@ public:
     using CancelCallback = std::function<void()>;
 
     AddOscillatorDialog(IThemeService& themeService);
-    // AddOscillatorDialog(); // Legacy
     ~AddOscillatorDialog() override;
 
     void paint(juce::Graphics& g) override;

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "ui/dialogs/OscillatorColorDialog.h"
-#include "ui/theme/WaveformColorPalette.h"
+#include "core/WaveformColorPalette.h"
+#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
@@ -10,14 +11,19 @@ class OscillatorColorDialogTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        dialog = std::make_unique<OscillatorColorDialog>(ThemeManager::getInstance());
+        themeManager_ = std::make_unique<ThemeManager>();
+        dialog = std::make_unique<OscillatorColorDialog>(getThemeManager());
     }
 
     void TearDown() override
     {
         dialog.reset();
+        themeManager_.reset();
     }
 
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
+    std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<OscillatorColorDialog> dialog;
 };
 

@@ -4790,3 +4790,31 @@ Add this feature:
 │ [----------] Global test environment set-up.                                                                                                                                                                      │
 │ [----------] 1 test from PaneClosingBugTest                                                                                                                                                                       │
 │ [ RUN      ] PaneClosingBugTest.ClosingPaneRemovesItAndHidesOscillator
+
+
+Pane
+- Frame
+- Header
+  - Title
+  - Badges
+  - ActionButtons
+  - CloseButton
+- Body
+  - Grid
+  - Waveform
+  - Labels
+
+
+resources/icomoon/SVG/stats-bars.svg
+
+Review, plan and implement this feature which will replace the global "hold" function with a per pane hold function.
+1. Every pane can independently be hold/paused (waveform does not update).
+2. The global hold setting is removed from the sidebar. There is no global function to hold all panes/oscillators.
+3. In the header of a pane, to the action buttons, add a new button to toggle the hold/pause feature for all waveforms in the pane:
+   - When the pane is actively updating waveforms (not paused) then the button shows the icon resources/icomoon/SVG/pause2.svg
+   - When the pane is on hold / paused then the button shows the icon: resources/icomoon/SVG/play3.svg
+
+
+Review this bug report and do a full root cause analysis because this this seems to be a heavy architectural problem: Have multiple panes and oscillators. When selecting either the "String Theory" or the "Crystalline" visual preset for an oscillator, the rendered waveform will ignore the pane's height and not resize accordingly. It will render across the whole height of the plugin editor.
+
+review this bug report: when selecting an oscillatorlistitem in the sidebar, the visibility toggle icon disappears. it is only visible on not selected items in the list.

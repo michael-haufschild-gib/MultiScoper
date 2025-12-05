@@ -43,10 +43,13 @@ public:
     EnvironmentMapManager* getEnvironmentMapManager() { return envMapManager_.get(); }
     TextureManager* getTextureManager() { return textureManager_.get(); }
 
-private:
+    // Split Rendering API
+    void prepareRender(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime);
+    void renderGrid(const WaveformRenderData& data);
     void renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime);
     void renderWaveformParticles(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime);
-    void renderGrid(const WaveformRenderData& data);
+
+private:
     void setupCamera2D();
     void setupCamera3D(const Settings3D& settings, float deltaTime);
     void createDefaultEnvironmentMaps();
@@ -66,6 +69,7 @@ private:
     juce::OpenGLContext* context_ = nullptr;
     int currentWidth_ = 0;
     int currentHeight_ = 0;
+    bool initialized_ = false;
 };
 
 } // namespace oscil

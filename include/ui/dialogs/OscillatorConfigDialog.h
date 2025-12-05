@@ -8,8 +8,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
 #include "core/interfaces/IInstanceRegistry.h"
-#include "ui/layout/Pane.h"
-#include "ui/theme/WaveformColorPalette.h"
+#include "core/Pane.h"
+#include "core/WaveformColorPalette.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilColorSwatches.h"

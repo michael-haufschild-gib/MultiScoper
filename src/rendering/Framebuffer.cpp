@@ -65,22 +65,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
     // Unbind
     ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // Check status
-    GLenum status = context.extensions.glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE)
-    {
-        DBG("Framebuffer: Incomplete status: " << (int)status);
-        destroy(context);
-        return false;
-    }
-
     return true;
-}
-
-void Framebuffer::blitTo(juce::OpenGLContext& context, Framebuffer* dest)
-{
-    // MSAA resolve not implemented yet
-    juce::ignoreUnused(context, dest);
 }
 
 void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
@@ -245,7 +230,11 @@ bool Framebuffer::createDepthBuffer(juce::OpenGLContext& context)
 
 bool Framebuffer::checkFramebufferComplete()
 {
-    GLenum status = juce::OpenGLContext::getCurrentContext()->extensions.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    auto* ctx = juce::OpenGLContext::getCurrentContext();
+    if (ctx == nullptr)
+        return false;
+
+    GLenum status = ctx->extensions.glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
     switch (status)
     {

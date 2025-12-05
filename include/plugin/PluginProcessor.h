@@ -22,13 +22,15 @@
 namespace oscil
 {
 
+class ShaderRegistry;
+
 class OscilPluginProcessor : public juce::AudioProcessor
     , public IAudioDataProvider
     , public juce::ValueTree::Listener
 {
 public:
     // Constructor with dependency injection
-    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService);
+    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, MemoryBudgetManager& memoryBudgetManager);
     ~OscilPluginProcessor() override;
 
     // AudioProcessor interface
@@ -65,6 +67,7 @@ public:
     // UI components should use these instead of accessing singletons directly
     IInstanceRegistry& getInstanceRegistry();
     IThemeService& getThemeService();
+    ShaderRegistry& getShaderRegistry();
 
     // IAudioDataProvider interface
     std::shared_ptr<IAudioBuffer> getBuffer(const SourceId& sourceId) override;
@@ -80,12 +83,19 @@ public:
     void valueTreeParentChanged(juce::ValueTree& /*tree*/) override {}
 
 private:
-    IInstanceRegistry& instanceRegistry_; // Injected dependency
-    IThemeService& themeService_;         // Injected dependency
+    IInstanceRegistry& instanceRegistry_;       // Injected dependency
+    IThemeService& themeService_;               // Injected dependency
+    ShaderRegistry& shaderRegistry_;            // Injected dependency
+    MemoryBudgetManager& memoryBudgetManager_;  // Injected dependency
 
+    // Capture buffer
     std::shared_ptr<DecimatingCaptureBuffer> captureBuffer_;
-    SourceId sourceId_;
+    std::shared_ptr<AnalysisEngine> analysisEngine_;
+
+    // Unique identifier for this instance
     juce::String trackIdentifier_;
+    SourceId sourceId_;
+
     OscilState state_;
     TimingEngine timingEngine_;
 

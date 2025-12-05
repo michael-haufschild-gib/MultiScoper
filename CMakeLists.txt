@@ -155,6 +155,10 @@ juce_add_binary_data(OscilBinaryData
         resources/icomoon/SVG/eye-blocked.svg
         resources/icomoon/SVG/cross.svg
         resources/icomoon/SVG/checkmark.svg
+        resources/icomoon/SVG/stats-bars.svg
+        resources/icomoon/SVG/pause2.svg
+        resources/icomoon/SVG/play3.svg
+        resources/icomoon/SVG/redo.svg
         resources/textures/particle_cloud.png
         resources/textures/particle_smoke_sheet.png
         resources/textures/particle_fire_sheet.png
@@ -303,6 +307,8 @@ if(OSCIL_BUILD_TESTS)
 
         tests/test_timing_config.cpp
         tests/test_timing_engine.cpp
+        tests/test_analysis_engine.cpp
+        tests/test_stats_overlay.cpp
         tests/test_capture_quality_config.cpp
         tests/test_decimating_capture_buffer.cpp
         tests/test_memory_budget_manager.cpp
@@ -365,6 +371,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_pane_closing_bug.cpp
         tests/test_pane_selector.cpp
         tests/test_select_pane_dialog.cpp
+        tests/test_oscillator_panel_controller.cpp
 
         # Test Harness Dependencies
         test_harness/src/TestElementRegistry.cpp

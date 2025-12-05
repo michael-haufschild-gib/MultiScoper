@@ -238,14 +238,15 @@ public:
 /**
  * Theme manager handles loading, saving, and applying themes.
  *
- * Implements IThemeService interface for dependency injection support.
+ * Implements IThemeService interface for dependency injection.
+ * Owned by PluginFactory - do not create directly except in tests.
  */
 class ThemeManager : public IThemeService,
-                     private juce::Timer,
-                     public juce::DeletedAtShutdown
+                     private juce::Timer
 {
 public:
-    static ThemeManager& getInstance();
+    ThemeManager();
+    ~ThemeManager() override;
 
     /**
      * Get the current active theme
@@ -334,9 +335,6 @@ public:
     ThemeManager& operator=(const ThemeManager&) = delete;
 
 private:
-    ThemeManager();
-    ~ThemeManager() override;
-
     void initializeSystemThemes();
     void notifyListeners();
 

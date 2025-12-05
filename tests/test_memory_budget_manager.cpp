@@ -51,23 +51,25 @@ public:
 };
 
 //==============================================================================
-// Base Test Fixture - resets singleton between tests
+// Base Test Fixture - creates its own MemoryBudgetManager instance
 //==============================================================================
 
 class MemoryBudgetManagerTestBase : public ::testing::Test
 {
 protected:
+    std::unique_ptr<MemoryBudgetManager> manager_;
+
     void SetUp() override
     {
-        MemoryBudgetManager::resetInstance();
+        manager_ = std::make_unique<MemoryBudgetManager>();
     }
 
     void TearDown() override
     {
-        MemoryBudgetManager::resetInstance();
+        manager_.reset();
     }
 
-    MemoryBudgetManager& manager() { return MemoryBudgetManager::getInstance(); }
+    MemoryBudgetManager& manager() { return *manager_; }
 
     std::shared_ptr<DecimatingCaptureBuffer> createBuffer(
         QualityPreset preset = QualityPreset::Standard)

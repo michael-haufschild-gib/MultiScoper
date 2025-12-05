@@ -3,12 +3,14 @@
 */
 
 #include "ui/components/UIAudioFeedback.h"
+#include <atomic>
 #include <cmath>
 
 namespace oscil
 {
 
 // Simple sound player using AudioSourcePlayer
+// Uses juce::SpinLock with tryLock in audio callback to avoid blocking
 class UIAudioFeedback::SoundPlayer : public juce::AudioSource
 {
 public:
@@ -16,13 +18,13 @@ public:
 
     void playBuffer(const juce::AudioBuffer<float>& buffer, float volume)
     {
-        std::scoped_lock lock(mutex_);
+        const juce::SpinLock::ScopedLockType lock(mutex_);
 
         // Copy buffer for playback
         playbackBuffer_.makeCopyOf(buffer);
         playbackPosition_ = 0;
         volume_ = volume;
-        isPlaying_ = true;
+        isPlaying_.store(true, std::memory_order_release);
     }
 
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override
@@ -33,25 +35,36 @@ public:
 
     void releaseResources() override
     {
-        std::scoped_lock lock(mutex_);
-        isPlaying_ = false;
+        const juce::SpinLock::ScopedLockType lock(mutex_);
+        isPlaying_.store(false, std::memory_order_release);
     }
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override
     {
-        std::scoped_lock lock(mutex_);
+        // Use tryLock to avoid blocking the audio thread - drop frame if locked
+        const juce::SpinLock::ScopedTryLockType lock(mutex_);
 
         bufferToFill.clearActiveBufferRegion();
 
-        if (!isPlaying_ || playbackBuffer_.getNumSamples() == 0)
+        if (!lock.isLocked())
+            return; // Drop this frame rather than block audio thread
+
+        if (!isPlaying_.load(std::memory_order_acquire) || playbackBuffer_.getNumSamples() == 0)
             return;
+
+        // Guard against empty playback buffer (would cause negative array index)
+        if (playbackBuffer_.getNumChannels() == 0)
+        {
+            isPlaying_.store(false, std::memory_order_release);
+            return;
+        }
 
         int samplesToPlay = std::min(bufferToFill.numSamples,
                                       playbackBuffer_.getNumSamples() - playbackPosition_);
 
         if (samplesToPlay <= 0)
         {
-            isPlaying_ = false;
+            isPlaying_.store(false, std::memory_order_release);
             return;
         }
 
@@ -72,22 +85,16 @@ public:
         playbackPosition_ += samplesToPlay;
 
         if (playbackPosition_ >= playbackBuffer_.getNumSamples())
-            isPlaying_ = false;
+            isPlaying_.store(false, std::memory_order_release);
     }
 
 private:
     juce::AudioBuffer<float> playbackBuffer_;
     int playbackPosition_ = 0;
     float volume_ = 1.0f;
-    bool isPlaying_ = false;
-    std::mutex mutex_;
+    std::atomic<bool> isPlaying_{false};
+    juce::SpinLock mutex_;
 };
-
-UIAudioFeedback& UIAudioFeedback::getInstance()
-{
-    static UIAudioFeedback instance;
-    return instance;
-}
 
 UIAudioFeedback::UIAudioFeedback()
     : player_(std::make_unique<SoundPlayer>())

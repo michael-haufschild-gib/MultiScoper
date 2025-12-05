@@ -15,40 +15,26 @@ using namespace oscil;
 class InstanceRegistrySyncTest : public ::testing::Test
 {
 protected:
+    std::unique_ptr<InstanceRegistry> registry_;
     std::mutex dispatcherMutex;
 
-    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
-    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
+    InstanceRegistry& getRegistry() { return *registry_; }
 
     void SetUp() override
     {
+        // Create owned instance
+        registry_ = std::make_unique<InstanceRegistry>();
+
         // Force synchronous dispatch for tests
         getRegistry().setDispatcher([this](std::function<void()> f) {
             std::scoped_lock lock(dispatcherMutex);
             f();
         });
-
-        // Clear any existing registrations
-        auto sources = getRegistry().getAllSources();
-        for (const auto& source : sources)
-        {
-            getRegistry().unregisterInstance(source.sourceId);
-        }
     }
 
     void TearDown() override
     {
-        // Clean up
-        auto sources = getRegistry().getAllSources();
-        for (const auto& source : sources)
-        {
-            getRegistry().unregisterInstance(source.sourceId);
-        }
-
-        // Reset dispatcher to default async behavior
-        getRegistry().setDispatcher([](std::function<void()> f) {
-             juce::MessageManager::callAsync(std::move(f));
-        });
+        registry_.reset();
     }
 };
 
@@ -212,7 +198,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegistration)
 
     for (int t = 0; t < numThreads; ++t)
     {
-        threads.emplace_back([t, &buffers, &successCount, registrationsPerThread]() {
+        threads.emplace_back([this, t, &buffers, &successCount, registrationsPerThread]() {
             for (int i = 0; i < registrationsPerThread; ++i)
             {
                 int idx = t * registrationsPerThread + i;
@@ -247,7 +233,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentReadWrite)
     std::atomic<int> updateCount{0};
 
     // Reader thread
-    std::thread reader([&]() {
+    std::thread reader([this, &stopFlag, &readCount, &sourceId]() {
         while (!stopFlag.load())
         {
             auto info = getRegistry().getSource(sourceId);
@@ -257,7 +243,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentReadWrite)
     });
 
     // Writer thread
-    std::thread writer([&]() {
+    std::thread writer([this, &stopFlag, &updateCount, &sourceId]() {
         for (int i = 0; i < 100; ++i)
         {
             getRegistry().updateSource(
@@ -284,7 +270,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
     std::atomic<int> registerSuccess{0};
     std::atomic<int> unregisterCalls{0};
 
-    std::thread registerThread([&]() {
+    std::thread registerThread([this, &registerSuccess, iterations]() {
         for (int i = 0; i < iterations; ++i)
         {
             auto buffer = std::make_shared<SharedCaptureBuffer>();
@@ -296,7 +282,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
         }
     });
 
-    std::thread unregisterThread([&]() {
+    std::thread unregisterThread([this, &unregisterCalls, iterations]() {
         for (int i = 0; i < iterations; ++i)
         {
             auto sources = getRegistry().getAllSources();

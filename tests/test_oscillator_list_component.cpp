@@ -12,15 +12,19 @@
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/InlineEditLabel.h"
 #include "ui/theme/ThemeManager.h"
+#include "rendering/ShaderRegistry.h"
 #include "TestElementRegistry.h"
+#include "OscilTestFixtures.h"
+#include "OscilTestUtils.h"
 
 using namespace oscil;
+using namespace oscil::test;
 
-// Dummy Registry
+// Dummy Registry for simple tests
 class DummyRegistry : public IInstanceRegistry
 {
 public:
-    SourceId registerInstance(const juce::String&, std::shared_ptr<IAudioBuffer>, const juce::String&, int, double) override { return SourceId::generate(); }
+    SourceId registerInstance(const juce::String&, std::shared_ptr<IAudioBuffer>, const juce::String&, int, double, std::shared_ptr<AnalysisEngine>) override { return SourceId::generate(); }
     void unregisterInstance(const SourceId&) override {}
     std::vector<SourceInfo> getAllSources() const override { return {}; }
     std::optional<SourceInfo> getSource(const SourceId&) const override { return std::nullopt; }
@@ -34,8 +38,31 @@ public:
 class OscillatorListComponentTest : public ::testing::Test
 {
 protected:
-    // No SetUp needed, using global JuceTestEnvironment
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
+    void SetUp() override
+    {
+        // Create owned service instances (no singletons)
+        themeManager_ = std::make_unique<ThemeManager>();
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
+    }
+
+    void TearDown() override
+    {
+        // Pump to process any pending callbacks
+        pumpMessageQueue(50);
+
+        // Destroy services in reverse order
+        shaderRegistry_.reset();
+        themeManager_.reset();
+
+        // Final cleanup
+        pumpMessageQueue(50);
+    }
+
+    IThemeService& getThemeService() { return *themeManager_; }
+
+    // Owned services
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
 };
 
 TEST_F(OscillatorListComponentTest, ToolbarConstruction)
@@ -50,12 +77,12 @@ TEST_F(OscillatorListComponentTest, Construction)
     std::cout << "Constructing registry..." << std::endl;
     DummyRegistry registry;
     std::cout << "Constructing list..." << std::endl;
-    auto* list = new OscillatorListComponent(getThemeService(), registry);
+    auto list = std::make_unique<OscillatorListComponent>(getThemeService(), registry);
     std::cout << "Verifying list ID..." << std::endl;
     // OscillatorListComponent inherits TestIdSupport and sets testId="oscillatorList"
-    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), list);
+    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), list.get());
     std::cout << "Deleting list..." << std::endl;
-    delete list;
+    list.reset();
     std::cout << "Construction test done." << std::endl;
 }
 

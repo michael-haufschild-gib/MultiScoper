@@ -3,16 +3,16 @@
     Tests for OscilDropdown UI component
 */
 
-#include <gtest/gtest.h>
+#include "OscilTestFixtures.h"
 #include "ui/components/OscilDropdown.h"
-#include "ui/theme/ThemeManager.h"
 
 using namespace oscil;
+using namespace oscil::test;
 
-class OscilDropdownTest : public ::testing::Test
+class OscilDropdownTest : public OscilComponentTestFixture
 {
 protected:
-    void SetUp() override {}
+    void SetUp() override { OscilComponentTestFixture::SetUp(); }
 };
 
 // =============================================================================
@@ -21,7 +21,7 @@ protected:
 
 TEST_F(OscilDropdownTest, DefaultConstruction)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_EQ(dropdown.getNumItems(), 0);
     EXPECT_TRUE(dropdown.isEnabled());
@@ -32,14 +32,14 @@ TEST_F(OscilDropdownTest, DefaultConstruction)
 
 TEST_F(OscilDropdownTest, ConstructionWithPlaceholder)
 {
-    OscilDropdown dropdown("Select an option...");
+    OscilDropdown dropdown(*mockThemeService, "Select an option...");
 
     EXPECT_EQ(dropdown.getPlaceholder(), juce::String("Select an option..."));
 }
 
 TEST_F(OscilDropdownTest, ConstructionWithPlaceholderAndTestId)
 {
-    OscilDropdown dropdown("Select...", "dropdown-1");
+    OscilDropdown dropdown(*mockThemeService, "Select...", "dropdown-1");
 
     EXPECT_EQ(dropdown.getPlaceholder(), juce::String("Select..."));
 }
@@ -50,7 +50,7 @@ TEST_F(OscilDropdownTest, ConstructionWithPlaceholderAndTestId)
 
 TEST_F(OscilDropdownTest, AddItemByLabel)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     dropdown.addItem("Option A");
     dropdown.addItem("Option B");
@@ -61,7 +61,7 @@ TEST_F(OscilDropdownTest, AddItemByLabel)
 
 TEST_F(OscilDropdownTest, AddItemByLabelAndId)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     dropdown.addItem("Option A", "a");
     dropdown.addItem("Option B", "b");
@@ -73,7 +73,7 @@ TEST_F(OscilDropdownTest, AddItemByLabelAndId)
 
 TEST_F(OscilDropdownTest, AddDropdownItem)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     DropdownItem item;
     item.id = "test";
@@ -88,7 +88,7 @@ TEST_F(OscilDropdownTest, AddDropdownItem)
 
 TEST_F(OscilDropdownTest, AddMultipleItems)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     std::vector<juce::String> labels = {"One", "Two", "Three"};
     dropdown.addItems(labels);
@@ -98,7 +98,7 @@ TEST_F(OscilDropdownTest, AddMultipleItems)
 
 TEST_F(OscilDropdownTest, AddMultipleDropdownItems)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     std::vector<DropdownItem> items;
     items.push_back({.id = "a", .label = "A"});
@@ -111,7 +111,7 @@ TEST_F(OscilDropdownTest, AddMultipleDropdownItems)
 
 TEST_F(OscilDropdownTest, AddSeparator)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     dropdown.addItem("Before");
     dropdown.addItem(DropdownItem::separator());
@@ -123,7 +123,7 @@ TEST_F(OscilDropdownTest, AddSeparator)
 
 TEST_F(OscilDropdownTest, ClearItems)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
     dropdown.addItem("Option B", "b");
 
@@ -138,7 +138,7 @@ TEST_F(OscilDropdownTest, ClearItems)
 
 TEST_F(OscilDropdownTest, SetSelectedIndex)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
     dropdown.addItem("Option B", "b");
     dropdown.addItem("Option C", "c");
@@ -150,7 +150,7 @@ TEST_F(OscilDropdownTest, SetSelectedIndex)
 
 TEST_F(OscilDropdownTest, GetSelectedId)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
     dropdown.addItem("Option B", "b");
 
@@ -161,7 +161,7 @@ TEST_F(OscilDropdownTest, GetSelectedId)
 
 TEST_F(OscilDropdownTest, GetSelectedLabel)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
     dropdown.addItem("Option B", "b");
 
@@ -172,7 +172,7 @@ TEST_F(OscilDropdownTest, GetSelectedLabel)
 
 TEST_F(OscilDropdownTest, NoSelectionReturnsMinusOne)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
 
     EXPECT_EQ(dropdown.getSelectedIndex(), -1);
@@ -180,7 +180,7 @@ TEST_F(OscilDropdownTest, NoSelectionReturnsMinusOne)
 
 TEST_F(OscilDropdownTest, NoSelectionReturnsEmptyId)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
 
     EXPECT_TRUE(dropdown.getSelectedId().isEmpty());
@@ -192,14 +192,14 @@ TEST_F(OscilDropdownTest, NoSelectionReturnsEmptyId)
 
 TEST_F(OscilDropdownTest, DefaultNotMultiSelect)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_FALSE(dropdown.isMultiSelect());
 }
 
 TEST_F(OscilDropdownTest, SetMultiSelect)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     dropdown.setMultiSelect(true);
     EXPECT_TRUE(dropdown.isMultiSelect());
@@ -210,7 +210,7 @@ TEST_F(OscilDropdownTest, SetMultiSelect)
 
 TEST_F(OscilDropdownTest, SetSelectedIndices)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.setMultiSelect(true);
     dropdown.addItem("A", "a");
     dropdown.addItem("B", "b");
@@ -227,7 +227,7 @@ TEST_F(OscilDropdownTest, SetSelectedIndices)
 
 TEST_F(OscilDropdownTest, GetSelectedIds)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.setMultiSelect(true);
     dropdown.addItem("A", "a");
     dropdown.addItem("B", "b");
@@ -247,7 +247,7 @@ TEST_F(OscilDropdownTest, GetSelectedIds)
 
 TEST_F(OscilDropdownTest, GetSelectedLabels)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.setMultiSelect(true);
     dropdown.addItem("Alpha", "a");
     dropdown.addItem("Beta", "b");
@@ -267,14 +267,14 @@ TEST_F(OscilDropdownTest, GetSelectedLabels)
 
 TEST_F(OscilDropdownTest, DefaultPlaceholder)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_EQ(dropdown.getPlaceholder(), juce::String("Select..."));
 }
 
 TEST_F(OscilDropdownTest, SetPlaceholder)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.setPlaceholder("Choose an option");
 
     EXPECT_EQ(dropdown.getPlaceholder(), juce::String("Choose an option"));
@@ -286,14 +286,14 @@ TEST_F(OscilDropdownTest, SetPlaceholder)
 
 TEST_F(OscilDropdownTest, DefaultNotSearchable)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_FALSE(dropdown.isSearchable());
 }
 
 TEST_F(OscilDropdownTest, SetSearchable)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     dropdown.setSearchable(true);
     EXPECT_TRUE(dropdown.isSearchable());
@@ -308,14 +308,14 @@ TEST_F(OscilDropdownTest, SetSearchable)
 
 TEST_F(OscilDropdownTest, DefaultEnabled)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_TRUE(dropdown.isEnabled());
 }
 
 TEST_F(OscilDropdownTest, SetDisabled)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.setEnabled(false);
 
     EXPECT_FALSE(dropdown.isEnabled());
@@ -323,7 +323,7 @@ TEST_F(OscilDropdownTest, SetDisabled)
 
 TEST_F(OscilDropdownTest, SetEnabledAfterDisabled)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.setEnabled(false);
     dropdown.setEnabled(true);
 
@@ -336,7 +336,7 @@ TEST_F(OscilDropdownTest, SetEnabledAfterDisabled)
 
 TEST_F(OscilDropdownTest, OnSelectionChangedCallback)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
     dropdown.addItem("Option B", "b");
 
@@ -356,7 +356,7 @@ TEST_F(OscilDropdownTest, OnSelectionChangedCallback)
 
 TEST_F(OscilDropdownTest, OnSelectionChangedIdCallback)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
     dropdown.addItem("Option B", "b");
 
@@ -373,7 +373,7 @@ TEST_F(OscilDropdownTest, OnSelectionChangedIdCallback)
 
 TEST_F(OscilDropdownTest, OnMultiSelectionChangedCallback)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.setMultiSelect(true);
     dropdown.addItem("A", "a");
     dropdown.addItem("B", "b");
@@ -394,7 +394,7 @@ TEST_F(OscilDropdownTest, OnMultiSelectionChangedCallback)
 
 TEST_F(OscilDropdownTest, NoCallbackWhenNotifyFalse)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
 
     int changeCount = 0;
@@ -414,7 +414,7 @@ TEST_F(OscilDropdownTest, NoCallbackWhenNotifyFalse)
 
 TEST_F(OscilDropdownTest, PreferredWidthPositive)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
 
     EXPECT_GT(dropdown.getPreferredWidth(), 0);
@@ -422,7 +422,7 @@ TEST_F(OscilDropdownTest, PreferredWidthPositive)
 
 TEST_F(OscilDropdownTest, PreferredHeightPositive)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_GT(dropdown.getPreferredHeight(), 0);
 }
@@ -433,7 +433,7 @@ TEST_F(OscilDropdownTest, PreferredHeightPositive)
 
 TEST_F(OscilDropdownTest, ThemeChangeDoesNotThrow)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
     dropdown.addItem("Option A", "a");
     dropdown.setSelectedIndex(0, false);
 
@@ -453,7 +453,7 @@ TEST_F(OscilDropdownTest, ThemeChangeDoesNotThrow)
 
 TEST_F(OscilDropdownTest, WantsKeyboardFocus)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_TRUE(dropdown.getWantsKeyboardFocus());
 }
@@ -464,14 +464,14 @@ TEST_F(OscilDropdownTest, WantsKeyboardFocus)
 
 TEST_F(OscilDropdownTest, DefaultPopupNotVisible)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_FALSE(dropdown.isPopupVisible());
 }
 
 TEST_F(OscilDropdownTest, HidePopupWhenNotVisible)
 {
-    OscilDropdown dropdown;
+    OscilDropdown dropdown(*mockThemeService);
 
     // Should not crash
     dropdown.hidePopup();

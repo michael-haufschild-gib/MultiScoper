@@ -9,9 +9,31 @@
 namespace oscil
 {
 
-TEST(ShaderRegistryTest, HasBasicShader)
+class ShaderRegistryTest : public ::testing::Test
 {
-    auto& registry = ShaderRegistry::getInstance();
+protected:
+    void SetUp() override
+    {
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
+    }
+
+    void TearDown() override
+    {
+        shaderRegistry_.reset();
+    }
+
+    ShaderRegistry& getShaderRegistry()
+    {
+        return *shaderRegistry_;
+    }
+
+private:
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
+};
+
+TEST_F(ShaderRegistryTest, HasBasicShader)
+{
+    auto& registry = getShaderRegistry();
 
     // Verify basic shader ID exists
     EXPECT_TRUE(registry.hasShader("basic"));
@@ -25,9 +47,9 @@ TEST(ShaderRegistryTest, HasBasicShader)
     EXPECT_FALSE(shader->getDisplayName().isEmpty());
 }
 
-TEST(ShaderRegistryTest, GetAvailableShaders)
+TEST_F(ShaderRegistryTest, GetAvailableShaders)
 {
-    auto& registry = ShaderRegistry::getInstance();
+    auto& registry = getShaderRegistry();
 
     // Should have at least the basic shader
     auto available = registry.getAvailableShaders();
@@ -46,9 +68,9 @@ TEST(ShaderRegistryTest, GetAvailableShaders)
     EXPECT_TRUE(foundBasic);
 }
 
-TEST(ShaderRegistryTest, GetNonExistentShader)
+TEST_F(ShaderRegistryTest, GetNonExistentShader)
 {
-    auto& registry = ShaderRegistry::getInstance();
+    auto& registry = getShaderRegistry();
 
     // Getting a non-existent shader should return nullptr
     EXPECT_FALSE(registry.hasShader("nonexistent_shader_xyz"));

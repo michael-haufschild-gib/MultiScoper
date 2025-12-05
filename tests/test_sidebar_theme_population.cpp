@@ -7,38 +7,55 @@
 #include "ui/layout/SidebarComponent.h"
 #include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
+#include "core/MemoryBudgetManager.h"
 #include "core/ServiceContext.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/theme/ThemeManager.h"
+#include "rendering/ShaderRegistry.h"
 
 using namespace oscil;
 
 class SidebarThemePopulationTest : public ::testing::Test
 {
 protected:
+    // Owned service instances (no singletons)
+    std::unique_ptr<InstanceRegistry> registry_;
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
+
     std::unique_ptr<OscilPluginProcessor> processor;
     std::unique_ptr<SidebarComponent> sidebar;
 
-    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
-    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
-    static ThemeManager& getThemeManager() { return ThemeManager::getInstance(); }
-
     void SetUp() override
     {
-        // Ensure some themes exist
-        auto& themeManager = getThemeManager();
-        // (ThemeManager usually has default themes initialized)
+        // Create owned service instances before other initialization
+        registry_ = std::make_unique<InstanceRegistry>();
+        themeManager_ = std::make_unique<ThemeManager>();
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<OscilPluginProcessor>(getRegistry(), themeManager);
-        // Initialize sidebar with ServiceContext
-        ServiceContext context{getRegistry(), themeManager};
+        // ThemeManager usually has default themes initialized
+
+        // Create processor with owned services
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+
+        // Initialize sidebar with ServiceContext using owned services
+        ServiceContext context{*registry_, *themeManager_, *shaderRegistry_};
         sidebar = std::make_unique<SidebarComponent>(context);
     }
 
     void TearDown() override
     {
+        // Reset in reverse order
         sidebar.reset();
         processor.reset();
+
+        // Destroy services in reverse order
+        memoryBudgetManager_.reset();
+        shaderRegistry_.reset();
+        themeManager_.reset();
+        registry_.reset();
     }
 };
 

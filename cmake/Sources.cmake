@@ -16,10 +16,15 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Oscillator.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/Pane.cpp
 
     # Core DSP
     ${CMAKE_SOURCE_DIR}/src/core/dsp/SignalProcessor.cpp
     ${CMAKE_SOURCE_DIR}/src/core/dsp/TimingEngine.cpp
+
+    # Core Analysis
+    ${CMAKE_SOURCE_DIR}/src/core/analysis/AnalysisEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/analysis/TransientDetector.cpp
 
     # Rendering (core)
     ${CMAKE_SOURCE_DIR}/src/rendering/EffectChain.cpp
@@ -93,8 +98,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilCheckbox.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButton.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdown.cpp
-    # NOTE: dropdown/ helper files removed - not properly integrated yet
-    # TODO: Properly extract DropdownList, DropdownSearch, DropdownPainter, DropdownSelectionManager
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabs.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordion.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilBadge.cpp
@@ -128,8 +131,10 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/managers/DisplaySettingsManager.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/managers/PerformanceMetricsController.cpp
 
+    # UI (controllers)
+    ${CMAKE_SOURCE_DIR}/src/ui/controllers/OscillatorPanelController.cpp
+
     # UI (layout)
-    ${CMAKE_SOURCE_DIR}/src/ui/layout/Pane.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/WindowLayout.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/PaneComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/PaneContainerComponent.cpp
@@ -139,6 +144,17 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/OptionsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/LayoutCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/SourceCoordinator.cpp
+
+    # UI (layout/pane)
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/pane/PaneActionBar.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/pane/PaneHeader.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/pane/PaneBody.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/pane/WaveformStack.cpp
+
+    # UI (layout/pane/overlays)
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/pane/overlays/PaneOverlay.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/pane/overlays/StatsOverlay.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/pane/overlays/CrosshairOverlay.cpp
 
     # UI (theme)
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManager.cpp

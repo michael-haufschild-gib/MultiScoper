@@ -64,14 +64,6 @@ struct Framebuffer
     virtual void resize(juce::OpenGLContext& context, int w, int h);
 
     /**
-     * Blit (copy/resolve) this framebuffer to another framebuffer.
-     * Used to resolve MSAA buffers to standard textures.
-     * @param context The OpenGL context
-     * @param dest The destination framebuffer (can be nullptr for default framebuffer)
-     */
-    virtual void blitTo(juce::OpenGLContext& context, Framebuffer* dest);
-
-    /**
      * Bind this framebuffer for rendering.
      * All subsequent draw calls will render to this FBO.
      */

@@ -16,60 +16,23 @@
 
 #include "core/interfaces/IInstanceRegistry.h"
 
-// Forward declarations for test classes (global namespace)
-class InstanceRegistryTest;
-class InstanceRegistryCrudTest;
-class InstanceRegistryLifecycleTest;
-class InstanceRegistrySyncTest;
-class PluginProcessorTest;
-class PluginProcessorAudioTest;
-class PluginProcessorLifecycleTest;
-class PluginProcessorStateTest;
-class SidebarThemePopulationTest;
-class PluginEditorTest;
-class PaneClosingBugTest;
-
 namespace oscil
 {
 
-// Forward declarations for test namespace
-namespace test {
-class TestTrack;
-class TestHttpServer;
-class OscilPluginTestFixture;
-class OscilComponentTestFixture;
-class OscilAudioTestFixture;
-}
-
-// Forward declarations
-class SharedCaptureBuffer;
-class OscilPluginProcessor;
-class PluginFactory;
-class SidebarComponent;
-class OscillatorListComponent;
-class SourceSelectorComponent;
-class OscillatorListItemComponent;
-class OscilPluginEditor;
-class AddOscillatorDialog;
-class DialogManager;
-class OptionsSection;
-class TimingSidebarSection;
-class PaneComponent;
-class WaveformComponent;
-class StateHandler;
-class SourceHandler;
-
 /**
- * Singleton registry for all active Oscil plugin instances.
+ * Registry for all active Oscil plugin instances.
  * Provides source discovery and deduplication for multi-instance coordination.
  *
  * Thread safety: All public methods are thread-safe.
  *
- * Implements IInstanceRegistry interface for dependency injection support.
+ * Implements IInstanceRegistry interface for dependency injection.
+ * Owned by OscilPluginProcessor - do not create directly except in tests.
  */
 class InstanceRegistry : public IInstanceRegistry
 {
 public:
+    InstanceRegistry();
+    ~InstanceRegistry() override = default;
     /**
      * Register a new plugin instance as a signal source.
      * Returns the assigned SourceId (may be existing if deduplication applies).
@@ -85,7 +48,8 @@ public:
         std::shared_ptr<IAudioBuffer> captureBuffer,
         const juce::String& name = "Track",
         int channelCount = 2,
-        double sampleRate = 44100.0) override;
+        double sampleRate = 44100.0,
+        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) override;
 
     /**
      * Unregister a plugin instance.
@@ -151,41 +115,6 @@ public:
     InstanceRegistry& operator=(const InstanceRegistry&) = delete;
 
 private:
-    // Only these classes can access the singleton directly
-    friend class oscil::OscilPluginProcessor;
-    friend class oscil::PluginFactory; // Factory needs access to inject into processor
-
-    // Test classes that need singleton access
-    friend class ::InstanceRegistryTest;
-    friend class ::InstanceRegistryCrudTest;
-    friend class ::InstanceRegistryLifecycleTest;
-    friend class ::InstanceRegistrySyncTest;
-    friend class ::PluginProcessorTest;
-    friend class ::PluginProcessorAudioTest;
-    friend class ::PluginProcessorLifecycleTest;
-    friend class ::PluginProcessorStateTest;
-    friend class ::SidebarThemePopulationTest;
-    friend class ::PluginEditorTest;
-    friend class ::PaneClosingBugTest;
-
-    // Also allow test harness access
-    // Test fixtures need access to getInstance()
-    friend class test::OscilPluginTestFixture;
-    friend class test::OscilComponentTestFixture;
-    friend class test::OscilAudioTestFixture;
-    friend class test::TestTrack;
-    friend class test::TestHttpServer;
-    friend class StateHandler;
-    friend class SourceHandler;
-
-    /**
-     * Get the singleton instance (Private/Friend access only)
-     */
-    [[nodiscard]] static InstanceRegistry& getInstance();
-
-    InstanceRegistry();
-    ~InstanceRegistry() override = default;
-
     void notifySourceAdded(const SourceId& sourceId);
     void notifySourceRemoved(const SourceId& sourceId);
     void notifySourceUpdated(const SourceId& sourceId);
@@ -200,6 +129,9 @@ private:
     // Using JUCE ListenerList for safe listener management
     // ListenerList handles removal during iteration and prevents dangling pointer issues
     juce::ListenerList<InstanceRegistryListener> listeners_;
+
+    // Shutdown flag to prevent async notifications from accessing destroyed object
+    std::atomic<bool> shuttingDown_{false};
 };
 
 } // namespace oscil

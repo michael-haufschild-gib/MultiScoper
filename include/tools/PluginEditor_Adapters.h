@@ -6,6 +6,7 @@
 #pragma once
 
 #include "plugin/PluginEditor.h"
+#include "plugin/PluginFactory.h"
 #include "ui/layout/SidebarComponent.h"
 #include "ui/dialogs/OscillatorConfigDialog.h"
 #include "core/dsp/TimingEngine.h"
@@ -190,12 +191,6 @@ private:
         editor_.getProcessor().getState().setAutoScaleEnabled(enabled);
     }
 
-    void holdDisplayChanged(bool enabled) override
-    {
-        editor_.setHoldDisplayForAllPanes(enabled);
-        editor_.getProcessor().getState().setHoldDisplayEnabled(enabled);
-    }
-
     void oscillatorsReordered(int fromIndex, int toIndex) override
     {
         // Reorder oscillators in state
@@ -250,8 +245,8 @@ private:
         config.qualityPreset = preset;
         state.setCaptureQualityConfig(config);
 
-        // Update MemoryBudgetManager
-        auto& memoryManager = MemoryBudgetManager::getInstance();
+        // Update MemoryBudgetManager via PluginFactory
+        auto& memoryManager = PluginFactory::getInstance().getMemoryBudgetManager();
         memoryManager.setGlobalConfig(config, static_cast<int>(editor_.getProcessor().getSampleRate()));
     }
 
@@ -262,8 +257,8 @@ private:
         config.bufferDuration = duration;
         state.setCaptureQualityConfig(config);
 
-        // Update MemoryBudgetManager
-        auto& memoryManager = MemoryBudgetManager::getInstance();
+        // Update MemoryBudgetManager via PluginFactory
+        auto& memoryManager = PluginFactory::getInstance().getMemoryBudgetManager();
         memoryManager.setGlobalConfig(config, static_cast<int>(editor_.getProcessor().getSampleRate()));
     }
 
@@ -274,8 +269,8 @@ private:
         config.autoAdjustQuality = enabled;
         state.setCaptureQualityConfig(config);
 
-        // Update MemoryBudgetManager
-        auto& memoryManager = MemoryBudgetManager::getInstance();
+        // Update MemoryBudgetManager via PluginFactory
+        auto& memoryManager = PluginFactory::getInstance().getMemoryBudgetManager();
         memoryManager.setGlobalConfig(config, static_cast<int>(editor_.getProcessor().getSampleRate()));
 
         // If auto-adjust is enabled, apply recommended quality

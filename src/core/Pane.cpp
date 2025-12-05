@@ -3,7 +3,7 @@
     PRD aligned with column distribution and drag-drop support
 */
 
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include "core/OscilState.h"
 #include <algorithm>
 
@@ -293,6 +293,10 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Recta
     if (panePositionInColumn < 0)
         return {};
 
+    // Guard against division by zero
+    if (totalRatio <= 0.0f)
+        return {};
+
     // Calculate Y position and height
     float yRatio = 0.0f;
     for (int i = 0; i < panePositionInColumn; ++i)
@@ -331,6 +335,10 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBoundsInColumn(const PaneId& pane
     }
 
     if (panePosition < 0)
+        return {};
+
+    // Guard against division by zero
+    if (totalRatio <= 0.0f)
         return {};
 
     // Calculate Y position

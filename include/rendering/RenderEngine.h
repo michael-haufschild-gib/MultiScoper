@@ -101,15 +101,7 @@ public:
 private:
     // Internal rendering methods
     void blitToScreen();
-    void compositeToScene(Framebuffer* source, const VisualConfiguration& config);
-    void flushComposites();
-
-    struct CompositeCommand
-    {
-        Framebuffer* source;
-        VisualConfiguration config;
-    };
-    std::vector<CompositeCommand> pendingComposites_;
+    void executeComposite(Framebuffer* source, const VisualConfiguration& config);
 
     // Subsystems
     std::unique_ptr<RenderBootstrapper> bootstrapper_;

@@ -3,13 +3,12 @@
 */
 
 #include "plugin/OpenGLLifecycleManager.h"
-#include "plugin/PluginEditor.h"
 #include "ui/panels/WaveformComponent.h"
 
 namespace oscil
 {
 
-OpenGLLifecycleManager::OpenGLLifecycleManager(OscilPluginEditor& editor)
+OpenGLLifecycleManager::OpenGLLifecycleManager(juce::AudioProcessorEditor& editor)
     : editor_(editor)
 {
 #if OSCIL_ENABLE_OPENGL

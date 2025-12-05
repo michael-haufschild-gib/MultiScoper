@@ -1,6 +1,6 @@
 /*
     Oscil - Shader Registry
-    Singleton managing shader registration and retrieval
+    Registry managing shader registration and retrieval
 */
 
 #pragma once
@@ -15,22 +15,16 @@ namespace oscil
 {
 
 /**
- * Singleton registry for waveform shaders.
+ * Registry for waveform shaders.
  * Manages shader lifecycle and provides access for rendering.
+ *
+ * Owned by PluginFactory - do not create directly except in tests.
  */
 class ShaderRegistry
 {
 public:
-    /**
-     * Get the singleton instance
-     */
-    [[nodiscard]] static ShaderRegistry& getInstance();
-
-    /**
-     * Register a shader
-     * @param shader The shader to register (takes ownership)
-     */
-    void registerShader(std::unique_ptr<WaveformShader> shader);
+    ShaderRegistry();
+    ~ShaderRegistry();
 
     /**
      * Get a shader by ID (prototype access for software rendering)
@@ -67,9 +61,6 @@ public:
      * Check if a shader ID is valid
      */
     [[nodiscard]] bool hasShader(const juce::String& shaderId) const;
-
-    ShaderRegistry();
-    ~ShaderRegistry();
 
     // Prevent copying
     ShaderRegistry(const ShaderRegistry&) = delete;

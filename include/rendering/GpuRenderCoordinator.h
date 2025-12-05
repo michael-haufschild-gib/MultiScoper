@@ -12,16 +12,15 @@
 
 #include <memory>
 #include <vector>
+#include <juce_audio_processors/juce_audio_processors.h>
 
 namespace oscil
 {
 
-class OscilPluginEditor;
-
 class GpuRenderCoordinator
 {
 public:
-    GpuRenderCoordinator(OscilPluginEditor& editor, StatusBarComponent& statusBar);
+    GpuRenderCoordinator(juce::AudioProcessorEditor& editor, StatusBarComponent& statusBar);
     ~GpuRenderCoordinator();
 
     void setGpuRenderingEnabled(bool enabled);

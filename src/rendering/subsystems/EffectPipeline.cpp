@@ -161,6 +161,12 @@ void EffectPipeline::initializeEffects()
 
 void EffectPipeline::releaseEffects()
 {
+    if (context_ == nullptr)
+    {
+        effects_.clear();
+        return;
+    }
+
     for (auto& pair : effects_)
     {
         pair.second->release(*context_);

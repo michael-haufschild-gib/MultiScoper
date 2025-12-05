@@ -49,6 +49,12 @@ void SignalProcessor::process(std::span<const float> leftChannel,
         case ProcessingMode::Right:
             processRight(rightChannel, output);
             break;
+
+        default:
+            // Unknown processing mode - fallback to mono for safety
+            jassertfalse; // Catch in debug builds
+            processMono(leftChannel, rightChannel, output);
+            break;
     }
 }
 
@@ -255,6 +261,13 @@ void SignalProcessor::decimate(std::span<const float> input,
         if (inputLength == 1)
         {
             std::fill(output.begin(), output.end(), input[0]);
+            return;
+        }
+
+        // Guard against outputLength == 1 (would cause division by zero)
+        if (outputLength == 1)
+        {
+            output[0] = input[inputLength / 2];  // Use middle sample
             return;
         }
 

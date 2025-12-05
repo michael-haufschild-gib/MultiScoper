@@ -51,7 +51,6 @@ public:
         // Display options events
         virtual void showGridChanged(bool /*enabled*/) {}
         virtual void autoScaleChanged(bool /*enabled*/) {}
-        virtual void holdDisplayChanged(bool /*enabled*/) {}
 
         // Layout and theme events (moved from toolbar)
         virtual void layoutChanged(int /*columnCount*/) {}
@@ -87,7 +86,6 @@ public:
 
     bool isShowGridEnabled() const { return showGridEnabled_; }
     bool isAutoScaleEnabled() const { return autoScaleEnabled_; }
-    bool isHoldDisplayEnabled() const { return holdDisplayEnabled_; }
 
     // Layout state (moved from toolbar)
     void setColumnCount(int columns);
@@ -135,7 +133,6 @@ private:
     void notifyGainChanged();
     void notifyShowGridChanged();
     void notifyAutoScaleChanged();
-    void notifyHoldDisplayChanged();
     void notifyLayoutChanged();
     void notifyThemeChanged();
     void notifyGpuRenderingChanged();
@@ -151,7 +148,6 @@ private:
     std::unique_ptr<juce::Label> displayLabel_;
     std::unique_ptr<OscilToggle> showGridToggle_;
     std::unique_ptr<OscilToggle> autoScaleToggle_;
-    std::unique_ptr<OscilToggle> holdDisplayToggle_;
 
     // Layout and theme dropdowns (moved from toolbar)
     std::unique_ptr<juce::Label> layoutLabel_;
@@ -173,7 +169,6 @@ private:
     float currentGainDb_ = 0.0f;
     bool showGridEnabled_ = true;
     bool autoScaleEnabled_ = true;
-    bool holdDisplayEnabled_ = false;
     int currentColumnCount_ = 1;
     juce::String currentThemeName_ = "Dark";
     bool gpuRenderingEnabled_ = true;  // Default to GPU mode when available

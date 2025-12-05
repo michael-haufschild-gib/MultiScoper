@@ -2,7 +2,7 @@
     Oscil - Pane Layout Tests
 */
 
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 
 #include <gtest/gtest.h>
 

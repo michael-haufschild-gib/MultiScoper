@@ -8,6 +8,7 @@
 #include "rendering/effects/PostProcessEffect.h"
 
 #include <cmath>
+#include <iostream>
 
 namespace oscil
 {
@@ -19,12 +20,19 @@ RenderEngine::RenderEngine()
     , effectPipeline_(std::make_unique<EffectPipeline>())
     , waveformPass_(std::make_unique<WaveformPass>())
 {
-    pendingComposites_.reserve(16); // Pre-reserve for common case
 }
 
 RenderEngine::~RenderEngine()
 {
-    // Note: shutdown() should be called explicitly while context is active
+    // If we're being destroyed while still initialized, GPU resources will leak.
+    // shutdown() must be called while the OpenGL context is still active.
+    // We can't call OpenGL functions here (no guaranteed context), so we just warn.
+    if (initialized_)
+    {
+        std::cerr << "[RenderEngine] LEAK: Destructor called without shutdown(). "
+                  << "GPU resources (shaders, FBOs, textures) will leak."
+                  << std::endl;
+    }
 }
 
 bool RenderEngine::initialize(juce::OpenGLContext& context)
@@ -139,9 +147,6 @@ void RenderEngine::beginFrame(float deltaTime)
 
     stats_.update(deltaTime);
 
-    // Clear pending composites for the new frame
-    pendingComposites_.clear();
-
     RE_LOG_THROTTLED(60, "beginFrame: dt=" << deltaTime);
 
     // Update particle system
@@ -176,19 +181,62 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
 
     if (it != waveformStates_.end())
     {
-        // Delegate to WaveformPass
-        // Note: WaveformPass::renderWaveform does the rendering to a waveform FBO
-        // and then applies post-processing (via EffectPipeline).
-        
-        Framebuffer* result = waveformPass_->renderWaveform(data, it->second, *effectPipeline_,
-                                                            stats_.getDeltaTime(), stats_.getTime(),
-                                                            bootstrapper_->getCompositeShader(),
-                                                            bootstrapper_->getCompositeTextureLoc());
+        WaveformRenderState& state = it->second;
+        const auto& config = state.visualConfig;
 
-        if (result)
+        // Step 0: Prepare (Timing, Camera, Viewport)
+        // This sets up the camera and viewport for the waveform geometry.
+        waveformPass_->prepareRender(data, state, stats_.getDeltaTime());
+
+        // Step 1: Render Grid Layer (Background) -> Scene FBO
+        // We render the grid directly to the scene FBO so it is NOT affected by waveform post-processing.
+        if (data.gridConfig.enabled)
         {
-            // Queue for compositing later (Batch optimization)
-            pendingComposites_.push_back({result, it->second.visualConfig});
+            auto* sceneFBO = effectPipeline_->getSceneFBO();
+            if (sceneFBO && sceneFBO->isValid())
+            {
+                sceneFBO->bind();
+                // Note: renderGrid handles its own viewport setting internally
+                waveformPass_->renderGrid(data);
+                sceneFBO->unbind();
+            }
+        }
+
+        // Step 2: Render Waveform & Particles -> Scratch FBO
+        auto* waveformFBO = effectPipeline_->getFramebufferPool()->getWaveformFBO();
+        if (waveformFBO)
+        {
+            waveformFBO->bind();
+            waveformFBO->clear(juce::Colours::transparentBlack, true);
+
+            // Render Geometry (uses viewport set by prepareRender)
+            waveformPass_->renderWaveformGeometry(data, config, stats_.getTime());
+
+            // Render Particles
+            if (config.particles.enabled)
+            {
+                waveformPass_->renderWaveformParticles(data, state, stats_.getDeltaTime());
+            }
+
+            waveformFBO->unbind();
+
+            // Step 3: Apply Post-Processing Effects -> Processed FBO
+            Framebuffer* processedFBO = waveformFBO;
+            if (config.hasPostProcessing())
+            {
+                processedFBO = effectPipeline_->applyPostProcessing(processedFBO, state, *context_,
+                                                                    stats_.getDeltaTime(),
+                                                                    bootstrapper_->getCompositeShader(),
+                                                                    bootstrapper_->getCompositeTextureLoc());
+                if (!processedFBO)
+                {
+                    processedFBO = waveformFBO;
+                }
+            }
+
+            // Step 4: Composite IMMEDIATELY (Blend Waveform over Grid/Scene)
+            // This is critical because waveformFBO is reused for the next waveform
+            executeComposite(processedFBO, config);
         }
     }
 }
@@ -197,9 +245,6 @@ void RenderEngine::endFrame()
 {
     if (!initialized_)
         return;
-
-    // Batch composite all waveforms to scene FBO
-    flushComposites();
 
     // Apply global effects to scene FBO
     if (isGlobalPostProcessingEnabled())
@@ -212,9 +257,9 @@ void RenderEngine::endFrame()
     blitToScreen();
 }
 
-void RenderEngine::flushComposites()
+void RenderEngine::executeComposite(Framebuffer* source, const VisualConfiguration& config)
 {
-    if (pendingComposites_.empty())
+    if (!source || !source->isValid())
         return;
 
     auto* sceneFBO = effectPipeline_->getSceneFBO();
@@ -222,6 +267,13 @@ void RenderEngine::flushComposites()
         return;
 
     sceneFBO->bind();
+
+    // Restore full viewport for compositing to the scene FBO
+    // This is necessary because renderWaveformGeometry/Particles sets the viewport to the pane size
+    if (currentWidth_ > 0 && currentHeight_ > 0)
+    {
+        glViewport(0, 0, currentWidth_, currentHeight_);
+    }
 
     glEnable(GL_BLEND);
     
@@ -231,45 +283,29 @@ void RenderEngine::flushComposites()
         shader->use();
         context_->extensions.glUniform1i(bootstrapper_->getCompositeTextureLoc(), 0);
         
-        BlendMode currentBlendMode = BlendMode::Additive; // Default assumption, will force set on first
-        bool first = true;
-
-        for (const auto& cmd : pendingComposites_)
+        // Set blend mode based on config
+        switch (config.compositeBlendMode)
         {
-            if (!cmd.source || !cmd.source->isValid())
-                continue;
-
-            // Set blend mode only if changed
-            if (first || cmd.config.compositeBlendMode != currentBlendMode)
-            {
-                currentBlendMode = cmd.config.compositeBlendMode;
-                switch (currentBlendMode)
-                {
-                    case BlendMode::Alpha:
-                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                        break;
-                    case BlendMode::Additive:
-                        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-                        break;
-                    case BlendMode::Multiply:
-                        glBlendFunc(GL_DST_COLOR, GL_ZERO);
-                        break;
-                    case BlendMode::Screen:
-                        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
-                        break;
-                }
-                first = false;
-            }
-
-            cmd.source->bindTexture(0);
-            effectPipeline_->getFramebufferPool()->renderFullscreenQuad();
+            case BlendMode::Alpha:
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                break;
+            case BlendMode::Additive:
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+                break;
+            case BlendMode::Multiply:
+                glBlendFunc(GL_DST_COLOR, GL_ZERO);
+                break;
+            case BlendMode::Screen:
+                glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
+                break;
         }
+
+        source->bindTexture(0);
+        effectPipeline_->getFramebufferPool()->renderFullscreenQuad();
     }
 
     glDisable(GL_BLEND);
     sceneFBO->unbind();
-    
-    pendingComposites_.clear();
 }
 
 void RenderEngine::registerWaveform(int waveformId)
@@ -397,20 +433,6 @@ void RenderEngine::setGlobalPostProcessingEnabled(bool enabled)
 bool RenderEngine::isGlobalPostProcessingEnabled() const
 {
     return effectPipeline_->isGlobalPostProcessingEnabled();
-}
-
-void RenderEngine::compositeToScene(Framebuffer* source, const VisualConfiguration& config)
-{
-    // Legacy method now delegates to internal list for consistency if called directly?
-    // But renderWaveform calls this?
-    // No, renderWaveform now adds to queue.
-    // This method is kept if someone calls it externally, but mostly it's replaced by flushComposites logic.
-    // Let's make it just queue it to avoid breaking API if public (it is private in header).
-    // It is private. So I can change it or remove it.
-    // I'll remove the body and redirect to queue, OR keep it as "immediate" fallback?
-    // Queue is safer.
-    
-    pendingComposites_.push_back({source, config});
 }
 
 void RenderEngine::blitToScreen()

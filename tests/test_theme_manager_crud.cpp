@@ -13,8 +13,18 @@ class ThemeManagerCRUDTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Ensure system themes are loaded
+        themeManager_ = std::make_unique<ThemeManager>();
     }
+
+    void TearDown() override
+    {
+        themeManager_.reset();
+    }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 // =============================================================================
@@ -24,7 +34,7 @@ protected:
 // Test: System themes exist
 TEST_F(ThemeManagerCRUDTest, SystemThemesExist)
 {
-    auto themes = ThemeManager::getInstance().getAvailableThemes();
+    auto themes = getThemeManager().getAvailableThemes();
 
     EXPECT_GE(themes.size(), 5); // At least 5 system themes
 
@@ -44,26 +54,26 @@ TEST_F(ThemeManagerCRUDTest, SystemThemesExist)
 // Test: System themes are immutable
 TEST_F(ThemeManagerCRUDTest, SystemThemesImmutable)
 {
-    EXPECT_TRUE(ThemeManager::getInstance().isSystemTheme("Dark Professional"));
-    EXPECT_TRUE(ThemeManager::getInstance().isSystemTheme("Classic Green"));
+    EXPECT_TRUE(getThemeManager().isSystemTheme("Dark Professional"));
+    EXPECT_TRUE(getThemeManager().isSystemTheme("Classic Green"));
 
     // Attempt to delete system theme should fail
-    EXPECT_FALSE(ThemeManager::getInstance().deleteTheme("Dark Professional"));
+    EXPECT_FALSE(getThemeManager().deleteTheme("Dark Professional"));
 }
 
 // Test: Set current theme
 TEST_F(ThemeManagerCRUDTest, SetCurrentTheme)
 {
-    EXPECT_TRUE(ThemeManager::getInstance().setCurrentTheme("Classic Green"));
+    EXPECT_TRUE(getThemeManager().setCurrentTheme("Classic Green"));
 
-    auto& current = ThemeManager::getInstance().getCurrentTheme();
+    auto& current = getThemeManager().getCurrentTheme();
     EXPECT_EQ(current.name, "Classic Green");
 }
 
 // Test: Get theme by name
 TEST_F(ThemeManagerCRUDTest, GetThemeByName)
 {
-    auto* theme = ThemeManager::getInstance().getTheme("Dark Professional");
+    auto* theme = getThemeManager().getTheme("Dark Professional");
 
     ASSERT_NE(theme, nullptr);
     EXPECT_EQ(theme->name, "Dark Professional");
@@ -73,30 +83,30 @@ TEST_F(ThemeManagerCRUDTest, GetThemeByName)
 // Test: Get nonexistent theme returns nullptr
 TEST_F(ThemeManagerCRUDTest, GetNonexistentTheme)
 {
-    auto* theme = ThemeManager::getInstance().getTheme("Nonexistent Theme");
+    auto* theme = getThemeManager().getTheme("Nonexistent Theme");
     EXPECT_EQ(theme, nullptr);
 }
 
 // Test: Create custom theme
 TEST_F(ThemeManagerCRUDTest, CreateCustomTheme)
 {
-    EXPECT_TRUE(ThemeManager::getInstance().createTheme("My Custom Theme", "Dark Professional"));
+    EXPECT_TRUE(getThemeManager().createTheme("My Custom Theme", "Dark Professional"));
 
-    auto* theme = ThemeManager::getInstance().getTheme("My Custom Theme");
+    auto* theme = getThemeManager().getTheme("My Custom Theme");
     ASSERT_NE(theme, nullptr);
     EXPECT_FALSE(theme->isSystemTheme);
 
     // Clean up
-    ThemeManager::getInstance().deleteTheme("My Custom Theme");
+    getThemeManager().deleteTheme("My Custom Theme");
 }
 
 // Test: Clone theme
 TEST_F(ThemeManagerCRUDTest, CloneTheme)
 {
-    EXPECT_TRUE(ThemeManager::getInstance().cloneTheme("Classic Amber", "My Amber Clone"));
+    EXPECT_TRUE(getThemeManager().cloneTheme("Classic Amber", "My Amber Clone"));
 
-    auto* original = ThemeManager::getInstance().getTheme("Classic Amber");
-    auto* clone = ThemeManager::getInstance().getTheme("My Amber Clone");
+    auto* original = getThemeManager().getTheme("Classic Amber");
+    auto* clone = getThemeManager().getTheme("My Amber Clone");
 
     ASSERT_NE(original, nullptr);
     ASSERT_NE(clone, nullptr);
@@ -109,17 +119,17 @@ TEST_F(ThemeManagerCRUDTest, CloneTheme)
     EXPECT_FALSE(clone->isSystemTheme);
 
     // Clean up
-    ThemeManager::getInstance().deleteTheme("My Amber Clone");
+    getThemeManager().deleteTheme("My Amber Clone");
 }
 
 // Test: Delete custom theme
 TEST_F(ThemeManagerCRUDTest, DeleteCustomTheme)
 {
-    ThemeManager::getInstance().createTheme("Temp Theme");
-    EXPECT_NE(ThemeManager::getInstance().getTheme("Temp Theme"), nullptr);
+    getThemeManager().createTheme("Temp Theme");
+    EXPECT_NE(getThemeManager().getTheme("Temp Theme"), nullptr);
 
-    EXPECT_TRUE(ThemeManager::getInstance().deleteTheme("Temp Theme"));
-    EXPECT_EQ(ThemeManager::getInstance().getTheme("Temp Theme"), nullptr);
+    EXPECT_TRUE(getThemeManager().deleteTheme("Temp Theme"));
+    EXPECT_EQ(getThemeManager().getTheme("Temp Theme"), nullptr);
 }
 
 // =============================================================================
@@ -129,16 +139,16 @@ TEST_F(ThemeManagerCRUDTest, DeleteCustomTheme)
 // Test: Create theme with empty name
 TEST_F(ThemeManagerCRUDTest, CreateThemeEmptyName)
 {
-    bool result = ThemeManager::getInstance().createTheme("");
+    bool result = getThemeManager().createTheme("");
 
     // Empty name should fail or create an unnamed theme
     // Implementation may vary - either behavior is acceptable
     if (result)
     {
-        auto* theme = ThemeManager::getInstance().getTheme("");
+        auto* theme = getThemeManager().getTheme("");
         if (theme != nullptr)
         {
-            ThemeManager::getInstance().deleteTheme("");
+            getThemeManager().deleteTheme("");
         }
     }
 }
@@ -146,28 +156,28 @@ TEST_F(ThemeManagerCRUDTest, CreateThemeEmptyName)
 // Test: Create theme with unicode name
 TEST_F(ThemeManagerCRUDTest, CreateThemeUnicodeName)
 {
-    bool result = ThemeManager::getInstance().createTheme(u8"日本語テーマ");
+    bool result = getThemeManager().createTheme(u8"日本語テーマ");
 
     EXPECT_TRUE(result);
 
-    auto* theme = ThemeManager::getInstance().getTheme(u8"日本語テーマ");
+    auto* theme = getThemeManager().getTheme(u8"日本語テーマ");
     ASSERT_NE(theme, nullptr);
     EXPECT_EQ(theme->name, u8"日本語テーマ");
 
-    ThemeManager::getInstance().deleteTheme(u8"日本語テーマ");
+    getThemeManager().deleteTheme(u8"日本語テーマ");
 }
 
 // Test: Create theme with special characters
 TEST_F(ThemeManagerCRUDTest, CreateThemeSpecialChars)
 {
-    bool result = ThemeManager::getInstance().createTheme("Theme <with> special/chars!");
+    bool result = getThemeManager().createTheme("Theme <with> special/chars!");
 
     EXPECT_TRUE(result);
 
-    auto* theme = ThemeManager::getInstance().getTheme("Theme <with> special/chars!");
+    auto* theme = getThemeManager().getTheme("Theme <with> special/chars!");
     ASSERT_NE(theme, nullptr);
 
-    ThemeManager::getInstance().deleteTheme("Theme <with> special/chars!");
+    getThemeManager().deleteTheme("Theme <with> special/chars!");
 }
 
 // Test: Create theme with very long name
@@ -177,25 +187,25 @@ TEST_F(ThemeManagerCRUDTest, CreateThemeLongName)
     for (int i = 0; i < 1000; ++i)
         longName += "a";
 
-    bool result = ThemeManager::getInstance().createTheme(longName);
+    bool result = getThemeManager().createTheme(longName);
 
     EXPECT_TRUE(result);
 
-    auto* theme = ThemeManager::getInstance().getTheme(longName);
+    auto* theme = getThemeManager().getTheme(longName);
     ASSERT_NE(theme, nullptr);
 
-    ThemeManager::getInstance().deleteTheme(longName);
+    getThemeManager().deleteTheme(longName);
 }
 
 // Test: Create duplicate theme
 TEST_F(ThemeManagerCRUDTest, CreateDuplicateTheme)
 {
-    EXPECT_TRUE(ThemeManager::getInstance().createTheme("DuplicateTest"));
+    EXPECT_TRUE(getThemeManager().createTheme("DuplicateTest"));
 
     // Creating with same name should fail
-    EXPECT_FALSE(ThemeManager::getInstance().createTheme("DuplicateTest"));
+    EXPECT_FALSE(getThemeManager().createTheme("DuplicateTest"));
 
-    ThemeManager::getInstance().deleteTheme("DuplicateTest");
+    getThemeManager().deleteTheme("DuplicateTest");
 }
 
 // =============================================================================
@@ -205,12 +215,12 @@ TEST_F(ThemeManagerCRUDTest, CreateDuplicateTheme)
 // Test: Create theme from non-existent source
 TEST_F(ThemeManagerCRUDTest, CreateThemeFromNonexistentSource)
 {
-    bool result = ThemeManager::getInstance().createTheme("NewTheme", "NonExistentSource");
+    bool result = getThemeManager().createTheme("NewTheme", "NonExistentSource");
 
     // Should fail or create a default theme
     if (result)
     {
-        ThemeManager::getInstance().deleteTheme("NewTheme");
+        getThemeManager().deleteTheme("NewTheme");
     }
     else
     {
@@ -221,17 +231,17 @@ TEST_F(ThemeManagerCRUDTest, CreateThemeFromNonexistentSource)
 // Test: Clone non-existent theme
 TEST_F(ThemeManagerCRUDTest, CloneNonexistentTheme)
 {
-    bool result = ThemeManager::getInstance().cloneTheme("DoesNotExist", "ClonedTheme");
+    bool result = getThemeManager().cloneTheme("DoesNotExist", "ClonedTheme");
 
     EXPECT_FALSE(result);
-    EXPECT_EQ(ThemeManager::getInstance().getTheme("ClonedTheme"), nullptr);
+    EXPECT_EQ(getThemeManager().getTheme("ClonedTheme"), nullptr);
 }
 
 // Test: Clone to existing name
 TEST_F(ThemeManagerCRUDTest, CloneToExistingName)
 {
     // Can't clone to a name that already exists
-    bool result = ThemeManager::getInstance().cloneTheme("Dark Professional", "Classic Green");
+    bool result = getThemeManager().cloneTheme("Dark Professional", "Classic Green");
 
     EXPECT_FALSE(result);
 }
@@ -239,7 +249,7 @@ TEST_F(ThemeManagerCRUDTest, CloneToExistingName)
 // Test: Delete non-existent theme
 TEST_F(ThemeManagerCRUDTest, DeleteNonexistentTheme)
 {
-    bool result = ThemeManager::getInstance().deleteTheme("ThisThemeDoesNotExist");
+    bool result = getThemeManager().deleteTheme("ThisThemeDoesNotExist");
 
     EXPECT_FALSE(result);
 }
@@ -247,13 +257,13 @@ TEST_F(ThemeManagerCRUDTest, DeleteNonexistentTheme)
 // Test: Set non-existent theme as current
 TEST_F(ThemeManagerCRUDTest, SetNonexistentCurrentTheme)
 {
-    juce::String previousTheme = ThemeManager::getInstance().getCurrentTheme().name;
+    juce::String previousTheme = getThemeManager().getCurrentTheme().name;
 
-    bool result = ThemeManager::getInstance().setCurrentTheme("NonExistentTheme");
+    bool result = getThemeManager().setCurrentTheme("NonExistentTheme");
 
     EXPECT_FALSE(result);
     // Current theme should remain unchanged
-    EXPECT_EQ(ThemeManager::getInstance().getCurrentTheme().name, previousTheme);
+    EXPECT_EQ(getThemeManager().getCurrentTheme().name, previousTheme);
 }
 
 // =============================================================================
@@ -267,12 +277,12 @@ TEST_F(ThemeManagerCRUDTest, UpdateSystemThemeFails)
     modifiedTheme.name = "Dark Professional";
     modifiedTheme.backgroundPrimary = juce::Colour(0xFFFF0000);
 
-    bool result = ThemeManager::getInstance().updateTheme("Dark Professional", modifiedTheme);
+    bool result = getThemeManager().updateTheme("Dark Professional", modifiedTheme);
 
     EXPECT_FALSE(result);
 
     // Original should be unchanged
-    auto* theme = ThemeManager::getInstance().getTheme("Dark Professional");
+    auto* theme = getThemeManager().getTheme("Dark Professional");
     ASSERT_NE(theme, nullptr);
     EXPECT_NE(theme->backgroundPrimary.getARGB(), 0xFFFF0000u);
 }
@@ -283,7 +293,7 @@ TEST_F(ThemeManagerCRUDTest, UpdateNonexistentTheme)
     ColorTheme theme;
     theme.name = "DoesNotExist";
 
-    bool result = ThemeManager::getInstance().updateTheme("DoesNotExist", theme);
+    bool result = getThemeManager().updateTheme("DoesNotExist", theme);
 
     EXPECT_FALSE(result);
 }
@@ -291,21 +301,21 @@ TEST_F(ThemeManagerCRUDTest, UpdateNonexistentTheme)
 // Test: Update custom theme successfully
 TEST_F(ThemeManagerCRUDTest, UpdateCustomThemeSuccess)
 {
-    ThemeManager::getInstance().createTheme("UpdateTest");
+    getThemeManager().createTheme("UpdateTest");
 
     ColorTheme modifiedTheme;
     modifiedTheme.name = "UpdateTest";
     modifiedTheme.backgroundPrimary = juce::Colour(0xFFABCDEF);
 
-    bool result = ThemeManager::getInstance().updateTheme("UpdateTest", modifiedTheme);
+    bool result = getThemeManager().updateTheme("UpdateTest", modifiedTheme);
 
     EXPECT_TRUE(result);
 
-    auto* theme = ThemeManager::getInstance().getTheme("UpdateTest");
+    auto* theme = getThemeManager().getTheme("UpdateTest");
     ASSERT_NE(theme, nullptr);
     EXPECT_EQ(theme->backgroundPrimary.getARGB(), 0xFFABCDEFu);
 
-    ThemeManager::getInstance().deleteTheme("UpdateTest");
+    getThemeManager().deleteTheme("UpdateTest");
 }
 
 // =============================================================================
@@ -315,7 +325,7 @@ TEST_F(ThemeManagerCRUDTest, UpdateCustomThemeSuccess)
 // Test: Get available themes is non-empty
 TEST_F(ThemeManagerCRUDTest, AvailableThemesNonEmpty)
 {
-    auto themes = ThemeManager::getInstance().getAvailableThemes();
+    auto themes = getThemeManager().getAvailableThemes();
 
     EXPECT_GT(themes.size(), 0u);
 }
@@ -323,11 +333,11 @@ TEST_F(ThemeManagerCRUDTest, AvailableThemesNonEmpty)
 // Test: All available themes can be retrieved
 TEST_F(ThemeManagerCRUDTest, AllAvailableThemesRetrievable)
 {
-    auto themeNames = ThemeManager::getInstance().getAvailableThemes();
+    auto themeNames = getThemeManager().getAvailableThemes();
 
     for (const auto& name : themeNames)
     {
-        auto* theme = ThemeManager::getInstance().getTheme(name);
+        auto* theme = getThemeManager().getTheme(name);
         EXPECT_NE(theme, nullptr) << "Theme '" << name.toStdString() << "' not retrievable";
     }
 }
@@ -335,8 +345,8 @@ TEST_F(ThemeManagerCRUDTest, AllAvailableThemesRetrievable)
 // Test: Current theme is always in available themes
 TEST_F(ThemeManagerCRUDTest, CurrentThemeInAvailable)
 {
-    auto& current = ThemeManager::getInstance().getCurrentTheme();
-    auto available = ThemeManager::getInstance().getAvailableThemes();
+    auto& current = getThemeManager().getCurrentTheme();
+    auto available = getThemeManager().getAvailableThemes();
 
     bool found = false;
     for (const auto& name : available)
@@ -354,21 +364,21 @@ TEST_F(ThemeManagerCRUDTest, CurrentThemeInAvailable)
 // Test: Delete current theme switches to another
 TEST_F(ThemeManagerCRUDTest, DeleteCurrentThemeSwitchesTheme)
 {
-    ThemeManager::getInstance().createTheme("TempCurrent");
-    ThemeManager::getInstance().setCurrentTheme("TempCurrent");
+    getThemeManager().createTheme("TempCurrent");
+    getThemeManager().setCurrentTheme("TempCurrent");
 
-    EXPECT_EQ(ThemeManager::getInstance().getCurrentTheme().name, "TempCurrent");
+    EXPECT_EQ(getThemeManager().getCurrentTheme().name, "TempCurrent");
 
     // Delete it - should switch to a system theme first
-    bool deleted = ThemeManager::getInstance().deleteTheme("TempCurrent");
+    bool deleted = getThemeManager().deleteTheme("TempCurrent");
 
     EXPECT_TRUE(deleted);
 
     // Theme should be deleted
-    EXPECT_EQ(ThemeManager::getInstance().getTheme("TempCurrent"), nullptr);
+    EXPECT_EQ(getThemeManager().getTheme("TempCurrent"), nullptr);
 
     // Current should now be a different (system) theme
-    EXPECT_NE(ThemeManager::getInstance().getCurrentTheme().name, "TempCurrent");
-    EXPECT_TRUE(ThemeManager::getInstance().isSystemTheme(
-        ThemeManager::getInstance().getCurrentTheme().name));
+    EXPECT_NE(getThemeManager().getCurrentTheme().name, "TempCurrent");
+    EXPECT_TRUE(getThemeManager().isSystemTheme(
+        getThemeManager().getCurrentTheme().name));
 }

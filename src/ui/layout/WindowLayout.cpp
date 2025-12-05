@@ -4,6 +4,7 @@
 */
 
 #include "ui/layout/WindowLayout.h"
+#include <juce_events/juce_events.h>
 
 namespace oscil
 {
@@ -147,11 +148,15 @@ bool WindowLayout::isValidWindowSize(int width, int height) const
 
 void WindowLayout::addListener(Listener* listener)
 {
+    // ListenerList is not thread-safe - must be called from message thread
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.add(listener);
 }
 
 void WindowLayout::removeListener(Listener* listener)
 {
+    // ListenerList is not thread-safe - must be called from message thread
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.remove(listener);
 }
 

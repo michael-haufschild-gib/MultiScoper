@@ -7,18 +7,17 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
+#include <juce_audio_processors/juce_audio_processors.h>
 #include "rendering/WaveformGLRenderer.h"
 #include "ui/layout/PaneComponent.h"
 
 namespace oscil
 {
 
-class OscilPluginEditor;
-
 class OpenGLLifecycleManager
 {
 public:
-    explicit OpenGLLifecycleManager(OscilPluginEditor& editor);
+    explicit OpenGLLifecycleManager(juce::AudioProcessorEditor& editor);
     ~OpenGLLifecycleManager();
 
     void setGpuRenderingEnabled(bool enabled);
@@ -34,7 +33,7 @@ public:
     void clearAllWaveforms();
 
 private:
-    OscilPluginEditor& editor_;
+    juce::AudioProcessorEditor& editor_;
     std::unique_ptr<WaveformGLRenderer> renderer_;
     juce::OpenGLContext context_;
     bool gpuRenderingEnabled_ = false;

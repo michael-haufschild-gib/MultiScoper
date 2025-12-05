@@ -8,7 +8,7 @@
 #include "ui/panels/WaveformComponent.h"
 #include "plugin/PluginProcessor.h"
 #include "core/OscilState.h"
-#include "ui/layout/Pane.h"
+#include "core/Pane.h"
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
 #include <cmath>
@@ -30,8 +30,9 @@ void TestRunnerHandler::handleRunLayoutTest(const httplib::Request& /*req*/, htt
         int statusBarHeight = 24;
         int sidebarWidth = 250;
 
-        int availableWidth = editorBounds.getWidth() - sidebarWidth;
-        int availableHeight = editorBounds.getHeight() - toolbarHeight - statusBarHeight;
+        // Guard against zero/negative dimensions during initialization or small window sizes
+        int availableWidth = std::max(100, editorBounds.getWidth() - sidebarWidth);
+        int availableHeight = std::max(100, editorBounds.getHeight() - toolbarHeight - statusBarHeight);
         juce::Rectangle<int> availableArea(0, 0, availableWidth, availableHeight);
 
         // Ensure we have panes to test

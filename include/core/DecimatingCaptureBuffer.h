@@ -264,6 +264,12 @@ public:
      */
     [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getInternalBuffer() const;
 
+    /**
+     * Explicitly clean up old buffers
+     * Should be called from Message Thread periodically or during shutdown
+     */
+    void cleanUpGarbage();
+
 private:
     void reconfigure();
     void processAndWriteDecimated(const float* const* samples, int numSamples, int numChannels,
@@ -291,6 +297,15 @@ private:
     };
 
     std::shared_ptr<ProcessingContext> context_;
+
+    // Safety mechanism to prevent audio thread from deleting shared resources
+    struct GraveyardItem
+    {
+        std::shared_ptr<SharedCaptureBuffer> buffer;
+        std::shared_ptr<ProcessingContext> context;
+        double timestampMs;
+    };
+    std::vector<GraveyardItem> graveyard_;
 };
 
 } // namespace oscil

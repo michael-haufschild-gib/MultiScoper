@@ -8,6 +8,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include "core/analysis/AnalysisEngine.h"
 #include <atomic>
 #include <vector>
 #include <optional>
@@ -274,6 +275,10 @@ public:
 
     [[nodiscard]] const SignalMetrics& getSignalMetrics() const noexcept { return signalMetrics_; }
     void updateSignalMetrics(float rms, float peak, float dcOffset) noexcept;
+    
+    // === Analysis ===
+    [[nodiscard]] AnalysisEngine& getAnalysisEngine() { return analysisEngine_; }
+    [[nodiscard]] const AnalysisEngine& getAnalysisEngine() const { return analysisEngine_; }
 
     // === Capture Buffer ===
     [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const noexcept { return captureBuffer_; }
@@ -314,6 +319,9 @@ private:
     // Metrics
     CorrelationMetrics correlationMetrics_;
     SignalMetrics signalMetrics_;
+    
+    // Analysis Engine
+    AnalysisEngine analysisEngine_;
 
     // Audio data
     std::shared_ptr<SharedCaptureBuffer> captureBuffer_;

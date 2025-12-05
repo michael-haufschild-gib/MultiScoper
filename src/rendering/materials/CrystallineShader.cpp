@@ -273,7 +273,12 @@ void CrystallineShader::generateCrystalMesh(const WaveformData3D& data, float xS
 
         // Tangent
         float len = std::sqrt(dx*dx + dy*dy);
-        float tx = dx/len, ty = dy/len;
+        float tx = 1.0f, ty = 0.0f;
+        if (len > 1e-6f)
+        {
+            tx = dx / len;
+            ty = dy / len;
+        }
 
         // Simple tube generation around the line segment
 

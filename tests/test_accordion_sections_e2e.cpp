@@ -20,9 +20,12 @@ using namespace oscil;
 class AccordionSectionTest : public ::testing::Test
 {
 protected:
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
+    IThemeService& getThemeService() { return *themeManager_; }
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
     void SetUp() override
     {
+        themeManager_ = std::make_unique<ThemeManager>();
         section_ = std::make_unique<OscilAccordionSection>(getThemeService(), "Test Section", "test_section");
         content_ = std::make_unique<juce::Component>();
         content_->setSize(200, 100);
@@ -32,8 +35,10 @@ protected:
     {
         section_.reset();
         content_.reset();
+        themeManager_.reset();
     }
 
+    std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<OscilAccordionSection> section_;
     std::unique_ptr<juce::Component> content_;
 };
@@ -155,17 +160,22 @@ TEST_F(AccordionSectionTest, ContentVisibilityFollowsExpandedState)
 class OptionsSectionTest : public ::testing::Test
 {
 protected:
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
+    IThemeService& getThemeService() { return *themeManager_; }
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
     void SetUp() override
     {
+        themeManager_ = std::make_unique<ThemeManager>();
         section_ = std::make_unique<OptionsSection>(getThemeService());
     }
 
     void TearDown() override
     {
         section_.reset();
+        themeManager_.reset();
     }
 
+    std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<OptionsSection> section_;
 };
 
@@ -186,9 +196,12 @@ TEST_F(OptionsSectionTest, DefaultGainIsZero)
 class AccordionOptionsSectionTest : public ::testing::Test
 {
 protected:
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
+    IThemeService& getThemeService() { return *themeManager_; }
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
     void SetUp() override
     {
+        themeManager_ = std::make_unique<ThemeManager>();
         accordionSection_ = std::make_unique<OscilAccordionSection>(getThemeService(), "OPTIONS", "sidebar_options");
         options_ = std::make_unique<OptionsSection>(getThemeService());
         accordionSection_->setContent(options_.get());
@@ -199,8 +212,10 @@ protected:
     {
         accordionSection_.reset();
         options_.reset();
+        themeManager_.reset();
     }
 
+    std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<OscilAccordionSection> accordionSection_;
     std::unique_ptr<OptionsSection> options_;
 };
@@ -226,9 +241,12 @@ TEST_F(AccordionOptionsSectionTest, OptionsHiddenWhenCollapsed)
 class AccordionTimingSectionTest : public ::testing::Test
 {
 protected:
-    IThemeService& getThemeService() { return ThemeManager::getInstance(); }
+    IThemeService& getThemeService() { return *themeManager_; }
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
     void SetUp() override
     {
+        themeManager_ = std::make_unique<ThemeManager>();
         accordionSection_ = std::make_unique<OscilAccordionSection>(getThemeService(), "TIMING", "sidebar_timing");
         timing_ = std::make_unique<TimingSidebarSection>(getThemeService());
         accordionSection_->setContent(timing_.get());
@@ -239,8 +257,10 @@ protected:
     {
         accordionSection_.reset();
         timing_.reset();
+        themeManager_.reset();
     }
 
+    std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<OscilAccordionSection> accordionSection_;
     std::unique_ptr<TimingSidebarSection> timing_;
 };

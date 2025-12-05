@@ -140,7 +140,15 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
     const auto& gridColors = data.gridColors;
     const auto& config = data.gridConfig;
 
+    // Ensure depth test is disabled for 2D grid
+    glDisable(GL_DEPTH_TEST);
+
     colorShader_->use();
+
+    // Ensure 2D state for grid
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Helper to draw a set of lines with a color using persistent buffers
     auto drawLines = [&](const std::vector<float>& verts, juce::Colour col) {
@@ -289,6 +297,8 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
                     break;
             }
 
+            // Guard against division by zero
+            if (numDivisions <= 0) numDivisions = 1;
             float widthPerDiv = 2.0f / static_cast<float>(numDivisions);
 
             // Draw major division lines (between divisions, not at edges)
@@ -307,6 +317,8 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
             // For bar-based modes, add sub-beat lines within each bar
             if (isBarBased && config.noteInterval >= NoteInterval::TWO_BARS) {
                 int subBeatsPerDiv = beatsPerBar;
+                // Guard against division by zero
+                if (subBeatsPerDiv <= 0) subBeatsPerDiv = 1;
                 float subBeatWidth = widthPerDiv / static_cast<float>(subBeatsPerDiv);
 
                 for (int i = 0; i < numDivisions; ++i) {

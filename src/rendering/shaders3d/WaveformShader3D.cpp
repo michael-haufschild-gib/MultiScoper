@@ -345,6 +345,8 @@ void WaveformShader3D::generateRibbonMesh(const float* samples, int sampleCount,
 
         // Normal is perpendicular to tangent in XY plane, facing Z+
         float len = std::sqrt(tx*tx + ty*ty);
+        if (len <= 0.0f)
+            len = 1.0f;  // Prevent division by zero
         float nx = -ty / len;
         float ny = tx / len;
 

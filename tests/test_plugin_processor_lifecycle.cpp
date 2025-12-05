@@ -7,8 +7,11 @@
 #include "OscilTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "core/SharedCaptureBuffer.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "core/InstanceRegistry.h"
+#include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
+#include "rendering/ShaderRegistry.h"
 
 using namespace oscil;
 using namespace oscil::test;
@@ -16,21 +19,37 @@ using namespace oscil::test;
 class PluginProcessorLifecycleTest : public ::testing::Test
 {
 protected:
+    std::unique_ptr<InstanceRegistry> registry_;
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<OscilPluginProcessor> processor;
-
-    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
-    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
 
     void SetUp() override
     {
+        // Create services in dependency order
+        registry_ = std::make_unique<InstanceRegistry>();
+        themeManager_ = std::make_unique<ThemeManager>();
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
+
+        // Create processor with owned services
         processor = std::make_unique<OscilPluginProcessor>(
-            getRegistry(),
-            ThemeManager::getInstance());
+            *registry_,
+            *themeManager_,
+            *shaderRegistry_,
+            *memoryBudgetManager_);
+        processor->prepareToPlay(44100.0, 512);
     }
 
     void TearDown() override
     {
+        // Reset in reverse dependency order
         processor.reset();
+        memoryBudgetManager_.reset();
+        shaderRegistry_.reset();
+        themeManager_.reset();
+        registry_.reset();
     }
 };
 
@@ -160,8 +179,10 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
     for (double rate : sampleRates)
     {
         processor = std::make_unique<OscilPluginProcessor>(
-            getRegistry(),
-            ThemeManager::getInstance());
+            *registry_,
+            *themeManager_,
+            *shaderRegistry_,
+            *memoryBudgetManager_);
         processor->prepareToPlay(rate, 512);
 
         EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate)
@@ -177,8 +198,10 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentBlockSizes)
     for (int blockSize : blockSizes)
     {
         processor = std::make_unique<OscilPluginProcessor>(
-            getRegistry(),
-            ThemeManager::getInstance());
+            *registry_,
+            *themeManager_,
+            *shaderRegistry_,
+            *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, blockSize);
         pumpMessageQueue(200);
 
@@ -324,14 +347,14 @@ TEST_F(PluginProcessorLifecycleTest, DestructorUnregistersFromRegistry)
     SourceId sourceId = processor->getSourceId();
 
     // Verify registered
-    auto buffer = getRegistry().getCaptureBuffer(sourceId);
+    auto buffer = registry_->getCaptureBuffer(sourceId);
     EXPECT_NE(buffer, nullptr);
 
     // Destroy processor
     processor.reset();
 
     // Should be unregistered (buffer should be nullptr or registry should not find it)
-    buffer = getRegistry().getCaptureBuffer(sourceId);
+    buffer = registry_->getCaptureBuffer(sourceId);
     EXPECT_EQ(buffer, nullptr);
 }
 
@@ -339,8 +362,15 @@ TEST_F(PluginProcessorLifecycleTest, DestructorUnregistersFromRegistry)
 
 TEST_F(PluginProcessorLifecycleTest, SourceIdBeforePrepare)
 {
+    // Create a fresh processor not yet prepared
+    auto freshProcessor = std::make_unique<OscilPluginProcessor>(
+        *registry_,
+        *themeManager_,
+        *shaderRegistry_,
+        *memoryBudgetManager_);
+
     // Source ID before prepareToPlay should be invalid
-    SourceId sourceId = processor->getSourceId();
+    SourceId sourceId = freshProcessor->getSourceId();
     EXPECT_FALSE(sourceId.isValid());
 }
 

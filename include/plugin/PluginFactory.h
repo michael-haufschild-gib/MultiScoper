@@ -1,7 +1,7 @@
 /*
     Oscil - Plugin Factory
-    Abstracts the creation of the plugin processor and its dependencies.
-    Facilitates testing by allowing dependency injection logic to be centralized.
+    Composition root for dependency injection.
+    Owns all core services and creates plugin instances with proper dependencies.
 */
 
 #pragma once
@@ -12,20 +12,41 @@
 namespace oscil
 {
 
+// Forward declarations
+class ThemeManager;
+class InstanceRegistry;
+class ShaderRegistry;
+class MemoryBudgetManager;
+class GlobalPreferences;
+
+/**
+ * Composition root for the Oscil plugin.
+ *
+ * This is the ONLY singleton in the system. It owns all core services
+ * and creates plugin instances with proper dependency injection.
+ *
+ * The factory owns:
+ * - ThemeManager (implements IThemeService)
+ * - InstanceRegistry (implements IInstanceRegistry)
+ * - ShaderRegistry
+ * - MemoryBudgetManager
+ * - GlobalPreferences
+ */
 class PluginFactory
 {
 public:
-    virtual ~PluginFactory() = default;
+    PluginFactory();
+    virtual ~PluginFactory();
 
     /**
      * Creates a new instance of the plugin processor.
-     * Connects all necessary dependencies (ThemeService, InstanceRegistry, etc.).
+     * Connects all necessary dependencies from owned services.
      */
     virtual std::unique_ptr<juce::AudioProcessor> createPluginProcessor();
 
     /**
      * Global access to the factory instance.
-     * Can be replaced for testing.
+     * This is the composition root - only this singleton is allowed.
      */
     static PluginFactory& getInstance();
 
@@ -35,8 +56,28 @@ public:
      */
     static void setInstance(PluginFactory* factory);
 
-protected:
-    PluginFactory() = default;
+    /**
+     * Access to owned services (for test harness and special cases).
+     * Normal code should receive services via dependency injection,
+     * not by calling these methods.
+     */
+    ThemeManager& getThemeManager();
+    InstanceRegistry& getInstanceRegistry();
+    ShaderRegistry& getShaderRegistry();
+    MemoryBudgetManager& getMemoryBudgetManager();
+    GlobalPreferences& getGlobalPreferences();
+
+private:
+    // Owned services - these are the single instances for the plugin
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<InstanceRegistry> instanceRegistry_;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
+    std::unique_ptr<GlobalPreferences> globalPreferences_;
+
+    // Prevent copying
+    PluginFactory(const PluginFactory&) = delete;
+    PluginFactory& operator=(const PluginFactory&) = delete;
 };
 
 } // namespace oscil

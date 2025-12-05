@@ -22,12 +22,6 @@
 namespace oscil
 {
 
-ShaderRegistry& ShaderRegistry::getInstance()
-{
-    static ShaderRegistry instance;
-    return instance;
-}
-
 ShaderRegistry::ShaderRegistry()
 {
     registerBuiltInShaders();
@@ -59,18 +53,6 @@ void ShaderRegistry::registerBuiltInShaders()
     registerShaderType<GlassRefractionShader>();
     registerShaderType<LiquidChromeShader>();
     registerShaderType<CrystallineShader>();
-}
-
-void ShaderRegistry::registerShader(std::unique_ptr<WaveformShader> shader)
-{
-    // Deprecated: prefer registerShaderType for factory support
-    // This overload only stores a prototype and cannot support per-instance GL compilation
-    // Kept for compatibility if needed, but createShader will fail for these
-    if (shader)
-    {
-        auto id = shader->getId().toStdString();
-        shaders_[id] = std::move(shader);
-    }
 }
 
 WaveformShader* ShaderRegistry::getShader(const juce::String& shaderId)

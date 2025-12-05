@@ -5,6 +5,7 @@
 #include "tools/test_server/SourceHandler.h"
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
+#include "plugin/PluginFactory.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
@@ -19,7 +20,7 @@ void SourceHandler::handleGetSources(const httplib::Request& /*req*/, httplib::R
 {
     auto result = runOnMessageThread([]() -> nlohmann::json {
         nlohmann::json response;
-        auto& registry = InstanceRegistry::getInstance();
+        auto& registry = PluginFactory::getInstance().getInstanceRegistry();
         auto sources = registry.getAllSources();
 
         nlohmann::json sourceList = nlohmann::json::array();
@@ -56,7 +57,7 @@ void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Respon
 
         auto result = runOnMessageThread([this, name, channelCount, sampleRate, trackId]() -> nlohmann::json {
             nlohmann::json response;
-            auto& registry = InstanceRegistry::getInstance();
+            auto& registry = PluginFactory::getInstance().getInstanceRegistry();
 
             // Create a new capture buffer for this source
             auto captureBuffer = std::make_shared<SharedCaptureBuffer>();
@@ -112,7 +113,7 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
 
         auto result = runOnMessageThread([this, sourceIdStr]() -> nlohmann::json {
             nlohmann::json response;
-            auto& registry = InstanceRegistry::getInstance();
+            auto& registry = PluginFactory::getInstance().getInstanceRegistry();
             SourceId sourceId;
             sourceId.id = juce::String(sourceIdStr);
 
@@ -193,7 +194,7 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
                     state.updateOscillator(osc);
 
                     // Bind the capture buffer to the waveform component
-                    auto& registry = InstanceRegistry::getInstance();
+                    auto& registry = PluginFactory::getInstance().getInstanceRegistry();
                     auto buffer = registry.getCaptureBuffer(newSourceId);
 
                     // Trigger UI refresh to rebind waveform components
@@ -252,7 +253,7 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             nlohmann::json response;
 
             // Get capture buffer for this source
-            auto& registry = InstanceRegistry::getInstance();
+            auto& registry = PluginFactory::getInstance().getInstanceRegistry();
             SourceId srcId;
             srcId.id = juce::String(sourceId);
             auto captureBuffer = registry.getCaptureBuffer(srcId);
@@ -276,7 +277,9 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             // Generate test waveform
             juce::AudioBuffer<float> testBuffer(2, numSamples);
             float phase = 0.0f;
-            float phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / sampleRate;
+            // Guard against division by zero
+            float safeSampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
+            float phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / safeSampleRate;
 
             for (int i = 0; i < numSamples; ++i)
             {

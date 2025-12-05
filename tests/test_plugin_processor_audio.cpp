@@ -7,7 +7,9 @@
 #include "plugin/PluginProcessor.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
+#include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
+#include "rendering/ShaderRegistry.h"
 #include <thread>
 #include <atomic>
 #include <cmath>
@@ -17,21 +19,29 @@ using namespace oscil;
 class PluginProcessorAudioTest : public ::testing::Test
 {
 protected:
+    std::unique_ptr<InstanceRegistry> registry_;
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<OscilPluginProcessor> processor;
-
-    // Helper to access registry (friend access doesn't inherit to TEST_F generated classes)
-    static InstanceRegistry& getRegistry() { return InstanceRegistry::getInstance(); }
 
     void SetUp() override
     {
+        registry_ = std::make_unique<InstanceRegistry>();
+        themeManager_ = std::make_unique<ThemeManager>();
+        shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
         processor = std::make_unique<OscilPluginProcessor>(
-            getRegistry(),
-            ThemeManager::getInstance());
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
     }
 
     void TearDown() override
     {
         processor.reset();
+        memoryBudgetManager_.reset();
+        shaderRegistry_.reset();
+        themeManager_.reset();
+        registry_.reset();
     }
 
     // Helper to generate audio buffer with specific values

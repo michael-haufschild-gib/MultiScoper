@@ -7,13 +7,11 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
-#include "ui/layout/Pane.h"
-#include "ui/panels/WaveformComponent.h"
+#include "core/Pane.h"
 #include "ui/components/TestId.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/InlineEditLabel.h"
+#include "ui/layout/pane/PaneHeader.h"
+#include "ui/layout/pane/PaneBody.h"
 #include "core/ServiceContext.h"
-#include <vector>
 #include <memory>
 #include <functional>
 
@@ -21,10 +19,15 @@ namespace oscil
 {
 
 class OscilPluginProcessor;
+class ShaderRegistry;
 
 /**
  * Component that contains one or more oscillator waveforms stacked vertically.
  * Supports drag-and-drop reordering.
+ *
+ * Structure:
+ * - PaneHeader: Drag handle, name, badges, action bar, close button
+ * - PaneBody: WaveformStack, CrosshairOverlay, StatsOverlay
  */
 class PaneComponent : public juce::Component,
                        public juce::DragAndDropTarget,
@@ -36,13 +39,6 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-
-    // Mouse events for drag initiation
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseDrag(const juce::MouseEvent& event) override;
-    void mouseMove(const juce::MouseEvent& event) override;
-    void mouseEnter(const juce::MouseEvent& event) override;
-    void mouseExit(const juce::MouseEvent& event) override;
 
     // DragAndDropTarget interface
     bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override;
@@ -108,7 +104,7 @@ public:
     /**
      * Get the number of oscillators in this pane
      */
-    size_t getOscillatorCount() const { return waveforms_.size(); }
+    size_t getOscillatorCount() const;
 
     /**
      * Set callback for when pane is reordered
@@ -154,7 +150,22 @@ public:
     void setShowGrid(bool enabled);
     void setGridConfig(const GridConfiguration& config);
     void setAutoScale(bool enabled);
+    
+    /**
+     * Toggle hold/pause display for this pane
+     */
+    void toggleHoldDisplay();
+    
+    /**
+     * Set hold display directly
+     */
     void setHoldDisplay(bool enabled);
+    
+    /**
+     * Check if pane is currently held/paused
+     */
+    bool isHoldDisplayEnabled() const { return isHeld_; }
+    
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
 
@@ -167,61 +178,45 @@ public:
     static constexpr const char* PANE_DRAG_ID = "OscilPane";
 
     // Test access - for automated testing only
-    WaveformComponent* getWaveformAt(size_t index) const {
-        return (index < waveforms_.size()) ? waveforms_[index].waveform.get() : nullptr;
-    }
-    const Oscillator* getOscillatorAt(size_t index) const {
-        return (index < waveforms_.size()) ? &waveforms_[index].oscillator : nullptr;
-    }
+    WaveformComponent* getWaveformAt(size_t index) const;
+    const Oscillator* getOscillatorAt(size_t index) const;
+
+    // Component access for testing
+    PaneHeader* getHeader() { return header_.get(); }
+    PaneBody* getBody() { return body_.get(); }
 
 private:
-    void updateLayout();
-    bool isInDragZone(const juce::Point<int>& position) const;
+    void handleHeaderAction(PaneAction action, bool state);
+    void handleDragStarted(const juce::MouseEvent& event);
+    void updateHeaderBadge();
 
     OscilPluginProcessor& processor_;
     IThemeService& themeService_;
+    ShaderRegistry& shaderRegistry_;
     PaneId paneId_;
     int paneIndex_ = 0;
+    juce::String paneName_;
 
-    struct OscillatorEntry
-    {
-        Oscillator oscillator;
-        std::unique_ptr<WaveformComponent> waveform;
-    };
-
-    std::vector<OscillatorEntry> waveforms_;
+    // Sub-components
+    std::unique_ptr<PaneHeader> header_;
+    std::unique_ptr<PaneBody> body_;
 
     // Drag state
     bool isDragOver_ = false;
     juce::Point<int> dragStartPos_;
+    
+    // Pane state
+    bool isHeld_ = false;
 
-    // Mouse hover state for crosshair
-    bool isMouseHovering_ = false;
-    int mouseX_ = 0;
-    int mouseY_ = 0;
+    // Primary oscillator tracking for header badge
+    const Oscillator* primaryOscillator_ = nullptr;
 
     // Callbacks
     std::function<void(const PaneId& movedPaneId, const PaneId& targetPaneId)> paneReorderedCallback_;
     std::function<void(const PaneId& paneId)> paneCloseCallback_;
     std::function<void(const PaneId& paneId, const juce::String& newName)> paneNameChangedCallback_;
 
-    // Close button
-    std::unique_ptr<OscilButton> closeButton_;
-
-    // Pane name editor
-    std::unique_ptr<InlineEditLabel> nameLabel_;
-    juce::String paneName_;
-
-    static constexpr int HEADER_HEIGHT = 24;
-    static constexpr int PADDING = 4;
     static constexpr int DRAG_THRESHOLD = 5;
-    
-    // Drag handle styling
-    static constexpr int DRAG_HANDLE_WIDTH = 20;
-    static constexpr int DRAG_HANDLE_LINE_WIDTH = 10;
-    static constexpr int DRAG_HANDLE_LINE_HEIGHT = 2;
-    static constexpr int DRAG_HANDLE_LINE_SPACING = 4;
-    static constexpr int DRAG_HANDLE_LEFT_MARGIN = 4;
 
     // TestIdSupport
     OSCIL_TESTABLE();

@@ -180,6 +180,9 @@ void NeonGlowShader::render(
     float w = static_cast<float>(target->getWidth());
     float h = static_cast<float>(target->getHeight());
 
+    if (w <= 0.0f || h <= 0.0f)
+        return;
+
     float projection[16] = {
         2.0f / w, 0.0f, 0.0f, 0.0f,
         0.0f, -2.0f / h, 0.0f, 0.0f, // Flip Y

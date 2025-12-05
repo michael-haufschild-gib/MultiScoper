@@ -281,6 +281,9 @@ void BasicShader::render(
     float viewportWidth = static_cast<float>(targetComponent->getWidth());
     float viewportHeight = static_cast<float>(targetComponent->getHeight());
 
+    if (viewportWidth <= 0.0f || viewportHeight <= 0.0f)
+        return;
+
     // Projection maps (0, 0) -> (-1, 1) and (viewportWidth, viewportHeight) -> (1, -1)
     // This creates an orthographic projection for the full editor coordinate space
     float left = 0.0f;
