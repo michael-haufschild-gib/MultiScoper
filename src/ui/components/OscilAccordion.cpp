@@ -12,16 +12,13 @@ namespace oscil
 //==============================================================================
 
 OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
     , title_(title)
     , expandSpring_(SpringPresets::snappy())
     , hoverSpring_(SpringPresets::stiff())
     , chevronSpring_(SpringPresets::bouncy())
 {
     setWantsKeyboardFocus(true);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     expandSpring_.position = 0.0f;
     hoverSpring_.position = 0.0f;
@@ -41,7 +38,6 @@ void OscilAccordionSection::registerTestId()
 
 OscilAccordionSection::~OscilAccordionSection()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -197,7 +193,7 @@ void OscilAccordionSection::paint(juce::Graphics& g)
         g.reduceClipRegion(contentBounds);
 
         // Optional: subtle background for content
-        g.setColour(theme_.backgroundPrimary.withAlpha(0.3f));
+        g.setColour(getTheme().backgroundPrimary.withAlpha(0.3f));
         g.fillRect(contentBounds);
     }
 }
@@ -208,7 +204,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
     float hoverAmount = hoverSpring_.position;
 
     // Background
-    auto bgColour = theme_.backgroundSecondary;
+    auto bgColour = getTheme().backgroundSecondary;
     if (hoverAmount > 0.01f && enabled_)
         bgColour = bgColour.brighter(0.05f * hoverAmount);
 
@@ -216,7 +212,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
     g.fillRect(bounds);
 
     // Bottom border
-    g.setColour(theme_.controlBorder.withAlpha(opacity * 0.3f));
+    g.setColour(getTheme().controlBorder.withAlpha(opacity * 0.3f));
     g.fillRect(bounds.getX(), bounds.getBottom() - 1, bounds.getWidth(), 1);
 
     auto contentBounds = bounds.reduced(PADDING_H, 0);
@@ -237,14 +233,14 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
     }
 
     // Title
-    g.setColour(theme_.textPrimary.withAlpha(opacity));
+    g.setColour(getTheme().textPrimary.withAlpha(opacity));
     g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).boldened());
     g.drawText(title_, contentBounds, juce::Justification::centredLeft);
 
     // Focus ring
     if (hasFocus_ && enabled_)
     {
-        g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
         g.drawRect(bounds.reduced(2), 2);
     }
 }
@@ -254,7 +250,7 @@ void OscilAccordionSection::paintChevron(juce::Graphics& g, juce::Rectangle<floa
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float rotation = chevronSpring_.position * juce::MathConstants<float>::halfPi;
 
-    g.setColour(theme_.textSecondary.withAlpha(opacity));
+    g.setColour(getTheme().textSecondary.withAlpha(opacity));
 
     juce::Path chevron;
     float size = bounds.getWidth() * 0.35f;
@@ -397,31 +393,22 @@ void OscilAccordionSection::updateAnimations()
     chevronSpring_.update(dt);
 }
 
-void OscilAccordionSection::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
-}
-
 //==============================================================================
 // OscilAccordion Implementation
 //==============================================================================
 
 OscilAccordion::OscilAccordion(IThemeService& themeService)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
 {
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 }
 
 OscilAccordion::~OscilAccordion()
 {
-    themeService_.removeListener(this);
 }
 
 OscilAccordionSection* OscilAccordion::addSection(const juce::String& title)
 {
-    auto section = std::make_unique<OscilAccordionSection>(themeService_, title);
+    auto section = std::make_unique<OscilAccordionSection>(getThemeService(), title);
     auto* sectionPtr = section.get();
 
     int index = static_cast<int>(sections_.size());
@@ -433,7 +420,7 @@ OscilAccordionSection* OscilAccordion::addSection(const juce::String& title)
     };
 
     addAndMakeVisible(*section);
-    sections_.add(std::move(section));
+    sections_.push_back(std::move(section));
 
     resized();
     return sectionPtr;
@@ -448,9 +435,9 @@ OscilAccordionSection* OscilAccordion::addSection(const juce::String& title, juc
 
 void OscilAccordion::removeSection(int index)
 {
-    if (index >= 0 && index < sections_.size())
+    if (index >= 0 && static_cast<size_t>(index) < sections_.size())
     {
-        sections_.remove(index);
+        sections_.erase(sections_.begin() + index);
         resized();
     }
 }
@@ -463,8 +450,8 @@ void OscilAccordion::clearSections()
 
 OscilAccordionSection* OscilAccordion::getSection(int index)
 {
-    if (index >= 0 && index < sections_.size())
-        return sections_[index];
+    if (index >= 0 && static_cast<size_t>(index) < sections_.size())
+        return sections_[static_cast<size_t>(index)].get();
     return nullptr;
 }
 
@@ -495,14 +482,14 @@ void OscilAccordion::setAllowMultiExpand(bool allow)
 
 void OscilAccordion::expandSection(int index)
 {
-    if (index >= 0 && index < sections_.size())
-        sections_[index]->setExpanded(true);
+    if (index >= 0 && static_cast<size_t>(index) < sections_.size())
+        sections_[static_cast<size_t>(index)]->setExpanded(true);
 }
 
 void OscilAccordion::collapseSection(int index)
 {
-    if (index >= 0 && index < sections_.size())
-        sections_[index]->setExpanded(false);
+    if (index >= 0 && static_cast<size_t>(index) < sections_.size())
+        sections_[static_cast<size_t>(index)]->setExpanded(false);
 }
 
 void OscilAccordion::expandAll()
@@ -533,7 +520,7 @@ int OscilAccordion::getPreferredHeight() const
 {
     int totalHeight = 0;
 
-    for (int i = 0; i < sections_.size(); ++i)
+    for (size_t i = 0; i < sections_.size(); ++i)
     {
         totalHeight += sections_[i]->getPreferredHeight();
         if (i > 0)
@@ -563,9 +550,9 @@ void OscilAccordion::handleSectionExpanded(int index, bool expanded)
     // collapse all other sections
     if (!allowMultiExpand_ && expanded)
     {
-        for (int i = 0; i < sections_.size(); ++i)
+        for (size_t i = 0; i < sections_.size(); ++i)
         {
-            if (i != index && sections_[i]->isExpanded())
+            if (static_cast<int>(i) != index && sections_[i]->isExpanded())
                 sections_[i]->setExpanded(false);
         }
     }
@@ -576,19 +563,13 @@ void OscilAccordion::layoutSections()
     auto bounds = getLocalBounds();
     int y = 0;
 
-    for (int i = 0; i < sections_.size(); ++i)
+    for (size_t i = 0; i < sections_.size(); ++i)
     {
         int height = sections_[i]->getPreferredHeight();
         sections_[i]->setBounds(0, y, bounds.getWidth(), height);
 
         y += height + spacing_;
     }
-}
-
-void OscilAccordion::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
 }
 
 } // namespace oscil

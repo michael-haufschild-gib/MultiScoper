@@ -73,7 +73,8 @@ public:
     std::shared_ptr<IAudioBuffer> getBuffer(const SourceId& sourceId) override;
     OscilState& getState() override;
     float getCpuUsage() const override { return cpuUsage_.load(std::memory_order_relaxed); }
-    double getSampleRate() const override { return currentSampleRate_; }
+    double getSampleRate() const override { return currentSampleRate_.load(std::memory_order_relaxed); }
+    int getCaptureRate() const override;
 
     // ValueTree::Listener overrides
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
@@ -109,13 +110,26 @@ private:
     double ticksToSecondsScale_{0.0};
 
     // Cached state for real-time safe getStateInformation()
-    // Updated on message thread, read by audio thread when needed
-    juce::String cachedStateXml_;
+    // Stores pre-converted UTF-8 bytes to avoid any allocation on audio thread.
+    // Updated on message thread, read by audio thread when needed.
+    std::vector<char> cachedStateUtf8_;
     mutable juce::SpinLock cachedStateLock_;
 
     // Helper to update cached state (call from message thread only)
     void updateCachedState();
 
+    // Thread-safe cache of capture quality config
+    // Prevents race conditions when prepareToPlay reads state while UI modifies it
+    CaptureQualityConfig cachedCaptureConfig_;
+    mutable juce::SpinLock captureConfigLock_;
+
+    // Helper to thread-safely get current capture config
+    CaptureQualityConfig getCaptureQualityConfig() const;
+    
+    // Helper to thread-safely set current capture config
+    void setCaptureQualityConfig(const CaptureQualityConfig& config);
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE(OscilPluginProcessor)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilPluginProcessor)
 };
 

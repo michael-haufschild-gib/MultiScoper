@@ -41,6 +41,11 @@ public:
     ) override;
 
     /**
+     * Configure from VisualConfiguration.
+     */
+    void configure(const VisualConfiguration& config) override { settings_ = config.radialBlur; }
+
+    /**
      * Configure the radial blur effect.
      */
     void setSettings(const RadialBlurSettings& settings) { settings_ = settings; }

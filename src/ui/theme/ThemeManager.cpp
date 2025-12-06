@@ -522,9 +522,24 @@ void ThemeManager::removeListener(ThemeManagerListener* listener)
 
 void ThemeManager::notifyListeners()
 {
-    listeners_.call([this](ThemeManagerListener& listener) {
-        listener.themeChanged(currentTheme_);
-    });
+    // Ensure theme change notifications happen on the message thread
+    // since listeners will typically call repaint() which requires message thread
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        listeners_.call([this](ThemeManagerListener& listener) {
+            listener.themeChanged(currentTheme_);
+        });
+    }
+    else
+    {
+        // Capture theme by value to avoid race conditions
+        auto themeCopy = currentTheme_;
+        juce::MessageManager::callAsync([this, themeCopy]() {
+            listeners_.call([&themeCopy](ThemeManagerListener& listener) {
+                listener.themeChanged(themeCopy);
+            });
+        });
+    }
 }
 
 // System theme definitions (unchanged)

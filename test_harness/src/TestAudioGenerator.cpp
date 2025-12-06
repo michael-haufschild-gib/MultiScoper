@@ -15,7 +15,8 @@ TestAudioGenerator::TestAudioGenerator()
 
 void TestAudioGenerator::prepare(double sampleRate)
 {
-    sampleRate_ = sampleRate;
+    // Guard against invalid sample rate
+    sampleRate_ = sampleRate > 0.0 ? sampleRate : 48000.0;
     phaseIncrement_ = frequency_.load() / sampleRate_;
     reset();
 }
@@ -28,8 +29,9 @@ void TestAudioGenerator::generateBlock(juce::AudioBuffer<float>& buffer)
     const Waveform wf = waveform_.load();
     const int burst = burstSamples_.load();
 
-    // Update phase increment in case frequency changed
-    phaseIncrement_ = frequency_.load() / sampleRate_;
+    // Update phase increment in case frequency changed (sampleRate_ validated in prepare())
+    if (sampleRate_ > 0.0)
+        phaseIncrement_ = frequency_.load() / sampleRate_;
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
@@ -115,7 +117,9 @@ void TestAudioGenerator::setFrequency(float hz)
 {
     // Allow LFO rates (sub-audio frequencies) for test visualization
     frequency_.store(juce::jlimit(0.01f, 20000.0f, hz));
-    phaseIncrement_ = frequency_.load() / sampleRate_;
+    // Guard against division by zero if prepare() wasn't called
+    if (sampleRate_ > 0.0)
+        phaseIncrement_ = frequency_.load() / sampleRate_;
 }
 
 void TestAudioGenerator::setAmplitude(float gain)

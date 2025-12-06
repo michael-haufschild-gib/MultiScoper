@@ -69,10 +69,12 @@ void TimingSidebarSection::setupPresenterCallbacks()
 
 void TimingSidebarSection::setupComponents()
 {
-    // TIME/MELODIC toggle
+    // TIME/MELODIC toggle with helpful tooltips
     modeToggle_ = std::make_unique<SegmentedButtonBar>(themeService_);
-    modeToggle_->addButton("TIME", static_cast<int>(TimingMode::TIME), "sidebar_timing_modeToggle_time");
-    modeToggle_->addButton("MELODIC", static_cast<int>(TimingMode::MELODIC), "sidebar_timing_modeToggle_melodic");
+    modeToggle_->addButton("TIME", static_cast<int>(TimingMode::TIME), "sidebar_timing_modeToggle_time",
+                           "Time Mode: Display fixed time intervals (milliseconds)");
+    modeToggle_->addButton("MELODIC", static_cast<int>(TimingMode::MELODIC), "sidebar_timing_modeToggle_melodic",
+                           "Melodic Mode: Display musical note intervals (syncs with BPM)");
     modeToggle_->setSelectedId(static_cast<int>(presenter_->getTimingMode()));
     modeToggle_->onSelectionChanged = [this](int id)
     {
@@ -256,8 +258,9 @@ void TimingSidebarSection::resized()
     // Waveform mode dropdown (both modes)
     int labelWidth = 40;
     waveformModeLabel_->setBounds(bounds.getX(), y, labelWidth, ROW_HEIGHT);
+    int selectorWidth = std::max(0, bounds.getWidth() - labelWidth - SPACING_MEDIUM);
     waveformModeSelector_->setBounds(bounds.getX() + labelWidth + SPACING_MEDIUM, y,
-                                      bounds.getWidth() - labelWidth - SPACING_MEDIUM, ROW_HEIGHT);
+                                      selectorWidth, ROW_HEIGHT);
     y += ROW_HEIGHT + SPACING_LARGE;
 
     // TIME mode controls
@@ -277,7 +280,7 @@ void TimingSidebarSection::resized()
         // BPM row: BPM label + field/value + sync toggle
         int bpmLabelWidth = 30;
         int syncToggleWidth = 70;
-        int bpmFieldWidth = bounds.getWidth() - bpmLabelWidth - syncToggleWidth - SPACING_MEDIUM * 2;
+        int bpmFieldWidth = std::max(0, bounds.getWidth() - bpmLabelWidth - syncToggleWidth - SPACING_MEDIUM * 2);
 
         bpmLabel_->setBounds(bounds.getX(), y, bpmLabelWidth, ROW_HEIGHT);
 

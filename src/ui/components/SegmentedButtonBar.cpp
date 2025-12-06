@@ -9,9 +9,8 @@ namespace oscil
 {
 
 SegmentedButtonBar::SegmentedButtonBar(IThemeService& themeService)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
 {
-    themeService_.addListener(this);
     setWantsKeyboardFocus(true);
 }
 
@@ -19,7 +18,6 @@ SegmentedButtonBar::SegmentedButtonBar(IThemeService& themeService)
 
 SegmentedButtonBar::~SegmentedButtonBar()
 {
-    themeService_.removeListener(this);
 }
 
 void SegmentedButtonBar::paint(juce::Graphics& g)
@@ -50,20 +48,19 @@ void SegmentedButtonBar::resized()
     }
 }
 
-void SegmentedButtonBar::themeChanged(const ColorTheme&)
+void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce::String& testId,
+                                    const juce::String& tooltip)
 {
-    // OscilButtons handle their own theme changes via ThemeManagerListener
-    repaint();
-}
-
-void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce::String& testId)
-{
-    auto button = std::make_unique<OscilButton>(themeService_, label, testId);
+    auto button = std::make_unique<OscilButton>(getThemeService(), label, testId);
 
     // Configure as a toggleable segment button
     button->setToggleable(true);
     button->setVariant(ButtonVariant::Secondary);
     button->setButtonId(id);
+
+    // Set tooltip if provided
+    if (tooltip.isNotEmpty())
+        button->setTooltip(tooltip);
 
     // Set up click handler - use the button ID from getButtonId()
     button->onClick = [this, id]() { handleButtonClick(id); };
@@ -83,15 +80,20 @@ void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce
     resized();
 }
 
-void SegmentedButtonBar::addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId)
+void SegmentedButtonBar::addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId,
+                                            const juce::String& tooltip)
 {
-    auto button = std::make_unique<OscilButton>(themeService_, juce::String{}, testId);
+    auto button = std::make_unique<OscilButton>(getThemeService(), juce::String{}, testId);
 
     // Configure as a toggleable segment button with path icon
     button->setToggleable(true);
     button->setVariant(ButtonVariant::Secondary);
     button->setButtonId(id);
     button->setIconPath(iconPath);
+
+    // Set tooltip if provided
+    if (tooltip.isNotEmpty())
+        button->setTooltip(tooltip);
 
     // Set up click handler
     button->onClick = [this, id]() { handleButtonClick(id); };
@@ -109,6 +111,18 @@ void SegmentedButtonBar::addButtonWithPath(const juce::Path& iconPath, int id, c
     }
 
     resized();
+}
+
+void SegmentedButtonBar::setButtonTooltip(int id, const juce::String& tooltip)
+{
+    for (auto& button : buttons_)
+    {
+        if (button->getButtonId() == id)
+        {
+            button->setTooltip(tooltip);
+            break;
+        }
+    }
 }
 
 void SegmentedButtonBar::clearButtons()

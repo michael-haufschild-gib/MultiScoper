@@ -377,8 +377,8 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
     // Load auto-adjust setting
     config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
 
-    // Load memory budget if present
-    int budgetBytes = qualityNode.getProperty(StateIds::MemoryBudgetBytes, 0);
+    // Load memory budget if present (stored as int64 to avoid overflow for large budgets)
+    juce::int64 budgetBytes = qualityNode.getProperty(StateIds::MemoryBudgetBytes, static_cast<juce::int64>(0));
     if (budgetBytes > 0)
     {
         config.memoryBudget.totalBudgetBytes = static_cast<size_t>(budgetBytes);
@@ -398,7 +398,7 @@ void OscilState::setCaptureQualityConfig(const CaptureQualityConfig& config)
     qualityNode.setProperty(StateIds::AutoAdjustQuality,
                             config.autoAdjustQuality, nullptr);
     qualityNode.setProperty(StateIds::MemoryBudgetBytes,
-                            static_cast<int>(config.memoryBudget.totalBudgetBytes), nullptr);
+                            static_cast<juce::int64>(config.memoryBudget.totalBudgetBytes), nullptr);
 }
 
 void OscilState::addListener(juce::ValueTree::Listener* listener)
@@ -510,6 +510,7 @@ juce::File GlobalPreferences::getPreferencesFile() const
 
 void GlobalPreferences::load()
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto file = getPreferencesFile();
     if (file.existsAsFile())
     {
@@ -522,88 +523,121 @@ void GlobalPreferences::load()
 
 void GlobalPreferences::save()
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto file = getPreferencesFile();
-    file.getParentDirectory().createDirectory();
+
+    // Create parent directory if it doesn't exist
+    auto parentDir = file.getParentDirectory();
+    if (!parentDir.exists())
+    {
+        auto result = parentDir.createDirectory();
+        if (result.failed())
+        {
+            DBG("GlobalPreferences::save() - Failed to create directory: " << result.getErrorMessage());
+            return;
+        }
+    }
 
     if (auto xml = preferences_.createXml())
     {
-        xml->writeTo(file);
+        if (!xml->writeTo(file))
+        {
+            DBG("GlobalPreferences::save() - Failed to write preferences to: " << file.getFullPathName());
+        }
+    }
+    else
+    {
+        DBG("GlobalPreferences::save() - Failed to create XML from preferences");
     }
 }
 
 juce::String GlobalPreferences::getDefaultTheme() const
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return preferences_.getProperty("defaultTheme", "Dark Professional");
 }
 
 void GlobalPreferences::setDefaultTheme(const juce::String& themeName)
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     preferences_.setProperty("defaultTheme", themeName, nullptr);
     save();
 }
 
 int GlobalPreferences::getDefaultColumnLayout() const
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return preferences_.getProperty("defaultColumns", 1);
 }
 
 void GlobalPreferences::setDefaultColumnLayout(int columns)
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     preferences_.setProperty("defaultColumns", columns, nullptr);
     save();
 }
 
 bool GlobalPreferences::getShowStatusBar() const
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return preferences_.getProperty("showStatusBar", true);
 }
 
 void GlobalPreferences::setShowStatusBar(bool show)
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     preferences_.setProperty("showStatusBar", show, nullptr);
     save();
 }
 
 bool GlobalPreferences::getReducedMotion() const
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return preferences_.getProperty("reducedMotion", false);
 }
 
 void GlobalPreferences::setReducedMotion(bool reduced)
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     preferences_.setProperty("reducedMotion", reduced, nullptr);
     save();
 }
 
 bool GlobalPreferences::getUIAudioFeedback() const
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return preferences_.getProperty("uiAudioFeedback", false);
 }
 
 void GlobalPreferences::setUIAudioFeedback(bool enabled)
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
     save();
 }
 
 bool GlobalPreferences::getTooltipsEnabled() const
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return preferences_.getProperty("tooltipsEnabled", true);
 }
 
 void GlobalPreferences::setTooltipsEnabled(bool enabled)
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
     save();
 }
 
 int GlobalPreferences::getDefaultSidebarWidth() const
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return preferences_.getProperty("defaultSidebarWidth", 280);
 }
 
 void GlobalPreferences::setDefaultSidebarWidth(int width)
 {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     preferences_.setProperty("defaultSidebarWidth", width, nullptr);
     save();
 }

@@ -29,6 +29,19 @@ class AnalysisEngine
 {
 public:
     AnalysisEngine();
+    ~AnalysisEngine() = default;
+
+    // Non-copyable and non-movable (contains std::atomic fields)
+    AnalysisEngine(const AnalysisEngine&) = delete;
+    AnalysisEngine& operator=(const AnalysisEngine&) = delete;
+    AnalysisEngine(AnalysisEngine&&) = delete;
+    AnalysisEngine& operator=(AnalysisEngine&&) = delete;
+
+    /**
+     * Prepare for playback
+     * Pre-allocates internal buffers to avoid real-time allocation
+     */
+    void prepare(double sampleRate, int samplesPerBlock);
     
     /**
      * Process a block of audio samples
@@ -70,6 +83,9 @@ private:
     TransientDetector sideTransient_;
     
     // Scratch buffers for Mid/Side calculation
+    // Pre-allocated to max expected block size to avoid allocation in prepare()
+    // which may be called from audio thread in some hosts
+    static constexpr size_t kDefaultBufferSize = 8192;
     std::vector<float> midBuffer_;
     std::vector<float> sideBuffer_;
 };

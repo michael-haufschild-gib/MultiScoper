@@ -6,8 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -28,8 +27,7 @@ namespace oscil
  * - Color preview (current vs original)
  * - Eye dropper tool (optional)
  */
-class OscilColorPicker : public juce::Component,
-                         public ThemeManagerListener,
+class OscilColorPicker : public ThemedComponent,
                          public TestIdSupport,
                          private juce::Timer
 {
@@ -79,8 +77,6 @@ public:
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
 private:
     void timerCallback() override;
@@ -124,8 +120,6 @@ private:
 
     std::unique_ptr<juce::TextEditor> hexInput_;
 
-    ColorTheme theme_;
-    IThemeService& themeService_;
 
     static constexpr int GRADIENT_SIZE = 180;
     static constexpr int SLIDER_HEIGHT = 16;
@@ -135,6 +129,7 @@ private:
     // Cached gradient
     juce::Image cachedGradientImage_;
     float cachedHue_ = -1.0f;
+    bool cachedIsWheelMode_ = false;  // Explicit flag for cache mode
     juce::Rectangle<int> cachedGradientBounds_;
     void updateGradientCache(const juce::Rectangle<int>& bounds);
 

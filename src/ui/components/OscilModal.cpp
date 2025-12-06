@@ -10,17 +10,13 @@ namespace oscil
 {
 
 OscilModal::OscilModal(IThemeService& themeService)
-    : themeService_(themeService)
-    , showSpring_(SpringPresets::snappy())
+    : ThemedComponent(themeService)
+    ,  showSpring_(SpringPresets::snappy())
     , scaleSpring_(SpringPresets::bouncy())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
     setVisible(false);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
-
     showSpring_.position = 0.0f;
     scaleSpring_.position = 0.8f;  // Start scaled down
 }
@@ -32,9 +28,8 @@ OscilModal::OscilModal(IThemeService& themeService, const juce::String& title)
 }
 
 OscilModal::OscilModal(IThemeService& themeService, const juce::String& title, const juce::String& testId)
-    : OscilModal(themeService)
+    : OscilModal(themeService, title)
 {
-    title_ = title;
     setTestId(testId);
 }
 
@@ -46,7 +41,6 @@ void OscilModal::registerTestId()
 OscilModal::~OscilModal()
 {
     juce::Desktop::getInstance().removeFocusChangeListener(this);
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -115,7 +109,8 @@ void OscilModal::show(juce::Component* parent)
     // Store previous focus
     previousFocus_ = juce::Component::getCurrentlyFocusedComponent();
 
-    // Register focus change listener for focus trap
+    // Register focus change listener for focus trap (ensure we don't double-register)
+    juce::Desktop::getInstance().removeFocusChangeListener(this);
     juce::Desktop::getInstance().addFocusChangeListener(this);
 
     if (parent)
@@ -256,11 +251,11 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
     shadow.drawForRectangle(g, bounds);
 
     // Background
-    g.setColour(theme_.backgroundPrimary.withAlpha(alpha));
+    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha));
     g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_LG);
 
     // Border
-    g.setColour(theme_.controlBorder.withAlpha(alpha * 0.3f));
+    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.3f));
     g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f),
                            ComponentLayout::RADIUS_LG, 1.0f);
 
@@ -281,7 +276,7 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
     if (showCloseButton_)
         textBounds.removeFromRight(CLOSE_BUTTON_SIZE + 8);
 
-    g.setColour(theme_.textPrimary.withAlpha(alpha));
+    g.setColour(getTheme().textPrimary.withAlpha(alpha));
     g.setFont(juce::Font(juce::FontOptions().withHeight(15.0f)).boldened());
     g.drawText(title_, textBounds, juce::Justification::centredLeft);
 
@@ -290,15 +285,18 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
     {
         auto closeBounds = getCloseButtonBounds().toFloat();
 
-        // Hover effect
-        if (isHoveringClose_)
+        // Animated hover effect using spring
+        float hoverAlpha = closeHoverSpring_.position;
+        if (hoverAlpha > 0.01f)
         {
-            g.setColour(theme_.backgroundSecondary.withAlpha(alpha));
+            g.setColour(getTheme().backgroundSecondary.withAlpha(alpha * hoverAlpha));
             g.fillRoundedRectangle(closeBounds, ComponentLayout::RADIUS_SM);
         }
 
-        // Close icon from SVG - centered within button bounds
-        g.setColour(theme_.textSecondary.withAlpha(alpha));
+        // Close icon - interpolate color from secondary to primary on hover
+        auto iconColor = getTheme().textSecondary.interpolatedWith(
+            getTheme().textPrimary, hoverAlpha);
+        g.setColour(iconColor.withAlpha(alpha));
         float iconSize = 14.0f;  // Icon size within the button
         auto iconPath = ListItemIcons::createCloseIcon(iconSize);
 
@@ -312,7 +310,7 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
     }
 
     // Separator
-    g.setColour(theme_.controlBorder.withAlpha(alpha * 0.3f));
+    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.3f));
     g.fillRect(bounds.getX() + 1, bounds.getBottom() - 1, bounds.getWidth() - 2, 1);
 }
 
@@ -411,6 +409,31 @@ void OscilModal::mouseDown(const juce::MouseEvent& e)
     if (closeOnBackdropClick_ && !modalBounds.contains(e.getPosition()))
     {
         requestClose();
+    }
+}
+
+void OscilModal::mouseMove(const juce::MouseEvent& e)
+{
+    if (!showCloseButton_)
+        return;
+
+    bool wasHovering = isHoveringClose_;
+    isHoveringClose_ = getCloseButtonBounds().contains(e.getPosition());
+
+    if (isHoveringClose_ != wasHovering)
+    {
+        closeHoverSpring_.setTarget(isHoveringClose_ ? 1.0f : 0.0f);
+        startTimerHz(ComponentLayout::ANIMATION_FPS);
+    }
+}
+
+void OscilModal::mouseExit(const juce::MouseEvent&)
+{
+    if (isHoveringClose_)
+    {
+        isHoveringClose_ = false;
+        closeHoverSpring_.setTarget(0.0f);
+        startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
 }
 
@@ -551,7 +574,8 @@ void OscilModal::updateAnimations()
     float dt = AnimationTiming::FRAME_DURATION_60FPS;
     showSpring_.update(dt);
     scaleSpring_.update(dt);
-    
+    closeHoverSpring_.update(dt);
+
     if (content_)
     {
         // Sync content alpha
@@ -577,12 +601,6 @@ void OscilModal::updateFocusTrap()
     {
         grabKeyboardFocus();
     }
-}
-
-void OscilModal::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
 }
 
 //==============================================================================
@@ -638,30 +656,51 @@ void OscilAlertModal::show(IThemeService& themeService,
                             const juce::String& title,
                             const juce::String& message,
                             [[maybe_unused]] Type type,
-                            [[maybe_unused]] std::function<void()> onOk)
+                            std::function<void()> onOk)
 {
-    // Create content
-    auto content = std::make_unique<juce::Component>();
+    // Create content container - will be owned by the modal
+    auto* content = new juce::Component();
     content->setSize(400, 100);
 
-    auto label = std::make_unique<juce::Label>();
+    // Label for the message
+    auto* label = new juce::Label();
     label->setText(message, juce::dontSendNotification);
     label->setJustificationType(juce::Justification::topLeft);
     label->setBounds(0, 0, 400, 60);
-    content->addAndMakeVisible(*label);
+    content->addAndMakeVisible(label);
 
-    auto okButton = std::make_unique<OscilButton>(themeService, "OK");
+    // OK button
+    auto* okButton = new OscilButton(themeService, "OK");
     okButton->setVariant(ButtonVariant::Primary);
     okButton->setBounds(400 - 80, 70, 80, 30);
-    content->addAndMakeVisible(*okButton);
+    content->addAndMakeVisible(okButton);
 
-    // Create and show modal
-    auto modal = std::make_unique<OscilModal>(themeService, title);
-    modal->setContent(content.get());
+    // Create modal - will self-delete when closed
+    auto* modal = new OscilModal(themeService, title);
+    modal->setContent(content);
     modal->setSize(ModalSize::Small);
 
-    // Note: In real usage, the modal and content ownership would need to be managed
-    // This is a simplified example
+    // Set up self-deletion when modal is closed
+    // Capture the callback and components to clean up
+    modal->onClose = [modal, content, label, okButton, onOk]() {
+        // Call user callback if provided
+        if (onOk)
+            onOk();
+
+        // Schedule deletion on message thread to avoid deleting during callback
+        juce::MessageManager::callAsync([modal, content, label, okButton]() {
+            delete label;
+            delete okButton;
+            delete content;
+            delete modal;
+        });
+    };
+
+    // Wire up OK button to close the modal
+    okButton->onClick = [modal]() {
+        modal->hide();
+    };
+
     modal->show();
 }
 

@@ -136,10 +136,10 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
 
         // Set up pane name change callback
         paneComponent->onPaneNameChanged([this](const PaneId& paneId, const juce::String& newName) {
-            auto& layoutManager = processor_.getState().getLayoutManager();
-            if (auto* pane = layoutManager.getPane(paneId))
+            auto& mgr = processor_.getState().getLayoutManager();
+            if (auto* p = mgr.getPane(paneId))
             {
-                pane->setName(newName);
+                p->setName(newName);
             }
         });
 
@@ -173,12 +173,17 @@ void OscillatorPanelController::reapplyGlobalSettings()
     auto& state = processor_.getState();
     
     // Re-apply timing settings (display samples)
+    // IMPORTANT: Use capture rate (decimated), not source rate, since display buffers are decimated
     auto timingConfig = processor_.getTimingEngine().toEntityConfig();
-    double sampleRate = processor_.getSampleRate();
-    if (sampleRate > 0)
+    int captureRate = processor_.getCaptureRate();
+    if (captureRate > 0)
     {
-        int displaySamples = static_cast<int>(sampleRate * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
-        if (displaySettings_) displaySettings_->setDisplaySamplesForAll(displaySamples);
+        int displaySamples = static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
+        if (displaySettings_)
+        {
+            displaySettings_->setDisplaySamplesForAll(displaySamples);
+            displaySettings_->setSampleRateForAll(captureRate);
+        }
     }
 
     // Re-apply visual settings
@@ -303,6 +308,193 @@ void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
     refreshPanels();
 }
 
+void OscillatorPanelController::highlightOscillator(const OscillatorId& oscillatorId)
+{
+    if (displaySettings_) displaySettings_->highlightOscillator(oscillatorId);
+}
+
+// SidebarComponent::Listener overrides
+
+void OscillatorPanelController::oscillatorSelected(const OscillatorId& oscillatorId)
+{
+    highlightOscillator(oscillatorId);
+}
+
+void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& oscillatorId)
+{
+    auto& state = processor_.getState();
+    auto oscillators = state.getOscillators();
+
+    for (const auto& osc : oscillators)
+    {
+        if (osc.getId() == oscillatorId)
+        {
+            auto& layoutManager = state.getLayoutManager();
+            auto panes = layoutManager.getPanes();
+            std::vector<std::pair<PaneId, juce::String>> paneList;
+            for (const auto& pane : panes)
+            {
+                paneList.emplace_back(pane.getId(), pane.getName());
+            }
+
+            if (dialogManager_)
+                dialogManager_->showConfigPopup(osc, paneList);
+            break;
+        }
+    }
+}
+
+void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorId& oscillatorId)
+{
+    if (!dialogManager_) return;
+
+    auto& state = processor_.getState();
+    auto oscillators = state.getOscillators();
+
+    for (const auto& osc : oscillators)
+    {
+        if (osc.getId() == oscillatorId)
+        {
+            dialogManager_->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
+                auto& oscilState = processor_.getState();
+                auto oscList = oscilState.getOscillators();
+                for (auto& o : oscList)
+                {
+                    if (o.getId() == oscillatorId)
+                    {
+                        o.setColour(color);
+                        oscilState.updateOscillator(o);
+                        break;
+                    }
+                }
+            });
+            break;
+        }
+    }
+}
+
+void OscillatorPanelController::oscillatorDeleteRequested(const OscillatorId& oscillatorId)
+{
+    processor_.getState().removeOscillator(oscillatorId);
+}
+
+void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)
+{
+    auto& state = processor_.getState();
+    auto oscillators = state.getOscillators();
+    for (auto& osc : oscillators)
+    {
+        if (osc.getId() == oscillatorId)
+        {
+            osc.setProcessingMode(mode);
+            state.updateOscillator(osc);
+            break;
+        }
+    }
+}
+
+void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible)
+{
+    auto& state = processor_.getState();
+    auto oscillators = state.getOscillators();
+    for (auto& osc : oscillators)
+    {
+        if (osc.getId() == oscillatorId)
+        {
+            osc.setVisible(visible);
+            state.updateOscillator(osc);
+            break;
+        }
+    }
+}
+
+void OscillatorPanelController::oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId)
+{
+    if (!dialogManager_) return;
+    pendingVisibilityOscillatorId_ = oscillatorId;
+    
+    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto panes = layoutManager.getPanes();
+
+    dialogManager_->showSelectPaneDialog(panes,
+        // onComplete callback
+        [this](const SelectPaneDialog::Result& result) {
+            auto& stateRef = processor_.getState();
+            auto& layoutMgr = stateRef.getLayoutManager();
+            PaneId targetPaneId = result.paneId;
+
+            if (result.createNewPane)
+            {
+                Pane newPane;
+                newPane.setName("Pane " + juce::String(layoutMgr.getPaneCount() + 1));
+                newPane.setOrderIndex(static_cast<int>(layoutMgr.getPaneCount()));
+                layoutMgr.addPane(newPane);
+                targetPaneId = newPane.getId();
+            }
+
+            auto oscList = stateRef.getOscillators();
+            for (auto& osc : oscList)
+            {
+                if (osc.getId() == pendingVisibilityOscillatorId_)
+                {
+                    osc.setPaneId(targetPaneId);
+                    osc.setVisible(true);
+                    stateRef.updateOscillator(osc);
+                    break;
+                }
+            }
+            pendingVisibilityOscillatorId_ = OscillatorId::invalid();
+        },
+        // onCancel callback - clear pending ID when user cancels
+        [this]() {
+            pendingVisibilityOscillatorId_ = OscillatorId::invalid();
+        });
+}
+
+void OscillatorPanelController::addOscillatorDialogRequested()
+{
+    if (!dialogManager_) return;
+    auto sources = processor_.getInstanceRegistry().getAllSources();
+    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto panes = layoutManager.getPanes();
+
+    dialogManager_->showAddOscillatorDialog(sources, panes, [this](const AddOscillatorDialog::Result& result) {
+        addOscillatorRequested(result);
+    });
+}
+
+void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog::Result& result)
+{
+    auto& state = processor_.getState();
+    auto& layoutManager = state.getLayoutManager();
+    PaneId targetPaneId = result.paneId;
+
+    if (result.createNewPane)
+    {
+        Pane newPane;
+        newPane.setName("Pane " + juce::String(layoutManager.getPaneCount() + 1));
+        newPane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
+        layoutManager.addPane(newPane);
+        targetPaneId = newPane.getId();
+    }
+
+    Oscillator osc;
+    osc.setSourceId(result.sourceId);
+    osc.setPaneId(targetPaneId);
+    osc.setProcessingMode(ProcessingMode::FullStereo);
+    osc.setColour(result.color);
+    osc.setVisualPresetId(result.visualPresetId);
+    
+    if (result.name.isNotEmpty()) osc.setName(result.name);
+    else osc.setName("Oscillator " + juce::String(state.getOscillators().size() + 1));
+
+    // Ensure shader matches preset
+    auto preset = VisualConfiguration::getPreset(result.visualPresetId);
+    osc.setShaderId(shaderTypeToId(preset.shaderType));
+
+    state.addOscillator(osc);
+}
+
 void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId)
 {
     auto& state = processor_.getState();
@@ -347,45 +539,54 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
             property == StateIds::ProcessingMode || property == StateIds::Visible ||
             property == StateIds::SourceId)
         {
-            // Find oscillator details
-            auto oscillators = processor_.getState().getOscillators();
-            // ... (similar optimization logic as PluginEditor, can act on paneComponents directly)
-            
-            for (const auto& osc : oscillators)
-            {
-                if (osc.getId() == oscId)
+            juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this), oscId, property]() {
+                auto* controller = weakThis.get();
+                if (!controller) return;
+
+                // Find oscillator details
+                auto oscillators = controller->processor_.getState().getOscillators();
+                bool handled = false;
+                
+                for (const auto& osc : oscillators)
                 {
-                    if (sidebar_)
+                    if (osc.getId() == oscId)
                     {
-                        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
-                            if (auto* controller = weakThis.get())
-                                if (controller->sidebar_) 
-                                    controller->sidebar_->refreshOscillatorList(controller->processor_.getState().getOscillators());
-                        });
-                    }
-
-                    for (auto& pane : paneComponents_)
-                    {
-                        if (pane && pane->getPaneId() == osc.getPaneId())
+                        if (controller->sidebar_)
                         {
-                            if (property == StateIds::Name) pane->updateOscillatorName(oscId, osc.getName());
-                            else if (property == StateIds::Colour) pane->updateOscillatorColor(oscId, osc.getColour());
-                            else if (property == StateIds::ProcessingMode || property == StateIds::Visible)
-                                pane->updateOscillator(oscId, osc.getProcessingMode(), osc.isVisible());
-                            else if (property == StateIds::SourceId) pane->updateOscillatorSource(oscId, osc.getSourceId());
-                            
-                            return; 
+                             controller->sidebar_->refreshOscillatorList(oscillators);
                         }
-                    }
-                    break;
-                }
-            }
-        }
 
-        // Fallback
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
-            if (auto* controller = weakThis.get()) controller->refreshPanels(); 
-        });
+                        for (auto& pane : controller->paneComponents_)
+                        {
+                            if (pane && pane->getPaneId() == osc.getPaneId())
+                            {
+                                if (property == StateIds::Name) pane->updateOscillatorName(oscId, osc.getName());
+                                else if (property == StateIds::Colour) pane->updateOscillatorColor(oscId, osc.getColour());
+                                else if (property == StateIds::ProcessingMode || property == StateIds::Visible)
+                                    pane->updateOscillator(oscId, osc.getProcessingMode(), osc.isVisible());
+                                else if (property == StateIds::SourceId) pane->updateOscillatorSource(oscId, osc.getSourceId());
+                                
+                                handled = true;
+                                break; 
+                            }
+                        }
+                        break;
+                    }
+                }
+                
+                if (!handled)
+                {
+                    controller->refreshPanels();
+                }
+            });
+        }
+        else
+        {
+            // Fallback for complex properties
+            juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
+                if (auto* controller = weakThis.get()) controller->refreshPanels(); 
+            });
+        }
     }
     else if (tree.hasType(StateIds::Pane))
     {

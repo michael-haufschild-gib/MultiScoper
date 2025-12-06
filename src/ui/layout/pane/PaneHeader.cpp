@@ -118,8 +118,6 @@ void PaneHeader::paint(juce::Graphics& g)
 
 void PaneHeader::resized()
 {
-    auto bounds = getLocalBounds();
-
     // Close button (right side)
     closeButton_->setBounds(
         getWidth() - CLOSE_BUTTON_SIZE - 2,

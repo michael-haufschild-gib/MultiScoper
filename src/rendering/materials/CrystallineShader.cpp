@@ -105,7 +105,15 @@ CrystallineShader::CrystallineShader()
     material_.ior = 2.42f; // Diamond
 }
 
-CrystallineShader::~CrystallineShader() = default;
+CrystallineShader::~CrystallineShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[CrystallineShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool CrystallineShader::compile(juce::OpenGLContext& context)
 {
@@ -241,6 +249,14 @@ void CrystallineShader::render(juce::OpenGLContext& context,
     ext.glBindVertexArray(0);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
     ext.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // Unbind environment map
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+    // Restore GL state
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 void CrystallineShader::generateCrystalMesh(const WaveformData3D& data, float xSpread)

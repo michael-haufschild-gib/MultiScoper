@@ -26,7 +26,8 @@ class DialogManager;
  * Controller responsible for managing the dynamic grid of Oscillator Panes.
  * Extracts complex pane management logic from PluginEditor.
  */
-class OscillatorPanelController : public juce::ValueTree::Listener
+class OscillatorPanelController : public juce::ValueTree::Listener,
+                                  public SidebarComponent::Listener
 {
 public:
     OscillatorPanelController(OscilPluginProcessor& processor,
@@ -83,9 +84,27 @@ public:
     void handlePaneClose(const PaneId& paneId);
 
     /**
+     * Highlight an oscillator in the grid (e.g., flash border).
+     */
+    void highlightOscillator(const OscillatorId& oscillatorId);
+
+    /**
      * Access managed pane components (e.g. for layout or GPU coordinator).
      */
     std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() { return paneComponents_; }
+
+    // SidebarComponent::Listener overrides (Oscillator logic moved from PluginEditor)
+    void oscillatorSelected(const OscillatorId& oscillatorId) override;
+    void oscillatorConfigRequested(const OscillatorId& oscillatorId) override;
+    void oscillatorColorConfigRequested(const OscillatorId& oscillatorId) override;
+    void oscillatorDeleteRequested(const OscillatorId& oscillatorId) override;
+    void oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode) override;
+    void oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible) override;
+    void oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId) override;
+    void addOscillatorDialogRequested() override;
+    void addOscillatorRequested(const AddOscillatorDialog::Result& result) override;
+
+    // Note: Other Sidebar events (Timing, Options) are handled by Editor or other controllers
 
     // ValueTree::Listener overrides
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
@@ -94,10 +113,12 @@ public:
     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override;
     void valueTreeParentChanged(juce::ValueTree& tree) override;
 
-private:
-    void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
+    // Publicly exposed for specific edge cases (e.g. dialog results that change source)
     void updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId);
 
+private:
+    void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
+    
     OscilPluginProcessor& processor_;
     ServiceContext& serviceContext_;
     PaneContainerComponent& container_;
@@ -111,6 +132,9 @@ private:
     std::vector<std::unique_ptr<PaneComponent>> paneComponents_;
     bool isUpdating_ = false; // Guard against recursive updates
     std::function<void()> layoutNeededCallback_;
+    
+    // Track oscillator pending visibility change (for pane selection dialog)
+    OscillatorId pendingVisibilityOscillatorId_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorPanelController)
     JUCE_DECLARE_WEAK_REFERENCEABLE(OscillatorPanelController)

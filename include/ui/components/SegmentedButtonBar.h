@@ -7,8 +7,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/OscilButton.h"
 #include <vector>
 
@@ -22,18 +21,15 @@ namespace oscil
  * Now uses OscilButton internally with toggleable and segment position support
  * for consistent styling, animations, and accessibility across the UI.
  */
-class SegmentedButtonBar : public juce::Component,
-                            public ThemeManagerListener
+class SegmentedButtonBar : public ThemedComponent
 {
 public:
-    SegmentedButtonBar(IThemeService& themeService);
+    explicit SegmentedButtonBar(IThemeService& themeService);
     ~SegmentedButtonBar() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
     // Keyboard navigation
     bool keyPressed(const juce::KeyPress& key) override;
@@ -43,16 +39,27 @@ public:
      * @param label Display text for the button
      * @param id Unique identifier for the button
      * @param testId Optional test ID for the button
+     * @param tooltip Optional tooltip text for the button
      */
-    void addButton(const juce::String& label, int id, const juce::String& testId = {});
+    void addButton(const juce::String& label, int id, const juce::String& testId = {},
+                   const juce::String& tooltip = {});
 
     /**
      * Add a button to the bar with a path-based icon
      * @param iconPath Path to render as the button icon (uses theme colors)
      * @param id Unique identifier for the button
      * @param testId Optional test ID for the button
+     * @param tooltip Optional tooltip text for the button
      */
-    void addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId = {});
+    void addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId = {},
+                           const juce::String& tooltip = {});
+
+    /**
+     * Set the tooltip for a specific button by ID
+     * @param id The button ID
+     * @param tooltip The tooltip text
+     */
+    void setButtonTooltip(int id, const juce::String& tooltip);
 
     /**
      * Remove all buttons
@@ -99,7 +106,6 @@ private:
     bool enabled_ = true;
     int minButtonWidth_ = 60;
 
-    IThemeService& themeService_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SegmentedButtonBar)
 };

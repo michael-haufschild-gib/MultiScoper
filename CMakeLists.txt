@@ -168,6 +168,18 @@ juce_add_binary_data(OscilBinaryData
         resources/textures/particle_shockwave.png
         resources/textures/particle_point_soft.png
         resources/textures/particle_wisp.png
+        resources/shaders/basic.vert
+        resources/shaders/basic.frag
+        resources/shaders/neon_glow.vert
+        resources/shaders/neon_glow.frag
+        resources/shaders/digital_glitch.vert
+        resources/shaders/digital_glitch.frag
+        resources/shaders/dual_outline.vert
+        resources/shaders/dual_outline.frag
+        resources/shaders/gradient_fill.vert
+        resources/shaders/gradient_fill.frag
+        resources/shaders/plasma_sine.vert
+        resources/shaders/plasma_sine.frag
 )
 
 # Source files

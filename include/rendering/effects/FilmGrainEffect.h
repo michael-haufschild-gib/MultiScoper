@@ -40,6 +40,11 @@ public:
     ) override;
 
     /**
+     * Configure from VisualConfiguration.
+     */
+    void configure(const VisualConfiguration& config) override { settings_ = config.filmGrain; }
+
+    /**
      * Configure the film grain effect.
      */
     void setSettings(const FilmGrainSettings& settings) { settings_ = settings; }

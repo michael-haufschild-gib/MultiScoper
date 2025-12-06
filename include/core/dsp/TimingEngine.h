@@ -512,6 +512,9 @@ namespace TimingIds
     static const juce::Identifier TriggerThreshold{ "triggerThreshold" };
     static const juce::Identifier MidiTriggerNote{ "midiTriggerNote" };
     static const juce::Identifier MidiTriggerChannel{ "midiTriggerChannel" };
+    static const juce::Identifier InternalBPM{ "internalBPM" };
+    static const juce::Identifier TriggerChannel{ "triggerChannel" };
+    static const juce::Identifier TriggerHysteresis{ "triggerHysteresis" };
 }
 
 } // namespace oscil

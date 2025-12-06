@@ -12,14 +12,16 @@
 #include "core/Oscillator.h"
 #include "core/InstanceRegistry.h"
 #include "core/Pane.h"
-#include "ui/panels/OscillatorListComponent.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
 #include "ui/layout/sections/OptionsSection.h"
+#include "ui/layout/sections/OscillatorSidebarSection.h"
 #include "ui/components/OscilAccordion.h"
 #include "core/dsp/CaptureQualityConfig.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
+#include "ui/components/SpringAnimation.h"
+#include "ui/components/ComponentConstants.h"
 #include <vector>
 
 namespace oscil
@@ -90,8 +92,9 @@ private:
  * Collapsible sidebar component with oscillator list
  */
 class SidebarComponent : public juce::Component,
+                         public juce::Timer,
                          public ThemeManagerListener,
-                         public OscillatorListComponent::Listener,
+                         public OscillatorSidebarSection::Listener,
                          public TimingSidebarSection::Listener,
                          public OptionsSection::Listener,
                          public TestIdSupport
@@ -158,6 +161,9 @@ public:
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
 
+    // Timer
+    void timerCallback() override;
+
     // State management
     void setCollapsed(bool collapsed);
     bool isCollapsed() const { return collapsed_; }
@@ -187,6 +193,7 @@ public:
     int getEffectiveWidth() const;
 
 private:
+    ServiceContext& context_;
     IThemeService& themeService_;
     IInstanceRegistry& instanceRegistry_;
 
@@ -194,17 +201,12 @@ private:
     std::unique_ptr<SidebarResizeHandle> resizeHandle_;
     std::unique_ptr<SidebarCollapseButton> collapseButton_;
 
-    // Add Oscillator button
-    std::unique_ptr<OscilButton> addOscillatorButton_;
-
-    // Oscillator List
-    std::unique_ptr<OscillatorListComponent> oscillatorList_;
-
-    // Accordion for control sections
+    // Accordion for all sections
     std::unique_ptr<juce::Viewport> accordionViewport_;
     std::unique_ptr<OscilAccordion> accordion_;
-    
+
     // Section contents (owned by Sidebar, displayed by Accordion)
+    std::unique_ptr<OscillatorSidebarSection> oscillatorSection_;
     std::unique_ptr<TimingSidebarSection> timingSection_;
     std::unique_ptr<OptionsSection> optionsSection_;
 
@@ -214,6 +216,9 @@ private:
     OscillatorId selectedOscillatorId_;
     std::vector<Pane> currentPanes_;  // Cached for source dropdown updates
 
+    // Collapse animation
+    SpringAnimation widthSpring_ = SpringPresets::smooth();
+
     juce::ListenerList<Listener> listeners_;
 
     void notifySidebarWidthChanged();
@@ -221,7 +226,8 @@ private:
     
     void setupSections();
 
-    // OscillatorListComponent::Listener overrides
+    // OscillatorSidebarSection::Listener overrides
+    void addOscillatorDialogRequested() override;
     void oscillatorSelected(const OscillatorId& id) override;
     void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) override;
     void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) override;
@@ -230,6 +236,7 @@ private:
     void oscillatorDeleteRequested(const OscillatorId& id) override;
     void oscillatorsReordered(int fromIndex, int toIndex) override;
     void oscillatorPaneSelectionRequested(const OscillatorId& id) override;
+    void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) override;
 
     // TimingSidebarSection::Listener overrides
     void timingModeChanged(TimingMode mode) override;
@@ -252,12 +259,9 @@ private:
 
     static constexpr int SECTION_HEADER_HEIGHT = 28;
     static constexpr int RESIZE_HANDLE_WIDTH = 6;
-    static constexpr int ADD_BUTTON_HEIGHT = 36;
     static constexpr int COLLAPSE_BUTTON_SIZE = 24;
     static constexpr int PADDING_SMALL = 4;
     static constexpr int PADDING_MEDIUM = 8;
-    static constexpr int MIN_LIST_HEIGHT = 100;
-    static constexpr int MAX_LIST_HEIGHT = 300;
 
     // TestIdSupport
     OSCIL_TESTABLE();

@@ -6,7 +6,9 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
+#include <vector>
+#include <memory>
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -20,8 +22,7 @@ namespace oscil
 /**
  * Individual accordion section with animated expand/collapse
  */
-class OscilAccordionSection : public juce::Component,
-                              public ThemeManagerListener,
+class OscilAccordionSection : public ThemedComponent,
                               public TestIdSupport,
                               private juce::Timer
 {
@@ -76,9 +77,6 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
 private:
     void timerCallback() override;
     void updateAnimations();
@@ -87,7 +85,6 @@ private:
     void paintHeader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds);
 
-    IThemeService& themeService_;
     juce::String title_;
     juce::Image icon_;
     juce::Component* content_ = nullptr;
@@ -103,8 +100,6 @@ private:
     SpringAnimation chevronSpring_;    // Rotation animation
 
     int lastReportedHeight_ = -1;      // For optimizing parent layout updates
-
-    ColorTheme theme_;
 
     static constexpr int HEADER_HEIGHT = 40;
     static constexpr int CHEVRON_SIZE = 16;
@@ -127,8 +122,7 @@ private:
  * - Optional icons
  * - Keyboard navigation
  */
-class OscilAccordion : public juce::Component,
-                       public ThemeManagerListener
+class OscilAccordion : public ThemedComponent
 {
 public:
     explicit OscilAccordion(IThemeService& themeService);
@@ -164,19 +158,13 @@ public:
     // Component overrides
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
 private:
     void handleSectionExpanded(int index, bool expanded);
     void layoutSections();
 
-    IThemeService& themeService_;
-    juce::OwnedArray<OscilAccordionSection> sections_;
+    std::vector<std::unique_ptr<OscilAccordionSection>> sections_;
     bool allowMultiExpand_ = false;
     int spacing_ = 1;
-
-    ColorTheme theme_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilAccordion)
 };

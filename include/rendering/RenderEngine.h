@@ -11,6 +11,8 @@
 #include <juce_core/juce_core.h>
 
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -57,7 +59,8 @@ public:
 
     void registerWaveform(int waveformId);
     void unregisterWaveform(int waveformId);
-    VisualConfiguration* getWaveformConfig(int waveformId);
+    [[nodiscard]] std::optional<VisualConfiguration> getWaveformConfig(int waveformId);
+    [[nodiscard]] bool hasWaveform(int waveformId);
     void setWaveformConfig(int waveformId, const VisualConfiguration& config);
     void clearAllWaveforms();
     void syncWaveforms(const std::unordered_set<int>& activeIds);
@@ -109,7 +112,8 @@ private:
     std::unique_ptr<WaveformPass> waveformPass_;
     RenderStats stats_;
 
-    // Per-waveform states
+    // Per-waveform states (protected by waveformStatesMutex_)
+    mutable juce::SpinLock waveformStatesMutex_;
     std::unordered_map<int, WaveformRenderState> waveformStates_;
 
     // Context and state

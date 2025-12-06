@@ -164,7 +164,8 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
                     {
                         auto mode = static_cast<ProcessingMode>(processingMode);
                         osc.setProcessingMode(mode);
-                        editor_.onOscillatorModeChanged(targetId, mode);
+                        if (auto* controller = editor_.getOscillatorPanelController())
+                            controller->oscillatorModeChanged(targetId, mode);
                     }
 
                     // Update visibility if provided
@@ -172,7 +173,8 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
                     {
                         bool isVisible = visible != 0;
                         osc.setVisible(isVisible);
-                        editor_.onOscillatorVisibilityChanged(targetId, isVisible);
+                        if (auto* controller = editor_.getOscillatorPanelController())
+                            controller->oscillatorVisibilityChanged(targetId, isVisible);
                     }
 
                     found = true;

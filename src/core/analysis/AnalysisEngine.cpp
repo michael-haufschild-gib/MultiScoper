@@ -11,6 +11,10 @@ namespace oscil
 
 AnalysisEngine::AnalysisEngine()
 {
+    // Pre-allocate scratch buffers to avoid allocation in prepare()
+    // which may be called from audio thread in some hosts
+    midBuffer_.resize(kDefaultBufferSize);
+    sideBuffer_.resize(kDefaultBufferSize);
     reset();
 }
 
@@ -52,6 +56,17 @@ void AnalysisEngine::resetAccumulated()
     metrics_.side.decayTimeMs = 0.0f;
 }
 
+void AnalysisEngine::prepare(double /*sampleRate*/, int samplesPerBlock)
+{
+    // REAL-TIME SAFETY: This method may be called from audio thread in some hosts
+    // (Pro Tools, Reaper). We NEVER allocate here - buffers are pre-allocated in
+    // constructor to kDefaultBufferSize (8192) which exceeds all standard DAW block sizes.
+    //
+    // If samplesPerBlock > kDefaultBufferSize, process() will safely skip Mid/Side
+    // analysis rather than risk audio dropouts from allocation.
+    (void) samplesPerBlock;  // Intentionally unused - allocation-free implementation
+}
+
 void AnalysisEngine::process(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
     int numSamples = buffer.getNumSamples();
@@ -68,9 +83,16 @@ void AnalysisEngine::process(const juce::AudioBuffer<float>& buffer, double samp
         processChannel(buffer.getReadPointer(1), numSamples, metrics_.right, rightTransient_, rightState_, sampleRate);
         
         // Mid/Side Calculation
-        // Resize scratch buffers if needed
-        if (midBuffer_.size() < static_cast<size_t>(numSamples)) midBuffer_.resize(static_cast<size_t>(numSamples));
-        if (sideBuffer_.size() < static_cast<size_t>(numSamples)) sideBuffer_.resize(static_cast<size_t>(numSamples));
+        // Ensure we don't overrun buffers if block size is unexpectedly larger than prepared
+        // In production, prepare() should cover the max block size, but we check for safety
+        size_t requiredSize = static_cast<size_t>(numSamples);
+        if (midBuffer_.size() < requiredSize || sideBuffer_.size() < requiredSize)
+        {
+            // This should not happen if prepare() was called correctly
+            // Log in debug builds but don't allocate/log on audio thread in release
+            jassertfalse;
+            return;
+        }
         
         const float* l = buffer.getReadPointer(0);
         const float* r = buffer.getReadPointer(1);
@@ -90,34 +112,42 @@ void AnalysisEngine::process(const juce::AudioBuffer<float>& buffer, double samp
     }
 }
 
-void AnalysisEngine::processChannel(const float* samples, int numSamples, ChannelMetrics& metrics, 
+void AnalysisEngine::processChannel(const float* samples, int numSamples, ChannelMetrics& metrics,
                                    TransientDetector& transientDetector, AnalysisChannelState& state, double sampleRate)
 {
+    // Precondition: caller must ensure numSamples > 0
+    // This is verified by process() which returns early if numSamples == 0
+    // Runtime guard in case precondition is violated (prevents division by zero in release builds)
+    if (numSamples <= 0)
+        return;
+    jassert(numSamples > 0);
+
     // RMS
     float rmsLinear = 0.0f;
     // Use JUCE for SIMD RMS if available, or simple loop
     // FloatVectorOperations doesn't have RMS, only add/mul
     // Need to square, sum, sqrt
     // Manual loop is fine for now, or vDSP on macOS
-    
+
     float sumSq = 0.0f;
     float sum = 0.0f;
     float peakLinear = 0.0f;
-    
+
     // Range finding for peak
     juce::Range<float> range = juce::FloatVectorOperations::findMinAndMax(samples, numSamples);
     peakLinear = std::max(std::abs(range.getStart()), std::abs(range.getEnd()));
-    
+
     for (int i = 0; i < numSamples; ++i)
     {
         float s = samples[i];
         sumSq += s * s;
         sum += s;
     }
-    
+
+    // Division is safe: numSamples > 0 is guaranteed by precondition check above
     rmsLinear = std::sqrt(sumSq / static_cast<float>(numSamples));
-    
-    // DC Offset
+
+    // DC Offset (same safety as above)
     float dc = sum / static_cast<float>(numSamples);
     
     // Apply Smoothing

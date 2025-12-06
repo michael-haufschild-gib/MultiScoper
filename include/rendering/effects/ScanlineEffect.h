@@ -39,6 +39,7 @@ public:
         float deltaTime
     ) override;
 
+    void configure(const VisualConfiguration& config) override { settings_ = config.scanlines; }
     void setSettings(const ScanlineSettings& settings) { settings_ = settings; }
     [[nodiscard]] const ScanlineSettings& getSettings() const { return settings_; }
 
@@ -49,7 +50,8 @@ private:
     GLint textureLoc_ = -1;
     GLint intensityLoc_ = -1;
     GLint densityLoc_ = -1;
-    GLint resolutionLoc_ = -1;
+    GLint widthLoc_ = -1;
+    GLint heightLoc_ = -1;
     GLint phosphorGlowLoc_ = -1;
 
     bool compiled_ = false;

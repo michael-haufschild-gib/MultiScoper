@@ -150,8 +150,23 @@ struct Matrix4
         float ry = fz * upX - fx * upZ;
         float rz = fx * upY - fy * upX;
 
-        // Normalize right
+        // Normalize right - handle gimbal lock when forward is parallel to up
         float rLen = std::sqrt(rx*rx + ry*ry + rz*rz);
+        constexpr float kEpsilon = 1e-6f;
+        if (rLen < kEpsilon)
+        {
+            // Forward is parallel to up - use alternative up vector
+            // If original up was Y-axis aligned, try Z-axis
+            float altUpX = 0, altUpY = 0, altUpZ = 1;
+            if (std::abs(upZ) > 0.9f)  // Original up was Z-axis aligned
+            {
+                altUpX = 0; altUpY = 1; altUpZ = 0;  // Use Y-axis instead
+            }
+            rx = fy * altUpZ - fz * altUpY;
+            ry = fz * altUpX - fx * altUpZ;
+            rz = fx * altUpY - fy * altUpX;
+            rLen = std::sqrt(rx*rx + ry*ry + rz*rz);
+        }
         if (rLen > 0) { rx /= rLen; ry /= rLen; rz /= rLen; }
 
         // Recalculate up = right x forward
@@ -338,6 +353,8 @@ private:
     // Animation
     float animationSpeed_ = 5.0f;
     bool isAnimating_ = false;
+    Vec3 animStartPosition_;
+    Vec3 animStartTarget_;
     Vec3 animTargetPosition_;
     Vec3 animTargetTarget_;
     float animDuration_ = 0.0f;

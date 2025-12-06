@@ -71,7 +71,7 @@ bool VignetteEffect::compile(juce::OpenGLContext& context)
     textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     intensityLoc_ = shader_->getUniformIDFromName("intensity");
     softnessLoc_ = shader_->getUniformIDFromName("softness");
-    colorLoc_ = shader_->getUniformIDFromName("vignetteColor");
+    colorLoc_ = shader_->getUniformIDFromName("colour");
 
     if (textureLoc_ < 0 || intensityLoc_ < 0 || softnessLoc_ < 0 || colorLoc_ < 0)
     {

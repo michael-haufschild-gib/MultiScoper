@@ -38,7 +38,7 @@ public:
     PaneBody(OscilPluginProcessor& processor,
              IThemeService& themeService,
              ShaderRegistry& shaderRegistry);
-    ~PaneBody() override = default;
+    ~PaneBody() override;
 
     // Component overrides
     void paint(juce::Graphics& g) override;
@@ -65,6 +65,7 @@ public:
     void setHoldDisplay(bool enabled);
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
+    void setSampleRate(int sampleRate);
 
     // Highlight oscillator
     void highlightOscillator(const OscillatorId& oscillatorId);

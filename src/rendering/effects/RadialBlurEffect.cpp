@@ -38,7 +38,8 @@ static const char* radialBlurFragmentShader = R"(
         {
             // Calculate zoom factor for this sample
             // Start at 1.0 (original) and increase by amount per step
-            float zoomStep = float(i) / float(samples - 1);
+            // Guard against division by zero when samples <= 1
+            float zoomStep = samples > 1 ? float(i) / float(samples - 1) : 0.0;
             float zoom = 1.0 + amount * zoomStep;
 
             // Calculate sample position (zooming from center)

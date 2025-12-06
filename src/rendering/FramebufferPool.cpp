@@ -17,8 +17,8 @@ FramebufferPool::FramebufferPool()
 
 FramebufferPool::~FramebufferPool()
 {
-    // Note: shutdown() should be called explicitly before destruction
-    // while OpenGL context is still active
+    // Debug assertion to catch missing shutdown() calls
+    jassert(!initialized_ && "FramebufferPool::shutdown() must be called before destruction");
 }
 
 std::unique_ptr<Framebuffer> FramebufferPool::createFramebuffer()

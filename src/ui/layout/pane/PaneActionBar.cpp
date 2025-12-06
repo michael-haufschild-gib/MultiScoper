@@ -52,15 +52,17 @@ void PaneActionBar::resized()
     auto bounds = getLocalBounds();
     int x = 0;
 
+    int yPos = juce::jmax(0, (bounds.getHeight() - BUTTON_SIZE) / 2);
+
     if (holdButton_)
     {
-        holdButton_->setBounds(x, (bounds.getHeight() - BUTTON_SIZE) / 2, BUTTON_SIZE, BUTTON_SIZE);
+        holdButton_->setBounds(x, yPos, BUTTON_SIZE, BUTTON_SIZE);
         x += BUTTON_SIZE + BUTTON_SPACING;
     }
 
     if (statsButton_)
     {
-        statsButton_->setBounds(x, (bounds.getHeight() - BUTTON_SIZE) / 2, BUTTON_SIZE, BUTTON_SIZE);
+        statsButton_->setBounds(x, yPos, BUTTON_SIZE, BUTTON_SIZE);
         x += BUTTON_SIZE + BUTTON_SPACING;
     }
 

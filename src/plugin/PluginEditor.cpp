@@ -56,8 +56,6 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     addAndMakeVisible(*viewport_);
 
     sidebar_ = std::make_unique<SidebarComponent>(serviceContext_);
-    sidebarAdapter_ = std::make_unique<SidebarListenerAdapter>(*this);
-    sidebar_->addListener(sidebarAdapter_.get());
     addAndMakeVisible(*sidebar_);
 
     statusBar_ = std::make_unique<StatusBarComponent>(processor_.getThemeService());
@@ -84,74 +82,30 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         optionsSection->setAutoAdjustQuality(qualityConfig.autoAdjustQuality);
     }
 
-    // Initialize Display Settings Manager (Controller will manage the components list)
-    // We pass a reference to the controller's vector, which is initially empty
-    // The controller populates it, and DisplaySettingsManager sees the updates
-    // NOTE: DisplaySettingsManager holds a reference to the vector. We must ensure
-    // controller is created before passing its vector.
-    
-    // Create Controller
-    // We need to create it first to get reference to its vector, but it needs dependencies
-    // Circular dependency: Controller needs DisplaySettingsManager, Manager needs Controller's vector.
-    // Solution: Create Manager with temporary/empty vector (or update Manager to accept vector later)
-    // Current Manager takes `const std::vector<std::unique_ptr<PaneComponent>>&` in constructor.
-    // We will construct the controller, then construct the manager using controller's vector.
-    // BUT Controller needs Manager for global settings.
-    // We'll construct Manager first with a dummy/local vector, or refactor Manager.
-    // Refactoring Manager is out of scope for this step.
-    // Wait, `OscillatorPanelController` stores the vector.
-    // Let's initialize `oscillatorPanelController_` in the member initializer list if possible,
-    // or use `std::unique_ptr` and construct in body.
-    
-    // Correct order:
-    // 1. Construct Controller (owns the vector)
-    // 2. Construct Manager (references the vector)
-    // 3. Pass Manager to Controller (via setter or init method)
-    
-    // But Controller needs Manager in constructor? 
-    // My `OscillatorPanelController` constructor takes `DisplaySettingsManager&`.
-    // This implies Manager must exist first.
-    // But Manager needs the vector from Controller.
-    
-    // Workaround: `PluginEditor` owns the vector *conceptually* but delegates management?
-    // No, Controller owns it.
-    // We can make `DisplaySettingsManager` take a function or interface to get components.
-    // Or we create `DisplaySettingsManager` with a reference to a vector we declare in `PluginEditor` *before* transferring ownership?
-    // No, `OscillatorPanelController` has `std::vector<...> paneComponents_`.
-    
-    // Let's look at `DisplaySettingsManager.h`. It likely stores `const std::vector...& panes_`.
-    // We can't change that easily without editing it.
-    // We will add `getPaneComponents()` to `OscillatorPanelController`.
-    // We will delay `OscillatorPanelController::initialize()` until after Manager is created.
-    // But we can't construct Controller without Manager reference if it's in constructor.
-    
-    // Let's create a placeholder vector in PluginEditor that effectively is unused, 
-    // or realize that `DisplaySettingsManager` might need to be owned by `OscillatorPanelController` too?
-    // No, DisplaySettingsManager handles global settings for *all* panes.
-    
-    // Simplest fix: Controller takes Manager in `initialize()`, not constructor.
-    // I defined `OscillatorPanelController(..., DisplaySettingsManager&)` in the previous step.
-    // I should change that to be passed in `initialize` or `reapplyGlobalSettings`.
-    // Actually, let's just pass it in constructor.
-    // BUT Manager needs vector.
-    
-    // Okay, `PluginEditor` will *not* own the vector anymore. `OscillatorPanelController` does.
-    // So we can't pass a reference to a member of `PluginEditor` to `DisplaySettingsManager`.
-    // Unless... `OscillatorPanelController` exposes the vector.
-    // We create `oscillatorPanelController_` first.
-    // Then create `displaySettingsManager_` passing `oscillatorPanelController_->getPaneComponents()`.
-    // Then call `oscillatorPanelController_->initialize(...)` passing `*displaySettingsManager_`.
-    
-    // This requires `OscillatorPanelController` NOT to take `DisplaySettingsManager` in constructor.
-    // I will update `OscillatorPanelController` to take it in `initialize`.
-    
+    // Initialize Controller and DisplaySettingsManager with two-phase initialization to resolve
+    // circular dependency: Controller owns the pane vector, Manager needs to reference it,
+    // but Controller needs Manager for applying settings. Solution: Controller constructed first,
+    // Manager constructed with Controller's vector reference, then Manager passed to initialize().
     oscillatorPanelController_ = std::make_unique<OscillatorPanelController>(
         processor_, serviceContext_, *contentComponent_, *renderCoordinator_
     );
     
-    displaySettingsManager_ = std::make_unique<DisplaySettingsManager>(oscillatorPanelController_->getPaneComponents());
+    // Create DisplaySettingsManager with a callback that returns snapshot of current panes.
+    // This prevents iterator invalidation if pane vector changes during settings updates.
+    displaySettingsManager_ = std::make_unique<DisplaySettingsManager>([this]() {
+        std::vector<PaneComponent*> snapshot;
+        for (auto& pane : oscillatorPanelController_->getPaneComponents())
+        {
+            if (pane)
+                snapshot.push_back(pane.get());
+        }
+        return snapshot;
+    });
     
     oscillatorPanelController_->initialize(sidebar_.get(), dialogManager_.get(), displaySettingsManager_.get());
+
+    // Register Controller as Sidebar Listener (Handles Oscillator Events)
+    sidebar_->addListener(oscillatorPanelController_.get());
 
     // CRITICAL: Wire layout callback so panes get positioned after async refreshPanels()
     oscillatorPanelController_->setLayoutNeededCallback([this]() {
@@ -175,9 +129,6 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         timingSection->setHostSyncEnabled(timingConfig.hostSyncEnabled);
         timingSection->setHostBPM(timingConfig.hostBPM);
     }
-
-    // Listen to state
-    processor_.getState().addListener(this);
 
     // Create default oscillator if needed
     oscillatorPanelController_->createDefaultOscillatorIfNeeded();
@@ -211,16 +162,14 @@ OscilPluginEditor::~OscilPluginEditor()
     if (testServer_)
         testServer_->stop();
 
-    if (sidebar_ && sidebarAdapter_)
-        sidebar_->removeListener(sidebarAdapter_.get());
+    if (sidebar_ && oscillatorPanelController_)
+        sidebar_->removeListener(oscillatorPanelController_.get());
 
     if (dialogManager_ && configPopupAdapter_)
         dialogManager_->removeConfigPopupListener(configPopupAdapter_.get());
 
     if (timingEngineAdapter_)
         processor_.getTimingEngine().removeListener(timingEngineAdapter_.get());
-
-    processor_.getState().removeListener(this);
 }
 
 void OscilPluginEditor::parentHierarchyChanged()
@@ -274,10 +223,42 @@ void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillato
 
 void OscilPluginEditor::onSourcesChanged()
 {
+    auto sources = processor_.getInstanceRegistry().getAllSources();
+
     if (sidebar_)
     {
-        auto sources = processor_.getInstanceRegistry().getAllSources();
         sidebar_->refreshSourceList(sources);
+    }
+
+    // Update oscillators that have invalid sourceIds (created before sources were registered)
+    if (!sources.empty())
+    {
+        auto& state = processor_.getState();
+        auto oscillators = state.getOscillators();
+        bool updated = false;
+
+        for (auto& osc : oscillators)
+        {
+            if (!osc.getSourceId().isValid())
+            {
+                // Assign the first available source (typically the processor's own source)
+                // Prefer processor's own source if available
+                SourceId sourceToAssign = sources[0].sourceId;
+                if (processor_.getSourceId().isValid())
+                {
+                    sourceToAssign = processor_.getSourceId();
+                }
+                osc.setSourceId(sourceToAssign);
+                state.updateOscillator(osc);
+                updated = true;
+            }
+        }
+
+        // Refresh panels if any oscillators were updated
+        if (updated && oscillatorPanelController_)
+        {
+            oscillatorPanelController_->refreshPanels();
+        }
     }
 }
 
@@ -326,234 +307,9 @@ void OscilPluginEditor::onSidebarCollapsedStateChanged(bool collapsed)
     resized();
 }
 
-void OscilPluginEditor::onOscillatorSelected(const OscillatorId& oscillatorId)
-{
-    highlightOscillator(oscillatorId);
-}
-
-void OscilPluginEditor::onOscillatorConfigRequested(const OscillatorId& oscillatorId)
-{
-    // Logic still mostly here for now, but could be moved to controller
-    // The DialogManager needs the editor as parent, so we keep this wiring here
-    auto& state = processor_.getState();
-    auto oscillators = state.getOscillators();
-
-    for (const auto& osc : oscillators)
-    {
-        if (osc.getId() == oscillatorId)
-        {
-            auto& layoutManager = state.getLayoutManager();
-            auto panes = layoutManager.getPanes();
-            std::vector<std::pair<PaneId, juce::String>> paneList;
-            for (const auto& pane : panes)
-            {
-                paneList.emplace_back(pane.getId(), pane.getName());
-            }
-
-            if (dialogManager_)
-                dialogManager_->showConfigPopup(osc, paneList, nullptr);
-            break;
-        }
-    }
-}
-
-void OscilPluginEditor::onOscillatorColorConfigRequested(const OscillatorId& oscillatorId)
-{
-    if (!dialogManager_) return;
-
-    auto& state = processor_.getState();
-    auto oscillators = state.getOscillators();
-
-    for (const auto& osc : oscillators)
-    {
-        if (osc.getId() == oscillatorId)
-        {
-            dialogManager_->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
-                auto& oscilState = processor_.getState();
-                auto oscList = oscilState.getOscillators();
-                for (auto& o : oscList)
-                {
-                    if (o.getId() == oscillatorId)
-                    {
-                        o.setColour(color);
-                        oscilState.updateOscillator(o);
-                        break;
-                    }
-                }
-            });
-            break;
-        }
-    }
-}
-
-void OscilPluginEditor::onOscillatorConfigChanged(const OscillatorId& oscillatorId, const Oscillator& updated)
-{
-    // This is complex logic involving source changes
-    // We can delegate source update to controller
-    // But moving pane/updating state is also controller logic
-    // Ideally Controller handles ALL of this.
-    
-    // For now, we'll update state directly and let Controller listener handle refresh
-    // BUT if source changed, we need specific handling
-    
-    auto& state = processor_.getState();
-    auto currentOscillators = state.getOscillators();
-    for (const auto& existing : currentOscillators)
-    {
-        if (existing.getId() == oscillatorId)
-        {
-            if (existing.getSourceId() != updated.getSourceId())
-            {
-                updateOscillatorSource(oscillatorId, updated.getSourceId());
-            }
-            break;
-        }
-    }
-    
-    state.updateOscillator(updated);
-    // Controller listener handles UI refresh
-}
-
-void OscilPluginEditor::onOscillatorDeleteRequested(const OscillatorId& oscillatorId)
-{
-    processor_.getState().removeOscillator(oscillatorId);
-}
-
 void OscilPluginEditor::onConfigPopupClosed()
 {
     if (dialogManager_) dialogManager_->closeConfigPopup();
-}
-
-void OscilPluginEditor::onAddOscillatorDialogRequested()
-{
-    if (!dialogManager_) return;
-    auto sources = processor_.getInstanceRegistry().getAllSources();
-    auto& layoutManager = processor_.getState().getLayoutManager();
-    auto panes = layoutManager.getPanes();
-
-    dialogManager_->showAddOscillatorDialog(sources, panes, [this](const AddOscillatorDialog::Result& result) {
-        onAddOscillatorResult(result);
-    });
-}
-
-void OscilPluginEditor::onAddOscillatorResult(const AddOscillatorDialog::Result& result)
-{
-    auto& state = processor_.getState();
-    auto& layoutManager = state.getLayoutManager();
-    PaneId targetPaneId = result.paneId;
-
-    if (result.createNewPane)
-    {
-        Pane newPane;
-        newPane.setName("Pane " + juce::String(layoutManager.getPaneCount() + 1));
-        newPane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
-        layoutManager.addPane(newPane);
-        targetPaneId = newPane.getId();
-    }
-
-    Oscillator osc;
-    osc.setSourceId(result.sourceId);
-    osc.setPaneId(targetPaneId);
-    osc.setProcessingMode(ProcessingMode::FullStereo);
-    osc.setColour(result.color);
-    osc.setVisualPresetId(result.visualPresetId);
-    
-    if (result.name.isNotEmpty()) osc.setName(result.name);
-    else osc.setName("Oscillator " + juce::String(state.getOscillators().size() + 1));
-
-    // Ensure shader matches preset
-    auto preset = VisualConfiguration::getPreset(result.visualPresetId);
-    osc.setShaderId(shaderTypeToId(preset.shaderType));
-
-    state.addOscillator(osc);
-}
-
-void OscilPluginEditor::onOscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)
-{
-    auto& state = processor_.getState();
-    auto oscillators = state.getOscillators();
-    for (auto& osc : oscillators)
-    {
-        if (osc.getId() == oscillatorId)
-        {
-            osc.setProcessingMode(mode);
-            state.updateOscillator(osc);
-            break;
-        }
-    }
-}
-
-void OscilPluginEditor::onOscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible)
-{
-    auto& state = processor_.getState();
-    auto oscillators = state.getOscillators();
-    for (auto& osc : oscillators)
-    {
-        if (osc.getId() == oscillatorId)
-        {
-            osc.setVisible(visible);
-            state.updateOscillator(osc);
-            break;
-        }
-    }
-}
-
-void OscilPluginEditor::onOscillatorPaneSelectionRequested(const OscillatorId& oscillatorId)
-{
-    if (!dialogManager_) return;
-    pendingVisibilityOscillatorId_ = oscillatorId;
-    
-    auto& layoutManager = processor_.getState().getLayoutManager();
-    auto panes = layoutManager.getPanes();
-
-    dialogManager_->showSelectPaneDialog(panes, [this](const SelectPaneDialog::Result& result) {
-        auto& stateRef = processor_.getState();
-        auto& layoutMgr = stateRef.getLayoutManager();
-        PaneId targetPaneId = result.paneId;
-
-        if (result.createNewPane)
-        {
-            Pane newPane;
-            newPane.setName("Pane " + juce::String(layoutMgr.getPaneCount() + 1));
-            newPane.setOrderIndex(static_cast<int>(layoutMgr.getPaneCount()));
-            layoutMgr.addPane(newPane);
-            targetPaneId = newPane.getId();
-        }
-
-        auto oscList = stateRef.getOscillators();
-        for (auto& osc : oscList)
-        {
-            if (osc.getId() == pendingVisibilityOscillatorId_)
-            {
-                osc.setPaneId(targetPaneId);
-                osc.setVisible(true);
-                stateRef.updateOscillator(osc);
-                break;
-            }
-        }
-        pendingVisibilityOscillatorId_ = OscillatorId::invalid();
-    });
-}
-
-void OscilPluginEditor::updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId)
-{
-    // This needs to be explicit because it might involve buffer swapping not just state change
-    // Delegate to controller?
-    // Controller's updateOscillatorSource is private.
-    // But changing state triggers Listener in controller.
-    // So we just update state here.
-    
-    auto& state = processor_.getState();
-    auto oscillators = state.getOscillators();
-    for (auto& osc : oscillators)
-    {
-        if (osc.getId() == oscillatorId)
-        {
-            osc.setSourceId(newSourceId);
-            state.updateOscillator(osc);
-            break;
-        }
-    }
 }
 
 // Global Settings (delegated to Manager)
@@ -583,9 +339,9 @@ void OscilPluginEditor::setDisplaySamplesForAllPanes(int samples)
     if (displaySettingsManager_) displaySettingsManager_->setDisplaySamplesForAll(samples);
 }
 
-void OscilPluginEditor::highlightOscillator(const OscillatorId& oscillatorId)
+void OscilPluginEditor::setSampleRateForAllPanes(int sampleRate)
 {
-    if (displaySettingsManager_) displaySettingsManager_->highlightOscillator(oscillatorId);
+    if (displaySettingsManager_) displaySettingsManager_->setSampleRateForAll(sampleRate);
 }
 
 void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
@@ -608,39 +364,17 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
         oscillatorPanelController_->refreshPanels(); // Re-propagates GPU state
 }
 
-// ValueTree Listeners (Just pass-through or handled by Controller)
-// Actually, PluginEditor is still a listener.
-// But Controller is ALSO a listener.
-// We should remove redundant logic.
-
-void OscilPluginEditor::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) {}
-void OscilPluginEditor::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&) {}
-void OscilPluginEditor::valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree&, int) {}
-void OscilPluginEditor::valueTreeChildOrderChanged(juce::ValueTree&, int, int) {}
-void OscilPluginEditor::valueTreeParentChanged(juce::ValueTree&) {}
-
 // Test access
 
 const std::vector<std::unique_ptr<PaneComponent>>& OscilPluginEditor::getPaneComponents() const
-
 {
-
     return oscillatorPanelController_->getPaneComponents();
-
 }
-
-
 
 void OscilPluginEditor::refreshPanels()
-
 {
-
     if (oscillatorPanelController_)
-
         oscillatorPanelController_->refreshPanels();
-
 }
-
-
 
 } // namespace oscil

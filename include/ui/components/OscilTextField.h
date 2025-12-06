@@ -7,8 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -31,8 +30,7 @@ class OscilButton;
  * - Full keyboard accessibility
  * - APVTS support for Number variant
  */
-class OscilTextField : public juce::Component,
-                       public ThemeManagerListener,
+class OscilTextField : public ThemedComponent,
                        public TestIdSupport,
                        private juce::Timer
 {
@@ -100,9 +98,6 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
@@ -154,9 +149,6 @@ private:
     SpringAnimation focusSpring_;
     float focusAmount_ = 0.0f;
 
-    // Theme
-    ColorTheme theme_;
-    IThemeService& themeService_;
     juce::Font cachedErrorFont_;
 
     // Layout constants

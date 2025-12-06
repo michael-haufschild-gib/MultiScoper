@@ -205,7 +205,7 @@ public:
     // === Identity ===
     [[nodiscard]] SourceId getId() const noexcept { return id_; }
     [[nodiscard]] juce::String getDawTrackId() const noexcept { return dawTrackId_; }
-    void setDawTrackId(const juce::String& trackId) noexcept { dawTrackId_ = trackId; }
+    void setDawTrackId(const juce::String& trackId) { dawTrackId_ = trackId; }
 
     // === Ownership ===
     [[nodiscard]] InstanceId getOwningInstanceId() const noexcept { return owningInstanceId_; }
@@ -286,8 +286,14 @@ public:
 
     // === Timestamps ===
     [[nodiscard]] juce::Time getCreatedAt() const noexcept { return createdAt_; }
-    [[nodiscard]] juce::Time getLastHeartbeat() const noexcept { return lastHeartbeat_; }
-    void updateHeartbeat() noexcept { lastHeartbeat_ = juce::Time::getCurrentTime(); }
+    [[nodiscard]] juce::Time getLastHeartbeat() const noexcept
+    {
+        return juce::Time(lastHeartbeatMs_.load(std::memory_order_relaxed));
+    }
+    void updateHeartbeat() noexcept
+    {
+        lastHeartbeatMs_.store(juce::Time::currentTimeMillis(), std::memory_order_relaxed);
+    }
 
     // Schema version for migration
     static constexpr int CURRENT_SCHEMA_VERSION = 1;
@@ -313,7 +319,7 @@ private:
 
     // Timestamps
     juce::Time createdAt_;
-    juce::Time lastHeartbeat_;
+    std::atomic<int64_t> lastHeartbeatMs_{ 0 };  // Thread-safe heartbeat timestamp
     std::atomic<int64_t> lastAudioTimeMs_{ 0 };
 
     // Metrics

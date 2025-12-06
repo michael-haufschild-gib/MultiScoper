@@ -8,17 +8,13 @@ namespace oscil
 {
 
 OscilColorSwatches::OscilColorSwatches(IThemeService& themeService, const juce::String& testId)
-    : hoverSpring_(SpringPresets::stiff())
-    , themeService_(themeService)
-{
+    : ThemedComponent(themeService)
+    , hoverSpring_(SpringPresets::stiff())
+    {
     if (testId.isNotEmpty())
         setTestId(testId);
 
     setWantsKeyboardFocus(true);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
-
     hoverSpring_.position = 0.0f;
 }
 
@@ -29,7 +25,6 @@ void OscilColorSwatches::registerTestId()
 
 OscilColorSwatches::~OscilColorSwatches()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -172,7 +167,7 @@ void OscilColorSwatches::paint(juce::Graphics& g)
     if (hasFocus_ && focusedIndex_ >= 0 && focusedIndex_ < static_cast<int>(colors_.size()))
     {
         auto bounds = getSwatchBounds(focusedIndex_).toFloat();
-        g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
         g.drawRoundedRectangle(
             bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
             ComponentLayout::RADIUS_SM,
@@ -215,8 +210,8 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
     g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
 
     // Border
-    auto borderColour = isSelected ? theme_.controlActive
-                      : color.getBrightness() > 0.9f ? theme_.controlBorder
+    auto borderColour = isSelected ? getTheme().controlActive
+                      : color.getBrightness() > 0.9f ? getTheme().controlBorder
                       : color.darker(0.3f);
 
     g.setColour(borderColour);
@@ -392,12 +387,6 @@ void OscilColorSwatches::timerCallback()
     if (hoverSpring_.isSettled())
         stopTimer();
 
-    repaint();
-}
-
-void OscilColorSwatches::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
     repaint();
 }
 

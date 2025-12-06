@@ -9,15 +9,12 @@ namespace oscil
 {
 
 OscilSlider::OscilSlider(IThemeService& themeService)
-    : thumbScale_(SpringPresets::snappy())
+    : ThemedComponent(themeService)
+    , thumbScale_(SpringPresets::snappy())
     , snapPulse_(SpringPresets::bouncy())
-    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     thumbScale_.position = 1.0f;
     thumbScale_.target = 1.0f;
@@ -74,7 +71,6 @@ void OscilSlider::registerTestId()
 
 OscilSlider::~OscilSlider()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -259,7 +255,7 @@ void OscilSlider::paintHorizontal(juce::Graphics& g)
     if (label_.isNotEmpty())
     {
         labelHeight = 14.0f;
-        g.setColour(theme_.textSecondary.withAlpha(opacity));
+        g.setColour(getTheme().textSecondary.withAlpha(opacity));
         g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
         g.drawText(label_, bounds.withHeight(labelHeight), juce::Justification::centredLeft);
     }
@@ -297,7 +293,7 @@ void OscilSlider::paintVertical(juce::Graphics& g)
     if (label_.isNotEmpty())
     {
         labelHeight = 14.0f;
-        g.setColour(theme_.textSecondary.withAlpha(opacity));
+        g.setColour(getTheme().textSecondary.withAlpha(opacity));
         g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
         g.drawText(label_, bounds.removeFromBottom(labelHeight), juce::Justification::centred);
     }
@@ -319,7 +315,7 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Background track
-    g.setColour(theme_.backgroundSecondary.withAlpha(opacity));
+    g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
     g.fillRoundedRectangle(bounds, TRACK_HEIGHT / 2.0f);
 
     // Filled portion
@@ -358,7 +354,7 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
         }
     }
 
-    g.setColour(theme_.controlActive.withAlpha(opacity));
+    g.setColour(getTheme().controlActive.withAlpha(opacity));
     g.fillRoundedRectangle(filledBounds, TRACK_HEIGHT / 2.0f);
 }
 
@@ -393,12 +389,12 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
     g.fillEllipse(thumbBounds.translated(0, 1));
 
     // Thumb body
-    auto thumbColour = isDragging_ ? theme_.controlActive : juce::Colours::white;
+    auto thumbColour = isDragging_ ? getTheme().controlActive : juce::Colours::white;
     g.setColour(thumbColour.withAlpha(opacity));
     g.fillEllipse(thumbBounds);
 
     // Thumb border
-    g.setColour(theme_.controlBorder.withAlpha(opacity * 0.5f));
+    g.setColour(getTheme().controlBorder.withAlpha(opacity * 0.5f));
     g.drawEllipse(thumbBounds.reduced(0.5f), 1.0f);
 }
 
@@ -431,21 +427,21 @@ void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool
         getLocalBounds().toFloat().expanded(50, 30));
 
     // Background
-    g.setColour(theme_.backgroundPane);
+    g.setColour(getTheme().backgroundPane);
     g.fillRoundedRectangle(tooltipBounds, ComponentLayout::RADIUS_SM);
 
-    g.setColour(theme_.controlBorder.withAlpha(0.5f));
+    g.setColour(getTheme().controlBorder.withAlpha(0.5f));
     g.drawRoundedRectangle(tooltipBounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
 
     // Text
-    g.setColour(theme_.textPrimary);
+    g.setColour(getTheme().textPrimary);
     g.setFont(font);
     g.drawText(valueText, tooltipBounds, juce::Justification::centred);
 }
 
 void OscilSlider::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawRoundedRectangle(
         bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
         ComponentLayout::RADIUS_SM + ComponentLayout::FOCUS_RING_OFFSET,
@@ -561,13 +557,13 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     float proportion;
     if (isVertical)
     {
-        float trackHeight = static_cast<float>(bounds.getHeight()) - THUMB_SIZE;
+        float trackHeight = std::max(1.0f, static_cast<float>(bounds.getHeight()) - THUMB_SIZE);
         float relY = static_cast<float>(bounds.getBottom()) - THUMB_SIZE / 2 - static_cast<float>(e.getPosition().y);
         proportion = relY / trackHeight;
     }
     else
     {
-        float trackWidth = static_cast<float>(bounds.getWidth()) - THUMB_SIZE;
+        float trackWidth = std::max(1.0f, static_cast<float>(bounds.getWidth()) - THUMB_SIZE);
         float relX = static_cast<float>(e.getPosition().x) - THUMB_SIZE / 2;
         proportion = relX / trackWidth;
     }
@@ -838,20 +834,14 @@ float OscilSlider::getThumbPosition(bool isRangeEnd) const
 
     if (isVertical)
     {
-        float trackHeight = bounds.getHeight() - THUMB_SIZE;
+        float trackHeight = std::max(1.0f, bounds.getHeight() - THUMB_SIZE);
         return bounds.getBottom() - THUMB_SIZE / 2 - trackHeight * proportion;
     }
     else
     {
-        float trackWidth = bounds.getWidth() - THUMB_SIZE;
+        float trackWidth = std::max(1.0f, bounds.getWidth() - THUMB_SIZE);
         return THUMB_SIZE / 2 + trackWidth * proportion;
     }
-}
-
-void OscilSlider::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
 }
 
 // Custom accessibility handler with descriptive text for screen readers

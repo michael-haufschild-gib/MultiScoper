@@ -66,33 +66,32 @@ void StatsOverlay::paint(juce::Graphics& g)
 {
     // Call base to paint background
     PaneOverlay::paint(g);
-    
-    // We rely on child components for content, but we need to manage their opacity
+
     float opacity = getCurrentOpacity();
-    
-    // Hack: JUCE components don't support setOpacity directly in a way that affects children cleanly without LookAndFeel.
-    // But since we use a custom paint for PaneOverlay, we can try to control children or just set their alpha.
-    // TextEditor supports colour setting.
-    
     if (opacity <= 0.0f)
-    {
-        statsDisplay_->setVisible(false);
-        resetButton_->setVisible(false);
         return;
-    }
-    
-    if (!statsDisplay_->isVisible())
+
+    // Update child visibility outside of paint to avoid layout thrashing
+    // Only update when visibility state actually changes
+    bool shouldBeVisible = opacity > 0.0f;
+    if (statsDisplay_ && statsDisplay_->isVisible() != shouldBeVisible)
     {
-        statsDisplay_->setVisible(true);
-        resetButton_->setVisible(true);
+        statsDisplay_->setVisible(shouldBeVisible);
     }
-    
+    if (resetButton_ && resetButton_->isVisible() != shouldBeVisible)
+    {
+        resetButton_->setVisible(shouldBeVisible);
+    }
+
     const auto& theme = themeService_.getCurrentTheme();
-    
-    // Update text colors with opacity
-    statsDisplay_->setColour(juce::TextEditor::textColourId, theme.textPrimary.withAlpha(opacity));
-    // Font: Monospace. Use simple font to avoid headless issues
-    statsDisplay_->setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
+
+    // Update text colors with opacity (this doesn't trigger layout)
+    if (statsDisplay_)
+    {
+        statsDisplay_->setColour(juce::TextEditor::textColourId, theme.textPrimary.withAlpha(opacity));
+        // Font: Monospace for aligned table display
+        statsDisplay_->setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
+    }
 }
 
 juce::Rectangle<int> StatsOverlay::getPreferredContentSize() const

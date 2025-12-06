@@ -11,15 +11,12 @@ static constexpr float kTabFontSize = 13.0f;
 static constexpr float kBadgeFontSize = 10.0f;
 
 OscilTabs::OscilTabs(IThemeService& themeService)
-    : indicatorXSpring_(SpringPresets::snappy())
+    : ThemedComponent(themeService)
+    , indicatorXSpring_(SpringPresets::snappy())
     , indicatorWidthSpring_(SpringPresets::snappy())
     , hoverSpring_(SpringPresets::stiff())
-    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     indicatorXSpring_.position = 0.0f;
     indicatorWidthSpring_.position = 0.0f;
@@ -46,7 +43,6 @@ void OscilTabs::registerTestId()
 
 OscilTabs::~OscilTabs()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -347,7 +343,7 @@ void OscilTabs::paint(juce::Graphics& g)
     // Background line for default variant
     if (variant_ == Variant::Default && orientation_ == Orientation::Horizontal)
     {
-        g.setColour(theme_.controlBorder.withAlpha(0.3f));
+        g.setColour(getTheme().controlBorder.withAlpha(0.3f));
         g.fillRect(0, bounds.getHeight() - 1, bounds.getWidth(), 1);
     }
 
@@ -365,7 +361,7 @@ void OscilTabs::paint(juce::Graphics& g)
     if (hasFocus_)
     {
         auto selectedBounds = getTabBounds(selectedIndex_).toFloat();
-        g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
         g.drawRoundedRectangle(
             selectedBounds.reduced(-ComponentLayout::FOCUS_RING_OFFSET),
             ComponentLayout::RADIUS_SM,
@@ -384,7 +380,7 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     // Hover background for pills variant
     if (variant_ == Variant::Pills && isHovered && !isSelected && tab.enabled)
     {
-        g.setColour(theme_.backgroundSecondary.withAlpha(0.5f));
+        g.setColour(getTheme().backgroundSecondary.withAlpha(0.5f));
         g.fillRoundedRectangle(bounds.reduced(2).toFloat(), ComponentLayout::RADIUS_SM);
     }
 
@@ -421,9 +417,9 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     }
 
     // Label
-    auto textColour = isSelected ? theme_.controlActive
-                    : isHovered && tab.enabled ? theme_.textPrimary
-                    : theme_.textSecondary;
+    auto textColour = isSelected ? getTheme().controlActive
+                    : isHovered && tab.enabled ? getTheme().textPrimary
+                    : getTheme().textSecondary;
 
     g.setColour(textColour.withAlpha(opacity));
     g.setFont(font);
@@ -452,7 +448,7 @@ void OscilTabs::paintIndicator(juce::Graphics& g)
     {
         case Variant::Default:
             // Underline indicator
-            g.setColour(theme_.controlActive);
+            g.setColour(getTheme().controlActive);
             if (orientation_ == Orientation::Horizontal)
             {
                 g.fillRoundedRectangle(
@@ -477,15 +473,15 @@ void OscilTabs::paintIndicator(juce::Graphics& g)
 
         case Variant::Pills:
             // Filled background
-            g.setColour(theme_.controlActive.withAlpha(0.15f));
+            g.setColour(getTheme().controlActive.withAlpha(0.15f));
             g.fillRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM);
-            g.setColour(theme_.controlActive);
+            g.setColour(getTheme().controlActive);
             g.drawRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM, 1.0f);
             break;
 
         case Variant::Bordered:
             // Border around tab
-            g.setColour(theme_.controlBorder);
+            g.setColour(getTheme().controlBorder);
             g.drawRoundedRectangle(indicatorBounds.reduced(1), ComponentLayout::RADIUS_SM, 1.0f);
             break;
     }
@@ -493,7 +489,7 @@ void OscilTabs::paintIndicator(juce::Graphics& g)
 
 void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int count)
 {
-    g.setColour(theme_.statusError);
+    g.setColour(getTheme().statusError);
     g.fillEllipse(bounds.toFloat());
 
     g.setColour(juce::Colours::white);
@@ -721,12 +717,6 @@ void OscilTabs::updateAnimations()
     indicatorXSpring_.update(dt);
     indicatorWidthSpring_.update(dt);
     hoverSpring_.update(dt);
-}
-
-void OscilTabs::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
 }
 
 std::unique_ptr<juce::AccessibilityHandler> OscilTabs::createAccessibilityHandler()

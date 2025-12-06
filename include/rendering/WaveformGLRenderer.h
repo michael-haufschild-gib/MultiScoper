@@ -177,6 +177,10 @@ private:
     bool useRenderEngine_ = true;  // Enable by default
     std::chrono::steady_clock::time_point lastFrameTime_;
 
+    // Per-instance resize tracking (not static - each instance needs its own)
+    int lastResizeWidth_ = 0;
+    int lastResizeHeight_ = 0;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformGLRenderer)
 };
 

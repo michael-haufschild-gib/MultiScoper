@@ -90,6 +90,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleSystem.cpp
 
     # UI (components)
+    ${CMAKE_SOURCE_DIR}/src/ui/components/ThemedComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButton.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextField.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilToggle.cpp
@@ -142,6 +143,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/layout/SidebarComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/TimingSidebarSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/OptionsSection.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/OscillatorSidebarSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/LayoutCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/SourceCoordinator.cpp
 

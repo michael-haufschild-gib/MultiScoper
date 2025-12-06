@@ -49,9 +49,10 @@ SourceId InstanceRegistry::registerInstance(
     double sampleRate,
     std::shared_ptr<AnalysisEngine> analysisEngine)
 {
-    // Registry mutations should happen on message thread or during initialization
-    // Avoid calling from audio thread due to locks and allocation.
-    // We use locks to ensure safety if called from audio thread (e.g. prepareToPlay).
+    // Registry mutations should happen on message thread or during initialization.
+    // NEVER call from audio thread - uses blocking locks and heap allocation.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     SourceId sourceId;
     bool shouldNotify = false;
@@ -121,6 +122,10 @@ SourceId InstanceRegistry::registerInstance(
 
 void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
 {
+    // NEVER call from audio thread - uses blocking locks.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     bool shouldNotify = false;
 
     {
@@ -183,6 +188,10 @@ std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId&
 
 void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String& name, int channelCount, double sampleRate)
 {
+    // NEVER call from audio thread - uses blocking locks.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     bool shouldNotify = false;
 
     {

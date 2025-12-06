@@ -3,6 +3,7 @@
 */
 
 #include "rendering/shaders/GradientFillShader.h"
+#include "BinaryData.h"
 #include <cmath>
 
 namespace oscil
@@ -10,57 +11,6 @@ namespace oscil
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
-
-static const char* fillVertexShader = R"(
-    #version 330 core
-    in vec2 position;
-    in float vParam; // 0 at baseline, 1 at waveform
-    in float tParam; // 0 to 1 along wave
-
-    uniform mat4 projection;
-
-    out float vV;
-
-    void main()
-    {
-        gl_Position = projection * vec4(position, 0.0, 1.0);
-        vV = vParam;
-    }
-)";
-
-static const char* fillFragmentShader = R"(
-    #version 330 core
-    in float vV;
-
-    uniform vec4 baseColor;
-    uniform float opacity;
-
-    out vec4 fragColor;
-
-    // Convert sRGB to linear color space
-    // Input colors from juce::Colour are in sRGB, but we need linear for correct
-    // blending and tonemapping in the rendering pipeline
-    vec3 sRGBToLinear(vec3 srgb) {
-        return pow(srgb, vec3(2.2));
-    }
-
-    void main()
-    {
-        // Convert sRGB input to linear for correct rendering
-        vec3 linearColor = sRGBToLinear(baseColor.rgb);
-
-        // Gradient from linearColor (at top) to transparent (at bottom)
-        vec4 topColor = vec4(linearColor, baseColor.a);
-        vec4 bottomColor = vec4(linearColor, 0.0);
-
-        // Apply opacity
-        topColor.a *= opacity;
-        bottomColor.a *= opacity;
-
-        // Simple linear interpolation (in linear space)
-        fragColor = mix(bottomColor, topColor, vV);
-    }
-)";
 
 struct GradientFillShader::GLResources
 {
@@ -91,7 +41,10 @@ bool GradientFillShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
     
-    if (!gl_->program->addVertexShader(fillVertexShader) || !gl_->program->addFragmentShader(fillFragmentShader) || !gl_->program->link())
+    juce::String vertexCode = juce::String::createStringFromData(BinaryData::gradient_fill_vert, BinaryData::gradient_fill_vertSize);
+    juce::String fragmentCode = juce::String::createStringFromData(BinaryData::gradient_fill_frag, BinaryData::gradient_fill_fragSize);
+
+    if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) || !gl_->program->link())
     {
         DBG("GradientFillShader: Shader compilation failed: " << gl_->program->getLastError());
         gl_->program.reset();

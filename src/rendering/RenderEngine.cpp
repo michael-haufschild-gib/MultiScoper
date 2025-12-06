@@ -94,11 +94,14 @@ void RenderEngine::shutdown()
         return;
 
     // Release all waveform states
-    for (auto& pair : waveformStates_)
     {
-        pair.second.release(*context_);
+        juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+        for (auto& pair : waveformStates_)
+        {
+            pair.second.release(*context_);
+        }
+        waveformStates_.clear();
     }
-    waveformStates_.clear();
 
     // Shutdown subsystems
     waveformPass_->shutdown(*context_);
@@ -129,11 +132,14 @@ void RenderEngine::resize(int width, int height)
     // For now, we'll assume it doesn't strictly need it unless it recreates resources.
 
     // Resize history FBOs for waveforms with trails
-    for (auto& [key, state] : waveformStates_)
     {
-        if (state.trailsEnabled)
+        juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+        for (auto& [key, state] : waveformStates_)
         {
-            state.resizeHistoryFBO(*context_, width, height);
+            if (state.trailsEnabled)
+            {
+                state.resizeHistoryFBO(*context_, width, height);
+            }
         }
     }
 
@@ -171,11 +177,17 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
     if (!initialized_ || !data.visible || data.channel1.size() < 2)
         return;
 
-    // Get or create waveform state
+    // Get or create waveform state (lock scope)
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+
     auto it = waveformStates_.find(data.id);
     if (it == waveformStates_.end())
     {
-        registerWaveform(data.id);
+        // Register inline to avoid recursive lock
+        WaveformRenderState state;
+        state.waveformId = data.id;
+        waveformStates_[data.id] = std::move(state);
+        RE_LOG("RenderEngine: Registered waveform " << data.id);
         it = waveformStates_.find(data.id);
     }
 
@@ -203,7 +215,8 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
         }
 
         // Step 2: Render Waveform & Particles -> Scratch FBO
-        auto* waveformFBO = effectPipeline_->getFramebufferPool()->getWaveformFBO();
+        auto* pool = effectPipeline_->getFramebufferPool();
+        auto* waveformFBO = pool ? pool->getWaveformFBO() : nullptr;
         if (waveformFBO)
         {
             waveformFBO->bind();
@@ -310,6 +323,7 @@ void RenderEngine::executeComposite(Framebuffer* source, const VisualConfigurati
 
 void RenderEngine::registerWaveform(int waveformId)
 {
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
     if (waveformStates_.find(waveformId) == waveformStates_.end())
     {
         WaveformRenderState state;
@@ -321,6 +335,7 @@ void RenderEngine::registerWaveform(int waveformId)
 
 void RenderEngine::unregisterWaveform(int waveformId)
 {
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
     if (it != waveformStates_.end())
     {
@@ -331,16 +346,24 @@ void RenderEngine::unregisterWaveform(int waveformId)
     }
 }
 
-VisualConfiguration* RenderEngine::getWaveformConfig(int waveformId)
+std::optional<VisualConfiguration> RenderEngine::getWaveformConfig(int waveformId)
 {
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
     if (it != waveformStates_.end())
-        return &it->second.visualConfig;
-    return nullptr;
+        return it->second.visualConfig;
+    return std::nullopt;
+}
+
+bool RenderEngine::hasWaveform(int waveformId)
+{
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+    return waveformStates_.find(waveformId) != waveformStates_.end();
 }
 
 void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& config)
 {
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
     if (it != waveformStates_.end())
     {
@@ -382,6 +405,7 @@ void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& 
 
 void RenderEngine::clearAllWaveforms()
 {
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
     if (context_)
     {
         for (auto& pair : waveformStates_)
@@ -397,6 +421,8 @@ void RenderEngine::syncWaveforms(const std::unordered_set<int>& activeIds)
     if (!context_)
         return;
 
+    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+
     std::vector<int> toRemove;
     for (const auto& pair : waveformStates_)
     {
@@ -408,8 +434,14 @@ void RenderEngine::syncWaveforms(const std::unordered_set<int>& activeIds)
 
     for (int id : toRemove)
     {
-        unregisterWaveform(id);
-        RE_LOG("RenderEngine: Synced out stale waveform " << id);
+        // Inline unregisterWaveform to avoid recursive lock
+        auto it = waveformStates_.find(id);
+        if (it != waveformStates_.end())
+        {
+            it->second.release(*context_);
+            waveformStates_.erase(it);
+            RE_LOG("RenderEngine: Synced out stale waveform " << id);
+        }
     }
 }
 
@@ -468,6 +500,10 @@ void RenderEngine::blitToScreen()
 
         effectPipeline_->getFramebufferPool()->renderFullscreenQuad();
     }
+
+    // Restore GL state to prevent leakage into subsequent operations
+    glDisable(GL_BLEND);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 } // namespace oscil

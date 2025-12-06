@@ -246,9 +246,12 @@ WaveformAnalysis TestScreenshot::analyzeWaveform(const juce::Image& image,
                                     (pixel.getBlue() / 16);
                 colorCounts[colorKey]++;
 
-                // Track amplitude
-                float distanceFromCenter = std::abs(y - centerY) / static_cast<float>(centerY);
-                maxAmplitude = std::max(maxAmplitude, distanceFromCenter);
+                // Track amplitude (guard against centerY=0 if image height is 0)
+                if (centerY > 0)
+                {
+                    float distanceFromCenter = std::abs(y - centerY) / static_cast<float>(centerY);
+                    maxAmplitude = std::max(maxAmplitude, distanceFromCenter);
+                }
             }
         }
 
@@ -357,7 +360,7 @@ float TestScreenshot::estimateWaveformAmplitude(const juce::Image& image)
             auto pixel = image.getPixelAt(x, y);
             float brightness = pixel.getBrightness();
 
-            if (brightness > 0.3f)
+            if (brightness > 0.3f && centerY > 0)
             {
                 float distanceFromCenter = std::abs(y - centerY) / static_cast<float>(centerY);
                 maxAmplitude = std::max(maxAmplitude, distanceFromCenter);

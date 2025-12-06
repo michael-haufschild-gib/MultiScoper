@@ -49,9 +49,16 @@ public:
     virtual float getCpuUsage() const = 0;
 
     /**
-     * Get the current sample rate.
+     * Get the current source sample rate (DAW's sample rate).
      */
     virtual double getSampleRate() const = 0;
+
+    /**
+     * Get the capture rate used for display buffers (after decimation).
+     * This is the effective sample rate for display data.
+     * Use this for timing calculations related to displayed waveforms.
+     */
+    virtual int getCaptureRate() const = 0;
 };
 
 } // namespace oscil

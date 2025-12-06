@@ -1,115 +1,183 @@
 /*
     Oscil - Transient Detector Implementation
+    Uses dual envelope follower for robust transient detection
 */
 
 #include "core/analysis/TransientDetector.h"
 #include <cmath>
+#include <algorithm>
 
 namespace oscil
 {
 
 TransientDetector::TransientDetector()
 {
+    reset();
 }
 
 void TransientDetector::reset()
 {
     state_ = State::Idle;
-    envelope_ = 0.0f;
-    peakLevel_ = 0.0f;
+    fastEnvelope_ = 0.0f;
+    slowEnvelope_ = 0.0f;
+    transientPeak_ = 0.0f;
+    onsetLevel_ = 0.0f;
     samplesInState_ = 0;
-    attackTimeMs_ = 0.0f;
-    decayTimeMs_ = 0.0f;
+    samplesSincePeakIncrease_ = 0;
+    attackTimeMs_.store(0.0f, std::memory_order_relaxed);
+    decayTimeMs_.store(0.0f, std::memory_order_relaxed);
+}
+
+void TransientDetector::updateCoefficients(double sampleRate)
+{
+    if (sampleRate <= 0.0 || sampleRate == lastSampleRate_)
+        return;
+
+    lastSampleRate_ = sampleRate;
+
+    // Convert time constants to coefficients: coef = exp(-1 / (time * sampleRate))
+    // For time in ms: coef = exp(-1000 / (timeMs * sampleRate))
+    auto msToCoef = [sampleRate](float timeMs) -> float {
+        if (timeMs <= 0.0f) return 0.0f;
+        return std::exp(-1000.0f / (timeMs * static_cast<float>(sampleRate)));
+    };
+
+    fastAttackCoef_ = msToCoef(FAST_ATTACK_MS);
+    fastReleaseCoef_ = msToCoef(FAST_RELEASE_MS);
+    slowAttackCoef_ = msToCoef(SLOW_ATTACK_MS);
+    slowReleaseCoef_ = msToCoef(SLOW_RELEASE_MS);
 }
 
 void TransientDetector::process(const float* samples, int numSamples, double sampleRate)
 {
-    if (sampleRate <= 0.0) return;
-    
+    // Guard against invalid parameters
+    if (!samples || numSamples <= 0 || !std::isfinite(sampleRate) || sampleRate <= 0.0)
+        return;
+
+    // Update coefficients if sample rate changed
+    updateCoefficients(sampleRate);
+
     float currentAttack = attackTimeMs_.load(std::memory_order_relaxed);
     float currentDecay = decayTimeMs_.load(std::memory_order_relaxed);
-    
+
     for (int i = 0; i < numSamples; ++i)
     {
         float absSample = std::abs(samples[i]);
-        
-        // Track overall peak envelope for dynamic thresholds
-        if (absSample > peakLevel_)
+
+        // Update fast envelope (peak follower)
+        if (absSample > fastEnvelope_)
         {
-            peakLevel_ = absSample;
+            fastEnvelope_ = fastEnvelope_ * fastAttackCoef_ + absSample * (1.0f - fastAttackCoef_);
         }
         else
         {
-            peakLevel_ *= ENVELOPE_DECAY;
+            fastEnvelope_ = fastEnvelope_ * fastReleaseCoef_ + absSample * (1.0f - fastReleaseCoef_);
         }
-        
-        // Avoid division by zero or noise floor issues
-        if (peakLevel_ < 0.001f) 
+
+        // Update slow envelope (average follower)
+        if (absSample > slowEnvelope_)
         {
-            state_ = State::Idle;
-            continue;
+            slowEnvelope_ = slowEnvelope_ * slowAttackCoef_ + absSample * (1.0f - slowAttackCoef_);
         }
-        
-        float lowThresh = peakLevel_ * ATTACK_THRESHOLD_LOW;
-        float highThresh = peakLevel_ * ATTACK_THRESHOLD_HIGH;
-        
+        else
+        {
+            slowEnvelope_ = slowEnvelope_ * slowReleaseCoef_ + absSample * (1.0f - slowReleaseCoef_);
+        }
+
+        // State machine for transient detection
         switch (state_)
         {
             case State::Idle:
-                if (absSample < lowThresh)
+            {
+                // Check for transient onset: fast envelope significantly exceeds slow
+                if (slowEnvelope_ > NOISE_FLOOR && fastEnvelope_ > slowEnvelope_ * ONSET_RATIO)
                 {
-                    // Ready for attack
-                }
-                else if (absSample > lowThresh && absSample < highThresh)
-                {
-                    // Entered attack phase
+                    // Transient detected - start measuring attack
                     state_ = State::MeasuringAttack;
+                    onsetLevel_ = slowEnvelope_;
+                    transientPeak_ = fastEnvelope_;
                     samplesInState_ = 0;
                 }
                 break;
-                
+            }
+
             case State::MeasuringAttack:
+            {
                 samplesInState_++;
-                
-                if (absSample >= highThresh)
+
+                // Track the peak during attack
+                if (fastEnvelope_ > transientPeak_)
                 {
-                    // Attack complete
-                    double ms = (samplesInState_ / sampleRate) * 1000.0;
-                    currentAttack = static_cast<float>(ms);
+                    transientPeak_ = fastEnvelope_;
+                    samplesSincePeakIncrease_ = 0;
+                }
+                else
+                {
+                    samplesSincePeakIncrease_++;
+                }
+
+                // Check for attack completion: either envelope dropped or plateau detected
+                bool envelopeDropped = fastEnvelope_ < transientPeak_ * PEAK_THRESHOLD;
+                double plateauSamples = (PLATEAU_TIME_MS / 1000.0) * sampleRate;
+                bool plateauReached = samplesSincePeakIncrease_ >= plateauSamples;
+
+                if (envelopeDropped || plateauReached)
+                {
+                    // Attack phase complete - calculate attack time
+                    double attackMs = (samplesInState_ / sampleRate) * 1000.0;
+                    currentAttack = static_cast<float>(attackMs);
+
+                    // Transition to decay measurement
                     state_ = State::MeasuringDecay;
                     samplesInState_ = 0;
+                    samplesSincePeakIncrease_ = 0;
                 }
-                else if (absSample < lowThresh)
+
+                // Timeout: if attack takes too long (> 500ms), something's wrong
+                if (samplesInState_ > sampleRate * 0.5)
                 {
-                    // False start, dropped back down
                     state_ = State::Idle;
                 }
                 break;
-                
+            }
+
             case State::MeasuringDecay:
+            {
                 samplesInState_++;
-                
-                if (absSample <= lowThresh)
+
+                // Check if signal has decayed to threshold
+                float decayLevel = onsetLevel_ + (transientPeak_ - onsetLevel_) * DECAY_THRESHOLD;
+                if (fastEnvelope_ < decayLevel || fastEnvelope_ < NOISE_FLOOR * 10.0f)
                 {
                     // Decay complete
-                    double ms = (samplesInState_ / sampleRate) * 1000.0;
-                    currentDecay = static_cast<float>(ms);
+                    double decayMs = (samplesInState_ / sampleRate) * 1000.0;
+                    currentDecay = static_cast<float>(decayMs);
+
+                    // Return to idle
                     state_ = State::Idle;
                 }
-                else if (absSample > peakLevel_) // New peak during decay
+
+                // Check for new transient during decay (re-trigger)
+                if (slowEnvelope_ > NOISE_FLOOR && fastEnvelope_ > slowEnvelope_ * ONSET_RATIO * 1.5f)
                 {
-                    // Reset decay measurement or restart attack?
-                    // Usually implies a new attack or sustain
-                    // For now, assume re-attack if it jumps significantly, but simple logic:
-                    if (absSample > highThresh)
-                    {
-                        // Still high, continue decay measurement
-                    }
+                    // New transient - restart attack measurement
+                    state_ = State::MeasuringAttack;
+                    onsetLevel_ = slowEnvelope_;
+                    transientPeak_ = fastEnvelope_;
+                    samplesInState_ = 0;
+                }
+
+                // Timeout: if decay takes too long (> 5s), reset
+                if (samplesInState_ > sampleRate * 5.0)
+                {
+                    state_ = State::Idle;
                 }
                 break;
+            }
         }
     }
-    
+
+    // Store results
     attackTimeMs_.store(currentAttack, std::memory_order_relaxed);
     decayTimeMs_.store(currentDecay, std::memory_order_relaxed);
 }

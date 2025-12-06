@@ -125,15 +125,16 @@ void DecimatingCaptureBuffer::setQualityPreset(QualityPreset preset, int sourceR
 
 void DecimatingCaptureBuffer::reconfigure()
 {
-    // Reconfigure should only be called from the message thread to avoid
-    // potential allocation on the audio thread via graveyard_.push_back()
-    jassert(!juce::MessageManager::existsAndIsCurrentThread() ||
-            juce::MessageManager::getInstance()->isThisTheMessageThread() ||
-            !juce::MessageManager::getInstanceWithoutCreating());
+    // Reconfigure must be called from message thread (or before MessageManager exists during startup)
+    // This is critical because reconfigure() may allocate memory via graveyard_.push_back()
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    // Pre-allocate graveyard to avoid allocation during reconfigure
-    if (graveyard_.capacity() < 10)
-        graveyard_.reserve(10);
+    // Pre-allocate graveyard with generous capacity to avoid allocation during reconfigure
+    // 100 items should be more than enough for any normal usage pattern
+    static constexpr size_t kGraveyardCapacity = 100;
+    if (graveyard_.capacity() < kGraveyardCapacity)
+        graveyard_.reserve(kGraveyardCapacity);
 
     // Calculate capture rate and decimation ratio
     captureRate_ = config_.getCaptureRate(sourceRate_);
@@ -174,16 +175,26 @@ void DecimatingCaptureBuffer::reconfigure()
         newContext->filterMemoryBytes += filter.getMemoryUsageBytes();
     }
 
+    // Capture timestamp BEFORE acquiring lock to avoid calling Time functions under spinlock
+    // (Time::getMillisecondCounterHiRes may not be real-time safe on all platforms)
+    double timestamp = juce::Time::getMillisecondCounterHiRes();
+
     {
         // Protect swap with lock
         const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        
+
         // CRITICAL: Prevent destruction on audio thread
         // We move the OLD resources to a graveyard to be cleaned up later
         // when we are sure the audio thread is done with them.
         if (buffer_ || context_)
         {
-            graveyard_.push_back({buffer_, context_, juce::Time::getMillisecondCounterHiRes()});
+            // Always add to graveyard to ensure destruction happens on message thread.
+            // Even if this causes reallocation, it's safe because:
+            // 1. We're on the message thread (asserted above)
+            // 2. Audio thread uses tryLock, so it won't block on us
+            // 3. We own the lock, so audio thread can't get a reference while we swap
+            // The reserve(100) above is a best-effort optimization to avoid allocation.
+            graveyard_.push_back({buffer_, context_, timestamp});
         }
 
         buffer_ = newBuffer;

@@ -36,7 +36,12 @@ protected:
         editor_ = std::make_unique<TestEditor>(processor_);
         
         container_ = std::make_unique<PaneContainerComponent>();
-        displaySettings_ = std::make_unique<DisplaySettingsManager>(paneComponents_);
+        displaySettings_ = std::make_unique<DisplaySettingsManager>([this]() {
+            std::vector<PaneComponent*> snapshot;
+            for (auto& pane : paneComponents_)
+                snapshot.push_back(pane.get());
+            return snapshot;
+        });
         gpuCoordinator_ = std::make_unique<GpuRenderCoordinator>(*editor_, statusBar_);
         
         // Create controller

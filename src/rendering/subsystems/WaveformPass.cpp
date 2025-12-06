@@ -149,6 +149,7 @@ void WaveformPass::prepareRender(const WaveformRenderData& data, WaveformRenderS
     {
         float scale = static_cast<float>(context_->getRenderingScale());
         auto* target = context_->getTargetComponent();
+        if (!target) return;
         float logicalHeight = static_cast<float>(target->getHeight());
 
         float lx = data.bounds.getX();
@@ -202,15 +203,17 @@ Framebuffer* WaveformPass::renderWaveform(const WaveformRenderData& data, Wavefo
     waveformFBO->bind();
     waveformFBO->clear(juce::Colours::transparentBlack, true);
 
-    // Store previous viewport state
+    // Store previous viewport and depth test state
     GLint prevViewport[4];
     glGetIntegerv(GL_VIEWPORT, prevViewport);
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
 
     // Step 2: Set up camera (2D or 3D)
     if (is3DShader(config.shaderType))
     {
         float scale = static_cast<float>(context_->getRenderingScale());
         auto* target = context_->getTargetComponent();
+        if (!target) return nullptr;
         float logicalHeight = static_cast<float>(target->getHeight());
 
         float lx = data.bounds.getX();
@@ -247,6 +250,7 @@ Framebuffer* WaveformPass::renderWaveform(const WaveformRenderData& data, Wavefo
     {
         float scale = static_cast<float>(context_->getRenderingScale());
         auto* target = context_->getTargetComponent();
+        if (!target) return nullptr;
         float logicalHeight = static_cast<float>(target->getHeight());
 
         float lx = data.bounds.getX();
@@ -292,6 +296,12 @@ Framebuffer* WaveformPass::renderWaveform(const WaveformRenderData& data, Wavefo
         }
     }
 
+    // Restore GL depth test state
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
     // Step 6: Composite onto scene - handled by caller
     return current;
 }
@@ -303,6 +313,7 @@ void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const 
     {
         float scale = static_cast<float>(context_->getRenderingScale());
         auto* target = context_->getTargetComponent();
+        if (!target) return;
         float logicalHeight = static_cast<float>(target->getHeight());
 
         float lx = data.bounds.getX();
@@ -396,6 +407,7 @@ void WaveformPass::renderWaveformParticles(const WaveformRenderData& data, Wavef
     {
         float scale = static_cast<float>(context_->getRenderingScale());
         auto* target = context_->getTargetComponent();
+        if (!target) return;
         float logicalHeight = static_cast<float>(target->getHeight());
 
         float lx = data.bounds.getX();
@@ -428,6 +440,7 @@ void WaveformPass::renderGrid(const WaveformRenderData& data)
 
     float scale = static_cast<float>(context_->getRenderingScale());
     auto* target = context_->getTargetComponent();
+    if (!target) return;
     float logicalHeight = static_cast<float>(target->getHeight());
 
     float lx = data.bounds.getX();

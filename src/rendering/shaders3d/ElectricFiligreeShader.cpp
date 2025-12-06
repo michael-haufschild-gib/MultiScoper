@@ -3,6 +3,7 @@
 */
 
 #include "rendering/shaders3d/ElectricFiligreeShader.h"
+#include <numbers>
 
 #if OSCIL_ENABLE_OPENGL
 
@@ -10,6 +11,9 @@ namespace oscil
 {
 
 using namespace juce::gl;
+
+static constexpr float PI = std::numbers::pi_v<float>;
+static constexpr float DEG_TO_RAD = PI / 180.0f;
 
 // Vertex shader with passthrough
 static const char* filigreeVertexShader = R"(
@@ -75,10 +79,6 @@ static const char* filigreeFragmentShader = R"(
         vec3 i1 = min( g.xyz, l.zxy );
         vec3 i2 = max( g.xyz, l.zxy );
 
-        //   x0 = x0 - 0.0 + 0.0 * C.xxx;
-        //   x1 = x0 - i1  + 1.0 * C.xxx;
-        //   x2 = x0 - i2  + 2.0 * C.xxx;
-        //   x3 = x0 - 1.0 + 3.0 * C.xxx;
         vec3 x1 = x0 - i1 + C.xxx;
         vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y
         vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -0.5 = -D.y
@@ -107,8 +107,6 @@ static const char* filigreeFragmentShader = R"(
         vec4 b0 = vec4( x.xy, y.xy );
         vec4 b1 = vec4( x.zw, y.zw );
 
-        //vec4 s0 = vec4(lessThan(b0,0.0))*2.0 - 1.0;
-        //vec4 s1 = vec4(lessThan(b1,0.0))*2.0 - 1.0;
         vec4 s0 = floor(b0)*2.0 + 1.0;
         vec4 s1 = floor(b1)*2.0 + 1.0;
         vec4 sh = -step(h, vec4(0.0));
@@ -175,7 +173,15 @@ static const char* filigreeFragmentShader = R"(
 )";
 
 ElectricFiligreeShader::ElectricFiligreeShader() = default;
-ElectricFiligreeShader::~ElectricFiligreeShader() = default;
+ElectricFiligreeShader::~ElectricFiligreeShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[ElectricFiligreeShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool ElectricFiligreeShader::compile(juce::OpenGLContext& context)
 {
@@ -270,7 +276,7 @@ void ElectricFiligreeShader::render(juce::OpenGLContext& context,
     else
     {
         float dist = (camera.getPosition() - camera.getTarget()).length();
-        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
+        float fovRad = camera.getFOV() * DEG_TO_RAD;
         float height = 2.0f * dist * std::tan(fovRad * 0.5f);
         float width = height * camera.getAspectRatio();
         xSpread = width * 0.5f;
@@ -319,9 +325,12 @@ void ElectricFiligreeShader::update(float deltaTime)
 
 void ElectricFiligreeShader::setParameter(const juce::String& name, float value)
 {
-    if (name == "scale") noiseScale_ = value;
-    if (name == "speed") noiseSpeed_ = value;
-    if (name == "branches") branchIntensity_ = value;
+    if (name == "scale")
+        noiseScale_ = value;
+    else if (name == "speed")
+        noiseSpeed_ = value;
+    else if (name == "branches")
+        branchIntensity_ = value;
 }
 
 float ElectricFiligreeShader::getParameter(const juce::String& name) const

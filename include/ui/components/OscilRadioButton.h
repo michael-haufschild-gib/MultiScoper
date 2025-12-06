@@ -6,7 +6,9 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
+#include <vector>
+#include <memory>
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -30,8 +32,7 @@ class OscilRadioGroup;
  * - Focus ring for keyboard navigation
  * - Designed to work within OscilRadioGroup
  */
-class OscilRadioButton : public juce::Component,
-                         public ThemeManagerListener,
+class OscilRadioButton : public ThemedComponent,
                          public TestIdSupport,
                          private juce::Timer
 {
@@ -75,8 +76,6 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
@@ -109,8 +108,6 @@ private:
     SpringAnimation hoverSpring_;
 
     // Theme
-    ColorTheme theme_;
-    IThemeService& themeService_;
 
     static constexpr int RADIO_SIZE = 18;
     static constexpr int DOT_SIZE = 8;
@@ -131,8 +128,8 @@ private:
  * - Horizontal or vertical layout
  * - Keyboard navigation between options
  */
-class OscilRadioGroup : public juce::Component,
-                        public ThemeManagerListener
+class OscilRadioGroup : public ThemedComponent
+                        
 {
 public:
     enum class Orientation
@@ -181,8 +178,6 @@ public:
 
     bool keyPressed(const juce::KeyPress& key) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
@@ -190,7 +185,7 @@ public:
     // Access buttons (for internal use by OscilRadioButton)
     OscilRadioButton* getButton(int index) const
     {
-        return (index >= 0 && index < buttons_.size()) ? buttons_[index] : nullptr;
+        return (index >= 0 && static_cast<size_t>(index) < buttons_.size()) ? buttons_[static_cast<size_t>(index)].get() : nullptr;
     }
 
 private:
@@ -198,14 +193,12 @@ private:
     void updateButtonStates();
     void layoutButtons();
 
-    IThemeService& themeService_;
-    juce::OwnedArray<OscilRadioButton> buttons_;
+    std::vector<std::unique_ptr<OscilRadioButton>> buttons_;
     int selectedIndex_ = -1;
     Orientation orientation_ = Orientation::Vertical;
     int spacing_ = ComponentLayout::SPACING_SM;
     bool enabled_ = true;
 
-    ColorTheme theme_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilRadioGroup)
 };

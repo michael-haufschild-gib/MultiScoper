@@ -145,7 +145,15 @@ static const char* ribbonFragmentShader = R"(
 
 VolumetricRibbonShader::VolumetricRibbonShader() = default;
 
-VolumetricRibbonShader::~VolumetricRibbonShader() = default;
+VolumetricRibbonShader::~VolumetricRibbonShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[VolumetricRibbonShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool VolumetricRibbonShader::compile(juce::OpenGLContext& context)
 {
@@ -337,6 +345,12 @@ void VolumetricRibbonShader::render(juce::OpenGLContext& context,
     glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, nullptr);
     ext.glBindVertexArray(0);
 
+    // Unbind texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Restore GL state
+    glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 }
 

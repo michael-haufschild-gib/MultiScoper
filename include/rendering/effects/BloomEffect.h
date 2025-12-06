@@ -40,7 +40,12 @@ public:
     ) override;
 
     /**
-     * Configure the bloom effect.
+     * Configure the bloom effect from VisualConfiguration.
+     */
+    void configure(const VisualConfiguration& config) override { settings_ = config.bloom; }
+
+    /**
+     * Configure the bloom effect directly.
      */
     void setSettings(const BloomSettings& settings) { settings_ = settings; }
     [[nodiscard]] const BloomSettings& getSettings() const { return settings_; }

@@ -12,6 +12,10 @@ MemoryBudgetManager::MemoryBudgetManager() = default;
 
 void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, int sourceRate)
 {
+    // NEVER call from audio thread - triggers buffer reconfiguration with heap allocation.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     bool configChanged = (globalConfig_ != config) || (sourceRate_ != sourceRate);
 
     globalConfig_ = config;
@@ -28,6 +32,10 @@ void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, in
 void MemoryBudgetManager::registerBuffer(const juce::String& id,
                                           std::shared_ptr<DecimatingCaptureBuffer> buffer)
 {
+    // NEVER call from audio thread - uses blocking locks.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     if (!buffer || id.isEmpty())
         return;
 
@@ -58,6 +66,10 @@ void MemoryBudgetManager::registerBuffer(const juce::String& id,
 
 void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
 {
+    // NEVER call from audio thread - uses blocking locks.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     bool removed = false;
 
     {
@@ -76,6 +88,10 @@ void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
 
 void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, QualityOverride override)
 {
+    // NEVER call from audio thread - uses blocking locks and triggers buffer reconfiguration.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     std::scoped_lock lock(buffersMutex_);
 
     auto it = buffers_.find(id);
@@ -123,6 +139,8 @@ bool MemoryBudgetManager::isBufferRegistered(const juce::String& id) const
 
 size_t MemoryBudgetManager::getTotalMemoryUsage() const
 {
+    std::scoped_lock lock(buffersMutex_);
+
     if (usageCacheDirty_)
     {
         updateCachedUsage();
@@ -324,11 +342,15 @@ void MemoryBudgetManager::reconfigureAllBuffers()
 
 void MemoryBudgetManager::addListener(Listener* listener)
 {
+    // ListenerList::add() is NOT thread-safe. Must be called from message thread.
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.add(listener);
 }
 
 void MemoryBudgetManager::removeListener(Listener* listener)
 {
+    // ListenerList::remove() is NOT thread-safe. Must be called from message thread.
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.remove(listener);
 }
 
@@ -355,14 +377,18 @@ void MemoryBudgetManager::pruneExpiredBuffers()
 
 void MemoryBudgetManager::refreshMemoryUsage()
 {
-    usageCacheDirty_ = true;
-    updateCachedUsage();
+    {
+        std::scoped_lock lock(buffersMutex_);
+        usageCacheDirty_ = true;
+        updateCachedUsage();
+    }
     notifyMemoryUsageChanged();
 }
 
 void MemoryBudgetManager::updateCachedUsage() const
 {
-    std::scoped_lock lock(buffersMutex_);
+    // REQUIRES: buffersMutex_ must already be held by caller
+    // This is an internal helper that assumes the lock is already acquired.
 
     cachedTotalUsage_ = 0;
 
@@ -380,19 +406,52 @@ void MemoryBudgetManager::updateCachedUsage() const
 
 void MemoryBudgetManager::notifyMemoryUsageChanged()
 {
-    auto snapshot = getMemorySnapshot();
-    listeners_.call([&snapshot](Listener& l) { l.memoryUsageChanged(snapshot); });
+    // THREAD SAFETY: ListenerList is not thread-safe.
+    // We must defer notifications to message thread to match addListener/removeListener requirements.
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        auto snapshot = getMemorySnapshot();
+        listeners_.call([&snapshot](Listener& l) { l.memoryUsageChanged(snapshot); });
+    }
+    else
+    {
+        juce::MessageManager::callAsync([this]() {
+            auto snapshot = getMemorySnapshot();
+            listeners_.call([&snapshot](Listener& l) { l.memoryUsageChanged(snapshot); });
+        });
+    }
 }
 
 void MemoryBudgetManager::notifyBufferCountChanged()
 {
-    int count = getBufferCount();
-    listeners_.call([count](Listener& l) { l.bufferCountChanged(count); });
+    // THREAD SAFETY: Defer to message thread for ListenerList safety
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        int count = getBufferCount();
+        listeners_.call([count](Listener& l) { l.bufferCountChanged(count); });
+    }
+    else
+    {
+        juce::MessageManager::callAsync([this]() {
+            int count = getBufferCount();
+            listeners_.call([count](Listener& l) { l.bufferCountChanged(count); });
+        });
+    }
 }
 
 void MemoryBudgetManager::notifyEffectiveQualityChanged(QualityPreset newQuality)
 {
-    listeners_.call([newQuality](Listener& l) { l.effectiveQualityChanged(newQuality); });
+    // THREAD SAFETY: Defer to message thread for ListenerList safety
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        listeners_.call([newQuality](Listener& l) { l.effectiveQualityChanged(newQuality); });
+    }
+    else
+    {
+        juce::MessageManager::callAsync([this, newQuality]() {
+            listeners_.call([newQuality](Listener& l) { l.effectiveQualityChanged(newQuality); });
+        });
+    }
 }
 
 } // namespace oscil

@@ -35,6 +35,11 @@ PaneBody::PaneBody(OscilPluginProcessor& processor,
     // Overlay starts invisible - use setVisibleAnimated(true) via setStatsVisible to show
 }
 
+PaneBody::~PaneBody()
+{
+    stopTimer();
+}
+
 void PaneBody::paint(juce::Graphics& g)
 {
 #if OSCIL_ENABLE_OPENGL
@@ -73,14 +78,20 @@ void PaneBody::mouseMove(const juce::MouseEvent& event)
 void PaneBody::mouseEnter(const juce::MouseEvent& event)
 {
     if (crosshairOverlay_)
+    {
         crosshairOverlay_->setVisible(true);
+        crosshairOverlay_->setCrosshairVisible(true);
+    }
     updateCrosshairPosition(event.getPosition());
 }
 
 void PaneBody::mouseExit(const juce::MouseEvent& /*event*/)
 {
     if (crosshairOverlay_)
+    {
+        crosshairOverlay_->setCrosshairVisible(false);
         crosshairOverlay_->setVisible(false);
+    }
 }
 
 void PaneBody::updateCrosshairPosition(juce::Point<int> pos)
@@ -105,21 +116,28 @@ void PaneBody::calculateCrosshairValues(juce::Point<int> localPos, float& timeMs
 {
     if (!crosshairOverlay_)
         return;
-        
+
     auto bounds = crosshairOverlay_->getLocalBounds();
-    
-    if (bounds.isEmpty() || bounds.getWidth() <= 0 || bounds.getHeight() <= 0)
+
+    // Guard against zero or invalid dimensions to prevent division by zero and NaN
+    int width = bounds.getWidth();
+    int height = bounds.getHeight();
+    if (width <= 0 || height <= 0)
+        return;
+
+    // Guard against invalid sample rate or display samples
+    if (sampleRate_ <= 0 || displaySamples_ <= 0)
         return;
 
     // Calculate time based on X position
-    float normalizedX = static_cast<float>(localPos.x) / bounds.getWidth();
+    float normalizedX = static_cast<float>(localPos.x) / static_cast<float>(width);
     normalizedX = juce::jlimit(0.0f, 1.0f, normalizedX);
 
-    float totalTimeMs = (static_cast<float>(displaySamples_) / sampleRate_) * 1000.0f;
+    float totalTimeMs = (static_cast<float>(displaySamples_) / static_cast<float>(sampleRate_)) * 1000.0f;
     timeMs = normalizedX * totalTimeMs;
 
     // Calculate amplitude based on Y position
-    float normalizedY = static_cast<float>(localPos.y) / bounds.getHeight();
+    float normalizedY = static_cast<float>(localPos.y) / static_cast<float>(height);
     normalizedY = juce::jlimit(0.0f, 1.0f, normalizedY);
 
     // Linear interpolation between +6dB and -60dB
@@ -220,6 +238,12 @@ void PaneBody::setDisplaySamples(int samples)
     displaySamples_ = samples;
     if (waveformStack_)
         waveformStack_->setDisplaySamples(samples);
+}
+
+void PaneBody::setSampleRate(int sampleRate)
+{
+    if (sampleRate > 0)
+        sampleRate_ = sampleRate;
 }
 
 // Highlight oscillator

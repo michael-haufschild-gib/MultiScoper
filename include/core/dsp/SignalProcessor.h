@@ -33,11 +33,12 @@ struct ProcessedSignal
     {
         // ProcessedSignal is for UI visualization only.
         // Allocating memory on the audio thread is strictly forbidden.
-        // Ensure this is called on the message thread.
-        // Note: We use a raw jassert here to avoid including juce_events in a dsp header,
-        // but this check is critical for thread safety.
-        // In a standard JUCE app, MessageManager is available.
-        jassert (juce::MessageManager::getInstance()->isThisTheMessageThread());
+        // This check works in both debug AND release builds for safety.
+        if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+        {
+            jassertfalse; // Trigger in debug for investigation
+            return;       // Fail safe in release - don't resize from wrong thread
+        }
 
         // Optimization: reserve capacity to avoid reallocations if possible
         if (channel1.capacity() < static_cast<size_t>(samples))

@@ -18,10 +18,26 @@ using namespace juce::gl;
 /**
  * OpenGL framebuffer wrapper for off-screen rendering.
  * Supports color attachment and optional depth buffer for 3D rendering.
+ *
+ * IMPORTANT: Call destroy(context) before destruction to prevent OpenGL resource leaks.
+ * The destructor cannot free OpenGL resources as it requires an active OpenGL context.
  */
 struct Framebuffer
 {
-    virtual ~Framebuffer() = default;
+    virtual ~Framebuffer()
+    {
+        // Debug assertion to catch missing destroy() calls
+        jassert(fbo == 0 && "Framebuffer::destroy() must be called before destruction");
+    }
+
+    // Prevent copying and moving (OpenGL resources cannot be shared)
+    Framebuffer(const Framebuffer&) = delete;
+    Framebuffer& operator=(const Framebuffer&) = delete;
+    Framebuffer(Framebuffer&&) = delete;
+    Framebuffer& operator=(Framebuffer&&) = delete;
+
+    // Default construction is allowed
+    Framebuffer() = default;
 
     GLuint fbo = 0;
     GLuint colorTexture = 0;

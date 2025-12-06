@@ -3,6 +3,7 @@
 */
 
 #include "rendering/shaders/DigitalGlitchShader.h"
+#include "BinaryData.h"
 #include <cmath>
 
 namespace oscil
@@ -10,70 +11,6 @@ namespace oscil
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
-
-static const char* glitchVertexShader = R"(
-    #version 330 core
-    in vec2 position;
-    in float distFromCenter;
-    in float tParam;
-
-    uniform mat4 projection;
-    uniform float time;
-
-    out float vDistFromCenter;
-
-    float rand(float n) { return fract(sin(n) * 43758.5453123); }
-
-    void main()
-    {
-        vec2 pos = position;
-        
-        // Glitch logic
-        // Create random blocky offsets
-        float blockIdx = floor(tParam * 30.0);
-        float r = rand(blockIdx + floor(time * 10.0));
-        
-        if (r > 0.9) {
-            // Y offset
-            pos.y += (rand(r) - 0.5) * 100.0;
-            // X offset
-            pos.x += (rand(r + 1.0) - 0.5) * 20.0;
-        }
-
-        gl_Position = projection * vec4(pos, 0.0, 1.0);
-        vDistFromCenter = distFromCenter;
-    }
-)";
-
-static const char* glitchFragmentShader = R"(
-    #version 330 core
-    in float vDistFromCenter;
-
-    uniform vec4 baseColor;
-    uniform float opacity;
-
-    out vec4 fragColor;
-
-    // Convert sRGB to linear color space
-    // Input colors from juce::Colour are in sRGB, but we need linear for correct
-    // blending and tonemapping in the rendering pipeline
-    vec3 sRGBToLinear(vec3 srgb) {
-        return pow(srgb, vec3(2.2));
-    }
-
-    void main()
-    {
-        float dist = abs(vDistFromCenter);
-
-        // Techy/Scanline look
-        float alpha = 1.0 - smoothstep(0.8, 1.0, dist);
-
-        // Convert sRGB input to linear for correct rendering
-        vec3 linearColor = sRGBToLinear(baseColor.rgb);
-
-        fragColor = vec4(linearColor, alpha * opacity);
-    }
-)";
 
 struct DigitalGlitchShader::GLResources
 {
@@ -105,7 +42,10 @@ bool DigitalGlitchShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
     
-    if (!gl_->program->addVertexShader(glitchVertexShader) || !gl_->program->addFragmentShader(glitchFragmentShader) || !gl_->program->link())
+    juce::String vertexCode = juce::String::createStringFromData(BinaryData::digital_glitch_vert, BinaryData::digital_glitch_vertSize);
+    juce::String fragmentCode = juce::String::createStringFromData(BinaryData::digital_glitch_frag, BinaryData::digital_glitch_fragSize);
+
+    if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) || !gl_->program->link())
     {
         DBG("DigitalGlitchShader: Shader compilation failed: " << gl_->program->getLastError());
         gl_->program.reset();

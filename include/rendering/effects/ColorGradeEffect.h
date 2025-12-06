@@ -44,6 +44,11 @@ public:
     ) override;
 
     /**
+     * Configure from VisualConfiguration.
+     */
+    void configure(const VisualConfiguration& config) override { settings_ = config.colorGrade; }
+
+    /**
      * Configure the color grading effect.
      */
     void setSettings(const ColorGradeSettings& settings) { settings_ = settings; }

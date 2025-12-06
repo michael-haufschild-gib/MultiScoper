@@ -9,14 +9,11 @@ namespace oscil
 {
 
 OscilTextField::OscilTextField(IThemeService& themeService)
-    : focusSpring_(SpringPresets::stiff())
-    , themeService_(themeService)
+    : ThemedComponent(themeService)
+    , focusSpring_(SpringPresets::stiff())
     , cachedErrorFont_(juce::FontOptions{})
 {
     setupComponents();
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     focusSpring_.position = 0.0f;
     focusSpring_.target = 0.0f;
@@ -56,7 +53,6 @@ void OscilTextField::registerTestId()
 
 OscilTextField::~OscilTextField()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -88,12 +84,12 @@ void OscilTextField::setupComponents()
 
     // Stepper buttons for Number variant (created but not visible by default)
     // Using Primary variant (blue) for clear visibility
-    decrementButton_ = std::make_unique<OscilButton>(themeService_, "-");
+    decrementButton_ = std::make_unique<OscilButton>(getThemeService(), "-");
     decrementButton_->setVariant(ButtonVariant::Primary);
     decrementButton_->onClick = [this] { decrementValue(); };
     addChildComponent(*decrementButton_);
 
-    incrementButton_ = std::make_unique<OscilButton>(themeService_, "+");
+    incrementButton_ = std::make_unique<OscilButton>(getThemeService(), "+");
     incrementButton_->setVariant(ButtonVariant::Primary);
     incrementButton_->onClick = [this] { incrementValue(); };
     addChildComponent(*incrementButton_);
@@ -151,7 +147,7 @@ juce::String OscilTextField::getText() const
 void OscilTextField::setPlaceholder(const juce::String& placeholder)
 {
     placeholder_ = placeholder;
-    editor_->setTextToShowWhenEmpty(placeholder, theme_.textSecondary);
+    editor_->setTextToShowWhenEmpty(placeholder, getTheme().textSecondary);
 }
 
 void OscilTextField::setRange(double min, double max)
@@ -287,14 +283,14 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Background
-    g.setColour(theme_.backgroundSecondary.withAlpha(opacity));
+    g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
     g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
 
     // Border
-    auto borderColour = hasError() ? theme_.statusError
-                                   : (focusAmount_ > 0.01f ? theme_.controlActive
-                                                           : theme_.controlBorder);
-    borderColour = borderColour.interpolatedWith(theme_.controlActive, focusAmount_);
+    auto borderColour = hasError() ? getTheme().statusError
+                                   : (focusAmount_ > 0.01f ? getTheme().controlActive
+                                                           : getTheme().controlBorder);
+    borderColour = borderColour.interpolatedWith(getTheme().controlActive, focusAmount_);
 
     g.setColour(borderColour.withAlpha(opacity));
     g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
@@ -302,7 +298,7 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     // Error message below
     if (hasError())
     {
-        g.setColour(theme_.statusError.withAlpha(opacity));
+        g.setColour(getTheme().statusError.withAlpha(opacity));
         g.setFont(cachedErrorFont_);
         g.drawText(errorMessage_,
             bounds.translated(0, bounds.getHeight() + 2).withHeight(14),
@@ -320,7 +316,7 @@ void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<fl
     float cy = iconBounds.getCentreY();
     float radius = 5.0f;
 
-    g.setColour(theme_.textSecondary.withAlpha(opacity));
+    g.setColour(getTheme().textSecondary.withAlpha(opacity));
     g.drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2, ComponentLayout::BORDER_MEDIUM);
     g.drawLine(cx + radius * 0.7f, cy + radius * 0.7f,
                cx + radius * 1.5f, cy + radius * 1.5f, ComponentLayout::BORDER_MEDIUM);
@@ -328,7 +324,7 @@ void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<fl
 
 void OscilTextField::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA * focusAmount_));
+    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA * focusAmount_));
     g.drawRoundedRectangle(
         bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
         ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET,
@@ -435,12 +431,12 @@ void OscilTextField::updateEditorStyle()
     editor_->setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
     editor_->setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
     editor_->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
-    editor_->setColour(juce::TextEditor::textColourId, theme_.textPrimary);
-    editor_->setColour(juce::TextEditor::highlightColourId, theme_.controlActive.withAlpha(0.3f));
-    editor_->setColour(juce::CaretComponent::caretColourId, theme_.controlActive);
+    editor_->setColour(juce::TextEditor::textColourId, getTheme().textPrimary);
+    editor_->setColour(juce::TextEditor::highlightColourId, getTheme().controlActive.withAlpha(0.3f));
+    editor_->setColour(juce::CaretComponent::caretColourId, getTheme().controlActive);
 
     editor_->setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
-    editor_->setTextToShowWhenEmpty(placeholder_, theme_.textSecondary);
+    editor_->setTextToShowWhenEmpty(placeholder_, getTheme().textSecondary);
     
     cachedErrorFont_ = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_CAPTION));
 }
@@ -520,12 +516,6 @@ void OscilTextField::notifyValueChanged()
         onValueChanged(numValue_);
 }
 
-void OscilTextField::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    updateEditorStyle();
-    repaint();
-}
 
 std::unique_ptr<juce::AccessibilityHandler> OscilTextField::createAccessibilityHandler()
 {

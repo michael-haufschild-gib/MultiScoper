@@ -27,23 +27,27 @@ InstanceId InstanceId::generate()
 Source::Source()
     : id_(SourceId::generate())
     , createdAt_(juce::Time::getCurrentTime())
-    , lastHeartbeat_(juce::Time::getCurrentTime())
 {
-    lastAudioTimeMs_.store(juce::Time::currentTimeMillis());
+    auto now = juce::Time::currentTimeMillis();
+    lastHeartbeatMs_.store(now, std::memory_order_relaxed);
+    lastAudioTimeMs_.store(now, std::memory_order_relaxed);
 }
 
 Source::Source(const SourceId& sourceId)
     : id_(sourceId)
     , createdAt_(juce::Time::getCurrentTime())
-    , lastHeartbeat_(juce::Time::getCurrentTime())
 {
-    lastAudioTimeMs_.store(juce::Time::currentTimeMillis());
+    auto now = juce::Time::currentTimeMillis();
+    lastHeartbeatMs_.store(now, std::memory_order_relaxed);
+    lastAudioTimeMs_.store(now, std::memory_order_relaxed);
 }
 
 Source::Source(const juce::ValueTree& state)
     : createdAt_(juce::Time::getCurrentTime())
-    , lastHeartbeat_(juce::Time::getCurrentTime())
 {
+    auto now = juce::Time::currentTimeMillis();
+    lastHeartbeatMs_.store(now, std::memory_order_relaxed);
+    lastAudioTimeMs_.store(now, std::memory_order_relaxed);
     fromValueTree(state);
 }
 
@@ -167,16 +171,28 @@ bool Source::transferOwnership()
 
 bool Source::transitionTo(SourceState newState)
 {
-    if (!canTransitionTo(newState))
-        return false;
+    // Use compare_exchange to atomically check and update state (avoids TOCTOU race)
+    SourceState currentState = state_.load(std::memory_order_acquire);
 
-    state_ = newState;
-    lastHeartbeat_ = juce::Time::getCurrentTime();
+    // Loop to handle spurious failures from compare_exchange_weak
+    while (isValidTransition(currentState, newState))
+    {
+        if (state_.compare_exchange_weak(currentState, newState,
+                                          std::memory_order_acq_rel,
+                                          std::memory_order_acquire))
+        {
+            lastHeartbeatMs_.store(juce::Time::currentTimeMillis(), std::memory_order_relaxed);
 
-    // Update active flag based on state
-    isActiveFlag_ = (newState == SourceState::ACTIVE);
+            // Update active flag based on state
+            isActiveFlag_ = (newState == SourceState::ACTIVE);
 
-    return true;
+            return true;
+        }
+        // compare_exchange_weak failed, currentState is updated with actual value
+        // Loop will re-check if the new current state allows the transition
+    }
+
+    return false;
 }
 
 bool Source::canTransitionTo(SourceState targetState) const
@@ -235,7 +251,9 @@ void Source::updateLastAudioTime()
 
 int64_t Source::getTimeSinceLastAudio() const
 {
-    return juce::Time::currentTimeMillis() - lastAudioTimeMs_.load(std::memory_order_relaxed);
+    // Guard against system clock adjustments that could produce negative values
+    int64_t delta = juce::Time::currentTimeMillis() - lastAudioTimeMs_.load(std::memory_order_relaxed);
+    return delta >= 0 ? delta : 0;
 }
 
 void Source::updateActivityState()

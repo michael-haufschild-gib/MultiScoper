@@ -4,9 +4,26 @@
 
 #include "rendering/particles/ParticleEmitter.h"
 #include <cmath>
+#include <algorithm>
+#include <numbers>
 
 namespace oscil
 {
+
+namespace
+{
+    // Helper to safely calculate a random index within bounds
+    // This prevents out-of-bounds access from floating-point edge cases
+    inline size_t safeRandomIndex(float random01, size_t size)
+    {
+        if (size == 0) return 0;
+        if (size == 1) return 0;
+        // Clamp the result to valid range to handle floating-point edge cases
+        size_t maxIdx = size - 1;
+        size_t idx = static_cast<size_t>(random01 * static_cast<float>(maxIdx));
+        return std::min(idx, maxIdx);
+    }
+} // anonymous namespace
 
 ParticleEmitter::ParticleEmitter(ParticleEmitterId id)
     : id_(id)
@@ -41,7 +58,7 @@ void ParticleEmitter::update(ParticlePool& pool,
             // Emit uniformly along the waveform
             for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
             {
-                size_t idx = static_cast<size_t>(dist01_(rng_) * static_cast<float>(samples.size() - 1));
+                size_t idx = safeRandomIndex(dist01_(rng_), samples.size());
                 auto pos = getWaveformPosition(samples, bounds, idx, verticalScale);
                 
                 // Calculate waveform tangent/normal for better flow
@@ -81,7 +98,7 @@ void ParticleEmitter::update(ParticlePool& pool,
             {
                 for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
                 {
-                    size_t peakIdx = peaks[static_cast<size_t>(dist01_(rng_) * static_cast<float>(peaks.size() - 1))];
+                    size_t peakIdx = peaks[safeRandomIndex(dist01_(rng_), peaks.size())];
                     auto pos = getWaveformPosition(samples, bounds, peakIdx, verticalScale);
                     
                     // For peaks, emit outwards (away from X axis roughly, but based on curvature)
@@ -115,7 +132,7 @@ void ParticleEmitter::update(ParticlePool& pool,
             {
                 for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
                 {
-                    size_t crossIdx = crossings[static_cast<size_t>(dist01_(rng_) * static_cast<float>(crossings.size() - 1))];
+                    size_t crossIdx = crossings[safeRandomIndex(dist01_(rng_), crossings.size())];
                     auto pos = getWaveformPosition(samples, bounds, crossIdx, verticalScale);
                     
                     // For zero crossings, maybe emit ALONG the tangent? (Splash effect)
@@ -167,7 +184,7 @@ void ParticleEmitter::triggerBurst(ParticlePool& pool,
 
     for (int i = 0; i < count && !pool.isFull(); ++i)
     {
-        size_t idx = static_cast<size_t>(dist01_(rng_) * static_cast<float>(samples.size() - 1));
+        size_t idx = safeRandomIndex(dist01_(rng_), samples.size());
         auto pos = getWaveformPosition(samples, bounds, idx, verticalScale);
         
         // Calculate tangent for burst too
@@ -208,7 +225,8 @@ void ParticleEmitter::spawnParticle(ParticlePool& pool, float x, float y, std::o
                   dist01_(rng_) * (config_.velocityMax - config_.velocityMin);
 
     // Random angle within spread
-    float angleSpreadRad = config_.velocityAngleSpread * 3.14159265f / 180.0f;
+    static constexpr float DEG_TO_RAD = std::numbers::pi_v<float> / 180.0f;
+    float angleSpreadRad = config_.velocityAngleSpread * DEG_TO_RAD;
     float angle = (dist01_(rng_) - 0.5f) * angleSpreadRad;
 
     // Apply direction bias
@@ -249,7 +267,7 @@ juce::Point<float> ParticleEmitter::getWaveformPosition(
     size_t index,
     float verticalScale) const
 {
-    if (samples.empty())
+    if (samples.size() <= 1)
         return bounds.getCentre();
 
     index = std::min(index, samples.size() - 1);

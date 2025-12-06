@@ -168,6 +168,7 @@ public:
     
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
+    void setSampleRate(int sampleRate);
 
     /**
      * Highlight a specific oscillator (or clear highlight if oscillatorId is invalid)
@@ -207,9 +208,6 @@ private:
     
     // Pane state
     bool isHeld_ = false;
-
-    // Primary oscillator tracking for header badge
-    const Oscillator* primaryOscillator_ = nullptr;
 
     // Callbacks
     std::function<void(const PaneId& movedPaneId, const PaneId& targetPaneId)> paneReorderedCallback_;

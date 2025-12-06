@@ -1,6 +1,6 @@
 # Architecture Guide for LLM Coding Agents
 
-**Purpose**: Help agents decide WHERE to put code and WHAT patterns to follow in this JUCE audio plugin.
+**Purpose**: Instructions for WHERE to put code and WHAT patterns to follow in this JUCE audio plugin.
 
 **Tech Stack**: C++20, JUCE 8.0.5, OpenGL 3.3, CMake 3.21+, GoogleTest
 
@@ -9,6 +9,7 @@
 ## Core Architectural Principles
 
 ### 1. Layer-Based Architecture
+
 **Mental Model**: Code flows downward through layers. Higher layers depend on lower layers, never the reverse.
 
 ```
@@ -24,6 +25,7 @@ core/       → Business logic (Oscillator, State, Registry, DSP)
 **Rule**: Never include `plugin/` or `ui/` headers from `core/` or `rendering/`.
 
 ### 2. Header/Source Separation
+
 **Pattern**: Headers in `include/`, implementations in `src/`, mirrored structure.
 
 ```
@@ -34,6 +36,7 @@ include/ui/panels/Foo.h      ←→    src/ui/panels/Foo.cpp
 **Rule**: Always use `#pragma once`. Include paths are relative to `include/`.
 
 ### 3. Dependency Injection
+
 **Pattern**: Pass dependencies via constructor, not global singletons.
 
 ```cpp
@@ -55,15 +58,23 @@ Is it an entry point (Processor/Editor)?     → plugin/
 Is it a UI widget?                           → ui/components/
 Is it a content panel (list, config)?        → ui/panels/
 Is it a modal dialog?                        → ui/dialogs/
+Is it a UI manager/coordinator?              → ui/managers/ or ui/controllers/
 Is it layout/sidebar/pane management?        → ui/layout/
+Is it a sidebar accordion section?           → ui/layout/sections/
+Is it pane-internal (header, body, overlay)? → ui/layout/pane/
 Is it theming/colors?                        → ui/theme/
-Is it OpenGL rendering?                      → rendering/
-Is it a shader?                              → rendering/shaders/ or shaders3d/
+Is it OpenGL rendering core?                 → rendering/
+Is it a 2D waveform shader?                  → rendering/shaders/
+Is it a 3D visualization shader?             → rendering/shaders3d/
+Is it a material shader (glass, chrome)?     → rendering/materials/
 Is it a post-process effect?                 → rendering/effects/
+Is it particle-related?                      → rendering/particles/
+Is it render subsystem logic?                → rendering/subsystems/
 Is it business logic/models?                 → core/
 Is it signal processing?                     → core/dsp/
+Is it audio analysis?                        → core/analysis/
 Is it an interface/abstraction?              → core/interfaces/
-Is it test infrastructure?                   → tools/
+Is it test infrastructure?                   → tools/test_server/
 Is it platform-specific (.mm)?               → platform/macos/
 ```
 
@@ -80,6 +91,7 @@ Is it platform-specific (.mm)?               → platform/macos/
 ## Class Patterns
 
 ### UI Component Pattern
+
 All custom UI components follow this pattern:
 
 ```cpp
@@ -130,6 +142,7 @@ private:
 - Use `JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR`
 
 ### Model Pattern
+
 Domain models use value semantics with unique IDs:
 
 ```cpp
@@ -170,8 +183,9 @@ private:
 } // namespace oscil
 ```
 
-### Shader Pattern
-All waveform shaders inherit from `WaveformShader`:
+### 2D Waveform Shader Pattern
+
+All 2D waveform shaders inherit from `WaveformShader`:
 
 ```cpp
 // include/rendering/shaders/MyShader.h
@@ -209,11 +223,116 @@ private:
 } // namespace oscil
 ```
 
+### 3D Shader Pattern
+
+3D shaders go in `rendering/shaders3d/`:
+
+```cpp
+// include/rendering/shaders3d/My3DShader.h
+#pragma once
+
+#include "rendering/shaders3d/WaveformShader3D.h"
+
+namespace oscil
+{
+
+class My3DShader : public WaveformShader3D
+{
+public:
+    My3DShader() = default;
+    ~My3DShader() override = default;
+
+    [[nodiscard]] juce::String getId() const override { return "my_3d_shader"; }
+    [[nodiscard]] juce::String getDisplayName() const override { return "My 3D Shader"; }
+
+    // Uses Camera3D for view/projection matrices
+    void render(juce::OpenGLContext& context,
+                const std::vector<float>& samples,
+                const Shader3DRenderParams& params,
+                const Camera3D& camera) override;
+
+private:
+    // OpenGL resources, uniforms for camera matrices
+};
+
+} // namespace oscil
+```
+
+### Post-Process Effect Pattern
+
+Effects go in `rendering/effects/`:
+
+```cpp
+// include/rendering/effects/MyEffect.h
+#pragma once
+
+#include "rendering/effects/PostProcessEffect.h"
+
+namespace oscil
+{
+
+class MyEffect : public PostProcessEffect
+{
+public:
+    MyEffect() = default;
+    ~MyEffect() override = default;
+
+    [[nodiscard]] juce::String getId() const override { return "my_effect"; }
+    [[nodiscard]] juce::String getDisplayName() const override { return "My Effect"; }
+
+    void setIntensity(float intensity) { intensity_ = intensity; }
+
+#if OSCIL_ENABLE_OPENGL
+    bool compile(juce::OpenGLContext& context) override;
+    void release(juce::OpenGLContext& context) override;
+    void apply(juce::OpenGLContext& context,
+               Framebuffer& input,
+               Framebuffer& output,
+               const EffectParams& params) override;
+#endif
+
+private:
+    float intensity_ = 1.0f;
+};
+
+} // namespace oscil
+```
+
+### Material Shader Pattern
+
+Material shaders for advanced surface effects go in `rendering/materials/`:
+
+```cpp
+// include/rendering/materials/MyMaterialShader.h
+#pragma once
+
+#include "rendering/materials/MaterialShader.h"
+
+namespace oscil
+{
+
+class MyMaterialShader : public MaterialShader
+{
+public:
+    [[nodiscard]] juce::String getId() const override { return "my_material"; }
+
+    // Materials typically need environment maps or textures
+    void setEnvironmentMap(GLuint textureId);
+
+    void render(juce::OpenGLContext& context,
+                const std::vector<float>& samples,
+                const MaterialRenderParams& params) override;
+};
+
+} // namespace oscil
+```
+
 ---
 
 ## Interface Patterns
 
 ### When to Create an Interface
+
 Create interfaces (`I*` prefix) when:
 - Multiple implementations exist or will exist
 - Unit testing requires mocking
@@ -241,6 +360,7 @@ public:
 ```
 
 ### Existing Interfaces
+
 - `IInstanceRegistry` - Source registration abstraction
 - `IAudioBuffer` - Audio buffer abstraction
 - `IAudioDataProvider` - Audio data access
@@ -286,11 +406,17 @@ private:
 | UI Component | `Oscil{Name}.h/cpp` | `OscilButton.h` |
 | Panel | `{Name}Component.h/cpp` | `SidebarComponent.h` |
 | Dialog | `{Name}Dialog.h/cpp` | `AddOscillatorDialog.h` |
+| Sidebar Section | `{Name}Section.h/cpp` | `TimingSidebarSection.h` |
 | Model | `{Name}.h/cpp` | `Oscillator.h` |
-| Shader | `{Name}Shader.h/cpp` | `NeonGlowShader.h` |
+| 2D Shader | `{Name}Shader.h/cpp` | `NeonGlowShader.h` |
+| 3D Shader | `{Name}Shader.h/cpp` | `ElectricFiligreeShader.h` |
+| Material | `{Name}Shader.h/cpp` | `LiquidChromeShader.h` |
 | Effect | `{Name}Effect.h/cpp` | `BloomEffect.h` |
 | Test | `test_{name}.cpp` | `test_oscillator.cpp` |
 | Interface | `I{Name}.h` | `IInstanceRegistry.h` |
+| Manager | `{Name}Manager.h/cpp` | `DialogManager.h` |
+| Controller | `{Name}Controller.h/cpp` | `OscillatorPanelController.h` |
+| Coordinator | `{Name}Coordinator.h/cpp` | `LayoutCoordinator.h` |
 
 ---
 
@@ -302,22 +428,76 @@ private:
 #include "core/OscilState.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "core/dsp/TimingEngine.h"
+#include "core/analysis/AnalysisEngine.h"
 
 // UI includes
 #include "ui/components/OscilButton.h"
 #include "ui/panels/WaveformComponent.h"
+#include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/layout/SidebarComponent.h"
+#include "ui/layout/sections/TimingSidebarSection.h"
+#include "ui/managers/DialogManager.h"
+#include "ui/controllers/OscillatorPanelController.h"
 
 // Rendering includes
 #include "rendering/WaveformShader.h"
-#include "rendering/effects/BloomEffect.h"
 #include "rendering/shaders/NeonGlowShader.h"
+#include "rendering/shaders3d/ElectricFiligreeShader.h"
+#include "rendering/materials/LiquidChromeShader.h"
+#include "rendering/effects/BloomEffect.h"
+#include "rendering/particles/ParticleSystem.h"
+#include "rendering/subsystems/EffectPipeline.h"
 
 // Plugin includes (only from plugin/ or ui/)
 #include "plugin/PluginProcessor.h"
 #include "plugin/PluginEditor.h"
 ```
+
+---
+
+## Adding New Files to Build
+
+After creating new `.cpp` files, add them to `cmake/Sources.cmake`:
+
+```cmake
+# In cmake/Sources.cmake, find the appropriate section:
+
+set(OSCIL_SOURCES
+    # ... existing sources ...
+
+    # Add your new file in the appropriate section:
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilNewWidget.cpp
+)
+```
+
+Then rebuild:
+```bash
+cmake --build --preset dev
+```
+
+---
+
+## Thread Domains
+
+### Audio Thread (Real-Time Safe)
+- `PluginProcessor::processBlock()`
+- `TimingEngine` timing calculations
+- `SharedCaptureBuffer` writes
+
+**Rules**: No allocations, no locks, no I/O, no exceptions.
+
+### Message Thread (UI)
+- All `juce::Component` methods
+- State modifications
+- UI updates
+
+### OpenGL Thread
+- `WaveformGLRenderer::renderOpenGL()`
+- All shader rendering
+- Effect pipeline
+
+**Rule**: Use `SpinLock` for data shared between UI and OpenGL threads.
 
 ---
 
@@ -332,7 +512,7 @@ private:
 
 ---
 
-**Don't**: Create global singletons
+**Don't**: Create global singletons in new code
 ```cpp
 // Bad: Global state
 auto& registry = InstanceRegistry::getInstance();
@@ -352,9 +532,29 @@ src/ui/MyHelper.h
 
 **Don't**: Forget to update Sources.cmake
 ```cmake
-# After adding new files, update cmake/Sources.cmake
+# After adding new .cpp files, update cmake/Sources.cmake
 ```
-**Do**: Add both .h and .cpp paths to Sources.cmake
+**Do**: Add both .h and .cpp paths, then rebuild
+
+---
+
+**Don't**: Allocate in audio thread
+```cpp
+// Bad: Allocation in processBlock
+void processBlock(...) {
+    auto* buffer = new float[1024];  // NO!
+}
+```
+**Do**: Pre-allocate in constructor, use lock-free structures
+
+---
+
+**Don't**: Mix 2D and 3D shader locations
+```cpp
+// Bad: 3D shader in 2D folder
+src/rendering/shaders/VolumetricRibbon.cpp  // NO!
+```
+**Do**: 2D in `shaders/`, 3D in `shaders3d/`, materials in `materials/`
 
 ---
 
@@ -366,7 +566,9 @@ src/ui/MyHelper.h
 - `juce::AudioProcessorEditor` - Plugin editor
 - `ThemeManagerListener` - Theme-aware components
 - `TestIdSupport` - E2E testable components
-- `WaveformShader` - Custom waveform shaders
+- `WaveformShader` - 2D waveform shaders
+- `WaveformShader3D` - 3D visualization shaders
+- `MaterialShader` - Surface material shaders
 - `PostProcessEffect` - Post-processing effects
 
 ### Key Namespaces

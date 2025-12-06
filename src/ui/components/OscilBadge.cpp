@@ -8,10 +8,8 @@ namespace oscil
 {
 
 OscilBadge::OscilBadge(IThemeService& themeService)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
 {
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 }
 
 
@@ -47,7 +45,6 @@ void OscilBadge::registerTestId()
 
 OscilBadge::~OscilBadge()
 {
-    themeService_.removeListener(this);
 }
 
 void OscilBadge::setText(const juce::String& text)
@@ -164,16 +161,16 @@ juce::Colour OscilBadge::getBackgroundColour() const
     switch (color_)
     {
         case BadgeColor::Success:
-            return theme_.statusActive;  // Green
+            return getTheme().statusActive;  // Green
         case BadgeColor::Warning:
-            return theme_.statusWarning; // Yellow
+            return getTheme().statusWarning; // Yellow
         case BadgeColor::Error:
-            return theme_.statusError;   // Red
+            return getTheme().statusError;   // Red
         case BadgeColor::Info:
             return juce::Colour(0xFF06B6D4); // Cyan
         case BadgeColor::Default:
         default:
-            return theme_.controlActive; // Blue
+            return getTheme().controlActive; // Blue
     }
 }
 
@@ -196,10 +193,5 @@ juce::Colour OscilBadge::getBorderColour() const
     return getBackgroundColour();
 }
 
-void OscilBadge::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
-}
 
 } // namespace oscil

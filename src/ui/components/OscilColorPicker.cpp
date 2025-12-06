@@ -8,14 +8,10 @@ namespace oscil
 {
 
 OscilColorPicker::OscilColorPicker(IThemeService& themeService, const juce::String& testId)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
 {
     if (testId.isNotEmpty())
         setTestId(testId);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
-
     currentColor_ = juce::Colours::red;
     originalColor_ = currentColor_;
 
@@ -48,7 +44,6 @@ void OscilColorPicker::registerTestId()
 
 OscilColorPicker::~OscilColorPicker()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -153,7 +148,7 @@ void OscilColorPicker::paintSquareMode(juce::Graphics& g)
     g.drawImage(cachedGradientImage_, bounds.toFloat());
 
     // Border
-    g.setColour(theme_.controlBorder);
+    g.setColour(getTheme().controlBorder);
     g.drawRect(bounds);
 
     // Indicator
@@ -170,15 +165,13 @@ void OscilColorPicker::paintWheelMode(juce::Graphics& g)
 {
     auto bounds = getGradientBounds();
     
-    // Reuse cache mechanism for wheel mode (though hue dependency is different - wheel shows all hues)
-    // Wheel mode doesn't depend on 'hue_' property for the background, so we use a sentinel hue value or separate flag
-    // Here we just check bounds validity for wheel mode.
-    
-    // Check if we are in wheel mode and cache is stale (either bounds changed or we were in square mode)
-    if (cachedGradientBounds_ != bounds || !cachedGradientImage_.isValid() || cachedHue_ > -2.0f) // cachedHue_ > -2.0f implies we might have been in square mode or unitialized
+    // Check if cache is stale: bounds changed, image invalid, or mode changed from square to wheel
+    bool needsUpdate = cachedGradientBounds_ != bounds ||
+                       !cachedGradientImage_.isValid() ||
+                       !cachedIsWheelMode_;  // Was in square mode, need to regenerate for wheel
+
+    if (needsUpdate)
     {
-        // Mark as wheel mode in cache by setting hue to a sentinel (e.g. -10.0f)
-        // But updateGradientCache logic needs to know the mode.
         updateGradientCache(bounds);
     }
 
@@ -203,22 +196,30 @@ void OscilColorPicker::paintWheelMode(juce::Graphics& g)
 
 void OscilColorPicker::updateGradientCache(const juce::Rectangle<int>& bounds)
 {
+    // Guard against zero or negative dimensions
+    if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0)
+        return;
+
     cachedGradientImage_ = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     cachedGradientBounds_ = bounds;
-    
+
     if (mode_ == Mode::Square)
     {
         cachedHue_ = hue_;
-        
+        cachedIsWheelMode_ = false;
+
         juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
-        
+
+        float heightF = static_cast<float>(std::max(1, bounds.getHeight()));
+        float widthF = static_cast<float>(std::max(1, bounds.getWidth()));
+
         for (int y = 0; y < bounds.getHeight(); ++y)
         {
-            float brightness = 1.0f - (static_cast<float>(y) / static_cast<float>(bounds.getHeight()));
-            
+            float brightness = 1.0f - (static_cast<float>(y) / heightF);
+
             for (int x = 0; x < bounds.getWidth(); ++x)
             {
-                float saturation = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
+                float saturation = static_cast<float>(x) / widthF;
                 auto color = juce::Colour::fromHSV(hue_, saturation, brightness, 1.0f);
                 data.setPixelColour(x, y, color);
             }
@@ -226,11 +227,12 @@ void OscilColorPicker::updateGradientCache(const juce::Rectangle<int>& bounds)
     }
     else
     {
-        cachedHue_ = -10.0f; // Sentinel for wheel mode
-        float radius = static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f;
+        cachedHue_ = -10.0f; // Not used in wheel mode
+        cachedIsWheelMode_ = true;
+        float radius = std::max(1.0f, static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f);
         float cx = static_cast<float>(bounds.getWidth()) / 2.0f;
         float cy = static_cast<float>(bounds.getHeight()) / 2.0f;
-        
+
         juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
 
         for (int y = 0; y < bounds.getHeight(); ++y)
@@ -258,16 +260,20 @@ void OscilColorPicker::updateGradientCache(const juce::Rectangle<int>& bounds)
 
 void OscilColorPicker::paintHueSlider(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
+    if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0)
+        return;
+
     // Hue gradient
+    float widthF = static_cast<float>(std::max(1, bounds.getWidth()));
     for (int x = 0; x < bounds.getWidth(); ++x)
     {
-        float hue = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
+        float hue = static_cast<float>(x) / widthF;
         g.setColour(juce::Colour::fromHSV(hue, 1.0f, 1.0f, 1.0f));
         g.fillRect(bounds.getX() + x, bounds.getY(), 1, bounds.getHeight());
     }
 
     // Border
-    g.setColour(theme_.controlBorder);
+    g.setColour(getTheme().controlBorder);
     g.drawRect(bounds);
 
     // Indicator
@@ -296,15 +302,16 @@ void OscilColorPicker::paintAlphaSlider(juce::Graphics& g, juce::Rectangle<int> 
 
     // Alpha gradient
     auto baseColor = juce::Colour::fromHSV(hue_, saturation_, brightness_, 1.0f);
+    float widthF = static_cast<float>(std::max(1, bounds.getWidth()));
     for (int x = 0; x < bounds.getWidth(); ++x)
     {
-        float alpha = static_cast<float>(x) / static_cast<float>(bounds.getWidth());
+        float alpha = static_cast<float>(x) / widthF;
         g.setColour(baseColor.withAlpha(alpha));
         g.fillRect(bounds.getX() + x, bounds.getY(), 1, bounds.getHeight());
     }
 
     // Border
-    g.setColour(theme_.controlBorder);
+    g.setColour(getTheme().controlBorder);
     g.drawRect(bounds);
 
     // Indicator
@@ -348,7 +355,7 @@ void OscilColorPicker::paintPreview(juce::Graphics& g, juce::Rectangle<int> boun
     g.fillRect(currentBounds);
 
     // Border
-    g.setColour(theme_.controlBorder);
+    g.setColour(getTheme().controlBorder);
     g.drawRect(bounds);
 }
 
@@ -456,6 +463,10 @@ void OscilColorPicker::handleGradientDrag(juce::Point<int> pos)
 {
     auto bounds = getGradientBounds();
 
+    // Guard against division by zero if bounds are invalid
+    if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0)
+        return;
+
     saturation_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
     brightness_ = std::clamp(1.0f - static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight()), 0.0f, 1.0f);
 
@@ -465,6 +476,11 @@ void OscilColorPicker::handleGradientDrag(juce::Point<int> pos)
 void OscilColorPicker::handleHueDrag(juce::Point<int> pos)
 {
     auto bounds = getHueSliderBounds();
+
+    // Guard against division by zero if bounds are invalid
+    if (bounds.getWidth() <= 0)
+        return;
+
     hue_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
     updateFromHSV();
 }
@@ -472,6 +488,11 @@ void OscilColorPicker::handleHueDrag(juce::Point<int> pos)
 void OscilColorPicker::handleAlphaDrag(juce::Point<int> pos)
 {
     auto bounds = getAlphaSliderBounds();
+
+    // Guard against division by zero if bounds are invalid
+    if (bounds.getWidth() <= 0)
+        return;
+
     alpha_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
     updateFromHSV();
 }
@@ -495,12 +516,6 @@ void OscilColorPicker::updateHexField()
 void OscilColorPicker::timerCallback()
 {
     stopTimer();
-}
-
-void OscilColorPicker::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
 }
 
 } // namespace oscil

@@ -15,14 +15,22 @@ static size_t nextPowerOfTwo(size_t n)
     if (n == 0) return 1;
     // Check if already power of 2
     if ((n & (n - 1)) == 0) return n;
-    // Round up
+    // Prevent overflow: if n is too large, return max representable power of 2
+    constexpr size_t maxPowerOf2 = size_t{1} << (sizeof(size_t) * 8 - 1);
+    if (n > maxPowerOf2) return maxPowerOf2;
+    // Round up using bit manipulation
     --n;
     n |= n >> 1;
     n |= n >> 2;
     n |= n >> 4;
     n |= n >> 8;
     n |= n >> 16;
-    n |= n >> 32;
+    // Only apply 32-bit shift on 64-bit platforms to avoid UB
+    // (shifting by >= width of type is undefined behavior)
+    if constexpr (sizeof(size_t) > 4)
+    {
+        n |= n >> 32;
+    }
     return n + 1;
 }
 

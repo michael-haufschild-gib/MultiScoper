@@ -92,7 +92,8 @@ void DialogManager::showColorDialog(juce::Colour initialColor,
 }
 
 void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes,
-                                         std::function<void(const SelectPaneDialog::Result&)> onComplete)
+                                         std::function<void(const SelectPaneDialog::Result&)> onComplete,
+                                         std::function<void()> onCancel)
 {
     if (!selectPaneModal_ || !selectPaneDialogContent_)
         return;
@@ -105,7 +106,9 @@ void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes
         selectPaneModal_->hide();
     });
 
-    selectPaneDialogContent_->setOnCancel([this]() {
+    selectPaneDialogContent_->setOnCancel([this, onCancel]() {
+        if (onCancel)
+            onCancel();
         selectPaneModal_->hide();
     });
 
@@ -113,8 +116,7 @@ void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes
 }
 
 void DialogManager::showConfigPopup(const Oscillator& oscillator,
-                                    const std::vector<std::pair<PaneId, juce::String>>& availablePanes,
-                                    OscillatorConfigDialog::Listener* /*listener*/)
+                                    const std::vector<std::pair<PaneId, juce::String>>& availablePanes)
 {
     if (!configPopup_ || !configModal_)
         return;

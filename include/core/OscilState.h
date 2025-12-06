@@ -309,6 +309,7 @@ public:
     GlobalPreferences& operator=(const GlobalPreferences&) = delete;
 
 private:
+    mutable std::recursive_mutex mutex_;  // Thread safety for multi-instance access (recursive for setters calling save())
     juce::ValueTree preferences_;
 };
 

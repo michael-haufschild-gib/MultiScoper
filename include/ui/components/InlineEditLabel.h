@@ -6,7 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
 #include <functional>
@@ -28,8 +28,7 @@ class IThemeService;
  * - Validation: Optional callback to validate before saving
  * - Empty text handling: Reverts to original if empty string entered
  */
-class InlineEditLabel : public juce::Component,
-                        public ThemeManagerListener,
+class InlineEditLabel : public ThemedComponent,
                         public TestIdSupport
 {
 public:
@@ -81,11 +80,12 @@ public:
     void mouseDoubleClick(const juce::MouseEvent& e) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
     // Size hints
     int getPreferredHeight() const;
+
+protected:
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
 private:
     void setupComponents();
@@ -95,7 +95,6 @@ private:
     void updateEditorStyle();
 
     // Dependencies
-    IThemeService& themeService_;
 
     // State
     juce::String text_;

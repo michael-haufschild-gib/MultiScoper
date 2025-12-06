@@ -119,14 +119,21 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
     addChildComponent(*visibilityButton_);
 
     // Mode buttons - using icons for Stereo/Mono, short text for others
+    // Tooltips help users understand what each processing mode does
     modeButtons_ = std::make_unique<SegmentedButtonBar>(themeService_);
     modeButtons_->setMinButtonWidth(36);  // Compact buttons for 6 modes
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(14), static_cast<int>(ProcessingMode::FullStereo));
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(14), static_cast<int>(ProcessingMode::Mono));
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMidIcon(14), static_cast<int>(ProcessingMode::Mid));
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createSideIcon(14), static_cast<int>(ProcessingMode::Side));
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createLeftIcon(14), static_cast<int>(ProcessingMode::Left));
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(14), static_cast<int>(ProcessingMode::Right));
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(14),
+        static_cast<int>(ProcessingMode::FullStereo), {}, "Stereo: Display both L/R channels");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(14),
+        static_cast<int>(ProcessingMode::Mono), {}, "Mono: Mix to mono (L+R)/2");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMidIcon(14),
+        static_cast<int>(ProcessingMode::Mid), {}, "Mid: Center content (L+R)/2");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createSideIcon(14),
+        static_cast<int>(ProcessingMode::Side), {}, "Side: Stereo difference (L-R)/2");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createLeftIcon(14),
+        static_cast<int>(ProcessingMode::Left), {}, "Left: Left channel only");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(14),
+        static_cast<int>(ProcessingMode::Right), {}, "Right: Right channel only");
     if (suffix.isNotEmpty()) 
     {
         // SegmentedButtonBar doesn't easily support setting IDs for internal buttons via this API

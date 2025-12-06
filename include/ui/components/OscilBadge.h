@@ -6,8 +6,8 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
+#include "ui/components/ThemedComponent.h"
+
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/TestId.h"
@@ -24,8 +24,8 @@ namespace oscil
  * - Optional icon
  * - Compact mode for smaller spaces
  */
-class OscilBadge : public juce::Component,
-                   public ThemeManagerListener,
+class OscilBadge : public ThemedComponent,
+                   
                    public TestIdSupport
 {
 public:
@@ -59,8 +59,6 @@ public:
     // Component overrides
     void paint(juce::Graphics& g) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
 private:
     juce::Colour getBackgroundColour() const;
@@ -73,8 +71,6 @@ private:
     BadgeVariant variant_ = BadgeVariant::Filled;
     bool compact_ = false;
 
-    ColorTheme theme_;
-    IThemeService& themeService_;
 
     static constexpr int ICON_SIZE = 12;
     static constexpr int PADDING_H = 8;

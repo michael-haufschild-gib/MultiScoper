@@ -51,7 +51,15 @@ static const char* stringFragmentShader = R"(
 )";
 
 StringTheoryShader::StringTheoryShader() = default;
-StringTheoryShader::~StringTheoryShader() = default;
+StringTheoryShader::~StringTheoryShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[StringTheoryShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool StringTheoryShader::compile(juce::OpenGLContext& context)
 {
@@ -177,6 +185,10 @@ void StringTheoryShader::render(juce::OpenGLContext& context,
     ext.glDisableVertexAttribArray(static_cast<GLuint>(idxLoc));
     ext.glBindVertexArray(0);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // Restore GL state
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 void StringTheoryShader::generateStringMesh(const WaveformData3D& data, float xSpread)

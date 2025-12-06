@@ -4,11 +4,12 @@
 
 #include "rendering/Camera3D.h"
 #include <algorithm>
+#include <numbers>
 
 namespace oscil
 {
 
-static constexpr float PI = 3.14159265358979323846f;
+static constexpr float PI = std::numbers::pi_v<float>;
 static constexpr float DEG_TO_RAD = PI / 180.0f;
 
 Camera3D::Camera3D()
@@ -122,7 +123,21 @@ void Camera3D::zoom(float deltaDistance)
 void Camera3D::pan(float deltaX, float deltaY)
 {
     // Calculate right and up vectors from view
-    Vec3 forward = (target_ - position_).normalized();
+    Vec3 forward = target_ - position_;
+    float forwardLen = forward.length();
+
+    // Guard against degenerate case where position equals target
+    constexpr float kMinDistance = 1e-6f;
+    if (forwardLen < kMinDistance)
+    {
+        // Use default forward direction (negative Z)
+        forward = {0, 0, -1};
+    }
+    else
+    {
+        forward = forward * (1.0f / forwardLen);
+    }
+
     Vec3 right = Vec3::cross(forward, up_).normalized();
     Vec3 actualUp = Vec3::cross(right, forward);
 
@@ -162,19 +177,17 @@ void Camera3D::update(float deltaTime)
         }
         else
         {
-            // Smooth interpolation (ease out)
+            // Smooth interpolation (ease out cubic)
             float t = 1.0f - std::pow(1.0f - animProgress_, 3.0f);
 
-            Vec3 startPos = position_;
-            Vec3 startTarget = target_;
+            // Interpolate from stored start values to target
+            position_.x = animStartPosition_.x + (animTargetPosition_.x - animStartPosition_.x) * t;
+            position_.y = animStartPosition_.y + (animTargetPosition_.y - animStartPosition_.y) * t;
+            position_.z = animStartPosition_.z + (animTargetPosition_.z - animStartPosition_.z) * t;
 
-            position_.x = startPos.x + (animTargetPosition_.x - startPos.x) * t;
-            position_.y = startPos.y + (animTargetPosition_.y - startPos.y) * t;
-            position_.z = startPos.z + (animTargetPosition_.z - startPos.z) * t;
-
-            target_.x = startTarget.x + (animTargetTarget_.x - startTarget.x) * t;
-            target_.y = startTarget.y + (animTargetTarget_.y - startTarget.y) * t;
-            target_.z = startTarget.z + (animTargetTarget_.z - startTarget.z) * t;
+            target_.x = animStartTarget_.x + (animTargetTarget_.x - animStartTarget_.x) * t;
+            target_.y = animStartTarget_.y + (animTargetTarget_.y - animStartTarget_.y) * t;
+            target_.z = animStartTarget_.z + (animTargetTarget_.z - animStartTarget_.z) * t;
         }
 
         viewDirty_ = true;
@@ -196,6 +209,8 @@ void Camera3D::update(float deltaTime)
 
 void Camera3D::animateTo(const Vec3& position, const Vec3& target, float duration)
 {
+    animStartPosition_ = position_;
+    animStartTarget_ = target_;
     animTargetPosition_ = position;
     animTargetTarget_ = target;
     animDuration_ = std::max(0.01f, duration);

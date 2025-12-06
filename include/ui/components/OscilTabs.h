@@ -6,8 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -39,8 +38,7 @@ struct TabItem
  * - Keyboard navigation
  * - Full accessibility support
  */
-class OscilTabs : public juce::Component,
-                  public ThemeManagerListener,
+class OscilTabs : public ThemedComponent,
                   public TestIdSupport,
                   private juce::Timer
 {
@@ -119,9 +117,6 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
@@ -156,9 +151,6 @@ private:
 
     float targetIndicatorX_ = 0;
     float targetIndicatorWidth_ = 0;
-
-    ColorTheme theme_;
-    IThemeService& themeService_;
 
     static constexpr int DEFAULT_TAB_HEIGHT = 40;
     static constexpr int INDICATOR_HEIGHT = 3;

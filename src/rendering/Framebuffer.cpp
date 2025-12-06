@@ -79,7 +79,11 @@ void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
     int savedSamples = numSamples;
 
     destroy(context);
-    create(context, w, h, savedSamples, savedFormat, savedHasDepth, savedHasDepthTexture);
+    if (!create(context, w, h, savedSamples, savedFormat, savedHasDepth, savedHasDepthTexture))
+    {
+        DBG("Framebuffer::resize() failed to recreate FBO at " << w << "x" << h);
+        // Framebuffer is now invalid - caller should check isValid() before use
+    }
 }
 
 void Framebuffer::bind()
@@ -106,7 +110,8 @@ void Framebuffer::unbind()
 
 void Framebuffer::bindTexture(int textureUnit)
 {
-    if (colorTexture != 0)
+    // Guard against invalid texture unit (GL supports 0-15 typically)
+    if (colorTexture != 0 && textureUnit >= 0 && textureUnit < 16)
     {
         glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
         glBindTexture(GL_TEXTURE_2D, colorTexture);
@@ -115,7 +120,8 @@ void Framebuffer::bindTexture(int textureUnit)
 
 void Framebuffer::bindDepthTexture(int textureUnit)
 {
-    if (depthTexture != 0)
+    // Guard against invalid texture unit (GL supports 0-15 typically)
+    if (depthTexture != 0 && textureUnit >= 0 && textureUnit < 16)
     {
         glActiveTexture(GL_TEXTURE0 + static_cast<GLenum>(textureUnit));
         glBindTexture(GL_TEXTURE_2D, depthTexture);

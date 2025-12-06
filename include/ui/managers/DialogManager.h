@@ -54,20 +54,14 @@ public:
 
 
     void showSelectPaneDialog(const std::vector<Pane>& availablePanes,
-
-                              
-
-                              std::function<void(const SelectPaneDialog::Result&)> onComplete);
+                              std::function<void(const SelectPaneDialog::Result&)> onComplete,
+                              std::function<void()> onCancel = nullptr);
 
 
 
     // Configuration Popup
-
     void showConfigPopup(const Oscillator& oscillator,
-
-                         const std::vector<std::pair<PaneId, juce::String>>& availablePanes,
-
-                         OscillatorConfigDialog::Listener* listener);
+                         const std::vector<std::pair<PaneId, juce::String>>& availablePanes);
 
     
 

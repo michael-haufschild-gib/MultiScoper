@@ -8,16 +8,13 @@ namespace oscil
 {
 
 OscilButton::OscilButton(IThemeService& themeService, const juce::String& text)
-    : label_(text)
+    : ThemedComponent(themeService)
+    , label_(text)
     , scaleSpring_(SpringPresets::snappy())
     , brightnessSpring_(SpringPresets::stiff())
-    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     scaleSpring_.position = 1.0f;
     scaleSpring_.target = 1.0f;
@@ -51,7 +48,6 @@ void OscilButton::registerTestId()
 
 OscilButton::~OscilButton()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -305,10 +301,11 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     {
         auto pathBounds = iconPath_.getBounds();
         float padding = static_cast<float>(ComponentLayout::SPACING_XS);
-        float availableSize = std::min(bounds.getWidth(), bounds.getHeight()) - padding * 2;
+        float availableSize = std::max(1.0f, std::min(bounds.getWidth(), bounds.getHeight()) - padding * 2);
 
-        // Scale path to fit within available space
-        float scale = availableSize / std::max(pathBounds.getWidth(), pathBounds.getHeight());
+        // Scale path to fit within available space (guard against zero path bounds)
+        float pathDim = std::max(0.001f, std::max(pathBounds.getWidth(), pathBounds.getHeight()));
+        float scale = availableSize / pathDim;
 
         // Center the path within the bounds
         float offsetX = bounds.getCentreX() - (pathBounds.getCentreX() * scale);
@@ -328,7 +325,9 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     {
         if (icon_.isValid())
         {
-            auto iconBounds = bounds.reduced((bounds.getWidth() - ICON_SIZE) / 2);
+            // Guard against negative reduction (would expand instead)
+            float reduction = std::max(0.0f, (bounds.getWidth() - ICON_SIZE) / 2);
+            auto iconBounds = bounds.reduced(reduction);
             g.drawImage(icon_, iconBounds, juce::RectanglePlacement::centred);
             return;
         }
@@ -382,7 +381,7 @@ void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>
         ? ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET
         : ComponentLayout::RADIUS_LG + ComponentLayout::FOCUS_RING_OFFSET;
 
-    g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawRoundedRectangle(
         bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
         cornerRadius,
@@ -392,23 +391,25 @@ void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>
 
 juce::Colour OscilButton::getBackgroundColour() const
 {
+    const auto& theme = getTheme();
+
     // Handle toggled state for toggleable buttons
     if (toggleable_ && isToggled_)
     {
-        return theme_.btnPrimaryBgActive; 
+        return theme.btnPrimaryBgActive;
     }
 
     if (!enabled_)
     {
         switch (variant_)
         {
-            case ButtonVariant::Primary:   return theme_.btnPrimaryBgDisabled;
-            case ButtonVariant::Secondary: return theme_.btnSecondaryBgDisabled;
-            case ButtonVariant::Tertiary:  return theme_.btnTertiaryBgDisabled;
-            case ButtonVariant::Ghost:     return theme_.btnTertiaryBgDisabled;
-            case ButtonVariant::Danger:    return theme_.statusError.withAlpha(0.5f); // Fallback
-            case ButtonVariant::Icon:      return theme_.backgroundSecondary.withAlpha(0.5f);
-            default:                       return theme_.btnPrimaryBgDisabled;
+            case ButtonVariant::Primary:   return theme.btnPrimaryBgDisabled;
+            case ButtonVariant::Secondary: return theme.btnSecondaryBgDisabled;
+            case ButtonVariant::Tertiary:  return theme.btnTertiaryBgDisabled;
+            case ButtonVariant::Ghost:     return theme.btnTertiaryBgDisabled;
+            case ButtonVariant::Danger:    return theme.statusError.withAlpha(0.5f); // Fallback
+            case ButtonVariant::Icon:      return theme.backgroundSecondary.withAlpha(0.5f);
+            default:                       return theme.btnPrimaryBgDisabled;
         }
     }
 
@@ -416,13 +417,13 @@ juce::Colour OscilButton::getBackgroundColour() const
     {
         switch (variant_)
         {
-            case ButtonVariant::Primary:   return theme_.btnPrimaryBgActive;
-            case ButtonVariant::Secondary: return theme_.btnSecondaryBgActive;
-            case ButtonVariant::Tertiary:  return theme_.btnTertiaryBgActive;
-            case ButtonVariant::Ghost:     return theme_.btnTertiaryBgActive;
-            case ButtonVariant::Danger:    return theme_.statusError.darker(0.2f);
-            case ButtonVariant::Icon:      return theme_.controlHighlight;
-            default:                       return theme_.btnPrimaryBgActive;
+            case ButtonVariant::Primary:   return theme.btnPrimaryBgActive;
+            case ButtonVariant::Secondary: return theme.btnSecondaryBgActive;
+            case ButtonVariant::Tertiary:  return theme.btnTertiaryBgActive;
+            case ButtonVariant::Ghost:     return theme.btnTertiaryBgActive;
+            case ButtonVariant::Danger:    return theme.statusError.darker(0.2f);
+            case ButtonVariant::Icon:      return theme.controlHighlight;
+            default:                       return theme.btnPrimaryBgActive;
         }
     }
 
@@ -430,26 +431,26 @@ juce::Colour OscilButton::getBackgroundColour() const
     {
         switch (variant_)
         {
-            case ButtonVariant::Primary:   return theme_.btnPrimaryBgHover;
-            case ButtonVariant::Secondary: return theme_.btnSecondaryBgHover;
-            case ButtonVariant::Tertiary:  return theme_.btnTertiaryBgHover;
-            case ButtonVariant::Ghost:     return theme_.btnTertiaryBgHover;
-            case ButtonVariant::Danger:    return theme_.statusError.brighter(0.1f);
-            case ButtonVariant::Icon:      return theme_.controlHighlight;
-            default:                       return theme_.btnPrimaryBgHover;
+            case ButtonVariant::Primary:   return theme.btnPrimaryBgHover;
+            case ButtonVariant::Secondary: return theme.btnSecondaryBgHover;
+            case ButtonVariant::Tertiary:  return theme.btnTertiaryBgHover;
+            case ButtonVariant::Ghost:     return theme.btnTertiaryBgHover;
+            case ButtonVariant::Danger:    return theme.statusError.brighter(0.1f);
+            case ButtonVariant::Icon:      return theme.controlHighlight;
+            default:                       return theme.btnPrimaryBgHover;
         }
     }
 
     // Default state
     switch (variant_)
     {
-        case ButtonVariant::Primary:   return theme_.btnPrimaryBg;
-        case ButtonVariant::Secondary: return theme_.btnSecondaryBg;
-        case ButtonVariant::Tertiary:  return theme_.btnTertiaryBg;
-        case ButtonVariant::Ghost:     return theme_.btnTertiaryBg; // Ghost is alias for Tertiary style
-        case ButtonVariant::Danger:    return theme_.statusError;
-        case ButtonVariant::Icon:      return theme_.backgroundSecondary; // Default icon bg
-        default:                       return theme_.btnPrimaryBg;
+        case ButtonVariant::Primary:   return theme.btnPrimaryBg;
+        case ButtonVariant::Secondary: return theme.btnSecondaryBg;
+        case ButtonVariant::Tertiary:  return theme.btnTertiaryBg;
+        case ButtonVariant::Ghost:     return theme.btnTertiaryBg; // Ghost is alias for Tertiary style
+        case ButtonVariant::Danger:    return theme.statusError;
+        case ButtonVariant::Icon:      return theme.backgroundSecondary; // Default icon bg
+        default:                       return theme.btnPrimaryBg;
     }
 }
 
@@ -458,20 +459,20 @@ juce::Colour OscilButton::getTextColour() const
     // Handle toggled state for toggleable buttons
     if (toggleable_ && isToggled_)
     {
-        return theme_.btnPrimaryTextActive;
+        return getTheme().btnPrimaryTextActive;
     }
 
     if (!enabled_)
     {
         switch (variant_)
         {
-            case ButtonVariant::Primary:   return theme_.btnPrimaryTextDisabled;
-            case ButtonVariant::Secondary: return theme_.btnSecondaryTextDisabled;
-            case ButtonVariant::Tertiary:  return theme_.btnTertiaryTextDisabled;
-            case ButtonVariant::Ghost:     return theme_.btnTertiaryTextDisabled;
-            case ButtonVariant::Danger:    return theme_.textSecondary;
-            case ButtonVariant::Icon:      return theme_.textSecondary;
-            default:                       return theme_.textSecondary;
+            case ButtonVariant::Primary:   return getTheme().btnPrimaryTextDisabled;
+            case ButtonVariant::Secondary: return getTheme().btnSecondaryTextDisabled;
+            case ButtonVariant::Tertiary:  return getTheme().btnTertiaryTextDisabled;
+            case ButtonVariant::Ghost:     return getTheme().btnTertiaryTextDisabled;
+            case ButtonVariant::Danger:    return getTheme().textSecondary;
+            case ButtonVariant::Icon:      return getTheme().textSecondary;
+            default:                       return getTheme().textSecondary;
         }
     }
 
@@ -479,13 +480,13 @@ juce::Colour OscilButton::getTextColour() const
     {
         switch (variant_)
         {
-            case ButtonVariant::Primary:   return theme_.btnPrimaryTextActive;
-            case ButtonVariant::Secondary: return theme_.btnSecondaryTextActive;
-            case ButtonVariant::Tertiary:  return theme_.btnTertiaryTextActive;
-            case ButtonVariant::Ghost:     return theme_.btnTertiaryTextActive;
+            case ButtonVariant::Primary:   return getTheme().btnPrimaryTextActive;
+            case ButtonVariant::Secondary: return getTheme().btnSecondaryTextActive;
+            case ButtonVariant::Tertiary:  return getTheme().btnTertiaryTextActive;
+            case ButtonVariant::Ghost:     return getTheme().btnTertiaryTextActive;
             case ButtonVariant::Danger:    return juce::Colours::white;
-            case ButtonVariant::Icon:      return theme_.textHighlight;
-            default:                       return theme_.textHighlight;
+            case ButtonVariant::Icon:      return getTheme().textHighlight;
+            default:                       return getTheme().textHighlight;
         }
     }
 
@@ -493,32 +494,32 @@ juce::Colour OscilButton::getTextColour() const
     {
         switch (variant_)
         {
-            case ButtonVariant::Primary:   return theme_.btnPrimaryTextHover;
-            case ButtonVariant::Secondary: return theme_.btnSecondaryTextHover;
-            case ButtonVariant::Tertiary:  return theme_.btnTertiaryTextHover;
-            case ButtonVariant::Ghost:     return theme_.btnTertiaryTextHover;
+            case ButtonVariant::Primary:   return getTheme().btnPrimaryTextHover;
+            case ButtonVariant::Secondary: return getTheme().btnSecondaryTextHover;
+            case ButtonVariant::Tertiary:  return getTheme().btnTertiaryTextHover;
+            case ButtonVariant::Ghost:     return getTheme().btnTertiaryTextHover;
             case ButtonVariant::Danger:    return juce::Colours::white;
-            case ButtonVariant::Icon:      return theme_.textHighlight;
-            default:                       return theme_.textHighlight;
+            case ButtonVariant::Icon:      return getTheme().textHighlight;
+            default:                       return getTheme().textHighlight;
         }
     }
 
     // Default state
     switch (variant_)
     {
-        case ButtonVariant::Primary:   return theme_.btnPrimaryText;
-        case ButtonVariant::Secondary: return theme_.btnSecondaryText;
-        case ButtonVariant::Tertiary:  return theme_.btnTertiaryText;
-        case ButtonVariant::Ghost:     return theme_.btnTertiaryText;
+        case ButtonVariant::Primary:   return getTheme().btnPrimaryText;
+        case ButtonVariant::Secondary: return getTheme().btnSecondaryText;
+        case ButtonVariant::Tertiary:  return getTheme().btnTertiaryText;
+        case ButtonVariant::Ghost:     return getTheme().btnTertiaryText;
         case ButtonVariant::Danger:    return juce::Colours::white;
-        case ButtonVariant::Icon:      return theme_.textPrimary;
-        default:                       return theme_.btnPrimaryText;
+        case ButtonVariant::Icon:      return getTheme().textPrimary;
+        default:                       return getTheme().btnPrimaryText;
     }
 }
 
 juce::Colour OscilButton::getBorderColour() const
 {
-    return theme_.controlBorder;
+    return getTheme().controlBorder;
 }
 
 void OscilButton::resized()
@@ -679,12 +680,6 @@ void OscilButton::updateAnimations()
 
     currentScale_ = scaleSpring_.position;
     currentBrightness_ = brightnessSpring_.position;
-}
-
-void OscilButton::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
 }
 
 // Custom accessibility handler with descriptive text for screen readers

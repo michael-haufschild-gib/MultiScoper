@@ -11,14 +11,15 @@
 namespace oscil
 {
 
-DisplaySettingsManager::DisplaySettingsManager(std::vector<std::unique_ptr<PaneComponent>>& panes)
-    : panes_(panes)
+DisplaySettingsManager::DisplaySettingsManager(PaneGetter paneGetter)
+    : paneGetter_(std::move(paneGetter))
 {
 }
 
 void DisplaySettingsManager::setShowGridForAll(bool show)
 {
-    for (auto& pane : panes_)
+    // Get snapshot of panes to prevent iterator invalidation during callbacks
+    for (auto* pane : paneGetter_())
     {
         if (pane)
             pane->setShowGrid(show);
@@ -27,7 +28,7 @@ void DisplaySettingsManager::setShowGridForAll(bool show)
 
 void DisplaySettingsManager::setGridConfigForAll(const GridConfiguration& config)
 {
-    for (auto& pane : panes_)
+    for (auto* pane : paneGetter_())
     {
         if (pane)
             pane->setGridConfig(config);
@@ -36,7 +37,7 @@ void DisplaySettingsManager::setGridConfigForAll(const GridConfiguration& config
 
 void DisplaySettingsManager::setAutoScaleForAll(bool autoScale)
 {
-    for (auto& pane : panes_)
+    for (auto* pane : paneGetter_())
     {
         if (pane)
             pane->setAutoScale(autoScale);
@@ -45,7 +46,7 @@ void DisplaySettingsManager::setAutoScaleForAll(bool autoScale)
 
 void DisplaySettingsManager::setGainDbForAll(float gainDb)
 {
-    for (auto& pane : panes_)
+    for (auto* pane : paneGetter_())
     {
         if (pane)
             pane->setGainDb(gainDb);
@@ -54,16 +55,25 @@ void DisplaySettingsManager::setGainDbForAll(float gainDb)
 
 void DisplaySettingsManager::setDisplaySamplesForAll(int samples)
 {
-    for (auto& pane : panes_)
+    for (auto* pane : paneGetter_())
     {
         if (pane)
             pane->setDisplaySamples(samples);
     }
 }
 
+void DisplaySettingsManager::setSampleRateForAll(int sampleRate)
+{
+    for (auto* pane : paneGetter_())
+    {
+        if (pane)
+            pane->setSampleRate(sampleRate);
+    }
+}
+
 void DisplaySettingsManager::highlightOscillator(const OscillatorId& id)
 {
-    for (auto& pane : panes_)
+    for (auto* pane : paneGetter_())
     {
         if (pane)
             pane->highlightOscillator(id);

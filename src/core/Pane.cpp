@@ -271,6 +271,10 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Recta
     const Pane& pane = panes_[static_cast<size_t>(paneIndex)];
     int numColumns = getColumnCount();
 
+    // Guard against division by zero
+    if (numColumns <= 0)
+        return {};
+
     // Calculate column width
     int colWidth = availableArea.getWidth() / numColumns;
     int column = pane.getColumnIndex();
@@ -362,6 +366,10 @@ void PaneLayoutManager::redistributePanes()
         return;
 
     int numColumns = getColumnCount();
+
+    // Guard against division/modulo by zero
+    if (numColumns <= 0)
+        return;
 
     // PRD: Round-robin distribution to balance columns
     for (size_t i = 0; i < panes_.size(); ++i)

@@ -126,7 +126,15 @@ GlassRefractionShader::GlassRefractionShader()
     material_.roughness = 0.0f;
 }
 
-GlassRefractionShader::~GlassRefractionShader() = default;
+GlassRefractionShader::~GlassRefractionShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[GlassRefractionShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool GlassRefractionShader::compile(juce::OpenGLContext& context)
 {
@@ -348,8 +356,14 @@ void GlassRefractionShader::render(juce::OpenGLContext& context,
 
     ext.glBindVertexArray(0);
 
+    // Unbind environment map
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+    // Restore GL state
     glDisable(GL_CULL_FACE);
     glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
 }
 
 void GlassRefractionShader::update(float deltaTime)

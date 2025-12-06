@@ -198,7 +198,10 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
                     auto buffer = registry.getCaptureBuffer(newSourceId);
 
                     // Trigger UI refresh to rebind waveform components
-                    editor_.updateOscillatorSource(targetOscId, newSourceId);
+                    if (auto* controller = editor_.getOscillatorPanelController())
+                    {
+                        controller->updateOscillatorSource(targetOscId, newSourceId);
+                    }
 
                     response["status"] = "ok";
                     response["oscillatorId"] = targetOscId.id.toStdString();

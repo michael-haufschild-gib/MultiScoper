@@ -10,11 +10,10 @@ namespace oscil
 {
 
 InlineEditLabel::InlineEditLabel(IThemeService& themeService)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
 {
-    themeService_.addListener(this);
     setupComponents();
-    themeChanged(themeService_.getCurrentTheme());
+    updateEditorStyle();
 }
 
 InlineEditLabel::InlineEditLabel(IThemeService& themeService, const juce::String& testId)
@@ -25,7 +24,6 @@ InlineEditLabel::InlineEditLabel(IThemeService& themeService, const juce::String
 
 InlineEditLabel::~InlineEditLabel()
 {
-    themeService_.removeListener(this);
 }
 
 void InlineEditLabel::setupComponents()
@@ -63,7 +61,7 @@ void InlineEditLabel::setupComponents()
     addChildComponent(*editor_);
 
     // Create save button
-    saveButton_ = std::make_unique<OscilButton>(themeService_, "");
+    saveButton_ = std::make_unique<OscilButton>(getThemeService(), "");
     saveButton_->setVariant(ButtonVariant::Icon);
     saveButton_->setIconPath(ListItemIcons::createCheckmarkIcon(static_cast<float>(BUTTON_SIZE)));
     saveButton_->setTooltip("Save (Enter)");
@@ -73,7 +71,7 @@ void InlineEditLabel::setupComponents()
     addChildComponent(*saveButton_);
 
     // Create cancel button
-    cancelButton_ = std::make_unique<OscilButton>(themeService_, "");
+    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "");
     cancelButton_->setVariant(ButtonVariant::Icon);
     cancelButton_->setIconPath(ListItemIcons::createCloseIcon(static_cast<float>(BUTTON_SIZE)));
     cancelButton_->setTooltip("Cancel (Escape)");
@@ -109,7 +107,7 @@ void InlineEditLabel::setPlaceholder(const juce::String& placeholder)
     placeholder_ = placeholder;
     if (editor_)
         editor_->setTextToShowWhenEmpty(placeholder,
-            themeService_.getCurrentTheme().textSecondary);
+            getTheme().textSecondary);
 }
 
 void InlineEditLabel::setMaxLength(int maxLength)
@@ -264,7 +262,7 @@ void InlineEditLabel::updateEditorStyle()
     if (!editor_)
         return;
 
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
 
     editor_->setFont(font_);
     editor_->setJustification(justification_);
@@ -286,7 +284,7 @@ void InlineEditLabel::paint(juce::Graphics& g)
     if (editMode_)
         return; // Editor and buttons handle rendering
 
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Get text color
@@ -385,10 +383,10 @@ void InlineEditLabel::focusLost(FocusChangeType /*cause*/)
     // Component-level focus lost - handled by editor's onFocusLost
 }
 
-void InlineEditLabel::themeChanged(const ColorTheme& /*newTheme*/)
+void InlineEditLabel::onThemeChanged(const ColorTheme& /*newTheme*/)
 {
     updateEditorStyle();
-    repaint();
+    // repaint() is called automatically by base class
 }
 
 int InlineEditLabel::getPreferredHeight() const

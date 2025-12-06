@@ -3,6 +3,7 @@
 */
 
 #include "rendering/shaders/DualOutlineShader.h"
+#include "BinaryData.h"
 #include <cmath>
 
 namespace oscil
@@ -10,58 +11,6 @@ namespace oscil
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
-
-static const char* dualVertexShader = R"(
-    #version 330 core
-    in vec2 position;
-    in float distFromCenter;
-
-    uniform mat4 projection;
-
-    out float vDistFromCenter;
-
-    void main()
-    {
-        gl_Position = projection * vec4(position, 0.0, 1.0);
-        vDistFromCenter = distFromCenter;
-    }
-)";
-
-static const char* dualFragmentShader = R"(
-    #version 330 core
-    in float vDistFromCenter;
-
-    uniform vec4 baseColor;
-    uniform float opacity;
-
-    out vec4 fragColor;
-
-    // Convert sRGB to linear color space
-    // Input colors from juce::Colour are in sRGB, but we need linear for correct
-    // blending and tonemapping in the rendering pipeline
-    vec3 sRGBToLinear(vec3 srgb) {
-        return pow(srgb, vec3(2.2));
-    }
-
-    void main()
-    {
-        float dist = abs(vDistFromCenter);
-
-        // Inner line: Center to 0.3
-        float inner = 1.0 - smoothstep(0.2, 0.3, dist);
-
-        // Outer line: 0.6 to 0.9
-        float outer = smoothstep(0.6, 0.7, dist) * (1.0 - smoothstep(0.8, 0.9, dist));
-
-        // Combine
-        float alpha = (inner + outer * 0.5) * opacity * baseColor.a;
-
-        // Convert sRGB input to linear for correct rendering
-        vec3 linearColor = sRGBToLinear(baseColor.rgb);
-
-        fragColor = vec4(linearColor, alpha);
-    }
-)";
 
 struct DualOutlineShader::GLResources
 {
@@ -92,7 +41,10 @@ bool DualOutlineShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
     
-    if (!gl_->program->addVertexShader(dualVertexShader) || !gl_->program->addFragmentShader(dualFragmentShader) || !gl_->program->link())
+    juce::String vertexCode = juce::String::createStringFromData(BinaryData::dual_outline_vert, BinaryData::dual_outline_vertSize);
+    juce::String fragmentCode = juce::String::createStringFromData(BinaryData::dual_outline_frag, BinaryData::dual_outline_fragSize);
+
+    if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) || !gl_->program->link())
     {
         DBG("DualOutlineShader: Shader compilation failed: " << gl_->program->getLastError());
         gl_->program.reset();

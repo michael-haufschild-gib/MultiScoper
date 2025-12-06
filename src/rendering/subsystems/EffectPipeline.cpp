@@ -28,6 +28,8 @@ EffectPipeline::EffectPipeline()
 
 EffectPipeline::~EffectPipeline()
 {
+    // Debug assertion to catch missing shutdown() calls
+    jassert(context_ == nullptr && "EffectPipeline::shutdown() must be called before destruction");
 }
 
 bool EffectPipeline::initialize(juce::OpenGLContext& context, int width, int height)
@@ -84,79 +86,58 @@ void EffectPipeline::initializeEffects()
     effects_["radial_blur"] = std::make_unique<RadialBlurEffect>();
 
     // Initialize Effect Chain
+    // Each effect now implements configure() virtual method, eliminating dynamic_cast chains.
     effectChain_.clear();
+
+    // Helper lambda that uses the virtual configure() method
+    auto configureVirtual = [](PostProcessEffect* e, const VisualConfiguration& c) {
+        e->configure(c);
+    };
 
     // 1. Bloom
     effectChain_.addStep({"bloom",
                           [](const VisualConfiguration& c) { return c.bloom.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* bloom = dynamic_cast<BloomEffect*>(e))
-                                  bloom->setSettings(c.bloom);
-                          }});
+                          configureVirtual});
 
-    // 1.5 Radial Blur
+    // 2. Radial Blur
     effectChain_.addStep({"radial_blur",
                           [](const VisualConfiguration& c) { return c.radialBlur.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* rb = dynamic_cast<RadialBlurEffect*>(e))
-                                  rb->setSettings(c.radialBlur);
-                          }});
+                          configureVirtual});
 
-    // 2. Tilt Shift
+    // 3. Tilt Shift
     effectChain_.addStep({"tilt_shift",
                           [](const VisualConfiguration& c) { return c.tiltShift.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* ts = dynamic_cast<TiltShiftEffect*>(e))
-                                  ts->setSettings(c.tiltShift);
-                          }});
+                          configureVirtual});
 
-    // 3. Color Grade
+    // 4. Color Grade
     effectChain_.addStep({"color_grade",
                           [](const VisualConfiguration& c) { return c.colorGrade.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* cg = dynamic_cast<ColorGradeEffect*>(e))
-                                  cg->setSettings(c.colorGrade);
-                          }});
+                          configureVirtual});
 
-    // 4. Chromatic Aberration
+    // 5. Chromatic Aberration
     effectChain_.addStep({"chromatic_aberration",
                           [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* ca = dynamic_cast<ChromaticAberrationEffect*>(e))
-                                  ca->setSettings(c.chromaticAberration);
-                          }});
+                          configureVirtual});
 
-    // 5. Scanlines
+    // 6. Scanlines
     effectChain_.addStep({"scanlines",
                           [](const VisualConfiguration& c) { return c.scanlines.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* sl = dynamic_cast<ScanlineEffect*>(e))
-                                  sl->setSettings(c.scanlines);
-                          }});
+                          configureVirtual});
 
-    // 6. Distortion
+    // 7. Distortion
     effectChain_.addStep({"distortion",
                           [](const VisualConfiguration& c) { return c.distortion.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* d = dynamic_cast<DistortionEffect*>(e))
-                                  d->setSettings(c.distortion);
-                          }});
+                          configureVirtual});
 
-    // 7. Vignette
+    // 8. Vignette
     effectChain_.addStep({"vignette",
                           [](const VisualConfiguration& c) { return c.vignette.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* v = dynamic_cast<VignetteEffect*>(e))
-                                  v->setSettings(c.vignette);
-                          }});
+                          configureVirtual});
 
-    // 8. Film Grain
+    // 9. Film Grain
     effectChain_.addStep({"film_grain",
                           [](const VisualConfiguration& c) { return c.filmGrain.enabled; },
-                          [](PostProcessEffect* e, const VisualConfiguration& c) {
-                              if (auto* fg = dynamic_cast<FilmGrainEffect*>(e))
-                                  fg->setSettings(c.filmGrain);
-                          }});
+                          configureVirtual});
 }
 
 void EffectPipeline::releaseEffects()

@@ -119,7 +119,7 @@ static const char* prefilterFragmentShader = R"(
         
         float totalWeight = w0 * 0.5 + (w1 + w2 + w3 + w4) * 0.125;
         
-        vec3 avgColor = sum / totalWeight;
+        vec3 avgColor = sum / max(totalWeight, 0.0001);
 
         // Finally apply threshold
         vec3 result = applyThreshold(avgColor);
@@ -434,7 +434,10 @@ void BloomEffect::apply(
     pool.renderFullscreenQuad();
 
     // Cleanup
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
 }
 

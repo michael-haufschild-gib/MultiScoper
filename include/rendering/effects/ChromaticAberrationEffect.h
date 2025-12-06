@@ -40,6 +40,11 @@ public:
     ) override;
 
     /**
+     * Configure from VisualConfiguration.
+     */
+    void configure(const VisualConfiguration& config) override { settings_ = config.chromaticAberration; }
+
+    /**
      * Configure the chromatic aberration effect.
      */
     void setSettings(const ChromaticAberrationSettings& settings) { settings_ = settings; }

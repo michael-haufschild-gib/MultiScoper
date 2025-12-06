@@ -47,7 +47,7 @@ public:
     void paintItem(juce::Graphics& g, const DropdownItem& item,
                   juce::Rectangle<int> bounds, bool isHovered, bool isSelected, bool isFocused, float alpha)
     {
-        const auto& theme = owner_.theme_;
+        const auto& theme = owner_.getTheme();
 
         if (item.isSeparator)
         {
@@ -188,17 +188,14 @@ private:
 };
 
 OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
-    : showSpring_(SpringPresets::snappy())
-    , themeService_(themeService)
+    : ThemedComponent(themeService)
+    , showSpring_(SpringPresets::snappy())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
 
     // Mark as popup so modal focus traps don't steal focus
     getProperties().set("isOscilPopup", true);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     showSpring_.position = 0.0f;
     showSpring_.target = 0.0f;
@@ -213,7 +210,12 @@ OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
 
 OscilDropdownPopup::~OscilDropdownPopup()
 {
-    themeService_.removeListener(this);
+    // Clear search field callback to prevent use-after-free if callback is in flight
+    if (searchField_)
+    {
+        searchField_->onTextChange = nullptr;
+    }
+
     stopTimer();
 }
 
@@ -262,7 +264,7 @@ void OscilDropdownPopup::setSearchable(bool searchable)
     {
         searchField_ = std::make_unique<SearchField>(*this);
         searchField_->setMultiLine(false);
-        searchField_->setTextToShowWhenEmpty("Search...", theme_.textSecondary);
+        searchField_->setTextToShowWhenEmpty("Search...", getTheme().textSecondary);
         searchField_->onTextChange = [this]() {
             searchText_ = searchField_->getText();
             updateFilteredItems();
@@ -331,7 +333,8 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
         // the list might be wider than visible area.
         // But DropdownItem paints full width.
         
-        listComponent_->setSize(width - POPUP_PADDING * 2, contentHeight);
+        int listWidth = juce::jmax(1, width - POPUP_PADDING * 2);
+        listComponent_->setSize(listWidth, contentHeight);
     }
         
     resized(); // Updates viewport bounds
@@ -424,10 +427,10 @@ void OscilDropdownPopup::paint(juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat();
 
     // Background with shadow effect
-    g.setColour(theme_.backgroundPrimary.withAlpha(alpha * 0.98f));
+    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha * 0.98f));
     g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
 
-    g.setColour(theme_.controlBorder.withAlpha(alpha * 0.5f));
+    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.5f));
     g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
     
     // Items are painted by listComponent_
@@ -567,28 +570,17 @@ void OscilDropdownPopup::timerCallback()
     repaint();
 }
 
-void OscilDropdownPopup::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    if (searchField_)
-        searchField_->setTextToShowWhenEmpty("Search...", theme_.textSecondary);
-    repaint();
-}
-
 //==============================================================================
 // OscilDropdown Implementation
 //==============================================================================
 
 OscilDropdown::OscilDropdown(IThemeService& themeService)
-    : hoverSpring_(SpringPresets::stiff())
+    : ThemedComponent(themeService)
+    , hoverSpring_(SpringPresets::stiff())
     , chevronSpring_(SpringPresets::bouncy())
-    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     hoverSpring_.position = 0.0f;
     hoverSpring_.target = 0.0f;
@@ -616,7 +608,6 @@ void OscilDropdown::registerTestId()
 
 OscilDropdown::~OscilDropdown()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -768,7 +759,7 @@ void OscilDropdown::showPopup()
 
     popupVisible_ = true;
 
-    popup_ = std::make_unique<OscilDropdownPopup>(themeService_);
+    popup_ = std::make_unique<OscilDropdownPopup>(getThemeService());
     popup_->setItems(items_);
     popup_->setSelectedIndices(selectedIndices_);
     popup_->setMultiSelect(multiSelect_);
@@ -880,7 +871,7 @@ void OscilDropdown::paint(juce::Graphics& g)
     float hoverAmount = hoverSpring_.position;
 
     // Background
-    auto bgColour = theme_.backgroundSecondary;
+    auto bgColour = getTheme().backgroundSecondary;
     if (hoverAmount > 0.01f)
         bgColour = bgColour.brighter(0.05f * hoverAmount);
 
@@ -888,9 +879,9 @@ void OscilDropdown::paint(juce::Graphics& g)
     g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
 
     // Border
-    auto borderColour = popupVisible_ ? theme_.controlActive
-                      : hasFocus_ ? theme_.controlActive
-                      : theme_.controlBorder;
+    auto borderColour = popupVisible_ ? getTheme().controlActive
+                      : hasFocus_ ? getTheme().controlActive
+                      : getTheme().controlBorder;
 
     g.setColour(borderColour.withAlpha(opacity));
     g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
@@ -898,7 +889,7 @@ void OscilDropdown::paint(juce::Graphics& g)
     // Focus ring
     if (hasFocus_ && enabled_)
     {
-        g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
         g.drawRoundedRectangle(
             bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
             ComponentLayout::RADIUS_SM + ComponentLayout::FOCUS_RING_OFFSET,
@@ -911,7 +902,7 @@ void OscilDropdown::paint(juce::Graphics& g)
     textBounds.removeFromRight(CHEVRON_SIZE + 8);
 
     bool isPlaceholder = selectedIndices_.empty();
-    g.setColour((isPlaceholder ? theme_.textSecondary : theme_.textPrimary)
+    g.setColour((isPlaceholder ? getTheme().textSecondary : getTheme().textPrimary)
         .withAlpha(opacity));
     g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
     g.drawText(displayText_, textBounds, juce::Justification::centredLeft);
@@ -928,7 +919,7 @@ void OscilDropdown::paintChevron(juce::Graphics& g, juce::Rectangle<float> bound
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float rotation = chevronSpring_.position * juce::MathConstants<float>::pi;
 
-    g.setColour(theme_.textSecondary.withAlpha(opacity));
+    g.setColour(getTheme().textSecondary.withAlpha(opacity));
 
     juce::Path chevron;
     float size = bounds.getWidth() * 0.4f;
@@ -1059,12 +1050,6 @@ void OscilDropdown::timerCallback()
     if (hoverSpring_.isSettled() && chevronSpring_.isSettled())
         stopTimer();
 
-    repaint();
-}
-
-void OscilDropdown::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
     repaint();
 }
 

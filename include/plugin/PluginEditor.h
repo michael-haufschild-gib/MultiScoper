@@ -57,7 +57,7 @@ class GpuRenderCoordinator;
  * Adapter class to bridge SidebarComponent::Listener to OscilPluginEditor
  * This avoids multiple inheritance with conflicting method signatures
  */
-class SidebarListenerAdapter;
+// SidebarListenerAdapter removed - OscillatorPanelController listens directly
 
 /**
  * Adapter class to bridge OscillatorConfigDialog::Listener to OscilPluginEditor
@@ -76,7 +76,6 @@ class TimingEngineListenerAdapter;
  */
 class OscilPluginEditor : public juce::AudioProcessorEditor
     , public juce::DragAndDropContainer
-    , public juce::ValueTree::Listener
     , public TestIdSupport
     , private juce::Timer
 {
@@ -94,30 +93,12 @@ public:
     // Sidebar event handlers (called from adapter)
     void onSidebarWidthChanged(int newWidth);
     void onSidebarCollapsedStateChanged(bool collapsed);
-    void onOscillatorSelected(const OscillatorId& oscillatorId);
-    void onOscillatorConfigRequested(const OscillatorId& oscillatorId);
-    void onOscillatorColorConfigRequested(const OscillatorId& oscillatorId);
-    void onOscillatorConfigChanged(const OscillatorId& oscillatorId, const Oscillator& updated);
-    void onOscillatorDeleteRequested(const OscillatorId& oscillatorId);
+
+    // Dialog Listeners
     void onConfigPopupClosed();
-
-    // Add oscillator dialog handlers
-    void onAddOscillatorDialogRequested();
-    void onAddOscillatorResult(const AddOscillatorDialog::Result& result);
-
-    // Oscillator property change handlers (from sidebar)
-    void onOscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode);
-    void onOscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible);
-    void onOscillatorPaneSelectionRequested(const OscillatorId& oscillatorId);
 
     // Accessor for adapter classes to reach processor
     OscilPluginProcessor& getProcessor() { return processor_; }
-
-    /**
-     * Update an oscillator's source and refresh the waveform buffer binding
-     * This is the central coordination point for source changes from any UI
-     */
-    void updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId);
 
     // Display options - apply to all panes
     void setShowGridForAllPanes(bool enabled);
@@ -125,22 +106,18 @@ public:
     void setAutoScaleForAllPanes(bool enabled);
     void setGainDbForAllPanes(float dB);
     void setDisplaySamplesForAllPanes(int samples);
-    void highlightOscillator(const OscillatorId& oscillatorId);
+    void setSampleRateForAllPanes(int sampleRate);
 
     // Rendering mode control
     void setGpuRenderingEnabled(bool enabled);
-
-    // ValueTree::Listener overrides
-    void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged, const juce::Identifier& property) override;
-    void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) override;
-    void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int moveFromIndex) override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parentTreeWhoseChildrenHaveMoved, int oldIndex, int newIndex) override;
-    void valueTreeParentChanged(juce::ValueTree& treeWhoseParentHasChanged) override;
 
     // Test access - for automated testing only
     // Delegated to controller
     const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const;
     void refreshPanels();
+
+    // Accessor for test server and adapters
+    OscillatorPanelController* getOscillatorPanelController() const { return oscillatorPanelController_.get(); }
 
     // Public refresh methods for adapters
     void refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators);
@@ -171,7 +148,7 @@ private:
 
     std::unique_ptr<StatusBarComponent> statusBar_;
     std::unique_ptr<SidebarComponent> sidebar_;
-    std::unique_ptr<SidebarListenerAdapter> sidebarAdapter_;
+
     std::unique_ptr<TimingEngineListenerAdapter> timingEngineAdapter_;
 
     // Dialog Manager
@@ -180,9 +157,6 @@ private:
 
     // Display Settings Manager
     std::unique_ptr<DisplaySettingsManager> displaySettingsManager_;
-
-    // Select Pane Modal (for visibility toggle without pane assignment)
-    OscillatorId pendingVisibilityOscillatorId_; // Oscillator awaiting pane selection
 
     // Test server (for automated UI testing)
     std::unique_ptr<PluginTestServer> testServer_;

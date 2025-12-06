@@ -24,6 +24,12 @@ class PostProcessEffect
 public:
     virtual ~PostProcessEffect() = default;
 
+    // Prevent copying and moving (effects manage GPU resources)
+    PostProcessEffect(const PostProcessEffect&) = delete;
+    PostProcessEffect& operator=(const PostProcessEffect&) = delete;
+    PostProcessEffect(PostProcessEffect&&) = delete;
+    PostProcessEffect& operator=(PostProcessEffect&&) = delete;
+
     /**
      * Get the unique identifier for this effect.
      */
@@ -81,6 +87,17 @@ public:
      */
     void setEnabled(bool enabled) { enabled_ = enabled; }
     [[nodiscard]] bool isEnabled() const { return enabled_; }
+
+    /**
+     * Configure the effect from a VisualConfiguration.
+     * Override in derived classes to extract relevant settings.
+     * Default implementation does nothing (for effects that configure via other means).
+     * @param config The full visual configuration
+     */
+    virtual void configure(const struct VisualConfiguration& config)
+    {
+        juce::ignoreUnused(config);
+    }
 
 protected:
     PostProcessEffect() = default;

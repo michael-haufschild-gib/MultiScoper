@@ -150,14 +150,14 @@ void PaneComponent::updateHeaderBadge()
     header_->setOscillatorCount(static_cast<int>(count));
 
     // Set primary oscillator for badge display
+    // Note: We don't store the pointer - just pass it directly to header which copies by value.
+    // This avoids potential dangling pointer issues if oscillators are removed.
     if (count > 0 && body_->getWaveformStack())
     {
-        primaryOscillator_ = body_->getWaveformStack()->getOscillatorAt(0);
-        header_->setPrimaryOscillator(primaryOscillator_);
+        header_->setPrimaryOscillator(body_->getWaveformStack()->getOscillatorAt(0));
     }
     else
     {
-        primaryOscillator_ = nullptr;
         header_->setPrimaryOscillator(nullptr);
     }
 }
@@ -328,6 +328,12 @@ void PaneComponent::setDisplaySamples(int samples)
 {
     if (body_)
         body_->setDisplaySamples(samples);
+}
+
+void PaneComponent::setSampleRate(int sampleRate)
+{
+    if (body_)
+        body_->setSampleRate(sampleRate);
 }
 
 void PaneComponent::highlightOscillator(const OscillatorId& oscillatorId)

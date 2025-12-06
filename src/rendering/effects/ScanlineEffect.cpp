@@ -111,7 +111,8 @@ bool ScanlineEffect::compile(juce::OpenGLContext& context)
     textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     intensityLoc_ = shader_->getUniformIDFromName("intensity");
     densityLoc_ = shader_->getUniformIDFromName("density");
-    resolutionLoc_ = shader_->getUniformIDFromName("resolution");
+    widthLoc_ = shader_->getUniformIDFromName("width");
+    heightLoc_ = shader_->getUniformIDFromName("height");
     phosphorGlowLoc_ = shader_->getUniformIDFromName("phosphorGlow");
 
     compiled_ = true;
@@ -155,10 +156,9 @@ void ScanlineEffect::apply(
     ext.glUniform1i(textureLoc_, 0);
     ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
     ext.glUniform1f(densityLoc_, settings_.density);
-    ext.glUniform2f(resolutionLoc_,
-        static_cast<float>(source->width),
-        static_cast<float>(source->height));
-    ext.glUniform1f(phosphorGlowLoc_, settings_.phosphorGlow ? 1.0f : 0.0f);
+    ext.glUniform1f(widthLoc_, static_cast<float>(source->width));
+    ext.glUniform1f(heightLoc_, static_cast<float>(source->height));
+    ext.glUniform1i(phosphorGlowLoc_, settings_.phosphorGlow ? 1 : 0);
 
     pool.renderFullscreenQuad();
     destination->unbind();

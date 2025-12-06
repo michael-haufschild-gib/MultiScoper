@@ -6,14 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
 
-#include "ui/theme/IThemeService.h"
 
 namespace oscil
 {
@@ -32,8 +31,7 @@ namespace oscil
  * - Click outside to dismiss (optional)
  * - Accessibility support
  */
-class OscilModal : public juce::Component,
-                   public ThemeManagerListener,
+class OscilModal : public ThemedComponent,
                    public TestIdSupport,
                    private juce::Timer,
                    private juce::FocusChangeListener
@@ -79,12 +77,12 @@ public:
     void resized() override;
 
     void mouseDown(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     bool keyPressed(const juce::KeyPress& key) override;
     void focusGained(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
     // FocusChangeListener
     void globalFocusChanged(juce::Component* focusedComponent) override;
@@ -109,7 +107,6 @@ private:
     void updateFocusTrap();
     void collectFocusableChildren(juce::Component* parent, juce::Array<juce::Component*>& result);
 
-    IThemeService& themeService_;
 
     juce::String title_;
     juce::Component* content_ = nullptr;
@@ -128,8 +125,8 @@ private:
 
     SpringAnimation showSpring_;
     SpringAnimation scaleSpring_;
+    SpringAnimation closeHoverSpring_ = SpringPresets::stiff();
 
-    ColorTheme theme_;
 
     static constexpr int TITLE_BAR_HEIGHT = 48;
     static constexpr int CLOSE_BUTTON_SIZE = 28;

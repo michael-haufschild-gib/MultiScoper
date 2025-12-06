@@ -206,12 +206,12 @@ void WaveformGLRenderer::renderOpenGL()
     if (renderEngine_ && renderEngine_->isInitialized())
     {
         // Check if we need to resize the FBOs
-        static int lastWidth = 0, lastHeight = 0;
-        if (width != lastWidth || height != lastHeight)
+        // Note: Using member variables instead of static to support multiple plugin instances
+        if (width != lastResizeWidth_ || height != lastResizeHeight_)
         {
             renderEngine_->resize(width, height);
-            lastWidth = width;
-            lastHeight = height;
+            lastResizeWidth_ = width;
+            lastResizeHeight_ = height;
         }
     }
 
@@ -313,7 +313,7 @@ void WaveformGLRenderer::renderOpenGL()
             for (const auto& data : waveformsToRender)
                 {
                     // Ensure waveform is registered
-                    if (!renderEngine_->getWaveformConfig(data.id))
+                    if (!renderEngine_->hasWaveform(data.id))
                     {
                         renderEngine_->registerWaveform(data.id);
                     }

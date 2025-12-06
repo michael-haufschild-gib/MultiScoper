@@ -247,6 +247,12 @@ ParticleSystem::ParticleSystem(int maxParticles)
 
 ParticleSystem::~ParticleSystem()
 {
+#if OSCIL_ENABLE_OPENGL
+    if (initialized_)
+    {
+        std::cerr << "[ParticleSystem] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
 }
 
 void ParticleSystem::release(juce::OpenGLContext& context)
@@ -565,9 +571,9 @@ void ParticleSystem::render(juce::OpenGLContext& context,
 
     glDepthMask(GL_FALSE);
     if (settings.softParticles)
-        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);  // Soft particles blend based on depth texture, not depth test
     else
-        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_DEPTH_TEST);   // Standard particles use depth testing for proper occlusion
 
     float projection[16] = {
         2.0f / static_cast<float>(viewportWidth), 0.0f, 0.0f, 0.0f,
@@ -623,7 +629,10 @@ void ParticleSystem::render(juce::OpenGLContext& context,
 
 void ParticleSystem::uploadParticleData(juce::OpenGLContext& context, const std::vector<ParticleEmitterId>& emitterIds)
 {
-    instanceData_.clear();
+    // Use resize(0) to preserve capacity - avoids deallocation in render path
+    // The buffer was pre-allocated in initialize() with reserve(maxParticles)
+    instanceData_.resize(0);
+
     bool filter = !emitterIds.empty();
 
     auto shouldInclude = [&](int id) {
@@ -639,18 +648,19 @@ void ParticleSystem::uploadParticleData(juce::OpenGLContext& context, const std:
         ParticleInstanceData data;
         data.x = particle.x;
         data.y = particle.y;
-        
+
         float age = particle.getAge();
-        
+
         data.r = particle.r;
         data.g = particle.g;
         data.b = particle.b;
-        data.a = particle.a * (1.0f - age * age); 
+        data.a = particle.a * (1.0f - age * age);
 
         data.size = particle.size;
         data.rotation = particle.rotation;
         data.age = age;
 
+        // push_back won't allocate as long as size < capacity (pre-reserved)
         instanceData_.push_back(data);
     });
 

@@ -6,8 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
@@ -40,8 +39,7 @@ struct DropdownItem
 /**
  * Dropdown popup that displays the list of options
  */
-class OscilDropdownPopup : public juce::Component,
-                           public ThemeManagerListener,
+class OscilDropdownPopup : public ThemedComponent,
                            private juce::Timer
 {
 public:
@@ -68,9 +66,6 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
 private:
     class ItemList;
     friend class ItemList;
@@ -94,8 +89,6 @@ private:
     juce::String searchText_;
 
     SpringAnimation showSpring_;
-    IThemeService& themeService_;
-    ColorTheme theme_;
 
     static constexpr int ITEM_HEIGHT = 32;
     static constexpr int MAX_VISIBLE_ITEMS = 8;
@@ -116,8 +109,7 @@ private:
  * - Keyboard navigation
  * - Full accessibility support
  */
-class OscilDropdown : public juce::Component,
-                      public ThemeManagerListener,
+class OscilDropdown : public ThemedComponent,
                       public TestIdSupport,
                       private juce::Timer
 {
@@ -188,9 +180,6 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
@@ -216,9 +205,6 @@ private:
     SpringAnimation chevronSpring_;
 
     std::unique_ptr<OscilDropdownPopup> popup_;
-
-    IThemeService& themeService_;
-    ColorTheme theme_;
 
     static constexpr int CHEVRON_SIZE = 16;
     static constexpr int PADDING_H = 12;

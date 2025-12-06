@@ -134,7 +134,15 @@ static const char* electricFlowerFragmentShader = R"(
 
 ElectricFlowerShader::ElectricFlowerShader() = default;
 
-ElectricFlowerShader::~ElectricFlowerShader() = default;
+ElectricFlowerShader::~ElectricFlowerShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[ElectricFlowerShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool ElectricFlowerShader::compile(juce::OpenGLContext& context)
 {
@@ -339,6 +347,11 @@ void ElectricFlowerShader::updateVertices(const WaveformData3D& data, float xSpr
     // Each vertex: position (x, y, z) + normalized index + amplitude
 
     vertices_.clear();
+
+    // Guard against division by zero (need at least 2 samples for interpolation)
+    if (data.sampleCount < 2)
+        return;
+
     vertices_.reserve(static_cast<size_t>(data.sampleCount) * 5);
 
     for (int i = 0; i < data.sampleCount; ++i)

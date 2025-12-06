@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -23,15 +24,22 @@ struct OscillatorId;
  *
  * This manager owns no state - it simply coordinates applying settings
  * to all pane components in the editor.
+ *
+ * Note: Uses a callback to get panes rather than storing a reference,
+ * to prevent iterator invalidation if the source vector is modified
+ * during iteration (e.g., by callbacks triggered during settings updates).
  */
 class DisplaySettingsManager
 {
 public:
+    /** Callback type for getting current panes (returns raw pointers for safe iteration) */
+    using PaneGetter = std::function<std::vector<PaneComponent*>()>;
+
     /**
      * Constructor
-     * @param panes Reference to the vector of pane components to manage
+     * @param paneGetter Callback that returns the current list of pane pointers
      */
-    explicit DisplaySettingsManager(std::vector<std::unique_ptr<PaneComponent>>& panes);
+    explicit DisplaySettingsManager(PaneGetter paneGetter);
 
     /**
      * Enable/disable grid display for all panes
@@ -64,13 +72,19 @@ public:
     void setDisplaySamplesForAll(int samples);
 
     /**
+     * Set sample rate for all panes (for crosshair time calculations)
+     * @param sampleRate Sample rate in Hz (should be capture rate, not source rate)
+     */
+    void setSampleRateForAll(int sampleRate);
+
+    /**
      * Highlight a specific oscillator across all panes
      * @param id The oscillator ID to highlight
      */
     void highlightOscillator(const OscillatorId& id);
 
 private:
-    std::vector<std::unique_ptr<PaneComponent>>& panes_;
+    PaneGetter paneGetter_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DisplaySettingsManager)
 };

@@ -156,10 +156,15 @@ void SidebarCollapseButton::setCollapsed(bool collapsed)
 // SidebarComponent implementation
 
 SidebarComponent::SidebarComponent(ServiceContext& context)
-    : themeService_(context.themeService)
+    : context_(context)
+    , themeService_(context.themeService)
     , instanceRegistry_(context.instanceRegistry)
 {
     themeService_.addListener(this);
+
+    // Initialize width spring to expanded width
+    widthSpring_.position = static_cast<float>(expandedWidth_);
+    widthSpring_.target = static_cast<float>(expandedWidth_);
 
 #if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
     OSCIL_REGISTER_TEST_ID("sidebar");
@@ -189,20 +194,7 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
     collapseButton_->onClick = [this]() { toggleCollapsed(); };
     addAndMakeVisible(collapseButton_.get());
 
-    // Add Oscillator button
-    addOscillatorButton_ = std::make_unique<OscilButton>(themeService_, "+ Add Oscillator", "sidebar_addOscillator");
-    addOscillatorButton_->setVariant(ButtonVariant::Primary);
-    addOscillatorButton_->onClick = [this]() {
-        listeners_.call([](Listener& l) { l.addOscillatorDialogRequested(); });
-    };
-    addAndMakeVisible(addOscillatorButton_.get());
-
-    // Oscillator List
-    oscillatorList_ = std::make_unique<OscillatorListComponent>(context);
-    oscillatorList_->addListener(this);
-    addAndMakeVisible(oscillatorList_.get());
-
-    // Control sections in scrollable viewport
+    // All sections in scrollable viewport
     accordionViewport_ = std::make_unique<juce::Viewport>();
     accordion_ = std::make_unique<OscilAccordion>(themeService_);
 
@@ -212,13 +204,21 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
     addAndMakeVisible(accordionViewport_.get());
 
     setupSections();
+
+    // Force initial layout to size accordion after sections are added
+    resized();
 }
 
 SidebarComponent::~SidebarComponent()
 {
+    stopTimer();
     themeService_.removeListener(this);
-    if (oscillatorList_)
-        oscillatorList_->removeListener(this);
+    if (oscillatorSection_)
+        oscillatorSection_->removeListener(this);
+    if (timingSection_)
+        timingSection_->removeListener(this);
+    if (optionsSection_)
+        optionsSection_->removeListener(this);
 }
 
 void SidebarComponent::paint(juce::Graphics& g)
@@ -244,45 +244,24 @@ void SidebarComponent::resized()
     {
         // Collapsed state
         collapseButton_->setBounds(bounds.withSizeKeepingCentre(COLLAPSE_BUTTON_SIZE, COLLAPSE_BUTTON_SIZE));
-        addOscillatorButton_->setVisible(false);
-        oscillatorList_->setVisible(false);
         accordionViewport_->setVisible(false);
     }
     else
     {
         // Expanded state
-        addOscillatorButton_->setVisible(true);
-        oscillatorList_->setVisible(true);
         accordionViewport_->setVisible(true);
 
         // Collapse button at top right
         auto topRow = bounds.removeFromTop(SECTION_HEADER_HEIGHT).reduced(PADDING_SMALL, PADDING_SMALL);
         collapseButton_->setBounds(topRow.removeFromRight(COLLAPSE_BUTTON_SIZE));
 
-        // Add Oscillator button at top
-        auto buttonArea = bounds.removeFromTop(ADD_BUTTON_HEIGHT).reduced(PADDING_MEDIUM, PADDING_SMALL);
-        addOscillatorButton_->setBounds(buttonArea);
-
-        // Oscillator List area
-        // Flexible height based on list content size, but constrained
-        // Ideally we'd ask the list for preferred height, but it's dynamic.
-        // We'll give it a fixed slice for now or let it expand.
-        // Let's give it a reasonable fixed slice or based on actual item count if we could know it easily.
-        // For now, let's use MAX_LIST_HEIGHT as the allocated space, and let the list viewport handle scrolling.
-        // Wait, previously we calculated height based on items. OscillatorListComponent manages its own internal viewport.
-        // We should give it a fixed area or dynamic area.
-        // Let's give it MAX_LIST_HEIGHT for now, or remaining space if less.
-        
-        auto listArea = bounds.removeFromTop(MAX_LIST_HEIGHT).reduced(PADDING_SMALL, 0);
-        oscillatorList_->setBounds(listArea);
-
-        // Control sections viewport - takes remaining space
+        // All sections in accordion viewport - takes remaining space
         accordionViewport_->setBounds(bounds.reduced(PADDING_SMALL, 0));
-        
+
         // Update accordion width to match viewport
         if (accordion_)
         {
-            int width = accordionViewport_->getWidth() - (accordionViewport_->getScrollBarThickness() + PADDING_SMALL);
+            int width = juce::jmax(1, accordionViewport_->getWidth() - (accordionViewport_->getScrollBarThickness() + PADDING_SMALL));
             accordion_->setSize(width, accordion_->getPreferredHeight());
         }
     }
@@ -293,12 +272,35 @@ void SidebarComponent::themeChanged(const ColorTheme&)
     repaint();
 }
 
+void SidebarComponent::timerCallback()
+{
+    // Update spring animation
+    widthSpring_.update(AnimationTiming::FRAME_DURATION_60FPS);
+
+    // Notify parent to re-layout with new width
+    notifySidebarWidthChanged();
+
+    // Stop timer when animation settles
+    if (widthSpring_.isSettled(1.0f))  // 1px threshold for width
+    {
+        widthSpring_.snapToTarget();  // Ensure we're exactly at target
+        stopTimer();
+    }
+}
+
 void SidebarComponent::setCollapsed(bool collapsed)
 {
     if (collapsed_ != collapsed)
     {
         collapsed_ = collapsed;
         collapseButton_->setCollapsed(collapsed);
+
+        // Animate width transition
+        float targetWidth = collapsed ? static_cast<float>(WindowLayout::COLLAPSED_SIDEBAR_WIDTH)
+                                       : static_cast<float>(expandedWidth_);
+        widthSpring_.setTarget(targetWidth);
+        startTimerHz(ComponentLayout::ANIMATION_FPS);
+
         resized();
         notifySidebarCollapsedStateChanged();
     }
@@ -317,19 +319,28 @@ void SidebarComponent::setSidebarWidth(int width)
     if (expandedWidth_ != newWidth)
     {
         expandedWidth_ = newWidth;
+
+        // If not collapsed, update spring immediately (no animation during resize drag)
+        if (!collapsed_)
+        {
+            widthSpring_.setTarget(static_cast<float>(newWidth));
+            widthSpring_.snapToTarget();
+        }
+
         notifySidebarWidthChanged();
     }
 }
 
 int SidebarComponent::getEffectiveWidth() const
 {
-    return collapsed_ ? WindowLayout::COLLAPSED_SIDEBAR_WIDTH : expandedWidth_;
+    // Return animated width during transitions
+    return static_cast<int>(widthSpring_.position);
 }
 
 void SidebarComponent::refreshOscillatorList(const std::vector<Oscillator>& oscillators)
 {
-    if (oscillatorList_)
-        oscillatorList_->refreshList(oscillators);
+    if (oscillatorSection_)
+        oscillatorSection_->refreshList(oscillators);
 }
 
 void SidebarComponent::setSelectedOscillator(const OscillatorId& oscillatorId)
@@ -337,8 +348,8 @@ void SidebarComponent::setSelectedOscillator(const OscillatorId& oscillatorId)
     if (selectedOscillatorId_ != oscillatorId)
     {
         selectedOscillatorId_ = oscillatorId;
-        if (oscillatorList_)
-            oscillatorList_->setSelectedOscillator(oscillatorId);
+        if (oscillatorSection_)
+            oscillatorSection_->setSelectedOscillator(oscillatorId);
     }
 }
 
@@ -377,6 +388,17 @@ void SidebarComponent::setupSections()
     accordion_->clearSections();
     accordion_->setAllowMultiExpand(true);
 
+    // Create oscillator section (first section with add button and oscillator list)
+    oscillatorSection_ = std::make_unique<OscillatorSidebarSection>(context_);
+    oscillatorSection_->addListener(this);
+
+    auto* oscillators = accordion_->addSection("OSCILLATORS", oscillatorSection_.get());
+    if (oscillators)
+    {
+        oscillators->setTestId("sidebar_oscillators");
+        oscillators->setExpanded(true, false);
+    }
+
     // Create timing section
     timingSection_ = std::make_unique<TimingSidebarSection>(themeService_);
     timingSection_->addListener(this);
@@ -403,7 +425,12 @@ void SidebarComponent::setupSections()
     }
 }
 
-// OscillatorListComponent::Listener implementation
+// OscillatorSidebarSection::Listener implementation
+void SidebarComponent::addOscillatorDialogRequested()
+{
+    listeners_.call([](Listener& l) { l.addOscillatorDialogRequested(); });
+}
+
 void SidebarComponent::oscillatorSelected(const OscillatorId& id)
 {
     selectedOscillatorId_ = id;
@@ -443,6 +470,12 @@ void SidebarComponent::oscillatorsReordered(int fromIndex, int toIndex)
 void SidebarComponent::oscillatorPaneSelectionRequested(const OscillatorId& id)
 {
     listeners_.call([id](Listener& l) { l.oscillatorPaneSelectionRequested(id); });
+}
+
+void SidebarComponent::oscillatorNameChanged(const OscillatorId& id, const juce::String& newName)
+{
+    // Name changes are handled internally by OscillatorListComponent
+    juce::ignoreUnused(id, newName);
 }
 
 // TimingSidebarSection::Listener implementation

@@ -39,6 +39,7 @@ public:
         float deltaTime
     ) override;
 
+    void configure(const VisualConfiguration& config) override { settings_ = config.tiltShift; }
     void setSettings(const TiltShiftSettings& settings) { settings_ = settings; }
     [[nodiscard]] const TiltShiftSettings& getSettings() const { return settings_; }
 

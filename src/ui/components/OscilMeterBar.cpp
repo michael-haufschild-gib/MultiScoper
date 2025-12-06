@@ -9,11 +9,8 @@ namespace oscil
 {
 
 OscilMeterBar::OscilMeterBar(IThemeService& themeService)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
 {
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
-
     startTimerHz(TIMER_HZ);
 }
 
@@ -30,7 +27,6 @@ void OscilMeterBar::registerTestId()
 
 OscilMeterBar::~OscilMeterBar()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -169,7 +165,7 @@ void OscilMeterBar::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
 
     // Background
-    g.setColour(theme_.backgroundSecondary);
+    g.setColour(getTheme().backgroundSecondary);
     g.fillRect(bounds);
 
     int scaleWidth = showScale_ ? SCALE_WIDTH : 0;
@@ -206,9 +202,9 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
     juce::ColourGradient gradient;
     
     // Define gradient colors (Green -> Yellow -> Red)
-    gradient.addColour(0.0, theme_.statusActive);   // Bottom/Left
-    gradient.addColour(0.7, theme_.statusWarning);  // Mid
-    gradient.addColour(1.0, theme_.statusError);    // Top/Right
+    gradient.addColour(0.0, getTheme().statusActive);   // Bottom/Left
+    gradient.addColour(0.7, getTheme().statusWarning);  // Mid
+    gradient.addColour(1.0, getTheme().statusError);    // Top/Right
 
     if (orientation_ == Orientation::Vertical)
     {
@@ -238,13 +234,13 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
 
         // Peak hold indicator
         int peakY = bounds.getBottom() - static_cast<int>(peakPos * bounds.getHeight());
-        g.setColour(theme_.textPrimary);
+        g.setColour(getTheme().textPrimary);
         g.fillRect(bounds.getX(), peakY - 1, bounds.getWidth(), 2);
 
         // Clip indicator
         if (clip)
         {
-            g.setColour(theme_.statusError);
+            g.setColour(getTheme().statusError);
             g.fillRect(bounds.getX(), bounds.getY(), bounds.getWidth(), 4);
         }
     }
@@ -266,13 +262,13 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
 
         // Peak hold
         int peakX = bounds.getX() + static_cast<int>(peakPos * bounds.getWidth());
-        g.setColour(theme_.textPrimary);
+        g.setColour(getTheme().textPrimary);
         g.fillRect(peakX - 1, bounds.getY(), 2, bounds.getHeight());
 
         // Clip
         if (clip)
         {
-            g.setColour(theme_.statusError);
+            g.setColour(getTheme().statusError);
             g.fillRect(bounds.getRight() - 4, bounds.getY(), 4, bounds.getHeight());
         }
     }
@@ -280,7 +276,7 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
 
 void OscilMeterBar::paintScale(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    g.setColour(theme_.textSecondary);
+    g.setColour(getTheme().textSecondary);
     g.setFont(juce::Font(juce::FontOptions().withHeight(9.0f)));
 
     // Draw dB markers
@@ -313,7 +309,12 @@ float OscilMeterBar::levelToPosition(float level) const
     float db = 20.0f * std::log10(level);
     db = std::clamp(db, minDb_, maxDb_);
 
-    return (db - minDb_) / (maxDb_ - minDb_);
+    // Guard against division by zero if range is invalid
+    float range = maxDb_ - minDb_;
+    if (std::abs(range) < 0.001f)
+        return 0.5f;
+
+    return (db - minDb_) / range;
 }
 
 float OscilMeterBar::dbToLevel(float db) const
@@ -325,11 +326,11 @@ juce::Colour OscilMeterBar::getLevelColour(float normalizedLevel) const
 {
     // Green -> Yellow -> Red gradient
     if (normalizedLevel < 0.7f)
-        return theme_.statusActive;  // Green
+        return getTheme().statusActive;  // Green
     else if (normalizedLevel < 0.9f)
-        return theme_.statusWarning;  // Yellow
+        return getTheme().statusWarning;  // Yellow
     else
-        return theme_.statusError;    // Red
+        return getTheme().statusError;    // Red
 }
 
 void OscilMeterBar::resized()
@@ -376,12 +377,6 @@ void OscilMeterBar::timerCallback()
         if (rightPeakHold_ < 0) rightPeakHold_ = 0;
     }
 
-    repaint();
-}
-
-void OscilMeterBar::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
     repaint();
 }
 

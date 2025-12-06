@@ -74,7 +74,15 @@ static const char* vectorFragmentShader = R"(
 )";
 
 VectorFlowShader::VectorFlowShader() = default;
-VectorFlowShader::~VectorFlowShader() = default;
+VectorFlowShader::~VectorFlowShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[VectorFlowShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool VectorFlowShader::compile(juce::OpenGLContext& context)
 {
@@ -204,13 +212,22 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
     ext.glDisableVertexAttribArray(static_cast<GLuint>(tLoc));
     ext.glBindVertexArray(0);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // Restore GL state
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 void VectorFlowShader::generateVectorMesh(const WaveformData3D& data, float xSpread)
 {
     vertices_.clear();
+
+    // Guard against division by zero (need at least 2 samples for interpolation)
+    if (data.sampleCount < 2)
+        return;
+
     vertices_.reserve(static_cast<size_t>(data.sampleCount * 4));
-    
+
     for (int i = 0; i < data.sampleCount; ++i)
     {
         float t = static_cast<float>(i) / static_cast<float>(data.sampleCount - 1);

@@ -8,15 +8,12 @@ namespace oscil
 {
 
 OscilToggle::OscilToggle(IThemeService& themeService)
-    : positionSpring_(SpringPresets::bouncy())
+    : ThemedComponent(themeService)
+    , positionSpring_(SpringPresets::bouncy())
     , celebrationSpring_(SpringPresets::snappy())
-    , themeService_(themeService)
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
-
-    theme_ = themeService_.getCurrentTheme();
-    themeService_.addListener(this);
 
     positionSpring_.position = 0.0f;
     positionSpring_.target = 0.0f;
@@ -60,7 +57,6 @@ void OscilToggle::registerTestId()
 
 OscilToggle::~OscilToggle()
 {
-    themeService_.removeListener(this);
     stopTimer();
 }
 
@@ -186,7 +182,7 @@ void OscilToggle::paint(juce::Graphics& g)
         auto labelBounds = bounds.toFloat()
             .withLeft(ComponentLayout::TOGGLE_WIDTH + ComponentLayout::SPACING_SM);
 
-        g.setColour(theme_.textPrimary.withAlpha(opacity));
+        g.setColour(getTheme().textPrimary.withAlpha(opacity));
         g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
@@ -201,7 +197,7 @@ void OscilToggle::paint(juce::Graphics& g)
         auto labelBounds = juce::Rectangle<float>(
             0, 0, static_cast<float>(labelWidth), static_cast<float>(bounds.getHeight()));
 
-        g.setColour(theme_.textPrimary.withAlpha(opacity));
+        g.setColour(getTheme().textPrimary.withAlpha(opacity));
         g.setFont(font);
         g.drawText(label_, labelBounds, juce::Justification::centredRight);
 
@@ -224,8 +220,8 @@ void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
 
     // Interpolate track color based on position
     float progress = positionSpring_.position;
-    auto offColor = theme_.controlBorder;
-    auto onColor = theme_.statusActive;
+    auto offColor = getTheme().controlBorder;
+    auto onColor = getTheme().statusActive;
     auto trackColor = offColor.interpolatedWith(onColor, progress);
 
     g.setColour(trackColor.withAlpha(opacity));
@@ -264,7 +260,7 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
 
 void OscilToggle::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(theme_.controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawRoundedRectangle(
         bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
         bounds.getHeight() / 2.0f + ComponentLayout::FOCUS_RING_OFFSET,
@@ -357,11 +353,6 @@ void OscilToggle::updateAnimations()
     celebrationSpring_.update(dt);
 }
 
-void OscilToggle::themeChanged(const ColorTheme& newTheme)
-{
-    theme_ = newTheme;
-    repaint();
-}
 
 //==============================================================================
 // Accessibility Handler for OscilToggle

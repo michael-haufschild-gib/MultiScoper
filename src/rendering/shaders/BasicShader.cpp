@@ -3,6 +3,7 @@
 */
 
 #include "rendering/shaders/BasicShader.h"
+#include "BinaryData.h"
 #include <cmath>
 #include <iostream>
 
@@ -14,70 +15,6 @@ namespace oscil
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
-// GLSL shader sources - Modernized to GLSL 3.30 Core
-static const char* vertexShaderSource = R"(
-    #version 330 core
-    in vec2 position;
-    in float distFromCenter;
-
-    uniform mat4 projection;
-
-    out float vDistFromCenter;
-
-    void main()
-    {
-        gl_Position = projection * vec4(position, 0.0, 1.0);
-        vDistFromCenter = distFromCenter;
-    }
-)";
-
-static const char* fragmentShaderSource = R"(
-    #version 330 core
-    in float vDistFromCenter;
-
-    uniform vec4 baseColor;
-    uniform float opacity;
-    uniform float glowIntensity;
-
-    out vec4 fragColor;
-
-    // Convert sRGB to linear color space
-    // Input colors from juce::Colour are in sRGB, but we need linear for correct
-    // blending and tonemapping in the rendering pipeline
-    vec3 sRGBToLinear(vec3 srgb) {
-        // Approximate sRGB to linear conversion (gamma 2.2)
-        return pow(srgb, vec3(2.2));
-    }
-
-    void main()
-    {
-        // Convert sRGB input color to linear space for correct rendering
-        vec3 neonColor = sRGBToLinear(baseColor.rgb);
-
-        float dist = abs(vDistFromCenter);
-
-        // 80s Neon effect: thin bright core with colored glow halo
-        // Core line - very thin bright center
-        float core = 1.0 - smoothstep(0.0, 0.08, dist);
-
-        // Glow falloff - smooth exponential decay for the halo
-        float glow = exp(-dist * 6.0) * glowIntensity;
-
-        // The core is slightly brighter/saturated version of the color
-        // The glow keeps the color but fades out
-        vec3 coreColor = neonColor * 1.5;  // Brighten core
-        vec3 glowColor = neonColor;         // Glow stays true to color
-
-        // Mix: bright core fading into colored glow
-        vec3 finalColor = mix(glowColor * glow, coreColor, core);
-
-        // Alpha: solid core, fading glow
-        float alpha = opacity * (core + glow * 0.7) * baseColor.a;
-
-        // Output in linear space - blit shader will tonemap and apply gamma
-        fragColor = vec4(finalColor, alpha);
-    }
-)";
 
 struct BasicShader::GLResources
 {
@@ -134,7 +71,8 @@ bool BasicShader::compile(juce::OpenGLContext& context)
 
     BASIC_LOG("Compiling shaders (GLSL 3.30 Core)...");
 
-    if (!gl_->program->addVertexShader(vertexShaderSource))
+    juce::String vertexCode = juce::String::createStringFromData(BinaryData::basic_vert, BinaryData::basic_vertSize);
+    if (!gl_->program->addVertexShader(vertexCode))
     {
         BASIC_LOG("Vertex shader compilation FAILED: " << gl_->program->getLastError().toStdString());
         gl_->program.reset();
@@ -142,7 +80,8 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     }
     BASIC_LOG("Vertex shader compiled OK");
 
-    if (!gl_->program->addFragmentShader(fragmentShaderSource))
+    juce::String fragmentCode = juce::String::createStringFromData(BinaryData::basic_frag, BinaryData::basic_fragSize);
+    if (!gl_->program->addFragmentShader(fragmentCode))
     {
         BASIC_LOG("Fragment shader compilation FAILED: " << gl_->program->getLastError().toStdString());
         gl_->program.reset();
@@ -151,6 +90,7 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     BASIC_LOG("Fragment shader compiled OK");
 
     if (!gl_->program->link())
+
     {
         BASIC_LOG("Shader program linking FAILED: " << gl_->program->getLastError().toStdString());
         gl_->program.reset();

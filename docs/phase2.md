@@ -319,48 +319,7 @@ Dual time cursors per pane showing:
 
 ### Category 1: Measurement & Analysis
 
-#### 1.1 Measurement Cursors
-**Description**: Two draggable vertical cursor lines per pane that measure time and amplitude.
-
-**Requirements**:
-- Drag handles at top of waveform area
-- Cursor A (solid) and Cursor B (dashed) in contrasting colors
-- Readout panel showing:
-  - Δt in milliseconds
-  - Δt in samples (at current sample rate)
-  - Δt in musical value (e.g., "0.68 of a 1/16 at 120 BPM")
-  - Amplitude at each cursor (linear peak + dBFS)
-- Snap-to-zero-crossing option
-- Snap-to-peak option
-- Lock/unlock cursor positions
-- Copy values to clipboard
-
-**Use Cases**:
-- Measuring kick attack time
-- Checking reverb pre-delay
-- Calibrating sidechain timing
-- Tuning compressor attack/release
-
-#### 1.2 Statistics Overlay
-**Description**: Per-pane statistical information overlaid on waveform.
-
-**Requirements**:
-- Toggle display (off by default)
-- Show on-waveform:
-  - RMS envelope (lighter trace)
-  - Peak envelope (dotted trace)
-- Show in corner overlay:
-  - Current RMS (dBFS)
-  - Current peak (dBFS)
-  - Crest factor (peak/RMS ratio)
-  - DC offset (if >0.1%)
-- Clipping indicator (red flash when samples >0dBFS)
-- Attack/decay time estimation:
-  - Time from 10%→90% (attack)
-  - Time from 90%→10% (decay)
-  - Triggered by threshold crossing
-
-#### 1.3 Pitch/Cycle Detection
+#### 1.1 Pitch/Cycle Detection
 **Description**: Automatic detection of fundamental frequency with cycle-locked display.
 
 **Requirements**:

@@ -40,6 +40,11 @@ public:
     ) override;
 
     /**
+     * Configure from VisualConfiguration.
+     */
+    void configure(const VisualConfiguration& config) override { settings_ = config.vignette; }
+
+    /**
      * Configure the vignette effect.
      */
     void setSettings(const VignetteSettings& settings) { settings_ = settings; }

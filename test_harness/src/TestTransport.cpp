@@ -38,7 +38,8 @@ void TestTransport::setPositionSamples(int64_t samples)
 
 double TestTransport::getPositionSeconds() const
 {
-    return static_cast<double>(positionSamples_.load()) / sampleRate_;
+    // Guard against division by zero when sampleRate is 0
+    return sampleRate_ > 0.0 ? static_cast<double>(positionSamples_.load()) / sampleRate_ : 0.0;
 }
 
 double TestTransport::getPositionBeats() const
@@ -58,7 +59,9 @@ void TestTransport::advancePosition(int numSamples)
 
 double TestTransport::getSamplesPerBeat() const
 {
-    return (60.0 / bpm_.load()) * sampleRate_;
+    // Guard against division by zero when bpm is 0
+    double bpm = bpm_.load();
+    return bpm > 0.0 ? (60.0 / bpm) * sampleRate_ : 0.0;
 }
 
 juce::AudioPlayHead::PositionInfo TestTransport::getPositionInfo() const

@@ -213,6 +213,10 @@ void TimingEngine::recalculateInterval()
                 atomicHostBPM_.load(std::memory_order_relaxed) :
                 atomicInternalBPM_.load(std::memory_order_relaxed);
 
+            // Guard against NaN/Inf - jmax doesn't handle NaN correctly
+            if (!std::isfinite(effectiveBPM))
+                effectiveBPM = EngineTimingConfig::MIN_BPM;
+
             double bpm = static_cast<double>(juce::jmax(effectiveBPM, EngineTimingConfig::MIN_BPM));
             newInterval = static_cast<float>((beats * 60000.0) / bpm);
             break;
@@ -368,23 +372,23 @@ bool TimingEngine::processMidi(const juce::MidiBuffer& midiMessages)
 
 bool TimingEngine::checkAndClearManualTrigger()
 {
-    return manualTrigger_.exchange(false);
+    return manualTrigger_.exchange(false, std::memory_order_relaxed);
 }
 
 bool TimingEngine::checkAndClearTrigger()
 {
     // Check manual trigger
-    if (manualTrigger_.exchange(false))
+    if (manualTrigger_.exchange(false, std::memory_order_relaxed))
         return true;
 
     // Check auto/midi trigger
-    return triggered_.exchange(false);
+    return triggered_.exchange(false, std::memory_order_relaxed);
 }
 
 void TimingEngine::requestManualTrigger()
 {
-    manualTrigger_.store(true);
-    triggered_.store(true); // Set general flag too
+    manualTrigger_.store(true, std::memory_order_relaxed);
+    triggered_.store(true, std::memory_order_relaxed); // Set general flag too
 }
 
 bool TimingEngine::detectTrigger(const float* samples, int numSamples)
@@ -488,6 +492,9 @@ juce::ValueTree TimingEngine::toValueTree() const
     state.setProperty(TimingIds::TriggerThreshold, atomicTriggerThreshold_.load(std::memory_order_relaxed), nullptr);
     state.setProperty(TimingIds::MidiTriggerNote, atomicMidiTriggerNote_.load(std::memory_order_relaxed), nullptr);
     state.setProperty(TimingIds::MidiTriggerChannel, atomicMidiTriggerChannel_.load(std::memory_order_relaxed), nullptr);
+    state.setProperty(TimingIds::InternalBPM, atomicInternalBPM_.load(std::memory_order_relaxed), nullptr);
+    state.setProperty(TimingIds::TriggerChannel, atomicTriggerChannel_.load(std::memory_order_relaxed), nullptr);
+    state.setProperty(TimingIds::TriggerHysteresis, atomicTriggerHysteresis_.load(std::memory_order_relaxed), nullptr);
 
     return state;
 }
@@ -516,6 +523,9 @@ void TimingEngine::fromValueTree(const juce::ValueTree& state)
     atomicTriggerThreshold_.store(state.getProperty(TimingIds::TriggerThreshold, 0.1f), std::memory_order_relaxed);
     atomicMidiTriggerNote_.store(state.getProperty(TimingIds::MidiTriggerNote, -1), std::memory_order_relaxed);
     atomicMidiTriggerChannel_.store(state.getProperty(TimingIds::MidiTriggerChannel, 0), std::memory_order_relaxed);
+    atomicInternalBPM_.store(state.getProperty(TimingIds::InternalBPM, 120.0f), std::memory_order_relaxed);
+    atomicTriggerChannel_.store(state.getProperty(TimingIds::TriggerChannel, 0), std::memory_order_relaxed);
+    atomicTriggerHysteresis_.store(state.getProperty(TimingIds::TriggerHysteresis, 0.01f), std::memory_order_relaxed);
 
     recalculateInterval();
 }

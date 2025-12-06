@@ -71,7 +71,15 @@ static const char* wireframeFragmentShader = R"(
 
 WireframeMeshShader::WireframeMeshShader() = default;
 
-WireframeMeshShader::~WireframeMeshShader() = default;
+WireframeMeshShader::~WireframeMeshShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (compiled_)
+    {
+        std::cerr << "[WireframeMeshShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+    }
+#endif
+}
 
 bool WireframeMeshShader::compile(juce::OpenGLContext& context)
 {
@@ -233,6 +241,7 @@ void WireframeMeshShader::render(juce::OpenGLContext& context,
 
     glDisable(GL_LINE_SMOOTH);
     glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
 }
 
 void WireframeMeshShader::update(float deltaTime)

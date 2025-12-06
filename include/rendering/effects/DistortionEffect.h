@@ -39,6 +39,7 @@ public:
         float deltaTime
     ) override;
 
+    void configure(const VisualConfiguration& config) override { settings_ = config.distortion; }
     void setSettings(const DistortionSettings& settings) { settings_ = settings; }
     [[nodiscard]] const DistortionSettings& getSettings() const { return settings_; }
 
