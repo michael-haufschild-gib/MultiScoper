@@ -31,6 +31,7 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -227,6 +228,7 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     
     steps:
       - name: Checkout repository
@@ -280,9 +282,10 @@ jobs:
         run: cmake --build --preset coverage
 
       - name: Run Tests
+        timeout-minutes: 30
         run: |
           export LLVM_PROFILE_FILE="coverage-%p.profraw"
-          ctest --preset coverage
+          ctest --preset coverage --timeout 300
 
       - name: Generate Coverage Report
         run: |
@@ -317,6 +320,7 @@ jobs:
   rtsan:
     name: RealtimeSanitizer
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
