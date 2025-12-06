@@ -184,12 +184,18 @@ TEST_F(OscilModalTest, SetCloseOnBackdropClick)
 
 TEST_F(OscilModalTest, ShowModal)
 {
+#if defined(__SANITIZE_REALTIME__) || defined(__has_feature) && __has_feature(realtime_sanitizer)
+    // Skip this test when RTSan is enabled - showing modals in headless
+    // environments causes JUCE XWindowSystem assertions that trigger SEGFAULT
+    GTEST_SKIP() << "Skipping modal show test under RealtimeSanitizer";
+#else
     OscilModal modal(getThemeManager());
 
     // Note: show() requires a parent, so just test without one
     // The modal animation system means isShowing() depends on spring state
     modal.show(nullptr);
     // Can't reliably test isShowing without a message loop
+#endif
 }
 
 TEST_F(OscilModalTest, HideModal)

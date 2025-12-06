@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Enable C and CXX languages explicitly for JUCE
-project(Oscil VERSION 1.0.0 LANGUAGES C CXX OBJCXX)
+# OBJCXX (Objective-C++) is only needed on macOS
+if(APPLE)
+    project(Oscil VERSION 1.0.0 LANGUAGES C CXX OBJCXX)
+else()
+    project(Oscil VERSION 1.0.0 LANGUAGES C CXX)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
