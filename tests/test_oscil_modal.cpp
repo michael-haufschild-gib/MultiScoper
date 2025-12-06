@@ -184,7 +184,7 @@ TEST_F(OscilModalTest, SetCloseOnBackdropClick)
 
 TEST_F(OscilModalTest, ShowModal)
 {
-#if defined(__SANITIZE_REALTIME__) || defined(__has_feature) && __has_feature(realtime_sanitizer)
+#if defined(__SANITIZE_REALTIME__) || (defined(__has_feature) && __has_feature(realtime_sanitizer))
     // Skip this test when RTSan is enabled - showing modals in headless
     // environments causes JUCE XWindowSystem assertions that trigger SEGFAULT
     GTEST_SKIP() << "Skipping modal show test under RealtimeSanitizer";
