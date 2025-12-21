@@ -1,0 +1,151 @@
+[0/2] Re-checking globbed directories...
+[1/120] Building CXX object CMakeFiles/Oscil.dir/src/plugin/OpenGLLifecycleManager.cpp.o
+[2/120] Building CXX object CMakeFiles/Oscil.dir/src/ui/layout/pane/WaveformStack.cpp.o
+[3/120] Building CXX object CMakeFiles/Oscil.dir/src/ui/layout/PaneContainerComponent.cpp.o
+[4/120] Building CXX object CMakeFiles/Oscil.dir/src/plugin/PluginProcessor.cpp.o
+[5/120] Building CXX object CMakeFiles/Oscil.dir/src/ui/managers/DisplaySettingsManager.cpp.o
+[6/120] Building CXX object CMakeFiles/Oscil.dir/src/rendering/GpuRenderCoordinator.cpp.o
+[7/120] Building CXX object CMakeFiles/Oscil.dir/src/ui/layout/PaneComponent.cpp.o
+[8/120] Building CXX object CMakeFiles/Oscil.dir/src/ui/layout/pane/PaneBody.cpp.o
+[9/120] Building CXX object CMakeFiles/Oscil.dir/src/ui/layout/PluginEditorLayout.cpp.o
+[10/120] Building CXX object CMakeFiles/Oscil.dir/src/ui/controllers/OscillatorPanelController.cpp.o
+[11/120] Building CXX object CMakeFiles/Oscil.dir/src/plugin/PluginEditor.cpp.o
+[12/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/LayoutHandler.cpp.o
+[13/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/OscillatorHandler.cpp.o
+[14/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/PluginTestServer.cpp.o
+[15/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_timing_engine_deserialization.cpp.o
+[16/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/test_runners/WaveformTestRunner.cpp.o
+[17/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/test_runners/LayoutTestRunner.cpp.o
+[18/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/test_runners/SettingsTestRunner.cpp.o
+[19/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/test_runners/RenderingTestRunner.cpp.o
+[20/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/SourceHandler.cpp.o
+[21/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/TestRunnerHandler.cpp.o
+[22/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/ScreenshotHandler.cpp.o
+[23/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_timing_calculations.cpp.o
+[24/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/StateHandler.cpp.o
+[25/120] Building CXX object CMakeFiles/Oscil.dir/src/tools/test_server/WaveformHandler.cpp.o
+[26/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_visual_config_deserialization.cpp.o
+[27/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_timing_engine_hysteresis.cpp.o
+[28/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_add_oscillator_dialog.cpp.o
+[29/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_accordion_sections_e2e.cpp.o
+[30/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_sidebar_theme_population.cpp.o
+[31/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_plugin_editor.cpp.o
+[32/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscillator_list_component.cpp.o
+[33/120] Building CXX object CMakeFiles/OscilTests.dir/src/core/DecimatingCaptureBuffer.cpp.o
+[34/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscil_dropdown.cpp.o
+[35/120] Linking CXX static library Oscil_artefacts/Debug/liboscil4_SharedCode.a
+[36/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_pane_closing_bug.cpp.o
+[37/120] Building CXX object CMakeFiles/OscilTests.dir/src/plugin/OpenGLLifecycleManager.cpp.o
+[38/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/components/painters/ButtonPainter.cpp.o
+[39/120] Building CXX object CMakeFiles/OscilTests.dir/src/rendering/GpuRenderCoordinator.cpp.o
+[40/120] Building CXX object CMakeFiles/OscilTests.dir/src/plugin/PluginProcessor.cpp.o
+[41/120] Building CXX object CMakeFiles/OscilTests.dir/tests/test_oscillator_panel_controller.cpp.o
+[42/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/panels/OscillatorListComponent.cpp.o
+[43/120] Building CXX object CMakeFiles/OscilTests.dir/src/plugin/PluginEditor.cpp.o
+[44/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/panels/OscillatorListItem.cpp.o
+[45/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/panels/SourceSelectorComponent.cpp.o
+[46/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/dialogs/OscillatorConfigDialog.cpp.o
+[47/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/managers/DisplaySettingsManager.cpp.o
+[48/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/dialogs/AddOscillatorDialog.cpp.o
+[49/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/PaneContainerComponent.cpp.o
+[50/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/managers/DialogManager.cpp.o
+[51/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/PaneComponent.cpp.o
+[52/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/controllers/OscillatorPanelController.cpp.o
+[53/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/SidebarComponent.cpp.o
+[54/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/PluginEditorLayout.cpp.o
+[55/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/sections/TimingSidebarSection.cpp.o
+[56/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/sections/OptionsSection.cpp.o
+[57/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/sections/OscillatorSidebarSection.cpp.o
+[58/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/pane/PaneBody.cpp.o
+[59/120] Building CXX object CMakeFiles/OscilTests.dir/src/ui/layout/pane/WaveformStack.cpp.o
+[60/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/LayoutHandler.cpp.o
+[61/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/test_runners/LayoutTestRunner.cpp.o
+[62/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/test_runners/WaveformTestRunner.cpp.o
+[63/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/OscillatorHandler.cpp.o
+[64/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/ScreenshotHandler.cpp.o
+[65/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/test_runners/RenderingTestRunner.cpp.o
+[66/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/test_runners/SettingsTestRunner.cpp.o
+[67/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/PluginTestServer.cpp.o
+[68/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/TestRunnerHandler.cpp.o
+[69/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/src/TestTrack.cpp.o
+[70/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/SourceHandler.cpp.o
+[71/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/plugin/PluginProcessor.cpp.o
+[72/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/WaveformHandler.cpp.o
+[73/120] Building CXX object CMakeFiles/OscilTests.dir/src/tools/test_server/StateHandler.cpp.o
+[74/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/core/DecimatingCaptureBuffer.cpp.o
+[75/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/plugin/OpenGLLifecycleManager.cpp.o
+[76/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/Framebuffer.cpp.o
+[77/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/shaders/GradientFillShader.cpp.o
+[78/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/shaders/BasicShader.cpp.o
+[79/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/shaders/DualOutlineShader.cpp.o
+[80/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/components/painters/ButtonPainter.cpp.o
+[81/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/shaders/PlasmaSineShader.cpp.o
+[82/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/GpuRenderCoordinator.cpp.o
+[83/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/shaders/DigitalGlitchShader.cpp.o
+[84/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/rendering/effects/BloomEffect.cpp.o
+[85/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/panels/OscillatorListComponent.cpp.o
+[86/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/plugin/PluginEditor.cpp.o
+[87/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/panels/OscillatorListItem.cpp.o
+[88/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/panels/SourceSelectorComponent.cpp.o
+[89/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/managers/DisplaySettingsManager.cpp.o
+[90/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/dialogs/OscillatorConfigDialog.cpp.o
+[91/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/dialogs/AddOscillatorDialog.cpp.o
+[92/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/managers/DialogManager.cpp.o
+[93/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/PaneContainerComponent.cpp.o
+[94/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/PaneComponent.cpp.o
+[95/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/controllers/OscillatorPanelController.cpp.o
+[96/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/sections/TimingSidebarSection.cpp.o
+[97/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/SidebarComponent.cpp.o
+[98/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/sections/OptionsSection.cpp.o
+[99/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/PluginEditorLayout.cpp.o
+[100/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/sections/OscillatorSidebarSection.cpp.o
+[101/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/pane/PaneBody.cpp.o
+[102/120] Linking CXX executable Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4
+[103/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/ui/layout/pane/WaveformStack.cpp.o
+[104/120] Linking CXX CFBundle shared module Oscil_artefacts/Debug/AU/oscil4.component/Contents/MacOS/oscil4
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/AU/oscil4.component: code has no resources but signature indicates they must be present
+-- Replacing invalid signature with ad-hoc signature
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/AU/oscil4.component: replacing existing signature
+-- Destination /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component exists, overwriting
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component/Contents
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component/Contents/_CodeSignature
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component/Contents/_CodeSignature/CodeResources
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component/Contents/MacOS
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component/Contents/MacOS/oscil4
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component/Contents/Info.plist
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/Components/oscil4.component/Contents/PkgInfo
+[105/120] Linking CXX CFBundle shared module Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/MacOS/oscil4
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3: code has no resources but signature indicates they must be present
+-- Replacing invalid signature with ad-hoc signature
+/Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3: replacing existing signature
+removing moduleinfo.json
+creating /Users/Spare/Documents/code/MultiScoper/build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3/Contents/Resources/moduleinfo.json
+JUCE v8.0.5
+JUCE Assertion failure in juce_Timer.cpp:99
+-- Destination /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3 exists, overwriting
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/_CodeSignature
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/_CodeSignature/CodeResources
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/MacOS
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/MacOS/oscil4
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/Resources
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/Resources/moduleinfo.json
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/Info.plist
+-- Installing: /Users/Spare/Library/Audio/Plug-Ins/VST3/oscil4.vst3/Contents/PkgInfo
+[106/120] Linking CXX executable OscilTests
+JUCE v8.0.5
+[107/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/test_runners/LayoutTestRunner.cpp.o
+[108/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/test_runners/RenderingTestRunner.cpp.o
+[109/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/test_runners/SettingsTestRunner.cpp.o
+[110/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/test_runners/WaveformTestRunner.cpp.o
+[111/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/LayoutHandler.cpp.o
+[112/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/PluginTestServer.cpp.o
+[113/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/OscillatorHandler.cpp.o
+[114/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/SourceHandler.cpp.o
+[115/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/ScreenshotHandler.cpp.o
+[116/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/TestRunnerHandler.cpp.o
+[117/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/WaveformHandler.cpp.o
+[118/120] Building CXX object test_harness/CMakeFiles/OscilTestHarness.dir/__/src/tools/test_server/StateHandler.cpp.o
+[119/120] Linking CXX executable "test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"

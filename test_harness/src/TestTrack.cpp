@@ -52,9 +52,28 @@ void TestTrack::prepare(double sampleRate, int samplesPerBlock)
 
 void TestTrack::processBlock()
 {
+    static std::atomic<int> blockCount{0};
+    int currentBlock = blockCount.fetch_add(1);
+    bool shouldLog = (currentBlock % 100 == 0);
+
+    // [FLOW:GENERATION] Log audio generation details
+    if (shouldLog) {
+        std::cerr << "[FLOW:GENERATION] Track " << trackIndex_ << " processing block " << currentBlock 
+                  << ". Amp=" << audioGenerator_.getAmplitude() << std::endl;
+    }
+
     // Clear and generate test audio
     audioBuffer_.clear();
     audioGenerator_.generateBlock(audioBuffer_);
+
+    // Check if generation actually produced non-silent audio
+    if (shouldLog) {
+        float rms = audioBuffer_.getRMSLevel(0, 0, audioBuffer_.getNumSamples());
+        std::cerr << "[FLOW:GENERATION] Generated RMS=" << rms << " (Ch0)" << std::endl;
+        if (rms == 0.0f && audioGenerator_.getAmplitude() > 0.0f) {
+             std::cerr << "[FLOW:GENERATION] WARNING: Silent buffer despite non-zero amplitude!" << std::endl;
+        }
+    }
 
     // Process through plugin
     processor_->processBlock(audioBuffer_, midiBuffer_);

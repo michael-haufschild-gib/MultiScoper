@@ -1,0 +1,398 @@
+JUCE v8.0.5
+Oscil Test Harness started
+HTTP API available at: http://localhost:8765
+Health check: http://localhost:8765/health
+[HTTP IN] GET /health
+[HTTP IN] POST /state/reset
+[HTTP IN] POST /track/0/showEditor
+[DEBUG] handleTrackShowEditor called
+[DEBUG] trackId = 0
+[DEBUG] track = valid
+[DEBUG] isEditorVisible = 0
+[DEBUG] Calling callAsync to show editor
+[DEBUG] callAsync queued, preparing response
+[DEBUG] callAsync executing on message thread
+[DEBUG] Sending success response
+[DEBUG] Response sent
+[GL] WaveformGLRenderer CREATED
+WaveformGLRenderer created
+[GL] setContext called, context=valid
+GPU rendering enabled - OpenGL context attached
+WaveformGLRenderer: Cleared all waveforms
+[DEBUG] showTrackEditor completed
+WaveformStack: Skipping duplicate oscillator d3c79913f34b42fd92b4c59426666119
+[GL] === newOpenGLContextCreated CALLED ===
+WaveformGLRenderer: OpenGL context created
+WaveformGLRenderer: Registered waveform 1
+RenderBootstrapper: Blit shader compiled, sourceTexture uniform=0
+RenderBootstrapper: Composite shader compiled, sourceTexture uniform=0
+FramebufferPool: Initialized 1200x800 (HDR)
+[BASIC] compile() called, already compiled=0
+[BASIC] Compiling shaders (GLSL 3.30 Core)...
+[BASIC] Vertex shader compiled OK
+[BASIC] Fragment shader compiled OK
+[BASIC] Shader compiled and linked successfully
+[BASIC] Uniform locations - projection=3, baseColor=7, opacity=2, glowIntensity=8, lineWidth=1, geometryWidth=0
+[BASIC] Created VAO=2, VBO=2
+[BASIC] Attribute locations - position=1, distFromCenter=0
+[BASIC] Shader fully initialized, compiled=true
+[RenderEngine] WaveformPass: Pre-compiled basic shader (others compile on-demand)
+ParticleSystem: Initialized with capacity 10000
+[HTTP IN] GET /ui/elements
+[HTTP IN] GET /state/oscillators
+[HTTP IN] GET /ui/element/sidebar
+[HTTP IN] GET /ui/element/sidebar_addOscillator
+[HTTP IN] POST /ui/click
+EnvironmentMapManager: Initialized
+EnvironmentMapManager: Created map 'default_studio' (256x256)
+EnvironmentMapManager: Created map 'studio' (256x256)
+EnvironmentMapManager: Created map 'neon' (256x256)
+EnvironmentMapManager: Created map 'cyber_space' (256x256)
+EnvironmentMapManager: Created map 'dark' (256x256)
+EnvironmentMapManager: Created map 'sunset' (256x256)
+EnvironmentMapManager: Created map 'abstract' (256x256)
+[RenderEngine] RenderEngine: Initialized 1200x800
+[GL] RenderEngine initialized successfully
+WaveformGLRenderer: RenderEngine initialized
+[GL] contextReady_ set to TRUE
+FramebufferPool: Resized to 2400x1600
+[RenderEngine] RenderEngine: Resized to 2400x1600
+[RenderEngine] RenderEngine: Registered waveform 1
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /state/sources
+[HTTP IN] GET /ui/element/addOscillatorDialog_sourceDropdown
+[HTTP IN] POST /ui/select
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[HTTP IN] GET /state/panes
+[HTTP IN] GET /ui/element/addOscillatorDialog_paneDropdown
+[HTTP ERROR] Internal server error on GET /ui/element/addOscillatorDialog_paneDropdown (status: 404)
+[HTTP IN] GET /ui/element/addOscillatorDialog_nameField
+[HTTP IN] POST /ui/clearText
+[HTTP IN] POST /ui/typeText
+[HTTP IN] GET /ui/element/addOscillatorDialog_colorSwatches
+[HTTP ERROR] Internal server error on GET /ui/element/addOscillatorDialog_colorSwatches (status: 404)
+[HTTP IN] GET /ui/element/addOscillatorDialog_okBtn
+[HTTP IN] POST /ui/click
+WaveformGLRenderer: Cleared all waveforms
+[GL] renderOpenGL: 0 waveforms, 0 registered, viewport=2400x1600, renderEngine=active
+[RenderEngine] RenderEngine: Synced out stale waveform 1
+[RenderEngine] beginFrame: dt=0.0150168
+WaveformGLRenderer: Registered waveform 2
+WaveformGLRenderer: Registered waveform 3
+[RenderEngine] RenderEngine: Registered waveform 3
+[BASIC] render() called, compiled=1, ch1 size=1776
+[BASIC] Drawing ch1: 3552 verts, bounds=(6,418,888x352), posLoc=1, distLoc=0
+[BASIC] Draw completed OK
+[BASIC] Drawing ch2: isStereo=1, ch2 size=1776
+[BASIC] Drawing ch2: 3552 verts, centerY2=682
+[RenderEngine] RenderEngine: Registered waveform 2
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[BASIC] render() called, compiled=1, ch1 size=1776
+[BASIC] Drawing ch1: 3552 verts, bounds=(6,418,888x352), posLoc=1, distLoc=0
+[BASIC] Draw completed OK
+[BASIC] Drawing ch2: isStereo=1, ch2 size=1776
+[BASIC] Drawing ch2: 3552 verts, centerY2=682
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /state/oscillators
+[GL] renderOpenGL: 2 waveforms, 2 registered, viewport=2400x1600, renderEngine=active
+[GL]   Waveform 3: bounds=(6,418,888x352), ch1=1776, ch2=1776, isStereo=1, visible=1, preset=default
+[GL]   Waveform 2: bounds=(6,30,888x352), ch1=1776, ch2=1776, isStereo=1, visible=1, preset=default
+[RenderEngine] beginFrame: dt=0.00481796
+[BASIC] render() called, compiled=1, ch1 size=1776
+[BASIC] Drawing ch1: 3552 verts, bounds=(6,418,888x352), posLoc=1, distLoc=0
+[BASIC] Draw completed OK
+[BASIC] Drawing ch2: isStereo=1, ch2 size=1776
+[BASIC] Drawing ch2: 3552 verts, centerY2=682
+[HTTP IN] GET /ui/element/oscillator_90d2e00b00574785953101d33f1bcfdc
+[HTTP ERROR] Internal server error on GET /ui/element/oscillator_90d2e00b00574785953101d33f1bcfdc (status: 404)
+[HTTP IN] POST /track/0/hideEditor
+WaveformGLRenderer: OpenGL context closing
+[HTTP IN] POST /state/reset
+FramebufferPool: Shutdown complete
+[RenderEngine] RenderEngine: Shutdown complete
+WaveformGLRenderer: RenderEngine shutdown complete
+WaveformGLRenderer: Cleanup already performed, skipping
+[GL] WaveformGLRenderer DESTROYED
+WaveformGLRenderer destroyed
+[HTTP IN] POST /track/0/showEditor
+[DEBUG] handleTrackShowEditor called
+[DEBUG] trackId = 0
+[DEBUG] track = valid
+[DEBUG] isEditorVisible = 0
+[DEBUG] Calling callAsync to show editor
+[DEBUG] callAsync queued, preparing response
+[DEBUG] callAsync executing on message thread
+[DEBUG] Sending success response
+[DEBUG] Response sent
+[GL] WaveformGLRenderer CREATED
+WaveformGLRenderer created
+[GL] setContext called, context=valid
+GPU rendering enabled - OpenGL context attached
+WaveformGLRenderer: Cleared all waveforms
+[DEBUG] showTrackEditor completed
+WaveformStack: Skipping duplicate oscillator 09f6631578304a638f2bb3a83b4e600f
+WaveformGLRenderer: Registered waveform 4
+[GL] === newOpenGLContextCreated CALLED ===
+WaveformGLRenderer: OpenGL context created
+RenderBootstrapper: Blit shader compiled, sourceTexture uniform=0
+RenderBootstrapper: Composite shader compiled, sourceTexture uniform=0
+FramebufferPool: Initialized 1200x800 (HDR)
+[BASIC] compile() called, already compiled=0
+[BASIC] Compiling shaders (GLSL 3.30 Core)...
+[BASIC] Vertex shader compiled OK
+[BASIC] Fragment shader compiled OK
+[BASIC] Shader compiled and linked successfully
+[BASIC] Uniform locations - projection=3, baseColor=7, opacity=2, glowIntensity=8, lineWidth=1, geometryWidth=0
+[BASIC] Created VAO=2, VBO=2
+[BASIC] Attribute locations - position=1, distFromCenter=0
+[BASIC] Shader fully initialized, compiled=true
+[RenderEngine] WaveformPass: Pre-compiled basic shader (others compile on-demand)
+ParticleSystem: Initialized with capacity 10000
+[HTTP IN] GET /ui/elements
+EnvironmentMapManager: Initialized
+EnvironmentMapManager: Created map 'default_studio' (256x256)
+EnvironmentMapManager: Created map 'studio' (256x256)
+[HTTP IN] GET /state/oscillators
+[HTTP IN] POST /ui/click
+EnvironmentMapManager: Created map 'neon' (256x256)
+EnvironmentMapManager: Created map 'cyber_space' (256x256)
+EnvironmentMapManager: Created map 'dark' (256x256)
+EnvironmentMapManager: Created map 'sunset' (256x256)
+EnvironmentMapManager: Created map 'abstract' (256x256)
+[RenderEngine] RenderEngine: Initialized 1200x800
+[GL] RenderEngine initialized successfully
+WaveformGLRenderer: RenderEngine initialized
+[GL] contextReady_ set to TRUE
+FramebufferPool: Resized to 2400x1600
+[RenderEngine] RenderEngine: Resized to 2400x1600
+[RenderEngine] RenderEngine: Registered waveform 4
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[BASIC] render() called, compiled=1, ch1 size=1776
+[BASIC] Drawing ch1: 3552 verts, bounds=(6,30,888x740), posLoc=1, distLoc=0
+[BASIC] Draw completed OK
+[BASIC] Drawing ch2: isStereo=1, ch2 size=1776
+[BASIC] Drawing ch2: 3552 verts, centerY2=585
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog_cancelBtn
+[HTTP IN] POST /ui/click
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[GL] renderOpenGL: 1 waveforms, 1 registered, viewport=2400x1600, renderEngine=active
+[GL]   Waveform 4: bounds=(6,30,888x740), ch1=1776, ch2=1776, isStereo=1, visible=1, preset=default
+[RenderEngine] beginFrame: dt=0.0121656
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[BASIC] render() called, compiled=1, ch1 size=1776
+[BASIC] Drawing ch1: 3552 verts, bounds=(6,30,888x740), posLoc=1, distLoc=0
+[BASIC] Draw completed OK
+[BASIC] Drawing ch2: isStereo=1, ch2 size=1776
+[BASIC] Drawing ch2: 3552 verts, centerY2=585
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /state/oscillators
+[HTTP IN] POST /track/0/hideEditor
+[HTTP IN] POST /state/reset
+WaveformGLRenderer: OpenGL context closing
+FramebufferPool: Shutdown complete
+[RenderEngine] RenderEngine: Shutdown complete
+WaveformGLRenderer: RenderEngine shutdown complete
+WaveformGLRenderer: Cleanup already performed, skipping
+[GL] WaveformGLRenderer DESTROYED
+WaveformGLRenderer destroyed
+[HTTP IN] POST /track/0/showEditor
+[DEBUG] handleTrackShowEditor called
+[DEBUG] trackId = 0
+[DEBUG] track = valid
+[DEBUG] isEditorVisible = 0
+[DEBUG] Calling callAsync to show editor
+[DEBUG] callAsync executing on message thread
+[DEBUG] callAsync queued, preparing response
+[DEBUG] Sending success response
+[DEBUG] Response sent
+[GL] WaveformGLRenderer CREATED
+WaveformGLRenderer created
+[GL] setContext called, context=valid
+GPU rendering enabled - OpenGL context attached
+WaveformGLRenderer: Cleared all waveforms
+[DEBUG] showTrackEditor completed
+WaveformStack: Skipping duplicate oscillator 63f3a24c33024e5384dd06af2fd644ca
+WaveformGLRenderer: Registered waveform 5
+[GL] === newOpenGLContextCreated CALLED ===
+WaveformGLRenderer: OpenGL context created
+RenderBootstrapper: Blit shader compiled, sourceTexture uniform=0
+RenderBootstrapper: Composite shader compiled, sourceTexture uniform=0
+FramebufferPool: Initialized 1200x800 (HDR)
+[BASIC] compile() called, already compiled=0
+[BASIC] Compiling shaders (GLSL 3.30 Core)...
+[BASIC] Vertex shader compiled OK
+[BASIC] Fragment shader compiled OK
+[BASIC] Shader compiled and linked successfully
+[BASIC] Uniform locations - projection=3, baseColor=7, opacity=2, glowIntensity=8, lineWidth=1, geometryWidth=0
+[BASIC] Created VAO=2, VBO=2
+[BASIC] Attribute locations - position=1, distFromCenter=0
+[BASIC] Shader fully initialized, compiled=true
+[RenderEngine] WaveformPass: Pre-compiled basic shader (others compile on-demand)
+ParticleSystem: Initialized with capacity 10000
+[HTTP IN] GET /ui/elements
+EnvironmentMapManager: Initialized
+EnvironmentMapManager: Created map 'default_studio' (256x256)
+[HTTP IN] POST /ui/click
+EnvironmentMapManager: Created map 'studio' (256x256)
+EnvironmentMapManager: Created map 'neon' (256x256)
+EnvironmentMapManager: Created map 'cyber_space' (256x256)
+EnvironmentMapManager: Created map 'dark' (256x256)
+EnvironmentMapManager: Created map 'sunset' (256x256)
+EnvironmentMapManager: Created map 'abstract' (256x256)
+[RenderEngine] RenderEngine: Initialized 1200x800
+[GL] RenderEngine initialized successfully
+WaveformGLRenderer: RenderEngine initialized
+[GL] contextReady_ set to TRUE
+FramebufferPool: Resized to 2400x1600
+[RenderEngine] RenderEngine: Resized to 2400x1600
+[RenderEngine] RenderEngine: Registered waveform 5
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[GL] renderOpenGL: 1 waveforms, 1 registered, viewport=2400x1600, renderEngine=active
+[GL]   Waveform 5: bounds=(6,30,888x740), ch1=1776, ch2=1776, isStereo=1, visible=1, preset=default
+[RenderEngine] beginFrame: dt=0.026849
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog_nameField
+[HTTP IN] POST /ui/clearText
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+JUCE Assertion failure in juce_Colour.cpp:340
+[HTTP IN] POST /ui/click
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog_error
+[HTTP ERROR] Internal server error on GET /ui/element/addOscillatorDialog_error (status: 404)
+[HTTP IN] GET /ui/element/addOscillatorDialog
+[HTTP IN] GET /ui/element/addOscillatorDialog_cancelBtn
+[HTTP IN] POST /ui/click
+[HTTP IN] POST /track/0/hideEditor

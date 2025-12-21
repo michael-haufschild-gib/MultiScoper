@@ -1695,7 +1695,14 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
         std::string colourStr = body.value("colour", "");
         if (!colourStr.empty())
         {
-            osc.setColour(juce::Colour::fromString(juce::String(colourStr)));
+            auto col = juce::Colour::fromString(juce::String(colourStr));
+            // FORCE ALPHA to 255 if it's parsed as 0 (common issue with 6-digit hex)
+            if (col.getAlpha() == 0) col = col.withAlpha(1.0f);
+            
+            std::cerr << "[HTTP] handleStateAddOscillator: Received color='" << colourStr 
+                      << "' Parsed=" << col.toDisplayString(true) 
+                      << " Alpha=" << (int)col.getAlpha() << std::endl;
+            osc.setColour(col);
         }
         else
         {
@@ -1786,6 +1793,18 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
         if (body.contains("lineWidth"))
         {
             osc.setLineWidth(body["lineWidth"].get<float>());
+        }
+        if (body.contains("colour"))
+        {
+            std::string colStr = body["colour"].get<std::string>();
+            auto col = juce::Colour::fromString(juce::String(colStr));
+            // FORCE ALPHA to 255 if it's parsed as 0
+            if (col.getAlpha() == 0) col = col.withAlpha(1.0f);
+            
+            std::cerr << "[HTTP] handleStateUpdateOscillator: Received color='" << colStr 
+                      << "' Parsed=" << col.toDisplayString(true) 
+                      << " Alpha=" << (int)col.getAlpha() << std::endl;
+            osc.setColour(col);
         }
 
         // Update the oscillator in state - THIS IS THE FUNCTION WITH THE BUG FIX!
