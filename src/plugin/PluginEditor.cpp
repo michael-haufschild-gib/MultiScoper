@@ -76,7 +76,14 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     if (auto* optionsSection = sidebar_->getOptionsSection())
     {
         optionsSection->setGpuRenderingEnabled(gpuRenderingEnabled);
-        auto qualityConfig = processor_.getState().getCaptureQualityConfig();
+        
+        // Sync visual settings from state
+        auto& state = processor_.getState();
+        optionsSection->setAutoScale(state.isAutoScaleEnabled());
+        optionsSection->setShowGrid(state.isShowGridEnabled());
+        optionsSection->setGainDb(state.getGainDb());
+        
+        auto qualityConfig = state.getCaptureQualityConfig();
         optionsSection->setQualityPreset(qualityConfig.qualityPreset);
         optionsSection->setBufferDuration(qualityConfig.bufferDuration);
         optionsSection->setAutoAdjustQuality(qualityConfig.autoAdjustQuality);
@@ -375,6 +382,18 @@ void OscilPluginEditor::refreshPanels()
 {
     if (oscillatorPanelController_)
         oscillatorPanelController_->refreshPanels();
+}
+
+void OscilPluginEditor::requestFrameCapture(std::function<void(juce::Image)> callback)
+{
+    if (renderCoordinator_)
+    {
+        renderCoordinator_->requestFrameCapture(std::move(callback));
+    }
+    else
+    {
+        callback(juce::Image());
+    }
 }
 
 } // namespace oscil

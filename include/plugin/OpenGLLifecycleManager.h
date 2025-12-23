@@ -32,6 +32,12 @@ public:
     void detach();
     void clearAllWaveforms();
 
+    /**
+     * Request a capture of the next rendered frame.
+     * Only works if GPU rendering is enabled.
+     */
+    void requestFrameCapture(std::function<void(juce::Image)> callback);
+
 private:
     juce::AudioProcessorEditor& editor_;
     std::unique_ptr<WaveformGLRenderer> renderer_;

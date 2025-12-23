@@ -85,4 +85,16 @@ void GpuRenderCoordinator::detach()
     }
 }
 
+void GpuRenderCoordinator::requestFrameCapture(std::function<void(juce::Image)> callback)
+{
+    if (glManager_)
+    {
+        glManager_->requestFrameCapture(std::move(callback));
+    }
+    else
+    {
+        callback(juce::Image());
+    }
+}
+
 } // namespace oscil

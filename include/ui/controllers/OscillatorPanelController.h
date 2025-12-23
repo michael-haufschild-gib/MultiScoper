@@ -104,6 +104,11 @@ public:
     void addOscillatorDialogRequested() override;
     void addOscillatorRequested(const AddOscillatorDialog::Result& result) override;
 
+    // SidebarComponent::Listener overrides (Options logic)
+    void gainChanged(float dB) override;
+    void autoScaleChanged(bool enabled) override;
+    void showGridChanged(bool enabled) override;
+
     // Note: Other Sidebar events (Timing, Options) are handled by Editor or other controllers
 
     // ValueTree::Listener overrides

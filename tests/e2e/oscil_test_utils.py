@@ -375,7 +375,7 @@ class OscilTestClient:
         try:
             response = requests.post(
                 f"{self.base_url}/ui/toggle",
-                json={"elementId": element_id, "state": state},
+                json={"elementId": element_id, "value": state},
                 timeout=self.timeout
             )
             return response.status_code == 200
@@ -656,12 +656,14 @@ class OscilTestClient:
             print(f"[ERROR] Verify waveform failed: {e}")
             return {"pass": False, "error": str(e)}
 
-    def analyze_waveform(self, element_id: str = None) -> Dict:
+    def analyze_waveform(self, element_id: str = None, background_color: str = None) -> Dict:
         """Analyze waveform in display and return metrics"""
         try:
             params = {}
             if element_id:
                 params["elementId"] = element_id
+            if background_color:
+                params["backgroundColor"] = background_color
 
             response = requests.get(
                 f"{self.base_url}/analyze/waveform",

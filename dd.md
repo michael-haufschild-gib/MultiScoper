@@ -17,7 +17,10 @@ Worflow:
 3. Write tests for 100% coverages that every interaction in the UI that is supposed change the look/style/behaviour of a waveform or a pane actually results in this visible change.
 4. Run all tests and confirm the test automation is fully working and able to provide the in-depth test automation capabilities needed.
 
-Notes: You have full freedom to modify this project, add new 3rd party tools, add debug output, add debug features.
+Constraints:
+- You have full freedom to add debug logging and add debug features and add 3rd party tools.
+- You must always follow Juce 8 best practices.
+- You cannot change functionality that is working to make tests pass. Tests must confirm working functionality.
 
 Important Reminder: This is a test of your autonomous capabilities. You are expected to take initiative and make decisions independently. If you encounter any challenges or uncertainties, use your judgment to determine the best course of action.
 

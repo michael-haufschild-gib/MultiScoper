@@ -351,4 +351,9 @@ void PaneBody::resetStats()
     }
 }
 
+void PaneBody::registerTestId()
+{
+    OSCIL_REGISTER_TEST_ID(testId_);
+}
+
 } // namespace oscil

@@ -441,6 +441,7 @@ VisualConfiguration VisualConfiguration::getPreset(const juce::String& presetNam
         // 1. Default (Utility)
         addPreset("default", [](VisualConfiguration& c) {
             c.shaderType = ShaderType::Basic2D;
+            c.particles.enabled = false; // Disable particles for clean utility view
         });
 
         // 2. Vector Scope (Utility/Retro)

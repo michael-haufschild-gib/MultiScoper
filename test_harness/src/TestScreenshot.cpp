@@ -3,6 +3,7 @@
 */
 
 #include "TestScreenshot.h"
+#include "plugin/PluginEditor.h"
 #include <juce_graphics/juce_graphics.h>
 #include <algorithm>
 #include <cmath>
@@ -86,6 +87,75 @@ juce::Image TestScreenshot::getComponentImage(juce::Component* component)
 {
     if (component == nullptr)
         return {};
+
+    // Check if we are inside an OscilPluginEditor (which might use OpenGL)
+    // We only attempt this if we are NOT on the message thread (to avoid deadlock)
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        OscilPluginEditor* editor = nullptr;
+        juce::Component* current = component;
+        
+        // Walk up hierarchy
+        while (current != nullptr)
+        {
+            if (auto* e = dynamic_cast<OscilPluginEditor*>(current))
+            {
+                editor = e;
+                break;
+            }
+            current = current->getParentComponent();
+        }
+
+        if (editor != nullptr)
+        {
+            juce::WaitableEvent event;
+            juce::Image capturedImage;
+
+            // Request capture
+            editor->requestFrameCapture([&](juce::Image img) {
+                capturedImage = img;
+                event.signal();
+            });
+
+            // Wait for capture (2 seconds timeout)
+            if (event.wait(2000))
+            {
+                if (capturedImage.isValid())
+                {
+                    // Calculate scaling factor (e.g. 2.0 for Retina)
+                    float scale = (float)capturedImage.getWidth() / editor->getWidth();
+
+                    // If we captured the whole editor, but wanted a child component, crop it
+                    if (component != editor)
+                    {
+                        // Calculate bounds relative to the editor
+                        auto topLeft = editor->getLocalPoint(component, juce::Point<int>(0, 0));
+                        
+                        juce::Rectangle<int> cropArea(
+                            static_cast<int>(topLeft.x * scale), 
+                            static_cast<int>(topLeft.y * scale), 
+                            static_cast<int>(component->getWidth() * scale), 
+                            static_cast<int>(component->getHeight() * scale)
+                        );
+                        
+                        // Intersect with image bounds to be safe
+                        cropArea = cropArea.getIntersection(capturedImage.getBounds());
+                        
+                        if (!cropArea.isEmpty())
+                            return capturedImage.getClippedImage(cropArea);
+                    }
+                    else
+                    {
+                        return capturedImage;
+                    }
+                }
+            }
+            else
+            {
+                std::cerr << "[ERROR] Screenshot capture TIMEOUT" << std::endl;
+            }
+        }
+    }
 
     return component->createComponentSnapshot(component->getLocalBounds(), true, 1.0f);
 }
@@ -222,18 +292,35 @@ WaveformAnalysis TestScreenshot::analyzeWaveform(const juce::Image& image,
 
     int lastY = -1;
     int zeroCrossings = 0;
+    
+    // Ignore margins to avoid detecting borders as signal (25% of height)
+    int margin = height / 4;
+    if (height <= margin * 2) margin = 0;
+
+    bool loggedFirstPixel = false;
 
     for (int x = 0; x < width; x += 2)
     {
         int waveformY = -1;
 
-        for (int y = 0; y < height; ++y)
+        for (int y = margin; y < height - margin; ++y)
         {
             auto pixel = image.getPixelAt(x, y);
+            
+            // Ignore practically invisible pixels
+            if (pixel.getAlpha() < 10) continue;
 
             // Check if this is a non-background pixel
             if (!colorsMatch(pixel, backgroundColor, 30))
             {
+                if (!loggedFirstPixel)
+                {
+                    std::cerr << "[DEBUG] First non-bg pixel at " << x << "," << y 
+                              << " Color: " << pixel.toDisplayString(true) 
+                              << " BG: " << backgroundColor.toDisplayString(true) << std::endl;
+                    loggedFirstPixel = true;
+                }
+
                 totalNonBackground++;
 
                 // Track waveform position for amplitude

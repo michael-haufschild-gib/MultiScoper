@@ -336,6 +336,84 @@ void WaveformGLRenderer::renderOpenGL()
             juce::OpenGLHelpers::clear(backgroundColour_);
         }
     }
+
+    // Process any pending frame captures
+    processPendingCaptures(width, height);
+}
+
+void WaveformGLRenderer::requestFrameCapture(FrameCaptureCallback callback)
+{
+    const juce::SpinLock::ScopedLockType lock(captureLock_);
+    pendingCaptures_.push_back(std::move(callback));
+}
+
+void WaveformGLRenderer::processPendingCaptures(int width, int height)
+{
+    // Check (unlocked) if there's work to do
+    if (pendingCaptures_.empty())
+        return;
+
+    std::vector<FrameCaptureCallback> callbacks;
+    {
+        const juce::SpinLock::ScopedLockType lock(captureLock_);
+        if (pendingCaptures_.empty())
+            return;
+        callbacks = std::move(pendingCaptures_);
+        // pendingCaptures_ is now empty
+    }
+
+    // Capture the frame
+    // We read into a temporary buffer first
+    std::vector<uint8_t> rawPixels;
+    try
+    {
+        rawPixels.resize(width * height * 4);
+    }
+    catch (...)
+    {
+        return; // Allocation failed
+    }
+
+    // Read pixels (RGBA format)
+    // Note: glReadPixels reads from bottom-left up
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rawPixels.data());
+
+    // Create the JUCE image (ARGB format)
+    juce::Image capturedImage(juce::Image::ARGB, width, height, true);
+    juce::Image::BitmapData destData(capturedImage, juce::Image::BitmapData::readWrite);
+
+    // Copy and convert
+    // GL (RGBA, Bottom-Up) -> JUCE (ARGB, Top-Down)
+    for (int y = 0; y < height; ++y)
+    {
+        const int srcRowIndex = height - 1 - y; // Flip vertically
+        const uint8_t* srcRow = rawPixels.data() + (srcRowIndex * width * 4);
+        uint8_t* destRow = destData.getLinePointer(y);
+
+        for (int x = 0; x < width; ++x)
+        {
+            const uint8_t* srcPixel = srcRow + (x * 4);
+            // GL: R, G, B, A
+            uint8_t r = srcPixel[0];
+            uint8_t g = srcPixel[1];
+            uint8_t b = srcPixel[2];
+            uint8_t a = srcPixel[3];
+
+            // JUCE ARGB: B, G, R, A (in memory on Little Endian)
+            // We use PixelARGB to handle endianness correctly
+            juce::PixelARGB* destPixel = reinterpret_cast<juce::PixelARGB*>(destRow + (x * 4));
+            destPixel->setARGB(a, r, g, b);
+        }
+    }
+
+    // Dispatch callbacks on the Message Thread
+    // We capture by value to ensure the image lives long enough
+    juce::MessageManager::callAsync([callbacks = std::move(callbacks), img = capturedImage]() {
+        for (const auto& cb : callbacks)
+        {
+            cb(img);
+        }
+    });
 }
 
 void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour)
@@ -566,6 +644,8 @@ void WaveformGLRenderer::updateWaveform(const WaveformRenderData& data)
 {
     const juce::SpinLock::ScopedLockType lock(dataLock_);
     waveforms_[data.id] = data;
+    
+    // DBG("Renderer update: id=" << data.id << " scale=" << data.verticalScale << " val0=" << (data.channel1.empty() ? 0 : data.channel1[0]));
 }
 
 void WaveformGLRenderer::setBackgroundColour(juce::Colour colour)

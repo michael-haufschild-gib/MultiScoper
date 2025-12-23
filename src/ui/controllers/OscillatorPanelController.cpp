@@ -155,11 +155,14 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
 
         // Set initial GPU state
         bool gpuEnabled = gpuCoordinator_.isGpuRenderingEnabled();
+        bool autoScaleEnabled = processor_.getState().isAutoScaleEnabled(); // Get auto-scale state
+        
         for (size_t i = 0; i < paneComponent->getOscillatorCount(); ++i)
         {
             if (auto* waveform = paneComponent->getWaveformAt(i))
             {
                 waveform->setGpuRenderingEnabled(gpuEnabled);
+                waveform->setAutoScale(autoScaleEnabled); // Explicitly set auto-scale
             }
         }
 
@@ -637,5 +640,41 @@ void OscillatorPanelController::valueTreeChildOrderChanged(juce::ValueTree& pare
 }
 
 void OscillatorPanelController::valueTreeParentChanged(juce::ValueTree&) {}
+
+void OscillatorPanelController::gainChanged(float dB)
+{
+    // Update state
+    processor_.getState().setGainDb(dB);
+    
+    // Apply to panes immediately
+    if (displaySettings_)
+    {
+        displaySettings_->setGainDbForAll(dB);
+    }
+}
+
+void OscillatorPanelController::autoScaleChanged(bool enabled)
+{
+    // Update state
+    processor_.getState().setAutoScaleEnabled(enabled);
+    
+    // Apply to panes immediately
+    if (displaySettings_)
+    {
+        displaySettings_->setAutoScaleForAll(enabled);
+    }
+}
+
+void OscillatorPanelController::showGridChanged(bool enabled)
+{
+    // Update state
+    processor_.getState().setShowGridEnabled(enabled);
+    
+    // Apply to panes immediately
+    if (displaySettings_)
+    {
+        displaySettings_->setShowGridForAll(enabled);
+    }
+}
 
 } // namespace oscil

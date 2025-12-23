@@ -488,8 +488,17 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     // Copy display buffer data from presenter
     if (presenter_)
     {
-        data.channel1 = presenter_->getDisplayBuffer1();
-        data.channel2 = presenter_->getDisplayBuffer2();
+        // Optimization: Don't send silence to GPU
+        if (presenter_->getGainLinear() < 0.002f)
+        {
+            data.channel1.clear();
+            data.channel2.clear();
+        }
+        else
+        {
+            data.channel1 = presenter_->getDisplayBuffer1();
+            data.channel2 = presenter_->getDisplayBuffer2();
+        }
         data.isStereo = presenter_->isStereo();
         data.verticalScale = presenter_->getEffectiveScale();
     }

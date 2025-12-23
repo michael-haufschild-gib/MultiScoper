@@ -1253,7 +1253,12 @@ void TestHttpServer::handleScreenshot(const httplib::Request& req, httplib::Resp
     {
         auto body = json::parse(req.body);
         std::string path = body.value("path", "/tmp/screenshot.png");
-        std::string element = body.value("element", "window");
+        
+        std::string element = "window";
+        if (body.contains("elementId"))
+            element = body["elementId"].get<std::string>();
+        else if (body.contains("element"))
+            element = body["element"].get<std::string>();
 
         juce::File outputFile(path);
         bool success = false;
@@ -1693,6 +1698,8 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
 
         // Set colour if provided (as hex string like "#FF0000")
         std::string colourStr = body.value("colour", "");
+        if (colourStr.empty()) colourStr = body.value("color", "");
+        
         if (!colourStr.empty())
         {
             auto col = juce::Colour::fromString(juce::String(colourStr));
@@ -1794,9 +1801,13 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
         {
             osc.setLineWidth(body["lineWidth"].get<float>());
         }
-        if (body.contains("colour"))
+        
+        std::string colStr;
+        if (body.contains("colour")) colStr = body["colour"].get<std::string>();
+        else if (body.contains("color")) colStr = body["color"].get<std::string>();
+        
+        if (!colStr.empty())
         {
-            std::string colStr = body["colour"].get<std::string>();
             auto col = juce::Colour::fromString(juce::String(colStr));
             // FORCE ALPHA to 255 if it's parsed as 0
             if (col.getAlpha() == 0) col = col.withAlpha(1.0f);

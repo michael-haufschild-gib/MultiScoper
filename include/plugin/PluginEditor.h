@@ -115,6 +115,12 @@ public:
     // Delegated to controller
     const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const;
     void refreshPanels();
+    
+    /**
+     * Request a capture of the rendered frame (OpenGL or Software).
+     * @param callback Function to call with the result.
+     */
+    void requestFrameCapture(std::function<void(juce::Image)> callback);
 
     // Accessor for test server and adapters
     OscillatorPanelController* getOscillatorPanelController() const { return oscillatorPanelController_.get(); }

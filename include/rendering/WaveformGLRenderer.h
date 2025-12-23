@@ -145,9 +145,19 @@ public:
             func(*renderEngine_);
     }
 
+    using FrameCaptureCallback = std::function<void(juce::Image)>;
+
+    /**
+     * Request a capture of the current frame.
+     * The callback will be executed on the Message Thread with the captured image.
+     * @param callback Function to call with the captured image.
+     */
+    void requestFrameCapture(FrameCaptureCallback callback);
+
 private:
     void compileDebugShader();
     void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);
+    void processPendingCaptures(int width, int height);
 
     juce::OpenGLContext* context_ = nullptr;
     std::atomic<bool> contextReady_{ false };
@@ -157,6 +167,10 @@ private:
     // Using SpinLock for fast synchronization (short critical sections)
     juce::SpinLock dataLock_;
     std::unordered_map<int, WaveformRenderData> waveforms_;
+
+    // Frame capture
+    juce::SpinLock captureLock_;
+    std::vector<FrameCaptureCallback> pendingCaptures_;
 
     // Render state
     juce::Colour backgroundColour_{ juce::Colours::transparentBlack };

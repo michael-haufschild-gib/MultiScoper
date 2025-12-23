@@ -102,6 +102,7 @@ private:
     static constexpr int STATS_UPDATE_HZ = 15; // Approx 66ms
 
     // TestIdSupport
+    void registerTestId() override;
     OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneBody)

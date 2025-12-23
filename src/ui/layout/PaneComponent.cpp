@@ -51,6 +51,13 @@ void PaneComponent::setPaneIndex(int index)
     // Register pane with index-based testId
     auto testId = juce::String("pane_") + juce::String(index);
     OSCIL_REGISTER_TEST_ID(testId.toRawUTF8());
+    
+    // Also update body test ID to be unique and addressable
+    if (body_)
+    {
+        auto bodyTestId = juce::String("pane_body_") + juce::String(index);
+        body_->setTestId(bodyTestId);
+    }
 #endif
 }
 

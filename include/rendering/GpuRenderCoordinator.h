@@ -31,6 +31,8 @@ public:
     void clearWaveforms();
     void detach();
 
+    void requestFrameCapture(std::function<void(juce::Image)> callback);
+
 private:
     std::unique_ptr<OpenGLLifecycleManager> glManager_;
     StatusBarComponent& statusBar_;

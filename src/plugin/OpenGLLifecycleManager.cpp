@@ -104,4 +104,21 @@ void OpenGLLifecycleManager::updateWaveformData(const std::vector<std::unique_pt
 #endif
 }
 
+void OpenGLLifecycleManager::requestFrameCapture(std::function<void(juce::Image)> callback)
+{
+#if OSCIL_ENABLE_OPENGL
+    if (renderer_ && gpuRenderingEnabled_)
+    {
+        renderer_->requestFrameCapture(std::move(callback));
+    }
+    else
+    {
+        // Immediate failure callback
+        callback(juce::Image());
+    }
+#else
+    callback(juce::Image());
+#endif
+}
+
 } // namespace oscil

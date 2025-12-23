@@ -6,6 +6,8 @@
 #include "TestUIController.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/OscilToggle.h"
+#include "ui/components/OscilSlider.h"
 #include <thread>
 #include <chrono>
 
@@ -447,6 +449,16 @@ bool TestUIController::toggle(const juce::String& elementId, bool value)
     if (component == nullptr)
         return false;
 
+    // Handle OscilToggle explicitly
+    if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
+    {
+        juce::MessageManager::callAsync([oscilToggle, value]()
+        {
+            oscilToggle->setValue(value, true);
+        });
+        return true;
+    }
+
     auto* toggleButton = dynamic_cast<juce::ToggleButton*>(component);
     if (toggleButton != nullptr)
     {
@@ -475,6 +487,16 @@ bool TestUIController::setSliderValue(const juce::String& elementId, double valu
     auto* component = TestElementRegistry::getInstance().findElement(elementId);
     if (component == nullptr)
         return false;
+
+    // Handle OscilSlider explicitly
+    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+    {
+        juce::MessageManager::callAsync([oscilSlider, value]()
+        {
+            oscilSlider->setValue(value, true);
+        });
+        return true;
+    }
 
     auto* slider = dynamic_cast<juce::Slider*>(component);
     if (slider == nullptr)
