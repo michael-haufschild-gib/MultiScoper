@@ -267,6 +267,7 @@ private:
     OSCIL_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SidebarComponent)
+    JUCE_DECLARE_WEAK_REFERENCEABLE(SidebarComponent)
 };
 
 } // namespace oscil

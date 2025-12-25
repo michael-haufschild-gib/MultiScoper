@@ -40,7 +40,7 @@ void OscilState::initializeDefaultState()
     state_.appendChild(juce::ValueTree(StateIds::Timing), nullptr);
 }
 
-juce::String OscilState::toXmlString() const
+juce::String OscilState::toXmlString()
 {
     // Sync layoutManager_ back to state_ before serialization
     // This ensures pane changes made at runtime are persisted
@@ -53,15 +53,9 @@ juce::String OscilState::toXmlString() const
     return {};
 }
 
-void OscilState::syncLayoutManagerToState() const
+void OscilState::syncLayoutManagerToState()
 {
     // Sync layoutManager_ back to state_ before serialization.
-    // Although this method modifies the underlying ValueTree data of state_,
-    // it is conceptually preserving "logical constness" by ensuring the 
-    // serialized representation matches the current runtime state (layoutManager_).
-    // juce::ValueTree is a reference-counted wrapper, so modifying its content
-    // does not require the wrapper itself to be mutable.
-
     // Remove existing Panes node and replace with current layoutManager state
     auto existingPanes = state_.getChildWithName(StateIds::Panes);
     if (existingPanes.isValid())
@@ -510,7 +504,7 @@ juce::File GlobalPreferences::getPreferencesFile() const
 
 void GlobalPreferences::load()
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto file = getPreferencesFile();
     if (file.existsAsFile())
     {
@@ -523,7 +517,13 @@ void GlobalPreferences::load()
 
 void GlobalPreferences::save()
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
+    saveUnlocked();
+}
+
+void GlobalPreferences::saveUnlocked()
+{
+    // NOTE: Caller must hold mutex_ before calling this method
     auto file = getPreferencesFile();
 
     // Create parent directory if it doesn't exist
@@ -551,95 +551,125 @@ void GlobalPreferences::save()
     }
 }
 
+void GlobalPreferences::scheduleSave()
+{
+    // Debounce: only schedule one save at a time
+    if (!savePending_.exchange(true))
+    {
+        juce::MessageManager::callAsync([this]() {
+            if (savePending_.load())
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                saveUnlocked();
+                savePending_.store(false);
+            }
+        });
+    }
+}
+
 juce::String GlobalPreferences::getDefaultTheme() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("defaultTheme", "Dark Professional");
 }
 
 void GlobalPreferences::setDefaultTheme(const juce::String& themeName)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    preferences_.setProperty("defaultTheme", themeName, nullptr);
-    save();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        preferences_.setProperty("defaultTheme", themeName, nullptr);
+    }
+    scheduleSave();
 }
 
 int GlobalPreferences::getDefaultColumnLayout() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("defaultColumns", 1);
 }
 
 void GlobalPreferences::setDefaultColumnLayout(int columns)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    preferences_.setProperty("defaultColumns", columns, nullptr);
-    save();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        preferences_.setProperty("defaultColumns", columns, nullptr);
+    }
+    scheduleSave();
 }
 
 bool GlobalPreferences::getShowStatusBar() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("showStatusBar", true);
 }
 
 void GlobalPreferences::setShowStatusBar(bool show)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    preferences_.setProperty("showStatusBar", show, nullptr);
-    save();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        preferences_.setProperty("showStatusBar", show, nullptr);
+    }
+    scheduleSave();
 }
 
 bool GlobalPreferences::getReducedMotion() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("reducedMotion", false);
 }
 
 void GlobalPreferences::setReducedMotion(bool reduced)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    preferences_.setProperty("reducedMotion", reduced, nullptr);
-    save();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        preferences_.setProperty("reducedMotion", reduced, nullptr);
+    }
+    scheduleSave();
 }
 
 bool GlobalPreferences::getUIAudioFeedback() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("uiAudioFeedback", false);
 }
 
 void GlobalPreferences::setUIAudioFeedback(bool enabled)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
-    save();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
+    }
+    scheduleSave();
 }
 
 bool GlobalPreferences::getTooltipsEnabled() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("tooltipsEnabled", true);
 }
 
 void GlobalPreferences::setTooltipsEnabled(bool enabled)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
-    save();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
+    }
+    scheduleSave();
 }
 
 int GlobalPreferences::getDefaultSidebarWidth() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("defaultSidebarWidth", 280);
 }
 
 void GlobalPreferences::setDefaultSidebarWidth(int width)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    preferences_.setProperty("defaultSidebarWidth", width, nullptr);
-    save();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        preferences_.setProperty("defaultSidebarWidth", width, nullptr);
+    }
+    scheduleSave();
 }
 
 } // namespace oscil

@@ -93,15 +93,6 @@ private:
     std::unique_ptr<OscilSlider> distortionSpeed_;
     std::unique_ptr<juce::Component> distortionContainer_;
 
-    // Glitch
-    std::unique_ptr<OscilToggle> glitchEnabled_;
-    std::unique_ptr<OscilSlider> glitchIntensity_;
-    std::unique_ptr<OscilSlider> glitchBlockSize_;
-    std::unique_ptr<OscilSlider> glitchLineShift_;
-    std::unique_ptr<OscilSlider> glitchColorSep_;
-    std::unique_ptr<OscilSlider> glitchFlicker_;
-    std::unique_ptr<juce::Component> glitchContainer_;
-
     // Tilt Shift
     std::unique_ptr<OscilToggle> tiltShiftEnabled_;
     std::unique_ptr<OscilSlider> tiltPosition_;

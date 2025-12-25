@@ -51,9 +51,9 @@ BasicShader::~BasicShader()
     {
         // FATAL: Shader destroyed without release(context) being called.
         // This leaks VBO/VAO/Program on the GPU.
-        // Ensure the owner calls release() during shutdown/cleanup.
-        // jassertfalse; // Disabled to prevent crash in VST3 helper, but this IS a leak.
-        std::cerr << "[BasicShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        std::cerr << "[BasicShader] LEAK: Destructor called without release(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse;  // Assert in debug builds
     }
 #endif
 }

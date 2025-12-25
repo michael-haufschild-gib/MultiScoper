@@ -31,6 +31,7 @@ public:
 
     void detach();
     void clearAllWaveforms();
+    void setBackgroundColour(juce::Colour colour);
 
     /**
      * Request a capture of the next rendered frame.

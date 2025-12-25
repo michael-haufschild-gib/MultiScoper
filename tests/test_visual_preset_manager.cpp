@@ -754,10 +754,6 @@ TEST_F(VisualPresetManagerTest, ConfigurationJsonRoundTrip)
     original.trails.enabled = true;
     original.trails.decay = 0.2f;
 
-    original.particles.enabled = true;
-    original.particles.emissionRate = 200.0f;
-    original.particles.particleColor = juce::Colour(0xFFFF0000);
-
     original.settings3D.enabled = true;
     original.settings3D.cameraDistance = 3.5f;
     original.settings3D.autoRotate = true;
@@ -781,10 +777,6 @@ TEST_F(VisualPresetManagerTest, ConfigurationJsonRoundTrip)
 
     EXPECT_TRUE(restored.trails.enabled);
     EXPECT_FLOAT_EQ(restored.trails.decay, 0.2f);
-
-    EXPECT_TRUE(restored.particles.enabled);
-    EXPECT_FLOAT_EQ(restored.particles.emissionRate, 200.0f);
-    EXPECT_EQ(restored.particles.particleColor.getARGB(), 0xFFFF0000u);
 
     EXPECT_TRUE(restored.settings3D.enabled);
     EXPECT_FLOAT_EQ(restored.settings3D.cameraDistance, 3.5f);
@@ -817,8 +809,6 @@ TEST_F(VisualPresetManagerTest, AllPostProcessingEffectsRoundTrip)
     original.scanlines.intensity = 0.4f;
     original.distortion.enabled = true;
     original.distortion.intensity = 0.1f;
-    original.glitch.enabled = true;
-    original.glitch.intensity = 0.6f;
     original.tiltShift.enabled = true;
     original.tiltShift.blurRadius = 3.0f;
 
@@ -841,8 +831,6 @@ TEST_F(VisualPresetManagerTest, AllPostProcessingEffectsRoundTrip)
     EXPECT_FLOAT_EQ(restored.scanlines.intensity, 0.4f);
     EXPECT_TRUE(restored.distortion.enabled);
     EXPECT_FLOAT_EQ(restored.distortion.intensity, 0.1f);
-    EXPECT_TRUE(restored.glitch.enabled);
-    EXPECT_FLOAT_EQ(restored.glitch.intensity, 0.6f);
     EXPECT_TRUE(restored.tiltShift.enabled);
     EXPECT_FLOAT_EQ(restored.tiltShift.blurRadius, 3.0f);
 }

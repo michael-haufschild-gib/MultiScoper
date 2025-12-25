@@ -223,51 +223,73 @@ size_t InstanceRegistry::getSourceCount() const
 void InstanceRegistry::addListener(InstanceRegistryListener* listener)
 {
     // ListenerList::add() is NOT thread-safe. Must be called from message thread.
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    // Runtime check - not just debug assertion
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        jassertfalse; // Still assert in Debug for development
+        return;       // But also guard in Release
+    }
     listeners_.add(listener);
 }
 
 void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
 {
     // ListenerList::remove() is NOT thread-safe. Must be called from message thread.
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    // Runtime check - not just debug assertion
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        jassertfalse; // Still assert in Debug for development
+        return;       // But also guard in Release
+    }
     listeners_.remove(listener);
 }
 
 void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 {
     // Use injected dispatcher (defaults to MessageManager::callAsync)
-    dispatcher_([this, sourceId]() {
-        // Guard against use-after-free during shutdown
-        if (shuttingDown_.load(std::memory_order_acquire))
-            return;
-        listeners_.call([&sourceId](InstanceRegistryListener& l) {
-            l.sourceAdded(sourceId);
-        });
+    // Capture WeakReference to prevent use-after-free if registry is destroyed before callback runs
+    dispatcher_([weakThis = juce::WeakReference<InstanceRegistry>(this), sourceId]() {
+        if (auto* self = weakThis.get())
+        {
+            // Guard against use-after-free during shutdown
+            if (self->shuttingDown_.load(std::memory_order_acquire))
+                return;
+            self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
+                l.sourceAdded(sourceId);
+            });
+        }
     });
 }
 
 void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 {
-    dispatcher_([this, sourceId]() {
-        // Guard against use-after-free during shutdown
-        if (shuttingDown_.load(std::memory_order_acquire))
-            return;
-        listeners_.call([&sourceId](InstanceRegistryListener& l) {
-            l.sourceRemoved(sourceId);
-        });
+    // Capture WeakReference to prevent use-after-free if registry is destroyed before callback runs
+    dispatcher_([weakThis = juce::WeakReference<InstanceRegistry>(this), sourceId]() {
+        if (auto* self = weakThis.get())
+        {
+            // Guard against use-after-free during shutdown
+            if (self->shuttingDown_.load(std::memory_order_acquire))
+                return;
+            self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
+                l.sourceRemoved(sourceId);
+            });
+        }
     });
 }
 
 void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
 {
-    dispatcher_([this, sourceId]() {
-        // Guard against use-after-free during shutdown
-        if (shuttingDown_.load(std::memory_order_acquire))
-            return;
-        listeners_.call([&sourceId](InstanceRegistryListener& l) {
-            l.sourceUpdated(sourceId);
-        });
+    // Capture WeakReference to prevent use-after-free if registry is destroyed before callback runs
+    dispatcher_([weakThis = juce::WeakReference<InstanceRegistry>(this), sourceId]() {
+        if (auto* self = weakThis.get())
+        {
+            // Guard against use-after-free during shutdown
+            if (self->shuttingDown_.load(std::memory_order_acquire))
+                return;
+            self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
+                l.sourceUpdated(sourceId);
+            });
+        }
     });
 }
 

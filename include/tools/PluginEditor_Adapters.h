@@ -11,6 +11,8 @@
 #include "ui/dialogs/OscillatorConfigDialog.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/MemoryBudgetManager.h"
+#include <fstream>
+#include <chrono>
 
 namespace oscil
 {
@@ -96,6 +98,44 @@ public:
         updateDisplayAndGrid();
     }
 
+    void hostBPMChanged(float bpm) override
+    {
+        // Dispatch to message thread - this callback may be invoked from audio thread
+        // Use SafePointer to handle case where sidebar is destroyed before callback runs
+        if (auto* sidebar = editor_.getSidebar())
+        {
+            juce::Component::SafePointer<SidebarComponent> safeSidebar(sidebar);
+            juce::MessageManager::callAsync([safeSidebar, bpm]() {
+                if (safeSidebar != nullptr)
+                {
+                    if (auto* timingSection = safeSidebar->getTimingSection())
+                    {
+                        timingSection->setHostBPM(bpm);
+                    }
+                }
+            });
+        }
+    }
+
+    void hostSyncStateChanged(bool enabled) override
+    {
+        // Dispatch to message thread - this callback may be invoked from audio thread
+        // Use SafePointer to handle case where sidebar is destroyed before callback runs
+        if (auto* sidebar = editor_.getSidebar())
+        {
+            juce::Component::SafePointer<SidebarComponent> safeSidebar(sidebar);
+            juce::MessageManager::callAsync([safeSidebar, enabled]() {
+                if (safeSidebar != nullptr)
+                {
+                    if (auto* timingSection = safeSidebar->getTimingSection())
+                    {
+                        timingSection->setHostSyncEnabled(enabled);
+                    }
+                }
+            });
+        }
+    }
+
 private:
     void updateDisplayAndGrid()
     {
@@ -131,6 +171,137 @@ private:
         }
     }
 
+    OscilPluginEditor& editor_;
+};
+
+/**
+ * Adapter class to bridge SidebarComponent::Listener timing events to TimingEngine
+ */
+class TimingSidebarListenerAdapter : public SidebarComponent::Listener
+{
+public:
+    explicit TimingSidebarListenerAdapter(OscilPluginEditor& editor)
+        : editor_(editor) {}
+
+    void timingModeChanged(TimingMode mode) override
+    {
+        editor_.getProcessor().getTimingEngine().setTimingMode(mode);
+    }
+
+    void noteIntervalChanged(NoteInterval interval) override
+    {
+        editor_.getProcessor().getTimingEngine().setNoteIntervalFromEntity(interval);
+    }
+
+    void timeIntervalChanged(float ms) override
+    {
+        editor_.getProcessor().getTimingEngine().setTimeIntervalMs(ms);
+    }
+
+    void hostSyncChanged(bool enabled) override
+    {
+        editor_.getProcessor().getTimingEngine().setHostSyncEnabled(enabled);
+    }
+
+    void bpmChanged(float bpm) override
+    {
+        editor_.getProcessor().getTimingEngine().setInternalBPM(static_cast<double>(bpm));
+    }
+
+    void waveformModeChanged(WaveformMode mode) override
+    {
+        // Map WaveformMode (UI) to WaveformTriggerMode (Engine)
+        // FreeRunning -> None
+        // RestartOnPlay -> None (Trigger logic handles this via Transport info, but let's check Engine options)
+        // RestartOnNote -> Midi
+        
+        auto& engine = editor_.getProcessor().getTimingEngine();
+        
+        switch (mode)
+        {
+            case WaveformMode::FreeRunning:
+                engine.setWaveformTriggerMode(WaveformTriggerMode::None);
+                break;
+            case WaveformMode::RestartOnPlay:
+                // RestartOnPlay is usually handled by checking TransportState in processBlock
+                // and resetting phase. There isn't a specific "RestartOnPlay" trigger mode 
+                // in WaveformTriggerMode (None, RisingEdge, etc.). 
+                // However, engine.getConfig().hostSyncEnabled handles sync.
+                // WaveformMode in UI might be redundant or map to specific trigger flags.
+                // Let's assume FreeRunning for now if no specific mode exists, 
+                // or check if we need to set specific flags.
+                // Looking at TimingConfig.h, WaveformMode is an entity enum.
+                // Looking at TimingEngine.h, we have WaveformTriggerMode::Midi, etc.
+                
+                // If the UI implies "Sync Restart", it might mean "HostSync".
+                // But we have a separate "Host Sync" toggle.
+                
+                // Let's map strict restart triggers:
+                engine.setWaveformTriggerMode(WaveformTriggerMode::None);
+                break;
+            case WaveformMode::RestartOnNote:
+                engine.setWaveformTriggerMode(WaveformTriggerMode::Midi);
+                break;
+        }
+    }
+
+private:
+    OscilPluginEditor& editor_;
+};
+
+/**
+ * Adapter class to bridge SidebarComponent::Listener options events to Editor/Processor
+ */
+class OptionsSidebarListenerAdapter : public SidebarComponent::Listener
+{
+public:
+    explicit OptionsSidebarListenerAdapter(OscilPluginEditor& editor)
+        : editor_(editor) {}
+
+    void layoutChanged(int columnCount) override
+    {
+        // #region agent log
+        { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H2\",\"location\":\"PluginEditor_Adapters.h:layoutChanged\",\"message\":\"Layout change requested\",\"data\":{\"columnCount\":" << columnCount << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
+        // #endregion
+        // Safe cast to ColumnLayout (1-3)
+        auto layout = static_cast<ColumnLayout>(juce::jlimit(1, 3, columnCount));
+        editor_.getProcessor().getState().setColumnLayout(layout);
+        // Trigger layout update
+        editor_.resized();
+    }
+
+    void themeChanged(const juce::String& themeName) override
+    {
+        editor_.getProcessor().getThemeService().setCurrentTheme(themeName);
+    }
+
+    void gpuRenderingChanged(bool enabled) override
+    {
+        editor_.setGpuRenderingEnabled(enabled);
+    }
+
+    void qualityPresetChanged(QualityPreset preset) override
+    {
+        auto config = editor_.getProcessor().getState().getCaptureQualityConfig();
+        config.qualityPreset = preset;
+        editor_.getProcessor().getState().setCaptureQualityConfig(config);
+    }
+
+    void bufferDurationChanged(BufferDuration duration) override
+    {
+        auto config = editor_.getProcessor().getState().getCaptureQualityConfig();
+        config.bufferDuration = duration;
+        editor_.getProcessor().getState().setCaptureQualityConfig(config);
+    }
+
+    void autoAdjustQualityChanged(bool enabled) override
+    {
+        auto config = editor_.getProcessor().getState().getCaptureQualityConfig();
+        config.autoAdjustQuality = enabled;
+        editor_.getProcessor().getState().setCaptureQualityConfig(config);
+    }
+
+private:
     OscilPluginEditor& editor_;
 };
 

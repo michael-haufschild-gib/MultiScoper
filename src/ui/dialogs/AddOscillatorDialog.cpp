@@ -64,6 +64,20 @@ void AddOscillatorDialog::setupComponents()
     populateVisualPresetDropdown();
     addAndMakeVisible(*visualPresetDropdown_);
 
+    browsePresetsButton_ = std::make_unique<OscilButton>(themeService_, juce::CharPointer_UTF8("\xE2\x9A\x99"), "addOscillatorDialog_browsePresetsBtn");  // Gear symbol: ⚙
+    browsePresetsButton_->setVariant(ButtonVariant::Ghost);
+    browsePresetsButton_->onClick = [this]() {
+        if (browsePresetsCallback_)
+        {
+            juce::String currentPresetId = visualPresetDropdown_->getSelectedId();
+            browsePresetsCallback_(currentPresetId, [this](const juce::String& selectedPresetId) {
+                // Update the dropdown with the newly selected preset
+                visualPresetDropdown_->setSelectedId(selectedPresetId, false);
+            });
+        }
+    };
+    addAndMakeVisible(*browsePresetsButton_);
+
     // Error label (hidden by default)
     errorLabel_ = std::make_unique<juce::Label>("", "");
     errorLabel_->setVisible(false);
@@ -122,10 +136,14 @@ void AddOscillatorDialog::resized()
     colorSwatches_->setBounds(bounds.removeFromTop(COLOR_PICKER_HEIGHT));
     bounds.removeFromTop(SECTION_SPACING);
 
-    // Visual Preset section
+    // Visual Preset section (dropdown + gear button)
     visualPresetLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
     bounds.removeFromTop(4);
-    visualPresetDropdown_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
+    auto presetRow = bounds.removeFromTop(CONTROL_HEIGHT);
+    int gearButtonWidth = CONTROL_HEIGHT;  // Square button
+    browsePresetsButton_->setBounds(presetRow.removeFromRight(gearButtonWidth));
+    presetRow.removeFromRight(4);  // Spacing between dropdown and button
+    visualPresetDropdown_->setBounds(presetRow);
     bounds.removeFromTop(8);
 
     // Error label

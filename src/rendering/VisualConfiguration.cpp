@@ -20,7 +20,6 @@ static const juce::Identifier SCANLINES_TYPE("Scanlines");
 static const juce::Identifier DISTORTION_TYPE("Distortion");
 static const juce::Identifier TILTSHIFT_TYPE("TiltShift");
 static const juce::Identifier RADIALBLUR_TYPE("RadialBlur");
-static const juce::Identifier PARTICLES_TYPE("Particles");
 static const juce::Identifier SETTINGS3D_TYPE("Settings3D");
 static const juce::Identifier LIGHTING_TYPE("Lighting");
 static const juce::Identifier MATERIAL_TYPE("Material");
@@ -119,32 +118,6 @@ juce::ValueTree VisualConfiguration::toValueTree() const
     tiltTree.setProperty("range", tiltShift.range, nullptr);
     tiltTree.setProperty("blurRadius", tiltShift.blurRadius, nullptr);
     tree.addChild(tiltTree, -1, nullptr);
-
-    // Particles
-    juce::ValueTree particlesTree(PARTICLES_TYPE);
-    particlesTree.setProperty("enabled", particles.enabled, nullptr);
-    particlesTree.setProperty("emissionMode", static_cast<int>(particles.emissionMode), nullptr);
-    particlesTree.setProperty("emissionRate", particles.emissionRate, nullptr);
-    particlesTree.setProperty("particleLife", particles.particleLife, nullptr);
-    particlesTree.setProperty("particleSize", particles.particleSize, nullptr);
-    particlesTree.setProperty("particleColor", static_cast<juce::int64>(particles.particleColor.getARGB()), nullptr);
-    particlesTree.setProperty("blendMode", static_cast<int>(particles.blendMode), nullptr);
-    particlesTree.setProperty("gravity", particles.gravity, nullptr);
-    particlesTree.setProperty("drag", particles.drag, nullptr);
-    particlesTree.setProperty("randomness", particles.randomness, nullptr);
-    particlesTree.setProperty("velocityScale", particles.velocityScale, nullptr);
-    particlesTree.setProperty("audioReactive", particles.audioReactive, nullptr);
-    particlesTree.setProperty("audioEmissionBoost", particles.audioEmissionBoost, nullptr);
-    particlesTree.setProperty("textureId", particles.textureId, nullptr);
-    particlesTree.setProperty("textureRows", particles.textureRows, nullptr);
-    particlesTree.setProperty("textureCols", particles.textureCols, nullptr);
-    particlesTree.setProperty("softParticles", particles.softParticles, nullptr);
-    particlesTree.setProperty("softDepthSensitivity", particles.softDepthSensitivity, nullptr);
-    particlesTree.setProperty("useTurbulence", particles.useTurbulence, nullptr);
-    particlesTree.setProperty("turbulenceStrength", particles.turbulenceStrength, nullptr);
-    particlesTree.setProperty("turbulenceScale", particles.turbulenceScale, nullptr);
-    particlesTree.setProperty("turbulenceSpeed", particles.turbulenceSpeed, nullptr);
-    tree.addChild(particlesTree, -1, nullptr);
 
     // 3D Settings
     juce::ValueTree settings3DTree(SETTINGS3D_TYPE);
@@ -313,37 +286,6 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
         config.tiltShift.blurRadius = tiltTree.getProperty("blurRadius", 2.0f);
     }
 
-    // Particles
-    auto particlesTree = tree.getChildWithName(PARTICLES_TYPE);
-    if (particlesTree.isValid())
-    {
-        config.particles.enabled = particlesTree.getProperty("enabled", false);
-        config.particles.emissionMode = static_cast<ParticleEmissionMode>(
-            static_cast<int>(particlesTree.getProperty("emissionMode", 0)));
-        config.particles.emissionRate = particlesTree.getProperty("emissionRate", 100.0f);
-        config.particles.particleLife = particlesTree.getProperty("particleLife", 2.0f);
-        config.particles.particleSize = particlesTree.getProperty("particleSize", 4.0f);
-        config.particles.particleColor = juce::Colour(static_cast<juce::uint32>(
-            static_cast<juce::int64>(particlesTree.getProperty("particleColor", static_cast<juce::int64>(0xFFFFAA00)))));
-        config.particles.blendMode = static_cast<ParticleBlendMode>(
-            static_cast<int>(particlesTree.getProperty("blendMode", 0)));
-        config.particles.gravity = particlesTree.getProperty("gravity", 0.0f);
-        config.particles.drag = particlesTree.getProperty("drag", 0.1f);
-        config.particles.randomness = particlesTree.getProperty("randomness", 0.5f);
-        config.particles.velocityScale = particlesTree.getProperty("velocityScale", 1.0f);
-        config.particles.audioReactive = particlesTree.getProperty("audioReactive", true);
-        config.particles.audioEmissionBoost = particlesTree.getProperty("audioEmissionBoost", 2.0f);
-        config.particles.textureId = particlesTree.getProperty("textureId", "").toString();
-        config.particles.textureRows = particlesTree.getProperty("textureRows", 1);
-        config.particles.textureCols = particlesTree.getProperty("textureCols", 1);
-        config.particles.softParticles = particlesTree.getProperty("softParticles", false);
-        config.particles.softDepthSensitivity = particlesTree.getProperty("softDepthSensitivity", 1.0f);
-        config.particles.useTurbulence = particlesTree.getProperty("useTurbulence", false);
-        config.particles.turbulenceStrength = particlesTree.getProperty("turbulenceStrength", 0.0f);
-        config.particles.turbulenceScale = particlesTree.getProperty("turbulenceScale", 0.5f);
-        config.particles.turbulenceSpeed = particlesTree.getProperty("turbulenceSpeed", 0.5f);
-    }
-
     // 3D Settings
     auto settings3DTree = tree.getChildWithName(SETTINGS3D_TYPE);
     if (settings3DTree.isValid())
@@ -416,11 +358,6 @@ bool VisualConfiguration::hasPostProcessing() const
            distortion.enabled;
 }
 
-bool VisualConfiguration::hasParticles() const
-{
-    return particles.enabled;
-}
-
 VisualConfiguration VisualConfiguration::getDefault()
 {
     return VisualConfiguration();
@@ -441,7 +378,6 @@ VisualConfiguration VisualConfiguration::getPreset(const juce::String& presetNam
         // 1. Default (Utility)
         addPreset("default", [](VisualConfiguration& c) {
             c.shaderType = ShaderType::Basic2D;
-            c.particles.enabled = false; // Disable particles for clean utility view
         });
 
         // 2. Vector Scope (Utility/Retro)
@@ -474,14 +410,6 @@ VisualConfiguration VisualConfiguration::getPreset(const juce::String& presetNam
             c.settings3D.rotateSpeed = 5.0f;
             c.bloom.enabled = true;
             c.bloom.intensity = 1.5f;
-            c.particles.enabled = true;
-            c.particles.textureId = "sparkle";
-            c.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
-            c.particles.emissionRate = 50.0f;
-            c.particles.particleSize = 2.0f;
-            c.particles.particleLife = 1.0f;
-            c.particles.velocityScale = 0.5f;
-            c.particles.blendMode = ParticleBlendMode::Additive;
         });
 
         // 4. Crystalline (Material)
@@ -498,14 +426,7 @@ VisualConfiguration VisualConfiguration::getPreset(const juce::String& presetNam
             c.material.useEnvironmentMap = true;
             c.material.environmentMapId = "sunset";
             c.bloom.enabled = true;
-            c.bloom.intensity = 1.8f; // Sparkle
-            c.particles.enabled = true;
-            c.particles.textureId = "sparkle";
-            c.particles.emissionMode = ParticleEmissionMode::AtPeaks;
-            c.particles.emissionRate = 20.0f;
-            c.particles.particleSize = 5.0f;
-            c.particles.particleLife = 0.5f;
-            c.particles.blendMode = ParticleBlendMode::Additive;
+            c.bloom.intensity = 1.8f;
         });
 
         return m;
@@ -532,31 +453,9 @@ std::vector<std::pair<juce::String, juce::String>> VisualConfiguration::getAvail
     };
 }
 
-void VisualConfiguration::applyOverrides(VisualConfiguration& config, const juce::ValueTree& overrides)
+void VisualConfiguration::applyOverrides([[maybe_unused]] VisualConfiguration& config, [[maybe_unused]] const juce::ValueTree& overrides)
 {
-    if (overrides.hasProperty("particlesEnabled"))
-        config.particles.enabled = overrides.getProperty("particlesEnabled");
-    
-    if (overrides.hasProperty("particleTextureId"))
-        config.particles.textureId = overrides.getProperty("particleTextureId").toString();
-        
-    if (overrides.hasProperty("particleTurbulenceStrength"))
-        config.particles.turbulenceStrength = overrides.getProperty("particleTurbulenceStrength");
-    
-    if (overrides.hasProperty("particleTurbulenceScale"))
-        config.particles.turbulenceScale = overrides.getProperty("particleTurbulenceScale");
-        
-    if (overrides.hasProperty("particleTurbulenceSpeed"))
-        config.particles.turbulenceSpeed = overrides.getProperty("particleTurbulenceSpeed");
-        
-    if (overrides.hasProperty("particleUseTurbulence"))
-        config.particles.useTurbulence = overrides.getProperty("particleUseTurbulence");
-        
-    if (overrides.hasProperty("particleSoftness"))
-    {
-        config.particles.softParticles = true;
-        config.particles.softDepthSensitivity = overrides.getProperty("particleSoftness");
-    }
+    // This method is kept for future extensibility
 }
 
 juce::String shaderTypeToId(ShaderType type)
@@ -568,7 +467,6 @@ juce::String shaderTypeToId(ShaderType type)
         case ShaderType::GradientFill:    return "gradient_fill";
         case ShaderType::DualOutline:     return "dual_outline";
         case ShaderType::PlasmaSine:      return "plasma_sine";
-        case ShaderType::DigitalGlitch:   return "digital_glitch";
         case ShaderType::VolumetricRibbon: return "volumetric_ribbon";
         case ShaderType::WireframeMesh:   return "wireframe_mesh";
         case ShaderType::VectorFlow:      return "vector_flow";
@@ -589,7 +487,6 @@ ShaderType idToShaderType(const juce::String& id)
     if (id == "gradient_fill")     return ShaderType::GradientFill;
     if (id == "dual_outline")      return ShaderType::DualOutline;
     if (id == "plasma_sine")       return ShaderType::PlasmaSine;
-    if (id == "digital_glitch")    return ShaderType::DigitalGlitch;
     if (id == "volumetric_ribbon") return ShaderType::VolumetricRibbon;
     if (id == "wireframe_mesh")    return ShaderType::WireframeMesh;
     if (id == "vector_flow")       return ShaderType::VectorFlow;
@@ -600,6 +497,33 @@ ShaderType idToShaderType(const juce::String& id)
     if (id == "liquid_chrome")     return ShaderType::LiquidChrome;
     if (id == "crystalline")       return ShaderType::Crystalline;
     return ShaderType::Basic2D;
+}
+
+// ============================================================================
+// JSON Serialization (via ValueTree XML)
+// ============================================================================
+
+juce::var VisualConfiguration::toJson() const
+{
+    auto tree = toValueTree();
+    if (auto xml = tree.createXml())
+        return juce::var(xml->toString());
+    return juce::var();
+}
+
+VisualConfiguration VisualConfiguration::fromJson(const juce::var& json)
+{
+    juce::String xmlString = json.toString();
+    if (xmlString.isEmpty())
+        return getDefault();
+
+    if (auto xml = juce::parseXML(xmlString))
+    {
+        auto tree = juce::ValueTree::fromXml(*xml);
+        if (tree.isValid())
+            return fromValueTree(tree);
+    }
+    return getDefault();
 }
 
 } // namespace oscil

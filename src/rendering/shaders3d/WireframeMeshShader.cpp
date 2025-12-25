@@ -76,7 +76,9 @@ WireframeMeshShader::~WireframeMeshShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[WireframeMeshShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        std::cerr << "[WireframeMeshShader] LEAK: Destructor called without release(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse;
     }
 #endif
 }

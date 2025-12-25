@@ -5,6 +5,7 @@
 #include "ui/layout/PaneComponent.h"
 #include "ui/theme/ThemeManager.h"
 #include "plugin/PluginProcessor.h"
+#include <fstream>
 
 namespace oscil
 {
@@ -16,7 +17,13 @@ PaneComponent::PaneComponent(OscilPluginProcessor& processor, ServiceContext& co
     , paneId_(paneId)
     , paneName_("Pane")
 {
+    // In GPU mode, OpenGL handles the background so this component is NOT opaque
+    // In CPU mode, we fill the background in paint() so it IS opaque
+#if OSCIL_ENABLE_OPENGL
+    setOpaque(!processor.getState().isGpuRenderingEnabled());
+#else
     setOpaque(true);
+#endif
 
     // Create header
     header_ = std::make_unique<PaneHeader>(themeService_);
@@ -70,6 +77,9 @@ void PaneComponent::paint(juce::Graphics& g)
     // Only fill the pane background in software rendering mode.
 #if OSCIL_ENABLE_OPENGL
     bool gpuEnabled = processor_.getState().isGpuRenderingEnabled();
+    // #region agent log
+    { static int logCounter = 0; if (++logCounter % 30 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H12\",\"location\":\"PaneComponent.cpp:paint\",\"message\":\"Paint called\",\"data\":{\"gpuEnabled\":" << (gpuEnabled ? "true" : "false") << ",\"willFillBg\":" << (!gpuEnabled ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
+    // #endregion
     if (!gpuEnabled)
 #endif
     {
@@ -144,7 +154,12 @@ void PaneComponent::handleDragStarted(const juce::MouseEvent& event)
         dragG.setOpacity(0.7f);
         dragG.drawImageAt(snapshot, 0, 0);
 
-        container->startDragging(dragDescription, this, juce::ScaledImage(dragImage), true, nullptr, &event.source);
+        // Calculate offset from mouse to top-left of pane image
+        // The event comes from PaneHeader, so convert to PaneComponent coordinates
+        auto mouseInPane = getLocalPoint(event.eventComponent, event.getPosition());
+        juce::Point<int> imageOffset(-mouseInPane.x, -mouseInPane.y);
+
+        container->startDragging(dragDescription, this, juce::ScaledImage(dragImage), true, &imageOffset, &event.source);
     }
 }
 
@@ -341,6 +356,17 @@ void PaneComponent::setSampleRate(int sampleRate)
 {
     if (body_)
         body_->setSampleRate(sampleRate);
+}
+
+void PaneComponent::setGpuRenderingEnabled(bool enabled)
+{
+    // Update opaque state: in GPU mode, OpenGL handles background (not opaque)
+    // In CPU mode, we fill the background in paint() (opaque)
+    // #region agent log
+    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H16\",\"location\":\"PaneComponent.cpp:setGpuRenderingEnabled\",\"message\":\"Setting opaque state\",\"data\":{\"gpuEnabled\":" << (enabled ? "true" : "false") << ",\"setOpaqueTo\":" << (!enabled ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
+    // #endregion
+    setOpaque(!enabled);
+    repaint();
 }
 
 void PaneComponent::highlightOscillator(const OscillatorId& oscillatorId)

@@ -132,6 +132,8 @@ private:
 
     // Shutdown flag to prevent async notifications from accessing destroyed object
     std::atomic<bool> shuttingDown_{false};
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE(InstanceRegistry)
 };
 
 } // namespace oscil

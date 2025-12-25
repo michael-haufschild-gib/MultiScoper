@@ -164,11 +164,6 @@ public:
                      Type type = Type::Info,
                      std::function<void()> onOk = nullptr);
 
-    static void confirm(IThemeService& themeService,
-                        const juce::String& title,
-                        const juce::String& message,
-                        std::function<void(bool)> onResult);
-
 private:
     OscilAlertModal() = delete;
 };

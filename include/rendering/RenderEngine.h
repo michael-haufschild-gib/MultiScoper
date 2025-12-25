@@ -24,7 +24,7 @@ namespace oscil
 
 /**
  * Central orchestrator for all rendering subsystems.
- * Manages framebuffers, post-processing effects, particles,
+ * Manages framebuffers, post-processing effects,
  * 3D rendering, and per-waveform visual states.
  *
  * THREAD SAFETY:
@@ -69,7 +69,6 @@ public:
     // Subsystem Access
     // ========================================================================
 
-    ParticleSystem* getParticleSystem() { return waveformPass_->getParticleSystem(); }
     Camera3D* getCamera() { return waveformPass_->getCamera(); }
     FramebufferPool* getFramebufferPool() { return effectPipeline_->getFramebufferPool(); }
     EnvironmentMapManager* getEnvironmentMapManager() { return waveformPass_->getEnvironmentMapManager(); }

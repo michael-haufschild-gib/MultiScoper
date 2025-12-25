@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Test modules to run (in order)
 TEST_MODULES = [
+    # Original tests
     ("test_add_oscillator_journey", "Add Oscillator User Journey"),
     ("test_edit_oscillator_journey", "Edit Oscillator User Journey"),
     ("test_delete_oscillator_journey", "Delete Oscillator User Journey"),
@@ -31,12 +32,25 @@ TEST_MODULES = [
     ("test_timing_section", "Timing Section Controls"),
     ("test_theme_switching", "Theme Switching"),
     ("test_transport_and_timing", "Transport and Timing Controls"),
+    # New tests - Options Section
+    ("test_options_section", "Options Section Controls"),
+    # New tests - Dialogs
+    ("test_oscillator_config_dialog", "Oscillator Config Dialog"),
+    ("test_preset_browser_dialog", "Preset Browser Dialog"),
+    ("test_preset_editor_dialog", "Preset Editor Dialog"),
+    # New tests - Pane Interactions
+    ("test_pane_interactions", "Pane Interactions"),
+    # New tests - End-to-End Verification
+    ("test_execution_paths", "Execution Path Verification"),
+    # New tests - Keyboard
+    ("test_keyboard_shortcuts", "Keyboard Shortcuts"),
 ]
 
 # Quick sanity tests (subset of above)
 QUICK_TESTS = [
     ("test_add_oscillator_journey", "Add Oscillator User Journey"),
     ("test_sidebar_interactions", "Sidebar Interactions"),
+    ("test_options_section", "Options Section Controls"),
 ]
 
 

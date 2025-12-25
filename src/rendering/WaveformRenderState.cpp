@@ -60,28 +60,6 @@ void WaveformRenderState::resizeHistoryFBO(juce::OpenGLContext& context, int wid
     }
 }
 
-void WaveformRenderState::addParticleEmitter(ParticleEmitterId id)
-{
-    if (std::find(emitterIds.begin(), emitterIds.end(), id) == emitterIds.end())
-    {
-        emitterIds.push_back(id);
-    }
-}
-
-void WaveformRenderState::removeParticleEmitter(ParticleEmitterId id)
-{
-    auto it = std::find(emitterIds.begin(), emitterIds.end(), id);
-    if (it != emitterIds.end())
-    {
-        emitterIds.erase(it);
-    }
-}
-
-void WaveformRenderState::clearParticleEmitters()
-{
-    emitterIds.clear();
-}
-
 void WaveformRenderState::pushSamples(const std::vector<float>& samples)
 {
     if (samples.empty())
@@ -115,7 +93,6 @@ void WaveformRenderState::release(juce::OpenGLContext& context)
         historyFBO.reset();
     }
     trailsEnabled = false;
-    emitterIds.clear();
     sampleHistory.clear();
 }
 

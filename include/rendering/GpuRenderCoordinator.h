@@ -31,6 +31,7 @@ public:
     void clearWaveforms();
     void detach();
 
+    void setBackgroundColour(juce::Colour colour);
     void requestFrameCapture(std::function<void(juce::Image)> callback);
 
 private:

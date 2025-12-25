@@ -10,6 +10,7 @@
 #include "core/Oscillator.h"
 #include "core/dsp/CaptureQualityConfig.h"
 #include "core/Pane.h"
+#include <atomic>
 #include <vector>
 
 namespace oscil
@@ -113,8 +114,9 @@ public:
 
     /**
      * Serialize to XML for DAW persistence
+     * NOTE: Non-const because it syncs layoutManager_ to state_ before serialization
      */
-    [[nodiscard]] juce::String toXmlString() const;
+    [[nodiscard]] juce::String toXmlString();
 
     /**
      * Load from XML string
@@ -231,10 +233,7 @@ public:
     static constexpr int CURRENT_SCHEMA_VERSION = 2;
 
 private:
-    // Mutable because syncLayoutManagerToState() syncs the layoutManager_ runtime
-    // representation back to state_ during serialization (toXmlString). This is
-    // conceptually a cache synchronization, not a state change.
-    mutable juce::ValueTree state_;
+    juce::ValueTree state_;
     PaneLayoutManager layoutManager_;
 
     void initializeDefaultState();
@@ -243,7 +242,7 @@ private:
      * Sync layoutManager_ back to state_ before serialization.
      * This ensures pane changes made at runtime are persisted.
      */
-    void syncLayoutManagerToState() const;
+    void syncLayoutManagerToState();
 
     // Non-const versions for modification - ensure nodes exist
     juce::ValueTree getOrCreateOscillatorsNode();
@@ -309,8 +308,15 @@ public:
     GlobalPreferences& operator=(const GlobalPreferences&) = delete;
 
 private:
-    mutable std::recursive_mutex mutex_;  // Thread safety for multi-instance access (recursive for setters calling save())
+    // Internal save that assumes lock is already held
+    void saveUnlocked();
+
+    // Schedule an async save with debouncing
+    void scheduleSave();
+
+    mutable std::mutex mutex_;  // Thread safety for multi-instance access
     juce::ValueTree preferences_;
+    std::atomic<bool> savePending_{false};  // Debounce flag for async saves
 };
 
 } // namespace oscil

@@ -79,7 +79,9 @@ VectorFlowShader::~VectorFlowShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[VectorFlowShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        std::cerr << "[VectorFlowShader] LEAK: Destructor called without release(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse;
     }
 #endif
 }

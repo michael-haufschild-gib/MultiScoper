@@ -3,7 +3,6 @@
 */
 
 #include "rendering/VisualConfiguration.h"
-#include "rendering/serialization/ParticleSerialization.h"
 #include "rendering/serialization/Settings3DSerialization.h"
 
 namespace oscil
@@ -153,9 +152,6 @@ juce::ValueTree VisualConfiguration::toValueTree() const
     tiltTree.setProperty("blurRadius", tiltShift.blurRadius, nullptr);
     tree.addChild(tiltTree, -1, nullptr);
 
-    // Particles
-    tree.addChild(ParticleSerialization::toValueTree(particles), -1, nullptr);
-
     // 3D Settings
     tree.addChild(Settings3DSerialization::toValueTree(settings3D), -1, nullptr);
 
@@ -292,9 +288,6 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
         config.tiltShift.blurRadius = tiltTree.getProperty("blurRadius", 2.0f);
     }
 
-    // Particles
-    config.particles = ParticleSerialization::fromValueTree(tree);
-
     // 3D Settings
     config.settings3D = Settings3DSerialization::fromValueTree(tree);
 
@@ -390,16 +383,6 @@ juce::var VisualConfiguration::toJson() const
     distortionObj->setProperty("speed", distortion.speed);
     obj->setProperty("distortion", juce::var(distortionObj));
 
-    // Glitch
-    auto glitchObj = new juce::DynamicObject();
-    glitchObj->setProperty("enabled", glitch.enabled);
-    glitchObj->setProperty("intensity", glitch.intensity);
-    glitchObj->setProperty("block_size", glitch.blockSize);
-    glitchObj->setProperty("line_shift", glitch.lineShift);
-    glitchObj->setProperty("color_separation", glitch.colorSeparation);
-    glitchObj->setProperty("flicker_rate", glitch.flickerRate);
-    obj->setProperty("glitch", juce::var(glitchObj));
-
     // Tilt Shift
     auto tiltShiftObj = new juce::DynamicObject();
     tiltShiftObj->setProperty("enabled", tiltShift.enabled);
@@ -408,9 +391,6 @@ juce::var VisualConfiguration::toJson() const
     tiltShiftObj->setProperty("blur_radius", tiltShift.blurRadius);
     tiltShiftObj->setProperty("iterations", tiltShift.iterations);
     obj->setProperty("tilt_shift", juce::var(tiltShiftObj));
-
-    // Particles
-    obj->setProperty("particles", ParticleSerialization::toJson(particles));
 
     // 3D Settings
     obj->setProperty("settings_3d", Settings3DSerialization::toJson(settings3D));
@@ -520,17 +500,6 @@ VisualConfiguration VisualConfiguration::fromJson(const juce::var& json)
         config.distortion.speed = static_cast<float>(static_cast<double>(distortionObj->getProperty("speed")));
     }
 
-    // Glitch
-    if (auto* glitchObj = obj->getProperty("glitch").getDynamicObject())
-    {
-        config.glitch.enabled = glitchObj->getProperty("enabled");
-        config.glitch.intensity = static_cast<float>(static_cast<double>(glitchObj->getProperty("intensity")));
-        config.glitch.blockSize = static_cast<float>(static_cast<double>(glitchObj->getProperty("block_size")));
-        config.glitch.lineShift = static_cast<float>(static_cast<double>(glitchObj->getProperty("line_shift")));
-        config.glitch.colorSeparation = static_cast<float>(static_cast<double>(glitchObj->getProperty("color_separation")));
-        config.glitch.flickerRate = static_cast<float>(static_cast<double>(glitchObj->getProperty("flicker_rate")));
-    }
-
     // Tilt Shift
     if (auto* tiltShiftObj = obj->getProperty("tilt_shift").getDynamicObject())
     {
@@ -540,9 +509,6 @@ VisualConfiguration VisualConfiguration::fromJson(const juce::var& json)
         config.tiltShift.blurRadius = static_cast<float>(static_cast<double>(tiltShiftObj->getProperty("blur_radius")));
         config.tiltShift.iterations = static_cast<int>(tiltShiftObj->getProperty("iterations"));
     }
-
-    // Particles
-    config.particles = ParticleSerialization::fromJson(json);
 
     // 3D Settings
     config.settings3D = Settings3DSerialization::fromJson(json);

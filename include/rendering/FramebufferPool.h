@@ -50,7 +50,7 @@ public:
 
     /**
      * Get the waveform FBO (with depth buffer for 3D rendering).
-     * Used for initial waveform geometry + particle rendering.
+     * Used for initial waveform geometry rendering.
      */
     virtual Framebuffer* getWaveformFBO() { return waveformFBO_.get(); }
 

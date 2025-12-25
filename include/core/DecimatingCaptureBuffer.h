@@ -114,7 +114,7 @@ public:
      */
     DecimatingCaptureBuffer(const CaptureQualityConfig& config, int sourceRate);
 
-    ~DecimatingCaptureBuffer() override = default;
+    ~DecimatingCaptureBuffer() override;
 
     // Non-copyable, non-movable
     DecimatingCaptureBuffer(const DecimatingCaptureBuffer&) = delete;

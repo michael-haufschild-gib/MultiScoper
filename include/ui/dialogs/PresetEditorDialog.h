@@ -21,7 +21,6 @@
 #include "ui/components/PresetPreviewPanel.h"
 #include "ui/dialogs/preset_editor/ShaderSettingsTab.h"
 #include "ui/dialogs/preset_editor/EffectsTab.h"
-#include "ui/dialogs/preset_editor/ParticlesTab.h"
 #include "ui/dialogs/preset_editor/Settings3DTab.h"
 #include "ui/dialogs/preset_editor/MaterialsTab.h"
 #include "ui/components/TestId.h"
@@ -36,7 +35,7 @@ namespace oscil
  * Features:
  * - Name/description fields
  * - Live preview panel
- * - 5 tabs: Shader, Effects, Particles, 3D/Camera, Materials
+ * - 4 tabs: Shader, Effects, 3D/Camera, Materials
  * - All 80+ rendering parameters accessible
  * - Real-time preview updates
  * - Save/Cancel with unsaved changes detection
@@ -93,7 +92,6 @@ private:
     void setupTabs();
     void setupShaderTab();
     void setupEffectsTab();
-    void setupParticlesTab();
     void setup3DTab();
     void setupMaterialsTab();
     void setupFooterButtons();
@@ -149,9 +147,6 @@ private:
 
     // Effects tab
     std::unique_ptr<EffectsTab> effectsTab_;
-
-    // Particles tab
-    std::unique_ptr<ParticlesTab> particlesTab_;
 
     // 3D tab
     std::unique_ptr<Settings3DTab> settings3DTab_;

@@ -159,21 +159,10 @@ juce_add_binary_data(OscilBinaryData
         resources/icomoon/SVG/pause2.svg
         resources/icomoon/SVG/play3.svg
         resources/icomoon/SVG/redo.svg
-        resources/textures/particle_cloud.png
-        resources/textures/particle_smoke_sheet.png
-        resources/textures/particle_fire_sheet.png
-        resources/textures/particle_electric_sheet.png
-        resources/textures/particle_sparkle.png
-        resources/textures/particle_halo.png
-        resources/textures/particle_shockwave.png
-        resources/textures/particle_point_soft.png
-        resources/textures/particle_wisp.png
         resources/shaders/basic.vert
         resources/shaders/basic.frag
         resources/shaders/neon_glow.vert
         resources/shaders/neon_glow.frag
-        resources/shaders/digital_glitch.vert
-        resources/shaders/digital_glitch.frag
         resources/shaders/dual_outline.vert
         resources/shaders/dual_outline.frag
         resources/shaders/gradient_fill.vert
@@ -346,7 +335,6 @@ if(OSCIL_BUILD_TESTS)
         tests/test_timing_presenter.cpp
         tests/test_pane_layout.cpp
         tests/test_config_structs.cpp
-        tests/test_particle_system.cpp
 
         # New tests - 100% coverage initiative
         tests/test_window_layout.cpp
@@ -362,6 +350,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_visual_config_application.cpp
         tests/test_visual_config_presets.cpp
         tests/test_plugin_editor.cpp
+        tests/test_timing_controls_integration.cpp
 
         # Updated UI Component tests
         tests/test_oscil_button.cpp

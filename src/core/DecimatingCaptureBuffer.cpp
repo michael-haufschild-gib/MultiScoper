@@ -109,6 +109,13 @@ DecimatingCaptureBuffer::DecimatingCaptureBuffer(const CaptureQualityConfig& con
     reconfigure();
 }
 
+DecimatingCaptureBuffer::~DecimatingCaptureBuffer()
+{
+    // Clear graveyard to release all deferred resources immediately
+    // This prevents resource accumulation if plugin is unloaded quickly
+    graveyard_.clear();
+}
+
 void DecimatingCaptureBuffer::configure(const CaptureQualityConfig& config, int sourceRate)
 {
     config_ = config;

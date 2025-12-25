@@ -13,6 +13,7 @@
 #include "ui/managers/DisplaySettingsManager.h"
 #include "rendering/GpuRenderCoordinator.h"
 #include "core/ServiceContext.h"
+#include <atomic>
 #include <vector>
 #include <memory>
 
@@ -98,6 +99,7 @@ public:
     void oscillatorConfigRequested(const OscillatorId& oscillatorId) override;
     void oscillatorColorConfigRequested(const OscillatorId& oscillatorId) override;
     void oscillatorDeleteRequested(const OscillatorId& oscillatorId) override;
+    void oscillatorsReordered(int fromIndex, int toIndex) override;
     void oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode) override;
     void oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible) override;
     void oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId) override;
@@ -129,14 +131,18 @@ private:
     PaneContainerComponent& container_;
     GpuRenderCoordinator& gpuCoordinator_;
     
-    // Weak references
-    DisplaySettingsManager* displaySettings_ = nullptr;
-    SidebarComponent* sidebar_ = nullptr;
-    DialogManager* dialogManager_ = nullptr;
+    // Weak references (safe across async callbacks)
+    juce::WeakReference<DisplaySettingsManager> displaySettings_;
+    juce::WeakReference<SidebarComponent> sidebar_;
+    juce::WeakReference<DialogManager> dialogManager_;
 
     std::vector<std::unique_ptr<PaneComponent>> paneComponents_;
     bool isUpdating_ = false; // Guard against recursive updates
     std::function<void()> layoutNeededCallback_;
+    std::atomic<bool> refreshPending_{false}; // Debounce flag for async refresh coalescing
+
+    // Schedule a refresh with debouncing (coalesces multiple rapid calls)
+    void scheduleRefresh();
     
     // Track oscillator pending visibility change (for pane selection dialog)
     OscillatorId pendingVisibilityOscillatorId_;

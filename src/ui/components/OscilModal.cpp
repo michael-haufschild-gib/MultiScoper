@@ -658,59 +658,71 @@ void OscilAlertModal::show(IThemeService& themeService,
                             [[maybe_unused]] Type type,
                             std::function<void()> onOk)
 {
-    // Create content container - will be owned by the modal
-    auto* content = new juce::Component();
+    // Use unique_ptr for safe ownership management
+    auto modal = std::make_unique<OscilModal>(themeService, title);
+    auto content = std::make_unique<juce::Component>();
+    auto label = std::make_unique<juce::Label>();
+    auto okButton = std::make_unique<OscilButton>(themeService, "OK");
+
+    // Configure content
     content->setSize(400, 100);
 
-    // Label for the message
-    auto* label = new juce::Label();
+    // Configure label
     label->setText(message, juce::dontSendNotification);
     label->setJustificationType(juce::Justification::topLeft);
     label->setBounds(0, 0, 400, 60);
-    content->addAndMakeVisible(label);
 
-    // OK button
-    auto* okButton = new OscilButton(themeService, "OK");
+    // Configure button
     okButton->setVariant(ButtonVariant::Primary);
     okButton->setBounds(400 - 80, 70, 80, 30);
-    content->addAndMakeVisible(okButton);
 
-    // Create modal - will self-delete when closed
-    auto* modal = new OscilModal(themeService, title);
-    modal->setContent(content);
+    // Get raw pointers for wiring before releasing ownership
+    auto* modalPtr = modal.get();
+    auto* okButtonPtr = okButton.get();
+
+    // Add children to content (no ownership transfer, just visibility)
+    content->addAndMakeVisible(label.get());
+    content->addAndMakeVisible(okButton.get());
+
+    // Set content on modal
+    modal->setContent(content.get());
     modal->setSize(ModalSize::Small);
 
-    // Set up self-deletion when modal is closed
-    // Capture the callback and components to clean up
-    modal->onClose = [modal, content, label, okButton, onOk]() {
+    // Wire up OK button to close the modal
+    okButtonPtr->onClick = [modalPtr]() {
+        modalPtr->hide();
+    };
+
+    // Transfer ownership to shared_ptr for safe capture in lambda
+    // All components will be deleted when the shared_ptr is destroyed
+    struct ModalComponents {
+        std::unique_ptr<OscilModal> modal;
+        std::unique_ptr<juce::Component> content;
+        std::unique_ptr<juce::Label> label;
+        std::unique_ptr<OscilButton> okButton;
+    };
+    auto components = std::make_shared<ModalComponents>(ModalComponents{
+        std::move(modal),
+        std::move(content),
+        std::move(label),
+        std::move(okButton)
+    });
+
+    // Set up cleanup when modal is closed
+    modalPtr->onClose = [components, onOk]() {
         // Call user callback if provided
         if (onOk)
             onOk();
 
         // Schedule deletion on message thread to avoid deleting during callback
-        juce::MessageManager::callAsync([modal, content, label, okButton]() {
-            delete label;
-            delete okButton;
-            delete content;
-            delete modal;
+        // The shared_ptr capture ensures components live until this runs
+        juce::MessageManager::callAsync([components]() {
+            // Components will be deleted when this lambda completes
+            // and the shared_ptr goes out of scope
         });
     };
 
-    // Wire up OK button to close the modal
-    okButton->onClick = [modal]() {
-        modal->hide();
-    };
-
-    modal->show();
-}
-
-void OscilAlertModal::confirm([[maybe_unused]] IThemeService& themeService,
-                               [[maybe_unused]] const juce::String& title,
-                               [[maybe_unused]] const juce::String& message,
-                               [[maybe_unused]] std::function<void(bool)> onResult)
-{
-    // Similar implementation with Cancel and OK buttons
-    // Would pass result to callback
+    modalPtr->show();
 }
 
 } // namespace oscil

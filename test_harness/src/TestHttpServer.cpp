@@ -6,6 +6,7 @@
 #include "TestElementRegistry.h"
 #include "core/OscilState.h"
 #include "plugin/PluginFactory.h"
+#include "plugin/PluginEditor.h"
 
 namespace oscil::test
 {
@@ -234,6 +235,9 @@ void TestHttpServer::setupRoutes()
     server_->Post("/screenshot", [this](const httplib::Request& req, httplib::Response& res) {
         handleScreenshot(req, res);
     });
+    server_->Get("/screenshot/raw", [this](const httplib::Request& req, httplib::Response& res) {
+        handleScreenshotRaw(req, res);
+    });
     server_->Post("/screenshot/compare", [this](const httplib::Request& req, httplib::Response& res) {
         handleScreenshotCompare(req, res);
     });
@@ -284,8 +288,40 @@ void TestHttpServer::setupRoutes()
     server_->Get("/state/panes", [this](const httplib::Request& req, httplib::Response& res) {
         handleStatePanes(req, res);
     });
+    server_->Post("/state/pane/add", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateAddPane(req, res);
+    });
+    server_->Post("/state/pane/swap", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStatePaneSwap(req, res);
+    });
+    server_->Post("/state/gpu", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateGpuToggle(req, res);
+    });
     server_->Get("/state/sources", [this](const httplib::Request& req, httplib::Response& res) {
         handleStateSources(req, res);
+    });
+
+    // Display Settings
+    server_->Post("/state/layout", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateLayout(req, res);
+    });
+    server_->Post("/state/theme", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateTheme(req, res);
+    });
+    server_->Post("/state/grid", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateGrid(req, res);
+    });
+    server_->Get("/state/display", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateDisplay(req, res);
+    });
+    server_->Post("/state/display", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateDisplay(req, res);
+    });
+    server_->Post("/state/timing", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateTiming(req, res);
+    });
+    server_->Get("/state/timing", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateTiming(req, res);
     });
 
     // Performance Metrics
@@ -306,6 +342,25 @@ void TestHttpServer::setupRoutes()
     });
     server_->Post("/metrics/recordFrame", [this](const httplib::Request& req, httplib::Response& res) {
         handleMetricsRecordFrame(req, res);
+    });
+
+    // Debug Logs
+    server_->Get("/debug/logs", [this](const httplib::Request& req, httplib::Response& res) {
+        handleDebugLogs(req, res);
+    });
+    server_->Post("/debug/logs/clear", [this](const httplib::Request& req, httplib::Response& res) {
+        handleDebugLogsClear(req, res);
+    });
+    server_->Get("/debug/logs/tail", [this](const httplib::Request& req, httplib::Response& res) {
+        handleDebugLogsTail(req, res);
+    });
+    server_->Post("/debug/logs/wait", [this](const httplib::Request& req, httplib::Response& res) {
+        handleDebugLogsWait(req, res);
+    });
+
+    // Ping endpoint for client health checks
+    server_->Get("/ping", [this](const httplib::Request&, httplib::Response& res) {
+        res.set_content(successResponse().dump(), "application/json");
     });
 }
 
@@ -1292,6 +1347,49 @@ void TestHttpServer::handleScreenshot(const httplib::Request& req, httplib::Resp
     }
 }
 
+void TestHttpServer::handleScreenshotRaw(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        std::string element = "window";
+        if (req.has_param("elementId")) element = req.get_param_value("elementId");
+        else if (req.has_param("element")) element = req.get_param_value("element");
+
+        juce::Image image;
+
+        if (element == "window")
+        {
+            if (auto* editor = daw_.getPrimaryEditor())
+            {
+                image = screenshot_.getComponentImage(editor);
+            }
+        }
+        else
+        {
+            image = screenshot_.getElementImage(element);
+        }
+
+        if (image.isValid())
+        {
+            juce::MemoryOutputStream stream;
+            juce::PNGImageFormat pngFormat;
+            pngFormat.writeImageToStream(image, stream);
+
+            res.set_content(static_cast<const char*>(stream.getData()), stream.getDataSize(), "image/png");
+        }
+        else
+        {
+            res.status = 404;
+            res.set_content(errorResponse("Failed to capture image or element not found").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.status = 500;
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
 void TestHttpServer::handleVerifyWaveform(const httplib::Request& req, httplib::Response& res)
 {
     try
@@ -1300,7 +1398,25 @@ void TestHttpServer::handleVerifyWaveform(const httplib::Request& req, httplib::
         std::string elementId = body.value("elementId", "");
         float minAmplitude = body.value("minAmplitude", 0.05f);
 
-        bool rendered = screenshot_.verifyWaveformRendered(elementId, minAmplitude);
+        juce::Image image;
+        if (elementId == "window")
+        {
+            if (auto* editor = daw_.getPrimaryEditor())
+            {
+                image = screenshot_.getComponentImage(editor);
+            }
+        }
+        else
+        {
+            image = screenshot_.getElementImage(elementId);
+        }
+
+        bool rendered = false;
+        if (!image.isNull())
+        {
+            auto analysis = screenshot_.analyzeWaveform(image);
+            rendered = analysis.detected && analysis.amplitude >= minAmplitude;
+        }
 
         json data;
         data["pass"] = rendered;
@@ -1394,14 +1510,50 @@ void TestHttpServer::handleVerifyColor(const httplib::Request& req, httplib::Res
 
         juce::Colour expectedColor = juce::Colour::fromString(colorHex);
         bool pass = false;
+        float actualCoverage = 0.0f;
+        int matchingPixels = 0;
+        juce::Image image;
 
-        if (mode == "background")
+        if (elementId == "window")
         {
-            pass = screenshot_.verifyBackgroundColor(elementId, expectedColor, tolerance);
+            if (auto* editor = daw_.getPrimaryEditor())
+            {
+                image = screenshot_.getComponentImage(editor);
+            }
         }
-        else if (mode == "contains")
+        else
         {
-            pass = screenshot_.verifyContainsColor(elementId, expectedColor, minCoverage, tolerance);
+            image = screenshot_.getElementImage(elementId);
+        }
+
+        // Custom verification logic to capture stats
+        if (!image.isNull())
+        {
+            if (mode == "background")
+            {
+                pass = screenshot_.verifyBackgroundColor(elementId, expectedColor, tolerance);
+            }
+            else if (mode == "contains")
+            {
+                int totalPixels = image.getWidth() * image.getHeight();
+                int checkedPixels = 0;
+                
+                // Re-implement logic here to get stats (or we could modify TestScreenshot)
+                // Using stride 2 like TestScreenshot
+                for (int y = 0; y < image.getHeight(); y += 2)
+                {
+                    for (int x = 0; x < image.getWidth(); x += 2)
+                    {
+                        auto pixel = image.getPixelAt(x, y);
+                        checkedPixels++;
+                        if (TestScreenshot::colorsMatch(pixel, expectedColor, tolerance))
+                            matchingPixels++;
+                    }
+                }
+                
+                actualCoverage = checkedPixels > 0 ? static_cast<float>(matchingPixels) / checkedPixels : 0.0f;
+                pass = actualCoverage >= minCoverage;
+            }
         }
 
         json data;
@@ -1409,6 +1561,10 @@ void TestHttpServer::handleVerifyColor(const httplib::Request& req, httplib::Res
         data["elementId"] = elementId;
         data["expectedColor"] = colorHex;
         data["mode"] = mode;
+        data["actualCoverage"] = actualCoverage;
+        data["matchingPixels"] = matchingPixels;
+        data["imageWidth"] = image.getWidth();
+        data["imageHeight"] = image.getHeight();
 
         res.set_content(successResponse(data).dump(), "application/json");
     }
@@ -1514,25 +1670,37 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
     auto* track = daw_.getTrack(0);
     if (track)
     {
-        // Clear oscillators and panes on the message thread
-        juce::MessageManager::callAsync([track]() {
-            auto& state = track->getProcessor().getState();
+        // Clear oscillators and panes on the message thread and WAIT for completion
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+        
+        juce::MessageManager::callAsync([track, promisePtr]() {
+            try {
+                auto& state = track->getProcessor().getState();
 
-            // Remove all oscillators
-            auto oscillators = state.getOscillators();
-            for (const auto& osc : oscillators)
-            {
-                state.removeOscillator(osc.getId());
-            }
+                // Remove all oscillators
+                auto oscillators = state.getOscillators();
+                for (const auto& osc : oscillators)
+                {
+                    state.removeOscillator(osc.getId());
+                }
 
-            // Clear panes
-            auto& layoutManager = state.getLayoutManager();
-            auto panes = layoutManager.getPanes();
-            for (const auto& pane : panes)
-            {
-                layoutManager.removePane(pane.getId());
+                // Clear panes
+                auto& layoutManager = state.getLayoutManager();
+                auto panes = layoutManager.getPanes();
+                for (const auto& pane : panes)
+                {
+                    layoutManager.removePane(pane.getId());
+                }
+                
+                promisePtr->set_value(true);
+            } catch (...) {
+                promisePtr->set_value(false);
             }
         });
+
+        // Wait for the reset to complete
+        future.wait_for(std::chrono::seconds(2));
     }
 
     // Clear the element registry
@@ -1728,7 +1896,7 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
         // Set order index
         osc.setOrderIndex(static_cast<int>(state.getOscillators().size()));
 
-        // Build response before adding to state (we have the ID already)
+        // Build response data
         json oscJson;
         oscJson["id"] = osc.getId().id.toStdString();
         oscJson["name"] = osc.getName().toStdString();
@@ -1736,14 +1904,29 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
         oscJson["paneId"] = osc.getPaneId().id.toStdString();
         oscJson["mode"] = processingModeToString(osc.getProcessingMode()).toStdString();
 
-        // Add to state on message thread to ensure UI updates properly
-        // Capture oscillator by copy and track pointer (safe lifetime)
+        // Add to state on message thread and WAIT for completion
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+        
         Oscillator oscCopy = osc;
-        juce::MessageManager::callAsync([oscCopy, track]() mutable {
-            track->getProcessor().getState().addOscillator(oscCopy);
+        juce::MessageManager::callAsync([oscCopy, track, promisePtr]() mutable {
+            try {
+                track->getProcessor().getState().addOscillator(oscCopy);
+                promisePtr->set_value(true);
+            } catch (...) {
+                promisePtr->set_value(false);
+            }
         });
 
-        res.set_content(successResponse(oscJson).dump(), "application/json");
+        // Wait for the add to complete
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            res.set_content(successResponse(oscJson).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout adding oscillator").dump(), "application/json");
+        }
     }
     catch (const std::exception& e)
     {
@@ -1904,6 +2087,176 @@ void TestHttpServer::handleStatePanes(const httplib::Request&, httplib::Response
     res.set_content(successResponse(panes).dump(), "application/json");
 }
 
+void TestHttpServer::handleStateAddPane(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        auto& state = track->getProcessor().getState();
+        auto& layoutManager = state.getLayoutManager();
+
+        // Create new pane
+        Pane newPane;
+        
+        // Set name (default based on count)
+        std::string name = body.value("name", "");
+        if (name.empty())
+        {
+            name = "Pane " + std::to_string(layoutManager.getPaneCount() + 1);
+        }
+        newPane.setName(name);
+        newPane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
+
+        // Capture pane ID before adding (it gets generated in constructor)
+        std::string paneId = newPane.getId().id.toStdString();
+
+        // Add pane on message thread and WAIT for completion
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+        
+        Pane paneCopy = newPane;
+        juce::MessageManager::callAsync([paneCopy, track, promisePtr]() mutable {
+            try {
+                track->getProcessor().getState().getLayoutManager().addPane(paneCopy);
+                // Refresh UI
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    editor->refreshPanels();
+                    editor->resized();
+                }
+                promisePtr->set_value(true);
+            } catch (...) {
+                promisePtr->set_value(false);
+            }
+        });
+
+        // Wait for the add to complete
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            json paneJson;
+            paneJson["id"] = paneId;
+            paneJson["name"] = name;
+            res.set_content(successResponse(paneJson).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout adding pane").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStatePaneSwap(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        int fromIndex = body.value("fromIndex", -1);
+        int toIndex = body.value("toIndex", -1);
+
+        if (fromIndex < 0 || toIndex < 0)
+        {
+            res.set_content(errorResponse("fromIndex and toIndex are required").dump(), "application/json");
+            return;
+        }
+
+        // Swap panes on message thread
+        juce::MessageManager::callAsync([track, fromIndex, toIndex]() {
+            auto& layoutManager = track->getProcessor().getState().getLayoutManager();
+            auto panes = layoutManager.getPanes();
+            
+            if (fromIndex < static_cast<int>(panes.size()) && toIndex < static_cast<int>(panes.size()))
+            {
+                PaneId fromPaneId = panes[static_cast<size_t>(fromIndex)].getId();
+                layoutManager.movePane(fromPaneId, toIndex);
+                
+                // Refresh UI - use track->getEditor() instead of getActiveEditor()
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    editor->refreshPanels();
+                    editor->resized();
+                }
+            }
+        });
+
+        json result;
+        result["fromIndex"] = fromIndex;
+        result["toIndex"] = toIndex;
+        res.set_content(successResponse(result).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStateGpuToggle(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        bool enabled = body.value("enabled", true);
+
+        // Toggle GPU on message thread - use shared_ptr to avoid dangling reference
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+        
+        juce::MessageManager::callAsync([track, enabled, promisePtr]() {
+            bool success = false;
+            try {
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    editor->setGpuRenderingEnabled(enabled);
+                    success = true;
+                }
+            } catch (...) {}
+            promisePtr->set_value(success);
+        });
+
+        // Wait for async operation to complete (with timeout)
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            bool success = future.get();
+            json result;
+            result["gpuEnabled"] = enabled;
+            result["editorFound"] = success;
+            res.set_content(successResponse(result).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout waiting for GPU toggle").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
 void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Response& res)
 {
     json sources = json::array();
@@ -1920,6 +2273,379 @@ void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Respon
     }
 
     res.set_content(successResponse(sources).dump(), "application/json");
+}
+
+// Display Settings handlers
+void TestHttpServer::handleStateLayout(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        int columns = body.value("columns", 1);
+
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+
+        juce::MessageManager::callAsync([track, columns, promisePtr]() {
+            bool success = false;
+            try {
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    // Get processor and set layout
+                    auto& processor = editor->getProcessor();
+                    auto layout = static_cast<ColumnLayout>(juce::jlimit(1, 3, columns));
+                    processor.getState().getLayoutManager().setColumnLayout(layout);
+                    editor->refreshPanels(); // Refresh panels for new layout
+                    editor->resized(); // Trigger layout update
+                    success = true;
+                }
+            } catch (...) {}
+            promisePtr->set_value(success);
+        });
+
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            json result;
+            result["columns"] = columns;
+            result["success"] = future.get();
+            res.set_content(successResponse(result).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout waiting for layout change").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStateTheme(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        std::string themeName = body.value("theme", "");
+        
+        if (themeName.empty())
+        {
+            res.set_content(errorResponse("Theme name is required").dump(), "application/json");
+            return;
+        }
+
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+
+        juce::MessageManager::callAsync([track, themeName, promisePtr]() {
+            bool success = false;
+            try {
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    // Access theme service through the processor
+                    auto& processor = editor->getProcessor();
+                    auto& themeService = processor.getThemeService();
+                    themeService.setCurrentTheme(juce::String(themeName));
+                    success = true;
+                }
+            } catch (...) {}
+            promisePtr->set_value(success);
+        });
+
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            json result;
+            result["theme"] = themeName;
+            result["success"] = future.get();
+            res.set_content(successResponse(result).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout waiting for theme change").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStateGrid(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        auto body = json::parse(req.body);
+        bool showGrid = body.value("show", true);
+
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+
+        juce::MessageManager::callAsync([track, showGrid, promisePtr]() {
+            bool success = false;
+            try {
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    auto& processor = editor->getProcessor();
+                    processor.getState().setShowGridEnabled(showGrid);
+                    editor->setShowGridForAllPanes(showGrid);
+                    success = true;
+                }
+            } catch (...) {}
+            promisePtr->set_value(success);
+        });
+
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            json result;
+            result["showGrid"] = showGrid;
+            result["success"] = future.get();
+            res.set_content(successResponse(result).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout waiting for grid toggle").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStateDisplay(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        // GET - return current display settings
+        if (req.method == "GET")
+        {
+            auto promisePtr = std::make_shared<std::promise<json>>();
+            auto future = promisePtr->get_future();
+
+            juce::MessageManager::callAsync([track, promisePtr]() {
+                json result;
+                try {
+                    if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                    {
+                        auto& processor = editor->getProcessor();
+                        auto& state = processor.getState();
+                        auto& layoutManager = state.getLayoutManager();
+                        
+                        result["showGrid"] = state.isShowGridEnabled();
+                        result["autoScale"] = state.isAutoScaleEnabled();
+                        result["gain"] = state.getGainDb();
+                        result["columns"] = static_cast<int>(layoutManager.getColumnLayout());
+                        result["gpuEnabled"] = state.isGpuRenderingEnabled();
+                        result["success"] = true;
+                    }
+                    else
+                    {
+                        result["success"] = false;
+                        result["error"] = "Editor not found";
+                    }
+                } catch (const std::exception& e) {
+                    result["success"] = false;
+                    result["error"] = e.what();
+                }
+                promisePtr->set_value(result);
+            });
+
+            if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+            {
+                json result = future.get();
+                res.set_content(successResponse(result).dump(), "application/json");
+            }
+            else
+            {
+                res.set_content(errorResponse("Timeout getting display settings").dump(), "application/json");
+            }
+            return;
+        }
+
+        // POST - update display settings
+        auto body = json::parse(req.body);
+
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+
+        juce::MessageManager::callAsync([track, body, promisePtr]() {
+            bool success = false;
+            try {
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    auto& processor = editor->getProcessor();
+                    auto& state = processor.getState();
+                    
+                    if (body.contains("showGrid"))
+                    {
+                        state.setShowGridEnabled(body["showGrid"].get<bool>());
+                        editor->setShowGridForAllPanes(body["showGrid"].get<bool>());
+                    }
+                    if (body.contains("autoScale"))
+                        state.setAutoScaleEnabled(body["autoScale"].get<bool>());
+                    if (body.contains("gain"))
+                        state.setGainDb(body["gain"].get<float>());
+                        
+                    success = true;
+                }
+            } catch (...) {}
+            promisePtr->set_value(success);
+        });
+
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            json result;
+            result["success"] = future.get();
+            res.set_content(successResponse(result).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout updating display settings").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStateTiming(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        // GET - return current timing settings
+        if (req.method == "GET")
+        {
+            // Use shared_ptr to ensure promise lifetime extends beyond timeout
+            auto promisePtr = std::make_shared<std::promise<json>>();
+            auto future = promisePtr->get_future();
+
+            juce::MessageManager::callAsync([track, promisePtr]() {
+                json result;
+                try {
+                    if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                    {
+                        auto& processor = editor->getProcessor();
+                        auto& timingEngine = processor.getTimingEngine();
+                        auto config = timingEngine.getConfig();
+                        auto hostInfo = timingEngine.getHostInfo();
+                        
+                        result["mode"] = static_cast<int>(config.timingMode);
+                        result["bpm"] = config.internalBPM;
+                        result["hostBpm"] = hostInfo.bpm;
+                        result["interval"] = static_cast<int>(config.noteInterval);
+                        result["syncToHost"] = config.hostSyncEnabled;
+                        result["timeIntervalMs"] = config.timeIntervalMs;
+                        result["success"] = true;
+                    }
+                    else
+                    {
+                        result["success"] = false;
+                        result["error"] = "Editor not found";
+                    }
+                } catch (const std::exception& e) {
+                    result["success"] = false;
+                    result["error"] = e.what();
+                }
+                promisePtr->set_value(result);
+            });
+
+            if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+            {
+                json result = future.get();
+                res.set_content(successResponse(result).dump(), "application/json");
+            }
+            else
+            {
+                res.set_content(errorResponse("Timeout getting timing settings").dump(), "application/json");
+            }
+            return;
+        }
+
+        // POST - update timing settings
+        auto body = json::parse(req.body);
+
+        // Use shared_ptr to ensure promise lifetime extends beyond timeout
+        auto promisePtr = std::make_shared<std::promise<bool>>();
+        auto future = promisePtr->get_future();
+
+        juce::MessageManager::callAsync([track, body, promisePtr]() {
+            bool success = false;
+            try {
+                if (auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor()))
+                {
+                    auto& processor = editor->getProcessor();
+                    auto& timingEngine = processor.getTimingEngine();
+                    
+                    if (body.contains("mode"))
+                        timingEngine.setTimingMode(static_cast<TimingMode>(body["mode"].get<int>()));
+                    if (body.contains("bpm"))
+                        timingEngine.setInternalBPM(static_cast<float>(body["bpm"].get<double>()));
+                    if (body.contains("interval"))
+                        timingEngine.setNoteInterval(static_cast<EngineNoteInterval>(body["interval"].get<int>()));
+                    if (body.contains("syncToHost"))
+                        timingEngine.setHostSyncEnabled(body["syncToHost"].get<bool>());
+                    if (body.contains("timeIntervalMs"))
+                        timingEngine.setTimeIntervalMs(body["timeIntervalMs"].get<float>());
+                        
+                    success = true;
+                }
+            } catch (...) {
+                success = false;
+            }
+            promisePtr->set_value(success);
+        });
+
+        if (future.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+        {
+            json result;
+            result["success"] = future.get();
+            res.set_content(successResponse(result).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Timeout updating timing settings").dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
 }
 
 void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& res)
@@ -2021,6 +2747,239 @@ void TestHttpServer::handleMetricsRecordFrame(const httplib::Request&, httplib::
 {
     metrics_.recordFrame();
     res.set_content(successResponse().dump(), "application/json");
+}
+
+// Debug log handlers
+void TestHttpServer::handleDebugLogs(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        const std::string logPath = "/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log";
+        juce::File logFile(logPath);
+        
+        if (!logFile.existsAsFile())
+        {
+            json data;
+            data["logs"] = json::array();
+            data["count"] = 0;
+            res.set_content(successResponse(data).dump(), "application/json");
+            return;
+        }
+        
+        // Parse optional lines parameter
+        int maxLines = 1000;
+        if (req.has_param("lines"))
+        {
+            maxLines = std::stoi(req.get_param_value("lines"));
+        }
+        
+        // Read and parse log entries
+        juce::StringArray lines;
+        logFile.readLines(lines);
+        
+        json logs = json::array();
+        int count = 0;
+        int startIdx = std::max(0, lines.size() - maxLines);
+        
+        for (int i = startIdx; i < lines.size() && count < maxLines; ++i)
+        {
+            juce::String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            
+            try
+            {
+                json entry = json::parse(line.toStdString());
+                logs.push_back(entry);
+                count++;
+            }
+            catch (...)
+            {
+                // Skip non-JSON lines
+            }
+        }
+        
+        json data;
+        data["logs"] = logs;
+        data["count"] = count;
+        data["totalLines"] = lines.size();
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleDebugLogsClear(const httplib::Request&, httplib::Response& res)
+{
+    try
+    {
+        const std::string logPath = "/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log";
+        juce::File logFile(logPath);
+        
+        if (logFile.existsAsFile())
+        {
+            logFile.replaceWithText("");
+        }
+        
+        res.set_content(successResponse().dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleDebugLogsTail(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        const std::string logPath = "/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log";
+        juce::File logFile(logPath);
+        
+        int numLines = 50;
+        if (req.has_param("lines"))
+        {
+            numLines = std::stoi(req.get_param_value("lines"));
+        }
+        
+        if (!logFile.existsAsFile())
+        {
+            json data;
+            data["logs"] = json::array();
+            data["count"] = 0;
+            res.set_content(successResponse(data).dump(), "application/json");
+            return;
+        }
+        
+        juce::StringArray lines;
+        logFile.readLines(lines);
+        
+        json logs = json::array();
+        int startIdx = std::max(0, lines.size() - numLines);
+        
+        for (int i = startIdx; i < lines.size(); ++i)
+        {
+            juce::String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            
+            try
+            {
+                json entry = json::parse(line.toStdString());
+                logs.push_back(entry);
+            }
+            catch (...)
+            {
+                // Skip non-JSON lines
+            }
+        }
+        
+        json data;
+        data["logs"] = logs;
+        data["count"] = static_cast<int>(logs.size());
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleDebugLogsWait(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto body = json::parse(req.body);
+        std::string pattern = body.value("pattern", "");
+        std::string hypothesisId = body.value("hypothesisId", "");
+        int timeoutMs = body.value("timeout", 5000);
+        
+        const std::string logPath = "/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log";
+        juce::File logFile(logPath);
+        
+        auto startTime = std::chrono::steady_clock::now();
+        int lastLineCount = 0;
+        
+        while (true)
+        {
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - startTime).count();
+            
+            if (elapsed >= timeoutMs)
+            {
+                json data;
+                data["found"] = false;
+                data["timeout"] = true;
+                res.set_content(successResponse(data).dump(), "application/json");
+                return;
+            }
+            
+            if (logFile.existsAsFile())
+            {
+                juce::StringArray lines;
+                logFile.readLines(lines);
+                
+                // Only check new lines
+                for (int i = lastLineCount; i < lines.size(); ++i)
+                {
+                    juce::String line = lines[i].trim();
+                    if (line.isEmpty()) continue;
+                    
+                    try
+                    {
+                        json entry = json::parse(line.toStdString());
+                        
+                        bool matches = true;
+                        
+                        // Check hypothesis ID if specified
+                        if (!hypothesisId.empty())
+                        {
+                            std::string entryHypId = entry.value("hypothesisId", "");
+                            if (entryHypId.find(hypothesisId) == std::string::npos)
+                            {
+                                matches = false;
+                            }
+                        }
+                        
+                        // Check pattern in message or location
+                        if (matches && !pattern.empty())
+                        {
+                            std::string msg = entry.value("message", "");
+                            std::string loc = entry.value("location", "");
+                            
+                            if (msg.find(pattern) == std::string::npos &&
+                                loc.find(pattern) == std::string::npos)
+                            {
+                                matches = false;
+                            }
+                        }
+                        
+                        if (matches)
+                        {
+                            json data;
+                            data["found"] = true;
+                            data["entry"] = entry;
+                            res.set_content(successResponse(data).dump(), "application/json");
+                            return;
+                        }
+                    }
+                    catch (...)
+                    {
+                        // Skip non-JSON lines
+                    }
+                }
+                
+                lastLineCount = lines.size();
+            }
+            
+            // Sleep before checking again
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
 }
 
 } // namespace oscil::test

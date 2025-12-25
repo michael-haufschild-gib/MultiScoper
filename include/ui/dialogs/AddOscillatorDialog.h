@@ -52,6 +52,8 @@ public:
      */
     using Callback = std::function<void(const Result&)>;
     using CancelCallback = std::function<void()>;
+    using BrowsePresetsCallback = std::function<void(const juce::String& currentPresetId, 
+                                                      std::function<void(const juce::String&)> onPresetSelected)>;
 
     AddOscillatorDialog(IThemeService& themeService);
     ~AddOscillatorDialog() override;
@@ -79,6 +81,12 @@ public:
      * Set the callback for when Cancel is clicked
      */
     void setOnCancel(CancelCallback callback) { cancelCallback_ = std::move(callback); }
+
+    /**
+     * Set the callback for when browse presets button is clicked.
+     * The callback receives the current preset ID and a function to call when a preset is selected.
+     */
+    void setOnBrowsePresets(BrowsePresetsCallback callback) { browsePresetsCallback_ = std::move(callback); }
 
     /**
      * Reset the dialog state for reuse
@@ -110,6 +118,7 @@ private:
     std::vector<Pane> panes_;
     Callback callback_;
     CancelCallback cancelCallback_;
+    BrowsePresetsCallback browsePresetsCallback_;
 
     // Source section
     std::unique_ptr<juce::Label> sourceLabel_;
@@ -130,6 +139,7 @@ private:
     // Visual Preset section
     std::unique_ptr<juce::Label> visualPresetLabel_;
     std::unique_ptr<OscilDropdown> visualPresetDropdown_;
+    std::unique_ptr<OscilButton> browsePresetsButton_;  // Gear button to open preset browser
 
     // Error message
     std::unique_ptr<juce::Label> errorLabel_;

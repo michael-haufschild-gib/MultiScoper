@@ -129,22 +129,6 @@ void EffectsTab::setupComponents()
     auto* distortionSection = effectsAccordion_->addSection("Distortion", distortionContainer_.get());
     distortionSection->setHeaderComponent(distortionEnabled_.get(), 40);
 
-    // Glitch
-    glitchContainer_ = std::make_unique<juce::Component>();
-    glitchEnabled_ = createToggle("", "preset_effect_glitch_enabled");
-    glitchIntensity_ = createSlider("preset_glitch_intensity", 0.0, 1.0);
-    glitchBlockSize_ = createSlider("preset_glitch_block_size", 0.01, 0.2);
-    glitchLineShift_ = createSlider("preset_glitch_line_shift", 0.0, 0.1);
-    glitchColorSep_ = createSlider("preset_glitch_color_sep", 0.0, 0.05);
-    glitchFlicker_ = createSlider("preset_glitch_flicker", 1.0, 30.0);
-    glitchContainer_->addAndMakeVisible(*glitchIntensity_);
-    glitchContainer_->addAndMakeVisible(*glitchBlockSize_);
-    glitchContainer_->addAndMakeVisible(*glitchLineShift_);
-    glitchContainer_->addAndMakeVisible(*glitchColorSep_);
-    glitchContainer_->addAndMakeVisible(*glitchFlicker_);
-    auto* glitchSection = effectsAccordion_->addSection("Glitch", glitchContainer_.get());
-    glitchSection->setHeaderComponent(glitchEnabled_.get(), 40);
-
     // Tilt Shift
     tiltShiftContainer_ = std::make_unique<juce::Component>();
     tiltShiftEnabled_ = createToggle("", "preset_effect_tilt_shift_enabled");
@@ -236,14 +220,6 @@ void EffectsTab::setConfiguration(const VisualConfiguration& config)
     distortionFrequency_->setValue(config.distortion.frequency, false);
     distortionSpeed_->setValue(config.distortion.speed, false);
 
-    // Glitch
-    glitchEnabled_->setValue(config.glitch.enabled, false);
-    glitchIntensity_->setValue(config.glitch.intensity, false);
-    glitchBlockSize_->setValue(config.glitch.blockSize, false);
-    glitchLineShift_->setValue(config.glitch.lineShift, false);
-    glitchColorSep_->setValue(config.glitch.colorSeparation, false);
-    glitchFlicker_->setValue(config.glitch.flickerRate, false);
-
     // Tilt Shift
     tiltShiftEnabled_->setValue(config.tiltShift.enabled, false);
     tiltPosition_->setValue(config.tiltShift.position, false);
@@ -307,14 +283,6 @@ void EffectsTab::updateConfiguration(VisualConfiguration& config)
     config.distortion.intensity = static_cast<float>(distortionIntensity_->getValue());
     config.distortion.frequency = static_cast<float>(distortionFrequency_->getValue());
     config.distortion.speed = static_cast<float>(distortionSpeed_->getValue());
-
-    // Glitch
-    config.glitch.enabled = glitchEnabled_->getValue();
-    config.glitch.intensity = static_cast<float>(glitchIntensity_->getValue());
-    config.glitch.blockSize = static_cast<float>(glitchBlockSize_->getValue());
-    config.glitch.lineShift = static_cast<float>(glitchLineShift_->getValue());
-    config.glitch.colorSeparation = static_cast<float>(glitchColorSep_->getValue());
-    config.glitch.flickerRate = static_cast<float>(glitchFlicker_->getValue());
 
     // Tilt Shift
     config.tiltShift.enabled = tiltShiftEnabled_->getValue();

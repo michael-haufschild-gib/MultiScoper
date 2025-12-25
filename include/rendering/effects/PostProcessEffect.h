@@ -7,10 +7,11 @@
 
 #include "rendering/Framebuffer.h"
 #include "rendering/FramebufferPool.h"
+
 #include <juce_core/juce_core.h>
 
 #if OSCIL_ENABLE_OPENGL
-#include <juce_opengl/juce_opengl.h>
+    #include <juce_opengl/juce_opengl.h>
 
 namespace oscil
 {
@@ -72,8 +73,7 @@ public:
         Framebuffer* source,
         Framebuffer* destination,
         FramebufferPool& pool,
-        float deltaTime = 0.0f
-    ) = 0;
+        float deltaTime = 0.0f) = 0;
 
     /**
      * Set effect intensity/strength (0.0 = disabled, 1.0 = full effect).
@@ -110,8 +110,7 @@ protected:
      */
     static bool compileEffectShader(
         juce::OpenGLShaderProgram& program,
-        const char* fragmentSource
-    );
+        const char* fragmentSource);
 
     /**
      * Standard fullscreen quad vertex shader source (legacy GLSL).

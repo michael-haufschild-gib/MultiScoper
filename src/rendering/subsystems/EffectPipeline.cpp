@@ -9,13 +9,14 @@
 #include "rendering/effects/ColorGradeEffect.h"
 #include "rendering/effects/DistortionEffect.h"
 #include "rendering/effects/FilmGrainEffect.h"
-#include "rendering/effects/GlitchEffect.h"
 #include "rendering/effects/RadialBlurEffect.h"
 #include "rendering/effects/ScanlineEffect.h"
 #include "rendering/effects/TiltShiftEffect.h"
 #include "rendering/effects/TrailsEffect.h"
 #include "rendering/effects/VignetteEffect.h"
 #include "rendering/subsystems/RenderStats.h" // For logging macros
+
+#include <iostream>
 
 namespace oscil
 {
@@ -28,8 +29,13 @@ EffectPipeline::EffectPipeline()
 
 EffectPipeline::~EffectPipeline()
 {
-    // Debug assertion to catch missing shutdown() calls
-    jassert(context_ == nullptr && "EffectPipeline::shutdown() must be called before destruction");
+    // Log in all builds - critical for diagnosing production issues
+    if (context_ != nullptr)
+    {
+        std::cerr << "[EffectPipeline] LEAK: Destructor called without shutdown(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse; // Also assert in debug builds
+    }
 }
 
 bool EffectPipeline::initialize(juce::OpenGLContext& context, int width, int height)
@@ -82,7 +88,6 @@ void EffectPipeline::initializeEffects()
     effects_["chromatic_aberration"] = std::make_unique<ChromaticAberrationEffect>();
     effects_["scanlines"] = std::make_unique<ScanlineEffect>();
     effects_["distortion"] = std::make_unique<DistortionEffect>();
-    effects_["glitch"] = std::make_unique<GlitchEffect>();
     effects_["radial_blur"] = std::make_unique<RadialBlurEffect>();
 
     // Initialize Effect Chain
@@ -204,8 +209,7 @@ Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRe
                     state.historyFBO.get(), // Previous frame history
                     trailsDest,             // Output
                     *fbPool_,
-                    deltaTime
-                );
+                    deltaTime);
 
                 // Copy the result back to historyFBO for the next frame
                 // We need to pass compositeShader to applyPostProcessing or have EffectPipeline hold a reference to Bootstrapper.
@@ -263,8 +267,6 @@ void EffectPipeline::setQualityLevel(QualityLevel level)
                 trails->setEnabled(false);
             if (auto* ca = getEffect("chromatic_aberration"))
                 ca->setEnabled(false);
-            if (auto* glitch = getEffect("glitch"))
-                glitch->setEnabled(false);
             if (auto* dist = getEffect("distortion"))
                 dist->setEnabled(false);
             break;
@@ -276,8 +278,6 @@ void EffectPipeline::setQualityLevel(QualityLevel level)
                 trails->setEnabled(true);
             if (auto* ca = getEffect("chromatic_aberration"))
                 ca->setEnabled(true);
-            if (auto* glitch = getEffect("glitch"))
-                glitch->setEnabled(true);
             if (auto* dist = getEffect("distortion"))
                 dist->setEnabled(true);
             break;

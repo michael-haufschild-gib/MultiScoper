@@ -7,15 +7,20 @@
 namespace oscil
 {
 
-DialogManager::DialogManager(juce::Component& parent, IThemeService& themeService, IInstanceRegistry& instanceRegistry)
+DialogManager::DialogManager(juce::Component& parent, IThemeService& themeService, IInstanceRegistry& instanceRegistry,
+                             VisualPresetManager& presetManager)
     : parent_(parent)
     , themeService_(themeService)
     , instanceRegistry_(instanceRegistry)
+    , presetManager_(presetManager)
 {
     parent_.addComponentListener(this);
 
     // Initialize Add Oscillator Dialog
     addOscillatorDialogContent_ = std::make_unique<AddOscillatorDialog>(themeService_);
+    addOscillatorDialogContent_->setOnBrowsePresets([this](const juce::String& currentId, auto onSelected) {
+        showPresetBrowserDialog(currentId, onSelected);
+    });
     addOscillatorModal_ = std::make_unique<OscilModal>(themeService_, "Add Oscillator", "addOscillatorModal");
     addOscillatorModal_->setContent(addOscillatorDialogContent_.get());
 
@@ -31,6 +36,9 @@ DialogManager::DialogManager(juce::Component& parent, IThemeService& themeServic
 
     // Initialize Config Popup (Content)
     configPopup_ = std::make_unique<OscillatorConfigDialog>(themeService_, instanceRegistry_);
+    configPopup_->setOnBrowsePresets([this](const juce::String& currentId, auto onSelected) {
+        showPresetBrowserDialog(currentId, onSelected);
+    });
     
     // Initialize Config Modal
     configModal_ = std::make_unique<OscilModal>(themeService_, "Configure Oscillator", "configModal");
@@ -40,6 +48,11 @@ DialogManager::DialogManager(juce::Component& parent, IThemeService& themeServic
     configPopup_->onClose = [this]() {
         configModal_->hide();
     };
+
+    // Initialize Preset Browser Dialog
+    presetBrowserDialogContent_ = std::make_unique<PresetBrowserDialog>(themeService_, presetManager_);
+    presetBrowserModal_ = std::make_unique<OscilModal>(themeService_, "Browse Presets", "presetBrowserModal");
+    presetBrowserModal_->setContent(presetBrowserDialogContent_.get());
 }
 
 DialogManager::~DialogManager()
@@ -154,6 +167,30 @@ void DialogManager::removeConfigPopupListener(OscillatorConfigDialog::Listener* 
         configPopup_->removeListener(listener);
 }
 
+void DialogManager::showPresetBrowserDialog(const juce::String& currentPresetId,
+                                            std::function<void(const juce::String& selectedPresetId)> onPresetSelected)
+{
+    if (!presetBrowserModal_ || !presetBrowserDialogContent_)
+        return;
+
+    presetBrowserDialogContent_->refreshPresets();
+    presetBrowserDialogContent_->setSelectedPresetId(currentPresetId);
+
+    presetBrowserDialogContent_->setOnPresetSelected([this, onPresetSelected](const juce::String& presetId) {
+        if (onPresetSelected)
+            onPresetSelected(presetId);
+        presetBrowserModal_->hide();
+    });
+
+    presetBrowserDialogContent_->setOnCancel([this]() {
+        presetBrowserModal_->hide();
+    });
+
+    // Show on top of everything (including other modals)
+    presetBrowserModal_->show(&parent_);
+    presetBrowserModal_->toFront(true);
+}
+
 void DialogManager::componentBeingDeleted(juce::Component& component)
 {
     if (&component == &parent_)
@@ -163,6 +200,7 @@ void DialogManager::componentBeingDeleted(juce::Component& component)
         if (colorModal_) colorModal_->hide();
         if (selectPaneModal_) selectPaneModal_->hide();
         if (configModal_) configModal_->hide();
+        if (presetBrowserModal_) presetBrowserModal_->hide();
     }
 }
 

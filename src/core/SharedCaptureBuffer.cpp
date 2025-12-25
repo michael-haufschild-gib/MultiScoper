@@ -60,6 +60,12 @@ void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const Ca
 void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int numChannels,
                                  const CaptureFrameMetadata& metadata, bool tryLock)
 {
+    // Defensive assertions (debug-only) - catch invalid usage before release build silently ignores
+    jassert(samples != nullptr);  // Must have valid sample pointer array
+    jassert(numSamples >= 0);     // Should never be negative
+    jassert(numChannels >= 0);    // Should never be negative
+
+    // Early return for empty input (valid but nothing to do)
     if (numSamples <= 0 || numChannels <= 0)
         return;
 

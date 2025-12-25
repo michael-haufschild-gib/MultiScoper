@@ -77,6 +77,14 @@ void GpuRenderCoordinator::clearWaveforms()
     }
 }
 
+void GpuRenderCoordinator::setBackgroundColour(juce::Colour colour)
+{
+    if (glManager_)
+    {
+        glManager_->setBackgroundColour(colour);
+    }
+}
+
 void GpuRenderCoordinator::detach()
 {
     if (glManager_)

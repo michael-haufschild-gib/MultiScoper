@@ -4,6 +4,8 @@
 
 #include "rendering/FramebufferPool.h"
 
+#include <iostream>
+
 #if OSCIL_ENABLE_OPENGL
 
 namespace oscil
@@ -17,8 +19,13 @@ FramebufferPool::FramebufferPool()
 
 FramebufferPool::~FramebufferPool()
 {
-    // Debug assertion to catch missing shutdown() calls
-    jassert(!initialized_ && "FramebufferPool::shutdown() must be called before destruction");
+    // Log in all builds - critical for diagnosing production issues
+    if (initialized_)
+    {
+        std::cerr << "[FramebufferPool] LEAK: Destructor called without shutdown(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse;  // Also assert in debug builds
+    }
 }
 
 std::unique_ptr<Framebuffer> FramebufferPool::createFramebuffer()

@@ -6,6 +6,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "TestDAW.h"
 #include "TestHttpServer.h"
+#include <iostream>
 
 namespace oscil::test
 {
@@ -324,6 +325,7 @@ public:
     void initialise(const juce::String& commandLine) override
     {
         juce::ignoreUnused(commandLine);
+        std::cerr << ">>> TestHarnessApplication::initialise" << std::endl;
 
         // Parse command line for port
         int port = TestHttpServer::DEFAULT_PORT;
@@ -338,23 +340,36 @@ public:
             }
         }
 
+        std::cerr << ">>> Initializing DAW..." << std::endl;
         // Initialize the test DAW
         daw_ = std::make_unique<TestDAW>();
         daw_->initialize();
         daw_->start();  // Start audio processing immediately so waveforms render
+        std::cerr << ">>> DAW Initialized." << std::endl;
 
         // Create and start HTTP server
+        std::cerr << ">>> Starting Server on port " << port << "..." << std::endl;
         server_ = std::make_unique<TestHttpServer>(*daw_);
         if (!server_->start(port))
         {
+            std::cerr << ">>> SERVER FAILED TO START on port " << port << std::endl;
             juce::NativeMessageBox::showMessageBoxAsync(
                 juce::MessageBoxIconType::WarningIcon,
                 "Server Error",
                 "Failed to start HTTP server on port " + juce::String(port));
         }
+        else
+        {
+            std::cerr << ">>> Server STARTED successfully." << std::endl;
+        }
 
         // Create the main window
         mainWindow_ = std::make_unique<TestHarnessWindow>(*daw_, *server_);
+
+        // FORCE OPEN TRACK 0 EDITOR (Workaround for tests)
+        std::cerr << ">>> Opening Track 0 Editor..." << std::endl;
+        daw_->showTrackEditor(0);
+        std::cerr << ">>> Track 0 Editor requested." << std::endl;
 
         std::cout << "Oscil Test Harness started" << std::endl;
         std::cout << "HTTP API available at: http://localhost:" << port << std::endl;

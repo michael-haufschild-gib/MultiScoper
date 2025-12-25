@@ -8,6 +8,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <atomic>
+#include <thread>
 #include <vector>
 #include <cstring>
 #include <span>
@@ -73,18 +74,18 @@ struct AtomicMetadata
      * writer thread crashes mid-update (leaving sequence odd). After MAX_RETRIES,
      * returns current atomic values as best-effort fallback.
      *
-     * No yield() is used because the write operation is extremely fast (just a few
-     * atomic stores). Yielding can make contention worse by giving up the CPU.
+     * After YIELD_THRESHOLD spins, yields to let the writer complete (improves
+     * behavior under heavy system load or thread preemption).
      */
     CaptureFrameMetadata read() const
     {
         CaptureFrameMetadata result;
         uint32_t seq1, seq2;
 
-        // Low retry limit since writes are very fast (nanoseconds)
-        // If writer crashes mid-update, we don't want to spin long on UI thread
-        // Increased to 1000 to handle thread preemption in high-contention CI environments
-        static constexpr int MAX_RETRIES = 1000;
+        // Yield after initial spins to let writer complete under heavy load
+        static constexpr int YIELD_THRESHOLD = 100;
+        // High retry limit for heavy-contention CI environments
+        static constexpr int MAX_RETRIES = 10000;
         int retries = 0;
 
         for (;;) {
@@ -103,7 +104,9 @@ struct AtomicMetadata
                     result.bpm = bpm.load(std::memory_order_relaxed);
                     return result;
                 }
-                // Spin without yielding - write operation is nanoseconds
+                // After initial spins, yield to let writer complete
+                if (retries > YIELD_THRESHOLD)
+                    std::this_thread::yield();
                 continue;
             }
 
@@ -127,6 +130,9 @@ struct AtomicMetadata
                 // Excessive contention or issue - return what we have
                 return result;
             }
+            // After initial spins, yield to let writer complete
+            if (retries > YIELD_THRESHOLD)
+                std::this_thread::yield();
         }
 
         return result;

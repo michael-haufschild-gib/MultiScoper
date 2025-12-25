@@ -131,6 +131,7 @@ public:
 
     // Single selection
     void setSelectedIndex(int index, bool notify = true);
+    void setSelectedId(const juce::String& id, bool notify = true);
     int getSelectedIndex() const;
     juce::String getSelectedId() const;
     juce::String getSelectedLabel() const;

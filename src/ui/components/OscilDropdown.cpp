@@ -653,6 +653,20 @@ void OscilDropdown::setSelectedIndex(int index, bool notify)
     setSelectedIndices(newSelection, notify);
 }
 
+void OscilDropdown::setSelectedId(const juce::String& id, bool notify)
+{
+    for (size_t i = 0; i < items_.size(); ++i)
+    {
+        if (items_[i].id == id)
+        {
+            setSelectedIndex(static_cast<int>(i), notify);
+            return;
+        }
+    }
+    // ID not found - clear selection
+    setSelectedIndex(-1, notify);
+}
+
 int OscilDropdown::getSelectedIndex() const
 {
     return selectedIndices_.empty() ? -1 : *selectedIndices_.begin();

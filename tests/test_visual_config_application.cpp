@@ -62,16 +62,6 @@ TEST_F(VisualConfigApplicationTest, HasPostProcessing)
     EXPECT_TRUE(config.hasPostProcessing());
 }
 
-TEST_F(VisualConfigApplicationTest, HasParticles)
-{
-    VisualConfiguration config;
-
-    EXPECT_FALSE(config.hasParticles());
-
-    config.particles.enabled = true;
-    EXPECT_TRUE(config.hasParticles());
-}
-
 TEST_F(VisualConfigApplicationTest, GetDefault)
 {
     auto config = VisualConfiguration::getDefault();

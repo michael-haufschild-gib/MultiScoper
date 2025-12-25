@@ -121,4 +121,16 @@ void OpenGLLifecycleManager::requestFrameCapture(std::function<void(juce::Image)
 #endif
 }
 
+void OpenGLLifecycleManager::setBackgroundColour(juce::Colour colour)
+{
+#if OSCIL_ENABLE_OPENGL
+    if (renderer_)
+    {
+        renderer_->setBackgroundColour(colour);
+    }
+#else
+    juce::ignoreUnused(colour);
+#endif
+}
+
 } // namespace oscil

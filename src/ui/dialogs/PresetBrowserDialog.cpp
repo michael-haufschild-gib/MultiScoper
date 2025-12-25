@@ -281,8 +281,7 @@ void PresetBrowserDialog::filterPresets()
                         shaderType == ShaderType::NeonGlow ||
                         shaderType == ShaderType::GradientFill ||
                         shaderType == ShaderType::DualOutline ||
-                        shaderType == ShaderType::PlasmaSine ||
-                        shaderType == ShaderType::DigitalGlitch;
+                        shaderType == ShaderType::PlasmaSine;
             }
             else if (shaderFilter_ == "3d")
             {

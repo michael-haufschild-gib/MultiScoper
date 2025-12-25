@@ -96,9 +96,16 @@ public:
     /**
      * Update waveform data for rendering (thread-safe)
      * Call this from the message thread when waveform data changes
-     * @param data The render data to update
+     * @param data The render data to update (copy version)
      */
     void updateWaveform(const WaveformRenderData& data);
+
+    /**
+     * Update waveform data for rendering (thread-safe, move version)
+     * Prefer this when the caller doesn't need the data after the call
+     * @param data The render data to update (moved)
+     */
+    void updateWaveform(WaveformRenderData&& data);
 
     /**
      * Set the background color for clearing
@@ -123,7 +130,7 @@ public:
 
     /**
      * Enable or disable the advanced render engine.
-     * When enabled, post-processing, particles, and 3D effects are available.
+     * When enabled, post-processing and 3D effects are available.
      * @param enabled Whether to use the render engine
      */
     void setRenderEngineEnabled(bool enabled) { useRenderEngine_ = enabled; }
@@ -163,10 +170,13 @@ private:
     std::atomic<bool> contextReady_{ false };
     std::atomic<bool> cleanupPerformed_{ false };  // Guard for idempotent cleanup
 
-    // Thread-safe waveform data storage
-    // Using SpinLock for fast synchronization (short critical sections)
+    // Thread-safe waveform data storage using double-buffering
+    // Message thread writes to waveformsWrite_, GL thread reads from waveformsRead_
+    // Swap occurs atomically at the start of each frame to avoid deep copies
     juce::SpinLock dataLock_;
-    std::unordered_map<int, WaveformRenderData> waveforms_;
+    std::unordered_map<int, WaveformRenderData> waveformsWrite_;  // Message thread writes
+    std::unordered_map<int, WaveformRenderData> waveformsRead_;   // GL thread reads
+    std::atomic<bool> swapPending_{false};
 
     // Frame capture
     juce::SpinLock captureLock_;
@@ -184,7 +194,7 @@ private:
     GLint debugColorLoc_ = -1;
     bool debugShaderCompiled_ = false;
 
-    // Advanced render engine for post-processing, particles, 3D
+    // Advanced render engine for post-processing and 3D effects
     // Protected by engineLock_ for thread-safe access/lifecycle management
     juce::ReadWriteLock engineLock_;
     std::unique_ptr<RenderEngine> renderEngine_;
@@ -194,6 +204,13 @@ private:
     // Per-instance resize tracking (not static - each instance needs its own)
     int lastResizeWidth_ = 0;
     int lastResizeHeight_ = 0;
+
+    // Per-instance debug counters (not static - prevents data races with multiple instances)
+    int debugFrameCounter_ = 0;
+    int debugEntryLogCounter_ = 0;
+
+    // Pooled capture buffer to avoid per-frame allocation
+    std::vector<uint8_t> captureBuffer_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformGLRenderer)
 };

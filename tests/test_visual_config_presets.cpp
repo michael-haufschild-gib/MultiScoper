@@ -30,10 +30,6 @@ TEST_F(VisualConfigPresetTest, SerializationRoundTrip)
     original.trails.enabled = true;
     original.trails.decay = 0.05f;
 
-    original.particles.enabled = true;
-    original.particles.emissionRate = 200.0f;
-    original.particles.particleColor = juce::Colours::cyan;
-
     original.settings3D.enabled = true;
     original.settings3D.cameraDistance = 8.0f;
     original.settings3D.autoRotate = true;
@@ -57,10 +53,6 @@ TEST_F(VisualConfigPresetTest, SerializationRoundTrip)
 
     EXPECT_EQ(restored.trails.enabled, original.trails.enabled);
     EXPECT_FLOAT_EQ(restored.trails.decay, original.trails.decay);
-
-    EXPECT_EQ(restored.particles.enabled, original.particles.enabled);
-    EXPECT_FLOAT_EQ(restored.particles.emissionRate, original.particles.emissionRate);
-    EXPECT_EQ(restored.particles.particleColor.getARGB(), original.particles.particleColor.getARGB());
 
     EXPECT_EQ(restored.settings3D.enabled, original.settings3D.enabled);
     EXPECT_FLOAT_EQ(restored.settings3D.cameraDistance, original.settings3D.cameraDistance);
@@ -141,30 +133,6 @@ TEST_F(VisualConfigPresetTest, SerializationPreservesColorGradeDetails)
     EXPECT_FLOAT_EQ(restored.colorGrade.tint, original.colorGrade.tint);
     EXPECT_EQ(restored.colorGrade.shadows.getARGB(), original.colorGrade.shadows.getARGB());
     EXPECT_EQ(restored.colorGrade.highlights.getARGB(), original.colorGrade.highlights.getARGB());
-}
-
-TEST_F(VisualConfigPresetTest, SerializationPreservesParticleDetails)
-{
-    VisualConfiguration original;
-    original.particles.enabled = true;
-    original.particles.emissionMode = ParticleEmissionMode::AtPeaks;
-    original.particles.blendMode = ParticleBlendMode::Screen;
-    original.particles.gravity = -50.0f;
-    original.particles.drag = 0.2f;
-    original.particles.randomness = 0.8f;
-    original.particles.audioReactive = false;
-    original.particles.audioEmissionBoost = 3.0f;
-
-    auto tree = original.toValueTree();
-    auto restored = VisualConfiguration::fromValueTree(tree);
-
-    EXPECT_EQ(restored.particles.emissionMode, original.particles.emissionMode);
-    EXPECT_EQ(restored.particles.blendMode, original.particles.blendMode);
-    EXPECT_FLOAT_EQ(restored.particles.gravity, original.particles.gravity);
-    EXPECT_FLOAT_EQ(restored.particles.drag, original.particles.drag);
-    EXPECT_FLOAT_EQ(restored.particles.randomness, original.particles.randomness);
-    EXPECT_EQ(restored.particles.audioReactive, original.particles.audioReactive);
-    EXPECT_FLOAT_EQ(restored.particles.audioEmissionBoost, original.particles.audioEmissionBoost);
 }
 
 TEST_F(VisualConfigPresetTest, SerializationPreserves3DDetails)

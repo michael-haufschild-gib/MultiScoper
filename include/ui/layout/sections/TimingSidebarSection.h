@@ -112,9 +112,6 @@ private:
     std::unique_ptr<OscilTextField> bpmField_;       // Free Running mode
     std::unique_ptr<juce::Label> bpmValueLabel_;     // Host Sync mode (read-only)
 
-    // Sync status indicator
-    std::unique_ptr<juce::Label> syncStatusLabel_;
-
     std::unique_ptr<TimingPresenter> presenter_;
 
     juce::ListenerList<Listener> listeners_;

@@ -533,11 +533,17 @@ void ThemeManager::notifyListeners()
     else
     {
         // Capture theme by value to avoid race conditions
+        // Use WeakReference to prevent use-after-free if ThemeManager is destroyed
+        // before the async callback runs
         auto themeCopy = currentTheme_;
-        juce::MessageManager::callAsync([this, themeCopy]() {
-            listeners_.call([&themeCopy](ThemeManagerListener& listener) {
-                listener.themeChanged(themeCopy);
-            });
+        juce::WeakReference<ThemeManager> weakThis(this);
+        juce::MessageManager::callAsync([weakThis, themeCopy]() {
+            if (auto* self = weakThis.get())
+            {
+                self->listeners_.call([&themeCopy](ThemeManagerListener& listener) {
+                    listener.themeChanged(themeCopy);
+                });
+            }
         });
     }
 }

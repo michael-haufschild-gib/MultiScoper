@@ -16,12 +16,9 @@
 namespace oscil
 {
 
-// Forward declaration
-using ParticleEmitterId = int;
-
 /**
  * Persistent per-waveform state for the render engine.
- * Includes history FBOs for trails, particle emitter IDs, and visual configuration.
+ * Includes history FBOs for trails and visual configuration.
  */
 struct WaveformRenderState
 {
@@ -30,9 +27,6 @@ struct WaveformRenderState
     // Trails (stateful post-processing)
     bool trailsEnabled = false;
     std::unique_ptr<Framebuffer> historyFBO;
-
-    // Particle emitters for this waveform
-    std::vector<ParticleEmitterId> emitterIds;
 
     // Full visual configuration
     VisualConfiguration visualConfig;
@@ -66,23 +60,6 @@ struct WaveformRenderState
      * @param height New height
      */
     void resizeHistoryFBO(juce::OpenGLContext& context, int width, int height);
-
-    /**
-     * Add a particle emitter to this waveform.
-     * @param id The emitter ID
-     */
-    void addParticleEmitter(ParticleEmitterId id);
-
-    /**
-     * Remove a particle emitter from this waveform.
-     * @param id The emitter ID
-     */
-    void removeParticleEmitter(ParticleEmitterId id);
-
-    /**
-     * Clear all particle emitters.
-     */
-    void clearParticleEmitters();
 
     /**
      * Push new samples to the history buffer.

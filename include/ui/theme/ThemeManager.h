@@ -353,6 +353,8 @@ private:
     std::unordered_map<juce::String, ColorTheme> themes_;
     std::set<juce::String> pendingSaves_;
     juce::ListenerList<ThemeManagerListener> listeners_;
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE(ThemeManager)
 };
 
 // Pre-defined system themes

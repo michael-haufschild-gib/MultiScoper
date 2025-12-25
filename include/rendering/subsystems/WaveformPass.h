@@ -1,13 +1,12 @@
 /*
     Oscil - Waveform Pass
-    Handles rendering of individual waveforms (geometry, particles, grid).
+    Handles rendering of individual waveforms (geometry and grid).
 */
 
 #pragma once
 
 #include "rendering/Camera3D.h"
 #include "rendering/GridRenderer.h"
-#include "rendering/ParticleRenderer.h"
 #include "rendering/ShaderRegistry.h"
 #include "rendering/WaveformGLRenderer.h"
 #include "rendering/WaveformRenderState.h"
@@ -38,7 +37,6 @@ public:
                                 juce::OpenGLShaderProgram* compositeShader, GLint compositeLoc);
 
     // Subsystem accessors
-    ParticleSystem* getParticleSystem() { return particleSystem_.get(); }
     Camera3D* getCamera() { return camera_.get(); }
     EnvironmentMapManager* getEnvironmentMapManager() { return envMapManager_.get(); }
     TextureManager* getTextureManager() { return textureManager_.get(); }
@@ -47,7 +45,6 @@ public:
     void prepareRender(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime);
     void renderGrid(const WaveformRenderData& data);
     void renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime);
-    void renderWaveformParticles(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime);
 
 private:
     void setupCamera2D();
@@ -55,8 +52,6 @@ private:
     void createDefaultEnvironmentMaps();
 
     // Subsystems
-    std::unique_ptr<ParticleSystem> particleSystem_;
-    std::unique_ptr<ParticleRenderer> particleRenderer_;
     std::unique_ptr<GridRenderer> gridRenderer_;
     std::unique_ptr<Camera3D> camera_;
     std::unique_ptr<EnvironmentMapManager> envMapManager_;

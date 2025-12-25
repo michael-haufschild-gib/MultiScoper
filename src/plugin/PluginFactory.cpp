@@ -7,6 +7,7 @@
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
 #include "core/OscilState.h"  // for GlobalPreferences
+#include "core/VisualPresetManager.h"
 #include "ui/theme/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
 #include <atomic>
@@ -27,7 +28,10 @@ PluginFactory::PluginFactory()
     , shaderRegistry_(std::make_unique<ShaderRegistry>())
     , memoryBudgetManager_(std::make_unique<MemoryBudgetManager>())
     , globalPreferences_(std::make_unique<GlobalPreferences>())
+    , visualPresetManager_(std::make_unique<VisualPresetManager>())
 {
+    // Initialize the preset manager
+    visualPresetManager_->initialize();
 }
 
 PluginFactory::~PluginFactory() = default;
@@ -86,6 +90,11 @@ MemoryBudgetManager& PluginFactory::getMemoryBudgetManager()
 GlobalPreferences& PluginFactory::getGlobalPreferences()
 {
     return *globalPreferences_;
+}
+
+VisualPresetManager& PluginFactory::getVisualPresetManager()
+{
+    return *visualPresetManager_;
 }
 
 } // namespace oscil

@@ -163,7 +163,9 @@ LiquidChromeShader::~LiquidChromeShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[LiquidChromeShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        std::cerr << "[LiquidChromeShader] LEAK: Destructor called without release(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse;
     }
 #endif
 }

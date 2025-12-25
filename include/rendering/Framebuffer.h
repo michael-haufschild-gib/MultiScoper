@@ -9,6 +9,7 @@
 
 #if OSCIL_ENABLE_OPENGL
 #include <juce_opengl/juce_opengl.h>
+#include <atomic>
 
 namespace oscil
 {
@@ -24,20 +25,34 @@ using namespace juce::gl;
  */
 struct Framebuffer
 {
+    // Static leak counter for monitoring FBO allocations (works in Release builds)
+    static inline std::atomic<int> leakCounter_{0};
+
+    Framebuffer() { ++leakCounter_; }
+
     virtual ~Framebuffer()
     {
+        --leakCounter_;
         // Debug assertion to catch missing destroy() calls
         jassert(fbo == 0 && "Framebuffer::destroy() must be called before destruction");
+        
+        #if !JUCE_DEBUG
+        if (fbo != 0)
+            DBG("Framebuffer leak detected. Total unreleased: " << leakCounter_.load());
+        #endif
     }
+
+    /**
+     * Get the current count of live Framebuffer instances
+     * Useful for leak detection in Release builds
+     */
+    static int getLeakCount() { return leakCounter_.load(); }
 
     // Prevent copying and moving (OpenGL resources cannot be shared)
     Framebuffer(const Framebuffer&) = delete;
     Framebuffer& operator=(const Framebuffer&) = delete;
     Framebuffer(Framebuffer&&) = delete;
     Framebuffer& operator=(Framebuffer&&) = delete;
-
-    // Default construction is allowed
-    Framebuffer() = default;
 
     GLuint fbo = 0;
     GLuint colorTexture = 0;

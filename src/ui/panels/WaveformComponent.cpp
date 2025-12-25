@@ -5,6 +5,7 @@
 #include "ui/panels/WaveformComponent.h"
 
 #include "ui/theme/ThemeManager.h"
+#include <fstream>
 
 #include "rendering/ShaderRegistry.h"
 #include "rendering/VisualConfiguration.h"
@@ -132,6 +133,10 @@ void WaveformComponent::paint(juce::Graphics& g)
 
     const auto& theme = themeService_.getCurrentTheme();
 
+    // #region agent log
+    { static int logCounter = 0; if (++logCounter % 30 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H12\",\"location\":\"WaveformComponent.cpp:paint\",\"message\":\"Paint called\",\"data\":{\"gpuEnabled\":" << (gpuRenderingEnabled_ ? "true" : "false") << ",\"willFillBg\":" << (!gpuRenderingEnabled_ ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
+    // #endregion
+
     // FIX: Only draw background in software mode - in GPU mode, OpenGL renders directly
     // and filling background here would cover the GL waveform
     if (!gpuRenderingEnabled_)
@@ -237,6 +242,23 @@ void WaveformComponent::setVisualOverrides(const juce::ValueTree& overrides)
 void WaveformComponent::setGpuRenderingEnabled(bool enabled)
 {
     gpuRenderingEnabled_ = enabled;
+
+    // Conditionally manage VBlank attachment to save CPU when GPU rendering is active
+    // In GPU mode, WaveformGLRenderer handles updates at VBlank rate, so we don't need
+    // this component to drive updateWaveformPath() or repaint() calls
+    if (enabled)
+    {
+        // Disable VBlank attachment - GPU rendering handles updates
+        vBlankAttachment_.reset();
+    }
+    else if (!vBlankAttachment_)
+    {
+        // Re-enable for software rendering
+        vBlankAttachment_ = std::make_unique<juce::VBlankAttachment>(this, [this]() {
+            updateWaveformPath();
+            repaint();
+        });
+    }
 }
 
 void WaveformComponent::setGridConfig(const GridConfiguration& config)

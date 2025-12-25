@@ -6,6 +6,8 @@
 #include "ui/managers/DialogManager.h"
 #include "core/OscilState.h"
 #include "core/InstanceRegistry.h"
+#include <fstream>
+#include <chrono>
 
 namespace oscil
 {
@@ -28,7 +30,7 @@ OscillatorPanelController::~OscillatorPanelController()
 
 void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogManager* dialogManager, DisplaySettingsManager* displaySettings)
 {
-    sidebar_ = sidebar;
+    sidebar_ = sidebar;       // WeakReference assignment
     dialogManager_ = dialogManager;
     displaySettings_ = displaySettings;
 
@@ -44,11 +46,30 @@ void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogMana
     });
 }
 
+void OscillatorPanelController::scheduleRefresh()
+{
+    // Coalesce multiple rapid state changes into a single refresh
+    if (!refreshPending_.exchange(true))
+    {
+        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
+            if (auto* controller = weakThis.get())
+            {
+                controller->refreshPending_.store(false);
+                controller->refreshPanels();
+            }
+        });
+    }
+}
+
 void OscillatorPanelController::refreshPanels()
 {
     // Prevent recursion
     if (isUpdating_) return;
     isUpdating_ = true;
+
+    // #region agent log
+    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H4\",\"location\":\"OscillatorPanelController.cpp:refreshPanels\",\"message\":\"Refreshing panels\",\"data\":{\"paneCountBefore\":" << paneComponents_.size() << ",\"columnCount\":" << processor_.getState().getLayoutManager().getColumnCount() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
+    // #endregion
 
     // Clear GL renderer waveforms first to prevent stale data
     gpuCoordinator_.clearWaveforms();
@@ -73,16 +94,17 @@ void OscillatorPanelController::refreshPanels()
     createPaneComponents(oscillators, layoutManager);
 
     // Update Sidebar
-    if (sidebar_)
+    if (auto* sidebarPtr = sidebar_.get())
     {
         // Refresh lists
         auto sources = processor_.getInstanceRegistry().getAllSources();
-        sidebar_->refreshSourceList(sources);
+        sidebarPtr->refreshSourceList(sources);
 
         auto panes = layoutManager.getPanes();
         juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this), panes]() {
             if (auto* controller = weakThis.get())
-                if (controller->sidebar_) controller->sidebar_->refreshPaneList(panes);
+                if (auto* sb = controller->sidebar_.get())
+                    sb->refreshPaneList(panes);
         });
 
         // Sort oscillators by order
@@ -92,7 +114,7 @@ void OscillatorPanelController::refreshPanels()
                       return a.getOrderIndex() < b.getOrderIndex();
                   });
         
-        sidebar_->refreshOscillatorList(sortedOscs);
+        sidebarPtr->refreshOscillatorList(sortedOscs);
     }
 
     // Apply settings
@@ -157,6 +179,9 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
         bool gpuEnabled = gpuCoordinator_.isGpuRenderingEnabled();
         bool autoScaleEnabled = processor_.getState().isAutoScaleEnabled(); // Get auto-scale state
         
+        // Update PaneComponent opaque state for proper JUCE/GL interaction
+        paneComponent->setGpuRenderingEnabled(gpuEnabled);
+        
         for (size_t i = 0; i < paneComponent->getOscillatorCount(); ++i)
         {
             if (auto* waveform = paneComponent->getWaveformAt(i))
@@ -182,19 +207,19 @@ void OscillatorPanelController::reapplyGlobalSettings()
     if (captureRate > 0)
     {
         int displaySamples = static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
-        if (displaySettings_)
+        if (auto* settings = displaySettings_.get())
         {
-            displaySettings_->setDisplaySamplesForAll(displaySamples);
-            displaySettings_->setSampleRateForAll(captureRate);
+            settings->setDisplaySamplesForAll(displaySamples);
+            settings->setSampleRateForAll(captureRate);
         }
     }
 
     // Re-apply visual settings
-    if (displaySettings_)
+    if (auto* settings = displaySettings_.get())
     {
-        displaySettings_->setShowGridForAll(state.isShowGridEnabled());
-        displaySettings_->setAutoScaleForAll(state.isAutoScaleEnabled());
-        displaySettings_->setGainDbForAll(state.getGainDb());
+        settings->setShowGridForAll(state.isShowGridEnabled());
+        settings->setAutoScaleForAll(state.isAutoScaleEnabled());
+        settings->setGainDbForAll(state.getGainDb());
     }
 }
 
@@ -281,6 +306,9 @@ void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, c
     }
 
     refreshPanels();
+    
+    // Force repaint of container to clear any ghost images
+    container_.repaint();
 }
 
 void OscillatorPanelController::handleEmptyColumnDrop(const PaneId& movedPaneId, int targetColumn)
@@ -288,6 +316,9 @@ void OscillatorPanelController::handleEmptyColumnDrop(const PaneId& movedPaneId,
     auto& layoutManager = processor_.getState().getLayoutManager();
     layoutManager.movePaneToColumn(movedPaneId, targetColumn, 0);
     refreshPanels();
+    
+    // Force repaint of container to clear any ghost images
+    container_.repaint();
 }
 
 void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
@@ -313,7 +344,8 @@ void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
 
 void OscillatorPanelController::highlightOscillator(const OscillatorId& oscillatorId)
 {
-    if (displaySettings_) displaySettings_->highlightOscillator(oscillatorId);
+    if (auto* settings = displaySettings_.get())
+        settings->highlightOscillator(oscillatorId);
 }
 
 // SidebarComponent::Listener overrides
@@ -340,8 +372,8 @@ void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& os
                 paneList.emplace_back(pane.getId(), pane.getName());
             }
 
-            if (dialogManager_)
-                dialogManager_->showConfigPopup(osc, paneList);
+            if (auto* dialog = dialogManager_.get())
+                dialog->showConfigPopup(osc, paneList);
             break;
         }
     }
@@ -349,7 +381,8 @@ void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& os
 
 void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorId& oscillatorId)
 {
-    if (!dialogManager_) return;
+    auto* dialog = dialogManager_.get();
+    if (!dialog) return;
 
     auto& state = processor_.getState();
     auto oscillators = state.getOscillators();
@@ -358,7 +391,7 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
     {
         if (osc.getId() == oscillatorId)
         {
-            dialogManager_->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
+            dialog->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
                 auto& oscilState = processor_.getState();
                 auto oscList = oscilState.getOscillators();
                 for (auto& o : oscList)
@@ -379,6 +412,11 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
 void OscillatorPanelController::oscillatorDeleteRequested(const OscillatorId& oscillatorId)
 {
     processor_.getState().removeOscillator(oscillatorId);
+}
+
+void OscillatorPanelController::oscillatorsReordered(int fromIndex, int toIndex)
+{
+    processor_.getState().reorderOscillators(fromIndex, toIndex);
 }
 
 void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)
@@ -413,13 +451,14 @@ void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& 
 
 void OscillatorPanelController::oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId)
 {
-    if (!dialogManager_) return;
+    auto* dialog = dialogManager_.get();
+    if (!dialog) return;
     pendingVisibilityOscillatorId_ = oscillatorId;
     
     auto& layoutManager = processor_.getState().getLayoutManager();
     auto panes = layoutManager.getPanes();
 
-    dialogManager_->showSelectPaneDialog(panes,
+    dialog->showSelectPaneDialog(panes,
         // onComplete callback
         [this](const SelectPaneDialog::Result& result) {
             auto& stateRef = processor_.getState();
@@ -456,12 +495,13 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
 
 void OscillatorPanelController::addOscillatorDialogRequested()
 {
-    if (!dialogManager_) return;
+    auto* dialog = dialogManager_.get();
+    if (!dialog) return;
     auto sources = processor_.getInstanceRegistry().getAllSources();
     auto& layoutManager = processor_.getState().getLayoutManager();
     auto panes = layoutManager.getPanes();
 
-    dialogManager_->showAddOscillatorDialog(sources, panes, [this](const AddOscillatorDialog::Result& result) {
+    dialog->showAddOscillatorDialog(sources, panes, [this](const AddOscillatorDialog::Result& result) {
         addOscillatorRequested(result);
     });
 }
@@ -520,9 +560,9 @@ void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscil
                 }
             }
             
-            if (sidebar_)
+            if (auto* sb = sidebar_.get())
             {
-                sidebar_->refreshOscillatorList(state.getOscillators());
+                sb->refreshOscillatorList(state.getOscillators());
             }
             return;
         }
@@ -554,9 +594,9 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
                 {
                     if (osc.getId() == oscId)
                     {
-                        if (controller->sidebar_)
+                        if (auto* sb = controller->sidebar_.get())
                         {
-                             controller->sidebar_->refreshOscillatorList(oscillators);
+                             sb->refreshOscillatorList(oscillators);
                         }
 
                         for (auto& pane : controller->paneComponents_)
@@ -585,17 +625,13 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
         }
         else
         {
-            // Fallback for complex properties
-            juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
-                if (auto* controller = weakThis.get()) controller->refreshPanels(); 
-            });
+            // Fallback for complex properties - use coalesced refresh
+            scheduleRefresh();
         }
     }
     else if (tree.hasType(StateIds::Pane))
     {
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
-            if (auto* controller = weakThis.get()) controller->refreshPanels(); 
-        });
+        scheduleRefresh();
     }
 }
 
@@ -603,9 +639,7 @@ void OscillatorPanelController::valueTreeChildAdded(juce::ValueTree&, juce::Valu
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
-            if (auto* controller = weakThis.get()) controller->refreshPanels(); 
-        });
+        scheduleRefresh();
     }
 }
 
@@ -614,18 +648,19 @@ void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree&, juce::Va
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
         // Close dialog if open
-        if (dialogManager_ && child.hasType(StateIds::Oscillator))
+        if (auto* dialog = dialogManager_.get())
         {
-            OscillatorId oid{child.getProperty(StateIds::Id).toString()};
-            if (dialogManager_->isConfigPopupVisibleFor(oid))
+            if (child.hasType(StateIds::Oscillator))
             {
-                dialogManager_->closeConfigPopup();
+                OscillatorId oid{child.getProperty(StateIds::Id).toString()};
+                if (dialog->isConfigPopupVisibleFor(oid))
+                {
+                    dialog->closeConfigPopup();
+                }
             }
         }
 
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
-            if (auto* controller = weakThis.get()) controller->refreshPanels(); 
-        });
+        scheduleRefresh();
     }
 }
 
@@ -633,9 +668,7 @@ void OscillatorPanelController::valueTreeChildOrderChanged(juce::ValueTree& pare
 {
     if (parent.hasType(StateIds::Oscillators) || parent.hasType(StateIds::Panes))
     {
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
-            if (auto* controller = weakThis.get()) controller->refreshPanels(); 
-        });
+        scheduleRefresh();
     }
 }
 
@@ -647,9 +680,9 @@ void OscillatorPanelController::gainChanged(float dB)
     processor_.getState().setGainDb(dB);
     
     // Apply to panes immediately
-    if (displaySettings_)
+    if (auto* settings = displaySettings_.get())
     {
-        displaySettings_->setGainDbForAll(dB);
+        settings->setGainDbForAll(dB);
     }
 }
 
@@ -659,9 +692,9 @@ void OscillatorPanelController::autoScaleChanged(bool enabled)
     processor_.getState().setAutoScaleEnabled(enabled);
     
     // Apply to panes immediately
-    if (displaySettings_)
+    if (auto* settings = displaySettings_.get())
     {
-        displaySettings_->setAutoScaleForAll(enabled);
+        settings->setAutoScaleForAll(enabled);
     }
 }
 
@@ -671,9 +704,9 @@ void OscillatorPanelController::showGridChanged(bool enabled)
     processor_.getState().setShowGridEnabled(enabled);
     
     // Apply to panes immediately
-    if (displaySettings_)
+    if (auto* settings = displaySettings_.get())
     {
-        displaySettings_->setShowGridForAll(enabled);
+        settings->setShowGridForAll(enabled);
     }
 }
 

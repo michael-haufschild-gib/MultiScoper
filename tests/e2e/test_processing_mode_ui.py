@@ -86,7 +86,8 @@ def test_processing_mode_selection(client: OscilTestClient):
     oscillators = client.get_oscillators()
 
     if oscillators:
-        initial_mode = oscillators[0].get('processingMode', 'unknown')
+        # API returns 'mode' key, not 'processingMode'
+        initial_mode = oscillators[0].get('mode', oscillators[0].get('processingMode', 'unknown'))
         print(f"   Initial mode: {initial_mode}")
 
         # The mode should default to FullStereo

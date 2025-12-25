@@ -4,6 +4,7 @@
 */
 
 #include "plugin/PluginEditor.h"
+#include "plugin/PluginFactory.h"
 
 #include "core/InstanceRegistry.h"
 #include "ui/layout/LayoutCoordinator.h"
@@ -62,7 +63,11 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     addAndMakeVisible(*statusBar_);
 
     // Create managers and coordinators
-    dialogManager_ = std::make_unique<DialogManager>(*this, processor_.getThemeService(), processor_.getInstanceRegistry());
+    dialogManager_ = std::make_unique<DialogManager>(
+        *this, 
+        processor_.getThemeService(), 
+        processor_.getInstanceRegistry(),
+        PluginFactory::getInstance().getVisualPresetManager());
     configPopupAdapter_ = std::make_unique<ConfigPopupListenerAdapter>(*this);
     dialogManager_->addConfigPopupListener(configPopupAdapter_.get());
 
@@ -73,6 +78,11 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     // Initialize GPU Rendering
     bool gpuRenderingEnabled = processor_.getState().isGpuRenderingEnabled();
     renderCoordinator_->setGpuRenderingEnabled(gpuRenderingEnabled);
+    
+    // Set initial background color for GPU renderer
+    const auto& theme = processor_.getThemeService().getCurrentTheme();
+    renderCoordinator_->setBackgroundColour(theme.backgroundPane);
+    
     if (auto* optionsSection = sidebar_->getOptionsSection())
     {
         optionsSection->setGpuRenderingEnabled(gpuRenderingEnabled);
@@ -113,6 +123,14 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     // Register Controller as Sidebar Listener (Handles Oscillator Events)
     sidebar_->addListener(oscillatorPanelController_.get());
+    
+    // Register Timing Adapter as Sidebar Listener (Handles Timing Events)
+    timingSidebarAdapter_ = std::make_unique<TimingSidebarListenerAdapter>(*this);
+    sidebar_->addListener(timingSidebarAdapter_.get());
+
+    // Register Options Adapter as Sidebar Listener (Handles Global Options)
+    optionsSidebarAdapter_ = std::make_unique<OptionsSidebarListenerAdapter>(*this);
+    sidebar_->addListener(optionsSidebarAdapter_.get());
 
     // CRITICAL: Wire layout callback so panes get positioned after async refreshPanels()
     oscillatorPanelController_->setLayoutNeededCallback([this]() {
@@ -172,6 +190,12 @@ OscilPluginEditor::~OscilPluginEditor()
     if (sidebar_ && oscillatorPanelController_)
         sidebar_->removeListener(oscillatorPanelController_.get());
 
+    if (sidebar_ && timingSidebarAdapter_)
+        sidebar_->removeListener(timingSidebarAdapter_.get());
+
+    if (sidebar_ && optionsSidebarAdapter_)
+        sidebar_->removeListener(optionsSidebarAdapter_.get());
+
     if (dialogManager_ && configPopupAdapter_)
         dialogManager_->removeConfigPopupListener(configPopupAdapter_.get());
 
@@ -201,6 +225,9 @@ void OscilPluginEditor::paint(juce::Graphics& g)
 
 void OscilPluginEditor::resized()
 {
+    // #region agent log
+    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H2\",\"location\":\"PluginEditor.cpp:resized\",\"message\":\"Editor resized\",\"data\":{\"width\":" << getWidth() << ",\"height\":" << getHeight() << ",\"paneCount\":" << (oscillatorPanelController_ ? oscillatorPanelController_->getPaneComponents().size() : 0) << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
+    // #endregion
     if (editorLayout_)
     {
         editorLayout_->resized();
@@ -269,8 +296,12 @@ void OscilPluginEditor::onSourcesChanged()
     }
 }
 
-void OscilPluginEditor::onThemeChanged(const ColorTheme& /*newTheme*/)
+void OscilPluginEditor::onThemeChanged(const ColorTheme& newTheme)
 {
+    // Update GPU renderer background color
+    if (renderCoordinator_)
+        renderCoordinator_->setBackgroundColour(newTheme.backgroundPane);
+
     repaint();
 
     if (statusBar_)
@@ -353,7 +384,16 @@ void OscilPluginEditor::setSampleRateForAllPanes(int sampleRate)
 
 void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
 {
-    if (renderCoordinator_) renderCoordinator_->setGpuRenderingEnabled(enabled);
+    // #region agent log
+    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"GPU_TOGGLE\",\"location\":\"PluginEditor.cpp:setGpuRenderingEnabled\",\"message\":\"GPU toggle called\",\"data\":{\"enabled\":" << (enabled ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
+    // #endregion
+    
+    // Clear waveforms before switching modes to prevent ghost images
+    if (renderCoordinator_)
+    {
+        renderCoordinator_->clearWaveforms();
+        renderCoordinator_->setGpuRenderingEnabled(enabled);
+    }
     
     // Update sidebar
     if (sidebar_ && sidebar_->getOptionsSection())
@@ -361,14 +401,12 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
         
     processor_.getState().setGpuRenderingEnabled(enabled);
     
-    // Controller listener will pick up state change? 
-    // GpuRenderingEnabled is a property of root or Options state?
-    // It's in OscilState.
-    // Controller doesn't listen to GPU state specifically in `valueTreePropertyChanged` in my implementation.
-    // We should manually propagate or update controller.
-    
+    // Refresh panels to propagate GPU state to all waveform components
     if (oscillatorPanelController_)
-        oscillatorPanelController_->refreshPanels(); // Re-propagates GPU state
+        oscillatorPanelController_->refreshPanels();
+    
+    // Force repaint of entire editor to clear any ghost images
+    repaint();
 }
 
 // Test access

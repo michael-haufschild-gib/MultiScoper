@@ -170,30 +170,6 @@ void PresetPreviewPanel::paint(juce::Graphics& g)
         }
     }
 
-    // Draw particles preview
-    if (config_.particles.enabled)
-    {
-        juce::Random particleRng(static_cast<int>(animationTime_ * 1000));
-        g.setColour(config_.particles.particleColor);
-
-        int particleCount = static_cast<int>(config_.particles.emissionRate * 0.1f);
-        for (int i = 0; i < particleCount; ++i)
-        {
-            float t = static_cast<float>(i) / particleCount;
-            int sampleIndex = static_cast<int>(t * WAVEFORM_SAMPLES) % WAVEFORM_SAMPLES;
-
-            float x = waveformBounds.getX() + t * waveformBounds.getWidth();
-            float baseY = centerY - waveformData_[sampleIndex] * amplitude;
-
-            // Add some randomness
-            float offsetY = (particleRng.nextFloat() - 0.5f) * 20.0f * config_.particles.randomness;
-            float y = baseY + offsetY;
-
-            float size = config_.particles.particleSize * 0.5f;
-            g.fillEllipse(x - size / 2, y - size / 2, size, size);
-        }
-    }
-
     // Shader type indicator text
     g.setColour(theme.textSecondary.withAlpha(0.5f));
     g.setFont(10.0f);
@@ -254,13 +230,6 @@ void PresetPreviewPanel::generateWaveformData()
 
         // Normalize
         value /= 1.5f;
-
-        // Apply some distortion if glitch shader
-        if (config_.shaderType == ShaderType::DigitalGlitch)
-        {
-            if (std::fmod(t + timeOffset * 0.1f, 0.2f) < 0.05f)
-                value *= 0.5f;
-        }
 
         waveformData_[i] = value;
     }

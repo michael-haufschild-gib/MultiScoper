@@ -328,6 +328,34 @@ void BloomEffect::apply(
     juce::ignoreUnused(deltaTime);
     if (!compiled_ || !source || !destination) return;
 
+    // Early-out if bloom is effectively disabled (intensity ~0)
+    // Use combine shader with zero intensity to blit source to destination
+    if (settings_.intensity < 0.001f)
+    {
+        auto& ext = context.extensions;
+        
+        destination->bind();
+        combineShader_->use();
+        
+        // Bind source as both original and bloom (bloom will be zero-weighted)
+        source->bindTexture(0);
+        ext.glUniform1i(combineOriginalLoc_, 0);
+        
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, source->colorTexture);  // Use source as dummy bloom
+        ext.glUniform1i(combineBloomLoc_, 1);
+        ext.glUniform1f(combineIntensityLoc_, 0.0f);  // Zero bloom contribution
+        
+        pool.renderFullscreenQuad();
+        
+        // Cleanup
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0);
+        destination->unbind();
+        return;
+    }
+
     // 1. Check for resize
     int w = source->width;
     int h = source->height;

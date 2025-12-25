@@ -159,11 +159,6 @@ void TimingSidebarSection::setupComponents()
     addAndMakeVisible(*bpmValueLabel_);
     OSCIL_REGISTER_CHILD_TEST_ID(*bpmValueLabel_, "sidebar_timing_bpmDisplay");
 
-    // Sync status
-    syncStatusLabel_ = std::make_unique<juce::Label>();
-    syncStatusLabel_->setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(*syncStatusLabel_);
-
     // Apply initial theme
     themeChanged(themeService_.getCurrentTheme());
 }
@@ -299,8 +294,6 @@ void TimingSidebarSection::resized()
         y += ROW_HEIGHT + SPACING_LARGE;
     }
 
-    // Sync status - hide the label since we draw a styled pill badge in paint()
-    syncStatusLabel_->setVisible(false);
 }
 
 void TimingSidebarSection::themeChanged(const ColorTheme& newTheme)
@@ -314,10 +307,6 @@ void TimingSidebarSection::themeChanged(const ColorTheme& newTheme)
     // MELODIC mode labels
     bpmLabel_->setColour(juce::Label::textColourId, newTheme.textPrimary);
     bpmValueLabel_->setColour(juce::Label::textColourId, newTheme.textHighlight);
-
-    // Sync status
-    syncStatusLabel_->setColour(juce::Label::textColourId,
-                                 presenter_->isSynced() ? newTheme.statusActive : newTheme.textSecondary);
 
     repaint();
 }
@@ -356,11 +345,6 @@ void TimingSidebarSection::updateUi()
     bpmField_->setNumericValue(presenter_->getInternalBPM(), false);
     
     bpmValueLabel_->setText(juce::String(presenter_->getHostBPM(), 1), juce::dontSendNotification);
-    
-    const auto& theme = themeService_.getCurrentTheme();
-    syncStatusLabel_->setColour(juce::Label::textColourId,
-                                 presenter_->isSynced() ? theme.statusActive : theme.textSecondary);
-    syncStatusLabel_->setText(presenter_->isSynced() ? "Synced" : "Not synced", juce::dontSendNotification);
     
     // Repaint to show/hide SYNCED pill badge which relies on paint() checking isSynced()
     repaint();

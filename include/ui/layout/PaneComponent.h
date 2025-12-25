@@ -169,6 +169,11 @@ public:
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
     void setSampleRate(int sampleRate);
+    
+    /**
+     * Set GPU rendering mode (updates opaque state for proper JUCE/GL interaction)
+     */
+    void setGpuRenderingEnabled(bool enabled);
 
     /**
      * Highlight a specific oscillator (or clear highlight if oscillatorId is invalid)

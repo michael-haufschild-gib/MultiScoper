@@ -122,8 +122,10 @@ private:
     void timerCallback() override;
     void updateAnimations();
 
-    // Path caching
+    // Path caching with bounds tracking to avoid regeneration during animations
     juce::Path cachedButtonPath_;
+    juce::Rectangle<float> cachedPathBounds_;
+    SegmentPosition cachedSegmentPosition_ = SegmentPosition::None;
     void updatePathCache(const juce::Rectangle<float>& bounds);
 
     // Rendering helpers

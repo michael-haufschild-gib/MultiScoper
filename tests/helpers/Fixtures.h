@@ -209,8 +209,9 @@ protected:
 
     /**
      * Serialize and deserialize state (round-trip test helper)
+     * Note: toXmlString() is non-const because it syncs internal state
      */
-    std::unique_ptr<OscilState> roundTripState(const OscilState& original)
+    std::unique_ptr<OscilState> roundTripState(OscilState& original)
     {
         juce::String xml = original.toXmlString();
         auto restored = std::make_unique<OscilState>();

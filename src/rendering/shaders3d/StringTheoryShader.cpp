@@ -56,7 +56,9 @@ StringTheoryShader::~StringTheoryShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[StringTheoryShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        std::cerr << "[StringTheoryShader] LEAK: Destructor called without release(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse;
     }
 #endif
 }

@@ -58,7 +58,6 @@ void ShaderSettingsTab::populateShaderDropdown()
     shaderTypeDropdown_->addItem("Gradient Fill", "gradientfill");
     shaderTypeDropdown_->addItem("Dual Outline", "dualoutline");
     shaderTypeDropdown_->addItem("Plasma Sine", "plasmasine");
-    shaderTypeDropdown_->addItem("Digital Glitch", "digitalglitch");
     // 3D Shaders
     shaderTypeDropdown_->addItem("Volumetric Ribbon", "volumetricribbon");
     shaderTypeDropdown_->addItem("Wireframe Mesh", "wireframemesh");

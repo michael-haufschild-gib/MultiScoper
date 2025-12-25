@@ -200,6 +200,13 @@ void OscilButton::paint(juce::Graphics& g)
 
 void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 {
+    // Skip regeneration if nothing changed
+    if (bounds == cachedPathBounds_ && segmentPosition_ == cachedSegmentPosition_)
+        return;
+
+    cachedPathBounds_ = bounds;
+    cachedSegmentPosition_ = segmentPosition_;
+
     cachedButtonPath_.clear();
     float cornerRadius = variant_ == ButtonVariant::Icon
         ? ComponentLayout::RADIUS_MD
@@ -584,12 +591,6 @@ void OscilButton::mouseDown(const juce::MouseEvent& e)
         currentBrightness_ = ComponentLayout::PRESS_BRIGHTNESS_OFFSET;
         repaint();
     }
-
-    // Handle right-click
-    if (e.mods.isPopupMenu() && onRightClick)
-    {
-        onRightClick();
-    }
 }
 
 void OscilButton::mouseUp(const juce::MouseEvent& e)
@@ -613,9 +614,17 @@ void OscilButton::mouseUp(const juce::MouseEvent& e)
     }
 
     // Trigger click if released inside button
-    if (wasPressed && contains(e.getPosition()) && !e.mods.isPopupMenu())
+    if (wasPressed && contains(e.getPosition()))
     {
-        triggerClick();
+        if (e.mods.isPopupMenu())
+        {
+            if (onRightClick)
+                onRightClick();
+        }
+        else
+        {
+            triggerClick();
+        }
     }
 }
 

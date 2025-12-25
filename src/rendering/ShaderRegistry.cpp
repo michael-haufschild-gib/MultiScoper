@@ -8,7 +8,6 @@
 #include "rendering/shaders/GradientFillShader.h"
 #include "rendering/shaders/DualOutlineShader.h"
 #include "rendering/shaders/PlasmaSineShader.h"
-#include "rendering/shaders/DigitalGlitchShader.h"
 #include "rendering/shaders3d/VolumetricRibbonShader.h"
 #include "rendering/shaders3d/WireframeMeshShader.h"
 #include "rendering/shaders3d/VectorFlowShader.h"
@@ -39,7 +38,6 @@ void ShaderRegistry::registerBuiltInShaders()
     registerShaderType<GradientFillShader>();
     registerShaderType<DualOutlineShader>();
     registerShaderType<PlasmaSineShader>();
-    registerShaderType<DigitalGlitchShader>();
 
     // Register 3D shaders
     registerShaderType<VolumetricRibbonShader>();

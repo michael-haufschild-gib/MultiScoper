@@ -78,6 +78,14 @@ public:
 
     std::function<void()> onClose;
 
+    /**
+     * Callback for when browse presets button is clicked.
+     * The callback receives the current preset ID and a function to call when a preset is selected.
+     */
+    using BrowsePresetsCallback = std::function<void(const juce::String& currentPresetId,
+                                                      std::function<void(const juce::String&)> onPresetSelected)>;
+    void setOnBrowsePresets(BrowsePresetsCallback callback) { browsePresetsCallback_ = std::move(callback); }
+
     // Preferred dimensions
     static constexpr int DIALOG_WIDTH = 360;
     static constexpr int DIALOG_HEIGHT = 550;
@@ -149,6 +157,7 @@ private:
     // Visual preset section
     std::unique_ptr<juce::Label> visualPresetLabel_;
     std::unique_ptr<OscilDropdown> visualPresetDropdown_;
+    std::unique_ptr<OscilButton> browsePresetsButton_;  // Gear button to open preset browser
     juce::String visualPresetId_ = "default";
 
     // Line Width slider
@@ -165,6 +174,7 @@ private:
     std::unique_ptr<OscilButton> footerCloseButton_;
 
     juce::ListenerList<Listener> listeners_;
+    BrowsePresetsCallback browsePresetsCallback_;
 
     // Get default colors from centralized palette
     std::vector<juce::Colour> getDefaultColors() const { return WaveformColorPalette::getAllColors(); }

@@ -691,31 +691,31 @@ void TimingEngine::dispatchPendingUpdates()
 
     // Check flags and notify listeners on the current thread (expected Message Thread)
     // Use atomic reads for thread-safe access to values that may be written from audio thread
-    if (pendingTimingModeChange_.exchange(false))
+    if (pendingTimingModeChange_.exchange(false, std::memory_order_acquire))
     {
         auto mode = static_cast<TimingMode>(atomicTimingMode_.load(std::memory_order_relaxed));
         listeners_.call([mode](Listener& l) { l.timingModeChanged(mode); });
     }
 
-    if (pendingIntervalChange_.exchange(false))
+    if (pendingIntervalChange_.exchange(false, std::memory_order_acquire))
     {
         float interval = atomicActualIntervalMs_.load(std::memory_order_relaxed);
         listeners_.call([interval](Listener& l) { l.intervalChanged(interval); });
     }
 
-    if (pendingHostBPMChange_.exchange(false))
+    if (pendingHostBPMChange_.exchange(false, std::memory_order_acquire))
     {
         float bpm = atomicHostBPM_.load(std::memory_order_relaxed);
         listeners_.call([bpm](Listener& l) { l.hostBPMChanged(bpm); });
     }
 
-    if (pendingHostSyncChange_.exchange(false))
+    if (pendingHostSyncChange_.exchange(false, std::memory_order_acquire))
     {
         bool enabled = atomicHostSyncEnabled_.load(std::memory_order_relaxed);
         listeners_.call([enabled](Listener& l) { l.hostSyncStateChanged(enabled); });
     }
 
-    if (pendingTimeSignatureChange_.exchange(false))
+    if (pendingTimeSignatureChange_.exchange(false, std::memory_order_acquire))
     {
         int numerator = atomicTimeSigNumerator_.load(std::memory_order_relaxed);
         int denominator = atomicTimeSigDenominator_.load(std::memory_order_relaxed);
@@ -725,22 +725,22 @@ void TimingEngine::dispatchPendingUpdates()
 
 void TimingEngine::notifyTimingModeChanged()
 {
-    pendingTimingModeChange_.store(true);
+    pendingTimingModeChange_.store(true, std::memory_order_release);
 }
 
 void TimingEngine::notifyIntervalChanged()
 {
-    pendingIntervalChange_.store(true);
+    pendingIntervalChange_.store(true, std::memory_order_release);
 }
 
 void TimingEngine::notifyHostBPMChanged()
 {
-    pendingHostBPMChange_.store(true);
+    pendingHostBPMChange_.store(true, std::memory_order_release);
 }
 
 void TimingEngine::notifyHostSyncStateChanged()
 {
-    pendingHostSyncChange_.store(true);
+    pendingHostSyncChange_.store(true, std::memory_order_release);
 }
 
 } // namespace oscil

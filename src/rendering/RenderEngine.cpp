@@ -9,6 +9,8 @@
 
 #include <cmath>
 #include <iostream>
+#include <fstream>
+#include <chrono>
 
 namespace oscil
 {
@@ -24,14 +26,16 @@ RenderEngine::RenderEngine()
 
 RenderEngine::~RenderEngine()
 {
-    // If we're being destroyed while still initialized, GPU resources will leak.
-    // shutdown() must be called while the OpenGL context is still active.
-    // We can't call OpenGL functions here (no guaranteed context), so we just warn.
-    if (initialized_)
+    // Attempt cleanup if context is still valid
+    if (initialized_ && context_ && context_->isActive())
     {
-        std::cerr << "[RenderEngine] LEAK: Destructor called without shutdown(). "
-                  << "GPU resources (shaders, FBOs, textures) will leak."
-                  << std::endl;
+        DBG("[RenderEngine] WARNING: shutdown() not called, attempting cleanup");
+        shutdown();
+    }
+    else if (initialized_)
+    {
+        // Context gone, can't clean up - log for debugging
+        std::cerr << "[RenderEngine] LEAK: GPU resources leaked (context unavailable)" << std::endl;
     }
 }
 
@@ -155,10 +159,6 @@ void RenderEngine::beginFrame(float deltaTime)
 
     RE_LOG_THROTTLED(60, "beginFrame: dt=" << deltaTime);
 
-    // Update particle system
-    if (auto* ps = waveformPass_->getParticleSystem())
-        ps->update(deltaTime);
-
     // Update camera animation
     if (auto* cam = waveformPass_->getCamera())
         cam->update(deltaTime);
@@ -166,6 +166,9 @@ void RenderEngine::beginFrame(float deltaTime)
     // Clear scene FBO
     if (auto* sceneFBO = effectPipeline_->getSceneFBO())
     {
+        // #region agent log
+        { static int frameCount = 0; if (++frameCount % 60 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H11,H13\",\"location\":\"RenderEngine.cpp:beginFrame\",\"message\":\"Clearing scene FBO\",\"data\":{\"bgRed\":" << backgroundColour_.getFloatRed() << ",\"bgGreen\":" << backgroundColour_.getFloatGreen() << ",\"bgBlue\":" << backgroundColour_.getFloatBlue() << ",\"bgAlpha\":" << backgroundColour_.getFloatAlpha() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
+        // #endregion
         sceneFBO->bind();
         sceneFBO->clear(backgroundColour_, false);
         sceneFBO->unbind();
@@ -214,7 +217,7 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
             }
         }
 
-        // Step 2: Render Waveform & Particles -> Scratch FBO
+        // Step 2: Render Waveform Geometry -> Scratch FBO
         auto* pool = effectPipeline_->getFramebufferPool();
         auto* waveformFBO = pool ? pool->getWaveformFBO() : nullptr;
         if (waveformFBO)
@@ -224,12 +227,6 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
 
             // Render Geometry (uses viewport set by prepareRender)
             waveformPass_->renderWaveformGeometry(data, config, stats_.getTime());
-
-            // Render Particles
-            if (config.particles.enabled)
-            {
-                waveformPass_->renderWaveformParticles(data, state, stats_.getDeltaTime());
-            }
 
             waveformFBO->unbind();
 
@@ -279,23 +276,27 @@ void RenderEngine::executeComposite(Framebuffer* source, const VisualConfigurati
     if (!sceneFBO)
         return;
 
+    // #region agent log
+    { static int logCounter = 0; if (++logCounter % 120 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H11,H13\",\"location\":\"RenderEngine.cpp:executeComposite\",\"message\":\"Compositing waveform\",\"data\":{\"compositeOpacity\":" << config.compositeOpacity << ",\"blendMode\":" << static_cast<int>(config.compositeBlendMode) << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
+    // #endregion
+
     sceneFBO->bind();
 
     // Restore full viewport for compositing to the scene FBO
-    // This is necessary because renderWaveformGeometry/Particles sets the viewport to the pane size
+    // This is necessary because renderWaveformGeometry sets the viewport to the pane size
     if (currentWidth_ > 0 && currentHeight_ > 0)
     {
         glViewport(0, 0, currentWidth_, currentHeight_);
     }
 
     glEnable(GL_BLEND);
-    
+
     auto* shader = bootstrapper_->getCompositeShader();
     if (shader)
     {
         shader->use();
         context_->extensions.glUniform1i(bootstrapper_->getCompositeTextureLoc(), 0);
-        
+
         // Set blend mode based on config
         switch (config.compositeBlendMode)
         {
@@ -380,25 +381,6 @@ void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& 
             {
                 it->second.disableTrails(*context_);
             }
-
-            // Update turbulence
-            if (auto* ps = waveformPass_->getParticleSystem())
-            {
-                if (config.particles.enabled)
-                {
-                    if (config.particles.useTurbulence)
-                    {
-                        ps->setTurbulence(
-                            config.particles.turbulenceStrength,
-                            config.particles.turbulenceScale,
-                            config.particles.turbulenceSpeed);
-                    }
-                    else
-                    {
-                        ps->setTurbulence(0.0f, 0.5f, 0.5f);
-                    }
-                }
-            }
         }
     }
 }
@@ -422,6 +404,10 @@ void RenderEngine::syncWaveforms(const std::unordered_set<int>& activeIds)
         return;
 
     juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+
+    // #region agent log
+    { static int logCounter = 0; if (++logCounter % 60 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H9\",\"location\":\"RenderEngine.cpp:syncWaveforms\",\"message\":\"Syncing waveforms\",\"data\":{\"activeCount\":" << activeIds.size() << ",\"stateCount\":" << waveformStates_.size() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
+    // #endregion
 
     std::vector<int> toRemove;
     for (const auto& pair : waveformStates_)
@@ -484,6 +470,10 @@ void RenderEngine::blitToScreen()
     auto width = static_cast<GLsizei>(static_cast<float>(targetComponent->getWidth()) * desktopScale);
     auto height = static_cast<GLsizei>(static_cast<float>(targetComponent->getHeight()) * desktopScale);
     glViewport(0, 0, width, height);
+
+    // #region agent log
+    { static int frameCount = 0; if (++frameCount % 120 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H15\",\"location\":\"RenderEngine.cpp:blitToScreen\",\"message\":\"Blitting scene to screen\",\"data\":{\"blendMode\":\"GL_ONE,GL_ONE_MINUS_SRC_ALPHA\"},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
+    // #endregion
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);

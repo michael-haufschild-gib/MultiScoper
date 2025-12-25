@@ -44,9 +44,7 @@ static MaterialProperties convertMaterialSettings(const MaterialSettings& settin
 }
 
 WaveformPass::WaveformPass()
-    : particleSystem_(std::make_unique<ParticleSystem>())
-    , particleRenderer_(std::make_unique<ParticleRenderer>(*particleSystem_))
-    , gridRenderer_(std::make_unique<GridRenderer>())
+    : gridRenderer_(std::make_unique<GridRenderer>())
     , registry_(std::make_unique<ShaderRegistry>())
 {
 }
@@ -94,9 +92,6 @@ bool WaveformPass::initialize(juce::OpenGLContext& context, int width, int heigh
     if (gridRenderer_)
         gridRenderer_->initialize(context);
 
-    if (!particleSystem_->initialize(context))
-        RE_LOG("WaveformPass: Failed to initialize particle system");
-
     textureManager_ = std::make_unique<TextureManager>();
     textureManager_->initialize(context);
 
@@ -126,8 +121,6 @@ void WaveformPass::shutdown(juce::OpenGLContext& context)
         pair.second->release(context);
     compiledShaders_.clear();
 
-    if (particleSystem_)
-        particleSystem_->release(context);
     if (textureManager_)
         textureManager_->release(context);
     if (envMapManager_)
@@ -273,14 +266,8 @@ Framebuffer* WaveformPass::renderWaveform(const WaveformRenderData& data, Wavefo
     // Step 3: Render waveform geometry
     renderWaveformGeometry(data, config, accumulatedTime);
 
-    // Restore full viewport for particles and post-processing
+    // Restore full viewport for post-processing
     glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
-
-    // Step 4: Render particles
-    if (config.particles.enabled)
-    {
-        renderWaveformParticles(data, state, deltaTime);
-    }
 
     waveformFBO->unbind();
 
@@ -398,35 +385,6 @@ void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const 
 
     const std::vector<float>* channel2Ptr = data.isStereo ? &data.channel2 : nullptr;
     shader->render(*context_, data.channel1, channel2Ptr, params);
-}
-
-void WaveformPass::renderWaveformParticles(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime)
-{
-    // Ensure viewport is set correctly for particles
-    if (context_)
-    {
-        float scale = static_cast<float>(context_->getRenderingScale());
-        auto* target = context_->getTargetComponent();
-        if (!target) return;
-        float logicalHeight = static_cast<float>(target->getHeight());
-
-        float lx = data.bounds.getX();
-        float ly = data.bounds.getY();
-        float lw = data.bounds.getWidth();
-        float lh = data.bounds.getHeight();
-
-        int vx = static_cast<int>(lx * scale);
-        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
-        int vw = static_cast<int>(lw * scale);
-        int vh = static_cast<int>(lh * scale);
-
-        glViewport(vx, vy, vw, vh);
-    }
-
-    if (particleRenderer_)
-    {
-        particleRenderer_->render(*context_, data, state, deltaTime, nullptr);
-    }
 }
 
 void WaveformPass::renderGrid(const WaveformRenderData& data)

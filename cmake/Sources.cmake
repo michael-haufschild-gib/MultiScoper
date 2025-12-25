@@ -17,10 +17,16 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Oscillator.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Pane.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/VisualPreset.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/VisualPresetManager.cpp
+
+    # Core Presets
+    ${CMAKE_SOURCE_DIR}/src/core/presets/SystemPresetFactory.cpp
 
     # Core DSP
     ${CMAKE_SOURCE_DIR}/src/core/dsp/SignalProcessor.cpp
     ${CMAKE_SOURCE_DIR}/src/core/dsp/TimingEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/dsp/TriggerDetector.cpp
 
     # Core Analysis
     ${CMAKE_SOURCE_DIR}/src/core/analysis/AnalysisEngine.cpp
@@ -31,7 +37,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/Framebuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/FramebufferPool.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/GridRenderer.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/ParticleRenderer.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/RenderEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/ShaderRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformGLRenderer.cpp
@@ -51,7 +56,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/GradientFillShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/DualOutlineShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/PlasmaSineShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders/DigitalGlitchShader.cpp
 
     # Rendering (shaders 3D)
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/WaveformShader3D.cpp
@@ -80,14 +84,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ChromaticAberrationEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ScanlineEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/DistortionEffect.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/effects/GlitchEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/RadialBlurEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/TiltShiftEffect.cpp
-
-    # Rendering (particles)
-    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticlePool.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleEmitter.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleSystem.cpp
 
     # UI (components)
     ${CMAKE_SOURCE_DIR}/src/ui/components/ThemedComponent.cpp
@@ -110,6 +108,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/UIAudioFeedback.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/PaneSelectorComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/InlineEditLabel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/PresetCard.cpp
 
     # UI (panels)
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListComponent.cpp
@@ -128,6 +127,9 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/dialogs/AddOscillatorDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/dialogs/OscillatorColorDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/dialogs/SelectPaneDialog.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/dialogs/PresetBrowserDialog.cpp
+
+    # UI (managers)
     ${CMAKE_SOURCE_DIR}/src/ui/managers/DialogManager.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/managers/DisplaySettingsManager.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/managers/PerformanceMetricsController.cpp

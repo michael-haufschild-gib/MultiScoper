@@ -40,7 +40,7 @@ std::vector<SystemPresetFactory::PresetDefinition> SystemPresetFactory::getSyste
         {
             "string_theory",
             "String Theory",
-            "3D visualization with rotating strings and particles",
+            "3D visualization with rotating strings",
             [](VisualConfiguration& c) {
                 c.shaderType = ShaderType::StringTheory;
                 c.settings3D.enabled = true;
@@ -50,20 +50,12 @@ std::vector<SystemPresetFactory::PresetDefinition> SystemPresetFactory::getSyste
                 c.settings3D.rotateSpeed = 5.0f;
                 c.bloom.enabled = true;
                 c.bloom.intensity = 1.5f;
-                c.particles.enabled = true;
-                c.particles.textureId = "sparkle";
-                c.particles.emissionMode = ParticleEmissionMode::AlongWaveform;
-                c.particles.emissionRate = 50.0f;
-                c.particles.particleSize = 2.0f;
-                c.particles.particleLife = 1.0f;
-                c.particles.velocityScale = 0.5f;
-                c.particles.blendMode = ParticleBlendMode::Additive;
             }
         },
         {
             "crystalline",
             "Crystalline",
-            "Crystal material shader with high refraction and sparkle particles",
+            "Crystal material shader with high refraction",
             [](VisualConfiguration& c) {
                 c.shaderType = ShaderType::Crystalline;
                 c.settings3D.enabled = true;
@@ -78,13 +70,6 @@ std::vector<SystemPresetFactory::PresetDefinition> SystemPresetFactory::getSyste
                 c.material.environmentMapId = "sunset";
                 c.bloom.enabled = true;
                 c.bloom.intensity = 1.8f;
-                c.particles.enabled = true;
-                c.particles.textureId = "sparkle";
-                c.particles.emissionMode = ParticleEmissionMode::AtPeaks;
-                c.particles.emissionRate = 20.0f;
-                c.particles.particleSize = 5.0f;
-                c.particles.particleLife = 0.5f;
-                c.particles.blendMode = ParticleBlendMode::Additive;
             }
         },
         {

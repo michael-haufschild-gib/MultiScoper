@@ -118,6 +118,7 @@ private:
 
     // Route handlers - Screenshot & Visual Verification
     void handleScreenshot(const httplib::Request& req, httplib::Response& res);
+    void handleScreenshotRaw(const httplib::Request& req, httplib::Response& res);
     void handleScreenshotCompare(const httplib::Request& req, httplib::Response& res);
     void handleBaselineSave(const httplib::Request& req, httplib::Response& res);
 
@@ -137,6 +138,9 @@ private:
     void handleStateUpdateOscillator(const httplib::Request& req, httplib::Response& res);
     void handleStateReorderOscillators(const httplib::Request& req, httplib::Response& res);
     void handleStatePanes(const httplib::Request& req, httplib::Response& res);
+    void handleStateAddPane(const httplib::Request& req, httplib::Response& res);
+    void handleStatePaneSwap(const httplib::Request& req, httplib::Response& res);
+    void handleStateGpuToggle(const httplib::Request& req, httplib::Response& res);
     void handleStateSources(const httplib::Request& req, httplib::Response& res);
 
     // Health check
@@ -149,6 +153,19 @@ private:
     void handleMetricsStats(const httplib::Request& req, httplib::Response& res);
     void handleMetricsReset(const httplib::Request& req, httplib::Response& res);
     void handleMetricsRecordFrame(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Debug Logs
+    void handleDebugLogs(const httplib::Request& req, httplib::Response& res);
+    void handleDebugLogsClear(const httplib::Request& req, httplib::Response& res);
+    void handleDebugLogsTail(const httplib::Request& req, httplib::Response& res);
+    void handleDebugLogsWait(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Display Settings
+    void handleStateLayout(const httplib::Request& req, httplib::Response& res);
+    void handleStateTheme(const httplib::Request& req, httplib::Response& res);
+    void handleStateGrid(const httplib::Request& req, httplib::Response& res);
+    void handleStateDisplay(const httplib::Request& req, httplib::Response& res);
+    void handleStateTiming(const httplib::Request& req, httplib::Response& res);
 
     TestDAW& daw_;
     TestUIController uiController_;

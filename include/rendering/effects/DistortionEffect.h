@@ -7,6 +7,7 @@
 
 #include "PostProcessEffect.h"
 #include "rendering/VisualConfiguration.h"
+
 #include <memory>
 
 #if OSCIL_ENABLE_OPENGL
@@ -36,10 +37,10 @@ public:
         Framebuffer* source,
         Framebuffer* destination,
         FramebufferPool& pool,
-        float deltaTime
-    ) override;
+        float deltaTime) override;
 
     void configure(const VisualConfiguration& config) override { settings_ = config.distortion; }
+
     void setSettings(const DistortionSettings& settings) { settings_ = settings; }
     [[nodiscard]] const DistortionSettings& getSettings() const { return settings_; }
 

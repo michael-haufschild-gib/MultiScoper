@@ -77,7 +77,6 @@ void PresetEditorDialog::setupTabs()
     tabs_ = std::make_unique<OscilTabs>(themeService_, OscilTabs::Orientation::Horizontal, "preset_editor_tabs");
     tabs_->addTab("Shader", "shader");
     tabs_->addTab("Effects", "effects");
-    tabs_->addTab("Particles", "particles");
     tabs_->addTab("3D/Camera", "3d");
     tabs_->addTab("Materials", "materials");
     tabs_->onTabChanged = [this](int index) {
@@ -96,7 +95,6 @@ void PresetEditorDialog::setupTabs()
     // Setup all tab contents
     setupShaderTab();
     setupEffectsTab();
-    setupParticlesTab();
     setup3DTab();
     setupMaterialsTab();
 }
@@ -121,17 +119,6 @@ void PresetEditorDialog::setupEffectsTab()
         updatePreview();
     };
     tabContent_->addAndMakeVisible(*effectsTab_);
-}
-
-void PresetEditorDialog::setupParticlesTab()
-{
-    particlesTab_ = std::make_unique<ParticlesTab>(themeService_);
-    particlesTab_->onConfigChanged = [this]() {
-        markChanged();
-        updateConfiguration();
-        updatePreview();
-    };
-    tabContent_->addAndMakeVisible(*particlesTab_);
 }
 
 void PresetEditorDialog::setup3DTab()
@@ -262,9 +249,8 @@ void PresetEditorDialog::layoutTabContent()
     // Hide all tab containers first
     if (shaderTab_) shaderTab_->setVisible(currentTabIndex_ == 0);
     if (effectsTab_) effectsTab_->setVisible(currentTabIndex_ == 1);
-    if (particlesTab_) particlesTab_->setVisible(currentTabIndex_ == 2);
-    if (settings3DTab_) settings3DTab_->setVisible(currentTabIndex_ == 3);
-    if (materialsTab_) materialsTab_->setVisible(currentTabIndex_ == 4);
+    if (settings3DTab_) settings3DTab_->setVisible(currentTabIndex_ == 2);
+    if (materialsTab_) materialsTab_->setVisible(currentTabIndex_ == 3);
 
     if (currentTabIndex_ == 0)
     {
@@ -286,15 +272,6 @@ void PresetEditorDialog::layoutTabContent()
     }
     else if (currentTabIndex_ == 2)
     {
-        // Particles tab
-        if (particlesTab_)
-        {
-            particlesTab_->setBounds(0, 0, contentWidth, particlesTab_->getPreferredHeight());
-            tabContent_->setSize(contentWidth, particlesTab_->getPreferredHeight() + 20);
-        }
-    }
-    else if (currentTabIndex_ == 3)
-    {
         // 3D tab
         if (settings3DTab_)
         {
@@ -302,7 +279,7 @@ void PresetEditorDialog::layoutTabContent()
             tabContent_->setSize(contentWidth, settings3DTab_->getPreferredHeight() + 20);
         }
     }
-    else if (currentTabIndex_ == 4)
+    else if (currentTabIndex_ == 3)
     {
         // Materials tab
         if (materialsTab_)
@@ -386,9 +363,6 @@ void PresetEditorDialog::updateFromConfiguration()
     if (effectsTab_)
         effectsTab_->setConfiguration(workingConfig_);
 
-    if (particlesTab_)
-        particlesTab_->setConfiguration(workingConfig_);
-
     if (settings3DTab_)
         settings3DTab_->setConfiguration(workingConfig_);
 
@@ -406,9 +380,6 @@ void PresetEditorDialog::updateConfiguration()
 
     if (effectsTab_)
         effectsTab_->updateConfiguration(workingConfig_);
-
-    if (particlesTab_)
-        particlesTab_->updateConfiguration(workingConfig_);
 
     if (settings3DTab_)
         settings3DTab_->updateConfiguration(workingConfig_);

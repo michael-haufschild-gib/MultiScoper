@@ -24,7 +24,6 @@ TEST_F(ShaderTypeTest, Is3DShader)
     EXPECT_FALSE(is3DShader(ShaderType::GradientFill));
     EXPECT_FALSE(is3DShader(ShaderType::DualOutline));
     EXPECT_FALSE(is3DShader(ShaderType::PlasmaSine));
-    EXPECT_FALSE(is3DShader(ShaderType::DigitalGlitch));
 
     // 3D shaders
     EXPECT_TRUE(is3DShader(ShaderType::VolumetricRibbon));
@@ -78,7 +77,6 @@ TEST_F(ShaderTypeTest, RoundTripConversion)
         ShaderType::GradientFill,
         ShaderType::DualOutline,
         ShaderType::PlasmaSine,
-        ShaderType::DigitalGlitch,
         ShaderType::VolumetricRibbon,
         ShaderType::WireframeMesh,
         ShaderType::VectorFlow,
@@ -130,32 +128,6 @@ TEST_F(TrailSettingsTest, DefaultValues)
     EXPECT_FALSE(trails.enabled);
     EXPECT_FLOAT_EQ(trails.decay, 0.1f);
     EXPECT_FLOAT_EQ(trails.opacity, 0.8f);
-}
-
-// =============================================================================
-// ParticleSettings Tests
-// =============================================================================
-
-class ParticleSettingsTest : public ::testing::Test
-{
-};
-
-TEST_F(ParticleSettingsTest, DefaultValues)
-{
-    ParticleSettings particles;
-
-    EXPECT_FALSE(particles.enabled);
-    EXPECT_EQ(particles.emissionMode, ParticleEmissionMode::AlongWaveform);
-    EXPECT_FLOAT_EQ(particles.emissionRate, 100.0f);
-    EXPECT_FLOAT_EQ(particles.particleLife, 2.0f);
-    EXPECT_FLOAT_EQ(particles.particleSize, 4.0f);
-    EXPECT_EQ(particles.blendMode, ParticleBlendMode::Additive);
-    EXPECT_FLOAT_EQ(particles.gravity, 0.0f);
-    EXPECT_FLOAT_EQ(particles.drag, 0.1f);
-    EXPECT_FLOAT_EQ(particles.randomness, 0.5f);
-    EXPECT_FLOAT_EQ(particles.velocityScale, 1.0f);
-    EXPECT_TRUE(particles.audioReactive);
-    EXPECT_FLOAT_EQ(particles.audioEmissionBoost, 2.0f);
 }
 
 // =============================================================================

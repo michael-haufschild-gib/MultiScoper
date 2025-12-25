@@ -70,6 +70,16 @@ class ConfigPopupListenerAdapter;
 class TimingEngineListenerAdapter;
 
 /**
+ * Adapter class to bridge SidebarComponent::Listener timing events to TimingEngine
+ */
+class TimingSidebarListenerAdapter;
+
+/**
+ * Adapter class to bridge SidebarComponent::Listener options events to Editor/Processor
+ */
+class OptionsSidebarListenerAdapter;
+
+/**
  * Main plugin editor component.
  * Uses coordinator classes to handle listener callbacks, reducing direct
  * coupling and improving testability.
@@ -124,6 +134,9 @@ public:
 
     // Accessor for test server and adapters
     OscillatorPanelController* getOscillatorPanelController() const { return oscillatorPanelController_.get(); }
+    
+    // Accessor for sidebar (used by TimingEngineListenerAdapter for bidirectional sync)
+    SidebarComponent* getSidebar() const { return sidebar_.get(); }
 
     // Public refresh methods for adapters
     void refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators);
@@ -160,6 +173,8 @@ private:
     // Dialog Manager
     std::unique_ptr<DialogManager> dialogManager_;
     std::unique_ptr<ConfigPopupListenerAdapter> configPopupAdapter_;
+    std::unique_ptr<TimingSidebarListenerAdapter> timingSidebarAdapter_;
+    std::unique_ptr<OptionsSidebarListenerAdapter> optionsSidebarAdapter_;
 
     // Display Settings Manager
     std::unique_ptr<DisplaySettingsManager> displaySettingsManager_;
