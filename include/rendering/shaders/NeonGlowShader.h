@@ -40,6 +40,16 @@ public:
     ) override;
 #endif
 
+    /**
+     * Software fallback: Draws multi-pass neon glow using JUCE Graphics
+     */
+    void renderSoftware(
+        juce::Graphics& g,
+        const std::vector<float>& channel1,
+        const std::vector<float>* channel2,
+        const ShaderRenderParams& params
+    ) override;
+
 private:
 #if OSCIL_ENABLE_OPENGL
     struct GLResources;

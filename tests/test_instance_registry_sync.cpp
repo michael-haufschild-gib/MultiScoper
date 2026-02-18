@@ -57,7 +57,7 @@ TEST_F(InstanceRegistrySyncTest, DeduplicationSameTrack)
 
 // === Listener Tests ===
 
-class TestRegistryListener : public InstanceRegistryListener
+class TestRegistryListener : public IInstanceRegistryListener
 {
 public:
     int addedCount = 0;
@@ -146,7 +146,7 @@ TEST_F(InstanceRegistrySyncTest, RemoveListenerTwice)
 
 // === Self-Removing Listener Tests ===
 
-class SelfRemovingListener : public InstanceRegistryListener
+class SelfRemovingListener : public IInstanceRegistryListener
 {
 public:
     InstanceRegistry& registry_;

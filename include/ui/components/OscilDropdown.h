@@ -6,12 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -39,8 +40,7 @@ struct DropdownItem
 /**
  * Dropdown popup that displays the list of options
  */
-class OscilDropdownPopup : public ThemedComponent,
-                           private juce::Timer
+class OscilDropdownPopup : public ThemedComponent
 {
 public:
     explicit OscilDropdownPopup(IThemeService& themeService);
@@ -60,9 +60,8 @@ public:
     // Component overrides
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void parentHierarchyChanged() override;
     void mouseDown(const juce::MouseEvent& e) override;
-    void mouseMove(const juce::MouseEvent& e) override;
-    void mouseExit(const juce::MouseEvent& e) override;
     bool keyPressed(const juce::KeyPress& key) override;
     void focusLost(FocusChangeType cause) override;
 
@@ -70,7 +69,6 @@ private:
     class ItemList;
     friend class ItemList;
 
-    void timerCallback() override;
     void updateFilteredItems();
     int getItemAtPosition(juce::Point<int> pos) const;
     void ensureItemVisible(int index);
@@ -88,7 +86,10 @@ private:
     std::unique_ptr<ItemList> listComponent_;
     juce::String searchText_;
 
-    SpringAnimation showSpring_;
+    // Animation state
+    float showProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator showAnimator_;
 
     static constexpr int ITEM_HEIGHT = 32;
     static constexpr int MAX_VISIBLE_ITEMS = 8;
@@ -110,8 +111,7 @@ private:
  * - Full accessibility support
  */
 class OscilDropdown : public ThemedComponent,
-                      public TestIdSupport,
-                      private juce::Timer
+                      public TestIdSupport
 {
 public:
     OscilDropdown(IThemeService& themeService);
@@ -185,7 +185,6 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
     void handleItemClicked(int index);
     void updateDisplayText();
     void paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds);
@@ -202,8 +201,12 @@ private:
     bool hasFocus_ = false;
     bool popupVisible_ = false;
 
-    SpringAnimation hoverSpring_;
-    SpringAnimation chevronSpring_;
+    // Animation state
+    float hoverProgress_ = 0.0f;
+    float chevronProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator hoverAnimator_;
+    ScopedAnimator chevronAnimator_;
 
     std::unique_ptr<OscilDropdownPopup> popup_;
 

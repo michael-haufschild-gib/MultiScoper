@@ -13,8 +13,8 @@ AnalysisEngine::AnalysisEngine()
 {
     // Pre-allocate scratch buffers to avoid allocation in prepare()
     // which may be called from audio thread in some hosts
-    midBuffer_.resize(kDefaultBufferSize);
-    sideBuffer_.resize(kDefaultBufferSize);
+    midBuffer_.resize(DEFAULT_BUFFER_SIZE);
+    sideBuffer_.resize(DEFAULT_BUFFER_SIZE);
     reset();
 }
 
@@ -60,9 +60,9 @@ void AnalysisEngine::prepare(double /*sampleRate*/, int samplesPerBlock)
 {
     // REAL-TIME SAFETY: This method may be called from audio thread in some hosts
     // (Pro Tools, Reaper). We NEVER allocate here - buffers are pre-allocated in
-    // constructor to kDefaultBufferSize (8192) which exceeds all standard DAW block sizes.
+    // constructor to DEFAULT_BUFFER_SIZE (8192) which exceeds all standard DAW block sizes.
     //
-    // If samplesPerBlock > kDefaultBufferSize, process() will safely skip Mid/Side
+    // If samplesPerBlock > DEFAULT_BUFFER_SIZE, process() will safely skip Mid/Side
     // analysis rather than risk audio dropouts from allocation.
     (void) samplesPerBlock;  // Intentionally unused - allocation-free implementation
 }

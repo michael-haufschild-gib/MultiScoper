@@ -323,18 +323,77 @@ void SignalProcessor::decimate(std::span<const float> input,
     }
 }
 
-// AdaptiveDecimator implementation
+//==============================================================================
+// AdaptiveDecimator Implementation
+//==============================================================================
+
+LODTier AdaptiveDecimator::calculateTierWithHysteresis(int width, LODTier currentTier) const
+{
+    // Apply hysteresis to prevent tier flickering at boundaries.
+    // When width is near a threshold, prefer staying in the current tier
+    // unless we've moved clearly past the hysteresis zone.
+    
+    // Helper to check if width is within hysteresis zone of a threshold
+    auto isNearThreshold = [this](int w, int threshold) {
+        return w >= (threshold - HYSTERESIS_PIXELS) && w <= (threshold + HYSTERESIS_PIXELS);
+    };
+    
+    // Determine the strict tier based on thresholds (with >= to include boundary in higher tier)
+    auto getStrictTier = [](int w) {
+        if (w >= 800) return LODTier::Full;
+        if (w >= 400) return LODTier::High;
+        if (w >= 200) return LODTier::Medium;
+        return LODTier::Preview;
+    };
+    
+    LODTier strictTier = getStrictTier(width);
+    
+    // If already at the strict tier, no change needed
+    if (strictTier == currentTier)
+        return currentTier;
+    
+    // Check if we're in a hysteresis zone around any threshold
+    bool inHysteresisZone = isNearThreshold(width, THRESHOLD_FULL_HIGH) ||
+                            isNearThreshold(width, THRESHOLD_HIGH_MEDIUM) ||
+                            isNearThreshold(width, THRESHOLD_MEDIUM_PREVIEW);
+    
+    if (inHysteresisZone)
+    {
+        // In hysteresis zone: only change tier if moving by more than one tier level
+        int currentSamples = getLODSampleCount(currentTier);
+        int strictSamples = getLODSampleCount(strictTier);
+        
+        // If the difference is one tier (512 samples or less), prefer current tier
+        if (std::abs(currentSamples - strictSamples) <= 1024)
+            return currentTier;
+    }
+    
+    return strictTier;
+}
 
 void AdaptiveDecimator::setDisplayWidth(int widthPixels)
 {
-    displayWidth_ = std::max(1, widthPixels);
-    targetSamples_ = displayWidth_ * 2; // 2 samples per pixel for good visual quality
+    int width = std::max(1, widthPixels);
+    displayWidth_.store(width, std::memory_order_relaxed);
+
+    // Calculate new tier with hysteresis to prevent flickering
+    LODTier oldTier = currentTier_.load(std::memory_order_relaxed);
+    LODTier newTier = calculateTierWithHysteresis(width, oldTier);
+
+    // Update tier and target sample count
+    currentTier_.store(newTier, std::memory_order_relaxed);
+    targetSamples_.store(getLODSampleCount(newTier), std::memory_order_relaxed);
 }
 
 void AdaptiveDecimator::process(std::span<const float> input,
                                  std::vector<float>& output) const
 {
-    output.resize(static_cast<size_t>(targetSamples_));
+    int targetSamples = targetSamples_.load(std::memory_order_relaxed);
+    output.resize(static_cast<size_t>(targetSamples));
+
+    if (output.empty())
+        return;
+
     // Wrap output vector in span
     std::span<float> outSpan(output.data(), output.size());
     SignalProcessor::decimate(input, outSpan, true);
@@ -344,8 +403,11 @@ void AdaptiveDecimator::processWithEnvelope(std::span<const float> input,
                                              std::vector<float>& minEnvelope,
                                              std::vector<float>& maxEnvelope) const
 {
-    minEnvelope.resize(static_cast<size_t>(displayWidth_));
-    maxEnvelope.resize(static_cast<size_t>(displayWidth_));
+    // Use target samples for envelope size (consistent with LOD tier)
+    int envelopeSize = targetSamples_.load(std::memory_order_relaxed);
+    
+    minEnvelope.resize(static_cast<size_t>(envelopeSize));
+    maxEnvelope.resize(static_cast<size_t>(envelopeSize));
 
     if (input.empty())
     {
@@ -355,15 +417,15 @@ void AdaptiveDecimator::processWithEnvelope(std::span<const float> input,
     }
 
     size_t inputLength = input.size();
-    float samplesPerPixel = static_cast<float>(inputLength) / static_cast<float>(displayWidth_);
+    float samplesPerOutput = static_cast<float>(inputLength) / static_cast<float>(envelopeSize);
 
-    for (int i = 0; i < displayWidth_; ++i)
+    for (int i = 0; i < envelopeSize; ++i)
     {
-        size_t startIdx = static_cast<size_t>(static_cast<float>(i) * samplesPerPixel);
-        size_t endIdx = static_cast<size_t>(static_cast<float>(i + 1) * samplesPerPixel);
+        size_t startIdx = static_cast<size_t>(static_cast<float>(i) * samplesPerOutput);
+        size_t endIdx = static_cast<size_t>(static_cast<float>(i + 1) * samplesPerOutput);
         endIdx = std::min(endIdx, inputLength);
 
-        if (startIdx >= endIdx) // Should not happen if calculation is correct
+        if (startIdx >= endIdx)
         {
              minEnvelope[static_cast<size_t>(i)] = 0.0f;
              maxEnvelope[static_cast<size_t>(i)] = 0.0f;
@@ -381,6 +443,96 @@ void AdaptiveDecimator::processWithEnvelope(std::span<const float> input,
 
         minEnvelope[static_cast<size_t>(i)] = minVal;
         maxEnvelope[static_cast<size_t>(i)] = maxVal;
+    }
+}
+
+void AdaptiveDecimator::processWithPeaks(std::span<const float> input,
+                                          DecimatedWaveform& output) const
+{
+    output.tier = currentTier_.load(std::memory_order_relaxed);
+    output.resize(static_cast<size_t>(targetSamples_.load(std::memory_order_relaxed)));
+
+    if (input.empty())
+    {
+        std::fill(output.samples.begin(), output.samples.end(), 0.0f);
+        std::fill(output.minEnvelope.begin(), output.minEnvelope.end(), 0.0f);
+        std::fill(output.maxEnvelope.begin(), output.maxEnvelope.end(), 0.0f);
+        return;
+    }
+
+    size_t inputLength = input.size();
+    size_t outputLength = output.size();
+    
+    // Handle case where input is smaller than output (upsampling)
+    if (inputLength <= outputLength)
+    {
+        if (inputLength == 1)
+        {
+            std::fill(output.samples.begin(), output.samples.end(), input[0]);
+            std::fill(output.minEnvelope.begin(), output.minEnvelope.end(), input[0]);
+            std::fill(output.maxEnvelope.begin(), output.maxEnvelope.end(), input[0]);
+            return;
+        }
+
+        // Linear interpolation for upsampling
+        double scale = static_cast<double>(inputLength - 1) / static_cast<double>(outputLength - 1);
+        
+        for (size_t i = 0; i < outputLength; ++i)
+        {
+            double pos = static_cast<double>(i) * scale;
+            size_t idx0 = static_cast<size_t>(pos);
+            size_t idx1 = std::min(idx0 + 1, inputLength - 1);
+            float frac = static_cast<float>(pos - static_cast<double>(idx0));
+            
+            float interpolated = input[idx0] * (1.0f - frac) + input[idx1] * frac;
+            output.samples[i] = interpolated;
+            output.minEnvelope[i] = interpolated;
+            output.maxEnvelope[i] = interpolated;
+        }
+        return;
+    }
+
+    // Downsampling with min/max envelope preservation
+    float samplesPerOutput = static_cast<float>(inputLength) / static_cast<float>(outputLength);
+
+    for (size_t i = 0; i < outputLength; ++i)
+    {
+        size_t startIdx = static_cast<size_t>(static_cast<float>(i) * samplesPerOutput);
+        size_t endIdx = static_cast<size_t>(static_cast<float>(i + 1) * samplesPerOutput);
+        endIdx = std::min(endIdx, inputLength);
+
+        if (startIdx >= endIdx)
+        {
+            output.samples[i] = 0.0f;
+            output.minEnvelope[i] = 0.0f;
+            output.maxEnvelope[i] = 0.0f;
+            continue;
+        }
+
+        float minVal = input[startIdx];
+        float maxVal = input[startIdx];
+        float maxAbsVal = 0.0f;
+        float peakSample = 0.0f;
+
+        for (size_t j = startIdx; j < endIdx; ++j)
+        {
+            float sample = input[j];
+            minVal = std::min(minVal, sample);
+            maxVal = std::max(maxVal, sample);
+            
+            float absVal = std::abs(sample);
+            if (absVal > maxAbsVal)
+            {
+                maxAbsVal = absVal;
+                peakSample = sample;
+            }
+        }
+
+        // Store the peak sample (preserves visual transients)
+        output.samples[i] = peakSample;
+        // Store min/max for accurate envelope rendering
+        output.minEnvelope[i] = minVal;
+        output.maxEnvelope[i] = maxVal;
     }
 }
 

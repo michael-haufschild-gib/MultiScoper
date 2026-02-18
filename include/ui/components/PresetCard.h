@@ -6,9 +6,10 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/TestId.h"
-#include "ui/components/SpringAnimation.h"
+#include "ui/animation/OscilAnimationService.h"
 #include "core/VisualPreset.h"
 
 namespace oscil
@@ -26,8 +27,7 @@ namespace oscil
  * - Double-click to apply
  */
 class PresetCard : public ThemedComponent,
-                   public TestIdSupport,
-                   private juce::Timer
+                   public TestIdSupport
 {
 public:
     /**
@@ -80,7 +80,7 @@ public:
     void mouseMove(const juce::MouseEvent& e) override;
 
 private:
-    void timerCallback() override;
+    void parentHierarchyChanged() override;
     void updateAnimations();
 
     void paintThumbnail(juce::Graphics& g, juce::Rectangle<int> bounds);
@@ -100,8 +100,12 @@ private:
     bool isHovered_ = false;
     int hoveredActionIndex_ = -1;
 
-    SpringAnimation hoverSpring_;
-    SpringAnimation selectSpring_;
+    // Animation
+    ScopedAnimator hoverAnimator_;
+    ScopedAnimator selectAnimator_;
+    float currentHoverValue_ = 0.0f;
+    float currentSelectValue_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
 
     juce::ListenerList<Listener> listeners_;
 

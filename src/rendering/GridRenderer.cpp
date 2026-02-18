@@ -107,14 +107,14 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
     colorShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     if (!colorShader_->addVertexShader(colorVertexShader))
     {
-        DBG("GridRenderer: Failed to compile vertex shader: " << colorShader_->getLastError());
+        juce::Logger::writeToLog("GridRenderer: Failed to compile vertex shader: " + colorShader_->getLastError());
         colorShader_.reset();
         return;
     }
 
     if (!colorShader_->addFragmentShader(colorFragmentShader))
     {
-        DBG("GridRenderer: Failed to compile fragment shader: " << colorShader_->getLastError());
+        juce::Logger::writeToLog("GridRenderer: Failed to compile fragment shader: " + colorShader_->getLastError());
         colorShader_.reset();
         return;
     }
@@ -124,7 +124,7 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
 
     if (!colorShader_->link())
     {
-        DBG("GridRenderer: Failed to link shader program: " << colorShader_->getLastError());
+        juce::Logger::writeToLog("GridRenderer: Failed to link shader program: " + colorShader_->getLastError());
         colorShader_.reset();
         return;
     }
@@ -158,8 +158,7 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
         size_t vertexCount = verts.size() / 2;
         if (vertexCount > gridBufferCapacity_)
         {
-            DBG("GridRenderer: Vertex count (" << vertexCount << ") exceeds buffer capacity ("
-                << gridBufferCapacity_ << "), truncating");
+            juce::Logger::writeToLog("GridRenderer: Vertex count (" + juce::String(vertexCount) + ") exceeds buffer capacity (" + juce::String(gridBufferCapacity_) + "), truncating");
             vertexCount = gridBufferCapacity_;
         }
 

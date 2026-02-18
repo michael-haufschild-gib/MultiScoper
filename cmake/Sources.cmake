@@ -12,8 +12,12 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/InstanceRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/core/SharedCaptureBuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/RawCaptureBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/AudioCapturePool.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CaptureThread.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/GlobalPreferences.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Oscillator.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Pane.cpp
@@ -43,36 +47,25 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformRenderState.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/VisualConfiguration.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/serialization/VisualConfigurationSerialization.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/serialization/Settings3DSerialization.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/Camera3D.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/GpuRenderCoordinator.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/managers/GpuRenderCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/RenderBootstrapper.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/EffectPipeline.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/WaveformPass.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/FrameBudgetGuard.cpp
 
 
     # Rendering (shaders)
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/BasicShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/NeonGlowShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/GradientFillShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders/DualOutlineShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders/PlasmaSineShader.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/shaders/InstancedShader.cpp
 
-    # Rendering (shaders 3D)
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/WaveformShader3D.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/VolumetricRibbonShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/WireframeMeshShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/VectorFlowShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/StringTheoryShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/ElectricFlowerShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/ElectricFiligreeShader.cpp
-
-    # Rendering (materials)
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/MaterialShader.cpp
+    # Rendering (materials - utilities only)
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/EnvironmentMapManager.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/materials/TextureManager.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/GlassRefractionShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/LiquidChromeShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/CrystallineShader.cpp
 
     # Rendering (effects)
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/PostProcessEffect.cpp
@@ -166,6 +159,12 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ColorPickerComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeCoordinator.cpp
 
+    # UI (animation)
+    ${CMAKE_SOURCE_DIR}/src/ui/animation/OscilAnimationService.cpp
+
+    # Tools (profiling)
+    ${CMAKE_SOURCE_DIR}/src/tools/PerformanceProfiler.cpp
+
     # Tools (test server)
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/PluginTestServer.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/LayoutHandler.cpp
@@ -181,5 +180,6 @@ set(OSCIL_SOURCES
 if(APPLE)
     list(APPEND OSCIL_SOURCES
         ${CMAKE_SOURCE_DIR}/src/platform/macos/AnimationSettings.mm
+        ${CMAKE_SOURCE_DIR}/src/rendering/backends/MetalComputeBackend.mm
     )
 endif()

@@ -138,7 +138,7 @@ void TestRunnerHandler::handleRunLayoutTest(const httplib::Request& /*req*/, htt
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result, 200);
 }
 
 void TestRunnerHandler::handleRunDragDropTest(const httplib::Request& /*req*/, httplib::Response& res)
@@ -416,8 +416,9 @@ void TestRunnerHandler::handleRunDragDropTest(const httplib::Request& /*req*/, h
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result, 200);
 }
+
 void TestRunnerHandler::handleRunWaveformTest(const httplib::Request& /*req*/, httplib::Response& res)
 {
     auto result = runOnMessageThread([this]() -> nlohmann::json {
@@ -425,7 +426,7 @@ void TestRunnerHandler::handleRunWaveformTest(const httplib::Request& /*req*/, h
         nlohmann::json tests = nlohmann::json::array();
 
         auto& state = editor_.getProcessor().getState();
-        auto captureBuffer = editor_.getProcessor().getCaptureBuffer();
+        auto captureBuffer = editor_.getProcessor().getDecimatingCaptureBuffer();
 
         // Ensure we have at least one oscillator
         if (state.getOscillators().empty())
@@ -599,7 +600,7 @@ void TestRunnerHandler::handleRunWaveformTest(const httplib::Request& /*req*/, h
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result, 200);
 }
 
 void TestRunnerHandler::handleRunSettingsTest(const httplib::Request& /*req*/, httplib::Response& res)
@@ -777,7 +778,7 @@ void TestRunnerHandler::handleRunSettingsTest(const httplib::Request& /*req*/, h
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result, 200);
 }
 
 void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, httplib::Response& res)
@@ -904,8 +905,7 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
-
+    sendJson(res, result, 200);
 }
 
 } // namespace oscil

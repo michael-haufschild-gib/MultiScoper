@@ -6,15 +6,15 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include <vector>
 #include <memory>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
-
+#include "ui/animation/OscilAnimationService.h"
 #include "ui/theme/IThemeService.h"
 
 namespace oscil
@@ -33,8 +33,7 @@ class OscilRadioGroup;
  * - Designed to work within OscilRadioGroup
  */
 class OscilRadioButton : public ThemedComponent,
-                         public TestIdSupport,
-                         private juce::Timer
+                         public TestIdSupport
 {
 public:
     explicit OscilRadioButton(IThemeService& themeService);
@@ -66,6 +65,7 @@ public:
     // Component overrides
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void parentHierarchyChanged() override;
 
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
@@ -82,9 +82,6 @@ public:
 
 private:
     friend class OscilRadioGroup;
-
-    void timerCallback() override;
-    void updateAnimations();
 
     // Rendering
     void paintCircle(juce::Graphics& g, const juce::Rectangle<float>& bounds);
@@ -103,11 +100,12 @@ private:
     // Parent group (if any)
     OscilRadioGroup* parentGroup_ = nullptr;
 
-    // Animation
-    SpringAnimation selectionSpring_;
-    SpringAnimation hoverSpring_;
-
-    // Theme
+    // Animation state
+    float selectionProgress_ = 0.0f;
+    float hoverProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator selectionAnimator_;
+    ScopedAnimator hoverAnimator_;
 
     static constexpr int RADIO_SIZE = 18;
     static constexpr int DOT_SIZE = 8;

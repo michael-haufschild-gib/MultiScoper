@@ -10,16 +10,10 @@ namespace oscil
 
 OscilTextField::OscilTextField(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , focusSpring_(SpringPresets::stiff())
     , cachedErrorFont_(juce::FontOptions{})
 {
     setupComponents();
-
-    focusSpring_.position = 0.0f;
-    focusSpring_.target = 0.0f;
 }
-
-
 
 OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant)
     : OscilTextField(themeService)
@@ -27,15 +21,11 @@ OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant var
     setVariant(variant);
 }
 
-
-
 OscilTextField::OscilTextField(IThemeService& themeService, const juce::String& testId)
     : OscilTextField(themeService)
 {
     setTestId(testId);
 }
-
-
 
 OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant, const juce::String& testId)
     : OscilTextField(themeService)
@@ -44,17 +34,12 @@ OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant var
     setTestId(testId);
 }
 
-
-
 void OscilTextField::registerTestId()
 {
     OSCIL_REGISTER_TEST_ID(testId_);
 }
 
-OscilTextField::~OscilTextField()
-{
-    stopTimer();
-}
+OscilTextField::~OscilTextField() = default;
 
 void OscilTextField::setupComponents()
 {
@@ -267,6 +252,10 @@ int OscilTextField::getPreferredHeight() const
 
 void OscilTextField::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     auto bounds = getLocalBounds().toFloat();
 
     paintBackground(g, bounds);
@@ -286,11 +275,11 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
     g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
 
-    // Border
+    // Border - use focusProgress_ for smooth transition
     auto borderColour = hasError() ? getTheme().statusError
-                                   : (focusAmount_ > 0.01f ? getTheme().controlActive
+                                   : (focusProgress_ > 0.01f ? getTheme().controlActive
                                                            : getTheme().controlBorder);
-    borderColour = borderColour.interpolatedWith(getTheme().controlActive, focusAmount_);
+    borderColour = borderColour.interpolatedWith(getTheme().controlActive, focusProgress_);
 
     g.setColour(borderColour.withAlpha(opacity));
     g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
@@ -324,7 +313,7 @@ void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<fl
 
 void OscilTextField::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA * focusAmount_));
+    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA * focusProgress_));
     g.drawRoundedRectangle(
         bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
         ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET,
@@ -334,6 +323,14 @@ void OscilTextField::paintFocusRing(juce::Graphics& g, const juce::Rectangle<flo
 
 void OscilTextField::resized()
 {
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilTextField::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
+
     auto bounds = getLocalBounds();
 
     // Calculate editor bounds based on variant
@@ -389,41 +386,61 @@ void OscilTextField::mouseWheelMove(const juce::MouseEvent& e,
 
 void OscilTextField::focusGained(FocusChangeType /*cause*/)
 {
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        focusSpring_.setTarget(1.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = focusProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilTextField>(this);
+        focusAnimator_.set(animService_->createValueAnimation(
+            AnimationPresets::HOVER_DURATION_MS,
+            [safeThis, startValue](float progress) {
+                if (safeThis)
+                {
+                    safeThis->focusProgress_ = startValue + (1.0f - startValue) * progress;
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseOut()));
+        focusAnimator_.start();
     }
     else
     {
-        focusAmount_ = 1.0f;
+        focusProgress_ = 1.0f;
         repaint();
     }
 }
 
 void OscilTextField::focusLost(FocusChangeType /*cause*/)
 {
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        focusSpring_.setTarget(0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = focusProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilTextField>(this);
+        focusAnimator_.set(animService_->createValueAnimation(
+            AnimationPresets::HOVER_DURATION_MS,
+            [safeThis, startValue](float progress) {
+                if (safeThis)
+                {
+                    safeThis->focusProgress_ = startValue * (1.0f - progress);
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseOut()));
+        focusAnimator_.start();
     }
     else
     {
-        focusAmount_ = 0.0f;
+        focusProgress_ = 0.0f;
         repaint();
     }
 }
 
-void OscilTextField::timerCallback()
+void OscilTextField::parentHierarchyChanged()
 {
-    focusSpring_.update(AnimationTiming::FRAME_DURATION_60FPS);
-    focusAmount_ = focusSpring_.position;
-
-    if (focusSpring_.isSettled())
-        stopTimer();
-
-    repaint();
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void OscilTextField::updateEditorStyle()
@@ -517,13 +534,78 @@ void OscilTextField::notifyValueChanged()
 }
 
 
+//==============================================================================
+// Accessibility Handler for OscilTextField
+//==============================================================================
+class OscilTextFieldAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit OscilTextFieldAccessibilityHandler(OscilTextField& field)
+        : juce::AccessibilityHandler(field,
+            field.getVariant() == TextFieldVariant::Number ? juce::AccessibilityRole::slider
+                                                            : juce::AccessibilityRole::editableText)
+        , field_(field)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        if (field_.getPlaceholder().isNotEmpty())
+            return field_.getPlaceholder();
+
+        switch (field_.getVariant())
+        {
+            case TextFieldVariant::Text:
+                return "Text Field";
+            case TextFieldVariant::Number:
+                return "Number Field";
+            case TextFieldVariant::Search:
+                return "Search Field";
+        }
+        return "Text Field";
+    }
+
+    juce::String getDescription() const override
+    {
+        juce::String desc;
+        if (field_.getVariant() == TextFieldVariant::Number)
+        {
+            desc = "Value: " + juce::String(field_.getNumericValue());
+        }
+        else
+        {
+            juce::String text = field_.getText();
+            desc = text.isEmpty() ? "Empty" : text;
+        }
+
+        if (!field_.isEnabled())
+            desc += " (disabled)";
+
+        if (field_.hasError())
+            desc += " - Error: " + field_.getErrorMessage();
+
+        return desc;
+    }
+
+    juce::String getHelp() const override
+    {
+        if (field_.getVariant() == TextFieldVariant::Number)
+            return "Use mouse wheel to adjust value. Double-click to reset to default.";
+        else if (field_.getVariant() == TextFieldVariant::Search)
+            return "Type to search.";
+        else
+            return "Type to enter text.";
+    }
+
+private:
+    OscilTextField& field_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilTextFieldAccessibilityHandler)
+};
+
 std::unique_ptr<juce::AccessibilityHandler> OscilTextField::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        variant_ == TextFieldVariant::Number ? juce::AccessibilityRole::slider
-                                              : juce::AccessibilityRole::editableText
-    );
+    return std::make_unique<OscilTextFieldAccessibilityHandler>(*this);
 }
 
 } // namespace oscil

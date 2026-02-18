@@ -73,7 +73,8 @@ void EffectPipeline::shutdown(juce::OpenGLContext& context)
 void EffectPipeline::resize(juce::OpenGLContext& context, int width, int height)
 {
     fbPool_->resize(context, width, height);
-    sceneFBO_->resize(context, width, height);
+    if (!sceneFBO_->resize(context, width, height))
+        DBG("EffectPipeline: sceneFBO resize failed");
 }
 
 void EffectPipeline::initializeEffects()
@@ -232,6 +233,10 @@ void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* 
     if (!source || !destination || !source->isValid() || !destination->isValid() || !compositeShader)
         return;
 
+    // Save GL state for restoration
+    GLboolean depthTestWasEnabled = juce::gl::glIsEnabled(juce::gl::GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = juce::gl::glIsEnabled(juce::gl::GL_BLEND);
+
     // Use composite shader for simple copy (linear pass-through)
     destination->bind();
     juce::gl::glDisable(juce::gl::GL_DEPTH_TEST);
@@ -243,7 +248,15 @@ void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* 
 
     fbPool_->renderFullscreenQuad();
 
+    // Cleanup
+    juce::gl::glBindTexture(juce::gl::GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state
+    if (depthTestWasEnabled)
+        juce::gl::glEnable(juce::gl::GL_DEPTH_TEST);
+    if (blendWasEnabled)
+        juce::gl::glEnable(juce::gl::GL_BLEND);
 }
 
 void EffectPipeline::applyGlobalEffects(Framebuffer* /*sceneFBO*/, juce::OpenGLContext& /*context*/)

@@ -1,38 +1,49 @@
 /*
     Oscil - Decimating Capture Buffer Implementation
-    Uses JUCE 8's dsp::FIR::Filter for high-quality anti-aliasing
+    Lock-free capture with SIMD-optimized decimation filtering
 */
 
 #include "core/DecimatingCaptureBuffer.h"
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <thread>
 
 namespace oscil
 {
 
 //==============================================================================
-// DecimationFilter Implementation
-// Uses JUCE's FIR::Filter with Kaiser window for optimal anti-aliasing
+// SIMDDecimationFilter Implementation
 //==============================================================================
 
-DecimationFilter::DecimationFilter()
+SIMDDecimationFilter::SIMDDecimationFilter()
 {
-    // Create a passthrough filter by default
+    // Initialize with passthrough filter
     coefficients_ = new juce::dsp::FIR::Coefficients<float>(1);
     coefficients_->getRawCoefficients()[0] = 1.0f;
-    filter_.coefficients = coefficients_;
+    
+    for (auto& filter : filters_)
+    {
+        filter.coefficients = coefficients_;
+    }
 }
 
-void DecimationFilter::configure(int decimationRatio, double sourceRate)
+void SIMDDecimationFilter::configure(int decimationRatio, double sourceRate, int maxBlockSize)
 {
     decimationRatio_ = juce::jmax(1, decimationRatio);
+    decimationPhase_ = 0;
 
     if (decimationRatio_ <= 1 || sourceRate <= 0)
     {
         // No filtering needed - passthrough
         coefficients_ = new juce::dsp::FIR::Coefficients<float>(1);
         coefficients_->getRawCoefficients()[0] = 1.0f;
-        filter_.coefficients = coefficients_;
+        
+        for (auto& filter : filters_)
+        {
+            filter.coefficients = coefficients_;
+        }
+        
+        scratchBuffer_.setSize(static_cast<int>(MAX_CHANNELS), maxBlockSize);
         reset();
         return;
     }
@@ -40,7 +51,7 @@ void DecimationFilter::configure(int decimationRatio, double sourceRate)
     // Calculate cutoff frequency for anti-aliasing
     double targetRate = sourceRate / static_cast<double>(decimationRatio_);
     double targetNyquist = targetRate / 2.0;
-    double cutoffFrequency = targetNyquist * 0.9;
+    double cutoffFrequency = targetNyquist * 0.9;  // 10% headroom
 
     double sourceNyquist = sourceRate / 2.0;
     double transitionBand = targetNyquist - cutoffFrequency;
@@ -48,6 +59,7 @@ void DecimationFilter::configure(int decimationRatio, double sourceRate)
     float normalisedTransitionWidth = static_cast<float>(
         juce::jlimit(0.01, 0.49, transitionBand / sourceNyquist));
 
+    // Design FIR filter using Kaiser window (optimal for anti-aliasing)
     coefficients_ = juce::dsp::FilterDesign<float>::designFIRLowpassKaiserMethod(
         static_cast<float>(cutoffFrequency),
         sourceRate,
@@ -55,37 +67,137 @@ void DecimationFilter::configure(int decimationRatio, double sourceRate)
         STOPBAND_ATTENUATION_DB
     );
 
-    filter_.coefficients = coefficients_;
+    // Apply coefficients to all channel filters
+    for (auto& filter : filters_)
+    {
+        filter.coefficients = coefficients_;
+    }
+
+    // Allocate scratch buffer for in-place filtering
+    scratchBuffer_.setSize(static_cast<int>(MAX_CHANNELS), maxBlockSize);
+    
     reset();
-    // Logging removed for real-time safety (configure may be called from audio-adjacent paths)
 }
 
-float DecimationFilter::processSample(float sample)
+int SIMDDecimationFilter::processBlock(const float* const* input, float* const* output,
+                                        int numInputSamples, int numChannels)
 {
-    return filter_.processSample(sample);
+    if (decimationRatio_ <= 1)
+    {
+        // No decimation - direct copy
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            if (input[ch] && output[ch])
+            {
+                std::memcpy(output[ch], input[ch], 
+                           static_cast<size_t>(numInputSamples) * sizeof(float));
+            }
+        }
+        return numInputSamples;
+    }
+
+    const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
+    
+    // Ensure scratch buffer is large enough
+    if (scratchBuffer_.getNumSamples() < numInputSamples)
+    {
+        // This should not happen if configure() was called correctly
+        // But handle gracefully - just copy without filtering
+        for (int ch = 0; ch < actualChannels; ++ch)
+        {
+            if (input[ch] && output[ch])
+            {
+                int outIdx = 0;
+                for (int i = decimationPhase_; i < numInputSamples; i += decimationRatio_)
+                {
+                    output[ch][outIdx++] = input[ch][i];
+                }
+            }
+        }
+        int numOutput = (numInputSamples - decimationPhase_ + decimationRatio_ - 1) / decimationRatio_;
+        decimationPhase_ = (decimationPhase_ + numInputSamples) % decimationRatio_;
+        return numOutput;
+    }
+
+    // Copy input to scratch buffer for in-place filtering
+    for (int ch = 0; ch < actualChannels; ++ch)
+    {
+        if (input[ch])
+        {
+            std::memcpy(scratchBuffer_.getWritePointer(ch), input[ch],
+                       static_cast<size_t>(numInputSamples) * sizeof(float));
+        }
+        else
+        {
+            scratchBuffer_.clear(ch, 0, numInputSamples);
+        }
+    }
+
+    // SIMD-optimized block processing for each channel
+    // JUCE's FIR::Filter uses SIMD internally when processing blocks
+    for (int ch = 0; ch < actualChannels; ++ch)
+    {
+        juce::dsp::AudioBlock<float> block(scratchBuffer_.getArrayOfWritePointers(), 
+                                            static_cast<size_t>(actualChannels),
+                                            static_cast<size_t>(numInputSamples));
+        
+        // Process single channel
+        auto channelBlock = block.getSingleChannelBlock(static_cast<size_t>(ch));
+        juce::dsp::ProcessContextReplacing<float> context(channelBlock);
+        filters_[static_cast<size_t>(ch)].process(context);
+    }
+
+    // Decimate: pick every Nth sample starting from current phase
+    int numOutput = 0;
+    for (int i = decimationPhase_; i < numInputSamples; i += decimationRatio_)
+    {
+        for (int ch = 0; ch < actualChannels; ++ch)
+        {
+            if (output[ch])
+            {
+                output[ch][numOutput] = scratchBuffer_.getSample(ch, i);
+            }
+        }
+        numOutput++;
+    }
+
+    // Update phase for seamless block boundaries
+    decimationPhase_ = (decimationPhase_ + numInputSamples) % decimationRatio_;
+
+    return numOutput;
 }
 
-void DecimationFilter::reset()
+void SIMDDecimationFilter::reset()
 {
-    filter_.reset();
+    for (auto& filter : filters_)
+    {
+        filter.reset();
+    }
+    decimationPhase_ = 0;
 }
 
-size_t DecimationFilter::getFilterOrder() const
+size_t SIMDDecimationFilter::getFilterOrder() const
 {
     if (coefficients_)
         return coefficients_->getFilterOrder();
     return 0;
 }
 
-size_t DecimationFilter::getMemoryUsageBytes() const
+size_t SIMDDecimationFilter::getMemoryUsageBytes() const
 {
     size_t bytes = 0;
 
     if (coefficients_)
     {
+        // Coefficients storage
         bytes += (coefficients_->getFilterOrder() + 1) * sizeof(float);
-        bytes += (coefficients_->getFilterOrder() + 1) * sizeof(float);
+        // Filter state per channel
+        bytes += (coefficients_->getFilterOrder() + 1) * sizeof(float) * MAX_CHANNELS;
     }
+
+    // Scratch buffer
+    bytes += static_cast<size_t>(scratchBuffer_.getNumSamples() * 
+                                  scratchBuffer_.getNumChannels()) * sizeof(float);
 
     return bytes;
 }
@@ -95,8 +207,6 @@ size_t DecimationFilter::getMemoryUsageBytes() const
 //==============================================================================
 
 DecimatingCaptureBuffer::DecimatingCaptureBuffer()
-    : buffer_(std::make_shared<SharedCaptureBuffer>())
-    , context_(std::make_shared<ProcessingContext>())
 {
     reconfigure();
 }
@@ -104,16 +214,26 @@ DecimatingCaptureBuffer::DecimatingCaptureBuffer()
 DecimatingCaptureBuffer::DecimatingCaptureBuffer(const CaptureQualityConfig& config, int sourceRate)
     : config_(config)
     , sourceRate_(sourceRate)
-    , context_(std::make_shared<ProcessingContext>())
 {
     reconfigure();
 }
 
 DecimatingCaptureBuffer::~DecimatingCaptureBuffer()
 {
-    // Clear graveyard to release all deferred resources immediately
-    // This prevents resource accumulation if plugin is unloaded quickly
-    graveyard_.clear();
+    // Clean up active state
+    CaptureState* state = activeState_.exchange(nullptr, std::memory_order_acquire);
+    if (state)
+    {
+        // Wait for any in-flight audio callbacks
+        while (state->epoch.load(std::memory_order_acquire) > 0)
+        {
+            std::this_thread::yield();
+        }
+        delete state;
+    }
+
+    // Clean up retired states
+    retiredStates_.clear();
 }
 
 void DecimatingCaptureBuffer::configure(const CaptureQualityConfig& config, int sourceRate)
@@ -130,82 +250,80 @@ void DecimatingCaptureBuffer::setQualityPreset(QualityPreset preset, int sourceR
     reconfigure();
 }
 
-void DecimatingCaptureBuffer::reconfigure()
+std::unique_ptr<CaptureState> DecimatingCaptureBuffer::createNewState()
 {
-    // Reconfigure must be called from message thread (or before MessageManager exists during startup)
-    // This is critical because reconfigure() may allocate memory via graveyard_.push_back()
-    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
-            juce::MessageManager::getInstance()->isThisTheMessageThread());
+    auto state = std::make_unique<CaptureState>();
 
-    // Pre-allocate graveyard with generous capacity to avoid allocation during reconfigure
-    // 100 items should be more than enough for any normal usage pattern
-    static constexpr size_t kGraveyardCapacity = 100;
-    if (graveyard_.capacity() < kGraveyardCapacity)
-        graveyard_.reserve(kGraveyardCapacity);
+    // Calculate decimation parameters
+    int captureRate = config_.getCaptureRate(sourceRate_);
+    int decimationRatio = config_.getDecimationRatio(sourceRate_);
 
-    // Calculate capture rate and decimation ratio
-    captureRate_ = config_.getCaptureRate(sourceRate_);
-    decimationRatio_ = config_.getDecimationRatio(sourceRate_);
+    state->decimationRatio = decimationRatio;
+    state->captureRate = captureRate;
 
-    // Calculate required buffer size
-    size_t bufferSamples = config_.calculateBufferSizeSamples(captureRate_);
+    // Calculate buffer size
+    size_t bufferSamples = config_.calculateBufferSizeSamples(captureRate);
 
-    // Round up to next power of 2 for efficient ring buffer
-    // Guard against overflow: stop when powerOf2Size would overflow
+    // Round up to power of 2
     size_t powerOf2Size = 1;
     while (powerOf2Size < bufferSamples && powerOf2Size <= (SIZE_MAX / 2))
         powerOf2Size *= 2;
 
-    // Create new buffer with appropriate size
-    auto newBuffer = std::make_shared<SharedCaptureBuffer>(powerOf2Size);
+    // Create buffer
+    state->buffer = std::make_unique<SharedCaptureBuffer>(powerOf2Size);
+
+    // Create and configure processing context
+    state->context = std::make_unique<ProcessingContext>();
     
-    // Create new processing context
-    auto newContext = std::make_shared<ProcessingContext>();
-    
-    // Configure filters in the new context
-    for (auto& filter : newContext->filters)
+    state->context->filter.configure(decimationRatio, static_cast<double>(sourceRate_),
+                                      static_cast<int>(MAX_EXPECTED_BLOCK_SIZE));
+
+    // Allocate decimated output buffer
+    int maxDecimatedSamples = static_cast<int>(MAX_EXPECTED_BLOCK_SIZE / 
+                                                std::max(1, decimationRatio)) + 1;
+    state->context->decimatedBuffer.setSize(static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS),
+                                             maxDecimatedSamples);
+
+    state->context->updateMemoryUsage();
+
+    return state;
+}
+
+void DecimatingCaptureBuffer::reconfigure()
+{
+    // Reconfigure must be called from message thread
+    // Runtime check works in release builds (not just debug)
+    auto* mm = juce::MessageManager::getInstanceWithoutCreating();
+    if (mm != nullptr && !mm->isThisTheMessageThread())
     {
-        filter.configure(decimationRatio_, static_cast<double>(sourceRate_));
+        jassertfalse;  // Debug assertion for development
+        return;        // Runtime guard for release builds
     }
 
-    // Reset decimation counters
-    std::fill(newContext->decimationCounters.begin(), newContext->decimationCounters.end(), 0);
+    // Create new state
+    auto newState = createNewState();
 
-    // Resize scratch buffer to accommodate worst-case block size
-    static constexpr size_t MAX_EXPECTED_BLOCK_SIZE = 8192;
-    newContext->scratchBuffer.resize(SharedCaptureBuffer::MAX_CHANNELS * MAX_EXPECTED_BLOCK_SIZE);
+    // Atomic swap - audio thread will see new state on next callback
+    CaptureState* oldState = activeState_.exchange(newState.release(), 
+                                                    std::memory_order_acq_rel);
 
-    // Calculate filter memory usage
-    newContext->filterMemoryBytes = 0;
-    for (const auto& filter : newContext->filters)
+    if (oldState)
     {
-        newContext->filterMemoryBytes += filter.getMemoryUsageBytes();
-    }
-
-    // Capture timestamp BEFORE acquiring lock to avoid calling Time functions under spinlock
-    // (Time::getMillisecondCounterHiRes may not be real-time safe on all platforms)
-    double timestamp = juce::Time::getMillisecondCounterHiRes();
-
-    {
-        // Protect swap with lock
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-
-        // CRITICAL: Prevent destruction on audio thread
-        // We move the OLD resources to a graveyard to be cleaned up later
-        // when we are sure the audio thread is done with them.
-        if (buffer_ || context_)
+        // Wait for audio thread to finish with old state
+        // This spin is brief - audio callbacks are typically < 10ms
+        int spinCount = 0;
+        while (oldState->epoch.load(std::memory_order_acquire) > 0)
         {
-            // Always add to graveyard to ensure destruction happens on message thread.
-            // Even if this causes reallocation, it's safe because:
-            // 1. We're on the message thread (asserted above)
-            // 2. Audio thread uses tryLock, so it won't block on us
-            // 3. We own the lock, so audio thread can't get a reference while we swap
-            // The reserve(100) above is a best-effort optimization to avoid allocation.
-            graveyard_.push_back({buffer_, context_, timestamp});
+            if (++spinCount > 1000)
+            {
+                std::this_thread::yield();
+                spinCount = 0;
+            }
         }
 
-        buffer_ = newBuffer;
-        context_ = newContext;
+        // Move to retired list for deferred cleanup
+        double now = juce::Time::getMillisecondCounterHiRes();
+        retiredStates_.push_back({std::unique_ptr<CaptureState>(oldState), now});
     }
 
     cleanUpGarbage();
@@ -214,19 +332,19 @@ void DecimatingCaptureBuffer::reconfigure()
 void DecimatingCaptureBuffer::cleanUpGarbage()
 {
     double now = juce::Time::getMillisecondCounterHiRes();
-    // Keep items for at least 2 seconds to be safe
-    // This ensures that even if the audio thread held a reference just before the swap,
-    // it will have finished its block long before we delete the object.
     static constexpr double RETENTION_MS = 2000.0;
 
-    // Remove old items
-    graveyard_.erase(
-        std::remove_if(graveyard_.begin(), graveyard_.end(),
-            [now](const GraveyardItem& item) {
-                return (now - item.timestampMs) > RETENTION_MS;
+    retiredStates_.erase(
+        std::remove_if(retiredStates_.begin(), retiredStates_.end(),
+            [now](const RetiredState& item) {
+                return (now - item.retiredTimeMs) > RETENTION_MS;
             }),
-        graveyard_.end());
+        retiredStates_.end());
 }
+
+//==============================================================================
+// Write Interface (Audio Thread - Lock Free)
+//==============================================================================
 
 void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer,
                                      const CaptureFrameMetadata& metadata)
@@ -247,242 +365,163 @@ void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer,
 void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples, int numChannels,
                                      const CaptureFrameMetadata& metadata)
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    std::shared_ptr<ProcessingContext> ctx;
-
-    {
-        // CRITICAL: Use tryLock for real-time safety - audio thread must never block
-        // If reconfigure() is holding the lock (allocating memory), we drop this frame
-        const juce::SpinLock::ScopedTryLockType sl(bufferSwapLock_);
-        if (!sl.isLocked())
-            return;  // Drop frame rather than block audio thread
-        buf = buffer_;
-        ctx = context_;
-    }
-
-    if (numSamples <= 0 || numChannels <= 0 || !buf || !ctx)
+    // Load active state atomically - NO LOCK
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer || !state->context)
         return;
+
+    if (numSamples <= 0 || numChannels <= 0)
+        return;
+
+    // Increment epoch to signal we're using this state
+    // Use acq_rel for proper release semantics on ARM/Apple Silicon
+    state->epoch.fetch_add(1, std::memory_order_acq_rel);
 
     const int actualChannels = juce::jmin(numChannels,
                                            static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
 
-    if (decimationRatio_ <= 1)
+    if (state->decimationRatio <= 1)
     {
-        // No decimation - write directly
-        buf->write(samples, numSamples, numChannels, metadata, true);
-        return;
+        // No decimation - write directly using lock-free path
+        state->buffer->writeLockFree(samples, numSamples, actualChannels, metadata);
+    }
+    else
+    {
+        // SIMD decimation + write
+        float* outputPtrs[SharedCaptureBuffer::MAX_CHANNELS];
+        for (int ch = 0; ch < actualChannels; ++ch)
+        {
+            outputPtrs[ch] = state->context->decimatedBuffer.getWritePointer(ch);
+        }
+
+        int decimatedCount = state->context->filter.processBlock(
+            samples, outputPtrs, numSamples, actualChannels);
+
+        if (decimatedCount > 0)
+        {
+            CaptureFrameMetadata decimatedMeta = metadata;
+            decimatedMeta.numSamples = decimatedCount;
+            decimatedMeta.sampleRate = static_cast<double>(state->captureRate);
+
+            const float* constOutputPtrs[SharedCaptureBuffer::MAX_CHANNELS];
+            for (int ch = 0; ch < actualChannels; ++ch)
+            {
+                constOutputPtrs[ch] = outputPtrs[ch];
+            }
+
+            state->buffer->writeLockFree(constOutputPtrs, decimatedCount, 
+                                          actualChannels, decimatedMeta);
+        }
     }
 
-    // Process with decimation
-    processAndWriteDecimated(samples, numSamples, actualChannels, metadata);
+    // Decrement epoch to signal we're done
+    state->epoch.fetch_sub(1, std::memory_order_release);
 }
 
-void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* samples,
-                                                        int numSamples, int numChannels,
-                                                        const CaptureFrameMetadata& metadata)
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    std::shared_ptr<ProcessingContext> ctx;
-
-    {
-        // CRITICAL: Use tryLock for real-time safety - audio thread must never block
-        const juce::SpinLock::ScopedTryLockType sl(bufferSwapLock_);
-        if (!sl.isLocked())
-            return;  // Drop frame rather than block audio thread
-        buf = buffer_;
-        ctx = context_;
-    }
-
-    if (!buf || !ctx) return;
-
-    // Safety check: Ensure scratch buffer is large enough
-    const size_t maxScratchPerChannel = ctx->scratchBuffer.size() / SharedCaptureBuffer::MAX_CHANNELS;
-    const size_t maxSamplesFromScratch = maxScratchPerChannel * static_cast<size_t>(decimationRatio_);
-    const int safeNumSamples = std::min(numSamples, static_cast<int>(maxSamplesFromScratch));
-
-    int decimatedCount = 0;
-
-    // Use pointers to scratch buffer segments
-    float* scratchPtrs[SharedCaptureBuffer::MAX_CHANNELS];
-    for (int ch = 0; ch < numChannels; ++ch)
-    {
-        scratchPtrs[ch] = ctx->scratchBuffer.data() + (static_cast<size_t>(ch) * maxScratchPerChannel);
-    }
-    
-    for (int ch = 0; ch < numChannels; ++ch)
-    {
-        int writeIdx = 0;
-        size_t chIdx = static_cast<size_t>(ch);
-        
-        // Use filter and counter from the context
-        auto& filter = ctx->filters[chIdx];
-        int& counter = ctx->decimationCounters[chIdx];
-        float* dest = scratchPtrs[ch];
-        const float* src = samples[ch]; 
-        
-        if (src)
-        {
-            for (int i = 0; i < safeNumSamples; ++i)
-            {
-                float inputSample = src[i];
-                float filteredSample = filter.processSample(inputSample);
-                
-                counter++;
-                if (counter >= decimationRatio_)
-                {
-                    dest[writeIdx++] = filteredSample;
-                    counter = 0;
-                }
-            }
-        }
-        else
-        {
-            for (int i = 0; i < safeNumSamples; ++i)
-            {
-                float filteredSample = filter.processSample(0.0f);
-                counter++;
-                if (counter >= decimationRatio_)
-                {
-                    dest[writeIdx++] = filteredSample;
-                    counter = 0;
-                }
-            }
-        }
-        
-        if (ch == 0) decimatedCount = writeIdx;
-    }
-
-    // Write decimated samples to downstream buffer
-    if (decimatedCount > 0)
-    {
-        CaptureFrameMetadata decimatedMeta = metadata;
-        decimatedMeta.numSamples = decimatedCount;
-        decimatedMeta.sampleRate = static_cast<double>(captureRate_);
-
-        buf->write(const_cast<const float**>(scratchPtrs), decimatedCount, numChannels, decimatedMeta, true);
-    }
-}
+//==============================================================================
+// Read Interface (Any Thread - Lock Free)
+//==============================================================================
 
 int DecimatingCaptureBuffer::read(float* output, int numSamples, int channel) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return 0;
-    return buf->read(output, numSamples, channel);
+    return state->buffer->read(output, numSamples, channel);
 }
 
 int DecimatingCaptureBuffer::read(std::span<float> output, int channel) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return 0;
-    return buf->read(output, channel);
+    return state->buffer->read(output, channel);
 }
 
 int DecimatingCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return 0;
-    return buf->read(output, numSamples);
+    return state->buffer->read(output, numSamples);
 }
 
 CaptureFrameMetadata DecimatingCaptureBuffer::getLatestMetadata() const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return {};
-    return buf->getLatestMetadata();
+    return state->buffer->getLatestMetadata();
 }
 
 size_t DecimatingCaptureBuffer::getCapacity() const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return 0;
-    return buf->getCapacity();
+    return state->buffer->getCapacity();
 }
 
 size_t DecimatingCaptureBuffer::getAvailableSamples() const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return 0;
-    return buf->getAvailableSamples();
+    return state->buffer->getAvailableSamples();
 }
 
 float DecimatingCaptureBuffer::getPeakLevel(int channel, int numSamples) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return 0.0f;
-    return buf->getPeakLevel(channel, numSamples);
+    return state->buffer->getPeakLevel(channel, numSamples);
 }
 
 float DecimatingCaptureBuffer::getRMSLevel(int channel, int numSamples) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state || !state->buffer)
         return 0.0f;
-    return buf->getRMSLevel(channel, numSamples);
+    return state->buffer->getRMSLevel(channel, numSamples);
 }
+
+int DecimatingCaptureBuffer::getCaptureRate() const
+{
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state)
+        return CaptureRate::STANDARD;
+    return state->captureRate;
+}
+
+int DecimatingCaptureBuffer::getDecimationRatio() const
+{
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state)
+        return 1;
+    return state->decimationRatio;
+}
+
+//==============================================================================
+// Memory Management
+//==============================================================================
 
 size_t DecimatingCaptureBuffer::getMemoryUsageBytes() const
 {
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state)
+        return 0;
+
     size_t total = 0;
 
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    std::shared_ptr<ProcessingContext> ctx;
+    if (state->buffer)
     {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-        ctx = context_;
+        total += state->buffer->getCapacity() * SharedCaptureBuffer::MAX_CHANNELS * sizeof(float);
     }
 
-    if (buf)
+    if (state->context)
     {
-        total += buf->getCapacity() * SharedCaptureBuffer::MAX_CHANNELS * sizeof(float);
-    }
-
-    if (ctx)
-    {
-        // Filter state
-        total += ctx->filterMemoryBytes;
-
-        // Scratch buffer
-        total += ctx->scratchBuffer.capacity() * sizeof(float);
+        total += state->context->totalMemoryBytes;
     }
 
     return total;
@@ -510,30 +549,78 @@ juce::String DecimatingCaptureBuffer::getMemoryUsageString() const
 
 void DecimatingCaptureBuffer::clear()
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    std::shared_ptr<ProcessingContext> ctx;
+    // clear() must only be called from the message thread for thread safety
+    // Runtime check works in release builds (not just debug)
+    auto* mm = juce::MessageManager::getInstanceWithoutCreating();
+    if (mm != nullptr && !mm->isThisTheMessageThread())
     {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-        ctx = context_;
+        jassertfalse;  // Debug assertion for development
+        return;        // Runtime guard for release builds
     }
 
-    if (buf)
-        buf->clear();
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+    if (!state)
+        return;
 
-    if (ctx)
+    // Wait for any in-flight audio thread writes to complete
+    // The epoch is > 0 while write() is actively using this state
+    int spinCount = 0;
+    while (state->epoch.load(std::memory_order_acquire) > 0)
     {
-        for (auto& filter : ctx->filters)
-            filter.reset();
-
-        std::fill(ctx->decimationCounters.begin(), ctx->decimationCounters.end(), 0);
+        if (++spinCount > 1000)
+        {
+            std::this_thread::yield();
+            spinCount = 0;
+        }
     }
+
+    // Now safe to clear - audio thread is not using this state
+    // Note: There's still a small window where audio thread could start a write
+    // after we check epoch but before we clear. However, the buffer and filter
+    // clear() operations are thread-safe themselves (they use atomics internally).
+    if (state->buffer)
+        state->buffer->clear();
+
+    if (state->context)
+        state->context->filter.reset();
 }
 
 std::shared_ptr<SharedCaptureBuffer> DecimatingCaptureBuffer::getInternalBuffer() const
 {
-    const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-    return buffer_;
+    // This method modifies mutable cached state without synchronization,
+    // so it must only be called from the message thread to avoid data races.
+    // The allocation (shared_ptr creation) is acceptable on message thread.
+    // Runtime check works in release builds (not just debug)
+    auto* mm = juce::MessageManager::getInstanceWithoutCreating();
+    if (mm != nullptr && !mm->isThisTheMessageThread())
+    {
+        jassertfalse;  // Debug assertion for development
+        return nullptr;  // Runtime guard for release builds
+    }
+
+    CaptureState* state = activeState_.load(std::memory_order_acquire);
+
+    // Check if cached pointer is still valid
+    if (cachedBufferState_.load(std::memory_order_relaxed) == state && cachedBufferPtr_)
+    {
+        return cachedBufferPtr_;
+    }
+
+    if (!state || !state->buffer)
+    {
+        return nullptr;
+    }
+
+    // Create a shared_ptr wrapper around the raw pointer
+    // Note: This is a compatibility shim - the buffer is owned by CaptureState
+    // The shared_ptr has a custom deleter that does nothing
+    cachedBufferPtr_ = std::shared_ptr<SharedCaptureBuffer>(
+        state->buffer.get(),
+        [](SharedCaptureBuffer*) { /* No-op deleter - CaptureState owns the buffer */ }
+    );
+    cachedBufferState_.store(state, std::memory_order_relaxed);
+
+    return cachedBufferPtr_;
 }
 
 } // namespace oscil

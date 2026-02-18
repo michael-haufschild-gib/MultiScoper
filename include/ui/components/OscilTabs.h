@@ -6,12 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -39,8 +40,7 @@ struct TabItem
  * - Full accessibility support
  */
 class OscilTabs : public ThemedComponent,
-                  public TestIdSupport,
-                  private juce::Timer
+                  public TestIdSupport
 {
 public:
     enum class Orientation
@@ -121,8 +121,7 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
-    void updateAnimations();
+    void parentHierarchyChanged() override;
 
     int getTabAtPosition(juce::Point<int> pos) const;
     juce::Rectangle<int> getTabBounds(int index) const;
@@ -144,13 +143,16 @@ private:
 
     bool hasFocus_ = false;
 
-    // Animation for indicator position
-    SpringAnimation indicatorXSpring_;
-    SpringAnimation indicatorWidthSpring_;
-    SpringAnimation hoverSpring_;
-
-    float targetIndicatorX_ = 0;
-    float targetIndicatorWidth_ = 0;
+    // Animation state
+    float currentIndicatorX_ = 0.0f;
+    float currentIndicatorWidth_ = 0.0f;
+    float targetIndicatorX_ = 0.0f;
+    float targetIndicatorWidth_ = 0.0f;
+    float currentHoverValue_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator indicatorXAnimator_;
+    ScopedAnimator indicatorWidthAnimator_;
+    ScopedAnimator hoverAnimator_;
 
     static constexpr int DEFAULT_TAB_HEIGHT = 40;
     static constexpr int INDICATOR_HEIGHT = 3;

@@ -35,7 +35,23 @@ NeonGlowShader::NeonGlowShader()
 {
 }
 
-NeonGlowShader::~NeonGlowShader() = default;
+NeonGlowShader::~NeonGlowShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    // Resources should be released before destruction
+    // but we can't call OpenGL functions here without context
+    // Check for both compiled state AND orphaned VAO/VBO resources
+    if (gl_ && (gl_->compiled || gl_->vao != 0 || gl_->vbo != 0))
+    {
+        // FATAL: Shader destroyed without release(context) being called.
+        // This leaks VBO/VAO/Program on the GPU.
+        std::cerr << "[NeonGlowShader] LEAK: Destructor called without release(). "
+                  << "GPU resources may have leaked. (compiled=" << gl_->compiled
+                  << ", vao=" << gl_->vao << ", vbo=" << gl_->vbo << ")" << std::endl;
+        jassertfalse;  // Assert in debug builds
+    }
+#endif
+}
 
 #if OSCIL_ENABLE_OPENGL
 bool NeonGlowShader::compile(juce::OpenGLContext& context)
@@ -69,9 +85,21 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
 
 void NeonGlowShader::release(juce::OpenGLContext& context)
 {
-    if (!gl_->compiled) return;
-    context.extensions.glDeleteBuffers(1, &gl_->vbo);
-    context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+    // Delete VBO if allocated (check != 0 to avoid double-free)
+    if (gl_->vbo != 0)
+    {
+        context.extensions.glDeleteBuffers(1, &gl_->vbo);
+        gl_->vbo = 0;  // Reset to prevent double-free
+    }
+
+    // Delete VAO if allocated (check != 0 to avoid double-free)
+    if (gl_->vao != 0)
+    {
+        context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+        gl_->vao = 0;  // Reset to prevent double-free
+    }
+
+    // Release shader program
     gl_->program.reset();
     gl_->compiled = false;
 }
@@ -114,16 +142,22 @@ void NeonGlowShader::render(
         -1.0f, 1.0f, 0.0f, 1.0f
     };
 
-    ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
+    // Set uniforms with validation (H25 fix: validate before use)
+    if (gl_->projectionLoc >= 0)
+        ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
 
-    ext.glUniform4f(gl_->baseColorLoc,
-        params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
-    ext.glUniform1f(gl_->opacityLoc, params.opacity);
-    ext.glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
+    if (gl_->baseColorLoc >= 0)
+        ext.glUniform4f(gl_->baseColorLoc,
+            params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
+    if (gl_->opacityLoc >= 0)
+        ext.glUniform1f(gl_->opacityLoc, params.opacity);
+    if (gl_->glowIntensityLoc >= 0)
+        ext.glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
 
     // Wide expansion for the glow tail
     const float kGeometryScale = 12.0f;
-    ext.glUniform1f(gl_->geometryScaleLoc, kGeometryScale);
+    if (gl_->geometryScaleLoc >= 0)
+        ext.glUniform1f(gl_->geometryScaleLoc, kGeometryScale);
 
     // Prepare geometry
     ext.glBindVertexArray(gl_->vao);
@@ -188,5 +222,90 @@ void NeonGlowShader::render(
     glDisable(GL_BLEND);
 }
 #endif
+
+void NeonGlowShader::renderSoftware(
+    juce::Graphics& g,
+    const std::vector<float>& channel1,
+    const std::vector<float>* channel2,
+    const ShaderRenderParams& params)
+{
+    if (channel1.size() < 2)
+        return;
+
+    auto bounds = params.bounds;
+    float width = bounds.getWidth();
+    float height = bounds.getHeight();
+
+    // Calculate layout based on stereo/mono
+    float centerY1, centerY2;
+    float amplitude1, amplitude2;
+
+    if (params.isStereo && channel2 != nullptr)
+    {
+        float halfHeight = height * 0.5f;
+        centerY1 = bounds.getY() + halfHeight * 0.5f;
+        centerY2 = bounds.getY() + halfHeight * 1.5f;
+        amplitude1 = halfHeight * 0.45f * params.verticalScale;
+        amplitude2 = halfHeight * 0.45f * params.verticalScale;
+    }
+    else
+    {
+        centerY1 = bounds.getCentreY();
+        centerY2 = centerY1;
+        amplitude1 = height * 0.45f * params.verticalScale;
+        amplitude2 = amplitude1;
+    }
+
+    // Helper lambda to draw neon glow effect (multi-pass glow simulation)
+    auto drawNeonWaveform = [&](const std::vector<float>& samples, float centerY, float amp)
+    {
+        juce::Path path;
+        float xScale = width / static_cast<float>(samples.size() - 1);
+
+        float startY = centerY - samples[0] * amp;
+        path.startNewSubPath(bounds.getX(), startY);
+
+        for (size_t i = 1; i < samples.size(); ++i)
+        {
+            float x = bounds.getX() + static_cast<float>(i) * xScale;
+            float y = centerY - samples[i] * amp;
+            path.lineTo(x, y);
+        }
+
+        // Draw multiple passes to simulate glow effect
+        // Outer glow (widest, most transparent)
+        float glowIntensity = params.shaderIntensity;
+        float baseWidth = params.lineWidth;
+
+        // Pass 1: Wide outer glow
+        g.setColour(params.colour.withAlpha(params.opacity * 0.15f * glowIntensity));
+        g.strokePath(path, juce::PathStrokeType(baseWidth * 6.0f,
+            juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+        // Pass 2: Medium glow
+        g.setColour(params.colour.withAlpha(params.opacity * 0.3f * glowIntensity));
+        g.strokePath(path, juce::PathStrokeType(baseWidth * 3.0f,
+            juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+        // Pass 3: Inner glow (colored)
+        g.setColour(params.colour.withAlpha(params.opacity * 0.7f));
+        g.strokePath(path, juce::PathStrokeType(baseWidth * 1.5f,
+            juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+        // Pass 4: Bright white core
+        g.setColour(juce::Colours::white.withAlpha(params.opacity * 0.9f));
+        g.strokePath(path, juce::PathStrokeType(baseWidth * 0.5f,
+            juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    };
+
+    // Draw first channel
+    drawNeonWaveform(channel1, centerY1, amplitude1);
+
+    // Draw second channel if stereo
+    if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
+    {
+        drawNeonWaveform(*channel2, centerY2, amplitude2);
+    }
+}
 
 } // namespace oscil

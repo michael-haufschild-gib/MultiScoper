@@ -36,13 +36,13 @@ bool PostProcessEffect::compileEffectShader(
 {
     if (!program.addVertexShader(fullscreenVertexShaderSource))
     {
-        DBG("PostProcessEffect: Vertex shader failed: " << program.getLastError());
+        juce::Logger::writeToLog("PostProcessEffect: Vertex shader failed: " + program.getLastError());
         return false;
     }
 
     if (!program.addFragmentShader(fragmentSource))
     {
-        DBG("PostProcessEffect: Fragment shader failed: " << program.getLastError());
+        juce::Logger::writeToLog("PostProcessEffect: Fragment shader failed: " + program.getLastError());
         return false;
     }
 
@@ -56,7 +56,7 @@ bool PostProcessEffect::compileEffectShader(
 
     if (!program.link())
     {
-        DBG("PostProcessEffect: Link failed: " << program.getLastError());
+        juce::Logger::writeToLog("PostProcessEffect: Link failed: " + program.getLastError());
         return false;
     }
 

@@ -3,6 +3,7 @@
 */
 
 #include "ui/components/OscilAccordion.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -14,15 +15,12 @@ namespace oscil
 OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title)
     : ThemedComponent(themeService)
     , title_(title)
-    , expandSpring_(SpringPresets::snappy())
-    , hoverSpring_(SpringPresets::stiff())
-    , chevronSpring_(SpringPresets::bouncy())
 {
     setWantsKeyboardFocus(true);
 
-    expandSpring_.position = 0.0f;
-    hoverSpring_.position = 0.0f;
-    chevronSpring_.position = 0.0f;
+    expandProgress_ = 0.0f;
+    hoverProgress_ = 0.0f;
+    chevronRotation_ = 0.0f;
 }
 
 OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title, const juce::String& testId)
@@ -38,7 +36,16 @@ void OscilAccordionSection::registerTestId()
 
 OscilAccordionSection::~OscilAccordionSection()
 {
-    stopTimer();
+    // ScopedAnimators handle completion on destruction
+}
+
+void OscilAccordionSection::parentHierarchyChanged()
+{
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void OscilAccordionSection::setTitle(const juce::String& title)
@@ -81,7 +88,7 @@ void OscilAccordionSection::setContent(juce::Component* content)
         if (content_)
         {
             addAndMakeVisible(content_);
-            content_->setVisible(expanded_ || expandSpring_.position > 0.01f);
+            content_->setVisible(expanded_ || expandProgress_ > 0.01f);
 
             // Check for dynamic height support
             dynamicContent_ = dynamic_cast<DynamicHeightContent*>(content_);
@@ -104,20 +111,58 @@ void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 
     expanded_ = expanded;
 
-    if (animate && AnimationSettings::shouldUseSpringAnimations())
+    float targetExpand = expanded ? 1.0f : 0.0f;
+
+    if (animate && animService_ && OscilAnimationService::shouldAnimate())
     {
-        expandSpring_.setTarget(expanded ? 1.0f : 0.0f);
-        chevronSpring_.setTarget(expanded ? 1.0f : 0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startExpand = expandProgress_;
+        float startChevron = chevronRotation_;
+        auto safeThis = juce::Component::SafePointer<OscilAccordionSection>(this);
+
+        expandAnimator_.set(animService_->createExpandAnimation(
+            [safeThis, startExpand, targetExpand](float v) {
+                if (!safeThis)
+                    return;
+
+                safeThis->expandProgress_ = juce::jmap(v, startExpand, targetExpand);
+
+                // Show/hide content based on animation state
+                if (safeThis->content_)
+                {
+                    bool shouldBeVisible = safeThis->expandProgress_ > 0.01f;
+                    if (safeThis->content_->isVisible() != shouldBeVisible)
+                        safeThis->content_->setVisible(shouldBeVisible);
+                }
+
+                // Only notify parent when height actually changed
+                int currentHeight = safeThis->getPreferredHeight();
+                if (currentHeight != safeThis->lastReportedHeight_)
+                {
+                    safeThis->lastReportedHeight_ = currentHeight;
+                    if (safeThis->onHeightChanged)
+                        safeThis->onHeightChanged();
+                    else if (auto* parent = safeThis->getParentComponent())
+                        parent->resized();
+                }
+
+                safeThis->repaint();
+            }));
+        expandAnimator_.start();
+
+        chevronAnimator_.set(animService_->createExpandAnimation(
+            [safeThis, startChevron, targetExpand](float v) {
+                if (safeThis)
+                {
+                    safeThis->chevronRotation_ = juce::jmap(v, startChevron, targetExpand);
+                    safeThis->repaint();
+                }
+            }));
+        chevronAnimator_.start();
     }
     else
     {
-        // When skipping animation, set BOTH position AND target to prevent
-        // the spring from animating toward the wrong value when timer runs
-        expandSpring_.position = expanded ? 1.0f : 0.0f;
-        expandSpring_.target = expanded ? 1.0f : 0.0f;
-        chevronSpring_.position = expanded ? 1.0f : 0.0f;
-        chevronSpring_.target = expanded ? 1.0f : 0.0f;
+        expandProgress_ = targetExpand;
+        chevronRotation_ = targetExpand;
 
         if (content_)
             content_->setVisible(expanded);
@@ -161,7 +206,7 @@ int OscilAccordionSection::getContentHeight() const
 int OscilAccordionSection::getPreferredHeight() const
 {
     int contentHeight = getContentHeight();
-    float expandAmount = expandSpring_.position;
+    float expandAmount = expandProgress_;
 
     return HEADER_HEIGHT + static_cast<int>(static_cast<float>(contentHeight) * expandAmount);
 }
@@ -169,7 +214,7 @@ int OscilAccordionSection::getPreferredHeight() const
 void OscilAccordionSection::contentHeightChanged()
 {
     // If expanded, we need to update layout
-    if (expanded_ || expandSpring_.position > 0.01f)
+    if (expanded_ || expandProgress_ > 0.01f)
     {
         if (onHeightChanged)
             onHeightChanged();
@@ -180,6 +225,10 @@ void OscilAccordionSection::contentHeightChanged()
 
 void OscilAccordionSection::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     auto bounds = getLocalBounds();
 
     // Header
@@ -187,7 +236,7 @@ void OscilAccordionSection::paint(juce::Graphics& g)
     paintHeader(g, headerBounds);
 
     // Content area (clipped)
-    if (content_ && expandSpring_.position > 0.01f)
+    if (content_ && expandProgress_ > 0.01f)
     {
         auto contentBounds = bounds;
         g.reduceClipRegion(contentBounds);
@@ -201,7 +250,7 @@ void OscilAccordionSection::paint(juce::Graphics& g)
 void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float hoverAmount = hoverSpring_.position;
+    float hoverAmount = hoverProgress_;
 
     // Background
     auto bgColour = getTheme().backgroundSecondary;
@@ -248,7 +297,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 void OscilAccordionSection::paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float rotation = chevronSpring_.position * juce::MathConstants<float>::halfPi;
+    float rotation = chevronRotation_ * juce::MathConstants<float>::halfPi;
 
     g.setColour(getTheme().textSecondary.withAlpha(opacity));
 
@@ -270,6 +319,14 @@ void OscilAccordionSection::paintChevron(juce::Graphics& g, juce::Rectangle<floa
 
 void OscilAccordionSection::resized()
 {
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilAccordionSection::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
+
     if (content_)
     {
         auto bounds = getLocalBounds();
@@ -306,14 +363,23 @@ void OscilAccordionSection::mouseEnter(const juce::MouseEvent&)
 
     isHovered_ = true;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ && OscilAnimationService::shouldAnimate())
     {
-        hoverSpring_.setTarget(1.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = hoverProgress_;
+        hoverAnimator_.set(animService_->createHoverAnimation(
+            [safeThis = juce::Component::SafePointer<OscilAccordionSection>(this), startValue](float v) {
+                if (auto* self = safeThis.getComponent())
+                {
+                    // Interpolate from start value to target (1.0 for enter)
+                    self->hoverProgress_ = startValue + (1.0f - startValue) * v;
+                    self->repaint();
+                }
+            }));
+        hoverAnimator_.start();
     }
     else
     {
-        hoverSpring_.position = 1.0f;
+        hoverProgress_ = 1.0f;
         repaint();
     }
 }
@@ -322,14 +388,23 @@ void OscilAccordionSection::mouseExit(const juce::MouseEvent&)
 {
     isHovered_ = false;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ && OscilAnimationService::shouldAnimate())
     {
-        hoverSpring_.setTarget(0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = hoverProgress_;
+        hoverAnimator_.set(animService_->createHoverAnimation(
+            [safeThis = juce::Component::SafePointer<OscilAccordionSection>(this), startValue](float v) {
+                if (auto* self = safeThis.getComponent())
+                {
+                    // Interpolate from start value to target (0.0 for exit)
+                    self->hoverProgress_ = startValue * (1.0f - v);
+                    self->repaint();
+                }
+            }));
+        hoverAnimator_.start();
     }
     else
     {
-        hoverSpring_.position = 0.0f;
+        hoverProgress_ = 0.0f;
         repaint();
     }
 }
@@ -354,43 +429,6 @@ void OscilAccordionSection::focusLost(FocusChangeType)
 {
     hasFocus_ = false;
     repaint();
-}
-
-void OscilAccordionSection::timerCallback()
-{
-    updateAnimations();
-
-    // Show/hide content based on animation state
-    if (content_)
-    {
-        bool shouldBeVisible = expandSpring_.position > 0.01f;
-        if (content_->isVisible() != shouldBeVisible)
-            content_->setVisible(shouldBeVisible);
-    }
-
-    // Only notify parent when height actually changed to avoid expensive layout recalculations
-    int currentHeight = getPreferredHeight();
-    if (currentHeight != lastReportedHeight_)
-    {
-        lastReportedHeight_ = currentHeight;
-        if (onHeightChanged)
-            onHeightChanged();
-        else if (auto* parent = getParentComponent())
-            parent->resized();
-    }
-
-    if (expandSpring_.isSettled() && hoverSpring_.isSettled() && chevronSpring_.isSettled())
-        stopTimer();
-
-    repaint();
-}
-
-void OscilAccordionSection::updateAnimations()
-{
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-    expandSpring_.update(dt);
-    hoverSpring_.update(dt);
-    chevronSpring_.update(dt);
 }
 
 //==============================================================================
@@ -541,6 +579,14 @@ void OscilAccordion::updateContentHeight()
 
 void OscilAccordion::resized()
 {
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilAccordion::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
+
     layoutSections();
 }
 

@@ -109,6 +109,15 @@ void TrailsEffect::apply(
     if (!compiled_ || !source || !destination)
         return;
 
+    // Save GL state for restoration (H24 FIX: also save blend function)
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
     auto& ext = context.extensions;
 
     destination->bind();
@@ -116,16 +125,42 @@ void TrailsEffect::apply(
     glDisable(GL_BLEND);
 
     // Simple passthrough since we don't have history
+    // NOTE: We bind source texture to unit 0 only and use the same unit for both
+    // samplers. Binding the same texture to multiple units simultaneously can
+    // cause undefined behavior on some drivers. Since this is a fallback path
+    // with full decay (no trails), we use the same texture unit for both.
     shader_->use();
     source->bindTexture(0);
     ext.glUniform1i(currentTextureLoc_, 0);
-    source->bindTexture(1); // Use source as history too (no effect)
-    ext.glUniform1i(historyTextureLoc_, 1);
+    ext.glUniform1i(historyTextureLoc_, 0);  // Same unit - both samplers read from source
     ext.glUniform1f(decayLoc_, 1.0f); // Full decay = no trails
     ext.glUniform1f(opacityLoc_, 1.0f);
 
     pool.renderFullscreenQuad();
+
+    // Cleanup texture unit (only unit 0 used in fallback path)
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state (H24 FIX: also restore blend function)
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
+    if (blendWasEnabled)
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                           static_cast<GLenum>(blendDstRGB),
+                           static_cast<GLenum>(blendSrcAlpha),
+                           static_cast<GLenum>(blendDstAlpha));
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
 }
 
 void TrailsEffect::applyWithHistory(
@@ -141,6 +176,15 @@ void TrailsEffect::applyWithHistory(
     if (!compiled_ || !source || !history || !destination)
         return;
 
+    // Save GL state for restoration (H24 FIX: also save blend function)
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
     auto& ext = context.extensions;
 
     destination->bind();
@@ -151,20 +195,47 @@ void TrailsEffect::applyWithHistory(
 
     // Bind current frame
     source->bindTexture(0);
-    ext.glUniform1i(currentTextureLoc_, 0);
+    if (currentTextureLoc_ >= 0)
+        ext.glUniform1i(currentTextureLoc_, 0);
 
     // Bind history
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, history->colorTexture);
-    ext.glUniform1i(historyTextureLoc_, 1);
+    if (historyTextureLoc_ >= 0)
+        ext.glUniform1i(historyTextureLoc_, 1);
 
-    ext.glUniform1f(decayLoc_, settings_.decay * intensity_);
-    ext.glUniform1f(opacityLoc_, settings_.opacity);
+    if (decayLoc_ >= 0)
+        ext.glUniform1f(decayLoc_, settings_.decay * intensity_);
+    if (opacityLoc_ >= 0)
+        ext.glUniform1f(opacityLoc_, settings_.opacity);
 
     pool.renderFullscreenQuad();
 
+    // Cleanup texture units
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state (H24 FIX: also restore blend function)
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
+    if (blendWasEnabled)
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                           static_cast<GLenum>(blendDstRGB),
+                           static_cast<GLenum>(blendSrcAlpha),
+                           static_cast<GLenum>(blendDstAlpha));
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
 
     // Copy result back to history for next frame
     // This is done by the RenderEngine after all processing

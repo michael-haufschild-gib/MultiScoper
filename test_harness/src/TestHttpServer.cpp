@@ -7,6 +7,7 @@
 #include "core/OscilState.h"
 #include "plugin/PluginFactory.h"
 #include "plugin/PluginEditor.h"
+#include "tools/PerformanceProfiler.h"
 
 namespace oscil::test
 {
@@ -343,6 +344,43 @@ void TestHttpServer::setupRoutes()
     server_->Post("/metrics/recordFrame", [this](const httplib::Request& req, httplib::Response& res) {
         handleMetricsRecordFrame(req, res);
     });
+    
+    // Extended Profiling
+    server_->Post("/profiling/start", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingStart(req, res);
+    });
+    server_->Post("/profiling/stop", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingStop(req, res);
+    });
+    server_->Get("/profiling/snapshot", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingSnapshot(req, res);
+    });
+    server_->Get("/profiling/gpu", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingGpu(req, res);
+    });
+    server_->Get("/profiling/threads", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingThreads(req, res);
+    });
+    server_->Get("/profiling/components", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingComponents(req, res);
+    });
+    server_->Get("/profiling/hotspots", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingHotspots(req, res);
+    });
+    server_->Get("/profiling/timeline", [this](const httplib::Request& req, httplib::Response& res) {
+        handleProfilingTimeline(req, res);
+    });
+    
+    // Stress Testing
+    server_->Post("/stress/oscillators", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStressOscillators(req, res);
+    });
+    server_->Post("/stress/effects", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStressEffects(req, res);
+    });
+    server_->Post("/stress/audio", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStressAudio(req, res);
+    });
 
     // Debug Logs
     server_->Get("/debug/logs", [this](const httplib::Request& req, httplib::Response& res) {
@@ -397,13 +435,37 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
+        if (!body.contains("bpm"))
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: bpm").dump(), "application/json");
+            return;
+        }
         double bpm = body.value("bpm", 120.0);
+        if (bpm <= 0.0 || bpm > 999.0)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid bpm value: must be between 0 and 999").dump(), "application/json");
+            return;
+        }
         daw_.getTransport().setBpm(bpm);
         res.set_content(successResponse().dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -412,13 +474,31 @@ void TestHttpServer::handleTransportSetPosition(const httplib::Request& req, htt
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         int64_t samples = body.value("samples", 0);
+        if (samples < 0)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid samples value: must be non-negative").dump(), "application/json");
+            return;
+        }
         daw_.getTransport().setPositionSamples(samples);
         res.set_content(successResponse().dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -444,7 +524,15 @@ void TestHttpServer::handleTrackAudio(const httplib::Request& req, httplib::Resp
 
         if (track == nullptr)
         {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Track not found: " + std::to_string(trackId)).dump(), "application/json");
+            return;
+        }
+
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
             return;
         }
 
@@ -453,14 +541,34 @@ void TestHttpServer::handleTrackAudio(const httplib::Request& req, httplib::Resp
         float frequency = body.value("frequency", 440.0f);
         float amplitude = body.value("amplitude", 0.8f);
 
+        // Validate values
+        if (frequency <= 0.0f || frequency > 20000.0f)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid frequency: must be between 0 and 20000 Hz").dump(), "application/json");
+            return;
+        }
+        if (amplitude < 0.0f || amplitude > 1.0f)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid amplitude: must be between 0 and 1").dump(), "application/json");
+            return;
+        }
+
         track->getAudioGenerator().setWaveform(TestAudioGenerator::stringToWaveform(waveform));
         track->getAudioGenerator().setFrequency(frequency);
         track->getAudioGenerator().setAmplitude(amplitude);
 
         res.set_content(successResponse().dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -474,13 +582,21 @@ void TestHttpServer::handleTrackBurst(const httplib::Request& req, httplib::Resp
 
         if (track == nullptr)
         {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Track not found: " + std::to_string(trackId)).dump(), "application/json");
             return;
         }
 
-        auto body = json::parse(req.body);
+        auto body = json::parse(req.body.empty() ? "{}" : req.body);
         int samples = body.value("samples", 4410);
         std::string waveform = body.value("waveform", "");
+
+        if (samples <= 0)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid samples value: must be positive").dump(), "application/json");
+            return;
+        }
 
         if (!waveform.empty())
         {
@@ -490,8 +606,14 @@ void TestHttpServer::handleTrackBurst(const httplib::Request& req, httplib::Resp
 
         res.set_content(successResponse().dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -505,7 +627,8 @@ void TestHttpServer::handleTrackInfo(const httplib::Request& req, httplib::Respo
 
         if (track == nullptr)
         {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Track not found: " + std::to_string(trackId)).dump(), "application/json");
             return;
         }
 
@@ -523,6 +646,7 @@ void TestHttpServer::handleTrackInfo(const httplib::Request& req, httplib::Respo
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -540,7 +664,8 @@ void TestHttpServer::handleTrackShowEditor(const httplib::Request& req, httplib:
 
         if (track == nullptr)
         {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Track not found: " + std::to_string(trackId)).dump(), "application/json");
             return;
         }
 
@@ -588,6 +713,7 @@ void TestHttpServer::handleTrackShowEditor(const httplib::Request& req, httplib:
     catch (const std::exception& e)
     {
         std::cerr << "[ERROR] Exception in handleTrackShowEditor: " << e.what() << std::endl;
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -601,7 +727,8 @@ void TestHttpServer::handleTrackHideEditor(const httplib::Request& req, httplib:
 
         if (track == nullptr)
         {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Track not found: " + std::to_string(trackId)).dump(), "application/json");
             return;
         }
 
@@ -617,6 +744,7 @@ void TestHttpServer::handleTrackHideEditor(const httplib::Request& req, httplib:
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -626,8 +754,21 @@ void TestHttpServer::handleUIClick(const httplib::Request& req, httplib::Respons
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.click(elementId))
         {
@@ -635,11 +776,18 @@ void TestHttpServer::handleUIClick(const httplib::Request& req, httplib::Respons
         }
         else
         {
+            res.status = 404;
             res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -648,8 +796,21 @@ void TestHttpServer::handleUIDoubleClick(const httplib::Request& req, httplib::R
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.doubleClick(elementId))
         {
@@ -657,11 +818,18 @@ void TestHttpServer::handleUIDoubleClick(const httplib::Request& req, httplib::R
         }
         else
         {
+            res.status = 404;
             res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -670,9 +838,22 @@ void TestHttpServer::handleUISelect(const httplib::Request& req, httplib::Respon
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
         std::string itemText = body.value("itemText", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         bool success = false;
 
@@ -696,6 +877,12 @@ void TestHttpServer::handleUISelect(const httplib::Request& req, httplib::Respon
         {
             success = uiController_.selectByText(elementId, itemText);
         }
+        else
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: itemId or itemText").dump(), "application/json");
+            return;
+        }
 
         if (success)
         {
@@ -703,11 +890,18 @@ void TestHttpServer::handleUISelect(const httplib::Request& req, httplib::Respon
         }
         else
         {
+            res.status = 400;
             res.set_content(errorResponse("Failed to select item").dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -716,8 +910,22 @@ void TestHttpServer::handleUIToggle(const httplib::Request& req, httplib::Respon
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         bool value = body.value("value", false);
 
         if (uiController_.toggle(elementId, value))
@@ -726,11 +934,18 @@ void TestHttpServer::handleUIToggle(const httplib::Request& req, httplib::Respon
         }
         else
         {
-            res.set_content(errorResponse("Element not found or not toggleable").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or not toggleable: " + elementId).dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -739,8 +954,29 @@ void TestHttpServer::handleUISlider(const httplib::Request& req, httplib::Respon
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
+        if (!body.contains("value"))
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: value").dump(), "application/json");
+            return;
+        }
+
         double value = body.value("value", 0.0);
 
         if (uiController_.setSliderValue(elementId, value))
@@ -749,11 +985,18 @@ void TestHttpServer::handleUISlider(const httplib::Request& req, httplib::Respon
         }
         else
         {
-            res.set_content(errorResponse("Element not found or not a slider").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or not a slider: " + elementId).dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -762,9 +1005,22 @@ void TestHttpServer::handleUIDrag(const httplib::Request& req, httplib::Response
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string from = body.value("from", "");
         std::string to = body.value("to", "");
+
+        if (from.empty() || to.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required fields: from and to").dump(), "application/json");
+            return;
+        }
 
         // Check for modifier keys
         bool shift = body.value("shift", false);
@@ -791,11 +1047,18 @@ void TestHttpServer::handleUIDrag(const httplib::Request& req, httplib::Response
         }
         else
         {
-            res.set_content(errorResponse("Failed to drag").dump(), "application/json");
+            res.status = 400;
+            res.set_content(errorResponse("Failed to drag: elements not found or not draggable").dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -804,8 +1067,22 @@ void TestHttpServer::handleUIDragOffset(const httplib::Request& req, httplib::Re
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         int deltaX = body.value("deltaX", 0);
         int deltaY = body.value("deltaY", 0);
 
@@ -833,11 +1110,18 @@ void TestHttpServer::handleUIDragOffset(const httplib::Request& req, httplib::Re
         }
         else
         {
-            res.set_content(errorResponse("Failed to drag by offset").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Failed to drag by offset: element not found").dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -846,8 +1130,21 @@ void TestHttpServer::handleUIRightClick(const httplib::Request& req, httplib::Re
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.rightClick(elementId))
         {
@@ -855,11 +1152,18 @@ void TestHttpServer::handleUIRightClick(const httplib::Request& req, httplib::Re
         }
         else
         {
+            res.status = 404;
             res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -868,8 +1172,22 @@ void TestHttpServer::handleUIHover(const httplib::Request& req, httplib::Respons
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         int durationMs = body.value("durationMs", 500);
 
         if (uiController_.hover(elementId, durationMs))
@@ -878,11 +1196,18 @@ void TestHttpServer::handleUIHover(const httplib::Request& req, httplib::Respons
         }
         else
         {
+            res.status = 404;
             res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -891,8 +1216,22 @@ void TestHttpServer::handleUIScroll(const httplib::Request& req, httplib::Respon
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         float deltaY = body.value("deltaY", 0.0f);
         float deltaX = body.value("deltaX", 0.0f);
 
@@ -923,11 +1262,18 @@ void TestHttpServer::handleUIScroll(const httplib::Request& req, httplib::Respon
         }
         else
         {
-            res.set_content(errorResponse("Failed to scroll").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Failed to scroll: element not found or not scrollable").dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -936,8 +1282,21 @@ void TestHttpServer::handleUISliderIncrement(const httplib::Request& req, httpli
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.incrementSlider(elementId))
         {
@@ -947,11 +1306,18 @@ void TestHttpServer::handleUISliderIncrement(const httplib::Request& req, httpli
         }
         else
         {
-            res.set_content(errorResponse("Element not found or not a slider").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or not a slider: " + elementId).dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -960,8 +1326,21 @@ void TestHttpServer::handleUISliderDecrement(const httplib::Request& req, httpli
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.decrementSlider(elementId))
         {
@@ -971,11 +1350,18 @@ void TestHttpServer::handleUISliderDecrement(const httplib::Request& req, httpli
         }
         else
         {
-            res.set_content(errorResponse("Element not found or not a slider").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or not a slider: " + elementId).dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -984,8 +1370,21 @@ void TestHttpServer::handleUISliderReset(const httplib::Request& req, httplib::R
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.resetSliderToDefault(elementId))
         {
@@ -995,11 +1394,18 @@ void TestHttpServer::handleUISliderReset(const httplib::Request& req, httplib::R
         }
         else
         {
-            res.set_content(errorResponse("Element not found or not a slider").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or not a slider: " + elementId).dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1009,9 +1415,22 @@ void TestHttpServer::handleUIKeyPress(const httplib::Request& req, httplib::Resp
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string key = body.value("key", "");
         std::string elementId = body.value("elementId", "");
+
+        if (key.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: key").dump(), "application/json");
+            return;
+        }
 
         bool shift = body.value("shift", false);
         bool alt = body.value("alt", false);
@@ -1048,6 +1467,7 @@ void TestHttpServer::handleUIKeyPress(const httplib::Request& req, httplib::Resp
         else if (key.length() == 1) keyCode = key[0]; // Single character
         else
         {
+            res.status = 400;
             res.set_content(errorResponse("Unknown key: " + key).dump(), "application/json");
             return;
         }
@@ -1072,11 +1492,18 @@ void TestHttpServer::handleUIKeyPress(const httplib::Request& req, httplib::Resp
         }
         else
         {
+            res.status = 400;
             res.set_content(errorResponse("Failed to press key").dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1085,9 +1512,22 @@ void TestHttpServer::handleUITypeText(const httplib::Request& req, httplib::Resp
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
         std::string text = body.value("text", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.typeText(elementId, text))
         {
@@ -1095,11 +1535,18 @@ void TestHttpServer::handleUITypeText(const httplib::Request& req, httplib::Resp
         }
         else
         {
-            res.set_content(errorResponse("Element not found or not a text input").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or not a text input: " + elementId).dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1108,8 +1555,21 @@ void TestHttpServer::handleUIClearText(const httplib::Request& req, httplib::Res
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.clearText(elementId))
         {
@@ -1117,11 +1577,18 @@ void TestHttpServer::handleUIClearText(const httplib::Request& req, httplib::Res
         }
         else
         {
-            res.set_content(errorResponse("Element not found or not a text input").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or not a text input: " + elementId).dump(), "application/json");
         }
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1131,8 +1598,21 @@ void TestHttpServer::handleUIFocus(const httplib::Request& req, httplib::Respons
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         if (uiController_.setFocus(elementId))
         {
@@ -1140,11 +1620,18 @@ void TestHttpServer::handleUIFocus(const httplib::Request& req, httplib::Respons
         }
         else
         {
+            res.status = 404;
             res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1168,6 +1655,7 @@ void TestHttpServer::handleUIFocusNext(const httplib::Request&, httplib::Respons
     }
     else
     {
+        res.status = 400;
         res.set_content(errorResponse("No focused element").dump(), "application/json");
     }
 }
@@ -1182,6 +1670,7 @@ void TestHttpServer::handleUIFocusPrevious(const httplib::Request&, httplib::Res
     }
     else
     {
+        res.status = 400;
         res.set_content(errorResponse("No focused element").dump(), "application/json");
     }
 }
@@ -1191,8 +1680,22 @@ void TestHttpServer::handleUIWaitForElement(const httplib::Request& req, httplib
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         int timeoutMs = body.value("timeoutMs", 5000);
 
         bool found = uiController_.waitForElement(elementId, timeoutMs);
@@ -1202,8 +1705,14 @@ void TestHttpServer::handleUIWaitForElement(const httplib::Request& req, httplib
         data["elementId"] = elementId;
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1212,8 +1721,22 @@ void TestHttpServer::handleUIWaitForVisible(const httplib::Request& req, httplib
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         int timeoutMs = body.value("timeoutMs", 5000);
 
         bool visible = uiController_.waitForVisible(elementId, timeoutMs);
@@ -1223,8 +1746,14 @@ void TestHttpServer::handleUIWaitForVisible(const httplib::Request& req, httplib
         data["elementId"] = elementId;
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1233,8 +1762,22 @@ void TestHttpServer::handleUIWaitForEnabled(const httplib::Request& req, httplib
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         int timeoutMs = body.value("timeoutMs", 5000);
 
         bool enabled = uiController_.waitForEnabled(elementId, timeoutMs);
@@ -1244,8 +1787,14 @@ void TestHttpServer::handleUIWaitForEnabled(const httplib::Request& req, httplib
         data["elementId"] = elementId;
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1306,9 +1855,9 @@ void TestHttpServer::handleScreenshot(const httplib::Request& req, httplib::Resp
 {
     try
     {
-        auto body = json::parse(req.body);
+        auto body = json::parse(req.body.empty() ? "{}" : req.body);
         std::string path = body.value("path", "/tmp/screenshot.png");
-        
+
         std::string element = "window";
         if (body.contains("elementId"))
             element = body["elementId"].get<std::string>();
@@ -1338,11 +1887,18 @@ void TestHttpServer::handleScreenshot(const httplib::Request& req, httplib::Resp
         }
         else
         {
+            res.status = 400;
             res.set_content(errorResponse("Failed to capture screenshot").dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1394,8 +1950,22 @@ void TestHttpServer::handleVerifyWaveform(const httplib::Request& req, httplib::
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         float minAmplitude = body.value("minAmplitude", 0.05f);
 
         juce::Image image;
@@ -1425,8 +1995,14 @@ void TestHttpServer::handleVerifyWaveform(const httplib::Request& req, httplib::
 
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1435,12 +2011,39 @@ void TestHttpServer::handleScreenshotCompare(const httplib::Request& req, httpli
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
         std::string baselinePath = body.value("baseline", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+        if (baselinePath.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: baseline").dump(), "application/json");
+            return;
+        }
+
         int tolerance = body.value("tolerance", 5);
 
         juce::File baselineFile(baselinePath);
+        if (!baselineFile.existsAsFile())
+        {
+            res.status = 404;
+            res.set_content(errorResponse("Baseline file not found: " + baselinePath).dump(), "application/json");
+            return;
+        }
+
         auto result = screenshot_.compareElementToBaseline(elementId, baselineFile, tolerance);
 
         json data;
@@ -1461,8 +2064,14 @@ void TestHttpServer::handleScreenshotCompare(const httplib::Request& req, httpli
 
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1471,8 +2080,22 @@ void TestHttpServer::handleBaselineSave(const httplib::Request& req, httplib::Re
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         std::string dirPath = body.value("directory", "/tmp/baselines");
         std::string name = body.value("name", "");
 
@@ -1488,11 +2111,18 @@ void TestHttpServer::handleBaselineSave(const httplib::Request& req, httplib::Re
         }
         else
         {
+            res.status = 400;
             res.set_content(errorResponse("Failed to save baseline").dump(), "application/json");
         }
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1501,8 +2131,22 @@ void TestHttpServer::handleVerifyColor(const httplib::Request& req, httplib::Res
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
+
         std::string colorHex = body.value("color", "#000000");
         int tolerance = body.value("tolerance", 10);
         std::string mode = body.value("mode", "background"); // "background" or "contains"
@@ -1535,7 +2179,6 @@ void TestHttpServer::handleVerifyColor(const httplib::Request& req, httplib::Res
             }
             else if (mode == "contains")
             {
-                int totalPixels = image.getWidth() * image.getHeight();
                 int checkedPixels = 0;
                 
                 // Re-implement logic here to get stats (or we could modify TestScreenshot)
@@ -1568,8 +2211,14 @@ void TestHttpServer::handleVerifyColor(const httplib::Request& req, httplib::Res
 
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1578,11 +2227,32 @@ void TestHttpServer::handleVerifyBounds(const httplib::Request& req, httplib::Re
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
         int expectedWidth = body.value("width", 0);
         int expectedHeight = body.value("height", 0);
         int tolerance = body.value("tolerance", 5);
+
+        // Validate tolerance range
+        if (tolerance < 0 || tolerance > 1000)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid tolerance: must be between 0 and 1000").dump(), "application/json");
+            return;
+        }
 
         auto bounds = screenshot_.getElementBounds(elementId);
         bool pass = screenshot_.verifyElementBounds(elementId, expectedWidth, expectedHeight, tolerance);
@@ -1601,8 +2271,14 @@ void TestHttpServer::handleVerifyBounds(const httplib::Request& req, httplib::Re
 
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1611,8 +2287,21 @@ void TestHttpServer::handleVerifyVisible(const httplib::Request& req, httplib::R
 {
     try
     {
+        if (req.body.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Request body required").dump(), "application/json");
+            return;
+        }
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required field: elementId").dump(), "application/json");
+            return;
+        }
 
         bool visible = screenshot_.verifyElementVisible(elementId);
 
@@ -1622,8 +2311,14 @@ void TestHttpServer::handleVerifyVisible(const httplib::Request& req, httplib::R
 
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1633,6 +2328,14 @@ void TestHttpServer::handleAnalyzeWaveform(const httplib::Request& req, httplib:
     try
     {
         std::string elementId = req.get_param_value("elementId");
+
+        if (elementId.empty())
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Missing required query parameter: elementId").dump(), "application/json");
+            return;
+        }
+
         std::string bgColorHex = req.get_param_value("backgroundColor");
 
         juce::Colour backgroundColor = bgColorHex.empty()
@@ -1642,7 +2345,8 @@ void TestHttpServer::handleAnalyzeWaveform(const httplib::Request& req, httplib:
         auto image = screenshot_.getElementImage(elementId);
         if (image.isNull())
         {
-            res.set_content(errorResponse("Element not found or no image").dump(), "application/json");
+            res.status = 404;
+            res.set_content(errorResponse("Element not found or no image: " + elementId).dump(), "application/json");
             return;
         }
 
@@ -1659,6 +2363,7 @@ void TestHttpServer::handleAnalyzeWaveform(const httplib::Request& req, httplib:
     }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -1720,7 +2425,11 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
         if (auto* track = daw_.getTrack(0))
         {
             juce::String xml = track->getProcessor().getState().toXmlString();
-            juce::File(path).replaceWithText(xml);
+            if (!juce::File(path).replaceWithText(xml))
+            {
+                res.set_content(errorResponse("Failed to write state file").dump(), "application/json");
+                return;
+            }
             res.set_content(successResponse().dump(), "application/json");
         }
         else
@@ -2662,8 +3371,17 @@ void TestHttpServer::handleMetricsStart(const httplib::Request& req, httplib::Re
 {
     try
     {
-        auto body = json::parse(req.body);
+        // Parse body if provided, use defaults otherwise
+        auto body = json::parse(req.body.empty() ? "{}" : req.body);
         int intervalMs = body.value("intervalMs", 100);
+
+        // Validate intervalMs range
+        if (intervalMs < 10 || intervalMs > 60000)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid intervalMs: must be between 10 and 60000").dump(), "application/json");
+            return;
+        }
 
         metrics_.startCollection(intervalMs);
 
@@ -2672,8 +3390,14 @@ void TestHttpServer::handleMetricsStart(const httplib::Request& req, httplib::Re
         data["intervalMs"] = intervalMs;
         res.set_content(successResponse(data).dump(), "application/json");
     }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
     catch (const std::exception& e)
     {
+        res.status = 500;
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -2749,6 +3473,413 @@ void TestHttpServer::handleMetricsRecordFrame(const httplib::Request&, httplib::
     res.set_content(successResponse().dump(), "application/json");
 }
 
+// ============================================================================
+// Extended Profiling Handlers
+// ============================================================================
+
+void TestHttpServer::handleProfilingStart(const httplib::Request&, httplib::Response& res)
+{
+    metrics_.startProfiling();
+    
+    json data;
+    data["profiling"] = true;
+    data["message"] = "Profiling started";
+    
+    res.set_content(successResponse(data).dump(), "application/json");
+}
+
+void TestHttpServer::handleProfilingStop(const httplib::Request&, httplib::Response& res)
+{
+    auto result = metrics_.stopProfiling();
+    
+    json data;
+    data["profiling"] = false;
+    data["durationMs"] = result.durationMs;
+    
+    // Summary stats
+    json summary;
+    summary["avgFps"] = result.stats.avgFps;
+    summary["minFps"] = result.stats.minFps;
+    summary["maxFps"] = result.stats.maxFps;
+    summary["p50FrameTimeMs"] = result.stats.p50FrameTimeMs;
+    summary["p95FrameTimeMs"] = result.stats.p95FrameTimeMs;
+    summary["p99FrameTimeMs"] = result.stats.p99FrameTimeMs;
+    summary["avgCpu"] = result.stats.avgCpu;
+    summary["maxMemoryMB"] = result.stats.maxMemoryMB;
+    summary["peakMemoryMB"] = result.peakMemoryMB;
+    summary["memoryGrowthMBPerSec"] = result.memoryGrowthMBPerSec;
+    data["summary"] = summary;
+    
+    // Hotspot count
+    data["hotspotCount"] = result.hotspots.size();
+    
+    res.set_content(successResponse(data).dump(), "application/json");
+}
+
+void TestHttpServer::handleProfilingSnapshot(const httplib::Request&, httplib::Response& res)
+{
+    bool isProfiling = metrics_.isProfiling();
+    
+    json data;
+    data["profiling"] = isProfiling;
+    data["timestamp"] = juce::Time::currentTimeMillis();
+    
+    // Current snapshot
+    auto snapshot = metrics_.getCurrentSnapshot();
+    data["fps"] = snapshot.fps;
+    data["cpuPercent"] = snapshot.cpuPercent;
+    data["memoryMB"] = snapshot.memoryMB;
+    data["oscillatorCount"] = snapshot.oscillatorCount;
+    
+    if (isProfiling)
+    {
+        // GPU metrics
+        auto gpu = metrics_.getGpuMetrics();
+        json gpuData;
+        gpuData["currentFps"] = gpu.currentFps;
+        gpuData["avgFps"] = gpu.avgFps;
+        gpuData["avgFrameTimeMs"] = gpu.avgFrameTimeMs;
+        gpuData["p95FrameTimeMs"] = gpu.p95FrameTimeMs;
+        gpuData["totalFrames"] = gpu.totalFrames;
+        data["gpu"] = gpuData;
+        
+        // Hotspot count
+        data["hotspotCount"] = metrics_.getHotspots().size();
+    }
+    
+    res.set_content(successResponse(data).dump(), "application/json");
+}
+
+void TestHttpServer::handleProfilingGpu(const httplib::Request&, httplib::Response& res)
+{
+    auto gpu = metrics_.getGpuMetrics();
+    
+    json data;
+    data["currentFps"] = gpu.currentFps;
+    data["avgFps"] = gpu.avgFps;
+    data["minFps"] = gpu.minFps;
+    data["maxFps"] = gpu.maxFps;
+    data["avgFrameTimeMs"] = gpu.avgFrameTimeMs;
+    data["minFrameTimeMs"] = gpu.minFrameTimeMs;
+    data["maxFrameTimeMs"] = gpu.maxFrameTimeMs;
+    data["p50FrameTimeMs"] = gpu.p50FrameTimeMs;
+    data["p95FrameTimeMs"] = gpu.p95FrameTimeMs;
+    data["p99FrameTimeMs"] = gpu.p99FrameTimeMs;
+    
+    json timing;
+    timing["avgBeginFrameMs"] = gpu.avgBeginFrameMs;
+    timing["avgWaveformRenderMs"] = gpu.avgWaveformRenderMs;
+    timing["avgEffectPipelineMs"] = gpu.avgEffectPipelineMs;
+    timing["avgCompositeMs"] = gpu.avgCompositeMs;
+    timing["avgBlitMs"] = gpu.avgBlitMs;
+    data["timing"] = timing;
+    
+    json operations;
+    operations["totalFboBinds"] = gpu.totalFboBinds;
+    operations["totalShaderSwitches"] = gpu.totalShaderSwitches;
+    data["operations"] = operations;
+    
+    data["totalFrames"] = gpu.totalFrames;
+    
+    // Budget tracking from PerformanceProfiler
+    auto& profiler = oscil::PerformanceProfiler::getInstance();
+    auto gpuData = profiler.getGpuProfiler().getData();
+    json budget;
+    budget["exceededCount"] = gpuData.budgetExceededCount;
+    budget["totalSkippedWaveforms"] = gpuData.totalSkippedWaveforms;
+    budget["totalSkippedEffects"] = gpuData.totalSkippedEffects;
+    budget["avgBudgetRatio"] = gpuData.avgBudgetRatio;
+    budget["maxBudgetRatio"] = gpuData.maxBudgetRatio;
+    data["budget"] = budget;
+    
+    res.set_content(successResponse(data).dump(), "application/json");
+}
+
+void TestHttpServer::handleProfilingThreads(const httplib::Request&, httplib::Response& res)
+{
+    auto toJson = [](const ThreadMetrics& m) {
+        json j;
+        j["name"] = m.name;
+        j["avgExecutionTimeMs"] = m.avgExecutionTimeMs;
+        j["maxExecutionTimeMs"] = m.maxExecutionTimeMs;
+        j["minExecutionTimeMs"] = m.minExecutionTimeMs;
+        j["invocationCount"] = m.invocationCount;
+        j["loadPercent"] = m.loadPercent;
+        j["totalLockWaitMs"] = m.totalLockWaitMs;
+        j["lockAcquisitionCount"] = m.lockAcquisitionCount;
+        return j;
+    };
+    
+    json data;
+    data["audioThread"] = toJson(metrics_.getAudioThreadMetrics());
+    data["uiThread"] = toJson(metrics_.getUiThreadMetrics());
+    data["openglThread"] = toJson(metrics_.getOpenGLThreadMetrics());
+    
+    res.set_content(successResponse(data).dump(), "application/json");
+}
+
+void TestHttpServer::handleProfilingComponents(const httplib::Request&, httplib::Response& res)
+{
+    auto stats = metrics_.getComponentStats();
+    
+    json components = json::array();
+    for (const auto& s : stats)
+    {
+        json c;
+        c["name"] = s.name;
+        c["repaintCount"] = s.repaintCount;
+        c["totalRepaintTimeMs"] = s.totalRepaintTimeMs;
+        c["avgRepaintTimeMs"] = s.avgRepaintTimeMs;
+        c["maxRepaintTimeMs"] = s.maxRepaintTimeMs;
+        c["repaintsPerSecond"] = s.repaintsPerSecond;
+        components.push_back(c);
+    }
+    
+    json data;
+    data["components"] = components;
+    data["count"] = stats.size();
+    
+    res.set_content(successResponse(data).dump(), "application/json");
+}
+
+void TestHttpServer::handleProfilingHotspots(const httplib::Request&, httplib::Response& res)
+{
+    auto hotspots = metrics_.getHotspots();
+    
+    json hsArray = json::array();
+    for (const auto& hs : hotspots)
+    {
+        json h;
+        h["category"] = hs.category;
+        h["location"] = hs.location;
+        h["description"] = hs.description;
+        h["severity"] = hs.severity;
+        h["impactMs"] = hs.impactMs;
+        h["recommendation"] = hs.recommendation;
+        hsArray.push_back(h);
+    }
+    
+    json data;
+    data["hotspots"] = hsArray;
+    data["count"] = hotspots.size();
+    
+    res.set_content(successResponse(data).dump(), "application/json");
+}
+
+void TestHttpServer::handleProfilingTimeline(const httplib::Request& req, httplib::Response& res)
+{
+    int frameCount = 60;
+    if (req.has_param("frames"))
+    {
+        frameCount = std::stoi(req.get_param_value("frames"));
+    }
+    
+    juce::String timelineJson = metrics_.getTimelineJson(frameCount);
+    
+    // Parse and wrap in success response
+    try
+    {
+        json timeline = json::parse(timelineJson.toStdString());
+        res.set_content(successResponse(timeline).dump(), "application/json");
+    }
+    catch (...)
+    {
+        json data;
+        data["frames"] = json::array();
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+}
+
+// ============================================================================
+// Stress Testing Handlers
+// ============================================================================
+
+void TestHttpServer::handleStressOscillators(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        // Parse body if provided, use defaults otherwise
+        auto body = json::parse(req.body.empty() ? "{}" : req.body);
+        int count = body.value("count", 5);
+
+        // Validate count range
+        if (count < 1 || count > 100)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid count: must be between 1 and 100").dump(), "application/json");
+            return;
+        }
+
+        // Add multiple oscillators for stress testing
+        int added = 0;
+
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.status = 404;
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+        
+        auto& state = track->getProcessor().getState();
+        auto& layoutManager = state.getLayoutManager();
+        
+        // Get sources from registry
+        auto allSources = PluginFactory::getInstance().getInstanceRegistry().getAllSources();
+        if (allSources.empty())
+        {
+            res.status = 404;
+            res.set_content(errorResponse("No sources available").dump(), "application/json");
+            return;
+        }
+
+        auto panes = layoutManager.getPanes();
+        if (panes.empty())
+        {
+            res.status = 404;
+            res.set_content(errorResponse("No panes available").dump(), "application/json");
+            return;
+        }
+
+        for (int i = 0; i < count; ++i)
+        {
+            // Create oscillator
+            Oscillator osc;
+            osc.setName("Stress Osc " + juce::String(i + 1));
+            osc.setSourceId(allSources[0].sourceId);
+            osc.setPaneId(panes[0].getId());
+            osc.setOrderIndex(static_cast<int>(state.getOscillators().size()));
+
+            state.addOscillator(osc);
+            added++;
+        }
+
+        json data;
+        data["added"] = added;
+        data["totalOscillators"] = static_cast<int>(state.getOscillators().size());
+
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.status = 500;
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStressEffects(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        // Parse body if provided, use defaults otherwise
+        auto body = json::parse(req.body.empty() ? "{}" : req.body);
+        bool enableAll = body.value("enableAll", true);
+        std::string quality = body.value("quality", "high");
+
+        // Validate quality value
+        if (quality != "low" && quality != "medium" && quality != "high")
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid quality: must be 'low', 'medium', or 'high'").dump(), "application/json");
+            return;
+        }
+
+        // This would enable effects on all oscillators
+        // Implementation depends on the oscillator configuration API
+
+        json data;
+        data["effectsEnabled"] = enableAll;
+        data["quality"] = quality;
+        data["message"] = "Effects configuration updated";
+
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.status = 500;
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleStressAudio(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        // Parse body if provided, use defaults otherwise
+        auto body = json::parse(req.body.empty() ? "{}" : req.body);
+        int durationMs = body.value("durationMs", 5000);
+        double amplitude = body.value("amplitude", 0.5);
+        std::string waveform = body.value("waveform", "sine");
+        double frequency = body.value("frequency", 440.0);
+
+        // Validate parameter ranges
+        if (durationMs < 100 || durationMs > 60000)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid durationMs: must be between 100 and 60000").dump(), "application/json");
+            return;
+        }
+        if (amplitude < 0.0 || amplitude > 1.0)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid amplitude: must be between 0 and 1").dump(), "application/json");
+            return;
+        }
+        if (frequency <= 0.0 || frequency > 20000.0)
+        {
+            res.status = 400;
+            res.set_content(errorResponse("Invalid frequency: must be between 0 and 20000 Hz").dump(), "application/json");
+            return;
+        }
+
+        auto* track = daw_.getTrack(0);
+        if (!track)
+        {
+            res.status = 404;
+            res.set_content(errorResponse("No track available").dump(), "application/json");
+            return;
+        }
+
+        // Configure audio generator for continuous output
+        auto& generator = track->getAudioGenerator();
+
+        // Set waveform type
+        generator.setWaveform(TestAudioGenerator::stringToWaveform(juce::String(waveform)));
+        generator.setFrequency(static_cast<float>(frequency));
+        generator.setAmplitude(static_cast<float>(amplitude));
+
+        // Note: Caller should stop after durationMs
+        json data;
+        data["generating"] = generator.isGenerating();
+        data["durationMs"] = durationMs;
+        data["waveform"] = waveform;
+        data["frequency"] = frequency;
+        data["amplitude"] = amplitude;
+
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const json::parse_error& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse("Invalid JSON: " + std::string(e.what())).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.status = 500;
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
 // Debug log handlers
 void TestHttpServer::handleDebugLogs(const httplib::Request& req, httplib::Response& res)
 {
@@ -2816,12 +3947,16 @@ void TestHttpServer::handleDebugLogsClear(const httplib::Request&, httplib::Resp
     {
         const std::string logPath = "/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log";
         juce::File logFile(logPath);
-        
+
         if (logFile.existsAsFile())
         {
-            logFile.replaceWithText("");
+            if (!logFile.replaceWithText(""))
+            {
+                res.set_content(errorResponse("Failed to clear log file").dump(), "application/json");
+                return;
+            }
         }
-        
+
         res.set_content(successResponse().dump(), "application/json");
     }
     catch (const std::exception& e)

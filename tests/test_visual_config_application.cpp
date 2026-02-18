@@ -38,10 +38,12 @@ TEST_F(VisualConfigApplicationTest, Requires3DWithEnabled)
 
 TEST_F(VisualConfigApplicationTest, Requires3DWith3DShader)
 {
+    // All 3D shaders have been removed. requires3D() only returns true 
+    // when settings3D.enabled is set (tested in Requires3DWithEnabled)
     VisualConfiguration config;
-    config.shaderType = ShaderType::VolumetricRibbon;
+    config.shaderType = ShaderType::Basic2D;
 
-    EXPECT_TRUE(config.requires3D());
+    EXPECT_FALSE(config.requires3D());
 }
 
 TEST_F(VisualConfigApplicationTest, HasPostProcessing)

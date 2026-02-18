@@ -17,8 +17,7 @@ nlohmann::json WaveformTestRunner::runTests()
     nlohmann::json tests = nlohmann::json::array();
 
     auto& state = editor_.getProcessor().getState();
-    auto captureBuffer = editor_.getProcessor().getCaptureBuffer();
-    auto decimatingBuffer = std::dynamic_pointer_cast<DecimatingCaptureBuffer>(captureBuffer);
+    auto decimatingBuffer = editor_.getProcessor().getDecimatingCaptureBuffer();
 
     // Ensure we have at least one oscillator
     if (state.getOscillators().empty())

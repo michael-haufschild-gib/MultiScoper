@@ -6,7 +6,9 @@
 #include "ui/controllers/OscillatorPanelController.h"
 #include "OscilTestFixtures.h"
 #include "ui/managers/DisplaySettingsManager.h"
-#include "rendering/GpuRenderCoordinator.h"
+#include "ui/managers/GpuRenderCoordinator.h"
+#include "core/AudioCapturePool.h"
+#include "core/CaptureThread.h"
 
 namespace oscil
 {
@@ -22,9 +24,13 @@ class OscillatorPanelControllerTest : public ::testing::Test
 {
 protected:
     OscillatorPanelControllerTest()
-        : processor_(instanceRegistry_, themeService_, shaderRegistry_, memoryBudgetManager_)
+        : capturePool_()
+        , captureThread_(capturePool_)
+        , processor_(instanceRegistry_, themeService_, shaderRegistry_, memoryBudgetManager_, 
+                     capturePool_, captureThread_)
         , serviceContext_{ instanceRegistry_, themeService_, shaderRegistry_ }
     {
+        captureThread_.startCapturing();
     }
 
     void SetUp() override
@@ -59,6 +65,7 @@ protected:
         displaySettings_.reset();
         container_.reset();
         editor_.reset();
+        captureThread_.stopCapturing();
     }
 
     // Mocks & Dependencies
@@ -66,6 +73,8 @@ protected:
     oscil::test::MockThemeService themeService_;
     ShaderRegistry shaderRegistry_;
     MemoryBudgetManager memoryBudgetManager_;
+    AudioCapturePool capturePool_;
+    CaptureThread captureThread_;
     OscilPluginProcessor processor_;
     ServiceContext serviceContext_;
     

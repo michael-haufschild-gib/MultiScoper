@@ -5,6 +5,8 @@
 
 #include <gtest/gtest.h>
 #include "plugin/PluginProcessor.h"
+#include "core/AudioCapturePool.h"
+#include "core/CaptureThread.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
@@ -20,6 +22,8 @@ protected:
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
+    std::unique_ptr<AudioCapturePool> capturePool_;
+    std::unique_ptr<CaptureThread> captureThread_;
     std::unique_ptr<OscilPluginProcessor> processor;
 
     void SetUp() override
@@ -28,18 +32,34 @@ protected:
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
+        capturePool_ = std::make_unique<AudioCapturePool>();
+        captureThread_ = std::make_unique<CaptureThread>(*capturePool_);
+        captureThread_->startCapturing();
 
         processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_,
+            *capturePool_, *captureThread_);
     }
 
     void TearDown() override
     {
         processor.reset();
+        if (captureThread_)
+            captureThread_->stopCapturing();
+        captureThread_.reset();
+        capturePool_.reset();
         memoryBudgetManager_.reset();
         shaderRegistry_.reset();
         themeManager_.reset();
         registry_.reset();
+    }
+
+    // Helper to create a fresh processor
+    std::unique_ptr<OscilPluginProcessor> createNewProcessor()
+    {
+        return std::make_unique<OscilPluginProcessor>(
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_,
+            *capturePool_, *captureThread_);
     }
 
     // Helper to generate audio buffer with specific values
@@ -79,7 +99,7 @@ protected:
 
 TEST_F(PluginProcessorTest, PluginName)
 {
-    EXPECT_EQ(processor->getName(), "Oscil");
+    EXPECT_EQ(processor->getName(), "MultiScoper");
 }
 
 TEST_F(PluginProcessorTest, NoMidiSupport)
@@ -203,8 +223,7 @@ TEST_F(PluginProcessorTest, PrepareToPlay_DifferentSampleRates)
 
     for (double rate : sampleRates)
     {
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+        processor = createNewProcessor();
         processor->prepareToPlay(rate, 512);
 
         EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate)
@@ -219,8 +238,7 @@ TEST_F(PluginProcessorTest, PrepareToPlay_DifferentBlockSizes)
 
     for (int blockSize : blockSizes)
     {
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+        processor = createNewProcessor();
         processor->prepareToPlay(44100.0, blockSize);
 
         // Should not crash
@@ -393,8 +411,7 @@ TEST_F(PluginProcessorTest, StateInformation_SaveAndRestore)
     EXPECT_GT(savedState.getSize(), 0u);
 
     // Create new processor and restore state
-    auto newProcessor = std::make_unique<OscilPluginProcessor>(
-        *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+    auto newProcessor = createNewProcessor();
     newProcessor->prepareToPlay(44100.0, 512);
 
     newProcessor->setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));

@@ -43,13 +43,13 @@ endif()
 # Option for OpenGL support
 option(OSCIL_ENABLE_OPENGL "Enable OpenGL context for GPU compositing" ON)
 
-# Option for Melatonin Inspector (UI debugging tool)
-# Disabled by default for CI/release builds - creates a separate window that can timeout in headless environments
-option(OSCIL_ENABLE_INSPECTOR "Enable Melatonin Inspector for UI debugging (development only)" OFF)
-
 # Option for RealtimeSanitizer (requires Clang 18+)
 # Detects real-time safety violations: allocations, locks, syscalls in audio thread
 option(OSCIL_ENABLE_RTSAN "Enable RealtimeSanitizer for real-time safety checking" OFF)
+
+# Option for Performance Profiling
+# Enables detailed GPU/thread/component profiling (development only)
+option(OSCIL_ENABLE_PROFILING "Enable performance profiling infrastructure" ON)
 
 # Option for Clang-Tidy Static Analysis
 # Catches performance issues, bugs, and modernization opportunities
@@ -112,34 +112,23 @@ CPMAddPackage(
     GIT_TAG v3.11.3
 )
 
-# Melatonin Inspector for UI debugging (browser-like devtools for JUCE)
-# Only fetch/build when explicitly enabled
-if(OSCIL_ENABLE_INSPECTOR)
-    CPMAddPackage(
-        NAME melatonin_inspector
-        GITHUB_REPOSITORY sudara/melatonin_inspector
-        GIT_TAG origin/main
-        SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/melatonin_inspector
-    )
-endif()
-
 # Include source file definitions
 include(cmake/Sources.cmake)
 
 # Define the plugin
 juce_add_plugin(Oscil
-    COMPANY_NAME "OscilAudio"
+    COMPANY_NAME "MultiScoper"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
-    PLUGIN_MANUFACTURER_CODE Osci
-    PLUGIN_CODE Osc1
+    PLUGIN_MANUFACTURER_CODE MuSc
+    PLUGIN_CODE MSc1
     FORMATS AU VST3 Standalone
-    PRODUCT_NAME "oscil4"
-    BUNDLE_ID "com.oscilaudio.oscil4"
+    PRODUCT_NAME "MultiScoper"
+    BUNDLE_ID "com.multiscoper.multiscoper"
     VST3_CATEGORIES "Fx" "Analyzer"
     AU_MAIN_TYPE "kAudioUnitType_Effect"
 )
@@ -169,6 +158,11 @@ juce_add_binary_data(OscilBinaryData
         resources/shaders/gradient_fill.frag
         resources/shaders/plasma_sine.vert
         resources/shaders/plasma_sine.frag
+        resources/shaders/waveform_instanced.vert
+        resources/shaders/waveform_instanced.frag
+        resources/shaders/waveform_ssbo.vert
+        resources/shaders/waveform_ssbo.frag
+        resources/shaders/waveform_compute.glsl
 )
 
 # Source files
@@ -192,7 +186,7 @@ target_compile_definitions(Oscil
         JUCE_REPORT_APP_USAGE=0
         JUCE_STRICT_REFCOUNTEDPOINTER=1
         $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
-        $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:OSCIL_ENABLE_INSPECTOR=1>
+        $<$<BOOL:${OSCIL_ENABLE_PROFILING}>:OSCIL_ENABLE_PROFILING=1>
 )
 
 # Define interface library for warning suppressions to ensure they come last
@@ -210,6 +204,7 @@ endif()
 target_link_libraries(Oscil
     PRIVATE
         OscilBinaryData
+        juce::juce_animation
         juce::juce_audio_utils
         juce::juce_audio_processors
         juce::juce_graphics
@@ -220,7 +215,6 @@ target_link_libraries(Oscil
         juce::juce_events
         juce::juce_dsp
         nlohmann_json::nlohmann_json
-        $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:melatonin_inspector>
         $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     PUBLIC
         juce::juce_recommended_config_flags
@@ -275,6 +269,7 @@ if(OSCIL_BUILD_TESTS)
     add_executable(OscilTests
         tests/test_main.cpp
         tests/test_signal_processor.cpp
+        tests/test_adaptive_lod.cpp
 
         # Refactored core tests - split for better isolation
         tests/test_source_id.cpp
@@ -292,6 +287,11 @@ if(OSCIL_BUILD_TESTS)
         tests/test_capture_buffer_core.cpp
         tests/test_capture_buffer_threading.cpp
         tests/test_capture_buffer_lifecycle.cpp
+
+        # Lock-free capture architecture tests
+        tests/test_raw_capture_buffer.cpp
+        tests/test_audio_capture_pool.cpp
+        tests/test_capture_thread.cpp
 
         tests/test_oscillator_core.cpp
         tests/test_oscillator_dsp.cpp
@@ -315,9 +315,6 @@ if(OSCIL_BUILD_TESTS)
         tests/test_memory_budget_manager.cpp
 
         # Refactored UI component tests - split for better isolation
-        tests/test_spring_physics.cpp
-        tests/test_spring_interaction.cpp
-        tests/test_spring_edge.cpp
         tests/test_animation_settings_validation.cpp
         tests/test_animation_settings_presets.cpp
         tests/test_animation_settings_persistence.cpp
@@ -328,7 +325,6 @@ if(OSCIL_BUILD_TESTS)
         tests/test_accordion_sections_e2e.cpp
         tests/test_sidebar_theme_population.cpp
         tests/test_shaders.cpp
-        tests/test_waveform_shader_3d.cpp
         tests/test_effect_chain.cpp
         tests/test_framebuffer_pool.cpp
         tests/test_waveform_presenter.cpp
@@ -373,6 +369,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_pane_selector.cpp
         tests/test_select_pane_dialog.cpp
         tests/test_oscillator_panel_controller.cpp
+        tests/FrameBudgetGuardTest.cpp
 
         # Test Harness Dependencies
         test_harness/src/TestElementRegistry.cpp
@@ -394,6 +391,7 @@ if(OSCIL_BUILD_TESTS)
         PRIVATE
             OscilBinaryData
             GTest::gtest_main  # gtest_main already includes gtest
+            juce::juce_animation
             juce::juce_core
             juce::juce_data_structures
             juce::juce_graphics
@@ -427,6 +425,7 @@ if(OSCIL_BUILD_TESTS)
             JUCE_WEB_BROWSER=0
             OSCIL_ENABLE_TEST_IDS=1
             $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
+            $<$<BOOL:${OSCIL_ENABLE_PROFILING}>:OSCIL_ENABLE_PROFILING=1>
     )
 
     # Apply RTSan to tests (tests are executables, not shared libraries)

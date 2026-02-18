@@ -56,6 +56,9 @@ private:
     std::atomic<float> attackTimeMs_{ 0.0f };
     std::atomic<float> decayTimeMs_{ 0.0f };
 
+    // Thread safety flag - prevents process() during reset()
+    std::atomic<bool> resetting_{ false };
+
     // Envelope coefficients (set based on sample rate)
     float fastAttackCoef_ = 0.0f;
     float fastReleaseCoef_ = 0.0f;

@@ -7,6 +7,7 @@
 
 #include "Framebuffer.h"
 #include "VisualConfiguration.h"
+#include <atomic>
 #include <deque>
 #include <memory>
 #include <vector>
@@ -25,11 +26,50 @@ struct WaveformRenderState
     int waveformId = 0;
 
     // Trails (stateful post-processing)
-    bool trailsEnabled = false;
+    // H10 FIX: Use atomic bool for thread-safe access
+    // This flag may be read during render operations and written from UI thread
+    std::atomic<bool> trailsEnabled{false};
     std::unique_ptr<Framebuffer> historyFBO;
 
     // Full visual configuration
     VisualConfiguration visualConfig;
+
+    // Default constructor
+    WaveformRenderState() = default;
+
+    // Move constructor - atomics are not movable, so load and store manually
+    WaveformRenderState(WaveformRenderState&& other) noexcept
+        : waveformId(other.waveformId)
+        , trailsEnabled(other.trailsEnabled.load(std::memory_order_relaxed))
+        , historyFBO(std::move(other.historyFBO))
+        , visualConfig(std::move(other.visualConfig))
+        , sampleHistory(std::move(other.sampleHistory))
+        , maxHistoryDepth(other.maxHistoryDepth)
+        , lastFrameTime(other.lastFrameTime)
+        , accumulatedTime(other.accumulatedTime)
+    {
+    }
+
+    // Move assignment operator
+    WaveformRenderState& operator=(WaveformRenderState&& other) noexcept
+    {
+        if (this != &other)
+        {
+            waveformId = other.waveformId;
+            trailsEnabled.store(other.trailsEnabled.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            historyFBO = std::move(other.historyFBO);
+            visualConfig = std::move(other.visualConfig);
+            sampleHistory = std::move(other.sampleHistory);
+            maxHistoryDepth = other.maxHistoryDepth;
+            lastFrameTime = other.lastFrameTime;
+            accumulatedTime = other.accumulatedTime;
+        }
+        return *this;
+    }
+
+    // Delete copy operations (atomics cannot be copied)
+    WaveformRenderState(const WaveformRenderState&) = delete;
+    WaveformRenderState& operator=(const WaveformRenderState&) = delete;
 
     // Sample history for 3D temporal effects (waterfall displays)
     std::deque<std::vector<float>> sampleHistory;
@@ -99,12 +139,11 @@ struct WaveformRenderState
 
     /**
      * Check if this state needs sample history for 3D effects.
+     * Note: 3D shaders that required sample history have been removed.
      */
     [[nodiscard]] bool needsSampleHistory() const
     {
-        return visualConfig.requires3D() &&
-               (visualConfig.shaderType == ShaderType::WireframeMesh ||
-                visualConfig.shaderType == ShaderType::VectorFlow);
+        return false;  // No 3D shaders require sample history anymore
     }
 
     /**

@@ -42,6 +42,8 @@ public:
      * @param name User-friendly name for the source
      * @param channelCount Number of audio channels
      * @param sampleRate Current sample rate
+     * @param analysisEngine Analysis engine for this source
+     * @param instanceUUID Persistent UUID that survives DAW session reload
      */
     [[nodiscard]] SourceId registerInstance(
         const juce::String& trackIdentifier,
@@ -49,7 +51,8 @@ public:
         const juce::String& name = "Track",
         int channelCount = 2,
         double sampleRate = 44100.0,
-        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) override;
+        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr,
+        const juce::String& instanceUUID = juce::String()) override;
 
     /**
      * Unregister a plugin instance.
@@ -66,6 +69,20 @@ public:
      * Get a specific source by ID
      */
     [[nodiscard]] std::optional<SourceInfo> getSource(const SourceId& sourceId) const override;
+
+    /**
+     * Get a source by name (for resolving persisted oscillator references)
+     * Returns the first source with a matching name, or nullopt if not found.
+     * Name matching is case-insensitive.
+     */
+    [[nodiscard]] std::optional<SourceInfo> getSourceByName(const juce::String& name) const override;
+
+    /**
+     * Get a source by instanceUUID (for resolving persisted oscillator references)
+     * This is the most reliable method as instanceUUIDs are unique and persist across sessions.
+     * Returns the source with matching UUID, or nullopt if not found.
+     */
+    [[nodiscard]] std::optional<SourceInfo> getSourceByInstanceUUID(const juce::String& uuid) const override;
 
     /**
      * Get the capture buffer for a source
@@ -121,7 +138,8 @@ private:
 
     mutable std::shared_mutex mutex_;
     std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_;
-    std::unordered_map<juce::String, SourceId> trackToSourceMap_; // Deduplication map
+    std::unordered_map<juce::String, SourceId> trackToSourceMap_;      // Deduplication map (by trackIdentifier)
+    std::unordered_map<juce::String, SourceId> instanceUUIDToSourceMap_; // Persistent UUID lookup map
 
     // Dispatcher for notifications
     Dispatcher dispatcher_;
@@ -132,6 +150,11 @@ private:
 
     // Shutdown flag to prevent async notifications from accessing destroyed object
     std::atomic<bool> shuttingDown_{false};
+
+    // Sequence number for detecting stale async notifications
+    // Incremented on each source registration/unregistration/update
+    // Captured by async callbacks to detect if notification is stale
+    std::atomic<uint64_t> operationSequence_{0};
 
     JUCE_DECLARE_WEAK_REFERENCEABLE(InstanceRegistry)
 };

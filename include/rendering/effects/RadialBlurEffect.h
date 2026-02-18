@@ -47,8 +47,16 @@ public:
 
     /**
      * Configure the radial blur effect.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
      */
-    void setSettings(const RadialBlurSettings& settings) { settings_ = settings; }
+    void setSettings(const RadialBlurSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.amount = juce::jlimit(0.0f, 0.5f, settings_.amount);
+        settings_.glow = juce::jlimit(0.0f, 5.0f, settings_.glow);
+        settings_.samples = juce::jlimit(2, 8, settings_.samples);
+    }
     [[nodiscard]] const RadialBlurSettings& getSettings() const { return settings_; }
 
 private:

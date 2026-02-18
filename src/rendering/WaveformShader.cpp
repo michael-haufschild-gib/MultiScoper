@@ -91,19 +91,19 @@ bool WaveformShader::compileShaderProgram(
 {
     if (!program.addVertexShader(vertexSource))
     {
-        DBG("Vertex shader compilation failed: " << program.getLastError());
+        juce::Logger::writeToLog("WaveformShader: Vertex shader compilation failed: " + program.getLastError());
         return false;
     }
 
     if (!program.addFragmentShader(fragmentSource))
     {
-        DBG("Fragment shader compilation failed: " << program.getLastError());
+        juce::Logger::writeToLog("WaveformShader: Fragment shader compilation failed: " + program.getLastError());
         return false;
     }
 
     if (!program.link())
     {
-        DBG("Shader program linking failed: " << program.getLastError());
+        juce::Logger::writeToLog("WaveformShader: Shader program linking failed: " + program.getLastError());
         return false;
     }
 
@@ -235,7 +235,7 @@ void WaveformShader::buildFillGeometry(
     }
 }
 
-bool WaveformShader::checkGLError([[maybe_unused]] const char* location)
+bool WaveformShader::checkGLError(const char* location)
 {
     using namespace juce::gl;
 
@@ -243,7 +243,7 @@ bool WaveformShader::checkGLError([[maybe_unused]] const char* location)
     if (error == GL_NO_ERROR)
         return true;
 
-    [[maybe_unused]] const char* errorStr = "Unknown error";
+    const char* errorStr = "Unknown error";
     switch (error)
     {
         case GL_INVALID_ENUM:                  errorStr = "GL_INVALID_ENUM"; break;
@@ -254,7 +254,7 @@ bool WaveformShader::checkGLError([[maybe_unused]] const char* location)
         default: break;
     }
 
-    DBG("OpenGL error at " << location << ": " << errorStr << " (0x" << juce::String::toHexString(static_cast<int>(error)) << ")");
+    juce::Logger::writeToLog("OpenGL error at " + juce::String(location) + ": " + juce::String(errorStr) + " (0x" + juce::String::toHexString(static_cast<int>(error)) + ")");
 
     // Clear any remaining errors
     while (glGetError() != GL_NO_ERROR) {}

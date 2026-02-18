@@ -1,6 +1,6 @@
 /*
     Oscil - Source Coordinator
-    Handles InstanceRegistryListener callbacks and source list management
+    Handles IInstanceRegistryListener callbacks and source list management
 */
 
 #pragma once
@@ -17,10 +17,10 @@ namespace oscil
 
 /**
  * Coordinates source registry events for the plugin editor.
- * Encapsulates InstanceRegistryListener implementation to reduce
+ * Encapsulates IInstanceRegistryListener implementation to reduce
  * editor responsibilities.
  */
-class SourceCoordinator : public InstanceRegistryListener
+class SourceCoordinator : public IInstanceRegistryListener
 {
 public:
     using SourcesChangedCallback = std::function<void()>;
@@ -36,7 +36,7 @@ public:
      */
     ~SourceCoordinator() override;
 
-    // InstanceRegistryListener interface
+    // IInstanceRegistryListener interface
     void sourceAdded(const SourceId& sourceId) override;
     void sourceRemoved(const SourceId& sourceId) override;
     void sourceUpdated(const SourceId& sourceId) override;

@@ -196,6 +196,11 @@ public:
     std::shared_ptr<IAudioBuffer> getCaptureBuffer() const;
     juce::String getShaderId() const { return shaderId_; }
     bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
+    
+    // LOD accessors - for testing and debugging
+    [[nodiscard]] LODTier getCurrentLODTier() const;
+    [[nodiscard]] int getTargetSampleCount() const;
+    [[nodiscard]] int getDecimatorWidth() const;
 
     // Accessibility support
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;

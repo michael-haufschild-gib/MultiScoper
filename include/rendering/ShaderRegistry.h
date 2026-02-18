@@ -8,6 +8,7 @@
 #include "WaveformShader.h"
 #include <juce_core/juce_core.h>
 #include <memory>
+#include <shared_mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -17,6 +18,13 @@ namespace oscil
 /**
  * Registry for waveform shaders.
  * Manages shader lifecycle and provides access for rendering.
+ *
+ * THREAD SAFETY (H13):
+ * This class uses a shared_mutex to allow concurrent reads (getShader, hasShader,
+ * getAvailableShaders) while serializing writes (registerShaderType).
+ * - Shaders are registered at startup before multi-threaded access begins.
+ * - Read access during rendering is thread-safe with shared lock.
+ * - createShader() uses factories_ which is also protected by the mutex.
  *
  * Owned by PluginFactory - do not create directly except in tests.
  */
@@ -72,17 +80,24 @@ private:
      */
     void registerBuiltInShaders();
 
+    // H13 FIX: Mutex for thread-safe access to shader maps
+    // Mutable because we need to lock in const methods (getShader const, hasShader, etc.)
+    mutable std::shared_mutex mutex_;
+
     // Prototype storage
     std::unordered_map<std::string, std::unique_ptr<WaveformShader>> shaders_;
     // Factory storage
     std::unordered_map<std::string, std::function<std::unique_ptr<WaveformShader>()>> factories_;
-    
+
     juce::String defaultShaderId_ = "basic";
     
     // Helper to register a shader type with both prototype and factory
+    // H13 FIX: Uses exclusive lock since this modifies the maps
+    // Note: This is called during construction, before multi-threaded access begins
     template<typename T>
     void registerShaderType()
     {
+        std::unique_lock<std::shared_mutex> lock(mutex_);
         auto prototype = std::make_unique<T>();
         auto id = prototype->getId().toStdString();
         shaders_[id] = std::move(prototype);

@@ -21,6 +21,11 @@ PresetEditorDialog::PresetEditorDialog(IThemeService& themeService, VisualPreset
 
 PresetEditorDialog::~PresetEditorDialog()
 {
+    // Clear viewport's viewed component before tabContent_ is destroyed
+    // to prevent dangling pointer access during component destruction
+    if (tabViewport_)
+        tabViewport_->setViewedComponent(nullptr, false);
+
     themeService_.removeListener(this);
 }
 

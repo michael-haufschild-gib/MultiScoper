@@ -3,22 +3,19 @@
 */
 
 #include "ui/components/OscilToggle.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
 
 OscilToggle::OscilToggle(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , positionSpring_(SpringPresets::bouncy())
-    , celebrationSpring_(SpringPresets::snappy())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    positionSpring_.position = 0.0f;
-    positionSpring_.target = 0.0f;
-    celebrationSpring_.position = 1.0f;
-    celebrationSpring_.target = 1.0f;
+    positionProgress_ = 0.0f;
+    celebrationProgress_ = 1.0f;
 
     // Setup internal toggle button for APVTS (hidden)
     internalButton_.setToggleState(false, juce::dontSendNotification);
@@ -57,7 +54,16 @@ void OscilToggle::registerTestId()
 
 OscilToggle::~OscilToggle()
 {
-    stopTimer();
+    // ScopedAnimators handle completion on destruction
+}
+
+void OscilToggle::parentHierarchyChanged()
+{
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void OscilToggle::setValue(bool value, bool animate)
@@ -70,21 +76,31 @@ void OscilToggle::setValue(bool value, bool animate)
     // Update internal button for APVTS sync
     internalButton_.setToggleState(value, juce::dontSendNotification);
 
-    if (animate && AnimationSettings::shouldUseSpringAnimations())
+    float targetPos = value ? 1.0f : 0.0f;
+
+    if (animate && animService_ && OscilAnimationService::shouldAnimate())
     {
-        positionSpring_.setTarget(value ? 1.0f : 0.0f);
+        float startPos = positionProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilToggle>(this);
+        positionAnimator_.set(animService_->createValueAnimation(
+            AnimationPresets::SNAPPY_DURATION_MS,
+            [safeThis, startPos, targetPos](float v) {
+                if (safeThis)
+                {
+                    safeThis->positionProgress_ = juce::jmap(v, startPos, targetPos);
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseOut()));
+        positionAnimator_.start();
 
         // Trigger celebration on activation
         if (value && wasOff)
             triggerCelebration();
-
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
     else
     {
-        positionSpring_.snapToTarget();
-        positionSpring_.target = value ? 1.0f : 0.0f;
-        positionSpring_.position = positionSpring_.target;
+        positionProgress_ = targetPos;
         repaint();
     }
 
@@ -162,6 +178,10 @@ int OscilToggle::getPreferredHeight() const
 
 void OscilToggle::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     auto bounds = getLocalBounds();
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
@@ -219,7 +239,7 @@ void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Interpolate track color based on position
-    float progress = positionSpring_.position;
+    float progress = positionProgress_;
     auto offColor = getTheme().controlBorder;
     auto onColor = getTheme().statusActive;
     auto trackColor = offColor.interpolatedWith(onColor, progress);
@@ -231,7 +251,7 @@ void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
 void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float progress = positionSpring_.position;
+    float progress = positionProgress_;
 
     // Calculate knob position
     float knobSize = ComponentLayout::TOGGLE_KNOB_SIZE;
@@ -242,7 +262,7 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
     float knobY = trackBounds.getY() + padding;
 
     // Apply celebration scale
-    float scale = celebrationSpring_.position;
+    float scale = celebrationProgress_;
     float scaledSize = knobSize * scale;
     float offset = (scaledSize - knobSize) / 2.0f;
 
@@ -270,7 +290,13 @@ void OscilToggle::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>
 
 void OscilToggle::resized()
 {
-    // No child components to layout
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilToggle::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
 }
 
 void OscilToggle::mouseDown(const juce::MouseEvent&)
@@ -311,46 +337,39 @@ void OscilToggle::focusLost(FocusChangeType)
 void OscilToggle::triggerCelebration()
 {
     // Respect reduced motion preference
-    if (!AnimationSettings::shouldUseSpringAnimations())
+    if (!animService_ || !OscilAnimationService::shouldAnimate())
         return;
 
-    celebrationSpring_.setTarget(ComponentLayout::CELEBRATION_SCALE, 1.0f);
-
-    // Schedule return to normal scale
-    // Use SafePointer to prevent use-after-free if component is destroyed before callback
-    juce::Component::SafePointer<OscilToggle> safeThis(this);
-    juce::Timer::callAfterDelay(100, [safeThis] {
-        if (auto* toggle = safeThis.getComponent())
-        {
-            toggle->celebrationSpring_.setTarget(1.0f);
-            if (!toggle->isTimerRunning())
-                toggle->startTimerHz(ComponentLayout::ANIMATION_FPS);
-        }
-    });
+    // Quick scale up, then back down
+    auto safeThis = juce::Component::SafePointer<OscilToggle>(this);
+    celebrationAnimator_.set(animService_->createValueAnimation(
+        80.0, // Quick celebration
+        [safeThis](float v) {
+            if (safeThis)
+            {
+                // Scale up for first half, then back down
+                if (v < 0.5f)
+                    safeThis->celebrationProgress_ = 1.0f + (ComponentLayout::CELEBRATION_SCALE - 1.0f) * (v * 2.0f);
+                else
+                    safeThis->celebrationProgress_ = ComponentLayout::CELEBRATION_SCALE - (ComponentLayout::CELEBRATION_SCALE - 1.0f) * ((v - 0.5f) * 2.0f);
+                safeThis->repaint();
+            }
+        },
+        juce::Easings::createEaseOut(),
+        [safeThis]() {
+            if (safeThis)
+            {
+                safeThis->celebrationProgress_ = 1.0f;
+                safeThis->repaint();
+            }
+        }));
+    celebrationAnimator_.start();
 }
 
 void OscilToggle::notifyValueChanged()
 {
     if (onValueChanged)
         onValueChanged(value_);
-}
-
-void OscilToggle::timerCallback()
-{
-    updateAnimations();
-
-    if (positionSpring_.isSettled() && celebrationSpring_.isSettled())
-        stopTimer();
-
-    repaint();
-}
-
-void OscilToggle::updateAnimations()
-{
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-
-    positionSpring_.update(dt);
-    celebrationSpring_.update(dt);
 }
 
 

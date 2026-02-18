@@ -10,6 +10,7 @@
 #include "core/Oscillator.h"
 #include <vector>
 #include <span>
+#include <atomic>
 
 namespace oscil
 {
@@ -142,41 +143,163 @@ private:
     void processRight(std::span<const float> right, ProcessedSignal& output) const;
 };
 
+//==============================================================================
+// Level-of-Detail (LOD) System
+//==============================================================================
+
+/**
+ * LOD quality tiers based on visible waveform width.
+ * Each tier defines the target sample count for optimal visual fidelity
+ * without excessive GPU/CPU overhead.
+ *
+ * Width Thresholds:
+ *   > 800px  -> Full (2048 samples)
+ *   400-800px -> High (1024 samples)
+ *   200-400px -> Medium (512 samples)
+ *   < 200px   -> Preview (256 samples)
+ */
+enum class LODTier
+{
+    Full,       // 2048 samples - maximum quality for large displays
+    High,       // 1024 samples - high quality for medium displays
+    Medium,     // 512 samples  - balanced quality for small displays
+    Preview     // 256 samples  - preview quality for tiny displays
+};
+
+/**
+ * Get the sample count for a given LOD tier.
+ */
+[[nodiscard]] inline int getLODSampleCount(LODTier tier)
+{
+    switch (tier)
+    {
+        case LODTier::Full:    return 2048;
+        case LODTier::High:    return 1024;
+        case LODTier::Medium:  return 512;
+        case LODTier::Preview: return 256;
+    }
+    return 1024; // Default fallback
+}
+
+/**
+ * Get a human-readable name for an LOD tier.
+ */
+[[nodiscard]] inline const char* getLODTierName(LODTier tier)
+{
+    switch (tier)
+    {
+        case LODTier::Full:    return "Full";
+        case LODTier::High:    return "High";
+        case LODTier::Medium:  return "Medium";
+        case LODTier::Preview: return "Preview";
+    }
+    return "Unknown";
+}
+
+/**
+ * Result of decimation with min/max envelope for accurate peak visualization.
+ * This struct preserves peak transients even at low LOD levels.
+ */
+struct DecimatedWaveform
+{
+    std::vector<float> samples;      // Decimated sample values
+    std::vector<float> minEnvelope;  // Minimum values per decimation segment
+    std::vector<float> maxEnvelope;  // Maximum values per decimation segment
+    LODTier tier = LODTier::Full;    // Current LOD tier
+    
+    void resize(size_t count)
+    {
+        samples.resize(count);
+        minEnvelope.resize(count);
+        maxEnvelope.resize(count);
+    }
+    
+    void clear()
+    {
+        samples.clear();
+        minEnvelope.clear();
+        maxEnvelope.clear();
+    }
+    
+    [[nodiscard]] bool empty() const { return samples.empty(); }
+    [[nodiscard]] size_t size() const { return samples.size(); }
+};
+
 /**
  * Adaptive decimator for display optimization.
  * Reduces sample count based on display width while preserving visual fidelity.
+ * Uses tiered LOD with hysteresis to prevent flickering at tier boundaries.
  */
 class AdaptiveDecimator
 {
 public:
+    // Width thresholds for LOD tier transitions
+    // Hysteresis zone of 20px prevents flickering at boundaries
+    static constexpr int THRESHOLD_FULL_HIGH = 800;
+    static constexpr int THRESHOLD_HIGH_MEDIUM = 400;
+    static constexpr int THRESHOLD_MEDIUM_PREVIEW = 200;
+    static constexpr int HYSTERESIS_PIXELS = 20;
+
     AdaptiveDecimator() = default;
 
     /**
-     * Configure the decimator for a given display width
+     * Configure the decimator for a given display width.
+     * Applies hysteresis to prevent tier flickering at boundaries.
      */
     void setDisplayWidth(int widthPixels);
 
     /**
-     * Get the recommended sample count for display
+     * Get the current LOD tier.
+     * Thread-safe: uses relaxed atomic load.
      */
-    [[nodiscard]] int getTargetSampleCount() const { return targetSamples_; }
+    [[nodiscard]] LODTier getCurrentTier() const { return currentTier_.load(std::memory_order_relaxed); }
 
     /**
-     * Decimate samples for display
+     * Get the recommended sample count for display.
+     * Thread-safe: uses relaxed atomic load.
+     */
+    [[nodiscard]] int getTargetSampleCount() const { return targetSamples_.load(std::memory_order_relaxed); }
+
+    /**
+     * Get the current display width.
+     * Thread-safe: uses relaxed atomic load.
+     */
+    [[nodiscard]] int getDisplayWidth() const { return displayWidth_.load(std::memory_order_relaxed); }
+
+    /**
+     * Decimate samples for display (simple mode).
      */
     void process(std::span<const float> input,
                  std::vector<float>& output) const;
 
     /**
-     * Decimate with min/max envelope for peak preservation
+     * Decimate with min/max envelope for peak preservation (legacy API).
      */
     void processWithEnvelope(std::span<const float> input,
                              std::vector<float>& minEnvelope,
                              std::vector<float>& maxEnvelope) const;
 
+    /**
+     * Decimate with full peak-preserving envelope (new API).
+     * Populates a DecimatedWaveform with samples and min/max envelopes.
+     */
+    void processWithPeaks(std::span<const float> input,
+                          DecimatedWaveform& output) const;
+
 private:
-    int displayWidth_ = 800;
-    int targetSamples_ = 800;
+    /**
+     * Calculate LOD tier for a given width with hysteresis.
+     * @param width Current display width in pixels
+     * @param currentTier Current tier (for hysteresis calculation)
+     * @return The appropriate LOD tier
+     */
+    [[nodiscard]] LODTier calculateTierWithHysteresis(int width, LODTier currentTier) const;
+
+    // Thread-safe atomic members for cross-thread access
+    // setDisplayWidth() may be called from UI thread while process() runs on another
+    std::atomic<int> displayWidth_{800};
+    std::atomic<int> targetSamples_{2048};
+    std::atomic<LODTier> currentTier_{LODTier::Full};
 };
 
 } // namespace oscil

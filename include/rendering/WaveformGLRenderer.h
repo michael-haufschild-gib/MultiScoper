@@ -13,6 +13,7 @@
 #include "rendering/WaveformShader.h"
 #include "rendering/VisualConfiguration.h"
 #include "core/dsp/TimingConfig.h"
+#include "core/dsp/SignalProcessor.h"  // For LODTier enum
 #include <vector>
 #include <unordered_map>
 #include <atomic>
@@ -54,6 +55,18 @@ struct WaveformRenderData
     VisualConfiguration visualConfig;    // Full visual configuration for render engine
     GridConfiguration gridConfig;        // Grid configuration
     GridColors gridColors;               // Grid colors (copied from theme on message thread)
+    
+    // LOD (Level-of-Detail) metadata for adaptive rendering
+    LODTier lodTier = LODTier::Full;     // Current LOD quality tier
+    bool hasMinMaxEnvelope = false;      // True if min/max envelopes are available
+    
+    // Min/max envelopes for peak-accurate rendering at low LOD
+    // When hasMinMaxEnvelope is true, shaders can use these to draw accurate peaks
+    // even when the main sample arrays are heavily decimated
+    std::vector<float> minEnvelope1;     // Min values for channel1
+    std::vector<float> maxEnvelope1;     // Max values for channel1  
+    std::vector<float> minEnvelope2;     // Min values for channel2 (stereo)
+    std::vector<float> maxEnvelope2;     // Max values for channel2 (stereo)
 };
 
 /**
@@ -161,14 +174,40 @@ public:
      */
     void requestFrameCapture(FrameCaptureCallback callback);
 
+    /**
+     * Check if context recovery is pending.
+     * Returns true if the renderer detected a context loss and is waiting to reinitialize.
+     */
+    [[nodiscard]] bool isRecoveryPending() const { return needsReinitialization_.load(std::memory_order_acquire); }
+
+    /**
+     * Force a reinitialization of GPU resources on the next frame.
+     * Useful when the host signals graphics changes.
+     */
+    void requestReinitialization() { needsReinitialization_.store(true, std::memory_order_release); }
+
 private:
+    /**
+     * Handle detected context loss.
+     * Marks resources as invalid and schedules reinitialization.
+     */
+    void handleContextLoss();
+
+    /**
+     * Attempt to reinitialize GPU resources after context loss.
+     * @return true if reinitialization succeeded
+     */
+    bool attemptReinitialization();
     void compileDebugShader();
     void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);
     void processPendingCaptures(int width, int height);
 
-    juce::OpenGLContext* context_ = nullptr;
+    std::atomic<juce::OpenGLContext*> context_{ nullptr };
+    juce::OpenGLContext* lastKnownContext_ = nullptr;  // For context change detection
     std::atomic<bool> contextReady_{ false };
     std::atomic<bool> cleanupPerformed_{ false };  // Guard for idempotent cleanup
+    std::atomic<bool> needsReinitialization_{ false };  // Context recovery flag
+    std::atomic<int> consecutiveRecoveryFailures_{ 0 };  // Track failed recovery attempts
 
     // Thread-safe waveform data storage using double-buffering
     // Message thread writes to waveformsWrite_, GL thread reads from waveformsRead_
@@ -177,6 +216,10 @@ private:
     std::unordered_map<int, WaveformRenderData> waveformsWrite_;  // Message thread writes
     std::unordered_map<int, WaveformRenderData> waveformsRead_;   // GL thread reads
     std::atomic<bool> swapPending_{false};
+
+    // C12 FIX: Atomic flag for thread-safe deferred clear
+    // Set by UI thread, consumed by render thread at start of frame
+    std::atomic<bool> clearRequested_{false};
 
     // Frame capture
     juce::SpinLock captureLock_;
@@ -211,6 +254,9 @@ private:
 
     // Pooled capture buffer to avoid per-frame allocation
     std::vector<uint8_t> captureBuffer_;
+
+    // Reused vector for waveforms to render (avoids per-frame allocation)
+    std::vector<const WaveformRenderData*> waveformsToRender_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformGLRenderer)
 };

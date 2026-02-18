@@ -9,7 +9,7 @@ namespace oscil
 {
 
 PaneSelectorComponent::PaneSelectorComponent(IThemeService& themeService, bool allowNewPane, const juce::String& testId)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
     , allowNewPane_(allowNewPane)
 {
     if (testId.isNotEmpty())
@@ -28,7 +28,7 @@ void PaneSelectorComponent::registerTestId()
 void PaneSelectorComponent::setupDropdown()
 {
     juce::String dropdownTestId = testId_.isNotEmpty() ? testId_ + "_dropdown" : "";
-    dropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select pane...", dropdownTestId);
+    dropdown_ = std::make_unique<OscilDropdown>(getThemeService(), "Select pane...", dropdownTestId);
     dropdown_->onSelectionChanged = [this](int index) { handleSelectionChange(index); };
     addAndMakeVisible(*dropdown_);
 

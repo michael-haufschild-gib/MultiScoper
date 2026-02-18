@@ -21,6 +21,18 @@
 namespace oscil
 {
 
+/**
+ * Manages framebuffers and post-processing effects for the render pipeline.
+ *
+ * THREAD SAFETY (H11):
+ * This class is designed to be used EXCLUSIVELY from the OpenGL rendering thread.
+ * - All methods (initialize, shutdown, resize, applyPostProcessing, getEffect)
+ *   must be called from the OpenGL thread.
+ * - setQualityLevel() modifies effect enabled states and MUST be called from
+ *   the OpenGL thread to avoid racing with render operations.
+ * - Effect enable/disable should be synchronized with frame boundaries.
+ *   Call setQualityLevel() in beginFrame() or endFrame(), not during rendering.
+ */
 class EffectPipeline : public IEffectProvider
 {
 public:

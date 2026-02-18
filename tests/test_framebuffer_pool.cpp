@@ -19,12 +19,13 @@ public:
         return true;
     }
     void destroy(juce::OpenGLContext&) override { destroyCalled = true; }
-    void resize(juce::OpenGLContext&, int w, int h) override { 
+    bool resize(juce::OpenGLContext&, int w, int h) override {
         resizeCalled = true;
-        createW = w; 
-        createH = h; 
+        createW = w;
+        createH = h;
+        return true;
     }
-    bool isValid() const override { return fbo != 0; }
+    bool isValid() const noexcept override { return fbo != 0; }
 };
 
 class TestableFramebufferPool : public FramebufferPool {
@@ -39,6 +40,10 @@ public:
     
     bool createFullscreenQuad(juce::OpenGLContext&) override { return true; }
     void destroyFullscreenQuad(juce::OpenGLContext&) override {}
+    
+    // Skip vertex buffer pool in unit tests (requires real GL context)
+    bool createVertexBufferPool(juce::OpenGLContext&) override { return true; }
+    void destroyVertexBufferPool(juce::OpenGLContext&) override {}
 };
 
 TEST(FramebufferPoolTest, InitializeCreatesFBOs) {

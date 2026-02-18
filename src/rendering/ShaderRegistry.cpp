@@ -6,17 +6,6 @@
 #include "rendering/shaders/BasicShader.h"
 #include "rendering/shaders/NeonGlowShader.h"
 #include "rendering/shaders/GradientFillShader.h"
-#include "rendering/shaders/DualOutlineShader.h"
-#include "rendering/shaders/PlasmaSineShader.h"
-#include "rendering/shaders3d/VolumetricRibbonShader.h"
-#include "rendering/shaders3d/WireframeMeshShader.h"
-#include "rendering/shaders3d/VectorFlowShader.h"
-#include "rendering/shaders3d/StringTheoryShader.h"
-#include "rendering/shaders3d/ElectricFlowerShader.h"
-#include "rendering/shaders3d/ElectricFiligreeShader.h"
-#include "rendering/materials/GlassRefractionShader.h"
-#include "rendering/materials/LiquidChromeShader.h"
-#include "rendering/materials/CrystallineShader.h"
 
 namespace oscil
 {
@@ -30,43 +19,32 @@ ShaderRegistry::~ShaderRegistry() = default;
 
 void ShaderRegistry::registerBuiltInShaders()
 {
-    // Register default shaders
-    registerShaderType<BasicShader>();
-
     // Register 2D shaders
+    registerShaderType<BasicShader>();
     registerShaderType<NeonGlowShader>();
     registerShaderType<GradientFillShader>();
-    registerShaderType<DualOutlineShader>();
-    registerShaderType<PlasmaSineShader>();
-
-    // Register 3D shaders
-    registerShaderType<VolumetricRibbonShader>();
-    registerShaderType<WireframeMeshShader>();
-    registerShaderType<VectorFlowShader>();
-    registerShaderType<StringTheoryShader>();
-    registerShaderType<ElectricFlowerShader>();
-    registerShaderType<ElectricFiligreeShader>();
-
-    // Register Material shaders
-    registerShaderType<GlassRefractionShader>();
-    registerShaderType<LiquidChromeShader>();
-    registerShaderType<CrystallineShader>();
 }
 
 WaveformShader* ShaderRegistry::getShader(const juce::String& shaderId)
 {
+    // H13 FIX: Use shared lock for concurrent read access
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     auto it = shaders_.find(shaderId.toStdString());
     return (it != shaders_.end()) ? it->second.get() : nullptr;
 }
 
 const WaveformShader* ShaderRegistry::getShader(const juce::String& shaderId) const
 {
+    // H13 FIX: Use shared lock for concurrent read access
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     auto it = shaders_.find(shaderId.toStdString());
     return (it != shaders_.end()) ? it->second.get() : nullptr;
 }
 
 std::unique_ptr<WaveformShader> ShaderRegistry::createShader(const juce::String& shaderId) const
 {
+    // H13 FIX: Use shared lock for concurrent read access
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     auto it = factories_.find(shaderId.toStdString());
     if (it != factories_.end())
     {
@@ -77,6 +55,8 @@ std::unique_ptr<WaveformShader> ShaderRegistry::createShader(const juce::String&
 
 std::vector<ShaderInfo> ShaderRegistry::getAvailableShaders() const
 {
+    // H13 FIX: Use shared lock for concurrent read access
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     std::vector<ShaderInfo> result;
     result.reserve(shaders_.size());
 
@@ -90,6 +70,8 @@ std::vector<ShaderInfo> ShaderRegistry::getAvailableShaders() const
 
 bool ShaderRegistry::hasShader(const juce::String& shaderId) const
 {
+    // H13 FIX: Use shared lock for concurrent read access
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return shaders_.find(shaderId.toStdString()) != shaders_.end();
 }
 

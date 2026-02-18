@@ -40,7 +40,20 @@ public:
     ) override;
 
     void configure(const VisualConfiguration& config) override { settings_ = config.tiltShift; }
-    void setSettings(const TiltShiftSettings& settings) { settings_ = settings; }
+
+    /**
+     * Configure the tilt shift effect.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
+     */
+    void setSettings(const TiltShiftSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.position = juce::jlimit(0.0f, 1.0f, settings_.position);
+        settings_.range = juce::jlimit(0.0f, 1.0f, settings_.range);
+        settings_.blurRadius = juce::jlimit(0.0f, 10.0f, settings_.blurRadius);
+        settings_.iterations = juce::jlimit(1, 8, settings_.iterations);
+    }
     [[nodiscard]] const TiltShiftSettings& getSettings() const { return settings_; }
 
 private:

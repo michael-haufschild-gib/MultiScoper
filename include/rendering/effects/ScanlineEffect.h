@@ -40,7 +40,18 @@ public:
     ) override;
 
     void configure(const VisualConfiguration& config) override { settings_ = config.scanlines; }
-    void setSettings(const ScanlineSettings& settings) { settings_ = settings; }
+
+    /**
+     * Configure the scanline effect.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
+     */
+    void setSettings(const ScanlineSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.intensity = juce::jlimit(0.0f, 1.0f, settings_.intensity);
+        settings_.density = juce::jlimit(0.5f, 10.0f, settings_.density);
+    }
     [[nodiscard]] const ScanlineSettings& getSettings() const { return settings_; }
 
 private:

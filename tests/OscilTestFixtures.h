@@ -14,6 +14,8 @@
 #include <map>
 #include <set>
 
+#include "core/AudioCapturePool.h"
+#include "core/CaptureThread.h"
 #include "core/InstanceRegistry.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
@@ -46,8 +48,16 @@ public:
         const juce::String& name = "Track",
         int channelCount = 2,
         double sampleRate = 44100.0,
-        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) override
+        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr,
+        const juce::String& instanceUUID = juce::String()) override
     {
+        (void)trackIdentifier;
+        (void)captureBuffer;
+        (void)name;
+        (void)channelCount;
+        (void)sampleRate;
+        (void)analysisEngine;
+        (void)instanceUUID;
         return SourceId::generate();
     }
 
@@ -73,6 +83,28 @@ public:
         auto it = sources_.find(sourceId.id);
         if (it != sources_.end())
             return it->second;
+        return std::nullopt;
+    }
+
+    std::optional<SourceInfo> getSourceByName(const juce::String& name) const override
+    {
+        for (const auto& [key, info] : sources_)
+        {
+            if (info.name.equalsIgnoreCase(name))
+                return info;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<SourceInfo> getSourceByInstanceUUID(const juce::String& uuid) const override
+    {
+        if (uuid.isEmpty())
+            return std::nullopt;
+        for (const auto& [key, info] : sources_)
+        {
+            if (info.instanceUUID == uuid)
+                return info;
+        }
         return std::nullopt;
     }
 
@@ -220,9 +252,16 @@ protected:
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
+        
+        // Create centralized capture infrastructure (owned by this fixture)
+        capturePool_ = std::make_unique<AudioCapturePool>();
+        captureThread_ = std::make_unique<CaptureThread>(*capturePool_);
+        captureThread_->startCapturing();
 
         // Create processor with owned services
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_,
+            *capturePool_, *captureThread_);
 
         // Disable GPU rendering for headless test environment
         // OpenGL context operations crash without a real display/window
@@ -243,11 +282,21 @@ protected:
         // Pump to process cleanup callbacks
         pumpMessageQueue(50);
 
-        // Destroy processor
+        // Destroy processor (releases capture slot)
         processor.reset();
+
+        // Stop capture thread before destroying pool
+        if (captureThread_)
+        {
+            captureThread_->stopCapturing();
+        }
 
         // Pump before destroying services
         pumpMessageQueue(50);
+
+        // Destroy capture infrastructure in order
+        captureThread_.reset();
+        capturePool_.reset();
 
         // Destroy services in reverse order
         memoryBudgetManager_.reset();
@@ -281,6 +330,10 @@ protected:
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
+
+    // Centralized capture infrastructure (replaces per-processor pool/thread)
+    std::unique_ptr<AudioCapturePool> capturePool_;
+    std::unique_ptr<CaptureThread> captureThread_;
 
     std::unique_ptr<OscilPluginProcessor> processor;
     std::unique_ptr<OscilPluginEditor> editor;

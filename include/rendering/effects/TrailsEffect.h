@@ -55,8 +55,15 @@ public:
 
     /**
      * Configure the trails effect.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
      */
-    void setSettings(const TrailSettings& settings) { settings_ = settings; }
+    void setSettings(const TrailSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.decay = juce::jlimit(0.01f, 0.5f, settings_.decay);
+        settings_.opacity = juce::jlimit(0.0f, 1.0f, settings_.opacity);
+    }
     [[nodiscard]] const TrailSettings& getSettings() const { return settings_; }
 
 private:

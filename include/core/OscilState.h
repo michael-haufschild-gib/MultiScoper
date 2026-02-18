@@ -10,6 +10,7 @@
 #include "core/Oscillator.h"
 #include "core/dsp/CaptureQualityConfig.h"
 #include "core/Pane.h"
+#include "core/GlobalPreferences.h"
 #include <atomic>
 #include <vector>
 
@@ -29,9 +30,14 @@ namespace StateIds
     static const juce::Identifier Timing{ "Timing" };
     static const juce::Identifier Version{ "version" };
 
+    // Plugin instance identifier (persisted across sessions)
+    static const juce::Identifier InstanceUUID{ "instanceUUID" };
+
     // Oscillator properties
     static const juce::Identifier Id{ "id" };
     static const juce::Identifier SourceId{ "sourceId" };
+    static const juce::Identifier SourceName{ "sourceName" };  // Fallback source identification (pre-UUID migration)
+    static const juce::Identifier SourceInstanceUUID{ "sourceInstanceUUID" };  // Stable reference to source plugin instance
     static const juce::Identifier ProcessingMode{ "processingMode" };
     static const juce::Identifier Colour{ "colour" };
     static const juce::Identifier Opacity{ "opacity" };
@@ -95,6 +101,13 @@ namespace StateIds
 /**
  * Central state manager for Oscil plugin.
  * Handles serialization, deserialization, and migration of plugin state.
+ *
+ * THREAD SAFETY: This class is NOT thread-safe. All access must occur
+ * on the message thread. The underlying juce::ValueTree is designed for
+ * single-threaded access with listener notifications.
+ *
+ * For cross-thread communication, use the PluginProcessor's async
+ * mechanisms which properly defer state operations to the message thread.
  */
 class OscilState
 {
@@ -108,8 +121,14 @@ public:
 
     /**
      * Get the root ValueTree
+     * WARNING: Mutable access - caller must ensure message thread ownership.
+     * Prefer const version or specific accessors when possible.
      */
-    [[nodiscard]] juce::ValueTree& getState() { return state_; }
+    [[nodiscard]] juce::ValueTree& getState()
+    {
+        jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+        return state_;
+    }
     [[nodiscard]] const juce::ValueTree& getState() const { return state_; }
 
     /**
@@ -255,68 +274,6 @@ private:
     juce::ValueTree getPanesNode() const;
     juce::ValueTree getLayoutNode() const;
     juce::ValueTree getCaptureQualityNode() const;
-};
-
-/**
- * Global user preferences (stored separately from project state)
- */
-class GlobalPreferences
-{
-public:
-    GlobalPreferences();
-    ~GlobalPreferences();
-
-    /**
-     * Get the preferences file
-     */
-    [[nodiscard]] juce::File getPreferencesFile() const;
-
-    /**
-     * Load preferences from disk
-     */
-    void load();
-
-    /**
-     * Save preferences to disk
-     */
-    void save();
-
-    // Preference accessors
-    [[nodiscard]] juce::String getDefaultTheme() const;
-    void setDefaultTheme(const juce::String& themeName);
-
-    [[nodiscard]] int getDefaultColumnLayout() const;
-    void setDefaultColumnLayout(int columns);
-
-    [[nodiscard]] bool getShowStatusBar() const;
-    void setShowStatusBar(bool show);
-
-    // UI customization settings
-    [[nodiscard]] bool getReducedMotion() const;
-    void setReducedMotion(bool reduced);
-
-    [[nodiscard]] bool getUIAudioFeedback() const;
-    void setUIAudioFeedback(bool enabled);
-
-    [[nodiscard]] bool getTooltipsEnabled() const;
-    void setTooltipsEnabled(bool enabled);
-
-    [[nodiscard]] int getDefaultSidebarWidth() const;
-    void setDefaultSidebarWidth(int width);
-
-    GlobalPreferences(const GlobalPreferences&) = delete;
-    GlobalPreferences& operator=(const GlobalPreferences&) = delete;
-
-private:
-    // Internal save that assumes lock is already held
-    void saveUnlocked();
-
-    // Schedule an async save with debouncing
-    void scheduleSave();
-
-    mutable std::mutex mutex_;  // Thread safety for multi-instance access
-    juce::ValueTree preferences_;
-    std::atomic<bool> savePending_{false};  // Debounce flag for async saves
 };
 
 } // namespace oscil

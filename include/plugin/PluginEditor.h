@@ -10,9 +10,6 @@
 #if OSCIL_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 #endif
-#if OSCIL_ENABLE_INSPECTOR
-    #include <melatonin_inspector/melatonin_inspector.h>
-#endif
 #include "ui/components/OscilModal.h"
 #include "ui/components/TestId.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
@@ -29,9 +26,10 @@
 #include "ui/panels/WaveformComponent.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/controllers/OscillatorPanelController.h"
+#include "ui/animation/OscilAnimationService.h"
 
 #include "plugin/PluginProcessor.h"
-#include "rendering/GpuRenderCoordinator.h"
+#include "ui/managers/GpuRenderCoordinator.h"
 #include "core/ServiceContext.h"
 
 namespace oscil
@@ -137,6 +135,9 @@ public:
     
     // Accessor for sidebar (used by TimingEngineListenerAdapter for bidirectional sync)
     SidebarComponent* getSidebar() const { return sidebar_.get(); }
+    
+    // Accessor for animation service
+    OscilAnimationService& getAnimationService() { return *animationService_; }
 
     // Public refresh methods for adapters
     void refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators);
@@ -193,11 +194,9 @@ private:
 
     // Metrics Controller
     std::unique_ptr<PerformanceMetricsController> metricsController_;
-
-#if OSCIL_ENABLE_INSPECTOR
-    // Melatonin Inspector for UI debugging (toggle with Cmd+I / Ctrl+I)
-    melatonin::Inspector inspector_{*this};
-#endif
+    
+    // Animation Service
+    std::unique_ptr<OscilAnimationService> animationService_;
 
     static constexpr int STATUS_BAR_HEIGHT = 24;
     static constexpr int DEFAULT_WIDTH = 1200;

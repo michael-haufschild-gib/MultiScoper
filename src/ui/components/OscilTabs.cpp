@@ -3,24 +3,22 @@
 */
 
 #include "ui/components/OscilTabs.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
 
-static constexpr float kTabFontSize = 13.0f;
-static constexpr float kBadgeFontSize = 10.0f;
+static constexpr float TAB_FONT_SIZE = 13.0f;
+static constexpr float BADGE_FONT_SIZE = 10.0f;
 
 OscilTabs::OscilTabs(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , indicatorXSpring_(SpringPresets::snappy())
-    , indicatorWidthSpring_(SpringPresets::snappy())
-    , hoverSpring_(SpringPresets::stiff())
 {
     setWantsKeyboardFocus(true);
 
-    indicatorXSpring_.position = 0.0f;
-    indicatorWidthSpring_.position = 0.0f;
-    hoverSpring_.position = 0.0f;
+    currentIndicatorX_ = 0.0f;
+    currentIndicatorWidth_ = 0.0f;
+    currentHoverValue_ = 0.0f;
 }
 
 OscilTabs::OscilTabs(IThemeService& themeService, Orientation orientation)
@@ -43,7 +41,16 @@ void OscilTabs::registerTestId()
 
 OscilTabs::~OscilTabs()
 {
-    stopTimer();
+    // ScopedAnimators handle completion on destruction
+}
+
+void OscilTabs::parentHierarchyChanged()
+{
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void OscilTabs::addTab(const juce::String& label, const juce::String& id)
@@ -62,8 +69,8 @@ void OscilTabs::addTab(const juce::String& label, const juce::String& id)
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
+        currentIndicatorX_ = targetIndicatorX_;
+        currentIndicatorWidth_ = targetIndicatorWidth_;
     }
     else
     {
@@ -86,8 +93,8 @@ void OscilTabs::addTab(const TabItem& tab)
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
+        currentIndicatorX_ = targetIndicatorX_;
+        currentIndicatorWidth_ = targetIndicatorWidth_;
     }
     else
     {
@@ -114,8 +121,8 @@ void OscilTabs::addTabs(const std::vector<juce::String>& labels)
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
+        currentIndicatorX_ = targetIndicatorX_;
+        currentIndicatorWidth_ = targetIndicatorWidth_;
     }
     
     resized();
@@ -133,8 +140,8 @@ void OscilTabs::addTabs(const std::vector<TabItem>& tabs)
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
+        currentIndicatorX_ = targetIndicatorX_;
+        currentIndicatorWidth_ = targetIndicatorWidth_;
     }
     
     resized();
@@ -185,16 +192,36 @@ void OscilTabs::setSelectedIndex(int index, bool notify)
     targetIndicatorX_ = static_cast<float>(bounds.getX());
     targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ && OscilAnimationService::shouldAnimate())
     {
-        indicatorXSpring_.setTarget(targetIndicatorX_);
-        indicatorWidthSpring_.setTarget(targetIndicatorWidth_);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startX = currentIndicatorX_;
+        float startW = currentIndicatorWidth_;
+        auto safeThis = juce::Component::SafePointer<OscilTabs>(this);
+
+        indicatorXAnimator_.set(animService_->createTabAnimation(
+            [safeThis, startX](float v) {
+                if (safeThis)
+                {
+                    safeThis->currentIndicatorX_ = juce::jmap(v, startX, safeThis->targetIndicatorX_);
+                    safeThis->repaint();
+                }
+            }));
+        indicatorXAnimator_.start();
+
+        indicatorWidthAnimator_.set(animService_->createTabAnimation(
+            [safeThis, startW](float v) {
+                if (safeThis)
+                {
+                    safeThis->currentIndicatorWidth_ = juce::jmap(v, startW, safeThis->targetIndicatorWidth_);
+                    safeThis->repaint();
+                }
+            }));
+        indicatorWidthAnimator_.start();
     }
     else
     {
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
+        currentIndicatorX_ = targetIndicatorX_;
+        currentIndicatorWidth_ = targetIndicatorWidth_;
         repaint();
     }
 
@@ -292,7 +319,7 @@ int OscilTabs::getPreferredWidth() const
             }
             else
             {
-                auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+                auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
                 juce::GlyphArrangement glyphs;
                 glyphs.addLineOfText(font, tab.label, 0, 0);
                 int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -308,7 +335,7 @@ int OscilTabs::getPreferredWidth() const
         int maxWidth = 0;
         for (const auto& tab : tabs_)
         {
-            auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+            auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
             juce::GlyphArrangement glyphs;
             glyphs.addLineOfText(font, tab.label, 0, 0);
             int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -338,6 +365,10 @@ int OscilTabs::getPreferredHeight() const
 
 void OscilTabs::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     auto bounds = getLocalBounds();
 
     // Background line for default variant
@@ -389,7 +420,7 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     int contentWidth = 0;
 
     // Calculate total content width for centering
-    auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+    auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, tab.label, 0, 0);
     int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -493,7 +524,7 @@ void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int c
     g.fillEllipse(bounds.toFloat());
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(kBadgeFontSize)).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(BADGE_FONT_SIZE)).boldened());
 
     juce::String text = count > 99 ? "99+" : juce::String(count);
     g.drawText(text, bounds, juce::Justification::centred);
@@ -501,6 +532,14 @@ void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int c
 
 void OscilTabs::resized()
 {
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilTabs::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
+
     // Recompute layout on resize (especially for stretch/auto modes)
     updateLayoutCache();
 
@@ -511,11 +550,9 @@ void OscilTabs::resized()
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
 
-        if (!isTimerRunning())
-        {
-            indicatorXSpring_.position = targetIndicatorX_;
-            indicatorWidthSpring_.position = targetIndicatorWidth_;
-        }
+        // On resize, snap indicator to position without animation
+        currentIndicatorX_ = targetIndicatorX_;
+        currentIndicatorWidth_ = targetIndicatorWidth_;
     }
 }
 
@@ -560,7 +597,7 @@ void OscilTabs::updateLayoutCache()
         {
             // Calculate position based on measured widths
             int x = 0;
-            auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+            auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
 
             for (size_t i = 0; i < tabs_.size(); ++i)
             {
@@ -596,16 +633,16 @@ juce::Rectangle<float> OscilTabs::getIndicatorBounds() const
     {
         int height = tabHeight_ > 0 ? tabHeight_ : getHeight();
         return juce::Rectangle<float>(
-            indicatorXSpring_.position, 0,
-            indicatorWidthSpring_.position, static_cast<float>(height)
+            currentIndicatorX_, 0,
+            currentIndicatorWidth_, static_cast<float>(height)
         );
     }
     else
     {
         int width = tabWidth_ > 0 ? tabWidth_ : getWidth();
         return juce::Rectangle<float>(
-            0, indicatorXSpring_.position,
-            static_cast<float>(width), indicatorWidthSpring_.position
+            0, currentIndicatorX_,
+            static_cast<float>(width), currentIndicatorWidth_
         );
     }
 }
@@ -653,6 +690,39 @@ bool OscilTabs::keyPressed(const juce::KeyPress& key)
 
     int newIndex = selectedIndex_;
 
+    // Handle Home/End keys to jump to first/last enabled tab
+    if (key == juce::KeyPress::homeKey)
+    {
+        newIndex = 0;
+        // Find first enabled tab
+        while (newIndex < static_cast<int>(tabs_.size()) &&
+               !tabs_[static_cast<size_t>(newIndex)].enabled)
+        {
+            newIndex++;
+        }
+        if (newIndex < static_cast<int>(tabs_.size()) && newIndex != selectedIndex_)
+        {
+            setSelectedIndex(newIndex);
+            return true;
+        }
+        return false;
+    }
+    else if (key == juce::KeyPress::endKey)
+    {
+        newIndex = static_cast<int>(tabs_.size()) - 1;
+        // Find last enabled tab
+        while (newIndex >= 0 && !tabs_[static_cast<size_t>(newIndex)].enabled)
+        {
+            newIndex--;
+        }
+        if (newIndex >= 0 && newIndex != selectedIndex_)
+        {
+            setSelectedIndex(newIndex);
+            return true;
+        }
+        return false;
+    }
+
     if (orientation_ == Orientation::Horizontal)
     {
         if (key == juce::KeyPress::leftKey)
@@ -698,33 +768,51 @@ void OscilTabs::focusLost(FocusChangeType)
     repaint();
 }
 
-void OscilTabs::timerCallback()
+//==============================================================================
+// Accessibility Handler for OscilTabs
+//==============================================================================
+class OscilTabsAccessibilityHandler : public juce::AccessibilityHandler
 {
-    updateAnimations();
-
-    if (indicatorXSpring_.isSettled() && indicatorWidthSpring_.isSettled() &&
-        hoverSpring_.isSettled())
+public:
+    explicit OscilTabsAccessibilityHandler(OscilTabs& tabs)
+        : juce::AccessibilityHandler(tabs, juce::AccessibilityRole::group)
+        , tabs_(tabs)
     {
-        stopTimer();
     }
 
-    repaint();
-}
+    juce::String getTitle() const override
+    {
+        return "Tab Group";
+    }
 
-void OscilTabs::updateAnimations()
-{
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-    indicatorXSpring_.update(dt);
-    indicatorWidthSpring_.update(dt);
-    hoverSpring_.update(dt);
-}
+    juce::String getDescription() const override
+    {
+        int count = tabs_.getNumTabs();
+        int selected = tabs_.getSelectedIndex();
+        if (count == 0)
+            return "Empty tab group";
+
+        juce::String desc = "Tab " + juce::String(selected + 1) + " of " + juce::String(count);
+        juce::String selectedLabel = tabs_.getSelectedId();
+        if (selectedLabel.isNotEmpty())
+            desc += ": " + selectedLabel;
+        return desc;
+    }
+
+    juce::String getHelp() const override
+    {
+        return "Use arrow keys to navigate between tabs. Press Home for first tab, End for last tab.";
+    }
+
+private:
+    OscilTabs& tabs_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilTabsAccessibilityHandler)
+};
 
 std::unique_ptr<juce::AccessibilityHandler> OscilTabs::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::group
-    );
+    return std::make_unique<OscilTabsAccessibilityHandler>(*this);
 }
 
 } // namespace oscil

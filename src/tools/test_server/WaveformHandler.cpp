@@ -9,15 +9,27 @@
 #include "plugin/PluginProcessor.h"
 #include "core/SharedCaptureBuffer.h"
 #include <cmath>
+#include <random>
 
 namespace oscil
 {
 
 void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib::Response& res)
 {
+    // Parse JSON body with error handling
+    nlohmann::json body;
     try
     {
-        auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
+        body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
+    }
+    catch (const nlohmann::json::parse_error& e)
+    {
+        sendJson(res, jsonError("Invalid JSON: " + std::string(e.what())), 400);
+        return;
+    }
+
+    try
+    {
         std::string waveformType = body.value("type", "sine");
         float frequency = body.value("frequency", 440.0f);
         float amplitude = body.value("amplitude", 0.8f);
@@ -27,15 +39,15 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
         if (sampleRate <= 0.0f)
             sampleRate = 44100.0f;
 
-        auto result = runOnMessageThread([this, waveformType, frequency, amplitude, numSamples, sampleRate]() -> nlohmann::json {
+        auto result = runOnMessageThread([this, waveformType, frequency, amplitude, numSamples, sampleRate]() -> std::pair<nlohmann::json, int> {
             nlohmann::json response;
 
-            // Get capture buffer from processor
-            auto captureBuffer = editor_.getProcessor().getCaptureBuffer();
+            // Get DecimatingCaptureBuffer to test the actual lock-free SIMD path
+            auto captureBuffer = editor_.getProcessor().getDecimatingCaptureBuffer();
             if (!captureBuffer)
             {
                 response["error"] = "No capture buffer available";
-                return response;
+                return {response, 500};
             }
 
             // Generate test waveform
@@ -67,7 +79,10 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
                 }
                 else if (waveformType == "noise")
                 {
-                    sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
+                    // Use thread-local RNG for thread safety
+                    static thread_local std::mt19937 rng(std::random_device{}());
+                    static thread_local std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+                    sample = dist(rng) * amplitude;
                 }
                 else if (waveformType == "dc")
                 {
@@ -95,8 +110,8 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
             metadata.bpm = 120.0f;
             metadata.timestamp = 0;
 
-            // Use blocking write (tryLock=false) for reliable test injection
-            captureBuffer->write(testBuffer, metadata, false);
+            // Write through DecimatingCaptureBuffer - tests the actual lock-free SIMD path
+            captureBuffer->write(testBuffer, metadata);
 
             // Force UI update
             editor_.repaint();
@@ -108,17 +123,14 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
             response["samplesInjected"] = numSamples;
             response["sampleRate"] = sampleRate;
 
-            return response;
+            return {response, 200};
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result.first, result.second);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 500);
     }
 }
 
@@ -164,6 +176,12 @@ void WaveformHandler::handleGetWaveformState(const httplib::Request& /*req*/, ht
                 wfInfo["displaySamples"] = waveform->getDisplaySamples();
                 wfInfo["processingMode"] = static_cast<int>(waveform->getProcessingMode());
 
+                // LOD (Level-of-Detail) information
+                wfInfo["lodTier"] = getLODTierName(waveform->getCurrentLODTier());
+                wfInfo["targetSampleCount"] = waveform->getTargetSampleCount();
+                wfInfo["width"] = waveform->getWidth();
+                wfInfo["decimatorWidth"] = waveform->getDecimatorWidth();  // For debugging LOD
+
                 auto colour = waveform->getColour();
                 wfInfo["colour"] = {
                     {"r", colour.getRed()},
@@ -185,7 +203,7 @@ void WaveformHandler::handleGetWaveformState(const httplib::Request& /*req*/, ht
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result, 200);
 }
 
 } // namespace oscil

@@ -58,6 +58,7 @@ public:
 
         // Rendering mode events
         virtual void gpuRenderingChanged(bool /*enabled*/) {}
+        virtual void gpuComputeChanged(bool /*enabled*/) {}
 
         // Capture quality events
         virtual void qualityPresetChanged(QualityPreset /*preset*/) {}
@@ -100,6 +101,12 @@ public:
     void setGpuRenderingEnabled(bool enabled);
     bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
 
+    // GPU compute acceleration state (Tier 4 - opt-in only)
+    void setGpuComputeEnabled(bool enabled);
+    bool isGpuComputeEnabled() const { return gpuComputeEnabled_; }
+    void setGpuComputeAvailable(bool available);
+    bool isGpuComputeAvailable() const { return gpuComputeAvailable_; }
+
     // Capture quality state
     void setQualityPreset(QualityPreset preset);
     QualityPreset getQualityPreset() const { return currentQualityPreset_; }
@@ -136,6 +143,7 @@ private:
     void notifyLayoutChanged();
     void notifyThemeChanged();
     void notifyGpuRenderingChanged();
+    void notifyGpuComputeChanged();
     void notifyQualityPresetChanged();
     void notifyBufferDurationChanged();
     void notifyAutoAdjustQualityChanged();
@@ -158,6 +166,8 @@ private:
     // GPU rendering toggle
     std::unique_ptr<juce::Label> renderingLabel_;
     std::unique_ptr<OscilToggle> gpuRenderingToggle_;
+    std::unique_ptr<OscilToggle> gpuComputeToggle_;
+    std::unique_ptr<juce::Label> gpuComputeWarningLabel_;
 
     // Capture quality controls
     std::unique_ptr<juce::Label> qualityLabel_;
@@ -172,6 +182,8 @@ private:
     int currentColumnCount_ = 1;
     juce::String currentThemeName_ = "Dark";
     bool gpuRenderingEnabled_ = true;  // Default to GPU mode when available
+    bool gpuComputeEnabled_ = false;   // Default OFF - user must opt-in (Tier 4)
+    bool gpuComputeAvailable_ = false; // Whether GPU compute is available on this system
     QualityPreset currentQualityPreset_ = QualityPreset::Standard;
     BufferDuration currentBufferDuration_ = BufferDuration::Medium;
     bool autoAdjustQualityEnabled_ = true;

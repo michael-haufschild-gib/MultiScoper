@@ -80,12 +80,12 @@ struct OscillatorId
 {
     juce::String id;
 
-    bool operator==(const OscillatorId& other) const { return id == other.id; }
-    bool operator!=(const OscillatorId& other) const { return !(*this == other); }
+    bool operator==(const OscillatorId& other) const noexcept { return id == other.id; }
+    bool operator!=(const OscillatorId& other) const noexcept { return !(*this == other); }
 
     [[nodiscard]] static OscillatorId generate();
     static OscillatorId invalid() { return OscillatorId{""}; }
-    bool isValid() const { return id.isNotEmpty(); }
+    bool isValid() const noexcept { return id.isNotEmpty(); }
 };
 
 /**
@@ -95,12 +95,12 @@ struct PaneId
 {
     juce::String id;
 
-    bool operator==(const PaneId& other) const { return id == other.id; }
-    bool operator!=(const PaneId& other) const { return !(*this == other); }
+    bool operator==(const PaneId& other) const noexcept { return id == other.id; }
+    bool operator!=(const PaneId& other) const noexcept { return !(*this == other); }
 
     [[nodiscard]] static PaneId generate();
     static PaneId invalid() { return PaneId{""}; }
-    bool isValid() const { return id.isNotEmpty(); }
+    bool isValid() const noexcept { return id.isNotEmpty(); }
 };
 
 /**
@@ -108,17 +108,19 @@ struct PaneId
  */
 struct OscillatorIdHash
 {
-    std::size_t operator()(const OscillatorId& oid) const
+    std::size_t operator()(const OscillatorId& oid) const noexcept
     {
-        return std::hash<std::string>{}(oid.id.toStdString());
+        // Use hashCode() instead of toStdString() to avoid memory allocation
+        return static_cast<std::size_t>(oid.id.hashCode());
     }
 };
 
 struct PaneIdHash
 {
-    std::size_t operator()(const PaneId& pid) const
+    std::size_t operator()(const PaneId& pid) const noexcept
     {
-        return std::hash<std::string>{}(pid.id.toStdString());
+        // Use hashCode() instead of toStdString() to avoid memory allocation
+        return static_cast<std::size_t>(pid.id.hashCode());
     }
 };
 
@@ -171,6 +173,8 @@ public:
     // Getters
     [[nodiscard]] OscillatorId getId() const noexcept { return id_; }
     [[nodiscard]] SourceId getSourceId() const noexcept { return sourceId_; }
+    [[nodiscard]] juce::String getSourceName() const noexcept { return sourceName_; }
+    [[nodiscard]] juce::String getSourceInstanceUUID() const noexcept { return sourceInstanceUUID_; }
     [[nodiscard]] ProcessingMode getProcessingMode() const noexcept { return processingMode_; }
     [[nodiscard]] juce::Colour getColour() const noexcept { return colour_; }
     [[nodiscard]] float getOpacity() const noexcept { return opacity_; }
@@ -186,6 +190,10 @@ public:
 
     // Setters
     void setSourceId(const SourceId& sourceId);
+    void setSourceName(const juce::String& name) noexcept { sourceName_ = name; }
+    void setSourceInstanceUUID(const juce::String& uuid) noexcept { sourceInstanceUUID_ = uuid; }
+    void setSourceIdAndName(const SourceId& sourceId, const juce::String& name);
+    void setSourceIdNameAndUUID(const SourceId& sourceId, const juce::String& name, const juce::String& uuid);
     void setProcessingMode(ProcessingMode mode) noexcept { processingMode_ = mode; }
     void setColour(juce::Colour colour) noexcept { colour_ = colour; }
     void setOpacity(float opacity) noexcept { opacity_ = juce::jlimit(0.0f, 1.0f, opacity); }
@@ -243,11 +251,15 @@ public:
     static bool isValidName(const juce::String& name);
 
     // Schema version for migration support
-    static constexpr int CURRENT_SCHEMA_VERSION = 2;
+    // v3: Added sourceName for stable persistence (sourceId is ephemeral)
+    // v4: Added sourceInstanceUUID for reliable cross-session source reconnection
+    static constexpr int CURRENT_SCHEMA_VERSION = 4;
 
 private:
     OscillatorId id_;
-    SourceId sourceId_;
+    SourceId sourceId_;                    // Runtime identifier (ephemeral, not persisted reliably)
+    juce::String sourceName_;              // Source name for persistence (fallback, used if UUID not available)
+    juce::String sourceInstanceUUID_;      // Persistent UUID for reliable cross-session source reconnection
     OscillatorState state_ = OscillatorState::NO_SOURCE;
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
     juce::Colour colour_{WaveformColorPalette::getRandomColor()};

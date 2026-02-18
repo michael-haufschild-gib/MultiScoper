@@ -7,12 +7,13 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -29,8 +30,7 @@ namespace oscil
  * - E2E test automation via testId
  */
 class OscilToggle : public ThemedComponent,
-                    public TestIdSupport,
-                    private juce::Timer
+                    public TestIdSupport
 {
 public:
     OscilToggle(IThemeService& themeService);
@@ -70,6 +70,7 @@ public:
     // Component overrides
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void parentHierarchyChanged() override;
 
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
@@ -82,8 +83,6 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
-    void updateAnimations();
     void triggerCelebration();
     void notifyValueChanged();
 
@@ -99,9 +98,12 @@ private:
     juce::String label_;
     bool labelOnRight_ = true;
 
-    // Animation
-    SpringAnimation positionSpring_;       // Knob position (0 = off, 1 = on)
-    SpringAnimation celebrationSpring_;    // Scale pulse on activation
+    // Animation state
+    float positionProgress_ = 0.0f;       // Knob position (0 = off, 1 = on)
+    float celebrationProgress_ = 0.0f;    // Scale pulse on activation
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator positionAnimator_;
+    ScopedAnimator celebrationAnimator_;
 
     // APVTS
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> attachment_;

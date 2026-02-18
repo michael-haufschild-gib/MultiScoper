@@ -7,13 +7,14 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
 #include "ui/components/MagneticSnapController.h"
+#include "ui/animation/OscilAnimationService.h"
 #include <vector>
 
 namespace oscil
@@ -35,8 +36,7 @@ namespace oscil
  * - E2E test automation via testId
  */
 class OscilSlider : public ThemedComponent,
-                    public TestIdSupport,
-                    private juce::Timer
+                    public TestIdSupport
 {
 public:
     OscilSlider(IThemeService& themeService);
@@ -119,6 +119,7 @@ public:
     // Component overrides
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void parentHierarchyChanged() override;
 
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent& e) override;
@@ -138,8 +139,6 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
-    void updateAnimations();
 
     // Value handling
     double constrainValue(double value) const;
@@ -188,10 +187,12 @@ private:
     double dragStartValue_ = 0.0;
     juce::Point<int> dragStartPoint_;
 
-    // Animation
-    SpringAnimation thumbScale_;
-    SpringAnimation snapPulse_;
+    // Animation state
     float currentThumbScale_ = 1.0f;
+    float snapPulseProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator thumbAnimator_;
+    ScopedAnimator snapAnimator_;
 
     // APVTS
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment_;

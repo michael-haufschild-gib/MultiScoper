@@ -415,9 +415,12 @@ void MemoryBudgetManager::notifyMemoryUsageChanged()
     }
     else
     {
-        juce::MessageManager::callAsync([this]() {
-            auto snapshot = getMemorySnapshot();
-            listeners_.call([&snapshot](Listener& l) { l.memoryUsageChanged(snapshot); });
+        juce::MessageManager::callAsync([weak = juce::WeakReference<MemoryBudgetManager>(this)]() {
+            if (auto* self = weak.get())
+            {
+                auto snapshot = self->getMemorySnapshot();
+                self->listeners_.call([&snapshot](Listener& l) { l.memoryUsageChanged(snapshot); });
+            }
         });
     }
 }
@@ -432,9 +435,12 @@ void MemoryBudgetManager::notifyBufferCountChanged()
     }
     else
     {
-        juce::MessageManager::callAsync([this]() {
-            int count = getBufferCount();
-            listeners_.call([count](Listener& l) { l.bufferCountChanged(count); });
+        juce::MessageManager::callAsync([weak = juce::WeakReference<MemoryBudgetManager>(this)]() {
+            if (auto* self = weak.get())
+            {
+                int count = self->getBufferCount();
+                self->listeners_.call([count](Listener& l) { l.bufferCountChanged(count); });
+            }
         });
     }
 }
@@ -448,8 +454,11 @@ void MemoryBudgetManager::notifyEffectiveQualityChanged(QualityPreset newQuality
     }
     else
     {
-        juce::MessageManager::callAsync([this, newQuality]() {
-            listeners_.call([newQuality](Listener& l) { l.effectiveQualityChanged(newQuality); });
+        juce::MessageManager::callAsync([weak = juce::WeakReference<MemoryBudgetManager>(this), newQuality]() {
+            if (auto* self = weak.get())
+            {
+                self->listeners_.call([newQuality](Listener& l) { l.effectiveQualityChanged(newQuality); });
+            }
         });
     }
 }

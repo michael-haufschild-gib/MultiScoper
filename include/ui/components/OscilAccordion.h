@@ -6,15 +6,16 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include <vector>
 #include <memory>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -23,8 +24,7 @@ namespace oscil
  * Individual accordion section with animated expand/collapse
  */
 class OscilAccordionSection : public ThemedComponent,
-                              public TestIdSupport,
-                              private juce::Timer
+                              public TestIdSupport
 {
 public:
     explicit OscilAccordionSection(IThemeService& themeService, const juce::String& title = "");
@@ -78,7 +78,7 @@ public:
     void focusLost(FocusChangeType cause) override;
 
 private:
-    void timerCallback() override;
+    void parentHierarchyChanged() override;
     void updateAnimations();
     void contentHeightChanged();
 
@@ -95,9 +95,14 @@ private:
     bool hasFocus_ = false;
     bool mouseDownInHeader_ = false;  // Track if mouseDown occurred in header for proper click detection
 
-    SpringAnimation expandSpring_;     // 0 = collapsed, 1 = expanded
-    SpringAnimation hoverSpring_;
-    SpringAnimation chevronSpring_;    // Rotation animation
+    // Animation
+    ScopedAnimator expandAnimator_;
+    ScopedAnimator hoverAnimator_;
+    ScopedAnimator chevronAnimator_;
+    float expandProgress_ = 0.0f;
+    float hoverProgress_ = 0.0f;
+    float chevronRotation_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
 
     int lastReportedHeight_ = -1;      // For optimizing parent layout updates
 

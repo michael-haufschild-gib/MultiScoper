@@ -12,7 +12,7 @@ namespace oscil
 
 void WaveformRenderState::enableTrails(juce::OpenGLContext& context, int width, int height)
 {
-    if (trailsEnabled && historyFBO && historyFBO->isValid())
+    if (trailsEnabled.load(std::memory_order_relaxed) && historyFBO && historyFBO->isValid())
     {
         // Already enabled, just resize if needed
         resizeHistoryFBO(context, width, height);
@@ -25,7 +25,7 @@ void WaveformRenderState::enableTrails(juce::OpenGLContext& context, int width, 
     // Create history FBO with standard format (no depth needed)
     if (historyFBO->create(context, width, height, 0, GL_RGBA8, false))
     {
-        trailsEnabled = true;
+        trailsEnabled.store(true, std::memory_order_release);
         // Clear the history FBO initially
         historyFBO->bind();
         historyFBO->clear(juce::Colours::black, false);
@@ -45,7 +45,7 @@ void WaveformRenderState::disableTrails(juce::OpenGLContext& context)
         historyFBO->destroy(context);
         historyFBO.reset();
     }
-    trailsEnabled = false;
+    trailsEnabled.store(false, std::memory_order_release);
     DBG("WaveformRenderState: Trails disabled for waveform " << waveformId);
 }
 
@@ -55,7 +55,8 @@ void WaveformRenderState::resizeHistoryFBO(juce::OpenGLContext& context, int wid
     {
         if (historyFBO->width != width || historyFBO->height != height)
         {
-            historyFBO->resize(context, width, height);
+            if (!historyFBO->resize(context, width, height))
+                DBG("WaveformRenderState: historyFBO resize failed");
         }
     }
 }
@@ -92,7 +93,7 @@ void WaveformRenderState::release(juce::OpenGLContext& context)
         historyFBO->destroy(context);
         historyFBO.reset();
     }
-    trailsEnabled = false;
+    trailsEnabled.store(false, std::memory_order_release);
     sampleHistory.clear();
 }
 

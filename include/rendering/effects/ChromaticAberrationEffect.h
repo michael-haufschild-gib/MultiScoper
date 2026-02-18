@@ -46,8 +46,14 @@ public:
 
     /**
      * Configure the chromatic aberration effect.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
      */
-    void setSettings(const ChromaticAberrationSettings& settings) { settings_ = settings; }
+    void setSettings(const ChromaticAberrationSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.intensity = juce::jlimit(0.0f, 0.1f, settings_.intensity);
+    }
     [[nodiscard]] const ChromaticAberrationSettings& getSettings() const { return settings_; }
 
 private:

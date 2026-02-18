@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/theme/ThemeManager.h"
 #include "core/ServiceContext.h"
 #include "ui/layout/WindowLayout.h"
@@ -20,8 +21,8 @@
 #include "core/dsp/CaptureQualityConfig.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/ComponentConstants.h"
+#include "ui/animation/OscilAnimationService.h"
 #include <vector>
 
 namespace oscil
@@ -92,7 +93,6 @@ private:
  * Collapsible sidebar component with oscillator list
  */
 class SidebarComponent : public juce::Component,
-                         public juce::Timer,
                          public ThemeManagerListener,
                          public OscillatorSidebarSection::Listener,
                          public TimingSidebarSection::Listener,
@@ -157,12 +157,10 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void parentHierarchyChanged() override;
 
     // ThemeManagerListener
     void themeChanged(const ColorTheme& newTheme) override;
-
-    // Timer
-    void timerCallback() override;
 
     // State management
     void setCollapsed(bool collapsed);
@@ -217,7 +215,9 @@ private:
     std::vector<Pane> currentPanes_;  // Cached for source dropdown updates
 
     // Collapse animation
-    SpringAnimation widthSpring_ = SpringPresets::smooth();
+    ScopedAnimator widthAnimator_;
+    float currentWidthValue_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
 
     juce::ListenerList<Listener> listeners_;
 

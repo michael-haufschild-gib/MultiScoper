@@ -4,6 +4,7 @@
 
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
+#include "core/DebugLogger.h"
 #include "Oscil.h"
 
 namespace oscil
@@ -34,6 +35,7 @@ void InstanceRegistry::shutdown()
         std::unique_lock<std::shared_mutex> lock(mutex_);
         sources_.clear();
         trackToSourceMap_.clear();
+        instanceUUIDToSourceMap_.clear();
     }
 
     // Note: we don't clear listeners here because they might be static/global
@@ -47,7 +49,8 @@ SourceId InstanceRegistry::registerInstance(
     const juce::String& name,
     int channelCount,
     double sampleRate,
-    std::shared_ptr<AnalysisEngine> analysisEngine)
+    std::shared_ptr<AnalysisEngine> analysisEngine,
+    const juce::String& instanceUUID)
 {
     // Registry mutations should happen on message thread or during initialization.
     // NEVER call from audio thread - uses blocking locks and heap allocation.
@@ -75,6 +78,22 @@ SourceId InstanceRegistry::registerInstance(
                 sourceIt->second.sampleRate = sampleRate;
                 if (name.isNotEmpty())
                     sourceIt->second.name = name;
+                // CRITICAL FIX: Always update instanceUUID when provided, not just when empty.
+                // This handles the case where a plugin restores its UUID after initial registration
+                // (setStateInformation may run after prepareToPlay with provisional UUID).
+                if (instanceUUID.isNotEmpty())
+                {
+                    // Remove old UUID mapping if it exists and is different
+                    if (sourceIt->second.instanceUUID.isNotEmpty() &&
+                        sourceIt->second.instanceUUID != instanceUUID)
+                    {
+                        instanceUUIDToSourceMap_.erase(sourceIt->second.instanceUUID);
+                        OSCIL_LOG("SOURCE", "registerInstance: Replacing UUID '" + sourceIt->second.instanceUUID
+                                  + "' with '" + instanceUUID + "' for sourceId=" + juce::String(existingIt->second.id));
+                    }
+                    sourceIt->second.instanceUUID = instanceUUID;
+                    instanceUUIDToSourceMap_[instanceUUID] = existingIt->second;
+                }
                 return existingIt->second;
             }
         }
@@ -93,6 +112,7 @@ SourceId InstanceRegistry::registerInstance(
             info.sourceId = sourceId;
             info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
             info.trackIdentifier = trackIdentifier;
+            info.instanceUUID = instanceUUID;
             info.channelCount = channelCount;
             info.sampleRate = sampleRate;
             info.buffer = captureBuffer;
@@ -101,13 +121,36 @@ SourceId InstanceRegistry::registerInstance(
 
             sources_[sourceId] = info;
             trackToSourceMap_[trackIdentifier] = sourceId;
+
+            // Add to UUID map if provided, with collision detection
+            if (instanceUUID.isNotEmpty())
+            {
+                auto existingUUID = instanceUUIDToSourceMap_.find(instanceUUID);
+                if (existingUUID != instanceUUIDToSourceMap_.end() && existingUUID->second != sourceId)
+                {
+                    // UUID collision detected - log warning and reject duplicate
+                    OSCIL_LOG_ERROR("InstanceRegistry::registerInstance",
+                                    "UUID collision for " + instanceUUID + " - already registered to sourceId="
+                                    + juce::String(existingUUID->second.id) + ", rejecting new registration");
+                    // Clean up the source we just added
+                    trackToSourceMap_.erase(trackIdentifier);
+                    sources_.erase(sourceId);
+                    return SourceId::invalid();
+                }
+                instanceUUIDToSourceMap_[instanceUUID] = sourceId;
+            }
+
             shouldNotify = true;
+
+            OSCIL_LOG_SOURCE("REGISTERED", juce::String(sourceId.id), info.name,
+                             captureBuffer != nullptr, static_cast<int>(sources_.size()));
         }
     }
 
-    // Return invalid ID if max limit reached (no logging in audio-adjacent paths)
+    // Return invalid ID if max limit reached
     if (maxLimitReached)
     {
+        OSCIL_LOG_ERROR("InstanceRegistry::registerInstance", "MAX_TRACKS limit reached");
         return SourceId::invalid();
     }
 
@@ -127,19 +170,34 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     bool shouldNotify = false;
+    juce::String removedName;
 
     {
         std::unique_lock<std::shared_mutex> lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
+        {
+            OSCIL_LOG("SOURCE", "unregisterInstance: sourceId=" + juce::String(sourceId.id) + " NOT FOUND");
             return;
+        }
+
+        removedName = it->second.name;
 
         // Remove from track map using stored identifier (O(1))
         trackToSourceMap_.erase(it->second.trackIdentifier);
 
+        // Remove from UUID map if present
+        if (it->second.instanceUUID.isNotEmpty())
+        {
+            instanceUUIDToSourceMap_.erase(it->second.instanceUUID);
+        }
+
         sources_.erase(it);
         shouldNotify = true;
+
+        OSCIL_LOG_SOURCE("UNREGISTERED", juce::String(sourceId.id), removedName,
+                         false, static_cast<int>(sources_.size()));
     }
 
     // Notify listeners OUTSIDE the lock to prevent deadlock
@@ -175,14 +233,72 @@ std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) 
     return std::nullopt;
 }
 
+std::optional<SourceInfo> InstanceRegistry::getSourceByName(const juce::String& name) const
+{
+    if (name.isEmpty())
+        return std::nullopt;
+
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+
+    // Case-insensitive search for matching name
+    for (const auto& [id, info] : sources_)
+    {
+        if (info.name.equalsIgnoreCase(name))
+        {
+            OSCIL_LOG("SOURCE", "getSourceByName: FOUND name='" + name + "' -> sourceId=" + juce::String(id.id));
+            return info;
+        }
+    }
+
+    OSCIL_LOG("SOURCE", "getSourceByName: NOT FOUND name='" + name + "' (searched " + juce::String(static_cast<int>(sources_.size())) + " sources)");
+    return std::nullopt;
+}
+
+std::optional<SourceInfo> InstanceRegistry::getSourceByInstanceUUID(const juce::String& uuid) const
+{
+    if (uuid.isEmpty())
+        return std::nullopt;
+
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+
+    // O(1) lookup using the UUID map
+    auto it = instanceUUIDToSourceMap_.find(uuid);
+    if (it != instanceUUIDToSourceMap_.end())
+    {
+        auto sourceIt = sources_.find(it->second);
+        if (sourceIt != sources_.end())
+        {
+            OSCIL_LOG("SOURCE", "getSourceByInstanceUUID: FOUND uuid='" + uuid + "' -> sourceId=" + juce::String(it->second.id));
+            return sourceIt->second;
+        }
+    }
+
+    OSCIL_LOG("SOURCE", "getSourceByInstanceUUID: NOT FOUND uuid='" + uuid + "'");
+    return std::nullopt;
+}
+
 std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId& sourceId) const
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
-        return it->second.buffer.lock();
+    {
+        auto buffer = it->second.buffer.lock();
+        bool lockSuccess = (buffer != nullptr);
+        OSCIL_LOG_BUFFER("InstanceRegistry::getCaptureBuffer", juce::String(sourceId.id),
+                         true, lockSuccess, "name=" + it->second.name);
+        if (!buffer)
+        {
+            OSCIL_LOG_ERROR("InstanceRegistry::getCaptureBuffer",
+                           "weak_ptr.lock() FAILED for sourceId=" + juce::String(sourceId.id)
+                           + " (name=" + it->second.name + ") - buffer was destroyed");
+        }
+        return buffer;
+    }
 
+    OSCIL_LOG_BUFFER("InstanceRegistry::getCaptureBuffer", juce::String(sourceId.id),
+                     false, false, "source NOT FOUND in registry");
     return nullptr;
 }
 
@@ -220,7 +336,7 @@ size_t InstanceRegistry::getSourceCount() const
     return sources_.size();
 }
 
-void InstanceRegistry::addListener(InstanceRegistryListener* listener)
+void InstanceRegistry::addListener(IInstanceRegistryListener* listener)
 {
     // ListenerList::add() is NOT thread-safe. Must be called from message thread.
     // Runtime check - not just debug assertion
@@ -232,7 +348,7 @@ void InstanceRegistry::addListener(InstanceRegistryListener* listener)
     listeners_.add(listener);
 }
 
-void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
+void InstanceRegistry::removeListener(IInstanceRegistryListener* listener)
 {
     // ListenerList::remove() is NOT thread-safe. Must be called from message thread.
     // Runtime check - not just debug assertion
@@ -246,15 +362,29 @@ void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
 
 void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 {
+    // Increment sequence number to track this operation
+    uint64_t capturedSeq = operationSequence_.fetch_add(1, std::memory_order_acq_rel);
+
     // Use injected dispatcher (defaults to MessageManager::callAsync)
     // Capture WeakReference to prevent use-after-free if registry is destroyed before callback runs
-    dispatcher_([weakThis = juce::WeakReference<InstanceRegistry>(this), sourceId]() {
+    // Capture sequence number to detect stale notifications
+    dispatcher_([weakThis = juce::WeakReference<InstanceRegistry>(this), sourceId, capturedSeq]() {
         if (auto* self = weakThis.get())
         {
             // Guard against use-after-free during shutdown
             if (self->shuttingDown_.load(std::memory_order_acquire))
                 return;
-            self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
+
+            // Check if source still exists (stale notification detection)
+            // The sequence number ensures we don't process notifications for sources
+            // that were added then removed before the async callback ran
+            {
+                std::shared_lock<std::shared_mutex> lock(self->mutex_);
+                if (self->sources_.find(sourceId) == self->sources_.end())
+                    return;  // Source was removed before notification could be delivered
+            }
+
+            self->listeners_.call([&sourceId](IInstanceRegistryListener& l) {
                 l.sourceAdded(sourceId);
             });
         }
@@ -263,14 +393,19 @@ void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 
 void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 {
+    // Increment sequence number to track this operation
+    operationSequence_.fetch_add(1, std::memory_order_acq_rel);
+
     // Capture WeakReference to prevent use-after-free if registry is destroyed before callback runs
+    // For removal notifications, we don't check if source exists (it was just removed)
+    // but we still use sequence tracking for consistency
     dispatcher_([weakThis = juce::WeakReference<InstanceRegistry>(this), sourceId]() {
         if (auto* self = weakThis.get())
         {
             // Guard against use-after-free during shutdown
             if (self->shuttingDown_.load(std::memory_order_acquire))
                 return;
-            self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
+            self->listeners_.call([&sourceId](IInstanceRegistryListener& l) {
                 l.sourceRemoved(sourceId);
             });
         }
@@ -279,6 +414,9 @@ void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 
 void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
 {
+    // Increment sequence number to track this operation
+    operationSequence_.fetch_add(1, std::memory_order_acq_rel);
+
     // Capture WeakReference to prevent use-after-free if registry is destroyed before callback runs
     dispatcher_([weakThis = juce::WeakReference<InstanceRegistry>(this), sourceId]() {
         if (auto* self = weakThis.get())
@@ -286,7 +424,15 @@ void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
             // Guard against use-after-free during shutdown
             if (self->shuttingDown_.load(std::memory_order_acquire))
                 return;
-            self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
+
+            // Check if source still exists (stale notification detection)
+            {
+                std::shared_lock<std::shared_mutex> lock(self->mutex_);
+                if (self->sources_.find(sourceId) == self->sources_.end())
+                    return;  // Source was removed before notification could be delivered
+            }
+
+            self->listeners_.call([&sourceId](IInstanceRegistryListener& l) {
                 l.sourceUpdated(sourceId);
             });
         }

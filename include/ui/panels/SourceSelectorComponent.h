@@ -83,7 +83,7 @@ private:
  * Popup content for source selection with search and rich list
  */
 class SourceSelectorPopup : public juce::Component,
-                             public InstanceRegistryListener,
+                             public IInstanceRegistryListener,
                              public ThemeManagerListener
 {
 public:
@@ -99,7 +99,7 @@ public:
     std::function<void(const SourceId&)> onSourceSelected;
     std::function<void()> onDisconnect;
 
-    // InstanceRegistryListener
+    // IInstanceRegistryListener
     void sourceAdded(const SourceId& sourceId) override;
     void sourceRemoved(const SourceId& sourceId) override;
     void sourceUpdated(const SourceId& sourceId) override;
@@ -141,7 +141,7 @@ private:
  * Shows current selection and opens rich popup on click.
  */
 class SourceSelectorComponent : public juce::Component,
-                                 public InstanceRegistryListener
+                                 public IInstanceRegistryListener
 {
 public:
     explicit SourceSelectorComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
@@ -174,7 +174,7 @@ public:
      */
     void refreshSources();
 
-    // InstanceRegistryListener interface
+    // IInstanceRegistryListener interface
     void sourceAdded(const SourceId& sourceId) override;
     void sourceRemoved(const SourceId& sourceId) override;
     void sourceUpdated(const SourceId& sourceId) override;

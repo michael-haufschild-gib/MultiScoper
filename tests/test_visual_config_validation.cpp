@@ -18,33 +18,18 @@ class ShaderTypeTest : public ::testing::Test
 
 TEST_F(ShaderTypeTest, Is3DShader)
 {
-    // 2D shaders
+    // All remaining shaders are 2D (3D shaders have been removed)
     EXPECT_FALSE(is3DShader(ShaderType::Basic2D));
     EXPECT_FALSE(is3DShader(ShaderType::NeonGlow));
     EXPECT_FALSE(is3DShader(ShaderType::GradientFill));
-    EXPECT_FALSE(is3DShader(ShaderType::DualOutline));
-    EXPECT_FALSE(is3DShader(ShaderType::PlasmaSine));
-
-    // 3D shaders
-    EXPECT_TRUE(is3DShader(ShaderType::VolumetricRibbon));
-    EXPECT_TRUE(is3DShader(ShaderType::WireframeMesh));
-    EXPECT_TRUE(is3DShader(ShaderType::VectorFlow));
-    EXPECT_TRUE(is3DShader(ShaderType::StringTheory));
-
-    // Material shaders (also 3D)
-    EXPECT_TRUE(is3DShader(ShaderType::GlassRefraction));
-    EXPECT_TRUE(is3DShader(ShaderType::LiquidChrome));
-    EXPECT_TRUE(is3DShader(ShaderType::Crystalline));
 }
 
 TEST_F(ShaderTypeTest, IsMaterialShader)
 {
+    // All material shaders have been removed
     EXPECT_FALSE(isMaterialShader(ShaderType::Basic2D));
-    EXPECT_FALSE(isMaterialShader(ShaderType::VolumetricRibbon));
-
-    EXPECT_TRUE(isMaterialShader(ShaderType::GlassRefraction));
-    EXPECT_TRUE(isMaterialShader(ShaderType::LiquidChrome));
-    EXPECT_TRUE(isMaterialShader(ShaderType::Crystalline));
+    EXPECT_FALSE(isMaterialShader(ShaderType::NeonGlow));
+    EXPECT_FALSE(isMaterialShader(ShaderType::GradientFill));
 }
 
 TEST_F(ShaderTypeTest, ShaderTypeToId)
@@ -52,16 +37,13 @@ TEST_F(ShaderTypeTest, ShaderTypeToId)
     EXPECT_EQ(shaderTypeToId(ShaderType::Basic2D), "basic");
     EXPECT_EQ(shaderTypeToId(ShaderType::NeonGlow), "neon_glow");
     EXPECT_EQ(shaderTypeToId(ShaderType::GradientFill), "gradient_fill");
-    EXPECT_EQ(shaderTypeToId(ShaderType::VolumetricRibbon), "volumetric_ribbon");
-    EXPECT_EQ(shaderTypeToId(ShaderType::GlassRefraction), "glass_refraction");
 }
 
 TEST_F(ShaderTypeTest, IdToShaderType)
 {
     EXPECT_EQ(idToShaderType("basic"), ShaderType::Basic2D);
     EXPECT_EQ(idToShaderType("neon_glow"), ShaderType::NeonGlow);
-    EXPECT_EQ(idToShaderType("volumetric_ribbon"), ShaderType::VolumetricRibbon);
-    EXPECT_EQ(idToShaderType("glass_refraction"), ShaderType::GlassRefraction);
+    EXPECT_EQ(idToShaderType("gradient_fill"), ShaderType::GradientFill);
 
     // Unknown ID should default to Basic2D
     EXPECT_EQ(idToShaderType("unknown"), ShaderType::Basic2D);
@@ -74,16 +56,7 @@ TEST_F(ShaderTypeTest, RoundTripConversion)
     std::vector<ShaderType> allTypes = {
         ShaderType::Basic2D,
         ShaderType::NeonGlow,
-        ShaderType::GradientFill,
-        ShaderType::DualOutline,
-        ShaderType::PlasmaSine,
-        ShaderType::VolumetricRibbon,
-        ShaderType::WireframeMesh,
-        ShaderType::VectorFlow,
-        ShaderType::StringTheory,
-        ShaderType::GlassRefraction,
-        ShaderType::LiquidChrome,
-        ShaderType::Crystalline
+        ShaderType::GradientFill
     };
 
     for (auto type : allTypes)

@@ -32,7 +32,23 @@ GradientFillShader::GradientFillShader()
 {
 }
 
-GradientFillShader::~GradientFillShader() = default;
+GradientFillShader::~GradientFillShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    // Resources should be released before destruction
+    // but we can't call OpenGL functions here without context
+    // Check for both compiled state AND orphaned VAO/VBO resources
+    if (gl_ && (gl_->compiled || gl_->vao != 0 || gl_->vbo != 0))
+    {
+        // FATAL: Shader destroyed without release(context) being called.
+        // This leaks VBO/VAO/Program on the GPU.
+        std::cerr << "[GradientFillShader] LEAK: Destructor called without release(). "
+                  << "GPU resources may have leaked. (compiled=" << gl_->compiled
+                  << ", vao=" << gl_->vao << ", vbo=" << gl_->vbo << ")" << std::endl;
+        jassertfalse;  // Assert in debug builds
+    }
+#endif
+}
 
 #if OSCIL_ENABLE_OPENGL
 bool GradientFillShader::compile(juce::OpenGLContext& context)
@@ -64,9 +80,21 @@ bool GradientFillShader::compile(juce::OpenGLContext& context)
 
 void GradientFillShader::release(juce::OpenGLContext& context)
 {
-    if (!gl_->compiled) return;
-    context.extensions.glDeleteBuffers(1, &gl_->vbo);
-    context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+    // Delete VBO if allocated (check != 0 to avoid double-free)
+    if (gl_->vbo != 0)
+    {
+        context.extensions.glDeleteBuffers(1, &gl_->vbo);
+        gl_->vbo = 0;  // Reset to prevent double-free
+    }
+
+    // Delete VAO if allocated (check != 0 to avoid double-free)
+    if (gl_->vao != 0)
+    {
+        context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+        gl_->vao = 0;  // Reset to prevent double-free
+    }
+
+    // Release shader program
     gl_->program.reset();
     gl_->compiled = false;
 }
@@ -106,10 +134,14 @@ void GradientFillShader::render(
         -1.0f, 1.0f, 0.0f, 1.0f
     };
 
-    ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
-    ext.glUniform4f(gl_->baseColorLoc,
-        params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
-    ext.glUniform1f(gl_->opacityLoc, params.opacity);
+    // Set uniforms with validation (H25 fix: validate before use)
+    if (gl_->projectionLoc >= 0)
+        ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
+    if (gl_->baseColorLoc >= 0)
+        ext.glUniform4f(gl_->baseColorLoc,
+            params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
+    if (gl_->opacityLoc >= 0)
+        ext.glUniform1f(gl_->opacityLoc, params.opacity);
 
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
@@ -188,5 +220,81 @@ void GradientFillShader::render(
     glDisable(GL_BLEND);
 }
 #endif
+
+void GradientFillShader::renderSoftware(
+    juce::Graphics& g,
+    const std::vector<float>& channel1,
+    const std::vector<float>* channel2,
+    const ShaderRenderParams& params)
+{
+    if (channel1.size() < 2)
+        return;
+
+    auto bounds = params.bounds;
+    float width = bounds.getWidth();
+    float height = bounds.getHeight();
+
+    // Calculate layout based on stereo/mono
+    float centerY1, centerY2;
+    float amplitude1, amplitude2;
+
+    if (params.isStereo && channel2 != nullptr)
+    {
+        float halfHeight = height * 0.5f;
+        centerY1 = bounds.getY() + halfHeight * 0.5f;
+        centerY2 = bounds.getY() + halfHeight * 1.5f;
+        amplitude1 = halfHeight * 0.45f * params.verticalScale;
+        amplitude2 = halfHeight * 0.45f * params.verticalScale;
+    }
+    else
+    {
+        centerY1 = bounds.getCentreY();
+        centerY2 = centerY1;
+        amplitude1 = height * 0.45f * params.verticalScale;
+        amplitude2 = amplitude1;
+    }
+
+    // Helper lambda to draw a filled waveform with gradient
+    auto drawFilledWaveform = [&](const std::vector<float>& samples, float centerY, float amp)
+    {
+        juce::Path path;
+        float xScale = width / static_cast<float>(samples.size() - 1);
+
+        // Start from bottom-left corner at the baseline
+        path.startNewSubPath(bounds.getX(), centerY);
+
+        // Draw the waveform line
+        for (size_t i = 0; i < samples.size(); ++i)
+        {
+            float x = bounds.getX() + static_cast<float>(i) * xScale;
+            float y = centerY - samples[i] * amp;
+            path.lineTo(x, y);
+        }
+
+        // Close path back to baseline
+        path.lineTo(bounds.getRight(), centerY);
+        path.closeSubPath();
+
+        // Fill with gradient from color at top to transparent at bottom
+        juce::ColourGradient gradient(
+            params.colour.withAlpha(params.opacity),
+            0.0f, centerY - amp,  // Top (full color)
+            params.colour.withAlpha(0.0f),
+            0.0f, centerY,  // Bottom (transparent)
+            false);
+
+        g.setGradientFill(gradient);
+        g.fillPath(path);
+    };
+
+    // Draw first channel
+    drawFilledWaveform(channel1, centerY1, amplitude1);
+
+    // Draw second channel if stereo
+    if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
+    {
+        drawFilledWaveform(*channel2, centerY2, amplitude2);
+    }
+}
 
 } // namespace oscil

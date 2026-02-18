@@ -46,7 +46,7 @@ struct Framebuffer
      * Get the current count of live Framebuffer instances
      * Useful for leak detection in Release builds
      */
-    static int getLeakCount() { return leakCounter_.load(); }
+    static int getLeakCount() noexcept { return leakCounter_.load(); }
 
     // Prevent copying and moving (OpenGL resources cannot be shared)
     Framebuffer(const Framebuffer&) = delete;
@@ -91,8 +91,9 @@ struct Framebuffer
      * @param context The OpenGL context
      * @param w New width
      * @param h New height
+     * @return true if resize succeeded, false if the FBO is now invalid
      */
-    virtual void resize(juce::OpenGLContext& context, int w, int h);
+    [[nodiscard]] virtual bool resize(juce::OpenGLContext& context, int w, int h);
 
     /**
      * Bind this framebuffer for rendering.
@@ -121,7 +122,7 @@ struct Framebuffer
     /**
      * Check if the framebuffer is valid and ready for use.
      */
-    [[nodiscard]] virtual bool isValid() const { return fbo != 0; }
+    [[nodiscard]] virtual bool isValid() const noexcept { return fbo != 0; }
 
     /**
      * Clear the framebuffer with the specified color.

@@ -18,8 +18,10 @@ DialogManager::DialogManager(juce::Component& parent, IThemeService& themeServic
 
     // Initialize Add Oscillator Dialog
     addOscillatorDialogContent_ = std::make_unique<AddOscillatorDialog>(themeService_);
-    addOscillatorDialogContent_->setOnBrowsePresets([this](const juce::String& currentId, auto onSelected) {
-        showPresetBrowserDialog(currentId, onSelected);
+    juce::WeakReference<DialogManager> weakThis(this);
+    addOscillatorDialogContent_->setOnBrowsePresets([weakThis](const juce::String& currentId, auto onSelected) {
+        if (auto* manager = weakThis.get())
+            manager->showPresetBrowserDialog(currentId, onSelected);
     });
     addOscillatorModal_ = std::make_unique<OscilModal>(themeService_, "Add Oscillator", "addOscillatorModal");
     addOscillatorModal_->setContent(addOscillatorDialogContent_.get());
@@ -36,17 +38,19 @@ DialogManager::DialogManager(juce::Component& parent, IThemeService& themeServic
 
     // Initialize Config Popup (Content)
     configPopup_ = std::make_unique<OscillatorConfigDialog>(themeService_, instanceRegistry_);
-    configPopup_->setOnBrowsePresets([this](const juce::String& currentId, auto onSelected) {
-        showPresetBrowserDialog(currentId, onSelected);
+    configPopup_->setOnBrowsePresets([weakThis](const juce::String& currentId, auto onSelected) {
+        if (auto* manager = weakThis.get())
+            manager->showPresetBrowserDialog(currentId, onSelected);
     });
-    
+
     // Initialize Config Modal
     configModal_ = std::make_unique<OscilModal>(themeService_, "Configure Oscillator", "configModal");
     configModal_->setContent(configPopup_.get());
-    
+
     // Connect internal close button/action to modal hide
-    configPopup_->onClose = [this]() {
-        configModal_->hide();
+    configPopup_->onClose = [weakThis]() {
+        if (auto* manager = weakThis.get())
+            manager->configModal_->hide();
     };
 
     // Initialize Preset Browser Dialog
@@ -69,14 +73,17 @@ void DialogManager::showAddOscillatorDialog(const std::vector<SourceInfo>& sourc
 
     addOscillatorDialogContent_->setData(sources, panes);
 
-    addOscillatorDialogContent_->setOnComplete([this, onComplete](const AddOscillatorDialog::Result& result) {
+    juce::WeakReference<DialogManager> weakThis(this);
+    addOscillatorDialogContent_->setOnComplete([weakThis, onComplete](const AddOscillatorDialog::Result& result) {
         if (onComplete)
             onComplete(result);
-        addOscillatorModal_->hide();
+        if (auto* manager = weakThis.get())
+            manager->addOscillatorModal_->hide();
     });
 
-    addOscillatorDialogContent_->setOnCancel([this]() {
-        addOscillatorModal_->hide();
+    addOscillatorDialogContent_->setOnCancel([weakThis]() {
+        if (auto* manager = weakThis.get())
+            manager->addOscillatorModal_->hide();
     });
 
     addOscillatorModal_->show(&parent_);
@@ -91,14 +98,17 @@ void DialogManager::showColorDialog(juce::Colour initialColor,
     colorDialogContent_->setColors(WaveformColorPalette::getAllColors());
     colorDialogContent_->setSelectedColor(initialColor);
 
-    colorDialogContent_->setOnColorSelected([this, onColorSelected](juce::Colour color) {
+    juce::WeakReference<DialogManager> weakThis(this);
+    colorDialogContent_->setOnColorSelected([weakThis, onColorSelected](juce::Colour color) {
         if (onColorSelected)
             onColorSelected(color);
-        colorModal_->hide();
+        if (auto* manager = weakThis.get())
+            manager->colorModal_->hide();
     });
 
-    colorDialogContent_->setOnCancel([this]() {
-        colorModal_->hide();
+    colorDialogContent_->setOnCancel([weakThis]() {
+        if (auto* manager = weakThis.get())
+            manager->colorModal_->hide();
     });
 
     colorModal_->show(&parent_);
@@ -113,16 +123,19 @@ void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes
 
     selectPaneDialogContent_->setAvailablePanes(availablePanes);
 
-    selectPaneDialogContent_->setOnComplete([this, onComplete](const SelectPaneDialog::Result& result) {
+    juce::WeakReference<DialogManager> weakThis(this);
+    selectPaneDialogContent_->setOnComplete([weakThis, onComplete](const SelectPaneDialog::Result& result) {
         if (onComplete)
             onComplete(result);
-        selectPaneModal_->hide();
+        if (auto* manager = weakThis.get())
+            manager->selectPaneModal_->hide();
     });
 
-    selectPaneDialogContent_->setOnCancel([this, onCancel]() {
+    selectPaneDialogContent_->setOnCancel([weakThis, onCancel]() {
         if (onCancel)
             onCancel();
-        selectPaneModal_->hide();
+        if (auto* manager = weakThis.get())
+            manager->selectPaneModal_->hide();
     });
 
     selectPaneModal_->show(&parent_);
@@ -176,14 +189,17 @@ void DialogManager::showPresetBrowserDialog(const juce::String& currentPresetId,
     presetBrowserDialogContent_->refreshPresets();
     presetBrowserDialogContent_->setSelectedPresetId(currentPresetId);
 
-    presetBrowserDialogContent_->setOnPresetSelected([this, onPresetSelected](const juce::String& presetId) {
+    juce::WeakReference<DialogManager> weakThis(this);
+    presetBrowserDialogContent_->setOnPresetSelected([weakThis, onPresetSelected](const juce::String& presetId) {
         if (onPresetSelected)
             onPresetSelected(presetId);
-        presetBrowserModal_->hide();
+        if (auto* manager = weakThis.get())
+            manager->presetBrowserModal_->hide();
     });
 
-    presetBrowserDialogContent_->setOnCancel([this]() {
-        presetBrowserModal_->hide();
+    presetBrowserDialogContent_->setOnCancel([weakThis]() {
+        if (auto* manager = weakThis.get())
+            manager->presetBrowserModal_->hide();
     });
 
     // Show on top of everything (including other modals)

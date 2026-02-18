@@ -46,8 +46,19 @@ public:
 
     /**
      * Configure the bloom effect directly.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
      */
-    void setSettings(const BloomSettings& settings) { settings_ = settings; }
+    void setSettings(const BloomSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.intensity = juce::jlimit(0.0f, 2.0f, settings_.intensity);
+        settings_.threshold = juce::jlimit(0.0f, 1.0f, settings_.threshold);
+        settings_.iterations = juce::jlimit(2, 8, settings_.iterations);
+        settings_.downsampleSteps = juce::jlimit(1, 6, settings_.downsampleSteps);
+        settings_.spread = juce::jlimit(0.1f, 5.0f, settings_.spread);
+        settings_.softKnee = juce::jlimit(0.0f, 1.0f, settings_.softKnee);
+    }
     [[nodiscard]] const BloomSettings& getSettings() const { return settings_; }
 
 private:

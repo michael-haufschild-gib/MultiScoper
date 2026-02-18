@@ -27,22 +27,7 @@ enum class ShaderType
     // 2D Shaders
     Basic2D,
     NeonGlow,
-    GradientFill,
-    DualOutline,
-    PlasmaSine,
-
-    // 3D Shaders
-    VolumetricRibbon,
-    WireframeMesh,
-    VectorFlow,
-    StringTheory,
-    ElectricFlower,
-    ElectricFiligree,
-
-    // Material Shaders
-    GlassRefraction,
-    LiquidChrome,
-    Crystalline
+    GradientFill
 };
 
 /**
@@ -224,6 +209,16 @@ struct MaterialSettings
 /**
  * Complete visual configuration for a single waveform.
  * Contains all shader, post-processing, 3D, and material settings.
+ *
+ * THREAD SAFETY (H15):
+ * This is a value type that should be copied when passing between threads.
+ * The RenderEngine uses a copy-on-read pattern:
+ * - UI thread: Updates configs via setWaveformConfig() (under waveformStatesMutex_)
+ * - Render thread: Copies config to BatchEntry::visualConfig under lock before rendering
+ * - Rendering uses the copied config, so no race with UI updates
+ *
+ * Do NOT share references to VisualConfiguration between threads.
+ * Always pass by value or copy under lock.
  */
 struct VisualConfiguration
 {
@@ -316,29 +311,20 @@ struct VisualConfiguration
 
 /**
  * Check if a shader type is a 3D shader.
+ * Note: All 3D shaders have been removed. This function exists for API compatibility.
  */
-inline bool is3DShader(ShaderType type)
+inline bool is3DShader([[maybe_unused]] ShaderType type)
 {
-    return type == ShaderType::VolumetricRibbon ||
-           type == ShaderType::WireframeMesh ||
-           type == ShaderType::VectorFlow ||
-           type == ShaderType::StringTheory ||
-           type == ShaderType::ElectricFlower ||
-           type == ShaderType::ElectricFiligree ||
-           // Material shaders are also 3D shaders
-           type == ShaderType::GlassRefraction ||
-           type == ShaderType::LiquidChrome ||
-           type == ShaderType::Crystalline;
+    return false;
 }
 
 /**
  * Check if a shader type is a material shader.
+ * Note: All material shaders have been removed. This function exists for API compatibility.
  */
-inline bool isMaterialShader(ShaderType type)
+inline bool isMaterialShader([[maybe_unused]] ShaderType type)
 {
-    return type == ShaderType::GlassRefraction ||
-           type == ShaderType::LiquidChrome ||
-           type == ShaderType::Crystalline;
+    return false;
 }
 
 /**

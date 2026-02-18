@@ -43,7 +43,24 @@ void WaveformPresenter::setAutoScale(bool enabled)
 
 void WaveformPresenter::setDisplayWidth(int width)
 {
+    // Capture previous LOD tier before updating
+    LODTier previousTier = decimator_.getCurrentTier();
+    
+    // Update decimator with new width (this may change the LOD tier)
     decimator_.setDisplayWidth(width);
+    
+    // Check if LOD tier changed
+    LODTier newTier = decimator_.getCurrentTier();
+    if (newTier != previousTier && lodTransitionProgress_ >= 1.0f)
+    {
+        // LOD tier changed - start a transition
+        previousLODTier_ = previousTier;
+        lodTransitionProgress_ = 0.0f;
+        
+        // Save current display buffers for cross-fade
+        previousDisplayBuffer1_ = displayBuffer1_;
+        previousDisplayBuffer2_ = displayBuffer2_;
+    }
 }
 
 void WaveformPresenter::process()
@@ -88,18 +105,72 @@ void WaveformPresenter::process()
 
     signalProcessor_.process(leftSpan, rightSpan, processingMode_, processedSignal_);
 
-    // Decimate for display
+    // Decimate for display with peak preservation
     std::span<const float> processedLeft(processedSignal_.channel1.data(), processedSignal_.channel1.size());
-    decimator_.process(processedLeft, displayBuffer1_);
+    decimator_.processWithPeaks(processedLeft, decimatedWaveform1_);
+    
+    // Copy samples to display buffer for backward compatibility
+    displayBuffer1_ = decimatedWaveform1_.samples;
 
     if (processedSignal_.isStereo)
     {
         std::span<const float> processedRight(processedSignal_.channel2.data(), processedSignal_.channel2.size());
-        decimator_.process(processedRight, displayBuffer2_);
+        decimator_.processWithPeaks(processedRight, decimatedWaveform2_);
+        displayBuffer2_ = decimatedWaveform2_.samples;
     }
     else
     {
         displayBuffer2_.clear();
+        decimatedWaveform2_.clear();
+    }
+    
+    // Handle LOD transition blending
+    if (lodTransitionProgress_ < 1.0f)
+    {
+        // Advance transition
+        lodTransitionProgress_ += LOD_TRANSITION_SPEED;
+        lodTransitionProgress_ = std::min(lodTransitionProgress_, 1.0f);
+        
+        // Cross-fade between previous and current buffers
+        // This prevents visual "popping" when LOD changes
+        if (!previousDisplayBuffer1_.empty())
+        {
+            float blend = lodTransitionProgress_;
+            
+            // Resample previous buffer to match new size if different
+            if (previousDisplayBuffer1_.size() != displayBuffer1_.size())
+            {
+                // Simple case: just snap to new buffer since sizes differ
+                // The hysteresis in AdaptiveDecimator prevents rapid tier changes
+                // so this transition will be smooth enough
+            }
+            else
+            {
+                // Same size: blend samples
+                for (size_t i = 0; i < displayBuffer1_.size(); ++i)
+                {
+                    displayBuffer1_[i] = previousDisplayBuffer1_[i] * (1.0f - blend) 
+                                       + displayBuffer1_[i] * blend;
+                }
+                
+                if (!previousDisplayBuffer2_.empty() && 
+                    previousDisplayBuffer2_.size() == displayBuffer2_.size())
+                {
+                    for (size_t i = 0; i < displayBuffer2_.size(); ++i)
+                    {
+                        displayBuffer2_[i] = previousDisplayBuffer2_[i] * (1.0f - blend) 
+                                           + displayBuffer2_[i] * blend;
+                    }
+                }
+            }
+        }
+        
+        // Clear previous buffers when transition completes
+        if (lodTransitionProgress_ >= 1.0f)
+        {
+            previousDisplayBuffer1_.clear();
+            previousDisplayBuffer2_.clear();
+        }
     }
 
     // Calculate levels

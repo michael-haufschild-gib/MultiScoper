@@ -6,12 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 
 namespace oscil
@@ -33,7 +34,6 @@ namespace oscil
  */
 class OscilModal : public ThemedComponent,
                    public TestIdSupport,
-                   private juce::Timer,
                    private juce::FocusChangeListener
 {
 public:
@@ -47,7 +47,7 @@ public:
     juce::String getTitle() const { return title_; }
 
     void setContent(juce::Component* content);
-    juce::Component* getContent() const { return content_; }
+    juce::Component* getContent() const { return content_.getComponent(); }
 
     void setSize(ModalSize size);
     ModalSize getModalSize() const { return modalSize_; }
@@ -66,7 +66,7 @@ public:
     // Show/Hide
     void show(juce::Component* parent = nullptr);
     void hide();
-    bool isShowing() const { return isVisible() && showSpring_.position > 0.01f; }
+    bool isShowing() const { return isVisible() && showProgress_ > 0.01f; }
 
     // Callbacks
     std::function<void()> onClose;
@@ -91,8 +91,9 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
-    void updateAnimations();
+    void startShowAnimation();
+    void startHideAnimation();
+    void updateVisualState();
 
     void paintBackdrop(juce::Graphics& g);
     void paintModal(juce::Graphics& g, juce::Rectangle<int> bounds);
@@ -109,7 +110,7 @@ private:
 
 
     juce::String title_;
-    juce::Component* content_ = nullptr;
+    juce::Component::SafePointer<juce::Component> content_;  // SafePointer prevents dangling reference
     ModalSize modalSize_ = ModalSize::Medium;
     int customWidth_ = 0;
     int customHeight_ = 0;
@@ -122,10 +123,16 @@ private:
 
     bool isHoveringClose_ = false;
     juce::Component::SafePointer<juce::Component> previousFocus_;
-
-    SpringAnimation showSpring_;
-    SpringAnimation scaleSpring_;
-    SpringAnimation closeHoverSpring_ = SpringPresets::stiff();
+    
+    // Animation state (0.0 = hidden, 1.0 = fully visible)
+    float showProgress_ = 0.0f;
+    float scaleProgress_ = 0.0f;
+    float closeHoverProgress_ = 0.0f;
+    
+    // Animation service and animators
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator showAnimator_;
+    ScopedAnimator hoverAnimator_;
 
 
     static constexpr int TITLE_BAR_HEIGHT = 48;

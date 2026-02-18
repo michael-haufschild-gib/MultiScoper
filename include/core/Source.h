@@ -87,15 +87,15 @@ struct SourceId
 {
     juce::String id;
 
-    bool operator==(const SourceId& other) const { return id == other.id; }
-    bool operator!=(const SourceId& other) const { return !(*this == other); }
-    bool operator<(const SourceId& other) const { return id < other.id; }
+    bool operator==(const SourceId& other) const noexcept { return id == other.id; }
+    bool operator!=(const SourceId& other) const noexcept { return !(*this == other); }
+    bool operator<(const SourceId& other) const noexcept { return id < other.id; }
 
     [[nodiscard]] static SourceId generate();
     static SourceId invalid() { return SourceId{ "" }; }
     static SourceId noSource() { return SourceId{ "NO_SOURCE" }; }
-    bool isValid() const { return id.isNotEmpty() && id != "NO_SOURCE"; }
-    bool isNoSource() const { return id == "NO_SOURCE"; }
+    bool isValid() const noexcept { return id.isNotEmpty() && id != "NO_SOURCE"; }
+    bool isNoSource() const noexcept { return id == "NO_SOURCE"; }
 };
 
 /**
@@ -103,9 +103,10 @@ struct SourceId
  */
 struct SourceIdHash
 {
-    std::size_t operator()(const SourceId& sid) const
+    std::size_t operator()(const SourceId& sid) const noexcept
     {
-        return std::hash<std::string>{}(sid.id.toStdString());
+        // Use hashCode() instead of toStdString() to avoid memory allocation
+        return static_cast<std::size_t>(sid.id.hashCode());
     }
 };
 
@@ -116,12 +117,12 @@ struct InstanceId
 {
     juce::String id;
 
-    bool operator==(const InstanceId& other) const { return id == other.id; }
-    bool operator!=(const InstanceId& other) const { return !(*this == other); }
+    bool operator==(const InstanceId& other) const noexcept { return id == other.id; }
+    bool operator!=(const InstanceId& other) const noexcept { return !(*this == other); }
 
     [[nodiscard]] static InstanceId generate();
     static InstanceId invalid() { return InstanceId{ "" }; }
-    bool isValid() const { return id.isNotEmpty(); }
+    bool isValid() const noexcept { return id.isNotEmpty(); }
 };
 
 /**
@@ -129,9 +130,10 @@ struct InstanceId
  */
 struct InstanceIdHash
 {
-    std::size_t operator()(const InstanceId& iid) const
+    std::size_t operator()(const InstanceId& iid) const noexcept
     {
-        return std::hash<std::string>{}(iid.id.toStdString());
+        // Use hashCode() instead of toStdString() to avoid memory allocation
+        return static_cast<std::size_t>(iid.id.hashCode());
     }
 };
 
@@ -164,6 +166,13 @@ struct SignalMetrics
  * - Manage instance ownership and backup instances
  * - Provide audio data access via capture buffer
  * - Track signal metrics and correlation
+ *
+ * Thread Safety:
+ * - State transitions (transitionTo) should be called from message thread
+ * - getBackupInstanceIds() returns a copy (thread-safe read)
+ * - updateLastAudioTime() can be called from audio thread
+ * - updateActivityState() should be called from message thread
+ * - Heartbeat methods are thread-safe
  */
 class Source
 {
@@ -211,10 +220,19 @@ public:
     [[nodiscard]] InstanceId getOwningInstanceId() const noexcept { return owningInstanceId_; }
     void setOwningInstanceId(const InstanceId& instanceId);
 
-    [[nodiscard]] const std::vector<InstanceId>& getBackupInstanceIds() const noexcept { return backupInstanceIds_; }
+    // Returns a copy for thread safety - use sparingly
+    [[nodiscard]] std::vector<InstanceId> getBackupInstanceIds() const
+    {
+        const juce::SpinLock::ScopedLockType lock(backupMutex_);
+        return backupInstanceIds_;
+    }
     void addBackupInstance(const InstanceId& instanceId);
     void removeBackupInstance(const InstanceId& instanceId);
-    [[nodiscard]] bool hasBackupInstances() const noexcept { return !backupInstanceIds_.empty(); }
+    [[nodiscard]] bool hasBackupInstances() const
+    {
+        const juce::SpinLock::ScopedLockType lock(backupMutex_);
+        return !backupInstanceIds_.empty();
+    }
     [[nodiscard]] std::optional<InstanceId> getNextBackupInstance() const;
 
     /**
@@ -306,6 +324,7 @@ private:
     // Ownership
     InstanceId owningInstanceId_;
     std::vector<InstanceId> backupInstanceIds_;
+    mutable juce::SpinLock backupMutex_;  // Protects backupInstanceIds_ for thread safety
 
     // Audio configuration
     float sampleRate_ = 44100.0f;
@@ -314,7 +333,6 @@ private:
 
     // State
     std::atomic<SourceState> state_{ SourceState::DISCOVERED };
-    std::atomic<bool> isActiveFlag_{ false };
     juce::String displayName_;
 
     // Timestamps

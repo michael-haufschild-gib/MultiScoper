@@ -28,6 +28,7 @@ struct SourceInfo
     SourceId sourceId;
     juce::String name;                          // User-friendly name (DAW track name if available)
     juce::String trackIdentifier;               // DAW-provided track identifier
+    juce::String instanceUUID;                  // Persistent UUID (survives DAW session reload)
     int channelCount = 2;                       // Number of channels (1 = mono, 2 = stereo)
     double sampleRate = 44100.0;
     std::weak_ptr<IAudioBuffer> buffer;         // Weak reference to capture buffer
@@ -41,6 +42,7 @@ struct SourceInfo
         : sourceId(other.sourceId)
         , name(other.name)
         , trackIdentifier(other.trackIdentifier)
+        , instanceUUID(other.instanceUUID)
         , channelCount(other.channelCount)
         , sampleRate(other.sampleRate)
         , buffer(other.buffer)
@@ -56,6 +58,7 @@ struct SourceInfo
             sourceId = other.sourceId;
             name = other.name;
             trackIdentifier = other.trackIdentifier;
+            instanceUUID = other.instanceUUID;
             channelCount = other.channelCount;
             sampleRate = other.sampleRate;
             buffer = other.buffer;
@@ -70,10 +73,10 @@ struct SourceInfo
 /**
  * Listener interface for registry changes
  */
-class InstanceRegistryListener
+class IInstanceRegistryListener
 {
 public:
-    virtual ~InstanceRegistryListener() = default;
+    virtual ~IInstanceRegistryListener() = default;
     virtual void sourceAdded(const SourceId& sourceId) = 0;
     virtual void sourceRemoved(const SourceId& sourceId) = 0;
     virtual void sourceUpdated(const SourceId& sourceId) = 0;
@@ -98,7 +101,8 @@ public:
         const juce::String& name = "Track",
         int channelCount = 2,
         double sampleRate = 44100.0,
-        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) = 0;
+        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr,
+        const juce::String& instanceUUID = juce::String()) = 0;
 
     /**
      * Unregister a plugin instance.
@@ -114,6 +118,20 @@ public:
      * Get a specific source by ID
      */
     virtual std::optional<SourceInfo> getSource(const SourceId& sourceId) const = 0;
+
+    /**
+     * Get a source by name (for resolving persisted oscillator references)
+     * Returns the first source with a matching name, or nullopt if not found.
+     * Name matching is case-insensitive.
+     */
+    virtual std::optional<SourceInfo> getSourceByName(const juce::String& name) const = 0;
+
+    /**
+     * Get a source by instanceUUID (for resolving persisted oscillator references)
+     * This is the most reliable method as instanceUUIDs are unique and persist across sessions.
+     * Returns the source with matching UUID, or nullopt if not found.
+     */
+    virtual std::optional<SourceInfo> getSourceByInstanceUUID(const juce::String& uuid) const = 0;
 
     /**
      * Get the capture buffer for a source
@@ -134,12 +152,12 @@ public:
     /**
      * Add a listener for registry changes
      */
-    virtual void addListener(InstanceRegistryListener* listener) = 0;
+    virtual void addListener(IInstanceRegistryListener* listener) = 0;
 
     /**
      * Remove a listener
      */
-    virtual void removeListener(InstanceRegistryListener* listener) = 0;
+    virtual void removeListener(IInstanceRegistryListener* listener) = 0;
 };
 
 } // namespace oscil

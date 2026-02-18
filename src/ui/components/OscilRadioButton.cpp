@@ -13,16 +13,9 @@ namespace oscil
 
 OscilRadioButton::OscilRadioButton(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , selectionSpring_(SpringPresets::bouncy())
-    , hoverSpring_(SpringPresets::stiff())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
-
-    selectionSpring_.position = 0.0f;
-    selectionSpring_.target = 0.0f;
-    hoverSpring_.position = 0.0f;
-    hoverSpring_.target = 0.0f;
 }
 
 OscilRadioButton::OscilRadioButton(IThemeService& themeService, const juce::String& label)
@@ -43,9 +36,15 @@ void OscilRadioButton::registerTestId()
     OSCIL_REGISTER_TEST_ID(testId_);
 }
 
-OscilRadioButton::~OscilRadioButton()
+OscilRadioButton::~OscilRadioButton() = default;
+
+void OscilRadioButton::parentHierarchyChanged()
 {
-    stopTimer();
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void OscilRadioButton::setSelected(bool selected, bool notify)
@@ -54,14 +53,27 @@ void OscilRadioButton::setSelected(bool selected, bool notify)
 
     selected_ = selected;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    float target = selected ? 1.0f : 0.0f;
+    
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        selectionSpring_.setTarget(selected ? 1.0f : 0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = selectionProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilRadioButton>(this);
+        selectionAnimator_.set(animService_->createValueAnimation(
+            AnimationPresets::SNAPPY_DURATION_MS,
+            [safeThis, startValue, target](float progress) {
+                if (safeThis)
+                {
+                    safeThis->selectionProgress_ = startValue + (target - startValue) * progress;
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseOut()));
+        selectionAnimator_.start();
     }
     else
     {
-        selectionSpring_.position = selected ? 1.0f : 0.0f;
+        selectionProgress_ = target;
         repaint();
     }
 
@@ -121,6 +133,10 @@ int OscilRadioButton::getPreferredHeight() const
 
 void OscilRadioButton::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     auto bounds = getLocalBounds();
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
@@ -168,7 +184,7 @@ void OscilRadioButton::paint(juce::Graphics& g)
 
     paintCircle(g, circleBounds);
 
-    if (selected_ || selectionSpring_.position > 0.01f)
+    if (selected_ || selectionProgress_ > 0.01f)
         paintDot(g, circleBounds);
 
     if (hasFocus_ && enabled_)
@@ -178,12 +194,11 @@ void OscilRadioButton::paint(juce::Graphics& g)
 void OscilRadioButton::paintCircle(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float hoverAmount = hoverSpring_.position;
 
     // Background
     auto bgColour = getTheme().backgroundSecondary;
-    if (hoverAmount > 0.01f)
-        bgColour = bgColour.brighter(0.1f * hoverAmount);
+    if (hoverProgress_ > 0.01f)
+        bgColour = bgColour.brighter(0.1f * hoverProgress_);
 
     g.setColour(bgColour.withAlpha(opacity));
     g.fillEllipse(bounds);
@@ -197,7 +212,7 @@ void OscilRadioButton::paintCircle(juce::Graphics& g, const juce::Rectangle<floa
 void OscilRadioButton::paintDot(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float progress = selectionSpring_.position;
+    float progress = selectionProgress_;
 
     if (progress < 0.01f) return;
 
@@ -225,7 +240,13 @@ void OscilRadioButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<f
 
 void OscilRadioButton::resized()
 {
-    // No child components
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilRadioButton::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
 }
 
 void OscilRadioButton::mouseDown(const juce::MouseEvent&)
@@ -270,14 +291,23 @@ void OscilRadioButton::mouseEnter(const juce::MouseEvent&)
 
     isHovered_ = true;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        hoverSpring_.setTarget(1.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = hoverProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilRadioButton>(this);
+        hoverAnimator_.set(animService_->createHoverAnimation(
+            [safeThis, startValue](float progress) {
+                if (safeThis)
+                {
+                    safeThis->hoverProgress_ = startValue + (1.0f - startValue) * progress;
+                    safeThis->repaint();
+                }
+            }));
+        hoverAnimator_.start();
     }
     else
     {
-        hoverSpring_.position = 1.0f;
+        hoverProgress_ = 1.0f;
         repaint();
     }
 }
@@ -286,14 +316,23 @@ void OscilRadioButton::mouseExit(const juce::MouseEvent&)
 {
     isHovered_ = false;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        hoverSpring_.setTarget(0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = hoverProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilRadioButton>(this);
+        hoverAnimator_.set(animService_->createHoverAnimation(
+            [safeThis, startValue](float progress) {
+                if (safeThis)
+                {
+                    safeThis->hoverProgress_ = startValue * (1.0f - progress);
+                    safeThis->repaint();
+                }
+            }));
+        hoverAnimator_.start();
     }
     else
     {
-        hoverSpring_.position = 0.0f;
+        hoverProgress_ = 0.0f;
         repaint();
     }
 }
@@ -340,33 +379,58 @@ void OscilRadioButton::focusLost(FocusChangeType)
     repaint();
 }
 
-void OscilRadioButton::timerCallback()
+
+//==============================================================================
+// Accessibility Handler for OscilRadioButton
+//==============================================================================
+class OscilRadioButtonAccessibilityHandler : public juce::AccessibilityHandler
 {
-    updateAnimations();
+public:
+    explicit OscilRadioButtonAccessibilityHandler(OscilRadioButton& button)
+        : juce::AccessibilityHandler(button, juce::AccessibilityRole::radioButton,
+            juce::AccessibilityActions()
+                .addAction(juce::AccessibilityActionType::press,
+                    [&button] { if (button.isEnabled() && !button.isSelected()) button.setSelected(true); })
+          )
+        , button_(button)
+    {
+    }
 
-    if (selectionSpring_.isSettled() && hoverSpring_.isSettled())
-        stopTimer();
+    juce::String getTitle() const override
+    {
+        return button_.getLabel().isNotEmpty() ? button_.getLabel() : "Radio Button";
+    }
 
-    repaint();
-}
+    juce::String getDescription() const override
+    {
+        juce::String state = button_.isSelected() ? "Selected" : "Not selected";
+        if (!button_.isEnabled())
+            state += " (disabled)";
+        return state;
+    }
 
-void OscilRadioButton::updateAnimations()
-{
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-    selectionSpring_.update(dt);
-    hoverSpring_.update(dt);
-}
+    juce::String getHelp() const override
+    {
+        return "Press Space or Enter to select this option.";
+    }
 
+    juce::AccessibleState getCurrentState() const override
+    {
+        auto state = AccessibilityHandler::getCurrentState();
+        if (button_.isSelected())
+            state = state.withChecked();
+        return state;
+    }
+
+private:
+    OscilRadioButton& button_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilRadioButtonAccessibilityHandler)
+};
 
 std::unique_ptr<juce::AccessibilityHandler> OscilRadioButton::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::radioButton,
-        juce::AccessibilityActions()
-            .addAction(juce::AccessibilityActionType::press,
-                [this] { if (enabled_ && !selected_) setSelected(true); })
-    );
+    return std::make_unique<OscilRadioButtonAccessibilityHandler>(*this);
 }
 
 //==============================================================================
@@ -575,6 +639,30 @@ bool OscilRadioGroup::keyPressed(const juce::KeyPress& key)
         return false;
 
     int newIndex = selectedIndex_;
+
+    // Handle Home/End keys to jump to first/last option
+    if (key == juce::KeyPress::homeKey)
+    {
+        newIndex = 0;
+        if (newIndex != selectedIndex_)
+        {
+            setSelectedIndex(newIndex);
+            buttons_[static_cast<size_t>(newIndex)]->grabKeyboardFocus();
+            return true;
+        }
+        return false;
+    }
+    else if (key == juce::KeyPress::endKey)
+    {
+        newIndex = static_cast<int>(buttons_.size()) - 1;
+        if (newIndex != selectedIndex_)
+        {
+            setSelectedIndex(newIndex);
+            buttons_[static_cast<size_t>(newIndex)]->grabKeyboardFocus();
+            return true;
+        }
+        return false;
+    }
 
     if (orientation_ == Orientation::Vertical)
     {

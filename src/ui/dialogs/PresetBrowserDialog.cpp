@@ -279,25 +279,9 @@ void PresetBrowserDialog::filterPresets()
             {
                 match = shaderType == ShaderType::Basic2D ||
                         shaderType == ShaderType::NeonGlow ||
-                        shaderType == ShaderType::GradientFill ||
-                        shaderType == ShaderType::DualOutline ||
-                        shaderType == ShaderType::PlasmaSine;
+                        shaderType == ShaderType::GradientFill;
             }
-            else if (shaderFilter_ == "3d")
-            {
-                match = shaderType == ShaderType::VolumetricRibbon ||
-                        shaderType == ShaderType::WireframeMesh ||
-                        shaderType == ShaderType::VectorFlow ||
-                        shaderType == ShaderType::StringTheory ||
-                        shaderType == ShaderType::ElectricFlower ||
-                        shaderType == ShaderType::ElectricFiligree;
-            }
-            else if (shaderFilter_ == "material")
-            {
-                match = shaderType == ShaderType::GlassRefraction ||
-                        shaderType == ShaderType::LiquidChrome ||
-                        shaderType == ShaderType::Crystalline;
-            }
+            // Note: 3D and material shader filters removed as those shaders are no longer available
 
             if (!match) continue;
         }
@@ -532,6 +516,7 @@ void PresetBrowserDialog::showDuplicatePrompt(const juce::String& presetId)
     window->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
     window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
+    // Note: enterModalState with deleteWhenDismissed=true handles window deletion automatically
     window->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, presetId, window](int result) {
         if (safeThis != nullptr && result == 1)
         {
@@ -546,7 +531,7 @@ void PresetBrowserDialog::showDuplicatePrompt(const juce::String& presetId)
                 );
             }
         }
-        delete window;
+        // Note: window is deleted by JUCE's modal component manager (deleteWhenDismissed=true)
     }), true);
 }
 

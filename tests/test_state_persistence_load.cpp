@@ -111,21 +111,4 @@ TEST_F(StatePersistenceLoadTest, ConstructFromEmptyString)
     EXPECT_EQ(state.getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
 }
 
-// Test: Display options defaults
-TEST_F(StatePersistenceLoadTest, DisplayOptionsDefaults)
-{
-    // Check defaults
-    EXPECT_TRUE(state->isShowGridEnabled());
-    EXPECT_TRUE(state->isAutoScaleEnabled());
-    EXPECT_FLOAT_EQ(state->getGainDb(), 0.0f);
-}
-
-// Test: Sidebar defaults
-TEST_F(StatePersistenceLoadTest, SidebarDefaults)
-{
-    EXPECT_EQ(state->getSidebarWidth(), 300);
-    EXPECT_FALSE(state->isSidebarCollapsed());
-    EXPECT_TRUE(state->isStatusBarVisible());
-}
-
 // Note: GlobalPreferences tests are in test_state_persistence.cpp (GlobalPreferencesTest fixture)

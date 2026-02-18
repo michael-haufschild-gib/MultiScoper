@@ -5,7 +5,7 @@
 #include "ui/panels/WaveformComponent.h"
 
 #include "ui/theme/ThemeManager.h"
-#include <fstream>
+#include "core/DebugLogger.h"
 
 #include "rendering/ShaderRegistry.h"
 #include "rendering/VisualConfiguration.h"
@@ -133,10 +133,6 @@ void WaveformComponent::paint(juce::Graphics& g)
 
     const auto& theme = themeService_.getCurrentTheme();
 
-    // #region agent log
-    { static int logCounter = 0; if (++logCounter % 30 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H12\",\"location\":\"WaveformComponent.cpp:paint\",\"message\":\"Paint called\",\"data\":{\"gpuEnabled\":" << (gpuRenderingEnabled_ ? "true" : "false") << ",\"willFillBg\":" << (!gpuRenderingEnabled_ ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
-    // #endregion
-
     // FIX: Only draw background in software mode - in GPU mode, OpenGL renders directly
     // and filling background here would cover the GL waveform
     if (!gpuRenderingEnabled_)
@@ -192,6 +188,10 @@ void WaveformComponent::resized()
 
 void WaveformComponent::setCaptureBuffer(std::shared_ptr<IAudioBuffer> buffer)
 {
+    OSCIL_LOG_RENDER("WaveformComponent", "setCaptureBuffer called, waveformId=" + juce::String(waveformId_)
+                    + ", buffer=" + juce::String(buffer != nullptr ? "VALID" : "NULL")
+                    + ", samples=" + juce::String(buffer ? static_cast<int>(buffer->getAvailableSamples()) : 0));
+
     if (presenter_)
         presenter_->setCaptureBuffer(buffer);
 }
@@ -241,6 +241,10 @@ void WaveformComponent::setVisualOverrides(const juce::ValueTree& overrides)
 
 void WaveformComponent::setGpuRenderingEnabled(bool enabled)
 {
+    OSCIL_LOG_RENDER("WaveformComponent", "setGpuRenderingEnabled: waveformId=" + juce::String(waveformId_)
+                    + ", enabled=" + juce::String(enabled ? "GPU" : "SOFTWARE")
+                    + ", wasGpu=" + juce::String(gpuRenderingEnabled_ ? "YES" : "NO"));
+
     gpuRenderingEnabled_ = enabled;
 
     // Conditionally manage VBlank attachment to save CPU when GPU rendering is active
@@ -250,6 +254,7 @@ void WaveformComponent::setGpuRenderingEnabled(bool enabled)
     {
         // Disable VBlank attachment - GPU rendering handles updates
         vBlankAttachment_.reset();
+        OSCIL_LOG_RENDER("WaveformComponent", "VBlankAttachment DESTROYED (GPU mode)");
     }
     else if (!vBlankAttachment_)
     {
@@ -258,6 +263,7 @@ void WaveformComponent::setGpuRenderingEnabled(bool enabled)
             updateWaveformPath();
             repaint();
         });
+        OSCIL_LOG_RENDER("WaveformComponent", "VBlankAttachment CREATED (software mode)");
     }
 }
 
@@ -307,6 +313,13 @@ void WaveformComponent::forceUpdateWaveformData()
 {
     // Force the waveform path update which calculates peak/RMS levels
     // This is useful for testing to ensure data is processed before querying state
+    
+    // CRITICAL: Update display width before processing to ensure LOD tier is correct
+    // for the current component size. Without this, the decimator may use stale width
+    // data if the component was resized but process() wasn't called yet.
+    if (presenter_)
+        presenter_->setDisplayWidth(getWidth());
+    
     processAudioData();
 }
 
@@ -315,7 +328,22 @@ void WaveformComponent::processAudioData()
     if (holdDisplay_ || !presenter_)
         return;
 
+    // Log periodically (every ~100 calls) to avoid flooding
+    static std::atomic<int> processCounter{0};
+    int count = processCounter.fetch_add(1);
+
     presenter_->process();
+
+    // Log first call and then every 100th call
+    if (count == 0 || count % 100 == 0)
+    {
+        auto buffer = presenter_->getCaptureBuffer();
+        OSCIL_LOG_RENDER("WaveformComponent", "processAudioData: waveformId=" + juce::String(waveformId_)
+                        + ", bufferValid=" + juce::String(buffer != nullptr ? "YES" : "NO")
+                        + ", availableSamples=" + juce::String(buffer ? static_cast<int>(buffer->getAvailableSamples()) : 0)
+                        + ", hasData=" + juce::String(presenter_->hasData() ? "YES" : "NO")
+                        + ", gpuMode=" + juce::String(gpuRenderingEnabled_ ? "GPU" : "SOFTWARE"));
+    }
 }
 
 void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds)
@@ -515,11 +543,29 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
         {
             data.channel1.clear();
             data.channel2.clear();
+            data.hasMinMaxEnvelope = false;
         }
         else
         {
             data.channel1 = presenter_->getDisplayBuffer1();
             data.channel2 = presenter_->getDisplayBuffer2();
+            
+            // Copy LOD metadata
+            data.lodTier = presenter_->getCurrentLODTier();
+            
+            // Copy min/max envelopes for peak-accurate rendering
+            data.hasMinMaxEnvelope = presenter_->hasMinMaxEnvelopes();
+            if (data.hasMinMaxEnvelope)
+            {
+                data.minEnvelope1 = presenter_->getMinEnvelope1();
+                data.maxEnvelope1 = presenter_->getMaxEnvelope1();
+                
+                if (presenter_->isStereo())
+                {
+                    data.minEnvelope2 = presenter_->getMinEnvelope2();
+                    data.maxEnvelope2 = presenter_->getMaxEnvelope2();
+                }
+            }
         }
         data.isStereo = presenter_->isStereo();
         data.verticalScale = presenter_->getEffectiveScale();
@@ -564,5 +610,20 @@ bool WaveformComponent::isAutoScaleEnabled() const { return presenter_ ? present
 float WaveformComponent::getGainLinear() const { return presenter_ ? presenter_->getGainLinear() : 1.0f; }
 int WaveformComponent::getDisplaySamples() const { return presenter_ ? presenter_->getDisplaySamples() : 2048; }
 std::shared_ptr<IAudioBuffer> WaveformComponent::getCaptureBuffer() const { return presenter_ ? presenter_->getCaptureBuffer() : nullptr; }
+
+LODTier WaveformComponent::getCurrentLODTier() const
+{
+    return presenter_ ? presenter_->getCurrentLODTier() : LODTier::Full;
+}
+
+int WaveformComponent::getTargetSampleCount() const
+{
+    return presenter_ ? presenter_->getTargetSampleCount() : 2048;
+}
+
+int WaveformComponent::getDecimatorWidth() const
+{
+    return presenter_ ? presenter_->getDecimatorDisplayWidth() : 800;
+}
 
 } // namespace oscil

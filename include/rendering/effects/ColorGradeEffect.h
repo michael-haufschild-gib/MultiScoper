@@ -50,8 +50,18 @@ public:
 
     /**
      * Configure the color grading effect.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
      */
-    void setSettings(const ColorGradeSettings& settings) { settings_ = settings; }
+    void setSettings(const ColorGradeSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.brightness = juce::jlimit(-1.0f, 1.0f, settings_.brightness);
+        settings_.contrast = juce::jlimit(0.5f, 2.0f, settings_.contrast);
+        settings_.saturation = juce::jlimit(0.0f, 2.0f, settings_.saturation);
+        settings_.temperature = juce::jlimit(-1.0f, 1.0f, settings_.temperature);
+        settings_.tint = juce::jlimit(-1.0f, 1.0f, settings_.tint);
+    }
     [[nodiscard]] const ColorGradeSettings& getSettings() const { return settings_; }
 
 private:

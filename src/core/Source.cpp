@@ -65,15 +65,18 @@ juce::ValueTree Source::toValueTree() const
     tree.setProperty("displayName", displayName_, nullptr);
     tree.setProperty("schemaVersion", schemaVersion_, nullptr);
 
-    // Serialize backup instance IDs
-    juce::ValueTree backupsTree("BackupInstances");
-    for (const auto& backup : backupInstanceIds_)
+    // Serialize backup instance IDs (thread-safe access)
     {
-        juce::ValueTree backupTree("Instance");
-        backupTree.setProperty("id", backup.id, nullptr);
-        backupsTree.appendChild(backupTree, nullptr);
+        const juce::SpinLock::ScopedLockType lock(backupMutex_);
+        juce::ValueTree backupsTree("BackupInstances");
+        for (const auto& backup : backupInstanceIds_)
+        {
+            juce::ValueTree backupTree("Instance");
+            backupTree.setProperty("id", backup.id, nullptr);
+            backupsTree.appendChild(backupTree, nullptr);
+        }
+        tree.appendChild(backupsTree, nullptr);
     }
-    tree.appendChild(backupsTree, nullptr);
 
     return tree;
 }
@@ -93,19 +96,22 @@ void Source::fromValueTree(const juce::ValueTree& state)
     displayName_ = state.getProperty("displayName", juce::String()).toString();
     schemaVersion_ = static_cast<int>(state.getProperty("schemaVersion", 1));
 
-    // Deserialize backup instance IDs
-    backupInstanceIds_.clear();
-    auto backupsTree = state.getChildWithName("BackupInstances");
-    if (backupsTree.isValid())
+    // Deserialize backup instance IDs (thread-safe access)
     {
-        for (int i = 0; i < backupsTree.getNumChildren(); ++i)
+        const juce::SpinLock::ScopedLockType lock(backupMutex_);
+        backupInstanceIds_.clear();
+        auto backupsTree = state.getChildWithName("BackupInstances");
+        if (backupsTree.isValid())
         {
-            auto backupTree = backupsTree.getChild(i);
-            InstanceId backupId;
-            backupId.id = backupTree.getProperty("id", juce::String()).toString();
-            if (backupId.isValid())
+            for (int i = 0; i < backupsTree.getNumChildren(); ++i)
             {
-                backupInstanceIds_.push_back(backupId);
+                auto backupTree = backupsTree.getChild(i);
+                InstanceId backupId;
+                backupId.id = backupTree.getProperty("id", juce::String()).toString();
+                if (backupId.isValid())
+                {
+                    backupInstanceIds_.push_back(backupId);
+                }
             }
         }
     }
@@ -128,6 +134,8 @@ void Source::addBackupInstance(const InstanceId& instanceId)
     if (instanceId == owningInstanceId_)
         return;
 
+    const juce::SpinLock::ScopedLockType lock(backupMutex_);
+
     // Don't add duplicates
     for (const auto& backup : backupInstanceIds_)
     {
@@ -140,6 +148,8 @@ void Source::addBackupInstance(const InstanceId& instanceId)
 
 void Source::removeBackupInstance(const InstanceId& instanceId)
 {
+    const juce::SpinLock::ScopedLockType lock(backupMutex_);
+
     backupInstanceIds_.erase(
         std::remove_if(backupInstanceIds_.begin(), backupInstanceIds_.end(),
             [&instanceId](const InstanceId& id) { return id == instanceId; }),
@@ -148,6 +158,8 @@ void Source::removeBackupInstance(const InstanceId& instanceId)
 
 std::optional<InstanceId> Source::getNextBackupInstance() const
 {
+    const juce::SpinLock::ScopedLockType lock(backupMutex_);
+
     if (backupInstanceIds_.empty())
         return std::nullopt;
 
@@ -156,15 +168,22 @@ std::optional<InstanceId> Source::getNextBackupInstance() const
 
 bool Source::transferOwnership()
 {
-    auto nextBackup = getNextBackupInstance();
-    if (!nextBackup.has_value())
+    const juce::SpinLock::ScopedLockType lock(backupMutex_);
+
+    if (backupInstanceIds_.empty())
         return false;
 
+    // Get and remove the next backup in one atomic operation
+    auto nextBackup = backupInstanceIds_.front();
+
     // Set new owner
-    owningInstanceId_ = nextBackup.value();
+    owningInstanceId_ = nextBackup;
 
     // Remove from backup list
-    removeBackupInstance(nextBackup.value());
+    backupInstanceIds_.erase(
+        std::remove_if(backupInstanceIds_.begin(), backupInstanceIds_.end(),
+            [&nextBackup](const InstanceId& id) { return id == nextBackup; }),
+        backupInstanceIds_.end());
 
     return true;
 }
@@ -182,10 +201,6 @@ bool Source::transitionTo(SourceState newState)
                                           std::memory_order_acquire))
         {
             lastHeartbeatMs_.store(juce::Time::currentTimeMillis(), std::memory_order_relaxed);
-
-            // Update active flag based on state
-            isActiveFlag_ = (newState == SourceState::ACTIVE);
-
             return true;
         }
         // compare_exchange_weak failed, currentState is updated with actual value

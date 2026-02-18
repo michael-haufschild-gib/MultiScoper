@@ -12,7 +12,6 @@
 #include <iostream>
 #include <chrono>
 #include <unordered_set>
-#include <fstream>
 
 namespace oscil
 {
@@ -60,7 +59,8 @@ WaveformGLRenderer::~WaveformGLRenderer()
     // Ensure cleanup happens even if openGLContextClosing() callback wasn't invoked
     // (e.g., in headless test environments where JUCE callbacks may not fire)
     // Only attempt cleanup if context exists and is active to safely call GL functions
-    if (!cleanupPerformed_.load() && context_ != nullptr && context_->isActive())
+    auto* ctx = context_.load(std::memory_order_acquire);
+    if (!cleanupPerformed_.load() && ctx != nullptr && ctx->isActive())
     {
         openGLContextClosing();
     }
@@ -72,7 +72,7 @@ WaveformGLRenderer::~WaveformGLRenderer()
 void WaveformGLRenderer::setContext(juce::OpenGLContext* context)
 {
     GL_LOG("setContext called, context=" << (context ? "valid" : "nullptr"));
-    context_ = context;
+    context_.store(context, std::memory_order_release);
 }
 
 void WaveformGLRenderer::newOpenGLContextCreated()
@@ -87,11 +87,12 @@ void WaveformGLRenderer::newOpenGLContextCreated()
     }
 
     // Initialize the advanced render engine
-    if (useRenderEngine_ && context_)
+    auto* ctx = context_.load(std::memory_order_acquire);
+    if (useRenderEngine_ && ctx != nullptr)
     {
         const juce::ScopedWriteLock lock(engineLock_);
         renderEngine_ = std::make_unique<RenderEngine>();
-        if (!renderEngine_->initialize(*context_))
+        if (!renderEngine_->initialize(*ctx))
         {
             GL_LOG("WARNING: RenderEngine initialization failed, falling back to basic rendering");
             DBG("WaveformGLRenderer: RenderEngine initialization failed");
@@ -115,15 +116,16 @@ void WaveformGLRenderer::newOpenGLContextCreated()
 
 void WaveformGLRenderer::compileDebugShader()
 {
-    GL_LOG("compileDebugShader called, context_=" << (context_ ? "valid" : "nullptr")
+    auto* ctx = context_.load(std::memory_order_acquire);
+    GL_LOG("compileDebugShader called, context_=" << (ctx ? "valid" : "nullptr")
            << ", already compiled=" << debugShaderCompiled_);
 
-    if (!context_ || debugShaderCompiled_)
+    if (ctx == nullptr || debugShaderCompiled_)
         return;
 
     GL_LOG("Compiling DEBUG shader...");
 
-    debugShader_ = std::make_unique<juce::OpenGLShaderProgram>(*context_);
+    debugShader_ = std::make_unique<juce::OpenGLShaderProgram>(*ctx);
 
     if (!debugShader_->addVertexShader(debugVertexShader))
     {
@@ -157,7 +159,7 @@ void WaveformGLRenderer::compileDebugShader()
 
     // Create VAO and VBO for debug rendering using JUCE's cross-platform extensions
     // Note: OpenGL 3.2 Core Profile is set via setOpenGLVersionRequired() before attachTo()
-    auto& ext = context_->extensions;
+    auto& ext = ctx->extensions;
 
     // Clear any pre-existing GL errors
     while (glGetError() != GL_NO_ERROR) {}
@@ -178,18 +180,40 @@ void WaveformGLRenderer::compileDebugShader()
 
 void WaveformGLRenderer::renderOpenGL()
 {
+    // Load context pointer atomically once and use the local copy throughout this frame
+    // This prevents race conditions with setContext() being called from another thread
+    auto* ctx = context_.load(std::memory_order_acquire);
+
     // Defensive context validation
-    if (!contextReady_.load() || context_ == nullptr)
+    if (!contextReady_.load() || ctx == nullptr)
         return;
 
+    // Check for context loss
     if (!juce::OpenGLHelpers::isContextActive())
+    {
+        handleContextLoss();
         return;
+    }
+
+    // Check for context change (host may have recreated context)
+    if (ctx != lastKnownContext_)
+    {
+        DBG("WaveformGLRenderer: Context changed, scheduling reinitialization");
+        needsReinitialization_.store(true, std::memory_order_release);
+        lastKnownContext_ = ctx;
+    }
+
+    // Handle pending reinitialization
+    if (needsReinitialization_.load(std::memory_order_acquire))
+    {
+        if (!attemptReinitialization())
+        {
+            // Reinitialization failed, skip this frame
+            return;
+        }
+    }
 
     jassert(juce::OpenGLHelpers::isContextActive());
-
-    // #region agent log
-    { static int frameCount = 0; if (++frameCount % 60 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H1\",\"location\":\"WaveformGLRenderer.cpp:renderOpenGL\",\"message\":\"Frame render start\",\"data\":{\"waveformsReadSize\":" << waveformsRead_.size() << ",\"waveformsWriteSize\":" << waveformsWrite_.size() << ",\"swapPending\":" << (swapPending_.load() ? "true" : "false") << ",\"bgColor\":\"" << backgroundColour_.toString().toStdString() << "\"},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
-    // #endregion
 
     // Clear the default framebuffer (screen) to transparent black.
     // This is CRITICAL because the RenderEngine path blits transparent content
@@ -205,8 +229,8 @@ void WaveformGLRenderer::renderOpenGL()
     deltaTime = std::min(deltaTime, 0.1f);
 
     // Set viewport to match the component
-    const float desktopScale = static_cast<float>(context_->getRenderingScale());
-    auto* targetComponent = context_->getTargetComponent();
+    const float desktopScale = static_cast<float>(ctx->getRenderingScale());
+    auto* targetComponent = ctx->getTargetComponent();
     if (!targetComponent)
         return;
 
@@ -230,6 +254,18 @@ void WaveformGLRenderer::renderOpenGL()
         }
     }
 
+    // C12 FIX: Process deferred clear request from UI thread
+    // This must happen on the render thread to avoid data races with waveformsRead_
+    if (clearRequested_.load(std::memory_order_acquire))
+    {
+        const juce::SpinLock::ScopedLockType lock(dataLock_);
+        waveformsWrite_.clear();
+        waveformsRead_.clear();
+        swapPending_.store(false, std::memory_order_release);
+        clearRequested_.store(false, std::memory_order_release);
+        DBG("WaveformGLRenderer: Cleared all waveforms on render thread");
+    }
+
     // Swap double-buffers if write buffer has new data
     // This avoids deep-copying WaveformRenderData vectors every frame
     if (swapPending_.load(std::memory_order_acquire))
@@ -240,11 +276,10 @@ void WaveformGLRenderer::renderOpenGL()
     }
 
     // Build list of visible waveforms from the read buffer (no lock needed - GL thread exclusive)
-    std::vector<const WaveformRenderData*> waveformsToRender;
-    waveformsToRender.reserve(waveformsRead_.size());
-    // #region agent log
-    { static int logCounter = 0; if (++logCounter % 60 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H6,H10\",\"location\":\"WaveformGLRenderer.cpp:renderOpenGL:buildList\",\"message\":\"Building waveform list\",\"data\":{\"readMapSize\":" << waveformsRead_.size() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; for (const auto& p : waveformsRead_) { f << "{\"hypothesisId\":\"H6,H10\",\"location\":\"WaveformGLRenderer.cpp:renderOpenGL:waveformEntry\",\"message\":\"Waveform in read map\",\"data\":{\"id\":" << p.first << ",\"visible\":" << (p.second.visible ? "true" : "false") << ",\"ch1Size\":" << p.second.channel1.size() << ",\"boundsX\":" << p.second.bounds.getX() << ",\"boundsY\":" << p.second.bounds.getY() << ",\"boundsW\":" << p.second.bounds.getWidth() << ",\"boundsH\":" << p.second.bounds.getHeight() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; } f.close(); } }
-    // #endregion
+    // Reuse member vector to avoid per-frame allocation
+    waveformsToRender_.clear();
+    if (waveformsToRender_.capacity() < waveformsRead_.size())
+        waveformsToRender_.reserve(waveformsRead_.size());
     for (const auto& pair : waveformsRead_)
     {
         // In debug mode, render even if channel1 is empty and not visible
@@ -254,14 +289,14 @@ void WaveformGLRenderer::renderOpenGL()
             // Only require non-empty bounds, not visible flag or data
             if (!pair.second.bounds.isEmpty())
             {
-                waveformsToRender.push_back(&pair.second);
+                waveformsToRender_.push_back(&pair.second);
             }
         }
         else
         {
             if (pair.second.visible && !pair.second.channel1.empty())
             {
-                waveformsToRender.push_back(&pair.second);
+                waveformsToRender_.push_back(&pair.second);
             }
         }
     }
@@ -271,10 +306,10 @@ void WaveformGLRenderer::renderOpenGL()
     if (++debugFrameCounter_ >= 60)
     {
         debugFrameCounter_ = 0;
-        GL_LOG("renderOpenGL: " << waveformsToRender.size() << " waveforms, "
+        GL_LOG("renderOpenGL: " << waveformsToRender_.size() << " waveforms, "
                << waveformsRead_.size() << " registered, viewport=" << width << "x" << height
                << ", renderEngine=" << (renderEngine_ ? "active" : "off"));
-        for (const auto* data : waveformsToRender)
+        for (const auto* data : waveformsToRender_)
         {
             GL_LOG("  Waveform " << data->id << ": bounds=("
                    << data->bounds.getX() << "," << data->bounds.getY() << ","
@@ -303,7 +338,7 @@ void WaveformGLRenderer::renderOpenGL()
                         juce::Colour(0xFF0000FF));  // Bright blue
 
         // DEBUG MODE: Draw colored rectangles at waveform positions
-        for (const auto* data : waveformsToRender)
+        for (const auto* data : waveformsToRender_)
         {
             renderDebugRect(data->bounds, data->colour);
         }
@@ -324,7 +359,7 @@ void WaveformGLRenderer::renderOpenGL()
             // oscillators are removed or panes are rebuilt.
             {
                 std::unordered_set<int> activeIds;
-                for (const auto* data : waveformsToRender)
+                for (const auto* data : waveformsToRender_)
                     activeIds.insert(data->id);
                 renderEngine_->syncWaveforms(activeIds);
             }
@@ -332,21 +367,27 @@ void WaveformGLRenderer::renderOpenGL()
             // Begin frame (clears scene FBO, updates timing)
             renderEngine_->beginFrame(deltaTime);
 
-            // Register/update waveform configs with render engine
-            for (const auto* data : waveformsToRender)
+            // ========== BATCHED RENDERING (optimized state changes) ==========
+            // Use batch API to reduce shader/FBO/VBO bind calls
+            renderEngine_->beginBatch();
+
+            for (const auto* data : waveformsToRender_)
+            {
+                // Ensure waveform is registered
+                if (!renderEngine_->hasWaveform(data->id))
                 {
-                    // Ensure waveform is registered
-                    if (!renderEngine_->hasWaveform(data->id))
-                    {
-                        renderEngine_->registerWaveform(data->id);
-                    }
-
-                    // Update the visual configuration for this waveform
-                    renderEngine_->setWaveformConfig(data->id, data->visualConfig);
-
-                    // Render the waveform through the engine
-                    renderEngine_->renderWaveform(*data);
+                    renderEngine_->registerWaveform(data->id);
                 }
+
+                // Update the visual configuration for this waveform
+                renderEngine_->setWaveformConfig(data->id, data->visualConfig);
+
+                // Add to batch for sorted, grouped rendering
+                renderEngine_->addToBatch(*data);
+            }
+
+            // Flush batch: sorts by shader, batches grids, groups non-PP waveforms
+            renderEngine_->flushBatch();
 
             // End frame (applies global effects, blits to screen)
             renderEngine_->endFrame();
@@ -393,9 +434,15 @@ void WaveformGLRenderer::processPendingCaptures(int width, int height)
         {
             captureBuffer_.resize(requiredSize);
         }
+        catch (const std::exception& e)
+        {
+            juce::Logger::writeToLog("Frame capture resize failed: " + juce::String(e.what()));
+            return;
+        }
         catch (...)
         {
-            return; // Allocation failed
+            juce::Logger::writeToLog("Frame capture resize failed: unknown exception");
+            return;
         }
     }
 
@@ -443,6 +490,8 @@ void WaveformGLRenderer::processPendingCaptures(int width, int height)
 
 void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour)
 {
+    auto* ctx = context_.load(std::memory_order_acquire);
+
     // Check preconditions and log failures once per second
     // Using member variable instead of static to prevent data races with multiple plugin instances
     bool shouldLogEntry = (++debugEntryLogCounter_ >= 60);
@@ -451,17 +500,17 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
         debugEntryLogCounter_ = 0;
         GL_LOG("renderDebugRect entry: shader=" << (debugShader_ ? "valid" : "null")
                << ", compiled=" << debugShaderCompiled_
-               << ", context=" << (context_ ? "valid" : "null"));
+               << ", context=" << (ctx ? "valid" : "null"));
     }
 
-    if (!debugShader_ || !debugShaderCompiled_ || !context_)
+    if (!debugShader_ || !debugShaderCompiled_ || ctx == nullptr)
         return;
 
-    auto* targetComponent = context_->getTargetComponent();
+    auto* targetComponent = ctx->getTargetComponent();
     if (!targetComponent)
         return;
 
-    auto& ext = context_->extensions;
+    auto& ext = ctx->extensions;
 
     // Use shouldLogEntry from above to control logging frequency
     // (already incremented at the start of this function)
@@ -547,6 +596,10 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     if (shouldLog && errColor != GL_NO_ERROR)
         GL_LOG("Error after color uniform: " << errColor);
 
+    // Save GL state before modification
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+
     // Disable depth test - we want 2D overlay
     glDisable(GL_DEPTH_TEST);
 
@@ -593,7 +646,112 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     ext.glDisableVertexAttribArray(posAttrib);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
     ext.glBindVertexArray(0);
-    glDisable(GL_BLEND);
+
+    // Restore GL state
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    if (!blendWasEnabled)
+        glDisable(GL_BLEND);
+}
+
+void WaveformGLRenderer::handleContextLoss()
+{
+    // Mark all GPU resources as invalid
+    contextReady_.store(false, std::memory_order_release);
+    
+    // Schedule reinitialization on next valid frame
+    needsReinitialization_.store(true, std::memory_order_release);
+    
+    // Log for debugging (throttled)
+    static std::atomic<int> lossCounter{0};
+    if (lossCounter.fetch_add(1, std::memory_order_relaxed) % 60 == 0)
+    {
+        DBG("WaveformGLRenderer: Context loss detected, scheduling recovery");
+    }
+}
+
+bool WaveformGLRenderer::attemptReinitialization()
+{
+    // Check if context is now available
+    auto* ctx = context_.load(std::memory_order_acquire);
+    if (ctx == nullptr || !juce::OpenGLHelpers::isContextActive())
+    {
+        consecutiveRecoveryFailures_.fetch_add(1, std::memory_order_relaxed);
+        return false;
+    }
+
+    DBG("WaveformGLRenderer: Attempting context recovery...");
+
+    // Shutdown existing resources safely
+    {
+        const juce::ScopedWriteLock lock(engineLock_);
+        if (renderEngine_)
+        {
+            renderEngine_->shutdown();
+            renderEngine_.reset();
+        }
+    }
+
+    // Release debug shader GL resources BEFORE clearing state
+    // C13 FIX: Must delete GL objects while context is still active
+    auto& ext = ctx->extensions;
+    if (debugVBO_ != 0)
+    {
+        ext.glDeleteBuffers(1, &debugVBO_);
+        debugVBO_ = 0;
+    }
+    if (debugVAO_ != 0)
+    {
+        ext.glDeleteVertexArrays(1, &debugVAO_);
+        debugVAO_ = 0;
+    }
+
+    // Clear debug shader state (program is JUCE-managed, reset handles cleanup)
+    debugShader_.reset();
+    debugShaderCompiled_ = false;
+    shadersCompiled_ = false;
+
+    // Reinitialize
+    if constexpr (DEBUG_RENDER_MODE)
+    {
+        compileDebugShader();
+    }
+
+    if (useRenderEngine_)
+    {
+        const juce::ScopedWriteLock lock(engineLock_);
+        renderEngine_ = std::make_unique<RenderEngine>();
+        if (!renderEngine_->initialize(*ctx))
+        {
+            DBG("WaveformGLRenderer: RenderEngine reinitialization failed");
+            renderEngine_.reset();
+            consecutiveRecoveryFailures_.fetch_add(1, std::memory_order_relaxed);
+
+            // If we've failed too many times, stop trying
+            if (consecutiveRecoveryFailures_.load(std::memory_order_relaxed) > 10)
+            {
+                DBG("WaveformGLRenderer: Too many recovery failures, giving up");
+                needsReinitialization_.store(false, std::memory_order_release);
+            }
+            return false;
+        }
+
+        // Propagate current background color
+        renderEngine_->setBackgroundColour(backgroundColour_);
+    }
+
+    // Success!
+    needsReinitialization_.store(false, std::memory_order_release);
+    contextReady_.store(true, std::memory_order_release);
+    consecutiveRecoveryFailures_.store(0, std::memory_order_relaxed);
+    lastKnownContext_ = ctx;
+
+    // Reset resize tracking to force FBO resize on next frame
+    lastResizeWidth_ = 0;
+    lastResizeHeight_ = 0;
+
+    DBG("WaveformGLRenderer: Context recovery successful");
+    return true;
 }
 
 void WaveformGLRenderer::openGLContextClosing()
@@ -621,9 +779,10 @@ void WaveformGLRenderer::openGLContextClosing()
     }
 
     // Release debug shader resources
-    if (context_ != nullptr)
+    auto* ctx = context_.load(std::memory_order_acquire);
+    if (ctx != nullptr)
     {
-        auto& ext = context_->extensions;
+        auto& ext = ctx->extensions;
 
         if (debugVBO_ != 0)
         {
@@ -669,9 +828,6 @@ void WaveformGLRenderer::unregisterWaveform(int id)
 void WaveformGLRenderer::updateWaveform(const WaveformRenderData& data)
 {
     const juce::SpinLock::ScopedLockType lock(dataLock_);
-    // #region agent log
-    { static int logCounter = 0; if (++logCounter % 60 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H7,H10\",\"location\":\"WaveformGLRenderer.cpp:updateWaveform\",\"message\":\"Updating waveform data\",\"data\":{\"id\":" << data.id << ",\"boundsX\":" << data.bounds.getX() << ",\"boundsY\":" << data.bounds.getY() << ",\"boundsW\":" << data.bounds.getWidth() << ",\"boundsH\":" << data.bounds.getHeight() << ",\"ch1Size\":" << data.channel1.size() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
-    // #endregion
     waveformsWrite_[data.id] = data;
     swapPending_.store(true, std::memory_order_release);
 }
@@ -687,9 +843,6 @@ void WaveformGLRenderer::updateWaveform(WaveformRenderData&& data)
 void WaveformGLRenderer::setBackgroundColour(juce::Colour colour)
 {
     backgroundColour_ = colour;
-    // #region agent log
-    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H11,H14\",\"location\":\"WaveformGLRenderer.cpp:setBackgroundColour\",\"message\":\"Setting background color\",\"data\":{\"colorARGB\":\"" << colour.toString().toStdString() << "\",\"alpha\":" << colour.getFloatAlpha() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
-    // #endregion
     // Propagate to RenderEngine so scene FBO is also cleared with this color
     if (renderEngine_)
     {
@@ -705,18 +858,11 @@ int WaveformGLRenderer::getWaveformCount() const
 
 void WaveformGLRenderer::clearAllWaveforms()
 {
-    // #region agent log
-    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H3-FIX\",\"location\":\"WaveformGLRenderer.cpp:clearAllWaveforms\",\"message\":\"Clearing BOTH waveform buffers\",\"data\":{\"waveformsWriteSizeBefore\":" << waveformsWrite_.size() << ",\"waveformsReadSizeBefore\":" << waveformsRead_.size() << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
-    // #endregion
-    const juce::SpinLock::ScopedLockType lock(dataLock_);
-    // FIX: Clear BOTH buffers to prevent stale waveform data from persisting
-    // after a swap. Previously only waveformsWrite_ was cleared, but after swap
-    // the old waveformsRead_ content would end up in waveformsWrite_ and get
-    // mixed with new waveform data.
-    waveformsWrite_.clear();
-    waveformsRead_.clear();
-    swapPending_.store(false, std::memory_order_release);  // No swap needed - both are empty
-    DBG("WaveformGLRenderer: Cleared all waveforms (both buffers)");
+    // C12 FIX: Set atomic flag for deferred clear instead of modifying buffers directly.
+    // The actual clear happens on the render thread at the start of the next frame
+    // to avoid race conditions with renderOpenGL() accessing waveformsRead_.
+    clearRequested_.store(true, std::memory_order_release);
+    DBG("WaveformGLRenderer: Clear requested (deferred to render thread)");
 }
 
 } // namespace oscil

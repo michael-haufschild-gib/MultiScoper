@@ -75,7 +75,8 @@ static const char* scanlineFragmentShader = R"(
         // Phosphor Glow (Bloom/Bleed)
         if (phosphorGlow) {
             // Sample neighbors to simulate phosphor persistence/bleed
-            vec2 onePixel = vec2(1.0/width, 1.0/height);
+            // Guard against division by zero for very small dimensions
+            vec2 onePixel = vec2(1.0/max(width, 1.0), 1.0/max(height, 1.0));
             vec3 blur = texture(sourceTexture, vTexCoord + vec2(onePixel.x, 0.0)).rgb;
             blur += texture(sourceTexture, vTexCoord - vec2(onePixel.x, 0.0)).rgb;
             color += blur * 0.15 * intensity; 
@@ -144,6 +145,15 @@ void ScanlineEffect::apply(
     if (!compiled_ || !source || !destination)
         return;
 
+    // Save GL state for restoration (H24 FIX: also save blend function)
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
     auto& ext = context.extensions;
 
     destination->bind();
@@ -153,15 +163,46 @@ void ScanlineEffect::apply(
     shader_->use();
 
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
-    ext.glUniform1f(densityLoc_, settings_.density);
-    ext.glUniform1f(widthLoc_, static_cast<float>(source->width));
-    ext.glUniform1f(heightLoc_, static_cast<float>(source->height));
-    ext.glUniform1i(phosphorGlowLoc_, settings_.phosphorGlow ? 1 : 0);
+
+    // Set uniforms with validation to prevent GL errors on invalid locations
+    if (textureLoc_ >= 0)
+        ext.glUniform1i(textureLoc_, 0);
+    if (intensityLoc_ >= 0)
+        ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
+    if (densityLoc_ >= 0)
+        ext.glUniform1f(densityLoc_, settings_.density);
+    if (widthLoc_ >= 0)
+        ext.glUniform1f(widthLoc_, static_cast<float>(source->width));
+    if (heightLoc_ >= 0)
+        ext.glUniform1f(heightLoc_, static_cast<float>(source->height));
+    if (phosphorGlowLoc_ >= 0)
+        ext.glUniform1i(phosphorGlowLoc_, settings_.phosphorGlow ? 1 : 0);
 
     pool.renderFullscreenQuad();
+
+    // Cleanup texture unit - explicitly set active unit before unbinding
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state (H24 FIX: also restore blend function)
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
+    if (blendWasEnabled)
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                           static_cast<GLenum>(blendDstRGB),
+                           static_cast<GLenum>(blendSrcAlpha),
+                           static_cast<GLenum>(blendDstAlpha));
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
 }
 
 } // namespace oscil

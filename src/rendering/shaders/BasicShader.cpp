@@ -3,6 +3,7 @@
 */
 
 #include "rendering/shaders/BasicShader.h"
+#include "rendering/FramebufferPool.h"  // For VertexBufferPool
 #include "BinaryData.h"
 #include <cmath>
 #include <iostream>
@@ -32,6 +33,9 @@ struct BasicShader::GLResources
     // Attribute locations (get these after compilation)
     GLint positionLoc = -1;
     GLint distFromCenterLoc = -1;
+
+    // Logging counter (per-instance, not static)
+    int renderLogCounter = 0;
 };
 #endif
 
@@ -47,12 +51,14 @@ BasicShader::~BasicShader()
 #if OSCIL_ENABLE_OPENGL
     // Resources should be released before destruction
     // but we can't call OpenGL functions here without context
-    if (gl_ && gl_->compiled)
+    // Check for both compiled state AND orphaned VAO/VBO resources
+    if (gl_ && (gl_->compiled || gl_->vao != 0 || gl_->vbo != 0))
     {
         // FATAL: Shader destroyed without release(context) being called.
         // This leaks VBO/VAO/Program on the GPU.
         std::cerr << "[BasicShader] LEAK: Destructor called without release(). "
-                  << "GPU resources may have leaked." << std::endl;
+                  << "GPU resources may have leaked. (compiled=" << gl_->compiled
+                  << ", vao=" << gl_->vao << ", vbo=" << gl_->vbo << ")" << std::endl;
         jassertfalse;  // Assert in debug builds
     }
 #endif
@@ -147,6 +153,44 @@ bool BasicShader::compile(juce::OpenGLContext& context)
 
     BASIC_LOG("Created VAO=" << gl_->vao << ", VBO=" << gl_->vbo);
 
+    // Check for GL errors after VAO/VBO creation
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR)
+    {
+        BASIC_LOG("GL error after VAO/VBO creation: " << err);
+        // Clean up any resources that were created
+        if (gl_->vbo != 0)
+        {
+            context.extensions.glDeleteBuffers(1, &gl_->vbo);
+            gl_->vbo = 0;
+        }
+        if (gl_->vao != 0)
+        {
+            context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+            gl_->vao = 0;
+        }
+        gl_->program.reset();
+        return false;
+    }
+
+    // Validate VAO/VBO were actually created (non-zero handles)
+    if (gl_->vao == 0 || gl_->vbo == 0)
+    {
+        BASIC_LOG("Failed to create VAO/VBO: vao=" << gl_->vao << ", vbo=" << gl_->vbo);
+        if (gl_->vbo != 0)
+        {
+            context.extensions.glDeleteBuffers(1, &gl_->vbo);
+            gl_->vbo = 0;
+        }
+        if (gl_->vao != 0)
+        {
+            context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+            gl_->vao = 0;
+        }
+        gl_->program.reset();
+        return false;
+    }
+
     gl_->compiled = true;
     BASIC_LOG("Shader fully initialized, compiled=true");
     return true;
@@ -154,12 +198,10 @@ bool BasicShader::compile(juce::OpenGLContext& context)
 
 void BasicShader::release(juce::OpenGLContext& context)
 {
-    if (!gl_->compiled)
-        return;
-
     auto& ext = context.extensions;
 
-    // Properly delete VAO and VBO to prevent resource leaks
+    // Always clean up VAO/VBO if they were created, regardless of compile status
+    // This prevents resource leaks if compile() fails after creating these resources
     if (gl_->vbo != 0)
     {
         ext.glDeleteBuffers(1, &gl_->vbo);
@@ -187,10 +229,9 @@ void BasicShader::render(
     const std::vector<float>* channel2,
     const ShaderRenderParams& params)
 {
-    // Log once per second to avoid spamming
-    static int renderLogCounter = 0;
-    bool shouldLog = (++renderLogCounter >= 60);
-    if (shouldLog) renderLogCounter = 0;
+    // Log once per second to avoid spamming (per-instance counter)
+    bool shouldLog = (++gl_->renderLogCounter >= 60);
+    if (shouldLog) gl_->renderLogCounter = 0;
 
     if (shouldLog)
         BASIC_LOG("render() called, compiled=" << gl_->compiled << ", ch1 size=" << channel1.size());
@@ -231,12 +272,24 @@ void BasicShader::render(
     float top = 0.0f;
     float bottom = viewportHeight;
 
-    // Create orthographic projection matrix (column-major for OpenGL)
+    // Create orthographic projection matrix
+    // Layout: Column-major order as required by OpenGL (glUniformMatrix4fv with GL_FALSE)
+    //
+    // Matrix math: P = | 2/(r-l)    0         0    -(r+l)/(r-l) |
+    //                  |   0     2/(t-b)      0    -(t+b)/(t-b) |
+    //                  |   0        0        -1         0        |
+    //                  |   0        0         0         1        |
+    //
+    // Column-major 1D array layout: [col0.x, col0.y, col0.z, col0.w, col1.x, ...]
+    // This matches GLSL's mat4 column-major convention.
+    //
+    // Shader expects: gl_Position = projection * vec4(position, 0.0, 1.0)
+    // where position is in screen coordinates (0,0 = top-left).
     float projection[16] = {
-        2.0f / (right - left), 0.0f, 0.0f, 0.0f,
-        0.0f, 2.0f / (top - bottom), 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0f, 0.0f,
-        -(right + left) / (right - left), -(top + bottom) / (top - bottom), 0.0f, 1.0f
+        2.0f / (right - left), 0.0f, 0.0f, 0.0f,                         // Column 0
+        0.0f, 2.0f / (top - bottom), 0.0f, 0.0f,                         // Column 1
+        0.0f, 0.0f, -1.0f, 0.0f,                                         // Column 2
+        -(right + left) / (right - left), -(top + bottom) / (top - bottom), 0.0f, 1.0f  // Column 3
     };
 
     ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
@@ -283,9 +336,20 @@ void BasicShader::render(
     if (positionLoc < 0) positionLoc = 0;
     if (distFromCenterLoc < 0) distFromCenterLoc = 1;
 
-    // Bind VAO
-    ext.glBindVertexArray(gl_->vao);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
+    // Check if we should use the pooled VBO for batched rendering
+    bool usePool = (vertexBufferPool_ != nullptr && vertexBufferPool_->isInitialized());
+
+    if (usePool)
+    {
+        // Pool is already bound by caller (RenderEngine) - just use it
+        // Note: VAO and VBO are bound by pool->bind() before batch starts
+    }
+    else
+    {
+        // Use shader's own VAO/VBO (non-batched path)
+        ext.glBindVertexArray(gl_->vao);
+        ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
+    }
 
     // Build and render channel 1
     // Use geometry wide enough for glow to fade out
@@ -296,22 +360,48 @@ void BasicShader::render(
     buildLineGeometry(vertices, channel1, centerY1, amplitude1,
         glowWidth, params.bounds.getX(), params.bounds.getWidth());
 
-    ext.glBufferData(GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
-        vertices.data(), GL_DYNAMIC_DRAW);
+    ptrdiff_t ch1Offset = 0;
+    size_t ch1VertexCount = vertices.size() / 4;
 
-    // Set up vertex attributes using dynamic locations
+    if (usePool)
+    {
+        // Allocate in pool (uploads via glBufferSubData)
+        ch1Offset = vertexBufferPool_->allocate(vertices.data(), ch1VertexCount);
+        if (ch1Offset < 0)
+        {
+            // Pool full - fallback to own VBO
+            usePool = false;
+            ext.glBindVertexArray(gl_->vao);
+            ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
+            ext.glBufferData(GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+                vertices.data(), GL_DYNAMIC_DRAW);
+            ch1Offset = 0;
+        }
+    }
+    else
+    {
+        // Upload to shader's own VBO
+        ext.glBufferData(GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+            vertices.data(), GL_DYNAMIC_DRAW);
+    }
+
+    // Set up vertex attributes with appropriate offset
+    void* offsetPtr = reinterpret_cast<void*>(ch1Offset);
     ext.glEnableVertexAttribArray(static_cast<GLuint>(positionLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+    ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 
+        4 * sizeof(float), offsetPtr);
     ext.glEnableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-        reinterpret_cast<void*>(2 * sizeof(float)));
+    ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 
+        4 * sizeof(float), reinterpret_cast<void*>(ch1Offset + 2 * sizeof(float)));
 
     if (shouldLog)
-        BASIC_LOG("Drawing ch1: " << vertices.size() / 4 << " verts, bounds=("
+        BASIC_LOG("Drawing ch1: " << ch1VertexCount << " verts, bounds=("
                  << params.bounds.getX() << "," << params.bounds.getY() << ","
                  << params.bounds.getWidth() << "x" << params.bounds.getHeight() << ")"
-                 << ", posLoc=" << positionLoc << ", distLoc=" << distFromCenterLoc);
+                 << ", posLoc=" << positionLoc << ", distLoc=" << distFromCenterLoc
+                 << ", usePool=" << (usePool ? "true" : "false"));
 
     // Draw with multiple passes for enhanced glow
     for (int pass = GLOW_PASSES - 1; pass >= 0; --pass)
@@ -319,7 +409,7 @@ void BasicShader::render(
         float passIntensity = GLOW_INTENSITY * static_cast<float>(GLOW_PASSES - pass) / GLOW_PASSES;
         ext.glUniform1f(gl_->glowIntensityLoc, passIntensity);
 
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(ch1VertexCount));
     }
 
     // Check for GL errors after draw
@@ -339,19 +429,56 @@ void BasicShader::render(
         buildLineGeometry(vertices, *channel2, centerY2, amplitude2,
             glowWidth, params.bounds.getX(), params.bounds.getWidth());
 
-        if (shouldLog)
-            BASIC_LOG("Drawing ch2: " << vertices.size() / 4 << " verts, centerY2=" << centerY2);
+        size_t ch2VertexCount = vertices.size() / 4;
+        ptrdiff_t ch2Offset = 0;
 
-        ext.glBufferData(GL_ARRAY_BUFFER,
-            static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
-            vertices.data(), GL_DYNAMIC_DRAW);
-
-        for (int pass = GLOW_PASSES - 1; pass >= 0; --pass)
+        if (usePool)
         {
-            float passIntensity = GLOW_INTENSITY * static_cast<float>(GLOW_PASSES - pass) / GLOW_PASSES;
-            ext.glUniform1f(gl_->glowIntensityLoc, passIntensity);
+            ch2Offset = vertexBufferPool_->allocate(vertices.data(), ch2VertexCount);
+            if (ch2Offset < 0)
+            {
+                // Pool full - skip channel 2 (or could fallback, but this is rare)
+                if (shouldLog)
+                    BASIC_LOG("ch2 skipped: pool full");
+            }
+            else
+            {
+                // Update vertex attribute pointers for ch2 offset
+                void* ch2OffsetPtr = reinterpret_cast<void*>(ch2Offset);
+                ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE,
+                    4 * sizeof(float), ch2OffsetPtr);
+                ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE,
+                    4 * sizeof(float), reinterpret_cast<void*>(ch2Offset + 2 * sizeof(float)));
 
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+                if (shouldLog)
+                    BASIC_LOG("Drawing ch2: " << ch2VertexCount << " verts, centerY2=" << centerY2);
+
+                for (int pass = GLOW_PASSES - 1; pass >= 0; --pass)
+                {
+                    float passIntensity = GLOW_INTENSITY * static_cast<float>(GLOW_PASSES - pass) / GLOW_PASSES;
+                    ext.glUniform1f(gl_->glowIntensityLoc, passIntensity);
+
+                    glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(ch2VertexCount));
+                }
+            }
+        }
+        else
+        {
+            // Non-pooled path
+            if (shouldLog)
+                BASIC_LOG("Drawing ch2: " << ch2VertexCount << " verts, centerY2=" << centerY2);
+
+            ext.glBufferData(GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+                vertices.data(), GL_DYNAMIC_DRAW);
+
+            for (int pass = GLOW_PASSES - 1; pass >= 0; --pass)
+            {
+                float passIntensity = GLOW_INTENSITY * static_cast<float>(GLOW_PASSES - pass) / GLOW_PASSES;
+                ext.glUniform1f(gl_->glowIntensityLoc, passIntensity);
+
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(ch2VertexCount));
+            }
         }
     }
     else if (shouldLog && params.isStereo)
@@ -360,11 +487,14 @@ void BasicShader::render(
                  << ", ch2 size=" << (channel2 ? channel2->size() : 0));
     }
 
-    // Cleanup
+    // Cleanup - only unbind if we bound our own VAO
     ext.glDisableVertexAttribArray(static_cast<GLuint>(positionLoc));
     ext.glDisableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
-    ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
-    ext.glBindVertexArray(0);
+    if (!usePool)
+    {
+        ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
+        ext.glBindVertexArray(0);
+    }
     glDisable(GL_BLEND);
 }
 #endif

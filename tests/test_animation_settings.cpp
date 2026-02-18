@@ -4,7 +4,6 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/AnimationSettings.h"
-#include "ui/components/SpringAnimation.h"
 #include <thread>
 #include <chrono>
 #include <vector>
@@ -191,20 +190,6 @@ TEST_F(AnimationSettingsTest, EaseInOutNormalMotion)
     EXPECT_NEAR(midpoint, 50.0f, 1.0f);
 }
 
-// Test: Integration with SpringAnimation
-TEST_F(AnimationSettingsTest, SpringAnimationIntegration)
-{
-    AnimationSettings::setAppPreference(false);
-    EXPECT_TRUE(AnimationSettings::shouldUseSpringAnimations());
-
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.setTarget(1.0f);
-    spring.update(1.0f / 60.0f);
-
-    // With animations enabled, spring should make progress
-    EXPECT_GT(spring.position, 0.0f);
-}
-
 // ============================================================================
 // Nested Scope Edge Cases
 // ============================================================================
@@ -384,24 +369,24 @@ TEST_F(AnimationSettingsTest, ConcurrentReadWhileWriting)
 // Easing Edge Cases
 // ============================================================================
 
-// Test: Lerp with progress below zero
+// Test: Lerp with progress below zero (clamped to 0)
 TEST_F(AnimationSettingsTest, LerpProgressBelowZero)
 {
     AnimationSettings::setAppPreference(false);
 
-    // Negative progress extrapolates backward
+    // Negative progress is now clamped to 0 for safety
     float result = AnimationHelper::lerp(0.0f, 100.0f, -0.5f);
-    EXPECT_FLOAT_EQ(result, -50.0f);
+    EXPECT_FLOAT_EQ(result, 0.0f);  // Clamped to start value
 }
 
-// Test: Lerp with progress above one
+// Test: Lerp with progress above one (clamped to 1)
 TEST_F(AnimationSettingsTest, LerpProgressAboveOne)
 {
     AnimationSettings::setAppPreference(false);
 
-    // Progress > 1 extrapolates forward
+    // Progress > 1 is now clamped to 1 for safety
     float result = AnimationHelper::lerp(0.0f, 100.0f, 1.5f);
-    EXPECT_FLOAT_EQ(result, 150.0f);
+    EXPECT_FLOAT_EQ(result, 100.0f);  // Clamped to end value
 }
 
 // Test: Lerp with negative value range

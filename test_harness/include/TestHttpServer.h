@@ -153,6 +153,21 @@ private:
     void handleMetricsStats(const httplib::Request& req, httplib::Response& res);
     void handleMetricsReset(const httplib::Request& req, httplib::Response& res);
     void handleMetricsRecordFrame(const httplib::Request& req, httplib::Response& res);
+    
+    // Route handlers - Extended Profiling
+    void handleProfilingStart(const httplib::Request& req, httplib::Response& res);
+    void handleProfilingStop(const httplib::Request& req, httplib::Response& res);
+    void handleProfilingSnapshot(const httplib::Request& req, httplib::Response& res);
+    void handleProfilingGpu(const httplib::Request& req, httplib::Response& res);
+    void handleProfilingThreads(const httplib::Request& req, httplib::Response& res);
+    void handleProfilingComponents(const httplib::Request& req, httplib::Response& res);
+    void handleProfilingHotspots(const httplib::Request& req, httplib::Response& res);
+    void handleProfilingTimeline(const httplib::Request& req, httplib::Response& res);
+    
+    // Route handlers - Stress Testing
+    void handleStressOscillators(const httplib::Request& req, httplib::Response& res);
+    void handleStressEffects(const httplib::Request& req, httplib::Response& res);
+    void handleStressAudio(const httplib::Request& req, httplib::Response& res);
 
     // Route handlers - Debug Logs
     void handleDebugLogs(const httplib::Request& req, httplib::Response& res);

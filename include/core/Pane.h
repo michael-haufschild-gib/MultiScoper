@@ -68,6 +68,8 @@ private:
     juce::String name_;
     float heightRatio_ = DEFAULT_HEIGHT_RATIO;
     int columnIndex_ = 0;  // Which column this pane is in (0-2)
+
+    JUCE_LEAK_DETECTOR(Pane)
 };
 
 /**
@@ -285,6 +287,8 @@ private:
     void notifyPaneOrderChanged();
     void notifyPaneAdded(const PaneId& paneId);
     void notifyPaneRemoved(const PaneId& paneId);
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneLayoutManager)
 };
 
 // ValueTree identifiers for Pane and PaneLayout

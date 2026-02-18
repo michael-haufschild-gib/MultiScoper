@@ -1,6 +1,12 @@
 /*
     Oscil - Shared Capture Buffer
-    Lock-free ring buffer for real-time audio capture and visualization
+    Lock-free SPSC ring buffer for real-time audio capture and visualization
+    
+    Optimizations:
+    - Lock-free write for audio thread (SPSC pattern)
+    - Batched memcpy instead of sample-by-sample copy
+    - Power-of-2 capacity for fast modulo via bitwise AND
+    - SeqLock pattern for metadata (already lock-free)
 */
 
 #pragma once
@@ -33,13 +39,10 @@ struct CaptureFrameMetadata
 /**
  * Lock-free atomic metadata using SeqLock pattern.
  * Single-producer (audio thread) / multiple-consumer (UI threads) safe.
- *
- * Write pattern: increment sequence (odd), write fields, increment sequence (even)
- * Read pattern: read sequence, read fields, read sequence again, retry if changed/odd
  */
 struct AtomicMetadata
 {
-    std::atomic<uint32_t> sequence{0};  // SeqLock sequence counter
+    std::atomic<uint32_t> sequence{0};
     std::atomic<double> sampleRate{44100.0};
     std::atomic<int> numChannels{2};
     std::atomic<int64_t> timestamp{0};
@@ -47,15 +50,14 @@ struct AtomicMetadata
     std::atomic<bool> isPlaying{false};
     std::atomic<double> bpm{120.0};
 
-    /**
-     * Write metadata from audio thread (lock-free)
-     */
     void write(const CaptureFrameMetadata& meta)
     {
-        // Increment sequence to odd (signals write in progress)
-        sequence.fetch_add(1, std::memory_order_release);
+        // SeqLock write pattern: increment sequence (odd = write in progress),
+        // then fence, then writes, then fence, then increment (even = write complete).
+        // CRITICAL: Use fences to prevent reordering on ARM/Apple Silicon.
+        sequence.fetch_add(1, std::memory_order_relaxed);
+        std::atomic_thread_fence(std::memory_order_release);  // Fence BEFORE writes
 
-        // Write all fields
         sampleRate.store(meta.sampleRate, std::memory_order_relaxed);
         numChannels.store(meta.numChannels, std::memory_order_relaxed);
         timestamp.store(meta.timestamp, std::memory_order_relaxed);
@@ -63,39 +65,24 @@ struct AtomicMetadata
         isPlaying.store(meta.isPlaying, std::memory_order_relaxed);
         bpm.store(meta.bpm, std::memory_order_relaxed);
 
-        // Increment sequence to even (signals write complete)
-        sequence.fetch_add(1, std::memory_order_release);
+        std::atomic_thread_fence(std::memory_order_release);  // Fence AFTER writes
+        sequence.fetch_add(1, std::memory_order_relaxed);
     }
 
-    /**
-     * Read metadata from any thread (lock-free, may retry)
-     *
-     * Uses a bounded retry strategy to prevent infinite loops in case the
-     * writer thread crashes mid-update (leaving sequence odd). After MAX_RETRIES,
-     * returns current atomic values as best-effort fallback.
-     *
-     * After YIELD_THRESHOLD spins, yields to let the writer complete (improves
-     * behavior under heavy system load or thread preemption).
-     */
     CaptureFrameMetadata read() const
     {
         CaptureFrameMetadata result;
         uint32_t seq1, seq2;
 
-        // Yield after initial spins to let writer complete under heavy load
-        static constexpr int YIELD_THRESHOLD = 100;
-        // High retry limit for heavy-contention CI environments
-        static constexpr int MAX_RETRIES = 10000;
+        static constexpr int YIELD_THRESHOLD = 10;
+        static constexpr int MAX_RETRIES = 100;
         int retries = 0;
 
         for (;;) {
             seq1 = sequence.load(std::memory_order_acquire);
 
-            // If sequence is odd, writer is in progress - retry with limit
             if (seq1 & 1) {
                 if (++retries > MAX_RETRIES) {
-                    // Writer may have crashed mid-update; return best-effort values
-                    // Using relaxed loads since consistency cannot be guaranteed anyway
                     result.sampleRate = sampleRate.load(std::memory_order_relaxed);
                     result.numChannels = numChannels.load(std::memory_order_relaxed);
                     result.timestamp = timestamp.load(std::memory_order_relaxed);
@@ -104,13 +91,11 @@ struct AtomicMetadata
                     result.bpm = bpm.load(std::memory_order_relaxed);
                     return result;
                 }
-                // After initial spins, yield to let writer complete
                 if (retries > YIELD_THRESHOLD)
                     std::this_thread::yield();
                 continue;
             }
 
-            // Read all fields
             result.sampleRate = sampleRate.load(std::memory_order_relaxed);
             result.numChannels = numChannels.load(std::memory_order_relaxed);
             result.timestamp = timestamp.load(std::memory_order_relaxed);
@@ -120,17 +105,13 @@ struct AtomicMetadata
 
             seq2 = sequence.load(std::memory_order_acquire);
 
-            // If sequence hasn't changed, read was consistent
             if (seq1 == seq2) {
                 break;
             }
 
-            // Writer modified during our read - retry with limit
             if (++retries > MAX_RETRIES) {
-                // Excessive contention or issue - return what we have
                 return result;
             }
-            // After initial spins, yield to let writer complete
             if (retries > YIELD_THRESHOLD)
                 std::this_thread::yield();
         }
@@ -140,141 +121,97 @@ struct AtomicMetadata
 };
 
 /**
- * Lock-free ring buffer for real-time audio capture.
- * Designed for single-producer (audio thread) / multiple-consumer (UI threads) usage.
- *
- * Memory budget: ≤1MB per instance as per PRD requirements.
- *
- * Implements IAudioBuffer interface for read-only access abstraction.
+ * Lock-free SPSC ring buffer for real-time audio capture.
+ * 
+ * Thread safety model:
+ * - SPSC (Single Producer Single Consumer) for optimal performance
+ * - Audio thread: Use writeLockFree() - zero locks, zero blocking
+ * - UI thread: Use read() - lock-free atomic reads
+ * - Test injection: Use write() with tryLock=false for blocking write
  */
 class SharedCaptureBuffer : public IAudioBuffer
 {
 public:
-    // Buffer capacity must accommodate MAX_TIME_INTERVAL_MS (4000ms) at max sample rate (192kHz)
-    // Calculation: 4000ms × 192kHz = 768,000 samples minimum
-    // Using next power of 2: 1,048,576 (2^20) = ~5.5s @ 192kHz, ~24s @ 44.1kHz
-    // Memory: 2 channels × 4 bytes × 1M samples = ~8MB per buffer
     static constexpr size_t DEFAULT_BUFFER_SAMPLES = 1048576;
     static constexpr size_t MAX_CHANNELS = 2;
 
-    /**
-     * Create a capture buffer with specified capacity
-     * @param bufferSamples Number of samples per channel to store
-     */
     explicit SharedCaptureBuffer(size_t bufferSamples = DEFAULT_BUFFER_SAMPLES);
 
-    /**
-     * Write audio samples to the buffer.
-     *
-     * @param buffer Audio buffer containing samples
-     * @param metadata Frame metadata (sample rate, timestamp, etc.)
-     * @param tryLock If true, attempts to lock and returns immediately if failed (for real-time thread).
-     *                If false, blocks until lock is acquired (for non-real-time injection).
-     */
-    void write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata, bool tryLock = false);
+    //==========================================================================
+    // Lock-Free Write (Audio Thread - SPSC)
+    //==========================================================================
 
     /**
-     * Write raw sample data to the buffer.
+     * Write audio samples - LOCK FREE, WAIT FREE
+     * Use this from audio thread for maximum performance.
+     * Uses batched memcpy instead of sample-by-sample copy.
      *
-     * @param samples Pointer to interleaved sample data
-     * @param numSamples Number of samples per channel
-     * @param numChannels Number of channels
-     * @param metadata Frame metadata
-     * @param tryLock If true, attempts to lock and returns immediately if failed.
+     * IMPORTANT: Only safe when there is a single producer (audio thread).
+     * For test injection from another thread, use write() with tryLock=false.
      */
+    void writeLockFree(const float* const* samples, int numSamples, int numChannels,
+                       const CaptureFrameMetadata& metadata);
+
+    void writeLockFree(const juce::AudioBuffer<float>& buffer, 
+                       const CaptureFrameMetadata& metadata);
+
+    //==========================================================================
+    // Legacy Write Interface (with locking for multi-producer scenarios)
+    //==========================================================================
+
+    /**
+     * Write with optional locking for thread safety.
+     * Use tryLock=true for audio thread (non-blocking, may drop frames).
+     * Use tryLock=false for test injection (blocking).
+     */
+    void write(const juce::AudioBuffer<float>& buffer, 
+               const CaptureFrameMetadata& metadata, bool tryLock = false);
+
     void write(const float* const* samples, int numSamples, int numChannels,
                const CaptureFrameMetadata& metadata, bool tryLock = false);
 
-    /**
-     * Read the most recent samples into a buffer.
-     * Safe to call from any thread (UI thread typically).
-     *
-     * @param output Buffer to write samples into
-     * @param numSamples Number of samples to read
-     * @param channel Channel index (0 = left, 1 = right)
-     * @return Actual number of samples read
-     */
+    //==========================================================================
+    // Read Interface (Any Thread - Lock Free)
+    //==========================================================================
+
     int read(float* output, int numSamples, int channel = 0) const override;
-
-    /**
-     * Read the most recent samples into a span.
-     * Safe to call from any thread (UI thread typically).
-     *
-     * @param output Span to write samples into
-     * @param channel Channel index (0 = left, 1 = right)
-     * @return Actual number of samples read
-     */
     int read(std::span<float> output, int channel = 0) const;
-
-    /**
-     * Read the most recent samples for all channels.
-     * @param output Audio buffer to write into
-     * @param numSamples Number of samples to read
-     * @return Actual number of samples read
-     */
     int read(juce::AudioBuffer<float>& output, int numSamples) const override;
 
-    /**
-     * Get the latest metadata
-     */
     CaptureFrameMetadata getLatestMetadata() const override;
-
-    /**
-     * Get the current write position
-     */
     size_t getWritePosition() const { return writePos_.load(std::memory_order_acquire); }
-
-    /**
-     * Get the buffer capacity in samples
-     */
     size_t getCapacity() const override { return capacity_; }
-
-    /**
-     * Get the number of available samples
-     */
     size_t getAvailableSamples() const override;
-
-    /**
-     * Clear the buffer
-     */
     void clear();
 
-    /**
-     * Get the peak level for a channel (recent samples)
-     * @param channel Channel index
-     * @param numSamples Number of recent samples to analyze
-     */
     float getPeakLevel(int channel, int numSamples = 1024) const override;
-
-    /**
-     * Get RMS level for a channel (recent samples)
-     * @param channel Channel index
-     * @param numSamples Number of recent samples to analyze
-     */
     float getRMSLevel(int channel, int numSamples = 1024) const override;
 
 private:
     size_t capacity_;
-    std::vector<float> buffer_; // Flat buffer: [Channel 0][Channel 1]...
-    std::atomic<size_t> writePos_{ 0 };
-    std::atomic<size_t> samplesWritten_{ 0 };
-    
-    // SpinLock for thread-safe writing from multiple sources (e.g. audio thread + test injector)
+    std::vector<float> buffer_;  // Flat buffer: [Channel 0][Channel 1]...
+    std::atomic<size_t> writePos_{0};
+    std::atomic<size_t> samplesWritten_{0};
+
+    // Overtake detection: tracks how many times writer has wrapped around the buffer.
+    // Readers can detect if data has been overwritten by comparing wrap counts.
+    // This provides visibility into write pressure without adding synchronization overhead.
+    std::atomic<uint64_t> writeWrapCount_{0};
+
+    // SpinLock only for multi-producer scenarios (test injection)
+    // Not used in SPSC audio path
     juce::SpinLock writeLock_;
 
-    // Lock-free metadata using SeqLock pattern (no SpinLock needed)
     mutable AtomicMetadata metadata_;
 
-    // Helper to wrap position within buffer using fast bitwise AND
-    // Requires capacity to be power of 2 (enforced in constructor)
     size_t wrapPosition(size_t pos) const
     {
-        jassert(capacity_ > 0);
-        jassert((capacity_ & (capacity_ - 1)) == 0);  // Assert power of 2
-        // Runtime safety check in case capacity_ is 0 (should never happen)
-        if (capacity_ == 0) return 0;
         return pos & (capacity_ - 1);
     }
+
+    // Internal implementation for batched memcpy write
+    void writeInternal(const float* const* samples, int numSamples, int numChannels,
+                       const CaptureFrameMetadata& metadata);
 };
 
 } // namespace oscil

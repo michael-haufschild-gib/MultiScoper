@@ -6,12 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -28,8 +29,7 @@ namespace oscil
  * - Eye dropper tool (optional)
  */
 class OscilColorPicker : public ThemedComponent,
-                         public TestIdSupport,
-                         private juce::Timer
+                         public TestIdSupport
 {
 public:
     enum class Mode
@@ -79,8 +79,6 @@ public:
 
 
 private:
-    void timerCallback() override;
-
     void updateFromHSV();
     void updateHexField();
 

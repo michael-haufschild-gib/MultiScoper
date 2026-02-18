@@ -4,6 +4,7 @@
 
 #include "core/OscilState.h"
 #include <algorithm>
+#include <cmath>
 
 namespace oscil
 {
@@ -70,33 +71,66 @@ void OscilState::syncLayoutManagerToState()
 bool OscilState::fromXmlString(const juce::String& xmlString)
 {
     if (xmlString.isEmpty())
-        return false;
-
-    if (auto xml = juce::XmlDocument::parse(xmlString))
     {
-        auto loadedState = juce::ValueTree::fromXml(*xml);
-        if (loadedState.isValid() && loadedState.hasType(StateIds::OscilState))
-        {
-            state_ = loadedState;
-
-            // Load layout manager state
-            auto panesNode = getPanesNode();
-            if (panesNode.isValid())
-            {
-                layoutManager_.fromValueTree(panesNode);
-            }
-
-            auto layoutNode = getLayoutNode();
-            if (layoutNode.isValid())
-            {
-                int cols = layoutNode.getProperty(StateIds::Columns, 1);
-                layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
-            }
-
-            return true;
-        }
+        juce::Logger::writeToLog("OscilState::fromXmlString: Empty XML string provided");
+        return false;
     }
-    return false;
+
+    juce::XmlDocument doc(xmlString);
+    auto xml = doc.getDocumentElement();
+    if (!xml)
+    {
+        juce::Logger::writeToLog("OscilState::fromXmlString: XML parse error: " + doc.getLastParseError());
+        return false;
+    }
+
+    auto loadedState = juce::ValueTree::fromXml(*xml);
+    if (!loadedState.isValid())
+    {
+        juce::Logger::writeToLog("OscilState::fromXmlString: Invalid ValueTree from XML");
+        return false;
+    }
+
+    if (!loadedState.hasType(StateIds::OscilState))
+    {
+        juce::Logger::writeToLog("OscilState::fromXmlString: Wrong root type, expected 'OscilState' but got '" + loadedState.getType().toString() + "'");
+        return false;
+    }
+
+    // Validate schema version before accepting state
+    int loadedVersion = loadedState.getProperty(StateIds::Version, 0);
+    if (loadedVersion < 0 || loadedVersion > CURRENT_SCHEMA_VERSION)
+    {
+        juce::Logger::writeToLog("OscilState::fromXmlString: Invalid schema version " +
+                                 juce::String(loadedVersion) + " (expected 0-" +
+                                 juce::String(CURRENT_SCHEMA_VERSION) + ")");
+        // Don't fail - we can still try to load with defaults for missing fields
+    }
+
+    state_ = loadedState;
+
+    // Load layout manager state
+    auto panesNode = getPanesNode();
+    if (panesNode.isValid())
+    {
+        layoutManager_.fromValueTree(panesNode);
+    }
+
+    auto layoutNode = getLayoutNode();
+    if (layoutNode.isValid())
+    {
+        int cols = layoutNode.getProperty(StateIds::Columns, 1);
+        // Validate column layout value and log if out of range
+        if (cols < 1 || cols > 3)
+        {
+            juce::Logger::writeToLog("OscilState::fromXmlString: Column layout " +
+                                     juce::String(cols) + " out of range [1,3], clamping");
+            cols = std::clamp(cols, 1, 3);
+        }
+        layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
+    }
+
+    return true;
 }
 
 std::vector<Oscillator> OscilState::getOscillators() const
@@ -260,11 +294,34 @@ void OscilState::setColumnLayout(ColumnLayout layout)
 int OscilState::getSidebarWidth() const
 {
     auto layoutNode = getLayoutNode();
-    return layoutNode.getProperty(StateIds::SidebarWidth, 300);
+    int width = layoutNode.getProperty(StateIds::SidebarWidth, 300);
+    // Validate sidebar width is within reasonable bounds
+    constexpr int kMinSidebarWidth = 50;
+    constexpr int kMaxSidebarWidth = 500;
+    if (width < kMinSidebarWidth || width > kMaxSidebarWidth)
+    {
+        juce::Logger::writeToLog("OscilState::getSidebarWidth: Width " +
+                                 juce::String(width) + " out of range [" +
+                                 juce::String(kMinSidebarWidth) + "," +
+                                 juce::String(kMaxSidebarWidth) + "], returning default");
+        return 300;
+    }
+    return width;
 }
 
 void OscilState::setSidebarWidth(int width)
 {
+    // Validate and clamp sidebar width before storing
+    constexpr int kMinSidebarWidth = 50;
+    constexpr int kMaxSidebarWidth = 500;
+    if (width < kMinSidebarWidth || width > kMaxSidebarWidth)
+    {
+        juce::Logger::writeToLog("OscilState::setSidebarWidth: Width " +
+                                 juce::String(width) + " out of range, clamping to [" +
+                                 juce::String(kMinSidebarWidth) + "," +
+                                 juce::String(kMaxSidebarWidth) + "]");
+        width = std::clamp(width, kMinSidebarWidth, kMaxSidebarWidth);
+    }
     auto layoutNode = getOrCreateLayoutNode();
     layoutNode.setProperty(StateIds::SidebarWidth, width, nullptr);
 }
@@ -320,11 +377,39 @@ void OscilState::setAutoScaleEnabled(bool enabled)
 float OscilState::getGainDb() const
 {
     auto layoutNode = getLayoutNode();
-    return static_cast<float>(layoutNode.getProperty(StateIds::GainDb, 0.0));
+    float dB = static_cast<float>(layoutNode.getProperty(StateIds::GainDb, 0.0));
+    // Validate gain is within reasonable bounds (-60dB to +12dB)
+    constexpr float kMinGainDb = -60.0f;
+    constexpr float kMaxGainDb = 12.0f;
+    if (dB < kMinGainDb || dB > kMaxGainDb || std::isnan(dB) || std::isinf(dB))
+    {
+        juce::Logger::writeToLog("OscilState::getGainDb: Value " +
+                                 juce::String(dB) + " out of range [" +
+                                 juce::String(kMinGainDb) + "," +
+                                 juce::String(kMaxGainDb) + "], returning default 0.0");
+        return 0.0f;
+    }
+    return dB;
 }
 
 void OscilState::setGainDb(float dB)
 {
+    // Validate and clamp gain before storing
+    constexpr float kMinGainDb = -60.0f;
+    constexpr float kMaxGainDb = 12.0f;
+    if (std::isnan(dB) || std::isinf(dB))
+    {
+        juce::Logger::writeToLog("OscilState::setGainDb: Invalid value (nan/inf), using 0.0");
+        dB = 0.0f;
+    }
+    else if (dB < kMinGainDb || dB > kMaxGainDb)
+    {
+        juce::Logger::writeToLog("OscilState::setGainDb: Value " +
+                                 juce::String(dB) + " out of range, clamping to [" +
+                                 juce::String(kMinGainDb) + "," +
+                                 juce::String(kMaxGainDb) + "]");
+        dB = std::clamp(dB, kMinGainDb, kMaxGainDb);
+    }
     auto layoutNode = getOrCreateLayoutNode();
     layoutNode.setProperty(StateIds::GainDb, dB, nullptr);
 }
@@ -356,25 +441,54 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
 
     CaptureQualityConfig config;
 
-    // Load quality preset
+    // Load quality preset with validation
     int presetInt = qualityNode.getProperty(StateIds::QualityPreset,
                                              static_cast<int>(QualityPreset::Standard));
-    config.qualityPreset = static_cast<QualityPreset>(
-        std::clamp(presetInt, 0, static_cast<int>(QualityPreset::Ultra)));
+    constexpr int kMaxQualityPreset = static_cast<int>(QualityPreset::Ultra);
+    if (presetInt < 0 || presetInt > kMaxQualityPreset)
+    {
+        juce::Logger::writeToLog("OscilState::getCaptureQualityConfig: QualityPreset " +
+                                 juce::String(presetInt) + " out of range [0," +
+                                 juce::String(kMaxQualityPreset) + "], using Standard");
+        presetInt = static_cast<int>(QualityPreset::Standard);
+    }
+    config.qualityPreset = static_cast<QualityPreset>(presetInt);
 
-    // Load buffer duration
+    // Load buffer duration with validation
     int durationInt = qualityNode.getProperty(StateIds::BufferDuration,
                                                static_cast<int>(BufferDuration::Medium));
-    config.bufferDuration = static_cast<BufferDuration>(
-        std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
+    constexpr int kMaxBufferDuration = static_cast<int>(BufferDuration::Long);
+    if (durationInt < 0 || durationInt > kMaxBufferDuration)
+    {
+        juce::Logger::writeToLog("OscilState::getCaptureQualityConfig: BufferDuration " +
+                                 juce::String(durationInt) + " out of range [0," +
+                                 juce::String(kMaxBufferDuration) + "], using Medium");
+        durationInt = static_cast<int>(BufferDuration::Medium);
+    }
+    config.bufferDuration = static_cast<BufferDuration>(durationInt);
 
     // Load auto-adjust setting
     config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
 
     // Load memory budget if present (stored as int64 to avoid overflow for large budgets)
     juce::int64 budgetBytes = qualityNode.getProperty(StateIds::MemoryBudgetBytes, static_cast<juce::int64>(0));
-    if (budgetBytes > 0)
+    if (budgetBytes < 0)
     {
+        juce::Logger::writeToLog("OscilState::getCaptureQualityConfig: Negative memory budget " +
+                                 juce::String(budgetBytes) + ", ignoring");
+        budgetBytes = 0;
+    }
+    else if (budgetBytes > 0)
+    {
+        // Validate budget is within reasonable limits (1MB to 1GB)
+        constexpr juce::int64 kMaxBudget = 1024LL * 1024LL * 1024LL;  // 1GB
+        if (budgetBytes > kMaxBudget)
+        {
+            juce::Logger::writeToLog("OscilState::getCaptureQualityConfig: Memory budget " +
+                                     juce::String(budgetBytes) + " exceeds max, clamping to " +
+                                     juce::String(kMaxBudget));
+            budgetBytes = kMaxBudget;
+        }
         config.memoryBudget.totalBudgetBytes = static_cast<size_t>(budgetBytes);
     }
 
@@ -482,194 +596,6 @@ juce::ValueTree OscilState::getOrCreateCaptureQualityNode()
 juce::ValueTree OscilState::getCaptureQualityNode() const
 {
     return state_.getChildWithName(StateIds::CaptureQuality);
-}
-
-// GlobalPreferences implementation
-
-GlobalPreferences::GlobalPreferences()
-{
-    preferences_ = juce::ValueTree("GlobalPreferences");
-    load();
-}
-
-GlobalPreferences::~GlobalPreferences()
-{
-}
-
-juce::File GlobalPreferences::getPreferencesFile() const
-{
-    auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    return appDataDir.getChildFile("Oscil").getChildFile("preferences.xml");
-}
-
-void GlobalPreferences::load()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto file = getPreferencesFile();
-    if (file.existsAsFile())
-    {
-        if (auto xml = juce::XmlDocument::parse(file))
-        {
-            preferences_ = juce::ValueTree::fromXml(*xml);
-        }
-    }
-}
-
-void GlobalPreferences::save()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    saveUnlocked();
-}
-
-void GlobalPreferences::saveUnlocked()
-{
-    // NOTE: Caller must hold mutex_ before calling this method
-    auto file = getPreferencesFile();
-
-    // Create parent directory if it doesn't exist
-    auto parentDir = file.getParentDirectory();
-    if (!parentDir.exists())
-    {
-        auto result = parentDir.createDirectory();
-        if (result.failed())
-        {
-            DBG("GlobalPreferences::save() - Failed to create directory: " << result.getErrorMessage());
-            return;
-        }
-    }
-
-    if (auto xml = preferences_.createXml())
-    {
-        if (!xml->writeTo(file))
-        {
-            DBG("GlobalPreferences::save() - Failed to write preferences to: " << file.getFullPathName());
-        }
-    }
-    else
-    {
-        DBG("GlobalPreferences::save() - Failed to create XML from preferences");
-    }
-}
-
-void GlobalPreferences::scheduleSave()
-{
-    // Debounce: only schedule one save at a time
-    if (!savePending_.exchange(true))
-    {
-        juce::MessageManager::callAsync([this]() {
-            if (savePending_.load())
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                saveUnlocked();
-                savePending_.store(false);
-            }
-        });
-    }
-}
-
-juce::String GlobalPreferences::getDefaultTheme() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return preferences_.getProperty("defaultTheme", "Dark Professional");
-}
-
-void GlobalPreferences::setDefaultTheme(const juce::String& themeName)
-{
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        preferences_.setProperty("defaultTheme", themeName, nullptr);
-    }
-    scheduleSave();
-}
-
-int GlobalPreferences::getDefaultColumnLayout() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return preferences_.getProperty("defaultColumns", 1);
-}
-
-void GlobalPreferences::setDefaultColumnLayout(int columns)
-{
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        preferences_.setProperty("defaultColumns", columns, nullptr);
-    }
-    scheduleSave();
-}
-
-bool GlobalPreferences::getShowStatusBar() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return preferences_.getProperty("showStatusBar", true);
-}
-
-void GlobalPreferences::setShowStatusBar(bool show)
-{
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        preferences_.setProperty("showStatusBar", show, nullptr);
-    }
-    scheduleSave();
-}
-
-bool GlobalPreferences::getReducedMotion() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return preferences_.getProperty("reducedMotion", false);
-}
-
-void GlobalPreferences::setReducedMotion(bool reduced)
-{
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        preferences_.setProperty("reducedMotion", reduced, nullptr);
-    }
-    scheduleSave();
-}
-
-bool GlobalPreferences::getUIAudioFeedback() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return preferences_.getProperty("uiAudioFeedback", false);
-}
-
-void GlobalPreferences::setUIAudioFeedback(bool enabled)
-{
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
-    }
-    scheduleSave();
-}
-
-bool GlobalPreferences::getTooltipsEnabled() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return preferences_.getProperty("tooltipsEnabled", true);
-}
-
-void GlobalPreferences::setTooltipsEnabled(bool enabled)
-{
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
-    }
-    scheduleSave();
-}
-
-int GlobalPreferences::getDefaultSidebarWidth() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return preferences_.getProperty("defaultSidebarWidth", 280);
-}
-
-void GlobalPreferences::setDefaultSidebarWidth(int width)
-{
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        preferences_.setProperty("defaultSidebarWidth", width, nullptr);
-    }
-    scheduleSave();
 }
 
 } // namespace oscil

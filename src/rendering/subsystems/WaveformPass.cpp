@@ -4,8 +4,6 @@
 
 #include "rendering/subsystems/WaveformPass.h"
 
-#include "rendering/materials/MaterialShader.h"
-#include "rendering/shaders3d/WaveformShader3D.h"
 #include "rendering/subsystems/RenderStats.h"
 
 #include <iostream>
@@ -14,34 +12,6 @@ namespace oscil
 {
 
 using namespace juce::gl;
-
-// Helper to convert MaterialSettings to MaterialProperties
-static MaterialProperties convertMaterialSettings(const MaterialSettings& settings, juce::Colour overrideColour)
-{
-    MaterialProperties props;
-    props.reflectivity = settings.reflectivity;
-    props.roughness = settings.roughness;
-    props.ior = settings.refractiveIndex;
-    props.fresnelPower = settings.fresnelPower;
-    props.baseColorR = overrideColour.getFloatRed();
-    props.baseColorG = overrideColour.getFloatGreen();
-    props.baseColorB = overrideColour.getFloatBlue();
-    props.baseColorA = overrideColour.getFloatAlpha();
-
-    if (settings.refractiveIndex > 1.0f && settings.reflectivity < 0.5f)
-    {
-        props.metallic = 0.0f; // Dielectric (glass)
-        props.refractionStrength = 1.0f;
-    }
-    else
-    {
-        props.metallic = 1.0f; // Metallic (chrome)
-        props.refractionStrength = 0.0f;
-    }
-
-    props.envMapStrength = settings.useEnvironmentMap ? 1.0f : 0.0f;
-    return props;
-}
 
 WaveformPass::WaveformPass()
     : gridRenderer_(std::make_unique<GridRenderer>())
@@ -316,35 +286,13 @@ void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const 
         glViewport(vx, vy, vw, vh);
     }
 
-    juce::String shaderId = shaderTypeToId(config.shaderType);
-    WaveformShader* shader = nullptr;
-
-    auto it = compiledShaders_.find(shaderId.toStdString());
-    if (it != compiledShaders_.end())
-    {
-        shader = it->second.get();
-    }
-
-    if (!shader && context_)
-    {
-        auto newShader = registry_->createShader(shaderId);
-        if (newShader && newShader->compile(*context_))
-        {
-            RE_LOG("Lazy-compiled shader: " << shaderId.toStdString());
-            compiledShaders_[shaderId.toStdString()] = std::move(newShader);
-            shader = compiledShaders_[shaderId.toStdString()].get();
-        }
-    }
-
-    if (!shader || !shader->isCompiled())
-    {
-        auto basicIt = compiledShaders_.find("basic");
-        if (basicIt != compiledShaders_.end())
-            shader = basicIt->second.get();
-    }
-
+    // Use shader cache to avoid redundant lookups and binds
+    WaveformShader* shader = bindShaderIfNeeded(config.shaderType);
     if (!shader || !shader->isCompiled())
         return;
+
+    // Set vertex buffer pool for batched geometry upload
+    shader->setVertexBufferPool(currentVertexBufferPool_);
 
     ShaderRenderParams params;
     params.colour = data.colour;
@@ -355,33 +303,6 @@ void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const 
     params.verticalScale = data.verticalScale;
     params.time = accumulatedTime;
     params.shaderIntensity = config.bloom.enabled ? config.bloom.intensity : 1.0f;
-
-    if (is3DShader(config.shaderType))
-    {
-        if (auto* shader3D = dynamic_cast<WaveformShader3D*>(shader))
-        {
-            if (camera_)
-                shader3D->setCamera(*camera_);
-            shader3D->setLighting(config.lighting);
-        }
-
-        if (isMaterialShader(config.shaderType))
-        {
-            if (auto* materialShader = dynamic_cast<MaterialShader*>(shader))
-            {
-                MaterialProperties matProps = convertMaterialSettings(config.material, data.colour);
-                materialShader->setMaterial(matProps);
-
-                if (envMapManager_ && config.material.useEnvironmentMap)
-                {
-                    GLuint envMap = envMapManager_->getMap(config.material.environmentMapId);
-                    if (envMap == 0)
-                        envMap = envMapManager_->getDefaultMap();
-                    materialShader->setEnvironmentMap(envMap);
-                }
-            }
-        }
-    }
 
     const std::vector<float>* channel2Ptr = data.isStereo ? &data.channel2 : nullptr;
     shader->render(*context_, data.channel1, channel2Ptr, params);
@@ -449,6 +370,71 @@ void WaveformPass::createDefaultEnvironmentMaps()
     envMapManager_->createFromPreset("dark", EnvironmentPreset::Dark);
     envMapManager_->createFromPreset("sunset", EnvironmentPreset::Sunset);
     envMapManager_->createFromPreset("abstract", EnvironmentPreset::Abstract);
+}
+
+// ============================================================================
+// Shader State Caching Implementation
+// ============================================================================
+
+void WaveformPass::resetShaderCache()
+{
+    currentBoundShader_ = nullptr;
+    currentBoundShaderType_ = ShaderType::Basic2D;
+    shaderCacheValid_ = false;
+}
+
+WaveformShader* WaveformPass::bindShaderIfNeeded(ShaderType shaderType)
+{
+    // Check if we already have this shader bound
+    if (shaderCacheValid_ && currentBoundShaderType_ == shaderType && currentBoundShader_ != nullptr)
+    {
+        // Shader already bound, skip redundant bind
+        return currentBoundShader_;
+    }
+
+    // Need to bind a different shader
+    juce::String shaderId = shaderTypeToId(shaderType);
+    WaveformShader* shader = nullptr;
+
+    // Look up in compiled shaders
+    auto it = compiledShaders_.find(shaderId.toStdString());
+    if (it != compiledShaders_.end())
+    {
+        shader = it->second.get();
+    }
+
+    // Lazy compile if needed
+    if (!shader && context_)
+    {
+        auto newShader = registry_->createShader(shaderId);
+        if (newShader && newShader->compile(*context_))
+        {
+            RE_LOG("Lazy-compiled shader (batched): " << shaderId.toStdString());
+            compiledShaders_[shaderId.toStdString()] = std::move(newShader);
+            shader = compiledShaders_[shaderId.toStdString()].get();
+        }
+    }
+
+    // Fall back to basic shader if needed
+    if (!shader || !shader->isCompiled())
+    {
+        auto basicIt = compiledShaders_.find("basic");
+        if (basicIt != compiledShaders_.end())
+        {
+            shader = basicIt->second.get();
+        }
+    }
+
+    if (shader && shader->isCompiled())
+    {
+        // Update cache state (the shader's render() method will call use() internally)
+        currentBoundShader_ = shader;
+        currentBoundShaderType_ = shaderType;
+        shaderCacheValid_ = true;
+        return shader;
+    }
+
+    return nullptr;
 }
 
 } // namespace oscil

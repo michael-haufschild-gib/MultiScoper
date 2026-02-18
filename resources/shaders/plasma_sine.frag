@@ -1,4 +1,19 @@
 #version 330 core
+precision highp float;
+// ============================================================================
+// Plasma Sine Fragment Shader
+// Multi-pass plasma effect with haze, electric arcs, and solid core
+// Part of Oscil audio visualization plugin
+//
+// GPU COMPATIBILITY: OpenGL 3.3 Core Profile
+// - Intel HD Graphics 2500+ (2012+): SUPPORTED
+// - AMD/NVIDIA discrete GPUs (2008+): SUPPORTED
+// - macOS 10.9+: SUPPORTED
+//
+// COLOR SPACE: Outputs linear color values in [0, 1] range (no HDR).
+// The blit shader applies gamma correction for display.
+// ============================================================================
+
 in vec2 vPos;
 in float vV;
 in float vT;
@@ -10,9 +25,14 @@ uniform int passIndex; // 0=Haze, 1=Arcs, 2=Core
 
 out vec4 fragColor;
 
-// Convert sRGB to linear color space
-// Input colors from juce::Colour are in sRGB, but we need linear for correct
-// blending and tonemapping in the rendering pipeline
+// Convert sRGB to linear color space for physically correct blending
+// This uses the gamma 2.2 approximation which is faster than the full sRGB
+// transfer function but slightly less accurate in the toe region (dark values).
+// For real-time rendering, this trade-off is acceptable.
+//
+// Full sRGB formula (not used for performance):
+//   if (srgb <= 0.04045) linear = srgb / 12.92;
+//   else linear = pow((srgb + 0.055) / 1.055, 2.4);
 vec3 sRGBToLinear(vec3 srgb) {
     return pow(srgb, vec3(2.2));
 }

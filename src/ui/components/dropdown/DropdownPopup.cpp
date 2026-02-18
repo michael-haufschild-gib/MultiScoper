@@ -24,7 +24,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        float alpha = owner_.showSpring_.position;
+        float alpha = owner_.showProgress_;
         if (alpha < 0.01f) return;
 
         int start = g.getClipBounds().getY() / ITEM_HEIGHT;
@@ -225,7 +225,6 @@ private:
 
 OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , showSpring_(SpringPresets::snappy())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
@@ -233,8 +232,7 @@ OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
     // Mark as popup so modal focus traps don't steal focus
     getProperties().set("isOscilPopup", true);
 
-    showSpring_.position = 0.0f;
-    showSpring_.target = 0.0f;
+    showProgress_ = 0.0f;
 
     listComponent_ = std::make_unique<ItemList>(*this);
     viewport_ = std::make_unique<juce::Viewport>();
@@ -252,7 +250,8 @@ OscilDropdownPopup::~OscilDropdownPopup()
         searchField_->onTextChange = nullptr;
     }
 
-    stopTimer();
+    // Cancel any running animation
+    showAnimator_.reset();
 }
 
 void OscilDropdownPopup::setItems(const std::vector<DropdownItem>& items)
@@ -356,14 +355,38 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
          }
     }
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (AnimationSettings::shouldAnimate())
     {
-        showSpring_.setTarget(1.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        // Get animation service and create show animation
+        animService_ = findAnimationService(this);
+        if (animService_)
+        {
+            auto safeThis = juce::Component::SafePointer<OscilDropdownPopup>(this);
+            auto animator = animService_->createValueAnimation(
+                AnimationPresets::EXPAND_DURATION_MS,
+                [safeThis](float progress) {
+                    if (safeThis)
+                    {
+                        safeThis->showProgress_ = progress;
+                        if (safeThis->listComponent_)
+                            safeThis->listComponent_->repaint();
+                        safeThis->repaint();
+                    }
+                },
+                juce::Easings::createEaseOut(),
+                nullptr);
+            showAnimator_.set(std::move(animator));
+            animService_->addAnimator(*showAnimator_.get());
+            showAnimator_.start();
+        }
+        else
+        {
+            showProgress_ = 1.0f;
+        }
     }
     else
     {
-        showSpring_.position = 1.0f;
+        showProgress_ = 1.0f;
     }
 
     if (searchField_)
@@ -372,10 +395,32 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
 
 void OscilDropdownPopup::dismiss()
 {
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (AnimationSettings::shouldAnimate() && animService_)
     {
-        showSpring_.setTarget(0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        auto safeThis = juce::Component::SafePointer<OscilDropdownPopup>(this);
+        auto animator = animService_->createValueAnimation(
+            AnimationPresets::EXPAND_DURATION_MS,
+            [safeThis](float progress) {
+                if (safeThis)
+                {
+                    safeThis->showProgress_ = 1.0f - progress;  // Reverse: 1 -> 0
+                    if (safeThis->listComponent_)
+                        safeThis->listComponent_->repaint();
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseIn(),
+            [safeThis]() {
+                if (safeThis)
+                {
+                    safeThis->setVisible(false);
+                    if (safeThis->onDismiss)
+                        safeThis->onDismiss();
+                }
+            });
+        showAnimator_.set(std::move(animator));
+        animService_->addAnimator(*showAnimator_.get());
+        showAnimator_.start();
     }
     else
     {
@@ -422,7 +467,7 @@ void OscilDropdownPopup::updateFilteredItems()
 
 void OscilDropdownPopup::paint(juce::Graphics& g)
 {
-    float alpha = showSpring_.position;
+    float alpha = showProgress_;
     if (alpha < 0.01f) return;
 
     auto bounds = getLocalBounds().toFloat();
@@ -545,24 +590,6 @@ void OscilDropdownPopup::ensureItemVisible(int index)
 int OscilDropdownPopup::getItemAtPosition(juce::Point<int>) const
 {
     return -1;
-}
-
-void OscilDropdownPopup::timerCallback()
-{
-    showSpring_.update(AnimationTiming::FRAME_DURATION_60FPS);
-
-    if (showSpring_.isSettled())
-    {
-        stopTimer();
-        if (showSpring_.position < 0.1f)
-        {
-            setVisible(false);
-            if (onDismiss) onDismiss();
-        }
-    }
-
-    if (listComponent_) listComponent_->repaint();
-    repaint();
 }
 
 }

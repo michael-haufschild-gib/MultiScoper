@@ -1,9 +1,10 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/dropdown/DropdownItem.h"
+#include "ui/animation/OscilAnimationService.h"
 #include <set>
 
 namespace oscil
@@ -11,9 +12,9 @@ namespace oscil
 
 /**
  * Dropdown popup that displays the list of options
+ * Uses JUCE Animator for VBlank-synced animations
  */
-class OscilDropdownPopup : public ThemedComponent,
-                           private juce::Timer
+class OscilDropdownPopup : public ThemedComponent
 {
 public:
     explicit OscilDropdownPopup(IThemeService& themeService);
@@ -41,7 +42,6 @@ private:
     class ItemList;
     friend class ItemList;
 
-    void timerCallback() override;
     void updateFilteredItems();
     int getItemAtPosition(juce::Point<int> pos) const;
     void ensureItemVisible(int index);
@@ -59,7 +59,10 @@ private:
     std::unique_ptr<ItemList> listComponent_;
     juce::String searchText_;
 
-    SpringAnimation showSpring_;
+    // Animation state
+    float showProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator showAnimator_;
 
     static constexpr int ITEM_HEIGHT = 32;
     static constexpr int MAX_VISIBLE_ITEMS = 8;

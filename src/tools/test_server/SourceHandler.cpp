@@ -42,14 +42,25 @@ void SourceHandler::handleGetSources(const httplib::Request& /*req*/, httplib::R
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result, 200);
 }
 
 void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Response& res)
 {
+    // Parse JSON body with error handling
+    nlohmann::json body;
     try
     {
-        auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
+        body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
+    }
+    catch (const nlohmann::json::parse_error& e)
+    {
+        sendJson(res, jsonError("Invalid JSON: " + std::string(e.what())), 400);
+        return;
+    }
+
+    try
+    {
         std::string name = body.value("name", "Test Track");
         int channelCount = body.value("channelCount", 2);
         double sampleRate = body.value("sampleRate", 44100.0);
@@ -84,32 +95,38 @@ void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Respon
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result, 200);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 500);
     }
 }
 
 void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Response& res)
 {
+    // Parse JSON body with error handling
+    nlohmann::json body;
     try
     {
-        auto body = nlohmann::json::parse(req.body);
-        std::string sourceIdStr = body.value("sourceId", "");
+        body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
+    }
+    catch (const nlohmann::json::parse_error& e)
+    {
+        sendJson(res, jsonError("Invalid JSON: " + std::string(e.what())), 400);
+        return;
+    }
 
-        if (sourceIdStr.empty())
-        {
-            nlohmann::json error;
-            error["error"] = "sourceId required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
-            return;
-        }
+    // Validate required field
+    if (!body.contains("sourceId") || !body["sourceId"].is_string() || body["sourceId"].get<std::string>().empty())
+    {
+        sendJson(res, jsonError("Missing required field: sourceId"), 400);
+        return;
+    }
+
+    try
+    {
+        std::string sourceIdStr = body["sourceId"].get<std::string>();
 
         auto result = runOnMessageThread([this, sourceIdStr]() -> nlohmann::json {
             nlohmann::json response;
@@ -130,36 +147,42 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result, 200);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 500);
     }
 }
 
 void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Response& res)
 {
+    // Parse JSON body with error handling
+    nlohmann::json body;
     try
     {
-        auto body = nlohmann::json::parse(req.body);
-        std::string oscillatorId = body.value("oscillatorId", "");
-        std::string sourceId = body.value("sourceId", "");
-        int oscillatorIndex = body.value("oscillatorIndex", -1);
+        body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
+    }
+    catch (const nlohmann::json::parse_error& e)
+    {
+        sendJson(res, jsonError("Invalid JSON: " + std::string(e.what())), 400);
+        return;
+    }
 
-        if (oscillatorId.empty() && oscillatorIndex < 0)
-        {
-            nlohmann::json error;
-            error["error"] = "oscillatorId or oscillatorIndex required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
-            return;
-        }
+    std::string oscillatorId = body.value("oscillatorId", "");
+    std::string sourceId = body.value("sourceId", "");
+    int oscillatorIndex = body.value("oscillatorIndex", -1);
 
-        auto result = runOnMessageThread([this, oscillatorId, sourceId, oscillatorIndex]() -> nlohmann::json {
+    // Validate required fields
+    if (oscillatorId.empty() && oscillatorIndex < 0)
+    {
+        sendJson(res, jsonError("Missing required field: oscillatorId or oscillatorIndex"), 400);
+        return;
+    }
+
+    try
+    {
+        auto result = runOnMessageThread([this, oscillatorId, sourceId, oscillatorIndex]() -> std::pair<nlohmann::json, int> {
             nlohmann::json response;
             auto& state = editor_.getProcessor().getState();
             auto oscillators = state.getOscillators();
@@ -177,24 +200,35 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
             else
             {
                 response["error"] = "Invalid oscillator index";
-                return response;
+                return {response, 400};
             }
 
             // Find the oscillator in state and update it
             bool found = false;
+            auto& registry = PluginFactory::getInstance().getInstanceRegistry();
+
             for (auto& osc : oscillators)
             {
                 if (osc.getId().id == targetOscId.id)
                 {
                     SourceId newSourceId;
                     newSourceId.id = juce::String(sourceId);
-                    osc.setSourceId(newSourceId);
+
+                    // Look up source info to get name and UUID for persistence
+                    juce::String sourceName = "Unknown Source";
+                    juce::String sourceUUID;
+                    auto sourceInfo = registry.getSource(newSourceId);
+                    if (sourceInfo.has_value())
+                    {
+                        sourceName = sourceInfo->name;
+                        sourceUUID = sourceInfo->instanceUUID;
+                    }
+                    osc.setSourceIdNameAndUUID(newSourceId, sourceName, sourceUUID);
 
                     // Update the oscillator in state
                     state.updateOscillator(osc);
 
                     // Bind the capture buffer to the waveform component
-                    auto& registry = PluginFactory::getInstance().getInstanceRegistry();
                     auto buffer = registry.getCaptureBuffer(newSourceId);
 
                     // Trigger UI refresh to rebind waveform components
@@ -215,44 +249,51 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
             if (!found)
             {
                 response["error"] = "Oscillator not found";
+                return {response, 404};
             }
 
-            return response;
+            return {response, 200};
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result.first, result.second);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 500);
     }
 }
 
 void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib::Response& res)
 {
+    // Parse JSON body with error handling
+    nlohmann::json body;
     try
     {
-        auto body = nlohmann::json::parse(req.body);
-        std::string sourceId = body.value("sourceId", "");
+        body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
+    }
+    catch (const nlohmann::json::parse_error& e)
+    {
+        sendJson(res, jsonError("Invalid JSON: " + std::string(e.what())), 400);
+        return;
+    }
+
+    // Validate required field
+    if (!body.contains("sourceId") || !body["sourceId"].is_string() || body["sourceId"].get<std::string>().empty())
+    {
+        sendJson(res, jsonError("Missing required field: sourceId"), 400);
+        return;
+    }
+
+    try
+    {
+        std::string sourceId = body["sourceId"].get<std::string>();
         std::string waveformType = body.value("type", "sine");
         float frequency = body.value("frequency", 440.0f);
         float amplitude = body.value("amplitude", 0.8f);
         int numSamples = body.value("samples", 4096);
         float sampleRate = body.value("sampleRate", 44100.0f);
 
-        if (sourceId.empty())
-        {
-            nlohmann::json error;
-            error["error"] = "sourceId required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
-            return;
-        }
-
-        auto result = runOnMessageThread([this, sourceId, waveformType, frequency, amplitude, numSamples, sampleRate]() -> nlohmann::json {
+        auto result = runOnMessageThread([this, sourceId, waveformType, frequency, amplitude, numSamples, sampleRate]() -> std::pair<nlohmann::json, int> {
             nlohmann::json response;
 
             // Get capture buffer for this source
@@ -274,7 +315,7 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             if (!captureBuffer)
             {
                 response["error"] = "Source not found or no capture buffer";
-                return response;
+                return {response, 404};
             }
 
             // Generate test waveform
@@ -340,7 +381,7 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             else
             {
                 response["error"] = "Buffer is not writable (unknown type)";
-                return response;
+                return {response, 500};
             }
 
             // Force UI update
@@ -353,17 +394,14 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             response["amplitude"] = amplitude;
             response["samplesInjected"] = numSamples;
 
-            return response;
+            return {response, 200};
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result.first, result.second);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 500);
     }
 }
 

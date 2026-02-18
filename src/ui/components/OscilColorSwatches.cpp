@@ -9,13 +9,11 @@ namespace oscil
 
 OscilColorSwatches::OscilColorSwatches(IThemeService& themeService, const juce::String& testId)
     : ThemedComponent(themeService)
-    , hoverSpring_(SpringPresets::stiff())
-    {
+{
     if (testId.isNotEmpty())
         setTestId(testId);
 
     setWantsKeyboardFocus(true);
-    hoverSpring_.position = 0.0f;
 }
 
 void OscilColorSwatches::registerTestId()
@@ -23,9 +21,12 @@ void OscilColorSwatches::registerTestId()
     OSCIL_REGISTER_TEST_ID(testId_);
 }
 
-OscilColorSwatches::~OscilColorSwatches()
+OscilColorSwatches::~OscilColorSwatches() = default;
+
+void OscilColorSwatches::parentHierarchyChanged()
 {
-    stopTimer();
+    ThemedComponent::parentHierarchyChanged();
+    animService_ = findAnimationService(this);
 }
 
 void OscilColorSwatches::setColors(const std::vector<juce::Colour>& colors)
@@ -377,16 +378,6 @@ void OscilColorSwatches::focusGained(FocusChangeType)
 void OscilColorSwatches::focusLost(FocusChangeType)
 {
     hasFocus_ = false;
-    repaint();
-}
-
-void OscilColorSwatches::timerCallback()
-{
-    hoverSpring_.update(AnimationTiming::FRAME_DURATION_60FPS);
-
-    if (hoverSpring_.isSettled())
-        stopTimer();
-
     repaint();
 }
 

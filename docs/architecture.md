@@ -1,583 +1,131 @@
 # Architecture Guide for LLM Coding Agents
 
-**Purpose**: Instructions for WHERE to put code and WHAT patterns to follow in this JUCE audio plugin.
-
-**Tech Stack**: C++20, JUCE 8.0.5, OpenGL 3.3, CMake 3.21+, GoogleTest
-
----
-
-## Core Architectural Principles
-
-### 1. Layer-Based Architecture
-
-**Mental Model**: Code flows downward through layers. Higher layers depend on lower layers, never the reverse.
-
-```
-plugin/     → Entry points (AudioProcessor, AudioProcessorEditor)
-    ↓
-ui/         → User interface (Components, Panels, Dialogs, Layout)
-    ↓
-rendering/  → OpenGL visualization (Shaders, Effects, Particles)
-    ↓
-core/       → Business logic (Oscillator, State, Registry, DSP)
-```
-
-**Rule**: Never include `plugin/` or `ui/` headers from `core/` or `rendering/`.
-
-### 2. Header/Source Separation
-
-**Pattern**: Headers in `include/`, implementations in `src/`, mirrored structure.
-
-```
-include/core/Oscillator.h    ←→    src/core/Oscillator.cpp
-include/ui/panels/Foo.h      ←→    src/ui/panels/Foo.cpp
-```
-
-**Rule**: Always use `#pragma once`. Include paths are relative to `include/`.
-
-### 3. Dependency Injection
-
-**Pattern**: Pass dependencies via constructor, not global singletons.
-
-```cpp
-// Good: Dependencies injected
-OscilPluginProcessor(IInstanceRegistry& registry, IThemeService& theme);
-
-// Bad: Hidden dependencies
-OscilPluginProcessor() { registry_ = GlobalRegistry::getInstance(); }
-```
+**Purpose**: Instructions for WHERE to put code and WHAT patterns to follow in Oscil.
+**Tech Stack**: C++20 | JUCE 8.0.5 | CMake 3.21+ | OpenGL 3.3 (GLSL 3.30)
 
 ---
 
 ## Where to Put New Code
 
-### Decision Tree: "Where does X go?"
-
 ```
-Is it an entry point (Processor/Editor)?     → plugin/
-Is it a UI widget?                           → ui/components/
-Is it a content panel (list, config)?        → ui/panels/
-Is it a modal dialog?                        → ui/dialogs/
-Is it a UI manager/coordinator?              → ui/managers/ or ui/controllers/
-Is it layout/sidebar/pane management?        → ui/layout/
-Is it a sidebar accordion section?           → ui/layout/sections/
-Is it pane-internal (header, body, overlay)? → ui/layout/pane/
-Is it theming/colors?                        → ui/theme/
-Is it OpenGL rendering core?                 → rendering/
-Is it a 2D waveform shader?                  → rendering/shaders/
-Is it a 3D visualization shader?             → rendering/shaders3d/
-Is it a material shader (glass, chrome)?     → rendering/materials/
-Is it a post-process effect?                 → rendering/effects/
-Is it particle-related?                      → rendering/particles/
-Is it render subsystem logic?                → rendering/subsystems/
-Is it business logic/models?                 → core/
-Is it signal processing?                     → core/dsp/
-Is it audio analysis?                        → core/analysis/
-Is it an interface/abstraction?              → core/interfaces/
-Is it test infrastructure?                   → tools/test_server/
-Is it platform-specific (.mm)?               → platform/macos/
+include/                    # Headers (.h) - public interfaces
+├── core/                   # Business logic, state, data models
+│   ├── dsp/                # Signal processing headers
+│   ├── interfaces/         # Abstract interfaces (I-prefix)
+│   └── presets/            # Preset system
+├── plugin/                 # Plugin entry points (Processor, Editor)
+├── rendering/              # OpenGL visualization
+│   ├── effects/            # Post-processing effects
+│   ├── shaders/            # 2D waveform shaders
+│   └── subsystems/         # Render pipeline components
+└── ui/                     # User interface
+    ├── components/         # Reusable widgets (OscilButton, etc.)
+    ├── dialogs/            # Modal dialogs
+    ├── layout/             # Layout management
+    └── panels/             # Content panels
+
+src/                        # Implementation (.cpp) - mirrors include/
+tests/                      # Unit tests (test_*.cpp)
+tests/e2e/                  # E2E Python tests (test_*.py)
+resources/shaders/          # GLSL shader files (.vert, .frag)
 ```
 
-### Adding a New Feature Checklist
+### Decision Tree: Where Do I Put This?
 
-1. **Model** → `include/core/` + `src/core/`
-2. **UI Component** → `include/ui/components/` + `src/ui/components/`
-3. **Panel/Dialog** → `include/ui/panels/` or `ui/dialogs/`
-4. **Tests** → `tests/test_*.cpp`
-5. **Update Sources.cmake** → Add new files to `cmake/Sources.cmake`
+| Creating...             | Location                                                | Naming Pattern            |
+| ----------------------- | ------------------------------------------------------- | ------------------------- |
+| New UI widget           | `include/ui/components/` + `src/ui/components/`         | `Oscil[Name].h/.cpp`      |
+| New dialog              | `include/ui/dialogs/` + `src/ui/dialogs/`               | `[Name]Dialog.h/.cpp`     |
+| New post-process effect | `include/rendering/effects/` + `src/rendering/effects/` | `[Name]Effect.h/.cpp`     |
+| New waveform shader     | `include/rendering/shaders/` + `src/rendering/shaders/` | `[Name]Shader.h/.cpp`     |
+| New core data model     | `include/core/` + `src/core/`                           | `[Name].h/.cpp`           |
+| New interface           | `include/core/interfaces/`                              | `I[Name].h`               |
+| Unit test               | `tests/`                                                | `test_[snake_case].cpp`   |
+| E2E test                | `tests/e2e/`                                            | `test_[snake_case].py`    |
+| GLSL shader             | `resources/shaders/`                                    | `[snake_case].vert/.frag` |
 
 ---
 
-## Class Patterns
-
-### UI Component Pattern
-
-All custom UI components follow this pattern:
-
-```cpp
-// include/ui/components/OscilFoo.h
-#pragma once
-
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/components/ComponentConstants.h"
-#include "ui/components/SpringAnimation.h"
-#include "ui/components/TestId.h"
-
-namespace oscil
-{
-
-class OscilFoo : public juce::Component,
-                 public ThemeManagerListener,  // Theme changes
-                 public TestIdSupport,         // E2E test IDs
-                 private juce::Timer           // Animations
-{
-public:
-    explicit OscilFoo(const juce::String& testId = {});
-    ~OscilFoo() override;
-
-    // Component overrides
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
-private:
-    void timerCallback() override;
-
-    ColorTheme theme_;
-    SpringAnimation hoverSpring_;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilFoo)
-};
-
-} // namespace oscil
-```
-
-**Key Points**:
-- Inherit `ThemeManagerListener` for theme support
-- Inherit `TestIdSupport` for E2E testing
-- Use `SpringAnimation` for smooth transitions
-- Use `JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR`
-
-### Model Pattern
-
-Domain models use value semantics with unique IDs:
-
-```cpp
-// include/core/MyModel.h
-#pragma once
-
-#include <juce_core/juce_core.h>
-
-namespace oscil
-{
-
-struct MyModelId
-{
-    juce::String id;
-
-    bool operator==(const MyModelId& other) const { return id == other.id; }
-    bool operator!=(const MyModelId& other) const { return !(*this == other); }
-
-    [[nodiscard]] static MyModelId generate();
-    static MyModelId invalid() { return MyModelId{ "" }; }
-    bool isValid() const { return id.isNotEmpty(); }
-};
-
-class MyModel
-{
-public:
-    MyModel();
-
-    [[nodiscard]] const MyModelId& getId() const { return id_; }
-
-    // Getters/setters...
-
-private:
-    MyModelId id_;
-    // Properties...
-};
-
-} // namespace oscil
-```
-
-### 2D Waveform Shader Pattern
-
-All 2D waveform shaders inherit from `WaveformShader`:
-
-```cpp
-// include/rendering/shaders/MyShader.h
-#pragma once
-
-#include "rendering/WaveformShader.h"
-
-namespace oscil
-{
-
-class MyShader : public WaveformShader
-{
-public:
-    MyShader() = default;
-    ~MyShader() override = default;
-
-    // Identification
-    [[nodiscard]] juce::String getId() const override { return "my_shader"; }
-    [[nodiscard]] juce::String getDisplayName() const override { return "My Shader"; }
-    [[nodiscard]] juce::String getDescription() const override { return "Description"; }
-
-#if OSCIL_ENABLE_OPENGL
-    bool compile(juce::OpenGLContext& context) override;
-    void release(juce::OpenGLContext& context) override;
-    bool isCompiled() const override;
-    void render(juce::OpenGLContext& context,
-                const std::vector<float>& samples,
-                const ShaderRenderParams& params) override;
-#endif
-
-private:
-    // OpenGL resources...
-};
-
-} // namespace oscil
-```
-
-### 3D Shader Pattern
-
-3D shaders go in `rendering/shaders3d/`:
-
-```cpp
-// include/rendering/shaders3d/My3DShader.h
-#pragma once
-
-#include "rendering/shaders3d/WaveformShader3D.h"
-
-namespace oscil
-{
-
-class My3DShader : public WaveformShader3D
-{
-public:
-    My3DShader() = default;
-    ~My3DShader() override = default;
-
-    [[nodiscard]] juce::String getId() const override { return "my_3d_shader"; }
-    [[nodiscard]] juce::String getDisplayName() const override { return "My 3D Shader"; }
-
-    // Uses Camera3D for view/projection matrices
-    void render(juce::OpenGLContext& context,
-                const std::vector<float>& samples,
-                const Shader3DRenderParams& params,
-                const Camera3D& camera) override;
-
-private:
-    // OpenGL resources, uniforms for camera matrices
-};
-
-} // namespace oscil
-```
-
-### Post-Process Effect Pattern
-
-Effects go in `rendering/effects/`:
-
-```cpp
-// include/rendering/effects/MyEffect.h
-#pragma once
-
-#include "rendering/effects/PostProcessEffect.h"
-
-namespace oscil
-{
-
-class MyEffect : public PostProcessEffect
-{
-public:
-    MyEffect() = default;
-    ~MyEffect() override = default;
-
-    [[nodiscard]] juce::String getId() const override { return "my_effect"; }
-    [[nodiscard]] juce::String getDisplayName() const override { return "My Effect"; }
-
-    void setIntensity(float intensity) { intensity_ = intensity; }
-
-#if OSCIL_ENABLE_OPENGL
-    bool compile(juce::OpenGLContext& context) override;
-    void release(juce::OpenGLContext& context) override;
-    void apply(juce::OpenGLContext& context,
-               Framebuffer& input,
-               Framebuffer& output,
-               const EffectParams& params) override;
-#endif
-
-private:
-    float intensity_ = 1.0f;
-};
-
-} // namespace oscil
-```
-
-### Material Shader Pattern
-
-Material shaders for advanced surface effects go in `rendering/materials/`:
-
-```cpp
-// include/rendering/materials/MyMaterialShader.h
-#pragma once
-
-#include "rendering/materials/MaterialShader.h"
-
-namespace oscil
-{
-
-class MyMaterialShader : public MaterialShader
-{
-public:
-    [[nodiscard]] juce::String getId() const override { return "my_material"; }
-
-    // Materials typically need environment maps or textures
-    void setEnvironmentMap(GLuint textureId);
-
-    void render(juce::OpenGLContext& context,
-                const std::vector<float>& samples,
-                const MaterialRenderParams& params) override;
-};
-
-} // namespace oscil
-```
+## Naming Conventions
+
+| Element         | Convention                     | Example                              |
+| --------------- | ------------------------------ | ------------------------------------ |
+| Classes         | PascalCase                     | `OscilButton`, `BloomEffect`         |
+| Interfaces      | I-prefix PascalCase            | `IInstanceRegistry`, `IThemeService` |
+| Files           | PascalCase                     | `OscilButton.cpp`, `BloomEffect.h`   |
+| Test files      | snake*case with `test*` prefix | `test_oscil_button.cpp`              |
+| Namespace       | lowercase                      | `oscil`, `oscil::test`               |
+| Private members | trailing underscore            | `enabled_`, `settings_`              |
+| Constants       | SCREAMING_SNAKE_CASE           | `DEFAULT_TIMEOUT`                    |
 
 ---
 
-## Interface Patterns
+## Key Architectural Patterns
 
-### When to Create an Interface
+### Dependency Injection
 
-Create interfaces (`I*` prefix) when:
-- Multiple implementations exist or will exist
-- Unit testing requires mocking
-- Breaking circular dependencies
-
-**Location**: `include/core/interfaces/`
+All UI components receive dependencies via constructor:
 
 ```cpp
-// include/core/interfaces/IFoo.h
-#pragma once
+// DO: Accept interface reference
+OscilButton(IThemeService& themeService);
 
-namespace oscil
-{
-
-class IFoo
-{
-public:
-    virtual ~IFoo() = default;
-
-    virtual void doSomething() = 0;
-    virtual int getValue() const = 0;
-};
-
-} // namespace oscil
+// DON'T: Use global singleton
+OscilButton() : theme_(ThemeManager::getInstance()) {} // BAD
 ```
 
-### Existing Interfaces
+### Thread Safety
 
-- `IInstanceRegistry` - Source registration abstraction
-- `IAudioBuffer` - Audio buffer abstraction
-- `IAudioDataProvider` - Audio data access
-- `IThemeService` - Theme management
+- **Audio thread**: Lock-free only, no allocations
+- **UI thread**: All GUI operations
+- Use `std::atomic` for cross-thread state (explicit `memory_order`)
+- Use `juce::MessageManager::callAsync()` for UI updates from audio thread
 
----
+### OpenGL Resource Management
 
-## Listener Pattern
-
-JUCE uses listeners for callbacks. Follow this pattern:
-
-```cpp
-class MyComponent
-{
-public:
-    class Listener
-    {
-    public:
-        virtual ~Listener() = default;
-        virtual void onSomethingHappened(const MyId& id) {}  // Default empty
-        virtual void onValueChanged(float value) {}
-    };
-
-    void addListener(Listener* l) { listeners_.add(l); }
-    void removeListener(Listener* l) { listeners_.remove(l); }
-
-private:
-    void notifySomethingHappened(const MyId& id)
-    {
-        listeners_.call([&](Listener& l) { l.onSomethingHappened(id); });
-    }
-
-    juce::ListenerList<Listener> listeners_;
-};
-```
+- Always pair `compile()` with `release()`
+- Check `isCompiled()` before using shaders
+- Use `#if OSCIL_ENABLE_OPENGL` guards
 
 ---
 
-## File Naming Conventions
+## Adding Files to Build
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| UI Component | `Oscil{Name}.h/cpp` | `OscilButton.h` |
-| Panel | `{Name}Component.h/cpp` | `SidebarComponent.h` |
-| Dialog | `{Name}Dialog.h/cpp` | `AddOscillatorDialog.h` |
-| Sidebar Section | `{Name}Section.h/cpp` | `TimingSidebarSection.h` |
-| Model | `{Name}.h/cpp` | `Oscillator.h` |
-| 2D Shader | `{Name}Shader.h/cpp` | `NeonGlowShader.h` |
-| 3D Shader | `{Name}Shader.h/cpp` | `ElectricFiligreeShader.h` |
-| Material | `{Name}Shader.h/cpp` | `LiquidChromeShader.h` |
-| Effect | `{Name}Effect.h/cpp` | `BloomEffect.h` |
-| Test | `test_{name}.cpp` | `test_oscillator.cpp` |
-| Interface | `I{Name}.h` | `IInstanceRegistry.h` |
-| Manager | `{Name}Manager.h/cpp` | `DialogManager.h` |
-| Controller | `{Name}Controller.h/cpp` | `OscillatorPanelController.h` |
-| Coordinator | `{Name}Coordinator.h/cpp` | `LayoutCoordinator.h` |
-
----
-
-## Include Path Patterns
-
-```cpp
-// Core includes
-#include "core/Oscillator.h"
-#include "core/OscilState.h"
-#include "core/interfaces/IInstanceRegistry.h"
-#include "core/dsp/TimingEngine.h"
-#include "core/analysis/AnalysisEngine.h"
-
-// UI includes
-#include "ui/components/OscilButton.h"
-#include "ui/panels/WaveformComponent.h"
-#include "ui/dialogs/AddOscillatorDialog.h"
-#include "ui/theme/ThemeManager.h"
-#include "ui/layout/SidebarComponent.h"
-#include "ui/layout/sections/TimingSidebarSection.h"
-#include "ui/managers/DialogManager.h"
-#include "ui/controllers/OscillatorPanelController.h"
-
-// Rendering includes
-#include "rendering/WaveformShader.h"
-#include "rendering/shaders/NeonGlowShader.h"
-#include "rendering/shaders3d/ElectricFiligreeShader.h"
-#include "rendering/materials/LiquidChromeShader.h"
-#include "rendering/effects/BloomEffect.h"
-#include "rendering/particles/ParticleSystem.h"
-#include "rendering/subsystems/EffectPipeline.h"
-
-// Plugin includes (only from plugin/ or ui/)
-#include "plugin/PluginProcessor.h"
-#include "plugin/PluginEditor.h"
-```
-
----
-
-## Adding New Files to Build
-
-After creating new `.cpp` files, add them to `cmake/Sources.cmake`:
+After creating new source files, add them to `cmake/Sources.cmake`:
 
 ```cmake
-# In cmake/Sources.cmake, find the appropriate section:
-
 set(OSCIL_SOURCES
-    # ... existing sources ...
+    # ... existing files ...
 
-    # Add your new file in the appropriate section:
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilNewWidget.cpp
+    # UI (components)
+    ${CMAKE_SOURCE_DIR}/src/ui/components/Oscil[Name].cpp
+
+    # Rendering (effects)
+    ${CMAKE_SOURCE_DIR}/src/rendering/effects/[Name]Effect.cpp
 )
 ```
-
-Then rebuild:
-```bash
-cmake --build --preset dev
-```
-
----
-
-## Thread Domains
-
-### Audio Thread (Real-Time Safe)
-- `PluginProcessor::processBlock()`
-- `TimingEngine` timing calculations
-- `SharedCaptureBuffer` writes
-
-**Rules**: No allocations, no locks, no I/O, no exceptions.
-
-### Message Thread (UI)
-- All `juce::Component` methods
-- State modifications
-- UI updates
-
-### OpenGL Thread
-- `WaveformGLRenderer::renderOpenGL()`
-- All shader rendering
-- Effect pipeline
-
-**Rule**: Use `SpinLock` for data shared between UI and OpenGL threads.
 
 ---
 
 ## Common Mistakes
 
-**Don't**: Include plugin headers from core/
-```cpp
-// Bad: core/ depending on plugin/
-#include "plugin/PluginProcessor.h"  // NO!
-```
-**Do**: Use interfaces and dependency injection
+- **Don't**: Use raw pointers for ownership. **Do**: `std::unique_ptr` or `std::shared_ptr`.
+- **Don't**: Create global singletons. **Do**: Dependency injection via interfaces.
+- **Don't**: Put implementation in headers. **Do**: Separate `.h` from `.cpp`.
+- **Don't**: Name test files without `test_` prefix. **Do**: `test_[name].cpp`.
+- **Don't**: Forget `#pragma once` in headers.
+- **Don't**: Use `using namespace` in headers. **Do**: Explicit `juce::` prefix.
+- **Don't**: Allocate memory in audio thread. **Do**: Pre-allocate buffers.
+- **Don't**: Skip adding new files to `cmake/Sources.cmake`.
 
 ---
 
-**Don't**: Create global singletons in new code
-```cpp
-// Bad: Global state
-auto& registry = InstanceRegistry::getInstance();
-```
-**Do**: Inject dependencies via constructor
+## On-Demand References
 
----
-
-**Don't**: Put headers in src/
-```cpp
-// Bad: Header in implementation folder
-src/ui/MyHelper.h
-```
-**Do**: Headers in include/, implementations in src/
-
----
-
-**Don't**: Forget to update Sources.cmake
-```cmake
-# After adding new .cpp files, update cmake/Sources.cmake
-```
-**Do**: Add both .h and .cpp paths, then rebuild
-
----
-
-**Don't**: Allocate in audio thread
-```cpp
-// Bad: Allocation in processBlock
-void processBlock(...) {
-    auto* buffer = new float[1024];  // NO!
-}
-```
-**Do**: Pre-allocate in constructor, use lock-free structures
-
----
-
-**Don't**: Mix 2D and 3D shader locations
-```cpp
-// Bad: 3D shader in 2D folder
-src/rendering/shaders/VolumetricRibbon.cpp  // NO!
-```
-**Do**: 2D in `shaders/`, 3D in `shaders3d/`, materials in `materials/`
-
----
-
-## Quick Reference
-
-### Key Base Classes
-- `juce::Component` - All UI components
-- `juce::AudioProcessor` - Plugin processor
-- `juce::AudioProcessorEditor` - Plugin editor
-- `ThemeManagerListener` - Theme-aware components
-- `TestIdSupport` - E2E testable components
-- `WaveformShader` - 2D waveform shaders
-- `WaveformShader3D` - 3D visualization shaders
-- `MaterialShader` - Surface material shaders
-- `PostProcessEffect` - Post-processing effects
-
-### Key Namespaces
-- `oscil` - All project code
-- `juce` - JUCE framework (use explicitly)
-
-### Build Commands
-```bash
-cmake --preset dev          # Configure
-cmake --build --preset dev  # Build
-ctest --preset dev          # Test
-```
+| Domain                                   | Serena Memory               |
+| ---------------------------------------- | --------------------------- |
+| Full directory map with key files        | `codebase-structure`        |
+| UI component/interface templates         | `juce-component-patterns`   |
+| OpenGL shader/effect templates           | `opengl-rendering-patterns` |
+| Thread safety patterns, lock-free queues | `thread-safety-patterns`    |
+| Test templates and fixtures              | `testing-detailed-patterns` |

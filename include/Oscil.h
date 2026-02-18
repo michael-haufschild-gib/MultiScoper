@@ -21,6 +21,9 @@
 // Core includes
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
+#include "core/RawCaptureBuffer.h"
+#include "core/AudioCapturePool.h"
+#include "core/CaptureThread.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"

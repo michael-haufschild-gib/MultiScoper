@@ -1,6 +1,6 @@
 /*
     Oscil - Decimating Capture Buffer Unit Tests
-    Tests for decimation, anti-aliasing filter, and memory management
+    Tests for SIMD decimation, anti-aliasing filter, and memory management
 */
 
 #include <gtest/gtest.h>
@@ -11,114 +11,159 @@
 using namespace oscil;
 
 //==============================================================================
-// Decimation Filter Tests
+// SIMD Decimation Filter Tests
 //==============================================================================
 
-class DecimationFilterTest : public ::testing::Test
+class SIMDDecimationFilterTest : public ::testing::Test
 {
 protected:
-    DecimationFilter filter;
+    SIMDDecimationFilter filter;
+    static constexpr int TEST_BLOCK_SIZE = 1024;
+    
+    // Helper to process a block and get output count
+    int processTestBlock(const float* input, float* output, int numSamples, int numChannels = 1)
+    {
+        const float* inputs[2] = { input, input };
+        float* outputs[2] = { output, output };
+        return filter.processBlock(inputs, outputs, numSamples, numChannels);
+    }
 };
 
-TEST_F(DecimationFilterTest, DefaultConfigurationIsPassthrough)
+TEST_F(SIMDDecimationFilterTest, DefaultConfigurationIsPassthrough)
 {
-    // Default filter (ratio 1) should pass signal through unchanged
-    filter.configure(1, 44100.0);
+    filter.configure(1, 44100.0, TEST_BLOCK_SIZE);
 
-    float testSignal = 0.5f;
-    float output = filter.processSample(testSignal);
-
-    // With ratio 1 and single coefficient, output should equal input
-    EXPECT_FLOAT_EQ(output, testSignal);
+    std::vector<float> input(TEST_BLOCK_SIZE, 0.5f);
+    std::vector<float> output(TEST_BLOCK_SIZE);
+    
+    int outputCount = processTestBlock(input.data(), output.data(), TEST_BLOCK_SIZE);
+    
+    // With ratio 1, output count equals input count
+    EXPECT_EQ(outputCount, TEST_BLOCK_SIZE);
+    EXPECT_FLOAT_EQ(output[0], 0.5f);
 }
 
-TEST_F(DecimationFilterTest, IsActiveReturnsFalseForRatioOne)
+TEST_F(SIMDDecimationFilterTest, IsActiveReturnsFalseForRatioOne)
 {
-    filter.configure(1, 44100.0);
+    filter.configure(1, 44100.0, TEST_BLOCK_SIZE);
     EXPECT_FALSE(filter.isActive());
 }
 
-TEST_F(DecimationFilterTest, IsActiveReturnsTrueForHigherRatios)
+TEST_F(SIMDDecimationFilterTest, IsActiveReturnsTrueForHigherRatios)
 {
-    filter.configure(2, 44100.0);
+    filter.configure(2, 44100.0, TEST_BLOCK_SIZE);
     EXPECT_TRUE(filter.isActive());
 
-    filter.configure(8, 44100.0);
+    filter.configure(8, 44100.0, TEST_BLOCK_SIZE);
     EXPECT_TRUE(filter.isActive());
 }
 
-TEST_F(DecimationFilterTest, GetDecimationRatioReturnsConfiguredValue)
+TEST_F(SIMDDecimationFilterTest, GetDecimationRatioReturnsConfiguredValue)
 {
-    filter.configure(4, 44100.0);
+    filter.configure(4, 44100.0, TEST_BLOCK_SIZE);
     EXPECT_EQ(filter.getDecimationRatio(), 4);
 
-    filter.configure(16, 44100.0);
+    filter.configure(16, 44100.0, TEST_BLOCK_SIZE);
     EXPECT_EQ(filter.getDecimationRatio(), 16);
 }
 
-TEST_F(DecimationFilterTest, ResetClearsFilterState)
+TEST_F(SIMDDecimationFilterTest, DecimationReducesOutputCount)
 {
-    filter.configure(4, 44100.0);
+    filter.configure(4, 44100.0, TEST_BLOCK_SIZE);
+    
+    std::vector<float> input(TEST_BLOCK_SIZE, 1.0f);
+    std::vector<float> output(TEST_BLOCK_SIZE);
+    
+    int outputCount = processTestBlock(input.data(), output.data(), TEST_BLOCK_SIZE);
+    
+    // 4x decimation: 1024 samples -> ~256 samples
+    EXPECT_NEAR(outputCount, TEST_BLOCK_SIZE / 4, 1);
+}
+
+TEST_F(SIMDDecimationFilterTest, ResetClearsFilterState)
+{
+    filter.configure(4, 44100.0, TEST_BLOCK_SIZE);
 
     // Process some samples to build up state
-    for (int i = 0; i < 100; ++i)
-        filter.processSample(1.0f);
+    std::vector<float> input(TEST_BLOCK_SIZE, 1.0f);
+    std::vector<float> output(TEST_BLOCK_SIZE);
+    processTestBlock(input.data(), output.data(), TEST_BLOCK_SIZE);
 
     filter.reset();
 
     // After reset, processing DC should converge back to DC
-    float dcOutput = 0.0f;
-    for (int i = 0; i < 50; ++i)
-        dcOutput = filter.processSample(0.0f);
+    std::fill(input.begin(), input.end(), 0.0f);
+    processTestBlock(input.data(), output.data(), TEST_BLOCK_SIZE);
 
-    EXPECT_NEAR(dcOutput, 0.0f, 0.01f);
+    // Output should be near zero
+    float sum = 0.0f;
+    for (int i = 10; i < TEST_BLOCK_SIZE / 4; ++i)
+        sum += std::abs(output[static_cast<size_t>(i)]);
+    
+    EXPECT_NEAR(sum / static_cast<float>(TEST_BLOCK_SIZE / 4 - 10), 0.0f, 0.1f);
 }
 
-TEST_F(DecimationFilterTest, FilterAttenuatesHighFrequencies)
+TEST_F(SIMDDecimationFilterTest, FilterAttenuatesHighFrequencies)
 {
-    // 4x decimation at 44100 Hz uses JUCE Kaiser window design
-    filter.configure(4, 44100.0);
-
-    // Generate high-frequency signal (near Nyquist of target rate)
-    // At 4x decimation from 44100 -> 11025, Nyquist is 5512.5 Hz
-    // Test with signal at 0.4 of source Nyquist = ~8820 Hz
-    // This should be heavily attenuated
+    filter.configure(4, 44100.0, TEST_BLOCK_SIZE);
 
     float highFreqEnergy = 0.0f;
     float lowFreqEnergy = 0.0f;
 
+    std::vector<float> input(TEST_BLOCK_SIZE);
+    std::vector<float> output(TEST_BLOCK_SIZE);
+
     // High frequency test (alternating +1/-1 = Nyquist)
+    for (int i = 0; i < TEST_BLOCK_SIZE; ++i)
+        input[static_cast<size_t>(i)] = (i % 2 == 0) ? 1.0f : -1.0f;
+    
     filter.reset();
-    for (int i = 0; i < 1000; ++i)
-    {
-        float input = (i % 2 == 0) ? 1.0f : -1.0f;
-        float output = filter.processSample(input);
-        highFreqEnergy += output * output;
-    }
+    int count = processTestBlock(input.data(), output.data(), TEST_BLOCK_SIZE);
+    
+    for (int i = 0; i < count; ++i)
+        highFreqEnergy += output[static_cast<size_t>(i)] * output[static_cast<size_t>(i)];
 
     // Low frequency test (DC signal = 1.0)
+    std::fill(input.begin(), input.end(), 1.0f);
     filter.reset();
-    for (int i = 0; i < 1000; ++i)
-    {
-        float output = filter.processSample(1.0f);
-        if (i > 50)  // Skip initial transient
-            lowFreqEnergy += output * output;
-    }
+    count = processTestBlock(input.data(), output.data(), TEST_BLOCK_SIZE);
+    
+    for (int i = 10; i < count; ++i)  // Skip initial transient
+        lowFreqEnergy += output[static_cast<size_t>(i)] * output[static_cast<size_t>(i)];
 
     // High frequency should be significantly attenuated
     EXPECT_LT(highFreqEnergy, lowFreqEnergy * 0.1f);
 }
 
-TEST_F(DecimationFilterTest, GetFilterOrderReturnsPositiveForActiveFilter)
+TEST_F(SIMDDecimationFilterTest, GetFilterOrderReturnsPositiveForActiveFilter)
 {
-    filter.configure(4, 44100.0);
+    filter.configure(4, 44100.0, TEST_BLOCK_SIZE);
     EXPECT_GT(filter.getFilterOrder(), 0u);
 }
 
-TEST_F(DecimationFilterTest, GetMemoryUsageBytesReturnsPositive)
+TEST_F(SIMDDecimationFilterTest, GetMemoryUsageBytesReturnsPositive)
 {
-    filter.configure(4, 44100.0);
+    filter.configure(4, 44100.0, TEST_BLOCK_SIZE);
     EXPECT_GT(filter.getMemoryUsageBytes(), 0u);
+}
+
+TEST_F(SIMDDecimationFilterTest, PhaseTrackingAcrossBlocks)
+{
+    filter.configure(4, 44100.0, 256);
+    
+    std::vector<float> input(256, 1.0f);
+    std::vector<float> output(256);
+    
+    int totalOutput = 0;
+    
+    // Process multiple blocks
+    for (int block = 0; block < 4; ++block)
+    {
+        totalOutput += processTestBlock(input.data(), output.data(), 256);
+    }
+    
+    // After 4 blocks of 256 = 1024 samples, should have ~256 output samples
+    EXPECT_NEAR(totalOutput, 256, 4);
 }
 
 //==============================================================================
@@ -239,7 +284,6 @@ protected:
     CaptureQualityConfig config;
     std::unique_ptr<DecimatingCaptureBuffer> buffer;
 
-    // Helper to create test audio buffer
     juce::AudioBuffer<float> createTestBuffer(int numSamples, int numChannels = 2,
                                                float frequency = 440.0f, float sampleRate = 44100.0f)
     {
@@ -512,7 +556,6 @@ TEST_F(DecimatingBufferReconfigureTest, ConfigurePreservesDataIntegrity)
     buffer->configure(newConfig, 48000);
 
     // Buffer should be cleared/reset after reconfiguration
-    // (new buffer created with different size)
     EXPECT_EQ(buffer->getConfig().qualityPreset, QualityPreset::Eco);
 }
 

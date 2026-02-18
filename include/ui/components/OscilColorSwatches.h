@@ -6,12 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -27,8 +28,7 @@ namespace oscil
  * - Accessibility support
  */
 class OscilColorSwatches : public ThemedComponent,
-                           public TestIdSupport,
-                           private juce::Timer
+                           public TestIdSupport
 {
 public:
     explicit OscilColorSwatches(IThemeService& themeService, const juce::String& testId = "");
@@ -86,8 +86,7 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
-
+    void parentHierarchyChanged() override;
     int getSwatchAtPosition(juce::Point<int> pos) const;
     juce::Rectangle<int> getSwatchBounds(int index) const;
     int getColumnCount() const;
@@ -108,7 +107,10 @@ private:
     bool hasFocus_ = false;
     int focusedIndex_ = 0;
 
-    SpringAnimation hoverSpring_;
+    // Animation
+    ScopedAnimator hoverAnimator_;
+    float hoverProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
 
 
     // TestIdSupport

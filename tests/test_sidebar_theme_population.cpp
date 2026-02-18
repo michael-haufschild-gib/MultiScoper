@@ -6,6 +6,8 @@
 #include <gtest/gtest.h>
 #include "ui/layout/SidebarComponent.h"
 #include "plugin/PluginProcessor.h"
+#include "core/AudioCapturePool.h"
+#include "core/CaptureThread.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
 #include "core/ServiceContext.h"
@@ -23,6 +25,8 @@ protected:
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
+    std::unique_ptr<AudioCapturePool> capturePool_;
+    std::unique_ptr<CaptureThread> captureThread_;
 
     std::unique_ptr<OscilPluginProcessor> processor;
     std::unique_ptr<SidebarComponent> sidebar;
@@ -34,11 +38,16 @@ protected:
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
+        capturePool_ = std::make_unique<AudioCapturePool>();
+        captureThread_ = std::make_unique<CaptureThread>(*capturePool_);
+        captureThread_->startCapturing();
 
         // ThemeManager usually has default themes initialized
 
         // Create processor with owned services
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_,
+            *capturePool_, *captureThread_);
 
         // Initialize sidebar with ServiceContext using owned services
         ServiceContext context{*registry_, *themeManager_, *shaderRegistry_};
@@ -50,6 +59,11 @@ protected:
         // Reset in reverse order
         sidebar.reset();
         processor.reset();
+        
+        if (captureThread_)
+            captureThread_->stopCapturing();
+        captureThread_.reset();
+        capturePool_.reset();
 
         // Destroy services in reverse order
         memoryBudgetManager_.reset();

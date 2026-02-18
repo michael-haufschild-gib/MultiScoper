@@ -9,12 +9,12 @@ namespace oscil
 {
 
 OscilRGBAPicker::OscilRGBAPicker(IThemeService& themeService)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
 {
     // Create sliders for RGBA channels
     auto createSlider = [this](std::unique_ptr<OscilSlider>& slider)
     {
-        slider = std::make_unique<OscilSlider>(themeService_);
+        slider = std::make_unique<OscilSlider>(getThemeService());
         slider->setRange(0, 255);
         slider->setStep(1);
         slider->setDecimalPlaces(0);
@@ -43,7 +43,7 @@ OscilRGBAPicker::OscilRGBAPicker(IThemeService& themeService)
     createLabel(hexLabel_, "Hex:");
 
     // Create hex input
-    hexInput_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "");
+    hexInput_ = std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Text, "");
     hexInput_->setPlaceholder("#RRGGBBAA");
     hexInput_->onReturnPressed = [this]() { updateFromHex(); };
     addAndMakeVisible(*hexInput_);

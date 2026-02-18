@@ -83,7 +83,7 @@ public:
     /**
      * Get the editor component (may be null)
      */
-    juce::AudioProcessorEditor* getEditor() { return editor_.get(); }
+    juce::AudioProcessorEditor* getEditor() { return editor_; }
 
     // AudioPlayHead implementation
     juce::Optional<juce::AudioPlayHead::PositionInfo> getPosition() const override;
@@ -95,7 +95,9 @@ private:
     TestTransport& transport_;
 
     std::unique_ptr<OscilPluginProcessor> processor_;
-    std::unique_ptr<juce::AudioProcessorEditor> editor_;
+    // Editor is owned by editorWindow_ via setContentOwned()
+    // This is just an observer pointer for getEditor() access
+    juce::AudioProcessorEditor* editor_ = nullptr;
     std::unique_ptr<juce::DocumentWindow> editorWindow_;
 
     TestAudioGenerator audioGenerator_;

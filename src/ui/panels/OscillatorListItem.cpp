@@ -282,7 +282,7 @@ void OscillatorListItemComponent::resized()
     float topH = selected_ ? COMPACT_HEIGHT : getHeight();
     
     // nameLabel_ takes top 55%
-    nameLabel_->setBounds(textX, selected_ ? 0 : 0, textW, static_cast<int>(topH * 0.55f));
+    nameLabel_->setBounds(textX, 0, textW, static_cast<int>(topH * 0.55f));
     
     // trackLabel_ takes bottom 45%
     trackLabel_->setBounds(textX, nameLabel_->getBottom(), textW, static_cast<int>(topH * 0.45f));

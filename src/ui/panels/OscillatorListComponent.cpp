@@ -329,12 +329,12 @@ void OscillatorListComponent::oscillatorDragStarted(const OscillatorId& id)
 
     if (sourceComponent)
     {
-        // Create drag description using DynamicObject properly
-        auto* dragObj = new juce::DynamicObject();
+        // Create drag description using DynamicObject::Ptr for exception safety
+        juce::DynamicObject::Ptr dragObj(new juce::DynamicObject());
         dragObj->setProperty("type", "oscillator");
         dragObj->setProperty("id", id.id);
         dragObj->setProperty("index", sourceIndex);
-        juce::var dragDescription(dragObj);
+        juce::var dragDescription(dragObj.get());
 
         // Create snapshot for drag image
         juce::Image dragImage = sourceComponent->createComponentSnapshot(sourceComponent->getLocalBounds());

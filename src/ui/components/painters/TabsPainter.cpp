@@ -9,8 +9,8 @@ namespace oscil
 {
 
 // Constants replicated from OscilTabs.cpp/h
-static constexpr float kTabFontSize = 13.0f;
-static constexpr float kBadgeFontSize = 10.0f;
+static constexpr float TAB_FONT_SIZE = 13.0f;
+static constexpr float BADGE_FONT_SIZE = 10.0f;
 static constexpr int ICON_SIZE = 16;
 static constexpr int BADGE_SIZE = 18;
 static constexpr int TAB_PADDING_H = 16;
@@ -69,7 +69,7 @@ void TabsPainter::paintTab(juce::Graphics& g, OscilTabs& tabs, int index, juce::
     int contentWidth = 0;
 
     // Calculate total content width for centering
-    auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+    auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, tab.label, 0, 0);
     int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -173,7 +173,7 @@ void TabsPainter::paintBadge(juce::Graphics& g, OscilTabs& tabs, juce::Rectangle
     g.fillEllipse(bounds.toFloat());
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(kBadgeFontSize)).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(BADGE_FONT_SIZE)).boldened());
 
     juce::String text = count > 99 ? "99+" : juce::String(count);
     g.drawText(text, bounds, juce::Justification::centred);

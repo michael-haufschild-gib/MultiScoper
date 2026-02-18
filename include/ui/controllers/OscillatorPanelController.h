@@ -11,7 +11,7 @@
 #include "ui/layout/PaneComponent.h"
 #include "ui/layout/SidebarComponent.h"
 #include "ui/managers/DisplaySettingsManager.h"
-#include "rendering/GpuRenderCoordinator.h"
+#include "ui/managers/GpuRenderCoordinator.h"
 #include "core/ServiceContext.h"
 #include <atomic>
 #include <vector>
@@ -137,7 +137,7 @@ private:
     juce::WeakReference<DialogManager> dialogManager_;
 
     std::vector<std::unique_ptr<PaneComponent>> paneComponents_;
-    bool isUpdating_ = false; // Guard against recursive updates
+    std::atomic<bool> isUpdating_{false}; // Guard against recursive updates
     std::function<void()> layoutNeededCallback_;
     std::atomic<bool> refreshPending_{false}; // Debounce flag for async refresh coalescing
 

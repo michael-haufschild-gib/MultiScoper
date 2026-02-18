@@ -44,7 +44,7 @@ void OscilColorPicker::registerTestId()
 
 OscilColorPicker::~OscilColorPicker()
 {
-    stopTimer();
+    // ScopedAnimators handle completion on destruction
 }
 
 void OscilColorPicker::setColor(juce::Colour color, bool notify)
@@ -121,6 +121,10 @@ int OscilColorPicker::getPreferredHeight() const
 
 void OscilColorPicker::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     if (mode_ == Mode::Square)
         paintSquareMode(g);
     else
@@ -395,6 +399,10 @@ juce::Rectangle<int> OscilColorPicker::getHexInputBounds() const
 
 void OscilColorPicker::resized()
 {
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     if (showHexInput_)
         hexInput_->setBounds(getHexInputBounds());
 }
@@ -511,11 +519,6 @@ void OscilColorPicker::updateHexField()
 {
     juce::String hex = "#" + currentColor_.toDisplayString(showAlpha_);
     hexInput_->setText(hex, juce::dontSendNotification);
-}
-
-void OscilColorPicker::timerCallback()
-{
-    stopTimer();
 }
 
 } // namespace oscil

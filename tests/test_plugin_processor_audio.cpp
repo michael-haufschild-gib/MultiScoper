@@ -5,6 +5,8 @@
 
 #include <gtest/gtest.h>
 #include "plugin/PluginProcessor.h"
+#include "core/AudioCapturePool.h"
+#include "core/CaptureThread.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
@@ -23,6 +25,8 @@ protected:
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
+    std::unique_ptr<AudioCapturePool> capturePool_;
+    std::unique_ptr<CaptureThread> captureThread_;
     std::unique_ptr<OscilPluginProcessor> processor;
 
     void SetUp() override
@@ -31,13 +35,21 @@ protected:
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
+        capturePool_ = std::make_unique<AudioCapturePool>();
+        captureThread_ = std::make_unique<CaptureThread>(*capturePool_);
+        captureThread_->startCapturing();
         processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+            *registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_,
+            *capturePool_, *captureThread_);
     }
 
     void TearDown() override
     {
         processor.reset();
+        if (captureThread_)
+            captureThread_->stopCapturing();
+        captureThread_.reset();
+        capturePool_.reset();
         memoryBudgetManager_.reset();
         shaderRegistry_.reset();
         themeManager_.reset();
@@ -106,6 +118,8 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_PassThroughAudio)
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_CapturesAudio)
 {
+    // Use legacy capture path for immediate capture testing
+    processor->setUseLockFreeCapture(false);
     processor->prepareToPlay(44100.0, 512);
 
     // Generate a test buffer with known values
@@ -122,6 +136,8 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_CapturesAudio)
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_MetadataCaptured)
 {
+    // Use legacy capture path for immediate capture testing
+    processor->setUseLockFreeCapture(false);
     processor->prepareToPlay(44100.0, 512);
 
     auto buffer = generateTestBuffer(2, 512, 0.5f);
@@ -405,6 +421,8 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_DifferentChannelValues)
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_Sequential)
 {
+    // Use legacy capture path for immediate capture testing
+    processor->setUseLockFreeCapture(false);
     processor->prepareToPlay(44100.0, 256);
 
     // Process multiple blocks sequentially
@@ -418,4 +436,45 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_Sequential)
     // Verify capture buffer has accumulated samples
     auto captureBuffer = processor->getCaptureBuffer();
     EXPECT_GT(captureBuffer->getAvailableSamples(), 0u);
+}
+
+// Test lock-free capture path works end-to-end
+TEST_F(PluginProcessorAudioTest, ProcessBlock_LockFreeCaptureWorks)
+{
+    // DO NOT disable lock-free capture - this tests the production path
+    // processor->setUseLockFreeCapture(false); // Intentionally NOT called
+    processor->prepareToPlay(44100.0, 256);
+
+    // Verify lock-free is enabled
+    EXPECT_TRUE(processor->usesLockFreeCapture());
+    EXPECT_TRUE(processor->isLockFreePathReady());
+
+    // Get the lock-free buffer BEFORE processing (should be empty initially)
+    auto captureBuffer = processor->getCaptureBuffer();
+    ASSERT_NE(captureBuffer, nullptr);
+    size_t initialSamples = captureBuffer->getAvailableSamples();
+
+    // Process several audio blocks to ensure data flows through
+    for (int i = 0; i < 10; ++i)
+    {
+        auto buffer = generateTestBuffer(2, 256);
+        juce::MidiBuffer midiBuffer;
+        processor->processBlock(buffer, midiBuffer);
+    }
+
+    // Give CaptureThread time to process the data
+    // CaptureThread runs at ~100 ticks/sec (10ms interval)
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    // Verify capture buffer has accumulated samples
+    size_t finalSamples = captureBuffer->getAvailableSamples();
+    EXPECT_GT(finalSamples, initialSamples) << "Lock-free capture should have written data to SharedCaptureBuffer";
+
+    // Also verify we can read actual audio data
+    if (finalSamples > 0)
+    {
+        std::vector<float> readBuffer(256);
+        int samplesRead = captureBuffer->read(readBuffer.data(), static_cast<int>(readBuffer.size()), 0);
+        EXPECT_GT(samplesRead, 0) << "Should be able to read samples from lock-free buffer";
+    }
 }

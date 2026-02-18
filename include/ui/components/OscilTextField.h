@@ -7,12 +7,13 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -31,8 +32,7 @@ class OscilButton;
  * - APVTS support for Number variant
  */
 class OscilTextField : public ThemedComponent,
-                       public TestIdSupport,
-                       private juce::Timer
+                       public TestIdSupport
 {
 public:
     OscilTextField(IThemeService& themeService);
@@ -67,6 +67,7 @@ public:
     void setError(const juce::String& errorMessage);
     void clearError();
     bool hasError() const { return !errorMessage_.isEmpty(); }
+    juce::String getErrorMessage() const { return errorMessage_; }
 
     // State
     void setEnabled(bool enabled);
@@ -97,12 +98,12 @@ public:
 
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
+    void parentHierarchyChanged() override;
 
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
     void setupComponents();
     void updateEditorStyle();
     void validateAndUpdate();
@@ -146,8 +147,9 @@ private:
     Callbacks::ValidationCallback validator_;
 
     // Animation
-    SpringAnimation focusSpring_;
-    float focusAmount_ = 0.0f;
+    ScopedAnimator focusAnimator_;
+    float focusProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
 
     juce::Font cachedErrorFont_;
 

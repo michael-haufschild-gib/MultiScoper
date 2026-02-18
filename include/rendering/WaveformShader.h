@@ -15,6 +15,9 @@
 namespace oscil
 {
 
+// Forward declaration for VBO pooling
+class VertexBufferPool;
+
 /**
  * Information about a shader for UI display
  */
@@ -48,6 +51,22 @@ class WaveformShader
 {
 public:
     virtual ~WaveformShader() = default;
+
+    // ========================================================================
+    // VBO Pool Integration (for batched rendering)
+    // ========================================================================
+
+    /**
+     * Set the vertex buffer pool for batched geometry upload.
+     * When set, shaders should use the pool's VBO instead of their own.
+     * @param pool Pointer to pool, or nullptr to use shader's own VBO
+     */
+    void setVertexBufferPool(VertexBufferPool* pool) { vertexBufferPool_ = pool; }
+
+    /**
+     * Get the current vertex buffer pool.
+     */
+    [[nodiscard]] VertexBufferPool* getVertexBufferPool() const { return vertexBufferPool_; }
 
     // Shader identification
     [[nodiscard]] virtual juce::String getId() const = 0;
@@ -109,6 +128,9 @@ public:
 
 protected:
     WaveformShader() = default;
+
+    // VBO pool for batched rendering (nullptr = use shader's own VBO)
+    VertexBufferPool* vertexBufferPool_ = nullptr;
 
 #if OSCIL_ENABLE_OPENGL
     /**

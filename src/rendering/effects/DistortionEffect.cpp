@@ -4,6 +4,8 @@
 
 #include "rendering/effects/DistortionEffect.h"
 
+#include <cmath>
+
 #if OSCIL_ENABLE_OPENGL
 
 namespace oscil
@@ -66,6 +68,7 @@ bool DistortionEffect::compile(juce::OpenGLContext& context)
     textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     intensityLoc_ = shader_->getUniformIDFromName("intensity");
     frequencyLoc_ = shader_->getUniformIDFromName("frequency");
+    speedLoc_ = shader_->getUniformIDFromName("speed");
     timeLoc_ = shader_->getUniformIDFromName("time");
 
     compiled_ = true;
@@ -95,10 +98,25 @@ void DistortionEffect::apply(
     if (!compiled_ || !source || !destination)
         return;
 
-    // Update time
-    accumulatedTime_ += deltaTime * settings_.speed;
-    if (accumulatedTime_ > 1000.0f)
-        accumulatedTime_ = std::fmod(accumulatedTime_, 1000.0f);
+    // Save GL state for restoration (H24 FIX: also save blend function)
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
+    // Update time - guard against NaN/Inf from bad deltaTime values
+    if (std::isfinite(deltaTime) && deltaTime > 0.0f)
+    {
+        accumulatedTime_ += deltaTime * settings_.speed;
+        if (accumulatedTime_ > 1000.0f)
+            accumulatedTime_ = std::fmod(accumulatedTime_, 1000.0f);
+    }
+    // Ensure accumulatedTime_ is always valid
+    if (!std::isfinite(accumulatedTime_))
+        accumulatedTime_ = 0.0f;
 
     auto& ext = context.extensions;
 
@@ -109,13 +127,43 @@ void DistortionEffect::apply(
     shader_->use();
 
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_ * 0.05f);
-    ext.glUniform1f(frequencyLoc_, settings_.frequency);
-    ext.glUniform1f(timeLoc_, accumulatedTime_);
+
+    // H25 FIX: Add uniform location validation before use
+    if (textureLoc_ >= 0)
+        ext.glUniform1i(textureLoc_, 0);
+    if (intensityLoc_ >= 0)
+        ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_ * 0.05f);
+    if (frequencyLoc_ >= 0)
+        ext.glUniform1f(frequencyLoc_, settings_.frequency);
+    if (speedLoc_ >= 0)
+        ext.glUniform1f(speedLoc_, 1.0f);  // Speed already baked into accumulatedTime_
+    if (timeLoc_ >= 0)
+        ext.glUniform1f(timeLoc_, accumulatedTime_);
 
     pool.renderFullscreenQuad();
+
+    // Cleanup texture unit
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state (H24 FIX: also restore blend function)
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
+    if (blendWasEnabled)
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                           static_cast<GLenum>(blendDstRGB),
+                           static_cast<GLenum>(blendSrcAlpha),
+                           static_cast<GLenum>(blendDstAlpha));
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
 }
 
 } // namespace oscil

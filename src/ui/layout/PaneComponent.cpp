@@ -5,7 +5,6 @@
 #include "ui/layout/PaneComponent.h"
 #include "ui/theme/ThemeManager.h"
 #include "plugin/PluginProcessor.h"
-#include <fstream>
 
 namespace oscil
 {
@@ -50,6 +49,19 @@ PaneComponent::PaneComponent(OscilPluginProcessor& processor, ServiceContext& co
     addAndMakeVisible(*body_);
 }
 
+PaneComponent::~PaneComponent()
+{
+    // Clear header callbacks before members are destroyed to prevent
+    // accessing destroyed callback members during header_ destruction
+    if (header_)
+    {
+        header_->onNameChanged = nullptr;
+        header_->onCloseRequested = nullptr;
+        header_->onActionTriggered = nullptr;
+        header_->onDragStarted = nullptr;
+    }
+}
+
 void PaneComponent::setPaneIndex(int index)
 {
     paneIndex_ = index;
@@ -77,9 +89,6 @@ void PaneComponent::paint(juce::Graphics& g)
     // Only fill the pane background in software rendering mode.
 #if OSCIL_ENABLE_OPENGL
     bool gpuEnabled = processor_.getState().isGpuRenderingEnabled();
-    // #region agent log
-    { static int logCounter = 0; if (++logCounter % 30 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H12\",\"location\":\"PaneComponent.cpp:paint\",\"message\":\"Paint called\",\"data\":{\"gpuEnabled\":" << (gpuEnabled ? "true" : "false") << ",\"willFillBg\":" << (!gpuEnabled ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
-    // #endregion
     if (!gpuEnabled)
 #endif
     {
@@ -362,9 +371,6 @@ void PaneComponent::setGpuRenderingEnabled(bool enabled)
 {
     // Update opaque state: in GPU mode, OpenGL handles background (not opaque)
     // In CPU mode, we fill the background in paint() (opaque)
-    // #region agent log
-    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H16\",\"location\":\"PaneComponent.cpp:setGpuRenderingEnabled\",\"message\":\"Setting opaque state\",\"data\":{\"gpuEnabled\":" << (enabled ? "true" : "false") << ",\"setOpaqueTo\":" << (!enabled ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
-    // #endregion
     setOpaque(!enabled);
     repaint();
 }

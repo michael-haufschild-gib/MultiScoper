@@ -123,6 +123,27 @@ void OptionsSection::setupComponents()
     };
     addAndMakeVisible(*gpuRenderingToggle_);
 
+    // GPU compute toggle (Tier 4 - opt-in only, may cause issues with some hosts)
+    gpuComputeToggle_ = std::make_unique<OscilToggle>(themeService_, "GPU Compute (Experimental)", "sidebar_options_gpuComputeToggle");
+    gpuComputeToggle_->setValue(gpuComputeEnabled_, false);
+    gpuComputeToggle_->setEnabled(gpuComputeAvailable_);  // Disabled if not available
+    gpuComputeToggle_->onValueChanged = [this](bool value)
+    {
+        gpuComputeEnabled_ = value;
+        notifyGpuComputeChanged();
+    };
+    addAndMakeVisible(*gpuComputeToggle_);
+
+    // GPU compute warning label
+    gpuComputeWarningLabel_ = std::make_unique<juce::Label>();
+    gpuComputeWarningLabel_->setText("May cause issues with some hosts", juce::dontSendNotification);
+    gpuComputeWarningLabel_->setJustificationType(juce::Justification::centredLeft);
+    gpuComputeWarningLabel_->setColour(juce::Label::textColourId, juce::Colours::orange.withAlpha(0.7f));
+    auto font = gpuComputeWarningLabel_->getFont();
+    font.setHeight(10.0f);
+    gpuComputeWarningLabel_->setFont(font);
+    addAndMakeVisible(*gpuComputeWarningLabel_);
+
     // Capture quality section label
     qualityLabel_ = std::make_unique<juce::Label>();
     qualityLabel_->setText("CAPTURE QUALITY", juce::dontSendNotification);
@@ -223,7 +244,18 @@ void OptionsSection::resized()
     y += LABEL_HEIGHT + SPACING_MEDIUM;
 
     gpuRenderingToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
-    y += ROW_HEIGHT + SPACING_LARGE;
+    y += ROW_HEIGHT + SPACING_MEDIUM;
+
+    // GPU Compute toggle and warning (only visible if compute is available)
+    gpuComputeToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
+    y += ROW_HEIGHT;
+    
+    if (gpuComputeWarningLabel_ != nullptr && gpuComputeWarningLabel_->isVisible())
+    {
+        gpuComputeWarningLabel_->setBounds(bounds.getX() + 24, y, bounds.getWidth() - 24, 14);
+        y += 14;
+    }
+    y += SPACING_LARGE;
 
     // Capture quality section label and controls
     qualityLabel_->setBounds(bounds.getX(), y, bounds.getWidth(), LABEL_HEIGHT);
@@ -394,6 +426,36 @@ void OptionsSection::setGpuRenderingEnabled(bool enabled)
 void OptionsSection::notifyGpuRenderingChanged()
 {
     listeners_.call([this](Listener& l) { l.gpuRenderingChanged(gpuRenderingEnabled_); });
+}
+
+void OptionsSection::setGpuComputeEnabled(bool enabled)
+{
+    gpuComputeEnabled_ = enabled;
+    if (gpuComputeToggle_ != nullptr)
+        gpuComputeToggle_->setValue(enabled, false);
+}
+
+void OptionsSection::setGpuComputeAvailable(bool available)
+{
+    gpuComputeAvailable_ = available;
+    if (gpuComputeToggle_ != nullptr)
+    {
+        gpuComputeToggle_->setEnabled(available);
+        if (!available)
+        {
+            gpuComputeToggle_->setValue(false, false);
+            gpuComputeEnabled_ = false;
+        }
+    }
+    if (gpuComputeWarningLabel_ != nullptr)
+    {
+        gpuComputeWarningLabel_->setVisible(available);
+    }
+}
+
+void OptionsSection::notifyGpuComputeChanged()
+{
+    listeners_.call([this](Listener& l) { l.gpuComputeChanged(gpuComputeEnabled_); });
 }
 
 void OptionsSection::setQualityPreset(QualityPreset preset)

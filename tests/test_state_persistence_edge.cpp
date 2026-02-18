@@ -125,27 +125,49 @@ TEST_F(StatePersistenceEdgeTest, ColumnLayoutClampingHigh)
     EXPECT_EQ(static_cast<int>(testState.getColumnLayout()), 3);
 }
 
-// Test: Gain dB extreme values
+// Test: Gain dB extreme values are clamped to valid range [-60, 12]
 TEST_F(StatePersistenceEdgeTest, GainDbExtremeValues)
 {
+    // Values above max should be clamped to 12dB
     state->setGainDb(100.0f);
-    EXPECT_FLOAT_EQ(state->getGainDb(), 100.0f);
+    EXPECT_FLOAT_EQ(state->getGainDb(), 12.0f);
 
+    // Values below min should be clamped to -60dB
     state->setGainDb(-100.0f);
-    EXPECT_FLOAT_EQ(state->getGainDb(), -100.0f);
+    EXPECT_FLOAT_EQ(state->getGainDb(), -60.0f);
+
+    // Valid values within range should be stored as-is
+    state->setGainDb(0.0f);
+    EXPECT_FLOAT_EQ(state->getGainDb(), 0.0f);
+
+    state->setGainDb(-30.0f);
+    EXPECT_FLOAT_EQ(state->getGainDb(), -30.0f);
+
+    state->setGainDb(12.0f);
+    EXPECT_FLOAT_EQ(state->getGainDb(), 12.0f);
 }
 
-// Test: Sidebar width extreme values
+// Test: Sidebar width extreme values are clamped to valid range [50, 500]
 TEST_F(StatePersistenceEdgeTest, SidebarWidthExtremeValues)
 {
+    // Values below min should be clamped to 50
     state->setSidebarWidth(0);
-    EXPECT_EQ(state->getSidebarWidth(), 0);
+    EXPECT_EQ(state->getSidebarWidth(), 50);
 
+    // Values above max should be clamped to 500
     state->setSidebarWidth(10000);
-    EXPECT_EQ(state->getSidebarWidth(), 10000);
+    EXPECT_EQ(state->getSidebarWidth(), 500);
 
+    // Negative values should be clamped to min
     state->setSidebarWidth(-100);
-    EXPECT_EQ(state->getSidebarWidth(), -100);
+    EXPECT_EQ(state->getSidebarWidth(), 50);
+
+    // Valid values within range should be stored as-is
+    state->setSidebarWidth(300);
+    EXPECT_EQ(state->getSidebarWidth(), 300);
+
+    state->setSidebarWidth(500);
+    EXPECT_EQ(state->getSidebarWidth(), 500);
 }
 
 // =============================================================================

@@ -6,7 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/IThemeService.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilTextField.h"
 #include <functional>
@@ -18,7 +18,7 @@ namespace oscil
  * Color picker component with RGBA sliders and hex input.
  * Supports both #RRGGBB and #RRGGBBAA hex formats.
  */
-class OscilRGBAPicker : public juce::Component
+class OscilRGBAPicker : public ThemedComponent
 {
 public:
     explicit OscilRGBAPicker(IThemeService& themeService);
@@ -75,7 +75,6 @@ private:
     void updateControls();
     void notifyColourChanged();
 
-    IThemeService& themeService_;
     juce::Colour currentColour_{ juce::Colours::green };
 
     // RGBA Sliders

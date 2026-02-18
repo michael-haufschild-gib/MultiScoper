@@ -269,27 +269,55 @@ bool BloomEffect::compile(juce::OpenGLContext& context)
 {
     if (compiled_) return true;
 
+    // Helper lambda to clean up on failure
+    auto cleanupOnFailure = [this]() {
+        prefilterShader_.reset();
+        downsampleShader_.reset();
+        upsampleShader_.reset();
+        combineShader_.reset();
+    };
+
     // 1. Prefilter
     prefilterShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*prefilterShader_, prefilterFragmentShader)) return false;
+    if (!compileEffectShader(*prefilterShader_, prefilterFragmentShader))
+    {
+        DBG("BloomEffect: Failed to compile prefilter shader");
+        cleanupOnFailure();
+        return false;
+    }
     prefilterThreshLoc_ = prefilterShader_->getUniformIDFromName("threshold");
     prefilterSoftKneeLoc_ = prefilterShader_->getUniformIDFromName("softKnee");
     prefilterResLoc_ = prefilterShader_->getUniformIDFromName("srcResolution");
 
     // 2. Downsample
     downsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*downsampleShader_, downsampleFragmentShader)) return false;
+    if (!compileEffectShader(*downsampleShader_, downsampleFragmentShader))
+    {
+        DBG("BloomEffect: Failed to compile downsample shader");
+        cleanupOnFailure();
+        return false;
+    }
     downsampleResLoc_ = downsampleShader_->getUniformIDFromName("srcResolution");
 
     // 3. Upsample
     upsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*upsampleShader_, upsampleFragmentShader)) return false;
+    if (!compileEffectShader(*upsampleShader_, upsampleFragmentShader))
+    {
+        DBG("BloomEffect: Failed to compile upsample shader");
+        cleanupOnFailure();
+        return false;
+    }
     upsampleFilterRadiusLoc_ = upsampleShader_->getUniformIDFromName("filterRadius");
     upsampleTexelSizeLoc_ = upsampleShader_->getUniformIDFromName("texelSize");
 
     // 4. Combine
     combineShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*combineShader_, combineFragmentShader)) return false;
+    if (!compileEffectShader(*combineShader_, combineFragmentShader))
+    {
+        DBG("BloomEffect: Failed to compile combine shader");
+        cleanupOnFailure();
+        return false;
+    }
     combineOriginalLoc_ = combineShader_->getUniformIDFromName("originalTexture");
     combineBloomLoc_ = combineShader_->getUniformIDFromName("bloomTexture");
     combineIntensityLoc_ = combineShader_->getUniformIDFromName("intensity");
@@ -328,31 +356,67 @@ void BloomEffect::apply(
     juce::ignoreUnused(deltaTime);
     if (!compiled_ || !source || !destination) return;
 
+    // Save GL state for restoration at end
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
+    // Helper to restore state on all exit paths
+    auto restoreState = [=]() {
+        if (depthTestWasEnabled)
+            glEnable(GL_DEPTH_TEST);
+        else
+            glDisable(GL_DEPTH_TEST);
+
+        if (blendWasEnabled)
+        {
+            glEnable(GL_BLEND);
+            glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                               static_cast<GLenum>(blendDstRGB),
+                               static_cast<GLenum>(blendSrcAlpha),
+                               static_cast<GLenum>(blendDstAlpha));
+        }
+        else
+        {
+            glDisable(GL_BLEND);
+        }
+    };
+
     // Early-out if bloom is effectively disabled (intensity ~0)
     // Use combine shader with zero intensity to blit source to destination
     if (settings_.intensity < 0.001f)
     {
         auto& ext = context.extensions;
-        
+
         destination->bind();
         combineShader_->use();
-        
+
         // Bind source as both original and bloom (bloom will be zero-weighted)
         source->bindTexture(0);
-        ext.glUniform1i(combineOriginalLoc_, 0);
-        
+        // H25 fix: validate uniform locations before use
+        if (combineOriginalLoc_ >= 0)
+            ext.glUniform1i(combineOriginalLoc_, 0);
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, source->colorTexture);  // Use source as dummy bloom
-        ext.glUniform1i(combineBloomLoc_, 1);
-        ext.glUniform1f(combineIntensityLoc_, 0.0f);  // Zero bloom contribution
-        
+        if (combineBloomLoc_ >= 0)
+            ext.glUniform1i(combineBloomLoc_, 1);
+        if (combineIntensityLoc_ >= 0)
+            ext.glUniform1f(combineIntensityLoc_, 0.0f);  // Zero bloom contribution
+
         pool.renderFullscreenQuad();
-        
+
         // Cleanup
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE0);
         destination->unbind();
+
+        restoreState();
         return;
     }
 
@@ -362,19 +426,32 @@ void BloomEffect::apply(
 
     if (w != lastWidth_ || h != lastHeight_)
     {
+        bool allMipsCreated = true;
         for (int i = 0; i < kMaxMipLevels; ++i)
         {
             // Mip 0 is half res, Mip 1 is quarter, etc.
             // Use shift to divide by 2^(i+1)
             int mipW = std::max(1, w >> (i + 1));
             int mipH = std::max(1, h >> (i + 1));
-            
+
             if (mipChain_[static_cast<size_t>(i)]->isValid())
                 mipChain_[static_cast<size_t>(i)]->destroy(context);
-            
+
             // Use Linear/Clamp for all mips (default in Framebuffer::create)
-            mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false);
+            if (!mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false))
+            {
+                DBG("BloomEffect: Failed to create mip level " << i << " (" << mipW << "x" << mipH << ")");
+                allMipsCreated = false;
+            }
         }
+
+        if (!allMipsCreated)
+        {
+            DBG("BloomEffect: Mip chain creation incomplete, bloom will be disabled");
+            restoreState();
+            return;
+        }
+
         lastWidth_ = w;
         lastHeight_ = h;
     }
@@ -389,9 +466,13 @@ void BloomEffect::apply(
     mipChain_[0]->bind();
     prefilterShader_->use();
     source->bindTexture(0);
-    ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
-    ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
-    ext.glUniform2f(prefilterResLoc_, (float)source->width, (float)source->height);
+    // H25 fix: validate uniform locations before use
+    if (prefilterThreshLoc_ >= 0)
+        ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
+    if (prefilterSoftKneeLoc_ >= 0)
+        ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
+    if (prefilterResLoc_ >= 0)
+        ext.glUniform2f(prefilterResLoc_, (float)source->width, (float)source->height);
     pool.renderFullscreenQuad();
     mipChain_[0]->unbind();
 
@@ -401,15 +482,32 @@ void BloomEffect::apply(
     downsampleShader_->use();
     for (int i = 0; i < kMaxMipLevels - 1; ++i)
     {
-        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
-        Framebuffer* dst = mipChain_[static_cast<size_t>(i)+1].get();
+        // H23 FIX: Bounds check to prevent out-of-range access
+        size_t srcIdx = static_cast<size_t>(i);
+        size_t dstIdx = static_cast<size_t>(i) + 1;
+        if (srcIdx >= mipChain_.size() || dstIdx >= mipChain_.size())
+        {
+            juce::Logger::writeToLog("BloomEffect: Mip chain bounds exceeded at index " + juce::String(i));
+            break;
+        }
+
+        Framebuffer* src = mipChain_[srcIdx].get();
+        Framebuffer* dst = mipChain_[dstIdx].get();
+
+        // Validate FBOs before use
+        if (!src || !src->isValid() || !dst || !dst->isValid())
+        {
+            juce::Logger::writeToLog("BloomEffect: Invalid FBO in downsample chain at index " + juce::String(i));
+            continue;
+        }
 
         dst->bind();
         src->bindTexture(0);
-        
+
         // Pass resolution of SOURCE for the dual filter offset calculations
-        ext.glUniform2f(downsampleResLoc_, (float)src->width, (float)src->height);
-        
+        if (downsampleResLoc_ >= 0)
+            ext.glUniform2f(downsampleResLoc_, (float)src->width, (float)src->height);
+
         pool.renderFullscreenQuad();
         dst->unbind();
     }
@@ -422,19 +520,37 @@ void BloomEffect::apply(
     glBlendFunc(GL_ONE, GL_ONE);
 
     upsampleShader_->use();
-    ext.glUniform1f(upsampleFilterRadiusLoc_, settings_.spread); // Controls tent radius
+    if (upsampleFilterRadiusLoc_ >= 0)
+        ext.glUniform1f(upsampleFilterRadiusLoc_, settings_.spread); // Controls tent radius
 
     for (int i = kMaxMipLevels - 1; i > 0; --i)
     {
-        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
-        Framebuffer* dst = mipChain_[static_cast<size_t>(i)-1].get();
+        // H23 FIX: Bounds check to prevent out-of-range access
+        size_t srcIdx = static_cast<size_t>(i);
+        size_t dstIdx = static_cast<size_t>(i) - 1;
+        if (srcIdx >= mipChain_.size() || dstIdx >= mipChain_.size())
+        {
+            juce::Logger::writeToLog("BloomEffect: Mip chain bounds exceeded at index " + juce::String(i));
+            break;
+        }
+
+        Framebuffer* src = mipChain_[srcIdx].get();
+        Framebuffer* dst = mipChain_[dstIdx].get();
+
+        // Validate FBOs before use
+        if (!src || !src->isValid() || !dst || !dst->isValid())
+        {
+            juce::Logger::writeToLog("BloomEffect: Invalid FBO in upsample chain at index " + juce::String(i));
+            continue;
+        }
 
         dst->bind();
         src->bindTexture(0);
-        
+
         // Pass texel size of the SOURCE (the smaller mip we are upsampling from)
         // This ensures the filter kernel size is relative to the source pixels
-        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float)src->width, 1.0f / (float)src->height);
+        if (upsampleTexelSizeLoc_ >= 0)
+            ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float)src->width, 1.0f / (float)src->height);
 
         pool.renderFullscreenQuad();
         dst->unbind();
@@ -450,23 +566,30 @@ void BloomEffect::apply(
     combineShader_->use();
 
     source->bindTexture(0);
-    ext.glUniform1i(combineOriginalLoc_, 0);
+    // H25 fix: validate uniform locations before use
+    if (combineOriginalLoc_ >= 0)
+        ext.glUniform1i(combineOriginalLoc_, 0);
 
     // Mip 0 now contains the accumulated bloom from all levels
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, mipChain_[0]->colorTexture);
-    ext.glUniform1i(combineBloomLoc_, 1);
+    if (combineBloomLoc_ >= 0)
+        ext.glUniform1i(combineBloomLoc_, 1);
 
-    ext.glUniform1f(combineIntensityLoc_, settings_.intensity);
+    if (combineIntensityLoc_ >= 0)
+        ext.glUniform1f(combineIntensityLoc_, settings_.intensity);
 
     pool.renderFullscreenQuad();
 
-    // Cleanup
+    // Cleanup texture units
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state
+    restoreState();
 }
 
 } // namespace oscil

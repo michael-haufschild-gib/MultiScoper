@@ -281,8 +281,10 @@ void ThemeManager::flushPendingSaves()
         for (const auto& [path, content] : filesToWrite)
         {
             juce::File file(path);
-            file.getParentDirectory().createDirectory();
-            file.replaceWithText(content);
+            if (!file.getParentDirectory().createDirectory())
+                juce::Logger::writeToLog("ThemeManager: Failed to create directory for: " + path);
+            if (!file.replaceWithText(content))
+                juce::Logger::writeToLog("ThemeManager: Failed to write theme file: " + path);
         }
     });
 }
@@ -449,7 +451,7 @@ juce::String ThemeManager::exportTheme(const juce::String& name) const
 juce::File ThemeManager::getThemesDirectory() const
 {
     auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    return appDataDir.getChildFile("Oscil").getChildFile("themes");
+    return appDataDir.getChildFile("MultiScoper").getChildFile("themes");
 }
 
 void ThemeManager::loadThemes()

@@ -87,10 +87,10 @@ void TestTrack::showEditor()
     if (editor_ != nullptr)
         return;
 
-    // Create editor
-    editor_.reset(processor_->createEditor());
+    // Create editor - window will take ownership
+    auto* newEditor = processor_->createEditor();
 
-    if (editor_ != nullptr)
+    if (newEditor != nullptr)
     {
         // Create window to host the editor
         editorWindow_ = std::make_unique<juce::DocumentWindow>(
@@ -99,16 +99,15 @@ void TestTrack::showEditor()
             juce::DocumentWindow::allButtons);
 
         editorWindow_->setUsingNativeTitleBar(true);
-        editorWindow_->setContentOwned(editor_.release(), true);
+        editorWindow_->setContentOwned(newEditor, true);  // Window takes ownership
         editorWindow_->setResizable(true, false);
         editorWindow_->centreWithSize(
             editorWindow_->getWidth(),
             editorWindow_->getHeight());
         editorWindow_->setVisible(true);
 
-        // Get editor back from window
-        editor_.reset(static_cast<juce::AudioProcessorEditor*>(
-            editorWindow_->getContentComponent()));
+        // Store observer pointer (window owns the editor)
+        editor_ = newEditor;
     }
 }
 
@@ -117,10 +116,9 @@ void TestTrack::hideEditor()
     if (editorWindow_ != nullptr)
     {
         editorWindow_->setVisible(false);
-        editor_.release(); // Window owns it
-        editorWindow_.reset();
+        editorWindow_.reset();  // This deletes the editor via setContentOwned
     }
-    editor_.reset();
+    editor_ = nullptr;  // Clear observer pointer
 }
 
 bool TestTrack::isEditorVisible() const

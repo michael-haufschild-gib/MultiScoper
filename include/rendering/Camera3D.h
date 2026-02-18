@@ -36,9 +36,9 @@ struct Matrix4
     }
 
     float& operator()(int row, int col) { return m[static_cast<size_t>(col * 4 + row)]; }
-    float operator()(int row, int col) const { return m[static_cast<size_t>(col * 4 + row)]; }
+    float operator()(int row, int col) const noexcept { return m[static_cast<size_t>(col * 4 + row)]; }
 
-    const float* data() const { return m.data(); }
+    const float* data() const noexcept { return m.data(); }
 
     Matrix4 operator*(const Matrix4& other) const
     {
@@ -194,24 +194,24 @@ struct Vec3
     Vec3() = default;
     Vec3(float x_, float y_, float z_) : x(x_), y(y_), z(z_) {}
 
-    Vec3 operator+(const Vec3& v) const { return {x + v.x, y + v.y, z + v.z}; }
-    Vec3 operator-(const Vec3& v) const { return {x - v.x, y - v.y, z - v.z}; }
-    Vec3 operator*(float s) const { return {x * s, y * s, z * s}; }
+    Vec3 operator+(const Vec3& v) const noexcept { return {x + v.x, y + v.y, z + v.z}; }
+    Vec3 operator-(const Vec3& v) const noexcept { return {x - v.x, y - v.y, z - v.z}; }
+    Vec3 operator*(float s) const noexcept { return {x * s, y * s, z * s}; }
 
-    float length() const { return std::sqrt(x*x + y*y + z*z); }
+    float length() const noexcept { return std::sqrt(x*x + y*y + z*z); }
 
-    Vec3 normalized() const
+    Vec3 normalized() const noexcept
     {
         float len = length();
         return len > 0 ? Vec3{x/len, y/len, z/len} : Vec3{};
     }
 
-    static float dot(const Vec3& a, const Vec3& b)
+    static float dot(const Vec3& a, const Vec3& b) noexcept
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
-    static Vec3 cross(const Vec3& a, const Vec3& b)
+    static Vec3 cross(const Vec3& a, const Vec3& b) noexcept
     {
         return {
             a.y * b.z - a.z * b.y,

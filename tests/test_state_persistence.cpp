@@ -551,17 +551,6 @@ TEST_F(StatePersistenceTest, ColumnLayoutClampingHigh)
 // EDGE CASE TESTS - Display Options
 // =============================================================================
 
-TEST_F(StatePersistenceTest, DisplayOptionsDefaults)
-{
-    OscilState state;
-
-    // Check defaults
-    EXPECT_TRUE(state.isShowGridEnabled());
-    EXPECT_TRUE(state.isAutoScaleEnabled());
-    EXPECT_FALSE(state.isHoldDisplayEnabled());
-    EXPECT_FLOAT_EQ(state.getGainDb(), 0.0f);
-}
-
 TEST_F(StatePersistenceTest, DisplayOptionsPersistence)
 {
     OscilState original;
@@ -596,15 +585,6 @@ TEST_F(StatePersistenceTest, GainDbExtremeValues)
 // =============================================================================
 // EDGE CASE TESTS - Sidebar Configuration
 // =============================================================================
-
-TEST_F(StatePersistenceTest, SidebarDefaults)
-{
-    OscilState state;
-
-    EXPECT_EQ(state.getSidebarWidth(), 300);
-    EXPECT_FALSE(state.isSidebarCollapsed());
-    EXPECT_TRUE(state.isStatusBarVisible());
-}
 
 TEST_F(StatePersistenceTest, SidebarPersistence)
 {

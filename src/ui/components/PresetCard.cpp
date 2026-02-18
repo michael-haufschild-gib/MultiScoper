@@ -3,17 +3,19 @@
 */
 
 #include "ui/components/PresetCard.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
 
 PresetCard::PresetCard(IThemeService& themeService, const juce::String& testId)
     : ThemedComponent(themeService)
-    , hoverSpring_(SpringPresets::snappy())
-    , selectSpring_(SpringPresets::snappy())
 {
     setSize(CARD_WIDTH, CARD_HEIGHT);
     setWantsKeyboardFocus(true);
+
+    currentHoverValue_ = 0.0f;
+    currentSelectValue_ = 0.0f;
 
     if (testId.isNotEmpty())
     {
@@ -23,7 +25,16 @@ PresetCard::PresetCard(IThemeService& themeService, const juce::String& testId)
 
 PresetCard::~PresetCard()
 {
-    stopTimer();
+    // ScopedAnimators handle completion on destruction
+}
+
+void PresetCard::parentHierarchyChanged()
+{
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void PresetCard::setPreset(const VisualPreset& preset)
@@ -37,10 +48,29 @@ void PresetCard::setSelected(bool selected)
     if (selected_ != selected)
     {
         selected_ = selected;
-        selectSpring_.setTarget(selected ? 1.0f : 0.0f);
-        if (!isTimerRunning())
-            startTimerHz(60);
-        repaint();
+
+        float target = selected ? 1.0f : 0.0f;
+        if (animService_ && OscilAnimationService::shouldAnimate())
+        {
+            float startVal = currentSelectValue_;
+            auto safeThis = juce::Component::SafePointer<PresetCard>(this);
+            selectAnimator_.set(animService_->createValueAnimation(
+                AnimationPresets::SNAPPY_DURATION_MS,
+                [safeThis, startVal, target](float v) {
+                    if (safeThis)
+                    {
+                        safeThis->currentSelectValue_ = juce::jmap(v, startVal, target);
+                        safeThis->repaint();
+                    }
+                },
+                juce::Easings::createEaseOut()));
+            selectAnimator_.start();
+        }
+        else
+        {
+            currentSelectValue_ = target;
+            repaint();
+        }
     }
 }
 
@@ -60,12 +90,12 @@ void PresetCard::paint(juce::Graphics& g)
     auto thumbnailBounds = bounds.removeFromTop(THUMBNAIL_HEIGHT);
     auto nameBounds = bounds;
 
-    float hoverValue = hoverSpring_.position;
+    float hoverValue = currentHoverValue_;
 
     auto& theme = getTheme();
 
     // Background with selection state
-    float selectValue = selectSpring_.position;
+    float selectValue = currentSelectValue_;
     auto bgColour = theme.backgroundPrimary.interpolatedWith(theme.controlActive.withAlpha(0.2f), selectValue);
 
     // Draw card background
@@ -255,7 +285,7 @@ void PresetCard::paintSystemBadge(juce::Graphics& g, juce::Rectangle<int> bounds
 void PresetCard::paintOverlay(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     auto& theme = getTheme();
-    float opacity = hoverSpring_.position;
+    float opacity = currentHoverValue_;
 
     // Semi-transparent overlay
     g.setColour(theme.backgroundPrimary.withAlpha(0.8f * opacity));
@@ -468,7 +498,7 @@ void PresetCard::mouseDown(const juce::MouseEvent& e)
     }
 
     // Check for action button click
-    if (isHovered_ && hoverSpring_.position > 0.5f)
+    if (isHovered_ && currentHoverValue_ > 0.5f)
     {
         int actionIndex = getHoveredActionIndex(e.getPosition());
         if (actionIndex >= 0)
@@ -508,20 +538,55 @@ void PresetCard::mouseDoubleClick(const juce::MouseEvent& e)
 void PresetCard::mouseEnter(const juce::MouseEvent& /*e*/)
 {
     isHovered_ = true;
-    hoverSpring_.setTarget(1.0f);
-    if (!isTimerRunning())
-        startTimerHz(60);
-    repaint();
+
+    if (animService_ && OscilAnimationService::shouldAnimate())
+    {
+        auto safeThis = juce::Component::SafePointer<PresetCard>(this);
+        hoverAnimator_.set(animService_->createHoverAnimation(
+            [safeThis](float v) {
+                if (safeThis)
+                {
+                    safeThis->currentHoverValue_ = v;
+                    safeThis->repaint();
+                }
+            }));
+        hoverAnimator_.start();
+    }
+    else
+    {
+        currentHoverValue_ = 1.0f;
+        repaint();
+    }
 }
 
 void PresetCard::mouseExit(const juce::MouseEvent& /*e*/)
 {
     isHovered_ = false;
     hoveredActionIndex_ = -1;
-    hoverSpring_.setTarget(0.0f);
-    if (!isTimerRunning())
-        startTimerHz(60);
-    repaint();
+
+    if (animService_ && OscilAnimationService::shouldAnimate())
+    {
+        // Capture start value to interpolate from current to 0
+        float startValue = currentHoverValue_;
+        auto safeThis = juce::Component::SafePointer<PresetCard>(this);
+        hoverAnimator_.set(animService_->createValueAnimation(
+            AnimationPresets::HOVER_DURATION_MS,
+            [safeThis, startValue](float progress) {
+                if (safeThis)
+                {
+                    // Interpolate from startValue to 0 as progress goes 0→1
+                    safeThis->currentHoverValue_ = startValue * (1.0f - progress);
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseOut()));
+        hoverAnimator_.start();
+    }
+    else
+    {
+        currentHoverValue_ = 0.0f;
+        repaint();
+    }
 }
 
 void PresetCard::mouseMove(const juce::MouseEvent& e)
@@ -532,30 +597,6 @@ void PresetCard::mouseMove(const juce::MouseEvent& e)
         hoveredActionIndex_ = newHoveredAction;
         repaint();
     }
-}
-
-void PresetCard::timerCallback()
-{
-    updateAnimations();
-}
-
-void PresetCard::updateAnimations()
-{
-    bool needsRepaint = false;
-
-    float deltaTime = 1.0f / 60.0f; // 60 FPS
-    hoverSpring_.update(deltaTime);
-    selectSpring_.update(deltaTime);
-
-    if (hoverSpring_.needsUpdate() || selectSpring_.needsUpdate())
-        needsRepaint = true;
-
-    if (needsRepaint)
-        repaint();
-
-    // Stop timer when animations complete
-    if (hoverSpring_.isSettled() && selectSpring_.isSettled())
-        stopTimer();
 }
 
 void PresetCard::registerTestId()

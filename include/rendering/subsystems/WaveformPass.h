@@ -23,6 +23,9 @@
 namespace oscil
 {
 
+// Forward declaration for VBO pooling
+class VertexBufferPool;
+
 class WaveformPass
 {
 public:
@@ -46,6 +49,35 @@ public:
     void renderGrid(const WaveformRenderData& data);
     void renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime);
 
+    // ========================================================================
+    // Shader State Caching (reduces redundant shader binds)
+    // ========================================================================
+
+    /**
+     * Reset shader cache at the start of a new batch/frame.
+     * Call this before beginning a batched render pass.
+     */
+    void resetShaderCache();
+
+    /**
+     * Bind a shader only if it's different from the currently bound one.
+     * @param shaderType The shader type to bind
+     * @return Pointer to the bound shader, or nullptr if binding failed
+     */
+    WaveformShader* bindShaderIfNeeded(ShaderType shaderType);
+
+    /**
+     * Get the currently bound shader type.
+     */
+    [[nodiscard]] ShaderType getCurrentShaderType() const { return currentBoundShaderType_; }
+
+    /**
+     * Set the vertex buffer pool for batched rendering.
+     * Pass nullptr to disable pooled rendering.
+     * @param pool Pointer to the pool, or nullptr
+     */
+    void setVertexBufferPool(VertexBufferPool* pool) { currentVertexBufferPool_ = pool; }
+
 private:
     void setupCamera2D();
     void setupCamera3D(const Settings3D& settings, float deltaTime);
@@ -65,6 +97,17 @@ private:
     int currentWidth_ = 0;
     int currentHeight_ = 0;
     bool initialized_ = false;
+
+    // ========================================================================
+    // Shader State Cache (avoids redundant shader binds)
+    // ========================================================================
+    
+    WaveformShader* currentBoundShader_ = nullptr;
+    ShaderType currentBoundShaderType_ = ShaderType::Basic2D;
+    bool shaderCacheValid_ = false;
+
+    // Vertex buffer pool for batched geometry (set during flushBatch)
+    VertexBufferPool* currentVertexBufferPool_ = nullptr;
 };
 
 } // namespace oscil

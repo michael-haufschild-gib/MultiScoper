@@ -109,7 +109,7 @@ TEST_F(InstanceRegistryLifecycleAdvancedTest, ShutdownPreventsCallbacks)
     bool callbackCalled = false;
 
     // Create a listener
-    class MockListener : public InstanceRegistryListener {
+    class MockListener : public IInstanceRegistryListener {
     public:
         bool* called;
         MockListener(bool* c) : called(c) {}

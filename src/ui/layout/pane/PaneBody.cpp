@@ -6,7 +6,6 @@
 #include "plugin/PluginProcessor.h"
 #include "rendering/ShaderRegistry.h"
 #include "core/InstanceRegistry.h"
-#include <fstream>
 
 namespace oscil
 {
@@ -47,9 +46,6 @@ void PaneBody::paint(juce::Graphics& g)
     // In GPU mode, the OpenGL renderer handles the background.
     // Only fill if GPU rendering is disabled to avoid occluding the GL content.
     bool gpuEnabled = processor_.getState().isGpuRenderingEnabled();
-    // #region agent log
-    { static int logCounter = 0; if (++logCounter % 30 == 1) { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H12\",\"location\":\"PaneBody.cpp:paint\",\"message\":\"Paint called\",\"data\":{\"gpuEnabled\":" << (gpuEnabled ? "true" : "false") << ",\"willFillBg\":" << (!gpuEnabled ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); } }
-    // #endregion
     if (gpuEnabled)
         return;
 #endif

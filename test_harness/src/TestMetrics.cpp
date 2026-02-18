@@ -1,8 +1,10 @@
 /*
     Oscil Test Harness - Performance Metrics Implementation
+    Extended with GPU profiling, thread metrics, and component tracking.
 */
 
 #include "TestMetrics.h"
+#include "tools/PerformanceProfiler.h"
 #include <algorithm>
 #include <numeric>
 
@@ -404,6 +406,222 @@ double TestMetrics::measureCpuUsage()
 #else
     return 0.0;
 #endif
+}
+
+// ============================================================================
+// Extended Profiling Implementation
+// ============================================================================
+
+void TestMetrics::startProfiling()
+{
+    if (profiling_.load())
+        return;
+    
+    profilingStartTime_ = juce::Time::currentTimeMillis();
+    
+    // Start the core profiler
+    oscil::PerformanceProfiler::getInstance().startProfiling();
+    
+    // Also start regular collection if not already running
+    if (!collecting_.load())
+    {
+        startCollection(100);
+    }
+    
+    profiling_.store(true);
+}
+
+ProfilingResult TestMetrics::stopProfiling()
+{
+    profiling_.store(false);
+    
+    ProfilingResult result;
+    result.startTimestamp = profilingStartTime_;
+    result.endTimestamp = juce::Time::currentTimeMillis();
+    result.durationMs = result.endTimestamp - result.startTimestamp;
+    
+    // Get stats from this class
+    result.stats = getStats();
+    
+    // Get GPU metrics from PerformanceProfiler
+    result.gpuMetrics = getGpuMetrics();
+    
+    // Get thread metrics
+    result.audioThread = getAudioThreadMetrics();
+    result.uiThread = getUiThreadMetrics();
+    result.openglThread = getOpenGLThreadMetrics();
+    
+    // Get component stats
+    result.componentStats = getComponentStats();
+    
+    // Get hotspots
+    result.hotspots = getHotspots();
+    
+    // Memory metrics
+    auto& profiler = oscil::PerformanceProfiler::getInstance();
+    result.memoryGrowthMBPerSec = profiler.getMemoryProfiler().getGrowthRateMBPerSecond();
+    result.peakMemoryMB = profiler.getMemoryProfiler().getPeakMemoryMB();
+    
+    // Stop the core profiler
+    oscil::PerformanceProfiler::getInstance().stopProfiling();
+    
+    return result;
+}
+
+GpuMetrics TestMetrics::getGpuMetrics()
+{
+    GpuMetrics metrics;
+    
+    auto gpuData = oscil::PerformanceProfiler::getInstance().getGpuProfiler().getData();
+    
+    metrics.currentFps = gpuData.currentFps;
+    metrics.avgFps = gpuData.avgFps;
+    metrics.minFps = gpuData.minFps == std::numeric_limits<double>::max() ? 0.0 : gpuData.minFps;
+    metrics.maxFps = gpuData.maxFps;
+    
+    metrics.avgFrameTimeMs = gpuData.frameHistogram.getAverageMs();
+    metrics.minFrameTimeMs = gpuData.frameHistogram.getMinMs() == std::numeric_limits<double>::max() 
+                             ? 0.0 : gpuData.frameHistogram.getMinMs();
+    metrics.maxFrameTimeMs = gpuData.frameHistogram.getMaxMs();
+    
+    metrics.p50FrameTimeMs = gpuData.frameHistogram.getPercentile(50);
+    metrics.p95FrameTimeMs = gpuData.frameHistogram.getPercentile(95);
+    metrics.p99FrameTimeMs = gpuData.frameHistogram.getPercentile(99);
+    
+    metrics.avgBeginFrameMs = gpuData.avgBeginFrameMs;
+    metrics.avgWaveformRenderMs = gpuData.avgWaveformRenderMs;
+    metrics.avgEffectPipelineMs = gpuData.avgEffectPipelineMs;
+    metrics.avgCompositeMs = gpuData.avgCompositeMs;
+    metrics.avgBlitMs = gpuData.avgBlitMs;
+    
+    metrics.totalFboBinds = gpuData.totalFboBinds;
+    metrics.totalShaderSwitches = gpuData.totalShaderSwitches;
+    metrics.totalFrames = gpuData.totalFrames;
+    
+    return metrics;
+}
+
+ThreadMetrics TestMetrics::getAudioThreadMetrics()
+{
+    auto m = oscil::PerformanceProfiler::getInstance().getThreadProfiler().getAudioThreadMetrics();
+    
+    ThreadMetrics result;
+    result.name = m.threadName;
+    result.avgExecutionTimeMs = m.avgExecutionTimeMs;
+    result.maxExecutionTimeMs = m.maxExecutionTimeMs;
+    result.minExecutionTimeMs = m.minExecutionTimeMs == std::numeric_limits<double>::max() 
+                                ? 0.0 : m.minExecutionTimeMs;
+    result.invocationCount = m.invocationCount;
+    result.loadPercent = m.loadPercent;
+    result.totalLockWaitMs = m.totalLockWaitMs;
+    result.lockAcquisitionCount = m.lockAcquisitionCount;
+    
+    return result;
+}
+
+ThreadMetrics TestMetrics::getUiThreadMetrics()
+{
+    auto m = oscil::PerformanceProfiler::getInstance().getThreadProfiler().getUIThreadMetrics();
+    
+    ThreadMetrics result;
+    result.name = m.threadName;
+    result.avgExecutionTimeMs = m.avgExecutionTimeMs;
+    result.maxExecutionTimeMs = m.maxExecutionTimeMs;
+    result.minExecutionTimeMs = m.minExecutionTimeMs == std::numeric_limits<double>::max() 
+                                ? 0.0 : m.minExecutionTimeMs;
+    result.invocationCount = m.invocationCount;
+    result.loadPercent = m.loadPercent;
+    result.totalLockWaitMs = m.totalLockWaitMs;
+    result.lockAcquisitionCount = m.lockAcquisitionCount;
+    
+    return result;
+}
+
+ThreadMetrics TestMetrics::getOpenGLThreadMetrics()
+{
+    auto m = oscil::PerformanceProfiler::getInstance().getThreadProfiler().getOpenGLThreadMetrics();
+    
+    ThreadMetrics result;
+    result.name = m.threadName;
+    result.avgExecutionTimeMs = m.avgExecutionTimeMs;
+    result.maxExecutionTimeMs = m.maxExecutionTimeMs;
+    result.minExecutionTimeMs = m.minExecutionTimeMs == std::numeric_limits<double>::max() 
+                                ? 0.0 : m.minExecutionTimeMs;
+    result.invocationCount = m.invocationCount;
+    result.loadPercent = m.loadPercent;
+    result.totalLockWaitMs = m.totalLockWaitMs;
+    result.lockAcquisitionCount = m.lockAcquisitionCount;
+    
+    return result;
+}
+
+std::vector<ComponentStats> TestMetrics::getComponentStats()
+{
+    auto stats = oscil::PerformanceProfiler::getInstance().getComponentProfiler().getStats();
+    
+    std::vector<ComponentStats> result;
+    result.reserve(stats.size());
+    
+    for (const auto& s : stats)
+    {
+        ComponentStats cs;
+        cs.name = s.componentName;
+        cs.repaintCount = s.repaintCount;
+        cs.totalRepaintTimeMs = s.totalRepaintTimeMs;
+        cs.avgRepaintTimeMs = s.avgRepaintTimeMs;
+        cs.maxRepaintTimeMs = s.maxRepaintTimeMs;
+        cs.repaintsPerSecond = s.repaintsPerSecond;
+        result.push_back(cs);
+    }
+    
+    return result;
+}
+
+std::vector<PerformanceHotspot> TestMetrics::getHotspots()
+{
+    auto hotspots = oscil::PerformanceProfiler::getInstance().getHotspots();
+    
+    std::vector<PerformanceHotspot> result;
+    result.reserve(hotspots.size());
+    
+    for (const auto& hs : hotspots)
+    {
+        PerformanceHotspot ph;
+        ph.category = hs.category;
+        ph.location = hs.location;
+        ph.description = hs.description;
+        ph.severity = hs.severity;
+        ph.impactMs = hs.impactMs;
+        ph.recommendation = hs.recommendation;
+        result.push_back(ph);
+    }
+    
+    return result;
+}
+
+juce::String TestMetrics::getTimelineJson(int frameCount)
+{
+    return oscil::PerformanceProfiler::getInstance().getTimelineJson(frameCount);
+}
+
+void TestMetrics::calculatePercentiles(std::vector<double>& frameTimes, 
+                                        double& p50, double& p95, double& p99)
+{
+    if (frameTimes.empty())
+    {
+        p50 = p95 = p99 = 0.0;
+        return;
+    }
+    
+    std::sort(frameTimes.begin(), frameTimes.end());
+    
+    auto percentileIndex = [&](double p) {
+        return static_cast<size_t>(p / 100.0 * (frameTimes.size() - 1));
+    };
+    
+    p50 = frameTimes[percentileIndex(50)];
+    p95 = frameTimes[percentileIndex(95)];
+    p99 = frameTimes[percentileIndex(99)];
 }
 
 } // namespace oscil::test

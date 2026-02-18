@@ -7,6 +7,7 @@
 #include "plugin/PluginFactory.h"
 
 #include "core/InstanceRegistry.h"
+#include "ui/animation/OscilAnimationService.h"
 #include "ui/layout/LayoutCoordinator.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/layout/SidebarComponent.h"
@@ -49,18 +50,19 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     // Apply theme
     processor_.getThemeService().setCurrentTheme(processor_.getState().getThemeName());
 
-    // Create basic UI components
+    // H50 FIX: Create basic UI components using addChildComponent (not visible yet)
+    // Components are made visible at the end after all setup is complete
     viewport_ = std::make_unique<juce::Viewport>();
     contentComponent_ = std::make_unique<PaneContainerComponent>();
     viewport_->setViewedComponent(contentComponent_.get(), false);
     viewport_->setScrollBarsShown(true, false);
-    addAndMakeVisible(*viewport_);
+    addChildComponent(*viewport_);  // H50: Added but not visible yet
 
     sidebar_ = std::make_unique<SidebarComponent>(serviceContext_);
-    addAndMakeVisible(*sidebar_);
+    addChildComponent(*sidebar_);  // H50: Added but not visible yet
 
     statusBar_ = std::make_unique<StatusBarComponent>(processor_.getThemeService());
-    addAndMakeVisible(*statusBar_);
+    addChildComponent(*statusBar_);  // H50: Added but not visible yet
 
     // Create managers and coordinators
     dialogManager_ = std::make_unique<DialogManager>(
@@ -74,6 +76,10 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     metricsController_ = std::make_unique<PerformanceMetricsController>(processor_, *statusBar_);
     editorLayout_ = std::make_unique<PluginEditorLayout>(*this, *viewport_, *contentComponent_, *sidebar_, *statusBar_, processor_);
     renderCoordinator_ = std::make_unique<GpuRenderCoordinator>(*this, *statusBar_);
+    animationService_ = std::make_unique<OscilAnimationService>(this);
+    
+    // Register animation service in properties so child components can find it
+    getProperties().set("oscilAnimationService", reinterpret_cast<int64_t>(animationService_.get()));
 
     // Initialize GPU Rendering
     bool gpuRenderingEnabled = processor_.getState().isGpuRenderingEnabled();
@@ -167,6 +173,13 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
                     WindowLayout::MAX_WINDOW_WIDTH, WindowLayout::MAX_WINDOW_HEIGHT);
     setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
+    // H50 FIX: Make child components visible AFTER all setup is complete
+    // This ensures proper initialization order and prevents issues with
+    // components accessing uninitialized state during visibility callbacks
+    viewport_->setVisible(true);
+    sidebar_->setVisible(true);
+    statusBar_->setVisible(true);
+
     startTimerHz(TIMER_REFRESH_RATE_HZ);
 
     if (juce::PluginHostType::getPluginLoadedAs() == juce::AudioProcessor::wrapperType_Standalone)
@@ -180,6 +193,17 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 OscilPluginEditor::~OscilPluginEditor()
 {
     stopTimer();
+
+    // H47 FIX: Clear animation service property BEFORE destroying the service
+    // This prevents child components from accessing a dangling pointer
+    getProperties().remove("oscilAnimationService");
+
+    // H47 FIX: Stop and clear animation service properly
+    if (animationService_)
+    {
+        animationService_->stopAll();
+        animationService_.reset();
+    }
 
     if (renderCoordinator_)
         renderCoordinator_->detach();
@@ -225,9 +249,6 @@ void OscilPluginEditor::paint(juce::Graphics& g)
 
 void OscilPluginEditor::resized()
 {
-    // #region agent log
-    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H2\",\"location\":\"PluginEditor.cpp:resized\",\"message\":\"Editor resized\",\"data\":{\"width\":" << getWidth() << ",\"height\":" << getHeight() << ",\"paneCount\":" << (oscillatorPanelController_ ? oscillatorPanelController_->getPaneComponents().size() : 0) << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
-    // #endregion
     if (editorLayout_)
     {
         editorLayout_->resized();
@@ -264,25 +285,81 @@ void OscilPluginEditor::onSourcesChanged()
         sidebar_->refreshSourceList(sources);
     }
 
-    // Update oscillators that have invalid sourceIds (created before sources were registered)
+    // Update oscillators that have invalid or stale sourceIds
+    // This handles:
+    // 1. Oscillators created before sources were registered (invalid sourceId)
+    // 2. Oscillators with stale sourceIds from previous sessions that no longer exist
     if (!sources.empty())
     {
         auto& state = processor_.getState();
         auto oscillators = state.getOscillators();
         bool updated = false;
+        auto& registry = processor_.getInstanceRegistry();
 
         for (auto& osc : oscillators)
         {
+            bool needsSourceAssignment = false;
+
+            // Check if sourceId is invalid (empty)
             if (!osc.getSourceId().isValid())
+            {
+                needsSourceAssignment = true;
+            }
+            // Check if sourceId is stale (valid format but doesn't exist in current registry)
+            else if (!registry.getSource(osc.getSourceId()).has_value())
+            {
+                // Try to resolve by instanceUUID first (most reliable for cross-session)
+                if (osc.getSourceInstanceUUID().isNotEmpty())
+                {
+                    auto resolvedSource = registry.getSourceByInstanceUUID(osc.getSourceInstanceUUID());
+                    if (resolvedSource.has_value())
+                    {
+                        // Resolved by UUID - update with new sourceId
+                        osc.setSourceIdNameAndUUID(resolvedSource->sourceId, resolvedSource->name, resolvedSource->instanceUUID);
+                        state.updateOscillator(osc);
+                        updated = true;
+                        continue;  // Successfully resolved
+                    }
+                }
+
+                // Try to resolve by sourceName (fallback)
+                if (osc.getSourceName().isNotEmpty())
+                {
+                    auto resolvedSource = registry.getSourceByName(osc.getSourceName());
+                    if (resolvedSource.has_value())
+                    {
+                        // Resolved by name - update with new sourceId and cache UUID
+                        osc.setSourceIdNameAndUUID(resolvedSource->sourceId, resolvedSource->name, resolvedSource->instanceUUID);
+                        state.updateOscillator(osc);
+                        updated = true;
+                        continue;  // Successfully resolved
+                    }
+                }
+
+                // All resolution failed - assign default source
+                needsSourceAssignment = true;
+            }
+
+            if (needsSourceAssignment)
             {
                 // Assign the first available source (typically the processor's own source)
                 // Prefer processor's own source if available
                 SourceId sourceToAssign = sources[0].sourceId;
+                juce::String sourceName = sources[0].name;
+                juce::String sourceUUID = sources[0].instanceUUID;
                 if (processor_.getSourceId().isValid())
                 {
                     sourceToAssign = processor_.getSourceId();
+                    // Look up source info from registry
+                    auto sourceInfo = registry.getSource(sourceToAssign);
+                    if (sourceInfo.has_value())
+                    {
+                        sourceName = sourceInfo->name;
+                        sourceUUID = sourceInfo->instanceUUID;
+                    }
                 }
-                osc.setSourceId(sourceToAssign);
+                // Use setSourceIdNameAndUUID to capture all identifiers for persistence
+                osc.setSourceIdNameAndUUID(sourceToAssign, sourceName, sourceUUID);
                 state.updateOscillator(osc);
                 updated = true;
             }
@@ -384,10 +461,6 @@ void OscilPluginEditor::setSampleRateForAllPanes(int sampleRate)
 
 void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
 {
-    // #region agent log
-    { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"GPU_TOGGLE\",\"location\":\"PluginEditor.cpp:setGpuRenderingEnabled\",\"message\":\"GPU toggle called\",\"data\":{\"enabled\":" << (enabled ? "true" : "false") << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
-    // #endregion
-    
     // Clear waveforms before switching modes to prevent ghost images
     if (renderCoordinator_)
     {

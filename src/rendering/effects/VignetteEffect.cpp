@@ -109,6 +109,15 @@ void VignetteEffect::apply(
     if (!compiled_ || !source || !destination)
         return;
 
+    // Save GL state for restoration (H24 FIX: also save blend function)
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
     auto& ext = context.extensions;
 
     // Bind destination and clear
@@ -123,21 +132,47 @@ void VignetteEffect::apply(
 
     // Bind source texture
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
 
-    // Set uniforms
-    ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
-    ext.glUniform1f(softnessLoc_, settings_.softness);
-    ext.glUniform4f(colorLoc_,
-        settings_.colour.getFloatRed(),
-        settings_.colour.getFloatGreen(),
-        settings_.colour.getFloatBlue(),
-        settings_.colour.getFloatAlpha());
+    // H27 FIX: Add uniform location validation (even though compile() checks,
+    // locations could become invalid after context changes)
+    if (textureLoc_ >= 0)
+        ext.glUniform1i(textureLoc_, 0);
+    if (intensityLoc_ >= 0)
+        ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
+    if (softnessLoc_ >= 0)
+        ext.glUniform1f(softnessLoc_, settings_.softness);
+    if (colorLoc_ >= 0)
+        ext.glUniform4f(colorLoc_,
+            settings_.colour.getFloatRed(),
+            settings_.colour.getFloatGreen(),
+            settings_.colour.getFloatBlue(),
+            settings_.colour.getFloatAlpha());
 
     // Render fullscreen quad
     pool.renderFullscreenQuad();
 
+    // Cleanup texture unit
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state (H24 FIX: also restore blend function)
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
+    if (blendWasEnabled)
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                           static_cast<GLenum>(blendDstRGB),
+                           static_cast<GLenum>(blendSrcAlpha),
+                           static_cast<GLenum>(blendDstAlpha));
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
 }
 
 } // namespace oscil

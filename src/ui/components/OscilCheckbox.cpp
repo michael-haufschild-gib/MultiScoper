@@ -9,16 +9,9 @@ namespace oscil
 
 OscilCheckbox::OscilCheckbox(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , checkSpring_(SpringPresets::bouncy())
-    , hoverSpring_(SpringPresets::stiff())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
-
-    checkSpring_.position = 0.0f;
-    checkSpring_.target = 0.0f;
-    hoverSpring_.position = 0.0f;
-    hoverSpring_.target = 0.0f;
 }
 
 OscilCheckbox::OscilCheckbox(IThemeService& themeService, const juce::String& label)
@@ -39,9 +32,15 @@ void OscilCheckbox::registerTestId()
     OSCIL_REGISTER_TEST_ID(testId_);
 }
 
-OscilCheckbox::~OscilCheckbox()
+OscilCheckbox::~OscilCheckbox() = default;
+
+void OscilCheckbox::parentHierarchyChanged()
 {
-    stopTimer();
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void OscilCheckbox::setChecked(bool checked, bool notify)
@@ -59,15 +58,25 @@ void OscilCheckbox::setState(CheckState state, bool notify)
                  : (state == CheckState::Indeterminate) ? 0.5f
                  : 0.0f;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        checkSpring_.setTarget(target);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = checkProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilCheckbox>(this);
+        checkAnimator_.set(animService_->createValueAnimation(
+            AnimationPresets::SNAPPY_DURATION_MS,
+            [safeThis, startValue, target](float progress) {
+                if (safeThis)
+                {
+                    safeThis->checkProgress_ = startValue + (target - startValue) * progress;
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseOut()));
+        checkAnimator_.start();
     }
     else
     {
-        checkSpring_.snapToTarget();
-        checkSpring_.position = target;
+        checkProgress_ = target;
         repaint();
     }
 
@@ -136,6 +145,10 @@ int OscilCheckbox::getPreferredHeight() const
 
 void OscilCheckbox::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     auto bounds = getLocalBounds();
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
@@ -184,10 +197,10 @@ void OscilCheckbox::paint(juce::Graphics& g)
 
     paintBox(g, boxBounds);
 
-    if (state_ == CheckState::Checked || checkSpring_.position > 0.5f)
+    if (state_ == CheckState::Checked || checkProgress_ > 0.5f)
         paintCheckMark(g, boxBounds);
     else if (state_ == CheckState::Indeterminate ||
-             (checkSpring_.position > 0.1f && checkSpring_.position <= 0.5f))
+             (checkProgress_ > 0.1f && checkProgress_ <= 0.5f))
         paintIndeterminate(g, boxBounds);
 
     if (hasFocus_ && enabled_)
@@ -197,18 +210,17 @@ void OscilCheckbox::paint(juce::Graphics& g)
 void OscilCheckbox::paintBox(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float hoverAmount = hoverSpring_.position;
 
     // Background
     auto bgColour = getTheme().backgroundSecondary;
-    if (state_ != CheckState::Unchecked || checkSpring_.position > 0.01f)
+    if (state_ != CheckState::Unchecked || checkProgress_ > 0.01f)
     {
-        float fillAmount = std::min(1.0f, checkSpring_.position * 2.0f);
+        float fillAmount = std::min(1.0f, checkProgress_ * 2.0f);
         bgColour = bgColour.interpolatedWith(getTheme().controlActive, fillAmount);
     }
 
-    if (hoverAmount > 0.01f)
-        bgColour = bgColour.brighter(0.1f * hoverAmount);
+    if (hoverProgress_ > 0.01f)
+        bgColour = bgColour.brighter(0.1f * hoverProgress_);
 
     g.setColour(bgColour.withAlpha(opacity));
     g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
@@ -224,7 +236,7 @@ void OscilCheckbox::paintBox(juce::Graphics& g, const juce::Rectangle<float>& bo
 void OscilCheckbox::paintCheckMark(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float progress = std::clamp((checkSpring_.position - 0.5f) * 2.0f, 0.0f, 1.0f);
+    float progress = std::clamp((checkProgress_ - 0.5f) * 2.0f, 0.0f, 1.0f);
 
     if (progress < 0.01f) return;
 
@@ -276,7 +288,13 @@ void OscilCheckbox::paintFocusRing(juce::Graphics& g, const juce::Rectangle<floa
 
 void OscilCheckbox::resized()
 {
-    // No child components
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilCheckbox::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
 }
 
 void OscilCheckbox::mouseDown(const juce::MouseEvent&)
@@ -300,14 +318,23 @@ void OscilCheckbox::mouseEnter(const juce::MouseEvent&)
 
     isHovered_ = true;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        hoverSpring_.setTarget(1.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = hoverProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilCheckbox>(this);
+        hoverAnimator_.set(animService_->createHoverAnimation(
+            [safeThis, startValue](float progress) {
+                if (safeThis)
+                {
+                    safeThis->hoverProgress_ = startValue + (1.0f - startValue) * progress;
+                    safeThis->repaint();
+                }
+            }));
+        hoverAnimator_.start();
     }
     else
     {
-        hoverSpring_.position = 1.0f;
+        hoverProgress_ = 1.0f;
         repaint();
     }
 }
@@ -316,14 +343,23 @@ void OscilCheckbox::mouseExit(const juce::MouseEvent&)
 {
     isHovered_ = false;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ != nullptr && OscilAnimationService::shouldAnimate())
     {
-        hoverSpring_.setTarget(0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startValue = hoverProgress_;
+        auto safeThis = juce::Component::SafePointer<OscilCheckbox>(this);
+        hoverAnimator_.set(animService_->createHoverAnimation(
+            [safeThis, startValue](float progress) {
+                if (safeThis)
+                {
+                    safeThis->hoverProgress_ = startValue * (1.0f - progress);
+                    safeThis->repaint();
+                }
+            }));
+        hoverAnimator_.start();
     }
     else
     {
-        hoverSpring_.position = 0.0f;
+        hoverProgress_ = 0.0f;
         repaint();
     }
 }
@@ -350,23 +386,6 @@ void OscilCheckbox::focusLost(FocusChangeType)
     repaint();
 }
 
-void OscilCheckbox::timerCallback()
-{
-    updateAnimations();
-
-    if (checkSpring_.isSettled() && hoverSpring_.isSettled())
-        stopTimer();
-
-    repaint();
-}
-
-void OscilCheckbox::updateAnimations()
-{
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-    checkSpring_.update(dt);
-    hoverSpring_.update(dt);
-}
-
 void OscilCheckbox::notifyStateChanged()
 {
     if (onStateChanged)
@@ -377,15 +396,82 @@ void OscilCheckbox::notifyStateChanged()
 }
 
 
+//==============================================================================
+// Accessibility Handler for OscilCheckbox
+//==============================================================================
+class OscilCheckboxAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit OscilCheckboxAccessibilityHandler(OscilCheckbox& checkbox)
+        : juce::AccessibilityHandler(checkbox, juce::AccessibilityRole::toggleButton,
+            juce::AccessibilityActions()
+                .addAction(juce::AccessibilityActionType::toggle,
+                    [&checkbox] { if (checkbox.isEnabled()) checkbox.toggle(); })
+          )
+        , checkbox_(checkbox)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        return checkbox_.getLabel().isNotEmpty() ? checkbox_.getLabel() : "Checkbox";
+    }
+
+    juce::String getDescription() const override
+    {
+        juce::String state;
+        switch (checkbox_.getState())
+        {
+            case CheckState::Checked:
+                state = "Checked";
+                break;
+            case CheckState::Unchecked:
+                state = "Unchecked";
+                break;
+            case CheckState::Indeterminate:
+                state = "Indeterminate";
+                break;
+        }
+        if (!checkbox_.isEnabled())
+            state += " (disabled)";
+        return state;
+    }
+
+    juce::String getHelp() const override
+    {
+        return "Press Space or Enter to toggle this checkbox.";
+    }
+
+    juce::AccessibleState getCurrentState() const override
+    {
+        auto state = AccessibilityHandler::getCurrentState()
+            .withCheckable();
+
+        switch (checkbox_.getState())
+        {
+            case CheckState::Checked:
+                state = state.withChecked();
+                break;
+            case CheckState::Indeterminate:
+                // Indeterminate is a mixed state - report as checkable but not fully checked
+                break;
+            case CheckState::Unchecked:
+            default:
+                break;
+        }
+
+        return state;
+    }
+
+private:
+    OscilCheckbox& checkbox_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilCheckboxAccessibilityHandler)
+};
+
 std::unique_ptr<juce::AccessibilityHandler> OscilCheckbox::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::toggleButton,
-        juce::AccessibilityActions()
-            .addAction(juce::AccessibilityActionType::toggle,
-                [this] { if (enabled_) toggle(); })
-    );
+    return std::make_unique<OscilCheckboxAccessibilityHandler>(*this);
 }
 
 } // namespace oscil

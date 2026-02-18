@@ -275,6 +275,8 @@ private:
     QualityPreset lastEffectiveQuality_ = QualityPreset::Standard;
 
     juce::ListenerList<Listener> listeners_;
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE(MemoryBudgetManager)
 };
 
 } // namespace oscil

@@ -6,6 +6,8 @@
 #include <gtest/gtest.h>
 #include "OscilTestUtils.h"
 #include "plugin/PluginProcessor.h"
+#include "core/AudioCapturePool.h"
+#include "core/CaptureThread.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "core/InstanceRegistry.h"
@@ -23,6 +25,8 @@ protected:
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
+    std::unique_ptr<AudioCapturePool> capturePool_;
+    std::unique_ptr<CaptureThread> captureThread_;
     std::unique_ptr<OscilPluginProcessor> processor;
 
     void SetUp() override
@@ -32,13 +36,18 @@ protected:
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
+        capturePool_ = std::make_unique<AudioCapturePool>();
+        captureThread_ = std::make_unique<CaptureThread>(*capturePool_);
+        captureThread_->startCapturing();
 
         // Create processor with owned services
         processor = std::make_unique<OscilPluginProcessor>(
             *registry_,
             *themeManager_,
             *shaderRegistry_,
-            *memoryBudgetManager_);
+            *memoryBudgetManager_,
+            *capturePool_,
+            *captureThread_);
         processor->prepareToPlay(44100.0, 512);
     }
 
@@ -46,10 +55,26 @@ protected:
     {
         // Reset in reverse dependency order
         processor.reset();
+        if (captureThread_)
+            captureThread_->stopCapturing();
+        captureThread_.reset();
+        capturePool_.reset();
         memoryBudgetManager_.reset();
         shaderRegistry_.reset();
         themeManager_.reset();
         registry_.reset();
+    }
+
+    // Helper to create a fresh processor
+    std::unique_ptr<OscilPluginProcessor> createNewProcessor()
+    {
+        return std::make_unique<OscilPluginProcessor>(
+            *registry_,
+            *themeManager_,
+            *shaderRegistry_,
+            *memoryBudgetManager_,
+            *capturePool_,
+            *captureThread_);
     }
 };
 
@@ -57,7 +82,7 @@ protected:
 
 TEST_F(PluginProcessorLifecycleTest, PluginName)
 {
-    EXPECT_EQ(processor->getName(), "Oscil");
+    EXPECT_EQ(processor->getName(), "MultiScoper");
 }
 
 TEST_F(PluginProcessorLifecycleTest, MidiSupport)
@@ -178,11 +203,7 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
 
     for (double rate : sampleRates)
     {
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_,
-            *themeManager_,
-            *shaderRegistry_,
-            *memoryBudgetManager_);
+        processor = createNewProcessor();
         processor->prepareToPlay(rate, 512);
 
         EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate)
@@ -197,11 +218,7 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentBlockSizes)
 
     for (int blockSize : blockSizes)
     {
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_,
-            *themeManager_,
-            *shaderRegistry_,
-            *memoryBudgetManager_);
+        processor = createNewProcessor();
         processor->prepareToPlay(44100.0, blockSize);
         pumpMessageQueue(200);
 
@@ -363,11 +380,7 @@ TEST_F(PluginProcessorLifecycleTest, DestructorUnregistersFromRegistry)
 TEST_F(PluginProcessorLifecycleTest, SourceIdBeforePrepare)
 {
     // Create a fresh processor not yet prepared
-    auto freshProcessor = std::make_unique<OscilPluginProcessor>(
-        *registry_,
-        *themeManager_,
-        *shaderRegistry_,
-        *memoryBudgetManager_);
+    auto freshProcessor = createNewProcessor();
 
     // Source ID before prepareToPlay should be invalid
     SourceId sourceId = freshProcessor->getSourceId();

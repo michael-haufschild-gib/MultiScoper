@@ -40,7 +40,10 @@ juce::ValueTree Oscillator::toValueTree() const
     juce::ValueTree state(StateIds::Oscillator);
 
     state.setProperty(StateIds::Id, id_.id, nullptr);
+    // Store sourceId (backwards compat), sourceName (fallback), and sourceInstanceUUID (primary)
     state.setProperty(StateIds::SourceId, sourceId_.id, nullptr);
+    state.setProperty(StateIds::SourceName, sourceName_, nullptr);
+    state.setProperty(StateIds::SourceInstanceUUID, sourceInstanceUUID_, nullptr);
     state.setProperty(StateIds::OscillatorState, static_cast<int>(state_), nullptr);
     state.setProperty(StateIds::ProcessingMode, processingModeToString(processingMode_), nullptr);
     state.setProperty(StateIds::Colour, static_cast<int>(colour_.getARGB()), nullptr);
@@ -79,6 +82,16 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     int loadedSchemaVersion = state.getProperty(StateIds::SchemaVersion, 1);
 
     id_.id = state.getProperty(StateIds::Id, id_.id);
+
+    // Load sourceInstanceUUID (primary, most reliable identifier)
+    sourceInstanceUUID_ = state.getProperty(StateIds::SourceInstanceUUID, "").toString();
+
+    // Load sourceName (fallback identifier for persistence)
+    sourceName_ = state.getProperty(StateIds::SourceName, "").toString();
+
+    // Load sourceId for backwards compatibility, but it will be resolved via sourceInstanceUUID/sourceName
+    // The sourceId loaded here may be stale (from previous session) and will need
+    // to be resolved to current sourceId using sourceInstanceUUID (or sourceName as fallback) in WaveformStack
     sourceId_.id = state.getProperty(StateIds::SourceId, "");
 
     // Handle oscillator state (migrate from old schema if needed)
@@ -91,6 +104,15 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     {
         // Migration: if sourceId is valid, assume ACTIVE
         state_ = sourceId_.isValid() ? OscillatorState::ACTIVE : OscillatorState::NO_SOURCE;
+    }
+
+    // Schema v3 migration: if we have a sourceId but no sourceName, the source
+    // assignment will be stale. Mark as NO_SOURCE to force re-assignment.
+    // The UI can use the old sourceId to show "source not found" message.
+    if (loadedSchemaVersion < 3 && sourceId_.isValid() && sourceName_.isEmpty())
+    {
+        // Keep sourceId for diagnostic purposes but mark state as needing resolution
+        // The actual resolution happens in WaveformStack when oscillator is added
     }
 
     processingMode_ = stringToProcessingMode(state.getProperty(StateIds::ProcessingMode, "FullStereo"));
@@ -164,6 +186,39 @@ void Oscillator::setSourceId(const SourceId& sourceId)
     else
     {
         state_ = OscillatorState::NO_SOURCE;
+        sourceName_.clear();           // Clear sourceName when source is cleared
+        sourceInstanceUUID_.clear();   // Clear UUID when source is cleared
+    }
+}
+
+void Oscillator::setSourceIdAndName(const SourceId& sourceId, const juce::String& name)
+{
+    sourceId_ = sourceId;
+    sourceName_ = name;
+
+    if (sourceId.isValid())
+    {
+        state_ = OscillatorState::ACTIVE;
+    }
+    else
+    {
+        state_ = OscillatorState::NO_SOURCE;
+    }
+}
+
+void Oscillator::setSourceIdNameAndUUID(const SourceId& sourceId, const juce::String& name, const juce::String& uuid)
+{
+    sourceId_ = sourceId;
+    sourceName_ = name;
+    sourceInstanceUUID_ = uuid;
+
+    if (sourceId.isValid())
+    {
+        state_ = OscillatorState::ACTIVE;
+    }
+    else
+    {
+        state_ = OscillatorState::NO_SOURCE;
     }
 }
 
@@ -171,6 +226,8 @@ void Oscillator::clearSource()
 {
     // Preserve configuration but transition to NO_SOURCE
     sourceId_ = SourceId::invalid();
+    sourceName_.clear();
+    sourceInstanceUUID_.clear();
     state_ = OscillatorState::NO_SOURCE;
     // All other settings (colour, processingMode, etc.) are preserved
 }

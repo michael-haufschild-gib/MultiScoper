@@ -6,10 +6,10 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ui/components/ThemedComponent.h"
 #include "ui/components/OscilDropdown.h"
 #include "core/Pane.h"
 #include "ui/components/TestId.h"
-#include "ui/theme/IThemeService.h"
 #include <functional>
 #include <vector>
 
@@ -20,7 +20,7 @@ namespace oscil
  * Reusable component for pane selection with optional "New pane" option.
  * Consolidates pane dropdown logic from AddOscillatorDialog and OscillatorConfigPopup.
  */
-class PaneSelectorComponent : public juce::Component,
+class PaneSelectorComponent : public ThemedComponent,
                                public TestIdSupport
 {
 public:
@@ -92,7 +92,6 @@ private:
     void populateDropdown();
     void handleSelectionChange(int index);
 
-    IThemeService& themeService_;
     bool allowNewPane_;
     std::unique_ptr<OscilDropdown> dropdown_;
     std::vector<std::pair<PaneId, juce::String>> panes_;

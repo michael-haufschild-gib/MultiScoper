@@ -5,6 +5,7 @@
 
 #include "ui/layout/SidebarComponent.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -162,9 +163,8 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
 {
     themeService_.addListener(this);
 
-    // Initialize width spring to expanded width
-    widthSpring_.position = static_cast<float>(expandedWidth_);
-    widthSpring_.target = static_cast<float>(expandedWidth_);
+    // Initialize width value to expanded width
+    currentWidthValue_ = static_cast<float>(expandedWidth_);
 
 #if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
     OSCIL_REGISTER_TEST_ID("sidebar");
@@ -211,7 +211,7 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
 
 SidebarComponent::~SidebarComponent()
 {
-    stopTimer();
+    // ScopedAnimator handles completion on destruction
     themeService_.removeListener(this);
     if (oscillatorSection_)
         oscillatorSection_->removeListener(this);
@@ -219,6 +219,15 @@ SidebarComponent::~SidebarComponent()
         timingSection_->removeListener(this);
     if (optionsSection_)
         optionsSection_->removeListener(this);
+}
+
+void SidebarComponent::parentHierarchyChanged()
+{
+    juce::Component::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void SidebarComponent::paint(juce::Graphics& g)
@@ -272,21 +281,6 @@ void SidebarComponent::themeChanged(const ColorTheme&)
     repaint();
 }
 
-void SidebarComponent::timerCallback()
-{
-    // Update spring animation
-    widthSpring_.update(AnimationTiming::FRAME_DURATION_60FPS);
-
-    // Notify parent to re-layout with new width
-    notifySidebarWidthChanged();
-
-    // Stop timer when animation settles
-    if (widthSpring_.isSettled(1.0f))  // 1px threshold for width
-    {
-        widthSpring_.snapToTarget();  // Ensure we're exactly at target
-        stopTimer();
-    }
-}
 
 void SidebarComponent::setCollapsed(bool collapsed)
 {
@@ -298,8 +292,26 @@ void SidebarComponent::setCollapsed(bool collapsed)
         // Animate width transition
         float targetWidth = collapsed ? static_cast<float>(WindowLayout::COLLAPSED_SIDEBAR_WIDTH)
                                        : static_cast<float>(expandedWidth_);
-        widthSpring_.setTarget(targetWidth);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+
+        if (animService_ && OscilAnimationService::shouldAnimate())
+        {
+            float startWidth = currentWidthValue_;
+            juce::WeakReference<SidebarComponent> weakThis(this);
+            widthAnimator_.set(animService_->createExpandAnimation(
+                [weakThis, startWidth, targetWidth](float v) {
+                    if (auto* sidebar = weakThis.get())
+                    {
+                        sidebar->currentWidthValue_ = juce::jmap(v, startWidth, targetWidth);
+                        sidebar->notifySidebarWidthChanged();
+                    }
+                }));
+            widthAnimator_.start();
+        }
+        else
+        {
+            currentWidthValue_ = targetWidth;
+            notifySidebarWidthChanged();
+        }
 
         resized();
         notifySidebarCollapsedStateChanged();
@@ -320,11 +332,10 @@ void SidebarComponent::setSidebarWidth(int width)
     {
         expandedWidth_ = newWidth;
 
-        // If not collapsed, update spring immediately (no animation during resize drag)
+        // If not collapsed, update width immediately (no animation during resize drag)
         if (!collapsed_)
         {
-            widthSpring_.setTarget(static_cast<float>(newWidth));
-            widthSpring_.snapToTarget();
+            currentWidthValue_ = static_cast<float>(newWidth);
         }
 
         notifySidebarWidthChanged();
@@ -334,7 +345,7 @@ void SidebarComponent::setSidebarWidth(int width)
 int SidebarComponent::getEffectiveWidth() const
 {
     // Return animated width during transitions
-    return static_cast<int>(widthSpring_.position);
+    return static_cast<int>(currentWidthValue_);
 }
 
 void SidebarComponent::refreshOscillatorList(const std::vector<Oscillator>& oscillators)
@@ -532,7 +543,8 @@ void SidebarComponent::layoutChanged(int columnCount)
 
 void SidebarComponent::themeChanged(const juce::String& themeName)
 {
-    listeners_.call([&themeName](Listener& l) { l.themeChanged(themeName); });
+    // Capture by value to avoid dangling reference if listener triggers re-entrancy
+    listeners_.call([themeName](Listener& l) { l.themeChanged(themeName); });
 }
 
 void SidebarComponent::gpuRenderingChanged(bool enabled)

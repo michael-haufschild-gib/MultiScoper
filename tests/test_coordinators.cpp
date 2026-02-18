@@ -22,12 +22,12 @@ using namespace oscil;
 class MockInstanceRegistry : public IInstanceRegistry
 {
 public:
-    void addListener(InstanceRegistryListener* listener) override
+    void addListener(IInstanceRegistryListener* listener) override
     {
         listeners_.add(listener);
     }
 
-    void removeListener(InstanceRegistryListener* listener) override
+    void removeListener(IInstanceRegistryListener* listener) override
     {
         listeners_.remove(listener);
     }
@@ -49,12 +49,19 @@ public:
 
     // Additional required interface methods
     SourceId registerInstance(const juce::String& /*trackIdentifier*/,
-                               std::shared_ptr<SharedCaptureBuffer> /*captureBuffer*/,
+                               std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
                                const juce::String& /*name*/,
                                int /*channelCount*/,
-                               double /*sampleRate*/) override
+                               double /*sampleRate*/,
+                               std::shared_ptr<AnalysisEngine> /*analysisEngine*/,
+                               const juce::String& /*instanceUUID*/) override
     {
         return SourceId::generate();
+    }
+
+    std::optional<SourceInfo> getSourceByInstanceUUID(const juce::String& /*uuid*/) const override
+    {
+        return std::nullopt;
     }
 
     void unregisterInstance(const SourceId& /*sourceId*/) override {}
@@ -64,6 +71,16 @@ public:
         for (const auto& source : sources_)
         {
             if (source.sourceId == sourceId)
+                return source;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<SourceInfo> getSourceByName(const juce::String& name) const override
+    {
+        for (const auto& source : sources_)
+        {
+            if (source.name.equalsIgnoreCase(name))
                 return source;
         }
         return std::nullopt;
@@ -108,21 +125,21 @@ public:
 private:
     void notifySourceAdded(const SourceId& id)
     {
-        listeners_.call([&id](InstanceRegistryListener& l) { l.sourceAdded(id); });
+        listeners_.call([&id](IInstanceRegistryListener& l) { l.sourceAdded(id); });
     }
 
     void notifySourceRemoved(const SourceId& id)
     {
-        listeners_.call([&id](InstanceRegistryListener& l) { l.sourceRemoved(id); });
+        listeners_.call([&id](IInstanceRegistryListener& l) { l.sourceRemoved(id); });
     }
 
     void notifySourceUpdated(const SourceId& id)
     {
-        listeners_.call([&id](InstanceRegistryListener& l) { l.sourceUpdated(id); });
+        listeners_.call([&id](IInstanceRegistryListener& l) { l.sourceUpdated(id); });
     }
 
     std::vector<SourceInfo> sources_;
-    juce::ListenerList<InstanceRegistryListener> listeners_;
+    juce::ListenerList<IInstanceRegistryListener> listeners_;
 };
 
 // =============================================================================

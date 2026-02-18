@@ -4,6 +4,7 @@
 
 #include "rendering/VisualConfiguration.h"
 #include "rendering/serialization/Settings3DSerialization.h"
+#include <cmath>
 
 namespace oscil
 {
@@ -55,6 +56,46 @@ juce::Colour hexToColorLocal(const juce::String& hex)
     return juce::Colour(static_cast<juce::uint32>(hex.getHexValue64()));
 }
 
+// ============================================================================
+// Validation Helper Functions
+// ============================================================================
+
+/**
+ * Clamp and validate a float value, logging if out of range
+ */
+float clampAndValidateFloat(float value, float minVal, float maxVal, float defaultVal, const char* fieldName)
+{
+    if (std::isnan(value) || std::isinf(value))
+    {
+        juce::Logger::writeToLog(juce::String("VisualConfiguration: Invalid ") + fieldName +
+                                 " (nan/inf), using default " + juce::String(defaultVal));
+        return defaultVal;
+    }
+    if (value < minVal || value > maxVal)
+    {
+        juce::Logger::writeToLog(juce::String("VisualConfiguration: ") + fieldName + " " +
+                                 juce::String(value) + " out of range [" +
+                                 juce::String(minVal) + "," + juce::String(maxVal) + "], clamping");
+        return std::clamp(value, minVal, maxVal);
+    }
+    return value;
+}
+
+/**
+ * Clamp and validate an int value, logging if out of range
+ */
+int clampAndValidateInt(int value, int minVal, int maxVal, int defaultVal, const char* fieldName)
+{
+    if (value < minVal || value > maxVal)
+    {
+        juce::Logger::writeToLog(juce::String("VisualConfiguration: ") + fieldName + " " +
+                                 juce::String(value) + " out of range [" +
+                                 juce::String(minVal) + "," + juce::String(maxVal) + "], clamping");
+        return std::clamp(value, minVal, maxVal);
+    }
+    return value;
+}
+
 } // anonymous namespace
 
 juce::ValueTree VisualConfiguration::toValueTree() const
@@ -77,7 +118,6 @@ juce::ValueTree VisualConfiguration::toValueTree() const
     bloomTree.setProperty("downsampleSteps", bloom.downsampleSteps, nullptr);
     bloomTree.setProperty("spread", bloom.spread, nullptr);
     bloomTree.setProperty("softKnee", bloom.softKnee, nullptr);
-    bloomTree.setProperty("scatter", bloom.scatter, nullptr);
     tree.addChild(bloomTree, -1, nullptr);
 
     // Radial Blur
@@ -169,30 +209,45 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     VisualConfiguration config;
 
     if (!tree.hasType(VISUAL_CONFIG_TYPE))
+    {
+        juce::Logger::writeToLog("VisualConfiguration::fromValueTree: Invalid tree type, expected VisualConfiguration");
         return config;
+    }
 
     // Shader type
     config.shaderType = idToShaderType(tree.getProperty("shaderType", "basic"));
 
-    // Compositing
+    // Compositing - validate blend mode enum
     int blendModeVal = static_cast<int>(tree.getProperty("compositeBlendMode", 0));
     if (blendModeVal < 0 || blendModeVal > static_cast<int>(BlendMode::Screen))
+    {
+        juce::Logger::writeToLog("VisualConfiguration: Invalid compositeBlendMode " +
+                                 juce::String(blendModeVal) + ", using Alpha");
         blendModeVal = static_cast<int>(BlendMode::Alpha);
+    }
     config.compositeBlendMode = static_cast<BlendMode>(blendModeVal);
-    config.compositeOpacity = tree.getProperty("compositeOpacity", 1.0f);
+
+    // Validate compositeOpacity (0.0 to 1.0)
+    float opacity = tree.getProperty("compositeOpacity", 1.0f);
+    config.compositeOpacity = clampAndValidateFloat(opacity, 0.0f, 1.0f, 1.0f, "compositeOpacity");
 
     // Bloom
     auto bloomTree = tree.getChildWithName(BLOOM_TYPE);
     if (bloomTree.isValid())
     {
         config.bloom.enabled = bloomTree.getProperty("enabled", false);
-        config.bloom.intensity = bloomTree.getProperty("intensity", 1.0f);
-        config.bloom.threshold = bloomTree.getProperty("threshold", 0.8f);
-        config.bloom.iterations = bloomTree.getProperty("iterations", 4);
-        config.bloom.downsampleSteps = bloomTree.getProperty("downsampleSteps", 6);
-        config.bloom.spread = bloomTree.getProperty("spread", 1.0f);
-        config.bloom.softKnee = bloomTree.getProperty("softKnee", 0.5f);
-        config.bloom.scatter = bloomTree.getProperty("scatter", 0.65f);
+        config.bloom.intensity = clampAndValidateFloat(
+            bloomTree.getProperty("intensity", 1.0f), 0.0f, 10.0f, 1.0f, "bloom.intensity");
+        config.bloom.threshold = clampAndValidateFloat(
+            bloomTree.getProperty("threshold", 0.8f), 0.0f, 2.0f, 0.8f, "bloom.threshold");
+        config.bloom.iterations = clampAndValidateInt(
+            bloomTree.getProperty("iterations", 4), 1, 16, 4, "bloom.iterations");
+        config.bloom.downsampleSteps = clampAndValidateInt(
+            bloomTree.getProperty("downsampleSteps", 6), 1, 10, 6, "bloom.downsampleSteps");
+        config.bloom.spread = clampAndValidateFloat(
+            bloomTree.getProperty("spread", 1.0f), 0.1f, 5.0f, 1.0f, "bloom.spread");
+        config.bloom.softKnee = clampAndValidateFloat(
+            bloomTree.getProperty("softKnee", 0.5f), 0.0f, 1.0f, 0.5f, "bloom.softKnee");
     }
 
     // Radial Blur
@@ -200,9 +255,12 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (radialBlurTree.isValid())
     {
         config.radialBlur.enabled = radialBlurTree.getProperty("enabled", false);
-        config.radialBlur.amount = radialBlurTree.getProperty("amount", 0.1f);
-        config.radialBlur.glow = radialBlurTree.getProperty("glow", 1.0f);
-        config.radialBlur.samples = radialBlurTree.getProperty("samples", 4);
+        config.radialBlur.amount = clampAndValidateFloat(
+            radialBlurTree.getProperty("amount", 0.1f), 0.0f, 1.0f, 0.1f, "radialBlur.amount");
+        config.radialBlur.glow = clampAndValidateFloat(
+            radialBlurTree.getProperty("glow", 1.0f), 0.0f, 5.0f, 1.0f, "radialBlur.glow");
+        config.radialBlur.samples = clampAndValidateInt(
+            radialBlurTree.getProperty("samples", 4), 1, 32, 4, "radialBlur.samples");
     }
 
     // Trails
@@ -210,8 +268,10 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (trailsTree.isValid())
     {
         config.trails.enabled = trailsTree.getProperty("enabled", false);
-        config.trails.decay = trailsTree.getProperty("decay", 0.1f);
-        config.trails.opacity = trailsTree.getProperty("opacity", 0.8f);
+        config.trails.decay = clampAndValidateFloat(
+            trailsTree.getProperty("decay", 0.1f), 0.0f, 1.0f, 0.1f, "trails.decay");
+        config.trails.opacity = clampAndValidateFloat(
+            trailsTree.getProperty("opacity", 0.8f), 0.0f, 1.0f, 0.8f, "trails.opacity");
     }
 
     // Color Grade
@@ -219,11 +279,16 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (colorGradeTree.isValid())
     {
         config.colorGrade.enabled = colorGradeTree.getProperty("enabled", false);
-        config.colorGrade.brightness = colorGradeTree.getProperty("brightness", 0.0f);
-        config.colorGrade.contrast = colorGradeTree.getProperty("contrast", 1.0f);
-        config.colorGrade.saturation = colorGradeTree.getProperty("saturation", 1.0f);
-        config.colorGrade.temperature = colorGradeTree.getProperty("temperature", 0.0f);
-        config.colorGrade.tint = colorGradeTree.getProperty("tint", 0.0f);
+        config.colorGrade.brightness = clampAndValidateFloat(
+            colorGradeTree.getProperty("brightness", 0.0f), -1.0f, 1.0f, 0.0f, "colorGrade.brightness");
+        config.colorGrade.contrast = clampAndValidateFloat(
+            colorGradeTree.getProperty("contrast", 1.0f), 0.0f, 3.0f, 1.0f, "colorGrade.contrast");
+        config.colorGrade.saturation = clampAndValidateFloat(
+            colorGradeTree.getProperty("saturation", 1.0f), 0.0f, 3.0f, 1.0f, "colorGrade.saturation");
+        config.colorGrade.temperature = clampAndValidateFloat(
+            colorGradeTree.getProperty("temperature", 0.0f), -1.0f, 1.0f, 0.0f, "colorGrade.temperature");
+        config.colorGrade.tint = clampAndValidateFloat(
+            colorGradeTree.getProperty("tint", 0.0f), -1.0f, 1.0f, 0.0f, "colorGrade.tint");
         config.colorGrade.shadows = juce::Colour(static_cast<juce::uint32>(
             static_cast<juce::int64>(colorGradeTree.getProperty("shadows", static_cast<juce::int64>(0xFF000000)))));
         config.colorGrade.highlights = juce::Colour(static_cast<juce::uint32>(
@@ -235,8 +300,10 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (vignetteTree.isValid())
     {
         config.vignette.enabled = vignetteTree.getProperty("enabled", false);
-        config.vignette.intensity = vignetteTree.getProperty("intensity", 0.5f);
-        config.vignette.softness = vignetteTree.getProperty("softness", 0.5f);
+        config.vignette.intensity = clampAndValidateFloat(
+            vignetteTree.getProperty("intensity", 0.5f), 0.0f, 2.0f, 0.5f, "vignette.intensity");
+        config.vignette.softness = clampAndValidateFloat(
+            vignetteTree.getProperty("softness", 0.5f), 0.0f, 1.0f, 0.5f, "vignette.softness");
         config.vignette.colour = juce::Colour(static_cast<juce::uint32>(
             static_cast<juce::int64>(vignetteTree.getProperty("colour", static_cast<juce::int64>(0xFF000000)))));
     }
@@ -246,8 +313,10 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (grainTree.isValid())
     {
         config.filmGrain.enabled = grainTree.getProperty("enabled", false);
-        config.filmGrain.intensity = grainTree.getProperty("intensity", 0.1f);
-        config.filmGrain.speed = grainTree.getProperty("speed", 24.0f);
+        config.filmGrain.intensity = clampAndValidateFloat(
+            grainTree.getProperty("intensity", 0.1f), 0.0f, 1.0f, 0.1f, "filmGrain.intensity");
+        config.filmGrain.speed = clampAndValidateFloat(
+            grainTree.getProperty("speed", 24.0f), 1.0f, 120.0f, 24.0f, "filmGrain.speed");
     }
 
     // Chromatic Aberration
@@ -255,7 +324,8 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (chromaticTree.isValid())
     {
         config.chromaticAberration.enabled = chromaticTree.getProperty("enabled", false);
-        config.chromaticAberration.intensity = chromaticTree.getProperty("intensity", 0.005f);
+        config.chromaticAberration.intensity = clampAndValidateFloat(
+            chromaticTree.getProperty("intensity", 0.005f), 0.0f, 0.1f, 0.005f, "chromaticAberration.intensity");
     }
 
     // Scanlines
@@ -263,8 +333,10 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (scanlineTree.isValid())
     {
         config.scanlines.enabled = scanlineTree.getProperty("enabled", false);
-        config.scanlines.intensity = scanlineTree.getProperty("intensity", 0.3f);
-        config.scanlines.density = scanlineTree.getProperty("density", 2.0f);
+        config.scanlines.intensity = clampAndValidateFloat(
+            scanlineTree.getProperty("intensity", 0.3f), 0.0f, 1.0f, 0.3f, "scanlines.intensity");
+        config.scanlines.density = clampAndValidateFloat(
+            scanlineTree.getProperty("density", 2.0f), 0.5f, 10.0f, 2.0f, "scanlines.density");
         config.scanlines.phosphorGlow = scanlineTree.getProperty("phosphorGlow", true);
     }
 
@@ -273,9 +345,12 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (distortionTree.isValid())
     {
         config.distortion.enabled = distortionTree.getProperty("enabled", false);
-        config.distortion.intensity = distortionTree.getProperty("intensity", 0.0f);
-        config.distortion.frequency = distortionTree.getProperty("frequency", 4.0f);
-        config.distortion.speed = distortionTree.getProperty("speed", 1.0f);
+        config.distortion.intensity = clampAndValidateFloat(
+            distortionTree.getProperty("intensity", 0.0f), 0.0f, 1.0f, 0.0f, "distortion.intensity");
+        config.distortion.frequency = clampAndValidateFloat(
+            distortionTree.getProperty("frequency", 4.0f), 0.1f, 20.0f, 4.0f, "distortion.frequency");
+        config.distortion.speed = clampAndValidateFloat(
+            distortionTree.getProperty("speed", 1.0f), 0.0f, 10.0f, 1.0f, "distortion.speed");
     }
 
     // Tilt Shift
@@ -283,9 +358,12 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     if (tiltTree.isValid())
     {
         config.tiltShift.enabled = tiltTree.getProperty("enabled", false);
-        config.tiltShift.position = tiltTree.getProperty("position", 0.5f);
-        config.tiltShift.range = tiltTree.getProperty("range", 0.3f);
-        config.tiltShift.blurRadius = tiltTree.getProperty("blurRadius", 2.0f);
+        config.tiltShift.position = clampAndValidateFloat(
+            tiltTree.getProperty("position", 0.5f), 0.0f, 1.0f, 0.5f, "tiltShift.position");
+        config.tiltShift.range = clampAndValidateFloat(
+            tiltTree.getProperty("range", 0.3f), 0.0f, 1.0f, 0.3f, "tiltShift.range");
+        config.tiltShift.blurRadius = clampAndValidateFloat(
+            tiltTree.getProperty("blurRadius", 2.0f), 0.0f, 20.0f, 2.0f, "tiltShift.blurRadius");
     }
 
     // 3D Settings
@@ -302,7 +380,8 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
 
 juce::var VisualConfiguration::toJson() const
 {
-    auto obj = new juce::DynamicObject();
+    // Use DynamicObject::Ptr for exception-safe memory management
+    juce::DynamicObject::Ptr obj(new juce::DynamicObject());
     obj->setProperty("shader_type", shaderTypeToId(shaderType));
     obj->setProperty("composite_blend_mode", blendModeToStringLocal(compositeBlendMode));
     obj->setProperty("composite_opacity", compositeOpacity);
@@ -316,7 +395,6 @@ juce::var VisualConfiguration::toJson() const
     bloomObj->setProperty("downsample_steps", bloom.downsampleSteps);
     bloomObj->setProperty("spread", bloom.spread);
     bloomObj->setProperty("soft_knee", bloom.softKnee);
-    bloomObj->setProperty("scatter", bloom.scatter);
     obj->setProperty("bloom", juce::var(bloomObj));
 
     // Radial Blur
@@ -401,59 +479,92 @@ juce::var VisualConfiguration::toJson() const
     // Lighting
     obj->setProperty("lighting", Settings3DSerialization::toJson(lighting));
 
-    return juce::var(obj);
+    return juce::var(obj.get());
 }
 
 VisualConfiguration VisualConfiguration::fromJson(const juce::var& json)
 {
     VisualConfiguration config;
     auto* obj = json.getDynamicObject();
-    if (!obj) return config;
+    if (!obj)
+    {
+        juce::Logger::writeToLog("VisualConfiguration::fromJson: Invalid JSON - not a dynamic object");
+        return config;
+    }
 
     config.shaderType = idToShaderType(obj->getProperty("shader_type").toString());
     config.compositeBlendMode = stringToBlendModeLocal(obj->getProperty("composite_blend_mode").toString());
-    config.compositeOpacity = static_cast<float>(static_cast<double>(obj->getProperty("composite_opacity")));
+    config.compositeOpacity = clampAndValidateFloat(
+        static_cast<float>(static_cast<double>(obj->getProperty("composite_opacity"))),
+        0.0f, 1.0f, 1.0f, "compositeOpacity");
 
     // Bloom
     if (auto* bloomObj = obj->getProperty("bloom").getDynamicObject())
     {
         config.bloom.enabled = bloomObj->getProperty("enabled");
-        config.bloom.intensity = static_cast<float>(static_cast<double>(bloomObj->getProperty("intensity")));
-        config.bloom.threshold = static_cast<float>(static_cast<double>(bloomObj->getProperty("threshold")));
-        config.bloom.iterations = static_cast<int>(bloomObj->getProperty("iterations"));
-        config.bloom.downsampleSteps = static_cast<int>(bloomObj->getProperty("downsample_steps"));
-        config.bloom.spread = static_cast<float>(static_cast<double>(bloomObj->getProperty("spread")));
-        config.bloom.softKnee = static_cast<float>(static_cast<double>(bloomObj->getProperty("soft_knee")));
-        if (bloomObj->hasProperty("scatter"))
-            config.bloom.scatter = static_cast<float>(static_cast<double>(bloomObj->getProperty("scatter")));
+        config.bloom.intensity = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(bloomObj->getProperty("intensity"))),
+            0.0f, 10.0f, 1.0f, "bloom.intensity");
+        config.bloom.threshold = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(bloomObj->getProperty("threshold"))),
+            0.0f, 2.0f, 0.8f, "bloom.threshold");
+        config.bloom.iterations = clampAndValidateInt(
+            static_cast<int>(bloomObj->getProperty("iterations")), 1, 16, 4, "bloom.iterations");
+        config.bloom.downsampleSteps = clampAndValidateInt(
+            static_cast<int>(bloomObj->getProperty("downsample_steps")), 1, 10, 6, "bloom.downsampleSteps");
+        config.bloom.spread = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(bloomObj->getProperty("spread"))),
+            0.1f, 5.0f, 1.0f, "bloom.spread");
+        config.bloom.softKnee = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(bloomObj->getProperty("soft_knee"))),
+            0.0f, 1.0f, 0.5f, "bloom.softKnee");
     }
 
     // Radial Blur
     if (auto* radialBlurObj = obj->getProperty("radial_blur").getDynamicObject())
     {
         config.radialBlur.enabled = radialBlurObj->getProperty("enabled");
-        config.radialBlur.amount = static_cast<float>(static_cast<double>(radialBlurObj->getProperty("amount")));
-        config.radialBlur.glow = static_cast<float>(static_cast<double>(radialBlurObj->getProperty("glow")));
-        config.radialBlur.samples = static_cast<int>(radialBlurObj->getProperty("samples"));
+        config.radialBlur.amount = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(radialBlurObj->getProperty("amount"))),
+            0.0f, 1.0f, 0.1f, "radialBlur.amount");
+        config.radialBlur.glow = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(radialBlurObj->getProperty("glow"))),
+            0.0f, 5.0f, 1.0f, "radialBlur.glow");
+        config.radialBlur.samples = clampAndValidateInt(
+            static_cast<int>(radialBlurObj->getProperty("samples")), 1, 32, 4, "radialBlur.samples");
     }
 
     // Trails
     if (auto* trailsObj = obj->getProperty("trails").getDynamicObject())
     {
         config.trails.enabled = trailsObj->getProperty("enabled");
-        config.trails.decay = static_cast<float>(static_cast<double>(trailsObj->getProperty("decay")));
-        config.trails.opacity = static_cast<float>(static_cast<double>(trailsObj->getProperty("opacity")));
+        config.trails.decay = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(trailsObj->getProperty("decay"))),
+            0.0f, 1.0f, 0.1f, "trails.decay");
+        config.trails.opacity = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(trailsObj->getProperty("opacity"))),
+            0.0f, 1.0f, 0.8f, "trails.opacity");
     }
 
     // Color Grade
     if (auto* colorGradeObj = obj->getProperty("color_grade").getDynamicObject())
     {
         config.colorGrade.enabled = colorGradeObj->getProperty("enabled");
-        config.colorGrade.brightness = static_cast<float>(static_cast<double>(colorGradeObj->getProperty("brightness")));
-        config.colorGrade.contrast = static_cast<float>(static_cast<double>(colorGradeObj->getProperty("contrast")));
-        config.colorGrade.saturation = static_cast<float>(static_cast<double>(colorGradeObj->getProperty("saturation")));
-        config.colorGrade.temperature = static_cast<float>(static_cast<double>(colorGradeObj->getProperty("temperature")));
-        config.colorGrade.tint = static_cast<float>(static_cast<double>(colorGradeObj->getProperty("tint")));
+        config.colorGrade.brightness = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(colorGradeObj->getProperty("brightness"))),
+            -1.0f, 1.0f, 0.0f, "colorGrade.brightness");
+        config.colorGrade.contrast = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(colorGradeObj->getProperty("contrast"))),
+            0.0f, 3.0f, 1.0f, "colorGrade.contrast");
+        config.colorGrade.saturation = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(colorGradeObj->getProperty("saturation"))),
+            0.0f, 3.0f, 1.0f, "colorGrade.saturation");
+        config.colorGrade.temperature = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(colorGradeObj->getProperty("temperature"))),
+            -1.0f, 1.0f, 0.0f, "colorGrade.temperature");
+        config.colorGrade.tint = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(colorGradeObj->getProperty("tint"))),
+            -1.0f, 1.0f, 0.0f, "colorGrade.tint");
         config.colorGrade.shadows = hexToColorLocal(colorGradeObj->getProperty("shadows").toString());
         config.colorGrade.highlights = hexToColorLocal(colorGradeObj->getProperty("highlights").toString());
     }
@@ -462,8 +573,12 @@ VisualConfiguration VisualConfiguration::fromJson(const juce::var& json)
     if (auto* vignetteObj = obj->getProperty("vignette").getDynamicObject())
     {
         config.vignette.enabled = vignetteObj->getProperty("enabled");
-        config.vignette.intensity = static_cast<float>(static_cast<double>(vignetteObj->getProperty("intensity")));
-        config.vignette.softness = static_cast<float>(static_cast<double>(vignetteObj->getProperty("softness")));
+        config.vignette.intensity = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(vignetteObj->getProperty("intensity"))),
+            0.0f, 2.0f, 0.5f, "vignette.intensity");
+        config.vignette.softness = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(vignetteObj->getProperty("softness"))),
+            0.0f, 1.0f, 0.5f, "vignette.softness");
         config.vignette.colour = hexToColorLocal(vignetteObj->getProperty("colour").toString());
     }
 
@@ -471,23 +586,33 @@ VisualConfiguration VisualConfiguration::fromJson(const juce::var& json)
     if (auto* filmGrainObj = obj->getProperty("film_grain").getDynamicObject())
     {
         config.filmGrain.enabled = filmGrainObj->getProperty("enabled");
-        config.filmGrain.intensity = static_cast<float>(static_cast<double>(filmGrainObj->getProperty("intensity")));
-        config.filmGrain.speed = static_cast<float>(static_cast<double>(filmGrainObj->getProperty("speed")));
+        config.filmGrain.intensity = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(filmGrainObj->getProperty("intensity"))),
+            0.0f, 1.0f, 0.1f, "filmGrain.intensity");
+        config.filmGrain.speed = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(filmGrainObj->getProperty("speed"))),
+            1.0f, 120.0f, 24.0f, "filmGrain.speed");
     }
 
     // Chromatic Aberration
     if (auto* chromaticAberrationObj = obj->getProperty("chromatic_aberration").getDynamicObject())
     {
         config.chromaticAberration.enabled = chromaticAberrationObj->getProperty("enabled");
-        config.chromaticAberration.intensity = static_cast<float>(static_cast<double>(chromaticAberrationObj->getProperty("intensity")));
+        config.chromaticAberration.intensity = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(chromaticAberrationObj->getProperty("intensity"))),
+            0.0f, 0.1f, 0.005f, "chromaticAberration.intensity");
     }
 
     // Scanlines
     if (auto* scanlinesObj = obj->getProperty("scanlines").getDynamicObject())
     {
         config.scanlines.enabled = scanlinesObj->getProperty("enabled");
-        config.scanlines.intensity = static_cast<float>(static_cast<double>(scanlinesObj->getProperty("intensity")));
-        config.scanlines.density = static_cast<float>(static_cast<double>(scanlinesObj->getProperty("density")));
+        config.scanlines.intensity = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(scanlinesObj->getProperty("intensity"))),
+            0.0f, 1.0f, 0.3f, "scanlines.intensity");
+        config.scanlines.density = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(scanlinesObj->getProperty("density"))),
+            0.5f, 10.0f, 2.0f, "scanlines.density");
         config.scanlines.phosphorGlow = scanlinesObj->getProperty("phosphor_glow");
     }
 
@@ -495,19 +620,32 @@ VisualConfiguration VisualConfiguration::fromJson(const juce::var& json)
     if (auto* distortionObj = obj->getProperty("distortion").getDynamicObject())
     {
         config.distortion.enabled = distortionObj->getProperty("enabled");
-        config.distortion.intensity = static_cast<float>(static_cast<double>(distortionObj->getProperty("intensity")));
-        config.distortion.frequency = static_cast<float>(static_cast<double>(distortionObj->getProperty("frequency")));
-        config.distortion.speed = static_cast<float>(static_cast<double>(distortionObj->getProperty("speed")));
+        config.distortion.intensity = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(distortionObj->getProperty("intensity"))),
+            0.0f, 1.0f, 0.0f, "distortion.intensity");
+        config.distortion.frequency = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(distortionObj->getProperty("frequency"))),
+            0.1f, 20.0f, 4.0f, "distortion.frequency");
+        config.distortion.speed = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(distortionObj->getProperty("speed"))),
+            0.0f, 10.0f, 1.0f, "distortion.speed");
     }
 
     // Tilt Shift
     if (auto* tiltShiftObj = obj->getProperty("tilt_shift").getDynamicObject())
     {
         config.tiltShift.enabled = tiltShiftObj->getProperty("enabled");
-        config.tiltShift.position = static_cast<float>(static_cast<double>(tiltShiftObj->getProperty("position")));
-        config.tiltShift.range = static_cast<float>(static_cast<double>(tiltShiftObj->getProperty("range")));
-        config.tiltShift.blurRadius = static_cast<float>(static_cast<double>(tiltShiftObj->getProperty("blur_radius")));
-        config.tiltShift.iterations = static_cast<int>(tiltShiftObj->getProperty("iterations"));
+        config.tiltShift.position = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(tiltShiftObj->getProperty("position"))),
+            0.0f, 1.0f, 0.5f, "tiltShift.position");
+        config.tiltShift.range = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(tiltShiftObj->getProperty("range"))),
+            0.0f, 1.0f, 0.3f, "tiltShift.range");
+        config.tiltShift.blurRadius = clampAndValidateFloat(
+            static_cast<float>(static_cast<double>(tiltShiftObj->getProperty("blur_radius"))),
+            0.0f, 20.0f, 2.0f, "tiltShift.blurRadius");
+        config.tiltShift.iterations = clampAndValidateInt(
+            static_cast<int>(tiltShiftObj->getProperty("iterations")), 1, 16, 4, "tiltShift.iterations");
     }
 
     // 3D Settings

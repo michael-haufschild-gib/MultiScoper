@@ -4,6 +4,8 @@
 
 #include "rendering/effects/FilmGrainEffect.h"
 
+#include <cmath>
+
 #if OSCIL_ENABLE_OPENGL
 
 namespace oscil
@@ -128,10 +130,25 @@ void FilmGrainEffect::apply(
     if (!compiled_ || !source || !destination)
         return;
 
-    // Update time based on configured speed
-    accumulatedTime_ += deltaTime * settings_.speed;
-    if (accumulatedTime_ > 1000.0f)
-        accumulatedTime_ = std::fmod(accumulatedTime_, 1000.0f);
+    // Save GL state for restoration (H24 fix: save complete blend state)
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
+    // Update time based on configured speed - guard against NaN/Inf
+    if (std::isfinite(deltaTime) && deltaTime > 0.0f)
+    {
+        accumulatedTime_ += deltaTime * settings_.speed;
+        if (accumulatedTime_ > 1000.0f)
+            accumulatedTime_ = std::fmod(accumulatedTime_, 1000.0f);
+    }
+    // Ensure accumulatedTime_ is always valid
+    if (!std::isfinite(accumulatedTime_))
+        accumulatedTime_ = 0.0f;
 
     auto& ext = context.extensions;
 
@@ -159,7 +176,28 @@ void FilmGrainEffect::apply(
     // Render fullscreen quad
     pool.renderFullscreenQuad();
 
+    // Cleanup texture unit
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state (H24 fix: restore complete blend state)
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
+    if (blendWasEnabled)
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                           static_cast<GLenum>(blendDstRGB),
+                           static_cast<GLenum>(blendSrcAlpha),
+                           static_cast<GLenum>(blendDstAlpha));
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
 }
 
 } // namespace oscil

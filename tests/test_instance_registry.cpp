@@ -198,7 +198,7 @@ TEST_F(InstanceRegistryTest, UpdateSource)
 }
 
 // Listener test helper
-class TestRegistryListener : public InstanceRegistryListener
+class TestRegistryListener : public IInstanceRegistryListener
 {
 public:
     int addedCount = 0;
@@ -463,7 +463,7 @@ TEST_F(InstanceRegistryTest, RemoveListenerTwice)
 }
 
 // Test: Listener that removes itself during callback
-class SelfRemovingListener : public InstanceRegistryListener
+class SelfRemovingListener : public IInstanceRegistryListener
 {
 public:
     int callCount = 0;

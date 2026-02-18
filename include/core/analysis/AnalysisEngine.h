@@ -85,7 +85,7 @@ private:
     // Scratch buffers for Mid/Side calculation
     // Pre-allocated to max expected block size to avoid allocation in prepare()
     // which may be called from audio thread in some hosts
-    static constexpr size_t kDefaultBufferSize = 8192;
+    static constexpr size_t DEFAULT_BUFFER_SIZE = 8192;
     std::vector<float> midBuffer_;
     std::vector<float> sideBuffer_;
 };

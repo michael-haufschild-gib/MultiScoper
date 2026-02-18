@@ -81,7 +81,7 @@ void TextureManager::loadTexture(juce::OpenGLContext&, const juce::String& name,
 
     if (!image.isValid())
     {
-        DBG("TextureManager: Failed to load image " << name);
+        juce::Logger::writeToLog("TextureManager: Failed to load image " + name);
         return;
     }
 

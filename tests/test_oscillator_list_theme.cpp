@@ -24,8 +24,8 @@ public:
     std::shared_ptr<IAudioBuffer> getCaptureBuffer(const SourceId&) const override { return nullptr; }
     void updateSource(const SourceId&, const juce::String&, int, double) override {}
     size_t getSourceCount() const override { return 0; }
-    void addListener(InstanceRegistryListener*) override {}
-    void removeListener(InstanceRegistryListener*) override {}
+    void addListener(IInstanceRegistryListener*) override {}
+    void removeListener(IInstanceRegistryListener*) override {}
 };
 
 class OscillatorListItemThemeTest : public ::testing::Test

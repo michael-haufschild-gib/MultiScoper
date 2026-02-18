@@ -19,6 +19,8 @@ class ShaderRegistry;
 class MemoryBudgetManager;
 class GlobalPreferences;
 class VisualPresetManager;
+class AudioCapturePool;
+class CaptureThread;
 
 /**
  * Composition root for the Oscil plugin.
@@ -69,6 +71,13 @@ public:
     GlobalPreferences& getGlobalPreferences();
     VisualPresetManager& getVisualPresetManager();
 
+    /**
+     * Centralized audio capture infrastructure (shared across all instances).
+     * The pool and thread are singleton-like within the factory lifecycle.
+     */
+    AudioCapturePool& getAudioCapturePool();
+    CaptureThread& getCaptureThread();
+
 private:
     // Owned services - these are the single instances for the plugin
     std::unique_ptr<ThemeManager> themeManager_;
@@ -77,6 +86,12 @@ private:
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<GlobalPreferences> globalPreferences_;
     std::unique_ptr<VisualPresetManager> visualPresetManager_;
+
+    // Centralized audio capture system (shared across all plugin instances)
+    // Pool owns 64 pre-allocated SPSC ring buffers
+    // Thread runs batch decimation and writes to processed buffers
+    std::unique_ptr<AudioCapturePool> audioCapturePool_;
+    std::unique_ptr<CaptureThread> captureThread_;
 
     // Prevent copying
     PluginFactory(const PluginFactory&) = delete;

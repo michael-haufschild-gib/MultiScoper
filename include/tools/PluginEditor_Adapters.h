@@ -11,8 +11,6 @@
 #include "ui/dialogs/OscillatorConfigDialog.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/MemoryBudgetManager.h"
-#include <fstream>
-#include <chrono>
 
 namespace oscil
 {
@@ -205,47 +203,70 @@ public:
 
     void bpmChanged(float bpm) override
     {
-        editor_.getProcessor().getTimingEngine().setInternalBPM(static_cast<double>(bpm));
+        editor_.getProcessor().getTimingEngine().setInternalBPM(bpm);
     }
 
     void waveformModeChanged(WaveformMode mode) override
     {
         // Map WaveformMode (UI) to WaveformTriggerMode (Engine)
-        // FreeRunning -> None
-        // RestartOnPlay -> None (Trigger logic handles this via Transport info, but let's check Engine options)
-        // RestartOnNote -> Midi
-        
+        // FreeRunning -> None (free-running display)
+        // RestartOnPlay -> None (not yet implemented, falls back to free-running)
+        // RestartOnNote -> Midi (trigger on MIDI note)
+
         auto& engine = editor_.getProcessor().getTimingEngine();
-        
+
         switch (mode)
         {
             case WaveformMode::FreeRunning:
                 engine.setWaveformTriggerMode(WaveformTriggerMode::None);
                 break;
             case WaveformMode::RestartOnPlay:
-                // RestartOnPlay is usually handled by checking TransportState in processBlock
-                // and resetting phase. There isn't a specific "RestartOnPlay" trigger mode 
-                // in WaveformTriggerMode (None, RisingEdge, etc.). 
-                // However, engine.getConfig().hostSyncEnabled handles sync.
-                // WaveformMode in UI might be redundant or map to specific trigger flags.
-                // Let's assume FreeRunning for now if no specific mode exists, 
-                // or check if we need to set specific flags.
-                // Looking at TimingConfig.h, WaveformMode is an entity enum.
-                // Looking at TimingEngine.h, we have WaveformTriggerMode::Midi, etc.
-                
-                // If the UI implies "Sync Restart", it might mean "HostSync".
-                // But we have a separate "Host Sync" toggle.
-                
-                // Let's map strict restart triggers:
+                // RestartOnPlay currently not implemented - falls back to free-running
+                // TODO: Implement transport-synced restart when DAW starts playback
                 engine.setWaveformTriggerMode(WaveformTriggerMode::None);
                 break;
             case WaveformMode::RestartOnNote:
                 engine.setWaveformTriggerMode(WaveformTriggerMode::Midi);
                 break;
         }
+
+        // FIX: Force display refresh after waveform mode change to clear stale state
+        // Without this, switching modes could leave stale displaySamples or buffer state
+        updateDisplayAndGrid();
     }
 
 private:
+    void updateDisplayAndGrid()
+    {
+        auto& processor = editor_.getProcessor();
+        auto& timingEngine = processor.getTimingEngine();
+        int captureRate = processor.getCaptureRate();
+
+        if (captureRate > 0)
+        {
+            float actualIntervalMs = timingEngine.getActualIntervalMs();
+            int displaySamples = static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(actualIntervalMs) / 1000.0));
+            editor_.setDisplaySamplesForAllPanes(displaySamples);
+            editor_.setSampleRateForAllPanes(captureRate);
+
+            GridConfiguration gridConfig;
+            gridConfig.enabled = processor.getState().isShowGridEnabled();
+
+            const auto& engineConfig = timingEngine.getConfig();
+            gridConfig.timingMode = engineConfig.timingMode;
+            gridConfig.visibleDurationMs = actualIntervalMs;
+
+            gridConfig.noteInterval = timingEngine.getNoteIntervalAsEntity();
+
+            const auto& hostInfo = timingEngine.getHostInfo();
+            gridConfig.bpm = static_cast<float>(hostInfo.bpm);
+            gridConfig.timeSigNumerator = hostInfo.timeSigNumerator;
+            gridConfig.timeSigDenominator = hostInfo.timeSigDenominator;
+
+            editor_.setGridConfigForAllPanes(gridConfig);
+        }
+    }
+
     OscilPluginEditor& editor_;
 };
 
@@ -260,9 +281,6 @@ public:
 
     void layoutChanged(int columnCount) override
     {
-        // #region agent log
-        { std::ofstream f("/Users/Spare/Documents/code/MultiScoper/.cursor/debug.log", std::ios::app); f << "{\"hypothesisId\":\"H2\",\"location\":\"PluginEditor_Adapters.h:layoutChanged\",\"message\":\"Layout change requested\",\"data\":{\"columnCount\":" << columnCount << "},\"timestamp\":" << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "}\n"; f.close(); }
-        // #endregion
         // Safe cast to ColumnLayout (1-3)
         auto layout = static_cast<ColumnLayout>(juce::jlimit(1, 3, columnCount));
         editor_.getProcessor().getState().setColumnLayout(layout);

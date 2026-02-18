@@ -67,11 +67,11 @@ public:
 
         // Create directories with error checking - failures indicate permission issues
         if (!presetsDir.createDirectory())
-            DBG("VisualPresetManager: Failed to create presets directory: " << presetsDir.getFullPathName());
+            juce::Logger::writeToLog("VisualPresetManager: Failed to create presets directory: " + presetsDir.getFullPathName());
         if (!systemDir.createDirectory())
-            DBG("VisualPresetManager: Failed to create system presets directory: " << systemDir.getFullPathName());
+            juce::Logger::writeToLog("VisualPresetManager: Failed to create system presets directory: " + systemDir.getFullPathName());
         if (!userDir.createDirectory())
-            DBG("VisualPresetManager: Failed to create user presets directory: " << userDir.getFullPathName());
+            juce::Logger::writeToLog("VisualPresetManager: Failed to create user presets directory: " + userDir.getFullPathName());
     }
 
     void createSystemPresets()
@@ -100,10 +100,11 @@ public:
             preset.configuration.presetId = def.id;
             def.setup(preset.configuration);
 
-            // Write to file
+            // Write to file with error checking
             auto json = preset.toJson();
             auto jsonString = juce::JSON::toString(json, true);
-            file.replaceWithText(jsonString);
+            if (!file.replaceWithText(jsonString))
+                juce::Logger::writeToLog("VisualPresetManager: Failed to write system preset: " + file.getFullPathName());
         }
     }
 
@@ -134,9 +135,26 @@ public:
             auto preset = loadPresetFromFile(file);
             if (preset.isValid())
             {
-                preset.category = expectedCategory;
-                preset.isReadOnly = (expectedCategory == PresetCategory::System);
-                presets_.push_back(preset);
+                // Check for duplicate UUID - skip if already loaded
+                bool isDuplicate = false;
+                for (const auto& existing : presets_)
+                {
+                    if (existing.id == preset.id)
+                    {
+                        juce::Logger::writeToLog("VisualPresetManager: Duplicate preset ID '" +
+                                                 preset.id + "' found in " + file.getFullPathName() +
+                                                 ", skipping (already loaded from another file)");
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+
+                if (!isDuplicate)
+                {
+                    preset.category = expectedCategory;
+                    preset.isReadOnly = (expectedCategory == PresetCategory::System);
+                    presets_.push_back(preset);
+                }
             }
         }
     }
@@ -144,25 +162,109 @@ public:
     VisualPreset loadPresetFromFile(const juce::File& file)
     {
         VisualPreset preset;
-        auto jsonText = file.loadFileAsString();
-        if (jsonText.isEmpty())
-            return preset;
 
-        auto json = juce::JSON::parse(jsonText);
-        if (json.isVoid())
+        // Validate file exists and is readable
+        if (!file.existsAsFile())
         {
-            DBG("Failed to parse preset JSON: " + file.getFullPathName());
+            juce::Logger::writeToLog("VisualPresetManager: Preset file does not exist: " + file.getFullPathName());
             return preset;
         }
 
-        return VisualPreset::fromJson(json);
+        // Check file size - reject suspiciously large files (>10MB)
+        auto fileSize = file.getSize();
+        if (fileSize > 10 * 1024 * 1024)
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Preset file too large (" +
+                                     juce::String(fileSize) + " bytes): " + file.getFullPathName());
+            return preset;
+        }
+
+        auto jsonText = file.loadFileAsString();
+        if (jsonText.isEmpty())
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Empty or unreadable preset file: " + file.getFullPathName());
+            return preset;
+        }
+
+        // Validate JSON structure
+        juce::String parseError;
+        auto json = juce::JSON::parse(jsonText);
+        if (json.isVoid())
+        {
+            // Try to get more specific error information
+            juce::var result;
+            auto parseResult = juce::JSON::parse(jsonText, result);
+            if (parseResult.failed())
+            {
+                juce::Logger::writeToLog("VisualPresetManager: Failed to parse preset JSON: " +
+                                         file.getFullPathName() + " - " + parseResult.getErrorMessage());
+            }
+            else
+            {
+                juce::Logger::writeToLog("VisualPresetManager: Failed to parse preset JSON: " + file.getFullPathName());
+            }
+            return preset;
+        }
+
+        // Validate it's a JSON object (not an array or primitive)
+        if (!json.getDynamicObject())
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Preset JSON is not an object: " + file.getFullPathName());
+            return preset;
+        }
+
+        preset = VisualPreset::fromJson(json);
+
+        // Validate the loaded preset has minimum required data
+        if (!preset.isValid())
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Loaded preset is invalid (missing required fields): " + file.getFullPathName());
+        }
+
+        return preset;
     }
 
     bool savePresetToFile(const VisualPreset& preset, const juce::File& file)
     {
+        // Validate preset before saving
+        if (preset.id.isEmpty())
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Cannot save preset with empty ID");
+            return false;
+        }
+        if (preset.name.isEmpty())
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Cannot save preset with empty name");
+            return false;
+        }
+
         auto json = preset.toJson();
         auto jsonString = juce::JSON::toString(json, true);
-        return file.replaceWithText(jsonString);
+
+        // Validate JSON output isn't empty
+        if (jsonString.isEmpty())
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Failed to serialize preset to JSON: " + preset.name);
+            return false;
+        }
+
+        // Ensure parent directory exists
+        auto parentDir = file.getParentDirectory();
+        if (!parentDir.exists() && !parentDir.createDirectory())
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Failed to create directory for preset: " +
+                                     parentDir.getFullPathName());
+            return false;
+        }
+
+        // Save with error handling
+        if (!file.replaceWithText(jsonString))
+        {
+            juce::Logger::writeToLog("VisualPresetManager: Failed to write preset file: " + file.getFullPathName());
+            return false;
+        }
+
+        return true;
     }
 
     juce::File getPresetFile(const VisualPreset& preset) const
@@ -352,8 +454,9 @@ Result<void> VisualPresetManager::updatePreset(const juce::String& id, const Vis
     if (!impl_->savePresetToFile(*preset, file))
         return Result<void>::fail("Failed to save preset to file");
 
-    // Notify listeners
-    impl_->listeners_.call([preset](Listener& l) { l.presetUpdated(*preset); });
+    // Notify listeners - make a copy to avoid dangling pointer if listener modifies vector
+    VisualPreset presetCopy = *preset;
+    impl_->listeners_.call([&presetCopy](Listener& l) { l.presetUpdated(presetCopy); });
 
     return Result<void>::ok();
 }
@@ -385,8 +488,9 @@ Result<void> VisualPresetManager::renamePreset(const juce::String& id, const juc
     if (!impl_->savePresetToFile(*preset, file))
         return Result<void>::fail("Failed to save preset to file");
 
-    // Notify listeners
-    impl_->listeners_.call([preset](Listener& l) { l.presetUpdated(*preset); });
+    // Notify listeners - make a copy to avoid dangling pointer if listener modifies vector
+    VisualPreset presetCopy = *preset;
+    impl_->listeners_.call([&presetCopy](Listener& l) { l.presetUpdated(presetCopy); });
 
     return Result<void>::ok();
 }
@@ -412,8 +516,9 @@ Result<void> VisualPresetManager::setDescription(const juce::String& id, const j
     if (!impl_->savePresetToFile(*preset, file))
         return Result<void>::fail("Failed to save preset to file");
 
-    // Notify listeners
-    impl_->listeners_.call([preset](Listener& l) { l.presetUpdated(*preset); });
+    // Notify listeners - make a copy to avoid dangling pointer if listener modifies vector
+    VisualPreset presetCopy = *preset;
+    impl_->listeners_.call([&presetCopy](Listener& l) { l.presetUpdated(presetCopy); });
 
     return Result<void>::ok();
 }
@@ -471,8 +576,9 @@ Result<void> VisualPresetManager::setFavorite(const juce::String& id, bool isFav
             return Result<void>::fail("Failed to save preset to file");
     }
 
-    // Notify listeners
-    impl_->listeners_.call([preset](Listener& l) { l.presetUpdated(*preset); });
+    // Notify listeners - make a copy to avoid dangling pointer if listener modifies vector
+    VisualPreset presetCopy = *preset;
+    impl_->listeners_.call([&presetCopy](Listener& l) { l.presetUpdated(presetCopy); });
 
     return Result<void>::ok();
 }
@@ -543,16 +649,16 @@ juce::File VisualPresetManager::getPresetsDirectory()
 #if JUCE_MAC
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
         .getChildFile("Application Support")
-        .getChildFile("Oscil")
+        .getChildFile("MultiScoper")
         .getChildFile("Presets");
 #elif JUCE_WINDOWS
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-        .getChildFile("Oscil")
+        .getChildFile("MultiScoper")
         .getChildFile("Presets");
 #else
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
         .getChildFile(".config")
-        .getChildFile("Oscil")
+        .getChildFile("MultiScoper")
         .getChildFile("Presets");
 #endif
 }

@@ -6,13 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
-
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -27,9 +27,7 @@ namespace oscil
  * - Full keyboard accessibility
  */
 class OscilCheckbox : public ThemedComponent,
-                      
-                      public TestIdSupport,
-                      private juce::Timer
+                      public TestIdSupport
 {
 public:
     explicit OscilCheckbox(IThemeService& themeService);
@@ -67,6 +65,7 @@ public:
     // Component overrides
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void parentHierarchyChanged() override;
 
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
@@ -82,8 +81,6 @@ public:
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
-    void timerCallback() override;
-    void updateAnimations();
     void notifyStateChanged();
 
     // Rendering
@@ -101,11 +98,12 @@ private:
     juce::String label_;
     bool labelOnRight_ = true;
 
-    // Animation
-    SpringAnimation checkSpring_;      // 0 = unchecked, 1 = checked
-    SpringAnimation hoverSpring_;
-
-    // Theme
+    // Animation state
+    float checkProgress_ = 0.0f;      // 0 = unchecked, 1 = checked
+    float hoverProgress_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator checkAnimator_;
+    ScopedAnimator hoverAnimator_;
 
     // TestIdSupport
     void registerTestId() override;

@@ -1,4 +1,15 @@
 #version 330 core
+// ============================================================================
+// Plasma Sine Vertex Shader
+// Animated jitter effect with noise-based vertex displacement
+// Part of Oscil audio visualization plugin
+//
+// GPU COMPATIBILITY: OpenGL 3.3 Core Profile
+// - Intel HD Graphics 2500+ (2012+): SUPPORTED
+// - AMD/NVIDIA discrete GPUs (2008+): SUPPORTED
+// - macOS 10.9+: SUPPORTED
+// ============================================================================
+
 in vec2 position;
 in float vParam; // -1 to 1 across width
 in float tParam; // 0 to 1 along length

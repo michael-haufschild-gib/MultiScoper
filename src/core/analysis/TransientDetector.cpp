@@ -17,6 +17,9 @@ TransientDetector::TransientDetector()
 
 void TransientDetector::reset()
 {
+    // Set flag to prevent audio thread from processing during reset
+    resetting_.store(true, std::memory_order_release);
+
     state_ = State::Idle;
     fastEnvelope_ = 0.0f;
     slowEnvelope_ = 0.0f;
@@ -26,6 +29,9 @@ void TransientDetector::reset()
     samplesSincePeakIncrease_ = 0;
     attackTimeMs_.store(0.0f, std::memory_order_relaxed);
     decayTimeMs_.store(0.0f, std::memory_order_relaxed);
+
+    // Clear flag after reset complete
+    resetting_.store(false, std::memory_order_release);
 }
 
 void TransientDetector::updateCoefficients(double sampleRate)
@@ -50,6 +56,10 @@ void TransientDetector::updateCoefficients(double sampleRate)
 
 void TransientDetector::process(const float* samples, int numSamples, double sampleRate)
 {
+    // Skip processing if reset is in progress (thread safety)
+    if (resetting_.load(std::memory_order_acquire))
+        return;
+
     // Guard against invalid parameters
     if (!samples || numSamples <= 0 || !std::isfinite(sampleRate) || sampleRate <= 0.0)
         return;

@@ -19,7 +19,7 @@ class TestHarnessWindow : public juce::DocumentWindow
 {
 public:
     TestHarnessWindow(TestDAW& daw, TestHttpServer& server)
-        : DocumentWindow("Oscil Test Harness",
+        : DocumentWindow("MultiScoper Test Harness",
                          juce::Colours::darkgrey,
                          DocumentWindow::allButtons),
           daw_(daw),
@@ -98,6 +98,15 @@ private:
             startTimerHz(4); // Update 4 times per second
         }
 
+        ~StatusComponent() override
+        {
+            stopTimer();
+            playStopButton_.removeListener(this);
+            bpmSlider_.removeListener(this);
+            for (int i = 0; i < 3; ++i)
+                editorButtons_[i].removeListener(this);
+        }
+
         void resized() override
         {
             auto bounds = getLocalBounds().reduced(20);
@@ -148,7 +157,7 @@ private:
 
             // Title
             g.setFont(juce::FontOptions(20.0f).withStyle("Bold"));
-            g.drawText("Oscil Test Harness", 20, y, getWidth() - 40, lineHeight, juce::Justification::centred);
+            g.drawText("MultiScoper Test Harness", 20, y, getWidth() - 40, lineHeight, juce::Justification::centred);
             y += lineHeight + 22;
 
             g.setFont(juce::FontOptions(14.0f));
@@ -318,7 +327,7 @@ class TestHarnessApplication : public juce::JUCEApplication
 public:
     TestHarnessApplication() = default;
 
-    const juce::String getApplicationName() override { return "Oscil Test Harness"; }
+    const juce::String getApplicationName() override { return "MultiScoper Test Harness"; }
     const juce::String getApplicationVersion() override { return "1.0.0"; }
     bool moreThanOneInstanceAllowed() override { return false; }
 
@@ -371,14 +380,14 @@ public:
         daw_->showTrackEditor(0);
         std::cerr << ">>> Track 0 Editor requested." << std::endl;
 
-        std::cout << "Oscil Test Harness started" << std::endl;
+        std::cout << "MultiScoper Test Harness started" << std::endl;
         std::cout << "HTTP API available at: http://localhost:" << port << std::endl;
         std::cout << "Health check: http://localhost:" << port << "/health" << std::endl;
     }
 
     void shutdown() override
     {
-        std::cout << "Shutting down Oscil Test Harness..." << std::endl;
+        std::cout << "Shutting down MultiScoper Test Harness..." << std::endl;
 
         mainWindow_.reset();
 

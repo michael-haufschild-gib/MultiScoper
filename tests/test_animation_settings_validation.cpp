@@ -5,7 +5,6 @@
 
 #include <gtest/gtest.h>
 #include "ui/components/AnimationSettings.h"
-#include "ui/components/SpringAnimation.h"
 
 using namespace oscil;
 
@@ -112,19 +111,7 @@ TEST_F(AnimationSettingsValidationTest, AnimationIntensity)
     EXPECT_FLOAT_EQ(AnimationSettings::getAnimationIntensity(), 0.0f);
 }
 
-// Test: Integration with SpringAnimation
-TEST_F(AnimationSettingsValidationTest, SpringAnimationIntegration)
-{
-    AnimationSettings::setAppPreference(false);
-    EXPECT_TRUE(AnimationSettings::shouldUseSpringAnimations());
-
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.setTarget(1.0f);
-    spring.update(1.0f / 60.0f);
-
-    // With animations enabled, spring should make progress
-    EXPECT_GT(spring.position, 0.0f);
-}
+// Test: Animation settings work correctly (integration removed - SpringAnimation deprecated)
 
 // Test: Zero duration input
 TEST_F(AnimationSettingsValidationTest, ZeroDurationInput)

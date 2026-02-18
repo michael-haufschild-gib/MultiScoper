@@ -3,6 +3,7 @@
 */
 
 #include "ui/components/OscilSlider.h"
+#include "ui/animation/OscilAnimationService.h"
 #include <cmath>
 
 namespace oscil
@@ -10,16 +11,12 @@ namespace oscil
 
 OscilSlider::OscilSlider(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , thumbScale_(SpringPresets::snappy())
-    , snapPulse_(SpringPresets::bouncy())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    thumbScale_.position = 1.0f;
-    thumbScale_.target = 1.0f;
-    snapPulse_.position = 1.0f;
-    snapPulse_.target = 1.0f;
+    currentThumbScale_ = 1.0f;
+    snapPulseProgress_ = 1.0f;
 
     // Setup internal slider for APVTS
     internalSlider_.setRange(minValue_, maxValue_, step_);
@@ -71,7 +68,16 @@ void OscilSlider::registerTestId()
 
 OscilSlider::~OscilSlider()
 {
-    stopTimer();
+    // ScopedAnimators handle completion on destruction
+}
+
+void OscilSlider::parentHierarchyChanged()
+{
+    ThemedComponent::parentHierarchyChanged();
+    if (auto* service = findAnimationService(this))
+    {
+        animService_ = service;
+    }
 }
 
 void OscilSlider::setVariant(SliderVariant variant)
@@ -236,6 +242,10 @@ int OscilSlider::getPreferredHeight() const
 
 void OscilSlider::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     if (variant_ == SliderVariant::Vertical)
         paintVertical(g);
     else
@@ -365,7 +375,7 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
 
     float scale = currentThumbScale_;
     if (justSnapped_)
-        scale *= snapPulse_.position;
+        scale *= snapPulseProgress_;
 
     float size = THUMB_SIZE * scale;
     float cx, cy;
@@ -463,7 +473,13 @@ juce::String OscilSlider::formatValue(double value) const
 
 void OscilSlider::resized()
 {
-    // No child components
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilSlider::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
 }
 
 void OscilSlider::mouseEnter(const juce::MouseEvent&)
@@ -472,17 +488,24 @@ void OscilSlider::mouseEnter(const juce::MouseEvent&)
 
     isHovered_ = true;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ && OscilAnimationService::shouldAnimate())
     {
-        thumbScale_.setTarget(1.1f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        auto safeThis = juce::Component::SafePointer<OscilSlider>(this);
+        thumbAnimator_.set(animService_->createHoverAnimation(
+            [safeThis](float v) {
+                if (safeThis)
+                {
+                    safeThis->currentThumbScale_ = juce::jmap(v, 1.0f, 1.1f);
+                    safeThis->repaint();
+                }
+            }));
+        thumbAnimator_.start();
     }
     else
     {
         currentThumbScale_ = 1.1f;
+        repaint();
     }
-
-    repaint();
 }
 
 void OscilSlider::mouseExit(const juce::MouseEvent&)
@@ -491,18 +514,26 @@ void OscilSlider::mouseExit(const juce::MouseEvent&)
 
     if (!isDragging_)
     {
-        if (AnimationSettings::shouldUseSpringAnimations())
+        if (animService_ && OscilAnimationService::shouldAnimate())
         {
-            thumbScale_.setTarget(1.0f);
-            startTimerHz(ComponentLayout::ANIMATION_FPS);
+            float startScale = currentThumbScale_;
+            auto safeThis = juce::Component::SafePointer<OscilSlider>(this);
+            thumbAnimator_.set(animService_->createHoverAnimation(
+                [safeThis, startScale](float v) {
+                    if (safeThis)
+                    {
+                        safeThis->currentThumbScale_ = juce::jmap(v, startScale, 1.0f);
+                        safeThis->repaint();
+                    }
+                }));
+            thumbAnimator_.start();
         }
         else
         {
             currentThumbScale_ = 1.0f;
+            repaint();
         }
     }
-
-    repaint();
 }
 
 void OscilSlider::mouseDown(const juce::MouseEvent& e)
@@ -610,10 +641,19 @@ void OscilSlider::mouseUp(const juce::MouseEvent&)
 
     if (!isHovered_)
     {
-        if (AnimationSettings::shouldUseSpringAnimations())
+        if (animService_ && OscilAnimationService::shouldAnimate())
         {
-            thumbScale_.setTarget(1.0f);
-            startTimerHz(ComponentLayout::ANIMATION_FPS);
+            float startScale = currentThumbScale_;
+            auto safeThis = juce::Component::SafePointer<OscilSlider>(this);
+            thumbAnimator_.set(animService_->createHoverAnimation(
+                [safeThis, startScale](float v) {
+                    if (safeThis)
+                    {
+                        safeThis->currentThumbScale_ = juce::jmap(v, startScale, 1.0f);
+                        safeThis->repaint();
+                    }
+                }));
+            thumbAnimator_.start();
         }
         else
         {
@@ -719,30 +759,6 @@ bool OscilSlider::hitTest(int x, int y)
     return hitArea.contains(static_cast<float>(x), static_cast<float>(y));
 }
 
-void OscilSlider::timerCallback()
-{
-    updateAnimations();
-
-    if (thumbScale_.isSettled() && (!justSnapped_ || snapPulse_.isSettled()))
-    {
-        stopTimer();
-        justSnapped_ = false;
-    }
-
-    repaint();
-}
-
-void OscilSlider::updateAnimations()
-{
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-
-    thumbScale_.update(dt);
-    currentThumbScale_ = thumbScale_.position;
-
-    if (justSnapped_)
-        snapPulse_.update(dt);
-}
-
 double OscilSlider::constrainValue(double value) const
 {
     value = juce::jlimit(minValue_, maxValue_, value);
@@ -784,22 +800,37 @@ void OscilSlider::triggerSnapFeedback()
 {
     justSnapped_ = true;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (animService_ && OscilAnimationService::shouldAnimate())
     {
-        snapPulse_.setTarget(1.15f, 1.0f);
-
-        // Use SafePointer to prevent use-after-free if component is destroyed before callback
-        juce::Component::SafePointer<OscilSlider> safeThis(this);
-        juce::Timer::callAfterDelay(100, [safeThis] {
-            if (auto* slider = safeThis.getComponent())
-            {
-                slider->snapPulse_.setTarget(1.0f);
-                if (!slider->isTimerRunning())
-                    slider->startTimerHz(ComponentLayout::ANIMATION_FPS);
-            }
-        });
-
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        // Quick scale pulse up then back down
+        auto safeThis = juce::Component::SafePointer<OscilSlider>(this);
+        snapAnimator_.set(animService_->createValueAnimation(
+            80.0, // Quick snap feedback
+            [safeThis](float v) {
+                if (safeThis)
+                {
+                    // Scale up for first half, then back down
+                    if (v < 0.5f)
+                        safeThis->snapPulseProgress_ = 1.0f + 0.15f * (v * 2.0f);
+                    else
+                        safeThis->snapPulseProgress_ = 1.15f - 0.15f * ((v - 0.5f) * 2.0f);
+                    safeThis->repaint();
+                }
+            },
+            juce::Easings::createEaseOut(),
+            [safeThis]() {
+                if (safeThis)
+                {
+                    safeThis->snapPulseProgress_ = 1.0f;
+                    safeThis->justSnapped_ = false;
+                    safeThis->repaint();
+                }
+            }));
+        snapAnimator_.start();
+    }
+    else
+    {
+        justSnapped_ = false;
     }
 }
 

@@ -29,7 +29,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
     ext.glGenFramebuffers(1, &fbo);
     if (fbo == 0)
     {
-        DBG("Framebuffer: Failed to generate FBO");
+        juce::Logger::writeToLog("Framebuffer: Failed to generate FBO");
         return false;
     }
 
@@ -38,7 +38,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
     if (numSamples > 0)
     {
         // MSAA temporarily disabled due to missing extension bindings in current JUCE setup
-        DBG("Framebuffer: MSAA requested but not implemented in this build. Falling back to standard FBO.");
+        juce::Logger::writeToLog("Framebuffer: MSAA requested but not implemented in this build. Falling back to standard FBO.");
     }
 
     // Standard Path: Use Textures (or Renderbuffer for depth if not sampling)
@@ -57,7 +57,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
     // Check completeness
     if (!checkFramebufferComplete())
     {
-        DBG("Framebuffer: Framebuffer is not complete");
+        juce::Logger::writeToLog("Framebuffer: Framebuffer is not complete");
         destroy(context);
         return false;
     }
@@ -68,10 +68,10 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
     return true;
 }
 
-void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
+bool Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
 {
     if (w == width && h == height)
-        return;
+        return true;
 
     GLenum savedFormat = format;
     bool savedHasDepth = hasDepth;
@@ -81,9 +81,10 @@ void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
     destroy(context);
     if (!create(context, w, h, savedSamples, savedFormat, savedHasDepth, savedHasDepthTexture))
     {
-        DBG("Framebuffer::resize() failed to recreate FBO at " << w << "x" << h);
-        // Framebuffer is now invalid - caller should check isValid() before use
+        juce::Logger::writeToLog("Framebuffer::resize() failed to recreate FBO at " + juce::String(w) + "x" + juce::String(h));
+        return false;
     }
+    return true;
 }
 
 void Framebuffer::bind()
@@ -151,7 +152,7 @@ bool Framebuffer::createColorTexture(juce::OpenGLContext& context)
     glGenTextures(1, &colorTexture);
     if (colorTexture == 0)
     {
-        DBG("Framebuffer: Failed to generate color texture");
+        juce::Logger::writeToLog("Framebuffer: Failed to generate color texture");
         return false;
     }
 
@@ -199,7 +200,7 @@ bool Framebuffer::createDepthBuffer(juce::OpenGLContext& context)
         glGenTextures(1, &depthTexture);
         if (depthTexture == 0)
         {
-            DBG("Framebuffer: Failed to generate depth texture");
+            juce::Logger::writeToLog("Framebuffer: Failed to generate depth texture");
             return false;
         }
 
@@ -221,7 +222,7 @@ bool Framebuffer::createDepthBuffer(juce::OpenGLContext& context)
         ext.glGenRenderbuffers(1, &depthBuffer);
         if (depthBuffer == 0)
         {
-            DBG("Framebuffer: Failed to generate depth renderbuffer");
+            juce::Logger::writeToLog("Framebuffer: Failed to generate depth renderbuffer");
             return false;
         }
 
@@ -247,16 +248,16 @@ bool Framebuffer::checkFramebufferComplete()
         case GL_FRAMEBUFFER_COMPLETE:
             return true;
         case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-            DBG("Framebuffer: Incomplete attachment");
+            juce::Logger::writeToLog("Framebuffer: Incomplete attachment");
             break;
         case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-            DBG("Framebuffer: Missing attachment");
+            juce::Logger::writeToLog("Framebuffer: Missing attachment");
             break;
         case GL_FRAMEBUFFER_UNSUPPORTED:
-            DBG("Framebuffer: Unsupported format combination");
+            juce::Logger::writeToLog("Framebuffer: Unsupported format combination");
             break;
         default:
-            DBG("Framebuffer: Unknown error " << (int)status);
+            juce::Logger::writeToLog("Framebuffer: Unknown error " + juce::String(static_cast<int>(status)));
             break;
     }
     return false;

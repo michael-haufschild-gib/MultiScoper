@@ -61,9 +61,9 @@ include(${CMAKE_SOURCE_DIR}/cmake/Sources.cmake)
 
 # Create JUCE standalone application
 juce_add_gui_app(OscilTestHarness
-    PRODUCT_NAME "Oscil Test Harness"
-    COMPANY_NAME "OscilAudio"
-    BUNDLE_ID "com.oscilaudio.testharness"
+    PRODUCT_NAME "MultiScoper Test Harness"
+    COMPANY_NAME "MultiScoper"
+    BUNDLE_ID "com.multiscoper.testharness"
 )
 
 # Add sources to the target
@@ -94,6 +94,7 @@ target_link_libraries(OscilTestHarness PRIVATE
     juce::juce_events
     juce::juce_audio_basics
     juce::juce_dsp
+    juce::juce_animation
     $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     httplib::httplib
     nlohmann_json::nlohmann_json

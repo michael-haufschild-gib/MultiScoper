@@ -85,24 +85,24 @@ TEST_F(AnimationSettingsPresetsTest, EaseInOutNormalMotion)
     EXPECT_NEAR(midpoint, 50.0f, 1.0f);
 }
 
-// Test: Lerp with progress below zero
+// Test: Lerp with progress below zero (clamped to 0)
 TEST_F(AnimationSettingsPresetsTest, LerpProgressBelowZero)
 {
     AnimationSettings::setAppPreference(false);
 
-    // Negative progress extrapolates backward
+    // Negative progress is now clamped to 0 for safety
     float result = AnimationHelper::lerp(0.0f, 100.0f, -0.5f);
-    EXPECT_FLOAT_EQ(result, -50.0f);
+    EXPECT_FLOAT_EQ(result, 0.0f);  // Clamped to start value
 }
 
-// Test: Lerp with progress above one
+// Test: Lerp with progress above one (clamped to 1)
 TEST_F(AnimationSettingsPresetsTest, LerpProgressAboveOne)
 {
     AnimationSettings::setAppPreference(false);
 
-    // Progress > 1 extrapolates forward
+    // Progress > 1 is now clamped to 1 for safety
     float result = AnimationHelper::lerp(0.0f, 100.0f, 1.5f);
-    EXPECT_FLOAT_EQ(result, 150.0f);
+    EXPECT_FLOAT_EQ(result, 100.0f);  // Clamped to end value
 }
 
 // Test: Lerp with negative value range

@@ -138,7 +138,7 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
         atomicTriggerMode_.load(std::memory_order_relaxed));
 
     if (triggerMode == WaveformTriggerMode::None)
-        return true;
+        return true;  // Free-running mode: always trigger (render every frame)
 
     if (triggerMode == WaveformTriggerMode::Manual)
     {

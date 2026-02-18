@@ -51,13 +51,13 @@ public:
 // Mock Framebuffer Pool
 class MockFramebufferPool : public FramebufferPool {
 public:
-    Framebuffer ping, pong;
+    mutable Framebuffer ping, pong;
     MockFramebufferPool() {
         ping.fbo = 1; // Mark as valid
         pong.fbo = 2;
     }
-    Framebuffer* getPingFBO() override { return &ping; }
-    Framebuffer* getPongFBO() override { return &pong; }
+    Framebuffer* getPingFBO() const override { return &ping; }
+    Framebuffer* getPongFBO() const override { return &pong; }
 };
 
 // Testable Effect Chain (intercepts GL calls)

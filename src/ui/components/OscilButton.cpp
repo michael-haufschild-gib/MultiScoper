@@ -1,8 +1,11 @@
 /*
     Oscil - Button Component Implementation
+    Migrated to JUCE Animator for VBlank-synced animations
 */
 
 #include "ui/components/OscilButton.h"
+#include "plugin/PluginEditor.h"
+#include <cmath>
 
 namespace oscil
 {
@@ -10,27 +13,19 @@ namespace oscil
 OscilButton::OscilButton(IThemeService& themeService, const juce::String& text)
     : ThemedComponent(themeService)
     , label_(text)
-    , scaleSpring_(SpringPresets::snappy())
-    , brightnessSpring_(SpringPresets::stiff())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
-    scaleSpring_.position = 1.0f;
-    scaleSpring_.target = 1.0f;
-    brightnessSpring_.position = 0.0f;
-    brightnessSpring_.target = 0.0f;
+    currentScale_ = 1.0f;
+    currentBrightness_ = 0.0f;
 }
-
-
 
 OscilButton::OscilButton(IThemeService& themeService, const juce::String& text, const juce::String& testId)
     : OscilButton(themeService, text)
 {
     setTestId(testId);
 }
-
-
 
 OscilButton::OscilButton(IThemeService& themeService, const juce::Image& icon)
     : OscilButton(themeService, juce::String{})
@@ -39,8 +34,6 @@ OscilButton::OscilButton(IThemeService& themeService, const juce::Image& icon)
     variant_ = ButtonVariant::Icon;
 }
 
-
-
 void OscilButton::registerTestId()
 {
     OSCIL_REGISTER_TEST_ID(testId_);
@@ -48,7 +41,8 @@ void OscilButton::registerTestId()
 
 OscilButton::~OscilButton()
 {
-    stopTimer();
+    scaleAnimator_.reset();
+    brightnessAnimator_.reset();
 }
 
 void OscilButton::setText(const juce::String& text)
@@ -112,8 +106,24 @@ void OscilButton::setShortcut(const juce::KeyPress& key)
 
 void OscilButton::setTooltip(const juce::String& tooltip)
 {
-    tooltipText_ = tooltip;
-    setHelpText(tooltip);
+    // Handle edge case: empty or whitespace-only tooltip
+    juce::String sanitized = tooltip.trim();
+    if (sanitized.isEmpty())
+    {
+        tooltipText_ = {};
+        setHelpText({});
+        return;
+    }
+
+    // Truncate very long tooltips to prevent rendering issues
+    static constexpr int MAX_TOOLTIP_LENGTH = 500;
+    if (sanitized.length() > MAX_TOOLTIP_LENGTH)
+    {
+        sanitized = sanitized.substring(0, MAX_TOOLTIP_LENGTH - 3) + "...";
+    }
+
+    tooltipText_ = sanitized;
+    setHelpText(sanitized);
 }
 
 void OscilButton::setToggleable(bool toggleable)
@@ -138,7 +148,8 @@ void OscilButton::setToggled(bool toggled, bool notify)
 
 void OscilButton::setBorder(juce::Colour color, float thickness)
 {
-    if (borderColor_ != color || borderWidth_ != thickness)
+    constexpr float epsilon = 1e-6f;
+    if (borderColor_ != color || std::abs(borderWidth_ - thickness) > epsilon)
     {
         borderColor_ = color;
         borderWidth_ = thickness;
@@ -180,6 +191,10 @@ int OscilButton::getPreferredHeight() const
 
 void OscilButton::paint(juce::Graphics& g)
 {
+    // Guard against zero-size painting
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
+
     auto bounds = getLocalBounds().toFloat();
 
     // Apply scale animation
@@ -200,7 +215,6 @@ void OscilButton::paint(juce::Graphics& g)
 
 void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 {
-    // Skip regeneration if nothing changed
     if (bounds == cachedPathBounds_ && segmentPosition_ == cachedSegmentPosition_)
         return;
 
@@ -214,12 +228,10 @@ void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 
     if (segmentPosition_ == SegmentPosition::None || segmentPosition_ == SegmentPosition::Only)
     {
-        // Standard rounded rectangle
         cachedButtonPath_.addRoundedRectangle(bounds, cornerRadius);
     }
     else if (segmentPosition_ == SegmentPosition::First)
     {
-        // Round left corners only
         cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(),
                                         bounds.getWidth(), bounds.getHeight(),
                                         cornerRadius, cornerRadius,
@@ -227,28 +239,21 @@ void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
     }
     else if (segmentPosition_ == SegmentPosition::Last)
     {
-        // Round right corners only
         cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(),
                                         bounds.getWidth(), bounds.getHeight(),
                                         cornerRadius, cornerRadius,
                                         false, true, false, true);
     }
-    else // Middle
+    else
     {
-        // No rounded corners
         cachedButtonPath_.addRectangle(bounds);
     }
 }
 
 void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    // Update path cache if bounds changed (simple check, assuming animation updates bounds every frame)
-    // Since bounds can change every frame during animation, we might still be regenerating path.
-    // However, avoiding allocation of juce::Path object itself is good.
-    // We'll update the cached path here since it depends on the animated bounds passed in paint.
     updatePathCache(bounds);
 
-    // Background
     auto bgColour = getBackgroundColour();
     if (std::abs(currentBrightness_) > 1e-6f)
         bgColour = bgColour.brighter(currentBrightness_);
@@ -267,29 +272,25 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
         g.fillPath(cachedButtonPath_);
     }
 
-    // Border for segmented buttons and Secondary variant (for visual definition)
     if (segmentPosition_ != SegmentPosition::None || variant_ == ButtonVariant::Secondary)
     {
         g.setColour(getBorderColour());
         g.strokePath(cachedButtonPath_, juce::PathStrokeType(1.0f));
     }
 
-    // Custom border
     if (borderWidth_ > 0.0f && borderColor_.getAlpha() > 0)
     {
         g.setColour(borderColor_);
         g.strokePath(cachedButtonPath_, juce::PathStrokeType(borderWidth_));
     }
 
-    // Content - use reduced padding for segmented buttons and narrow buttons
     int horizontalPadding;
     if (segmentPosition_ != SegmentPosition::None)
     {
-        horizontalPadding = ComponentLayout::BUTTON_SEGMENT_PADDING;  // Slightly more padding for better readability
+        horizontalPadding = ComponentLayout::BUTTON_SEGMENT_PADDING;
     }
     else if (bounds.getWidth() < TEXT_PADDING * 2.5f)
     {
-        // For narrow buttons, use proportional padding (min 8px for better readability)
         horizontalPadding = std::max(8, static_cast<int>(bounds.getWidth() * ComponentLayout::BUTTON_NARROW_PADDING_RATIO));
     }
     else
@@ -303,18 +304,15 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
 
     g.setColour(textColour);
 
-    // Path icon rendering (takes precedence over image icon and text)
     if (!iconPath_.isEmpty())
     {
         auto pathBounds = iconPath_.getBounds();
         float padding = static_cast<float>(ComponentLayout::SPACING_XS);
         float availableSize = std::max(1.0f, std::min(bounds.getWidth(), bounds.getHeight()) - padding * 2);
 
-        // Scale path to fit within available space (guard against zero path bounds)
         float pathDim = std::max(0.001f, std::max(pathBounds.getWidth(), pathBounds.getHeight()));
         float scale = availableSize / pathDim;
 
-        // Center the path within the bounds
         float offsetX = bounds.getCentreX() - (pathBounds.getCentreX() * scale);
         float offsetY = bounds.getCentreY() - (pathBounds.getCentreY() * scale);
 
@@ -327,22 +325,17 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
         return;
     }
 
-    // Icon-only button (image-based)
     if (variant_ == ButtonVariant::Icon)
     {
         if (icon_.isValid())
         {
-            // Guard against negative reduction (would expand instead)
             float reduction = std::max(0.0f, (bounds.getWidth() - ICON_SIZE) / 2);
             auto iconBounds = bounds.reduced(reduction);
             g.drawImage(icon_, iconBounds, juce::RectanglePlacement::centred);
             return;
         }
-        // Fall through to render text label if no image icon is set
-        // This allows Icon variant buttons to use text labels (e.g., Unicode symbols)
     }
 
-    // Text with optional icon
     auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
     g.setFont(font);
 
@@ -400,11 +393,8 @@ juce::Colour OscilButton::getBackgroundColour() const
 {
     const auto& theme = getTheme();
 
-    // Handle toggled state for toggleable buttons
     if (toggleable_ && isToggled_)
-    {
         return theme.btnPrimaryBgActive;
-    }
 
     if (!enabled_)
     {
@@ -414,7 +404,7 @@ juce::Colour OscilButton::getBackgroundColour() const
             case ButtonVariant::Secondary: return theme.btnSecondaryBgDisabled;
             case ButtonVariant::Tertiary:  return theme.btnTertiaryBgDisabled;
             case ButtonVariant::Ghost:     return theme.btnTertiaryBgDisabled;
-            case ButtonVariant::Danger:    return theme.statusError.withAlpha(0.5f); // Fallback
+            case ButtonVariant::Danger:    return theme.statusError.withAlpha(0.5f);
             case ButtonVariant::Icon:      return theme.backgroundSecondary.withAlpha(0.5f);
             default:                       return theme.btnPrimaryBgDisabled;
         }
@@ -448,26 +438,22 @@ juce::Colour OscilButton::getBackgroundColour() const
         }
     }
 
-    // Default state
     switch (variant_)
     {
         case ButtonVariant::Primary:   return theme.btnPrimaryBg;
         case ButtonVariant::Secondary: return theme.btnSecondaryBg;
         case ButtonVariant::Tertiary:  return theme.btnTertiaryBg;
-        case ButtonVariant::Ghost:     return theme.btnTertiaryBg; // Ghost is alias for Tertiary style
+        case ButtonVariant::Ghost:     return theme.btnTertiaryBg;
         case ButtonVariant::Danger:    return theme.statusError;
-        case ButtonVariant::Icon:      return theme.backgroundSecondary; // Default icon bg
+        case ButtonVariant::Icon:      return theme.backgroundSecondary;
         default:                       return theme.btnPrimaryBg;
     }
 }
 
 juce::Colour OscilButton::getTextColour() const
 {
-    // Handle toggled state for toggleable buttons
     if (toggleable_ && isToggled_)
-    {
         return getTheme().btnPrimaryTextActive;
-    }
 
     if (!enabled_)
     {
@@ -511,7 +497,6 @@ juce::Colour OscilButton::getTextColour() const
         }
     }
 
-    // Default state
     switch (variant_)
     {
         case ButtonVariant::Primary:   return getTheme().btnPrimaryText;
@@ -531,7 +516,13 @@ juce::Colour OscilButton::getBorderColour() const
 
 void OscilButton::resized()
 {
-    // No child components to layout
+    // Guard against zero or negative dimensions
+    if (getWidth() <= 0 || getHeight() <= 0)
+    {
+        juce::Logger::writeToLog("OscilButton::resized() - Invalid dimensions: "
+            + juce::String(getWidth()) + "x" + juce::String(getHeight()));
+        return;
+    }
 }
 
 void OscilButton::mouseEnter(const juce::MouseEvent&)
@@ -540,11 +531,31 @@ void OscilButton::mouseEnter(const juce::MouseEvent&)
 
     isHovered_ = true;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    // Get animation service if needed
+    if (animService_ == nullptr)
     {
-        scaleSpring_.setTarget(ComponentLayout::HOVER_SCALE);
-        brightnessSpring_.setTarget(ComponentLayout::HOVER_BRIGHTNESS_OFFSET);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        if (auto* editor = dynamic_cast<OscilPluginEditor*>(getTopLevelComponent()))
+            animService_ = &editor->getAnimationService();
+    }
+
+    if (AnimationSettings::shouldUseSpringAnimations() && animService_)
+    {
+        float startScale = currentScale_;
+        float startBrightness = currentBrightness_;
+        float targetScale = ComponentLayout::HOVER_SCALE;
+        float targetBrightness = ComponentLayout::HOVER_BRIGHTNESS_OFFSET;
+        
+        auto animator = animService_->createValueAnimation(
+            AnimationPresets::HOVER_DURATION_MS,
+            [this, startScale, startBrightness, targetScale, targetBrightness](float progress) {
+                currentScale_ = startScale + (targetScale - startScale) * progress;
+                currentBrightness_ = startBrightness + (targetBrightness - startBrightness) * progress;
+                repaint();
+            },
+            juce::Easings::createEase());
+        
+        scaleAnimator_.set(std::move(animator));
+        scaleAnimator_.start();
     }
     else
     {
@@ -559,11 +570,22 @@ void OscilButton::mouseExit(const juce::MouseEvent&)
     isHovered_ = false;
     isPressed_ = false;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (AnimationSettings::shouldUseSpringAnimations() && animService_)
     {
-        scaleSpring_.setTarget(1.0f);
-        brightnessSpring_.setTarget(0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startScale = currentScale_;
+        float startBrightness = currentBrightness_;
+        
+        auto animator = animService_->createValueAnimation(
+            AnimationPresets::HOVER_DURATION_MS,
+            [this, startScale, startBrightness](float progress) {
+                currentScale_ = startScale + (1.0f - startScale) * progress;
+                currentBrightness_ = startBrightness * (1.0f - progress);
+                repaint();
+            },
+            juce::Easings::createEase());
+        
+        scaleAnimator_.set(std::move(animator));
+        scaleAnimator_.start();
     }
     else
     {
@@ -573,17 +595,30 @@ void OscilButton::mouseExit(const juce::MouseEvent&)
     }
 }
 
-void OscilButton::mouseDown(const juce::MouseEvent& e)
+void OscilButton::mouseDown(const juce::MouseEvent&)
 {
     if (!enabled_) return;
 
     isPressed_ = true;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (AnimationSettings::shouldUseSpringAnimations() && animService_)
     {
-        scaleSpring_.setTarget(ComponentLayout::PRESS_SCALE);
-        brightnessSpring_.setTarget(ComponentLayout::PRESS_BRIGHTNESS_OFFSET);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startScale = currentScale_;
+        float startBrightness = currentBrightness_;
+        float targetScale = ComponentLayout::PRESS_SCALE;
+        float targetBrightness = ComponentLayout::PRESS_BRIGHTNESS_OFFSET;
+        
+        auto animator = animService_->createValueAnimation(
+            AnimationPresets::SNAPPY_DURATION_MS,
+            [this, startScale, startBrightness, targetScale, targetBrightness](float progress) {
+                currentScale_ = startScale + (targetScale - startScale) * progress;
+                currentBrightness_ = startBrightness + (targetBrightness - startBrightness) * progress;
+                repaint();
+            },
+            juce::Easings::createEaseOut());
+        
+        scaleAnimator_.set(std::move(animator));
+        scaleAnimator_.start();
     }
     else
     {
@@ -600,11 +635,24 @@ void OscilButton::mouseUp(const juce::MouseEvent& e)
     bool wasPressed = isPressed_;
     isPressed_ = false;
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    if (AnimationSettings::shouldUseSpringAnimations() && animService_)
     {
-        scaleSpring_.setTarget(isHovered_ ? ComponentLayout::HOVER_SCALE : 1.0f);
-        brightnessSpring_.setTarget(isHovered_ ? ComponentLayout::HOVER_BRIGHTNESS_OFFSET : 0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        float startScale = currentScale_;
+        float startBrightness = currentBrightness_;
+        float targetScale = isHovered_ ? ComponentLayout::HOVER_SCALE : 1.0f;
+        float targetBrightness = isHovered_ ? ComponentLayout::HOVER_BRIGHTNESS_OFFSET : 0.0f;
+        
+        auto animator = animService_->createValueAnimation(
+            AnimationPresets::SNAPPY_DURATION_MS,
+            [this, startScale, startBrightness, targetScale, targetBrightness](float progress) {
+                currentScale_ = startScale + (targetScale - startScale) * progress;
+                currentBrightness_ = startBrightness + (targetBrightness - startBrightness) * progress;
+                repaint();
+            },
+            juce::Easings::createEaseOut());
+        
+        scaleAnimator_.set(std::move(animator));
+        scaleAnimator_.start();
     }
     else
     {
@@ -613,7 +661,6 @@ void OscilButton::mouseUp(const juce::MouseEvent& e)
         repaint();
     }
 
-    // Trigger click if released inside button
     if (wasPressed && contains(e.getPosition()))
     {
         if (e.mods.isPopupMenu())
@@ -630,14 +677,12 @@ void OscilButton::mouseUp(const juce::MouseEvent& e)
 
 bool OscilButton::keyPressed(const juce::KeyPress& key)
 {
-    // Handle Enter or Space to activate
     if (enabled_ && (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey))
     {
         triggerClick();
         return true;
     }
 
-    // Handle shortcut key
     if (enabled_ && shortcutKey_.isValid() && key == shortcutKey_)
     {
         triggerClick();
@@ -662,36 +707,13 @@ void OscilButton::focusLost(FocusChangeType)
 void OscilButton::triggerClick()
 {
     if (toggleable_)
-    {
         setToggled(!isToggled_);
-    }
 
     if (onClick)
         onClick();
 }
 
-void OscilButton::timerCallback()
-{
-    updateAnimations();
-
-    if (scaleSpring_.isSettled() && brightnessSpring_.isSettled())
-        stopTimer();
-
-    repaint();
-}
-
-void OscilButton::updateAnimations()
-{
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-
-    scaleSpring_.update(dt);
-    brightnessSpring_.update(dt);
-
-    currentScale_ = scaleSpring_.position;
-    currentBrightness_ = brightnessSpring_.position;
-}
-
-// Custom accessibility handler with descriptive text for screen readers
+// Accessibility handler
 class OscilButtonAccessibilityHandler : public juce::AccessibilityHandler
 {
 public:
@@ -732,6 +754,15 @@ public:
 
     juce::String getHelp() const override
     {
+        // Don't show tooltip/help text for disabled buttons
+        if (!button_.isEnabled())
+            return {};
+
+        // Return custom tooltip if set, otherwise default help text
+        juce::String tooltip = button_.getTooltip();
+        if (tooltip.isNotEmpty())
+            return tooltip;
+
         return "Press Enter or Space to activate.";
     }
 

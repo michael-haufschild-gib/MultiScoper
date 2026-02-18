@@ -1002,12 +1002,12 @@ TEST_F(VisualPresetManagerTest, GetPresetsDirectory)
     EXPECT_FALSE(presetsDir.getFullPathName().isEmpty());
 
 #if JUCE_MAC
-    EXPECT_TRUE(presetsDir.getFullPathName().contains("Oscil"));
+    EXPECT_TRUE(presetsDir.getFullPathName().contains("MultiScoper"));
 #elif JUCE_WINDOWS
-    EXPECT_TRUE(presetsDir.getFullPathName().contains("Oscil"));
+    EXPECT_TRUE(presetsDir.getFullPathName().contains("MultiScoper"));
 #elif JUCE_LINUX
-    EXPECT_TRUE(presetsDir.getFullPathName().contains("Oscil") ||
-                presetsDir.getFullPathName().contains("oscil"));
+    EXPECT_TRUE(presetsDir.getFullPathName().contains("MultiScoper") ||
+                presetsDir.getFullPathName().contains("multiscoper"));
 #endif
 }
 

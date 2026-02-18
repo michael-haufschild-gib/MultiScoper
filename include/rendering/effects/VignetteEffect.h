@@ -46,8 +46,15 @@ public:
 
     /**
      * Configure the vignette effect.
+     * Parameters are clamped to valid ranges to prevent undefined behavior.
      */
-    void setSettings(const VignetteSettings& settings) { settings_ = settings; }
+    void setSettings(const VignetteSettings& settings)
+    {
+        settings_ = settings;
+        // Validate and clamp parameters to safe ranges
+        settings_.intensity = juce::jlimit(0.0f, 2.0f, settings_.intensity);
+        settings_.softness = juce::jlimit(0.0f, 1.0f, settings_.softness);
+    }
     [[nodiscard]] const VignetteSettings& getSettings() const { return settings_; }
 
 private:

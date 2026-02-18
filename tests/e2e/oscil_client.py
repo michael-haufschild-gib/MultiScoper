@@ -616,6 +616,69 @@ class OscilClient:
         return self._post("/metrics/reset")
     
     # =========================================================================
+    # Extended Profiling
+    # =========================================================================
+    
+    def profiling_start(self) -> Dict[str, Any]:
+        """Start detailed profiling session (GPU timing, thread metrics, etc.)."""
+        return self._post("/profiling/start")
+    
+    def profiling_stop(self) -> Dict[str, Any]:
+        """Stop profiling and return summary."""
+        return self._post("/profiling/stop")
+    
+    def profiling_snapshot(self) -> Dict[str, Any]:
+        """Get current profiling snapshot without stopping."""
+        return self._get("/profiling/snapshot")
+    
+    def profiling_gpu(self) -> Dict[str, Any]:
+        """Get GPU-specific metrics."""
+        return self._get("/profiling/gpu")
+    
+    def profiling_threads(self) -> Dict[str, Any]:
+        """Get thread-specific metrics."""
+        return self._get("/profiling/threads")
+    
+    def profiling_components(self) -> Dict[str, Any]:
+        """Get UI component repaint statistics."""
+        return self._get("/profiling/components")
+    
+    def profiling_hotspots(self) -> Dict[str, Any]:
+        """Get identified performance hotspots."""
+        return self._get("/profiling/hotspots")
+    
+    def profiling_timeline(self, frames: int = 60) -> Dict[str, Any]:
+        """Get frame timeline data."""
+        return self._get("/profiling/timeline", params={"frames": frames})
+    
+    # =========================================================================
+    # Stress Testing
+    # =========================================================================
+    
+    def stress_add_oscillators(self, count: int = 5) -> Dict[str, Any]:
+        """Add multiple oscillators for stress testing."""
+        return self._post("/stress/oscillators", {"count": count})
+    
+    def stress_enable_effects(self, enable_all: bool = True, quality: str = "high") -> Dict[str, Any]:
+        """Enable effects on all oscillators."""
+        return self._post("/stress/effects", {"enableAll": enable_all, "quality": quality})
+    
+    def stress_audio(
+        self,
+        duration_ms: int = 5000,
+        waveform: str = "sine",
+        frequency: float = 440.0,
+        amplitude: float = 0.5
+    ) -> Dict[str, Any]:
+        """Generate continuous audio for testing."""
+        return self._post("/stress/audio", {
+            "durationMs": duration_ms,
+            "waveform": waveform,
+            "frequency": frequency,
+            "amplitude": amplitude
+        })
+    
+    # =========================================================================
     # Debug Logs
     # =========================================================================
     

@@ -5,6 +5,7 @@
 #include "rendering/subsystems/RenderBootstrapper.h"
 
 #include <juce_core/juce_core.h>
+#include <iostream>
 
 namespace oscil
 {
@@ -83,6 +84,13 @@ RenderBootstrapper::RenderBootstrapper()
 
 RenderBootstrapper::~RenderBootstrapper()
 {
+    // Check for resource leaks - shutdown() should have been called before destruction
+    if (blitShader_ != nullptr || compositeShader_ != nullptr)
+    {
+        std::cerr << "[RenderBootstrapper] LEAK: Destructor called without shutdown(). "
+                  << "GPU resources may have leaked." << std::endl;
+        jassertfalse;
+    }
 }
 
 bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
@@ -93,7 +101,7 @@ bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
     if (!blitShader_->addVertexShader(blitVertexShader) ||
         !blitShader_->addFragmentShader(blitFragmentShader))
     {
-        DBG("RenderBootstrapper: Failed to compile blit shader: " << blitShader_->getLastError());
+        juce::Logger::writeToLog("RenderBootstrapper: Failed to compile blit shader: " + blitShader_->getLastError());
         return false;
     }
 
@@ -104,12 +112,12 @@ bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
 
     if (!blitShader_->link())
     {
-        DBG("RenderBootstrapper: Failed to link blit shader: " << blitShader_->getLastError());
+        juce::Logger::writeToLog("RenderBootstrapper: Failed to link blit shader: " + blitShader_->getLastError());
         return false;
     }
 
     blitTextureLoc_ = blitShader_->getUniformIDFromName("sourceTexture");
-    DBG("RenderBootstrapper: Blit shader compiled, sourceTexture uniform=" << blitTextureLoc_);
+    juce::Logger::writeToLog("RenderBootstrapper: Blit shader compiled, sourceTexture uniform=" + juce::String(blitTextureLoc_));
 
     // Compile composite shader (linear pass-through)
     compositeShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
@@ -117,7 +125,7 @@ bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
     if (!compositeShader_->addVertexShader(blitVertexShader) ||
         !compositeShader_->addFragmentShader(compositeFragmentShader))
     {
-        DBG("RenderBootstrapper: Failed to compile composite shader: " << compositeShader_->getLastError());
+        juce::Logger::writeToLog("RenderBootstrapper: Failed to compile composite shader: " + compositeShader_->getLastError());
         blitShader_.reset();
         return false;
     }
@@ -128,14 +136,14 @@ bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
 
     if (!compositeShader_->link())
     {
-        DBG("RenderBootstrapper: Failed to link composite shader: " << compositeShader_->getLastError());
+        juce::Logger::writeToLog("RenderBootstrapper: Failed to link composite shader: " + compositeShader_->getLastError());
         compositeShader_.reset();
         blitShader_.reset();
         return false;
     }
 
     compositeTextureLoc_ = compositeShader_->getUniformIDFromName("sourceTexture");
-    DBG("RenderBootstrapper: Composite shader compiled, sourceTexture uniform=" << compositeTextureLoc_);
+    juce::Logger::writeToLog("RenderBootstrapper: Composite shader compiled, sourceTexture uniform=" + juce::String(compositeTextureLoc_));
 
     return true;
 }

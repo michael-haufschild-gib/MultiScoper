@@ -35,7 +35,7 @@ class PaneComponent : public juce::Component,
 {
 public:
     PaneComponent(OscilPluginProcessor& processor, ServiceContext& context, const PaneId& paneId);
-    ~PaneComponent() override = default;
+    ~PaneComponent() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;

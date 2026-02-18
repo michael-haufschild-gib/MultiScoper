@@ -6,12 +6,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_animation/juce_animation.h>
 #include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/animation/OscilAnimationService.h"
 
 namespace oscil
 {
@@ -27,8 +28,7 @@ namespace oscil
  * - Icon support (left, right, or center)
  */
 class OscilButton : public ThemedComponent,
-                    public TestIdSupport,
-                    private juce::Timer
+                    public TestIdSupport
 {
 public:
     /**
@@ -119,8 +119,6 @@ public:
     void triggerClick();
 
 private:
-    void timerCallback() override;
-    void updateAnimations();
 
     // Path caching with bounds tracking to avoid regeneration during animations
     juce::Path cachedButtonPath_;
@@ -160,11 +158,12 @@ private:
     SegmentPosition segmentPosition_ = SegmentPosition::None;
     int buttonId_ = -1;
 
-    // Animation
-    SpringAnimation scaleSpring_;
-    SpringAnimation brightnessSpring_;
+    // Animation state
     float currentScale_ = 1.0f;
     float currentBrightness_ = 0.0f;
+    OscilAnimationService* animService_ = nullptr;
+    ScopedAnimator scaleAnimator_;
+    ScopedAnimator brightnessAnimator_;
 
     // Constants
     static constexpr int ICON_PADDING = 8;

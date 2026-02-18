@@ -119,6 +119,15 @@ void RadialBlurEffect::apply(
     if (!compiled_ || !source || !destination)
         return;
 
+    // Save GL state for restoration (H24 FIX: also save blend function)
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    GLint blendSrcRGB, blendDstRGB, blendSrcAlpha, blendDstAlpha;
+    glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &blendDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &blendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &blendDstAlpha);
+
     auto& ext = context.extensions;
 
     // Bind destination
@@ -133,17 +142,43 @@ void RadialBlurEffect::apply(
 
     // Bind source texture
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
 
-    // Set uniforms
-    ext.glUniform1f(amountLoc_, settings_.amount * intensity_);
-    ext.glUniform1f(glowLoc_, settings_.glow);
-    ext.glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
+    // Set uniforms with validation to prevent GL errors on invalid locations
+    if (textureLoc_ >= 0)
+        ext.glUniform1i(textureLoc_, 0);
+    if (amountLoc_ >= 0)
+        ext.glUniform1f(amountLoc_, settings_.amount * intensity_);
+    if (glowLoc_ >= 0)
+        ext.glUniform1f(glowLoc_, settings_.glow);
+    if (samplesLoc_ >= 0)
+        ext.glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
 
     // Render fullscreen quad
     pool.renderFullscreenQuad();
 
+    // Cleanup texture unit - explicitly set active unit before unbinding
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
     destination->unbind();
+
+    // Restore GL state (H24 FIX: also restore blend function)
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+
+    if (blendWasEnabled)
+    {
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(static_cast<GLenum>(blendSrcRGB),
+                           static_cast<GLenum>(blendDstRGB),
+                           static_cast<GLenum>(blendSrcAlpha),
+                           static_cast<GLenum>(blendDstAlpha));
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
 }
 
 } // namespace oscil
