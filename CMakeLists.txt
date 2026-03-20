@@ -418,8 +418,6 @@ if(OSCIL_BUILD_TESTS)
         tests/test_camera3d_animation.cpp
         tests/test_visual_config_validation.cpp
         tests/test_visual_config_application.cpp
-        tests/test_visual_config_validation.cpp
-        tests/test_visual_config_application.cpp
         tests/test_visual_config_presets.cpp
         tests/test_plugin_editor.cpp
 
