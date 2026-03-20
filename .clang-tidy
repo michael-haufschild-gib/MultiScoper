@@ -16,13 +16,16 @@
 #   performance-avoid-endl — not relevant for audio plugin (no iostream)
 #   modernize-use-equals-default — JUCE constructors often need explicit empty bodies
 #   readability-convert-member-functions-to-static — conflicts with JUCE override patterns
+#   concurrency-mt-unsafe — flags C stdlib functions (getenv, strtok) that JUCE uses internally
 
 Checks: >
   bugprone-*,
+  concurrency-*,
   performance-*,
   modernize-*,
   readability-function-cognitive-complexity,
   readability-function-size,
+  readability-implicit-bool-conversion,
   -modernize-use-trailing-return-type,
   -modernize-use-nodiscard,
   -modernize-avoid-c-arrays,
@@ -31,6 +34,7 @@ Checks: >
   -bugprone-narrowing-conversions,
   -performance-unnecessary-value-param,
   -performance-avoid-endl,
+  -concurrency-mt-unsafe,
 
 # ALL enabled checks are treated as errors — no warnings.
 WarningsAsErrors: '*'
@@ -55,6 +59,13 @@ CheckOptions:
     value: 8
   - key: readability-function-size.NestingThreshold
     value: 5
+
+  # Implicit bool conversion — catches int-to-bool and float-to-bool bugs.
+  # Pointer conditions (if (ptr)) are allowed to match JUCE idioms.
+  - key: readability-implicit-bool-conversion.AllowPointerConditions
+    value: true
+  - key: readability-implicit-bool-conversion.AllowIntegerConditions
+    value: false
 
   # Performance tuning
   - key: performance-move-const-arg.CheckTriviallyCopyableMove
