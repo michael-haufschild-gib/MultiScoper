@@ -28,8 +28,59 @@ env:
   GTEST_VERSION: "v1.17.0"
 
 jobs:
+  # ============================================================
+  # LINT GATE — must pass before build starts
+  # Fast checks: formatting, size limits, test quality
+  # ============================================================
+  lint:
+    name: Lint Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: clang-format check
+        run: |
+          ERRORS=0
+          while IFS= read -r -d '' file; do
+            if ! clang-format --dry-run --Werror "$file" 2>/dev/null; then
+              echo "ERROR: $file has formatting issues"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done < <(find include src tests test_harness -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) -not -path '*/build/*' -not -path '*/_deps/*' -print0 2>/dev/null)
+          if [ $ERRORS -gt 0 ]; then
+            echo "FAILED: $ERRORS file(s) have formatting issues. Run clang-format -i on them."
+            exit 1
+          fi
+          echo "PASSED: all files formatted correctly."
+
+      - name: Size lint (max file/function lines)
+        run: |
+          python3 scripts/size_lint.py \
+            --root . \
+            --paths include src tests test_harness \
+            --max-file-lines 500 \
+            --max-function-lines 60
+
+      - name: Test quality lint (shallow test detection)
+        run: |
+          python3 scripts/test_quality_lint.py \
+            --root . \
+            --paths tests \
+            --min-assertions 1
+
   build:
     name: ${{ matrix.name }}
+    needs: [lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -226,8 +277,9 @@ jobs:
   # Generates HTML coverage report using Clang source-based code coverage
   coverage:
     name: Code Coverage
+    needs: [lint]
     runs-on: ubuntu-24.04
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -316,6 +368,7 @@ jobs:
   # Note: Requires LLVM's official Clang 20+ (Ubuntu's packaged Clang doesn't include RTSan)
   rtsan:
     name: RealtimeSanitizer
+    needs: [lint]
     runs-on: ubuntu-24.04
 
     steps:

@@ -64,10 +64,38 @@ if(OSCIL_ENABLE_CLANG_TIDY)
 
     if(CLANG_TIDY_EXE)
         message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
-        # We exclude 'modernize-use-trailing-return-type' as it often conflicts with JUCE style
-        set(OSCIL_CLANG_TIDY_CMD "${CLANG_TIDY_EXE};-checks=bugprone-*,performance-*,modernize-*,-modernize-use-trailing-return-type")
+        # Checks and options are configured in .clang-tidy at project root.
+        # WarningsAsErrors: '*' ensures all findings are errors.
+        set(OSCIL_CLANG_TIDY_CMD "${CLANG_TIDY_EXE}")
     else()
         message(WARNING "OSCIL_ENABLE_CLANG_TIDY is ON but clang-tidy executable was not found in default path or Homebrew locations")
+    endif()
+endif()
+
+# Option for source-size linting (prevents god files/functions)
+option(OSCIL_ENABLE_SIZE_LIMIT_LINT "Enable max file/function line lint checks" ON)
+set(OSCIL_MAX_FILE_LINES "500" CACHE STRING "Maximum allowed lines per C/C++ file")
+set(OSCIL_MAX_FUNCTION_LINES "60" CACHE STRING "Maximum allowed lines per C/C++ function")
+set(OSCIL_SIZE_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/size_lint.py")
+
+# Option for test quality linting (prevents shallow/vibecoded tests)
+option(OSCIL_ENABLE_TEST_QUALITY_LINT "Enable shallow test detection lint checks" ON)
+set(OSCIL_MIN_ASSERTIONS_PER_TEST "1" CACHE STRING "Minimum assertions per test function")
+set(OSCIL_TEST_QUALITY_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_quality_lint.py")
+
+if(OSCIL_ENABLE_SIZE_LIMIT_LINT OR OSCIL_ENABLE_TEST_QUALITY_LINT)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+endif()
+
+if(OSCIL_ENABLE_SIZE_LIMIT_LINT)
+    if(NOT EXISTS "${OSCIL_SIZE_LINT_SCRIPT}")
+        message(FATAL_ERROR "OSCIL_ENABLE_SIZE_LIMIT_LINT is ON but lint script was not found: ${OSCIL_SIZE_LINT_SCRIPT}")
+    endif()
+endif()
+
+if(OSCIL_ENABLE_TEST_QUALITY_LINT)
+    if(NOT EXISTS "${OSCIL_TEST_QUALITY_LINT_SCRIPT}")
+        message(FATAL_ERROR "OSCIL_ENABLE_TEST_QUALITY_LINT is ON but lint script was not found: ${OSCIL_TEST_QUALITY_LINT_SCRIPT}")
     endif()
 endif()
 
@@ -251,6 +279,33 @@ if(OSCIL_CLANG_TIDY_CMD)
     endforeach()
 endif()
 
+# Repo-wide source size linting target
+if(OSCIL_ENABLE_SIZE_LIMIT_LINT)
+    add_custom_target(size_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_SIZE_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths include src tests test_harness
+            --max-file-lines ${OSCIL_MAX_FILE_LINES}
+            --max-function-lines ${OSCIL_MAX_FUNCTION_LINES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running source size lint checks"
+        VERBATIM
+    )
+endif()
+
+# Repo-wide test quality linting target
+if(OSCIL_ENABLE_TEST_QUALITY_LINT)
+    add_custom_target(test_quality_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_TEST_QUALITY_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths tests
+            --min-assertions ${OSCIL_MIN_ASSERTIONS_PER_TEST}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running test quality lint checks"
+        VERBATIM
+    )
+endif()
+
 # Suppress warnings from JUCE third-party dependencies (Harfbuzz, VST3 SDK)
 # Handled by OscilWarningSuppressions interface library above
 
@@ -320,6 +375,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_timing_config.cpp
         tests/test_timing_engine.cpp
         tests/test_analysis_engine.cpp
+        tests/test_transient_detector.cpp
         tests/test_stats_overlay.cpp
         tests/test_capture_quality_config.cpp
         tests/test_decimating_capture_buffer.cpp
@@ -338,6 +394,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_add_oscillator_dialog.cpp
         tests/test_accordion_sections_e2e.cpp
         tests/test_sidebar_theme_population.cpp
+        tests/test_sidebar_component.cpp
         tests/test_shaders.cpp
         tests/test_waveform_shader_3d.cpp
         tests/test_effect_chain.cpp
@@ -345,6 +402,9 @@ if(OSCIL_BUILD_TESTS)
         tests/test_waveform_presenter.cpp
         tests/test_timing_presenter.cpp
         tests/test_pane_layout.cpp
+        tests/test_pane_body.cpp
+        tests/test_pane_action_bar.cpp
+        tests/test_pane_header.cpp
         tests/test_config_structs.cpp
         tests/test_particle_system.cpp
 
@@ -448,6 +508,27 @@ if(OSCIL_BUILD_TESTS)
 
     include(GoogleTest)
     gtest_discover_tests(OscilTests)
+
+    if(OSCIL_ENABLE_SIZE_LIMIT_LINT)
+        add_test(NAME SizeLimitsLint
+            COMMAND ${Python3_EXECUTABLE} ${OSCIL_SIZE_LINT_SCRIPT}
+                --root ${CMAKE_CURRENT_SOURCE_DIR}
+                --paths include src tests test_harness
+                --max-file-lines ${OSCIL_MAX_FILE_LINES}
+                --max-function-lines ${OSCIL_MAX_FUNCTION_LINES}
+        )
+        set_tests_properties(SizeLimitsLint PROPERTIES LABELS "lint")
+    endif()
+
+    if(OSCIL_ENABLE_TEST_QUALITY_LINT)
+        add_test(NAME TestQualityLint
+            COMMAND ${Python3_EXECUTABLE} ${OSCIL_TEST_QUALITY_LINT_SCRIPT}
+                --root ${CMAKE_CURRENT_SOURCE_DIR}
+                --paths tests
+                --min-assertions ${OSCIL_MIN_ASSERTIONS_PER_TEST}
+        )
+        set_tests_properties(TestQualityLint PROPERTIES LABELS "lint")
+    endif()
 endif()
 
 # E2E Test Harness (optional)

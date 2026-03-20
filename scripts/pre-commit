@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Oscil pre-commit hook — fast lint gate.
+# Blocks commits that fail formatting, size limits, or test quality checks.
+#
+# Install: ./scripts/install-hooks.sh
+# Skip (emergency only): git commit --no-verify
+
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FAILED=0
+
+# Collect staged C/C++ files
+STAGED_CPP=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|h|hpp|cc|cxx|hxx)$' || true)
+STAGED_TESTS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^tests/test_.*\.cpp$' || true)
+
+echo "━━━ Oscil Pre-Commit Checks ━━━"
+
+# ─── 1. clang-format ───
+if [ -n "$STAGED_CPP" ]; then
+    if command -v clang-format &>/dev/null; then
+        echo -n "  clang-format... "
+        FORMAT_ERRORS=""
+        for file in $STAGED_CPP; do
+            if [ -f "$file" ]; then
+                DIFF=$(clang-format --dry-run --Werror "$file" 2>&1 || true)
+                if [ -n "$DIFF" ]; then
+                    FORMAT_ERRORS="${FORMAT_ERRORS}\n    ${file}"
+                fi
+            fi
+        done
+        if [ -n "$FORMAT_ERRORS" ]; then
+            echo -e "${RED}FAILED${NC}"
+            echo -e "  Files with formatting issues:${FORMAT_ERRORS}"
+            echo "  Run: clang-format -i <file> to fix"
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    else
+        echo -e "  clang-format... ${YELLOW}SKIPPED${NC} (not installed)"
+    fi
+else
+    echo "  clang-format... no C/C++ files staged"
+fi
+
+# ─── 2. Size lint ───
+if [ -n "$STAGED_CPP" ]; then
+    if command -v python3 &>/dev/null && [ -f "$REPO_ROOT/scripts/size_lint.py" ]; then
+        echo -n "  size-lint... "
+        # Run size lint only on staged files' parent directories
+        SIZE_OUTPUT=$(python3 "$REPO_ROOT/scripts/size_lint.py" \
+            --root "$REPO_ROOT" \
+            --paths include src tests test_harness \
+            --max-file-lines 500 \
+            --max-function-lines 60 2>&1)
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}FAILED${NC}"
+            echo "$SIZE_OUTPUT" | grep -E "(violation|FAILED)" | head -20
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    fi
+else
+    echo "  size-lint... no C/C++ files staged"
+fi
+
+# ─── 3. Test quality lint ───
+if [ -n "$STAGED_TESTS" ]; then
+    if command -v python3 &>/dev/null && [ -f "$REPO_ROOT/scripts/test_quality_lint.py" ]; then
+        echo -n "  test-quality... "
+        # Check only staged test files
+        TQ_OUTPUT=$(python3 "$REPO_ROOT/scripts/test_quality_lint.py" \
+            --root "$REPO_ROOT" \
+            --files $STAGED_TESTS 2>&1)
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}FAILED${NC}"
+            echo "$TQ_OUTPUT" | grep -E "(ERROR|FAILED)" | head -20
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    fi
+else
+    echo "  test-quality... no test files staged"
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [ $FAILED -ne 0 ]; then
+    echo -e "${RED}Commit blocked.${NC} Fix the issues above and try again."
+    echo "Emergency bypass: git commit --no-verify"
+    exit 1
+fi
+
+echo -e "${GREEN}All pre-commit checks passed.${NC}"
+exit 0
