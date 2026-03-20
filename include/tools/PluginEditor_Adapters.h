@@ -83,9 +83,27 @@ public:
     explicit TimingEngineListenerAdapter(OscilPluginEditor& editor)
         : editor_(editor) {}
 
+    void timingModeChanged(TimingMode mode) override
+    {
+        editor_.updateTimingSidebarMode(mode);
+        updateDisplayAndGrid();
+    }
+
     void intervalChanged(float /*actualIntervalMs*/) override
     {
         // Interval changed - update display samples and grid
+        updateDisplayAndGrid();
+    }
+
+    void hostBPMChanged(float bpm) override
+    {
+        editor_.updateTimingSidebarHostBpm(bpm);
+        updateDisplayAndGrid();
+    }
+
+    void hostSyncStateChanged(bool enabled) override
+    {
+        editor_.updateTimingSidebarHostSyncEnabled(enabled);
         updateDisplayAndGrid();
     }
 

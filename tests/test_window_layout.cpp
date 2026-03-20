@@ -1,16 +1,7 @@
-/*
-    Oscil - Window Layout Tests
-    Tests for WindowLayout class and SidebarResizeState
-*/
-
 #include <gtest/gtest.h>
 #include "ui/layout/WindowLayout.h"
 
 using namespace oscil;
-
-// =============================================================================
-// WindowLayout Basic Tests
-// =============================================================================
 
 class WindowLayoutTest : public ::testing::Test
 {
@@ -161,10 +152,6 @@ TEST_F(WindowLayoutTest, IsValidWindowSize)
     EXPECT_FALSE(layout.isValidWindowSize(1024, 5000)); // Height too large
 }
 
-// =============================================================================
-// WindowLayout Serialization Tests
-// =============================================================================
-
 TEST_F(WindowLayoutTest, SerializationRoundTrip)
 {
     layout.setWindowWidth(1400);
@@ -220,9 +207,21 @@ TEST_F(WindowLayoutTest, DeserializeWithOutOfRangeValues)
     EXPECT_EQ(restored.getSidebarWidth(), WindowLayout::MIN_SIDEBAR_WIDTH);
 }
 
-// =============================================================================
-// WindowLayout Listener Tests
-// =============================================================================
+TEST_F(WindowLayoutTest, DeserializeClampsSidebarAgainstWindowWidthConstraint)
+{
+    juce::ValueTree tree(WindowLayoutIds::WindowLayout);
+    tree.setProperty(WindowLayoutIds::WindowWidth, WindowLayout::MIN_WINDOW_WIDTH, nullptr);
+    tree.setProperty(WindowLayoutIds::WindowHeight, WindowLayout::MIN_WINDOW_HEIGHT, nullptr);
+    tree.setProperty(WindowLayoutIds::SidebarWidth, WindowLayout::MAX_SIDEBAR_WIDTH, nullptr);
+
+    WindowLayout restored(tree);
+
+    const int maxAllowedSidebar =
+        WindowLayout::MIN_WINDOW_WIDTH - WindowLayout::MIN_OSCILLOSCOPE_WIDTH;
+
+    EXPECT_LE(restored.getSidebarWidth(), maxAllowedSidebar);
+    EXPECT_GE(restored.getOscilloscopeAreaWidth(), WindowLayout::MIN_OSCILLOSCOPE_WIDTH);
+}
 
 class TestWindowLayoutListener : public WindowLayout::Listener
 {
@@ -323,10 +322,6 @@ TEST_F(WindowLayoutTest, RemoveListenerStopsNotifications)
     EXPECT_EQ(listener.windowSizeChangedCount, 0);
 }
 
-// =============================================================================
-// WindowLayout Edge Cases
-// =============================================================================
-
 TEST_F(WindowLayoutTest, SidebarWidthAdjustsWhenWindowShrinks)
 {
     layout.setWindowWidth(1200);
@@ -363,10 +358,6 @@ TEST_F(WindowLayoutTest, ConstantsAreConsistent)
     EXPECT_GE(WindowLayout::MIN_WINDOW_WIDTH,
               WindowLayout::MIN_SIDEBAR_WIDTH + WindowLayout::MIN_OSCILLOSCOPE_WIDTH);
 }
-
-// =============================================================================
-// SidebarResizeState Tests
-// =============================================================================
 
 class SidebarResizeStateTest : public ::testing::Test
 {

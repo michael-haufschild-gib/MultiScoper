@@ -5,6 +5,8 @@
 #include "core/Pane.h"
 
 #include <gtest/gtest.h>
+#include <limits>
+#include <cmath>
 
 using namespace oscil;
 
@@ -120,6 +122,21 @@ TEST_F(PaneTest, DeserializeWithOutOfRangeHeightRatio)
 
     Pane pane(state);
     EXPECT_EQ(pane.getHeightRatio(), Pane::MAX_HEIGHT_RATIO);
+}
+
+TEST_F(PaneTest, NonFiniteHeightRatioFallsBackToDefault)
+{
+    Pane pane;
+
+    pane.setHeightRatio(std::numeric_limits<float>::quiet_NaN());
+    EXPECT_FLOAT_EQ(pane.getHeightRatio(), Pane::DEFAULT_HEIGHT_RATIO);
+
+    juce::ValueTree state("Pane");
+    state.setProperty("heightRatio", std::numeric_limits<float>::quiet_NaN(), nullptr);
+
+    Pane restored(state);
+    EXPECT_TRUE(std::isfinite(restored.getHeightRatio()));
+    EXPECT_FLOAT_EQ(restored.getHeightRatio(), Pane::DEFAULT_HEIGHT_RATIO);
 }
 
 TEST_F(PaneTest, DeserializeWrongType)

@@ -47,6 +47,7 @@ void WindowLayout::fromValueTree(const juce::ValueTree& state)
     windowWidth_ = juce::jlimit(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH, windowWidth_);
     windowHeight_ = juce::jlimit(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT, windowHeight_);
     sidebarWidth_ = juce::jlimit(MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, sidebarWidth_);
+    sidebarWidth_ = clampSidebarWidth(sidebarWidth_);
 }
 
 void WindowLayout::setWindowWidth(int width)

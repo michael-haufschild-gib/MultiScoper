@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <cstdint>
 
 namespace oscil
 {
@@ -76,6 +77,12 @@ public:
      * @param sampleRate Sample rate in Hz (should be capture rate, not source rate)
      */
     void setSampleRateForAll(int sampleRate);
+
+    /**
+     * Request waveform restart across all panes at the provided timeline sample timestamp.
+     * @param timelineSampleTimestamp Trigger-aligned timeline sample position
+     */
+    void requestWaveformRestartAtTimestampForAll(int64_t timelineSampleTimestamp);
 
     /**
      * Highlight a specific oscillator across all panes

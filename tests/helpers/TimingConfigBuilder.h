@@ -180,6 +180,15 @@ public:
     }
 
     /**
+     * Set as both-edges trigger
+     */
+    TimingConfigBuilder& withBothEdgesTrigger()
+    {
+        config_.triggerMode = WaveformTriggerMode::BothEdges;
+        return *this;
+    }
+
+    /**
      * Set trigger threshold (0.0 to 1.0)
      */
     TimingConfigBuilder& withTriggerThreshold(float threshold)

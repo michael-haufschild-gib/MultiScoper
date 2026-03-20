@@ -150,6 +150,9 @@ int OscilColorSwatches::getPreferredWidth() const
 
 int OscilColorSwatches::getPreferredHeight() const
 {
+    if (colors_.empty())
+        return 0;
+
     int cols = getColumnCount();
     int rows = static_cast<int>((colors_.size() + static_cast<size_t>(cols) - 1) / static_cast<size_t>(cols));
     return rows * swatchSize_ + (rows - 1) * spacing_;

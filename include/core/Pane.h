@@ -8,6 +8,7 @@
 #include <juce_core/juce_core.h>
 #include "core/Oscillator.h"
 #include <vector>
+#include <cmath>
 
 namespace oscil
 {
@@ -58,7 +59,11 @@ public:
     void setOrderIndex(int index) noexcept { orderIndex_ = index; }
     void setCollapsed(bool collapsed) noexcept { collapsed_ = collapsed; }
     void setName(const juce::String& name) noexcept { name_ = name; }
-    void setHeightRatio(float ratio) noexcept { heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, ratio); }
+    void setHeightRatio(float ratio) noexcept
+    {
+        float safeRatio = std::isnan(ratio) ? DEFAULT_HEIGHT_RATIO : ratio;
+        heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, safeRatio);
+    }
     void setColumnIndex(int column) noexcept { columnIndex_ = column; }
 
 private:

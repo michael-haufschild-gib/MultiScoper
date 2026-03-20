@@ -62,10 +62,17 @@ void PluginEditorLayout::updateLayout(const std::vector<std::unique_ptr<PaneComp
 
     int numCols = layoutManager.getColumnCount();
     content_.setColumnCount(numCols);
-    int numRows = (numPanes + numCols - 1) / numCols;
-    int paneHeight = std::max(MIN_PANE_HEIGHT, availableArea.getHeight() / std::max(1, numRows));
 
-    content_.setSize(availableArea.getWidth(), paneHeight * numRows);
+    // Use the densest column to size content height so panes don't collapse when
+    // users intentionally stack many panes in one column.
+    int maxRowsInColumn = 1;
+    for (int col = 0; col < numCols; ++col)
+    {
+        maxRowsInColumn = std::max(maxRowsInColumn, layoutManager.getPaneCountInColumn(col));
+    }
+
+    int paneHeight = std::max(MIN_PANE_HEIGHT, availableArea.getHeight() / maxRowsInColumn);
+    content_.setSize(availableArea.getWidth(), paneHeight * maxRowsInColumn);
 
     // Position panes
     for (int i = 0; i < numPanes; ++i)

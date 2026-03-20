@@ -23,6 +23,32 @@
 #include "tools/test_server/PluginTestServer.h"
 
 #include <cmath>
+#include <limits>
+
+namespace
+{
+int64_t convertTimelineTimestampToCaptureDomain(int64_t timestamp, int sourceRate, int captureRate)
+{
+    if (timestamp <= 0)
+        return 0;
+
+    if (sourceRate <= 0 || captureRate <= 0 || sourceRate == captureRate)
+        return timestamp;
+
+    const long double scaled = (static_cast<long double>(timestamp) * static_cast<long double>(captureRate))
+                             / static_cast<long double>(sourceRate);
+    if (!std::isfinite(static_cast<double>(scaled)))
+        return timestamp;
+    if (scaled <= 0.0L)
+        return 0;
+
+    constexpr long double maxValue = static_cast<long double>(std::numeric_limits<int64_t>::max());
+    if (scaled >= maxValue)
+        return std::numeric_limits<int64_t>::max();
+
+    return static_cast<int64_t>(std::llround(scaled));
+}
+} // namespace
 
 namespace oscil
 {
@@ -106,6 +132,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     // Register Controller as Sidebar Listener (Handles Oscillator Events)
     sidebar_->addListener(oscillatorPanelController_.get());
+    sidebar_->addListener(this);
 
     // CRITICAL: Wire layout callback so panes get positioned after async refreshPanels()
     oscillatorPanelController_->setLayoutNeededCallback([this]() {
@@ -121,17 +148,29 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     
     // Sync timing UI
     auto timingConfig = processor_.getTimingEngine().toEntityConfig();
+    auto engineTimingConfig = processor_.getTimingEngine().getConfig();
     if (auto* timingSection = sidebar_->getTimingSection())
     {
+        WaveformMode waveformMode = WaveformMode::FreeRunning;
+        if (engineTimingConfig.triggerMode == WaveformTriggerMode::Midi)
+            waveformMode = WaveformMode::RestartOnNote;
+        else if (engineTimingConfig.syncToPlayhead)
+            waveformMode = WaveformMode::RestartOnPlay;
+
         timingSection->setTimingMode(timingConfig.timingMode);
         timingSection->setTimeIntervalMs(static_cast<int>(timingConfig.timeIntervalMs));
         timingSection->setNoteInterval(timingConfig.noteInterval);
         timingSection->setHostSyncEnabled(timingConfig.hostSyncEnabled);
         timingSection->setHostBPM(timingConfig.hostBPM);
+        timingSection->setWaveformMode(waveformMode);
     }
 
     // Create default oscillator if needed
     oscillatorPanelController_->createDefaultOscillatorIfNeeded();
+
+    // Perform initial source reconciliation now that UI/controller are ready.
+    // This catches stale source IDs and legacy uninitialized IDs on editor open.
+    onSourcesChanged();
 
     // Refresh panels
     oscillatorPanelController_->refreshPanels();
@@ -164,6 +203,9 @@ OscilPluginEditor::~OscilPluginEditor()
 
     if (sidebar_ && oscillatorPanelController_)
         sidebar_->removeListener(oscillatorPanelController_.get());
+
+    if (sidebar_)
+        sidebar_->removeListener(this);
 
     if (dialogManager_ && configPopupAdapter_)
         dialogManager_->removeConfigPopupListener(configPopupAdapter_.get());
@@ -210,171 +252,39 @@ void OscilPluginEditor::timerCallback()
     if (metricsController_)
         metricsController_->update();
 
+    if (displaySettingsManager_)
+    {
+        auto& timingEngine = processor_.getTimingEngine();
+        const auto timingConfig = timingEngine.getConfig();
+        const bool restartModeActive =
+            timingConfig.syncToPlayhead ||
+            timingConfig.triggerMode == WaveformTriggerMode::Midi;
+
+        if (restartModeActive && timingEngine.checkAndClearTrigger())
+        {
+            int64_t triggerTimestamp = static_cast<int64_t>(
+                std::llround(timingConfig.lastSyncTimestamp));
+            if (triggerTimestamp <= 0)
+            {
+                auto hostTimestamp = timingEngine.getHostInfo().timeInSamples;
+                if (hostTimestamp > 0)
+                    triggerTimestamp = hostTimestamp;
+            }
+
+            const int sourceRate = juce::jmax(1, static_cast<int>(
+                std::llround(processor_.getSampleRate())));
+            const int captureRate = juce::jmax(1, processor_.getCaptureRate());
+            triggerTimestamp = convertTimelineTimestampToCaptureDomain(triggerTimestamp,
+                                                                       sourceRate,
+                                                                       captureRate);
+
+            displaySettingsManager_->requestWaveformRestartAtTimestampForAll(
+                juce::jmax<int64_t>(0, triggerTimestamp));
+        }
+    }
+
     if (renderCoordinator_)
         renderCoordinator_->updateRendering(oscillatorPanelController_->getPaneComponents());
-}
-
-// Delegated methods
-
-void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators)
-{
-    if (sidebar_) sidebar_->refreshOscillatorList(oscillators);
-}
-
-void OscilPluginEditor::onSourcesChanged()
-{
-    auto sources = processor_.getInstanceRegistry().getAllSources();
-
-    if (sidebar_)
-    {
-        sidebar_->refreshSourceList(sources);
-    }
-
-    // Update oscillators that have invalid sourceIds (created before sources were registered)
-    if (!sources.empty())
-    {
-        auto& state = processor_.getState();
-        auto oscillators = state.getOscillators();
-        bool updated = false;
-
-        for (auto& osc : oscillators)
-        {
-            if (!osc.getSourceId().isValid())
-            {
-                // Assign the first available source (typically the processor's own source)
-                // Prefer processor's own source if available
-                SourceId sourceToAssign = sources[0].sourceId;
-                if (processor_.getSourceId().isValid())
-                {
-                    sourceToAssign = processor_.getSourceId();
-                }
-                osc.setSourceId(sourceToAssign);
-                state.updateOscillator(osc);
-                updated = true;
-            }
-        }
-
-        // Refresh panels if any oscillators were updated
-        if (updated && oscillatorPanelController_)
-        {
-            oscillatorPanelController_->refreshPanels();
-        }
-    }
-}
-
-void OscilPluginEditor::onThemeChanged(const ColorTheme& /*newTheme*/)
-{
-    repaint();
-
-    if (statusBar_)
-        statusBar_->repaint();
-
-    if (sidebar_)
-        sidebar_->repaint();
-
-    if (oscillatorPanelController_)
-    {
-        for (auto& pane : oscillatorPanelController_->getPaneComponents())
-        {
-            if (pane)
-                pane->repaint();
-        }
-    }
-}
-
-void OscilPluginEditor::onLayoutChanged()
-{
-    if (editorLayout_)
-        resized();
-}
-
-// Event Handlers (Adapters)
-
-void OscilPluginEditor::toggleSidebar()
-{
-    if (sidebar_) sidebar_->toggleCollapsed();
-}
-
-void OscilPluginEditor::onSidebarWidthChanged(int newWidth)
-{
-    windowLayout_.setSidebarWidth(newWidth);
-    resized();
-}
-
-void OscilPluginEditor::onSidebarCollapsedStateChanged(bool collapsed)
-{
-    windowLayout_.setSidebarCollapsed(collapsed);
-    resized();
-}
-
-void OscilPluginEditor::onConfigPopupClosed()
-{
-    if (dialogManager_) dialogManager_->closeConfigPopup();
-}
-
-// Global Settings (delegated to Manager)
-
-void OscilPluginEditor::setShowGridForAllPanes(bool enabled)
-{
-    if (displaySettingsManager_) displaySettingsManager_->setShowGridForAll(enabled);
-}
-
-void OscilPluginEditor::setGridConfigForAllPanes(const GridConfiguration& config)
-{
-    if (displaySettingsManager_) displaySettingsManager_->setGridConfigForAll(config);
-}
-
-void OscilPluginEditor::setAutoScaleForAllPanes(bool enabled)
-{
-    if (displaySettingsManager_) displaySettingsManager_->setAutoScaleForAll(enabled);
-}
-
-void OscilPluginEditor::setGainDbForAllPanes(float dB)
-{
-    if (displaySettingsManager_) displaySettingsManager_->setGainDbForAll(dB);
-}
-
-void OscilPluginEditor::setDisplaySamplesForAllPanes(int samples)
-{
-    if (displaySettingsManager_) displaySettingsManager_->setDisplaySamplesForAll(samples);
-}
-
-void OscilPluginEditor::setSampleRateForAllPanes(int sampleRate)
-{
-    if (displaySettingsManager_) displaySettingsManager_->setSampleRateForAll(sampleRate);
-}
-
-void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
-{
-    if (renderCoordinator_) renderCoordinator_->setGpuRenderingEnabled(enabled);
-    
-    // Update sidebar
-    if (sidebar_ && sidebar_->getOptionsSection())
-        sidebar_->getOptionsSection()->setGpuRenderingEnabled(enabled);
-        
-    processor_.getState().setGpuRenderingEnabled(enabled);
-    
-    // Controller listener will pick up state change? 
-    // GpuRenderingEnabled is a property of root or Options state?
-    // It's in OscilState.
-    // Controller doesn't listen to GPU state specifically in `valueTreePropertyChanged` in my implementation.
-    // We should manually propagate or update controller.
-    
-    if (oscillatorPanelController_)
-        oscillatorPanelController_->refreshPanels(); // Re-propagates GPU state
-}
-
-// Test access
-
-const std::vector<std::unique_ptr<PaneComponent>>& OscilPluginEditor::getPaneComponents() const
-{
-    return oscillatorPanelController_->getPaneComponents();
-}
-
-void OscilPluginEditor::refreshPanels()
-{
-    if (oscillatorPanelController_)
-        oscillatorPanelController_->refreshPanels();
 }
 
 } // namespace oscil

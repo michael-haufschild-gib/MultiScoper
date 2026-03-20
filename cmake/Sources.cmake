@@ -5,6 +5,7 @@ set(OSCIL_SOURCES
     # Plugin (entry points)
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginProcessor.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditor.cpp
+    ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditorSidebarHandlers.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginFactory.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/OpenGLLifecycleManager.cpp
 

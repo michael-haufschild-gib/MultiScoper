@@ -131,6 +131,7 @@ private:
 
     std::vector<std::unique_ptr<PaneComponent>> paneComponents_;
     bool isUpdating_ = false; // Guard against recursive updates
+    bool pendingRefresh_ = false; // Coalesce refresh requests that arrive mid-update
     std::function<void()> layoutNeededCallback_;
     
     // Track oscillator pending visibility change (for pane selection dialog)

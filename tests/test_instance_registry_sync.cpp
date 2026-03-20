@@ -55,6 +55,49 @@ TEST_F(InstanceRegistrySyncTest, DeduplicationSameTrack)
     EXPECT_EQ(getRegistry().getSourceCount(), 1);
 }
 
+TEST_F(InstanceRegistrySyncTest, DeduplicationRefreshesBufferAndMetadataForExistingTrack)
+{
+    auto primaryBuffer = std::make_shared<SharedCaptureBuffer>();
+    auto duplicateBuffer = std::make_shared<SharedCaptureBuffer>();
+
+    auto sourceId = getRegistry().registerInstance(
+        "track_primary", primaryBuffer, "Primary Track");
+    auto dedupedId = getRegistry().registerInstance(
+        "track_primary", duplicateBuffer, "Backup Track");
+
+    EXPECT_EQ(sourceId, dedupedId);
+    EXPECT_EQ(getRegistry().getSourceCount(), 1);
+    EXPECT_EQ(getRegistry().getCaptureBuffer(sourceId), duplicateBuffer);
+
+    auto sourceInfo = getRegistry().getSource(sourceId);
+    ASSERT_TRUE(sourceInfo.has_value());
+    EXPECT_EQ(sourceInfo->name, "Backup Track");
+}
+
+TEST_F(InstanceRegistrySyncTest, DeduplicationPromotesNewBufferWhenPrimaryExpired)
+{
+    SourceId sourceId;
+    {
+        auto primaryBuffer = std::make_shared<SharedCaptureBuffer>();
+        sourceId = getRegistry().registerInstance(
+            "track_failover", primaryBuffer, "Primary Track");
+        ASSERT_TRUE(sourceId.isValid());
+    }
+
+    EXPECT_EQ(getRegistry().getCaptureBuffer(sourceId), nullptr);
+
+    auto replacementBuffer = std::make_shared<SharedCaptureBuffer>();
+    auto dedupedId = getRegistry().registerInstance(
+        "track_failover", replacementBuffer, "Replacement Track");
+
+    EXPECT_EQ(sourceId, dedupedId);
+    EXPECT_EQ(getRegistry().getCaptureBuffer(sourceId), replacementBuffer);
+
+    auto sourceInfo = getRegistry().getSource(sourceId);
+    ASSERT_TRUE(sourceInfo.has_value());
+    EXPECT_EQ(sourceInfo->name, "Replacement Track");
+}
+
 // === Listener Tests ===
 
 class TestRegistryListener : public InstanceRegistryListener

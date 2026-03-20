@@ -11,6 +11,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 
+#include <cmath>
 #include <optional>
 
 namespace oscil
@@ -188,12 +189,20 @@ public:
     void setSourceId(const SourceId& sourceId);
     void setProcessingMode(ProcessingMode mode) noexcept { processingMode_ = mode; }
     void setColour(juce::Colour colour) noexcept { colour_ = colour; }
-    void setOpacity(float opacity) noexcept { opacity_ = juce::jlimit(0.0f, 1.0f, opacity); }
+    void setOpacity(float opacity) noexcept
+    {
+        float safeOpacity = std::isnan(opacity) ? 1.0f : opacity;
+        opacity_ = juce::jlimit(0.0f, 1.0f, safeOpacity);
+    }
     void setPaneId(const PaneId& paneId) noexcept { paneId_ = paneId; }
     void setOrderIndex(int index) noexcept { orderIndex_ = index; }
     void setVisible(bool visible) noexcept { visible_ = visible; }
     void setName(const juce::String& name);
-    void setLineWidth(float width) noexcept { lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, width); }
+    void setLineWidth(float width) noexcept
+    {
+        float safeWidth = std::isnan(width) ? DEFAULT_LINE_WIDTH : width;
+        lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, safeWidth);
+    }
     void setTimeWindow(std::optional<float> window) noexcept { timeWindow_ = window; }
     void setShaderId(const juce::String& shaderId) noexcept { shaderId_ = shaderId; }
     void setVisualPresetId(const juce::String& presetId) noexcept { visualPresetId_ = presetId; }

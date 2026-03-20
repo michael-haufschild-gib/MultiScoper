@@ -71,6 +71,15 @@ void DisplaySettingsManager::setSampleRateForAll(int sampleRate)
     }
 }
 
+void DisplaySettingsManager::requestWaveformRestartAtTimestampForAll(int64_t timelineSampleTimestamp)
+{
+    for (auto* pane : paneGetter_())
+    {
+        if (pane)
+            pane->requestWaveformRestartAtTimestamp(timelineSampleTimestamp);
+    }
+}
+
 void DisplaySettingsManager::highlightOscillator(const OscillatorId& id)
 {
     for (auto* pane : paneGetter_())

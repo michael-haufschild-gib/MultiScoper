@@ -10,6 +10,27 @@
 namespace oscil
 {
 
+namespace
+{
+std::shared_ptr<IAudioBuffer> resolveCaptureBufferForSource(OscilPluginProcessor& processor, const SourceId& sourceId)
+{
+    if (sourceId.isNoSource())
+    {
+        // Explicitly disconnected from any source.
+        return nullptr;
+    }
+
+    if (sourceId.isValid())
+    {
+        // Cross-instance binding: only use the selected source buffer.
+        return processor.getInstanceRegistry().getCaptureBuffer(sourceId);
+    }
+
+    // Legacy/uninitialized source fallback during startup: use local processor source.
+    return processor.getCaptureBuffer();
+}
+} // namespace
+
 WaveformStack::WaveformStack(OscilPluginProcessor& processor,
                               IThemeService& themeService,
                               ShaderRegistry& shaderRegistry)
@@ -18,8 +39,8 @@ WaveformStack::WaveformStack(OscilPluginProcessor& processor,
     , shaderRegistry_(shaderRegistry)
 {
     setOpaque(false);
-    // Allow mouse events to pass through to parent (for crosshair)
-    setInterceptsMouseClicks(false, true);
+    // Allow mouse events to pass through to parent (for crosshair updates in PaneBody).
+    setInterceptsMouseClicks(false, false);
 }
 
 void WaveformStack::resized()
@@ -42,23 +63,8 @@ void WaveformStack::addOscillator(const Oscillator& oscillator)
     entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
     entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
 
-    // Get capture buffer - always try processor's buffer first since it's always available
-    std::shared_ptr<IAudioBuffer> buffer = processor_.getCaptureBuffer();
-
-    // If we have a valid source ID, try to get its specific buffer
-    if (oscillator.getSourceId().isValid())
-    {
-        auto sourceBuffer = processor_.getInstanceRegistry().getCaptureBuffer(oscillator.getSourceId());
-        if (sourceBuffer)
-        {
-            buffer = sourceBuffer;
-        }
-    }
-
-    if (buffer)
-    {
-        entry.waveform->setCaptureBuffer(buffer);
-    }
+    auto buffer = resolveCaptureBufferForSource(processor_, oscillator.getSourceId());
+    entry.waveform->setCaptureBuffer(buffer);
 
     // Add component first, then set visibility (JUCE requires this order)
     addChildComponent(*entry.waveform);
@@ -106,22 +112,8 @@ void WaveformStack::updateOscillatorSource(const OscillatorId& oscillatorId, con
         {
             entry.oscillator.setSourceId(newSourceId);
 
-            std::shared_ptr<IAudioBuffer> newBuffer;
-
-            if (newSourceId.isValid())
-            {
-                newBuffer = processor_.getInstanceRegistry().getCaptureBuffer(newSourceId);
-            }
-
-            if (!newBuffer)
-            {
-                newBuffer = processor_.getCaptureBuffer();
-            }
-
-            if (newBuffer)
-            {
-                entry.waveform->setCaptureBuffer(newBuffer);
-            }
+            auto newBuffer = resolveCaptureBufferForSource(processor_, newSourceId);
+            entry.waveform->setCaptureBuffer(newBuffer);
 
             break;
         }
@@ -248,6 +240,15 @@ void WaveformStack::setDisplaySamples(int samples)
     {
         if (entry.waveform)
             entry.waveform->setDisplaySamples(samples);
+    }
+}
+
+void WaveformStack::requestRestartAtTimestamp(int64_t timelineSampleTimestamp)
+{
+    for (auto& entry : entries_)
+    {
+        if (entry.waveform)
+            entry.waveform->requestRestartAtTimestamp(timelineSampleTimestamp);
     }
 }
 

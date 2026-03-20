@@ -4,6 +4,8 @@
 
 #include "core/Source.h"
 #include <juce_core/juce_core.h>
+#include <algorithm>
+#include <cmath>
 
 namespace oscil
 {
@@ -103,7 +105,15 @@ void Source::fromValueTree(const juce::ValueTree& state)
             auto backupTree = backupsTree.getChild(i);
             InstanceId backupId;
             backupId.id = backupTree.getProperty("id", juce::String()).toString();
-            if (backupId.isValid())
+            if (!backupId.isValid())
+                continue;
+
+            // Preserve Source ownership invariants after persistence restore:
+            // backups must not contain the owner and must be unique.
+            if (backupId == owningInstanceId_)
+                continue;
+
+            if (std::find(backupInstanceIds_.begin(), backupInstanceIds_.end(), backupId) == backupInstanceIds_.end())
             {
                 backupInstanceIds_.push_back(backupId);
             }
@@ -296,16 +306,22 @@ void Source::updateActivityState()
 
 void Source::updateCorrelationMetrics(float correlation) noexcept
 {
-    correlationMetrics_.correlationCoefficient = juce::jlimit(-1.0f, 1.0f, correlation);
+    float safeCorrelation = std::isnan(correlation) ? 0.0f : correlation;
+    correlationMetrics_.correlationCoefficient = juce::jlimit(-1.0f, 1.0f, safeCorrelation);
     correlationMetrics_.isValid = true;
 }
 
 void Source::updateSignalMetrics(float rms, float peak, float dcOffset) noexcept
 {
-    signalMetrics_.rmsLevel = rms;
-    signalMetrics_.peakLevel = peak;
-    signalMetrics_.dcOffset = dcOffset;
-    signalMetrics_.hasSignal = rms > -60.0f; // Signal detected if above -60 dBFS
+    auto sanitizeFinite = [](float value, float fallback)
+    {
+        return std::isfinite(value) ? value : fallback;
+    };
+
+    signalMetrics_.rmsLevel = sanitizeFinite(rms, -100.0f);
+    signalMetrics_.peakLevel = sanitizeFinite(peak, -100.0f);
+    signalMetrics_.dcOffset = sanitizeFinite(dcOffset, 0.0f);
+    signalMetrics_.hasSignal = signalMetrics_.rmsLevel > -60.0f; // Signal detected if above -60 dBFS
 }
 
 } // namespace oscil

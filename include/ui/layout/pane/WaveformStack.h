@@ -14,6 +14,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <cstdint>
 
 namespace oscil
 {
@@ -81,6 +82,7 @@ public:
     void setHoldDisplay(bool enabled);
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
+    void requestRestartAtTimestamp(int64_t timelineSampleTimestamp);
 
     // Highlight a specific oscillator
     void highlightOscillator(const OscillatorId& oscillatorId);

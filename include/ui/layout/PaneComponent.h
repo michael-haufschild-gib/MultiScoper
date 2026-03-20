@@ -14,6 +14,7 @@
 #include "core/ServiceContext.h"
 #include <memory>
 #include <functional>
+#include <cstdint>
 
 namespace oscil
 {
@@ -169,6 +170,7 @@ public:
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
     void setSampleRate(int sampleRate);
+    void requestWaveformRestartAtTimestamp(int64_t timelineSampleTimestamp);
 
     /**
      * Highlight a specific oscillator (or clear highlight if oscillatorId is invalid)

@@ -43,6 +43,26 @@ TEST_F(StatePersistenceLoadTest, XmlWithMissingChildNodes)
     EXPECT_EQ(state->getOscillators().size(), 1);
 }
 
+// Test: Setting theme after loading minimal state creates missing Theme node
+TEST_F(StatePersistenceLoadTest, SetThemeNameAfterMissingChildNodesCreatesThemeNode)
+{
+    ASSERT_TRUE(state->fromXmlString("<OscilState version=\"2\"/>"));
+
+    state->setThemeName("Recovered Theme");
+
+    EXPECT_EQ(state->getThemeName(), "Recovered Theme");
+}
+
+// Test: Setting layout after loading minimal state creates missing Layout node
+TEST_F(StatePersistenceLoadTest, SetColumnLayoutAfterMissingChildNodesCreatesLayoutNode)
+{
+    ASSERT_TRUE(state->fromXmlString("<OscilState version=\"2\"/>"));
+
+    state->setColumnLayout(ColumnLayout::Triple);
+
+    EXPECT_EQ(state->getColumnLayout(), ColumnLayout::Triple);
+}
+
 // Test: XML with partial child nodes
 TEST_F(StatePersistenceLoadTest, XmlWithPartialChildNodes)
 {

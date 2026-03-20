@@ -51,7 +51,12 @@ void OscillatorColorDialog::setColors(const std::vector<juce::Colour>& colors)
 
 void OscillatorColorDialog::setSelectedColor(juce::Colour color)
 {
-    colorSwatches_->setSelectedColor(color);
+    // Reset stale state so a missing color does not reuse a previous selection.
+    colorSwatches_->setSelectedIndex(-1, false);
+    colorSwatches_->setSelectedColor(color, false);
+
+    if (colorSwatches_->getSelectedIndex() < 0 && !colorSwatches_->getColors().empty())
+        colorSwatches_->setSelectedIndex(0, false);
 }
 
 void OscillatorColorDialog::setOnColorSelected(ColorSelectedCallback callback)

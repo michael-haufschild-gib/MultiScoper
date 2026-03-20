@@ -14,6 +14,7 @@
 #include "ui/layout/pane/overlays/StatsOverlay.h"
 #include "ui/components/TestId.h"
 #include <memory>
+#include <cstdint>
 
 namespace oscil
 {
@@ -66,6 +67,7 @@ public:
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
     void setSampleRate(int sampleRate);
+    void requestWaveformRestartAtTimestamp(int64_t timelineSampleTimestamp);
 
     // Highlight oscillator
     void highlightOscillator(const OscillatorId& oscillatorId);

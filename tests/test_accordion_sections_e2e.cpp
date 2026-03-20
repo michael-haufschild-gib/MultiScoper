@@ -10,6 +10,7 @@
 #include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/theme/ThemeManager.h"
 #include "core/dsp/TimingConfig.h"
+#include "TestElementRegistry.h"
 
 using namespace oscil;
 
@@ -41,6 +42,27 @@ protected:
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<OscilAccordionSection> section_;
     std::unique_ptr<juce::Component> content_;
+};
+
+class AccordionContainerTest : public ::testing::Test
+{
+protected:
+    IThemeService& getThemeService() { return *themeManager_; }
+
+    void SetUp() override
+    {
+        themeManager_ = std::make_unique<ThemeManager>();
+        accordion_ = std::make_unique<OscilAccordion>(getThemeService());
+    }
+
+    void TearDown() override
+    {
+        accordion_.reset();
+        themeManager_.reset();
+    }
+
+    std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<OscilAccordion> accordion_;
 };
 
 // Test: OscilAccordionSection initializes in collapsed state by default (unlike CollapsibleSection)
@@ -153,6 +175,24 @@ TEST_F(AccordionSectionTest, ContentVisibilityFollowsExpandedState)
     EXPECT_FALSE(content_->isVisible());
 }
 
+TEST_F(AccordionContainerTest, RemovingSectionKeepsSingleExpandBehaviorForRemainingSections)
+{
+    auto* first = accordion_->addSection("First");
+    auto* middle = accordion_->addSection("Middle");
+    auto* last = accordion_->addSection("Last");
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(middle, nullptr);
+    ASSERT_NE(last, nullptr);
+
+    accordion_->removeSection(1);  // Remove "Middle", "Last" shifts from index 2 -> 1
+    auto* shiftedLast = accordion_->getSection(1);
+    ASSERT_NE(shiftedLast, nullptr);
+
+    shiftedLast->setExpanded(true, false);
+    EXPECT_TRUE(shiftedLast->isExpanded());
+    EXPECT_FALSE(accordion_->getSection(0)->isExpanded());
+}
+
 // ============================================================================
 // OptionsSection Tests (Existing tests remain largely the same)
 // ============================================================================
@@ -185,6 +225,16 @@ protected:
 TEST_F(OptionsSectionTest, DefaultGainIsZero)
 {
     EXPECT_FLOAT_EQ(section_->getGainDb(), 0.0f);
+}
+
+TEST_F(OptionsSectionTest, QualityPresetDropdownStartsDisabledWhenAutoAdjustEnabled)
+{
+    auto* qualityDropdown =
+        dynamic_cast<OscilDropdown*>(oscil::test::TestElementRegistry::getInstance()
+                                         .findElement("sidebar_options_qualityPresetDropdown"));
+
+    ASSERT_NE(qualityDropdown, nullptr);
+    EXPECT_FALSE(qualityDropdown->isEnabled());
 }
 
 // ... other OptionsSection tests ...
@@ -305,4 +355,3 @@ TEST_F(AccordionTimingSectionTest, CallbackWiredUpCorrectly)
     ASSERT_NE(dynamicContent, nullptr);
     EXPECT_TRUE(dynamicContent->onPreferredHeightChanged != nullptr);
 }
-

@@ -8,6 +8,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <cmath>
 
 namespace oscil
 {
@@ -117,8 +118,14 @@ struct HostInfo
     void updateFromPlayHead(const juce::AudioPlayHead::PositionInfo& posInfo)
     {
         if (auto bpmOpt = posInfo.getBpm())
-            bpm = static_cast<float>(juce::jlimit(static_cast<double>(MIN_BPM),
-                                                   static_cast<double>(MAX_BPM), *bpmOpt));
+        {
+            double bpmValue = *bpmOpt;
+            if (std::isfinite(bpmValue))
+            {
+                bpm = static_cast<float>(juce::jlimit(static_cast<double>(MIN_BPM),
+                                                       static_cast<double>(MAX_BPM), bpmValue));
+            }
+        }
 
         if (auto tsOpt = posInfo.getTimeSignature())
         {
@@ -127,10 +134,16 @@ struct HostInfo
         }
 
         if (auto ppqOpt = posInfo.getPpqPosition())
-            ppqPosition = *ppqOpt;
+        {
+            if (std::isfinite(*ppqOpt))
+                ppqPosition = *ppqOpt;
+        }
 
         if (auto timeOpt = posInfo.getTimeInSeconds())
-            timeInSeconds = *timeOpt;
+        {
+            if (std::isfinite(*timeOpt))
+                timeInSeconds = *timeOpt;
+        }
 
         if (auto samplesOpt = posInfo.getTimeInSamples())
             timeInSamples = *samplesOpt;
@@ -142,8 +155,10 @@ struct HostInfo
         isLooping = posInfo.getIsLooping();
         if (auto loopPoints = posInfo.getLoopPoints())
         {
-            loopStartPpq = loopPoints->ppqStart;
-            loopEndPpq = loopPoints->ppqEnd;
+            if (std::isfinite(loopPoints->ppqStart))
+                loopStartPpq = loopPoints->ppqStart;
+            if (std::isfinite(loopPoints->ppqEnd))
+                loopEndPpq = loopPoints->ppqEnd;
         }
     }
 
@@ -160,7 +175,8 @@ struct HostInfo
      */
     double getBarPosition() const
     {
-        if (timeSignature.numerator <= 0) return 0.0;
+        if (timeSignature.numerator <= 0 || !std::isfinite(ppqPosition))
+            return 0.0;
         return ppqPosition / timeSignature.numerator;
     }
 
@@ -169,7 +185,8 @@ struct HostInfo
      */
     double getBeatInBar() const
     {
-        if (timeSignature.numerator <= 0) return 0.0;
+        if (timeSignature.numerator <= 0 || !std::isfinite(ppqPosition))
+            return 0.0;
         return std::fmod(ppqPosition, static_cast<double>(timeSignature.numerator));
     }
 
@@ -178,7 +195,8 @@ struct HostInfo
      */
     double getMsPerBeat() const
     {
-        if (bpm <= 0.0f) return 500.0; // Default to 120 BPM
+        if (!std::isfinite(bpm) || bpm <= 0.0f)
+            return 500.0; // Default to 120 BPM
         return 60000.0 / bpm;
     }
 
@@ -187,6 +205,8 @@ struct HostInfo
      */
     double getMsPerBar() const
     {
+        if (timeSignature.numerator <= 0)
+            return 0.0;
         return getMsPerBeat() * timeSignature.numerator;
     }
 };

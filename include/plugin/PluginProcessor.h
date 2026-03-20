@@ -38,6 +38,7 @@ public:
     void releaseResources() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void updateTrackProperties(const TrackProperties& properties) override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -95,6 +96,7 @@ private:
 
     // Unique identifier for this instance
     juce::String trackIdentifier_;
+    juce::String sourceDisplayName_{"Oscil Track"};
     SourceId sourceId_;
 
     OscilState state_;

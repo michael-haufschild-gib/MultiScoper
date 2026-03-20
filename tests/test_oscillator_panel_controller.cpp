@@ -123,6 +123,41 @@ TEST_F(OscillatorPanelControllerTest, RefreshPanelsCreatesComponents)
     EXPECT_EQ(controller_->getPaneComponents().size(), 1);
 }
 
+TEST_F(OscillatorPanelControllerTest, RefreshPanelsProcessesQueuedRefreshRequestedDuringUpdate)
+{
+    auto& state = processor_.getState();
+
+    Pane initialPane;
+    initialPane.setName("Initial Pane");
+    state.getLayoutManager().addPane(initialPane);
+
+    Oscillator initialOscillator;
+    initialOscillator.setPaneId(initialPane.getId());
+    state.addOscillator(initialOscillator);
+
+    bool queuedRefreshRequested = false;
+    controller_->setLayoutNeededCallback([this, &state, &queuedRefreshRequested]() {
+        if (queuedRefreshRequested)
+            return;
+
+        queuedRefreshRequested = true;
+
+        Pane queuedPane;
+        queuedPane.setName("Queued Pane");
+        state.getLayoutManager().addPane(queuedPane);
+
+        Oscillator queuedOscillator;
+        queuedOscillator.setPaneId(queuedPane.getId());
+        state.addOscillator(queuedOscillator);
+
+        controller_->refreshPanels();
+    });
+
+    controller_->refreshPanels();
+
+    EXPECT_EQ(controller_->getPaneComponents().size(), 2);
+}
+
 TEST_F(OscillatorPanelControllerTest, ClosingPaneRemovesIt)
 {
     auto& state = processor_.getState();

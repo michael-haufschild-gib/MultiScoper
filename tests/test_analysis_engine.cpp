@@ -6,6 +6,7 @@
 #include "core/analysis/AnalysisEngine.h"
 #include <vector>
 #include <cmath>
+#include <limits>
 
 using namespace oscil;
 
@@ -167,6 +168,26 @@ TEST_F(AnalysisEngineTest, MidSideProcessing)
     EXPECT_NEAR(metrics.side.peakDb.load(), 0.0f, 0.1f);
 }
 
+TEST_F(AnalysisEngineTest, UnavailableChannelsAreReset)
+{
+    juce::AudioBuffer<float> stereoBuffer(2, 1024);
+    generateDC(stereoBuffer, 0, 1.0f);
+    generateDC(stereoBuffer, 1, -1.0f);
+    engine.process(stereoBuffer, sampleRate);
+
+    const auto& metrics = engine.getMetrics();
+    EXPECT_NEAR(metrics.right.peakDb.load(), 0.0f, 0.1f);
+    EXPECT_NEAR(metrics.side.peakDb.load(), 0.0f, 0.1f);
+
+    juce::AudioBuffer<float> monoBuffer(1, 1024);
+    monoBuffer.clear();
+    engine.process(monoBuffer, sampleRate);
+
+    EXPECT_LE(metrics.right.peakDb.load(), -99.0f);
+    EXPECT_LE(metrics.mid.peakDb.load(), -99.0f);
+    EXPECT_LE(metrics.side.peakDb.load(), -99.0f);
+}
+
 TEST_F(AnalysisEngineTest, AttackDetection)
 {
     // Test attack detection with a realistic signal scenario.
@@ -224,4 +245,30 @@ TEST_F(AnalysisEngineTest, AttackDetection)
     EXPECT_GT(attack, 0.0f);
     // Allow margin for envelope follower timing and onset detection
     EXPECT_NEAR(attack, 10.0f, 8.0f);
+}
+
+TEST_F(AnalysisEngineTest, NonFiniteSamplesDoNotPropagateToMetrics)
+{
+    juce::AudioBuffer<float> buffer(1, 8);
+    auto* data = buffer.getWritePointer(0);
+
+    data[0] = 0.25f;
+    data[1] = std::numeric_limits<float>::quiet_NaN();
+    data[2] = std::numeric_limits<float>::infinity();
+    data[3] = -std::numeric_limits<float>::infinity();
+    for (int i = 4; i < buffer.getNumSamples(); ++i)
+    {
+        data[i] = 0.0f;
+    }
+
+    engine.process(buffer, sampleRate);
+
+    const auto& metrics = engine.getMetrics();
+    EXPECT_TRUE(std::isfinite(metrics.left.rmsDb.load()));
+    EXPECT_TRUE(std::isfinite(metrics.left.peakDb.load()));
+    EXPECT_TRUE(std::isfinite(metrics.left.crestFactorDb.load()));
+    EXPECT_TRUE(std::isfinite(metrics.left.dcOffset.load()));
+    EXPECT_TRUE(std::isfinite(metrics.left.attackTimeMs.load()));
+    EXPECT_TRUE(std::isfinite(metrics.left.decayTimeMs.load()));
+    EXPECT_TRUE(std::isfinite(metrics.left.maxPeakDb.load()));
 }

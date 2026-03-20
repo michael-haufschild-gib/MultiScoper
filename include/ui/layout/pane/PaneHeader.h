@@ -82,6 +82,7 @@ private:
 
     // Drag state
     juce::Point<int> dragStartPos_;
+    bool dragStartedForGesture_ = false;
 
     // Layout constants
     static constexpr int DRAG_HANDLE_WIDTH = 20;
@@ -93,6 +94,7 @@ private:
     static constexpr int CLOSE_BUTTON_SIZE = 20;
     static constexpr int PADDING = 4;
     static constexpr int BADGE_WIDTH = 100;
+    static constexpr int DRAG_START_THRESHOLD_PX = 5;
 
     // TestIdSupport
     OSCIL_TESTABLE();

@@ -6,6 +6,7 @@
 #include "core/Pane.h"
 #include "core/OscilState.h"
 #include <algorithm>
+#include <cmath>
 
 namespace oscil
 {
@@ -54,7 +55,8 @@ void Pane::fromValueTree(const juce::ValueTree& state)
     columnIndex_ = state.getProperty(PaneIds::ColumnIndex, 0);
 
     // Validate
-    heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, heightRatio_);
+    float safeHeightRatio = std::isnan(heightRatio_) ? DEFAULT_HEIGHT_RATIO : heightRatio_;
+    heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, safeHeightRatio);
 }
 
 // PaneLayoutManager implementation
@@ -421,14 +423,20 @@ void PaneLayoutManager::fromValueTree(const juce::ValueTree& state)
 
     sortPanesByOrder();
 
-    // Only clamp invalid column indices, preserve valid saved positions
+    // Normalize invalid column indices, preserve valid saved positions
     if (!panes_.empty())
     {
         int numColumns = getColumnCount();
         for (auto& pane : panes_)
         {
-            if (pane.getColumnIndex() >= numColumns)
+            if (pane.getColumnIndex() < 0)
+            {
+                pane.setColumnIndex(0);
+            }
+            else if (pane.getColumnIndex() >= numColumns)
+            {
                 pane.setColumnIndex(pane.getColumnIndex() % numColumns);
+            }
         }
     }
 }

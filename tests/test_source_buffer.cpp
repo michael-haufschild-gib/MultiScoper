@@ -207,16 +207,11 @@ TEST_F(SourceBufferTest, SignalMetrics)
 
 TEST_F(SourceBufferTest, CorrelationMetricsWithNaN)
 {
-    // NaN should not corrupt metrics - verify behavior
     source->updateCorrelationMetrics(std::numeric_limits<float>::quiet_NaN());
 
-    // After NaN, the value should be clamped or handled gracefully
-    float result = source->getCorrelationMetrics().correlationCoefficient;
-    // jlimit with NaN produces NaN, which is a potential bug
-    // This test documents current behavior - if it fails, the implementation was fixed
-    EXPECT_TRUE(std::isfinite(result) || std::isnan(result));  // Documenting behavior
-
-    // Metrics should still be marked as valid (current implementation)
+    // Non-finite correlation should be sanitized to center (0.0)
+    EXPECT_TRUE(std::isfinite(source->getCorrelationMetrics().correlationCoefficient));
+    EXPECT_FLOAT_EQ(source->getCorrelationMetrics().correlationCoefficient, 0.0f);
     EXPECT_TRUE(source->getCorrelationMetrics().isValid);
 }
 
@@ -243,12 +238,9 @@ TEST_F(SourceBufferTest, SignalMetricsWithNaN)
     float nan = std::numeric_limits<float>::quiet_NaN();
     source->updateSignalMetrics(nan, nan, nan);
 
-    // NaN propagates through - document current behavior
-    EXPECT_TRUE(std::isnan(source->getSignalMetrics().rmsLevel));
-    EXPECT_TRUE(std::isnan(source->getSignalMetrics().peakLevel));
-    EXPECT_TRUE(std::isnan(source->getSignalMetrics().dcOffset));
-
-    // hasSignal check: NaN > -60.0f is false
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().rmsLevel, -100.0f);
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().peakLevel, -100.0f);
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().dcOffset, 0.0f);
     EXPECT_FALSE(source->getSignalMetrics().hasSignal);
 }
 
@@ -257,13 +249,10 @@ TEST_F(SourceBufferTest, SignalMetricsWithInfinity)
     float inf = std::numeric_limits<float>::infinity();
     source->updateSignalMetrics(inf, inf, inf);
 
-    // Infinity propagates - document current behavior
-    EXPECT_TRUE(std::isinf(source->getSignalMetrics().rmsLevel));
-    EXPECT_TRUE(std::isinf(source->getSignalMetrics().peakLevel));
-    EXPECT_TRUE(std::isinf(source->getSignalMetrics().dcOffset));
-
-    // Infinity > -60.0f is true
-    EXPECT_TRUE(source->getSignalMetrics().hasSignal);
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().rmsLevel, -100.0f);
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().peakLevel, -100.0f);
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().dcOffset, 0.0f);
+    EXPECT_FALSE(source->getSignalMetrics().hasSignal);
 }
 
 TEST_F(SourceBufferTest, SignalMetricsWithMixedValues)
@@ -274,8 +263,8 @@ TEST_F(SourceBufferTest, SignalMetricsWithMixedValues)
     source->updateSignalMetrics(-20.0f, inf, nan);
 
     EXPECT_FLOAT_EQ(source->getSignalMetrics().rmsLevel, -20.0f);
-    EXPECT_TRUE(std::isinf(source->getSignalMetrics().peakLevel));
-    EXPECT_TRUE(std::isnan(source->getSignalMetrics().dcOffset));
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().peakLevel, -100.0f);
+    EXPECT_FLOAT_EQ(source->getSignalMetrics().dcOffset, 0.0f);
     EXPECT_TRUE(source->getSignalMetrics().hasSignal);
 }
 

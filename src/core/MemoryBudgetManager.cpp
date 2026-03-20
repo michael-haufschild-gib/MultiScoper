@@ -10,6 +10,11 @@ namespace oscil
 
 MemoryBudgetManager::MemoryBudgetManager() = default;
 
+MemoryBudgetManager::~MemoryBudgetManager()
+{
+    shuttingDown_.store(true, std::memory_order_release);
+}
+
 void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, int sourceRate)
 {
     // NEVER call from audio thread - triggers buffer reconfiguration with heap allocation.
@@ -41,6 +46,7 @@ void MemoryBudgetManager::registerBuffer(const juce::String& id,
 
     {
         std::scoped_lock lock(buffersMutex_);
+        pruneExpiredBuffersLocked();
 
         BufferInfo info;
         info.id = id;
@@ -93,6 +99,7 @@ void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, Quali
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
 
     auto it = buffers_.find(id);
     if (it != buffers_.end())
@@ -102,7 +109,19 @@ void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, Quali
         // Reconfigure this buffer with new quality
         if (auto buffer = it->second.buffer.lock())
         {
-            QualityPreset effectivePreset = resolveQualityOverride(override, globalConfig_.qualityPreset);
+            QualityPreset effectivePreset;
+            if (override != QualityOverride::UseGlobal)
+            {
+                effectivePreset = resolveQualityOverride(override, globalConfig_.qualityPreset);
+            }
+            else if (globalConfig_.autoAdjustQuality)
+            {
+                effectivePreset = getRecommendedQualityForCount(static_cast<int>(buffers_.size()));
+            }
+            else
+            {
+                effectivePreset = globalConfig_.qualityPreset;
+            }
 
             CaptureQualityConfig bufferConfig = globalConfig_;
             bufferConfig.qualityPreset = effectivePreset;
@@ -128,18 +147,21 @@ QualityOverride MemoryBudgetManager::getBufferQualityOverride(const juce::String
 int MemoryBudgetManager::getBufferCount() const
 {
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
     return static_cast<int>(buffers_.size());
 }
 
 bool MemoryBudgetManager::isBufferRegistered(const juce::String& id) const
 {
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
     return buffers_.find(id) != buffers_.end();
 }
 
 size_t MemoryBudgetManager::getTotalMemoryUsage() const
 {
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
 
     if (usageCacheDirty_)
     {
@@ -151,6 +173,7 @@ size_t MemoryBudgetManager::getTotalMemoryUsage() const
 size_t MemoryBudgetManager::getBufferMemoryUsage(const juce::String& id) const
 {
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
 
     auto it = buffers_.find(id);
     if (it != buffers_.end())
@@ -168,11 +191,19 @@ MemoryUsageSnapshot MemoryBudgetManager::getMemorySnapshot() const
     MemoryUsageSnapshot snapshot;
 
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
 
     snapshot.budgetBytes = globalConfig_.memoryBudget.totalBudgetBytes;
     snapshot.numBuffers = static_cast<int>(buffers_.size());
-    // Use internal method to avoid deadlock (we already hold the lock)
-    snapshot.effectiveQuality = getRecommendedQualityForCount(snapshot.numBuffers);
+    if (globalConfig_.autoAdjustQuality)
+    {
+        // Use internal method to avoid lock re-entry (we already hold buffersMutex_).
+        snapshot.effectiveQuality = getRecommendedQualityForCount(snapshot.numBuffers);
+    }
+    else
+    {
+        snapshot.effectiveQuality = globalConfig_.qualityPreset;
+    }
 
     for (const auto& [id, info] : buffers_)
     {
@@ -255,6 +286,7 @@ QualityPreset MemoryBudgetManager::getRecommendedQualityForCount(int numBuffers)
 QualityPreset MemoryBudgetManager::getEffectiveQuality(const juce::String& id) const
 {
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
 
     auto it = buffers_.find(id);
     if (it != buffers_.end())
@@ -276,9 +308,9 @@ QualityPreset MemoryBudgetManager::getEffectiveQuality(const juce::String& id) c
 
 void MemoryBudgetManager::applyRecommendedQuality()
 {
-    QualityPreset recommended = getRecommendedQuality();
-
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
+    QualityPreset recommended = getRecommendedQualityForCount(static_cast<int>(buffers_.size()));
 
     for (auto& [id, info] : buffers_)
     {
@@ -308,6 +340,7 @@ void MemoryBudgetManager::applyRecommendedQuality()
 void MemoryBudgetManager::reconfigureAllBuffers()
 {
     std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
 
     for (auto& [id, info] : buffers_)
     {
@@ -357,22 +390,7 @@ void MemoryBudgetManager::removeListener(Listener* listener)
 void MemoryBudgetManager::pruneExpiredBuffers()
 {
     std::scoped_lock lock(buffersMutex_);
-
-    std::vector<juce::String> expiredIds;
-
-    for (const auto& [id, info] : buffers_)
-    {
-        if (info.buffer.expired())
-            expiredIds.push_back(id);
-    }
-
-    for (const auto& id : expiredIds)
-    {
-        buffers_.erase(id);
-    }
-
-    if (!expiredIds.empty())
-        usageCacheDirty_ = true;
+    pruneExpiredBuffersLocked();
 }
 
 void MemoryBudgetManager::refreshMemoryUsage()
@@ -383,6 +401,29 @@ void MemoryBudgetManager::refreshMemoryUsage()
         updateCachedUsage();
     }
     notifyMemoryUsageChanged();
+}
+
+bool MemoryBudgetManager::pruneExpiredBuffersLocked() const
+{
+    bool removed = false;
+
+    for (auto it = buffers_.begin(); it != buffers_.end(); )
+    {
+        if (it->second.buffer.expired())
+        {
+            it = buffers_.erase(it);
+            removed = true;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    if (removed)
+        usageCacheDirty_ = true;
+
+    return removed;
 }
 
 void MemoryBudgetManager::updateCachedUsage() const
@@ -404,54 +445,51 @@ void MemoryBudgetManager::updateCachedUsage() const
     usageCacheDirty_ = false;
 }
 
+void MemoryBudgetManager::postNotification(std::function<void(MemoryBudgetManager&)> callback)
+{
+    if (shuttingDown_.load(std::memory_order_acquire))
+        return;
+
+    auto* messageManager = juce::MessageManager::getInstanceWithoutCreating();
+    if (messageManager == nullptr)
+        return;
+
+    auto dispatch = [weakThis = juce::WeakReference<MemoryBudgetManager>(this),
+                     callback = std::move(callback)]() mutable {
+        auto* self = weakThis.get();
+        if (self == nullptr || self->shuttingDown_.load(std::memory_order_acquire))
+            return;
+
+        callback(*self);
+    };
+
+    if (messageManager->isThisTheMessageThread())
+        dispatch();
+    else
+        juce::MessageManager::callAsync(std::move(dispatch));
+}
+
 void MemoryBudgetManager::notifyMemoryUsageChanged()
 {
-    // THREAD SAFETY: ListenerList is not thread-safe.
-    // We must defer notifications to message thread to match addListener/removeListener requirements.
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        auto snapshot = getMemorySnapshot();
-        listeners_.call([&snapshot](Listener& l) { l.memoryUsageChanged(snapshot); });
-    }
-    else
-    {
-        juce::MessageManager::callAsync([this]() {
-            auto snapshot = getMemorySnapshot();
-            listeners_.call([&snapshot](Listener& l) { l.memoryUsageChanged(snapshot); });
-        });
-    }
+    postNotification([](MemoryBudgetManager& self) {
+        auto snapshot = self.getMemorySnapshot();
+        self.listeners_.call([&snapshot](Listener& listener) { listener.memoryUsageChanged(snapshot); });
+    });
 }
 
 void MemoryBudgetManager::notifyBufferCountChanged()
 {
-    // THREAD SAFETY: Defer to message thread for ListenerList safety
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        int count = getBufferCount();
-        listeners_.call([count](Listener& l) { l.bufferCountChanged(count); });
-    }
-    else
-    {
-        juce::MessageManager::callAsync([this]() {
-            int count = getBufferCount();
-            listeners_.call([count](Listener& l) { l.bufferCountChanged(count); });
-        });
-    }
+    postNotification([](MemoryBudgetManager& self) {
+        int count = self.getBufferCount();
+        self.listeners_.call([count](Listener& listener) { listener.bufferCountChanged(count); });
+    });
 }
 
 void MemoryBudgetManager::notifyEffectiveQualityChanged(QualityPreset newQuality)
 {
-    // THREAD SAFETY: Defer to message thread for ListenerList safety
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        listeners_.call([newQuality](Listener& l) { l.effectiveQualityChanged(newQuality); });
-    }
-    else
-    {
-        juce::MessageManager::callAsync([this, newQuality]() {
-            listeners_.call([newQuality](Listener& l) { l.effectiveQualityChanged(newQuality); });
-        });
-    }
+    postNotification([newQuality](MemoryBudgetManager& self) {
+        self.listeners_.call([newQuality](Listener& listener) { listener.effectiveQualityChanged(newQuality); });
+    });
 }
 
 } // namespace oscil

@@ -79,3 +79,30 @@ TEST_F(TimingPresenterTest, SyncBadgeVisibility)
     presenter.setTimingMode(TimingMode::TIME);
     EXPECT_FALSE(presenter.shouldShowSyncedBadge());
 }
+
+TEST_F(TimingPresenterTest, HostBpmUpdateDoesNotNotifyStateWhenHostBpmIsHidden)
+{
+    int stateChangedCount = 0;
+    presenter.setOnStateChanged([&]() { ++stateChangedCount; });
+
+    // Default mode is TIME and host sync is disabled, so host BPM is not visible.
+    presenter.setHostBPM(132.0f);
+
+    EXPECT_EQ(stateChangedCount, 0);
+    EXPECT_FLOAT_EQ(presenter.getHostBPM(), 132.0f);
+}
+
+TEST_F(TimingPresenterTest, HostBpmUpdateNotifiesStateWhenHostBpmIsVisible)
+{
+    int stateChangedCount = 0;
+    presenter.setOnStateChanged([&]() { ++stateChangedCount; });
+
+    presenter.setTimingMode(TimingMode::MELODIC);
+    presenter.setHostSyncEnabled(true);
+    stateChangedCount = 0;
+
+    presenter.setHostBPM(132.0f);
+
+    EXPECT_EQ(stateChangedCount, 1);
+    EXPECT_FLOAT_EQ(presenter.getHostBPM(), 132.0f);
+}

@@ -6,6 +6,8 @@
 #include "core/Oscillator.h"
 
 #include <gtest/gtest.h>
+#include <limits>
+#include <cmath>
 
 using namespace oscil;
 
@@ -81,6 +83,27 @@ TEST_F(OscillatorCoreTest, OpacityClamping)
 
     osc.setOpacity(1.5f);
     EXPECT_EQ(osc.getOpacity(), 1.0f);
+}
+
+TEST_F(OscillatorCoreTest, NonFiniteDisplayValuesFallbackToDefaults)
+{
+    Oscillator osc;
+
+    osc.setOpacity(std::numeric_limits<float>::quiet_NaN());
+    osc.setLineWidth(std::numeric_limits<float>::quiet_NaN());
+
+    EXPECT_FLOAT_EQ(osc.getOpacity(), 1.0f);
+    EXPECT_FLOAT_EQ(osc.getLineWidth(), Oscillator::DEFAULT_LINE_WIDTH);
+
+    juce::ValueTree state("Oscillator");
+    state.setProperty("opacity", std::numeric_limits<float>::quiet_NaN(), nullptr);
+    state.setProperty("lineWidth", std::numeric_limits<float>::quiet_NaN(), nullptr);
+
+    Oscillator restored(state);
+    EXPECT_TRUE(std::isfinite(restored.getOpacity()));
+    EXPECT_TRUE(std::isfinite(restored.getLineWidth()));
+    EXPECT_FLOAT_EQ(restored.getOpacity(), 1.0f);
+    EXPECT_FLOAT_EQ(restored.getLineWidth(), Oscillator::DEFAULT_LINE_WIDTH);
 }
 
 // Test: Effective colour (with opacity)
@@ -181,6 +204,23 @@ TEST_F(OscillatorCoreTest, DeserializeWithMissingProperties)
     EXPECT_TRUE(osc.isVisible());
 }
 
+TEST_F(OscillatorCoreTest, DeserializeMissingColourPreservesExistingColour)
+{
+    Oscillator osc;
+    const juce::Colour originalColour(0xFF112233);
+    osc.setColour(originalColour);
+
+    juce::ValueTree state("Oscillator");
+    state.setProperty(StateIds::SchemaVersion, Oscillator::CURRENT_SCHEMA_VERSION, nullptr);
+    state.setProperty(StateIds::SourceId, "", nullptr);
+    state.setProperty(StateIds::OscillatorState, static_cast<int>(OscillatorState::NO_SOURCE), nullptr);
+    // Intentionally omit StateIds::Colour to simulate partial/legacy payloads.
+
+    osc.fromValueTree(state);
+
+    EXPECT_EQ(osc.getColour().getARGB(), originalColour.getARGB());
+}
+
 TEST_F(OscillatorCoreTest, DeserializeWithOutOfRangeValues)
 {
     juce::ValueTree state("Oscillator");
@@ -192,6 +232,46 @@ TEST_F(OscillatorCoreTest, DeserializeWithOutOfRangeValues)
     // Values should be clamped
     EXPECT_EQ(osc.getLineWidth(), Oscillator::MAX_LINE_WIDTH);
     EXPECT_EQ(osc.getOpacity(), 1.0f);
+}
+
+TEST_F(OscillatorCoreTest, DeserializeInvalidStateValueRecoversFromSourceId)
+{
+    juce::ValueTree state("Oscillator");
+    state.setProperty("schemaVersion", 2, nullptr);
+    state.setProperty("sourceId", "source-123", nullptr);
+    state.setProperty("oscillatorState", 999, nullptr); // invalid enum value
+
+    Oscillator osc(state);
+
+    EXPECT_EQ(osc.getState(), OscillatorState::ACTIVE);
+    EXPECT_TRUE(osc.hasSource());
+}
+
+TEST_F(OscillatorCoreTest, DeserializeActiveStateWithoutSourceNormalizesToNoSource)
+{
+    juce::ValueTree state("Oscillator");
+    state.setProperty("schemaVersion", 2, nullptr);
+    state.setProperty("sourceId", "", nullptr);
+    state.setProperty("oscillatorState", static_cast<int>(OscillatorState::ACTIVE), nullptr);
+
+    Oscillator osc(state);
+
+    EXPECT_EQ(osc.getState(), OscillatorState::NO_SOURCE);
+    EXPECT_TRUE(osc.isNoSource());
+    EXPECT_FALSE(osc.hasSource());
+}
+
+TEST_F(OscillatorCoreTest, DeserializeNoSourceStateWithSourceNormalizesToActive)
+{
+    juce::ValueTree state("Oscillator");
+    state.setProperty("schemaVersion", 2, nullptr);
+    state.setProperty("sourceId", "source-123", nullptr);
+    state.setProperty("oscillatorState", static_cast<int>(OscillatorState::NO_SOURCE), nullptr);
+
+    Oscillator osc(state);
+
+    EXPECT_EQ(osc.getState(), OscillatorState::ACTIVE);
+    EXPECT_TRUE(osc.hasSource());
 }
 
 // Test: Extreme order indices

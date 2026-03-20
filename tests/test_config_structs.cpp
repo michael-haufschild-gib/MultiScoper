@@ -5,6 +5,8 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <limits>
+#include <cmath>
 
 using namespace oscil;
 
@@ -49,6 +51,24 @@ TEST(PerformanceConfigTest, Serialization) {
     EXPECT_EQ(restored.statusBarVisible, original.statusBarVisible);
 }
 
+TEST(PerformanceConfigTest, NonFiniteDeserializationFallsBackToDefaults) {
+    PerformanceConfig config;
+
+    juce::ValueTree vt("Test");
+    vt.setProperty("refreshRate", std::numeric_limits<float>::quiet_NaN(), nullptr);
+    vt.setProperty("cpuWarningThreshold", std::numeric_limits<float>::quiet_NaN(), nullptr);
+    vt.setProperty("cpuCriticalThreshold", std::numeric_limits<float>::quiet_NaN(), nullptr);
+
+    config.fromValueTree(vt);
+
+    EXPECT_TRUE(std::isfinite(config.refreshRate));
+    EXPECT_TRUE(std::isfinite(config.cpuWarningThreshold));
+    EXPECT_TRUE(std::isfinite(config.cpuCriticalThreshold));
+    EXPECT_FLOAT_EQ(config.refreshRate, 60.0f);
+    EXPECT_FLOAT_EQ(config.cpuWarningThreshold, 10.0f);
+    EXPECT_FLOAT_EQ(config.cpuCriticalThreshold, 15.0f);
+}
+
 // --- AudioConfig Tests ---
 
 TEST(AudioConfigTest, Validation) {
@@ -83,6 +103,23 @@ TEST(AudioConfigTest, Helpers) {
     EXPECT_DOUBLE_EQ(config.samplesToMs(100), 100.0);
 }
 
+TEST(AudioConfigTest, NonFiniteSampleRateHelpersReturnSafeValues) {
+    AudioConfig config;
+    config.sampleRate = std::numeric_limits<float>::quiet_NaN();
+    config.bufferSize = 256;
+
+    EXPECT_EQ(config.getBufferDurationMs(), 0.0);
+    EXPECT_EQ(config.getBufferDurationSeconds(), 0.0);
+    EXPECT_EQ(config.msToSamples(100.0), 0);
+    EXPECT_EQ(config.samplesToMs(100), 0.0);
+
+    config.sampleRate = std::numeric_limits<float>::infinity();
+    EXPECT_EQ(config.getBufferDurationMs(), 0.0);
+    EXPECT_EQ(config.getBufferDurationSeconds(), 0.0);
+    EXPECT_EQ(config.msToSamples(100.0), 0);
+    EXPECT_EQ(config.samplesToMs(100), 0.0);
+}
+
 // --- HostInfo Tests ---
 
 TEST(HostInfoTest, BPMHelpers) {
@@ -104,4 +141,32 @@ TEST(HostInfoTest, PositionHelpers) {
     
     EXPECT_DOUBLE_EQ(host.getBarPosition(), 1.125); // 4.5 / 4
     EXPECT_DOUBLE_EQ(host.getBeatInBar(), 0.5); // 4.5 % 4
+}
+
+TEST(HostInfoTest, NonFiniteHelpersReturnSafeDefaults) {
+    HostInfo host;
+    host.timeSignature.numerator = 4;
+
+    host.bpm = std::numeric_limits<float>::quiet_NaN();
+    EXPECT_DOUBLE_EQ(host.getMsPerBeat(), 500.0);
+    EXPECT_DOUBLE_EQ(host.getMsPerBar(), 2000.0);
+
+    host.bpm = std::numeric_limits<float>::infinity();
+    EXPECT_DOUBLE_EQ(host.getMsPerBeat(), 500.0);
+    EXPECT_DOUBLE_EQ(host.getMsPerBar(), 2000.0);
+
+    host.ppqPosition = std::numeric_limits<double>::quiet_NaN();
+    EXPECT_DOUBLE_EQ(host.getBarPosition(), 0.0);
+    EXPECT_DOUBLE_EQ(host.getBeatInBar(), 0.0);
+}
+
+TEST(HostInfoTest, UpdateFromPlayHeadIgnoresNonFiniteBpm) {
+    HostInfo host;
+    host.bpm = 130.0f;
+
+    juce::AudioPlayHead::PositionInfo posInfo;
+    posInfo.setBpm(std::numeric_limits<double>::quiet_NaN());
+
+    host.updateFromPlayHead(posInfo);
+    EXPECT_FLOAT_EQ(host.bpm, 130.0f);
 }

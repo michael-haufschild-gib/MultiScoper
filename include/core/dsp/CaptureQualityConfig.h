@@ -249,7 +249,10 @@ struct CaptureQualityConfig
             case QualityPreset::Eco:      return CaptureRate::ECO;
             case QualityPreset::Standard: return CaptureRate::STANDARD;
             case QualityPreset::High:     return CaptureRate::HIGH;
-            case QualityPreset::Ultra:    return sourceRate > 0 ? sourceRate : CaptureRate::HIGH;
+            case QualityPreset::Ultra:
+                if (sourceRate <= 0)
+                    return CaptureRate::HIGH;
+                return juce::jmin(sourceRate, CaptureRate::MAX_SOURCE_RATE);
         }
         return CaptureRate::STANDARD;
     }
@@ -339,6 +342,8 @@ struct CaptureQualityConfig
     static CaptureQualityConfig fromValueTree(const juce::ValueTree& tree)
     {
         CaptureQualityConfig config;
+        static constexpr int DEFAULT_TOTAL_BUDGET_MB = 50;
+        static constexpr int MAX_TOTAL_BUDGET_MB = 16 * 1024; // 16 GB safety ceiling
 
         if (tree.isValid())
         {
@@ -347,7 +352,9 @@ struct CaptureQualityConfig
             config.bufferDuration = stringToBufferDuration(
                 tree.getProperty("bufferDuration", "4s").toString());
 
-            int totalMB = tree.getProperty("totalBudgetMB", 50);
+            int totalMB = static_cast<int>(tree.getProperty("totalBudgetMB", DEFAULT_TOTAL_BUDGET_MB));
+            if (totalMB <= 0 || totalMB > MAX_TOTAL_BUDGET_MB)
+                totalMB = DEFAULT_TOTAL_BUDGET_MB;
             config.memoryBudget.totalBudgetBytes = static_cast<size_t>(totalMB) * 1024 * 1024;
 
             config.autoAdjustQuality = tree.getProperty("autoAdjustQuality", true);

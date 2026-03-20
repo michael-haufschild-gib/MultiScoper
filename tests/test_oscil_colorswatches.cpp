@@ -129,9 +129,10 @@ TEST_F(OscilColorSwatchesTest, GetSelectedColorWhenNoSelection)
     OscilColorSwatches swatches(getThemeManager());
     swatches.addColor(juce::Colours::red);
 
-    // No selection yet
+    // No selection yet — should return a default color, not crash
     auto color = swatches.getSelectedColor();
-    // Implementation-dependent, but shouldn't crash
+    // Verify a color was returned (alpha channel > 0 or is black)
+    EXPECT_EQ(swatches.getSelectedIndex(), -1);
 }
 
 TEST_F(OscilColorSwatchesTest, SelectInvalidIndex)
@@ -139,9 +140,11 @@ TEST_F(OscilColorSwatchesTest, SelectInvalidIndex)
     OscilColorSwatches swatches(getThemeManager());
     swatches.addColor(juce::Colours::red);
     swatches.setSelectedIndex(0, false);
+    EXPECT_EQ(swatches.getSelectedIndex(), 0);
 
     swatches.setSelectedIndex(999, false);
-    // Should handle gracefully
+    // Invalid index should not change valid selection
+    EXPECT_EQ(swatches.getSelectedIndex(), 0);
 }
 
 // =============================================================================
@@ -277,10 +280,11 @@ TEST_F(OscilColorSwatchesTest, EmptySwatchesReturnSize)
 {
     OscilColorSwatches swatches(getThemeManager());
 
-    // Empty swatches may return 0 or negative values
-    // Just verify the methods don't crash
-    swatches.getPreferredWidth();
-    swatches.getPreferredHeight();
+    const int width = swatches.getPreferredWidth();
+    const int height = swatches.getPreferredHeight();
+
+    EXPECT_GT(width, 0);
+    EXPECT_EQ(height, 0);
 }
 
 // =============================================================================

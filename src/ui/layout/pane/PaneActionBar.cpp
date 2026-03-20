@@ -8,6 +8,25 @@
 namespace oscil
 {
 
+namespace
+{
+constexpr float kHoldIconSize = 14.0f;
+
+void applyHoldButtonVisuals(OscilButton& button, IThemeService& themeService, bool toggled)
+{
+    if (toggled)
+    {
+        button.setIconPath(ListItemIcons::createPlayIcon(kHoldIconSize));
+        button.setBorder(themeService.getCurrentTheme().controlActive, 1.0f);
+    }
+    else
+    {
+        button.setIconPath(ListItemIcons::createPauseIcon(kHoldIconSize));
+        button.setBorder(juce::Colours::transparentBlack, 0.0f);
+    }
+}
+} // namespace
+
 PaneActionBar::PaneActionBar(IThemeService& themeService)
     : themeService_(themeService)
 {
@@ -22,15 +41,12 @@ void PaneActionBar::setupButtons()
     holdButton_->setIconPath(ListItemIcons::createPauseIcon(14.0f));
     holdButton_->setTooltip("Hold/Pause display for this pane");
     holdButton_->setToggleable(true);
+    applyHoldButtonVisuals(*holdButton_, themeService_, holdButton_->isToggled());
     holdButton_->onToggleStateChanged = [this](bool toggled) {
+        applyHoldButtonVisuals(*holdButton_, themeService_, toggled);
+
         if (onActionTriggered)
             onActionTriggered(PaneAction::ToggleHold, toggled);
-        
-        // Add active border when toggled
-        if (toggled)
-            holdButton_->setBorder(themeService_.getCurrentTheme().controlActive, 1.0f);
-        else
-            holdButton_->setBorder(juce::Colours::transparentBlack, 0.0f);
     };
     addAndMakeVisible(*holdButton_);
 
@@ -94,11 +110,7 @@ void PaneActionBar::setActionToggled(PaneAction action, bool toggled)
             if (holdButton_)
             {
                 holdButton_->setToggled(toggled, false);
-                // Update icon
-                if (toggled)
-                    holdButton_->setIconPath(ListItemIcons::createPlayIcon(static_cast<float>(BUTTON_SIZE)));
-                else
-                    holdButton_->setIconPath(ListItemIcons::createPauseIcon(static_cast<float>(BUTTON_SIZE)));
+                applyHoldButtonVisuals(*holdButton_, themeService_, toggled);
             }
             break;
         default:

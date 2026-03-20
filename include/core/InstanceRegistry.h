@@ -32,7 +32,7 @@ class InstanceRegistry : public IInstanceRegistry
 {
 public:
     InstanceRegistry();
-    ~InstanceRegistry() override = default;
+    ~InstanceRegistry() override;
     /**
      * Register a new plugin instance as a signal source.
      * Returns the assigned SourceId (may be existing if deduplication applies).
@@ -132,6 +132,8 @@ private:
 
     // Shutdown flag to prevent async notifications from accessing destroyed object
     std::atomic<bool> shuttingDown_{false};
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE(InstanceRegistry)
 };
 
 } // namespace oscil

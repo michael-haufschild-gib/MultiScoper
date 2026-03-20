@@ -62,11 +62,9 @@ void TimingPresenter::setHostBPM(float bpm)
     if (std::abs(hostBPM_ - bpm) > 1e-4f)
     {
         hostBPM_ = bpm;
-        // Usually doesn't trigger a callback unless we are in host sync mode and need to update display
-        // But the View updates the display in 'updateUi' or we can fire a generic change if strictly needed.
-        // For now, just updating state. The view might poll or we rely on updateUi.
-        // Actually, TimingSidebarSection had `setHostBPM` which updated the label text immediately.
-        notifyStateChanged(); 
+        // Host BPM only affects visible UI while displaying host-synced melodic mode.
+        if (shouldShowBPMValue())
+            notifyStateChanged();
     }
 }
 

@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <vector>
+#include <cstdint>
 
 namespace oscil
 {
@@ -142,6 +143,11 @@ public:
      * Set input gain in decibels (-60 to +24 dB)
      */
     void setGainDb(float dB);
+
+    /**
+     * Request waveform restart aligned to the given timeline sample timestamp.
+     */
+    void requestRestartAtTimestamp(int64_t timelineSampleTimestamp);
 
     /**
      * Set highlighted state (draws thicker outline when true)

@@ -92,6 +92,20 @@ TEST_F(StatsOverlayTest, ResetCallback)
     EXPECT_TRUE(resetCalled);
 }
 
+TEST_F(StatsOverlayTest, MouseInteractionEnabledForResetAndSelection)
+{
+    bool allowsThis = false;
+    bool allowsChildren = false;
+    overlay.getInterceptsMouseClicks(allowsThis, allowsChildren);
+
+    EXPECT_TRUE(allowsThis);
+    EXPECT_TRUE(allowsChildren);
+    EXPECT_FALSE(overlay.isClickThrough());
+
+    overlay.setBounds(0, 0, 200, 120);
+    EXPECT_TRUE(overlay.hitTest(10, 10));
+}
+
 TEST_F(StatsOverlayTest, FormattingChecks)
 {
     std::vector<OscillatorStats> stats;

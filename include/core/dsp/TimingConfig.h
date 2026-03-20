@@ -8,6 +8,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <cmath>
 
 namespace oscil
 {
@@ -278,20 +279,35 @@ struct TimingConfig
      */
     void calculateActualInterval()
     {
+        auto sanitizeNaN = [](float value, float fallback)
+        {
+            return std::isnan(value) ? fallback : value;
+        };
+
         if (timingMode == TimingMode::TIME)
         {
-            actualIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS, timeIntervalMs);
+            float safeTimeIntervalMs = sanitizeNaN(timeIntervalMs, DEFAULT_TIME_INTERVAL_MS);
+            actualIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS, safeTimeIntervalMs);
         }
         else // MELODIC mode
         {
-            float effectiveBpm = juce::jlimit(MIN_BPM, MAX_BPM, hostBPM);
+            float safeHostBpm = sanitizeNaN(hostBPM, DEFAULT_BPM);
+            float effectiveBpm = juce::jlimit(MIN_BPM, MAX_BPM, safeHostBpm);
             float msPerBeat = 60000.0f / effectiveBpm;  // ms per quarter note
 
             float multiplier = getNoteIntervalMultiplier(noteInterval);
+            if (!std::isfinite(multiplier) || multiplier <= 0.0f)
+            {
+                multiplier = 1.0f;
+            }
+
             actualIntervalMs = msPerBeat * multiplier;
 
             // Clamp to valid range
-            actualIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS, actualIntervalMs);
+            actualIntervalMs = juce::jlimit(
+                MIN_TIME_INTERVAL_MS,
+                MAX_TIME_INTERVAL_MS,
+                sanitizeNaN(actualIntervalMs, DEFAULT_TIME_INTERVAL_MS));
         }
     }
 
@@ -350,7 +366,8 @@ struct TimingConfig
      */
     void setHostBPM(float bpm)
     {
-        hostBPM = juce::jlimit(MIN_BPM, MAX_BPM, bpm);
+        float safeBpm = std::isnan(bpm) ? DEFAULT_BPM : bpm;
+        hostBPM = juce::jlimit(MIN_BPM, MAX_BPM, safeBpm);
         if (timingMode == TimingMode::MELODIC)
         {
             calculateActualInterval();
@@ -371,7 +388,8 @@ struct TimingConfig
      */
     void setTimeInterval(float ms)
     {
-        timeIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS, ms);
+        float safeMs = std::isnan(ms) ? DEFAULT_TIME_INTERVAL_MS : ms;
+        timeIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS, safeMs);
         if (timingMode == TimingMode::TIME)
         {
             calculateActualInterval();
@@ -425,17 +443,29 @@ struct TimingConfig
     {
         if (!tree.isValid()) return;
 
+        auto sanitizeFloat = [](float value, float fallback)
+        {
+            return std::isfinite(value) ? value : fallback;
+        };
+
         timingMode = stringToTimingMode(tree.getProperty("timingMode", "TIME").toString());
         triggerMode = stringToTriggerMode(tree.getProperty("triggerMode", "FREE_RUNNING").toString());
-        timeIntervalMs = static_cast<float>(tree.getProperty("timeIntervalMs", 500.0f));
+        timeIntervalMs = juce::jlimit(
+            MIN_TIME_INTERVAL_MS,
+            MAX_TIME_INTERVAL_MS,
+            sanitizeFloat(static_cast<float>(tree.getProperty("timeIntervalMs", DEFAULT_TIME_INTERVAL_MS)),
+                          DEFAULT_TIME_INTERVAL_MS));
         noteInterval = stringToNoteInterval(tree.getProperty("noteInterval", "1/4").toString());
         hostSyncEnabled = static_cast<bool>(tree.getProperty("hostSyncEnabled", false));
-        hostBPM = static_cast<float>(tree.getProperty("hostBPM", 120.0f));
+        hostBPM = juce::jlimit(
+            MIN_BPM,
+            MAX_BPM,
+            sanitizeFloat(static_cast<float>(tree.getProperty("hostBPM", DEFAULT_BPM)), DEFAULT_BPM));
         syncToPlayhead = static_cast<bool>(tree.getProperty("syncToPlayhead", false));
-        triggerThreshold = static_cast<float>(tree.getProperty("triggerThreshold", -20.0f));
+        triggerThreshold = sanitizeFloat(static_cast<float>(tree.getProperty("triggerThreshold", -20.0f)), -20.0f);
         triggerEdge = stringToTriggerEdge(tree.getProperty("triggerEdge", "Rising").toString());
-        midiTriggerNote = static_cast<int>(tree.getProperty("midiTriggerNote", -1));
-        midiTriggerChannel = static_cast<int>(tree.getProperty("midiTriggerChannel", 0));
+        midiTriggerNote = juce::jlimit(-1, 127, static_cast<int>(tree.getProperty("midiTriggerNote", -1)));
+        midiTriggerChannel = juce::jlimit(0, 16, static_cast<int>(tree.getProperty("midiTriggerChannel", 0)));
 
         calculateActualInterval();
     }

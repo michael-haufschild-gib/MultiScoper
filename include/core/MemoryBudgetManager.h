@@ -11,6 +11,8 @@
 #include <memory>
 #include <map>
 #include <mutex>
+#include <atomic>
+#include <functional>
 
 namespace oscil
 {
@@ -94,7 +96,7 @@ public:
      * Typically owned by PluginFactory and passed via dependency injection.
      */
     MemoryBudgetManager();
-    ~MemoryBudgetManager() = default;
+    ~MemoryBudgetManager();
 
     // Non-copyable
     MemoryBudgetManager(const MemoryBudgetManager&) = delete;
@@ -254,9 +256,14 @@ public:
     void refreshMemoryUsage();
 
 private:
+    // REQUIRES: buffersMutex_ is already held by caller.
+    // Removes expired weak_ptr entries and returns true if any entry was removed.
+    bool pruneExpiredBuffersLocked() const;
+
     void notifyMemoryUsageChanged();
     void notifyBufferCountChanged();
     void notifyEffectiveQualityChanged(QualityPreset newQuality);
+    void postNotification(std::function<void(MemoryBudgetManager&)> callback);
     void updateCachedUsage() const;
 
     // Internal helper to calculate recommended quality without locking
@@ -275,6 +282,9 @@ private:
     QualityPreset lastEffectiveQuality_ = QualityPreset::Standard;
 
     juce::ListenerList<Listener> listeners_;
+    std::atomic<bool> shuttingDown_{false};
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE(MemoryBudgetManager)
 };
 
 } // namespace oscil

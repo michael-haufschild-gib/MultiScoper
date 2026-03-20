@@ -126,7 +126,9 @@ void StatusBarComponent::setCpuUsage(float cpu)
 
 void StatusBarComponent::setMemoryUsage(float memory)
 {
-    if (std::abs(memoryUsage_ - memory) > 0.1f)
+    // Memory label is rendered with one decimal place, so update once the rounded
+    // display value can change (half-step of 0.1 MB).
+    if (std::abs(memoryUsage_ - memory) >= 0.05f)
     {
         memoryUsage_ = memory;
         updateMemoryLabel();

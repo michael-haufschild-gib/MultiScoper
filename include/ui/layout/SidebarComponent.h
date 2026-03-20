@@ -213,6 +213,7 @@ private:
     // State
     bool collapsed_ = false;
     int expandedWidth_ = WindowLayout::DEFAULT_SIDEBAR_WIDTH;
+    int dragStartWidth_ = WindowLayout::DEFAULT_SIDEBAR_WIDTH;
     OscillatorId selectedOscillatorId_;
     std::vector<Pane> currentPanes_;  // Cached for source dropdown updates
 

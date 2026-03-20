@@ -11,6 +11,8 @@
 #include "core/dsp/SignalProcessor.h"
 #include <memory>
 #include <vector>
+#include <optional>
+#include <cstdint>
 #include <juce_core/juce_core.h>
 
 namespace oscil
@@ -60,6 +62,13 @@ public:
      */
     void process();
 
+    /**
+     * Request display restart from a specific timeline sample timestamp.
+     * Subsequent process() calls keep a fixed display window and zero-fill
+     * the not-yet-captured tail until the restart window is fully populated.
+     */
+    void requestRestartAtTimestamp(int64_t timelineSampleTimestamp);
+
     // Accessors
     const std::vector<float>& getDisplayBuffer1() const { return displayBuffer1_; }
     const std::vector<float>& getDisplayBuffer2() const { return displayBuffer2_; }
@@ -97,6 +106,7 @@ private:
     float currentPeak_ = 0.0f;
     float currentRMS_ = 0.0f;
     float effectiveScale_ = 1.0f;
+    std::optional<int64_t> restartTimelineSample_;
 };
 
 } // namespace oscil

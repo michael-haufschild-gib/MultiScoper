@@ -240,6 +240,35 @@ TEST_F(SourceOwnershipTest, DeserializeBackupInstancesWithInvalidIds)
     EXPECT_EQ(testSource.getBackupInstanceIds()[0].id, "valid-instance-id");
 }
 
+TEST_F(SourceOwnershipTest, DeserializeBackupInstancesExcludesOwnerAndDuplicates)
+{
+    juce::ValueTree tree("Source");
+    tree.setProperty("id", "test-id", nullptr);
+    tree.setProperty("owningInstanceId", "owner-instance-id", nullptr);
+
+    juce::ValueTree backups("BackupInstances");
+
+    juce::ValueTree ownerAsBackup("Instance");
+    ownerAsBackup.setProperty("id", "owner-instance-id", nullptr);
+    backups.appendChild(ownerAsBackup, nullptr);
+
+    juce::ValueTree backup("Instance");
+    backup.setProperty("id", "backup-instance-id", nullptr);
+    backups.appendChild(backup, nullptr);
+
+    juce::ValueTree duplicate("Instance");
+    duplicate.setProperty("id", "backup-instance-id", nullptr);
+    backups.appendChild(duplicate, nullptr);
+
+    tree.appendChild(backups, nullptr);
+
+    Source testSource(tree);
+
+    ASSERT_EQ(testSource.getOwningInstanceId().id, "owner-instance-id");
+    ASSERT_EQ(testSource.getBackupInstanceIds().size(), 1);
+    EXPECT_EQ(testSource.getBackupInstanceIds()[0].id, "backup-instance-id");
+}
+
 // === Sequential Operations Test ===
 
 TEST_F(SourceOwnershipTest, SequentialBackupInstanceOperations)

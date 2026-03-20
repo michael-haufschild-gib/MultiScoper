@@ -7,6 +7,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include <cmath>
 
 namespace oscil
 {
@@ -117,7 +118,8 @@ struct AudioConfig
      */
     double getBufferDurationMs() const
     {
-        if (sampleRate <= 0.0f) return 0.0;
+        if (!std::isfinite(sampleRate) || sampleRate <= 0.0f)
+            return 0.0;
         return (static_cast<double>(bufferSize) / sampleRate) * 1000.0;
     }
 
@@ -126,7 +128,8 @@ struct AudioConfig
      */
     double getBufferDurationSeconds() const
     {
-        if (sampleRate <= 0.0f) return 0.0;
+        if (!std::isfinite(sampleRate) || sampleRate <= 0.0f)
+            return 0.0;
         return static_cast<double>(bufferSize) / sampleRate;
     }
 
@@ -135,6 +138,9 @@ struct AudioConfig
      */
     int msToSamples(double ms) const
     {
+        if (!std::isfinite(sampleRate) || sampleRate <= 0.0f || !std::isfinite(ms))
+            return 0;
+
         return static_cast<int>((ms / 1000.0) * sampleRate);
     }
 
@@ -143,7 +149,8 @@ struct AudioConfig
      */
     double samplesToMs(int samples) const
     {
-        if (sampleRate <= 0.0f) return 0.0;
+        if (!std::isfinite(sampleRate) || sampleRate <= 0.0f)
+            return 0.0;
         return (static_cast<double>(samples) / sampleRate) * 1000.0;
     }
 

@@ -137,7 +137,18 @@ void PaneComponent::handleDragStarted(const juce::MouseEvent& event)
         dragG.setOpacity(0.7f);
         dragG.drawImageAt(snapshot, 0, 0);
 
-        container->startDragging(dragDescription, this, juce::ScaledImage(dragImage), true, nullptr, &event.source);
+        const auto eventRelativeToPane = event.getEventRelativeTo(this);
+        auto mouseDownInPane = eventRelativeToPane.getMouseDownPosition();
+        mouseDownInPane.x = juce::jlimit(0, juce::jmax(0, dragImage.getWidth() - 1), mouseDownInPane.x);
+        mouseDownInPane.y = juce::jlimit(0, juce::jmax(0, dragImage.getHeight() - 1), mouseDownInPane.y);
+        juce::Point<int> dragImageOffset(-mouseDownInPane.x, -mouseDownInPane.y);
+
+        container->startDragging(dragDescription,
+                                 this,
+                                 juce::ScaledImage(dragImage),
+                                 true,
+                                 &dragImageOffset,
+                                 &event.source);
     }
 }
 
@@ -334,6 +345,12 @@ void PaneComponent::setSampleRate(int sampleRate)
 {
     if (body_)
         body_->setSampleRate(sampleRate);
+}
+
+void PaneComponent::requestWaveformRestartAtTimestamp(int64_t timelineSampleTimestamp)
+{
+    if (body_)
+        body_->requestWaveformRestartAtTimestamp(timelineSampleTimestamp);
 }
 
 void PaneComponent::highlightOscillator(const OscillatorId& oscillatorId)

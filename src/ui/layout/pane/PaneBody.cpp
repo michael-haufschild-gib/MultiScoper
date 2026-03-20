@@ -246,6 +246,12 @@ void PaneBody::setSampleRate(int sampleRate)
         sampleRate_ = sampleRate;
 }
 
+void PaneBody::requestWaveformRestartAtTimestamp(int64_t timelineSampleTimestamp)
+{
+    if (waveformStack_)
+        waveformStack_->requestRestartAtTimestamp(timelineSampleTimestamp);
+}
+
 // Highlight oscillator
 
 void PaneBody::highlightOscillator(const OscillatorId& oscillatorId)

@@ -76,6 +76,7 @@ class TimingEngineListenerAdapter;
  */
 class OscilPluginEditor : public juce::AudioProcessorEditor
     , public juce::DragAndDropContainer
+    , public SidebarComponent::Listener
     , public TestIdSupport
     , private juce::Timer
 {
@@ -93,6 +94,11 @@ public:
     // Sidebar event handlers (called from adapter)
     void onSidebarWidthChanged(int newWidth);
     void onSidebarCollapsedStateChanged(bool collapsed);
+
+    // Timing sidebar sync helpers (called from timing adapter callbacks)
+    void updateTimingSidebarMode(TimingMode mode);
+    void updateTimingSidebarHostSyncEnabled(bool enabled);
+    void updateTimingSidebarHostBpm(float bpm);
 
     // Dialog Listeners
     void onConfigPopupClosed();
@@ -129,6 +135,25 @@ private:
     void onSourcesChanged();
     void onThemeChanged(const ColorTheme& newTheme);
     void onLayoutChanged();
+
+    // SidebarComponent::Listener (non-oscillator events)
+    void sidebarWidthChanged(int newWidth) override;
+    void sidebarCollapsedStateChanged(bool collapsed) override;
+    void timingModeChanged(TimingMode mode) override;
+    void noteIntervalChanged(NoteInterval interval) override;
+    void timeIntervalChanged(float ms) override;
+    void hostSyncChanged(bool enabled) override;
+    void waveformModeChanged(WaveformMode mode) override;
+    void bpmChanged(float bpm) override;
+    void gainChanged(float dB) override;
+    void showGridChanged(bool enabled) override;
+    void autoScaleChanged(bool enabled) override;
+    void layoutChanged(int columnCount) override;
+    void themeChanged(const juce::String& themeName) override;
+    void gpuRenderingChanged(bool enabled) override;
+    void qualityPresetChanged(QualityPreset preset) override;
+    void bufferDurationChanged(BufferDuration duration) override;
+    void autoAdjustQualityChanged(bool enabled) override;
 
     OscilPluginProcessor& processor_;
     ServiceContext serviceContext_;
