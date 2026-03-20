@@ -249,12 +249,12 @@ TEST_F(AnimationSettingsValidationTest, StateAfterManyOperations)
 // Test: updateFromSystem doesn't crash
 TEST_F(AnimationSettingsValidationTest, UpdateFromSystemNoOp)
 {
-    // Should not crash
     AnimationSettings::updateFromSystem();
     AnimationSettings::updateFromSystem();
     AnimationSettings::updateFromSystem();
 
-    // We can't assert on the value here because it depends on the actual
-    // system setting (macOS) or is a no-op (other platforms).
-    // The important part is that calling it multiple times is safe.
+    // After multiple calls, prefersReducedMotion should return a consistent boolean
+    bool reduced1 = AnimationSettings::prefersReducedMotion();
+    bool reduced2 = AnimationSettings::prefersReducedMotion();
+    EXPECT_EQ(reduced1, reduced2);
 }

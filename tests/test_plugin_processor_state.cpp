@@ -109,6 +109,35 @@ TEST_F(PluginProcessorStateTest, StateInformation_InvalidXml)
     EXPECT_TRUE(processor->getCaptureBuffer() != nullptr);
 }
 
+TEST_F(PluginProcessorStateTest, StateInformation_InvalidXmlDoesNotMutateRuntimeTimingState)
+{
+    processor->prepareToPlay(44100.0, 512);
+
+    auto& engine = processor->getTimingEngine();
+    juce::AudioPlayHead::PositionInfo posInfo;
+    posInfo.setIsPlaying(true);
+    posInfo.setTimeInSamples(4096);
+    posInfo.setBpm(143.0);
+    engine.updateHostInfo(posInfo);
+    engine.requestManualTrigger();
+
+    const auto runtimeBefore = engine.getHostInfo();
+    ASSERT_TRUE(runtimeBefore.isPlaying);
+    ASSERT_EQ(runtimeBefore.timeInSamples, 4096);
+    ASSERT_DOUBLE_EQ(engine.getConfig().lastSyncTimestamp, 4096.0);
+
+    const char* invalidXml = "not valid xml <><>";
+    processor->setStateInformation(invalidXml, static_cast<int>(strlen(invalidXml)));
+    pumpMessageQueue(200);
+
+    // Parse failure should leave existing runtime state untouched.
+    const auto runtimeAfter = engine.getHostInfo();
+    EXPECT_TRUE(runtimeAfter.isPlaying);
+    EXPECT_EQ(runtimeAfter.timeInSamples, 4096);
+    EXPECT_DOUBLE_EQ(engine.getConfig().lastSyncTimestamp, 4096.0);
+    EXPECT_TRUE(engine.checkAndClearTrigger());
+}
+
 TEST_F(PluginProcessorStateTest, StateInformation_ContainsTimingState)
 {
     processor->prepareToPlay(44100.0, 512);
@@ -176,6 +205,53 @@ TEST_F(PluginProcessorStateTest, StateInformation_MultipleSaveRestore)
 
     // Should now be melodic again
     EXPECT_EQ(processor->getTimingEngine().getConfig().timingMode, TimingMode::MELODIC);
+}
+
+TEST_F(PluginProcessorStateTest, StateInformation_MissingTimingNodeClearsRuntimeTimingState)
+{
+    processor->prepareToPlay(44100.0, 512);
+
+    // Create non-persistent runtime timing state that should not survive restore.
+    auto& engine = processor->getTimingEngine();
+    juce::AudioPlayHead::PositionInfo posInfo;
+    posInfo.setIsPlaying(true);
+    posInfo.setTimeInSamples(8192);
+    engine.updateHostInfo(posInfo);
+    engine.requestManualTrigger();
+    ASSERT_DOUBLE_EQ(engine.getConfig().lastSyncTimestamp, 8192.0);
+    ASSERT_TRUE(engine.checkAndClearTrigger());
+    engine.requestManualTrigger();
+    ASSERT_TRUE(engine.checkAndClearManualTrigger());
+    engine.requestManualTrigger();
+
+    // Save a valid state first.
+    juce::MemoryBlock savedState;
+    processor->getStateInformation(savedState);
+    ASSERT_GT(savedState.getSize(), 0u);
+
+    auto xmlText = juce::String::createStringFromData(savedState.getData(),
+                                                      static_cast<int>(savedState.getSize()));
+    auto xml = juce::XmlDocument::parse(xmlText);
+    ASSERT_NE(xml, nullptr);
+
+    // Simulate malformed/legacy restore payload with missing Timing node.
+    auto* timingNode = xml->getChildByName("Timing");
+    ASSERT_NE(timingNode, nullptr);
+    xml->removeChildElement(timingNode, true);
+
+    auto modifiedXml = xml->toString();
+    processor->setStateInformation(modifiedXml.toRawUTF8(),
+                                   modifiedXml.getNumBytesAsUTF8());
+    pumpMessageQueue(200);
+
+    // Runtime-only timing state must be neutralized even when Timing node is absent.
+    EXPECT_DOUBLE_EQ(engine.getConfig().lastSyncTimestamp, 0.0);
+    EXPECT_FALSE(engine.checkAndClearTrigger());
+    EXPECT_FALSE(engine.checkAndClearManualTrigger());
+
+    const auto hostInfo = engine.getHostInfo();
+    EXPECT_FALSE(hostInfo.isPlaying);
+    EXPECT_EQ(hostInfo.timeInSamples, 0);
 }
 
 TEST_F(PluginProcessorStateTest, StateInformation_VeryLargeState)
@@ -248,8 +324,9 @@ TEST_F(PluginProcessorStateTest, StateAccessDuringProcessing)
     audioThread.join();
     stateThread.join();
 
-    // Should complete without crashes or deadlocks
-    EXPECT_NE(processor->getCaptureBuffer(), nullptr);
+    // Verify processor state is consistent after concurrent access
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 44100.0);
+    EXPECT_GE(processor->getCpuUsage(), 0.0f);
 }
 
 TEST_F(PluginProcessorStateTest, StateInformation_BeforePrepare)

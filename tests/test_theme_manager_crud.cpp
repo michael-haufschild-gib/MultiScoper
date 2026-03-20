@@ -139,17 +139,19 @@ TEST_F(ThemeManagerCRUDTest, DeleteCustomTheme)
 // Test: Create theme with empty name
 TEST_F(ThemeManagerCRUDTest, CreateThemeEmptyName)
 {
+    auto initialCount = getThemeManager().getAvailableThemes().size();
     bool result = getThemeManager().createTheme("");
 
-    // Empty name should fail or create an unnamed theme
-    // Implementation may vary - either behavior is acceptable
     if (result)
     {
-        auto* theme = getThemeManager().getTheme("");
-        if (theme != nullptr)
-        {
-            getThemeManager().deleteTheme("");
-        }
+        // If accepted, count should have increased
+        EXPECT_EQ(getThemeManager().getAvailableThemes().size(), initialCount + 1);
+        getThemeManager().deleteTheme("");
+    }
+    else
+    {
+        // If rejected, count should be unchanged
+        EXPECT_EQ(getThemeManager().getAvailableThemes().size(), initialCount);
     }
 }
 
@@ -334,11 +336,14 @@ TEST_F(ThemeManagerCRUDTest, AvailableThemesNonEmpty)
 TEST_F(ThemeManagerCRUDTest, AllAvailableThemesRetrievable)
 {
     auto themeNames = getThemeManager().getAvailableThemes();
+    ASSERT_GT(themeNames.size(), 0u);
 
     for (const auto& name : themeNames)
     {
         auto* theme = getThemeManager().getTheme(name);
         EXPECT_NE(theme, nullptr) << "Theme '" << name.toStdString() << "' not retrievable";
+        if (theme != nullptr)
+            EXPECT_FALSE(theme->name.isEmpty());
     }
 }
 

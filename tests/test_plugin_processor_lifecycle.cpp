@@ -166,9 +166,46 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_RegistersWithInstanceRegistry
     SourceId sourceId = processor->getSourceId();
     EXPECT_TRUE(sourceId.isValid());
 
-    // Should be able to retrieve the buffer from the registry
-    auto buffer = processor->getBuffer(sourceId);
-    EXPECT_NE(buffer, nullptr);
+    // Verify the source is retrievable and has the correct sample rate
+    auto source = registry_->getSource(sourceId);
+    EXPECT_TRUE(source.has_value());
+    EXPECT_DOUBLE_EQ(source->sampleRate, 44100.0);
+}
+
+TEST_F(PluginProcessorLifecycleTest, UpdateTrackProperties_UsesHostTrackNameForRegisteredSource)
+{
+    processor->prepareToPlay(44100.0, 256);
+    pumpMessageQueue(200);
+
+    SourceId sourceId = processor->getSourceId();
+    ASSERT_TRUE(sourceId.isValid());
+
+    juce::AudioProcessor::TrackProperties properties;
+    properties.name = juce::String("Hat Track");
+    processor->updateTrackProperties(properties);
+    pumpMessageQueue(50);
+
+    auto source = registry_->getSource(sourceId);
+    ASSERT_TRUE(source.has_value());
+    EXPECT_EQ(source->name, "Hat Track");
+}
+
+TEST_F(PluginProcessorLifecycleTest, UpdateTrackProperties_EmptyHostNameFallsBackToDefault)
+{
+    processor->prepareToPlay(44100.0, 256);
+    pumpMessageQueue(200);
+
+    SourceId sourceId = processor->getSourceId();
+    ASSERT_TRUE(sourceId.isValid());
+
+    juce::AudioProcessor::TrackProperties properties;
+    properties.name = juce::String("   ");
+    processor->updateTrackProperties(properties);
+    pumpMessageQueue(50);
+
+    auto source = registry_->getSource(sourceId);
+    ASSERT_TRUE(source.has_value());
+    EXPECT_EQ(source->name, "Oscil Track");
 }
 
 TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
@@ -231,29 +268,32 @@ TEST_F(PluginProcessorLifecycleTest, MultiplePrepareCalls)
     pumpMessageQueue(200);
     SourceId secondId = processor->getSourceId();
 
-    // Should have valid source IDs (may or may not be same depending on implementation)
-    EXPECT_TRUE(firstId.isValid());
-    EXPECT_TRUE(secondId.isValid());
+    // Both should be valid, and sample rate should reflect the latest call
+    EXPECT_EQ(firstId, secondId);
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 48000.0);
 }
 
 // === Service Accessor Tests ===
 
 TEST_F(PluginProcessorLifecycleTest, GetCaptureBuffer_NotNull)
 {
-    EXPECT_NE(processor->getCaptureBuffer(), nullptr);
+    auto buffer = processor->getCaptureBuffer();
+    EXPECT_NE(buffer, nullptr);
+    // Processor should also have a valid name
+    EXPECT_FALSE(processor->getName().isEmpty());
 }
 
 TEST_F(PluginProcessorLifecycleTest, GetCaptureBuffer_SameInstanceAfterPrepare)
 {
     auto bufferBefore = processor->getCaptureBuffer();
+    EXPECT_NE(bufferBefore, nullptr);
 
     processor->prepareToPlay(44100.0, 512);
 
     auto bufferAfter = processor->getCaptureBuffer();
-
-    // With DecimatingCaptureBuffer, the internal buffer is recreated on reconfiguration
-    // so pointers will differ. We just ensure we still have a valid buffer.
     EXPECT_NE(bufferAfter, nullptr);
+    // Sample rate should have been updated
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 44100.0);
 }
 
 TEST_F(PluginProcessorLifecycleTest, GetState_ReturnsValidState)
@@ -302,12 +342,11 @@ TEST_F(PluginProcessorLifecycleTest, GetBuffer_OwnSourceId)
     SourceId sourceId = processor->getSourceId();
     auto buffer = processor->getBuffer(sourceId);
 
+    // getBuffer should return a valid buffer for the processor's own source
     EXPECT_NE(buffer, nullptr);
-    
-    // Note: getBuffer returns the DecimatingCaptureBuffer wrapper (as IAudioBuffer)
-    // while getCaptureBuffer returns the internal SharedCaptureBuffer.
-    // So they are not the same pointer anymore.
-    // We verify we got a valid buffer that corresponds to the source.
+    // An invalid sourceId should return nullptr (proving lookup actually works)
+    auto nullBuffer = processor->getBuffer(SourceId::generate());
+    EXPECT_EQ(nullBuffer, nullptr);
 }
 
 TEST_F(PluginProcessorLifecycleTest, GetBuffer_InvalidSourceId)
@@ -333,11 +372,13 @@ TEST_F(PluginProcessorLifecycleTest, ReleaseResources_DoesNotCrash)
     juce::MidiBuffer midiBuffer;
     processor->processBlock(buffer, midiBuffer);
 
-    // Release should not crash
     processor->releaseResources();
 
-    // Should still have valid capture buffer
-    EXPECT_NE(processor->getCaptureBuffer(), nullptr);
+    // After release, capture buffer should still be accessible
+    auto captureBuffer = processor->getCaptureBuffer();
+    EXPECT_NE(captureBuffer, nullptr);
+    // Processor should still report its name after release
+    EXPECT_FALSE(processor->getName().isEmpty());
 }
 
 TEST_F(PluginProcessorLifecycleTest, DestructorUnregistersFromRegistry)

@@ -126,14 +126,15 @@ TEST(ThemeCoordinatorEventTests, NullCallbackHandled)
 {
     MockThemeService mockThemeService;
 
-    // Coordinator should handle null callback gracefully
     ThemeCoordinator coordinator(mockThemeService, nullptr);
 
     ColorTheme newTheme;
     newTheme.name = "Test";
 
-    // Should not crash
     mockThemeService.setTheme(newTheme);
+
+    // Theme should still be applied even with null callback
+    EXPECT_EQ(mockThemeService.getCurrentTheme().name, "Test");
 }
 
 // =============================================================================
@@ -184,13 +185,14 @@ TEST(LayoutCoordinatorEventTests, NullCallbackHandled)
 {
     WindowLayout layout;
 
-    // Should not crash with null callback
     LayoutCoordinator coordinator(layout, nullptr);
 
     layout.setSidebarWidth(500);
     layout.setSidebarCollapsed(true);
 
-    // No crash = success
+    // Layout state should still be updated even with null callback
+    EXPECT_EQ(layout.getSidebarWidth(), 500);
+    EXPECT_TRUE(layout.isSidebarCollapsed());
 }
 
 TEST(LayoutCoordinatorEventTests, MultipleLayoutChanges)

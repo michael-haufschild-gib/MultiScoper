@@ -137,6 +137,7 @@ TEST_F(OscilToggleTest, DefaultEnabled)
     OscilToggle toggle(getThemeManager());
 
     EXPECT_TRUE(toggle.isEnabled());
+    EXPECT_FALSE(toggle.getValue());
 }
 
 TEST_F(OscilToggleTest, SetDisabled)
@@ -151,8 +152,9 @@ TEST_F(OscilToggleTest, SetEnabledAfterDisabled)
 {
     OscilToggle toggle(getThemeManager());
     toggle.setEnabled(false);
-    toggle.setEnabled(true);
+    EXPECT_FALSE(toggle.isEnabled());
 
+    toggle.setEnabled(true);
     EXPECT_TRUE(toggle.isEnabled());
 }
 
@@ -184,8 +186,8 @@ TEST_F(OscilToggleTest, OnValueChangedCallback)
     };
 
     toggle.setValue(true);
-    // Note: setValue triggers callback internally through notifyValueChanged
-    // May not trigger if not attached to GUI loop, depends on implementation
+    // Regardless of callback, state should be updated
+    EXPECT_TRUE(toggle.getValue());
 }
 
 // =============================================================================

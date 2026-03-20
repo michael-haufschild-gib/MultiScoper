@@ -87,10 +87,12 @@ TEST_F(UIAudioFeedbackTest, PlaySoundWhenDisabled)
 {
     feedback_->setEnabled(false);
 
-    // Should not crash
     feedback_->playSound(UIAudioFeedback::SoundType::Click);
     feedback_->playSound(UIAudioFeedback::SoundType::Toggle);
     feedback_->playSound(UIAudioFeedback::SoundType::Error);
+
+    // State should remain disabled after playing sounds
+    EXPECT_FALSE(feedback_->isEnabled());
 }
 
 // Test: Play sound doesn't crash when enabled
@@ -98,7 +100,6 @@ TEST_F(UIAudioFeedbackTest, PlaySoundWhenEnabled)
 {
     feedback_->setEnabled(true);
 
-    // Should not crash (no audio device, but shouldn't throw)
     feedback_->playSound(UIAudioFeedback::SoundType::Click);
     feedback_->playSound(UIAudioFeedback::SoundType::Toggle);
     feedback_->playSound(UIAudioFeedback::SoundType::Success);
@@ -107,6 +108,8 @@ TEST_F(UIAudioFeedbackTest, PlaySoundWhenEnabled)
     feedback_->playSound(UIAudioFeedback::SoundType::Focus);
     feedback_->playSound(UIAudioFeedback::SoundType::Notification);
 
+    // System should remain enabled and functional after playing all types
+    EXPECT_TRUE(feedback_->isEnabled());
     feedback_->setEnabled(false);
 }
 
@@ -139,11 +142,13 @@ TEST_F(UIAudioFeedbackTest, DisabledSoundNotPlayed)
     feedback_->setEnabled(true);
 
     feedback_->setSoundEnabled(UIAudioFeedback::SoundType::Click, false);
+    EXPECT_FALSE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Click));
 
-    // Should not play (no crash, just silent)
     feedback_->playSound(UIAudioFeedback::SoundType::Click);
 
-    // Re-enable
+    // Sound type should still be disabled after playback attempt
+    EXPECT_FALSE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Click));
+
     feedback_->setSoundEnabled(UIAudioFeedback::SoundType::Click, true);
     feedback_->setEnabled(false);
 }
@@ -151,8 +156,11 @@ TEST_F(UIAudioFeedbackTest, DisabledSoundNotPlayed)
 // Test: Set audio device manager (null is valid)
 TEST_F(UIAudioFeedbackTest, SetAudioDeviceManager)
 {
-    // Setting null should not crash
     feedback_->setAudioDevice(nullptr);
+
+    // After setting null device, system should still be in a consistent state
+    EXPECT_FALSE(feedback_->isEnabled());
+    EXPECT_FLOAT_EQ(feedback_->getVolume(), 0.5f);
 }
 
 // Test: Shutdown doesn't crash
@@ -193,7 +201,6 @@ TEST_F(UIAudioFeedbackTest, RapidPlaySoundCalls)
 {
     feedback_->setEnabled(true);
 
-    // Rapidly play many sounds of different types
     for (int i = 0; i < 100; ++i)
     {
         feedback_->playSound(UIAudioFeedback::SoundType::Click);
@@ -201,7 +208,9 @@ TEST_F(UIAudioFeedbackTest, RapidPlaySoundCalls)
         feedback_->playSound(UIAudioFeedback::SoundType::SliderSnap);
     }
 
-    // Should not crash, clean up
+    // After 300 rapid calls, system should still report enabled and valid volume
+    EXPECT_TRUE(feedback_->isEnabled());
+    EXPECT_GE(feedback_->getVolume(), 0.0f);
     feedback_->setEnabled(false);
 }
 
@@ -266,10 +275,8 @@ TEST_F(UIAudioFeedbackTest, PlayAllSoundTypes)
 {
     feedback_->setEnabled(true);
 
-    // Enable all sounds including normally-disabled hover
     feedback_->setSoundEnabled(UIAudioFeedback::SoundType::Hover, true);
 
-    // Play each type
     feedback_->playSound(UIAudioFeedback::SoundType::Click);
     feedback_->playSound(UIAudioFeedback::SoundType::Toggle);
     feedback_->playSound(UIAudioFeedback::SoundType::SliderSnap);
@@ -279,7 +286,9 @@ TEST_F(UIAudioFeedbackTest, PlayAllSoundTypes)
     feedback_->playSound(UIAudioFeedback::SoundType::Hover);
     feedback_->playSound(UIAudioFeedback::SoundType::Notification);
 
-    // Should not crash
+    // All sound types should still be enabled after playback
+    EXPECT_TRUE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Click));
+    EXPECT_TRUE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Hover));
     feedback_->setSoundEnabled(UIAudioFeedback::SoundType::Hover, false);
     feedback_->setEnabled(false);
 }
@@ -296,7 +305,8 @@ TEST_F(UIAudioFeedbackTest, VolumeChangeDuringPlayback)
     feedback_->setVolume(0.5f);
     feedback_->playSound(UIAudioFeedback::SoundType::Click);
 
-    // Should not crash
+    // Volume should reflect the last set value
+    EXPECT_FLOAT_EQ(feedback_->getVolume(), 0.5f);
     feedback_->setEnabled(false);
 }
 
@@ -325,7 +335,9 @@ TEST_F(UIAudioFeedbackTest, SetNullDeviceMultipleTimes)
         feedback_->setAudioDevice(nullptr);
     }
 
-    // Should not crash
+    // System should remain in a consistent state
+    EXPECT_GE(feedback_->getVolume(), 0.0f);
+    EXPECT_LE(feedback_->getVolume(), 1.0f);
 }
 
 // Test: State after many operations

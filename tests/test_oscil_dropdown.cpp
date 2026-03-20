@@ -311,6 +311,7 @@ TEST_F(OscilDropdownTest, DefaultEnabled)
     OscilDropdown dropdown(*mockThemeService);
 
     EXPECT_TRUE(dropdown.isEnabled());
+    EXPECT_EQ(dropdown.getSelectedIndex(), -1);
 }
 
 TEST_F(OscilDropdownTest, SetDisabled)
@@ -325,8 +326,9 @@ TEST_F(OscilDropdownTest, SetEnabledAfterDisabled)
 {
     OscilDropdown dropdown(*mockThemeService);
     dropdown.setEnabled(false);
-    dropdown.setEnabled(true);
+    EXPECT_FALSE(dropdown.isEnabled());
 
+    dropdown.setEnabled(true);
     EXPECT_TRUE(dropdown.isEnabled());
 }
 

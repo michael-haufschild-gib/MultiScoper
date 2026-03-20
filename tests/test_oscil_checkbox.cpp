@@ -171,6 +171,7 @@ TEST_F(OscilCheckboxTest, DefaultEnabled)
     OscilCheckbox checkbox(getThemeManager());
 
     EXPECT_TRUE(checkbox.isEnabled());
+    EXPECT_FALSE(checkbox.isChecked());
 }
 
 TEST_F(OscilCheckboxTest, SetDisabled)
@@ -185,8 +186,9 @@ TEST_F(OscilCheckboxTest, SetEnabledAfterDisabled)
 {
     OscilCheckbox checkbox(getThemeManager());
     checkbox.setEnabled(false);
-    checkbox.setEnabled(true);
+    EXPECT_FALSE(checkbox.isEnabled());
 
+    checkbox.setEnabled(true);
     EXPECT_TRUE(checkbox.isEnabled());
 }
 

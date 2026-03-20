@@ -94,7 +94,9 @@ TEST_F(OscilBadgeTest, SetIcon)
     juce::Image icon(juce::Image::ARGB, 16, 16, true);
     badge.setIcon(icon);
 
-    // No hasIcon method, just verify it doesn't crash
+    // Badge should remain enabled after setting icon
+    EXPECT_TRUE(badge.isEnabled());
+    EXPECT_EQ(badge.getWidth(), 0);  // Not yet sized
 }
 
 TEST_F(OscilBadgeTest, ClearIcon)
@@ -105,7 +107,9 @@ TEST_F(OscilBadgeTest, ClearIcon)
     badge.setIcon(icon);
     badge.clearIcon();
 
-    // Just verify it doesn't crash
+    // Badge should still be enabled after clearing icon
+    EXPECT_TRUE(badge.isEnabled());
+    EXPECT_EQ(badge.getWidth(), 0);  // Not yet sized
 }
 
 // =============================================================================

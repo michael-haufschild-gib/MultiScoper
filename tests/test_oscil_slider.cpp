@@ -52,6 +52,7 @@ TEST_F(OscilSliderTest, ConstructionWithTestId)
     OscilSlider slider(getThemeManager(), "slider-1");
 
     EXPECT_TRUE(slider.isEnabled());
+    EXPECT_EQ(slider.getVariant(), SliderVariant::Single);
 }
 
 TEST_F(OscilSliderTest, ConstructionWithVariantAndTestId)
@@ -221,30 +222,35 @@ TEST_F(OscilSliderTest, SetMagneticPoints)
 {
     OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
+    slider.setMagneticSnappingEnabled(true);
 
     std::vector<double> points = {0.0, 25.0, 50.0, 75.0, 100.0};
     slider.setMagneticPoints(points);
 
-    // Just verify it doesn't crash
+    EXPECT_TRUE(slider.isMagneticSnappingEnabled());
+    EXPECT_NEAR(slider.getMinimum(), 0.0, 0.01);
 }
 
 TEST_F(OscilSliderTest, AddMagneticPoint)
 {
     OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
+    slider.setMagneticSnappingEnabled(true);
 
     slider.addMagneticPoint(50.0);
-    // Just verify it doesn't crash
+    EXPECT_TRUE(slider.isMagneticSnappingEnabled());
 }
 
 TEST_F(OscilSliderTest, ClearMagneticPoints)
 {
     OscilSlider slider(getThemeManager());
     slider.setRange(0.0, 100.0);
+    slider.setMagneticSnappingEnabled(true);
     slider.addMagneticPoint(50.0);
 
     slider.clearMagneticPoints();
-    // Just verify it doesn't crash
+    // Magnetic snapping state should still be enabled even with no points
+    EXPECT_TRUE(slider.isMagneticSnappingEnabled());
 }
 
 // =============================================================================

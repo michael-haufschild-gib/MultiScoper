@@ -371,7 +371,8 @@ TEST_F(OscilRadioGroupTest, InvalidIndexHandling)
     group.setSelectedIndex(0, false);
 
     group.setSelectedIndex(999, false);
-    // Should handle gracefully
+    // Invalid index should not change the valid selection
+    EXPECT_EQ(group.getSelectedIndex(), 0);
 }
 
 TEST_F(OscilRadioGroupTest, GetButton)

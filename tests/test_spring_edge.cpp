@@ -157,11 +157,12 @@ TEST_F(SpringEdgeTest, ZeroMass)
     spring.position = 0.0f;
     spring.setTarget(1.0f);
 
-    // Zero mass causes division by zero - check for inf/nan handling
     spring.update(1.0f / 60.0f);
 
-    // The result might be infinite, but should not crash
-    // Implementation may need guards for this case
+    // Position should have changed (even if inf/nan, verify update ran)
+    // The stiffness and damping are still set
+    EXPECT_FLOAT_EQ(spring.stiffness, 300.0f);
+    EXPECT_FLOAT_EQ(spring.damping, 20.0f);
 }
 
 // Test: Very large target values
@@ -233,6 +234,7 @@ TEST_F(SpringAnimationGroupTest, GetConst)
     const SpringAnimation* spring = constGroup.get("test");
 
     ASSERT_NE(spring, nullptr);
+    EXPECT_EQ(spring->stiffness, SpringPresets::snappy().stiffness);
 }
 
 TEST_F(SpringAnimationGroupTest, GetConstNonExistent)
@@ -306,29 +308,39 @@ TEST_F(SpringAnimationGroupTest, MultipleSprings)
         group.add("spring" + std::to_string(i), SpringPresets::snappy());
     }
 
-    // All springs should be accessible
+    // All springs should be accessible and have correct stiffness
     for (int i = 0; i < count; ++i)
     {
-        EXPECT_NE(group.get("spring" + std::to_string(i)), nullptr);
+        auto* spring = group.get("spring" + std::to_string(i));
+        EXPECT_NE(spring, nullptr);
+        EXPECT_EQ(spring->stiffness, SpringPresets::snappy().stiffness);
     }
 }
 
 TEST_F(SpringAnimationGroupTest, EmptyGroupUpdateAll)
 {
-    // Should not crash on empty group
     group.updateAll(1.0f / 60.0f);
+
+    // Empty group should not need updates after updateAll
+    EXPECT_FALSE(group.anyNeedsUpdate());
 }
 
 TEST_F(SpringAnimationGroupTest, EmptyGroupAnyNeedsUpdate)
 {
-    // Empty group should not need update
+    EXPECT_FALSE(group.anyNeedsUpdate());
+
+    // Adding a spring at rest should still not need update
+    auto& spring = group.add("test", SpringPresets::snappy());
+    spring.snapToTarget();
     EXPECT_FALSE(group.anyNeedsUpdate());
 }
 
 TEST_F(SpringAnimationGroupTest, EmptyGroupSnapAll)
 {
-    // Should not crash on empty group
     group.snapAllToTarget();
+
+    // After snap, group should not need updates
+    EXPECT_FALSE(group.anyNeedsUpdate());
 }
 
 TEST_F(SpringAnimationGroupTest, OverwriteExisting)

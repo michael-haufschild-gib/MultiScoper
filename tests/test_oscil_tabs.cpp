@@ -192,9 +192,11 @@ TEST_F(OscilTabsTest, InvalidIndexHandling)
     OscilTabs tabs(getThemeManager());
     tabs.addTab("Tab A", "a");
     tabs.setSelectedIndex(0, false);
+    EXPECT_EQ(tabs.getSelectedIndex(), 0);
 
     tabs.setSelectedIndex(999, false);
-    // Should handle gracefully
+    // Invalid index should not change the valid selection
+    EXPECT_EQ(tabs.getSelectedIndex(), 0);
 }
 
 // =============================================================================

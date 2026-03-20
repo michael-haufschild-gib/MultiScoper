@@ -138,7 +138,9 @@ TEST_F(OscilModalTest, SetCustomSize)
     OscilModal modal(getThemeManager());
 
     modal.setCustomSize(400, 300);
-    // Just verify it doesn't crash - custom size is internal
+    // After setting custom size, modal should still have valid configuration
+    EXPECT_TRUE(modal.getShowCloseButton());
+    EXPECT_TRUE(modal.getCloseOnEscape());
 }
 
 // =============================================================================
@@ -186,10 +188,10 @@ TEST_F(OscilModalTest, ShowModal)
 {
     OscilModal modal(getThemeManager());
 
-    // Note: show() requires a parent, so just test without one
-    // The modal animation system means isShowing() depends on spring state
     modal.show(nullptr);
-    // Can't reliably test isShowing without a message loop
+    // Modal should retain its configuration after show attempt
+    EXPECT_TRUE(modal.getShowCloseButton());
+    EXPECT_TRUE(modal.getCloseOnEscape());
 }
 
 TEST_F(OscilModalTest, HideModal)
@@ -197,15 +199,19 @@ TEST_F(OscilModalTest, HideModal)
     OscilModal modal(getThemeManager());
 
     modal.hide();
-    // Just verify it doesn't crash
+    // Modal configuration should persist after hide
+    EXPECT_TRUE(modal.getCloseOnEscape());
+    EXPECT_TRUE(modal.getShowCloseButton());
 }
 
 TEST_F(OscilModalTest, HideWhenNotShown)
 {
     OscilModal modal(getThemeManager());
 
-    // Should not crash when hiding a non-visible modal
     modal.hide();
+    // Double hide should not corrupt state
+    modal.hide();
+    EXPECT_TRUE(modal.getCloseOnEscape());
 }
 
 // =============================================================================
@@ -245,12 +251,15 @@ TEST_F(OscilModalTest, OnCloseRequestedPreventClose)
 {
     OscilModal modal(getThemeManager());
 
-    modal.onCloseRequested = []() {
-        return false;  // Prevent close
+    bool requestCalled = false;
+    modal.onCloseRequested = [&requestCalled]() {
+        requestCalled = true;
+        return false;
     };
 
-    // Callback returns false to prevent closing
-    // Just verify callback can be set
+    // Callback can be set and modal retains its configuration
+    EXPECT_FALSE(requestCalled);
+    EXPECT_TRUE(modal.getShowCloseButton());
 }
 
 // =============================================================================

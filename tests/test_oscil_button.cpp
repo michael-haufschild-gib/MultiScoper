@@ -127,6 +127,7 @@ TEST_F(OscilButtonTest, DefaultEnabled)
     OscilButton button(getThemeManager());
 
     EXPECT_TRUE(button.isEnabled());
+    EXPECT_EQ(button.getWidth(), 0);  // Not yet sized
 }
 
 TEST_F(OscilButtonTest, SetDisabled)
@@ -141,8 +142,9 @@ TEST_F(OscilButtonTest, SetEnabledAfterDisabled)
 {
     OscilButton button(getThemeManager());
     button.setEnabled(false);
-    button.setEnabled(true);
+    EXPECT_FALSE(button.isEnabled());
 
+    button.setEnabled(true);
     EXPECT_TRUE(button.isEnabled());
 }
 

@@ -230,11 +230,13 @@ TEST(SourceCoordinatorLifecycleTests, RegistrationOnConstruction)
 
 TEST(SourceCoordinatorLifecycleTests, NoCopyConstruction)
 {
-    // Verify SourceCoordinator is not copyable (compile-time check)
     static_assert(!std::is_copy_constructible<SourceCoordinator>::value,
                   "SourceCoordinator should not be copy constructible");
     static_assert(!std::is_copy_assignable<SourceCoordinator>::value,
                   "SourceCoordinator should not be copy assignable");
+    // Also verify move semantics are disabled
+    EXPECT_FALSE(std::is_copy_constructible<SourceCoordinator>::value);
+    EXPECT_FALSE(std::is_copy_assignable<SourceCoordinator>::value);
 }
 
 // =============================================================================
@@ -268,6 +270,8 @@ TEST(ThemeCoordinatorLifecycleTests, NoCopyConstruction)
                   "ThemeCoordinator should not be copy constructible");
     static_assert(!std::is_copy_assignable<ThemeCoordinator>::value,
                   "ThemeCoordinator should not be copy assignable");
+    EXPECT_FALSE(std::is_copy_constructible<ThemeCoordinator>::value);
+    EXPECT_FALSE(std::is_copy_assignable<ThemeCoordinator>::value);
 }
 
 // =============================================================================
@@ -295,4 +299,6 @@ TEST(LayoutCoordinatorLifecycleTests, NoCopyConstruction)
                   "LayoutCoordinator should not be copy constructible");
     static_assert(!std::is_copy_assignable<LayoutCoordinator>::value,
                   "LayoutCoordinator should not be copy assignable");
+    EXPECT_FALSE(std::is_copy_constructible<LayoutCoordinator>::value);
+    EXPECT_FALSE(std::is_copy_assignable<LayoutCoordinator>::value);
 }

@@ -151,8 +151,11 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_EmptyBuffer)
     juce::AudioBuffer<float> emptyBuffer(2, 0);
     juce::MidiBuffer midiBuffer;
 
-    // Should not crash on empty buffer
     processor->processBlock(emptyBuffer, midiBuffer);
+
+    // Processor should remain functional after empty buffer
+    EXPECT_GE(processor->getCpuUsage(), 0.0f);
+    EXPECT_EQ(emptyBuffer.getNumChannels(), 2);
 }
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_ZeroChannels)
@@ -162,8 +165,11 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_ZeroChannels)
     juce::AudioBuffer<float> noChannelBuffer(0, 512);
     juce::MidiBuffer midiBuffer;
 
-    // Should not crash on buffer with no channels
     processor->processBlock(noChannelBuffer, midiBuffer);
+
+    // Buffer dimensions should be unchanged — processBlock is non-destructive
+    EXPECT_EQ(noChannelBuffer.getNumChannels(), 0);
+    EXPECT_EQ(noChannelBuffer.getNumSamples(), 512);
 }
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_MonoBuffer)
@@ -173,8 +179,11 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_MonoBuffer)
     auto buffer = generateTestBuffer(1, 512, 0.5f);
     juce::MidiBuffer midiBuffer;
 
-    // Should handle mono buffer without crashing
     processor->processBlock(buffer, midiBuffer);
+
+    // Mono buffer should retain its dimensions after processing
+    EXPECT_EQ(buffer.getNumChannels(), 1);
+    EXPECT_EQ(buffer.getNumSamples(), 512);
 }
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_LargeBuffer)
@@ -184,8 +193,10 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_LargeBuffer)
     auto buffer = generateTestBuffer(2, 8192, 0.5f);
     juce::MidiBuffer midiBuffer;
 
-    // Should handle large buffers
     processor->processBlock(buffer, midiBuffer);
+
+    EXPECT_EQ(buffer.getNumSamples(), 8192);
+    EXPECT_GE(processor->getCpuUsage(), 0.0f);
 }
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_SmallBuffer)
@@ -195,18 +206,23 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_SmallBuffer)
     auto buffer = generateTestBuffer(2, 32, 0.5f);
     juce::MidiBuffer midiBuffer;
 
-    // Should handle small buffers
     processor->processBlock(buffer, midiBuffer);
+
+    EXPECT_EQ(buffer.getNumSamples(), 32);
+    EXPECT_EQ(buffer.getNumChannels(), 2);
 }
 
 TEST_F(PluginProcessorAudioTest, ProcessBeforePrepare)
 {
-    // Process before prepareToPlay - should not crash
+    // Process before prepareToPlay
     auto buffer = generateTestBuffer(2, 512);
     juce::MidiBuffer midiBuffer;
 
-    // May not capture correctly, but should not crash
     processor->processBlock(buffer, midiBuffer);
+
+    // Buffer should retain its dimensions; processor should not corrupt it
+    EXPECT_EQ(buffer.getNumChannels(), 2);
+    EXPECT_EQ(buffer.getNumSamples(), 512);
 }
 
 // === CPU Usage Tests ===
@@ -287,8 +303,10 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_ManyIterations)
         processor->processBlock(buffer, midiBuffer);
     }
 
-    // Should complete without issues
-    EXPECT_NE(processor->getCaptureBuffer(), nullptr);
+    // After 1000 iterations, CPU tracking should report a valid value
+    float cpuUsage = processor->getCpuUsage();
+    EXPECT_GE(cpuUsage, 0.0f);
+    EXPECT_LT(cpuUsage, 1000.0f);
 }
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_VaryingBufferSizes)
@@ -304,8 +322,9 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_VaryingBufferSizes)
         processor->processBlock(buffer, midiBuffer);
     }
 
-    // Should handle varying buffer sizes
-    EXPECT_NE(processor->getCaptureBuffer(), nullptr);
+    // After varying sizes, processor should still report valid sample rate
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 44100.0);
+    EXPECT_GE(processor->getCpuUsage(), 0.0f);
 }
 
 // === Signal Pattern Tests ===

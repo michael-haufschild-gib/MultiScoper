@@ -36,6 +36,18 @@ protected:
     }
 };
 
+class CountingRegistryListener final : public InstanceRegistryListener
+{
+public:
+    void sourceAdded(const SourceId&) override { ++addedCount; }
+    void sourceRemoved(const SourceId&) override { ++removedCount; }
+    void sourceUpdated(const SourceId&) override { ++updatedCount; }
+
+    int addedCount = 0;
+    int removedCount = 0;
+    int updatedCount = 0;
+};
+
 // === Null/Invalid Input Tests ===
 
 TEST_F(InstanceRegistryLifecycleTest, RegisterNullBuffer)
@@ -61,8 +73,10 @@ TEST_F(InstanceRegistryLifecycleTest, EmptyTrackIdentifier)
     auto sourceId = getRegistry().registerInstance(
         "", buffer, "Empty ID Track");
 
-    // Empty string is a valid key - should work
     EXPECT_TRUE(sourceId.isValid());
+    auto info = getRegistry().getSource(sourceId);
+    EXPECT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Empty ID Track");
 }
 
 TEST_F(InstanceRegistryLifecycleTest, UnicodeTrackIdentifier)
@@ -87,6 +101,9 @@ TEST_F(InstanceRegistryLifecycleTest, SpecialCharactersInTrackId)
         "track/with\\special:chars*?\"<>|", buffer, "Special Track");
 
     EXPECT_TRUE(sourceId.isValid());
+    auto info = getRegistry().getSource(sourceId);
+    EXPECT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Special Track");
 }
 
 TEST_F(InstanceRegistryLifecycleTest, VeryLongTrackIdentifier)
@@ -100,8 +117,9 @@ TEST_F(InstanceRegistryLifecycleTest, VeryLongTrackIdentifier)
     auto sourceId = getRegistry().registerInstance(
         longId, buffer, "Long ID Track");
 
-    // Should handle long strings gracefully
     EXPECT_TRUE(sourceId.isValid());
+    auto retrievedBuffer = getRegistry().getCaptureBuffer(sourceId);
+    EXPECT_EQ(retrievedBuffer, buffer);
 }
 
 // === Boundary Value Tests ===
@@ -125,8 +143,10 @@ TEST_F(InstanceRegistryLifecycleTest, NegativeSampleRate)
     auto sourceId = getRegistry().registerInstance(
         "track_neg_sr", buffer, "Negative SR", 2, -44100.0);
 
-    // Should accept any value (validation is caller's responsibility)
     EXPECT_TRUE(sourceId.isValid());
+    auto info = getRegistry().getSource(sourceId);
+    EXPECT_TRUE(info.has_value());
+    EXPECT_DOUBLE_EQ(info->sampleRate, -44100.0);
 }
 
 TEST_F(InstanceRegistryLifecycleTest, HighChannelCount)
@@ -149,6 +169,9 @@ TEST_F(InstanceRegistryLifecycleTest, ZeroSampleRate)
         "track_zero_sr", buffer, "Zero SR", 2, 0.0);
 
     EXPECT_TRUE(sourceId.isValid());
+    auto info = getRegistry().getSource(sourceId);
+    EXPECT_TRUE(info.has_value());
+    EXPECT_DOUBLE_EQ(info->sampleRate, 0.0);
 }
 
 TEST_F(InstanceRegistryLifecycleTest, ExtremeSampleRate)
@@ -187,6 +210,34 @@ TEST_F(InstanceRegistryLifecycleTest, BufferExpires)
     // But buffer should be nullptr (weak_ptr expired)
     auto expiredBuffer = getRegistry().getCaptureBuffer(sourceId);
     EXPECT_EQ(expiredBuffer, nullptr);
+}
+
+TEST_F(InstanceRegistryLifecycleTest, PendingAsyncNotificationsAreIgnoredAfterDestruction)
+{
+    std::vector<std::function<void()>> queuedCallbacks;
+    getRegistry().setDispatcher([&queuedCallbacks](std::function<void()> callback) {
+        queuedCallbacks.push_back(std::move(callback));
+    });
+
+    CountingRegistryListener listener;
+    getRegistry().addListener(&listener);
+
+    auto buffer = std::make_shared<SharedCaptureBuffer>();
+    (void) getRegistry().registerInstance("async_teardown_track", buffer, "Async Teardown Track");
+
+    EXPECT_EQ(listener.addedCount, 0);
+    ASSERT_FALSE(queuedCallbacks.empty());
+
+    registry_.reset();
+
+    for (auto& callback : queuedCallbacks)
+    {
+        callback();
+    }
+
+    EXPECT_EQ(listener.addedCount, 0);
+    EXPECT_EQ(listener.removedCount, 0);
+    EXPECT_EQ(listener.updatedCount, 0);
 }
 
 // === Edge Case Tests for Empty/Default State ===

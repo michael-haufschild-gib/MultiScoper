@@ -185,8 +185,11 @@ TEST_F(EffectChainTest, MissingEffectSkipped) {
         nullptr
     });
 
-    // Should run without crashing
     chain.process(context, &sourceFBO, pool, 0.01f, config, provider);
+
+    // Config should still be in its original state after processing
+    EXPECT_FALSE(config.bloom.enabled);
+    EXPECT_FALSE(config.glitch.enabled);
 }
 
 TEST_F(EffectChainTest, BindsDestinationFramebuffer) {

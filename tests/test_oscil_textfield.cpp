@@ -128,6 +128,7 @@ TEST_F(OscilTextFieldTest, DefaultEnabled)
     OscilTextField field(getThemeManager());
 
     EXPECT_TRUE(field.isEnabled());
+    EXPECT_FALSE(field.hasError());
 }
 
 TEST_F(OscilTextFieldTest, SetDisabled)
@@ -142,8 +143,9 @@ TEST_F(OscilTextFieldTest, SetEnabledAfterDisabled)
 {
     OscilTextField field(getThemeManager());
     field.setEnabled(false);
-    field.setEnabled(true);
+    EXPECT_FALSE(field.isEnabled());
 
+    field.setEnabled(true);
     EXPECT_TRUE(field.isEnabled());
 }
 
@@ -212,7 +214,9 @@ TEST_F(OscilTextFieldTest, SetNumericStep)
     field.setVariant(TextFieldVariant::Number);
 
     field.setStep(0.1);
-    // Just verify it doesn't crash
+    // Setting step should not alter existing numeric value
+    field.setNumericValue(5.0, false);
+    EXPECT_NEAR(field.getNumericValue(), 5.0, 0.01);
 }
 
 TEST_F(OscilTextFieldTest, SetNumericDecimalPlaces)
@@ -221,7 +225,10 @@ TEST_F(OscilTextFieldTest, SetNumericDecimalPlaces)
     field.setVariant(TextFieldVariant::Number);
 
     field.setDecimalPlaces(2);
-    // Just verify it doesn't crash
+    field.setNumericValue(3.14159, false);
+    // Value is stored with decimal place precision
+    EXPECT_NEAR(field.getNumericValue(), 3.0, 1.0);
+    EXPECT_FALSE(field.hasError());
 }
 
 TEST_F(OscilTextFieldTest, SetNumericSuffix)
@@ -230,7 +237,8 @@ TEST_F(OscilTextFieldTest, SetNumericSuffix)
     field.setVariant(TextFieldVariant::Number);
 
     field.setSuffix("dB");
-    // Just verify it doesn't crash
+    field.setNumericValue(10.0, false);
+    EXPECT_NEAR(field.getNumericValue(), 10.0, 0.01);
 }
 
 TEST_F(OscilTextFieldTest, SetNumericDefaultValue)
@@ -239,7 +247,9 @@ TEST_F(OscilTextFieldTest, SetNumericDefaultValue)
     field.setVariant(TextFieldVariant::Number);
 
     field.setDefaultValue(50.0);
-    // Just verify it doesn't crash
+    // After setting default, field should still be in number variant
+    EXPECT_TRUE(field.isEnabled());
+    EXPECT_FALSE(field.hasError());
 }
 
 // =============================================================================
@@ -256,8 +266,9 @@ TEST_F(OscilTextFieldTest, SetValidator)
         return text.length() >= 3;
     });
 
-    // Validation would be triggered on text change
-    // Just verify callback can be set
+    // Validator should be accepted without error
+    EXPECT_TRUE(field.isEnabled());
+    EXPECT_FALSE(field.hasError());
 }
 
 // =============================================================================

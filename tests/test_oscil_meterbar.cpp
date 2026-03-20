@@ -105,8 +105,9 @@ TEST_F(OscilMeterBarTest, NoClipAtUnityGain)
     OscilMeterBar meter(getThemeManager());
 
     meter.setLevel(1.0f);
-    // 1.0 is at the edge, may or may not clip depending on implementation
-    // Just verify it doesn't crash
+    // Level at unity gain — verify meter is in a consistent state
+    EXPECT_GE(meter.getLevel(), 0.0f);
+    EXPECT_LE(meter.getLevel(), 1.0f);
 }
 
 TEST_F(OscilMeterBarTest, ResetClip)
@@ -125,7 +126,8 @@ TEST_F(OscilMeterBarTest, ResetPeakHold)
     meter.setLevel(0.8f);
 
     meter.resetPeakHold();
-    // Just verify it doesn't crash
+    // After reset, clipping state should be clear
+    EXPECT_FALSE(meter.isClipping());
 }
 
 // =============================================================================
