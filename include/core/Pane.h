@@ -295,15 +295,15 @@ private:
 // ValueTree identifiers for Pane and PaneLayout
 namespace PaneIds
 {
-    static const juce::Identifier Pane{ "Pane" };
-    static const juce::Identifier Panes{ "Panes" };
-    static const juce::Identifier Id{ "id" };
-    static const juce::Identifier OrderIndex{ "orderIndex" };
-    static const juce::Identifier Collapsed{ "collapsed" };
-    static const juce::Identifier Name{ "name" };
-    static const juce::Identifier HeightRatio{ "heightRatio" };
-    static const juce::Identifier ColumnIndex{ "columnIndex" };
-    static const juce::Identifier ColumnLayout{ "columnLayout" };
+    inline const juce::Identifier Pane{ "Pane" };
+    inline const juce::Identifier Panes{ "Panes" };
+    inline const juce::Identifier Id{ "id" };
+    inline const juce::Identifier OrderIndex{ "orderIndex" };
+    inline const juce::Identifier Collapsed{ "collapsed" };
+    inline const juce::Identifier Name{ "name" };
+    inline const juce::Identifier HeightRatio{ "heightRatio" };
+    inline const juce::Identifier ColumnIndex{ "columnIndex" };
+    inline const juce::Identifier ColumnLayout{ "columnLayout" };
 }
 
 } // namespace oscil

@@ -26,7 +26,7 @@ juce::File GlobalPreferences::getPreferencesFile() const
 
 void GlobalPreferences::load()
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto file = getPreferencesFile();
     if (file.existsAsFile())
     {
@@ -39,7 +39,12 @@ void GlobalPreferences::load()
 
 void GlobalPreferences::save()
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
+    saveUnlocked();
+}
+
+void GlobalPreferences::saveUnlocked()
+{
     auto file = getPreferencesFile();
 
     auto parentDir = file.getParentDirectory();
@@ -68,93 +73,93 @@ void GlobalPreferences::save()
 
 juce::String GlobalPreferences::getDefaultTheme() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("defaultTheme", "Dark Professional");
 }
 
 void GlobalPreferences::setDefaultTheme(const juce::String& themeName)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     preferences_.setProperty("defaultTheme", themeName, nullptr);
-    save();
+    saveUnlocked();
 }
 
 int GlobalPreferences::getDefaultColumnLayout() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("defaultColumns", 1);
 }
 
 void GlobalPreferences::setDefaultColumnLayout(int columns)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     preferences_.setProperty("defaultColumns", columns, nullptr);
-    save();
+    saveUnlocked();
 }
 
 bool GlobalPreferences::getShowStatusBar() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("showStatusBar", true);
 }
 
 void GlobalPreferences::setShowStatusBar(bool show)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     preferences_.setProperty("showStatusBar", show, nullptr);
-    save();
+    saveUnlocked();
 }
 
 bool GlobalPreferences::getReducedMotion() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("reducedMotion", false);
 }
 
 void GlobalPreferences::setReducedMotion(bool reduced)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     preferences_.setProperty("reducedMotion", reduced, nullptr);
-    save();
+    saveUnlocked();
 }
 
 bool GlobalPreferences::getUIAudioFeedback() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("uiAudioFeedback", false);
 }
 
 void GlobalPreferences::setUIAudioFeedback(bool enabled)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
-    save();
+    saveUnlocked();
 }
 
 bool GlobalPreferences::getTooltipsEnabled() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("tooltipsEnabled", true);
 }
 
 void GlobalPreferences::setTooltipsEnabled(bool enabled)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
-    save();
+    saveUnlocked();
 }
 
 int GlobalPreferences::getDefaultSidebarWidth() const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return preferences_.getProperty("defaultSidebarWidth", 280);
 }
 
 void GlobalPreferences::setDefaultSidebarWidth(int width)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     preferences_.setProperty("defaultSidebarWidth", width, nullptr);
-    save();
+    saveUnlocked();
 }
 
 } // namespace oscil

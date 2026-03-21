@@ -170,11 +170,11 @@ struct SidebarResizeState
 // ValueTree identifiers for WindowLayout
 namespace WindowLayoutIds
 {
-    static const juce::Identifier WindowLayout{ "WindowLayout" };
-    static const juce::Identifier WindowWidth{ "windowWidth" };
-    static const juce::Identifier WindowHeight{ "windowHeight" };
-    static const juce::Identifier SidebarWidth{ "sidebarWidth" };
-    static const juce::Identifier SidebarCollapsed{ "sidebarCollapsed" };
+    inline const juce::Identifier WindowLayout{ "WindowLayout" };
+    inline const juce::Identifier WindowWidth{ "windowWidth" };
+    inline const juce::Identifier WindowHeight{ "windowHeight" };
+    inline const juce::Identifier SidebarWidth{ "sidebarWidth" };
+    inline const juce::Identifier SidebarCollapsed{ "sidebarCollapsed" };
 }
 
 } // namespace oscil

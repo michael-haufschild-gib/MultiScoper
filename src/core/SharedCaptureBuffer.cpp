@@ -9,6 +9,10 @@
 namespace oscil
 {
 
+// Maximum retries for torn-read detection in lock-free reads.
+// After exhausting retries (writer continuously active), return best-effort data.
+static constexpr int MAX_READ_RETRIES = 3;
+
 // Round up to next power of 2 for fast bitwise modulo
 static size_t nextPowerOfTwo(size_t n)
 {
@@ -106,13 +110,15 @@ void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamp
     writePos_.store(wrapPosition(writePos + totalSamples), std::memory_order_release);
     samplesWritten_.fetch_add(totalSamples, std::memory_order_release);
 
-    // Increment epoch to even → signals "write complete" to readers
-    writeEpoch_.fetch_add(1, std::memory_order_release);
-
     CaptureFrameMetadata meta = metadata;
     meta.numSamples = numSamples;
     meta.numChannels = actualChannels;
     metadata_.write(meta);
+
+    // Increment epoch to even → signals "write complete" to readers
+    // Metadata is written before this so readers seeing epoch-stable data
+    // are guaranteed the metadata for that frame has already been committed.
+    writeEpoch_.fetch_add(1, std::memory_order_release);
 }
 
 void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int numChannels,
@@ -152,8 +158,6 @@ int SharedCaptureBuffer::read(std::span<float> output, int channel) const
     // The writer brackets data copies with odd/even epoch increments.
     // We retry up to a bounded number of times to avoid infinite loops
     // if the writer is continuously active (normal in real-time audio).
-    static constexpr int MAX_READ_RETRIES = 3;
-
     for (int attempt = 0; attempt <= MAX_READ_RETRIES; ++attempt)
     {
         uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
@@ -244,36 +248,50 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
     if (channel < 0 || channel >= static_cast<int>(MAX_CHANNELS))
         return 0.0f;
 
-    size_t available = getAvailableSamples();
-    size_t requestedSamples = static_cast<size_t>(numSamples);
-    int samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
-
-    if (samplesToAnalyze <= 0)
-        return 0.0f;
-
-    size_t writePos = writePos_.load(std::memory_order_acquire);
-    size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
-    size_t channelOffset = static_cast<size_t>(channel) * capacity_;
-
     float peak = 0.0f;
-    
-    // Analyze in chunks to handle wrap-around
-    auto analyzeChunk = [&](size_t start, size_t count) {
-        for (size_t i = 0; i < count; ++i)
-        {
-            float val = std::abs(buffer_[channelOffset + start + i]);
-            if (val > peak) peak = val;
-        }
-    };
 
-    size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
-    analyzeChunk(readStart, firstChunk);
-    
-    if (firstChunk < static_cast<size_t>(samplesToAnalyze))
+    for (int attempt = 0; attempt <= MAX_READ_RETRIES; ++attempt)
     {
-        analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
+        uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
+
+        size_t available = getAvailableSamples();
+        size_t requestedSamples = static_cast<size_t>(numSamples);
+        int samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
+
+        if (samplesToAnalyze <= 0)
+            return 0.0f;
+
+        size_t writePos = writePos_.load(std::memory_order_acquire);
+        size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
+        size_t channelOffset = static_cast<size_t>(channel) * capacity_;
+
+        peak = 0.0f;
+
+        // Analyze in chunks to handle wrap-around
+        auto analyzeChunk = [&](size_t start, size_t count) {
+            for (size_t i = 0; i < count; ++i)
+            {
+                float val = std::abs(buffer_[channelOffset + start + i]);
+                if (val > peak) peak = val;
+            }
+        };
+
+        size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
+        analyzeChunk(readStart, firstChunk);
+
+        if (firstChunk < static_cast<size_t>(samplesToAnalyze))
+        {
+            analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
+        }
+
+        uint32_t epoch2 = writeEpoch_.load(std::memory_order_acquire);
+
+        // If epoch unchanged and even, no write was in progress — data is consistent
+        if (epoch1 == epoch2 && (epoch1 & 1) == 0)
+            return peak;
     }
 
+    // Exhausted retries — return best-effort data (acceptable for level meters)
     return peak;
 }
 
@@ -282,36 +300,52 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
     if (channel < 0 || channel >= static_cast<int>(MAX_CHANNELS))
         return 0.0f;
 
-    size_t available = getAvailableSamples();
-    size_t requestedSamples = static_cast<size_t>(numSamples);
-    int samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
+    float rms = 0.0f;
 
-    if (samplesToAnalyze <= 0)
-        return 0.0f;
-
-    size_t writePos = writePos_.load(std::memory_order_acquire);
-    size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
-    size_t channelOffset = static_cast<size_t>(channel) * capacity_;
-
-    double sumSquares = 0.0;
-
-    auto analyzeChunk = [&](size_t start, size_t count) {
-        for (size_t i = 0; i < count; ++i)
-        {
-            float val = buffer_[channelOffset + start + i];
-            sumSquares += val * val;
-        }
-    };
-
-    size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
-    analyzeChunk(readStart, firstChunk);
-
-    if (firstChunk < static_cast<size_t>(samplesToAnalyze))
+    for (int attempt = 0; attempt <= MAX_READ_RETRIES; ++attempt)
     {
-        analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
+        uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
+
+        size_t available = getAvailableSamples();
+        size_t requestedSamples = static_cast<size_t>(numSamples);
+        int samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
+
+        if (samplesToAnalyze <= 0)
+            return 0.0f;
+
+        size_t writePos = writePos_.load(std::memory_order_acquire);
+        size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
+        size_t channelOffset = static_cast<size_t>(channel) * capacity_;
+
+        double sumSquares = 0.0;
+
+        auto analyzeChunk = [&](size_t start, size_t count) {
+            for (size_t i = 0; i < count; ++i)
+            {
+                float val = buffer_[channelOffset + start + i];
+                sumSquares += val * val;
+            }
+        };
+
+        size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
+        analyzeChunk(readStart, firstChunk);
+
+        if (firstChunk < static_cast<size_t>(samplesToAnalyze))
+        {
+            analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
+        }
+
+        rms = static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
+
+        uint32_t epoch2 = writeEpoch_.load(std::memory_order_acquire);
+
+        // If epoch unchanged and even, no write was in progress — data is consistent
+        if (epoch1 == epoch2 && (epoch1 & 1) == 0)
+            return rms;
     }
 
-    return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
+    // Exhausted retries — return best-effort data (acceptable for level meters)
+    return rms;
 }
 
 } // namespace oscil
