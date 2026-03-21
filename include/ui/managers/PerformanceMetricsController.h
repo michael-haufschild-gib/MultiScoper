@@ -7,22 +7,24 @@
 
 #include "ui/panels/StatusBarComponent.h"
 
-#include "plugin/PluginProcessor.h"
-
 namespace oscil
 {
+
+class IAudioDataProvider;
+class IInstanceRegistry;
 
 class PerformanceMetricsController
 {
 public:
-    PerformanceMetricsController(OscilPluginProcessor& processor, StatusBarComponent& statusBar);
+    PerformanceMetricsController(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, StatusBarComponent& statusBar);
     ~PerformanceMetricsController() = default;
 
     void update();
     void reset();
 
 private:
-    OscilPluginProcessor& processor_;
+    IAudioDataProvider& dataProvider_;
+    IInstanceRegistry& instanceRegistry_;
     StatusBarComponent& statusBar_;
 
     int frameCount_ = 0;

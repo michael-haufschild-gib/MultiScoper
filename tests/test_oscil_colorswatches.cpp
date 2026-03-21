@@ -129,9 +129,10 @@ TEST_F(OscilColorSwatchesTest, GetSelectedColorWhenNoSelection)
     OscilColorSwatches swatches(getThemeManager());
     swatches.addColor(juce::Colours::red);
 
-    // No selection yet — should return a default color, not crash
-    auto color = swatches.getSelectedColor();
-    // Verify a color was returned (alpha channel > 0 or is black)
+    // No selection yet — should return a default color, not crash.
+    // Calling getSelectedColor() with no selection returns a default-constructed
+    // Colour (transparent black, ARGB=0). The key behavior is that it doesn't crash.
+    [[maybe_unused]] auto color = swatches.getSelectedColor();
     EXPECT_EQ(swatches.getSelectedIndex(), -1);
 }
 

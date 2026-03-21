@@ -92,7 +92,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     configPopupAdapter_ = std::make_unique<ConfigPopupListenerAdapter>(*this);
     dialogManager_->addConfigPopupListener(configPopupAdapter_.get());
 
-    metricsController_ = std::make_unique<PerformanceMetricsController>(processor_, *statusBar_);
+    metricsController_ = std::make_unique<PerformanceMetricsController>(processor_, processor_.getInstanceRegistry(), *statusBar_);
     editorLayout_ = std::make_unique<PluginEditorLayout>(*this, *viewport_, *contentComponent_, *sidebar_, *statusBar_, processor_);
     renderCoordinator_ = std::make_unique<GpuRenderCoordinator>(*this, *statusBar_);
 

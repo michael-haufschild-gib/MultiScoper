@@ -254,5 +254,5 @@ TEST_F(InstanceRegistryCrudTest, SourceActiveStateAfterRegistration)
 
     auto info = getRegistry().getSource(sourceId);
     ASSERT_TRUE(info.has_value());
-    EXPECT_TRUE(info->active.load());
+    EXPECT_TRUE(info->active);
 }

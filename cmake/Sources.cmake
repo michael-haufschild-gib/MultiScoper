@@ -8,7 +8,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditor.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditorSidebarHandlers.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginFactory.cpp
-    ${CMAKE_SOURCE_DIR}/src/plugin/OpenGLLifecycleManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/OpenGLLifecycleManager.cpp
 
     # Core (business logic)
     ${CMAKE_SOURCE_DIR}/src/core/InstanceRegistry.cpp

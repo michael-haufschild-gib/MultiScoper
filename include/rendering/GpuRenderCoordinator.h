@@ -8,7 +8,7 @@
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/StatusBarComponent.h"
 
-#include "plugin/OpenGLLifecycleManager.h"
+#include "rendering/OpenGLLifecycleManager.h"
 
 #include <memory>
 #include <vector>

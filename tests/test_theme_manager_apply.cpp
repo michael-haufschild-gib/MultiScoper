@@ -198,6 +198,7 @@ TEST_F(ThemeManagerApplyTest, WaveformColorLargeIndex)
 
     // With 64 colors, index 1000000 % 64 should equal a valid cycling pattern
     EXPECT_EQ(color0.getARGB(), theme->getWaveformColor(64).getARGB());
+    EXPECT_EQ(colorLarge.getARGB(), theme->getWaveformColor(1000000 % 64).getARGB());
 }
 
 // Test: Theme with empty waveform colors

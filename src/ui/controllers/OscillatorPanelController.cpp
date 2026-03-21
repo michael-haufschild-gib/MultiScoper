@@ -4,17 +4,19 @@
 
 #include "ui/controllers/OscillatorPanelController.h"
 #include "ui/managers/DialogManager.h"
+#include "core/interfaces/IAudioDataProvider.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "core/OscilState.h"
-#include "core/InstanceRegistry.h"
+#include "core/dsp/TimingEngine.h"
 
 namespace oscil
 {
 
-OscillatorPanelController::OscillatorPanelController(OscilPluginProcessor& processor,
+OscillatorPanelController::OscillatorPanelController(IAudioDataProvider& dataProvider,
                                                      ServiceContext& serviceContext,
                                                      PaneContainerComponent& container,
                                                      GpuRenderCoordinator& gpuCoordinator)
-    : processor_(processor)
+    : dataProvider_(dataProvider)
     , serviceContext_(serviceContext)
     , container_(container)
     , gpuCoordinator_(gpuCoordinator)
@@ -23,7 +25,7 @@ OscillatorPanelController::OscillatorPanelController(OscilPluginProcessor& proce
 
 OscillatorPanelController::~OscillatorPanelController()
 {
-    processor_.getState().removeListener(this);
+    dataProvider_.getState().removeListener(this);
 }
 
 void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogManager* dialogManager, DisplaySettingsManager* displaySettings)
@@ -33,7 +35,7 @@ void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogMana
     displaySettings_ = displaySettings;
 
     // Listen to state changes
-    processor_.getState().addListener(this);
+    dataProvider_.getState().addListener(this);
 
     // Setup container callbacks
     container_.setPaneDropCallback([this](const PaneId& moved, const PaneId& target) {
@@ -72,8 +74,8 @@ void OscillatorPanelController::refreshPanels()
     // So clearing `paneComponents_` updates the manager's view automatically (as long as it doesn't cache).
 
     // Get state
-    auto oscillators = processor_.getState().getOscillators();
-    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto oscillators = dataProvider_.getState().getOscillators();
+    auto& layoutManager = dataProvider_.getState().getLayoutManager();
 
     // Recreate components
     createPaneComponents(oscillators, layoutManager);
@@ -82,7 +84,7 @@ void OscillatorPanelController::refreshPanels()
     if (sidebar_)
     {
         // Refresh lists
-        auto sources = processor_.getInstanceRegistry().getAllSources();
+        auto sources = serviceContext_.instanceRegistry.getAllSources();
         sidebar_->refreshSourceList(sources);
 
         auto panes = layoutManager.getPanes();
@@ -134,7 +136,7 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
     int paneIndex = 0;
     for (const auto& pane : layoutManager.getPanes())
     {
-        auto paneComponent = std::make_unique<PaneComponent>(processor_, serviceContext_, pane.getId());
+        auto paneComponent = std::make_unique<PaneComponent>(dataProvider_, serviceContext_, pane.getId());
         paneComponent->setPaneIndex(paneIndex++);
 
         // Set up drag-and-drop reorder callback - managed by Container now, but component initiates drag
@@ -149,7 +151,7 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
 
         // Set up pane name change callback
         paneComponent->onPaneNameChanged([this](const PaneId& paneId, const juce::String& newName) {
-            auto& mgr = processor_.getState().getLayoutManager();
+            auto& mgr = dataProvider_.getState().getLayoutManager();
             if (auto* p = mgr.getPane(paneId))
             {
                 p->setName(newName);
@@ -183,12 +185,12 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
 
 void OscillatorPanelController::reapplyGlobalSettings()
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     
     // Re-apply timing settings (display samples)
     // IMPORTANT: Use capture rate (decimated), not source rate, since display buffers are decimated
-    auto timingConfig = processor_.getTimingEngine().toEntityConfig();
-    int captureRate = processor_.getCaptureRate();
+    auto timingConfig = dataProvider_.getTimingEngine().toEntityConfig();
+    int captureRate = dataProvider_.getCaptureRate();
     if (captureRate > 0)
     {
         int displaySamples = static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
@@ -202,7 +204,7 @@ void OscillatorPanelController::reapplyGlobalSettings()
     // Re-apply visual settings
     if (displaySettings_)
     {
-        auto& timingEngine = processor_.getTimingEngine();
+        auto& timingEngine = dataProvider_.getTimingEngine();
         auto hostInfo = timingEngine.getHostInfo();
         auto engineConfig = timingEngine.getConfig();
 
@@ -224,7 +226,7 @@ void OscillatorPanelController::reapplyGlobalSettings()
 
 void OscillatorPanelController::createDefaultOscillatorIfNeeded()
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
 
     if (layoutManager.getPaneCount() == 0 && state.getOscillators().empty())
@@ -247,9 +249,9 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
         // Only auto-bind to this processor's own source.
         // If registration is not ready yet, keep NO_SOURCE so later source
         // notifications can bind correctly instead of latching onto a foreign source.
-        if (processor_.getSourceId().isValid())
+        if (dataProvider_.getSourceId().isValid())
         {
-            osc.setSourceId(processor_.getSourceId());
+            osc.setSourceId(dataProvider_.getSourceId());
         }
 
         state.addOscillator(osc);
@@ -258,7 +260,7 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
 
 void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId)
 {
-    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto& layoutManager = dataProvider_.getState().getLayoutManager();
     const Pane* sourcePanePtr = layoutManager.getPane(movedPaneId);
     const Pane* targetPanePtr = layoutManager.getPane(targetPaneId);
 
@@ -306,14 +308,14 @@ void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, c
 
 void OscillatorPanelController::handleEmptyColumnDrop(const PaneId& movedPaneId, int targetColumn)
 {
-    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto& layoutManager = dataProvider_.getState().getLayoutManager();
     layoutManager.movePaneToColumn(movedPaneId, targetColumn, 0);
     refreshPanels();
 }
 
 void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
 
     // Hide oscillators in this pane

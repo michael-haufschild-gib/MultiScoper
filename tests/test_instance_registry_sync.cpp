@@ -241,7 +241,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegistration)
 
     for (int t = 0; t < numThreads; ++t)
     {
-        threads.emplace_back([this, t, &buffers, &successCount, registrationsPerThread]() {
+        threads.emplace_back([this, t, &buffers, &successCount]() {
             for (int i = 0; i < registrationsPerThread; ++i)
             {
                 int idx = t * registrationsPerThread + i;
@@ -313,7 +313,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
     std::atomic<int> registerSuccess{0};
     std::atomic<int> unregisterCalls{0};
 
-    std::thread registerThread([this, &registerSuccess, iterations]() {
+    std::thread registerThread([this, &registerSuccess]() {
         for (int i = 0; i < iterations; ++i)
         {
             auto buffer = std::make_shared<SharedCaptureBuffer>();
@@ -325,7 +325,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
         }
     });
 
-    std::thread unregisterThread([this, &unregisterCalls, iterations]() {
+    std::thread unregisterThread([this, &unregisterCalls]() {
         for (int i = 0; i < iterations; ++i)
         {
             auto sources = getRegistry().getAllSources();

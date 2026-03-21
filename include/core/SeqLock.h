@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <juce_core/juce_core.h>
 
 namespace oscil
 {
@@ -39,7 +40,12 @@ struct SeqLock
             if (seq1 & 1)
             {
                 if (++retries > MAX_RETRIES)
+                {
+                    // Writer appears stuck mid-write. Return best-effort data.
+                    // This fires a debug breakpoint in development builds.
+                    jassertfalse;
                     return data.load(std::memory_order_relaxed);
+                }
                 continue;
             }
             T snapshot = data.load(std::memory_order_relaxed);
@@ -47,7 +53,11 @@ struct SeqLock
             if (seq1 == seq2)
                 return snapshot;
             if (++retries > MAX_RETRIES)
+            {
+                // Sequence changed during read and retries exhausted. Return best-effort snapshot.
+                jassertfalse;
                 return snapshot;
+            }
         }
     }
 

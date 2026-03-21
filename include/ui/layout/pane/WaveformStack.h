@@ -20,7 +20,7 @@ namespace oscil
 {
 
 // Forward declarations
-class OscilPluginProcessor;
+class IAudioDataProvider;
 class ShaderRegistry;
 class IAudioBuffer;
 
@@ -48,7 +48,7 @@ public:
         Overlapped  // Waveforms overlaid on same area (future)
     };
 
-    WaveformStack(OscilPluginProcessor& processor,
+    WaveformStack(IAudioDataProvider& dataProvider,
                   IThemeService& themeService,
                   ShaderRegistry& shaderRegistry);
     ~WaveformStack() override = default;
@@ -98,7 +98,7 @@ public:
 private:
     void updateLayout();
 
-    OscilPluginProcessor& processor_;
+    IAudioDataProvider& dataProvider_;
     IThemeService& themeService_;
     ShaderRegistry& shaderRegistry_;
 

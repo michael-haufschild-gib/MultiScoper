@@ -3,12 +3,16 @@
 */
 
 #include "ui/managers/PerformanceMetricsController.h"
+#include "core/interfaces/IAudioDataProvider.h"
+#include "core/interfaces/IInstanceRegistry.h"
+#include "core/OscilState.h"
 
 namespace oscil
 {
 
-PerformanceMetricsController::PerformanceMetricsController(OscilPluginProcessor& processor, StatusBarComponent& statusBar)
-    : processor_(processor)
+PerformanceMetricsController::PerformanceMetricsController(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, StatusBarComponent& statusBar)
+    : dataProvider_(dataProvider)
+    , instanceRegistry_(instanceRegistry)
     , statusBar_(statusBar)
 {
     reset();
@@ -40,11 +44,11 @@ void PerformanceMetricsController::update()
     }
 
     // Update non-FPS metrics every tick to avoid visible lag after state changes.
-    statusBar_.setCpuUsage(processor_.getCpuUsage());
+    statusBar_.setCpuUsage(dataProvider_.getCpuUsage());
 
     // Memory usage - estimate based on capture buffer and oscillators.
-    size_t sourceCount = processor_.getInstanceRegistry().getSourceCount();
-    size_t oscillatorCount = processor_.getState().getOscillators().size();
+    size_t sourceCount = instanceRegistry_.getSourceCount();
+    size_t oscillatorCount = dataProvider_.getState().getOscillators().size();
     float memoryMB = 0.5f * static_cast<float>(sourceCount) + 0.1f * static_cast<float>(oscillatorCount) + 5.0f;
     statusBar_.setMemoryUsage(memoryMB);
 

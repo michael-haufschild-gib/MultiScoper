@@ -19,7 +19,7 @@
 namespace oscil
 {
 
-class OscilPluginProcessor;
+class IAudioDataProvider;
 class ShaderRegistry;
 
 /**
@@ -35,7 +35,7 @@ class PaneComponent : public juce::Component,
                        public TestIdSupport
 {
 public:
-    PaneComponent(OscilPluginProcessor& processor, ServiceContext& context, const PaneId& paneId);
+    PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, const PaneId& paneId);
     ~PaneComponent() override = default;
 
     void paint(juce::Graphics& g) override;
@@ -193,7 +193,7 @@ private:
     void handleDragStarted(const juce::MouseEvent& event);
     void updateHeaderBadge();
 
-    OscilPluginProcessor& processor_;
+    IAudioDataProvider& dataProvider_;
     IThemeService& themeService_;
     ShaderRegistry& shaderRegistry_;
     PaneId paneId_;

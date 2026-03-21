@@ -31,7 +31,7 @@ void SourceHandler::handleGetSources(const httplib::Request& /*req*/, httplib::R
             srcInfo["name"] = source.name.toStdString();
             srcInfo["channelCount"] = source.channelCount;
             srcInfo["sampleRate"] = source.sampleRate;
-            srcInfo["active"] = source.active.load();
+            srcInfo["active"] = source.active;
             srcInfo["hasBuffer"] = !source.buffer.expired();
             sourceList.push_back(srcInfo);
         }

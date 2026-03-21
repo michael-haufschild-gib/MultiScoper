@@ -17,7 +17,7 @@ protected:
     {
         OscilPluginTestFixture::SetUp();
 
-        paneBody_ = std::make_unique<PaneBody>(*processor, getThemeManager(), getShaderRegistry());
+        paneBody_ = std::make_unique<PaneBody>(*processor, getRegistry(), getThemeManager(), getShaderRegistry());
         paneBody_->setBounds(0, 0, 640, 320);
         paneBody_->resized();
     }

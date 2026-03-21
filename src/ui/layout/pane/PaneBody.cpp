@@ -3,23 +3,26 @@
 */
 
 #include "ui/layout/pane/PaneBody.h"
-#include "plugin/PluginProcessor.h"
+#include "core/interfaces/IAudioDataProvider.h"
+#include "core/interfaces/IInstanceRegistry.h"
+#include "core/OscilState.h"
 #include "rendering/ShaderRegistry.h"
-#include "core/InstanceRegistry.h"
 
 namespace oscil
 {
 
-PaneBody::PaneBody(OscilPluginProcessor& processor,
+PaneBody::PaneBody(IAudioDataProvider& dataProvider,
+                   IInstanceRegistry& instanceRegistry,
                    IThemeService& themeService,
                    ShaderRegistry& shaderRegistry)
-    : processor_(processor)
+    : dataProvider_(dataProvider)
+    , instanceRegistry_(instanceRegistry)
     , themeService_(themeService)
 {
     setTestId("pane_body");
 
     // Create waveform stack
-    waveformStack_ = std::make_unique<WaveformStack>(processor, themeService, shaderRegistry);
+    waveformStack_ = std::make_unique<WaveformStack>(dataProvider, themeService, shaderRegistry);
     addAndMakeVisible(*waveformStack_);
 
     // Create crosshair overlay (always visible, follows mouse)
@@ -45,7 +48,7 @@ void PaneBody::paint(juce::Graphics& g)
 #if OSCIL_ENABLE_OPENGL
     // In GPU mode, the OpenGL renderer handles the background.
     // Only fill if GPU rendering is disabled to avoid occluding the GL content.
-    if (processor_.getState().isGpuRenderingEnabled())
+    if (dataProvider_.getState().isGpuRenderingEnabled())
         return;
 #endif
 
@@ -307,7 +310,7 @@ void PaneBody::updateStats()
         auto sourceId = osc->getSourceId();
         if (!sourceId.isValid()) continue;
         
-        auto sourceInfo = processor_.getInstanceRegistry().getSource(sourceId);
+        auto sourceInfo = instanceRegistry_.getSource(sourceId);
         if (!sourceInfo.has_value() || !sourceInfo->analysisEngine) continue;
         
         OscillatorStats os;
@@ -349,7 +352,7 @@ void PaneBody::resetStats()
         auto sourceId = osc->getSourceId();
         if (!sourceId.isValid()) continue;
         
-        auto sourceInfo = processor_.getInstanceRegistry().getSource(sourceId);
+        auto sourceInfo = instanceRegistry_.getSource(sourceId);
         if (sourceInfo.has_value() && sourceInfo->analysisEngine)
         {
             sourceInfo->analysisEngine->resetAccumulated();

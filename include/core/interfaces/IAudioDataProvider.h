@@ -13,6 +13,7 @@ namespace oscil
 // Forward declarations
 class IAudioBuffer;
 class OscilState;
+class TimingEngine;
 struct SourceId;
 
 /**
@@ -59,6 +60,16 @@ public:
      * Use this for timing calculations related to displayed waveforms.
      */
     virtual int getCaptureRate() const = 0;
+
+    /**
+     * Get the timing engine for synchronization and timing queries.
+     */
+    virtual TimingEngine& getTimingEngine() = 0;
+
+    /**
+     * Get this processor instance's registered source ID.
+     */
+    virtual SourceId getSourceId() const = 0;
 };
 
 } // namespace oscil

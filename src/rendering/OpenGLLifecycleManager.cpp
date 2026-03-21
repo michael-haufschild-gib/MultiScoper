@@ -2,7 +2,7 @@
     Oscil - OpenGL Lifecycle Manager Implementation
 */
 
-#include "plugin/OpenGLLifecycleManager.h"
+#include "rendering/OpenGLLifecycleManager.h"
 #include "ui/panels/WaveformComponent.h"
 
 namespace oscil

@@ -78,8 +78,7 @@ TEST_F(StatsOverlayTest, ResetCallback)
     // we can simulate it if we exposed the button or finding it.
     // StatsOverlay has 2 children: TextEditor and Button.
     
-    auto* button = dynamic_cast<OscilButton*>(overlay.getChildComponent(1)); // 0 is TextEditor, 1 is Button usually
-    // But to be safe, iterate
+    // Iterate children to find and click the button
     for (auto* child : overlay.getChildren())
     {
         if (auto* btn = dynamic_cast<OscilButton*>(child))

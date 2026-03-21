@@ -10,12 +10,12 @@
 #include "ui/layout/SidebarComponent.h"
 #include "ui/panels/StatusBarComponent.h"
 
-#include "plugin/PluginProcessor.h"
-
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
+
+class IAudioDataProvider;
 
 class PluginEditorLayout
 {
@@ -25,7 +25,7 @@ public:
                        PaneContainerComponent& content,
                        SidebarComponent& sidebar,
                        StatusBarComponent& statusBar,
-                       OscilPluginProcessor& processor);
+                       IAudioDataProvider& dataProvider);
 
     void resized();
     void updateLayout(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents);
@@ -36,7 +36,7 @@ private:
     PaneContainerComponent& content_;
     SidebarComponent& sidebar_;
     StatusBarComponent& statusBar_;
-    OscilPluginProcessor& processor_;
+    IAudioDataProvider& dataProvider_;
 
     static constexpr int STATUS_BAR_HEIGHT = 24;
     static constexpr int MIN_CONTENT_WIDTH = 400;

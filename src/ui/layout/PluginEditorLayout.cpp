@@ -3,6 +3,8 @@
 */
 
 #include "ui/layout/PluginEditorLayout.h"
+#include "core/interfaces/IAudioDataProvider.h"
+#include "core/OscilState.h"
 
 namespace oscil
 {
@@ -12,13 +14,13 @@ PluginEditorLayout::PluginEditorLayout(juce::Component& editor,
                                        PaneContainerComponent& content,
                                        SidebarComponent& sidebar,
                                        StatusBarComponent& statusBar,
-                                       OscilPluginProcessor& processor)
+                                       IAudioDataProvider& dataProvider)
     : editor_(editor)
     , viewport_(viewport)
     , content_(content)
     , sidebar_(sidebar)
     , statusBar_(statusBar)
-    , processor_(processor)
+    , dataProvider_(dataProvider)
 {
 }
 
@@ -41,7 +43,7 @@ void PluginEditorLayout::resized()
 
 void PluginEditorLayout::updateLayout(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents)
 {
-    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto& layoutManager = dataProvider_.getState().getLayoutManager();
 
     // Use viewport's own bounds - this is the space available for content
     // Note: getViewArea() returns the visible portion of CONTENT, not viewport size

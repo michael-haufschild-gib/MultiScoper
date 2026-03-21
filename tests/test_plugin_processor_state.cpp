@@ -112,6 +112,7 @@ TEST_F(PluginProcessorStateTest, StateInformation_InvalidXml)
 
     // State should still be valid (unchanged on failure)
     EXPECT_TRUE(processor->getCaptureBuffer() != nullptr);
+    EXPECT_EQ(processor->getTimingEngine().getConfig().timingMode, originalMode);
 }
 
 TEST_F(PluginProcessorStateTest, StateInformation_InvalidXmlDoesNotMutateRuntimeTimingState)

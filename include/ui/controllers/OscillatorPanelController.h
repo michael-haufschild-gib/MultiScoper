@@ -6,7 +6,6 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include "plugin/PluginProcessor.h" // Needs full type for dependencies
 #include "ui/layout/PaneContainerComponent.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/layout/SidebarComponent.h"
@@ -20,6 +19,7 @@ namespace oscil
 {
 
 // Forward declarations
+class IAudioDataProvider;
 class DialogManager;
 
 /**
@@ -30,7 +30,7 @@ class OscillatorPanelController : public juce::ValueTree::Listener,
                                   public SidebarComponent::Listener
 {
 public:
-    OscillatorPanelController(OscilPluginProcessor& processor,
+    OscillatorPanelController(IAudioDataProvider& dataProvider,
                               ServiceContext& serviceContext,
                               PaneContainerComponent& container,
                               GpuRenderCoordinator& gpuCoordinator);
@@ -119,7 +119,7 @@ public:
 private:
     void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
     
-    OscilPluginProcessor& processor_;
+    IAudioDataProvider& dataProvider_;
     ServiceContext& serviceContext_;
     PaneContainerComponent& container_;
     GpuRenderCoordinator& gpuCoordinator_;

@@ -282,11 +282,11 @@ target_compile_definitions(Oscil
 # JUCE and other deps are not affected. JUCE headers use SYSTEM includes.
 add_library(OscilStrictWarnings INTERFACE)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(OscilStrictWarnings INTERFACE -Wextra -Wpedantic -Werror)
+    target_compile_options(OscilStrictWarnings INTERFACE -Wall -Wextra -Wpedantic -Werror)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(OscilStrictWarnings INTERFACE -Wextra -Wpedantic -Werror)
+    target_compile_options(OscilStrictWarnings INTERFACE -Wall -Wextra -Wpedantic -Werror)
 elseif(MSVC)
-    target_compile_options(OscilStrictWarnings INTERFACE /WX)
+    target_compile_options(OscilStrictWarnings INTERFACE /W4 /WX)
 endif()
 
 # Define interface library for warning suppressions to ensure they come last

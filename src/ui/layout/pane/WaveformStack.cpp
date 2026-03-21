@@ -3,8 +3,7 @@
 */
 
 #include "ui/layout/pane/WaveformStack.h"
-#include "plugin/PluginProcessor.h"
-#include "core/InstanceRegistry.h"
+#include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IAudioBuffer.h"
 
 namespace oscil
@@ -12,7 +11,7 @@ namespace oscil
 
 namespace
 {
-std::shared_ptr<IAudioBuffer> resolveCaptureBufferForSource(OscilPluginProcessor& processor, const SourceId& sourceId)
+std::shared_ptr<IAudioBuffer> resolveCaptureBufferForSource(IAudioDataProvider& provider, const SourceId& sourceId)
 {
     if (sourceId.isNoSource())
     {
@@ -23,18 +22,18 @@ std::shared_ptr<IAudioBuffer> resolveCaptureBufferForSource(OscilPluginProcessor
     if (sourceId.isValid())
     {
         // Cross-instance binding: only use the selected source buffer.
-        return processor.getInstanceRegistry().getCaptureBuffer(sourceId);
+        return provider.getBuffer(sourceId);
     }
 
     // Legacy/uninitialized source fallback during startup: use local processor source.
-    return processor.getCaptureBuffer();
+    return provider.getBuffer(provider.getSourceId());
 }
 } // namespace
 
-WaveformStack::WaveformStack(OscilPluginProcessor& processor,
+WaveformStack::WaveformStack(IAudioDataProvider& dataProvider,
                               IThemeService& themeService,
                               ShaderRegistry& shaderRegistry)
-    : processor_(processor)
+    : dataProvider_(dataProvider)
     , themeService_(themeService)
     , shaderRegistry_(shaderRegistry)
 {
@@ -63,7 +62,7 @@ void WaveformStack::addOscillator(const Oscillator& oscillator)
     entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
     entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
 
-    auto buffer = resolveCaptureBufferForSource(processor_, oscillator.getSourceId());
+    auto buffer = resolveCaptureBufferForSource(dataProvider_, oscillator.getSourceId());
     entry.waveform->setCaptureBuffer(buffer);
 
     // Add component first, then set visibility (JUCE requires this order)
@@ -112,7 +111,7 @@ void WaveformStack::updateOscillatorSource(const OscillatorId& oscillatorId, con
         {
             entry.oscillator.setSourceId(newSourceId);
 
-            auto newBuffer = resolveCaptureBufferForSource(processor_, newSourceId);
+            auto newBuffer = resolveCaptureBufferForSource(dataProvider_, newSourceId);
             entry.waveform->setCaptureBuffer(newBuffer);
 
             break;

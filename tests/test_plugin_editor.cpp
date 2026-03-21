@@ -164,10 +164,9 @@ TEST_F(PluginEditorTest, InitialLayout)
     editor->setSize(800, 600);
     editor->resized();
 
-    // Check if pane components are created
-    const auto& panes = editor->getPaneComponents();
-    // Verify we can call the method without crashing
+    // Verify we can call the method without crashing and get a valid reference
     EXPECT_NO_THROW(editor->getPaneComponents());
+    EXPECT_GE(editor->getPaneComponents().size(), 0u);
 }
 
 TEST_F(PluginEditorTest, GpuRenderingToggle)
@@ -239,7 +238,7 @@ TEST_F(PluginEditorTest, RefreshPanelsDoesNotCrash)
 TEST_F(PluginEditorTest, StatusBarOscillatorCountUpdatesPromptlyAfterAdd)
 {
     StatusBarComponent statusBar(processor->getThemeService());
-    PerformanceMetricsController metricsController(*processor, statusBar);
+    PerformanceMetricsController metricsController(*processor, processor->getInstanceRegistry(), statusBar);
 
     auto* countLabel = findOscillatorCountLabel(&statusBar);
     ASSERT_NE(countLabel, nullptr);
@@ -262,7 +261,7 @@ TEST_F(PluginEditorTest, StatusBarOscillatorCountUpdatesPromptlyAfterAdd)
 TEST_F(PluginEditorTest, StatusBarMemoryUsageUpdatesPromptlyAfterAdd)
 {
     StatusBarComponent statusBar(processor->getThemeService());
-    PerformanceMetricsController metricsController(*processor, statusBar);
+    PerformanceMetricsController metricsController(*processor, processor->getInstanceRegistry(), statusBar);
 
     auto* memoryLabel = findMemoryUsageLabel(&statusBar);
     ASSERT_NE(memoryLabel, nullptr);

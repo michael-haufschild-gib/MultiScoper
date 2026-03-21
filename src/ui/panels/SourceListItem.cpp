@@ -13,7 +13,7 @@ SourceListItem::SourceListItem(IThemeService& themeService, const SourceInfo& so
     , sourceId_(source.sourceId)
     , name_(source.name.isEmpty() ? source.sourceId.id : source.name)
     , channelCount_(source.channelCount)
-    , isActive_(source.active.load())
+    , isActive_(source.active)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }

@@ -20,7 +20,8 @@ namespace oscil
 {
 
 // Forward declarations
-class OscilPluginProcessor;
+class IAudioDataProvider;
+class IInstanceRegistry;
 class ShaderRegistry;
 
 /**
@@ -36,7 +37,8 @@ class PaneBody : public juce::Component,
                   private juce::Timer
 {
 public:
-    PaneBody(OscilPluginProcessor& processor,
+    PaneBody(IAudioDataProvider& dataProvider,
+             IInstanceRegistry& instanceRegistry,
              IThemeService& themeService,
              ShaderRegistry& shaderRegistry);
     ~PaneBody() override;
@@ -88,7 +90,8 @@ private:
     void updateStats();
     void resetStats();
 
-    OscilPluginProcessor& processor_;
+    IAudioDataProvider& dataProvider_;
+    IInstanceRegistry& instanceRegistry_;
     IThemeService& themeService_;
 
     // Child components

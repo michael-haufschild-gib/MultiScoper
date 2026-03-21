@@ -5,8 +5,9 @@
 
 #include "ui/controllers/OscillatorPanelController.h"
 #include "ui/managers/DialogManager.h"
+#include "core/interfaces/IAudioDataProvider.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "core/OscilState.h"
-#include "core/InstanceRegistry.h"
 
 namespace oscil
 {
@@ -19,7 +20,7 @@ void OscillatorPanelController::oscillatorSelected(const OscillatorId& oscillato
 
 void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& oscillatorId)
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
 
     for (const auto& osc : oscillators)
@@ -45,7 +46,7 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
 {
     if (!dialogManager_) return;
 
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
 
     for (const auto& osc : oscillators)
@@ -53,7 +54,7 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
         if (osc.getId() == oscillatorId)
         {
             dialogManager_->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
-                auto& oscilState = processor_.getState();
+                auto& oscilState = dataProvider_.getState();
                 auto oscList = oscilState.getOscillators();
                 for (auto& o : oscList)
                 {
@@ -72,12 +73,12 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
 
 void OscillatorPanelController::oscillatorDeleteRequested(const OscillatorId& oscillatorId)
 {
-    processor_.getState().removeOscillator(oscillatorId);
+    dataProvider_.getState().removeOscillator(oscillatorId);
 }
 
 void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
     {
@@ -92,7 +93,7 @@ void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscill
 
 void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible)
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
     {
@@ -110,13 +111,13 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
     if (!dialogManager_) return;
     pendingVisibilityOscillatorId_ = oscillatorId;
     
-    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto& layoutManager = dataProvider_.getState().getLayoutManager();
     auto panes = layoutManager.getPanes();
 
     dialogManager_->showSelectPaneDialog(panes,
         // onComplete callback
         [this](const SelectPaneDialog::Result& result) {
-            auto& stateRef = processor_.getState();
+            auto& stateRef = dataProvider_.getState();
             auto& layoutMgr = stateRef.getLayoutManager();
             PaneId targetPaneId = result.paneId;
 
@@ -151,8 +152,8 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
 void OscillatorPanelController::addOscillatorDialogRequested()
 {
     if (!dialogManager_) return;
-    auto sources = processor_.getInstanceRegistry().getAllSources();
-    auto& layoutManager = processor_.getState().getLayoutManager();
+    auto sources = serviceContext_.instanceRegistry.getAllSources();
+    auto& layoutManager = dataProvider_.getState().getLayoutManager();
     auto panes = layoutManager.getPanes();
 
     dialogManager_->showAddOscillatorDialog(sources, panes, [this](const AddOscillatorDialog::Result& result) {
@@ -162,7 +163,7 @@ void OscillatorPanelController::addOscillatorDialogRequested()
 
 void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog::Result& result)
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
     PaneId targetPaneId = result.paneId;
 
@@ -194,7 +195,7 @@ void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog
 
 void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId)
 {
-    auto& state = processor_.getState();
+    auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
 
     for (auto& osc : oscillators)
@@ -241,7 +242,7 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
                 if (!controller) return;
 
                 // Find oscillator details
-                auto oscillators = controller->processor_.getState().getOscillators();
+                auto oscillators = controller->dataProvider_.getState().getOscillators();
                 bool handled = false;
                 
                 for (const auto& osc : oscillators)

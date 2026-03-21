@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 #include <optional>
-#include <atomic>
 #include "core/Source.h"
 #include "core/interfaces/IAudioBuffer.h"
 
@@ -22,6 +21,9 @@ class AnalysisEngine;
 
 /**
  * Information about a registered audio source.
+ *
+ * Thread safety: all access to SourceInfo instances stored in InstanceRegistry
+ * is protected by the registry's shared_mutex. No atomic members are needed.
  */
 struct SourceInfo
 {
@@ -32,39 +34,7 @@ struct SourceInfo
     double sampleRate = 44100.0;
     std::weak_ptr<IAudioBuffer> buffer;         // Weak reference to capture buffer
     std::shared_ptr<AnalysisEngine> analysisEngine; // Analysis engine for this source
-    std::atomic<bool> active{ true };
-
-    SourceInfo() = default;
-
-    // Copy constructor
-    SourceInfo(const SourceInfo& other)
-        : sourceId(other.sourceId)
-        , name(other.name)
-        , trackIdentifier(other.trackIdentifier)
-        , channelCount(other.channelCount)
-        , sampleRate(other.sampleRate)
-        , buffer(other.buffer)
-        , analysisEngine(other.analysisEngine)
-        , active(other.active.load(std::memory_order_relaxed))
-    {}
-
-    // Assignment operator
-    SourceInfo& operator=(const SourceInfo& other)
-    {
-        if (this != &other)
-        {
-            sourceId = other.sourceId;
-            name = other.name;
-            trackIdentifier = other.trackIdentifier;
-            channelCount = other.channelCount;
-            sampleRate = other.sampleRate;
-            buffer = other.buffer;
-            analysisEngine = other.analysisEngine;
-            active.store(other.active.load(std::memory_order_relaxed),
-                        std::memory_order_relaxed);
-        }
-        return *this;
-    }
+    bool active = true;
 };
 
 /**

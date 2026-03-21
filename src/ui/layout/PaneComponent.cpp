@@ -4,13 +4,14 @@
 
 #include "ui/layout/PaneComponent.h"
 #include "ui/theme/ThemeManager.h"
-#include "plugin/PluginProcessor.h"
+#include "core/interfaces/IAudioDataProvider.h"
+#include "core/OscilState.h"
 
 namespace oscil
 {
 
-PaneComponent::PaneComponent(OscilPluginProcessor& processor, ServiceContext& context, const PaneId& paneId)
-    : processor_(processor)
+PaneComponent::PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, const PaneId& paneId)
+    : dataProvider_(dataProvider)
     , themeService_(context.themeService)
     , shaderRegistry_(context.shaderRegistry)
     , paneId_(paneId)
@@ -39,7 +40,7 @@ PaneComponent::PaneComponent(OscilPluginProcessor& processor, ServiceContext& co
     addAndMakeVisible(*header_);
 
     // Create body
-    body_ = std::make_unique<PaneBody>(processor_, themeService_, shaderRegistry_);
+    body_ = std::make_unique<PaneBody>(dataProvider_, context.instanceRegistry, themeService_, shaderRegistry_);
     addAndMakeVisible(*body_);
 }
 
@@ -62,7 +63,7 @@ void PaneComponent::paint(juce::Graphics& g)
     // FIX: In GPU mode, the OpenGL renderer handles the background.
     // Only fill the pane background in software rendering mode.
 #if OSCIL_ENABLE_OPENGL
-    bool gpuEnabled = processor_.getState().isGpuRenderingEnabled();
+    bool gpuEnabled = dataProvider_.getState().isGpuRenderingEnabled();
     if (!gpuEnabled)
 #endif
     {

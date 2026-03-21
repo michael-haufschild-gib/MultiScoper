@@ -79,8 +79,6 @@ public:
 
     // Oscil-specific methods
     [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const;
-    [[nodiscard]] SourceId getSourceId() const;
-    [[nodiscard]] TimingEngine& getTimingEngine();
 
     // Service access for dependency injection
     // UI components should use these instead of accessing singletons directly
@@ -95,6 +93,8 @@ public:
     float getCpuUsage() const override { return cpuUsage_.load(std::memory_order_relaxed); }
     double getSampleRate() const override { return currentSampleRate_.load(std::memory_order_relaxed); }
     int getCaptureRate() const override;
+    [[nodiscard]] TimingEngine& getTimingEngine() override;
+    [[nodiscard]] SourceId getSourceId() const override;
 
     // ValueTree::Listener overrides
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;

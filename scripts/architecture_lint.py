@@ -49,19 +49,8 @@ FORBIDDEN_INCLUDES: Dict[str, List[str]] = {
     "ui/": ["plugin/", "tools/"],
 }
 
-# Grandfathered violations — existing coupling that predates this lint.
-# These are tracked so they can be fixed incrementally without blocking CI.
-# Format: "relative/path:line_number" or "relative/path" (any line in file).
-# To fix: refactor the dependency, then remove the allowlist entry.
-ALLOWLISTED_FILES: Set[str] = {
-    "include/rendering/GpuRenderCoordinator.h",
-    "include/ui/controllers/OscillatorPanelController.h",
-    "include/ui/layout/PluginEditorLayout.h",
-    "include/ui/managers/PerformanceMetricsController.h",
-    "src/ui/layout/PaneComponent.cpp",
-    "src/ui/layout/pane/PaneBody.cpp",
-    "src/ui/layout/pane/WaveformStack.cpp",
-}
+# No allowlisted violations — all architecture boundaries are enforced.
+ALLOWLISTED_FILES: Set[str] = set()
 
 
 def get_module(file_path: str) -> str:
