@@ -34,7 +34,10 @@ struct ProcessedSignal
         // ProcessedSignal is for UI visualization only.
         // Allocating memory on the audio thread is strictly forbidden.
         // This check works in both debug AND release builds for safety.
-        if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+        // Use getInstanceWithoutCreating() to avoid creating a MessageManager
+        // in non-JUCE contexts (e.g. unit tests without a JUCE event loop).
+        auto* mm = juce::MessageManager::getInstanceWithoutCreating();
+        if (mm != nullptr && !mm->isThisTheMessageThread())
         {
             jassertfalse; // Trigger in debug for investigation
             return;       // Fail safe in release - don't resize from wrong thread

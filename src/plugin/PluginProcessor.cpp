@@ -32,15 +32,22 @@ juce::String normaliseSourceDisplayName(const juce::AudioProcessor::TrackPropert
 }
 } // namespace
 
-OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, PresetManager& presetManager, MemoryBudgetManager& memoryBudgetManager)
+OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
+                                           ShaderRegistry& shaderRegistry, PresetManager& presetManager,
+                                           MemoryBudgetManager& memoryBudgetManager)
+    : OscilPluginProcessor(PluginProcessorConfig{instanceRegistry, themeService, shaderRegistry, presetManager, memoryBudgetManager})
+{
+}
+
+OscilPluginProcessor::OscilPluginProcessor(const PluginProcessorConfig& config)
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
-    , instanceRegistry_(instanceRegistry)
-    , themeService_(themeService)
-    , shaderRegistry_(shaderRegistry)
-    , presetManager_(presetManager)
-    , memoryBudgetManager_(memoryBudgetManager)
+    , instanceRegistry_(config.instanceRegistry)
+    , themeService_(config.themeService)
+    , shaderRegistry_(config.shaderRegistry)
+    , presetManager_(config.presetManager)
+    , memoryBudgetManager_(config.memoryBudgetManager)
 {
     // Create capture buffer
     captureBuffer_ = std::make_shared<DecimatingCaptureBuffer>();
@@ -51,9 +58,9 @@ OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, 
 
     // Initialize MemoryBudgetManager with config from state
     // Use default sample rate until prepareToPlay is called
-    auto config = state_.getCaptureQualityConfig();
-    setCaptureQualityConfig(config);
-    memoryBudgetManager_.setGlobalConfig(config,
+    auto qualityConfig = state_.getCaptureQualityConfig();
+    setCaptureQualityConfig(qualityConfig);
+    memoryBudgetManager_.setGlobalConfig(qualityConfig,
                                          static_cast<int>(currentSampleRate_));
 
     // Listen for state changes (quality settings)

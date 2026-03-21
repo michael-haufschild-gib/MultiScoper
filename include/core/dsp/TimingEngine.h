@@ -10,57 +10,11 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <atomic>
 
+#include "core/SeqLock.h"
 #include "TimingEngineTypes.h"
 
 namespace oscil
 {
-
-/**
- * Generic SeqLock for publishing a plain struct from one writer thread
- * to many reader threads without locks.
- *
- * Single-producer / multiple-consumer. The writer increments a sequence
- * counter to odd before writing, then to even after. Readers spin until
- * they observe two identical even sequence values bracketing their read.
- */
-template <typename T>
-struct SeqLock
-{
-    void write(const T& value)
-    {
-        sequence.fetch_add(1, std::memory_order_release);   // odd → write in progress
-        data.store(value, std::memory_order_relaxed);
-        sequence.fetch_add(1, std::memory_order_release);   // even → write complete
-    }
-
-    T read() const
-    {
-        static constexpr int MAX_RETRIES = 1000;
-        int retries = 0;
-        for (;;)
-        {
-            uint32_t seq1 = sequence.load(std::memory_order_acquire);
-            if (seq1 & 1)
-            {
-                if (++retries > MAX_RETRIES)
-                    return data.load(std::memory_order_relaxed);
-                continue;
-            }
-            T snapshot = data.load(std::memory_order_relaxed);
-            uint32_t seq2 = sequence.load(std::memory_order_acquire);
-            if (seq1 == seq2)
-                return snapshot;
-            if (++retries > MAX_RETRIES)
-                return snapshot;
-        }
-    }
-
-private:
-    std::atomic<uint32_t> sequence{0};
-    // std::atomic<T> requires T to be trivially copyable. Both
-    // TimingConfigData and HostTimingInfo satisfy this.
-    std::atomic<T> data{T{}};
-};
 
 /**
  * UI-thread-writable timing configuration fields.
@@ -311,19 +265,19 @@ private:
 // ValueTree identifiers for TimingConfig
 namespace TimingIds
 {
-    static const juce::Identifier Timing{"Timing"};
-    static const juce::Identifier TimingMode{"timingMode"};
-    static const juce::Identifier HostSyncEnabled{"hostSyncEnabled"};
-    static const juce::Identifier SyncToPlayhead{"syncToPlayhead"};
-    static const juce::Identifier TimeIntervalMs{"timeIntervalMs"};
-    static const juce::Identifier NoteInterval{"noteInterval"};
-    static const juce::Identifier TriggerMode{"triggerMode"};
-    static const juce::Identifier TriggerThreshold{"triggerThreshold"};
-    static const juce::Identifier MidiTriggerNote{"midiTriggerNote"};
-    static const juce::Identifier MidiTriggerChannel{"midiTriggerChannel"};
-    static const juce::Identifier InternalBPM{"internalBPM"};
-    static const juce::Identifier TriggerChannel{"triggerChannel"};
-    static const juce::Identifier TriggerHysteresis{"triggerHysteresis"};
+    inline const juce::Identifier Timing{"Timing"};
+    inline const juce::Identifier TimingMode{"timingMode"};
+    inline const juce::Identifier HostSyncEnabled{"hostSyncEnabled"};
+    inline const juce::Identifier SyncToPlayhead{"syncToPlayhead"};
+    inline const juce::Identifier TimeIntervalMs{"timeIntervalMs"};
+    inline const juce::Identifier NoteInterval{"noteInterval"};
+    inline const juce::Identifier TriggerMode{"triggerMode"};
+    inline const juce::Identifier TriggerThreshold{"triggerThreshold"};
+    inline const juce::Identifier MidiTriggerNote{"midiTriggerNote"};
+    inline const juce::Identifier MidiTriggerChannel{"midiTriggerChannel"};
+    inline const juce::Identifier InternalBPM{"internalBPM"};
+    inline const juce::Identifier TriggerChannel{"triggerChannel"};
+    inline const juce::Identifier TriggerHysteresis{"triggerHysteresis"};
 }
 
 } // namespace oscil

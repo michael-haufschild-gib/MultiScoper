@@ -52,13 +52,14 @@ void PluginFactory::setInstance(PluginFactory* factory)
 
 std::unique_ptr<juce::AudioProcessor> PluginFactory::createPluginProcessor()
 {
-    return std::make_unique<OscilPluginProcessor>(
+    PluginProcessorConfig config{
         *instanceRegistry_,
         *themeManager_,
         *shaderRegistry_,
         *presetManager_,
         *memoryBudgetManager_
-    );
+    };
+    return std::make_unique<OscilPluginProcessor>(config);
 }
 
 ThemeManager& PluginFactory::getThemeManager()

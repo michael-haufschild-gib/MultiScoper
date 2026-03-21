@@ -25,13 +25,30 @@ namespace oscil
 class ShaderRegistry;
 class PresetManager;
 
+/**
+ * Aggregates the injected dependencies for OscilPluginProcessor construction.
+ */
+struct PluginProcessorConfig
+{
+    IInstanceRegistry& instanceRegistry;
+    IThemeService& themeService;
+    ShaderRegistry& shaderRegistry;
+    PresetManager& presetManager;
+    MemoryBudgetManager& memoryBudgetManager;
+};
+
 class OscilPluginProcessor : public juce::AudioProcessor
     , public IAudioDataProvider
     , public juce::ValueTree::Listener
 {
 public:
-    // Constructor with dependency injection
-    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, PresetManager& presetManager, MemoryBudgetManager& memoryBudgetManager);
+    // Primary constructor with aggregated config
+    explicit OscilPluginProcessor(const PluginProcessorConfig& config);
+
+    // Legacy constructor — delegates to the config constructor
+    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
+                         ShaderRegistry& shaderRegistry, PresetManager& presetManager,
+                         MemoryBudgetManager& memoryBudgetManager);
     ~OscilPluginProcessor() override;
 
     // AudioProcessor interface

@@ -52,5 +52,12 @@ size_lint_report.txt
 # Ephemeral task state
 task_state.md
 
+# Log files
+*.log
+
+# Ephemeral analysis documents
+godmode*.md
+market-readiness-*.md
+
 # Unity project build artifacts
 resources/unity/
