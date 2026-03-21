@@ -24,6 +24,15 @@ class AnalysisEngine;
  *
  * Thread safety: all access to SourceInfo instances stored in InstanceRegistry
  * is protected by the registry's shared_mutex. No atomic members are needed.
+ *
+ * Ownership contract for `buffer`:
+ *   The PluginProcessor owns the SharedCaptureBuffer via shared_ptr and passes it
+ *   to registerInstance(). The registry stores only a weak_ptr so that buffer
+ *   lifetime is tied to the PluginProcessor, not the registry. When a plugin
+ *   instance is destroyed (unregisterInstance), the shared_ptr in PluginProcessor
+ *   is released and the buffer is freed — even if stale SourceInfo copies exist
+ *   elsewhere. Callers that need the buffer must lock() the weak_ptr and handle
+ *   the nullptr case (source already removed).
  */
 struct SourceInfo
 {
@@ -32,7 +41,7 @@ struct SourceInfo
     juce::String trackIdentifier;               // DAW-provided track identifier
     int channelCount = 2;                       // Number of channels (1 = mono, 2 = stereo)
     double sampleRate = 44100.0;
-    std::weak_ptr<IAudioBuffer> buffer;         // Weak reference to capture buffer
+    std::weak_ptr<IAudioBuffer> buffer;         // Non-owning ref; see ownership contract above
     std::shared_ptr<AnalysisEngine> analysisEngine; // Analysis engine for this source
     bool active = true;
 };

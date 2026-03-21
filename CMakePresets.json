@@ -43,7 +43,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_MAKE_PROGRAM": "${sourceDir}/scripts/ninja-wrapper",
         "OSCIL_BUILD_TESTS": "ON",
-        "OSCIL_ENABLE_INSPECTOR": "ON"
+        "OSCIL_ENABLE_INSPECTOR": "ON",
+        "OSCIL_COPY_PLUGIN_AFTER_BUILD": "OFF"
       }
     },
     {

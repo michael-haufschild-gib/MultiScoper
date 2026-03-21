@@ -342,24 +342,53 @@ TEST_F(SignalProcessorTest, CorrelationZeroSamples)
 // Edge Case Tests - Special Floating Point Values
 // =============================================================================
 
-// Test: Process with NaN values
+// Test: Process with NaN values — output samples at non-NaN positions must remain finite
 TEST_F(SignalProcessorTest, ProcessWithNaN)
 {
     const int numSamples = 100;
     std::vector<float> left(numSamples, 0.5f);
     std::vector<float> right(numSamples, 0.5f);
 
-    // Insert NaN values
+    // Insert NaN values at known positions
     left[50] = std::nanf("");
     right[75] = std::nanf("");
 
-    // Should not crash
     processor.process(left, right, ProcessingMode::FullStereo, output);
 
-    EXPECT_EQ(output.numSamples, numSamples);
+    ASSERT_EQ(output.numSamples, numSamples);
+
+    // Non-NaN input positions must produce finite output
+    for (int i = 0; i < numSamples; ++i)
+    {
+        if (i != 50)
+            EXPECT_TRUE(std::isfinite(output.channel1[i])) << "channel1[" << i << "] is not finite";
+        if (i != 75)
+            EXPECT_TRUE(std::isfinite(output.channel2[i])) << "channel2[" << i << "] is not finite";
+    }
 }
 
-// Test: Process with Infinity values
+// Test: Process with NaN in Mono mode — NaN must not spread to clean samples
+TEST_F(SignalProcessorTest, ProcessWithNaNMonoContainment)
+{
+    const int numSamples = 100;
+    std::vector<float> left(numSamples, 0.5f);
+    std::vector<float> right(numSamples, 0.5f);
+    left[50] = std::nanf("");
+
+    processor.process(left, right, ProcessingMode::Mono, output);
+
+    ASSERT_EQ(output.numSamples, numSamples);
+
+    // Sample 50 may be NaN (legitimate propagation), but all other samples
+    // must be finite since their inputs were both 0.5f
+    for (int i = 0; i < numSamples; ++i)
+    {
+        if (i != 50)
+            EXPECT_TRUE(std::isfinite(output.channel1[i])) << "channel1[" << i << "] is not finite";
+    }
+}
+
+// Test: Process with Infinity values — non-Inf input positions must produce finite output
 TEST_F(SignalProcessorTest, ProcessWithInfinity)
 {
     const int numSamples = 100;
@@ -369,13 +398,22 @@ TEST_F(SignalProcessorTest, ProcessWithInfinity)
     left[25] = std::numeric_limits<float>::infinity();
     right[75] = -std::numeric_limits<float>::infinity();
 
-    // Should not crash
     processor.process(left, right, ProcessingMode::Mid, output);
 
-    EXPECT_EQ(output.numSamples, numSamples);
+    ASSERT_EQ(output.numSamples, numSamples);
+
+    // Mid = (L+R)/2. At non-Inf positions both L and R are 0.5f, so Mid must be 0.5f
+    for (int i = 0; i < numSamples; ++i)
+    {
+        if (i != 25 && i != 75)
+        {
+            EXPECT_TRUE(std::isfinite(output.channel1[i])) << "channel1[" << i << "] is not finite";
+            EXPECT_NEAR(output.channel1[i], 0.5f, 0.001f);
+        }
+    }
 }
 
-// Test: Peak with NaN
+// Test: Peak with NaN — result must not be negative
 TEST_F(SignalProcessorTest, PeakWithNaN)
 {
     std::vector<float> samples = { 0.1f, 0.5f, std::nanf(""), 0.3f };
@@ -383,33 +421,34 @@ TEST_F(SignalProcessorTest, PeakWithNaN)
     float peak = SignalProcessor::calculatePeak(samples);
 
     // Result may be NaN (propagated) or a finite value (NaN ignored).
-    // Either is acceptable — the key invariant is no UB.
-    EXPECT_TRUE(std::isnan(peak) || std::isfinite(peak));
+    // If finite, it must be non-negative and at least as large as the known peak (0.5).
+    EXPECT_TRUE(std::isnan(peak) || peak >= 0.5f);
 }
 
-// Test: Peak with Infinity
+// Test: Peak with Infinity — must return infinity (it is the largest absolute value)
 TEST_F(SignalProcessorTest, PeakWithInfinity)
 {
     std::vector<float> samples = { 0.1f, 0.5f, std::numeric_limits<float>::infinity(), 0.3f };
 
     float peak = SignalProcessor::calculatePeak(samples);
 
-    // Peak should be infinity or handled appropriately
-    EXPECT_TRUE(peak == std::numeric_limits<float>::infinity() || std::isfinite(peak));
+    // Peak must be infinity since abs(inf) > any finite value
+    EXPECT_EQ(peak, std::numeric_limits<float>::infinity());
 }
 
-// Test: RMS with NaN
+// Test: RMS with NaN — result non-negative or NaN
 TEST_F(SignalProcessorTest, RMSWithNaN)
 {
     std::vector<float> samples = { 0.5f, 0.5f, std::nanf(""), 0.5f };
 
     float rms = SignalProcessor::calculateRMS(samples);
 
-    // RMS with NaN input may propagate NaN or skip it — both are valid.
+    // RMS with NaN input may propagate NaN or skip it.
+    // If finite, must be non-negative.
     EXPECT_TRUE(std::isnan(rms) || rms >= 0.0f);
 }
 
-// Test: Correlation with NaN
+// Test: Correlation with NaN — result in valid range or NaN
 TEST_F(SignalProcessorTest, CorrelationWithNaN)
 {
     std::vector<float> left = { 0.5f, 0.5f, std::nanf(""), 0.5f };

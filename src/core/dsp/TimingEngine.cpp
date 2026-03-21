@@ -82,7 +82,7 @@ void TimingEngine::updateHostTimeSignature(const juce::AudioPlayHead::PositionIn
         audioThreadHostInfo_.timeSigDenominator = timeSig->denominator;
         // Publish before recalculate so it reads the updated time signature
         hostInfoLock_.write(audioThreadHostInfo_);
-        pendingTimeSignatureChange_.store(true, std::memory_order_relaxed);
+        pendingFlags_.fetch_or(kPendingTimeSignature, std::memory_order_relaxed);
         recalculateInterval();
     }
 }
@@ -383,32 +383,38 @@ void TimingEngine::dispatchPendingUpdates()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    if (pendingTimingModeChange_.exchange(false, std::memory_order_relaxed))
+    // Atomically snapshot and clear all pending flags in one operation
+    uint8_t flags = pendingFlags_.exchange(0, std::memory_order_relaxed);
+
+    if (flags == 0)
+        return;
+
+    if (flags & kPendingTimingMode)
     {
         auto cfg = configLock_.read();
         listeners_.call([mode = cfg.timingMode](Listener& l) { l.timingModeChanged(mode); });
     }
 
-    if (pendingIntervalChange_.exchange(false, std::memory_order_relaxed))
+    if (flags & kPendingInterval)
     {
         float interval = atomicActualIntervalMs_.load(std::memory_order_relaxed);
         listeners_.call([interval](Listener& l) { l.intervalChanged(interval); });
     }
 
-    if (pendingHostBPMChange_.exchange(false, std::memory_order_relaxed))
+    if (flags & kPendingHostBPM)
     {
         auto hostInfo = hostInfoLock_.read();
         float bpm = static_cast<float>(hostInfo.bpm);
         listeners_.call([bpm](Listener& l) { l.hostBPMChanged(bpm); });
     }
 
-    if (pendingHostSyncChange_.exchange(false, std::memory_order_relaxed))
+    if (flags & kPendingHostSync)
     {
         auto cfg = configLock_.read();
         listeners_.call([enabled = cfg.hostSyncEnabled](Listener& l) { l.hostSyncStateChanged(enabled); });
     }
 
-    if (pendingTimeSignatureChange_.exchange(false, std::memory_order_relaxed))
+    if (flags & kPendingTimeSignature)
     {
         auto hostInfo = hostInfoLock_.read();
         listeners_.call([num = hostInfo.timeSigNumerator, den = hostInfo.timeSigDenominator](Listener& l) {
@@ -419,22 +425,22 @@ void TimingEngine::dispatchPendingUpdates()
 
 void TimingEngine::notifyTimingModeChanged()
 {
-    pendingTimingModeChange_.store(true, std::memory_order_relaxed);
+    pendingFlags_.fetch_or(kPendingTimingMode, std::memory_order_relaxed);
 }
 
 void TimingEngine::notifyIntervalChanged()
 {
-    pendingIntervalChange_.store(true, std::memory_order_relaxed);
+    pendingFlags_.fetch_or(kPendingInterval, std::memory_order_relaxed);
 }
 
 void TimingEngine::notifyHostBPMChanged()
 {
-    pendingHostBPMChange_.store(true, std::memory_order_relaxed);
+    pendingFlags_.fetch_or(kPendingHostBPM, std::memory_order_relaxed);
 }
 
 void TimingEngine::notifyHostSyncStateChanged()
 {
-    pendingHostSyncChange_.store(true, std::memory_order_relaxed);
+    pendingFlags_.fetch_or(kPendingHostSync, std::memory_order_relaxed);
 }
 
 } // namespace oscil

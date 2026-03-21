@@ -155,6 +155,11 @@ private:
     // SpinLock for thread-safe writing from multiple sources (e.g. audio thread + test injector)
     juce::SpinLock writeLock_;
 
+    // Epoch counter for torn-read detection in read(). The writer increments
+    // to odd before memcpy, then to even after. Readers bracket their copy
+    // with two epoch loads and retry if they differ (concurrent write detected).
+    std::atomic<uint32_t> writeEpoch_{ 0 };
+
     // Lock-free metadata using SeqLock pattern (no SpinLock needed)
     mutable SeqLock<CaptureFrameMetadata> metadata_;
 

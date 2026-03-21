@@ -219,11 +219,7 @@ void TimingEngine::resetRuntimeStateForLoad()
     hostInfoLock_.write(audioThreadHostInfo_);
 
     recalculateInterval();
-    pendingTimingModeChange_.store(false, std::memory_order_relaxed);
-    pendingIntervalChange_.store(false, std::memory_order_relaxed);
-    pendingHostBPMChange_.store(false, std::memory_order_relaxed);
-    pendingHostSyncChange_.store(false, std::memory_order_relaxed);
-    pendingTimeSignatureChange_.store(false, std::memory_order_relaxed);
+    pendingFlags_.store(0, std::memory_order_relaxed);
     resetTriggerHistoryPending_.store(true, std::memory_order_relaxed);
 }
 

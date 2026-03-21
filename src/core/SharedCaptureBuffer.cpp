@@ -81,6 +81,9 @@ void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamp
     const size_t firstCount = std::min(effectiveSamples, capacity_ - maskedWritePos);
     const size_t secondCount = effectiveSamples - firstCount;
 
+    // Increment epoch to odd → signals "write in progress" to readers
+    writeEpoch_.fetch_add(1, std::memory_order_release);
+
     for (int ch = 0; ch < static_cast<int>(MAX_CHANNELS); ++ch)
     {
         float* dst = buffer_.data() + static_cast<size_t>(ch) * capacity_;
@@ -102,6 +105,9 @@ void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamp
 
     writePos_.store(wrapPosition(writePos + totalSamples), std::memory_order_release);
     samplesWritten_.fetch_add(totalSamples, std::memory_order_release);
+
+    // Increment epoch to even → signals "write complete" to readers
+    writeEpoch_.fetch_add(1, std::memory_order_release);
 
     CaptureFrameMetadata meta = metadata;
     meta.numSamples = numSamples;
@@ -142,38 +148,57 @@ int SharedCaptureBuffer::read(std::span<float> output, int channel) const
     if (output.empty() || channel < 0 || channel >= static_cast<int>(MAX_CHANNELS))
         return 0;
 
-    size_t available = getAvailableSamples();
-    size_t requestedSamples = output.size();
-    
-    // Clamp read request to available samples
-    size_t safeAvailable = std::min(available, capacity_);
-    size_t samplesToRead = std::min(requestedSamples, safeAvailable);
+    // Torn-read detection: retry if a write occurred during our read.
+    // The writer brackets data copies with odd/even epoch increments.
+    // We retry up to a bounded number of times to avoid infinite loops
+    // if the writer is continuously active (normal in real-time audio).
+    static constexpr int MAX_READ_RETRIES = 3;
 
-    if (samplesToRead == 0)
-        return 0;
-
-    // Read from the most recent samples (before write position)
-    size_t writePos = writePos_.load(std::memory_order_acquire);
-    
-    size_t readStart = (writePos + capacity_ - samplesToRead) & (capacity_ - 1);
-    size_t channelOffset = static_cast<size_t>(channel) * capacity_;
-    
-    // Optimization: Split into two memcpy's if wrapping, or one if contiguous
-    // Since we are reading a ring buffer, it might wrap around the end.
-    
-    size_t firstChunk = std::min(samplesToRead, capacity_ - readStart);
-    size_t secondChunk = samplesToRead - firstChunk;
-
-    // Copy first chunk
-    std::memcpy(output.data(), &buffer_[channelOffset + readStart], firstChunk * sizeof(float));
-
-    // Copy second chunk (wrapped)
-    if (secondChunk > 0)
+    for (int attempt = 0; attempt <= MAX_READ_RETRIES; ++attempt)
     {
-        std::memcpy(output.data() + firstChunk, &buffer_[channelOffset], secondChunk * sizeof(float));
+        uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
+
+        size_t available = getAvailableSamples();
+        size_t requestedSamples = output.size();
+
+        // Clamp read request to available samples
+        size_t safeAvailable = std::min(available, capacity_);
+        size_t samplesToRead = std::min(requestedSamples, safeAvailable);
+
+        if (samplesToRead == 0)
+            return 0;
+
+        // Read from the most recent samples (before write position)
+        size_t writePos = writePos_.load(std::memory_order_acquire);
+
+        size_t readStart = (writePos + capacity_ - samplesToRead) & (capacity_ - 1);
+        size_t channelOffset = static_cast<size_t>(channel) * capacity_;
+
+        size_t firstChunk = std::min(samplesToRead, capacity_ - readStart);
+        size_t secondChunk = samplesToRead - firstChunk;
+
+        // Copy first chunk
+        std::memcpy(output.data(), &buffer_[channelOffset + readStart], firstChunk * sizeof(float));
+
+        // Copy second chunk (wrapped)
+        if (secondChunk > 0)
+        {
+            std::memcpy(output.data() + firstChunk, &buffer_[channelOffset], secondChunk * sizeof(float));
+        }
+
+        uint32_t epoch2 = writeEpoch_.load(std::memory_order_acquire);
+
+        // If epoch unchanged and even, no write was in progress — data is consistent
+        if (epoch1 == epoch2 && (epoch1 & 1) == 0)
+            return static_cast<int>(samplesToRead);
+
+        // A write overlapped our read; retry for a consistent snapshot.
+        // On the last attempt, return what we have (best-effort for UI display).
     }
 
-    return static_cast<int>(samplesToRead);
+    // Exhausted retries — writer is very active. Return best-effort data.
+    // This is acceptable for visualization (minor glitch) but not for analysis.
+    return static_cast<int>(std::min(output.size(), std::min(getAvailableSamples(), capacity_)));
 }
 
 int SharedCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) const

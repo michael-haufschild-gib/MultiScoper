@@ -12,7 +12,7 @@
 #   readability-identifier-length — short names (i, x, ch) are fine in DSP code
 #   modernize-avoid-c-arrays — JUCE APIs use C arrays for audio buffers
 #   readability-magic-numbers — audio code legitimately uses numeric constants
-#   bugprone-narrowing-conversions — JUCE mixes int/float constantly
+#   bugprone-narrowing-conversions — re-enabled; suppressed per-file where JUCE APIs force int/float mixing
 #   performance-avoid-endl — not relevant for audio plugin (no iostream)
 #   modernize-use-equals-default — JUCE constructors often need explicit empty bodies
 #   readability-convert-member-functions-to-static — conflicts with JUCE override patterns
@@ -31,7 +31,6 @@ Checks: >
   -modernize-avoid-c-arrays,
   -modernize-use-equals-default,
   -bugprone-easily-swappable-parameters,
-  -bugprone-narrowing-conversions,
   -performance-unnecessary-value-param,
   -performance-avoid-endl,
   -concurrency-mt-unsafe,

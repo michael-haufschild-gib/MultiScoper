@@ -241,12 +241,14 @@ private:
 
     juce::ListenerList<Listener> listeners_;
 
-    // Pending update flags for lock-free notification (exchange semantics)
-    std::atomic<bool> pendingTimingModeChange_{false};
-    std::atomic<bool> pendingIntervalChange_{false};
-    std::atomic<bool> pendingHostBPMChange_{false};
-    std::atomic<bool> pendingHostSyncChange_{false};
-    std::atomic<bool> pendingTimeSignatureChange_{false};
+    // Pending update flags packed into a single atomic bitmask.
+    // Writers set bits with fetch_or; the dispatcher clears consumed bits with fetch_and.
+    static constexpr uint8_t kPendingTimingMode     = 1 << 0;
+    static constexpr uint8_t kPendingInterval       = 1 << 1;
+    static constexpr uint8_t kPendingHostBPM        = 1 << 2;
+    static constexpr uint8_t kPendingHostSync       = 1 << 3;
+    static constexpr uint8_t kPendingTimeSignature  = 1 << 4;
+    std::atomic<uint8_t> pendingFlags_{0};
 
     // Trigger detection
     bool detectTrigger(const float* samples, int numSamples);

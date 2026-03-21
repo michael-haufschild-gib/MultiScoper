@@ -85,6 +85,28 @@ const int Noise3D::p[512] = {
 // Shader strings and compileShaders() are in ParticleSystemShaders.cpp
 
 // ============================================================================
+// OpenGL Vertex Attribute Helper
+// ============================================================================
+
+/**
+ * Configure an instanced vertex attribute, replacing the repetitive
+ * glEnableVertexAttribArray + glVertexAttribPointer + glVertexAttribDivisor
+ * pattern and eliminating the reinterpret_cast on each call site.
+ */
+static void setInstancedAttrib(juce::OpenGLExtensionFunctions& ext,
+                               GLuint location, GLint components,
+                               GLsizei stride, size_t byteOffset)
+{
+    ext.glEnableVertexAttribArray(location);
+    ext.glVertexAttribPointer(location, components, GL_FLOAT, GL_FALSE,
+                              stride,
+                              // OpenGL requires a void* byte offset into the VBO.
+                              // NOLINTNEXTLINE(performance-no-int-to-ptr)
+                              reinterpret_cast<void*>(byteOffset));
+    glVertexAttribDivisor(location, 1);
+}
+
+// ============================================================================
 // ParticleSystem Implementation
 // ============================================================================
 
@@ -228,32 +250,13 @@ bool ParticleSystem::initialize(juce::OpenGLContext& context)
     size_t instanceBufferSize = static_cast<size_t>(pool_.getCapacity()) * sizeof(ParticleInstanceData);
     ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(instanceBufferSize), nullptr, GL_DYNAMIC_DRAW);
 
-    size_t stride = sizeof(ParticleInstanceData);
+    GLsizei stride = static_cast<GLsizei>(sizeof(ParticleInstanceData));
 
-    ext.glEnableVertexAttribArray(instancePosAttrib);
-    ext.glVertexAttribPointer(instancePosAttrib, 2, GL_FLOAT, GL_FALSE,
-                              static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, x)));
-    glVertexAttribDivisor(instancePosAttrib, 1);
-
-    ext.glEnableVertexAttribArray(instanceColorAttrib);
-    ext.glVertexAttribPointer(instanceColorAttrib, 4, GL_FLOAT, GL_FALSE,
-                              static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, r)));
-    glVertexAttribDivisor(instanceColorAttrib, 1);
-
-    ext.glEnableVertexAttribArray(instanceSizeAttrib);
-    ext.glVertexAttribPointer(instanceSizeAttrib, 1, GL_FLOAT, GL_FALSE,
-                              static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, size)));
-    glVertexAttribDivisor(instanceSizeAttrib, 1);
-
-    ext.glEnableVertexAttribArray(instanceRotationAttrib);
-    ext.glVertexAttribPointer(instanceRotationAttrib, 1, GL_FLOAT, GL_FALSE,
-                              static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, rotation)));
-    glVertexAttribDivisor(instanceRotationAttrib, 1);
-
-    ext.glEnableVertexAttribArray(instanceAgeAttrib);
-    ext.glVertexAttribPointer(instanceAgeAttrib, 1, GL_FLOAT, GL_FALSE,
-                              static_cast<GLsizei>(stride), reinterpret_cast<void*>(offsetof(ParticleInstanceData, age)));
-    glVertexAttribDivisor(instanceAgeAttrib, 1);
+    setInstancedAttrib(ext, instancePosAttrib,      2, stride, offsetof(ParticleInstanceData, x));
+    setInstancedAttrib(ext, instanceColorAttrib,    4, stride, offsetof(ParticleInstanceData, r));
+    setInstancedAttrib(ext, instanceSizeAttrib,     1, stride, offsetof(ParticleInstanceData, size));
+    setInstancedAttrib(ext, instanceRotationAttrib, 1, stride, offsetof(ParticleInstanceData, rotation));
+    setInstancedAttrib(ext, instanceAgeAttrib,      1, stride, offsetof(ParticleInstanceData, age));
 
     ext.glBindVertexArray(0);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);

@@ -52,6 +52,10 @@ if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build architectures for macOS")
 endif()
 
+# Copy built plugins to system plugin directories (requires write permissions)
+# Disabled by default for dev builds where ~/Library permissions may block the copy.
+option(OSCIL_COPY_PLUGIN_AFTER_BUILD "Copy built plugins to system plugin directories" ON)
+
 # Option for OpenGL support
 option(OSCIL_ENABLE_OPENGL "Enable OpenGL context for GPU compositing" ON)
 
@@ -199,7 +203,7 @@ juce_add_plugin(Oscil
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-    COPY_PLUGIN_AFTER_BUILD TRUE
+    COPY_PLUGIN_AFTER_BUILD ${OSCIL_COPY_PLUGIN_AFTER_BUILD}
     PLUGIN_MANUFACTURER_CODE Osci
     PLUGIN_CODE Osc1
     FORMATS AU VST3 Standalone
