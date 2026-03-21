@@ -85,6 +85,8 @@ private:
 
     // Plateau detection: if peak hasn't increased for this long, consider attack complete
     static constexpr float PLATEAU_TIME_MS = 2.0f;
+
+    friend struct TransientDetectorTestAccess;
 };
 
 } // namespace oscil

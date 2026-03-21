@@ -134,11 +134,14 @@ private:
     // Pre-calculated conversion factor for CPU timing (real-time safe)
     double ticksToSecondsScale_{0.0};
 
-    // Cached state for real-time safe getStateInformation()
-    // Stores pre-converted UTF-8 bytes to avoid any allocation on audio thread.
-    // Updated on message thread, read by audio thread when needed.
-    std::vector<char> cachedStateUtf8_;
-    mutable juce::SpinLock cachedStateLock_;
+    // Double-buffered cached state for lock-free real-time safe getStateInformation().
+    // Message thread writes to the inactive buffer, then atomically swaps the index.
+    // Audio thread reads from the active buffer without locking.
+    // Safety assumption: consecutive updateCachedState() calls are separated by enough
+    // time (user-driven state changes) that any in-flight audio-thread read completes
+    // before the previously-active buffer is reused.
+    std::vector<char> cachedStateBuffers_[2];
+    std::atomic<int> cachedStateActiveIndex_{0};
 
     // Helper to update cached state (call from message thread only)
     void updateCachedState();

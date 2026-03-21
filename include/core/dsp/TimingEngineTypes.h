@@ -75,8 +75,8 @@ inline double engineNoteIntervalToBeats(EngineNoteInterval interval, int timeSig
         case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return 2.0 / 3.0;
         case EngineNoteInterval::NOTE_TRIPLET_1_2:   return 4.0 / 3.0;
         case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return 1.0 / 3.0;
-        default:                                      return 1.0;
     }
+    return 1.0;
 }
 
 /** Convert EngineNoteInterval to display string */
@@ -101,8 +101,8 @@ inline juce::String engineNoteIntervalToString(EngineNoteInterval interval)
         case EngineNoteInterval::NOTE_TRIPLET_1_2:   return "1/2T";
         case EngineNoteInterval::NOTE_DOTTED_1_2:    return "1/2.";
         case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return "1/8T";
-        default:                                      return "1/4";
     }
+    return "1/4";
 }
 
 /** Convert entity NoteInterval to engine EngineNoteInterval */
@@ -127,8 +127,8 @@ inline EngineNoteInterval entityToEngineNoteInterval(NoteInterval interval)
         case NoteInterval::TRIPLET_EIGHTH:  return EngineNoteInterval::NOTE_TRIPLET_1_8TH;
         case NoteInterval::TRIPLET_QUARTER: return EngineNoteInterval::NOTE_TRIPLET_1_4TH;
         case NoteInterval::TRIPLET_HALF:    return EngineNoteInterval::NOTE_TRIPLET_1_2;
-        default:                            return EngineNoteInterval::NOTE_1_4TH;
     }
+    return EngineNoteInterval::NOTE_1_4TH;
 }
 
 /** Convert engine EngineNoteInterval to entity NoteInterval */
@@ -153,8 +153,8 @@ inline NoteInterval engineToEntityNoteInterval(EngineNoteInterval interval)
         case EngineNoteInterval::NOTE_TRIPLET_1_2:   return NoteInterval::TRIPLET_HALF;
         case EngineNoteInterval::NOTE_DOTTED_1_2:    return NoteInterval::DOTTED_HALF;
         case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return NoteInterval::TRIPLET_EIGHTH;
-        default:                                      return NoteInterval::QUARTER;
     }
+    return NoteInterval::QUARTER;
 }
 
 /**

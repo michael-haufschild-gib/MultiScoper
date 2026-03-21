@@ -15,21 +15,18 @@ void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
     // during save operations. We must not allocate memory in that case.
     if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
     {
-        // Audio thread path: return cached UTF-8 bytes (no allocation, no conversion)
-        const juce::SpinLock::ScopedTryLockType sl(cachedStateLock_);
-        if (sl.isLocked() && !cachedStateUtf8_.empty())
-        {
-            destData.replaceAll(cachedStateUtf8_.data(), cachedStateUtf8_.size());
-        }
-        // If lock failed or cache empty, return empty - host will retry
+        // Audio thread path: read from active buffer (lock-free, no allocation)
+        const auto& buf = cachedStateBuffers_[cachedStateActiveIndex_.load(std::memory_order_acquire)];
+        if (!buf.empty())
+            destData.replaceAll(buf.data(), buf.size());
         return;
     }
 
     // Message thread path: perform full serialization (allocates memory)
     updateCachedState();
 
-    const juce::SpinLock::ScopedLockType sl(cachedStateLock_);
-    destData.replaceAll(cachedStateUtf8_.data(), cachedStateUtf8_.size());
+    const auto& buf = cachedStateBuffers_[cachedStateActiveIndex_.load(std::memory_order_acquire)];
+    destData.replaceAll(buf.data(), buf.size());
 }
 
 void OscilPluginProcessor::updateCachedState()
@@ -55,9 +52,11 @@ void OscilPluginProcessor::updateCachedState()
     const char* utf8Ptr = xmlString.toRawUTF8();
     size_t utf8Size = xmlString.getNumBytesAsUTF8();
 
-    // Update cache with lock
-    const juce::SpinLock::ScopedLockType sl(cachedStateLock_);
-    cachedStateUtf8_.assign(utf8Ptr, utf8Ptr + utf8Size);
+    // Write to the inactive buffer, then swap atomically
+    int active = cachedStateActiveIndex_.load(std::memory_order_relaxed);
+    int inactive = 1 - active;
+    cachedStateBuffers_[inactive].assign(utf8Ptr, utf8Ptr + utf8Size);
+    cachedStateActiveIndex_.store(inactive, std::memory_order_release);
 }
 
 void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes)

@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <type_traits>
 #include <juce_core/juce_core.h>
 
 namespace oscil
@@ -23,6 +24,9 @@ namespace oscil
 template <typename T>
 struct SeqLock
 {
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "SeqLock<T> requires T to be trivially copyable");
+
     void write(const T& value)
     {
         sequence.fetch_add(1, std::memory_order_release);   // odd → write in progress

@@ -109,6 +109,15 @@ bool BasicShader::compile(juce::OpenGLContext& context)
              << ", opacity=" << gl_->opacityLoc
              << ", glowIntensity=" << gl_->glowIntensityLoc);
 
+    // Get attribute locations
+    gl_->positionLoc = context.extensions.glGetAttribLocation(gl_->program->getProgramID(), "position");
+    gl_->distFromCenterLoc = context.extensions.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
+    if (gl_->positionLoc < 0) gl_->positionLoc = 0;
+    if (gl_->distFromCenterLoc < 0) gl_->distFromCenterLoc = 1;
+
+    BASIC_LOG("Attribute locations - position=" << gl_->positionLoc
+             << ", distFromCenter=" << gl_->distFromCenterLoc);
+
     // Validate uniform locations - critical uniforms must be found
     bool uniformsValid = true;
     if (gl_->projectionLoc < 0)
@@ -238,12 +247,8 @@ void BasicShader::render(
         amplitude1 = amplitude2 = height * 0.45f * params.verticalScale;
     }
 
-    GLint programID = 0;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &programID);
-    GLint positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
-    GLint distFromCenterLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "distFromCenter");
-    if (positionLoc < 0) positionLoc = 0;
-    if (distFromCenterLoc < 0) distFromCenterLoc = 1;
+    GLint positionLoc = gl_->positionLoc;
+    GLint distFromCenterLoc = gl_->distFromCenterLoc;
 
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);

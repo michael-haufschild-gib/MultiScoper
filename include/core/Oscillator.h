@@ -49,9 +49,8 @@ inline juce::String processingModeToString(ProcessingMode mode)
             return "Left";
         case ProcessingMode::Right:
             return "Right";
-        default:
-            return "FullStereo";
     }
+    return "FullStereo";
 }
 
 /**

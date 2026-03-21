@@ -166,8 +166,8 @@ inline juce::String triggerModeToString(TriggerMode mode)
         case TriggerMode::HOST_SYNC:    return "HOST_SYNC";
         case TriggerMode::TRIGGERED:    return "TRIGGERED";
         case TriggerMode::MIDI:         return "MIDI";
-        default:                        return "FREE_RUNNING";
     }
+    return "FREE_RUNNING";
 }
 
 inline TriggerMode stringToTriggerMode(const juce::String& str)
