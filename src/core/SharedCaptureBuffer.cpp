@@ -60,27 +60,48 @@ void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const Ca
 void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamples, int numChannels,
                                          const CaptureFrameMetadata& metadata)
 {
+    if (numSamples <= 0)
+        return;
+
     const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
+    const auto totalSamples = static_cast<size_t>(numSamples);
     size_t writePos = writePos_.load(std::memory_order_relaxed);
 
-    for (int i = 0; i < numSamples; ++i)
+    // If writing more than capacity, only the last capacity_ samples survive
+    size_t srcOffset = 0;
+    size_t effectiveSamples = totalSamples;
+    if (effectiveSamples > capacity_)
     {
-        size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
-
-        for (int ch = 0; ch < actualChannels; ++ch)
-        {
-            float sample = 0.0f;
-            if (samples != nullptr && samples[ch] != nullptr)
-                sample = samples[ch][i];
-            buffer_[static_cast<size_t>(ch) * capacity_ + pos] = sample;
-        }
-
-        for (int ch = actualChannels; ch < static_cast<int>(MAX_CHANNELS); ++ch)
-            buffer_[static_cast<size_t>(ch) * capacity_ + pos] = 0.0f;
+        srcOffset = effectiveSamples - capacity_;
+        effectiveSamples = capacity_;
     }
 
-    writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
-    samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_release);
+    const size_t maskedWritePos = wrapPosition(writePos + srcOffset);
+    // First segment: from maskedWritePos to end of buffer (or fewer if effectiveSamples fits)
+    const size_t firstCount = std::min(effectiveSamples, capacity_ - maskedWritePos);
+    const size_t secondCount = effectiveSamples - firstCount;
+
+    for (int ch = 0; ch < static_cast<int>(MAX_CHANNELS); ++ch)
+    {
+        float* dst = buffer_.data() + static_cast<size_t>(ch) * capacity_;
+
+        if (ch < actualChannels && samples != nullptr && samples[ch] != nullptr)
+        {
+            const float* src = samples[ch] + srcOffset;
+            std::memcpy(dst + maskedWritePos, src, firstCount * sizeof(float));
+            if (secondCount > 0)
+                std::memcpy(dst, src + firstCount, secondCount * sizeof(float));
+        }
+        else
+        {
+            std::memset(dst + maskedWritePos, 0, firstCount * sizeof(float));
+            if (secondCount > 0)
+                std::memset(dst, 0, secondCount * sizeof(float));
+        }
+    }
+
+    writePos_.store(wrapPosition(writePos + totalSamples), std::memory_order_release);
+    samplesWritten_.fetch_add(totalSamples, std::memory_order_release);
 
     CaptureFrameMetadata meta = metadata;
     meta.numSamples = numSamples;

@@ -34,7 +34,7 @@ struct CaptureFrameMetadata
  * Lock-free ring buffer for real-time audio capture.
  * Designed for single-producer (audio thread) / multiple-consumer (UI threads) usage.
  *
- * Memory budget: ≤1MB per instance as per PRD requirements.
+ * Memory budget: ~8MB per instance (2 channels × 4 bytes × 1M samples).
  *
  * Implements IAudioBuffer interface for read-only access abstraction.
  */

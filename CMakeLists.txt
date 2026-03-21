@@ -174,7 +174,7 @@ CPMAddPackage(
 CPMAddPackage(
     NAME clap-juce-extensions
     GITHUB_REPOSITORY free-audio/clap-juce-extensions
-    GIT_TAG main
+    GIT_TAG 0.26.0
 )
 
 # Melatonin Inspector for UI debugging (browser-like devtools for JUCE)

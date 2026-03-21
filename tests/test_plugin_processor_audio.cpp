@@ -249,50 +249,6 @@ TEST_F(PluginProcessorAudioTest, ProcessBlock_CPUUsageTracked)
     EXPECT_LT(cpuUsage, 1000.0f); // Sanity check - should not be absurdly high
 }
 
-// === Concurrent Processing Tests ===
-
-/*
-TEST_F(PluginProcessorAudioTest, ConcurrentProcessing)
-{
-    processor->prepareToPlay(44100.0, 512);
-
-    std::atomic<bool> running{true};
-    std::atomic<int> processCount{0};
-
-    // Simulate concurrent processing (though in real DAW this shouldn't happen)
-    std::thread processor1([this, &running, &processCount]()
-    {
-        while (running)
-        {
-            auto buffer = generateTestBuffer(2, 256);
-            juce::MidiBuffer midiBuffer;
-            processor->processBlock(buffer, midiBuffer);
-            processCount++;
-        }
-    });
-
-    std::thread processor2([this, &running, &processCount]()
-    {
-        while (running)
-        {
-            auto buffer = generateTestBuffer(2, 256);
-            juce::MidiBuffer midiBuffer;
-            processor->processBlock(buffer, midiBuffer);
-            processCount++;
-        }
-    });
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    running = false;
-
-    processor1.join();
-    processor2.join();
-
-    // Should have processed many buffers without crashing
-    EXPECT_GT(processCount.load(), 10);
-}
-*/
-
 // === Stress Tests ===
 
 TEST_F(PluginProcessorAudioTest, ProcessBlock_ManyIterations)
