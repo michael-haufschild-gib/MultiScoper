@@ -23,8 +23,8 @@ env:
   BUILD_TYPE: Release
   # Consistent hashes for dependency caching
   JUCE_VERSION: "8.0.5"
-  HTTPLIB_VERSION: "v0.27.0"
-  JSON_VERSION: "v3.12.0"
+  HTTPLIB_VERSION: "v0.28.0"
+  JSON_VERSION: "v3.11.3"
   GTEST_VERSION: "v1.17.0"
 
 jobs:
@@ -78,6 +78,22 @@ jobs:
             --paths tests \
             --min-assertions 1
 
+      - name: Source registry lint (orphan/missing files)
+        run: python3 scripts/source_registry_lint.py --root .
+
+      - name: TODO lint (placeholder detection)
+        run: python3 scripts/todo_lint.py --root . --paths include src
+
+      - name: Architecture lint (dependency boundaries)
+        run: python3 scripts/architecture_lint.py --root . --paths include src
+
+      - name: Comment lint (empty comments, missing doc comments)
+        run: |
+          python3 scripts/comment_lint.py \
+            --root . \
+            --paths include src tests test_harness \
+            --doc-paths include
+
   build:
     name: ${{ matrix.name }}
     needs: [lint]
@@ -86,13 +102,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Temporarily disabled - will re-enable in a few weeks
-          # - name: macOS
-          #   os: macos-14
-          #   cmake_preset: ci-macos
-          #   pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
-          #   pluginval_exe: pluginval.app/Contents/MacOS/pluginval
-          #   plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
+          - name: macOS
+            os: macos-14
+            cmake_preset: ci-macos
+            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
+            pluginval_exe: pluginval.app/Contents/MacOS/pluginval
+            plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
           - name: Windows
             os: windows-latest
@@ -101,13 +116,12 @@ jobs:
             pluginval_exe: pluginval.exe
             plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
-          # Temporarily disabled - will re-enable in a few weeks
-          # - name: Linux
-          #   os: ubuntu-22.04
-          #   cmake_preset: ci-linux
-          #   pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
-          #   pluginval_exe: pluginval
-          #   plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
+          - name: Linux
+            os: ubuntu-22.04
+            cmake_preset: ci-linux
+            pluginval_url: https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
+            pluginval_exe: pluginval
+            plugin_path: Oscil_artefacts/Release/VST3/oscil4.vst3
 
     steps:
       - name: Checkout repository
@@ -235,6 +249,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo /usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
+          echo "XVFB_PID=$!" >> $GITHUB_ENV
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
       # Validate VST3 plugin with pluginval
@@ -248,6 +263,13 @@ jobs:
             ./${{ matrix.pluginval_exe }} --strictness-level 5 --verbose --validate "build/${{ matrix.cmake_preset }}/${{ matrix.plugin_path }}"
           else
             ./${{ matrix.pluginval_exe }} --strictness-level 10 --verbose --validate "build/${{ matrix.cmake_preset }}/${{ matrix.plugin_path }}"
+          fi
+
+      - name: Stop Xvfb (Linux)
+        if: runner.os == 'Linux' && always()
+        run: |
+          if [ -n "$XVFB_PID" ]; then
+            sudo kill "$XVFB_PID" 2>/dev/null || true
           fi
 
       # Upload build artifacts

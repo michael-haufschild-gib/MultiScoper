@@ -149,79 +149,58 @@ void DecimatingCaptureBuffer::setQualityPreset(QualityPreset preset, int sourceR
     reconfigure();
 }
 
-void DecimatingCaptureBuffer::reconfigure()
+std::shared_ptr<DecimatingCaptureBuffer::ProcessingContext> DecimatingCaptureBuffer::createProcessingContext()
 {
-    // Reconfigure must be called from message thread (or before MessageManager exists during startup)
-    // This is critical because reconfigure() may allocate memory via graveyard_.push_back()
-    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
-            juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    // Pre-allocate graveyard with generous capacity to avoid allocation during reconfigure
-    // 100 items should be more than enough for any normal usage pattern
-    static constexpr size_t kGraveyardCapacity = 100;
-    if (graveyard_.capacity() < kGraveyardCapacity)
-        graveyard_.reserve(kGraveyardCapacity);
-
-    // Calculate decimation ratio and effective capture rate after integer downsampling.
-    decimationRatio_ = config_.getDecimationRatio(sourceRate_);
-    captureRate_ = (sourceRate_ > 0 && decimationRatio_ > 0)
-        ? juce::jmax(1, sourceRate_ / decimationRatio_)
-        : juce::jmax(1, config_.getCaptureRate(sourceRate_));
-
-    // Calculate required buffer size
-    size_t bufferSamples = config_.calculateBufferSizeSamples(captureRate_);
-
-    // Round up to next power of 2 for efficient ring buffer
-    // Guard against overflow: stop when powerOf2Size would overflow
-    size_t powerOf2Size = 1;
-    while (powerOf2Size < bufferSamples && powerOf2Size <= (SIZE_MAX / 2))
-        powerOf2Size *= 2;
-
-    // Create new buffer with appropriate size
-    auto newBuffer = std::make_shared<SharedCaptureBuffer>(powerOf2Size);
-    
-    // Create new processing context
     auto newContext = std::make_shared<ProcessingContext>();
-    
-    // Configure filters in the new context
+
     for (auto& filter : newContext->filters)
     {
         filter.configure(decimationRatio_, static_cast<double>(sourceRate_));
     }
 
-    // Reset decimation counters
     std::fill(newContext->decimationCounters.begin(), newContext->decimationCounters.end(), 0);
 
-    // Resize scratch buffer to accommodate worst-case block size
     static constexpr size_t MAX_EXPECTED_BLOCK_SIZE = 8192;
     newContext->scratchBuffer.resize(SharedCaptureBuffer::MAX_CHANNELS * MAX_EXPECTED_BLOCK_SIZE);
 
-    // Calculate filter memory usage
     newContext->filterMemoryBytes = 0;
     for (const auto& filter : newContext->filters)
     {
         newContext->filterMemoryBytes += filter.getMemoryUsageBytes();
     }
 
-    // Capture timestamp BEFORE acquiring lock to avoid calling Time functions under spinlock
-    // (Time::getMillisecondCounterHiRes may not be real-time safe on all platforms)
+    return newContext;
+}
+
+void DecimatingCaptureBuffer::reconfigure()
+{
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    static constexpr size_t kGraveyardCapacity = 100;
+    if (graveyard_.capacity() < kGraveyardCapacity)
+        graveyard_.reserve(kGraveyardCapacity);
+
+    decimationRatio_ = config_.getDecimationRatio(sourceRate_);
+    captureRate_ = (sourceRate_ > 0 && decimationRatio_ > 0)
+        ? juce::jmax(1, sourceRate_ / decimationRatio_)
+        : juce::jmax(1, config_.getCaptureRate(sourceRate_));
+
+    size_t bufferSamples = config_.calculateBufferSizeSamples(captureRate_);
+    size_t powerOf2Size = 1;
+    while (powerOf2Size < bufferSamples && powerOf2Size <= (SIZE_MAX / 2))
+        powerOf2Size *= 2;
+
+    auto newBuffer = std::make_shared<SharedCaptureBuffer>(powerOf2Size);
+    auto newContext = createProcessingContext();
+
     double timestamp = juce::Time::getMillisecondCounterHiRes();
 
     {
-        // Protect swap with lock
         const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
 
-        // CRITICAL: Prevent destruction on audio thread
-        // We move the OLD resources to a graveyard to be cleaned up later
-        // when we are sure the audio thread is done with them.
         if (buffer_ || context_)
         {
-            // Always add to graveyard to ensure destruction happens on message thread.
-            // Even if this causes reallocation, it's safe because:
-            // 1. We're on the message thread (asserted above)
-            // 2. Audio thread uses tryLock, so it won't block on us
-            // 3. We own the lock, so audio thread can't get a reference while we swap
-            // The reserve(100) above is a best-effort optimization to avoid allocation.
             graveyard_.push_back({buffer_, context_, timestamp});
         }
 
@@ -303,261 +282,62 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
     processAndWriteDecimated(samples, numSamples, actualChannels, metadata);
 }
 
+int DecimatingCaptureBuffer::decimateChannel(const float* src, float* dest,
+                                               DecimationFilter& filter, int& counter,
+                                               int numSamples) const
+{
+    int writeIdx = 0;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float filtered = filter.processSample(src ? src[i] : 0.0f);
+        if (++counter >= decimationRatio_)
+        {
+            dest[writeIdx++] = filtered;
+            counter = 0;
+        }
+    }
+    return writeIdx;
+}
+
 void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* samples,
                                                         int numSamples, int numChannels,
                                                         const CaptureFrameMetadata& metadata)
 {
     std::shared_ptr<SharedCaptureBuffer> buf;
     std::shared_ptr<ProcessingContext> ctx;
-
     {
-        // CRITICAL: Use tryLock for real-time safety - audio thread must never block
         const juce::SpinLock::ScopedTryLockType sl(bufferSwapLock_);
-        if (!sl.isLocked())
-            return;  // Drop frame rather than block audio thread
+        if (!sl.isLocked()) return;
         buf = buffer_;
         ctx = context_;
     }
 
     if (!buf || !ctx) return;
 
-    // Safety check: Ensure scratch buffer is large enough
-    const size_t maxScratchPerChannel = ctx->scratchBuffer.size() / SharedCaptureBuffer::MAX_CHANNELS;
-    const size_t maxSamplesFromScratch = maxScratchPerChannel * static_cast<size_t>(decimationRatio_);
-    const int safeNumSamples = std::min(numSamples, static_cast<int>(maxSamplesFromScratch));
+    const size_t maxPerCh = ctx->scratchBuffer.size() / SharedCaptureBuffer::MAX_CHANNELS;
+    const int safeSamples = std::min(numSamples, static_cast<int>(maxPerCh * static_cast<size_t>(decimationRatio_)));
 
+    float* scratchPtrs[SharedCaptureBuffer::MAX_CHANNELS];
     int decimatedCount = 0;
 
-    // Use pointers to scratch buffer segments
-    float* scratchPtrs[SharedCaptureBuffer::MAX_CHANNELS];
     for (int ch = 0; ch < numChannels; ++ch)
     {
-        scratchPtrs[ch] = ctx->scratchBuffer.data() + (static_cast<size_t>(ch) * maxScratchPerChannel);
-    }
-    
-    for (int ch = 0; ch < numChannels; ++ch)
-    {
-        int writeIdx = 0;
-        size_t chIdx = static_cast<size_t>(ch);
-        
-        // Use filter and counter from the context
-        auto& filter = ctx->filters[chIdx];
-        int& counter = ctx->decimationCounters[chIdx];
-        float* dest = scratchPtrs[ch];
-        const float* src = samples[ch]; 
-        
-        if (src)
-        {
-            for (int i = 0; i < safeNumSamples; ++i)
-            {
-                float inputSample = src[i];
-                float filteredSample = filter.processSample(inputSample);
-                
-                counter++;
-                if (counter >= decimationRatio_)
-                {
-                    dest[writeIdx++] = filteredSample;
-                    counter = 0;
-                }
-            }
-        }
-        else
-        {
-            for (int i = 0; i < safeNumSamples; ++i)
-            {
-                float filteredSample = filter.processSample(0.0f);
-                counter++;
-                if (counter >= decimationRatio_)
-                {
-                    dest[writeIdx++] = filteredSample;
-                    counter = 0;
-                }
-            }
-        }
-        
-        if (ch == 0) decimatedCount = writeIdx;
+        scratchPtrs[ch] = ctx->scratchBuffer.data() + (static_cast<size_t>(ch) * maxPerCh);
+        int count = decimateChannel(samples[ch], scratchPtrs[ch],
+                                     ctx->filters[static_cast<size_t>(ch)],
+                                     ctx->decimationCounters[static_cast<size_t>(ch)],
+                                     safeSamples);
+        if (ch == 0) decimatedCount = count;
     }
 
-    // Write decimated samples to downstream buffer
     if (decimatedCount > 0)
     {
-        CaptureFrameMetadata decimatedMeta = metadata;
-        decimatedMeta.numSamples = decimatedCount;
-        decimatedMeta.sampleRate = static_cast<double>(captureRate_);
-        decimatedMeta.timestamp = scaleTimelineTimestamp(metadata.timestamp, sourceRate_, captureRate_);
-
-        buf->write(const_cast<const float**>(scratchPtrs), decimatedCount, numChannels, decimatedMeta, true);
+        CaptureFrameMetadata meta = metadata;
+        meta.numSamples = decimatedCount;
+        meta.sampleRate = static_cast<double>(captureRate_);
+        meta.timestamp = scaleTimelineTimestamp(metadata.timestamp, sourceRate_, captureRate_);
+        buf->write(const_cast<const float**>(scratchPtrs), decimatedCount, numChannels, meta, true);
     }
-}
-
-int DecimatingCaptureBuffer::read(float* output, int numSamples, int channel) const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->read(output, numSamples, channel);
-}
-
-int DecimatingCaptureBuffer::read(std::span<float> output, int channel) const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->read(output, channel);
-}
-
-int DecimatingCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->read(output, numSamples);
-}
-
-CaptureFrameMetadata DecimatingCaptureBuffer::getLatestMetadata() const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return {};
-    return buf->getLatestMetadata();
-}
-
-size_t DecimatingCaptureBuffer::getCapacity() const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->getCapacity();
-}
-
-size_t DecimatingCaptureBuffer::getAvailableSamples() const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->getAvailableSamples();
-}
-
-float DecimatingCaptureBuffer::getPeakLevel(int channel, int numSamples) const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0.0f;
-    return buf->getPeakLevel(channel, numSamples);
-}
-
-float DecimatingCaptureBuffer::getRMSLevel(int channel, int numSamples) const
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0.0f;
-    return buf->getRMSLevel(channel, numSamples);
-}
-
-size_t DecimatingCaptureBuffer::getMemoryUsageBytes() const
-{
-    size_t total = 0;
-    const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-
-    auto accumulateMemory = [&total](const std::shared_ptr<SharedCaptureBuffer>& buf,
-                                     const std::shared_ptr<ProcessingContext>& ctx) {
-        if (buf)
-            total += buf->getCapacity() * SharedCaptureBuffer::MAX_CHANNELS * sizeof(float);
-
-        if (ctx)
-        {
-            // Filter state
-            total += ctx->filterMemoryBytes;
-            // Scratch buffer
-            total += ctx->scratchBuffer.capacity() * sizeof(float);
-        }
-    };
-
-    accumulateMemory(buffer_, context_);
-    for (const auto& item : graveyard_)
-        accumulateMemory(item.buffer, item.context);
-
-    return total;
-}
-
-juce::String DecimatingCaptureBuffer::getMemoryUsageString() const
-{
-    size_t bytes = getMemoryUsageBytes();
-
-    if (bytes >= 1024 * 1024)
-    {
-        float mb = static_cast<float>(bytes) / (1024.0f * 1024.0f);
-        return juce::String(mb, 1) + " MB";
-    }
-    else if (bytes >= 1024)
-    {
-        float kb = static_cast<float>(bytes) / 1024.0f;
-        return juce::String(kb, 0) + " KB";
-    }
-    else
-    {
-        return juce::String(bytes) + " B";
-    }
-}
-
-void DecimatingCaptureBuffer::clear()
-{
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    std::shared_ptr<ProcessingContext> ctx;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-        ctx = context_;
-    }
-
-    if (buf)
-        buf->clear();
-
-    if (ctx)
-    {
-        for (auto& filter : ctx->filters)
-            filter.reset();
-
-        std::fill(ctx->decimationCounters.begin(), ctx->decimationCounters.end(), 0);
-    }
-}
-
-std::shared_ptr<SharedCaptureBuffer> DecimatingCaptureBuffer::getInternalBuffer() const
-{
-    const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-    return buffer_;
 }
 
 } // namespace oscil

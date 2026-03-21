@@ -157,6 +157,15 @@ private:
      */
     std::vector<size_t> findZeroCrossings(const std::vector<float>& samples) const;
 
+    float computeNormalAngle(const std::vector<float>& samples,
+                             const juce::Rectangle<float>& bounds,
+                             size_t idx, float verticalScale);
+
+    void emitAtIndices(ParticlePool& pool, const std::vector<size_t>& indices,
+                       const std::vector<float>& samples,
+                       const juce::Rectangle<float>& bounds,
+                       int count, float verticalScale);
+
     ParticleEmitterId id_;
     ParticleEmitterConfig config_;
     juce::Colour waveformColor_ = juce::Colours::cyan;

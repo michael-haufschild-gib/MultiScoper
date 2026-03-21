@@ -57,6 +57,10 @@ public:
 
 private:
     void generateWireframeMesh(const WaveformData3D& data, float xSpread);
+    void generateHorizontalLines(const WaveformData3D& data, float xSpread,
+                                  int xSegments, int zSegments, float scrollOffset);
+    void generateVerticalLines(const WaveformData3D& data, float xSpread,
+                                int zSegments, float scrollOffset);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

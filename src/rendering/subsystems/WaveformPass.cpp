@@ -8,7 +8,6 @@
 #include "rendering/shaders3d/WaveformShader3D.h"
 #include "rendering/subsystems/RenderStats.h"
 
-#include <iostream>
 
 namespace oscil
 {
@@ -58,9 +57,8 @@ WaveformPass::~WaveformPass()
     // We can't call OpenGL functions here (no context), so we just warn.
     if (initialized_ && !compiledShaders_.empty())
     {
-        std::cerr << "[WaveformPass] LEAK: Destructor called without shutdown(). "
-                  << compiledShaders_.size() << " compiled shaders will leak GPU resources."
-                  << std::endl;
+        DBG("[WaveformPass] LEAK: Destructor called without shutdown(). "
+            << compiledShaders_.size() << " compiled shaders will leak GPU resources.");
     }
 }
 
@@ -306,58 +304,73 @@ Framebuffer* WaveformPass::renderWaveform(const WaveformRenderData& data, Wavefo
     return current;
 }
 
-void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime)
+void WaveformPass::setWaveformViewport(const WaveformRenderData& data)
 {
-    // Ensure viewport is set correctly for 3D shaders (which rely on it for projection)
-    if (is3DShader(config.shaderType) && context_)
-    {
-        float scale = static_cast<float>(context_->getRenderingScale());
-        auto* target = context_->getTargetComponent();
-        if (!target) return;
-        float logicalHeight = static_cast<float>(target->getHeight());
+    if (!context_) return;
+    float scale = static_cast<float>(context_->getRenderingScale());
+    auto* target = context_->getTargetComponent();
+    if (!target) return;
+    float logicalHeight = static_cast<float>(target->getHeight());
 
-        float lx = data.bounds.getX();
-        float ly = data.bounds.getY();
-        float lw = data.bounds.getWidth();
-        float lh = data.bounds.getHeight();
+    int vx = std::max(0, static_cast<int>(data.bounds.getX() * scale));
+    int vy = std::max(0, static_cast<int>((logicalHeight - (data.bounds.getY() + data.bounds.getHeight())) * scale));
+    int vw = std::max(1, static_cast<int>(data.bounds.getWidth() * scale));
+    int vh = std::max(1, static_cast<int>(data.bounds.getHeight() * scale));
 
-        int vx = static_cast<int>(lx * scale);
-        int vy = static_cast<int>((logicalHeight - (ly + lh)) * scale);
-        int vw = static_cast<int>(lw * scale);
-        int vh = static_cast<int>(lh * scale);
+    glViewport(vx, vy, vw, vh);
+}
 
-        glViewport(vx, vy, vw, vh);
-    }
-
-    juce::String shaderId = shaderTypeToId(config.shaderType);
-    WaveformShader* shader = nullptr;
-
+WaveformShader* WaveformPass::resolveShader(const juce::String& shaderId)
+{
     auto it = compiledShaders_.find(shaderId.toStdString());
     if (it != compiledShaders_.end())
-    {
-        shader = it->second.get();
-    }
+        return it->second.get();
 
-    if (!shader && context_)
+    if (context_)
     {
         auto newShader = registry_->createShader(shaderId);
         if (newShader && newShader->compile(*context_))
         {
-            RE_LOG("Lazy-compiled shader: " << shaderId.toStdString());
             compiledShaders_[shaderId.toStdString()] = std::move(newShader);
-            shader = compiledShaders_[shaderId.toStdString()].get();
+            return compiledShaders_[shaderId.toStdString()].get();
         }
     }
 
-    if (!shader || !shader->isCompiled())
+    auto basicIt = compiledShaders_.find("basic");
+    return (basicIt != compiledShaders_.end()) ? basicIt->second.get() : nullptr;
+}
+
+void WaveformPass::configure3DShader(WaveformShader* shader, const VisualConfiguration& config,
+                                      const WaveformRenderData& data)
+{
+    if (auto* shader3D = dynamic_cast<WaveformShader3D*>(shader))
     {
-        auto basicIt = compiledShaders_.find("basic");
-        if (basicIt != compiledShaders_.end())
-            shader = basicIt->second.get();
+        if (camera_) shader3D->setCamera(*camera_);
+        shader3D->setLighting(config.lighting);
     }
 
-    if (!shader || !shader->isCompiled())
-        return;
+    if (isMaterialShader(config.shaderType))
+    {
+        if (auto* materialShader = dynamic_cast<MaterialShader*>(shader))
+        {
+            materialShader->setMaterial(convertMaterialSettings(config.material, data.colour));
+            if (envMapManager_ && config.material.useEnvironmentMap)
+            {
+                GLuint envMap = envMapManager_->getMap(config.material.environmentMapId);
+                if (envMap == 0) envMap = envMapManager_->getDefaultMap();
+                materialShader->setEnvironmentMap(envMap);
+            }
+        }
+    }
+}
+
+void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime)
+{
+    if (is3DShader(config.shaderType) && context_)
+        setWaveformViewport(data);
+
+    WaveformShader* shader = resolveShader(shaderTypeToId(config.shaderType));
+    if (!shader || !shader->isCompiled()) return;
 
     ShaderRenderParams params;
     params.colour = data.colour;
@@ -370,31 +383,7 @@ void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const 
     params.shaderIntensity = config.bloom.enabled ? config.bloom.intensity : 1.0f;
 
     if (is3DShader(config.shaderType))
-    {
-        if (auto* shader3D = dynamic_cast<WaveformShader3D*>(shader))
-        {
-            if (camera_)
-                shader3D->setCamera(*camera_);
-            shader3D->setLighting(config.lighting);
-        }
-
-        if (isMaterialShader(config.shaderType))
-        {
-            if (auto* materialShader = dynamic_cast<MaterialShader*>(shader))
-            {
-                MaterialProperties matProps = convertMaterialSettings(config.material, data.colour);
-                materialShader->setMaterial(matProps);
-
-                if (envMapManager_ && config.material.useEnvironmentMap)
-                {
-                    GLuint envMap = envMapManager_->getMap(config.material.environmentMapId);
-                    if (envMap == 0)
-                        envMap = envMapManager_->getDefaultMap();
-                    materialShader->setEnvironmentMap(envMap);
-                }
-            }
-        }
-    }
+        configure3DShader(shader, config, data);
 
     const std::vector<float>* channel2Ptr = data.isStereo ? &data.channel2 : nullptr;
     shader->render(*context_, data.channel1, channel2Ptr, params);

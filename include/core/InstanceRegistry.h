@@ -115,6 +115,12 @@ public:
     InstanceRegistry& operator=(const InstanceRegistry&) = delete;
 
 private:
+    SourceId tryReuseExistingSource(const juce::String& trackIdentifier,
+                                     std::shared_ptr<IAudioBuffer> captureBuffer,
+                                     const juce::String& name,
+                                     int channelCount,
+                                     double sampleRate,
+                                     std::shared_ptr<AnalysisEngine> analysisEngine);
     void notifySourceAdded(const SourceId& sourceId);
     void notifySourceRemoved(const SourceId& sourceId);
     void notifySourceUpdated(const SourceId& sourceId);

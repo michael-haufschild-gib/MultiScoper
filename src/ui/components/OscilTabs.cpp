@@ -1,5 +1,6 @@
 /*
     Oscil - Tabs Component Implementation
+    (Painting, layout cache, and indicator bounds are in OscilTabsPainting.cpp)
 */
 
 #include "ui/components/OscilTabs.h"
@@ -8,7 +9,6 @@ namespace oscil
 {
 
 static constexpr float kTabFontSize = 13.0f;
-static constexpr float kBadgeFontSize = 10.0f;
 
 OscilTabs::OscilTabs(IThemeService& themeService)
     : ThemedComponent(themeService)
@@ -56,9 +56,8 @@ void OscilTabs::addTab(const juce::String& label, const juce::String& id)
     if (tabs_.size() == 1)
     {
         selectedIndex_ = 0;
-        // Need to update cache first
         updateLayoutCache();
-        
+
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
@@ -80,9 +79,8 @@ void OscilTabs::addTab(const TabItem& tab)
     if (tabs_.size() == 1)
     {
         selectedIndex_ = 0;
-        // Need to update cache first
         updateLayoutCache();
-        
+
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
         targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
@@ -106,9 +104,9 @@ void OscilTabs::addTabs(const std::vector<juce::String>& labels)
         tab.label = label;
         tabs_.push_back(tab);
     }
-    
+
     updateLayoutCache();
-    
+
     if (tabs_.size() > 0 && selectedIndex_ == 0)
     {
         auto bounds = getTabBounds(0);
@@ -117,7 +115,7 @@ void OscilTabs::addTabs(const std::vector<juce::String>& labels)
         indicatorXSpring_.position = targetIndicatorX_;
         indicatorWidthSpring_.position = targetIndicatorWidth_;
     }
-    
+
     resized();
 }
 
@@ -125,9 +123,9 @@ void OscilTabs::addTabs(const std::vector<TabItem>& tabs)
 {
     for (const auto& tab : tabs)
         tabs_.push_back(tab);
-        
+
     updateLayoutCache();
-    
+
     if (tabs_.size() > 0 && selectedIndex_ == 0)
     {
         auto bounds = getTabBounds(0);
@@ -136,7 +134,7 @@ void OscilTabs::addTabs(const std::vector<TabItem>& tabs)
         indicatorXSpring_.position = targetIndicatorX_;
         indicatorWidthSpring_.position = targetIndicatorWidth_;
     }
-    
+
     resized();
 }
 
@@ -180,7 +178,6 @@ void OscilTabs::setSelectedIndex(int index, bool notify)
 
     selectedIndex_ = index;
 
-    // Update indicator target position
     auto bounds = getTabBounds(index);
     targetIndicatorX_ = static_cast<float>(bounds.getX());
     targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
@@ -336,175 +333,10 @@ int OscilTabs::getPreferredHeight() const
     }
 }
 
-void OscilTabs::paint(juce::Graphics& g)
-{
-    auto bounds = getLocalBounds();
-
-    // Background line for default variant
-    if (variant_ == Variant::Default && orientation_ == Orientation::Horizontal)
-    {
-        g.setColour(getTheme().controlBorder.withAlpha(0.3f));
-        g.fillRect(0, bounds.getHeight() - 1, bounds.getWidth(), 1);
-    }
-
-    // Draw tabs
-    for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
-    {
-        auto tabBounds = getTabBounds(i);
-        paintTab(g, i, tabBounds);
-    }
-
-    // Draw indicator
-    paintIndicator(g);
-
-    // Focus ring
-    if (hasFocus_)
-    {
-        auto selectedBounds = getTabBounds(selectedIndex_).toFloat();
-        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRoundedRectangle(
-            selectedBounds.reduced(-ComponentLayout::FOCUS_RING_OFFSET),
-            ComponentLayout::RADIUS_SM,
-            ComponentLayout::FOCUS_RING_WIDTH
-        );
-    }
-}
-
-void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> bounds)
-{
-    const auto& tab = tabs_[static_cast<size_t>(index)];
-    bool isSelected = (index == selectedIndex_);
-    bool isHovered = (index == hoveredIndex_);
-    float opacity = tab.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-
-    // Hover background for pills variant
-    if (variant_ == Variant::Pills && isHovered && !isSelected && tab.enabled)
-    {
-        g.setColour(getTheme().backgroundSecondary.withAlpha(0.5f));
-        g.fillRoundedRectangle(bounds.reduced(2).toFloat(), ComponentLayout::RADIUS_SM);
-    }
-
-    // Content bounds
-    auto contentBounds = bounds.reduced(TAB_PADDING_H, 0);
-    int contentWidth = 0;
-
-    // Calculate total content width for centering
-    auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
-    juce::GlyphArrangement glyphs;
-    glyphs.addLineOfText(font, tab.label, 0, 0);
-    int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-    contentWidth += labelWidth;
-
-    if (tab.icon.isValid())
-        contentWidth += ICON_SIZE + 8;
-
-    if (tab.badgeCount > 0)
-        contentWidth += BADGE_SIZE + 4;
-
-    int startX = contentBounds.getX() + (contentBounds.getWidth() - contentWidth) / 2;
-    int centerY = bounds.getCentreY();
-
-    // Icon
-    if (tab.icon.isValid())
-    {
-        g.setOpacity(opacity);
-        g.drawImage(tab.icon,
-            juce::Rectangle<float>(static_cast<float>(startX),
-                                   static_cast<float>(centerY - ICON_SIZE / 2),
-                                   ICON_SIZE, ICON_SIZE),
-            juce::RectanglePlacement::centred);
-        startX += ICON_SIZE + 8;
-    }
-
-    // Label
-    auto textColour = isSelected ? getTheme().controlActive
-                    : isHovered && tab.enabled ? getTheme().textPrimary
-                    : getTheme().textSecondary;
-
-    g.setColour(textColour.withAlpha(opacity));
-    g.setFont(font);
-
-    auto labelBounds = juce::Rectangle<int>(startX, 0, labelWidth, bounds.getHeight());
-    g.drawText(tab.label, labelBounds, juce::Justification::centred);
-    startX += labelWidth;
-
-    // Badge
-    if (tab.badgeCount > 0)
-    {
-        auto badgeBounds = juce::Rectangle<int>(
-            startX + 4, centerY - BADGE_SIZE / 2, BADGE_SIZE, BADGE_SIZE);
-        paintBadge(g, badgeBounds, tab.badgeCount);
-    }
-}
-
-void OscilTabs::paintIndicator(juce::Graphics& g)
-{
-    if (tabs_.empty())
-        return;
-
-    auto indicatorBounds = getIndicatorBounds();
-
-    switch (variant_)
-    {
-        case Variant::Default:
-            // Underline indicator
-            g.setColour(getTheme().controlActive);
-            if (orientation_ == Orientation::Horizontal)
-            {
-                g.fillRoundedRectangle(
-                    indicatorBounds.getX(),
-                    static_cast<float>(getHeight() - INDICATOR_HEIGHT),
-                    indicatorBounds.getWidth(),
-                    INDICATOR_HEIGHT,
-                    INDICATOR_HEIGHT / 2.0f
-                );
-            }
-            else
-            {
-                g.fillRoundedRectangle(
-                    0,
-                    indicatorBounds.getY(),
-                    INDICATOR_HEIGHT,
-                    indicatorBounds.getHeight(),
-                    INDICATOR_HEIGHT / 2.0f
-                );
-            }
-            break;
-
-        case Variant::Pills:
-            // Filled background
-            g.setColour(getTheme().controlActive.withAlpha(0.15f));
-            g.fillRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM);
-            g.setColour(getTheme().controlActive);
-            g.drawRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM, 1.0f);
-            break;
-
-        case Variant::Bordered:
-            // Border around tab
-            g.setColour(getTheme().controlBorder);
-            g.drawRoundedRectangle(indicatorBounds.reduced(1), ComponentLayout::RADIUS_SM, 1.0f);
-            break;
-    }
-}
-
-void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int count)
-{
-    g.setColour(getTheme().statusError);
-    g.fillEllipse(bounds.toFloat());
-
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(kBadgeFontSize)).boldened());
-
-    juce::String text = count > 99 ? "99+" : juce::String(count);
-    g.drawText(text, bounds, juce::Justification::centred);
-}
-
 void OscilTabs::resized()
 {
-    // Recompute layout on resize (especially for stretch/auto modes)
     updateLayoutCache();
 
-    // Update indicator position after resize
     if (!tabs_.empty() && selectedIndex_ >= 0)
     {
         auto bounds = getTabBounds(selectedIndex_);
@@ -516,97 +348,6 @@ void OscilTabs::resized()
             indicatorXSpring_.position = targetIndicatorX_;
             indicatorWidthSpring_.position = targetIndicatorWidth_;
         }
-    }
-}
-
-juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
-{
-    if (index < 0 || index >= static_cast<int>(cachedTabBounds_.size()))
-        return {};
-
-    return cachedTabBounds_[static_cast<size_t>(index)];
-}
-
-void OscilTabs::updateLayoutCache()
-{
-    cachedTabBounds_.clear();
-    
-    if (tabs_.empty())
-        return;
-
-    auto bounds = getLocalBounds();
-    cachedTabBounds_.reserve(tabs_.size());
-
-    if (orientation_ == Orientation::Horizontal)
-    {
-        int height = tabHeight_ > 0 ? tabHeight_ : bounds.getHeight();
-
-        if (stretchTabs_)
-        {
-            int tabWidth = bounds.getWidth() / static_cast<int>(tabs_.size());
-            for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
-            {
-                cachedTabBounds_.emplace_back(i * tabWidth, 0, tabWidth, height);
-            }
-        }
-        else if (tabWidth_ > 0)
-        {
-            for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
-            {
-                cachedTabBounds_.emplace_back(i * tabWidth_, 0, tabWidth_, height);
-            }
-        }
-        else
-        {
-            // Calculate position based on measured widths
-            int x = 0;
-            auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
-
-            for (size_t i = 0; i < tabs_.size(); ++i)
-            {
-                const auto& tab = tabs_[i];
-                juce::GlyphArrangement glyphs;
-                glyphs.addLineOfText(font, tab.label, 0, 0);
-                int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-                int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
-                int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
-                int width = labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
-                
-                cachedTabBounds_.emplace_back(x, 0, width, height);
-                x += width;
-            }
-        }
-    }
-    else
-    {
-        // Vertical
-        int width = tabWidth_ > 0 ? tabWidth_ : bounds.getWidth();
-        int height = tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
-
-        for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
-        {
-            cachedTabBounds_.emplace_back(0, i * height, width, height);
-        }
-    }
-}
-
-juce::Rectangle<float> OscilTabs::getIndicatorBounds() const
-{
-    if (orientation_ == Orientation::Horizontal)
-    {
-        int height = tabHeight_ > 0 ? tabHeight_ : getHeight();
-        return juce::Rectangle<float>(
-            indicatorXSpring_.position, 0,
-            indicatorWidthSpring_.position, static_cast<float>(height)
-        );
-    }
-    else
-    {
-        int width = tabWidth_ > 0 ? tabWidth_ : getWidth();
-        return juce::Rectangle<float>(
-            0, indicatorXSpring_.position,
-            static_cast<float>(width), indicatorWidthSpring_.position
-        );
     }
 }
 
@@ -668,7 +409,6 @@ bool OscilTabs::keyPressed(const juce::KeyPress& key)
             newIndex = std::min(static_cast<int>(tabs_.size()) - 1, selectedIndex_ + 1);
     }
 
-    // Skip disabled tabs
     int direction = (newIndex > selectedIndex_) ? 1 : -1;
     while (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) &&
            !tabs_[static_cast<size_t>(newIndex)].enabled)

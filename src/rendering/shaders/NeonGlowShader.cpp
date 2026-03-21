@@ -5,7 +5,6 @@
 #include "rendering/shaders/NeonGlowShader.h"
 #include "BinaryData.h"
 #include <cmath>
-#include <iostream>
 
 namespace oscil
 {
@@ -90,98 +89,59 @@ void NeonGlowShader::render(
     if (!gl_->compiled || channel1.size() < 2) return;
 
     auto& ext = context.extensions;
-
-    // Pure Additive Blending for light simulation
     glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE); 
+    glBlendFunc(GL_ONE, GL_ONE);
 
     gl_->program->use();
 
-    // Setup projection (Matches BasicShader)
     auto* target = context.getTargetComponent();
     if (!target) return;
-
     float w = static_cast<float>(target->getWidth());
     float h = static_cast<float>(target->getHeight());
-
-    if (w <= 0.0f || h <= 0.0f)
-        return;
+    if (w <= 0.0f || h <= 0.0f) return;
 
     float projection[16] = {
-        2.0f / w, 0.0f, 0.0f, 0.0f,
-        0.0f, -2.0f / h, 0.0f, 0.0f, // Flip Y
-        0.0f, 0.0f, -1.0f, 0.0f,
-        -1.0f, 1.0f, 0.0f, 1.0f
+        2.0f / w, 0.0f, 0.0f, 0.0f, 0.0f, -2.0f / h, 0.0f, 0.0f,
+        0.0f, 0.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f
     };
-
     ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
-
-    ext.glUniform4f(gl_->baseColorLoc,
-        params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
+    ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(), params.colour.getFloatGreen(),
+        params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
     ext.glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
 
-    // Wide expansion for the glow tail
     const float kGeometryScale = 12.0f;
     ext.glUniform1f(gl_->geometryScaleLoc, kGeometryScale);
 
-    // Prepare geometry
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
-    // Layout logic
     float height = params.bounds.getHeight();
-    float centerY1, centerY2;
-    float amp1, amp2;
-
-    if (params.isStereo && channel2 != nullptr)
-    {
-        float halfHeight = height * 0.5f;
-        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
-        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
-        amp1 = halfHeight * 0.45f * params.verticalScale;
-        amp2 = halfHeight * 0.45f * params.verticalScale;
-    }
-    else
-    {
-        centerY1 = params.bounds.getCentreY();
-        centerY2 = centerY1;
-        amp1 = height * 0.45f * params.verticalScale;
-        amp2 = amp1;
-    }
+    float centerY1, centerY2, amp1, amp2;
+    calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
     GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
     if (posLoc < 0) posLoc = 0;
     if (distLoc < 0) distLoc = 1;
 
+    float visualWidth = params.lineWidth * kGeometryScale;
     auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {
         std::vector<float> vertices;
-        // Calculate the visual width including the glow
-        float visualWidth = params.lineWidth * kGeometryScale;
-        
         buildLineGeometry(vertices, data, cy, amp, visualWidth, params.bounds.getX(), params.bounds.getWidth());
-
         ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
-
         ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-
         ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
         glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-
         ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
     };
 
     renderChannel(channel1, centerY1, amp1);
-
-    if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
-    {
+    if (params.isStereo && channel2 && channel2->size() >= 2)
         renderChannel(*channel2, centerY2, amp2);
-    }
 
     ext.glBindVertexArray(0);
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);

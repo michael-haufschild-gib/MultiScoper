@@ -4,6 +4,7 @@
 
 #include "ui/layout/pane/overlays/CrosshairOverlay.h"
 #include "ui/theme/ThemeManager.h"
+#include <cmath>
 
 namespace oscil
 {
@@ -44,7 +45,7 @@ void CrosshairOverlay::setMousePosition(juce::Point<int> pos)
 
 void CrosshairOverlay::setTimeValue(float timeMs)
 {
-    if (timeMs_ != timeMs)
+    if (std::abs(timeMs_ - timeMs) > 0.001f)
     {
         timeMs_ = timeMs;
         if (crosshairVisible_)
@@ -54,7 +55,7 @@ void CrosshairOverlay::setTimeValue(float timeMs)
 
 void CrosshairOverlay::setAmplitudeValue(float ampDb)
 {
-    if (ampDb_ != ampDb)
+    if (std::abs(ampDb_ - ampDb) > 0.01f)
     {
         ampDb_ = ampDb;
         if (crosshairVisible_)

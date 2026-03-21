@@ -71,44 +71,41 @@ juce::ValueTree Oscillator::toValueTree() const
     return state;
 }
 
+OscillatorState Oscillator::migrateOscillatorState(const juce::ValueTree& state,
+                                                    int schemaVersion,
+                                                    const SourceId& sourceId)
+{
+    if (schemaVersion >= 2)
+    {
+        const int rawState = static_cast<int>(
+            state.getProperty(StateIds::OscillatorState, static_cast<int>(OscillatorState::NO_SOURCE)));
+
+        OscillatorState result;
+        if (rawState == static_cast<int>(OscillatorState::ACTIVE) ||
+            rawState == static_cast<int>(OscillatorState::NO_SOURCE))
+            result = static_cast<OscillatorState>(rawState);
+        else
+            result = sourceId.isValid() ? OscillatorState::ACTIVE : OscillatorState::NO_SOURCE;
+
+        // Enforce invariant: state and source validity must agree.
+        if ((result == OscillatorState::ACTIVE) != sourceId.isValid())
+            result = sourceId.isValid() ? OscillatorState::ACTIVE : OscillatorState::NO_SOURCE;
+
+        return result;
+    }
+
+    return sourceId.isValid() ? OscillatorState::ACTIVE : OscillatorState::NO_SOURCE;
+}
+
 void Oscillator::fromValueTree(const juce::ValueTree& state)
 {
     if (!state.hasType(StateIds::Oscillator))
         return;
 
     int loadedSchemaVersion = state.getProperty(StateIds::SchemaVersion, 1);
-
     id_.id = state.getProperty(StateIds::Id, id_.id);
     sourceId_.id = state.getProperty(StateIds::SourceId, "");
-
-    // Handle oscillator state (migrate from old schema if needed)
-    if (loadedSchemaVersion >= 2)
-    {
-        const int rawState = static_cast<int>(
-            state.getProperty(StateIds::OscillatorState, static_cast<int>(OscillatorState::NO_SOURCE)));
-
-        if (rawState == static_cast<int>(OscillatorState::ACTIVE) ||
-            rawState == static_cast<int>(OscillatorState::NO_SOURCE))
-        {
-            state_ = static_cast<OscillatorState>(rawState);
-        }
-        else
-        {
-            // Invalid persisted state value: recover from source assignment.
-            state_ = sourceId_.isValid() ? OscillatorState::ACTIVE : OscillatorState::NO_SOURCE;
-        }
-
-        // Enforce invariant: state and source validity must agree.
-        if ((state_ == OscillatorState::ACTIVE) != sourceId_.isValid())
-        {
-            state_ = sourceId_.isValid() ? OscillatorState::ACTIVE : OscillatorState::NO_SOURCE;
-        }
-    }
-    else
-    {
-        // Migration: if sourceId is valid, assume ACTIVE
-        state_ = sourceId_.isValid() ? OscillatorState::ACTIVE : OscillatorState::NO_SOURCE;
-    }
+    state_ = migrateOscillatorState(state, loadedSchemaVersion, sourceId_);
 
     processingMode_ = stringToProcessingMode(state.getProperty(StateIds::ProcessingMode, "FullStereo"));
     colour_ = juce::Colour(static_cast<juce::uint32>(static_cast<int>(
@@ -119,42 +116,22 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     visible_ = state.getProperty(StateIds::Visible, true);
     name_ = state.getProperty(StateIds::Name, "");
 
-    // Extended display properties (with defaults for migration)
     lineWidth_ = state.getProperty(StateIds::LineWidth, DEFAULT_LINE_WIDTH);
+    timeWindow_ = state.hasProperty(StateIds::TimeWindow)
+        ? std::optional<float>(static_cast<float>(state.getProperty(StateIds::TimeWindow)))
+        : std::nullopt;
 
-    if (state.hasProperty(StateIds::TimeWindow))
-    {
-        timeWindow_ = static_cast<float>(state.getProperty(StateIds::TimeWindow));
-    }
-    else
-    {
-        timeWindow_ = std::nullopt;
-    }
-
-    // Validate and clamp values
-    auto sanitizeNaN = [](float value, float fallback)
-    {
+    auto sanitizeNaN = [](float value, float fallback) {
         return std::isnan(value) ? fallback : value;
     };
     lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, sanitizeNaN(lineWidth_, DEFAULT_LINE_WIDTH));
     opacity_ = juce::jlimit(0.0f, 1.0f, sanitizeNaN(opacity_, 1.0f));
 
-    // Shader ID (default to basic for migration)
     shaderId_ = state.getProperty(StateIds::ShaderId, "basic");
-
-    // Visual preset ID (default to "default" for migration)
     visualPresetId_ = state.getProperty(StateIds::VisualPresetId, "default").toString();
 
-    // Load overrides
     auto overrides = state.getChildWithName("VisualOverrides");
-    if (overrides.isValid())
-    {
-        visualOverrides_ = overrides.createCopy();
-    }
-    else
-    {
-        visualOverrides_ = juce::ValueTree("VisualOverrides");
-    }
+    visualOverrides_ = overrides.isValid() ? overrides.createCopy() : juce::ValueTree("VisualOverrides");
 
     schemaVersion_ = CURRENT_SCHEMA_VERSION;
 }

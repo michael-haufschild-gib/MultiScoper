@@ -41,6 +41,7 @@
       "inherits": ["base", "ninja", "ccache"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/scripts/ninja-wrapper",
         "OSCIL_BUILD_TESTS": "ON",
         "OSCIL_ENABLE_INSPECTOR": "ON"
       }
@@ -52,6 +53,7 @@
       "inherits": ["base", "ninja", "ccache"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/scripts/ninja-wrapper",
         "OSCIL_BUILD_TESTS": "ON",
         "OSCIL_ENABLE_INSPECTOR": "ON"
       }
@@ -139,43 +141,35 @@
   "buildPresets": [
     {
       "name": "dev",
-      "configurePreset": "dev",
-      "jobs": 0
+      "configurePreset": "dev"
     },
     {
       "name": "dev-release",
-      "configurePreset": "dev-release",
-      "jobs": 0
+      "configurePreset": "dev-release"
     },
     {
       "name": "release",
-      "configurePreset": "release",
-      "jobs": 0
+      "configurePreset": "release"
     },
     {
       "name": "ci",
-      "configurePreset": "ci",
-      "jobs": 0
+      "configurePreset": "ci"
     },
     {
       "name": "ci-macos",
-      "configurePreset": "ci-macos",
-      "jobs": 0
+      "configurePreset": "ci-macos"
     },
     {
       "name": "ci-linux",
-      "configurePreset": "ci-linux",
-      "jobs": 0
+      "configurePreset": "ci-linux"
     },
     {
       "name": "ci-windows",
-      "configurePreset": "ci-windows",
-      "jobs": 0
+      "configurePreset": "ci-windows"
     },
     {
       "name": "coverage",
-      "configurePreset": "coverage",
-      "jobs": 0
+      "configurePreset": "coverage"
     }
   ],
   "testPresets": [
@@ -185,6 +179,9 @@
       "output": {
         "outputOnFailure": true,
         "verbosity": "default"
+      },
+      "execution": {
+        "timeout": 30
       }
     },
     {
@@ -193,6 +190,9 @@
       "output": {
         "outputOnFailure": true,
         "verbosity": "verbose"
+      },
+      "execution": {
+        "timeout": 30
       }
     },
     {
@@ -201,6 +201,9 @@
       "output": {
         "outputOnFailure": true,
         "verbosity": "verbose"
+      },
+      "execution": {
+        "timeout": 30
       }
     },
     {
@@ -209,6 +212,9 @@
       "output": {
         "outputOnFailure": true,
         "verbosity": "verbose"
+      },
+      "execution": {
+        "timeout": 30
       }
     },
     {
@@ -217,6 +223,9 @@
       "output": {
         "outputOnFailure": true,
         "verbosity": "verbose"
+      },
+      "execution": {
+        "timeout": 30
       }
     },
     {
@@ -225,6 +234,9 @@
       "output": {
         "outputOnFailure": true,
         "verbosity": "default"
+      },
+      "execution": {
+        "timeout": 30
       }
     }
   ]

@@ -1,10 +1,10 @@
 /*
     Oscil - Modal Component Implementation
+    (Painting and layout bounds are in OscilModalPainting.cpp)
 */
 
 #include "ui/components/OscilModal.h"
 #include "ui/components/OscilButton.h"
-#include "ui/components/ListItemIcons.h"
 
 namespace oscil
 {
@@ -18,7 +18,7 @@ OscilModal::OscilModal(IThemeService& themeService)
     setAlwaysOnTop(true);
     setVisible(false);
     showSpring_.position = 0.0f;
-    scaleSpring_.position = 0.8f;  // Start scaled down
+    scaleSpring_.position = 0.8f;
 }
 
 OscilModal::OscilModal(IThemeService& themeService, const juce::String& title)
@@ -106,10 +106,8 @@ void OscilModal::setCloseOnBackdropClick(bool close)
 
 void OscilModal::show(juce::Component* parent)
 {
-    // Store previous focus
     previousFocus_ = juce::Component::getCurrentlyFocusedComponent();
 
-    // Register focus change listener for focus trap (ensure we don't double-register)
     juce::Desktop::getInstance().removeFocusChangeListener(this);
     juce::Desktop::getInstance().addFocusChangeListener(this);
 
@@ -120,7 +118,6 @@ void OscilModal::show(juce::Component* parent)
     }
     else
     {
-        // Add to desktop if no parent
         addToDesktop(juce::ComponentPeer::windowIsTemporary);
         auto displayBounds = juce::Desktop::getInstance().getDisplays()
             .getPrimaryDisplay()->userArea;
@@ -132,12 +129,10 @@ void OscilModal::show(juce::Component* parent)
 
     if (AnimationSettings::shouldUseSpringAnimations())
     {
-        // Initialize state before showing
         if (content_)
         {
             content_->setAlpha(showSpring_.position);
-            
-            // Apply initial scale transform
+
             float scale = scaleSpring_.position;
             auto modalBounds = getModalBounds();
             auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
@@ -152,20 +147,19 @@ void OscilModal::show(juce::Component* parent)
     {
         showSpring_.position = 1.0f;
         scaleSpring_.position = 1.0f;
-        
+
         if (content_)
         {
             content_->setAlpha(1.0f);
             content_->setTransform({});
         }
-        
+
         repaint();
     }
 }
 
 void OscilModal::hide()
 {
-    // Unregister focus change listener
     juce::Desktop::getInstance().removeFocusChangeListener(this);
 
     if (AnimationSettings::shouldUseSpringAnimations())
@@ -179,14 +173,13 @@ void OscilModal::hide()
         showSpring_.position = 0.0f;
         scaleSpring_.position = 0.8f;
         setVisible(false);
-        
+
         if (content_)
         {
             content_->setAlpha(1.0f);
             content_->setTransform({});
         }
 
-        // Restore focus
         if (previousFocus_ && previousFocus_->isShowing())
             previousFocus_->grabKeyboardFocus();
 
@@ -207,187 +200,6 @@ bool OscilModal::requestClose()
     return true;
 }
 
-void OscilModal::paint(juce::Graphics& g)
-{
-    float alpha = showSpring_.position;
-    if (alpha < 0.01f)
-        return;
-
-    paintBackdrop(g);
-
-    auto modalBounds = getModalBounds();
-
-    // Apply scale transform
-    float scale = scaleSpring_.position;
-    auto centreX = modalBounds.getCentreX();
-    auto centreY = modalBounds.getCentreY();
-
-    auto scaledWidth = static_cast<int>(static_cast<float>(modalBounds.getWidth()) * scale);
-    auto scaledHeight = static_cast<int>(static_cast<float>(modalBounds.getHeight()) * scale);
-
-    auto scaledBounds = juce::Rectangle<int>(
-        centreX - scaledWidth / 2,
-        centreY - scaledHeight / 2,
-        scaledWidth,
-        scaledHeight
-    );
-
-    paintModal(g, scaledBounds);
-}
-
-void OscilModal::paintBackdrop(juce::Graphics& g)
-{
-    float alpha = showSpring_.position * 0.5f;
-    g.setColour(juce::Colours::black.withAlpha(alpha));
-    g.fillRect(getLocalBounds());
-}
-
-void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
-{
-    float alpha = showSpring_.position;
-
-    // Shadow
-    juce::DropShadow shadow(juce::Colours::black.withAlpha(0.3f * alpha), 20, {0, 4});
-    shadow.drawForRectangle(g, bounds);
-
-    // Background
-    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha));
-    g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_LG);
-
-    // Border
-    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.3f));
-    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f),
-                           ComponentLayout::RADIUS_LG, 1.0f);
-
-    // Title bar
-    if (title_.isNotEmpty())
-    {
-        auto titleBounds = bounds.removeFromTop(TITLE_BAR_HEIGHT);
-        paintTitleBar(g, titleBounds);
-    }
-}
-
-void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
-{
-    float alpha = showSpring_.position;
-
-    // Title text
-    auto textBounds = bounds.reduced(MODAL_PADDING, 0);
-    if (showCloseButton_)
-        textBounds.removeFromRight(CLOSE_BUTTON_SIZE + 8);
-
-    g.setColour(getTheme().textPrimary.withAlpha(alpha));
-    g.setFont(juce::Font(juce::FontOptions().withHeight(15.0f)).boldened());
-    g.drawText(title_, textBounds, juce::Justification::centredLeft);
-
-    // Close button
-    if (showCloseButton_)
-    {
-        auto closeBounds = getCloseButtonBounds().toFloat();
-
-        // Animated hover effect using spring
-        float hoverAlpha = closeHoverSpring_.position;
-        if (hoverAlpha > 0.01f)
-        {
-            g.setColour(getTheme().backgroundSecondary.withAlpha(alpha * hoverAlpha));
-            g.fillRoundedRectangle(closeBounds, ComponentLayout::RADIUS_SM);
-        }
-
-        // Close icon - interpolate color from secondary to primary on hover
-        auto iconColor = getTheme().textSecondary.interpolatedWith(
-            getTheme().textPrimary, hoverAlpha);
-        g.setColour(iconColor.withAlpha(alpha));
-        float iconSize = 14.0f;  // Icon size within the button
-        auto iconPath = ListItemIcons::createCloseIcon(iconSize);
-
-        // Center the icon within the close button bounds
-        auto iconBounds = iconPath.getBounds();
-        float offsetX = closeBounds.getCentreX() - iconBounds.getCentreX();
-        float offsetY = closeBounds.getCentreY() - iconBounds.getCentreY();
-        iconPath.applyTransform(juce::AffineTransform::translation(offsetX, offsetY));
-
-        g.fillPath(iconPath);
-    }
-
-    // Separator
-    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.3f));
-    g.fillRect(bounds.getX() + 1, bounds.getBottom() - 1, bounds.getWidth() - 2, 1);
-}
-
-juce::Rectangle<int> OscilModal::getModalBounds() const
-{
-    auto parentBounds = getLocalBounds();
-
-    int width = 0, height = 0;
-
-    if (customWidth_ > 0 && customHeight_ > 0)
-    {
-        width = customWidth_;
-        height = customHeight_;
-    }
-    else
-    {
-        switch (modalSize_)
-        {
-            case ModalSize::Small:
-                width = SIZE_SMALL;
-                break;
-            case ModalSize::Medium:
-                width = SIZE_MEDIUM;
-                break;
-            case ModalSize::Large:
-                width = SIZE_LARGE;
-                break;
-            case ModalSize::FullScreen:
-                return parentBounds.reduced(MODAL_MARGIN);
-            case ModalSize::Auto:
-                width = SIZE_MEDIUM;
-                break;
-        }
-
-        // Calculate height based on content
-        int titleHeight = title_.isNotEmpty() ? TITLE_BAR_HEIGHT : 0;
-        int contentHeight = content_ ? contentPreferredHeight_ : 200;
-        height = titleHeight + contentHeight + MODAL_PADDING * 2;
-
-        // Limit height
-        int maxHeight = parentBounds.getHeight() - MODAL_MARGIN * 2;
-        height = std::min(height, maxHeight);
-    }
-
-    return parentBounds.withSizeKeepingCentre(width, height);
-}
-
-juce::Rectangle<int> OscilModal::getTitleBarBounds() const
-{
-    if (title_.isEmpty())
-        return {};
-
-    auto modalBounds = getModalBounds();
-    return modalBounds.removeFromTop(TITLE_BAR_HEIGHT);
-}
-
-juce::Rectangle<int> OscilModal::getContentBounds() const
-{
-    auto modalBounds = getModalBounds();
-
-    if (title_.isNotEmpty())
-        modalBounds.removeFromTop(TITLE_BAR_HEIGHT);
-
-    return modalBounds.reduced(MODAL_PADDING);
-}
-
-juce::Rectangle<int> OscilModal::getCloseButtonBounds() const
-{
-    auto titleBounds = getTitleBarBounds();
-    return juce::Rectangle<int>(
-        titleBounds.getRight() - MODAL_PADDING - CLOSE_BUTTON_SIZE,
-        titleBounds.getCentreY() - CLOSE_BUTTON_SIZE / 2,
-        CLOSE_BUTTON_SIZE,
-        CLOSE_BUTTON_SIZE
-    );
-}
-
 void OscilModal::resized()
 {
     if (content_)
@@ -398,14 +210,12 @@ void OscilModal::mouseDown(const juce::MouseEvent& e)
 {
     auto modalBounds = getModalBounds();
 
-    // Check close button
     if (showCloseButton_ && getCloseButtonBounds().contains(e.getPosition()))
     {
         requestClose();
         return;
     }
 
-    // Check backdrop click
     if (closeOnBackdropClick_ && !modalBounds.contains(e.getPosition()))
     {
         requestClose();
@@ -448,7 +258,6 @@ void OscilModal::collectFocusableChildren(juce::Component* parent, juce::Array<j
         {
             if (child->getWantsKeyboardFocus())
                 result.add(child);
-            // Recursively collect from nested components
             collectFocusableChildren(child, result);
         }
     }
@@ -462,7 +271,6 @@ bool OscilModal::keyPressed(const juce::KeyPress& key)
         return true;
     }
 
-    // Tab focus trap - recursively find all focusable children
     if (key == juce::KeyPress::tabKey && content_)
     {
         juce::Array<juce::Component*> focusableChildren;
@@ -489,12 +297,10 @@ bool OscilModal::keyPressed(const juce::KeyPress& key)
 
 void OscilModal::globalFocusChanged(juce::Component* focusedComponent)
 {
-    // Focus trap: if focus moves outside the modal, bring it back
     if (isVisible() && focusedComponent != nullptr)
     {
         if (!isParentOf(focusedComponent) && focusedComponent != this)
         {
-            // Allow focus if it's a known popup (or child of one)
             auto* comp = focusedComponent;
             while (comp != nullptr)
             {
@@ -503,7 +309,6 @@ void OscilModal::globalFocusChanged(juce::Component* focusedComponent)
                 comp = comp->getParentComponent();
             }
 
-            // Focus escaped - bring it back to first focusable child
             if (content_)
             {
                 juce::Array<juce::Component*> focusableChildren;
@@ -521,7 +326,6 @@ void OscilModal::globalFocusChanged(juce::Component* focusedComponent)
 
 void OscilModal::focusGained(FocusChangeType)
 {
-    // Focus first focusable child
     if (content_)
     {
         for (int i = 0; i < content_->getNumChildComponents(); ++i)
@@ -549,14 +353,13 @@ void OscilModal::timerCallback()
         if (showSpring_.position < 0.1f)
         {
             setVisible(false);
-            
+
             if (content_)
             {
                 content_->setAlpha(1.0f);
                 content_->setTransform({});
             }
 
-            // Restore focus
             if (previousFocus_ && previousFocus_->isShowing())
                 previousFocus_->grabKeyboardFocus();
 
@@ -566,7 +369,7 @@ void OscilModal::timerCallback()
     }
 
     repaint();
-    resized();  // Update content position during scale animation
+    resized();
 }
 
 void OscilModal::updateAnimations()
@@ -578,23 +381,18 @@ void OscilModal::updateAnimations()
 
     if (content_)
     {
-        // Sync content alpha
         content_->setAlpha(showSpring_.position);
-        
-        // Sync content scale
+
         float scale = scaleSpring_.position;
-        // Calculate pivot relative to content position
-        // Modal background scales around its center
         auto modalBounds = getModalBounds();
         auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
-        
+
         content_->setTransform(juce::AffineTransform::scale(scale, scale, pivot.x, pivot.y));
     }
 }
 
 void OscilModal::updateFocusTrap()
 {
-    // Called when focus changes - ensure it stays within modal
     auto* focusedComp = juce::Component::getCurrentlyFocusedComponent();
 
     if (focusedComp && !isParentOf(focusedComp) && focusedComp != this)
@@ -603,9 +401,7 @@ void OscilModal::updateFocusTrap()
     }
 }
 
-//==============================================================================
-// Accessibility Handler for OscilModal
-//==============================================================================
+// Accessibility handler
 class OscilModalAccessibilityHandler : public juce::AccessibilityHandler
 {
 public:
@@ -648,46 +444,35 @@ std::unique_ptr<juce::AccessibilityHandler> OscilModal::createAccessibilityHandl
     return std::make_unique<OscilModalAccessibilityHandler>(*this);
 }
 
-//==============================================================================
-// OscilAlertModal Implementation (static helper)
-//==============================================================================
-
+// OscilAlertModal static helper
 void OscilAlertModal::show(IThemeService& themeService,
                             const juce::String& title,
                             const juce::String& message,
                             [[maybe_unused]] Type type,
                             std::function<void()> onOk)
 {
-    // Create content container - will be owned by the modal
     auto* content = new juce::Component();
     content->setSize(400, 100);
 
-    // Label for the message
     auto* label = new juce::Label();
     label->setText(message, juce::dontSendNotification);
     label->setJustificationType(juce::Justification::topLeft);
     label->setBounds(0, 0, 400, 60);
     content->addAndMakeVisible(label);
 
-    // OK button
     auto* okButton = new OscilButton(themeService, "OK");
     okButton->setVariant(ButtonVariant::Primary);
     okButton->setBounds(400 - 80, 70, 80, 30);
     content->addAndMakeVisible(okButton);
 
-    // Create modal - will self-delete when closed
     auto* modal = new OscilModal(themeService, title);
     modal->setContent(content);
     modal->setSize(ModalSize::Small);
 
-    // Set up self-deletion when modal is closed
-    // Capture the callback and components to clean up
     modal->onClose = [modal, content, label, okButton, onOk]() {
-        // Call user callback if provided
         if (onOk)
             onOk();
 
-        // Schedule deletion on message thread to avoid deleting during callback
         juce::MessageManager::callAsync([modal, content, label, okButton]() {
             delete label;
             delete okButton;
@@ -696,7 +481,6 @@ void OscilAlertModal::show(IThemeService& themeService,
         });
     };
 
-    // Wire up OK button to close the modal
     okButton->onClick = [modal]() {
         modal->hide();
     };
@@ -709,8 +493,6 @@ void OscilAlertModal::confirm([[maybe_unused]] IThemeService& themeService,
                                [[maybe_unused]] const juce::String& message,
                                [[maybe_unused]] std::function<void(bool)> onResult)
 {
-    // Similar implementation with Cancel and OK buttons
-    // Would pass result to callback
 }
 
 } // namespace oscil

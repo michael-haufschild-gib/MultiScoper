@@ -32,6 +32,40 @@ ParticleEmitter::ParticleEmitter(ParticleEmitterId id)
     rng_.seed(static_cast<unsigned int>(id + 12345));
 }
 
+float ParticleEmitter::computeNormalAngle(const std::vector<float>& samples,
+                                          const juce::Rectangle<float>& bounds,
+                                          size_t idx, float verticalScale)
+{
+    size_t nextIdx = (idx + 1 < samples.size()) ? idx + 1 : idx;
+    size_t prevIdx = (idx > 0) ? idx - 1 : idx;
+    if (nextIdx == prevIdx)
+    {
+        if (idx < samples.size() - 1) nextIdx++;
+        else if (idx > 0) prevIdx--;
+    }
+
+    auto pNext = getWaveformPosition(samples, bounds, nextIdx, verticalScale);
+    auto pPrev = getWaveformPosition(samples, bounds, prevIdx, verticalScale);
+    float tangentAngle = std::atan2(pNext.y - pPrev.y, pNext.x - pPrev.x);
+    float side = (dist01_(rng_) > 0.5f) ? 1.57079633f : -1.57079633f;
+    return tangentAngle + side;
+}
+
+void ParticleEmitter::emitAtIndices(ParticlePool& pool, const std::vector<size_t>& indices,
+                                     const std::vector<float>& samples,
+                                     const juce::Rectangle<float>& bounds,
+                                     int count, float verticalScale)
+{
+    if (indices.empty()) return;
+    for (int i = 0; i < count && !pool.isFull(); ++i)
+    {
+        size_t idx = indices[safeRandomIndex(dist01_(rng_), indices.size())];
+        auto pos = getWaveformPosition(samples, bounds, idx, verticalScale);
+        float angle = computeNormalAngle(samples, bounds, idx, verticalScale);
+        spawnParticle(pool, pos.x, pos.y, angle);
+    }
+}
+
 void ParticleEmitter::update(ParticlePool& pool,
                              const std::vector<float>& samples,
                              const juce::Rectangle<float>& bounds,
@@ -41,133 +75,33 @@ void ParticleEmitter::update(ParticlePool& pool,
     if (!enabled_ || samples.empty() || bounds.isEmpty())
         return;
 
-    // Accumulate emission time
     emissionAccumulator_ += config_.emissionRate * deltaTime;
-
-    // Calculate how many particles to spawn this frame
     int particlesToSpawn = static_cast<int>(emissionAccumulator_);
     emissionAccumulator_ -= static_cast<float>(particlesToSpawn);
-
-    if (particlesToSpawn <= 0)
-        return;
+    if (particlesToSpawn <= 0) return;
 
     switch (config_.mode)
     {
         case ParticleEmissionMode::AlongWaveform:
         {
-            // Emit uniformly along the waveform
-            for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
-            {
-                size_t idx = safeRandomIndex(dist01_(rng_), samples.size());
-                auto pos = getWaveformPosition(samples, bounds, idx, verticalScale);
-                
-                // Calculate waveform tangent/normal for better flow
-                size_t nextIdx = (idx + 1 < samples.size()) ? idx + 1 : idx;
-                size_t prevIdx = (idx > 0) ? idx - 1 : idx;
-                
-                // If at ends, look further inward
-                if (nextIdx == prevIdx) 
-                {
-                     if (idx < samples.size() - 1) nextIdx++;
-                     else if (idx > 0) prevIdx--;
-                }
-                
-                auto pNext = getWaveformPosition(samples, bounds, nextIdx, verticalScale);
-                auto pPrev = getWaveformPosition(samples, bounds, prevIdx, verticalScale);
-                
-                float dx = pNext.x - pPrev.x;
-                float dy = pNext.y - pPrev.y;
-                
-                // Tangent angle
-                float tangentAngle = std::atan2(dy, dx);
-                
-                // Normal angle (perpendicular +90 or -90)
-                // Flip side randomly for balanced emission
-                float side = (dist01_(rng_) > 0.5f) ? 1.57079633f : -1.57079633f;
-                float normalAngle = tangentAngle + side;
-                
-                spawnParticle(pool, pos.x, pos.y, normalAngle);
-            }
+            // Build index list of random positions along the waveform
+            std::vector<size_t> indices(static_cast<size_t>(particlesToSpawn));
+            for (auto& idx : indices)
+                idx = safeRandomIndex(dist01_(rng_), samples.size());
+            emitAtIndices(pool, indices, samples, bounds, particlesToSpawn, verticalScale);
             break;
         }
-
         case ParticleEmissionMode::AtPeaks:
-        {
-            auto peaks = findPeaks(samples);
-            if (!peaks.empty())
-            {
-                for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
-                {
-                    size_t peakIdx = peaks[safeRandomIndex(dist01_(rng_), peaks.size())];
-                    auto pos = getWaveformPosition(samples, bounds, peakIdx, verticalScale);
-                    
-                    // For peaks, emit outwards (away from X axis roughly, but based on curvature)
-                    // A simple normal calculation works too
-                    size_t nextIdx = (peakIdx + 1 < samples.size()) ? peakIdx + 1 : peakIdx;
-                    size_t prevIdx = (peakIdx > 0) ? peakIdx - 1 : peakIdx;
-                    
-                    auto pNext = getWaveformPosition(samples, bounds, nextIdx, verticalScale);
-                    auto pPrev = getWaveformPosition(samples, bounds, prevIdx, verticalScale);
-                    
-                    float tangentAngle = std::atan2(pNext.y - pPrev.y, pNext.x - pPrev.x);
-                    
-                    // Peaks are usually convex/concave. 
-                    // If sample > 0, we want to emit UP (-90 deg screen space from X? No, Y is down in JUCE?)
-                    // JUCE Y is down. 
-                    // If sample > 0 (visual up), Y decreases.
-                    // We want to emit "Out".
-                    
-                    // Just use the normal logic again, it usually looks correct as "aura"
-                    float side = (dist01_(rng_) > 0.5f) ? 1.57079633f : -1.57079633f;
-                    spawnParticle(pool, pos.x, pos.y, tangentAngle + side);
-                }
-            }
+            emitAtIndices(pool, findPeaks(samples), samples, bounds, particlesToSpawn, verticalScale);
             break;
-        }
-
         case ParticleEmissionMode::AtZeroCrossings:
-        {
-            auto crossings = findZeroCrossings(samples);
-            if (!crossings.empty())
-            {
-                for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
-                {
-                    size_t crossIdx = crossings[safeRandomIndex(dist01_(rng_), crossings.size())];
-                    auto pos = getWaveformPosition(samples, bounds, crossIdx, verticalScale);
-                    
-                    // For zero crossings, maybe emit ALONG the tangent? (Splash effect)
-                    size_t nextIdx = (crossIdx + 1 < samples.size()) ? crossIdx + 1 : crossIdx;
-                    size_t prevIdx = (crossIdx > 0) ? crossIdx - 1 : crossIdx;
-                    
-                    auto pNext = getWaveformPosition(samples, bounds, nextIdx, verticalScale);
-                    auto pPrev = getWaveformPosition(samples, bounds, prevIdx, verticalScale);
-                    
-                    float tangentAngle = std::atan2(pNext.y - pPrev.y, pNext.x - pPrev.x);
-                    
-                    // Emit roughly perpendicular (splash) or along? 
-                    // Let's stick to normal for consistency unless specific effect requested
-                    float side = (dist01_(rng_) > 0.5f) ? 1.57079633f : -1.57079633f;
-                    spawnParticle(pool, pos.x, pos.y, tangentAngle + side);
-                }
-            }
+            emitAtIndices(pool, findZeroCrossings(samples), samples, bounds, particlesToSpawn, verticalScale);
             break;
-        }
-
         case ParticleEmissionMode::Continuous:
-        {
-            // Emit from center of bounds
-            float cx = bounds.getCentreX();
-            float cy = bounds.getCentreY();
-
             for (int i = 0; i < particlesToSpawn && !pool.isFull(); ++i)
-            {
-                spawnParticle(pool, cx, cy);
-            }
+                spawnParticle(pool, bounds.getCentreX(), bounds.getCentreY());
             break;
-        }
-
         case ParticleEmissionMode::Burst:
-            // Burst mode only spawns on triggerBurst() call
             break;
     }
 }

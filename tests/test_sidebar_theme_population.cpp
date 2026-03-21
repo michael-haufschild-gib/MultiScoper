@@ -12,6 +12,7 @@
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/theme/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
+#include "rendering/PresetManager.h"
 
 using namespace oscil;
 
@@ -22,6 +23,7 @@ protected:
     std::unique_ptr<InstanceRegistry> registry_;
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
 
     std::unique_ptr<OscilPluginProcessor> processor;
@@ -33,15 +35,16 @@ protected:
         registry_ = std::make_unique<InstanceRegistry>();
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // ThemeManager usually has default themes initialized
 
         // Create processor with owned services
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
 
         // Initialize sidebar with ServiceContext using owned services
-        ServiceContext context{*registry_, *themeManager_, *shaderRegistry_};
+        ServiceContext context{*registry_, *themeManager_, *shaderRegistry_, *presetManager_};
         sidebar = std::make_unique<SidebarComponent>(context);
     }
 

@@ -1,6 +1,7 @@
 /*
     Oscil - Theme Editor Component Implementation
     UI for creating and editing themes
+    (Action handlers are in ThemeEditorActions.cpp)
 */
 
 #include "ui/theme/ThemeEditorComponent.h"
@@ -29,7 +30,6 @@ void ColorSwatchButton::paint(juce::Graphics& g)
     const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
-    // Draw label
     g.setColour(theme.textPrimary);
     g.setFont(12.0f);
     auto labelBounds = bounds.removeFromLeft(100.0f);
@@ -37,10 +37,8 @@ void ColorSwatchButton::paint(juce::Graphics& g)
 
     bounds.removeFromLeft(8.0f);
 
-    // Draw color swatch
     auto swatchBounds = bounds.reduced(2.0f);
 
-    // Checkerboard for transparency
     const int checkSize = 6;
     auto swatchRect = swatchBounds.toNearestInt();
     for (int y = swatchRect.getY(); y < swatchRect.getBottom(); y += checkSize)
@@ -53,11 +51,9 @@ void ColorSwatchButton::paint(juce::Graphics& g)
         }
     }
 
-    // Draw color
     g.setColour(colour_);
     g.fillRect(swatchBounds);
 
-    // Draw border
     g.setColour(theme.controlBorder);
     g.drawRect(swatchBounds, 1.0f);
 }
@@ -70,12 +66,10 @@ void ColorSwatchButton::mouseUp(const juce::MouseEvent& e)
 {
     if (e.mods.isLeftButtonDown())
     {
-        // Create a color picker popup using modern C++ pattern
         auto colorPicker = std::make_unique<ColorPickerComponent>(themeService_);
         colorPicker->setColour(colour_);
         colorPicker->setSize(280, ColorPickerComponent::PREFERRED_HEIGHT);
 
-        // Set up callback
         juce::Component::SafePointer<ColorSwatchButton> safeThis(this);
         colorPicker->onColourChanged([safeThis](juce::Colour newColour)
         {
@@ -119,12 +113,10 @@ void ThemeColorSection::paint(juce::Graphics& g)
     const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds();
 
-    // Draw section header
     g.setColour(theme.textPrimary);
     g.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
     g.drawText(title_, bounds.removeFromTop(24), juce::Justification::centredLeft);
 
-    // Draw separator
     g.setColour(theme.gridMajor);
     g.drawHorizontalLine(22, 0.0f, static_cast<float>(getWidth()));
 }
@@ -132,7 +124,7 @@ void ThemeColorSection::paint(juce::Graphics& g)
 void ThemeColorSection::resized()
 {
     auto bounds = getLocalBounds();
-    bounds.removeFromTop(28);  // Header
+    bounds.removeFromTop(28);
 
     for (auto& swatch : swatches_)
     {
@@ -157,7 +149,6 @@ void ThemeColorSection::addColorSwatch(const juce::String& label, juce::Colour* 
 
 void ThemeColorSection::updateFromTheme(ColorTheme& /*theme*/)
 {
-    // Update swatch colors from their refs
     for (size_t i = 0; i < swatches_.size() && i < colorRefs_.size(); ++i)
     {
         swatches_[i]->setColour(*colorRefs_[i]);
@@ -192,7 +183,6 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
     OSCIL_REGISTER_TEST_ID("themeEditor");
 #endif
 
-    // Theme list
     themeList_ = std::make_unique<juce::ListBox>("Themes", this);
     themeList_->setRowHeight(24);
     addAndMakeVisible(*themeList_);
@@ -201,7 +191,6 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
     OSCIL_REGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
 #endif
 
-    // Action buttons
     createButton_ = std::make_unique<OscilButton>(themeService_, "New", "themeEditor_createBtn");
     createButton_->setVariant(ButtonVariant::Primary);
     createButton_->onClick = [this]() { handleCreateTheme(); };
@@ -241,7 +230,6 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
     };
     addAndMakeVisible(*closeButton_);
 
-    // Name editor
     nameLabel_ = std::make_unique<juce::Label>("", "Name:");
     addAndMakeVisible(*nameLabel_);
 
@@ -249,22 +237,18 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
     nameEditor_->setPlaceholder("Theme Name");
     addAndMakeVisible(*nameEditor_);
 
-    // System theme indicator
     systemThemeLabel_ = std::make_unique<juce::Label>("", "(System theme - read only)");
     systemThemeLabel_->setColour(juce::Label::textColourId, juce::Colours::orange);
     addChildComponent(*systemThemeLabel_);
 
-    // Color sections container
     colorContainer_ = std::make_unique<juce::Component>();
     colorViewport_ = std::make_unique<juce::Viewport>();
     colorViewport_->setViewedComponent(colorContainer_.get(), false);
     colorViewport_->setScrollBarsShown(true, false);
     addAndMakeVisible(*colorViewport_);
 
-    // Initialize theme list
     refreshThemeList();
 
-    // Select current theme
     auto currentThemeName = themeService_.getCurrentTheme().name;
     selectTheme(currentThemeName);
 }
@@ -283,7 +267,6 @@ void ThemeEditorComponent::paint(juce::Graphics& g)
     const auto& theme = themeService_.getCurrentTheme();
     g.fillAll(theme.backgroundPrimary);
 
-    // Draw separator between list and editor
     g.setColour(theme.gridMajor);
     g.drawVerticalLine(kLeftPanelWidth + kSeparatorPadding, 0.0f, static_cast<float>(getHeight()));
 }
@@ -292,7 +275,6 @@ void ThemeEditorComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(10);
 
-    // Left side - theme list and buttons
     auto leftPanel = bounds.removeFromLeft(kLeftPanelWidth);
 
     auto listButtons = leftPanel.removeFromBottom(70);
@@ -313,9 +295,8 @@ void ThemeEditorComponent::resized()
 
     themeList_->setBounds(leftPanel);
 
-    bounds.removeFromLeft(kSeparatorPadding * 2);  // Spacing
+    bounds.removeFromLeft(kSeparatorPadding * 2);
 
-    // Bottom buttons
     auto bottomButtons = bounds.removeFromBottom(30);
     closeButton_->setBounds(bottomButtons.removeFromRight(80));
     bottomButtons.removeFromRight(10);
@@ -323,7 +304,6 @@ void ThemeEditorComponent::resized()
 
     bounds.removeFromBottom(10);
 
-    // Right side - theme editor
     auto nameRow = bounds.removeFromTop(25);
     nameLabel_->setBounds(nameRow.removeFromLeft(50));
     nameRow.removeFromLeft(5);
@@ -333,12 +313,10 @@ void ThemeEditorComponent::resized()
 
     bounds.removeFromTop(10);
 
-    // Color sections in viewport
     colorViewport_->setBounds(bounds);
 
-    // Layout color sections within container
     int contentHeight = 0;
-    int sectionWidth = bounds.getWidth() - 20;  // Account for scrollbar
+    int sectionWidth = bounds.getWidth() - 20;
 
     if (backgroundSection_)
     {
@@ -424,7 +402,6 @@ void ThemeEditorComponent::selectTheme(const juce::String& name)
 {
     selectedThemeName_ = name;
 
-    // Find and select in list
     for (size_t i = 0; i < themeNames_.size(); ++i)
     {
         if (themeNames_[i] == name)
@@ -434,7 +411,6 @@ void ThemeEditorComponent::selectTheme(const juce::String& name)
         }
     }
 
-    // Get theme copy for editing
     auto* sourceTheme = themeService_.getTheme(name);
     if (sourceTheme)
     {
@@ -453,7 +429,6 @@ void ThemeEditorComponent::selectTheme(const juce::String& name)
 
 void ThemeEditorComponent::updateColorSections()
 {
-    // Clear existing sections
     backgroundSection_.reset();
     gridSection_.reset();
     textSection_.reset();
@@ -462,7 +437,6 @@ void ThemeEditorComponent::updateColorSections()
 
     bool isEditable = !themeService_.isSystemTheme(selectedThemeName_);
 
-    // Background section
     backgroundSection_ = std::make_unique<ThemeColorSection>(themeService_, "Background Colors");
     backgroundSection_->addColorSwatch("Primary:", &editingTheme_.backgroundPrimary);
     backgroundSection_->addColorSwatch("Secondary:", &editingTheme_.backgroundSecondary);
@@ -471,7 +445,6 @@ void ThemeEditorComponent::updateColorSections()
     backgroundSection_->setEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*backgroundSection_);
 
-    // Grid section
     gridSection_ = std::make_unique<ThemeColorSection>(themeService_, "Grid Colors");
     gridSection_->addColorSwatch("Major:", &editingTheme_.gridMajor);
     gridSection_->addColorSwatch("Minor:", &editingTheme_.gridMinor);
@@ -480,7 +453,6 @@ void ThemeEditorComponent::updateColorSections()
     gridSection_->setEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*gridSection_);
 
-    // Text section
     textSection_ = std::make_unique<ThemeColorSection>(themeService_, "Text Colors");
     textSection_->addColorSwatch("Primary:", &editingTheme_.textPrimary);
     textSection_->addColorSwatch("Secondary:", &editingTheme_.textSecondary);
@@ -489,7 +461,6 @@ void ThemeEditorComponent::updateColorSections()
     textSection_->setEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*textSection_);
 
-    // Control section
     controlSection_ = std::make_unique<ThemeColorSection>(themeService_, "Control Colors");
     controlSection_->addColorSwatch("Background:", &editingTheme_.controlBackground);
     controlSection_->addColorSwatch("Border:", &editingTheme_.controlBorder);
@@ -499,7 +470,6 @@ void ThemeEditorComponent::updateColorSections()
     controlSection_->setEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*controlSection_);
 
-    // Status section
     statusSection_ = std::make_unique<ThemeColorSection>(themeService_, "Status Colors");
     statusSection_->addColorSwatch("Active:", &editingTheme_.statusActive);
     statusSection_->addColorSwatch("Warning:", &editingTheme_.statusWarning);
@@ -509,204 +479,6 @@ void ThemeEditorComponent::updateColorSections()
     colorContainer_->addAndMakeVisible(*statusSection_);
 
     resized();
-}
-
-void ThemeEditorComponent::handleCreateTheme()
-{
-    auto* nameInput = new juce::AlertWindow("New Theme",
-        "Enter a name for the new theme:",
-        juce::MessageBoxIconType::QuestionIcon);
-
-    nameInput->addTextEditor("name", "My Theme", "Name:");
-    nameInput->addButton("Create", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    nameInput->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-
-    nameInput->enterModalState(true, juce::ModalCallbackFunction::create(
-        [this](int result)
-        {
-            if (result == 1)
-            {
-                auto* aw = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
-                if (aw)
-                {
-                    auto name = aw->getTextEditorContents("name");
-                    if (name.isNotEmpty())
-                    {
-                        if (themeService_.createTheme(name))
-                        {
-                            refreshThemeList();
-                            selectTheme(name);
-                        }
-                    }
-                }
-            }
-        }), true);
-}
-
-void ThemeEditorComponent::handleCloneTheme()
-{
-    if (selectedThemeName_.isEmpty())
-        return;
-
-    auto* nameInput = new juce::AlertWindow("Clone Theme",
-        "Enter a name for the cloned theme:",
-        juce::MessageBoxIconType::QuestionIcon);
-
-    nameInput->addTextEditor("name", selectedThemeName_ + " Copy", "Name:");
-    nameInput->addButton("Clone", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    nameInput->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-
-    auto sourceTheme = selectedThemeName_;
-    nameInput->enterModalState(true, juce::ModalCallbackFunction::create(
-        [this, sourceTheme](int result)
-        {
-            if (result == 1)
-            {
-                auto* aw = dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
-                if (aw)
-                {
-                    auto name = aw->getTextEditorContents("name");
-                    if (name.isNotEmpty())
-                    {
-                        if (themeService_.cloneTheme(sourceTheme, name))
-                        {
-                            refreshThemeList();
-                            selectTheme(name);
-                        }
-                    }
-                }
-            }
-        }), true);
-}
-
-void ThemeEditorComponent::handleDeleteTheme()
-{
-    if (selectedThemeName_.isEmpty())
-        return;
-
-    if (themeService_.isSystemTheme(selectedThemeName_))
-    {
-        juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
-            "Cannot Delete",
-            "System themes cannot be deleted.");
-        return;
-    }
-
-    auto themeName = selectedThemeName_;
-    juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::QuestionIcon,
-        "Delete Theme",
-        "Are you sure you want to delete '" + themeName + "'?",
-        "Delete", "Cancel", nullptr,
-        juce::ModalCallbackFunction::create([this, themeName](int result)
-        {
-            if (result == 1)
-            {
-                themeService_.deleteTheme(themeName);
-                refreshThemeList();
-                if (!themeNames_.empty())
-                {
-                    selectTheme(themeNames_[0]);
-                }
-            }
-        }));
-}
-
-void ThemeEditorComponent::handleImportTheme()
-{
-    auto chooser = std::make_shared<juce::FileChooser>("Import Theme",
-        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-        "*.json");
-
-    chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-        [this, chooser](const juce::FileChooser& fc)
-        {
-            auto file = fc.getResult();
-            if (file.existsAsFile())
-            {
-                auto json = file.loadFileAsString();
-                if (themeService_.importTheme(json))
-                {
-                    refreshThemeList();
-                    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
-                        "Import Successful",
-                        "Theme imported successfully.");
-                }
-                else
-                {
-                    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
-                        "Import Failed",
-                        "Failed to import theme. Check that the file is valid JSON.");
-                }
-            }
-        });
-}
-
-void ThemeEditorComponent::handleExportTheme()
-{
-    if (selectedThemeName_.isEmpty())
-        return;
-
-    auto json = themeService_.exportTheme(selectedThemeName_);
-    if (json.isEmpty())
-        return;
-
-    auto chooser = std::make_shared<juce::FileChooser>("Export Theme",
-        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-            .getChildFile(selectedThemeName_ + ".json"),
-        "*.json");
-
-    chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting,
-        [json, chooser](const juce::FileChooser& fc)
-        {
-            auto file = fc.getResult();
-            if (file != juce::File())
-            {
-                if (file.replaceWithText(json))
-                {
-                    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
-                        "Export Successful",
-                        "Theme exported successfully.");
-                }
-                else
-                {
-                    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
-                        "Export Failed",
-                        "Failed to save theme file.");
-                }
-            }
-        });
-}
-
-void ThemeEditorComponent::handleApplyTheme()
-{
-    if (selectedThemeName_.isEmpty())
-        return;
-
-    bool isSystem = themeService_.isSystemTheme(selectedThemeName_);
-
-    if (!isSystem)
-    {
-        // Update the custom theme with edited colors
-        editingTheme_.name = nameEditor_->getText();
-        themeService_.updateTheme(selectedThemeName_, editingTheme_);
-
-        // If name changed, update list
-        if (editingTheme_.name != selectedThemeName_)
-        {
-            refreshThemeList();
-            selectedThemeName_ = editingTheme_.name;
-        }
-    }
-
-    // Apply as current theme
-    themeService_.setCurrentTheme(selectedThemeName_);
-}
-
-void ThemeEditorComponent::handleColorChanged()
-{
-    // Mark that changes have been made
-    // Could add a "dirty" indicator here
-    repaint();
 }
 
 } // namespace oscil

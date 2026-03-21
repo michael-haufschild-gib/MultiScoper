@@ -248,6 +248,8 @@ public:
     float getRMSLevel(int channel, int numSamples = 1024) const override;
 
 private:
+    void writeInternal(const float* const* samples, int numSamples, int numChannels,
+                       const CaptureFrameMetadata& metadata);
     size_t capacity_;
     std::vector<float> buffer_; // Flat buffer: [Channel 0][Channel 1]...
     std::atomic<size_t> writePos_{ 0 };

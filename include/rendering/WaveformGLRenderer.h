@@ -148,6 +148,12 @@ public:
 private:
     void compileDebugShader();
     void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);
+    std::vector<WaveformRenderData> collectWaveformsToRender();
+    void renderWithEngine(const std::vector<WaveformRenderData>& waveformsToRender, float deltaTime);
+    void setupDebugProjection(juce::OpenGLExtensionFunctions& ext,
+                              GLint projLoc, GLint colorLoc,
+                              float viewportWidth, float viewportHeight,
+                              juce::Colour colour);
 
     juce::OpenGLContext* context_ = nullptr;
     std::atomic<bool> contextReady_{ false };

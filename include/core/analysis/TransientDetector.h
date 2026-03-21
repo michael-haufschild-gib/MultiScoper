@@ -66,6 +66,10 @@ private:
     double lastSampleRate_ = 0.0;
 
     void updateCoefficients(double sampleRate);
+    void updateEnvelopes(float absSample);
+    void processIdleState();
+    float processAttackState(double sampleRate, float currentAttack);
+    float processDecayState(double sampleRate, float currentDecay);
 
     // Detection thresholds
     static constexpr float ONSET_RATIO = 2.0f;      // Fast/slow ratio to detect onset

@@ -18,6 +18,7 @@ class InstanceRegistry;
 class ShaderRegistry;
 class MemoryBudgetManager;
 class GlobalPreferences;
+class PresetManager;
 
 /**
  * Composition root for the Oscil plugin.
@@ -66,6 +67,7 @@ public:
     ShaderRegistry& getShaderRegistry();
     MemoryBudgetManager& getMemoryBudgetManager();
     GlobalPreferences& getGlobalPreferences();
+    PresetManager& getPresetManager();
 
 private:
     // Owned services - these are the single instances for the plugin
@@ -74,6 +76,7 @@ private:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<GlobalPreferences> globalPreferences_;
+    std::unique_ptr<PresetManager> presetManager_;
 
     // Prevent copying
     PluginFactory(const PluginFactory&) = delete;

@@ -53,6 +53,32 @@ void InstanceRegistry::shutdown()
     // For now, just clearing sources breaks the reference cycles.
 }
 
+SourceId InstanceRegistry::tryReuseExistingSource(
+    const juce::String& trackIdentifier,
+    std::shared_ptr<IAudioBuffer> captureBuffer,
+    const juce::String& name,
+    int channelCount,
+    double sampleRate,
+    std::shared_ptr<AnalysisEngine> analysisEngine)
+{
+    auto existingIt = trackToSourceMap_.find(trackIdentifier);
+    if (existingIt == trackToSourceMap_.end())
+        return SourceId::invalid();
+
+    auto sourceIt = sources_.find(existingIt->second);
+    if (sourceIt == sources_.end())
+        return SourceId::invalid();
+
+    sourceIt->second.buffer = captureBuffer;
+    sourceIt->second.analysisEngine = analysisEngine;
+    sourceIt->second.channelCount = channelCount;
+    sourceIt->second.sampleRate = sampleRate;
+    if (name.isNotEmpty())
+        sourceIt->second.name = name;
+
+    return existingIt->second;
+}
+
 SourceId InstanceRegistry::registerInstance(
     const juce::String& trackIdentifier,
     std::shared_ptr<IAudioBuffer> captureBuffer,
@@ -61,88 +87,48 @@ SourceId InstanceRegistry::registerInstance(
     double sampleRate,
     std::shared_ptr<AnalysisEngine> analysisEngine)
 {
-    // Registry mutations should happen on message thread or during initialization.
-    // NEVER call from audio thread - uses blocking locks and heap allocation.
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     SourceId sourceId = SourceId::invalid();
     bool shouldNotifyAdded = false;
     bool shouldNotifyUpdated = false;
-    bool maxLimitReached = false;
 
     {
         std::unique_lock<std::shared_mutex> lock(mutex_);
 
-        // Check if we already have a source for this track (deduplication)
-        auto existingIt = trackToSourceMap_.find(trackIdentifier);
-        if (existingIt != trackToSourceMap_.end())
-        {
-            // Existing source already owns this track.
-            // Refresh with the latest buffer/metadata so re-created instances
-            // or duplicated tracks don't stay bound to stale capture data.
-            auto sourceIt = sources_.find(existingIt->second);
-            if (sourceIt != sources_.end())
-            {
-                sourceId = existingIt->second;
-                sourceIt->second.buffer = captureBuffer;
-                sourceIt->second.analysisEngine = analysisEngine;
-                sourceIt->second.channelCount = channelCount;
-                sourceIt->second.sampleRate = sampleRate;
-                if (name.isNotEmpty())
-                    sourceIt->second.name = name;
-                shouldNotifyUpdated = true;
-            }
-        }
-
+        sourceId = tryReuseExistingSource(trackIdentifier, captureBuffer, name,
+                                           channelCount, sampleRate, analysisEngine);
         if (sourceId.isValid())
         {
-            // Existing source found and reused; no further registry mutation required.
+            shouldNotifyUpdated = true;
+        }
+        else if (sources_.size() >= MAX_TRACKS)
+        {
+            return SourceId::invalid();
         }
         else
         {
-            // Check if we've reached the maximum number of sources
-            if (sources_.size() >= MAX_TRACKS)
-            {
-                maxLimitReached = true;
-            }
-            else
-            {
-                // Create new source
-                sourceId = SourceId::generate();
-
-                SourceInfo info;
-                info.sourceId = sourceId;
-                info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
-                info.trackIdentifier = trackIdentifier;
-                info.channelCount = channelCount;
-                info.sampleRate = sampleRate;
-                info.buffer = captureBuffer;
-                info.analysisEngine = analysisEngine;
-                info.active = true;
-
-                sources_[sourceId] = info;
-                trackToSourceMap_[trackIdentifier] = sourceId;
-                shouldNotifyAdded = true;
-            }
+            sourceId = SourceId::generate();
+            SourceInfo info;
+            info.sourceId = sourceId;
+            info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
+            info.trackIdentifier = trackIdentifier;
+            info.channelCount = channelCount;
+            info.sampleRate = sampleRate;
+            info.buffer = captureBuffer;
+            info.analysisEngine = analysisEngine;
+            info.active = true;
+            sources_[sourceId] = info;
+            trackToSourceMap_[trackIdentifier] = sourceId;
+            shouldNotifyAdded = true;
         }
     }
 
-    // Return invalid ID if max limit reached (no logging in audio-adjacent paths)
-    if (maxLimitReached)
-    {
-        return SourceId::invalid();
-    }
-
-    // Notify listeners OUTSIDE the lock to prevent deadlock
     if (shouldNotifyAdded)
-    {
         notifySourceAdded(sourceId);
-    }
     else if (shouldNotifyUpdated)
-    {
         notifySourceUpdated(sourceId);
-    }
 
     return sourceId;
 }

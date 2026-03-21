@@ -74,6 +74,7 @@ private:
     void updateFilteredItems();
     int getItemAtPosition(juce::Point<int> pos) const;
     void ensureItemVisible(int index);
+    void focusOnFirstSelected();
 
     std::vector<DropdownItem> items_;
     std::vector<int> filteredIndices_;

@@ -25,6 +25,18 @@ private:
     void createBuffers(juce::OpenGLContext& context);
     void compileShaders(juce::OpenGLContext& context);
 
+    void drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col);
+    void generateChannelGrid(const GridConfiguration& config, float yTop, float yBottom);
+    void generateHorizontalGrid(float yTop, float yBottom);
+    void generateTimeGrid(const GridConfiguration& config, float yTop, float yBottom);
+    void generateMusicalGrid(const GridConfiguration& config, float yTop, float yBottom);
+
+    static void addLine(std::vector<float>& dest, float x1, float y1, float x2, float y2)
+    {
+        dest.push_back(x1); dest.push_back(y1);
+        dest.push_back(x2); dest.push_back(y2);
+    }
+
     std::unique_ptr<juce::OpenGLShaderProgram> colorShader_;
     GLint colorUniformLoc_ = -1;
 

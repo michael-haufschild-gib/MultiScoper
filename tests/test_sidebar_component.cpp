@@ -9,6 +9,7 @@
 #include "core/MemoryBudgetManager.h"
 #include "core/ServiceContext.h"
 #include "rendering/ShaderRegistry.h"
+#include "rendering/PresetManager.h"
 
 using namespace oscil;
 
@@ -18,6 +19,7 @@ protected:
     std::unique_ptr<InstanceRegistry> registry_;
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<OscilPluginProcessor> processor_;
     std::unique_ptr<SidebarComponent> sidebar_;
@@ -27,14 +29,16 @@ protected:
         registry_ = std::make_unique<InstanceRegistry>();
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         processor_ = std::make_unique<OscilPluginProcessor>(*registry_,
                                                             *themeManager_,
                                                             *shaderRegistry_,
+                                                            *presetManager_,
                                                             *memoryBudgetManager_);
 
-        ServiceContext context{ *registry_, *themeManager_, *shaderRegistry_ };
+        ServiceContext context{ *registry_, *themeManager_, *shaderRegistry_, *presetManager_ };
         sidebar_ = std::make_unique<SidebarComponent>(context);
     }
 

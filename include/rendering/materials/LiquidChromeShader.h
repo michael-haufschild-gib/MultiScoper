@@ -57,6 +57,11 @@ public:
 
 private:
     void updateMesh(const WaveformData3D& data, float xSpread);
+    void setChromeUniforms(juce::OpenGLExtensionFunctions& ext,
+                           const WaveformData3D& data,
+                           const Camera3D& camera,
+                           const LightingConfig& lighting,
+                           float halfHeight);
 
     bool compiled_ = false;
     std::unique_ptr<juce::OpenGLShaderProgram> shader_;

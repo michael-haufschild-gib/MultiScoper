@@ -150,7 +150,7 @@ VolumetricRibbonShader::~VolumetricRibbonShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[VolumetricRibbonShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        DBG("[VolumetricRibbonShader] LEAK DETECTED: Destructor called without release()");
     }
 #endif
 }
@@ -162,7 +162,6 @@ bool VolumetricRibbonShader::compile(juce::OpenGLContext& context)
 
     auto& ext = context.extensions;
 
-    // Compile shader
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     if (!compileShaderProgram(*shader_, ribbonVertexShader, ribbonFragmentShader))
     {
@@ -171,7 +170,6 @@ bool VolumetricRibbonShader::compile(juce::OpenGLContext& context)
         return false;
     }
 
-    // Get uniform locations
     modelLoc_ = shader_->getUniformIDFromName("uModel");
     viewLoc_ = shader_->getUniformIDFromName("uView");
     projLoc_ = shader_->getUniformIDFromName("uProjection");
@@ -186,49 +184,17 @@ bool VolumetricRibbonShader::compile(juce::OpenGLContext& context)
     cameraPosLoc_ = shader_->getUniformIDFromName("uCameraPos");
     noiseTextureLoc_ = shader_->getUniformIDFromName("uNoiseTexture");
 
-    // Create VAO
     ext.glGenVertexArrays(1, &vao_);
     ext.glBindVertexArray(vao_);
-
-    // Create VBO
     ext.glGenBuffers(1, &vbo_);
     ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-
-    // Create IBO
     ext.glGenBuffers(1, &ibo_);
     ext.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_);
 
-    // Setup vertex attributes
-    GLint posAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aPosition");
-    GLint normAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aNormal");
-    GLint texAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aTexCoord");
-
-    const int stride = 8 * sizeof(float);
-
-    if (posAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
-    }
-
-    if (normAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(normAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(normAttrib), 3, GL_FLOAT, GL_FALSE, stride,
-                                  reinterpret_cast<void*>(3 * sizeof(float)));
-    }
-
-    if (texAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(texAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(texAttrib), 2, GL_FLOAT, GL_FALSE, stride,
-                                  reinterpret_cast<void*>(6 * sizeof(float)));
-    }
+    setupPosNormTexAttribs(ext, shader_->getProgramID());
 
     ext.glBindVertexArray(0);
-
     compiled_ = true;
-    DBG("VolumetricRibbonShader: Compiled successfully");
     return true;
 }
 
@@ -261,6 +227,30 @@ void VolumetricRibbonShader::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
+void VolumetricRibbonShader::setRenderUniforms(juce::OpenGLExtensionFunctions& ext,
+                                               const WaveformData3D& data,
+                                               const Camera3D& camera,
+                                               const LightingConfig& lighting,
+                                               float halfHeight)
+{
+    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
+    setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
+
+    ext.glUniform4f(colorLoc_,
+                    data.color.getFloatRed(), data.color.getFloatGreen(),
+                    data.color.getFloatBlue(), data.color.getFloatAlpha());
+
+    setLightingUniforms(ext, lightDirLoc_, ambientLoc_, diffuseLoc_,
+                        specularLoc_, specPowerLoc_, lighting);
+
+    ext.glUniform1f(timeLoc_, time_);
+    ext.glUniform1f(glowIntensityLoc_, glowIntensity_);
+
+    Vec3 camPos = camera.getPosition();
+    ext.glUniform3f(cameraPosLoc_, camPos.x, camPos.y, camPos.z);
+}
+
 void VolumetricRibbonShader::render(juce::OpenGLContext& context,
                                     const WaveformData3D& data,
                                     const Camera3D& camera,
@@ -269,70 +259,22 @@ void VolumetricRibbonShader::render(juce::OpenGLContext& context,
     if (!compiled_ || !data.samples || data.sampleCount < 2)
         return;
 
-    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
-    float xSpread = 1.0f;
-    float halfHeight = 1.0f;
+    float xSpread, halfHeight;
+    calculateCameraSpread(camera, xSpread, halfHeight);
 
-    if (camera.getProjection() == CameraProjection::Orthographic)
-    {
-        float height = camera.getOrthoSize();
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-    else
-    {
-        float dist = (camera.getPosition() - camera.getTarget()).length();
-        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
-        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-
-    // Update mesh with current waveform data
     updateMesh(data, xSpread);
-
-    if (indexCount_ == 0)
-        return;
+    if (indexCount_ == 0) return;
 
     auto& ext = context.extensions;
 
-    // Enable depth testing for 3D
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-
-    // Enable blending for glow
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     shader_->use();
+    setRenderUniforms(ext, data, camera, lighting, halfHeight);
 
-    // Set matrix uniforms - apply Y offset for stereo separation and Z offset for depth
-    // Scale amplitude by halfHeight to map normalized amplitude to world space
-    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
-                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
-    setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
-
-    // Set color
-    ext.glUniform4f(colorLoc_,
-                    data.color.getFloatRed(),
-                    data.color.getFloatGreen(),
-                    data.color.getFloatBlue(),
-                    data.color.getFloatAlpha());
-
-    // Set lighting
-    setLightingUniforms(ext, lightDirLoc_, ambientLoc_, diffuseLoc_,
-                        specularLoc_, specPowerLoc_, lighting);
-
-    // Set additional uniforms
-    ext.glUniform1f(timeLoc_, time_);
-    ext.glUniform1f(glowIntensityLoc_, glowIntensity_);
-
-    Vec3 camPos = camera.getPosition();
-    ext.glUniform3f(cameraPosLoc_, camPos.x, camPos.y, camPos.z);
-
-    // Bind noise texture
     if (noiseTextureID_ != 0)
     {
         glActiveTexture(GL_TEXTURE0);
@@ -340,16 +282,12 @@ void VolumetricRibbonShader::render(juce::OpenGLContext& context,
         ext.glUniform1i(noiseTextureLoc_, 0);
     }
 
-    // Bind VAO and draw
     ext.glBindVertexArray(vao_);
     glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, nullptr);
     ext.glBindVertexArray(0);
 
-    // Unbind texture
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Restore GL state
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 }

@@ -274,6 +274,8 @@ private:
     void reconfigure();
     void processAndWriteDecimated(const float* const* samples, int numSamples, int numChannels,
                                    const CaptureFrameMetadata& metadata);
+    int decimateChannel(const float* src, float* dest, DecimationFilter& filter,
+                        int& counter, int numSamples) const;
 
     // Configuration
     CaptureQualityConfig config_;
@@ -296,6 +298,7 @@ private:
         size_t filterMemoryBytes = 0;
     };
 
+    std::shared_ptr<ProcessingContext> createProcessingContext();
     std::shared_ptr<ProcessingContext> context_;
 
     // Safety mechanism to prevent audio thread from deleting shared resources

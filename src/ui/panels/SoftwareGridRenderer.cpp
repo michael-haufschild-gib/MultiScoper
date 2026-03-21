@@ -442,7 +442,6 @@ void SoftwareGridRenderer::drawAmplitudeLabels(juce::Graphics& g,
                                               bool showChannelLabel,
                                               const juce::String& channelLabel)
 {
-    const auto& theme = themeService_.getCurrentTheme();
     int centerY = area.getCentreY();
 
     // Draw +1 at top

@@ -117,28 +117,9 @@ void DigitalGlitchShader::render(
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
-    // Calculate layout based on stereo/mono mode
     float height = params.bounds.getHeight();
-    float centerY1, centerY2;
-    float amp1, amp2;
-
-    if (params.isStereo && channel2 != nullptr)
-    {
-        // Stereo stacked layout: L on top half, R on bottom half
-        float halfHeight = height * 0.5f;
-        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
-        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
-        amp1 = halfHeight * 0.45f * params.verticalScale;
-        amp2 = halfHeight * 0.45f * params.verticalScale;
-    }
-    else
-    {
-        // Mono layout: single channel centered
-        centerY1 = params.bounds.getCentreY();
-        centerY2 = centerY1;
-        amp1 = height * 0.45f * params.verticalScale;
-        amp2 = amp1;
-    }
+    float centerY1, centerY2, amp1, amp2;
+    calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     // Get attribute locations once
     GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");

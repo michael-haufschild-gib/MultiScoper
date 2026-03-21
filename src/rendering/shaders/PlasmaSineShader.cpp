@@ -123,26 +123,9 @@ void PlasmaSineShader::render(
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
     ext.glUniform1f(gl_->timeLoc, params.time);
 
-    // Geometry Config
     float height = params.bounds.getHeight();
-    float centerY1, centerY2;
-    float amp1, amp2;
-
-    if (params.isStereo && channel2 != nullptr)
-    {
-        float halfHeight = height * 0.5f;
-        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
-        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
-        amp1 = halfHeight * 0.45f * params.verticalScale;
-        amp2 = halfHeight * 0.45f * params.verticalScale;
-    }
-    else
-    {
-        centerY1 = params.bounds.getCentreY();
-        centerY2 = centerY1;
-        amp1 = height * 0.45f * params.verticalScale;
-        amp2 = amp1;
-    }
+    float centerY1, centerY2, amp1, amp2;
+    calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     // Attributes
     ext.glBindVertexArray(gl_->vao);

@@ -11,6 +11,7 @@
 #include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
+#include "rendering/PresetManager.h"
 #include <thread>
 #include <atomic>
 
@@ -23,6 +24,7 @@ protected:
     std::unique_ptr<InstanceRegistry> registry_;
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<OscilPluginProcessor> processor;
 
@@ -32,12 +34,14 @@ protected:
         registry_ = std::make_unique<InstanceRegistry>();
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         processor = std::make_unique<OscilPluginProcessor>(
             *registry_,
             *themeManager_,
             *shaderRegistry_,
+            *presetManager_,
             *memoryBudgetManager_);
     }
 
@@ -73,6 +77,7 @@ TEST_F(PluginProcessorStateTest, StateInformation_SaveAndRestore)
         *registry_,
         *themeManager_,
         *shaderRegistry_,
+        *presetManager_,
         *memoryBudgetManager_);
     newProcessor->prepareToPlay(44100.0, 512);
 
@@ -278,6 +283,7 @@ TEST_F(PluginProcessorStateTest, StateInformation_VeryLargeState)
         *registry_,
         *themeManager_,
         *shaderRegistry_,
+        *presetManager_,
         *memoryBudgetManager_);
     newProcessor->prepareToPlay(44100.0, 512);
 

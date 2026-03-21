@@ -9,6 +9,7 @@
 #include "core/OscilState.h"  // for GlobalPreferences
 #include "ui/theme/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
+#include "rendering/PresetManager.h"
 #include <atomic>
 
 namespace oscil
@@ -27,6 +28,7 @@ PluginFactory::PluginFactory()
     , shaderRegistry_(std::make_unique<ShaderRegistry>())
     , memoryBudgetManager_(std::make_unique<MemoryBudgetManager>())
     , globalPreferences_(std::make_unique<GlobalPreferences>())
+    , presetManager_(std::make_unique<PresetManager>())
 {
 }
 
@@ -59,6 +61,7 @@ std::unique_ptr<juce::AudioProcessor> PluginFactory::createPluginProcessor()
         *instanceRegistry_,
         *themeManager_,
         *shaderRegistry_,
+        *presetManager_,
         *memoryBudgetManager_
     );
 }
@@ -86,6 +89,11 @@ MemoryBudgetManager& PluginFactory::getMemoryBudgetManager()
 GlobalPreferences& PluginFactory::getGlobalPreferences()
 {
     return *globalPreferences_;
+}
+
+PresetManager& PluginFactory::getPresetManager()
+{
+    return *presetManager_;
 }
 
 } // namespace oscil

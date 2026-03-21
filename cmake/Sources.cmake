@@ -4,6 +4,7 @@
 set(OSCIL_SOURCES
     # Plugin (entry points)
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginProcessor.cpp
+    ${CMAKE_SOURCE_DIR}/src/plugin/PluginProcessorState.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditor.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditorSidebarHandlers.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginFactory.cpp
@@ -13,8 +14,10 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/InstanceRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/core/SharedCaptureBuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBufferQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/GlobalPreferences.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Oscillator.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Pane.cpp
@@ -22,6 +25,7 @@ set(OSCIL_SOURCES
     # Core DSP
     ${CMAKE_SOURCE_DIR}/src/core/dsp/SignalProcessor.cpp
     ${CMAKE_SOURCE_DIR}/src/core/dsp/TimingEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/dsp/TimingEngineSerialization.cpp
 
     # Core Analysis
     ${CMAKE_SOURCE_DIR}/src/core/analysis/AnalysisEngine.cpp
@@ -34,11 +38,15 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/GridRenderer.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/ParticleRenderer.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/RenderEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/RenderEngineWaveforms.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/ShaderRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformGLRenderer.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/WaveformGLRendererPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformRenderState.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/WaveformShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/VisualConfiguration.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/VisualConfigurationSerialization.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/PresetManager.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/Camera3D.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/GpuRenderCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/RenderBootstrapper.cpp
@@ -89,23 +97,36 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticlePool.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleEmitter.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleSystem.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleSystemShaders.cpp
 
     # UI (components)
     ${CMAKE_SOURCE_DIR}/src/ui/components/ThemedComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButton.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButtonPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextField.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextFieldPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilToggle.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSlider.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSliderPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSliderInteraction.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/MagneticSnapController.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilCheckbox.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButton.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButtonPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButtonInteraction.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdown.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownInteraction.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownPopup.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabs.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabsPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordion.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordionSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilBadge.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModal.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModalPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorSwatches.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorPicker.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorPickerCalc.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilMeterBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/SegmentedButtonBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/UIAudioFeedback.cpp
@@ -116,11 +137,14 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListToolbar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListItem.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListItemPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/dialogs/OscillatorConfigDialog.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/StatusBarComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/SourceSelectorComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/panels/SourceListItem.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/SourceItemComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/WaveformComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/panels/WaveformComponentRendering.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/WaveformPresenter.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/SoftwareGridRenderer.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/TimingPresenter.cpp
@@ -135,6 +159,7 @@ set(OSCIL_SOURCES
 
     # UI (controllers)
     ${CMAKE_SOURCE_DIR}/src/ui/controllers/OscillatorPanelController.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/controllers/OscillatorPanelControllerHandlers.cpp
 
     # UI (layout)
     ${CMAKE_SOURCE_DIR}/src/ui/layout/WindowLayout.cpp
@@ -142,6 +167,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/layout/PaneContainerComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/PluginEditorLayout.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/SidebarComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/layout/SidebarComponentHandlers.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/TimingSidebarSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/OptionsSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/layout/sections/OscillatorSidebarSection.cpp
@@ -161,7 +187,9 @@ set(OSCIL_SOURCES
 
     # UI (theme)
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManagerSerialization.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorActions.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ColorPickerComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeCoordinator.cpp
 
@@ -169,6 +197,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/PluginTestServer.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/LayoutHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/OscillatorHandler.cpp
+    ${CMAKE_SOURCE_DIR}/src/tools/test_server/OscillatorHandlerTests.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/SourceHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/ScreenshotHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/TestRunnerHandler.cpp

@@ -139,28 +139,24 @@ ElectricFlowerShader::~ElectricFlowerShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[ElectricFlowerShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        DBG("[ElectricFlowerShader] LEAK DETECTED: Destructor called without release()");
     }
 #endif
 }
 
 bool ElectricFlowerShader::compile(juce::OpenGLContext& context)
 {
-    if (compiled_)
-        return true;
+    if (compiled_) return true;
 
     auto& ext = context.extensions;
 
-    // Compile shader
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     if (!compileShaderProgram(*shader_, electricFlowerVertexShader, electricFlowerFragmentShader))
     {
-        DBG("ElectricFlowerShader: Failed to compile shader");
         shader_.reset();
         return false;
     }
 
-    // Get uniform locations
     modelLoc_ = shader_->getUniformIDFromName("uModel");
     viewLoc_ = shader_->getUniformIDFromName("uView");
     projLoc_ = shader_->getUniformIDFromName("uProjection");
@@ -170,20 +166,15 @@ bool ElectricFlowerShader::compile(juce::OpenGLContext& context)
     pointSizeLoc_ = shader_->getUniformIDFromName("uPointSize");
     glowIntensityLoc_ = shader_->getUniformIDFromName("uGlowIntensity");
 
-    // Create VAO
     ext.glGenVertexArrays(1, &vao_);
     ext.glBindVertexArray(vao_);
-
-    // Create VBO
     ext.glGenBuffers(1, &vbo_);
     ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 
-    // Setup vertex attributes
-    // Layout: position (3 floats) + index (1 float) + amplitude (1 float)
+    // Layout: position(3) + index(1) + amplitude(1), stride = 5 floats
     GLint posAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aPosition");
     GLint indexAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aIndex");
     GLint ampAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aAmplitude");
-
     const int stride = 5 * sizeof(float);
 
     if (posAttrib >= 0)
@@ -191,14 +182,12 @@ bool ElectricFlowerShader::compile(juce::OpenGLContext& context)
         ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
         ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
     }
-
     if (indexAttrib >= 0)
     {
         ext.glEnableVertexAttribArray(static_cast<GLuint>(indexAttrib));
         ext.glVertexAttribPointer(static_cast<GLuint>(indexAttrib), 1, GL_FLOAT, GL_FALSE, stride,
                                   reinterpret_cast<void*>(3 * sizeof(float)));
     }
-
     if (ampAttrib >= 0)
     {
         ext.glEnableVertexAttribArray(static_cast<GLuint>(ampAttrib));
@@ -207,9 +196,7 @@ bool ElectricFlowerShader::compile(juce::OpenGLContext& context)
     }
 
     ext.glBindVertexArray(0);
-
     compiled_ = true;
-    DBG("ElectricFlowerShader: Compiled successfully");
     return true;
 }
 
@@ -251,28 +238,9 @@ void ElectricFlowerShader::render(juce::OpenGLContext& context,
     if (!compiled_ || !data.samples || data.sampleCount < 2)
         return;
 
-    // Calculate xSpread to fill the screen width
-    float xSpread = 1.0f;
-    float halfHeight = 1.0f;
+    float xSpread, halfHeight;
+    calculateCameraSpread(camera, xSpread, halfHeight);
 
-    if (camera.getProjection() == CameraProjection::Orthographic)
-    {
-        float height = camera.getOrthoSize();
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-    else
-    {
-        float dist = (camera.getPosition() - camera.getTarget()).length();
-        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
-        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-
-    // Update vertex data
     updateVertices(data, xSpread);
 
     if (vertexCount_ == 0)

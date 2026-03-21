@@ -1,16 +1,12 @@
 /*
     Oscil - Theme Manager Implementation
+    (ColorTheme serialization and file I/O are in ThemeManagerSerialization.cpp)
 */
 
 #include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
-
-// ... (ColorTheme implementation skipped for brevity, it is unchanged) ...
-// Wait, I must provide the FULL content for write_file or use replace.
-// Since I have the full content in history, I will reconstruct it.
-// Actually, ColorTheme methods are at the top. I should keep them.
 
 void ColorTheme::initializeDefaultWaveformColors()
 {
@@ -35,7 +31,6 @@ void ColorTheme::initializeDefaultWaveformColors()
 
     waveformColors = defaultColors;
 
-    // Generate additional colors to reach 64
     while (waveformColors.size() < 64)
     {
         float hue = static_cast<float>(waveformColors.size()) / 64.0f;
@@ -43,171 +38,13 @@ void ColorTheme::initializeDefaultWaveformColors()
     }
 }
 
-juce::ValueTree ColorTheme::toValueTree() const
-{
-    juce::ValueTree state("Theme");
-
-    state.setProperty("name", name, nullptr);
-    state.setProperty("isSystem", isSystemTheme, nullptr);
-    state.setProperty("bgPrimary", static_cast<int>(backgroundPrimary.getARGB()), nullptr);
-    state.setProperty("bgSecondary", static_cast<int>(backgroundSecondary.getARGB()), nullptr);
-    state.setProperty("bgPane", static_cast<int>(backgroundPane.getARGB()), nullptr);
-    state.setProperty("gridMajor", static_cast<int>(gridMajor.getARGB()), nullptr);
-    state.setProperty("gridMinor", static_cast<int>(gridMinor.getARGB()), nullptr);
-    state.setProperty("gridZero", static_cast<int>(gridZeroLine.getARGB()), nullptr);
-    state.setProperty("textPrimary", static_cast<int>(textPrimary.getARGB()), nullptr);
-    state.setProperty("textSecondary", static_cast<int>(textSecondary.getARGB()), nullptr);
-    state.setProperty("textHighlight", static_cast<int>(textHighlight.getARGB()), nullptr);
-    state.setProperty("ctrlBg", static_cast<int>(controlBackground.getARGB()), nullptr);
-    state.setProperty("ctrlBorder", static_cast<int>(controlBorder.getARGB()), nullptr);
-    state.setProperty("ctrlHighlight", static_cast<int>(controlHighlight.getARGB()), nullptr);
-    state.setProperty("ctrlActive", static_cast<int>(controlActive.getARGB()), nullptr);
-    state.setProperty("statusActive", static_cast<int>(statusActive.getARGB()), nullptr);
-    state.setProperty("statusWarning", static_cast<int>(statusWarning.getARGB()), nullptr);
-    state.setProperty("statusError", static_cast<int>(statusError.getARGB()), nullptr);
-
-    // Button Primary
-    state.setProperty("btnPriBg", static_cast<int>(btnPrimaryBg.getARGB()), nullptr);
-    state.setProperty("btnPriBgH", static_cast<int>(btnPrimaryBgHover.getARGB()), nullptr);
-    state.setProperty("btnPriBgA", static_cast<int>(btnPrimaryBgActive.getARGB()), nullptr);
-    state.setProperty("btnPriBgD", static_cast<int>(btnPrimaryBgDisabled.getARGB()), nullptr);
-    state.setProperty("btnPriTxt", static_cast<int>(btnPrimaryText.getARGB()), nullptr);
-    state.setProperty("btnPriTxtD", static_cast<int>(btnPrimaryTextDisabled.getARGB()), nullptr);
-
-    // Button Secondary
-    state.setProperty("btnSecBg", static_cast<int>(btnSecondaryBg.getARGB()), nullptr);
-    state.setProperty("btnSecBgH", static_cast<int>(btnSecondaryBgHover.getARGB()), nullptr);
-    state.setProperty("btnSecBgA", static_cast<int>(btnSecondaryBgActive.getARGB()), nullptr);
-    state.setProperty("btnSecBgD", static_cast<int>(btnSecondaryBgDisabled.getARGB()), nullptr);
-    state.setProperty("btnSecTxt", static_cast<int>(btnSecondaryText.getARGB()), nullptr);
-    state.setProperty("btnSecTxtD", static_cast<int>(btnSecondaryTextDisabled.getARGB()), nullptr);
-
-    // Button Tertiary
-    state.setProperty("btnTerBg", static_cast<int>(btnTertiaryBg.getARGB()), nullptr);
-    state.setProperty("btnTerBgH", static_cast<int>(btnTertiaryBgHover.getARGB()), nullptr);
-    state.setProperty("btnTerBgA", static_cast<int>(btnTertiaryBgActive.getARGB()), nullptr);
-    state.setProperty("btnTerBgD", static_cast<int>(btnTertiaryBgDisabled.getARGB()), nullptr);
-    state.setProperty("btnTerTxt", static_cast<int>(btnTertiaryText.getARGB()), nullptr);
-    state.setProperty("btnTerTxtD", static_cast<int>(btnTertiaryTextDisabled.getARGB()), nullptr);
-
-    // Serialize waveform colors
-    juce::String colorStr;
-    for (const auto& color : waveformColors)
-    {
-        if (colorStr.isNotEmpty())
-            colorStr += ",";
-        colorStr += juce::String::toHexString(static_cast<int>(color.getARGB()));
-    }
-    state.setProperty("waveformColors", colorStr, nullptr);
-
-    return state;
-}
-
-void ColorTheme::fromValueTree(const juce::ValueTree& state)
-{
-    if (!state.hasType("Theme"))
-        return;
-
-    name = state.getProperty("name", "Custom");
-    isSystemTheme = state.getProperty("isSystem", false);
-
-    auto getColour = [&state](const char* prop, juce::Colour defaultVal) {
-        return juce::Colour(static_cast<juce::uint32>(
-            static_cast<int>(state.getProperty(prop, static_cast<int>(defaultVal.getARGB())))));
-    };
-
-    backgroundPrimary = getColour("bgPrimary", backgroundPrimary);
-    backgroundSecondary = getColour("bgSecondary", backgroundSecondary);
-    backgroundPane = getColour("bgPane", backgroundPane);
-    gridMajor = getColour("gridMajor", gridMajor);
-    gridMinor = getColour("gridMinor", gridMinor);
-    gridZeroLine = getColour("gridZero", gridZeroLine);
-    textPrimary = getColour("textPrimary", textPrimary);
-    textSecondary = getColour("textSecondary", textSecondary);
-    textHighlight = getColour("textHighlight", textHighlight);
-    controlBackground = getColour("ctrlBg", controlBackground);
-    controlBorder = getColour("ctrlBorder", controlBorder);
-    controlHighlight = getColour("ctrlHighlight", controlHighlight);
-    controlActive = getColour("ctrlActive", controlActive);
-    statusActive = getColour("statusActive", statusActive);
-    statusWarning = getColour("statusWarning", statusWarning);
-    statusError = getColour("statusError", statusError);
-
-    // Button Colors
-    btnPrimaryBg = getColour("btnPriBg", btnPrimaryBg);
-    btnPrimaryBgHover = getColour("btnPriBgH", btnPrimaryBgHover);
-    btnPrimaryBgActive = getColour("btnPriBgA", btnPrimaryBgActive);
-    btnPrimaryBgDisabled = getColour("btnPriBgD", btnPrimaryBgDisabled);
-    btnPrimaryText = getColour("btnPriTxt", btnPrimaryText);
-    btnPrimaryTextDisabled = getColour("btnPriTxtD", btnPrimaryTextDisabled);
-    
-    btnPrimaryTextHover = btnPrimaryText; 
-    btnPrimaryTextActive = btnPrimaryText;
-
-    btnSecondaryBg = getColour("btnSecBg", btnSecondaryBg);
-    btnSecondaryBgHover = getColour("btnSecBgH", btnSecondaryBgHover);
-    btnSecondaryBgActive = getColour("btnSecBgA", btnSecondaryBgActive);
-    btnSecondaryBgDisabled = getColour("btnSecBgD", btnSecondaryBgDisabled);
-    btnSecondaryText = getColour("btnSecTxt", btnSecondaryText);
-    btnSecondaryTextDisabled = getColour("btnSecTxtD", btnSecondaryTextDisabled);
-    btnSecondaryTextHover = btnSecondaryText; 
-    btnSecondaryTextActive = btnSecondaryText; 
-
-    btnTertiaryBg = getColour("btnTerBg", btnTertiaryBg);
-    btnTertiaryBgHover = getColour("btnTerBgH", btnTertiaryBgHover);
-    btnTertiaryBgActive = getColour("btnTerBgA", btnTertiaryBgActive);
-    btnTertiaryBgDisabled = getColour("btnTerBgD", btnTertiaryBgDisabled);
-    btnTertiaryText = getColour("btnTerTxt", btnTertiaryText);
-    btnTertiaryTextDisabled = getColour("btnTerTxtD", btnTertiaryTextDisabled);
-    btnTertiaryTextHover = btnTertiaryText; 
-    btnTertiaryTextActive = btnTertiaryText; 
-
-    // Parse waveform colors
-    juce::String colorStr = state.getProperty("waveformColors", "");
-    if (colorStr.isNotEmpty())
-    {
-        waveformColors.clear();
-        juce::StringArray colors;
-        colors.addTokens(colorStr, ",", "");
-        for (const auto& c : colors)
-        {
-            waveformColors.push_back(juce::Colour(static_cast<juce::uint32>(c.getHexValue32())));
-        }
-    }
-}
-
-juce::String ColorTheme::toJson() const
-{
-    auto state = toValueTree();
-    if (auto xml = state.createXml())
-    {
-        return xml->toString();
-    }
-    return {};
-}
-
-bool ColorTheme::fromJson(const juce::String& json)
-{
-    if (auto xml = juce::XmlDocument::parse(json))
-    {
-        auto state = juce::ValueTree::fromXml(*xml);
-        if (state.isValid())
-        {
-            fromValueTree(state);
-            return true;
-        }
-    }
-    return false;
-}
-
-// ThemeManager implementation
+// === ThemeManager Implementation ===
 
 ThemeManager::ThemeManager()
 {
     initializeSystemThemes();
     loadThemes();
 
-    // Set default theme
     if (themes_.find("Dark Professional") != themes_.end())
     {
         currentTheme_ = themes_["Dark Professional"];
@@ -216,10 +53,8 @@ ThemeManager::ThemeManager()
 
 ThemeManager::~ThemeManager()
 {
-    // Synchronously flush any pending saves before destruction
     stopTimer();
-    
-    // Process pending saves synchronously
+
     if (!pendingSaves_.empty())
     {
         auto themesDir = getThemesDirectory();
@@ -251,11 +86,9 @@ void ThemeManager::flushPendingSaves()
     if (pendingSaves_.empty())
         return;
 
-    // Prepare data for background thread
     std::vector<std::pair<juce::String, juce::String>> filesToWrite;
     auto themesDir = getThemesDirectory();
 
-    // Capture current state on main thread
     for (const auto& name : pendingSaves_)
     {
         auto it = themes_.find(name);
@@ -270,13 +103,12 @@ void ThemeManager::flushPendingSaves()
             }
         }
     }
-    
+
     pendingSaves_.clear();
 
     if (filesToWrite.empty())
         return;
 
-    // Launch background thread for I/O
     juce::Thread::launch([filesToWrite]() {
         for (const auto& [path, content] : filesToWrite)
         {
@@ -341,7 +173,6 @@ bool ThemeManager::createTheme(const juce::String& name, const juce::String& sou
     newTheme.isSystemTheme = false;
     themes_[name] = newTheme;
 
-    // Save immediately (queued)
     saveTheme(name);
     return true;
 }
@@ -356,7 +187,6 @@ bool ThemeManager::updateTheme(const juce::String& name, const ColorTheme& theme
     it->second.name = name;
     it->second.isSystemTheme = false;
 
-    // Save immediately (queued)
     saveTheme(name);
 
     if (currentTheme_.name == name)
@@ -388,11 +218,9 @@ bool ThemeManager::deleteTheme(const juce::String& name)
     }
 
     themes_.erase(it);
-    
-    // Remove from pending saves if present
+
     pendingSaves_.erase(name);
 
-    // Delete theme file from disk
     deleteThemeFile(name);
     return true;
 }
@@ -446,70 +274,6 @@ juce::String ThemeManager::exportTheme(const juce::String& name) const
     return it->second.toJson();
 }
 
-juce::File ThemeManager::getThemesDirectory() const
-{
-    auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    return appDataDir.getChildFile("Oscil").getChildFile("themes");
-}
-
-void ThemeManager::loadThemes()
-{
-    auto themesDir = getThemesDirectory();
-    if (!themesDir.exists())
-        return;
-
-    for (const auto& file : themesDir.findChildFiles(juce::File::findFiles, false, "*.xml"))
-    {
-        if (auto xml = juce::XmlDocument::parse(file))
-        {
-            auto loadedTree = juce::ValueTree::fromXml(*xml);
-            if (loadedTree.isValid())
-            {
-                ColorTheme theme;
-                theme.fromValueTree(loadedTree);
-                if (theme.name.isNotEmpty() && !theme.isSystemTheme)
-                {
-                    themes_[theme.name] = theme;
-                }
-            }
-        }
-    }
-}
-
-void ThemeManager::saveThemes()
-{
-    // Queue all custom themes for saving
-    for (const auto& [name, theme] : themes_)
-    {
-        if (!theme.isSystemTheme)
-        {
-            pendingSaves_.insert(name);
-        }
-    }
-    startTimer(500);
-}
-
-void ThemeManager::saveTheme(const juce::String& themeName)
-{
-    auto it = themes_.find(themeName);
-    if (it == themes_.end() || it->second.isSystemTheme)
-        return;
-
-    // Queue for async save with debounce
-    pendingSaves_.insert(themeName);
-    startTimer(500); // 500ms debounce
-}
-
-void ThemeManager::deleteThemeFile(const juce::String& themeName)
-{
-    auto themesDir = getThemesDirectory();
-    auto file = themesDir.getChildFile(themeName + ".xml");
-    if (file.exists())
-    {
-        file.deleteFile();
-    }
-}
-
 void ThemeManager::addListener(ThemeManagerListener* listener)
 {
     listeners_.add(listener);
@@ -522,8 +286,6 @@ void ThemeManager::removeListener(ThemeManagerListener* listener)
 
 void ThemeManager::notifyListeners()
 {
-    // Ensure theme change notifications happen on the message thread
-    // since listeners will typically call repaint() which requires message thread
     if (juce::MessageManager::getInstance()->isThisTheMessageThread())
     {
         listeners_.call([this](ThemeManagerListener& listener) {
@@ -532,7 +294,6 @@ void ThemeManager::notifyListeners()
     }
     else
     {
-        // Capture theme by value to avoid race conditions
         auto themeCopy = currentTheme_;
         juce::MessageManager::callAsync([this, themeCopy]() {
             listeners_.call([&themeCopy](ThemeManagerListener& listener) {
@@ -542,18 +303,15 @@ void ThemeManager::notifyListeners()
     }
 }
 
-// System theme definitions (unchanged)
+// === System Theme Definitions ===
+
 namespace SystemThemes
 {
-    // ... (same as original)
     ColorTheme createDarkProfessional()
     {
         ColorTheme theme;
         theme.name = "Dark Professional";
         theme.isSystemTheme = true;
-        // ... (omitted values for brevity, assumed to be in original file or included via copy-paste if I was replacing full file. 
-        // Wait, I must replace the FULL file. I will put the values back.)
-        
         theme.backgroundPrimary = juce::Colour(0xFF1E1E1E);
         theme.backgroundSecondary = juce::Colour(0xFF2D2D2D);
         theme.backgroundPane = juce::Colour(0xFF252525);
@@ -570,7 +328,7 @@ namespace SystemThemes
         theme.statusActive = juce::Colour(0xFF00CC00);
         theme.statusWarning = juce::Colour(0xFFCCAA00);
         theme.statusError = juce::Colour(0xFFCC0000);
-        
+
         theme.btnPrimaryBg = juce::Colour(0xFF007ACC);
         theme.btnPrimaryBgHover = juce::Colour(0xFF008AD9);
         theme.btnPrimaryBgActive = juce::Colour(0xFF0062A3);
@@ -612,7 +370,7 @@ namespace SystemThemes
         theme.controlBorder = juce::Colour(0xFF00AA00);
         theme.controlHighlight = juce::Colour(0xFF003300);
         theme.controlActive = juce::Colour(0xFF00FF00);
-        
+
         theme.waveformColors.clear();
         for (int i = 0; i < 64; ++i) {
             float brightness = 0.5f + 0.5f * (static_cast<float>(i) / 64.0f);
@@ -639,7 +397,7 @@ namespace SystemThemes
         theme.controlBorder = juce::Colour(0xFFAA7700);
         theme.controlHighlight = juce::Colour(0xFF332200);
         theme.controlActive = juce::Colour(0xFFFFAA00);
-        
+
         theme.waveformColors.clear();
         for (int i = 0; i < 64; ++i) {
             float hue = 0.08f + 0.04f * std::sin(static_cast<float>(i) * 0.2f);
@@ -687,7 +445,7 @@ namespace SystemThemes
         theme.controlBorder = juce::Colour(0xFFCCCCCC);
         theme.controlHighlight = juce::Colour(0xFFE0E0E0);
         theme.controlActive = juce::Colour(0xFF0066CC);
-        
+
         theme.waveformColors.clear();
         theme.waveformColors = {
             juce::Colour(0xFF007700), juce::Colour(0xFF007777), juce::Colour(0xFF770077), juce::Colour(0xFF777700),

@@ -56,7 +56,7 @@ namespace oscil
 OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processor_(p)
-    , serviceContext_{ processor_.getInstanceRegistry(), processor_.getThemeService(), processor_.getShaderRegistry() }
+    , serviceContext_{ processor_.getInstanceRegistry(), processor_.getThemeService(), processor_.getShaderRegistry(), processor_.getPresetManager() }
 {
     // Create coordinators
     sourceCoordinator_ = std::make_unique<SourceCoordinator>(

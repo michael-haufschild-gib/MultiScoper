@@ -1,0 +1,143 @@
+/*
+    Oscil - Oscillator Handler Integration Tests
+    handleTestOscillatorReorder for E2E test server
+*/
+
+#include "tools/test_server/OscillatorHandler.h"
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginProcessor.h"
+#include "core/Oscillator.h"
+#include "core/Pane.h"
+#include <nlohmann/json.hpp>
+
+namespace oscil
+{
+
+void OscillatorHandler::handleTestOscillatorReorder(const httplib::Request&, httplib::Response& res)
+{
+    auto result = runOnMessageThread([this]() -> nlohmann::json {
+        nlohmann::json response;
+        nlohmann::json tests = nlohmann::json::array();
+
+        auto& state = editor_.getProcessor().getState();
+        auto& layoutManager = state.getLayoutManager();
+
+        if (layoutManager.getPaneCount() == 0)
+        {
+            Pane defaultPane;
+            defaultPane.setName("Test Pane");
+            defaultPane.setOrderIndex(0);
+            layoutManager.addPane(defaultPane);
+        }
+
+        PaneId targetPaneId = layoutManager.getPanes()[0].getId();
+
+        auto existingOscs = state.getOscillators();
+        for (const auto& osc : existingOscs)
+            state.removeOscillator(osc.getId());
+
+        std::vector<juce::String> names = {"Alpha", "Beta", "Gamma"};
+        for (size_t i = 0; i < 3; ++i)
+        {
+            Oscillator osc;
+            osc.setPaneId(targetPaneId);
+            osc.setProcessingMode(ProcessingMode::FullStereo);
+            osc.setName(names[i]);
+            osc.setOrderIndex(static_cast<int>(i));
+            state.addOscillator(osc);
+        }
+        editor_.refreshPanels();
+
+        auto getOrderedOscillators = [&state]() {
+            auto oscs = state.getOscillators();
+            std::sort(oscs.begin(), oscs.end(),
+                      [](const Oscillator& a, const Oscillator& b) {
+                          return a.getOrderIndex() < b.getOrderIndex();
+                      });
+            return oscs;
+        };
+
+        auto runReorderTest = [&](const char* testName, int from, int to,
+                                   int expectedIdx, const char* details) {
+            nlohmann::json test;
+            test["name"] = testName;
+            auto before = getOrderedOscillators();
+            juce::String movedName = before[static_cast<size_t>(from)].getName();
+            state.reorderOscillators(from, to);
+            editor_.refreshPanels();
+            auto after = getOrderedOscillators();
+            bool passed = (after[static_cast<size_t>(expectedIdx)].getName() == movedName);
+            test["passed"] = passed;
+            test["details"] = details;
+            test["movedOsc"] = movedName.toStdString();
+            test["newOrder"] = {after[0].getName().toStdString(),
+                                after[1].getName().toStdString(),
+                                after[2].getName().toStdString()};
+            tests.push_back(test);
+        };
+
+        runReorderTest("MoveFirstToLast", 0, 2, 2,
+                        "First oscillator should move to last position");
+        state.reorderOscillators(2, 0);
+        editor_.refreshPanels();
+
+        runReorderTest("MoveLastToFirst", 2, 0, 0,
+                        "Last oscillator should move to first position");
+        state.reorderOscillators(0, 2);
+        editor_.refreshPanels();
+
+        runReorderTest("SwapAdjacent", 1, 0, 0,
+                        "Middle oscillator should move to first position");
+
+        // Test 4: Verify orderIndex values are sequential
+        {
+            nlohmann::json test;
+            test["name"] = "OrderIndexSequential";
+            auto after = getOrderedOscillators();
+            bool sequential = true;
+            nlohmann::json indices = nlohmann::json::array();
+            for (size_t i = 0; i < after.size(); ++i)
+            {
+                indices.push_back(after[i].getOrderIndex());
+                if (after[i].getOrderIndex() != static_cast<int>(i))
+                    sequential = false;
+            }
+            test["passed"] = sequential;
+            test["details"] = "orderIndex values should be 0, 1, 2";
+            test["orderIndices"] = indices;
+            tests.push_back(test);
+        }
+
+        // Test 5: Same index should be no-op
+        {
+            nlohmann::json test;
+            test["name"] = "SameIndexNoOp";
+            auto before = getOrderedOscillators();
+            state.reorderOscillators(1, 1);
+            editor_.refreshPanels();
+            auto after = getOrderedOscillators();
+            bool passed = (after[0].getName() == before[0].getName() &&
+                          after[1].getName() == before[1].getName() &&
+                          after[2].getName() == before[2].getName());
+            test["passed"] = passed;
+            test["details"] = "Moving to same index should not change order";
+            tests.push_back(test);
+        }
+
+        int passedCount = 0;
+        for (const auto& test : tests)
+            if (test["passed"].get<bool>()) passedCount++;
+
+        response["tests"] = tests;
+        response["totalTests"] = static_cast<int>(tests.size());
+        response["passed"] = passedCount;
+        response["failed"] = static_cast<int>(tests.size()) - passedCount;
+        response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
+
+        return response;
+    });
+
+    res.set_content(result.dump(), "application/json");
+}
+
+} // namespace oscil

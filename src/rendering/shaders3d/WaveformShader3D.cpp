@@ -42,79 +42,55 @@ void WaveformShader3D::render(juce::OpenGLContext& context,
                               const std::vector<float>* channel2,
                               const ShaderRenderParams& params)
 {
-    // Bridge: Convert 2D params to 3D data and call the 3D render method
     WaveformData3D data;
     data.samples = channel1.data();
     data.sampleCount = static_cast<int>(channel1.size());
     data.color = params.colour;
     data.lineThickness = params.lineWidth;
-    data.time = time_; // Use internally updated time
+    data.time = time_;
 
-    // For stereo: use Y-offset to separate channels vertically (like 2D stacked mode)
-    // Channel 1 (L) goes in upper half, Channel 2 (R) goes in lower half
     if (params.isStereo && channel2 && channel2->size() >= 2)
     {
-        DBG("[WaveformShader3D] STEREO mode: rendering ch1 at yOffset=0.5, ch2 at yOffset=-0.5");
-
-        // Calculate view dimensions to determine world-space offset
-        float halfHeight = 1.0f;
-        if (camera_.getProjection() == CameraProjection::Orthographic)
-        {
-            halfHeight = camera_.getOrthoSize() * 0.5f;
-        }
-        else
-        {
-            float dist = (camera_.getPosition() - camera_.getTarget()).length();
-            float fovRad = camera_.getFOV() * 3.14159265f / 180.0f;
-            float height = 2.0f * dist * std::tan(fovRad * 0.5f);
-            halfHeight = height * 0.5f;
-        }
-
-        // Calculate Z-offset to compensate for camera pitch
-        // This keeps the distance from camera to waveform constant despite the Y-shift,
-        // preventing one channel from being closer (brighter bloom) than the other.
-        float pitchRad = camera_.getOrbitPitch() * 3.14159265f / 180.0f;
-        float tanPitch = std::tan(pitchRad);
-
-        // Stereo mode: scale amplitude to half and offset vertically
-        data.yOffset = 0.5f;  // Upper half for channel 1
-        data.amplitude = params.verticalScale * 0.45f; // Fit in half the space
-        
-        // Apply depth compensation: move in Z to counter the distance change from Y shift
-        data.zOffset = -(data.yOffset * halfHeight) * tanPitch;
-
-        // Render channel 1 (L)
-        render(context, data, camera_, lighting_);
-
-        // Clear depth buffer between stereo channels to prevent occlusion
-        // This ensures both waveforms render fully even if they overlap in Z-space
-        glClear(GL_DEPTH_BUFFER_BIT);
-
-        // Render channel 2 (R) in lower half
-        WaveformData3D data2;
-        data2.samples = channel2->data();
-        data2.sampleCount = static_cast<int>(channel2->size());
-        data2.color = params.colour;
-        data2.lineThickness = params.lineWidth;
-        data2.yOffset = -0.5f; // Lower half for channel 2
-        data2.amplitude = params.verticalScale * 0.45f;
-        
-        // Apply depth compensation for second channel
-        data2.zOffset = -(data2.yOffset * halfHeight) * tanPitch;
-        
-        data2.time = time_;
-
-        render(context, data2, camera_, lighting_);
+        renderStereoChannels(context, data, *channel2, params);
     }
     else
     {
-        // Mono mode: full amplitude, centered
         data.yOffset = 0.0f;
         data.zOffset = 0.0f;
         data.amplitude = params.verticalScale;
-
         render(context, data, camera_, lighting_);
     }
+}
+
+void WaveformShader3D::renderStereoChannels(juce::OpenGLContext& context,
+                                             WaveformData3D& data,
+                                             const std::vector<float>& channel2,
+                                             const ShaderRenderParams& params)
+{
+    float xSpread, halfHeight;
+    calculateCameraSpread(camera_, xSpread, halfHeight);
+
+    // Z-offset compensates for camera pitch so both channels are equidistant
+    float pitchRad = camera_.getOrbitPitch() * 3.14159265f / 180.0f;
+    float tanPitch = std::tan(pitchRad);
+
+    data.yOffset = 0.5f;
+    data.amplitude = params.verticalScale * 0.45f;
+    data.zOffset = -(data.yOffset * halfHeight) * tanPitch;
+    render(context, data, camera_, lighting_);
+
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    WaveformData3D data2;
+    data2.samples = channel2.data();
+    data2.sampleCount = static_cast<int>(channel2.size());
+    data2.color = params.colour;
+    data2.lineThickness = params.lineWidth;
+    data2.yOffset = -0.5f;
+    data2.amplitude = params.verticalScale * 0.45f;
+    data2.zOffset = -(data2.yOffset * halfHeight) * tanPitch;
+    data2.time = time_;
+    render(context, data2, camera_, lighting_);
 }
 
 void WaveformShader3D::setMatrixUniforms(juce::OpenGLExtensionFunctions& ext,
@@ -175,6 +151,138 @@ void WaveformShader3D::setLightingUniforms(juce::OpenGLExtensionFunctions& ext,
         ext.glUniform1f(specPowerLoc, lighting.specularPower);
 }
 
+void WaveformShader3D::setupPosNormTexAttribs(juce::OpenGLExtensionFunctions& ext, GLuint programID)
+{
+    GLint posAttrib = ext.glGetAttribLocation(programID, "aPosition");
+    GLint normAttrib = ext.glGetAttribLocation(programID, "aNormal");
+    GLint texAttrib = ext.glGetAttribLocation(programID, "aTexCoord");
+
+    const int stride = 8 * sizeof(float);
+
+    if (posAttrib >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+    }
+    if (normAttrib >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(normAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(normAttrib), 3, GL_FLOAT, GL_FALSE, stride,
+                                  reinterpret_cast<void*>(3 * sizeof(float)));
+    }
+    if (texAttrib >= 0)
+    {
+        ext.glEnableVertexAttribArray(static_cast<GLuint>(texAttrib));
+        ext.glVertexAttribPointer(static_cast<GLuint>(texAttrib), 2, GL_FLOAT, GL_FALSE, stride,
+                                  reinterpret_cast<void*>(6 * sizeof(float)));
+    }
+}
+
+void WaveformShader3D::calculateCameraSpread(const Camera3D& camera, float& xSpread, float& halfHeight)
+{
+    xSpread = 1.0f;
+    halfHeight = 1.0f;
+
+    if (camera.getProjection() == CameraProjection::Orthographic)
+    {
+        float height = camera.getOrthoSize();
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+    else
+    {
+        float dist = (camera.getPosition() - camera.getTarget()).length();
+        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
+        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
+        float width = height * camera.getAspectRatio();
+        xSpread = width * 0.5f;
+        halfHeight = height * 0.5f;
+    }
+}
+
+static void generateTubeRingVertices(std::vector<float>& vertices,
+                                     const float* samples, int sampleCount,
+                                     float xSpread, float radius, int segments)
+{
+    for (int i = 0; i < sampleCount; ++i)
+    {
+        float t = static_cast<float>(i) / static_cast<float>(sampleCount - 1);
+        float px = (t * 2.0f - 1.0f) * xSpread;
+        float py = samples[i];
+
+        // Calculate tangent direction
+        float tx, ty, tz = 0.0f;
+        if (i == 0)
+        {
+            tx = (1.0f / static_cast<float>(sampleCount)) * xSpread;
+            ty = samples[1] - samples[0];
+        }
+        else if (i == sampleCount - 1)
+        {
+            tx = (1.0f / static_cast<float>(sampleCount)) * xSpread;
+            ty = samples[i] - samples[i - 1];
+        }
+        else
+        {
+            tx = (2.0f / static_cast<float>(sampleCount)) * xSpread;
+            ty = samples[i + 1] - samples[i - 1];
+        }
+
+        // Normalize tangent
+        float tLen = std::sqrt(tx * tx + ty * ty + tz * tz);
+        if (tLen > 0) { tx /= tLen; ty /= tLen; tz /= tLen; }
+
+        // Frenet frame: binormal = tangent x (0,0,1)
+        float bx = ty, by = -tx, bz = 0.0f;
+        float bLen = std::sqrt(bx * bx + by * by + bz * bz);
+        if (bLen > 0) { bx /= bLen; by /= bLen; bz /= bLen; }
+
+        // Normal = binormal x tangent
+        float nx = by * tz - bz * ty;
+        float ny = bz * tx - bx * tz;
+        float nz = bx * ty - by * tx;
+
+        for (int j = 0; j < segments; ++j)
+        {
+            float angle = static_cast<float>(j) / static_cast<float>(segments) * 2.0f * 3.14159265f;
+            float cosA = std::cos(angle);
+            float sinA = std::sin(angle);
+
+            vertices.push_back(px + (nx * cosA + bx * sinA) * radius);
+            vertices.push_back(py + (ny * cosA + by * sinA) * radius);
+            vertices.push_back((nz * cosA + bz * sinA) * radius);
+            vertices.push_back(nx * cosA + bx * sinA);
+            vertices.push_back(ny * cosA + by * sinA);
+            vertices.push_back(nz * cosA + bz * sinA);
+            vertices.push_back(t);
+            vertices.push_back(static_cast<float>(j) / static_cast<float>(segments));
+        }
+    }
+}
+
+static void generateTubeIndices(std::vector<GLuint>& indices, int sampleCount, int segments)
+{
+    for (int i = 0; i < sampleCount - 1; ++i)
+    {
+        for (int j = 0; j < segments; ++j)
+        {
+            int current = i * segments + j;
+            int next = i * segments + ((j + 1) % segments);
+            int currentNext = (i + 1) * segments + j;
+            int nextNext = (i + 1) * segments + ((j + 1) % segments);
+
+            indices.push_back(static_cast<GLuint>(current));
+            indices.push_back(static_cast<GLuint>(currentNext));
+            indices.push_back(static_cast<GLuint>(next));
+
+            indices.push_back(static_cast<GLuint>(next));
+            indices.push_back(static_cast<GLuint>(currentNext));
+            indices.push_back(static_cast<GLuint>(nextNext));
+        }
+    }
+}
+
 void WaveformShader3D::generateTubeMesh(const float* samples, int sampleCount,
                                         float xSpread,
                                         float radius, int segments,
@@ -187,121 +295,82 @@ void WaveformShader3D::generateTubeMesh(const float* samples, int sampleCount,
     if (!samples || sampleCount < 2 || segments < 3)
         return;
 
-    // Each vertex: position (3) + normal (3) + uv (2) = 8 floats
     const int floatsPerVertex = 8;
     vertices.reserve(static_cast<size_t>(sampleCount * segments * floatsPerVertex));
     indices.reserve(static_cast<size_t>((sampleCount - 1) * segments * 6));
 
-    // Generate vertices along the path
+    generateTubeRingVertices(vertices, samples, sampleCount, xSpread, radius, segments);
+    generateTubeIndices(indices, sampleCount, segments);
+}
+
+static void generateRibbonVertices(std::vector<float>& vertices,
+                                   const float* samples, int sampleCount,
+                                   float xSpread, float halfWidth)
+{
     for (int i = 0; i < sampleCount; ++i)
     {
         float t = static_cast<float>(i) / static_cast<float>(sampleCount - 1);
+        float x = (t * 2.0f - 1.0f) * xSpread;
+        float y = samples[i];
 
-        // Position on waveform (x = time, y = amplitude, z = 0 base)
-        float px = (t * 2.0f - 1.0f) * xSpread;  // -xSpread to xSpread
-        float py = samples[i];
-        float pz = 0.0f;
-
-        // Calculate tangent direction
-        float tx, ty, tz;
+        float tx, ty;
         if (i == 0)
         {
-            tx = (1.0f / static_cast<float>(sampleCount)) * xSpread;
-            ty = samples[1] - samples[0];
-            tz = 0.0f;
+            tx = xSpread;
+            ty = (samples[1] - samples[0]) * static_cast<float>(sampleCount);
         }
         else if (i == sampleCount - 1)
         {
-            tx = (1.0f / static_cast<float>(sampleCount)) * xSpread;
-            ty = samples[i] - samples[i - 1];
-            tz = 0.0f;
+            tx = xSpread;
+            ty = (samples[i] - samples[i - 1]) * static_cast<float>(sampleCount);
         }
         else
         {
-            tx = (2.0f / static_cast<float>(sampleCount)) * xSpread;
-            ty = samples[i + 1] - samples[i - 1];
-            tz = 0.0f;
+            tx = xSpread;
+            ty = (samples[i + 1] - samples[i - 1]) * static_cast<float>(sampleCount) * 0.5f;
         }
 
-        // Normalize tangent
-        float tLen = std::sqrt(tx*tx + ty*ty + tz*tz);
-        if (tLen > 0) { tx /= tLen; ty /= tLen; tz /= tLen; }
+        float len = std::sqrt(tx * tx + ty * ty);
+        if (len <= 0.0f) len = 1.0f;
+        float nx = -ty / len;
+        float ny = tx / len;
 
-        // Calculate perpendicular vectors using Frenet frame
-        // Up vector (use Z-up as default reference)
-        float upX = 0.0f, upY = 0.0f, upZ = 1.0f;
+        // Top vertex: pos(3) + normal(3) + uv(2)
+        vertices.push_back(x);
+        vertices.push_back(y + halfWidth * ny);
+        vertices.push_back(halfWidth * nx);
+        vertices.push_back(0.0f); vertices.push_back(0.0f); vertices.push_back(1.0f);
+        vertices.push_back(t); vertices.push_back(0.0f);
 
-        // Binormal = tangent x up
-        float bx = ty * upZ - tz * upY;
-        float by = tz * upX - tx * upZ;
-        float bz = tx * upY - ty * upX;
-
-        float bLen = std::sqrt(bx*bx + by*by + bz*bz);
-        if (bLen > 0) { bx /= bLen; by /= bLen; bz /= bLen; }
-
-        // Normal = binormal x tangent
-        float nx = by * tz - bz * ty;
-        float ny = bz * tx - bx * tz;
-        float nz = bx * ty - by * tx;
-
-        // Generate ring of vertices around this point
-        for (int j = 0; j < segments; ++j)
-        {
-            float angle = static_cast<float>(j) / static_cast<float>(segments) * 2.0f * 3.14159265f;
-            float cosA = std::cos(angle);
-            float sinA = std::sin(angle);
-
-            // Position on ring
-            float rx = px + (nx * cosA + bx * sinA) * radius;
-            float ry = py + (ny * cosA + by * sinA) * radius;
-            float rz = pz + (nz * cosA + bz * sinA) * radius;
-
-            // Normal (pointing outward from center of tube)
-            float rnx = nx * cosA + bx * sinA;
-            float rny = ny * cosA + by * sinA;
-            float rnz = nz * cosA + bz * sinA;
-
-            // UV coordinates
-            float u = t;
-            float v = static_cast<float>(j) / static_cast<float>(segments);
-
-            // Add vertex
-            vertices.push_back(rx);
-            vertices.push_back(ry);
-            vertices.push_back(rz);
-            vertices.push_back(rnx);
-            vertices.push_back(rny);
-            vertices.push_back(rnz);
-            vertices.push_back(u);
-            vertices.push_back(v);
-        }
+        // Bottom vertex
+        vertices.push_back(x);
+        vertices.push_back(y - halfWidth * ny);
+        vertices.push_back(-halfWidth * nx);
+        vertices.push_back(0.0f); vertices.push_back(0.0f); vertices.push_back(1.0f);
+        vertices.push_back(t); vertices.push_back(1.0f);
     }
+}
 
-    // Generate indices for triangle strips between rings
-    for (int i = 0; i < sampleCount - 1; ++i)
+static void generateQuadStripIndices(std::vector<GLuint>& indices, int stripCount)
+{
+    for (int i = 0; i < stripCount; ++i)
     {
-        for (int j = 0; j < segments; ++j)
-        {
-            int current = i * segments + j;
-            int next = i * segments + ((j + 1) % segments);
-            int currentNext = (i + 1) * segments + j;
-            int nextNext = (i + 1) * segments + ((j + 1) % segments);
+        int topLeft = i * 2;
+        int bottomLeft = i * 2 + 1;
+        int topRight = (i + 1) * 2;
+        int bottomRight = (i + 1) * 2 + 1;
 
-            // Two triangles per quad
-            indices.push_back(static_cast<GLuint>(current));
-            indices.push_back(static_cast<GLuint>(currentNext));
-            indices.push_back(static_cast<GLuint>(next));
-
-            indices.push_back(static_cast<GLuint>(next));
-            indices.push_back(static_cast<GLuint>(currentNext));
-            indices.push_back(static_cast<GLuint>(nextNext));
-        }
+        indices.push_back(static_cast<GLuint>(topLeft));
+        indices.push_back(static_cast<GLuint>(bottomLeft));
+        indices.push_back(static_cast<GLuint>(topRight));
+        indices.push_back(static_cast<GLuint>(topRight));
+        indices.push_back(static_cast<GLuint>(bottomLeft));
+        indices.push_back(static_cast<GLuint>(bottomRight));
     }
 }
 
 void WaveformShader3D::generateRibbonMesh(const float* samples, int sampleCount,
-                                          float xSpread,
-                                          float width,
+                                          float xSpread, float width,
                                           std::vector<float>& vertices,
                                           std::vector<GLuint>& indices)
 {
@@ -311,86 +380,12 @@ void WaveformShader3D::generateRibbonMesh(const float* samples, int sampleCount,
     if (!samples || sampleCount < 2)
         return;
 
-    // Each vertex: position (3) + normal (3) + uv (2) = 8 floats
     const int floatsPerVertex = 8;
     vertices.reserve(static_cast<size_t>(sampleCount * 2 * floatsPerVertex));
     indices.reserve(static_cast<size_t>((sampleCount - 1) * 6));
 
-    float halfWidth = width * 0.5f;
-
-    // Generate two vertices per sample (top and bottom of ribbon)
-    for (int i = 0; i < sampleCount; ++i)
-    {
-        float t = static_cast<float>(i) / static_cast<float>(sampleCount - 1);
-        float x = (t * 2.0f - 1.0f) * xSpread;  // -xSpread to xSpread
-        float y = samples[i];
-
-        // Calculate normal from tangent
-        float tx, ty;
-        if (i == 0)
-        {
-            tx = 1.0f * xSpread;
-            ty = (samples[1] - samples[0]) * static_cast<float>(sampleCount);
-        }
-        else if (i == sampleCount - 1)
-        {
-            tx = 1.0f * xSpread;
-            ty = (samples[i] - samples[i - 1]) * static_cast<float>(sampleCount);
-        }
-        else
-        {
-            tx = 1.0f * xSpread;
-            ty = (samples[i + 1] - samples[i - 1]) * static_cast<float>(sampleCount) * 0.5f;
-        }
-
-        // Normal is perpendicular to tangent in XY plane, facing Z+
-        float len = std::sqrt(tx*tx + ty*ty);
-        if (len <= 0.0f)
-            len = 1.0f;  // Prevent division by zero
-        float nx = -ty / len;
-        float ny = tx / len;
-
-        // Front face normal (facing viewer)
-        float fnx = 0.0f, fny = 0.0f, fnz = 1.0f;
-
-        // Top vertex
-        vertices.push_back(x);
-        vertices.push_back(y + halfWidth * ny);
-        vertices.push_back(halfWidth * nx);
-        vertices.push_back(fnx);
-        vertices.push_back(fny);
-        vertices.push_back(fnz);
-        vertices.push_back(t);
-        vertices.push_back(0.0f);
-
-        // Bottom vertex
-        vertices.push_back(x);
-        vertices.push_back(y - halfWidth * ny);
-        vertices.push_back(-halfWidth * nx);
-        vertices.push_back(fnx);
-        vertices.push_back(fny);
-        vertices.push_back(fnz);
-        vertices.push_back(t);
-        vertices.push_back(1.0f);
-    }
-
-    // Generate indices
-    for (int i = 0; i < sampleCount - 1; ++i)
-    {
-        int topLeft = i * 2;
-        int bottomLeft = i * 2 + 1;
-        int topRight = (i + 1) * 2;
-        int bottomRight = (i + 1) * 2 + 1;
-
-        // Two triangles per quad
-        indices.push_back(static_cast<GLuint>(topLeft));
-        indices.push_back(static_cast<GLuint>(bottomLeft));
-        indices.push_back(static_cast<GLuint>(topRight));
-
-        indices.push_back(static_cast<GLuint>(topRight));
-        indices.push_back(static_cast<GLuint>(bottomLeft));
-        indices.push_back(static_cast<GLuint>(bottomRight));
-    }
+    generateRibbonVertices(vertices, samples, sampleCount, xSpread, width * 0.5f);
+    generateQuadStripIndices(indices, sampleCount - 1);
 }
 
 } // namespace oscil

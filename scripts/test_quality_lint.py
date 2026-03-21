@@ -67,6 +67,24 @@ EXISTENCE_PATTERNS: List[re.Pattern] = [
     re.compile(r"\b(?:EXPECT|ASSERT)_GE\s*\(\s*\w+\.(?:size|count|length)\s*\(\s*\)\s*,\s*1\s*\)"),
 ]
 
+# Tautological assertion patterns — assertions that can NEVER fail.
+# These are worse than shallow tests: they give false confidence.
+TAUTOLOGY_PATTERNS: List[re.Pattern] = [
+    # EXPECT_EQ(x, x) — comparing a variable to itself
+    re.compile(r"\b(?:EXPECT|ASSERT)_EQ\s*\(\s*(\w+(?:\.\w+)*)\s*,\s*\1\s*\)"),
+    # EXPECT_TRUE(true) / EXPECT_FALSE(false)
+    re.compile(r"\b(?:EXPECT|ASSERT)_TRUE\s*\(\s*true\s*\)"),
+    re.compile(r"\b(?:EXPECT|ASSERT)_FALSE\s*\(\s*false\s*\)"),
+    # EXPECT_EQ(true, true) / EXPECT_EQ(false, false)
+    re.compile(r"\b(?:EXPECT|ASSERT)_EQ\s*\(\s*true\s*,\s*true\s*\)"),
+    re.compile(r"\b(?:EXPECT|ASSERT)_EQ\s*\(\s*false\s*,\s*false\s*\)"),
+    # EXPECT_NE(x, x) — always fails, likely a copy-paste error
+    re.compile(r"\b(?:EXPECT|ASSERT)_NE\s*\(\s*(\w+(?:\.\w+)*)\s*,\s*\1\s*\)"),
+    # EXPECT_GE(x, x) / EXPECT_LE(x, x) — always true
+    re.compile(r"\b(?:EXPECT|ASSERT)_GE\s*\(\s*(\w+(?:\.\w+)*)\s*,\s*\1\s*\)"),
+    re.compile(r"\b(?:EXPECT|ASSERT)_LE\s*\(\s*(\w+(?:\.\w+)*)\s*,\s*\1\s*\)"),
+]
+
 # Patterns that indicate a test IS behavioral even with few assertions
 BEHAVIORAL_INDICATORS = [
     # Death tests are single-assertion but meaningful
@@ -192,9 +210,30 @@ def has_behavioral_indicator(body: TestBody) -> bool:
     return any(p.search(body.raw_text) for p in BEHAVIORAL_INDICATORS)
 
 
+def find_tautologies(body: TestBody) -> List[str]:
+    """Return list of tautological assertion descriptions."""
+    found: List[str] = []
+    for pattern in TAUTOLOGY_PATTERNS:
+        for match in pattern.finditer(body.raw_text):
+            found.append(match.group().strip())
+    return found
+
+
 def analyze_test(body: TestBody, min_assertions: int) -> Optional[Violation]:
     """Analyze a single test body for quality violations."""
     assertion_count = count_assertions(body)
+
+    # Tautological assertions — always a violation, regardless of count
+    tautologies = find_tautologies(body)
+    if tautologies:
+        examples = "; ".join(tautologies[:3])
+        return Violation(
+            file="",
+            line=body.start_line,
+            suite=body.suite,
+            name=body.name,
+            reason=f"tautological assertion(s) that can never fail: {examples}",
+        )
 
     # Zero assertions — always a violation
     if assertion_count == 0:

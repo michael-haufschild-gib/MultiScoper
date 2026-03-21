@@ -88,11 +88,15 @@ TEST_F(StatePersistenceEdgeTest, ReorderSameIndex)
     EXPECT_EQ(state->getOscillators().size(), 1);
 }
 
-// Test: Reorder empty list
+// Test: Reorder empty list leaves state unchanged
 TEST_F(StatePersistenceEdgeTest, ReorderEmptyList)
 {
-    // Reorder on empty list should not crash
+    EXPECT_EQ(state->getOscillators().size(), 0);
+
+    // Reorder on empty list should not crash and list should remain empty
     state->reorderOscillators(0, 1);
+
+    EXPECT_EQ(state->getOscillators().size(), 0);
 }
 
 // Test: Column layout clamping low

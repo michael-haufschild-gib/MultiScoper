@@ -131,7 +131,7 @@ GlassRefractionShader::~GlassRefractionShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[GlassRefractionShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        DBG("[GlassRefractionShader] LEAK DETECTED: Destructor called without release()");
     }
 #endif
 }
@@ -143,29 +143,13 @@ bool GlassRefractionShader::compile(juce::OpenGLContext& context)
 
     auto& ext = context.extensions;
 
-    // Compile shader
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    
-    // Use modern shader compilation directly
-    if (!shader_->addVertexShader(glassVertexShader))
+    if (!compileShaderProgram(*shader_, glassVertexShader, glassFragmentShader))
     {
-        DBG("GlassRefractionShader: Vertex shader error: " << shader_->getLastError());
+        shader_.reset();
         return false;
     }
 
-    if (!shader_->addFragmentShader(glassFragmentShader))
-    {
-        DBG("GlassRefractionShader: Fragment shader error: " << shader_->getLastError());
-        return false;
-    }
-
-    if (!shader_->link())
-    {
-        DBG("GlassRefractionShader: Link error: " << shader_->getLastError());
-        return false;
-    }
-
-    // Get uniform locations
     modelLoc_ = shader_->getUniformIDFromName("uModel");
     viewLoc_ = shader_->getUniformIDFromName("uView");
     projLoc_ = shader_->getUniformIDFromName("uProjection");
@@ -180,49 +164,17 @@ bool GlassRefractionShader::compile(juce::OpenGLContext& context)
     lightDirLoc_ = shader_->getUniformIDFromName("uLightDir");
     specularLoc_ = shader_->getUniformIDFromName("uSpecular");
 
-    // Create VAO
     ext.glGenVertexArrays(1, &vao_);
     ext.glBindVertexArray(vao_);
-
-    // Create VBO
     ext.glGenBuffers(1, &vbo_);
     ext.glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-
-    // Create IBO
     ext.glGenBuffers(1, &ibo_);
     ext.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_);
 
-    // Setup vertex attributes
-    GLint posAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aPosition");
-    GLint normAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aNormal");
-    GLint texAttrib = ext.glGetAttribLocation(shader_->getProgramID(), "aTexCoord");
-
-    const int stride = 8 * sizeof(float);
-
-    if (posAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posAttrib), 3, GL_FLOAT, GL_FALSE, stride, nullptr);
-    }
-
-    if (normAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(normAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(normAttrib), 3, GL_FLOAT, GL_FALSE, stride,
-                                  reinterpret_cast<void*>(3 * sizeof(float)));
-    }
-
-    if (texAttrib >= 0)
-    {
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(texAttrib));
-        ext.glVertexAttribPointer(static_cast<GLuint>(texAttrib), 2, GL_FLOAT, GL_FALSE, stride,
-                                  reinterpret_cast<void*>(6 * sizeof(float)));
-    }
+    setupPosNormTexAttribs(ext, shader_->getProgramID());
 
     ext.glBindVertexArray(0);
-
     compiled_ = true;
-    DBG("GlassRefractionShader: Compiled successfully");
     return true;
 }
 
@@ -255,6 +207,31 @@ void GlassRefractionShader::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
+void GlassRefractionShader::setGlassUniforms(juce::OpenGLExtensionFunctions& ext,
+                                              const WaveformData3D& data,
+                                              const Camera3D& camera,
+                                              const LightingConfig& lighting,
+                                              float halfHeight)
+{
+    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
+                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
+    setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
+
+    Vec3 camPos = camera.getPosition();
+    ext.glUniform3f(cameraPosLoc_, camPos.x, camPos.y, camPos.z);
+
+    ext.glUniform4f(colorLoc_, data.color.getFloatRed(), data.color.getFloatGreen(),
+                    data.color.getFloatBlue(), data.color.getFloatAlpha());
+
+    ext.glUniform1f(iorLoc_, material_.ior);
+    ext.glUniform1f(refractionStrengthLoc_, material_.refractionStrength);
+    ext.glUniform1f(fresnelPowerLoc_, material_.fresnelPower);
+    ext.glUniform1f(dispersionLoc_, dispersion_);
+    ext.glUniform1f(timeLoc_, time_);
+
+    setLightingUniforms(ext, lightDirLoc_, -1, -1, specularLoc_, -1, lighting);
+}
+
 void GlassRefractionShader::render(juce::OpenGLContext& context,
                                    const WaveformData3D& data,
                                    const Camera3D& camera,
@@ -263,104 +240,35 @@ void GlassRefractionShader::render(juce::OpenGLContext& context,
     if (!compiled_ || !data.samples || data.sampleCount < 2)
         return;
 
-    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
-    float xSpread = 1.0f;
-    float halfHeight = 1.0f;
+    float xSpread, halfHeight;
+    calculateCameraSpread(camera, xSpread, halfHeight);
 
-    if (camera.getProjection() == CameraProjection::Orthographic)
-    {
-        float height = camera.getOrthoSize();
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-    else
-    {
-        float dist = (camera.getPosition() - camera.getTarget()).length();
-        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
-        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-
-    // Update mesh
     updateMesh(data, xSpread);
-
-    if (indexCount_ == 0)
-        return;
+    if (indexCount_ == 0) return;
 
     auto& ext = context.extensions;
 
-    // Enable depth testing
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-
-    // Enable blending for transparency
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Enable face culling (render back faces for glass effect)
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);  // Draw back faces first for better glass effect
+    glCullFace(GL_FRONT);
 
     shader_->use();
+    setGlassUniforms(ext, data, camera, lighting, halfHeight);
 
-    // Set matrix uniforms
-    // Scale amplitude by halfHeight to map normalized amplitude to world space
-    Matrix4 model = Matrix4::translation(0, data.yOffset * halfHeight, data.zOffset) *
-                    Matrix4::scale(1.0f, data.amplitude * halfHeight, 1.0f);
-    setMatrixUniforms(ext, modelLoc_, viewLoc_, projLoc_, camera, &model);
-
-    // Camera position
-    Vec3 camPos = camera.getPosition();
-    ext.glUniform3f(cameraPosLoc_, camPos.x, camPos.y, camPos.z);
-
-    // Color (tint)
-    ext.glUniform4f(colorLoc_,
-                    data.color.getFloatRed(),
-                    data.color.getFloatGreen(),
-                    data.color.getFloatBlue(),
-                    data.color.getFloatAlpha());
-
-    // Material properties
-    ext.glUniform1f(iorLoc_, material_.ior);
-    ext.glUniform1f(refractionStrengthLoc_, material_.refractionStrength);
-    ext.glUniform1f(fresnelPowerLoc_, material_.fresnelPower);
-    ext.glUniform1f(dispersionLoc_, dispersion_);
-    ext.glUniform1f(timeLoc_, time_);
-
-    // Light
-    float lx = lighting.lightDirX;
-    float ly = lighting.lightDirY;
-    float lz = lighting.lightDirZ;
-    float lLen = std::sqrt(lx*lx + ly*ly + lz*lz);
-    if (lLen > 0) { lx /= lLen; ly /= lLen; lz /= lLen; }
-    ext.glUniform3f(lightDirLoc_, lx, ly, lz);
-    ext.glUniform4f(specularLoc_, lighting.specularR, lighting.specularG,
-                    lighting.specularB, lighting.specularPower);
-
-    // Bind environment map
     if (hasEnvironmentMap())
-    {
         bindEnvironmentMap(ext, 0, envMapLoc_);
-    }
 
-    // Draw back faces
     ext.glBindVertexArray(vao_);
     glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, nullptr);
-
-    // Draw front faces
     glCullFace(GL_BACK);
     glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, nullptr);
-
     ext.glBindVertexArray(0);
 
-    // Unbind environment map
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
-    // Restore GL state
     glDisable(GL_CULL_FACE);
     glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);

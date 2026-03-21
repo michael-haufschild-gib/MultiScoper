@@ -23,6 +23,7 @@
 #include "plugin/PluginProcessor.h"
 #include "plugin/PluginEditor.h"
 #include "rendering/ShaderRegistry.h"
+#include "rendering/PresetManager.h"
 
 #include "OscilTestUtils.h"
 
@@ -41,12 +42,12 @@ class MockInstanceRegistry : public IInstanceRegistry
 {
 public:
     SourceId registerInstance(
-        const juce::String& trackIdentifier,
-        std::shared_ptr<IAudioBuffer> captureBuffer,
-        const juce::String& name = "Track",
-        int channelCount = 2,
-        double sampleRate = 44100.0,
-        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) override
+        const juce::String& /*trackIdentifier*/,
+        std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
+        const juce::String& /*name*/ = "Track",
+        int /*channelCount*/ = 2,
+        double /*sampleRate*/ = 44100.0,
+        std::shared_ptr<AnalysisEngine> /*analysisEngine*/ = nullptr) override
     {
         return SourceId::generate();
     }
@@ -219,10 +220,11 @@ protected:
         registry_ = std::make_unique<InstanceRegistry>();
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
 
         // Disable GPU rendering for headless test environment
         // OpenGL context operations crash without a real display/window
@@ -251,6 +253,7 @@ protected:
 
         // Destroy services in reverse order
         memoryBudgetManager_.reset();
+        presetManager_.reset();
         shaderRegistry_.reset();
         themeManager_.reset();
         registry_.reset();
@@ -280,6 +283,7 @@ protected:
     std::unique_ptr<InstanceRegistry> registry_;
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
 
     std::unique_ptr<OscilPluginProcessor> processor;
@@ -305,6 +309,7 @@ protected:
         mockRegistry = std::make_unique<MockInstanceRegistry>();
         mockThemeService = std::make_unique<MockThemeService>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        presetManager_ = std::make_unique<PresetManager>();
     }
 
     void TearDown() override
@@ -312,6 +317,7 @@ protected:
         // Pump to process any pending callbacks
         pumpMessageQueue(50);
 
+        presetManager_.reset();
         shaderRegistry_.reset();
         mockThemeService.reset();
         mockRegistry.reset();
@@ -323,12 +329,13 @@ protected:
      */
     ServiceContext createServiceContext()
     {
-        return ServiceContext{*mockRegistry, *mockThemeService, *shaderRegistry_};
+        return ServiceContext{*mockRegistry, *mockThemeService, *shaderRegistry_, *presetManager_};
     }
 
     std::unique_ptr<MockInstanceRegistry> mockRegistry;
     std::unique_ptr<MockThemeService> mockThemeService;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<PresetManager> presetManager_;
 };
 
 /**

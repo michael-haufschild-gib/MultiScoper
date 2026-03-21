@@ -23,6 +23,7 @@ namespace oscil
 {
 
 class ShaderRegistry;
+class PresetManager;
 
 class OscilPluginProcessor : public juce::AudioProcessor
     , public IAudioDataProvider
@@ -30,7 +31,7 @@ class OscilPluginProcessor : public juce::AudioProcessor
 {
 public:
     // Constructor with dependency injection
-    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, MemoryBudgetManager& memoryBudgetManager);
+    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, PresetManager& presetManager, MemoryBudgetManager& memoryBudgetManager);
     ~OscilPluginProcessor() override;
 
     // AudioProcessor interface
@@ -69,6 +70,7 @@ public:
     IInstanceRegistry& getInstanceRegistry();
     IThemeService& getThemeService();
     ShaderRegistry& getShaderRegistry();
+    PresetManager& getPresetManager();
 
     // IAudioDataProvider interface
     std::shared_ptr<IAudioBuffer> getBuffer(const SourceId& sourceId) override;
@@ -85,9 +87,13 @@ public:
     void valueTreeParentChanged(juce::ValueTree& /*tree*/) override {}
 
 private:
+    void deferRegistration(double sampleRate);
+    void updateCpuUsage(int64_t startTicks, int numSamples);
+
     IInstanceRegistry& instanceRegistry_;       // Injected dependency
     IThemeService& themeService_;               // Injected dependency
     ShaderRegistry& shaderRegistry_;            // Injected dependency
+    PresetManager& presetManager_;              // Injected dependency
     MemoryBudgetManager& memoryBudgetManager_;  // Injected dependency
 
     // Capture buffer

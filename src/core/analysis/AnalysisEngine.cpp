@@ -84,6 +84,31 @@ void AnalysisEngine::prepare(double /*sampleRate*/, int samplesPerBlock)
     (void) samplesPerBlock;  // Intentionally unused - allocation-free implementation
 }
 
+void AnalysisEngine::processMidSide(const float* left, const float* right,
+                                     int numSamples, double sampleRate)
+{
+    size_t requiredSize = static_cast<size_t>(numSamples);
+    if (midBuffer_.size() < requiredSize || sideBuffer_.size() < requiredSize)
+    {
+        jassertfalse;
+        clearChannelMetrics(metrics_.mid, midState_, midTransient_);
+        clearChannelMetrics(metrics_.side, sideState_, sideTransient_);
+        return;
+    }
+
+    // M = (L+R)/2, S = (L-R)/2
+    juce::FloatVectorOperations::copy(midBuffer_.data(), left, numSamples);
+    juce::FloatVectorOperations::add(midBuffer_.data(), right, numSamples);
+    juce::FloatVectorOperations::multiply(midBuffer_.data(), 0.5f, numSamples);
+
+    juce::FloatVectorOperations::copy(sideBuffer_.data(), left, numSamples);
+    juce::FloatVectorOperations::subtract(sideBuffer_.data(), right, numSamples);
+    juce::FloatVectorOperations::multiply(sideBuffer_.data(), 0.5f, numSamples);
+
+    processChannel(midBuffer_.data(), numSamples, metrics_.mid, midTransient_, midState_, sampleRate);
+    processChannel(sideBuffer_.data(), numSamples, metrics_.side, sideTransient_, sideState_, sampleRate);
+}
+
 void AnalysisEngine::process(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
     int numSamples = buffer.getNumSamples();
@@ -99,143 +124,82 @@ void AnalysisEngine::process(const juce::AudioBuffer<float>& buffer, double samp
         return;
     }
 
-    // L/R Processing
-    if (numChannels > 0)
-    {
-        processChannel(buffer.getReadPointer(0), numSamples, metrics_.left, leftTransient_, leftState_, sampleRate);
-    }
+    processChannel(buffer.getReadPointer(0), numSamples, metrics_.left, leftTransient_, leftState_, sampleRate);
 
     if (numChannels > 1)
     {
         processChannel(buffer.getReadPointer(1), numSamples, metrics_.right, rightTransient_, rightState_, sampleRate);
-        
-        // Mid/Side Calculation
-        // Ensure we don't overrun buffers if block size is unexpectedly larger than prepared
-        // In production, prepare() should cover the max block size, but we check for safety
-        size_t requiredSize = static_cast<size_t>(numSamples);
-        if (midBuffer_.size() < requiredSize || sideBuffer_.size() < requiredSize)
-        {
-            // This should not happen if prepare() was called correctly
-            // Log in debug builds but don't allocate/log on audio thread in release
-            jassertfalse;
-            clearChannelMetrics(metrics_.mid, midState_, midTransient_);
-            clearChannelMetrics(metrics_.side, sideState_, sideTransient_);
-            return;
-        }
-        
-        const float* l = buffer.getReadPointer(0);
-        const float* r = buffer.getReadPointer(1);
-        
-        // Vectorized Mid/Side: M = (L+R)/2, S = (L-R)/2
-        // JUCE FloatVectorOperations are efficient
-        juce::FloatVectorOperations::copy(midBuffer_.data(), l, numSamples);
-        juce::FloatVectorOperations::add(midBuffer_.data(), r, numSamples);
-        juce::FloatVectorOperations::multiply(midBuffer_.data(), 0.5f, numSamples);
-        
-        juce::FloatVectorOperations::copy(sideBuffer_.data(), l, numSamples);
-        juce::FloatVectorOperations::subtract(sideBuffer_.data(), r, numSamples);
-        juce::FloatVectorOperations::multiply(sideBuffer_.data(), 0.5f, numSamples);
-        
-        processChannel(midBuffer_.data(), numSamples, metrics_.mid, midTransient_, midState_, sampleRate);
-        processChannel(sideBuffer_.data(), numSamples, metrics_.side, sideTransient_, sideState_, sampleRate);
+        processMidSide(buffer.getReadPointer(0), buffer.getReadPointer(1), numSamples, sampleRate);
     }
     else
     {
-        // Keep channel metrics aligned with current topology; don't expose stale stereo values.
         clearChannelMetrics(metrics_.right, rightState_, rightTransient_);
         clearChannelMetrics(metrics_.mid, midState_, midTransient_);
         clearChannelMetrics(metrics_.side, sideState_, sideTransient_);
     }
 }
 
-void AnalysisEngine::processChannel(const float* samples, int numSamples, ChannelMetrics& metrics,
-                                   TransientDetector& transientDetector, AnalysisChannelState& state, double sampleRate)
+namespace
 {
-    // Precondition: caller must ensure numSamples > 0
-    // This is verified by process() which returns early if numSamples == 0
-    // Runtime guard in case precondition is violated (prevents division by zero in release builds)
-    if (numSamples <= 0)
-        return;
-    jassert(numSamples > 0);
 
-    if (!std::isfinite(state.rmsSmooth))
-        state.rmsSmooth = 0.0f;
-    if (!std::isfinite(state.dcSmooth))
-        state.dcSmooth = 0.0f;
+struct SampleStats
+{
+    float peak = 0.0f;
+    float rms = 0.0f;
+    float dc = 0.0f;
+};
 
-    // RMS
-    float rmsLinear = 0.0f;
-
-    float sumSq = 0.0f;
-    float sum = 0.0f;
-    float peakLinear = 0.0f;
-
+SampleStats computeSampleStats(const float* samples, int numSamples)
+{
+    float sumSq = 0.0f, sum = 0.0f, peak = 0.0f;
     for (int i = 0; i < numSamples; ++i)
     {
-        float s = samples[i];
-        if (!std::isfinite(s))
-            s = 0.0f;
-
-        peakLinear = juce::jmax(peakLinear, std::abs(s));
+        float s = std::isfinite(samples[i]) ? samples[i] : 0.0f;
+        peak = juce::jmax(peak, std::abs(s));
         sumSq += s * s;
         sum += s;
     }
+    float n = static_cast<float>(numSamples);
+    return { peak, std::sqrt(sumSq / n), sum / n };
+}
 
-    // Division is safe: numSamples > 0 is guaranteed by precondition check above
-    rmsLinear = std::sqrt(sumSq / static_cast<float>(numSamples));
+float safeToDb(float linear, float floor = -100.0f)
+{
+    float db = (linear > 0.00001f) ? 20.0f * std::log10(linear) : floor;
+    return std::isfinite(db) ? db : floor;
+}
 
-    // DC Offset (same safety as above)
-    float dc = sum / static_cast<float>(numSamples);
-    
-    // Apply Smoothing
-    // RMS Smoothing
-    state.rmsSmooth = state.rmsSmooth * (1.0f - config_.rmsSmoothing) + rmsLinear * config_.rmsSmoothing;
-    float smoothedRms = state.rmsSmooth;
-    
-    // DC Smoothing (LPF)
-    state.dcSmooth = state.dcSmooth * (1.0f - config_.dcSmoothing) + dc * config_.dcSmoothing;
-    float smoothedDc = state.dcSmooth;
+} // namespace
 
-    if (!std::isfinite(smoothedRms))
-        smoothedRms = 0.0f;
-    if (!std::isfinite(smoothedDc))
-        smoothedDc = 0.0f;
-    
-    // Update Atomics
-    // Use smoothed values for RMS and DC
-    // Peak is kept instantaneous, but Max Peak Hold handles the readability
-    
-    float rmsDb = (smoothedRms > 0.00001f) ? 20.0f * std::log10(smoothedRms) : -100.0f;
-    float peakDb = (peakLinear > 0.00001f) ? 20.0f * std::log10(peakLinear) : -100.0f;
-    
-    // Crest Factor (using smoothed RMS to avoid division by noise)
-    float crestDb = 0.0f;
-    if (smoothedRms > 0.0001f)
-    {
-        float crest = peakLinear / smoothedRms;
-        crestDb = 20.0f * std::log10(crest);
-    }
+void AnalysisEngine::processChannel(const float* samples, int numSamples, ChannelMetrics& metrics,
+                                   TransientDetector& transientDetector, AnalysisChannelState& state, double sampleRate)
+{
+    if (numSamples <= 0) return;
 
-    if (!std::isfinite(rmsDb))
-        rmsDb = -100.0f;
-    if (!std::isfinite(peakDb))
-        peakDb = -100.0f;
-    if (!std::isfinite(crestDb))
-        crestDb = 0.0f;
-    
+    if (!std::isfinite(state.rmsSmooth)) state.rmsSmooth = 0.0f;
+    if (!std::isfinite(state.dcSmooth)) state.dcSmooth = 0.0f;
+
+    auto stats = computeSampleStats(samples, numSamples);
+
+    state.rmsSmooth = state.rmsSmooth * (1.0f - config_.rmsSmoothing) + stats.rms * config_.rmsSmoothing;
+    state.dcSmooth = state.dcSmooth * (1.0f - config_.dcSmoothing) + stats.dc * config_.dcSmoothing;
+    float smoothedRms = std::isfinite(state.rmsSmooth) ? state.rmsSmooth : 0.0f;
+    float smoothedDc = std::isfinite(state.dcSmooth) ? state.dcSmooth : 0.0f;
+
+    float rmsDb = safeToDb(smoothedRms);
+    float peakDb = safeToDb(stats.peak);
+    float crestDb = (smoothedRms > 0.0001f)
+        ? safeToDb(stats.peak / smoothedRms, 0.0f)
+        : 0.0f;
+
     metrics.rmsDb.store(rmsDb, std::memory_order_relaxed);
     metrics.peakDb.store(peakDb, std::memory_order_relaxed);
     metrics.crestFactorDb.store(crestDb, std::memory_order_relaxed);
     metrics.dcOffset.store(smoothedDc, std::memory_order_relaxed);
-    
-    // Max Peak Hold
-    float currentMax = metrics.maxPeakDb.load(std::memory_order_relaxed);
-    if (peakDb > currentMax)
-    {
+
+    if (peakDb > metrics.maxPeakDb.load(std::memory_order_relaxed))
         metrics.maxPeakDb.store(peakDb, std::memory_order_relaxed);
-    }
-    
-    // Transients
+
     transientDetector.process(samples, numSamples, sampleRate);
     metrics.attackTimeMs.store(transientDetector.getAttackTimeMs(), std::memory_order_relaxed);
     metrics.decayTimeMs.store(transientDetector.getDecayTimeMs(), std::memory_order_relaxed);

@@ -101,6 +101,12 @@ public:
         return 0.0f;
     }
 
+private:
+    void renderStereoChannels(juce::OpenGLContext& context,
+                              WaveformData3D& data,
+                              const std::vector<float>& channel2,
+                              const ShaderRenderParams& params);
+
 protected:
     // Stored context for 3D rendering
     Camera3D camera_;
@@ -172,6 +178,18 @@ public:
                                    float width,
                                    std::vector<float>& vertices,
                                    std::vector<GLuint>& indices);
+
+    /**
+     * Calculate xSpread and halfHeight from camera projection.
+     * Used by all 3D shaders to map waveform to screen-filling coordinates.
+     */
+    static void calculateCameraSpread(const Camera3D& camera, float& xSpread, float& halfHeight);
+
+    /**
+     * Setup standard position(3) + normal(3) + texcoord(2) vertex attributes.
+     * Stride = 8 floats. Expects VAO already bound.
+     */
+    static void setupPosNormTexAttribs(juce::OpenGLExtensionFunctions& ext, GLuint programID);
 };
 
 } // namespace oscil

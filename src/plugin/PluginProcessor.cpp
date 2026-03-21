@@ -9,6 +9,7 @@
 #include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
+#include "rendering/PresetManager.h"
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
@@ -31,13 +32,14 @@ juce::String normaliseSourceDisplayName(const juce::AudioProcessor::TrackPropert
 }
 } // namespace
 
-OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, MemoryBudgetManager& memoryBudgetManager)
+OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService, ShaderRegistry& shaderRegistry, PresetManager& presetManager, MemoryBudgetManager& memoryBudgetManager)
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , instanceRegistry_(instanceRegistry)
     , themeService_(themeService)
     , shaderRegistry_(shaderRegistry)
+    , presetManager_(presetManager)
     , memoryBudgetManager_(memoryBudgetManager)
 {
     // Create capture buffer
@@ -92,78 +94,56 @@ void OscilPluginProcessor::setCurrentProgram(int) {}
 const juce::String OscilPluginProcessor::getProgramName(int) { return {}; }
 void OscilPluginProcessor::changeProgramName(int, const juce::String&) {}
 
+void OscilPluginProcessor::deferRegistration(double sampleRate)
+{
+    // Memory allocation and mutex operations must happen on message thread.
+    // prepareToPlay can be called from audio thread in some hosts (Pro Tools, Reaper).
+    auto doRegistration = [weakThis = juce::WeakReference<OscilPluginProcessor>(this),
+                           sampleRate,
+                           captureConfig = getCaptureQualityConfig(),
+                           trackId = trackIdentifier_,
+                           channelCount = getTotalNumInputChannels()]() {
+        auto* p = weakThis.get();
+        if (!p) return;
+
+        p->memoryBudgetManager_.setGlobalConfig(captureConfig, static_cast<int>(sampleRate));
+        p->captureBuffer_->configure(captureConfig, static_cast<int>(sampleRate));
+        p->memoryBudgetManager_.registerBuffer(trackId, p->captureBuffer_);
+
+        if (!p->sourceId_.isValid())
+        {
+            p->sourceId_ = p->instanceRegistry_.registerInstance(
+                trackId, p->captureBuffer_, p->sourceDisplayName_,
+                channelCount, sampleRate, p->analysisEngine_);
+        }
+        else
+        {
+            p->instanceRegistry_.updateSource(p->sourceId_, p->sourceDisplayName_,
+                                               channelCount, sampleRate);
+        }
+    };
+
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+        doRegistration();
+    else
+        juce::MessageManager::callAsync(std::move(doRegistration));
+}
+
 void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     currentSampleRate_.store(sampleRate, std::memory_order_release);
     currentBlockSize_.store(samplesPerBlock, std::memory_order_release);
-
-    // Pre-calculate ticks to seconds conversion for real-time safe CPU timing
     ticksToSecondsScale_ = 1.0 / static_cast<double>(juce::Time::getHighResolutionTicksPerSecond());
 
-    // TimingEngine setup is lock-free, safe to call from audio thread
     timingEngine_.setSampleRate(sampleRate);
-    
+
     if (analysisEngine_)
     {
         analysisEngine_->prepare(sampleRate, samplesPerBlock);
         analysisEngine_->reset();
     }
 
-    // Memory allocation and mutex-protected operations must happen on message thread
-    // This is critical because prepareToPlay can be called from audio thread in some hosts
-    // (e.g., Pro Tools, Reaper in certain configurations)
-    // The DecimatingCaptureBuffer is already initialized with defaults in constructor,
-    // so processBlock can safely write to it even before registration completes.
-    //
-    // Use WeakReference to handle case where processor is destroyed before callback runs.
-    auto doRegistration = [weakThis = juce::WeakReference<OscilPluginProcessor>(this),
-                           sampleRate,
-                           captureConfig = getCaptureQualityConfig(), // Thread-safe read
-                           trackId = trackIdentifier_,
-                           channelCount = getTotalNumInputChannels()]() {
-        auto* processor = weakThis.get();
-        if (!processor) return;
-
-        // Update MemoryBudgetManager with actual sample rate from host
-        processor->memoryBudgetManager_.setGlobalConfig(captureConfig, static_cast<int>(sampleRate));
-
-        // Configure capture buffer (allocates memory)
-        processor->captureBuffer_->configure(captureConfig, static_cast<int>(sampleRate));
-
-        // Register buffer with MemoryBudgetManager for auto-quality adjustment
-        processor->memoryBudgetManager_.registerBuffer(trackId, processor->captureBuffer_);
-
-        // Register with instance registry (uses mutex, allocates)
-        // Only register if not already registered (handles re-entrancy from host)
-        if (!processor->sourceId_.isValid())
-        {
-            processor->sourceId_ = processor->instanceRegistry_.registerInstance(
-                trackId,
-                processor->captureBuffer_,
-                processor->sourceDisplayName_,
-                channelCount,
-                sampleRate,
-                processor->analysisEngine_);
-        }
-        else
-        {
-            // Update existing registration with new sample rate
-            processor->instanceRegistry_.updateSource(processor->sourceId_,
-                                                      processor->sourceDisplayName_,
-                                                      channelCount,
-                                                      sampleRate);
-        }
-    };
-
-    // If already on message thread, execute directly; otherwise defer
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        doRegistration();
-    }
-    else
-    {
-        juce::MessageManager::callAsync(std::move(doRegistration));
-    }
+    deferRegistration(sampleRate);
 }
 
 void OscilPluginProcessor::updateTrackProperties(const TrackProperties& properties)
@@ -257,20 +237,21 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Audio passes through unchanged - this is a visualization plugin
 
-    // Calculate CPU usage using pre-calculated conversion factor (real-time safe)
-    // Guard against division by zero: some hosts may call processBlock before prepareToPlay
+    updateCpuUsage(startTime, numSamples);
+}
+
+void OscilPluginProcessor::updateCpuUsage(int64_t startTicks, int numSamples)
+{
     double sampleRate = currentSampleRate_.load(std::memory_order_relaxed);
-    if (sampleRate <= 0.0)
-        return;
+    if (sampleRate <= 0.0) return;
 
     auto endTime = juce::Time::getHighResolutionTicks();
-    double elapsedSeconds = static_cast<double>(endTime - startTime) * ticksToSecondsScale_;
-    double availableSeconds = static_cast<double>(numSamples) / sampleRate;
-    float usage = static_cast<float>(elapsedSeconds / availableSeconds * 100.0);
+    double elapsed = static_cast<double>(endTime - startTicks) * ticksToSecondsScale_;
+    double available = static_cast<double>(numSamples) / sampleRate;
+    float usage = static_cast<float>(elapsed / available * 100.0);
 
-    // Smooth CPU usage with exponential moving average
-    float currentUsage = cpuUsage_.load(std::memory_order_relaxed);
-    cpuUsage_.store(currentUsage * 0.9f + usage * 0.1f, std::memory_order_relaxed);
+    float current = cpuUsage_.load(std::memory_order_relaxed);
+    cpuUsage_.store(current * 0.9f + usage * 0.1f, std::memory_order_relaxed);
 }
 
 bool OscilPluginProcessor::hasEditor() const { return true; }
@@ -284,120 +265,8 @@ juce::AudioProcessorEditor* OscilPluginProcessor::createEditor()
     return editor.release();
 }
 
-void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
-{
-    // CRITICAL: Some DAWs (Pro Tools, Reaper) may call this from audio thread
-    // during save operations. We must not allocate memory in that case.
-    if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        // Audio thread path: return cached UTF-8 bytes (no allocation, no conversion)
-        const juce::SpinLock::ScopedTryLockType sl(cachedStateLock_);
-        if (sl.isLocked() && !cachedStateUtf8_.empty())
-        {
-            destData.replaceAll(cachedStateUtf8_.data(), cachedStateUtf8_.size());
-        }
-        // If lock failed or cache empty, return empty - host will retry
-        return;
-    }
-
-    // Message thread path: perform full serialization (allocates memory)
-    updateCachedState();
-
-    const juce::SpinLock::ScopedLockType sl(cachedStateLock_);
-    destData.replaceAll(cachedStateUtf8_.data(), cachedStateUtf8_.size());
-}
-
-void OscilPluginProcessor::updateCachedState()
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    // Sync timing engine state to OscilState before saving
-    auto timingState = timingEngine_.toValueTree();
-    auto& stateTree = state_.getState();
-
-    // Remove existing Timing node if present
-    auto existingTiming = stateTree.getChildWithName(StateIds::Timing);
-    if (existingTiming.isValid())
-        stateTree.removeChild(existingTiming, nullptr);
-
-    // Add current timing state
-    stateTree.appendChild(timingState, nullptr);
-
-    auto xmlString = state_.toXmlString();
-
-    // Convert to UTF-8 bytes now (on message thread) to avoid any
-    // potential allocation when audio thread reads the cached state.
-    const char* utf8Ptr = xmlString.toRawUTF8();
-    size_t utf8Size = xmlString.getNumBytesAsUTF8();
-
-    // Update cache with lock
-    const juce::SpinLock::ScopedLockType sl(cachedStateLock_);
-    cachedStateUtf8_.assign(utf8Ptr, utf8Ptr + utf8Size);
-}
-
-void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
-{
-    // CRITICAL: Some DAW hosts (Pro Tools, Reaper) may call setStateInformation from
-    // the audio thread during session load or preset recall. We must defer ALL state
-    // modifications to the message thread because:
-    // 1. fromXmlString() allocates memory (not real-time safe)
-    // 2. state_ may be accessed by UI thread concurrently (data race)
-    // 3. ValueTree operations are not thread-safe
-    //
-    // Copy the data to a heap-allocated string that can be captured by the lambda.
-    // Use WeakReference to handle case where processor is destroyed before callback runs.
-
-    auto xmlString = std::make_shared<juce::String>(
-        juce::String::createStringFromData(data, sizeInBytes));
-    auto sampleRate = static_cast<int>(currentSampleRate_);
-
-    auto doRestoreState = [weakThis = juce::WeakReference<OscilPluginProcessor>(this),
-                           xmlString, sampleRate]() {
-        auto* processor = weakThis.get();
-        if (!processor) return;
-
-        // Parse and apply state (now safely on message thread)
-        if (!processor->state_.fromXmlString(*xmlString))
-        {
-            DBG("PluginProcessor::setStateInformation - Failed to parse state XML");
-            return;
-        }
-
-        // Apply restored timing state (TimingEngine uses atomics internally)
-        auto timingTree = processor->state_.getState().getChildWithName(StateIds::Timing);
-        if (timingTree.isValid())
-        {
-            processor->timingEngine_.fromValueTree(timingTree);
-        }
-        else
-        {
-            // Legacy/malformed payloads may omit Timing node.
-            // Re-apply current persisted config to clear runtime-only timing latches.
-            processor->timingEngine_.fromValueTree(processor->timingEngine_.toValueTree());
-        }
-
-        // Sync restored capture quality config to MemoryBudgetManager
-        auto captureConfig = processor->state_.getCaptureQualityConfig();
-        processor->setCaptureQualityConfig(captureConfig);
-        processor->memoryBudgetManager_.setGlobalConfig(captureConfig, sampleRate);
-
-        // Update capture buffer config (allocates memory)
-        processor->captureBuffer_->configure(captureConfig, sampleRate);
-
-        // Update cached state for real-time safe getStateInformation()
-        processor->updateCachedState();
-    };
-
-    // If already on message thread, execute directly; otherwise defer
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
-    {
-        doRestoreState();
-    }
-    else
-    {
-        juce::MessageManager::callAsync(std::move(doRestoreState));
-    }
-}
+// getStateInformation, updateCachedState, and setStateInformation
+// are implemented in PluginProcessorState.cpp
 
 std::shared_ptr<SharedCaptureBuffer> OscilPluginProcessor::getCaptureBuffer() const
 {
@@ -440,6 +309,11 @@ IThemeService& OscilPluginProcessor::getThemeService()
 ShaderRegistry& OscilPluginProcessor::getShaderRegistry()
 {
     return shaderRegistry_;
+}
+
+PresetManager& OscilPluginProcessor::getPresetManager()
+{
+    return presetManager_;
 }
 
 std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& sourceId)

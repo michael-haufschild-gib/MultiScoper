@@ -12,9 +12,6 @@ namespace oscil
 
 using namespace juce::gl;
 
-static constexpr float PI = std::numbers::pi_v<float>;
-static constexpr float DEG_TO_RAD = PI / 180.0f;
-
 // Vertex shader with passthrough
 static const char* filigreeVertexShader = R"(
     #version 330 core
@@ -178,7 +175,7 @@ ElectricFiligreeShader::~ElectricFiligreeShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[ElectricFiligreeShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        DBG("[ElectricFiligreeShader] LEAK DETECTED: Destructor called without release()");
     }
 #endif
 }
@@ -261,26 +258,9 @@ void ElectricFiligreeShader::render(juce::OpenGLContext& context,
 
     if (!compiled_ || !data.samples || data.sampleCount < 2) return;
 
-    float xSpread = 1.0f; // Adjust based on projection like other shaders
-    
-    // Use ribbon mesh generation (flat strip)
-    // Generate a flat ribbon facing camera-ish
-    // For simplicity, use generateRibbonMesh from base class
-    
-    if (camera.getProjection() == CameraProjection::Orthographic)
-    {
-        float height = camera.getOrthoSize();
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-    }
-    else
-    {
-        float dist = (camera.getPosition() - camera.getTarget()).length();
-        float fovRad = camera.getFOV() * DEG_TO_RAD;
-        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-    }
+    float xSpread, halfHeight;
+    calculateCameraSpread(camera, xSpread, halfHeight);
+    juce::ignoreUnused(halfHeight);
 
     // Update mesh
     generateRibbonMesh(data.samples, data.sampleCount, xSpread, 0.1f * data.amplitude, vertices_, indices_);

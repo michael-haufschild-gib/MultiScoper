@@ -71,10 +71,9 @@ inline bool pumpMessageQueue(int maxWaitMs = 100, std::function<bool()> conditio
  *
  * @param condition Function that returns true when condition is met
  * @param maxWaitMs Maximum time to wait
- * @param checkIntervalMs How often to check the condition
  * @return true if condition was met, false if timeout
  */
-inline bool waitForCondition(std::function<bool()> condition, int maxWaitMs = 1000, int checkIntervalMs = 10)
+inline bool waitForCondition(std::function<bool()> condition, int maxWaitMs = 1000)
 {
     return pumpMessageQueue(maxWaitMs, condition);
 }

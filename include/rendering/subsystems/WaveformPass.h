@@ -53,6 +53,10 @@ private:
     void setupCamera2D();
     void setupCamera3D(const Settings3D& settings, float deltaTime);
     void createDefaultEnvironmentMaps();
+    void setWaveformViewport(const WaveformRenderData& data);
+    WaveformShader* resolveShader(const juce::String& shaderId);
+    void configure3DShader(WaveformShader* shader, const VisualConfiguration& config,
+                            const WaveformRenderData& data);
 
     // Subsystems
     std::unique_ptr<ParticleSystem> particleSystem_;

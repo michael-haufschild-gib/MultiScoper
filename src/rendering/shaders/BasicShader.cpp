@@ -5,13 +5,12 @@
 #include "rendering/shaders/BasicShader.h"
 #include "BinaryData.h"
 #include <cmath>
-#include <iostream>
 
 namespace oscil
 {
 
-// Release-mode logging macro (works in both Debug and Release)
-#define BASIC_LOG(msg) std::cerr << "[BASIC] " << msg << std::endl
+// Debug-only logging macro — no output in release builds
+#define BASIC_LOG(msg) DBG("[BASIC] " << msg)
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
@@ -49,11 +48,10 @@ BasicShader::~BasicShader()
     // but we can't call OpenGL functions here without context
     if (gl_ && gl_->compiled)
     {
-        // FATAL: Shader destroyed without release(context) being called.
-        // This leaks VBO/VAO/Program on the GPU.
-        // Ensure the owner calls release() during shutdown/cleanup.
-        // jassertfalse; // Disabled to prevent crash in VST3 helper, but this IS a leak.
-        std::cerr << "[BasicShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        // GPU resource leak: VBO/VAO/Program not released before destruction.
+        // jassertfalse fires in debug builds only to catch this during development.
+        jassertfalse;
+        DBG("[BasicShader] LEAK DETECTED: Destructor called without release()");
     }
 #endif
 }
@@ -61,7 +59,7 @@ BasicShader::~BasicShader()
 #if OSCIL_ENABLE_OPENGL
 bool BasicShader::compile(juce::OpenGLContext& context)
 {
-    BASIC_LOG("compile() called, already compiled=" << gl_->compiled);
+    BASIC_LOG("compile() called, already compiled=" << static_cast<int>(gl_->compiled));
 
     if (gl_->compiled)
         return true;
@@ -74,7 +72,7 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     juce::String vertexCode = juce::String::createStringFromData(BinaryData::basic_vert, BinaryData::basic_vertSize);
     if (!gl_->program->addVertexShader(vertexCode))
     {
-        BASIC_LOG("Vertex shader compilation FAILED: " << gl_->program->getLastError().toStdString());
+        BASIC_LOG("Vertex shader compilation FAILED: " << gl_->program->getLastError());
         gl_->program.reset();
         return false;
     }
@@ -83,7 +81,7 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     juce::String fragmentCode = juce::String::createStringFromData(BinaryData::basic_frag, BinaryData::basic_fragSize);
     if (!gl_->program->addFragmentShader(fragmentCode))
     {
-        BASIC_LOG("Fragment shader compilation FAILED: " << gl_->program->getLastError().toStdString());
+        BASIC_LOG("Fragment shader compilation FAILED: " << gl_->program->getLastError());
         gl_->program.reset();
         return false;
     }
@@ -92,7 +90,7 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     if (!gl_->program->link())
 
     {
-        BASIC_LOG("Shader program linking FAILED: " << gl_->program->getLastError().toStdString());
+        BASIC_LOG("Shader program linking FAILED: " << gl_->program->getLastError());
         gl_->program.reset();
         return false;
     }
@@ -145,7 +143,7 @@ bool BasicShader::compile(juce::OpenGLContext& context)
     context.extensions.glGenVertexArrays(1, &gl_->vao);
     context.extensions.glGenBuffers(1, &gl_->vbo);
 
-    BASIC_LOG("Created VAO=" << gl_->vao << ", VBO=" << gl_->vbo);
+    BASIC_LOG("Created VAO=" << static_cast<int>(gl_->vao) << ", VBO=" << static_cast<int>(gl_->vbo));
 
     gl_->compiled = true;
     BASIC_LOG("Shader fully initialized, compiled=true");
@@ -181,186 +179,101 @@ bool BasicShader::isCompiled() const
     return gl_->compiled;
 }
 
+void BasicShader::drawGlowPasses(juce::OpenGLExtensionFunctions& ext, int vertexCount)
+{
+    for (int pass = GLOW_PASSES - 1; pass >= 0; --pass)
+    {
+        float passIntensity = GLOW_INTENSITY * static_cast<float>(GLOW_PASSES - pass) / GLOW_PASSES;
+        ext.glUniform1f(gl_->glowIntensityLoc, passIntensity);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, vertexCount);
+    }
+}
+
 void BasicShader::render(
     juce::OpenGLContext& context,
     const std::vector<float>& channel1,
     const std::vector<float>* channel2,
     const ShaderRenderParams& params)
 {
-    // Log once per second to avoid spamming
-    static int renderLogCounter = 0;
-    bool shouldLog = (++renderLogCounter >= 60);
-    if (shouldLog) renderLogCounter = 0;
-
-    if (shouldLog)
-        BASIC_LOG("render() called, compiled=" << gl_->compiled << ", ch1 size=" << channel1.size());
-
-    if (!gl_->compiled || channel1.size() < 2)
-    {
-        if (shouldLog)
-            BASIC_LOG("render() early exit: compiled=" << gl_->compiled << ", samples=" << channel1.size());
-        return;
-    }
+    if (!gl_->compiled || channel1.size() < 2) return;
 
     auto& ext = context.extensions;
-
-    // Enable ADDITIVE blending for glow effect (light adds up, creating luminosity)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    // Use our shader program
     gl_->program->use();
 
-    // Set up orthographic projection using FULL VIEWPORT dimensions (not waveform bounds)
-    // The viewport is set to the entire editor, so we need to map editor coordinates to NDC.
-    // The waveform geometry is built with editor-relative coordinates (from populateGLRenderData).
     auto* targetComponent = context.getTargetComponent();
-    if (!targetComponent)
-        return;
+    if (!targetComponent) return;
 
     float viewportWidth = static_cast<float>(targetComponent->getWidth());
     float viewportHeight = static_cast<float>(targetComponent->getHeight());
+    if (viewportWidth <= 0.0f || viewportHeight <= 0.0f) return;
 
-    if (viewportWidth <= 0.0f || viewportHeight <= 0.0f)
-        return;
-
-    // Projection maps (0, 0) -> (-1, 1) and (viewportWidth, viewportHeight) -> (1, -1)
-    // This creates an orthographic projection for the full editor coordinate space
-    float left = 0.0f;
-    float right = viewportWidth;
-    float top = 0.0f;
-    float bottom = viewportHeight;
-
-    // Create orthographic projection matrix (column-major for OpenGL)
     float projection[16] = {
-        2.0f / (right - left), 0.0f, 0.0f, 0.0f,
-        0.0f, 2.0f / (top - bottom), 0.0f, 0.0f,
+        2.0f / viewportWidth, 0.0f, 0.0f, 0.0f,
+        0.0f, -2.0f / viewportHeight, 0.0f, 0.0f,
         0.0f, 0.0f, -1.0f, 0.0f,
-        -(right + left) / (right - left), -(top + bottom) / (top - bottom), 0.0f, 1.0f
+        -1.0f, 1.0f, 0.0f, 1.0f
     };
-
     ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
 
-    // Set color uniforms
-    ext.glUniform4f(gl_->baseColorLoc,
-        params.colour.getFloatRed(),
-        params.colour.getFloatGreen(),
-        params.colour.getFloatBlue(),
-        params.colour.getFloatAlpha());
+    ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
+        params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
     ext.glUniform1f(gl_->glowIntensityLoc, GLOW_INTENSITY);
 
-    // Calculate layout
     float height = params.bounds.getHeight();
-    float centerY1, centerY2;
-    float amplitude1, amplitude2;
-
+    float centerY1, centerY2, amplitude1, amplitude2;
     if (params.isStereo && channel2 != nullptr)
     {
         float halfHeight = height * 0.5f;
         centerY1 = params.bounds.getY() + halfHeight * 0.5f;
         centerY2 = params.bounds.getY() + halfHeight * 1.5f;
-        amplitude1 = halfHeight * 0.45f * params.verticalScale;
-        amplitude2 = halfHeight * 0.45f * params.verticalScale;
+        amplitude1 = amplitude2 = halfHeight * 0.45f * params.verticalScale;
     }
     else
     {
-        centerY1 = params.bounds.getCentreY();
-        centerY2 = centerY1;
-        amplitude1 = height * 0.45f * params.verticalScale;
-        amplitude2 = amplitude1;
+        centerY1 = centerY2 = params.bounds.getCentreY();
+        amplitude1 = amplitude2 = height * 0.45f * params.verticalScale;
     }
 
-    // Get the OpenGL program ID for attribute lookup
     GLint programID = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &programID);
-
-    // Get attribute locations dynamically (JUCE's translation may rename them)
     GLint positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
     GLint distFromCenterLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "distFromCenter");
-
-    // Fallback to index 0 and 1 if not found (should not happen with correct shader)
     if (positionLoc < 0) positionLoc = 0;
     if (distFromCenterLoc < 0) distFromCenterLoc = 1;
 
-    // Bind VAO
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
-    // Build and render channel 1
-    // Use geometry wide enough for glow to fade out
-    // The fragment shader creates the thin core line, the geometry provides space for the glow halo
-    std::vector<float> vertices;
-    // Scale glow width based on lineWidth: base 15px at default 1.5 lineWidth, proportionally scaled
     float glowWidth = params.lineWidth * 10.0f;
+    std::vector<float> vertices;
     buildLineGeometry(vertices, channel1, centerY1, amplitude1,
         glowWidth, params.bounds.getX(), params.bounds.getWidth());
 
-    ext.glBufferData(GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
         vertices.data(), GL_DYNAMIC_DRAW);
 
-    // Set up vertex attributes using dynamic locations
     ext.glEnableVertexAttribArray(static_cast<GLuint>(positionLoc));
     ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
     ext.glEnableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
     ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
         reinterpret_cast<void*>(2 * sizeof(float)));
 
-    if (shouldLog)
-        BASIC_LOG("Drawing ch1: " << vertices.size() / 4 << " verts, bounds=("
-                 << params.bounds.getX() << "," << params.bounds.getY() << ","
-                 << params.bounds.getWidth() << "x" << params.bounds.getHeight() << ")"
-                 << ", posLoc=" << positionLoc << ", distLoc=" << distFromCenterLoc);
+    drawGlowPasses(ext, static_cast<int>(vertices.size() / 4));
 
-    // Draw with multiple passes for enhanced glow
-    for (int pass = GLOW_PASSES - 1; pass >= 0; --pass)
-    {
-        float passIntensity = GLOW_INTENSITY * static_cast<float>(GLOW_PASSES - pass) / GLOW_PASSES;
-        ext.glUniform1f(gl_->glowIntensityLoc, passIntensity);
-
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-    }
-
-    // Check for GL errors after draw
-    GLenum err = glGetError();
-    if (shouldLog && err != GL_NO_ERROR)
-        BASIC_LOG("GL error after draw: " << err);
-    else if (shouldLog)
-        BASIC_LOG("Draw completed OK");
-
-    // Render channel 2 if stereo
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        if (shouldLog)
-            BASIC_LOG("Drawing ch2: isStereo=" << params.isStereo << ", ch2 size=" << channel2->size());
-
         vertices.clear();
         buildLineGeometry(vertices, *channel2, centerY2, amplitude2,
             glowWidth, params.bounds.getX(), params.bounds.getWidth());
-
-        if (shouldLog)
-            BASIC_LOG("Drawing ch2: " << vertices.size() / 4 << " verts, centerY2=" << centerY2);
-
-        ext.glBufferData(GL_ARRAY_BUFFER,
-            static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
             vertices.data(), GL_DYNAMIC_DRAW);
-
-        for (int pass = GLOW_PASSES - 1; pass >= 0; --pass)
-        {
-            float passIntensity = GLOW_INTENSITY * static_cast<float>(GLOW_PASSES - pass) / GLOW_PASSES;
-            ext.glUniform1f(gl_->glowIntensityLoc, passIntensity);
-
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-        }
-    }
-    else if (shouldLog && params.isStereo)
-    {
-        BASIC_LOG("ch2 NOT rendered: channel2=" << (channel2 ? "valid" : "null")
-                 << ", ch2 size=" << (channel2 ? channel2->size() : 0));
+        drawGlowPasses(ext, static_cast<int>(vertices.size() / 4));
     }
 
-    // Cleanup
     ext.glDisableVertexAttribArray(static_cast<GLuint>(positionLoc));
     ext.glDisableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);

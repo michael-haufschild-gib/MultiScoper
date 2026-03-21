@@ -252,79 +252,65 @@ float SignalProcessor::calculateRMS(std::span<const float> samples)
     return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samples.size())));
 }
 
+void SignalProcessor::upsample(std::span<const float> input, std::span<float> output)
+{
+    if (input.size() == 1)
+    {
+        std::fill(output.begin(), output.end(), input[0]);
+        return;
+    }
+    if (output.size() == 1)
+    {
+        output[0] = input[input.size() / 2];
+        return;
+    }
+
+    double scale = static_cast<double>(input.size() - 1) / static_cast<double>(output.size() - 1);
+    for (size_t i = 0; i < output.size(); ++i)
+    {
+        double pos = static_cast<double>(i) * scale;
+        size_t idx0 = static_cast<size_t>(pos);
+        size_t idx1 = std::min(idx0 + 1, input.size() - 1);
+        float frac = static_cast<float>(pos - static_cast<double>(idx0));
+        output[i] = input[idx0] * (1.0f - frac) + input[idx1] * frac;
+    }
+}
+
 void SignalProcessor::decimate(std::span<const float> input,
                                 std::span<float> output,
                                 bool preservePeaks)
 {
-    if (input.empty() || output.empty())
-        return;
+    if (input.empty() || output.empty()) return;
 
-    size_t inputLength = input.size();
-    size_t outputLength = output.size();
-
-    if (inputLength <= outputLength)
+    if (input.size() <= output.size())
     {
-        // Upsampling with linear interpolation
-        if (inputLength == 1)
-        {
-            std::fill(output.begin(), output.end(), input[0]);
-            return;
-        }
-
-        // Guard against outputLength == 1 (would cause division by zero)
-        if (outputLength == 1)
-        {
-            output[0] = input[inputLength / 2];  // Use middle sample
-            return;
-        }
-
-        double scale = static_cast<double>(inputLength - 1) / static_cast<double>(outputLength - 1);
-        
-        for (size_t i = 0; i < outputLength; ++i)
-        {
-            double pos = static_cast<double>(i) * scale;
-            size_t idx0 = static_cast<size_t>(pos);
-            size_t idx1 = std::min(idx0 + 1, inputLength - 1);
-            float frac = static_cast<float>(pos - static_cast<double>(idx0));
-            
-            output[i] = input[idx0] * (1.0f - frac) + input[idx1] * frac;
-        }
+        upsample(input, output);
         return;
     }
 
-    float samplesPerOutput = static_cast<float>(inputLength) / static_cast<float>(outputLength);
+    float samplesPerOutput = static_cast<float>(input.size()) / static_cast<float>(output.size());
 
-    for (size_t i = 0; i < outputLength; ++i)
+    for (size_t i = 0; i < output.size(); ++i)
     {
         size_t startIdx = static_cast<size_t>(static_cast<float>(i) * samplesPerOutput);
-        size_t endIdx = static_cast<size_t>(static_cast<float>(i + 1) * samplesPerOutput);
-        endIdx = std::min(endIdx, inputLength);
+        size_t endIdx = std::min(static_cast<size_t>(static_cast<float>(i + 1) * samplesPerOutput), input.size());
 
         if (preservePeaks)
         {
-            // Find max absolute value in range
-            float maxVal = 0.0f;
-            float maxSample = 0.0f;
+            float maxVal = 0.0f, maxSample = 0.0f;
             for (size_t j = startIdx; j < endIdx; ++j)
             {
                 float absVal = std::abs(input[j]);
-                if (absVal > maxVal)
-                {
-                    maxVal = absVal;
-                    maxSample = input[j];
-                }
+                if (absVal > maxVal) { maxVal = absVal; maxSample = input[j]; }
             }
             output[i] = maxSample;
         }
         else
         {
-            // Average samples in range
             double sum = 0.0;
             size_t count = endIdx - startIdx;
             for (size_t j = startIdx; j < endIdx; ++j)
-            {
                 sum += static_cast<double>(input[j]);
-            }
             output[i] = count > 0 ? static_cast<float>(sum / static_cast<double>(count)) : 0.0f;
         }
     }

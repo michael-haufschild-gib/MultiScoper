@@ -110,6 +110,26 @@ bool WaveformShader::compileShaderProgram(
     return true;
 }
 
+void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params,
+                                            const std::vector<float>* channel2,
+                                            float height,
+                                            float& centerY1, float& centerY2,
+                                            float& amp1, float& amp2)
+{
+    if (params.isStereo && channel2 != nullptr)
+    {
+        float halfHeight = height * 0.5f;
+        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
+        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
+        amp1 = amp2 = halfHeight * 0.45f * params.verticalScale;
+    }
+    else
+    {
+        centerY1 = centerY2 = params.bounds.getCentreY();
+        amp1 = amp2 = height * 0.45f * params.verticalScale;
+    }
+}
+
 void WaveformShader::buildLineGeometry(
     std::vector<float>& vertices,
     const std::vector<float>& samples,

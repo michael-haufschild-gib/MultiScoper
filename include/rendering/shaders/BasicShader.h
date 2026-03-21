@@ -55,7 +55,10 @@ private:
     std::unique_ptr<GLResources> gl_;
 #endif
 
-    // Glow parameters
+#if OSCIL_ENABLE_OPENGL
+    void drawGlowPasses(juce::OpenGLExtensionFunctions& ext, int vertexCount);
+#endif
+
     static constexpr float GLOW_INTENSITY = 0.8f;
     static constexpr int GLOW_PASSES = 3;
 };

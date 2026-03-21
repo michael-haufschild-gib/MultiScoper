@@ -68,6 +68,10 @@ private:
 
     std::vector<float> vertices_;
     std::vector<GLuint> indices_;
+
+    void uploadAndDrawCrystalMesh(juce::OpenGLExtensionFunctions& ext);
+    void generateCrystalVertices(const WaveformData3D& data, float xSpread, int polySegments, float radius);
+    void generateCrystalIndices(int sampleCount, int polySegments);
 };
 
 } // namespace oscil

@@ -117,8 +117,9 @@ TEST_F(ThemeManagerPersistenceTest, ValueTreeEmpty)
 
     theme.fromValueTree(emptyTree);
 
-    // Should not crash, may have default values
-    EXPECT_TRUE(true);
+    // After loading empty tree, theme should retain valid defaults.
+    EXPECT_FALSE(theme.backgroundPrimary.isTransparent());
+    EXPECT_FALSE(theme.textPrimary.isTransparent());
 }
 
 // Test: fromValueTree with wrong type

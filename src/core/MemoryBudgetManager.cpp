@@ -455,12 +455,12 @@ void MemoryBudgetManager::postNotification(std::function<void(MemoryBudgetManage
         return;
 
     auto dispatch = [weakThis = juce::WeakReference<MemoryBudgetManager>(this),
-                     callback = std::move(callback)]() mutable {
+                     cb = std::move(callback)]() mutable {
         auto* self = weakThis.get();
         if (self == nullptr || self->shuttingDown_.load(std::memory_order_acquire))
             return;
 
-        callback(*self);
+        cb(*self);
     };
 
     if (messageManager->isThisTheMessageThread())

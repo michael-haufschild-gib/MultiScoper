@@ -166,11 +166,12 @@ TEST_F(UIAudioFeedbackTest, SetAudioDeviceManager)
 // Test: Shutdown doesn't crash
 TEST_F(UIAudioFeedbackTest, ShutdownDoesntCrash)
 {
-    // Call shutdown explicitly
+    // Shutdown should be idempotent — calling it twice must not crash.
+    feedback_->shutdown();
     feedback_->shutdown();
 
-    // If we get here without crashing, test passes
-    EXPECT_TRUE(true);
+    // After shutdown, playSound must be a safe no-op.
+    EXPECT_NO_FATAL_FAILURE(feedback_->playSound(UIAudioFeedback::SoundType::Click));
 }
 
 // ============================================================================

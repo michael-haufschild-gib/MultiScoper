@@ -11,12 +11,14 @@ namespace oscil
 class IInstanceRegistry;
 class IThemeService;
 class ShaderRegistry;
+class PresetManager;
 
 struct ServiceContext
 {
     IInstanceRegistry& instanceRegistry;
     IThemeService& themeService;
     ShaderRegistry& shaderRegistry;
+    PresetManager& presetManager;
 };
 
 } // namespace oscil

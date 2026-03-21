@@ -76,7 +76,7 @@ WireframeMeshShader::~WireframeMeshShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[WireframeMeshShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        DBG("[WireframeMeshShader] LEAK DETECTED: Destructor called without release()");
     }
 #endif
 }
@@ -147,26 +147,8 @@ void WireframeMeshShader::render(juce::OpenGLContext& context,
     if (!compiled_ || !data.samples || data.sampleCount < 2)
         return;
 
-    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
-    float xSpread = 1.0f;
-    float halfHeight = 1.0f;
-
-    if (camera.getProjection() == CameraProjection::Orthographic)
-    {
-        float height = camera.getOrthoSize();
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-    else
-    {
-        float dist = (camera.getPosition() - camera.getTarget()).length();
-        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
-        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
+    float xSpread, halfHeight;
+    calculateCameraSpread(camera, xSpread, halfHeight);
 
     // Generate wireframe mesh
     generateWireframeMesh(data, xSpread);
@@ -251,65 +233,39 @@ void WireframeMeshShader::update(float deltaTime)
         time_ = std::fmod(time_, 1000.0f);
 }
 
-void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data, float xSpread)
+void WireframeMeshShader::generateHorizontalLines(const WaveformData3D& data, float xSpread,
+                                                   int xSegments, int zSegments, float scrollOffset)
 {
-    vertices_.clear();
-
-    // Each vertex: position (3) + depth (1) = 4 floats
-    // We generate horizontal lines (along waveform) and vertical lines (grid depth)
-
-    int xSegments = std::min(data.sampleCount, gridDensity_ * 4);
-    int zSegments = std::max(2, gridDensity_);  // Minimum 2 to avoid division by zero
-
-    // Reserve space for lines
-    // Horizontal lines: zSegments lines, each with xSegments-1 segments = 2 vertices per segment
-    // Vertical lines: xSegments lines across depth
-    size_t estimatedVertices = static_cast<size_t>(zSegments * (xSegments - 1) * 2 +
-                                                   xSegments * (zSegments - 1) * 2);
-    vertices_.reserve(estimatedVertices * 4);
-
-    float scrollOffset = std::fmod(time_, 1.0f);
-
-    // Generate horizontal lines (along X, at different Z depths)
     for (int z = 0; z < zSegments; ++z)
     {
         float zNorm = static_cast<float>(z) / static_cast<float>(zSegments - 1);
         float zPos = (zNorm - 0.5f) * gridDepth_;
-        float depth = zNorm;  // For fading
-
-        // Offset by scroll
         zPos -= scrollOffset * gridDepth_ / static_cast<float>(zSegments);
-        if (zPos < -gridDepth_ * 0.5f)
-            zPos += gridDepth_;
+        if (zPos < -gridDepth_ * 0.5f) zPos += gridDepth_;
 
         for (int x = 0; x < xSegments - 1; ++x)
         {
             float t1 = static_cast<float>(x) / static_cast<float>(xSegments - 1);
             float t2 = static_cast<float>(x + 1) / static_cast<float>(xSegments - 1);
-
             int idx1 = static_cast<int>(t1 * static_cast<float>(data.sampleCount - 1));
             int idx2 = static_cast<int>(t2 * static_cast<float>(data.sampleCount - 1));
 
-            float x1 = (t1 * 2.0f - 1.0f) * xSpread;
-            float x2 = (t2 * 2.0f - 1.0f) * xSpread;
-            float y1 = data.samples[idx1];
-            float y2 = data.samples[idx2];
-
-            // Vertex 1
-            vertices_.push_back(x1);
-            vertices_.push_back(y1);
+            vertices_.push_back((t1 * 2.0f - 1.0f) * xSpread);
+            vertices_.push_back(data.samples[idx1]);
             vertices_.push_back(zPos);
-            vertices_.push_back(depth);
+            vertices_.push_back(zNorm);
 
-            // Vertex 2
-            vertices_.push_back(x2);
-            vertices_.push_back(y2);
+            vertices_.push_back((t2 * 2.0f - 1.0f) * xSpread);
+            vertices_.push_back(data.samples[idx2]);
             vertices_.push_back(zPos);
-            vertices_.push_back(depth);
+            vertices_.push_back(zNorm);
         }
     }
+}
 
-    // Generate vertical lines (along Z, at sample positions)
+void WireframeMeshShader::generateVerticalLines(const WaveformData3D& data, float xSpread,
+                                                 int zSegments, float scrollOffset)
+{
     int xStep = std::max(1, data.sampleCount / gridDensity_);
     for (int x = 0; x < data.sampleCount; x += xStep)
     {
@@ -321,33 +277,35 @@ void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data, floa
         {
             float zNorm1 = static_cast<float>(z) / static_cast<float>(zSegments - 1);
             float zNorm2 = static_cast<float>(z + 1) / static_cast<float>(zSegments - 1);
-
-            float zPos1 = (zNorm1 - 0.5f) * gridDepth_;
-            float zPos2 = (zNorm2 - 0.5f) * gridDepth_;
-
-            // Apply scroll offset
-            zPos1 -= scrollOffset * gridDepth_ / static_cast<float>(zSegments);
-            zPos2 -= scrollOffset * gridDepth_ / static_cast<float>(zSegments);
-
-            // Wrap around
+            float zPos1 = (zNorm1 - 0.5f) * gridDepth_ - scrollOffset * gridDepth_ / static_cast<float>(zSegments);
+            float zPos2 = (zNorm2 - 0.5f) * gridDepth_ - scrollOffset * gridDepth_ / static_cast<float>(zSegments);
             if (zPos1 < -gridDepth_ * 0.5f) zPos1 += gridDepth_;
             if (zPos2 < -gridDepth_ * 0.5f) zPos2 += gridDepth_;
 
-            // Vertex 1
-            vertices_.push_back(xPos);
-            vertices_.push_back(y);
-            vertices_.push_back(zPos1);
-            vertices_.push_back(zNorm1);
-
-            // Vertex 2
-            vertices_.push_back(xPos);
-            vertices_.push_back(y);
-            vertices_.push_back(zPos2);
-            vertices_.push_back(zNorm2);
+            vertices_.push_back(xPos); vertices_.push_back(y);
+            vertices_.push_back(zPos1); vertices_.push_back(zNorm1);
+            vertices_.push_back(xPos); vertices_.push_back(y);
+            vertices_.push_back(zPos2); vertices_.push_back(zNorm2);
         }
     }
+}
 
-    // Set vertex count (VBO upload happens in render())
+void WireframeMeshShader::generateWireframeMesh(const WaveformData3D& data, float xSpread)
+{
+    vertices_.clear();
+
+    int xSegments = std::min(data.sampleCount, gridDensity_ * 4);
+    int zSegments = std::max(2, gridDensity_);
+
+    size_t estimatedVertices = static_cast<size_t>(zSegments * (xSegments - 1) * 2 +
+                                                   xSegments * (zSegments - 1) * 2);
+    vertices_.reserve(estimatedVertices * 4);
+
+    float scrollOffset = std::fmod(time_, 1.0f);
+
+    generateHorizontalLines(data, xSpread, xSegments, zSegments, scrollOffset);
+    generateVerticalLines(data, xSpread, zSegments, scrollOffset);
+
     vertexCount_ = vertices_.empty() ? 0 : static_cast<int>(vertices_.size() / 4);
 }
 

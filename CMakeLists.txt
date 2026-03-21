@@ -7,6 +7,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Auto-install pre-commit hook during configure (if .git exists and hook is missing)
+if(EXISTS "${CMAKE_SOURCE_DIR}/.git" AND EXISTS "${CMAKE_SOURCE_DIR}/scripts/pre-commit")
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/.git/hooks/pre-commit")
+        file(CREATE_LINK
+            "${CMAKE_SOURCE_DIR}/scripts/pre-commit"
+            "${CMAKE_SOURCE_DIR}/.git/hooks/pre-commit"
+            SYMBOLIC
+        )
+        message(STATUS "Installed pre-commit hook (symlink to scripts/pre-commit)")
+    endif()
+endif()
+
 # Windows-specific compile definitions
 if(WIN32)
     add_compile_definitions(
@@ -83,7 +95,25 @@ option(OSCIL_ENABLE_TEST_QUALITY_LINT "Enable shallow test detection lint checks
 set(OSCIL_MIN_ASSERTIONS_PER_TEST "1" CACHE STRING "Minimum assertions per test function")
 set(OSCIL_TEST_QUALITY_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_quality_lint.py")
 
-if(OSCIL_ENABLE_SIZE_LIMIT_LINT OR OSCIL_ENABLE_TEST_QUALITY_LINT)
+# Option for source registry linting (prevents orphan/missing files in Sources.cmake)
+option(OSCIL_ENABLE_SOURCE_REGISTRY_LINT "Enable source file registration lint checks" ON)
+set(OSCIL_SOURCE_REGISTRY_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/source_registry_lint.py")
+
+# Option for TODO/placeholder linting (prevents deferred work markers)
+option(OSCIL_ENABLE_TODO_LINT "Enable TODO/FIXME/placeholder detection" ON)
+set(OSCIL_TODO_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/todo_lint.py")
+
+# Option for architecture boundary linting (prevents layer violations)
+option(OSCIL_ENABLE_ARCHITECTURE_LINT "Enable include dependency boundary checks" ON)
+set(OSCIL_ARCHITECTURE_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/architecture_lint.py")
+
+# Option for comment quality linting (prevents empty comments, enforces doc comments on public API)
+option(OSCIL_ENABLE_COMMENT_LINT "Enable comment quality lint checks" ON)
+set(OSCIL_COMMENT_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/comment_lint.py")
+
+if(OSCIL_ENABLE_SIZE_LIMIT_LINT OR OSCIL_ENABLE_TEST_QUALITY_LINT
+   OR OSCIL_ENABLE_SOURCE_REGISTRY_LINT OR OSCIL_ENABLE_TODO_LINT
+   OR OSCIL_ENABLE_ARCHITECTURE_LINT OR OSCIL_ENABLE_COMMENT_LINT)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
 endif()
 
@@ -140,6 +170,13 @@ CPMAddPackage(
     GIT_TAG v3.11.3
 )
 
+# CLAP format support via clap-juce-extensions
+CPMAddPackage(
+    NAME clap-juce-extensions
+    GITHUB_REPOSITORY free-audio/clap-juce-extensions
+    GIT_TAG main
+)
+
 # Melatonin Inspector for UI debugging (browser-like devtools for JUCE)
 # Only fetch/build when explicitly enabled
 if(OSCIL_ENABLE_INSPECTOR)
@@ -170,6 +207,13 @@ juce_add_plugin(Oscil
     BUNDLE_ID "com.oscilaudio.oscil4"
     VST3_CATEGORIES "Fx" "Analyzer"
     AU_MAIN_TYPE "kAudioUnitType_Effect"
+)
+
+# Enable CLAP format via clap-juce-extensions
+clap_juce_extensions_plugin(
+    TARGET Oscil
+    CLAP_ID "com.oscilaudio.oscil4"
+    CLAP_FEATURES "audio-effect" "analyzer" "visualizer"
 )
 
 # Binary resources (SVG icons from icomoon)
@@ -234,6 +278,17 @@ target_compile_definitions(Oscil
         $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:OSCIL_ENABLE_INSPECTOR=1>
 )
 
+# Strict warnings — applied via interface library so only project targets link it.
+# JUCE and other deps are not affected. JUCE headers use SYSTEM includes.
+add_library(OscilStrictWarnings INTERFACE)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(OscilStrictWarnings INTERFACE -Wextra -Wpedantic -Werror)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(OscilStrictWarnings INTERFACE -Wextra -Wpedantic -Werror)
+elseif(MSVC)
+    target_compile_options(OscilStrictWarnings INTERFACE /WX)
+endif()
+
 # Define interface library for warning suppressions to ensure they come last
 add_library(OscilWarningSuppressions INTERFACE)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -265,6 +320,7 @@ target_link_libraries(Oscil
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
+        OscilStrictWarnings      # -Werror for project code
         OscilWarningSuppressions # Must be after JUCE warnings to override
 )
 
@@ -306,6 +362,19 @@ if(OSCIL_ENABLE_TEST_QUALITY_LINT)
     )
 endif()
 
+# Repo-wide comment quality linting target
+if(OSCIL_ENABLE_COMMENT_LINT)
+    add_custom_target(comment_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_COMMENT_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths include src tests test_harness
+            --doc-paths include
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running comment quality lint checks"
+        VERBATIM
+    )
+endif()
+
 # Suppress warnings from JUCE third-party dependencies (Harfbuzz, VST3 SDK)
 # Handled by OscilWarningSuppressions interface library above
 
@@ -341,6 +410,8 @@ if(OSCIL_BUILD_TESTS)
     add_executable(OscilTests
         tests/test_main.cpp
         tests/test_signal_processor.cpp
+        tests/test_signal_processor_edge.cpp
+        tests/test_signal_processor_stereo_mode.cpp
 
         # Refactored core tests - split for better isolation
         tests/test_source_id.cpp
@@ -356,6 +427,7 @@ if(OSCIL_BUILD_TESTS)
 
         # Refactored capture buffer tests - split for better isolation
         tests/test_capture_buffer_core.cpp
+        tests/test_capture_buffer_metadata.cpp
         tests/test_capture_buffer_threading.cpp
         tests/test_capture_buffer_lifecycle.cpp
 
@@ -373,13 +445,22 @@ if(OSCIL_BUILD_TESTS)
         tests/test_state_persistence_edge.cpp
 
         tests/test_timing_config.cpp
+        tests/test_timing_config_edge.cpp
         tests/test_timing_engine.cpp
+        tests/test_timing_engine_host.cpp
+        tests/test_timing_engine_host_edge.cpp
+        tests/test_timing_engine_serialization.cpp
+        tests/test_timing_engine_serialization_edge.cpp
+        tests/test_timing_engine_listeners.cpp
         tests/test_analysis_engine.cpp
         tests/test_transient_detector.cpp
         tests/test_stats_overlay.cpp
         tests/test_capture_quality_config.cpp
+        tests/test_capture_quality_config_edge.cpp
         tests/test_decimating_capture_buffer.cpp
+        tests/test_decimating_capture_buffer_edge.cpp
         tests/test_memory_budget_manager.cpp
+        tests/test_memory_budget_manager_edge.cpp
 
         # Refactored UI component tests - split for better isolation
         tests/test_spring_physics.cpp
@@ -395,6 +476,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_accordion_sections_e2e.cpp
         tests/test_sidebar_theme_population.cpp
         tests/test_sidebar_component.cpp
+        tests/test_preset_manager.cpp
         tests/test_shaders.cpp
         tests/test_waveform_shader_3d.cpp
         tests/test_effect_chain.cpp
@@ -402,6 +484,7 @@ if(OSCIL_BUILD_TESTS)
         tests/test_waveform_presenter.cpp
         tests/test_timing_presenter.cpp
         tests/test_pane_layout.cpp
+        tests/test_pane_layout_edge.cpp
         tests/test_pane_body.cpp
         tests/test_pane_action_bar.cpp
         tests/test_pane_header.cpp
@@ -476,6 +559,7 @@ if(OSCIL_BUILD_TESTS)
             juce::juce_dsp
             nlohmann_json::nlohmann_json
             $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
+            OscilStrictWarnings
             OscilWarningSuppressions
     )
 
@@ -505,7 +589,10 @@ if(OSCIL_BUILD_TESTS)
     endif()
 
     include(GoogleTest)
-    gtest_discover_tests(OscilTests)
+    gtest_discover_tests(OscilTests
+        DISCOVERY_TIMEOUT 30
+        PROPERTIES TIMEOUT 30
+    )
 
     if(OSCIL_ENABLE_SIZE_LIMIT_LINT)
         add_test(NAME SizeLimitsLint
@@ -526,6 +613,32 @@ if(OSCIL_BUILD_TESTS)
                 --min-assertions ${OSCIL_MIN_ASSERTIONS_PER_TEST}
         )
         set_tests_properties(TestQualityLint PROPERTIES LABELS "lint")
+    endif()
+
+    if(OSCIL_ENABLE_SOURCE_REGISTRY_LINT)
+        add_test(NAME SourceRegistryLint
+            COMMAND ${Python3_EXECUTABLE} ${OSCIL_SOURCE_REGISTRY_LINT_SCRIPT}
+                --root ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+        set_tests_properties(SourceRegistryLint PROPERTIES LABELS "lint")
+    endif()
+
+    if(OSCIL_ENABLE_TODO_LINT)
+        add_test(NAME TodoLint
+            COMMAND ${Python3_EXECUTABLE} ${OSCIL_TODO_LINT_SCRIPT}
+                --root ${CMAKE_CURRENT_SOURCE_DIR}
+                --paths include src
+        )
+        set_tests_properties(TodoLint PROPERTIES LABELS "lint")
+    endif()
+
+    if(OSCIL_ENABLE_ARCHITECTURE_LINT)
+        add_test(NAME ArchitectureLint
+            COMMAND ${Python3_EXECUTABLE} ${OSCIL_ARCHITECTURE_LINT_SCRIPT}
+                --root ${CMAKE_CURRENT_SOURCE_DIR}
+                --paths include src
+        )
+        set_tests_properties(ArchitectureLint PROPERTIES LABELS "lint")
     endif()
 endif()
 

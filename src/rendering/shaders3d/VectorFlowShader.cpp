@@ -79,7 +79,7 @@ VectorFlowShader::~VectorFlowShader()
 #if OSCIL_ENABLE_OPENGL
     if (compiled_)
     {
-        std::cerr << "[VectorFlowShader] LEAK DETECTED: Destructor called without release()" << std::endl;
+        DBG("[VectorFlowShader] LEAK DETECTED: Destructor called without release()");
     }
 #endif
 }
@@ -142,26 +142,8 @@ void VectorFlowShader::render(juce::OpenGLContext& context,
     if (!compiled_ || data.sampleCount < 2) return;
     juce::ignoreUnused(lighting);
 
-    // Calculate xSpread to fill the screen width and halfHeight for vertical scaling
-    float xSpread = 1.0f;
-    float halfHeight = 1.0f;
-
-    if (camera.getProjection() == CameraProjection::Orthographic)
-    {
-        float height = camera.getOrthoSize();
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
-    else
-    {
-        float dist = (camera.getPosition() - camera.getTarget()).length();
-        float fovRad = camera.getFOV() * 3.14159265f / 180.0f;
-        float height = 2.0f * dist * std::tan(fovRad * 0.5f);
-        float width = height * camera.getAspectRatio();
-        xSpread = width * 0.5f;
-        halfHeight = height * 0.5f;
-    }
+    float xSpread, halfHeight;
+    calculateCameraSpread(camera, xSpread, halfHeight);
 
     generateVectorMesh(data, xSpread);
     if (vertices_.empty()) return;

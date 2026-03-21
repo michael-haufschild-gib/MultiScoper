@@ -133,6 +133,7 @@ public:
                          bool preservePeaks = true);
 
 private:
+    static void upsample(std::span<const float> input, std::span<float> output);
     // Processing implementations for each mode
     void processFullStereo(std::span<const float> left, std::span<const float> right, ProcessedSignal& output) const;
     void processMono(std::span<const float> left, std::span<const float> right, ProcessedSignal& output) const;

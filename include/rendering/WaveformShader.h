@@ -156,6 +156,15 @@ protected:
      * @return true if no errors were found
      */
     static bool checkGLError(const char* location);
+
+    /**
+     * Calculate stereo/mono layout positions for channel rendering.
+     */
+    static void calculateStereoLayout(const ShaderRenderParams& params,
+                                       const std::vector<float>* channel2,
+                                       float height,
+                                       float& centerY1, float& centerY2,
+                                       float& amp1, float& amp2);
 #endif
 };
 

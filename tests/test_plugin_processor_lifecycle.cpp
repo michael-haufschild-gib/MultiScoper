@@ -12,6 +12,7 @@
 #include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
+#include "rendering/PresetManager.h"
 
 using namespace oscil;
 using namespace oscil::test;
@@ -22,6 +23,7 @@ protected:
     std::unique_ptr<InstanceRegistry> registry_;
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
     std::unique_ptr<OscilPluginProcessor> processor;
 
@@ -31,6 +33,7 @@ protected:
         registry_ = std::make_unique<InstanceRegistry>();
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
@@ -38,6 +41,7 @@ protected:
             *registry_,
             *themeManager_,
             *shaderRegistry_,
+            *presetManager_,
             *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, 512);
     }
@@ -219,6 +223,7 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
             *registry_,
             *themeManager_,
             *shaderRegistry_,
+            *presetManager_,
             *memoryBudgetManager_);
         processor->prepareToPlay(rate, 512);
 
@@ -238,6 +243,7 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentBlockSizes)
             *registry_,
             *themeManager_,
             *shaderRegistry_,
+            *presetManager_,
             *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, blockSize);
         pumpMessageQueue(200);
@@ -408,6 +414,7 @@ TEST_F(PluginProcessorLifecycleTest, SourceIdBeforePrepare)
         *registry_,
         *themeManager_,
         *shaderRegistry_,
+        *presetManager_,
         *memoryBudgetManager_);
 
     // Source ID before prepareToPlay should be invalid

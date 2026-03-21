@@ -7,6 +7,7 @@
 #include "OscilTestFixtures.h"
 #include "ui/managers/DisplaySettingsManager.h"
 #include "rendering/GpuRenderCoordinator.h"
+#include "rendering/PresetManager.h"
 
 namespace oscil
 {
@@ -22,8 +23,8 @@ class OscillatorPanelControllerTest : public ::testing::Test
 {
 protected:
     OscillatorPanelControllerTest()
-        : processor_(instanceRegistry_, themeService_, shaderRegistry_, memoryBudgetManager_)
-        , serviceContext_{ instanceRegistry_, themeService_, shaderRegistry_ }
+        : processor_(instanceRegistry_, themeService_, shaderRegistry_, presetManager_, memoryBudgetManager_)
+        , serviceContext_{ instanceRegistry_, themeService_, shaderRegistry_, presetManager_ }
     {
     }
 
@@ -65,6 +66,7 @@ protected:
     oscil::test::MockInstanceRegistry instanceRegistry_;
     oscil::test::MockThemeService themeService_;
     ShaderRegistry shaderRegistry_;
+    PresetManager presetManager_;
     MemoryBudgetManager memoryBudgetManager_;
     OscilPluginProcessor processor_;
     ServiceContext serviceContext_;

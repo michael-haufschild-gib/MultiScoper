@@ -181,11 +181,9 @@ TEST_F(ThemeManagerApplyTest, WaveformColorNegativeIndex)
     auto* theme = getThemeManager().getTheme("Dark Professional");
     ASSERT_NE(theme, nullptr);
 
-    // Negative index - behavior depends on implementation
-    // Should not crash, at minimum
+    // Negative index should still return a valid (non-transparent) color.
     auto color = theme->getWaveformColor(-1);
-    // Any valid color is acceptable
-    EXPECT_TRUE(true); // If we get here without crash, test passes
+    EXPECT_FALSE(color.isTransparent());
 }
 
 // Test: Get waveform color with very large index

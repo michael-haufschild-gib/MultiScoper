@@ -57,98 +57,54 @@ void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const Ca
     write(channels, numSamples, numChannels, metadata, tryLock);
 }
 
+void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamples, int numChannels,
+                                         const CaptureFrameMetadata& metadata)
+{
+    const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
+    size_t writePos = writePos_.load(std::memory_order_relaxed);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
+
+        for (int ch = 0; ch < actualChannels; ++ch)
+        {
+            float sample = 0.0f;
+            if (samples != nullptr && samples[ch] != nullptr)
+                sample = samples[ch][i];
+            buffer_[static_cast<size_t>(ch) * capacity_ + pos] = sample;
+        }
+
+        for (int ch = actualChannels; ch < static_cast<int>(MAX_CHANNELS); ++ch)
+            buffer_[static_cast<size_t>(ch) * capacity_ + pos] = 0.0f;
+    }
+
+    writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
+    samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_release);
+
+    CaptureFrameMetadata meta = metadata;
+    meta.numSamples = numSamples;
+    meta.numChannels = actualChannels;
+    metadata_.write(meta);
+}
+
 void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int numChannels,
                                  const CaptureFrameMetadata& metadata, bool tryLock)
 {
     if (numSamples <= 0 || numChannels <= 0)
         return;
 
-    // Handle locking based on tryLock parameter
-    // For real-time audio (tryLock=true), we must not block.
-    // If we can't get the lock, we drop the frame.
     if (tryLock)
     {
         const juce::SpinLock::ScopedTryLockType sl(writeLock_);
         if (!sl.isLocked())
             return;
-            
-        // Lock acquired, proceed
-        // Clamp channels once
-        const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
-
-        // Get current write position
-        size_t writePos = writePos_.load(std::memory_order_relaxed);
-
-        // Write samples to ring buffer
-        // Optimization: Write all channels in the loop to maximize cache hits if possible,
-        // but since we used planar layout, we write to distant memory regions.
-        // However, flat buffer removes the pointer indirection overhead.
-        
-        for (int i = 0; i < numSamples; ++i)
-        {
-            size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
-
-            for (int ch = 0; ch < actualChannels; ++ch)
-            {
-                float sample = 0.0f;
-                if (samples != nullptr && samples[ch] != nullptr)
-                    sample = samples[ch][i];
-                buffer_[static_cast<size_t>(ch) * capacity_ + pos] = sample;
-            }
-
-            // Zero out unused channels
-            for (int ch = actualChannels; ch < static_cast<int>(MAX_CHANNELS); ++ch)
-            {
-                buffer_[static_cast<size_t>(ch) * capacity_ + pos] = 0.0f;
-            }
-        }
-
-        // Update write position atomically
-        writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
-
-        // Update total samples written
-        samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_release);
-
-        // Update metadata
-        CaptureFrameMetadata meta = metadata;
-        meta.numSamples = numSamples;
-        meta.numChannels = actualChannels;
-        metadata_.write(meta);
+        writeInternal(samples, numSamples, numChannels, metadata);
     }
     else
     {
-        // Non-real-time thread: block until lock acquired
         const juce::SpinLock::ScopedLockType sl(writeLock_);
-        
-        // Duplicate logic (could extract to private method, but keeping inline for perf)
-        const int actualChannels = std::min(numChannels, static_cast<int>(MAX_CHANNELS));
-        size_t writePos = writePos_.load(std::memory_order_relaxed);
-
-        for (int i = 0; i < numSamples; ++i)
-        {
-            size_t pos = wrapPosition(writePos + static_cast<size_t>(i));
-
-            for (int ch = 0; ch < actualChannels; ++ch)
-            {
-                float sample = 0.0f;
-                if (samples != nullptr && samples[ch] != nullptr)
-                    sample = samples[ch][i];
-                buffer_[static_cast<size_t>(ch) * capacity_ + pos] = sample;
-            }
-
-            for (int ch = actualChannels; ch < static_cast<int>(MAX_CHANNELS); ++ch)
-            {
-                buffer_[static_cast<size_t>(ch) * capacity_ + pos] = 0.0f;
-            }
-        }
-
-        writePos_.store(wrapPosition(writePos + static_cast<size_t>(numSamples)), std::memory_order_release);
-        samplesWritten_.fetch_add(static_cast<size_t>(numSamples), std::memory_order_release);
-        
-        CaptureFrameMetadata meta = metadata;
-        meta.numSamples = numSamples;
-        meta.numChannels = actualChannels;
-        metadata_.write(meta);
+        writeInternal(samples, numSamples, numChannels, metadata);
     }
 }
 

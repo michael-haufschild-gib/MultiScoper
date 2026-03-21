@@ -255,6 +255,9 @@ public:
     static constexpr int CURRENT_SCHEMA_VERSION = 2;
 
 private:
+    static OscillatorState migrateOscillatorState(const juce::ValueTree& state,
+                                                   int schemaVersion,
+                                                   const SourceId& sourceId);
     OscillatorId id_;
     SourceId sourceId_;
     OscillatorState state_ = OscillatorState::NO_SOURCE;

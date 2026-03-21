@@ -40,5 +40,17 @@ screenshots/
 # Temporary build logs
 buildwarning*.txt
 
-# stuff
+# Python bytecode
+__pycache__/
+
+# Serena MCP state
+.serena/
+
+# Generated reports
+size_lint_report.txt
+
+# Ephemeral task state
+task_state.md
+
+# Unity project build artifacts
 resources/unity/
