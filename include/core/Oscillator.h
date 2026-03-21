@@ -111,7 +111,7 @@ struct OscillatorIdHash
 {
     std::size_t operator()(const OscillatorId& oid) const
     {
-        return std::hash<std::string>{}(oid.id.toStdString());
+        return static_cast<std::size_t>(oid.id.hashCode());
     }
 };
 
@@ -119,7 +119,7 @@ struct PaneIdHash
 {
     std::size_t operator()(const PaneId& pid) const
     {
-        return std::hash<std::string>{}(pid.id.toStdString());
+        return static_cast<std::size_t>(pid.id.hashCode());
     }
 };
 

@@ -249,12 +249,12 @@ void BasicShader::render(
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
     float glowWidth = params.lineWidth * 10.0f;
-    std::vector<float> vertices;
-    buildLineGeometry(vertices, channel1, centerY1, amplitude1,
+    vertexBuffer_.clear();
+    buildLineGeometry(vertexBuffer_, channel1, centerY1, amplitude1,
         glowWidth, params.bounds.getX(), params.bounds.getWidth());
 
-    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
-        vertices.data(), GL_DYNAMIC_DRAW);
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
+        vertexBuffer_.data(), GL_DYNAMIC_DRAW);
 
     ext.glEnableVertexAttribArray(static_cast<GLuint>(positionLoc));
     ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
@@ -262,16 +262,16 @@ void BasicShader::render(
     ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
         reinterpret_cast<void*>(2 * sizeof(float)));
 
-    drawGlowPasses(ext, static_cast<int>(vertices.size() / 4));
+    drawGlowPasses(ext, static_cast<int>(vertexBuffer_.size() / 4));
 
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        vertices.clear();
-        buildLineGeometry(vertices, *channel2, centerY2, amplitude2,
+        vertexBuffer_.clear();
+        buildLineGeometry(vertexBuffer_, *channel2, centerY2, amplitude2,
             glowWidth, params.bounds.getX(), params.bounds.getWidth());
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
-            vertices.data(), GL_DYNAMIC_DRAW);
-        drawGlowPasses(ext, static_cast<int>(vertices.size() / 4));
+        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
+            vertexBuffer_.data(), GL_DYNAMIC_DRAW);
+        drawGlowPasses(ext, static_cast<int>(vertexBuffer_.size() / 4));
     }
 
     ext.glDisableVertexAttribArray(static_cast<GLuint>(positionLoc));

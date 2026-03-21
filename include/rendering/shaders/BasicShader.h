@@ -57,6 +57,7 @@ private:
 
 #if OSCIL_ENABLE_OPENGL
     void drawGlowPasses(juce::OpenGLExtensionFunctions& ext, int vertexCount);
+    std::vector<float> vertexBuffer_; // Pre-allocated to avoid per-frame heap allocation
 #endif
 
     static constexpr float GLOW_INTENSITY = 0.8f;

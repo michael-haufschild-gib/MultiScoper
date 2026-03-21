@@ -40,19 +40,14 @@ PluginFactory& PluginFactory::getInstance()
     // This is the ONLY singleton pattern in the system
     static PluginFactory instance;
 
-    // Thread-safe check and set using compare_exchange
-    PluginFactory* expected = nullptr;
-    currentFactory.compare_exchange_strong(expected, &instance,
-        std::memory_order_acq_rel, std::memory_order_acquire);
-
-    return *currentFactory.load(std::memory_order_acquire);
+    PluginFactory* current = currentFactory.load(std::memory_order_acquire);
+    return current ? *current : instance;
 }
 
 void PluginFactory::setInstance(PluginFactory* factory)
 {
-    // Allow overriding for testing
-    static PluginFactory defaultInstance;
-    currentFactory.store(factory ? factory : &defaultInstance, std::memory_order_release);
+    // Store override (nullptr clears it, falling back to the static default)
+    currentFactory.store(factory, std::memory_order_release);
 }
 
 std::unique_ptr<juce::AudioProcessor> PluginFactory::createPluginProcessor()

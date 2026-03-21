@@ -16,6 +16,73 @@ namespace oscil
 {
 
 /**
+ * Generic SeqLock for publishing a plain struct from one writer thread
+ * to many reader threads without locks.
+ *
+ * Single-producer / multiple-consumer. The writer increments a sequence
+ * counter to odd before writing, then to even after. Readers spin until
+ * they observe two identical even sequence values bracketing their read.
+ */
+template <typename T>
+struct SeqLock
+{
+    void write(const T& value)
+    {
+        sequence.fetch_add(1, std::memory_order_release);   // odd → write in progress
+        data.store(value, std::memory_order_relaxed);
+        sequence.fetch_add(1, std::memory_order_release);   // even → write complete
+    }
+
+    T read() const
+    {
+        static constexpr int MAX_RETRIES = 1000;
+        int retries = 0;
+        for (;;)
+        {
+            uint32_t seq1 = sequence.load(std::memory_order_acquire);
+            if (seq1 & 1)
+            {
+                if (++retries > MAX_RETRIES)
+                    return data.load(std::memory_order_relaxed);
+                continue;
+            }
+            T snapshot = data.load(std::memory_order_relaxed);
+            uint32_t seq2 = sequence.load(std::memory_order_acquire);
+            if (seq1 == seq2)
+                return snapshot;
+            if (++retries > MAX_RETRIES)
+                return snapshot;
+        }
+    }
+
+private:
+    std::atomic<uint32_t> sequence{0};
+    // std::atomic<T> requires T to be trivially copyable. Both
+    // TimingConfigData and HostTimingInfo satisfy this.
+    std::atomic<T> data{T{}};
+};
+
+/**
+ * UI-thread-writable timing configuration fields.
+ * Published via SeqLock for consistent cross-thread reads.
+ */
+struct TimingConfigData
+{
+    TimingMode timingMode = TimingMode::TIME;
+    bool hostSyncEnabled = false;
+    bool syncToPlayhead = false;
+    float timeIntervalMs = 500.0f;
+    EngineNoteInterval noteInterval = EngineNoteInterval::NOTE_1_4TH;
+    float internalBPM = 120.0f;
+    WaveformTriggerMode triggerMode = WaveformTriggerMode::None;
+    float triggerThreshold = 0.1f;
+    int triggerChannel = 0;
+    float triggerHysteresis = 0.01f;
+    int midiTriggerNote = -1;
+    int midiTriggerChannel = 0;
+};
+
+/**
  * Timing engine for waveform display synchronization.
  * Handles TIME/MELODIC modes, triggering, and DAW synchronization.
  */
@@ -77,7 +144,7 @@ public:
 
     /**
      * Get the current engine configuration
-     * Constructs configuration from atomic values for thread safety
+     * Returns a consistent snapshot assembled from SeqLock-protected data
      */
     [[nodiscard]] EngineTimingConfig getConfig() const;
 
@@ -88,50 +155,28 @@ public:
 
     /**
      * Get the current host timing info
-     * Constructs info from atomic values for thread safety
+     * Returns a consistent snapshot from the host info SeqLock
      */
     [[nodiscard]] HostTimingInfo getHostInfo() const;
 
     /**
      * Set sample rate (thread-safe)
      */
-    void setSampleRate(double sampleRate)
-    {
-        atomicSampleRate_.store(sampleRate, std::memory_order_relaxed);
-    }
+    void setSampleRate(double sampleRate);
 
-    // Configuration setters
+    // Configuration setters (UI thread only)
     void setTimingMode(TimingMode mode);
     void setHostSyncEnabled(bool enabled);
     void setTimeIntervalMs(float ms);
     void setNoteInterval(EngineNoteInterval interval);
-    void setInternalBPM(float bpm);  // Set user-specified BPM for free-running mode
-    void setWaveformTriggerMode(WaveformTriggerMode mode)
-    {
-        atomicTriggerMode_.store(static_cast<int>(mode), std::memory_order_relaxed);
-    }
-    void setTriggerThreshold(float threshold)
-    {
-        threshold = juce::jlimit(0.0f, 1.0f, threshold);
-        atomicTriggerThreshold_.store(threshold, std::memory_order_relaxed);
-    }
-    void setTriggerChannel(int channel)
-    {
-        atomicTriggerChannel_.store(channel, std::memory_order_relaxed);
-    }
-    void setTriggerHysteresis(float hysteresis)
-    {
-        atomicTriggerHysteresis_.store(hysteresis, std::memory_order_relaxed);
-    }
-    void setMidiTriggerNote(int note)
-    {
-        atomicMidiTriggerNote_.store(note, std::memory_order_relaxed);
-    }
-    void setMidiTriggerChannel(int channel)
-    {
-        atomicMidiTriggerChannel_.store(channel, std::memory_order_relaxed);
-    }
-    void setSyncToPlayhead(bool enabled) { atomicSyncToPlayhead_.store(enabled, std::memory_order_relaxed); }
+    void setInternalBPM(float bpm);
+    void setWaveformTriggerMode(WaveformTriggerMode mode);
+    void setTriggerThreshold(float threshold);
+    void setTriggerChannel(int channel);
+    void setTriggerHysteresis(float hysteresis);
+    void setMidiTriggerNote(int note);
+    void setMidiTriggerChannel(int channel);
+    void setSyncToPlayhead(bool enabled);
 
     /**
      * Recalculate actual interval based on current mode and BPM
@@ -165,7 +210,8 @@ public:
      */
     [[nodiscard]] NoteInterval getNoteIntervalAsEntity() const
     {
-        return engineToEntityNoteInterval(static_cast<EngineNoteInterval>(atomicNoteInterval_.load(std::memory_order_relaxed)));
+        auto cfg = configLock_.read();
+        return engineToEntityNoteInterval(cfg.noteInterval);
     }
 
     // === Serialization ===
@@ -183,7 +229,6 @@ public:
     /**
      * Dispatch any pending updates to listeners.
      * MUST be called on the message thread (e.g. from a Timer).
-     * This replaces the previous async callback mechanism to ensure real-time safety.
      */
     void dispatchPendingUpdates();
 
@@ -210,54 +255,44 @@ private:
     void resetRuntimeStateForLoad();
     void loadTimingProperties(const juce::ValueTree& state);
 
-    // Thread-safe copies of values for cross-thread access.
-    // UI thread writes config via setters → stores to atomics
-    // Audio thread reads from atomics in processBlock/updateHostInfo
-    std::atomic<float> atomicHostBPM_{ 120.0f };
-    std::atomic<float> atomicInternalBPM_{ 120.0f };
-    std::atomic<float> atomicTimeIntervalMs_{ 500.0f };
-    std::atomic<float> atomicActualIntervalMs_{ 500.0f };
+    // --- SeqLock-protected cross-thread state ---
 
-    // Atomics for fields read from audio thread (written by UI thread setters)
-    std::atomic<int> atomicTimingMode_{ static_cast<int>(TimingMode::TIME) };
-    std::atomic<int> atomicNoteInterval_{ static_cast<int>(EngineNoteInterval::NOTE_1_4TH) };
-    std::atomic<bool> atomicHostSyncEnabled_{ false };
-    std::atomic<int> atomicTriggerMode_{ static_cast<int>(WaveformTriggerMode::None) };
-    std::atomic<int> atomicTriggerChannel_{ 0 };
-    std::atomic<float> atomicTriggerThreshold_{ 0.1f };
-    std::atomic<float> atomicTriggerHysteresis_{ 0.01f };
-    std::atomic<int> atomicMidiTriggerNote_{ -1 };
-    std::atomic<int> atomicMidiTriggerChannel_{ 0 };
-    std::atomic<double> atomicSampleRate_{ 44100.0 };
-    std::atomic<bool> atomicSyncToPlayhead_{ false };
-    std::atomic<double> atomicLastSyncTimestamp_{ 0.0 };
+    // UI-thread-written config (read by audio thread via SeqLock)
+    SeqLock<TimingConfigData> configLock_;
 
-    // Host info atomics
-    std::atomic<double> atomicPpqPosition_{ 0.0 };
-    std::atomic<bool> atomicIsPlaying_{ false };
-    std::atomic<int64_t> atomicTimeInSamples_{ 0 };
-    std::atomic<int> atomicTimeSigNumerator_{ 4 };
-    std::atomic<int> atomicTimeSigDenominator_{ 4 };
-    std::atomic<int> atomicTransportState_{ static_cast<int>(HostTimingInfo::TransportState::STOPPED) };
+    // Audio-thread-written host info (read by UI thread via SeqLock)
+    SeqLock<HostTimingInfo> hostInfoLock_;
 
-    // Trigger state (thread-safe)
-    std::atomic<bool> manualTrigger_{ false };
-    std::atomic<bool> triggered_{ false };  // Unified trigger flag
-    std::atomic<bool> resetTriggerHistoryPending_{ false };
+    // Audio-thread-local mirror of host info for direct access during processBlock.
+    // The audio thread updates this first, then publishes via hostInfoLock_.
+    HostTimingInfo audioThreadHostInfo_;
 
-    // Audio-thread-only state (accessed only from processBlock, not synchronized)
+    // --- Standalone atomics for values written by both threads or with exchange semantics ---
+
+    // Computed by recalculateInterval() from both threads
+    std::atomic<float> atomicActualIntervalMs_{500.0f};
+
+    // Written by audio thread in multiple locations
+    std::atomic<double> atomicLastSyncTimestamp_{0.0};
+
+    // Trigger state (thread-safe, uses exchange semantics)
+    std::atomic<bool> manualTrigger_{false};
+    std::atomic<bool> triggered_{false};
+    std::atomic<bool> resetTriggerHistoryPending_{false};
+
+    // Audio-thread-only state (not synchronized — accessed only from processBlock)
     bool previousTriggerState_ = false;
     float previousSample_ = 0.0f;
-    float previousBPM_ = 120.0f;  // For change detection
+    float previousBPM_ = 120.0f;
 
-    juce::ListenerList<Listener> listeners_;  // Message-thread-only (add/remove require jassert)
+    juce::ListenerList<Listener> listeners_;
 
-    // Pending update flags for lock-free notification
-    std::atomic<bool> pendingTimingModeChange_{ false };
-    std::atomic<bool> pendingIntervalChange_{ false };
-    std::atomic<bool> pendingHostBPMChange_{ false };
-    std::atomic<bool> pendingHostSyncChange_{ false };
-    std::atomic<bool> pendingTimeSignatureChange_{ false };
+    // Pending update flags for lock-free notification (exchange semantics)
+    std::atomic<bool> pendingTimingModeChange_{false};
+    std::atomic<bool> pendingIntervalChange_{false};
+    std::atomic<bool> pendingHostBPMChange_{false};
+    std::atomic<bool> pendingHostSyncChange_{false};
+    std::atomic<bool> pendingTimeSignatureChange_{false};
 
     // Trigger detection
     bool detectTrigger(const float* samples, int numSamples);
@@ -266,7 +301,7 @@ private:
     bool detectBothEdges(float sample);
     bool detectLevel(float sample);
 
-    // Notification helpers (now just set flags)
+    // Notification helpers
     void notifyTimingModeChanged();
     void notifyIntervalChanged();
     void notifyHostBPMChanged();
@@ -276,19 +311,19 @@ private:
 // ValueTree identifiers for TimingConfig
 namespace TimingIds
 {
-    static const juce::Identifier Timing{ "Timing" };
-    static const juce::Identifier TimingMode{ "timingMode" };
-    static const juce::Identifier HostSyncEnabled{ "hostSyncEnabled" };
-    static const juce::Identifier SyncToPlayhead{ "syncToPlayhead" };
-    static const juce::Identifier TimeIntervalMs{ "timeIntervalMs" };
-    static const juce::Identifier NoteInterval{ "noteInterval" };
-    static const juce::Identifier TriggerMode{ "triggerMode" };
-    static const juce::Identifier TriggerThreshold{ "triggerThreshold" };
-    static const juce::Identifier MidiTriggerNote{ "midiTriggerNote" };
-    static const juce::Identifier MidiTriggerChannel{ "midiTriggerChannel" };
-    static const juce::Identifier InternalBPM{ "internalBPM" };
-    static const juce::Identifier TriggerChannel{ "triggerChannel" };
-    static const juce::Identifier TriggerHysteresis{ "triggerHysteresis" };
+    static const juce::Identifier Timing{"Timing"};
+    static const juce::Identifier TimingMode{"timingMode"};
+    static const juce::Identifier HostSyncEnabled{"hostSyncEnabled"};
+    static const juce::Identifier SyncToPlayhead{"syncToPlayhead"};
+    static const juce::Identifier TimeIntervalMs{"timeIntervalMs"};
+    static const juce::Identifier NoteInterval{"noteInterval"};
+    static const juce::Identifier TriggerMode{"triggerMode"};
+    static const juce::Identifier TriggerThreshold{"triggerThreshold"};
+    static const juce::Identifier MidiTriggerNote{"midiTriggerNote"};
+    static const juce::Identifier MidiTriggerChannel{"midiTriggerChannel"};
+    static const juce::Identifier InternalBPM{"internalBPM"};
+    static const juce::Identifier TriggerChannel{"triggerChannel"};
+    static const juce::Identifier TriggerHysteresis{"triggerHysteresis"};
 }
 
 } // namespace oscil

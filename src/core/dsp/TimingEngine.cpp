@@ -22,14 +22,15 @@ void TimingEngine::updateHostBPM(const juce::AudioPlayHead::PositionInfo& positi
     if (!bpm) return;
 
     double newBPM = juce::jlimit<double>(EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM, *bpm);
-    double currentHostBPM = atomicHostBPM_.load(std::memory_order_relaxed);
-    if (std::abs(currentHostBPM - newBPM) <= 0.01)
+    if (std::abs(audioThreadHostInfo_.bpm - newBPM) <= 0.01)
         return;
 
-    atomicHostBPM_.store(static_cast<float>(newBPM), std::memory_order_relaxed);
+    audioThreadHostInfo_.bpm = newBPM;
+    // Publish immediately so recalculateInterval() sees updated BPM
+    hostInfoLock_.write(audioThreadHostInfo_);
 
-    auto timingMode = static_cast<TimingMode>(atomicTimingMode_.load(std::memory_order_relaxed));
-    if (timingMode == TimingMode::MELODIC)
+    auto cfg = configLock_.read();
+    if (cfg.timingMode == TimingMode::MELODIC)
         recalculateInterval();
 
     if (std::abs(previousBPM_ - static_cast<float>(newBPM)) > 0.5f)
@@ -44,22 +45,21 @@ void TimingEngine::updateSyncState(bool wasPlaying, bool isPlaying,
                                     int64_t previousTimeInSamples)
 {
     bool playStateChanged = (wasPlaying != isPlaying);
-    bool hostSyncEnabled = atomicHostSyncEnabled_.load(std::memory_order_relaxed);
-    bool syncToPlayhead = atomicSyncToPlayhead_.load(std::memory_order_relaxed);
+    auto cfg = configLock_.read();
 
-    if ((hostSyncEnabled || syncToPlayhead) && playStateChanged)
+    if ((cfg.hostSyncEnabled || cfg.syncToPlayhead) && playStateChanged)
     {
-        double syncTimestamp = atomicTimeInSamples_.load(std::memory_order_relaxed);
+        double syncTimestamp = static_cast<double>(audioThreadHostInfo_.timeInSamples);
         if (timeInSamples)
             syncTimestamp = static_cast<double>(*timeInSamples);
         atomicLastSyncTimestamp_.store(syncTimestamp, std::memory_order_relaxed);
     }
 
-    if (syncToPlayhead && !wasPlaying && isPlaying)
+    if (cfg.syncToPlayhead && !wasPlaying && isPlaying)
         triggered_.store(true, std::memory_order_relaxed);
 
     // Detect backward playhead jumps (loop wrap or seek) while playing
-    if (syncToPlayhead && isPlaying && !playStateChanged && timeInSamples)
+    if (cfg.syncToPlayhead && isPlaying && !playStateChanged && timeInSamples)
     {
         constexpr int64_t kBackwardJumpRetriggerMinSamples = 3;
         if (previousTimeInSamples - *timeInSamples >= kBackwardJumpRetriggerMinSamples)
@@ -75,13 +75,13 @@ void TimingEngine::updateHostTimeSignature(const juce::AudioPlayHead::PositionIn
     auto timeSig = positionInfo.getTimeSignature();
     if (!timeSig) return;
 
-    int oldNum = atomicTimeSigNumerator_.load(std::memory_order_relaxed);
-    int oldDen = atomicTimeSigDenominator_.load(std::memory_order_relaxed);
-
-    if (timeSig->numerator != oldNum || timeSig->denominator != oldDen)
+    if (timeSig->numerator != audioThreadHostInfo_.timeSigNumerator ||
+        timeSig->denominator != audioThreadHostInfo_.timeSigDenominator)
     {
-        atomicTimeSigNumerator_.store(timeSig->numerator, std::memory_order_relaxed);
-        atomicTimeSigDenominator_.store(timeSig->denominator, std::memory_order_relaxed);
+        audioThreadHostInfo_.timeSigNumerator = timeSig->numerator;
+        audioThreadHostInfo_.timeSigDenominator = timeSig->denominator;
+        // Publish before recalculate so it reads the updated time signature
+        hostInfoLock_.write(audioThreadHostInfo_);
         pendingTimeSignatureChange_.store(true, std::memory_order_relaxed);
         recalculateInterval();
     }
@@ -89,7 +89,7 @@ void TimingEngine::updateHostTimeSignature(const juce::AudioPlayHead::PositionIn
 
 void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& positionInfo)
 {
-    const int64_t previousTimeInSamples = atomicTimeInSamples_.load(std::memory_order_relaxed);
+    const int64_t previousTimeInSamples = audioThreadHostInfo_.timeInSamples;
     auto timeInSamples = positionInfo.getTimeInSamples();
     if (timeInSamples && *timeInSamples < 0)
         timeInSamples.reset();
@@ -97,58 +97,52 @@ void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& posit
     updateHostBPM(positionInfo);
 
     if (auto ppq = positionInfo.getPpqPosition())
-        atomicPpqPosition_.store(*ppq, std::memory_order_relaxed);
+        audioThreadHostInfo_.ppqPosition = *ppq;
 
-    bool wasPlaying = atomicIsPlaying_.load(std::memory_order_relaxed);
+    bool wasPlaying = audioThreadHostInfo_.isPlaying;
     bool isPlaying = positionInfo.getIsPlaying();
-    atomicIsPlaying_.store(isPlaying, std::memory_order_relaxed);
+    audioThreadHostInfo_.isPlaying = isPlaying;
 
     HostTimingInfo::TransportState transportState = HostTimingInfo::TransportState::STOPPED;
     if (isPlaying)
         transportState = positionInfo.getIsRecording()
             ? HostTimingInfo::TransportState::RECORDING
             : HostTimingInfo::TransportState::PLAYING;
-    atomicTransportState_.store(static_cast<int>(transportState), std::memory_order_relaxed);
+    audioThreadHostInfo_.transportState = transportState;
 
     updateSyncState(wasPlaying, isPlaying, timeInSamples, previousTimeInSamples);
 
     if (timeInSamples)
-        atomicTimeInSamples_.store(*timeInSamples, std::memory_order_relaxed);
+        audioThreadHostInfo_.timeInSamples = *timeInSamples;
 
     updateHostTimeSignature(positionInfo);
+
+    // Publish the complete host info snapshot for cross-thread readers
+    hostInfoLock_.write(audioThreadHostInfo_);
 }
 
 bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
 {
-    // Protect against denormal numbers which can cause 100x slowdown on some CPUs
     juce::ScopedNoDenormals noDenormals;
 
-    // Apply deferred history reset on the audio thread.
     if (resetTriggerHistoryPending_.exchange(false, std::memory_order_relaxed))
     {
         previousTriggerState_ = false;
         previousSample_ = 0.0f;
     }
 
-    // Read from atomics for thread-safe access (UI thread may modify via setters)
-    auto triggerMode = static_cast<WaveformTriggerMode>(
-        atomicTriggerMode_.load(std::memory_order_relaxed));
+    auto cfg = configLock_.read();
 
-    if (triggerMode == WaveformTriggerMode::None)
+    if (cfg.triggerMode == WaveformTriggerMode::None)
         return true;
 
-    if (triggerMode == WaveformTriggerMode::Manual)
-    {
-        // checkAndClearManualTrigger is called by polling, not here
+    if (cfg.triggerMode == WaveformTriggerMode::Manual)
         return manualTrigger_.load(std::memory_order_relaxed);
-    }
 
-    // In MIDI mode, we don't check audio buffer for triggers
-    if (triggerMode == WaveformTriggerMode::Midi)
+    if (cfg.triggerMode == WaveformTriggerMode::Midi)
         return triggered_.load(std::memory_order_relaxed);
 
-    int channel = std::min(atomicTriggerChannel_.load(std::memory_order_relaxed),
-                           buffer.getNumChannels() - 1);
+    int channel = std::min(cfg.triggerChannel, buffer.getNumChannels() - 1);
     if (channel < 0)
         return false;
 
@@ -157,7 +151,7 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
     {
         triggered_.store(true, std::memory_order_relaxed);
         atomicLastSyncTimestamp_.store(
-            static_cast<double>(atomicTimeInSamples_.load(std::memory_order_relaxed)),
+            static_cast<double>(audioThreadHostInfo_.timeInSamples),
             std::memory_order_relaxed);
         return true;
     }
@@ -173,13 +167,11 @@ int TimingEngine::getDisplaySampleCount(double sampleRate) const
 
 float TimingEngine::getActualIntervalMs() const
 {
-    // Use atomic for thread-safe read from UI thread
     return atomicActualIntervalMs_.load(std::memory_order_relaxed);
 }
 
 double TimingEngine::getWindowSizeSeconds() const
 {
-    // Use atomic for thread-safe read from UI thread
     return static_cast<double>(atomicActualIntervalMs_.load(std::memory_order_relaxed)) / 1000.0;
 }
 
@@ -187,33 +179,24 @@ void TimingEngine::recalculateInterval()
 {
     float newInterval = 0.0f;
 
-    // Read from atomics for thread safety
-    auto timingMode = static_cast<TimingMode>(atomicTimingMode_.load(std::memory_order_relaxed));
-    
-    switch (timingMode)
+    auto cfg = configLock_.read();
+    auto hostInfo = hostInfoLock_.read();
+
+    switch (cfg.timingMode)
     {
         case TimingMode::TIME:
-            newInterval = atomicTimeIntervalMs_.load(std::memory_order_relaxed);
+            newInterval = cfg.timeIntervalMs;
             break;
 
         case TimingMode::MELODIC:
         {
-            // Calculate interval from BPM and note interval
-            // Formula: interval_ms = (beats * 60000) / BPM
-            auto noteInterval = static_cast<EngineNoteInterval>(atomicNoteInterval_.load(std::memory_order_relaxed));
+            int timeSigNumerator = hostInfo.timeSigNumerator;
+            double beats = engineNoteIntervalToBeats(cfg.noteInterval, timeSigNumerator);
 
-            // Get time signature numerator for bar-based interval calculations
-            // Bar-based intervals (1 Bar, 2 Bars, etc.) depend on time signature
-            int timeSigNumerator = atomicTimeSigNumerator_.load(std::memory_order_relaxed);
-            double beats = engineNoteIntervalToBeats(noteInterval, timeSigNumerator);
+            float effectiveBPM = cfg.hostSyncEnabled
+                ? static_cast<float>(hostInfo.bpm)
+                : cfg.internalBPM;
 
-            // Use host BPM when synced, internal BPM when free-running
-            bool hostSync = atomicHostSyncEnabled_.load(std::memory_order_relaxed);
-            float effectiveBPM = hostSync ?
-                atomicHostBPM_.load(std::memory_order_relaxed) :
-                atomicInternalBPM_.load(std::memory_order_relaxed);
-
-            // Guard against NaN/Inf - jmax doesn't handle NaN correctly
             if (!std::isfinite(effectiveBPM))
                 effectiveBPM = EngineTimingConfig::MIN_BPM;
 
@@ -223,53 +206,39 @@ void TimingEngine::recalculateInterval()
         }
     }
 
-    // Clamp to valid range
     newInterval = juce::jlimit(
         static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS),
         static_cast<float>(EngineTimingConfig::MAX_TIME_INTERVAL_MS),
         newInterval
     );
 
-    // Store computed interval atomically and get previous value for change detection
-    // This avoids reading the non-atomic config_.actualIntervalMs from multiple threads
     float oldInterval = atomicActualIntervalMs_.exchange(newInterval, std::memory_order_relaxed);
-    
-    // Notify if changed significantly
+
     if (std::abs(oldInterval - newInterval) > 0.1f)
-    {
         notifyIntervalChanged();
-    }
 }
 
 bool TimingEngine::processMidi(const juce::MidiBuffer& midiMessages)
 {
-    // Only process if in MIDI trigger mode
-    auto triggerMode = static_cast<WaveformTriggerMode>(
-        atomicTriggerMode_.load(std::memory_order_relaxed));
+    auto cfg = configLock_.read();
 
-    if (triggerMode != WaveformTriggerMode::Midi)
+    if (cfg.triggerMode != WaveformTriggerMode::Midi)
         return false;
-
-    int triggerNote = atomicMidiTriggerNote_.load(std::memory_order_relaxed);
-    int triggerChannel = atomicMidiTriggerChannel_.load(std::memory_order_relaxed);
 
     for (const auto metadata : midiMessages)
     {
         auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
-            // Check channel (0 = omni, or 1-16)
-            if (triggerChannel != 0 && msg.getChannel() != triggerChannel)
+            if (cfg.midiTriggerChannel != 0 && msg.getChannel() != cfg.midiTriggerChannel)
                 continue;
 
-            // Check note (-1 = any, or 0-127)
-            if (triggerNote != -1 && msg.getNoteNumber() != triggerNote)
+            if (cfg.midiTriggerNote != -1 && msg.getNoteNumber() != cfg.midiTriggerNote)
                 continue;
 
-            // Trigger detected
             triggered_.store(true, std::memory_order_relaxed);
             atomicLastSyncTimestamp_.store(
-                static_cast<double>(atomicTimeInSamples_.load(std::memory_order_relaxed)),
+                static_cast<double>(audioThreadHostInfo_.timeInSamples),
                 std::memory_order_relaxed);
             return true;
         }
@@ -285,62 +254,67 @@ bool TimingEngine::checkAndClearManualTrigger()
 
 bool TimingEngine::checkAndClearTrigger()
 {
-    // Check manual trigger
     if (manualTrigger_.exchange(false, std::memory_order_relaxed))
         return true;
 
-    // Check auto/midi trigger
     return triggered_.exchange(false, std::memory_order_relaxed);
 }
 
 void TimingEngine::requestManualTrigger()
 {
     manualTrigger_.store(true, std::memory_order_relaxed);
-    triggered_.store(true, std::memory_order_relaxed); // Set general flag too
+    triggered_.store(true, std::memory_order_relaxed);
+    auto hostInfo = hostInfoLock_.read();
     atomicLastSyncTimestamp_.store(
-        static_cast<double>(atomicTimeInSamples_.load(std::memory_order_relaxed)),
+        static_cast<double>(hostInfo.timeInSamples),
         std::memory_order_relaxed);
+}
+
+void TimingEngine::setSampleRate(double sampleRate)
+{
+    auto info = hostInfoLock_.read();
+    info.sampleRate = sampleRate;
+    hostInfoLock_.write(info);
+    // Also update the audio-thread mirror in case this is called from prepareToPlay
+    audioThreadHostInfo_.sampleRate = sampleRate;
 }
 
 bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 {
-    // Read trigger mode from atomic once per block for consistency
-    auto triggerMode = static_cast<WaveformTriggerMode>(
-        atomicTriggerMode_.load(std::memory_order_relaxed));
+    auto cfg = configLock_.read();
 
     for (int i = 0; i < numSamples; ++i)
     {
         float sample = samples[i];
-        bool triggered = false;
+        bool trig = false;
 
-        switch (triggerMode)
+        switch (cfg.triggerMode)
         {
             case WaveformTriggerMode::RisingEdge:
-                triggered = detectRisingEdge(sample);
+                trig = detectRisingEdge(sample);
                 break;
 
             case WaveformTriggerMode::FallingEdge:
-                triggered = detectFallingEdge(sample);
+                trig = detectFallingEdge(sample);
                 break;
 
             case WaveformTriggerMode::BothEdges:
-                triggered = detectBothEdges(sample);
+                trig = detectBothEdges(sample);
                 break;
 
             case WaveformTriggerMode::Level:
-                triggered = detectLevel(sample);
+                trig = detectLevel(sample);
                 break;
 
             case WaveformTriggerMode::None:
             case WaveformTriggerMode::Manual:
             case WaveformTriggerMode::Midi:
-                // These modes don't use sample-based detection
                 break;
         }
 
         previousSample_ = sample;
 
-        if (triggered)
+        if (trig)
             return true;
     }
 
@@ -349,57 +323,43 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 
 bool TimingEngine::detectRisingEdge(float sample)
 {
-    // Read from atomics for thread-safe access
-    float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
-    float hysteresis = atomicTriggerHysteresis_.load(std::memory_order_relaxed);
-
-    bool wasBelow = previousSample_ < (threshold - hysteresis);
-    bool isAbove = sample >= threshold;
-
+    auto cfg = configLock_.read();
+    bool wasBelow = previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis);
+    bool isAbove = sample >= cfg.triggerThreshold;
     return wasBelow && isAbove;
 }
 
 bool TimingEngine::detectFallingEdge(float sample)
 {
-    // Read from atomics for thread-safe access
-    float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
-    float hysteresis = atomicTriggerHysteresis_.load(std::memory_order_relaxed);
-
-    bool wasAbove = previousSample_ > (threshold + hysteresis);
-    bool isBelow = sample <= threshold;
-
+    auto cfg = configLock_.read();
+    bool wasAbove = previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis);
+    bool isBelow = sample <= cfg.triggerThreshold;
     return wasAbove && isBelow;
 }
 
 bool TimingEngine::detectBothEdges(float sample)
 {
-    float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
-    float hysteresis = atomicTriggerHysteresis_.load(std::memory_order_relaxed);
-
-    // Rising edge: was below (threshold - hysteresis), now at or above threshold
-    bool risingEdge = previousSample_ < (threshold - hysteresis) && sample >= threshold;
-    // Falling edge: was above (threshold + hysteresis), now at or below threshold
-    bool fallingEdge = previousSample_ > (threshold + hysteresis) && sample <= threshold;
-
+    auto cfg = configLock_.read();
+    bool risingEdge = previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis) &&
+                      sample >= cfg.triggerThreshold;
+    bool fallingEdge = previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis) &&
+                       sample <= cfg.triggerThreshold;
     return risingEdge || fallingEdge;
 }
 
 bool TimingEngine::detectLevel(float sample)
 {
-    // Read from atomics for thread-safe access
-    float threshold = atomicTriggerThreshold_.load(std::memory_order_relaxed);
-    float hysteresis = atomicTriggerHysteresis_.load(std::memory_order_relaxed);
-
+    auto cfg = configLock_.read();
     float absLevel = std::abs(sample);
     bool wasBelow = !previousTriggerState_;
-    bool isAbove = absLevel > threshold;
+    bool isAbove = absLevel > cfg.triggerThreshold;
 
     if (wasBelow && isAbove)
     {
         previousTriggerState_ = true;
         return true;
     }
-    else if (!isAbove && absLevel < (threshold - hysteresis))
+    else if (!isAbove && absLevel < (cfg.triggerThreshold - cfg.triggerHysteresis))
     {
         previousTriggerState_ = false;
     }
@@ -409,29 +369,24 @@ bool TimingEngine::detectLevel(float sample)
 
 void TimingEngine::addListener(Listener* listener)
 {
-    // ListenerList::add() is NOT thread-safe. Must be called from message thread.
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.add(listener);
 }
 
 void TimingEngine::removeListener(Listener* listener)
 {
-    // ListenerList::remove() is NOT thread-safe. Must be called from message thread.
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     listeners_.remove(listener);
 }
 
 void TimingEngine::dispatchPendingUpdates()
 {
-    // Ensure this is called on the message thread to avoid race conditions with UI listeners
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    // Check flags and notify listeners on the current thread (expected Message Thread)
-    // Use atomic reads for thread-safe access to values that may be written from audio thread
     if (pendingTimingModeChange_.exchange(false, std::memory_order_relaxed))
     {
-        auto mode = static_cast<TimingMode>(atomicTimingMode_.load(std::memory_order_relaxed));
-        listeners_.call([mode](Listener& l) { l.timingModeChanged(mode); });
+        auto cfg = configLock_.read();
+        listeners_.call([mode = cfg.timingMode](Listener& l) { l.timingModeChanged(mode); });
     }
 
     if (pendingIntervalChange_.exchange(false, std::memory_order_relaxed))
@@ -442,21 +397,23 @@ void TimingEngine::dispatchPendingUpdates()
 
     if (pendingHostBPMChange_.exchange(false, std::memory_order_relaxed))
     {
-        float bpm = atomicHostBPM_.load(std::memory_order_relaxed);
+        auto hostInfo = hostInfoLock_.read();
+        float bpm = static_cast<float>(hostInfo.bpm);
         listeners_.call([bpm](Listener& l) { l.hostBPMChanged(bpm); });
     }
 
     if (pendingHostSyncChange_.exchange(false, std::memory_order_relaxed))
     {
-        bool enabled = atomicHostSyncEnabled_.load(std::memory_order_relaxed);
-        listeners_.call([enabled](Listener& l) { l.hostSyncStateChanged(enabled); });
+        auto cfg = configLock_.read();
+        listeners_.call([enabled = cfg.hostSyncEnabled](Listener& l) { l.hostSyncStateChanged(enabled); });
     }
 
     if (pendingTimeSignatureChange_.exchange(false, std::memory_order_relaxed))
     {
-        int numerator = atomicTimeSigNumerator_.load(std::memory_order_relaxed);
-        int denominator = atomicTimeSigDenominator_.load(std::memory_order_relaxed);
-        listeners_.call([numerator, denominator](Listener& l) { l.timeSignatureChanged(numerator, denominator); });
+        auto hostInfo = hostInfoLock_.read();
+        listeners_.call([num = hostInfo.timeSigNumerator, den = hostInfo.timeSigDenominator](Listener& l) {
+            l.timeSignatureChanged(num, den);
+        });
     }
 }
 

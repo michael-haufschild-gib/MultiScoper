@@ -33,7 +33,7 @@ BraceWrapping:
   SplitEmptyNamespace: true
 
 # Line breaking
-ColumnLimit: 0
+ColumnLimit: 120
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: All
@@ -125,7 +125,7 @@ BasedOnStyle: Chromium
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
-ColumnLimit: 0
+ColumnLimit: 120
 BreakBeforeBraces: Allman
 ObjCSpaceAfterProperty: true
 ObjCSpaceBeforeProtocolList: true
