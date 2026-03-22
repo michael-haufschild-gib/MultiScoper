@@ -14,6 +14,9 @@
 #include "core/dsp/TimingEngineTypes.h"
 #include "core/interfaces/IAudioBuffer.h"
 #include "plugin/PluginFactory.h"
+#include "plugin/PluginEditor.h"
+#include "ui/layout/PaneComponent.h"
+#include "ui/panels/WaveformComponent.h"
 #include <algorithm>
 
 namespace oscil::test
@@ -187,7 +190,84 @@ json snapshotAudioGenerators(TestDAW& daw)
     return arr;
 }
 
+json serializeWaveformState(WaveformComponent* wf, const Oscillator* osc)
+{
+    wf->forceUpdateWaveformData();
+    json j;
+    j["oscillatorId"] = osc->getId().id.toStdString();
+    j["name"] = osc->getName().toStdString();
+    j["hasWaveformData"] = wf->hasWaveformData();
+    j["peakLevel"] = wf->getPeakLevel();
+    j["rmsLevel"] = wf->getRMSLevel();
+    j["showGrid"] = wf->isGridVisible();
+    j["autoScale"] = wf->isAutoScaleEnabled();
+    j["holdDisplay"] = wf->isHoldDisplayEnabled();
+    j["gainLinear"] = wf->getGainLinear();
+    j["opacity"] = wf->getOpacity();
+    j["lineWidth"] = wf->getLineWidth();
+    j["displaySamples"] = wf->getDisplaySamples();
+    j["processingMode"] = static_cast<int>(wf->getProcessingMode());
+    auto c = wf->getColour();
+    j["colour"] = {{"r", c.getRed()}, {"g", c.getGreen()}, {"b", c.getBlue()}, {"a", c.getAlpha()}};
+    auto bounds = wf->getBounds();
+    j["bounds"] = {{"x", bounds.getX()}, {"y", bounds.getY()},
+                   {"w", bounds.getWidth()}, {"h", bounds.getHeight()}};
+    return j;
+}
+
 } // anonymous namespace
+
+json snapshotGUI(TestDAW& daw)
+{
+    // Must read WaveformComponent state on the message thread
+    json result;
+    result["editorOpen"] = false;
+
+    auto* editor = daw.getPrimaryEditor();
+    if (!editor)
+        return result;
+
+    auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor);
+    if (!oscilEditor)
+        return result;
+
+    // Block until message thread completes the snapshot
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([oscilEditor, &result, &done]() {
+        result["editorOpen"] = true;
+        const auto& paneComponents = oscilEditor->getPaneComponents();
+        json panesArr = json::array();
+
+        for (size_t pi = 0; pi < paneComponents.size(); ++pi)
+        {
+            auto* pane = paneComponents[pi].get();
+            if (!pane) continue;
+            json paneJson;
+            paneJson["index"] = pi;
+            paneJson["paneId"] = pane->getPaneId().id.toStdString();
+            paneJson["oscillatorCount"] = pane->getOscillatorCount();
+            auto paneBounds = pane->getBounds();
+            paneJson["bounds"] = {{"x", paneBounds.getX()}, {"y", paneBounds.getY()},
+                                  {"w", paneBounds.getWidth()}, {"h", paneBounds.getHeight()}};
+
+            json waveformsArr = json::array();
+            for (size_t wi = 0; wi < pane->getOscillatorCount(); ++wi)
+            {
+                auto* wf = pane->getWaveformAt(wi);
+                auto* osc = pane->getOscillatorAt(wi);
+                if (wf && osc)
+                    waveformsArr.push_back(serializeWaveformState(wf, osc));
+            }
+            paneJson["waveforms"] = waveformsArr;
+            panesArr.push_back(paneJson);
+        }
+        result["panes"] = panesArr;
+        done.signal();
+    });
+    done.wait(3000); // 3 second timeout
+
+    return result;
+}
 
 void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request&, httplib::Response& res)
 {
@@ -209,6 +289,7 @@ void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request&, httplib::
         data["sources"] = snapshotSources();
         data["audioGenerators"] = snapshotAudioGenerators(daw_);
         data["ui"] = snapshotUI();
+        data["gui"] = snapshotGUI(daw_);
         data["metrics"] = snapshotMetrics(metrics_);
         data["logs"] = snapshotLogs();
 

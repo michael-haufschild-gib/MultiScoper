@@ -50,12 +50,14 @@ void TestHttpServer::setupTrackRoutes()
 
 void TestHttpServer::handleTransportPlay(const httplib::Request&, httplib::Response& res)
 {
+    juce::Logger::writeToLog("[Harness] Transport play");
     daw_.start();
     res.set_content(successResponse().dump(), "application/json");
 }
 
 void TestHttpServer::handleTransportStop(const httplib::Request&, httplib::Response& res)
 {
+    juce::Logger::writeToLog("[Harness] Transport stop");
     daw_.stop();
     res.set_content(successResponse().dump(), "application/json");
 }
@@ -220,9 +222,13 @@ void TestHttpServer::handleTrackShowEditor(const httplib::Request& req, httplib:
             return;
         }
 
-        juce::MessageManager::callAsync([this, trackId]() {
+        juce::Logger::writeToLog("[Harness] Opening editor for track " + juce::String(trackId));
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([this, trackId, &done]() {
             daw_.showTrackEditor(trackId);
+            done.signal();
         });
+        done.wait(5000);
 
         json data;
         data["trackId"] = trackId;

@@ -90,6 +90,8 @@ void applyOscillatorJsonUpdates(Oscillator& osc, const json& body)
         osc.setVisible(body["visible"].get<bool>());
     if (body.contains("name"))
         osc.setName(juce::String(body["name"].get<std::string>()));
+    if (body.contains("mode"))
+        osc.setProcessingMode(stringToProcessingMode(juce::String(body["mode"].get<std::string>())));
     if (body.contains("opacity"))
         osc.setOpacity(body["opacity"].get<float>());
     if (body.contains("lineWidth"))
@@ -130,14 +132,27 @@ void TestHttpServer::setupStateRoutes()
     server_->Post("/state/oscillator/delete", [this](const httplib::Request& req, httplib::Response& res) {
         handleStateDeleteOscillator(req, res);
     });
+    server_->Post("/state/pane/add", [this](const httplib::Request& req, httplib::Response& res) {
+        handlePaneAdd(req, res);
+    });
+    server_->Post("/state/pane/remove", [this](const httplib::Request& req, httplib::Response& res) {
+        handlePaneRemove(req, res);
+    });
+    server_->Post("/state/oscillator/move", [this](const httplib::Request& req, httplib::Response& res) {
+        handleOscillatorMove(req, res);
+    });
 }
 
 void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response& res)
 {
+    juce::Logger::writeToLog("[Harness] State reset requested");
     auto* track = daw_.getTrack(0);
     if (track)
     {
-        juce::MessageManager::callAsync([track]() {
+        // Block until message thread completes the removal to prevent race
+        // conditions where the next operation starts before reset finishes.
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([track, &done]() {
             auto& state = track->getProcessor().getState();
             auto oscillators = state.getOscillators();
             for (const auto& osc : oscillators)
@@ -147,7 +162,9 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
             auto panes = layoutManager.getPanes();
             for (const auto& pane : panes)
                 layoutManager.removePane(pane.getId());
+            done.signal();
         });
+        done.wait(3000);
     }
 
     TestElementRegistry::getInstance().clear();
@@ -257,10 +274,15 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
 
         json oscJson = oscillatorToJson(osc);
 
+        juce::Logger::writeToLog("[Harness] Adding oscillator: " + osc.getName()
+            + " source=" + osc.getSourceId().id + " pane=" + osc.getPaneId().id);
         Oscillator oscCopy = osc;
-        juce::MessageManager::callAsync([oscCopy, track]() mutable {
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([oscCopy, track, &done]() mutable {
             track->getProcessor().getState().addOscillator(oscCopy);
+            done.signal();
         });
+        done.wait(3000);
 
         res.set_content(successResponse(oscJson).dump(), "application/json");
     }

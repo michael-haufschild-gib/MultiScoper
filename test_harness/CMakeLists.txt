@@ -28,6 +28,7 @@ set(TEST_HARNESS_SOURCES
     src/TestHttpServerState.cpp
     src/TestHttpServerWaveform.cpp
     src/TestHttpServerDiagnostic.cpp
+    src/TestHttpServerPanes.cpp
     src/TestHttpServerMetrics.cpp
     src/TestElementRegistry.cpp
     src/TestUIController.cpp

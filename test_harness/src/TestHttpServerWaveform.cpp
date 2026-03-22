@@ -43,9 +43,13 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
             return;
         }
 
-        juce::MessageManager::callAsync([oscId, track]() {
+        juce::Logger::writeToLog("[Harness] Deleting oscillator: " + juce::String(idStr));
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([oscId, track, &done]() {
             track->getProcessor().getState().removeOscillator(oscId);
+            done.signal();
         });
+        done.wait(3000);
 
         json data;
         data["id"] = idStr;

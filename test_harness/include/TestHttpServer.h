@@ -149,6 +149,11 @@ private:
     void handleStateSources(const httplib::Request& req, httplib::Response& res);
     void handleStateDeleteOscillator(const httplib::Request& req, httplib::Response& res);
 
+    // Route handlers - Pane Management
+    void handlePaneAdd(const httplib::Request& req, httplib::Response& res);
+    void handlePaneRemove(const httplib::Request& req, httplib::Response& res);
+    void handleOscillatorMove(const httplib::Request& req, httplib::Response& res);
+
     // Route handlers - Waveform State
     void handleWaveformState(const httplib::Request& req, httplib::Response& res);
 
