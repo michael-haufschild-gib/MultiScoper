@@ -5,6 +5,7 @@
 #include "TestUIController.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/OscilAccordion.h"
 
 namespace oscil::test
 {
@@ -26,6 +27,13 @@ void TestUIController::simulateMouseClick(juce::Component* component, bool doubl
         if (auto* oscilButton = dynamic_cast<OscilButton*>(component))
         {
             oscilButton->triggerClick();
+            return;
+        }
+
+        // Accordion sections: toggle() bypasses mouse position checks
+        if (auto* accordion = dynamic_cast<oscil::OscilAccordionSection*>(component))
+        {
+            accordion->toggle();
             return;
         }
     }

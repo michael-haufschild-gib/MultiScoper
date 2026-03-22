@@ -102,12 +102,11 @@ class TestOscillatorLifecycleFlow:
         Bug caught: oscillator state lost when editor is closed and reopened
         (e.g., state held only in UI components, not persisted to OscilState).
         """
-        client.reset_state()
-        client.wait_until(
-            lambda: len(client.get_oscillators()) == 0,
-            timeout_s=3.0, desc="state reset",
-        )
+        # Open first, then reset to clear the default oscillator
+        # that createDefaultOscillatorIfNeeded creates on editor open.
         client.open_editor()
+        client.reset_state()
+        client.wait_for_oscillator_count(0, timeout_s=3.0)
 
         sources = client.get_sources()
         if not sources:
