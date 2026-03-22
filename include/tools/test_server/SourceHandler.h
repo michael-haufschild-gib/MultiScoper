@@ -40,6 +40,12 @@ public:
     void handleInjectSourceData(const httplib::Request& req, httplib::Response& res);
 
 private:
+    nlohmann::json assignSourceOnMessageThread(const std::string& oscillatorId,
+                                                const std::string& sourceId, int oscillatorIndex);
+    nlohmann::json injectSourceDataOnMessageThread(const std::string& sourceId,
+                                                    const std::string& waveformType,
+                                                    float frequency, float amplitude,
+                                                    int numSamples, float sampleRate);
     std::unordered_map<std::string, std::shared_ptr<SharedCaptureBuffer>>& testSourceBuffers_;
 };
 

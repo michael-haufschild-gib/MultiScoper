@@ -29,7 +29,7 @@ public:
     void setEmptyColumnDropCallback(EmptyColumnDropCallback callback);
     void setColumnCount(int count);
 
-    // DragAndDropTarget interface
+    /// Accept pane drag-drop for reordering between columns (DragAndDropTarget).
     bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override;
     void itemDragEnter(const SourceDetails& dragSourceDetails) override;
     void itemDragMove(const SourceDetails& dragSourceDetails) override;

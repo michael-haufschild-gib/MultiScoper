@@ -76,6 +76,29 @@ bool DualOutlineShader::isCompiled() const
     return gl_->compiled;
 }
 
+void DualOutlineShader::drawChannel(juce::OpenGLExtensionFunctions& ext,
+                                     const std::vector<float>& samples,
+                                     float centerY, float amplitude,
+                                     float boundsX, float boundsWidth,
+                                     float lineWidth, GLint posLoc, GLint distLoc)
+{
+    std::vector<float> vertices;
+    float lineGeomWidth = lineWidth * 6.0f;
+    buildLineGeometry(vertices, samples, centerY, amplitude, lineGeomWidth, boundsX, boundsWidth);
+
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
+
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
+    ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
+    ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
+}
+
 void DualOutlineShader::render(
     juce::OpenGLContext& context,
     const std::vector<float>& channel1,
@@ -86,27 +109,12 @@ void DualOutlineShader::render(
 
     auto& ext = context.extensions;
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Additive works well for glowing outlines
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     gl_->program->use();
-
-    auto* target = context.getTargetComponent();
-    if (!target) return;
-
-    float w = static_cast<float>(target->getWidth());
-    float h = static_cast<float>(target->getHeight());
-
-    if (w <= 0.0f || h <= 0.0f)
+    if (!setup2DProjection(context, ext, gl_->projectionLoc))
         return;
 
-    float projection[16] = {
-        2.0f / w, 0.0f, 0.0f, 0.0f,
-        0.0f, -2.0f / h, 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0f, 0.0f,
-        -1.0f, 1.0f, 0.0f, 1.0f
-    };
-
-    ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
     ext.glUniform4f(gl_->baseColorLoc,
         params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
@@ -118,52 +126,16 @@ void DualOutlineShader::render(
     float centerY1, centerY2, amp1, amp2;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    // Get attribute locations once
-    GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
-    GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-    if (posLoc < 0) posLoc = 0;
-    if (distLoc < 0) distLoc = 1;
+    GLint posLoc = std::max(0, static_cast<int>(ext.glGetAttribLocation(gl_->program->getProgramID(), "position")));
+    GLint distLoc = std::max(1, static_cast<int>(ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter")));
 
-    // Render Channel 1
-    {
-        std::vector<float> vertices;
-        // Make line wide enough to accommodate both inner and outer outlines
-        float lineGeomWidth = params.lineWidth * 6.0f;
-        buildLineGeometry(vertices, channel1, centerY1, amp1, lineGeomWidth, params.bounds.getX(), params.bounds.getWidth());
+    drawChannel(ext, channel1, centerY1, amp1,
+                params.bounds.getX(), params.bounds.getWidth(), params.lineWidth, posLoc, distLoc);
 
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
-    }
-
-    // Render Channel 2 if stereo
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        std::vector<float> vertices;
-        float lineGeomWidth = params.lineWidth * 6.0f;
-        buildLineGeometry(vertices, *channel2, centerY2, amp2, lineGeomWidth, params.bounds.getX(), params.bounds.getWidth());
-
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
+        drawChannel(ext, *channel2, centerY2, amp2,
+                    params.bounds.getX(), params.bounds.getWidth(), params.lineWidth, posLoc, distLoc);
     }
 
     ext.glBindVertexArray(0);

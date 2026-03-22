@@ -210,6 +210,7 @@ private:
     void drawWaveform(juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void updateWaveformPath();
+    juce::Component* findEditorAncestor() const;
 
     IThemeService& themeService_;
     ShaderRegistry& shaderRegistry_;

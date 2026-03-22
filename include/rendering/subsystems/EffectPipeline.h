@@ -24,11 +24,15 @@ namespace oscil
 class EffectPipeline : public IEffectProvider
 {
 public:
+    /// Create an uninitialized effect pipeline.
     EffectPipeline();
     ~EffectPipeline() override;
 
+    /// Initialize framebuffer pool, scene FBO, and all post-processing effects.
     bool initialize(juce::OpenGLContext& context, int width, int height);
+    /// Release all GPU resources and effects.
     void shutdown(juce::OpenGLContext& context);
+    /// Resize all framebuffers and the scene FBO to new dimensions.
     void resize(juce::OpenGLContext& context, int width, int height);
 
     /**
@@ -55,11 +59,13 @@ public:
 
     void setQualityLevel(QualityLevel level);
 
-    // Helper for internal use and trails
+    /// Copy the contents of one framebuffer to another using the composite shader.
     void copyFramebuffer(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, juce::OpenGLShaderProgram* compositeShader, GLint compositeTextureLoc);
 
 private:
     void initializeEffects();
+    void createEffectInstances();
+    void buildEffectChain();
     void releaseEffects();
 
     std::unique_ptr<FramebufferPool> fbPool_;

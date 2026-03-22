@@ -70,24 +70,6 @@ void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& 
                 it->second.disableTrails(*context_);
             }
 
-            // Update turbulence
-            if (auto* ps = waveformPass_->getParticleSystem())
-            {
-                if (config.particles.enabled)
-                {
-                    if (config.particles.useTurbulence)
-                    {
-                        ps->setTurbulence(
-                            config.particles.turbulenceStrength,
-                            config.particles.turbulenceScale,
-                            config.particles.turbulenceSpeed);
-                    }
-                    else
-                    {
-                        ps->setTurbulence(0.0f, 0.5f, 0.5f);
-                    }
-                }
-            }
         }
     }
 }

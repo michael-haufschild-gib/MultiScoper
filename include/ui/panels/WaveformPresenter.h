@@ -107,6 +107,37 @@ private:
     float currentRMS_ = 0.0f;
     float effectiveScale_ = 1.0f;
     std::optional<int64_t> restartTimelineSample_;
+
+    /**
+     * Calculate how many samples to request, considering restart mode.
+     * Returns {requestedSamples, padTrailingSilence}, or {0, false} to skip.
+     */
+    std::pair<int, bool> resolveRequestedSamples();
+
+    /**
+     * Result of reading samples from the capture buffer.
+     */
+    struct ReadResult
+    {
+        int samplesRead = 0;
+        int rightChannelRead = 0;
+    };
+
+    /**
+     * Read samples from capture buffer into scratch buffers.
+     * Returns number of valid samples read per channel, or 0 on failure.
+     */
+    ReadResult readAndPadSamples(int requestedSamples, bool padTrailingSilence);
+
+    /**
+     * Apply signal processing, decimation, and level calculations.
+     */
+    void processAndDecimate(int samplesRead, int samplesReadRight);
+
+    /**
+     * Update auto-scale smoothing from current peak level.
+     */
+    void updateAutoScale();
 };
 
 } // namespace oscil

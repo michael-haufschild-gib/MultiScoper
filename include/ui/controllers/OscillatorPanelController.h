@@ -10,7 +10,6 @@
 #include "ui/layout/PaneComponent.h"
 #include "ui/layout/SidebarComponent.h"
 #include "ui/managers/DisplaySettingsManager.h"
-#include "rendering/GpuRenderCoordinator.h"
 #include "core/ServiceContext.h"
 #include <vector>
 #include <memory>
@@ -21,6 +20,7 @@ namespace oscil
 // Forward declarations
 class IAudioDataProvider;
 class DialogManager;
+class GpuRenderCoordinator;
 
 /**
  * Controller responsible for managing the dynamic grid of Oscillator Panes.
@@ -67,6 +67,9 @@ public:
      * Re-apply global settings (grid, gain, etc.) to all managed panes.
      */
     void reapplyGlobalSettings();
+
+    /** Update sidebar with current oscillators, sources, and pane list. */
+    void refreshSidebar(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
 
     /**
      * Handle dropped pane (reordering).
@@ -118,6 +121,7 @@ public:
 
 private:
     void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
+    void applyOscillatorPropertyChange(const OscillatorId& oscId, const juce::Identifier& property);
     
     IAudioDataProvider& dataProvider_;
     ServiceContext& serviceContext_;

@@ -239,3 +239,96 @@ TEST_F(DecimatingBufferInternalAccessEdgeTest, GetCapacityReturnsPositiveValue)
 {
     EXPECT_GT(buffer->getCapacity(), 0u);
 }
+
+//==============================================================================
+// Decimation Accuracy and Anti-Aliasing Tests
+//==============================================================================
+
+class DecimatingBufferAccuracyTest : public ::testing::Test
+{
+protected:
+    CaptureQualityConfig config;
+    std::unique_ptr<DecimatingCaptureBuffer> buffer;
+};
+
+TEST_F(DecimatingBufferAccuracyTest, DecimationReducesSampleCountByExpectedRatio)
+{
+    config.qualityPreset = QualityPreset::Standard;
+    buffer = std::make_unique<DecimatingCaptureBuffer>(config, 44100);
+    ASSERT_EQ(buffer->getDecimationRatio(), 2);
+
+    buffer->clear();
+
+    juce::AudioBuffer<float> audioBuf(2, 4000);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 4000; ++i)
+            audioBuf.setSample(ch, i, 0.5f);
+
+    CaptureFrameMetadata meta{};
+    meta.sampleRate = 44100.0;
+    buffer->write(audioBuf, meta);
+
+    size_t available = buffer->getAvailableSamples();
+    EXPECT_NEAR(static_cast<double>(available), 2000.0, 5.0)
+        << "Decimation ratio not applied correctly: expected ~2000, got " << available;
+}
+
+TEST_F(DecimatingBufferAccuracyTest, AntiAliasingRemovesHighFrequencyContent)
+{
+    config.qualityPreset = QualityPreset::Eco;
+    buffer = std::make_unique<DecimatingCaptureBuffer>(config, 44100);
+    ASSERT_EQ(buffer->getDecimationRatio(), 4);
+
+    buffer->clear();
+
+    constexpr int kN = 16384;
+    constexpr float kFreq = 10000.0f;
+    constexpr float kSR = 44100.0f;
+
+    juce::AudioBuffer<float> hf(2, kN);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < kN; ++i)
+            hf.setSample(ch, i, std::sin(2.0f * juce::MathConstants<float>::pi * kFreq * static_cast<float>(i) / kSR));
+
+    buffer->write(hf, CaptureFrameMetadata{});
+
+    std::vector<float> out(4096);
+    int n = buffer->read(out.data(), 4096, 0);
+    ASSERT_GT(n, 100);
+
+    double sumSq = 0.0;
+    int count = 0;
+    for (int i = 200; i < n; ++i) { sumSq += out[static_cast<size_t>(i)] * out[static_cast<size_t>(i)]; ++count; }
+    float rms = count > 0 ? static_cast<float>(std::sqrt(sumSq / count)) : 0.0f;
+
+    EXPECT_LT(rms, 0.1f) << "High-frequency not attenuated: RMS=" << rms;
+}
+
+TEST_F(DecimatingBufferAccuracyTest, LowFrequencySignalPreservedAfterDecimation)
+{
+    config.qualityPreset = QualityPreset::Eco;
+    buffer = std::make_unique<DecimatingCaptureBuffer>(config, 44100);
+    buffer->clear();
+
+    constexpr int kN = 16384;
+    constexpr float kFreq = 100.0f;
+    constexpr float kSR = 44100.0f;
+
+    juce::AudioBuffer<float> lf(2, kN);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < kN; ++i)
+            lf.setSample(ch, i, std::sin(2.0f * juce::MathConstants<float>::pi * kFreq * static_cast<float>(i) / kSR));
+
+    buffer->write(lf, CaptureFrameMetadata{});
+
+    std::vector<float> out(4096);
+    int n = buffer->read(out.data(), 4096, 0);
+    ASSERT_GT(n, 200);
+
+    double sumSq = 0.0;
+    int count = 0;
+    for (int i = 200; i < n; ++i) { sumSq += out[static_cast<size_t>(i)] * out[static_cast<size_t>(i)]; ++count; }
+    float rms = count > 0 ? static_cast<float>(std::sqrt(sumSq / count)) : 0.0f;
+
+    EXPECT_GT(rms, 0.5f) << "Low-frequency attenuated: RMS=" << rms;
+}

@@ -60,7 +60,7 @@ public:
     // Action bar access
     PaneActionBar* getActionBar() { return actionBar_.get(); }
 
-    // Check if point is in drag zone
+    /// Test whether the given local point falls within the drag-to-reorder region.
     bool isInDragZone(juce::Point<int> pos) const;
 
     // Height
@@ -68,6 +68,9 @@ public:
 
 private:
     void setupComponents();
+    void paintDragHandle(juce::Graphics& g, const juce::Rectangle<int>& handleBounds);
+    void paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& bounds,
+                               const ColorTheme& theme);
 
     IThemeService& themeService_;
 

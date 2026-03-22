@@ -158,6 +158,14 @@ protected:
     static bool checkGLError(const char* location);
 
     /**
+     * Helper to compute and set orthographic 2D projection matrix.
+     * @return false if the component has zero dimensions (skip rendering)
+     */
+    static bool setup2DProjection(juce::OpenGLContext& context,
+                                  juce::OpenGLExtensionFunctions& ext,
+                                  GLint projectionLoc);
+
+    /**
      * Calculate stereo/mono layout positions for channel rendering.
      */
     static void calculateStereoLayout(const ShaderRenderParams& params,

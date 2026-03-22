@@ -5,12 +5,14 @@
 
 #pragma once
 
-// Disable SSL and Brotli support - we only need HTTP for local testing
-#ifndef CPPHTTPLIB_OPENSSL_SUPPORT
-#define CPPHTTPLIB_OPENSSL_SUPPORT 0
+// Disable SSL and Brotli support - we only need HTTP for local testing.
+// httplib v0.38+ uses #ifdef (existence check), not #if (value check),
+// so we must ensure these macros are NOT defined at all.
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#undef CPPHTTPLIB_OPENSSL_SUPPORT
 #endif
-#ifndef CPPHTTPLIB_BROTLI_SUPPORT
-#define CPPHTTPLIB_BROTLI_SUPPORT 0
+#ifdef CPPHTTPLIB_BROTLI_SUPPORT
+#undef CPPHTTPLIB_BROTLI_SUPPORT
 #endif
 
 #include <httplib.h>
@@ -62,6 +64,13 @@ public:
 
 private:
     void setupRoutes();
+    void setupTransportRoutes();
+    void setupTrackRoutes();
+    void setupUIMouseRoutes();
+    void setupUIKeyboardRoutes();
+    void setupVerificationRoutes();
+    void setupStateRoutes();
+    void setupMetricsRoutes();
     void serverThread();
 
     // Utility functions

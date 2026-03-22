@@ -32,16 +32,14 @@ OscillatorConfigDialog::~OscillatorConfigDialog()
     themeService_.removeListener(this);
 }
 
-void OscillatorConfigDialog::setupComponents()
+void OscillatorConfigDialog::setupSourceAndMode()
 {
-    // Name editor (OscilTextField) - First item in content
     nameEditor_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "configPopup_nameField");
     nameEditor_->setPlaceholder("Oscillator Name");
     nameEditor_->onReturnPressed = [this]() { handleNameEdit(); };
     nameEditor_->onTextChanged = [this](const juce::String&) { handleNameEdit(); };
     addAndMakeVisible(*nameEditor_);
 
-    // Source section
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
     addAndMakeVisible(*sourceLabel_);
 
@@ -50,12 +48,11 @@ void OscillatorConfigDialog::setupComponents()
     addAndMakeVisible(*sourceSelector_);
     OSCIL_REGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
 
-    // Processing mode section
     modeLabel_ = std::make_unique<juce::Label>("", "Processing Mode");
     addAndMakeVisible(*modeLabel_);
 
     modeButtons_ = std::make_unique<SegmentedButtonBar>(themeService_);
-    modeButtons_->setMinButtonWidth(40);  // Compact buttons for 6 modes
+    modeButtons_->setMinButtonWidth(40);
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(16), static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(16), static_cast<int>(ProcessingMode::Mono), "configPopup_modeSelector_mono");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createMidIcon(16), static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
@@ -65,8 +62,10 @@ void OscillatorConfigDialog::setupComponents()
     modeButtons_->onSelectionChanged = [this](int id) { handleProcessingModeChange(id); };
     addAndMakeVisible(*modeButtons_);
     OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
+}
 
-    // Color swatches
+void OscillatorConfigDialog::setupAppearanceControls()
+{
     colorLabel_ = std::make_unique<juce::Label>("", "Color");
     addAndMakeVisible(*colorLabel_);
 
@@ -75,20 +74,15 @@ void OscillatorConfigDialog::setupComponents()
     colorSwatches_->onColorSelected = [this](int, juce::Colour color) { handleColorSelect(color); };
     addAndMakeVisible(*colorSwatches_);
 
-    // Visual preset dropdown
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
 
     visualPresetDropdown_ = std::make_unique<OscilDropdown>(themeService_, "", "configPopup_visualPresetDropdown");
-    auto availablePresets = VisualConfiguration::getAvailablePresets();
-    for (const auto& preset : availablePresets)
-    {
+    for (const auto& preset : VisualConfiguration::getAvailablePresets())
         visualPresetDropdown_->addItem(preset.second, preset.first);
-    }
     visualPresetDropdown_->onSelectionChanged = [this](int) { handleVisualPresetChange(); };
     addAndMakeVisible(*visualPresetDropdown_);
 
-    // Line Width slider
     lineWidthSlider_ = std::make_unique<OscilSlider>(themeService_, "configPopup_lineWidthSlider");
     lineWidthSlider_->setLabel("Line Width");
     lineWidthSlider_->setRange(Oscillator::MIN_LINE_WIDTH, Oscillator::MAX_LINE_WIDTH);
@@ -98,7 +92,6 @@ void OscillatorConfigDialog::setupComponents()
     lineWidthSlider_->onValueChanged = [this](double) { handleLineWidthChange(); };
     addAndMakeVisible(*lineWidthSlider_);
 
-    // Opacity slider
     opacitySlider_ = std::make_unique<OscilSlider>(themeService_, "configPopup_opacitySlider");
     opacitySlider_->setLabel("Opacity");
     opacitySlider_->setRange(0.0, 100.0);
@@ -107,8 +100,10 @@ void OscillatorConfigDialog::setupComponents()
     opacitySlider_->setSuffix(" %");
     opacitySlider_->onValueChanged = [this](double) { handleOpacityChange(); };
     addAndMakeVisible(*opacitySlider_);
+}
 
-    // Pane selector
+void OscillatorConfigDialog::setupPaneAndFooter()
+{
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
     addAndMakeVisible(*paneLabel_);
 
@@ -116,15 +111,18 @@ void OscillatorConfigDialog::setupComponents()
     paneSelectorComponent_->onSelectionChanged = [this](const PaneId&, bool) { handlePaneChange(); };
     addAndMakeVisible(*paneSelectorComponent_);
 
-    // Footer: Close button
-    footerCloseButton_ = std::make_unique<OscilButton>(themeService_, "Close");
+    footerCloseButton_ = std::make_unique<OscilButton>(themeService_, "Close", "configPopup_closeBtn");
     footerCloseButton_->setVariant(ButtonVariant::Secondary);
     footerCloseButton_->onClick = [this]() { handleClose(); };
     addAndMakeVisible(*footerCloseButton_);
+}
 
-    // Set size for modal
+void OscillatorConfigDialog::setupComponents()
+{
+    setupSourceAndMode();
+    setupAppearanceControls();
+    setupPaneAndFooter();
     setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
-
     themeChanged(themeService_.getCurrentTheme());
 }
 
@@ -217,7 +215,6 @@ void OscillatorConfigDialog::updateFromOscillator(const Oscillator& oscillator)
 
     // Load base config from preset
     VisualConfiguration config = VisualConfiguration::getPreset(visualPresetId_);
-    VisualConfiguration::applyOverrides(config, visualOverrides_);
 
     // Update controls
     nameEditor_->setText(name_, false);
@@ -302,6 +299,8 @@ void OscillatorConfigDialog::handleSourceChange(const SourceId& sourceId)
 
 void OscillatorConfigDialog::handleProcessingModeChange(int modeId)
 {
+    if (modeId < 0 || modeId > static_cast<int>(ProcessingMode::Right))
+        return;
     processingMode_ = static_cast<ProcessingMode>(modeId);
     notifyConfigChanged();
 }

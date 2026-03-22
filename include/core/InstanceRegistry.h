@@ -31,6 +31,7 @@ namespace oscil
 class InstanceRegistry : public IInstanceRegistry
 {
 public:
+    /// Create an empty instance registry.
     InstanceRegistry();
     ~InstanceRegistry() override;
     /**

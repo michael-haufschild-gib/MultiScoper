@@ -8,10 +8,6 @@
 
 using namespace oscil;
 
-// =============================================================================
-// VisualConfiguration Application Tests
-// =============================================================================
-
 class VisualConfigApplicationTest : public ::testing::Test
 {
 };
@@ -26,50 +22,44 @@ TEST_F(VisualConfigApplicationTest, DefaultValues)
     EXPECT_EQ(config.presetId, "default");
 }
 
-TEST_F(VisualConfigApplicationTest, Requires3DWithEnabled)
+TEST_F(VisualConfigApplicationTest, HasPostProcessingDefaultIsFalse)
 {
     VisualConfiguration config;
-
-    EXPECT_FALSE(config.requires3D());
-
-    config.settings3D.enabled = true;
-    EXPECT_TRUE(config.requires3D());
-}
-
-TEST_F(VisualConfigApplicationTest, Requires3DWith3DShader)
-{
-    VisualConfiguration config;
-    config.shaderType = ShaderType::VolumetricRibbon;
-
-    EXPECT_TRUE(config.requires3D());
-}
-
-TEST_F(VisualConfigApplicationTest, HasPostProcessing)
-{
-    VisualConfiguration config;
-
     EXPECT_FALSE(config.hasPostProcessing());
+}
 
+TEST_F(VisualConfigApplicationTest, HasPostProcessingDetectsEveryEffect)
+{
+    // Test each effect individually to ensure none are missed
+    auto testEffect = [](auto enableFn) {
+        VisualConfiguration config;
+        enableFn(config);
+        EXPECT_TRUE(config.hasPostProcessing());
+    };
+
+    testEffect([](VisualConfiguration& c) { c.bloom.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.radialBlur.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.tiltShift.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.trails.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.colorGrade.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.vignette.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.filmGrain.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.chromaticAberration.enabled = true; });
+    testEffect([](VisualConfiguration& c) { c.scanlines.enabled = true; });
+}
+
+TEST_F(VisualConfigApplicationTest, HasPostProcessingMultipleEffectsStillTrue)
+{
+    VisualConfiguration config;
     config.bloom.enabled = true;
+    config.scanlines.enabled = true;
     EXPECT_TRUE(config.hasPostProcessing());
 
     config.bloom.enabled = false;
-    config.trails.enabled = true;
     EXPECT_TRUE(config.hasPostProcessing());
 
-    config.trails.enabled = false;
-    config.vignette.enabled = true;
-    EXPECT_TRUE(config.hasPostProcessing());
-}
-
-TEST_F(VisualConfigApplicationTest, HasParticles)
-{
-    VisualConfiguration config;
-
-    EXPECT_FALSE(config.hasParticles());
-
-    config.particles.enabled = true;
-    EXPECT_TRUE(config.hasParticles());
+    config.scanlines.enabled = false;
+    EXPECT_FALSE(config.hasPostProcessing());
 }
 
 TEST_F(VisualConfigApplicationTest, GetDefault)
@@ -92,6 +82,5 @@ TEST_F(VisualConfigApplicationTest, GetPresetUnknown)
 {
     auto config = VisualConfiguration::getPreset("nonexistent_preset");
 
-    // Unknown preset should return default configuration
     EXPECT_EQ(config.shaderType, ShaderType::Basic2D);
 }

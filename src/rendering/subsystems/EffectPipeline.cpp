@@ -4,12 +4,12 @@
 
 #include "rendering/subsystems/EffectPipeline.h"
 
+#include <array>
+
 #include "rendering/effects/BloomEffect.h"
 #include "rendering/effects/ChromaticAberrationEffect.h"
 #include "rendering/effects/ColorGradeEffect.h"
-#include "rendering/effects/DistortionEffect.h"
 #include "rendering/effects/FilmGrainEffect.h"
-#include "rendering/effects/GlitchEffect.h"
 #include "rendering/effects/RadialBlurEffect.h"
 #include "rendering/effects/ScanlineEffect.h"
 #include "rendering/effects/TiltShiftEffect.h"
@@ -70,9 +70,8 @@ void EffectPipeline::resize(juce::OpenGLContext& context, int width, int height)
     sceneFBO_->resize(context, width, height);
 }
 
-void EffectPipeline::initializeEffects()
+void EffectPipeline::createEffectInstances()
 {
-    // LAZY EFFECT LOADING: Create effect objects but don't compile them yet.
     effects_["vignette"] = std::make_unique<VignetteEffect>();
     effects_["film_grain"] = std::make_unique<FilmGrainEffect>();
     effects_["bloom"] = std::make_unique<BloomEffect>();
@@ -81,63 +80,37 @@ void EffectPipeline::initializeEffects()
     effects_["color_grade"] = std::make_unique<ColorGradeEffect>();
     effects_["chromatic_aberration"] = std::make_unique<ChromaticAberrationEffect>();
     effects_["scanlines"] = std::make_unique<ScanlineEffect>();
-    effects_["distortion"] = std::make_unique<DistortionEffect>();
-    effects_["glitch"] = std::make_unique<GlitchEffect>();
     effects_["radial_blur"] = std::make_unique<RadialBlurEffect>();
+}
 
-    // Initialize Effect Chain
-    // Each effect now implements configure() virtual method, eliminating dynamic_cast chains.
+void EffectPipeline::buildEffectChain()
+{
     effectChain_.clear();
 
-    // Helper lambda that uses the virtual configure() method
     auto configureVirtual = [](PostProcessEffect* e, const VisualConfiguration& c) {
         e->configure(c);
     };
 
-    // 1. Bloom
-    effectChain_.addStep({"bloom",
-                          [](const VisualConfiguration& c) { return c.bloom.enabled; },
-                          configureVirtual});
+    struct ChainEntry { const char* id; bool (*isEnabled)(const VisualConfiguration&); };
+    static constexpr auto entries = std::to_array<ChainEntry>({
+        {"bloom",                [](const VisualConfiguration& c) { return c.bloom.enabled; }},
+        {"radial_blur",          [](const VisualConfiguration& c) { return c.radialBlur.enabled; }},
+        {"tilt_shift",           [](const VisualConfiguration& c) { return c.tiltShift.enabled; }},
+        {"color_grade",          [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
+        {"chromatic_aberration", [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; }},
+        {"scanlines",            [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
+        {"vignette",             [](const VisualConfiguration& c) { return c.vignette.enabled; }},
+        {"film_grain",           [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
+    });
 
-    // 2. Radial Blur
-    effectChain_.addStep({"radial_blur",
-                          [](const VisualConfiguration& c) { return c.radialBlur.enabled; },
-                          configureVirtual});
+    for (const auto& entry : entries)
+        effectChain_.addStep({entry.id, entry.isEnabled, configureVirtual});
+}
 
-    // 3. Tilt Shift
-    effectChain_.addStep({"tilt_shift",
-                          [](const VisualConfiguration& c) { return c.tiltShift.enabled; },
-                          configureVirtual});
-
-    // 4. Color Grade
-    effectChain_.addStep({"color_grade",
-                          [](const VisualConfiguration& c) { return c.colorGrade.enabled; },
-                          configureVirtual});
-
-    // 5. Chromatic Aberration
-    effectChain_.addStep({"chromatic_aberration",
-                          [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; },
-                          configureVirtual});
-
-    // 6. Scanlines
-    effectChain_.addStep({"scanlines",
-                          [](const VisualConfiguration& c) { return c.scanlines.enabled; },
-                          configureVirtual});
-
-    // 7. Distortion
-    effectChain_.addStep({"distortion",
-                          [](const VisualConfiguration& c) { return c.distortion.enabled; },
-                          configureVirtual});
-
-    // 8. Vignette
-    effectChain_.addStep({"vignette",
-                          [](const VisualConfiguration& c) { return c.vignette.enabled; },
-                          configureVirtual});
-
-    // 9. Film Grain
-    effectChain_.addStep({"film_grain",
-                          [](const VisualConfiguration& c) { return c.filmGrain.enabled; },
-                          configureVirtual});
+void EffectPipeline::initializeEffects()
+{
+    createEffectInstances();
+    buildEffectChain();
 }
 
 void EffectPipeline::releaseEffects()
@@ -263,10 +236,6 @@ void EffectPipeline::setQualityLevel(QualityLevel level)
                 trails->setEnabled(false);
             if (auto* ca = getEffect("chromatic_aberration"))
                 ca->setEnabled(false);
-            if (auto* glitch = getEffect("glitch"))
-                glitch->setEnabled(false);
-            if (auto* dist = getEffect("distortion"))
-                dist->setEnabled(false);
             break;
 
         case QualityLevel::Normal:
@@ -276,10 +245,6 @@ void EffectPipeline::setQualityLevel(QualityLevel level)
                 trails->setEnabled(true);
             if (auto* ca = getEffect("chromatic_aberration"))
                 ca->setEnabled(true);
-            if (auto* glitch = getEffect("glitch"))
-                glitch->setEnabled(true);
-            if (auto* dist = getEffect("distortion"))
-                dist->setEnabled(true);
             break;
 
         case QualityLevel::Ultra:

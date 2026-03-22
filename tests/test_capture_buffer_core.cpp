@@ -49,25 +49,30 @@ TEST_F(CaptureBufferCoreTest, BasicWriteRead)
     EXPECT_NEAR(output[0], 0.5f, 0.001f);
 }
 
-// Test: Ring buffer wrapping
-TEST_F(CaptureBufferCoreTest, RingBufferWrapping)
+// Test: Ring buffer wrapping — last write's data must survive
+TEST_F(CaptureBufferCoreTest, RingBufferWrappingPreservesLatestData)
 {
-    // Write more than buffer capacity to test wrapping
+    float lastValue = 0.0f;
     for (int i = 0; i < 20; ++i)
     {
-        auto testBuffer = generateTestBuffer(100, static_cast<float>(i) * 0.05f);
+        lastValue = static_cast<float>(i) * 0.05f;
+        auto testBuffer = generateTestBuffer(100, lastValue);
 
         CaptureFrameMetadata metadata;
         metadata.sampleRate = 44100.0;
-
         buffer->write(testBuffer, metadata);
     }
 
-    // Should still be able to read most recent samples
+    // Read the most recent 100 samples — they must match the last write's value
     std::vector<float> output(100);
     int samplesRead = buffer->read(output.data(), 100, 0);
 
-    EXPECT_GT(samplesRead, 0);
+    ASSERT_EQ(samplesRead, 100);
+    for (int i = 0; i < 100; ++i)
+    {
+        EXPECT_NEAR(output[i], lastValue, 0.001f)
+            << "Sample " << i << " has stale data after ring wrap";
+    }
 }
 
 // Test: Get available samples
@@ -224,14 +229,14 @@ TEST_F(CaptureBufferCoreTest, SmallCapacity)
     EXPECT_EQ(read, 1);
 }
 
-// Test: Capacity of 1 (edge case)
+// Test: Capacity of 1 — write and read back correctly
 TEST_F(CaptureBufferCoreTest, CapacityOne)
 {
+    // Bug caught: capacity=1 with power-of-2 masking causes division by zero
+    // or infinite loop in wrapPosition
     auto tinyBuffer = std::make_unique<SharedCaptureBuffer>(1);
-    // Should be at least 1 (may round up to minimum power of 2)
     EXPECT_GE(tinyBuffer->getCapacity(), 1u);
 
-    // Should not crash on operations
     auto testBuf = AudioBufferBuilder()
         .withChannels(2)
         .withSamples(1)
@@ -240,6 +245,12 @@ TEST_F(CaptureBufferCoreTest, CapacityOne)
 
     CaptureFrameMetadata meta;
     tinyBuffer->write(testBuf, meta);
+
+    // Verify we can read back the written value
+    std::vector<float> output(1);
+    int read = tinyBuffer->read(output.data(), 1, 0);
+    EXPECT_EQ(read, 1);
+    EXPECT_NEAR(output[0], 0.5f, 0.001f);
 }
 
 // Test: Large capacity
@@ -363,10 +374,13 @@ TEST_F(CaptureBufferCoreTest, WriteFillsExactly)
     EXPECT_EQ(buffer->getAvailableSamples(), 1024u);
 }
 
-// Test: Write exceeds capacity
-TEST_F(CaptureBufferCoreTest, WriteExceedsCapacity)
+// Test: Write exceeds capacity — only the last capacity_ samples survive
+TEST_F(CaptureBufferCoreTest, WriteExceedsCapacityPreservesLastSamples)
 {
-    // Buffer is 1024 samples, write 2048
+    // Bug caught: srcOffset calculation error causing the wrong samples to
+    // be stored when write size > capacity
+    // Buffer is 1024 samples, write 2048 with a ramp from 0.0 to 1.0
+    // The last 1024 samples should be the upper half of the ramp (0.5 to 1.0)
     auto largeBuf = AudioBufferBuilder()
         .withChannels(2)
         .withSamples(2048)
@@ -376,33 +390,50 @@ TEST_F(CaptureBufferCoreTest, WriteExceedsCapacity)
     CaptureFrameMetadata meta;
     buffer->write(largeBuf, meta);
 
-    // Available samples capped at capacity
-    EXPECT_LE(buffer->getAvailableSamples(), buffer->getCapacity());
+    EXPECT_EQ(buffer->getAvailableSamples(), buffer->getCapacity());
+
+    // Read back and verify we got the LAST 1024 samples (the upper half)
+    std::vector<float> output(1024);
+    int read = buffer->read(output.data(), 1024, 0);
+    ASSERT_EQ(read, 1024);
+
+    // The last 1024 samples of a 2048-sample ramp from 0.0 to 1.0
+    // correspond to samples[1024..2047], which span approximately 0.5 to 1.0
+    EXPECT_GT(output[0], 0.45f) << "First readable sample should be from upper half of ramp";
+    EXPECT_NEAR(output[1023], 1.0f, 0.01f) << "Last readable sample should be near end of ramp";
 }
 
-// Test: Read from empty buffer
+// Test: Read from empty buffer returns 0 and does not modify output
 TEST_F(CaptureBufferCoreTest, ReadFromEmptyBuffer)
 {
-    std::vector<float> output(100);
+    std::vector<float> output(100, -999.0f);
     int read = buffer->read(output.data(), 100, 0);
 
-    // Should return 0 or handle gracefully
-    EXPECT_GE(read, 0);
+    EXPECT_EQ(read, 0);
+    // Output should be untouched since no data was available
+    for (int i = 0; i < 100; ++i)
+    {
+        EXPECT_FLOAT_EQ(output[i], -999.0f)
+            << "Read from empty buffer modified output at index " << i;
+    }
 }
 
-// Test: Read more samples than available
+// Test: Read more samples than available — returns exact count with correct data
 TEST_F(CaptureBufferCoreTest, ReadMoreThanAvailable)
 {
     auto testBuf = generateTestBuffer(50, 0.5f);
     CaptureFrameMetadata meta;
     buffer->write(testBuf, meta);
 
-    // Try to read 100 when only 50 available
-    std::vector<float> output(100);
+    std::vector<float> output(100, -999.0f);
     int read = buffer->read(output.data(), 100, 0);
 
-    // Should read at most what's available
-    EXPECT_LE(read, 50);
+    EXPECT_EQ(read, 50);
+    // First 50 samples should have the written data
+    for (int i = 0; i < 50; ++i)
+    {
+        EXPECT_NEAR(output[i], 0.5f, 0.001f) << "Sample " << i << " incorrect in partial read";
+    }
 }
 
 // Test: Read more samples than capacity
@@ -420,20 +451,22 @@ TEST_F(CaptureBufferCoreTest, ReadMoreThanCapacity)
     EXPECT_LE(static_cast<size_t>(read), buffer->getCapacity());
 }
 
-// Test: Read from invalid channel index
+// Test: Read from invalid channel returns 0 samples
 TEST_F(CaptureBufferCoreTest, ReadFromInvalidChannel)
 {
     auto testBuf = generateTestBuffer(100, 0.5f);
     CaptureFrameMetadata meta;
     buffer->write(testBuf, meta);
 
-    std::vector<float> output(100);
+    std::vector<float> output(100, -999.0f);
 
-    // Channel 5 doesn't exist (only 0 and 1)
+    // Channel 5 doesn't exist (only 0 and 1), should return 0
     int read = buffer->read(output.data(), 100, 5);
+    EXPECT_EQ(read, 0);
 
-    // Should handle gracefully (return 0 or clamp to valid channel)
-    EXPECT_GE(read, 0);
+    // Negative channel should also return 0
+    read = buffer->read(output.data(), 100, -1);
+    EXPECT_EQ(read, 0);
 }
 
 // Test: Read with AudioBuffer overload
@@ -449,6 +482,8 @@ TEST_F(CaptureBufferCoreTest, ReadToAudioBuffer)
     EXPECT_EQ(read, 100);
     EXPECT_NEAR(output.getSample(0, 50), 0.5f, 0.01f);
 }
+
+// Extended data integrity tests in test_capture_buffer_integrity.cpp
 
 // Test: Read with zero samples requested
 TEST_F(CaptureBufferCoreTest, ReadZeroSamples)

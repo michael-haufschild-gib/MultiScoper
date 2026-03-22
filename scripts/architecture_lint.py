@@ -7,7 +7,7 @@ Enforces the include dependency DAG to prevent layer violations:
   core/        → may include: core/ only
   core/dsp/    → may include: core/ only
   core/analysis/ → may include: core/ only
-  rendering/   → may include: core/, rendering/, ui/ (existing coupling)
+  rendering/   → may include: core/, rendering/ only
   ui/          → may include: core/, rendering/, ui/
   plugin/      → may include: anything (top-level integration)
   tools/       → may include: anything (test infrastructure)
@@ -45,7 +45,7 @@ QUOTED_INCLUDE_RE = re.compile(r'^\s*#\s*include\s+"([^"]+)"')
 # A file in module X must NOT include files whose path starts with any forbidden prefix.
 FORBIDDEN_INCLUDES: Dict[str, List[str]] = {
     "core/": ["ui/", "rendering/", "plugin/", "tools/"],
-    "rendering/": ["plugin/", "tools/"],
+    "rendering/": ["ui/", "plugin/", "tools/"],
     "ui/": ["plugin/", "tools/"],
 }
 

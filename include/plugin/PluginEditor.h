@@ -31,7 +31,7 @@
 #include "ui/controllers/OscillatorPanelController.h"
 
 #include "plugin/PluginProcessor.h"
-#include "rendering/GpuRenderCoordinator.h"
+#include "ui/controllers/GpuRenderCoordinator.h"
 #include "core/ServiceContext.h"
 
 namespace oscil
@@ -81,6 +81,7 @@ class OscilPluginEditor : public juce::AudioProcessorEditor
     , private juce::Timer
 {
 public:
+    /// Construct the editor, wiring all coordinators and UI subsystems.
     explicit OscilPluginEditor(OscilPluginProcessor& processor);
     ~OscilPluginEditor() override;
 
@@ -88,44 +89,52 @@ public:
     void resized() override;
     void parentHierarchyChanged() override;
 
-    // Sidebar control
+    /// Toggle sidebar visibility (collapse/expand).
     void toggleSidebar();
 
-    // Sidebar event handlers (called from adapter)
+    /// Handle sidebar width drag events from layout coordinator.
     void onSidebarWidthChanged(int newWidth);
+    /// Handle sidebar collapsed state toggle.
     void onSidebarCollapsedStateChanged(bool collapsed);
 
-    // Timing sidebar sync helpers (called from timing adapter callbacks)
+    /// Sync timing sidebar display when timing mode changes.
     void updateTimingSidebarMode(TimingMode mode);
+    /// Sync timing sidebar host-sync toggle display.
     void updateTimingSidebarHostSyncEnabled(bool enabled);
+    /// Sync timing sidebar BPM display from host.
     void updateTimingSidebarHostBpm(float bpm);
 
-    // Dialog Listeners
+    /// Called when oscillator config popup closes (refresh panels).
     void onConfigPopupClosed();
 
-    // Accessor for adapter classes to reach processor
+    /// Access the underlying processor (for adapter classes).
     OscilPluginProcessor& getProcessor() { return processor_; }
 
-    // Display options - apply to all panes
+    /// Apply grid visibility setting to all panes.
     void setShowGridForAllPanes(bool enabled);
+    /// Apply grid configuration to all panes.
     void setGridConfigForAllPanes(const GridConfiguration& config);
+    /// Apply auto-scale setting to all panes.
     void setAutoScaleForAllPanes(bool enabled);
+    /// Apply gain (dB) setting to all panes.
     void setGainDbForAllPanes(float dB);
+    /// Set display sample count for all panes.
     void setDisplaySamplesForAllPanes(int samples);
+    /// Set display sample rate for all panes.
     void setSampleRateForAllPanes(int sampleRate);
 
-    // Rendering mode control
+    /// Switch between GPU (OpenGL) and software rendering.
     void setGpuRenderingEnabled(bool enabled);
 
-    // Test access - for automated testing only
-    // Delegated to controller
+    /// Get pane components (test access only).
     const std::vector<std::unique_ptr<PaneComponent>>& getPaneComponents() const;
+    /// Force-refresh all oscillator panels from current state.
     void refreshPanels();
 
-    // Accessor for test server and adapters
+    /// Get the oscillator panel controller (for test server and adapters).
     OscillatorPanelController* getOscillatorPanelController() const { return oscillatorPanelController_.get(); }
 
-    // Public refresh methods for adapters
+    /// Refresh sidebar oscillator list with current oscillators.
     void refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators);
 
 private:

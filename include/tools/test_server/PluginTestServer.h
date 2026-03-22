@@ -48,6 +48,7 @@ class StateHandler;
 class PluginTestServer
 {
 public:
+    /// Create a test server attached to the given plugin editor for HTTP-driven automation.
     explicit PluginTestServer(OscilPluginEditor& editor);
     ~PluginTestServer();
 
@@ -58,6 +59,11 @@ public:
 
 private:
     void setupEndpoints();
+    void setupLayoutEndpoints();
+    void setupOscillatorEndpoints();
+    void setupTestEndpoints();
+    void setupSourceEndpoints();
+    void setupWaveformEndpoints();
     void serverThread();
 
     OscilPluginEditor& editor_;

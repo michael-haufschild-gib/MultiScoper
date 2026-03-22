@@ -14,11 +14,15 @@ namespace oscil
 class GridRenderer
 {
 public:
+    /// Create an uninitialized grid renderer.
     GridRenderer();
     ~GridRenderer();
 
+    /// Compile grid shaders and allocate GPU buffers.
     void initialize(juce::OpenGLContext& context);
+    /// Release all GPU resources.
     void release(juce::OpenGLContext& context);
+    /// Render the background grid for the given waveform data.
     void render(juce::OpenGLContext& context, const WaveformRenderData& data);
 
 private:

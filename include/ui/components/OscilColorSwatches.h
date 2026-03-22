@@ -38,13 +38,16 @@ public:
     void setColors(const std::vector<juce::Colour>& colors);
     const std::vector<juce::Colour>& getColors() const { return colors_; }
 
+    /// Append a colour swatch to the palette.
     void addColor(juce::Colour color);
+    /// Remove all colour swatches.
     void clearColors();
 
     // Selection
     void setSelectedIndex(int index, bool notify = true);
     int getSelectedIndex() const { return selectedIndex_; }
 
+    /// Select the swatch matching the given colour, optionally firing the callback.
     void setSelectedColor(juce::Colour color, bool notify = true);
     juce::Colour getSelectedColor() const;
 

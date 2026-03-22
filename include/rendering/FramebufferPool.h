@@ -21,6 +21,7 @@ namespace oscil
 class FramebufferPool
 {
 public:
+    /// Create an uninitialized framebuffer pool.
     FramebufferPool();
     virtual ~FramebufferPool();
 

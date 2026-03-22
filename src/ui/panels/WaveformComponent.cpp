@@ -310,34 +310,26 @@ void WaveformComponent::setWaveformId(int id)
     waveformId_ = id;
 }
 
+juce::Component* WaveformComponent::findEditorAncestor() const
+{
+    for (auto* p = getParentComponent(); p != nullptr; p = p->getParentComponent())
+    {
+        if (dynamic_cast<juce::AudioProcessorEditor*>(p) != nullptr)
+            return p;
+    }
+    return nullptr;
+}
+
 void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
 {
 #if OSCIL_ENABLE_OPENGL
     data.id = waveformId_;
 
-    juce::Rectangle<int> relativeBounds;
+    auto* editorComponent = findEditorAncestor();
+    data.bounds = (editorComponent != nullptr
+        ? editorComponent->getLocalArea(this, getLocalBounds())
+        : getLocalBounds()).toFloat();
 
-    juce::Component* editorComponent = nullptr;
-    for (auto* p = getParentComponent(); p != nullptr; p = p->getParentComponent())
-    {
-        if (dynamic_cast<juce::AudioProcessorEditor*>(p) != nullptr)
-        {
-            editorComponent = p;
-            break;
-        }
-    }
-
-    if (editorComponent != nullptr)
-    {
-        relativeBounds = editorComponent->getLocalArea(this, getLocalBounds());
-    }
-    else
-    {
-        relativeBounds = getLocalBounds();
-    }
-    data.bounds = relativeBounds.toFloat();
-
-    // Copy display buffer data from presenter
     if (presenter_)
     {
         data.channel1 = presenter_->getDisplayBuffer1();
@@ -346,27 +338,22 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
         data.verticalScale = presenter_->getEffectiveScale();
     }
 
-    // Copy render parameters
     data.colour = colour_;
     data.opacity = opacity_;
     data.lineWidth = lineWidth_;
     data.visible = isVisible();
     data.gridConfig = gridRenderer_ ? gridRenderer_->getGridConfig() : GridConfiguration{};
 
-    // Copy grid colors from theme (thread-safe: this runs on message thread)
     const auto& theme = themeService_.getCurrentTheme();
     data.gridColors.gridMinor = theme.gridMinor;
     data.gridColors.gridMajor = theme.gridMajor;
     data.gridColors.gridZeroLine = theme.gridZeroLine;
 
-    // Populate advanced visual configuration from preset
     data.visualConfig = VisualConfiguration::getPreset(visualPresetId_);
 
-    // Apply overrides if present
-    if (visualOverrides_.isValid())
-    {
-        VisualConfiguration::applyOverrides(data.visualConfig, visualOverrides_);
-    }
+    // Visual overrides reserved for future per-oscillator customization.
+    // Currently no UI sets overrides, so the ValueTree is always empty.
+    juce::ignoreUnused(visualOverrides_);
 #else
     juce::ignoreUnused(data);
 #endif

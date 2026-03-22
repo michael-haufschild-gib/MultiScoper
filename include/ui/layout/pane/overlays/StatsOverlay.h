@@ -53,7 +53,7 @@ public:
     StatsOverlay(IThemeService& themeService, const juce::String& testId);
     ~StatsOverlay() override = default;
 
-    // Update stats for all oscillators in the pane
+    /// Refresh the displayed statistics for all oscillators in the owning pane.
     void updateStats(const std::vector<OscillatorStats>& stats);
 
     // Component overrides

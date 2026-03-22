@@ -6,7 +6,7 @@
 #include "ui/controllers/OscillatorPanelController.h"
 #include "OscilTestFixtures.h"
 #include "ui/managers/DisplaySettingsManager.h"
-#include "rendering/GpuRenderCoordinator.h"
+#include "ui/controllers/GpuRenderCoordinator.h"
 #include "rendering/PresetManager.h"
 
 namespace oscil

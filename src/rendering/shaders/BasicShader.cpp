@@ -57,59 +57,19 @@ BasicShader::~BasicShader()
 }
 
 #if OSCIL_ENABLE_OPENGL
-bool BasicShader::compile(juce::OpenGLContext& context)
+
+void BasicShader::resolveUniforms(juce::OpenGLContext& context)
 {
-    BASIC_LOG("compile() called, already compiled=" << static_cast<int>(gl_->compiled));
-
-    if (gl_->compiled)
-        return true;
-
-    // Create shader program
-    gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    BASIC_LOG("Compiling shaders (GLSL 3.30 Core)...");
-
-    juce::String vertexCode = juce::String::createStringFromData(BinaryData::basic_vert, BinaryData::basic_vertSize);
-    if (!gl_->program->addVertexShader(vertexCode))
-    {
-        BASIC_LOG("Vertex shader compilation FAILED: " << gl_->program->getLastError());
-        gl_->program.reset();
-        return false;
-    }
-    BASIC_LOG("Vertex shader compiled OK");
-
-    juce::String fragmentCode = juce::String::createStringFromData(BinaryData::basic_frag, BinaryData::basic_fragSize);
-    if (!gl_->program->addFragmentShader(fragmentCode))
-    {
-        BASIC_LOG("Fragment shader compilation FAILED: " << gl_->program->getLastError());
-        gl_->program.reset();
-        return false;
-    }
-    BASIC_LOG("Fragment shader compiled OK");
-
-    if (!gl_->program->link())
-
-    {
-        BASIC_LOG("Shader program linking FAILED: " << gl_->program->getLastError());
-        gl_->program.reset();
-        return false;
-    }
-
-    BASIC_LOG("Shader compiled and linked successfully");
-
-    // Get uniform locations
     gl_->projectionLoc = gl_->program->getUniformIDFromName("projection");
     gl_->baseColorLoc = gl_->program->getUniformIDFromName("baseColor");
     gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
 
-    // Log uniform locations for debugging
     BASIC_LOG("Uniform locations - projection=" << gl_->projectionLoc
              << ", baseColor=" << gl_->baseColorLoc
              << ", opacity=" << gl_->opacityLoc
              << ", glowIntensity=" << gl_->glowIntensityLoc);
 
-    // Get attribute locations
     gl_->positionLoc = context.extensions.glGetAttribLocation(gl_->program->getProgramID(), "position");
     gl_->distFromCenterLoc = context.extensions.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
     if (gl_->positionLoc < 0) gl_->positionLoc = 0;
@@ -117,38 +77,46 @@ bool BasicShader::compile(juce::OpenGLContext& context)
 
     BASIC_LOG("Attribute locations - position=" << gl_->positionLoc
              << ", distFromCenter=" << gl_->distFromCenterLoc);
+}
 
-    // Validate uniform locations - critical uniforms must be found
-    bool uniformsValid = true;
-    if (gl_->projectionLoc < 0)
+bool BasicShader::validateUniforms() const
+{
+    bool valid = true;
+    if (gl_->projectionLoc < 0) { BASIC_LOG("Failed to find uniform 'projection'"); valid = false; }
+    if (gl_->baseColorLoc < 0)  { BASIC_LOG("Failed to find uniform 'baseColor'");  valid = false; }
+    if (gl_->opacityLoc < 0)    { BASIC_LOG("Failed to find uniform 'opacity'");    valid = false; }
+    if (gl_->glowIntensityLoc < 0) { BASIC_LOG("Failed to find uniform 'glowIntensity'"); valid = false; }
+    return valid;
+}
+
+bool BasicShader::compile(juce::OpenGLContext& context)
+{
+    BASIC_LOG("compile() called, already compiled=" << static_cast<int>(gl_->compiled));
+
+    if (gl_->compiled)
+        return true;
+
+    gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
+
+    juce::String vertexCode = juce::String::createStringFromData(BinaryData::basic_vert, BinaryData::basic_vertSize);
+    juce::String fragmentCode = juce::String::createStringFromData(BinaryData::basic_frag, BinaryData::basic_fragSize);
+
+    if (!compileShaderProgram(*gl_->program, vertexCode.toRawUTF8(), fragmentCode.toRawUTF8()))
     {
-        BASIC_LOG("Failed to find uniform 'projection'");
-        uniformsValid = false;
-    }
-    if (gl_->baseColorLoc < 0)
-    {
-        BASIC_LOG("Failed to find uniform 'baseColor'");
-        uniformsValid = false;
-    }
-    if (gl_->opacityLoc < 0)
-    {
-        BASIC_LOG("Failed to find uniform 'opacity'");
-        uniformsValid = false;
-    }
-    if (gl_->glowIntensityLoc < 0)
-    {
-        BASIC_LOG("Failed to find uniform 'glowIntensity'");
-        uniformsValid = false;
+        BASIC_LOG("Shader compilation/linking FAILED: " << gl_->program->getLastError());
+        gl_->program.reset();
+        return false;
     }
 
-    if (!uniformsValid)
+    resolveUniforms(context);
+
+    if (!validateUniforms())
     {
         BASIC_LOG("Shader compilation failed - missing uniforms");
         gl_->program.reset();
         return false;
     }
 
-    // Create VAO and VBO (required for OpenGL 3.2 Core Profile on macOS)
     context.extensions.glGenVertexArrays(1, &gl_->vao);
     context.extensions.glGenBuffers(1, &gl_->vbo);
 
@@ -198,6 +166,19 @@ void BasicShader::drawGlowPasses(juce::OpenGLExtensionFunctions& ext, int vertex
     }
 }
 
+void BasicShader::renderChannel(juce::OpenGLExtensionFunctions& ext,
+                                const std::vector<float>& samples,
+                                float centerY, float amplitude, float glowWidth,
+                                float boundsX, float boundsWidth)
+{
+    vertexBuffer_.clear();
+    buildLineGeometry(vertexBuffer_, samples, centerY, amplitude,
+        glowWidth, boundsX, boundsWidth);
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
+        vertexBuffer_.data(), GL_DYNAMIC_DRAW);
+    drawGlowPasses(ext, static_cast<int>(vertexBuffer_.size() / 4));
+}
+
 void BasicShader::render(
     juce::OpenGLContext& context,
     const std::vector<float>& channel1,
@@ -212,20 +193,8 @@ void BasicShader::render(
 
     gl_->program->use();
 
-    auto* targetComponent = context.getTargetComponent();
-    if (!targetComponent) return;
-
-    float viewportWidth = static_cast<float>(targetComponent->getWidth());
-    float viewportHeight = static_cast<float>(targetComponent->getHeight());
-    if (viewportWidth <= 0.0f || viewportHeight <= 0.0f) return;
-
-    float projection[16] = {
-        2.0f / viewportWidth, 0.0f, 0.0f, 0.0f,
-        0.0f, -2.0f / viewportHeight, 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0f, 0.0f,
-        -1.0f, 1.0f, 0.0f, 1.0f
-    };
-    ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
+    if (!setup2DProjection(context, ext, gl_->projectionLoc))
+        return;
 
     ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
         params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
@@ -233,59 +202,67 @@ void BasicShader::render(
     ext.glUniform1f(gl_->glowIntensityLoc, GLOW_INTENSITY);
 
     float height = params.bounds.getHeight();
-    float centerY1, centerY2, amplitude1, amplitude2;
-    if (params.isStereo && channel2 != nullptr)
-    {
-        float halfHeight = height * 0.5f;
-        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
-        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
-        amplitude1 = amplitude2 = halfHeight * 0.45f * params.verticalScale;
-    }
-    else
-    {
-        centerY1 = centerY2 = params.bounds.getCentreY();
-        amplitude1 = amplitude2 = height * 0.45f * params.verticalScale;
-    }
-
-    GLint positionLoc = gl_->positionLoc;
-    GLint distFromCenterLoc = gl_->distFromCenterLoc;
+    float centerY1, centerY2, amp1, amp2;
+    calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     ext.glBindVertexArray(gl_->vao);
     ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
-    float glowWidth = params.lineWidth * 10.0f;
-    vertexBuffer_.clear();
-    buildLineGeometry(vertexBuffer_, channel1, centerY1, amplitude1,
-        glowWidth, params.bounds.getX(), params.bounds.getWidth());
-
-    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
-        vertexBuffer_.data(), GL_DYNAMIC_DRAW);
-
-    ext.glEnableVertexAttribArray(static_cast<GLuint>(positionLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-    ext.glEnableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(gl_->positionLoc));
+    ext.glVertexAttribPointer(static_cast<GLuint>(gl_->positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(gl_->distFromCenterLoc));
+    ext.glVertexAttribPointer(static_cast<GLuint>(gl_->distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
         reinterpret_cast<void*>(2 * sizeof(float)));
 
-    drawGlowPasses(ext, static_cast<int>(vertexBuffer_.size() / 4));
+    float glowWidth = params.lineWidth * 10.0f;
+    renderChannel(ext, channel1, centerY1, amp1, glowWidth, params.bounds.getX(), params.bounds.getWidth());
 
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
-    {
-        vertexBuffer_.clear();
-        buildLineGeometry(vertexBuffer_, *channel2, centerY2, amplitude2,
-            glowWidth, params.bounds.getX(), params.bounds.getWidth());
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
-            vertexBuffer_.data(), GL_DYNAMIC_DRAW);
-        drawGlowPasses(ext, static_cast<int>(vertexBuffer_.size() / 4));
-    }
+        renderChannel(ext, *channel2, centerY2, amp2, glowWidth, params.bounds.getX(), params.bounds.getWidth());
 
-    ext.glDisableVertexAttribArray(static_cast<GLuint>(positionLoc));
-    ext.glDisableVertexAttribArray(static_cast<GLuint>(distFromCenterLoc));
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(gl_->positionLoc));
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(gl_->distFromCenterLoc));
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
     ext.glBindVertexArray(0);
     glDisable(GL_BLEND);
 }
 #endif
+
+namespace
+{
+void drawGlowingChannel(juce::Graphics& g,
+                        const std::vector<float>& samples,
+                        float centerY, float amplitude,
+                        float boundsX, float boundsWidth,
+                        const ShaderRenderParams& params)
+{
+    juce::Path path;
+    float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
+
+    path.startNewSubPath(boundsX, centerY - samples[0] * amplitude);
+    for (size_t i = 1; i < samples.size(); ++i)
+    {
+        float x = boundsX + static_cast<float>(i) * xScale;
+        float y = centerY - samples[i] * amplitude;
+        path.lineTo(x, y);
+    }
+
+    for (int pass = BasicShader::GLOW_PASSES; pass >= 0; --pass)
+    {
+        float glowWidth = params.lineWidth * (1.0f + static_cast<float>(pass) * 1.5f);
+        float alpha = params.opacity * (0.15f + 0.25f * (1.0f - static_cast<float>(pass) / BasicShader::GLOW_PASSES));
+        g.setColour(params.colour.withAlpha(alpha));
+        g.strokePath(path, juce::PathStrokeType(glowWidth,
+            juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
+
+    g.setColour(params.colour.withAlpha(params.opacity));
+    g.strokePath(path, juce::PathStrokeType(params.lineWidth));
+
+    g.setColour(params.colour.brighter(0.5f).withAlpha(params.opacity * 0.8f));
+    g.strokePath(path, juce::PathStrokeType(params.lineWidth * 0.5f));
+}
+} // namespace
 
 void BasicShader::renderSoftware(
     juce::Graphics& g,
@@ -297,72 +274,29 @@ void BasicShader::renderSoftware(
         return;
 
     auto bounds = params.bounds;
-    float width = bounds.getWidth();
     float height = bounds.getHeight();
 
-    // Calculate layout
-    float centerY1, centerY2;
-    float amplitude1, amplitude2;
-
+    float centerY1, centerY2, amp1, amp2;
     if (params.isStereo && channel2 != nullptr)
     {
-        float halfHeight = height * 0.5f;
-        centerY1 = bounds.getY() + halfHeight * 0.5f;
-        centerY2 = bounds.getY() + halfHeight * 1.5f;
-        amplitude1 = halfHeight * 0.45f * params.verticalScale;
-        amplitude2 = halfHeight * 0.45f * params.verticalScale;
+        float halfH = height * 0.5f;
+        centerY1 = bounds.getY() + halfH * 0.5f;
+        centerY2 = bounds.getY() + halfH * 1.5f;
+        amp1 = amp2 = halfH * 0.45f * params.verticalScale;
     }
     else
     {
-        centerY1 = bounds.getCentreY();
-        centerY2 = centerY1;
-        amplitude1 = height * 0.45f * params.verticalScale;
-        amplitude2 = amplitude1;
+        centerY1 = centerY2 = bounds.getCentreY();
+        amp1 = amp2 = height * 0.45f * params.verticalScale;
     }
 
-    // Helper to draw a glowing waveform
-    auto drawGlowingWaveform = [&](const std::vector<float>& samples, float centerY, float amplitude)
-    {
-        juce::Path path;
-        float xScale = width / static_cast<float>(samples.size() - 1);
+    drawGlowingChannel(g, channel1, centerY1, amp1,
+                       bounds.getX(), bounds.getWidth(), params);
 
-        float startY = centerY - samples[0] * amplitude;
-        path.startNewSubPath(bounds.getX(), startY);
-
-        for (size_t i = 1; i < samples.size(); ++i)
-        {
-            float x = bounds.getX() + static_cast<float>(i) * xScale;
-            float y = centerY - samples[i] * amplitude;
-            path.lineTo(x, y);
-        }
-
-        // Draw glow layers (outer to inner, increasing opacity)
-        for (int pass = GLOW_PASSES; pass >= 0; --pass)
-        {
-            float glowWidth = params.lineWidth * (1.0f + static_cast<float>(pass) * 1.5f);
-            float alpha = params.opacity * (0.15f + 0.25f * (1.0f - static_cast<float>(pass) / GLOW_PASSES));
-
-            g.setColour(params.colour.withAlpha(alpha));
-            g.strokePath(path, juce::PathStrokeType(glowWidth,
-                juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-        }
-
-        // Draw core line
-        g.setColour(params.colour.withAlpha(params.opacity));
-        g.strokePath(path, juce::PathStrokeType(params.lineWidth));
-
-        // Draw bright center for neon effect
-        g.setColour(params.colour.brighter(0.5f).withAlpha(params.opacity * 0.8f));
-        g.strokePath(path, juce::PathStrokeType(params.lineWidth * 0.5f));
-    };
-
-    // Draw first channel
-    drawGlowingWaveform(channel1, centerY1, amplitude1);
-
-    // Draw second channel if stereo
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        drawGlowingWaveform(*channel2, centerY2, amplitude2);
+        drawGlowingChannel(g, *channel2, centerY2, amp2,
+                           bounds.getX(), bounds.getWidth(), params);
     }
 }
 

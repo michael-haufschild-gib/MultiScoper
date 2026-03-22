@@ -7,17 +7,6 @@
 #include "rendering/shaders/NeonGlowShader.h"
 #include "rendering/shaders/GradientFillShader.h"
 #include "rendering/shaders/DualOutlineShader.h"
-#include "rendering/shaders/PlasmaSineShader.h"
-#include "rendering/shaders/DigitalGlitchShader.h"
-#include "rendering/shaders3d/VolumetricRibbonShader.h"
-#include "rendering/shaders3d/WireframeMeshShader.h"
-#include "rendering/shaders3d/VectorFlowShader.h"
-#include "rendering/shaders3d/StringTheoryShader.h"
-#include "rendering/shaders3d/ElectricFlowerShader.h"
-#include "rendering/shaders3d/ElectricFiligreeShader.h"
-#include "rendering/materials/GlassRefractionShader.h"
-#include "rendering/materials/LiquidChromeShader.h"
-#include "rendering/materials/CrystallineShader.h"
 
 namespace oscil
 {
@@ -31,28 +20,10 @@ ShaderRegistry::~ShaderRegistry() = default;
 
 void ShaderRegistry::registerBuiltInShaders()
 {
-    // Register default shaders
     registerShaderType<BasicShader>();
-
-    // Register 2D shaders
     registerShaderType<NeonGlowShader>();
     registerShaderType<GradientFillShader>();
     registerShaderType<DualOutlineShader>();
-    registerShaderType<PlasmaSineShader>();
-    registerShaderType<DigitalGlitchShader>();
-
-    // Register 3D shaders
-    registerShaderType<VolumetricRibbonShader>();
-    registerShaderType<WireframeMeshShader>();
-    registerShaderType<VectorFlowShader>();
-    registerShaderType<StringTheoryShader>();
-    registerShaderType<ElectricFlowerShader>();
-    registerShaderType<ElectricFiligreeShader>();
-
-    // Register Material shaders
-    registerShaderType<GlassRefractionShader>();
-    registerShaderType<LiquidChromeShader>();
-    registerShaderType<CrystallineShader>();
 }
 
 WaveformShader* ShaderRegistry::getShader(const juce::String& shaderId)

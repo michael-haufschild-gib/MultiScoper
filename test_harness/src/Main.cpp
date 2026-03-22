@@ -142,8 +142,8 @@ private:
             g.fillAll(juce::Colours::darkgrey);
 
             g.setColour(juce::Colours::white);
-            int y = 20;
             const int lineHeight = 28;
+            int y = 20;
 
             // Title
             g.setFont(juce::FontOptions(20.0f).withStyle("Bold"));
@@ -171,12 +171,23 @@ private:
                        20, y, getWidth() - 40, lineHeight, juce::Justification::left);
             y += lineHeight + 6;
 
-            // Tracks header
+            y = paintTrackInfo(g, y, lineHeight);
+
+            // API endpoint hint
+            g.setColour(juce::Colours::grey);
+            g.setFont(juce::FontOptions(11.0f));
+            g.drawText("API: http://localhost:" + juce::String(server_.getPort()) + "/health",
+                       20, getHeight() - 30, getWidth() - 40, 20, juce::Justification::centred);
+        }
+
+        // Paints track header and per-track frequency info. Returns updated y position.
+        int paintTrackInfo(juce::Graphics& g, int y, int lineHeight)
+        {
+            g.setColour(juce::Colours::white);
             g.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
             g.drawText("Tracks:", 20, y, getWidth() - 40, lineHeight, juce::Justification::left);
             y += lineHeight;
 
-            // Track frequency info (next to combo boxes)
             g.setFont(juce::FontOptions(12.0f));
             for (int i = 0; i < 3; ++i)
             {
@@ -190,13 +201,7 @@ private:
                 }
                 y += lineHeight;
             }
-
-            // API endpoint hint
-            y = getHeight() - 30;
-            g.setColour(juce::Colours::grey);
-            g.setFont(juce::FontOptions(11.0f));
-            g.drawText("API: http://localhost:" + juce::String(server_.getPort()) + "/health",
-                       20, y, getWidth() - 40, 20, juce::Justification::centred);
+            return y;
         }
 
         void timerCallback() override

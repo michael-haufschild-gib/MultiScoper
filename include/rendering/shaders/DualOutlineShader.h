@@ -17,6 +17,7 @@ namespace oscil
 class DualOutlineShader : public WaveformShader
 {
 public:
+    /// Create a dual outline shader instance.
     DualOutlineShader();
     ~DualOutlineShader() override;
 
@@ -28,7 +29,9 @@ public:
     }
 
 #if OSCIL_ENABLE_OPENGL
+    /// Compile the dual outline shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program and GPU resources.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 
@@ -44,6 +47,12 @@ private:
 #if OSCIL_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
+
+    void drawChannel(juce::OpenGLExtensionFunctions& ext,
+                     const std::vector<float>& samples,
+                     float centerY, float amplitude,
+                     float boundsX, float boundsWidth,
+                     float lineWidth, GLint posLoc, GLint distLoc);
 #endif
 };
 

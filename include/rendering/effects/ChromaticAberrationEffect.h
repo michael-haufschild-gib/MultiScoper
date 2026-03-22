@@ -21,13 +21,16 @@ namespace oscil
 class ChromaticAberrationEffect : public PostProcessEffect
 {
 public:
+    /// Create a chromatic aberration effect with default settings.
     ChromaticAberrationEffect();
     ~ChromaticAberrationEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "chromatic_aberration"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Chromatic Aberration"; }
 
+    /// Compile the chromatic aberration shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

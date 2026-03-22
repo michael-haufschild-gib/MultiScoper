@@ -27,6 +27,12 @@ _codeql_detected_source_root
 # Dependency caches
 .cache/
 
+# Python virtual environments
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
 # Test results (generated)
 test-results/
 
@@ -37,8 +43,10 @@ screenshots/
 .claude/settings.json
 .claude/settings.local.json
 
-# Temporary build logs
+# Temporary build logs and artifacts
 buildwarning*.txt
+build_output.txt
+.ninja.pid
 
 # Python bytecode
 __pycache__/
@@ -52,8 +60,9 @@ size_lint_report.txt
 # Ephemeral task state
 task_state.md
 
-# Log files
+# Log files and session logs
 *.log
+logs/
 
 # Ephemeral analysis documents
 godmode*.md

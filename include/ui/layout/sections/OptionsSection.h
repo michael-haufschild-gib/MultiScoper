@@ -65,6 +65,7 @@ public:
         virtual void autoAdjustQualityChanged(bool /*enabled*/) {}
     };
 
+    /// Construct with full service context for display/quality controls.
     explicit OptionsSection(ServiceContext& context);
     explicit OptionsSection(IThemeService& themeService);
     ~OptionsSection() override;
@@ -128,6 +129,11 @@ public:
 
 private:
     void setupComponents();
+    void setupGainControls();
+    void setupDisplayToggles();
+    void setupLayoutAndTheme();
+    void setupRenderingControls();
+    void setupCaptureQualityControls();
 
     // Notification helpers
     void notifyGainChanged();

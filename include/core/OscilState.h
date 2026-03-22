@@ -99,6 +99,7 @@ namespace StateIds
 class OscilState
 {
 public:
+    /// Create a default OscilState with initialized state tree.
     OscilState();
 
     /**
@@ -265,6 +266,7 @@ private:
 class GlobalPreferences
 {
 public:
+    /// Create global preferences, loading from disk if available.
     GlobalPreferences();
     ~GlobalPreferences();
 

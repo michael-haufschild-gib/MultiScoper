@@ -22,9 +22,9 @@ on:
 env:
   BUILD_TYPE: Release
   # Consistent hashes for dependency caching
-  JUCE_VERSION: "8.0.5"
-  HTTPLIB_VERSION: "v0.28.0"
-  JSON_VERSION: "v3.11.3"
+  JUCE_VERSION: "8.0.12"
+  HTTPLIB_VERSION: "v0.38.0"
+  JSON_VERSION: "v3.12.0"
   GTEST_VERSION: "v1.17.0"
 
 jobs:

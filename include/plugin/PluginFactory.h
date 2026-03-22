@@ -36,6 +36,7 @@ class PresetManager;
 class PluginFactory
 {
 public:
+    /// Construct the factory and initialize all owned services.
     PluginFactory();
     virtual ~PluginFactory();
 
@@ -62,11 +63,17 @@ public:
      * Normal code should receive services via dependency injection,
      * not by calling these methods.
      */
+    /// Get the global theme manager (implements IThemeService).
     ThemeManager& getThemeManager();
+    /// Get the shared instance registry for multi-instance coordination.
     InstanceRegistry& getInstanceRegistry();
+    /// Get the shader registry for GPU waveform shaders.
     ShaderRegistry& getShaderRegistry();
+    /// Get the memory budget manager for capture buffer allocation.
     MemoryBudgetManager& getMemoryBudgetManager();
+    /// Get the global user preferences (persisted separately from project state).
     GlobalPreferences& getGlobalPreferences();
+    /// Get the visual preset manager.
     PresetManager& getPresetManager();
 
 private:

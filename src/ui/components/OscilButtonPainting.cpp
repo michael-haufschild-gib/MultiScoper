@@ -58,23 +58,16 @@ void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
     }
 }
 
-void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds)
+void OscilButton::paintButtonBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds, juce::Colour bgColour)
 {
-    updatePathCache(bounds);
-
-    auto bgColour = getBackgroundColour();
-    if (std::abs(currentBrightness_) > 1e-6f)
-        bgColour = bgColour.brighter(currentBrightness_);
-
-    if (!enabled_)
-        bgColour = bgColour.withAlpha(ComponentLayout::DISABLED_OPACITY);
+    juce::ignoreUnused(bounds);
 
     if (variant_ != ButtonVariant::Ghost && variant_ != ButtonVariant::Tertiary && variant_ != ButtonVariant::Icon)
     {
         g.setColour(bgColour);
         g.fillPath(cachedButtonPath_);
     }
-    else if ((isHovered_ || isPressed_ || isToggled_) && (variant_ == ButtonVariant::Ghost || variant_ == ButtonVariant::Tertiary || variant_ == ButtonVariant::Icon))
+    else if (isHovered_ || isPressed_ || isToggled_)
     {
         g.setColour(bgColour);
         g.fillPath(cachedButtonPath_);
@@ -91,96 +84,93 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
         g.setColour(borderColor_);
         g.strokePath(cachedButtonPath_, juce::PathStrokeType(borderWidth_));
     }
+}
 
-    int horizontalPadding;
-    if (segmentPosition_ != SegmentPosition::None)
-    {
-        horizontalPadding = ComponentLayout::BUTTON_SEGMENT_PADDING;
-    }
-    else if (bounds.getWidth() < TEXT_PADDING * 2.5f)
-    {
-        horizontalPadding = std::max(8, static_cast<int>(bounds.getWidth() * ComponentLayout::BUTTON_NARROW_PADDING_RATIO));
-    }
-    else
-    {
-        horizontalPadding = TEXT_PADDING;
-    }
-    auto contentBounds = bounds.reduced(static_cast<float>(horizontalPadding), 0);
-    auto textColour = getTextColour();
-    if (!enabled_)
-        textColour = textColour.withAlpha(ComponentLayout::DISABLED_OPACITY);
-
+void OscilButton::paintButtonContent(juce::Graphics& g, const juce::Rectangle<float>& bounds,
+                                     const juce::Rectangle<float>& contentBounds, juce::Colour textColour)
+{
     g.setColour(textColour);
 
+    // Path-based icon (SVG)
     if (!iconPath_.isEmpty())
     {
         auto pathBounds = iconPath_.getBounds();
         float padding = static_cast<float>(ComponentLayout::SPACING_XS);
         float availableSize = std::max(1.0f, std::min(bounds.getWidth(), bounds.getHeight()) - padding * 2);
-
         float pathDim = std::max(0.001f, std::max(pathBounds.getWidth(), pathBounds.getHeight()));
         float scale = availableSize / pathDim;
-
         float offsetX = bounds.getCentreX() - (pathBounds.getCentreX() * scale);
         float offsetY = bounds.getCentreY() - (pathBounds.getCentreY() * scale);
 
-        auto transform = juce::AffineTransform::scale(scale).translated(offsetX, offsetY);
-
         juce::Path scaledPath = iconPath_;
-        scaledPath.applyTransform(transform);
-
+        scaledPath.applyTransform(juce::AffineTransform::scale(scale).translated(offsetX, offsetY));
         g.fillPath(scaledPath);
         return;
     }
 
-    if (variant_ == ButtonVariant::Icon)
+    // Icon-only variant
+    if (variant_ == ButtonVariant::Icon && icon_.isValid())
     {
-        if (icon_.isValid())
-        {
-            float reduction = std::max(0.0f, (bounds.getWidth() - ICON_SIZE) / 2);
-            auto iconBounds = bounds.reduced(reduction);
-            g.drawImage(icon_, iconBounds, juce::RectanglePlacement::centred);
-            return;
-        }
+        float reduction = std::max(0.0f, (bounds.getWidth() - ICON_SIZE) / 2);
+        g.drawImage(icon_, bounds.reduced(reduction), juce::RectanglePlacement::centred);
+        return;
     }
 
     auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
     g.setFont(font);
 
+    // Text + icon
     if (icon_.isValid())
     {
         float iconY = (bounds.getHeight() - ICON_SIZE) / 2;
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
+        float startX = (bounds.getWidth() - ICON_SIZE - ICON_PADDING - textWidth) / 2;
 
         if (iconOnLeft_)
         {
-            float startX = (bounds.getWidth() - ICON_SIZE - ICON_PADDING - textWidth) / 2;
-            g.drawImage(icon_,
-                juce::Rectangle<float>(startX, iconY, ICON_SIZE, ICON_SIZE),
-                juce::RectanglePlacement::centred);
-            g.drawText(label_,
-                juce::Rectangle<float>(startX + ICON_SIZE + ICON_PADDING, 0,
-                                       textWidth, bounds.getHeight()),
-                juce::Justification::centredLeft);
+            g.drawImage(icon_, juce::Rectangle<float>(startX, iconY, ICON_SIZE, ICON_SIZE), juce::RectanglePlacement::centred);
+            g.drawText(label_, juce::Rectangle<float>(startX + ICON_SIZE + ICON_PADDING, 0, textWidth, bounds.getHeight()), juce::Justification::centredLeft);
         }
         else
         {
-            float startX = (bounds.getWidth() - ICON_SIZE - ICON_PADDING - textWidth) / 2;
-            g.drawText(label_,
-                juce::Rectangle<float>(startX, 0, textWidth, bounds.getHeight()),
-                juce::Justification::centredLeft);
-            g.drawImage(icon_,
-                juce::Rectangle<float>(startX + textWidth + ICON_PADDING, iconY,
-                                       ICON_SIZE, ICON_SIZE),
-                juce::RectanglePlacement::centred);
+            g.drawText(label_, juce::Rectangle<float>(startX, 0, textWidth, bounds.getHeight()), juce::Justification::centredLeft);
+            g.drawImage(icon_, juce::Rectangle<float>(startX + textWidth + ICON_PADDING, iconY, ICON_SIZE, ICON_SIZE), juce::RectanglePlacement::centred);
         }
     }
     else
     {
         g.drawText(label_, contentBounds, juce::Justification::centred);
     }
+}
+
+void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds)
+{
+    updatePathCache(bounds);
+
+    auto bgColour = getBackgroundColour();
+    if (std::abs(currentBrightness_) > 1e-6f)
+        bgColour = bgColour.brighter(currentBrightness_);
+    if (!enabled_)
+        bgColour = bgColour.withAlpha(ComponentLayout::DISABLED_OPACITY);
+
+    paintButtonBackground(g, bounds, bgColour);
+
+    int horizontalPadding;
+    if (segmentPosition_ != SegmentPosition::None)
+        horizontalPadding = ComponentLayout::BUTTON_SEGMENT_PADDING;
+    else if (bounds.getWidth() < TEXT_PADDING * 2.5f)
+        horizontalPadding = std::max(8, static_cast<int>(bounds.getWidth() * ComponentLayout::BUTTON_NARROW_PADDING_RATIO));
+    else
+        horizontalPadding = TEXT_PADDING;
+
+    auto contentBounds = bounds.reduced(static_cast<float>(horizontalPadding), 0);
+    auto textColour = getTextColour();
+    if (!enabled_)
+        textColour = textColour.withAlpha(ComponentLayout::DISABLED_OPACITY);
+
+    paintButtonContent(g, bounds, contentBounds, textColour);
 }
 
 void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)

@@ -49,6 +49,7 @@ public:
         virtual void filterModeChanged(OscillatorFilterMode /*mode*/) {}
     };
 
+    /// Construct the toolbar with filter and add-oscillator controls.
     explicit OscillatorListToolbar(ServiceContext& context);
     explicit OscillatorListToolbar(IThemeService& themeService);
     ~OscillatorListToolbar() override;
@@ -61,6 +62,7 @@ public:
 
     // State setters
     void setFilterMode(OscillatorFilterMode mode);
+    /// Update the displayed oscillator count badge (e.g. "3/5 visible").
     void setOscillatorCount(int total, int visible);
 
     // State getters

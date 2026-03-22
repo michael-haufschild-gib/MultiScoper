@@ -45,7 +45,7 @@ public:
     void setVariant(TextFieldVariant variant);
     TextFieldVariant getVariant() const { return variant_; }
 
-    // Text content
+    /// Set the field text, optionally firing the onChange callback.
     void setText(const juce::String& text, bool notify = true);
     juce::String getText() const;
 

@@ -8,7 +8,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditor.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginEditorSidebarHandlers.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginFactory.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/OpenGLLifecycleManager.cpp
 
     # Core (business logic)
     ${CMAKE_SOURCE_DIR}/src/core/InstanceRegistry.cpp
@@ -36,7 +35,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/Framebuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/FramebufferPool.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/GridRenderer.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/ParticleRenderer.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/RenderEngine.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/RenderEngineWaveforms.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/ShaderRegistry.cpp
@@ -47,8 +45,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/VisualConfiguration.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/VisualConfigurationSerialization.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/PresetManager.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/Camera3D.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/GpuRenderCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/RenderBootstrapper.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/EffectPipeline.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/subsystems/WaveformPass.cpp
@@ -59,25 +55,6 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/NeonGlowShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/GradientFillShader.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/shaders/DualOutlineShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders/PlasmaSineShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders/DigitalGlitchShader.cpp
-
-    # Rendering (shaders 3D)
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/WaveformShader3D.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/VolumetricRibbonShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/WireframeMeshShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/VectorFlowShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/StringTheoryShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/ElectricFlowerShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/shaders3d/ElectricFiligreeShader.cpp
-
-    # Rendering (materials)
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/MaterialShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/EnvironmentMapManager.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/TextureManager.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/GlassRefractionShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/LiquidChromeShader.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/materials/CrystallineShader.cpp
 
     # Rendering (effects)
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/PostProcessEffect.cpp
@@ -88,16 +65,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ColorGradeEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ChromaticAberrationEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ScanlineEffect.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/effects/DistortionEffect.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/effects/GlitchEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/RadialBlurEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/TiltShiftEffect.cpp
-
-    # Rendering (particles)
-    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticlePool.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleEmitter.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleSystem.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/particles/ParticleSystemShaders.cpp
 
     # UI (components)
     ${CMAKE_SOURCE_DIR}/src/ui/components/ThemedComponent.cpp
@@ -123,6 +92,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordionSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilBadge.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModal.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModalAlert.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModalPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorSwatches.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorPicker.cpp
@@ -158,6 +128,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/managers/PerformanceMetricsController.cpp
 
     # UI (controllers)
+    ${CMAKE_SOURCE_DIR}/src/ui/controllers/GpuRenderCoordinator.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/controllers/OpenGLLifecycleManager.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/controllers/OscillatorPanelController.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/controllers/OscillatorPanelControllerHandlers.cpp
 
@@ -201,6 +173,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/SourceHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/ScreenshotHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/TestRunnerHandler.cpp
+    ${CMAKE_SOURCE_DIR}/src/tools/test_server/TestRunnerHandlerDragDrop.cpp
+    ${CMAKE_SOURCE_DIR}/src/tools/test_server/TestRunnerHandlerWaveformSettings.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/WaveformHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/StateHandler.cpp
 )

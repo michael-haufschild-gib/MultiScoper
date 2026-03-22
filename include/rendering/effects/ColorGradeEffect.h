@@ -25,13 +25,16 @@ namespace oscil
 class ColorGradeEffect : public PostProcessEffect
 {
 public:
+    /// Create a color grade effect with default settings.
     ColorGradeEffect();
     ~ColorGradeEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "color_grade"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Color Grade"; }
 
+    /// Compile the color grading shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

@@ -18,6 +18,7 @@ namespace oscil
 class GradientFillShader : public WaveformShader
 {
 public:
+    /// Create a gradient fill shader instance.
     GradientFillShader();
     ~GradientFillShader() override;
 
@@ -29,7 +30,9 @@ public:
     }
 
 #if OSCIL_ENABLE_OPENGL
+    /// Compile the gradient fill shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program and GPU resources.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 
@@ -45,6 +48,12 @@ private:
 #if OSCIL_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
+
+    void drawFillChannel(juce::OpenGLExtensionFunctions& ext,
+                         const std::vector<float>& samples,
+                         float centerY, float amplitude,
+                         float boundsX, float boundsWidth,
+                         GLint posLoc, GLint vLoc);
 #endif
 };
 

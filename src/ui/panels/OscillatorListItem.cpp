@@ -57,11 +57,8 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
 }
 
 
-void OscillatorListItemComponent::setupComponents(int orderIndex)
+void OscillatorListItemComponent::setupLabels()
 {
-    juce::String suffix = juce::String(orderIndex);
-
-    // Name label (inline editable)
     nameLabel_ = std::make_unique<InlineEditLabel>(themeService_, getTestId() + "_name");
     nameLabel_->setText(displayName_, false);
     nameLabel_->setPlaceholder("Oscillator name...");
@@ -80,10 +77,12 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
     trackLabel_->setComponentID("trackLabel");
     trackLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
     trackLabel_->setJustificationType(juce::Justification::topLeft);
-    trackLabel_->setInterceptsMouseClicks(false, false); // Let clicks pass to item
+    trackLabel_->setInterceptsMouseClicks(false, false);
     addAndMakeVisible(*trackLabel_);
+}
 
-    // Delete button with trash icon
+void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
+{
     deleteButton_ = std::make_unique<OscilButton>(themeService_, "");
     deleteButton_->setVariant(ButtonVariant::Icon);
     deleteButton_->setIconPath(ListItemIcons::createTrashIcon(static_cast<float>(ICON_BUTTON_SIZE)));
@@ -92,7 +91,6 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
     deleteButton_->onClick = [this]() { listeners_.call([this](Listener& l) { l.oscillatorDeleteRequested(oscillatorId_); }); };
     addChildComponent(*deleteButton_);
 
-    // Settings button with gear icon
     settingsButton_ = std::make_unique<OscilButton>(themeService_, "");
     settingsButton_->setVariant(ButtonVariant::Icon);
     settingsButton_->setIconPath(ListItemIcons::createGearIcon(static_cast<float>(ICON_BUTTON_SIZE)));
@@ -101,12 +99,10 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
     settingsButton_->onClick = [this]() { listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); }); };
     addChildComponent(*settingsButton_);
 
-    // Visibility button - eye icon
     visibilityButton_ = std::make_unique<OscilButton>(themeService_, "");
     visibilityButton_->setVariant(ButtonVariant::Icon);
     if (suffix.isNotEmpty()) visibilityButton_->setTestId(getTestId() + "_vis_btn");
     visibilityButton_->onClick = [this]() {
-        // If trying to make visible but no valid pane, request pane selection
         if (!isVisible_ && !paneId_.isValid())
         {
             listeners_.call([this](Listener& l) { l.oscillatorPaneSelectionRequested(oscillatorId_); });
@@ -117,11 +113,12 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
         listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
     };
     addChildComponent(*visibilityButton_);
+}
 
-    // Mode buttons - using icons for Stereo/Mono, short text for others
-    // Tooltips help users understand what each processing mode does
+void OscillatorListItemComponent::setupModeButtons(const juce::String& suffix)
+{
     modeButtons_ = std::make_unique<SegmentedButtonBar>(themeService_);
-    modeButtons_->setMinButtonWidth(36);  // Compact buttons for 6 modes
+    modeButtons_->setMinButtonWidth(36);
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(14),
         static_cast<int>(ProcessingMode::FullStereo), {}, "Stereo: Display both L/R channels");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(14),
@@ -134,18 +131,21 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
         static_cast<int>(ProcessingMode::Left), {}, "Left: Left channel only");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(14),
         static_cast<int>(ProcessingMode::Right), {}, "Right: Right channel only");
-    if (suffix.isNotEmpty()) 
-    {
-        // SegmentedButtonBar doesn't easily support setting IDs for internal buttons via this API
-        // But we can register the bar itself
+    if (suffix.isNotEmpty())
         OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, getTestId() + "_mode");
-    }
     modeButtons_->onSelectionChanged = [this](int id) {
         processingMode_ = static_cast<ProcessingMode>(id);
         listeners_.call([this](Listener& l) { l.oscillatorModeChanged(oscillatorId_, processingMode_); });
     };
     addChildComponent(*modeButtons_);
+}
 
+void OscillatorListItemComponent::setupComponents(int orderIndex)
+{
+    juce::String suffix = juce::String(orderIndex);
+    setupLabels();
+    setupActionButtons(suffix);
+    setupModeButtons(suffix);
     updateVisibility();
 }
 

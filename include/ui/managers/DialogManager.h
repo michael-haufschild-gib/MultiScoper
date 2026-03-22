@@ -31,8 +31,8 @@ class DialogManager : public juce::ComponentListener
 
 public:
 
+    /// Construct with parent component and service dependencies.
     DialogManager(juce::Component& parent, IThemeService& themeService, IInstanceRegistry& instanceRegistry);
-
     ~DialogManager() override;
 
 
@@ -65,20 +65,17 @@ public:
 
     
 
+    /// Close the oscillator config popup if open.
     void closeConfigPopup();
-
+    /// Check if the config popup is currently showing for the given oscillator.
     bool isConfigPopupVisibleFor(const OscillatorId& oscillatorId) const;
 
-
-
+    /// Register a listener for config popup events.
     void addConfigPopupListener(OscillatorConfigDialog::Listener* listener);
-
+    /// Remove a config popup listener.
     void removeConfigPopupListener(OscillatorConfigDialog::Listener* listener);
 
-
-
-    // ComponentListener
-
+    /// Handle component deletion (cleanup config popup reference).
     void componentBeingDeleted(juce::Component& component) override;
 
 

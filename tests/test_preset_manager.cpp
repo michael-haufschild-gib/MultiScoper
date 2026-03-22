@@ -37,8 +37,8 @@ TEST_F(PresetManagerTest, BuiltInPresetsAvailable)
 {
     auto presets = manager.getAvailablePresets();
 
-    // Should have at least the 4 built-in presets
-    ASSERT_GE(presets.size(), 4u);
+    // Should have at least the 2 built-in presets (default, vector_scope)
+    ASSERT_GE(presets.size(), 2u);
 
     bool foundDefault = false;
     bool foundVectorScope = false;
@@ -65,10 +65,7 @@ TEST_F(PresetManagerTest, SaveAndLoadUserPreset)
     VisualConfiguration config;
     config.shaderType = ShaderType::NeonGlow;
     config.bloom.enabled = true;
-    config.bloom.intensity = 2.5f;
-    config.particles.enabled = true;
-    config.particles.emissionRate = 100.0f;
-
+    config.bloom.intensity = 1.8f;
     ASSERT_TRUE(manager.saveUserPreset("My Custom Preset", config));
 
     // Verify it appears in available presets
@@ -88,9 +85,7 @@ TEST_F(PresetManagerTest, SaveAndLoadUserPreset)
     auto loaded = manager.loadPreset("user_my_custom_preset");
     EXPECT_EQ(loaded.shaderType, ShaderType::NeonGlow);
     EXPECT_TRUE(loaded.bloom.enabled);
-    EXPECT_FLOAT_EQ(loaded.bloom.intensity, 2.5f);
-    EXPECT_TRUE(loaded.particles.enabled);
-    EXPECT_FLOAT_EQ(loaded.particles.emissionRate, 100.0f);
+    EXPECT_FLOAT_EQ(loaded.bloom.intensity, 1.8f);
 }
 
 TEST_F(PresetManagerTest, DeleteUserPreset)
@@ -113,9 +108,9 @@ TEST_F(PresetManagerTest, CannotDeleteBuiltInPreset)
 TEST_F(PresetManagerTest, ExportAndImportPreset)
 {
     VisualConfiguration config;
-    config.shaderType = ShaderType::PlasmaSine;
+    config.shaderType = ShaderType::DualOutline;
     config.chromaticAberration.enabled = true;
-    config.chromaticAberration.intensity = 0.8f;
+    config.chromaticAberration.intensity = 0.015f;
     ASSERT_TRUE(manager.saveUserPreset("Exportable", config));
 
     auto exportFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
@@ -133,9 +128,9 @@ TEST_F(PresetManagerTest, ExportAndImportPreset)
 
     // Verify data survived roundtrip
     auto loaded = manager.loadPreset("user_exportable");
-    EXPECT_EQ(loaded.shaderType, ShaderType::PlasmaSine);
+    EXPECT_EQ(loaded.shaderType, ShaderType::DualOutline);
     EXPECT_TRUE(loaded.chromaticAberration.enabled);
-    EXPECT_FLOAT_EQ(loaded.chromaticAberration.intensity, 0.8f);
+    EXPECT_FLOAT_EQ(loaded.chromaticAberration.intensity, 0.015f);
 
     exportFile.deleteFile();
 }
@@ -149,7 +144,7 @@ TEST_F(PresetManagerTest, SaveEmptyNameFails)
 TEST_F(PresetManagerTest, RenameUserPreset)
 {
     VisualConfiguration config;
-    config.shaderType = ShaderType::DigitalGlitch;
+    config.shaderType = ShaderType::GradientFill;
     ASSERT_TRUE(manager.saveUserPreset("OldName", config));
 
     EXPECT_TRUE(manager.renameUserPreset("user_oldname", "NewName"));
@@ -157,5 +152,5 @@ TEST_F(PresetManagerTest, RenameUserPreset)
     EXPECT_TRUE(manager.isUserPreset("user_newname"));
 
     auto loaded = manager.loadPreset("user_newname");
-    EXPECT_EQ(loaded.shaderType, ShaderType::DigitalGlitch);
+    EXPECT_EQ(loaded.shaderType, ShaderType::GradientFill);
 }

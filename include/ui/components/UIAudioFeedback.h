@@ -50,17 +50,18 @@ public:
     void setVolume(float volume);
     float getVolume() const { return volume_; }
 
-    // Play sounds
+    /// Trigger the synthesised feedback sound for the given interaction type.
     void playSound(SoundType type);
 
-    // Individual sound enables
+    /// Enable or disable a specific sound type.
     void setSoundEnabled(SoundType type, bool enabled);
+    /// Query whether a specific sound type is currently enabled.
     bool isSoundEnabled(SoundType type) const;
 
     // Audio device setup
     void setAudioDevice(juce::AudioDeviceManager* deviceManager);
 
-    // Cleanup
+    /// Release audio resources and stop all pending sounds.
     void shutdown();
 
     UIAudioFeedback(const UIAudioFeedback&) = delete;

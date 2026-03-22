@@ -96,6 +96,7 @@ struct ColorTheme
         initializeDefaultWaveformColors();
     }
 
+    /// Populate the waveformColors vector with the default HSL-distributed palette.
     void initializeDefaultWaveformColors();
 
     /**
@@ -327,7 +328,7 @@ public:
     // Timer callback for async saving
     void timerCallback() override;
 
-    // Flush any pending saves immediately (e.g. on shutdown)
+    /// Write any pending theme changes to disk immediately (call on shutdown).
     void flushPendingSaves();
 
     // Prevent copying

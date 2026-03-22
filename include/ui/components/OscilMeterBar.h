@@ -51,6 +51,7 @@ public:
     void setLevel(float level);
     void setLevels(float left, float right);  // Stereo
     void setRMSLevel(float rms);
+    /// Set per-channel RMS levels for stereo metering.
     void setRMSLevels(float leftRMS, float rightRMS);
 
     float getLevel() const { return leftLevel_; }
@@ -83,7 +84,9 @@ public:
 
     // State
     bool isClipping() const { return leftClip_ || rightClip_; }
+    /// Clear the clip indicator for both channels.
     void resetClip();
+    /// Reset the peak-hold value so the indicator drops to the current level.
     void resetPeakHold();
 
     // Size hints
@@ -105,6 +108,12 @@ private:
 
     void paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
                     float level, float rms, float peakHold, bool clip);
+    void paintMeterVertical(juce::Graphics& g, const juce::Rectangle<int>& bounds,
+                            juce::ColourGradient& gradient,
+                            float levelPos, float rmsPos, float peakPos, bool clip);
+    void paintMeterHorizontal(juce::Graphics& g, const juce::Rectangle<int>& bounds,
+                              juce::ColourGradient& gradient,
+                              float levelPos, float peakPos, bool clip);
     void paintScale(juce::Graphics& g, juce::Rectangle<int> bounds);
 
     // Current levels

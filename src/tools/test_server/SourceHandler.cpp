@@ -16,6 +16,71 @@
 namespace oscil
 {
 
+namespace
+{
+
+OscillatorId resolveOscId(const std::string& idStr, int index, const std::vector<Oscillator>& oscillators)
+{
+    OscillatorId targetId;
+    if (!idStr.empty())
+        targetId.id = juce::String(idStr);
+    else if (index >= 0 && index < static_cast<int>(oscillators.size()))
+        targetId = oscillators[static_cast<size_t>(index)].getId();
+    return targetId;
+}
+
+void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType,
+                          float frequency, float amplitude, float sampleRate)
+{
+    int numSamples = buffer.getNumSamples();
+    float phase = 0.0f;
+    float safeSampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
+    float phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / safeSampleRate;
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float sample = 0.0f;
+
+        if (waveformType == "sine")
+            sample = std::sin(phase) * amplitude;
+        else if (waveformType == "square")
+            sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
+        else if (waveformType == "triangle")
+        {
+            float t = phase / (2.0f * juce::MathConstants<float>::pi);
+            sample = (2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f))) - 1.0f) * amplitude;
+        }
+        else if (waveformType == "sawtooth")
+        {
+            float t = phase / (2.0f * juce::MathConstants<float>::pi);
+            sample = (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
+        }
+        else if (waveformType == "noise")
+            sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
+
+        buffer.setSample(0, i, sample);
+        buffer.setSample(1, i, sample * 0.8f);
+
+        phase += phaseIncrement;
+        if (phase > 2.0f * juce::MathConstants<float>::pi)
+            phase -= 2.0f * juce::MathConstants<float>::pi;
+    }
+}
+
+CaptureFrameMetadata makeTestMetadata(float sampleRate, int numSamples)
+{
+    CaptureFrameMetadata metadata;
+    metadata.sampleRate = sampleRate;
+    metadata.numChannels = 2;
+    metadata.numSamples = numSamples;
+    metadata.isPlaying = true;
+    metadata.bpm = 120.0f;
+    metadata.timestamp = 0;
+    return metadata;
+}
+
+} // namespace
+
 void SourceHandler::handleGetSources(const httplib::Request& /*req*/, httplib::Response& res)
 {
     auto result = runOnMessageThread([]() -> nlohmann::json {
@@ -141,6 +206,41 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
     }
 }
 
+nlohmann::json SourceHandler::assignSourceOnMessageThread(
+    const std::string& oscillatorId, const std::string& sourceId, int oscillatorIndex)
+{
+    nlohmann::json response;
+    auto& state = editor_.getProcessor().getState();
+    auto oscillators = state.getOscillators();
+
+    auto targetOscId = resolveOscId(oscillatorId, oscillatorIndex, oscillators);
+    if (!targetOscId.isValid()) { response["error"] = "Invalid oscillator index"; return response; }
+
+    for (auto& osc : oscillators)
+    {
+        if (osc.getId().id != targetOscId.id) continue;
+
+        SourceId newSourceId;
+        newSourceId.id = juce::String(sourceId);
+        osc.setSourceId(newSourceId);
+        state.updateOscillator(osc);
+
+        auto& registry = PluginFactory::getInstance().getInstanceRegistry();
+        auto buffer = registry.getCaptureBuffer(newSourceId);
+
+        if (auto* controller = editor_.getOscillatorPanelController())
+            controller->updateOscillatorSource(targetOscId, newSourceId);
+
+        response["status"] = "ok";
+        response["oscillatorId"] = targetOscId.id.toStdString();
+        response["sourceId"] = sourceId;
+        response["hasBuffer"] = (buffer != nullptr);
+        return response;
+    }
+    response["error"] = "Oscillator not found";
+    return response;
+}
+
 void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Response& res)
 {
     try
@@ -159,67 +259,9 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
             return;
         }
 
-        auto result = runOnMessageThread([this, oscillatorId, sourceId, oscillatorIndex]() -> nlohmann::json {
-            nlohmann::json response;
-            auto& state = editor_.getProcessor().getState();
-            auto oscillators = state.getOscillators();
-
-            // Find the oscillator
-            OscillatorId targetOscId;
-            if (!oscillatorId.empty())
-            {
-                targetOscId.id = juce::String(oscillatorId);
-            }
-            else if (oscillatorIndex >= 0 && oscillatorIndex < static_cast<int>(oscillators.size()))
-            {
-                targetOscId = oscillators[static_cast<size_t>(oscillatorIndex)].getId();
-            }
-            else
-            {
-                response["error"] = "Invalid oscillator index";
-                return response;
-            }
-
-            // Find the oscillator in state and update it
-            bool found = false;
-            for (auto& osc : oscillators)
-            {
-                if (osc.getId().id == targetOscId.id)
-                {
-                    SourceId newSourceId;
-                    newSourceId.id = juce::String(sourceId);
-                    osc.setSourceId(newSourceId);
-
-                    // Update the oscillator in state
-                    state.updateOscillator(osc);
-
-                    // Bind the capture buffer to the waveform component
-                    auto& registry = PluginFactory::getInstance().getInstanceRegistry();
-                    auto buffer = registry.getCaptureBuffer(newSourceId);
-
-                    // Trigger UI refresh to rebind waveform components
-                    if (auto* controller = editor_.getOscillatorPanelController())
-                    {
-                        controller->updateOscillatorSource(targetOscId, newSourceId);
-                    }
-
-                    response["status"] = "ok";
-                    response["oscillatorId"] = targetOscId.id.toStdString();
-                    response["sourceId"] = sourceId;
-                    response["hasBuffer"] = (buffer != nullptr);
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found)
-            {
-                response["error"] = "Oscillator not found";
-            }
-
-            return response;
+        auto result = runOnMessageThread([this, oscillatorId, sourceId, oscillatorIndex]() {
+            return assignSourceOnMessageThread(oscillatorId, sourceId, oscillatorIndex);
         });
-
         res.set_content(result.dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -229,6 +271,49 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
         res.status = 400;
         res.set_content(error.dump(), "application/json");
     }
+}
+
+nlohmann::json SourceHandler::injectSourceDataOnMessageThread(
+    const std::string& sourceId, const std::string& waveformType,
+    float frequency, float amplitude, int numSamples, float sampleRate)
+{
+    nlohmann::json response;
+
+    auto& registry = PluginFactory::getInstance().getInstanceRegistry();
+    SourceId srcId;
+    srcId.id = juce::String(sourceId);
+    auto captureBuffer = registry.getCaptureBuffer(srcId);
+
+    if (!captureBuffer)
+    {
+        auto it = testSourceBuffers_.find(sourceId);
+        if (it != testSourceBuffers_.end())
+            captureBuffer = it->second;
+    }
+
+    if (!captureBuffer) { response["error"] = "Source not found or no capture buffer"; return response; }
+
+    juce::AudioBuffer<float> testBuffer(2, numSamples);
+    generateTestWaveform(testBuffer, waveformType, frequency, amplitude, sampleRate);
+
+    auto metadata = makeTestMetadata(sampleRate, numSamples);
+
+    if (auto decBuffer = std::dynamic_pointer_cast<DecimatingCaptureBuffer>(captureBuffer))
+        decBuffer->write(testBuffer, metadata);
+    else if (auto sharedBuffer = std::dynamic_pointer_cast<SharedCaptureBuffer>(captureBuffer))
+        sharedBuffer->write(testBuffer, metadata, false);
+    else
+    { response["error"] = "Buffer is not writable (unknown type)"; return response; }
+
+    editor_.repaint();
+
+    response["status"] = "ok";
+    response["sourceId"] = sourceId;
+    response["waveformType"] = waveformType;
+    response["frequency"] = frequency;
+    response["amplitude"] = amplitude;
+    response["samplesInjected"] = numSamples;
+    return response;
 }
 
 void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib::Response& res)
@@ -252,110 +337,11 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             return;
         }
 
-        auto result = runOnMessageThread([this, sourceId, waveformType, frequency, amplitude, numSamples, sampleRate]() -> nlohmann::json {
-            nlohmann::json response;
-
-            // Get capture buffer for this source
-            auto& registry = PluginFactory::getInstance().getInstanceRegistry();
-            SourceId srcId;
-            srcId.id = juce::String(sourceId);
-            auto captureBuffer = registry.getCaptureBuffer(srcId);
-
-            if (!captureBuffer)
-            {
-                // Try from test source buffers
-                auto it = testSourceBuffers_.find(sourceId);
-                if (it != testSourceBuffers_.end())
-                {
-                    captureBuffer = it->second;
-                }
-            }
-
-            if (!captureBuffer)
-            {
-                response["error"] = "Source not found or no capture buffer";
-                return response;
-            }
-
-            // Generate test waveform
-            juce::AudioBuffer<float> testBuffer(2, numSamples);
-            float phase = 0.0f;
-            // Guard against division by zero
-            float safeSampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
-            float phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / safeSampleRate;
-
-            for (int i = 0; i < numSamples; ++i)
-            {
-                float sample = 0.0f;
-
-                if (waveformType == "sine")
-                {
-                    sample = std::sin(phase) * amplitude;
-                }
-                else if (waveformType == "square")
-                {
-                    sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
-                }
-                else if (waveformType == "triangle")
-                {
-                    float t = phase / (2.0f * juce::MathConstants<float>::pi);
-                    sample = (2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f))) - 1.0f) * amplitude;
-                }
-                else if (waveformType == "sawtooth")
-                {
-                    float t = phase / (2.0f * juce::MathConstants<float>::pi);
-                    sample = (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
-                }
-                else if (waveformType == "noise")
-                {
-                    sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
-                }
-
-                testBuffer.setSample(0, i, sample);
-                testBuffer.setSample(1, i, sample * 0.8f);  // Slightly different R channel
-
-                phase += phaseIncrement;
-                if (phase > 2.0f * juce::MathConstants<float>::pi)
-                    phase -= 2.0f * juce::MathConstants<float>::pi;
-            }
-
-            // Write to capture buffer
-            CaptureFrameMetadata metadata;
-            metadata.sampleRate = sampleRate;
-            metadata.numChannels = 2;
-            metadata.numSamples = numSamples;
-            metadata.isPlaying = true;
-            metadata.bpm = 120.0f;
-            metadata.timestamp = 0;
-
-            // Use blocking write (tryLock=false) for reliable test injection
-            if (auto decBuffer = std::dynamic_pointer_cast<DecimatingCaptureBuffer>(captureBuffer))
-            {
-                decBuffer->write(testBuffer, metadata);
-            }
-            else if (auto sharedBuffer = std::dynamic_pointer_cast<SharedCaptureBuffer>(captureBuffer))
-            {
-                sharedBuffer->write(testBuffer, metadata, false);
-            }
-            else
-            {
-                response["error"] = "Buffer is not writable (unknown type)";
-                return response;
-            }
-
-            // Force UI update
-            editor_.repaint();
-
-            response["status"] = "ok";
-            response["sourceId"] = sourceId;
-            response["waveformType"] = waveformType;
-            response["frequency"] = frequency;
-            response["amplitude"] = amplitude;
-            response["samplesInjected"] = numSamples;
-
-            return response;
-        });
-
+        auto result = runOnMessageThread(
+            [this, sourceId, waveformType, frequency, amplitude, numSamples, sampleRate]() {
+                return injectSourceDataOnMessageThread(sourceId, waveformType, frequency,
+                                                       amplitude, numSamples, sampleRate);
+            });
         res.set_content(result.dump(), "application/json");
     }
     catch (const std::exception& e)

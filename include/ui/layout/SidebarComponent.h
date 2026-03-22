@@ -152,6 +152,7 @@ public:
         virtual void autoAdjustQualityChanged(bool /*enabled*/) {}
     };
 
+    /// Construct the sidebar with all accordion sections wired to the service context.
     explicit SidebarComponent(ServiceContext& context);
     ~SidebarComponent() override;
 
@@ -167,19 +168,20 @@ public:
     // State management
     void setCollapsed(bool collapsed);
     bool isCollapsed() const { return collapsed_; }
+    /// Toggle between collapsed (icon-only) and expanded sidebar states.
     void toggleCollapsed();
 
     void setSidebarWidth(int width);
     int getSidebarWidth() const { return expandedWidth_; }
 
-    // Source list management
+    /// Rebuild the source list from the current registry snapshot.
     void refreshSourceList(const std::vector<SourceInfo>& sources);
 
-    // Oscillator list management
+    /// Rebuild the oscillator list from the current state snapshot.
     void refreshOscillatorList(const std::vector<Oscillator>& oscillators);
     void setSelectedOscillator(const OscillatorId& oscillatorId);
 
-    // Pane list management (for add-to-pane dropdowns)
+    /// Refresh pane names in add-to-pane dropdowns.
     void refreshPaneList(const std::vector<Pane>& panes);
 
     void addListener(Listener* listener);

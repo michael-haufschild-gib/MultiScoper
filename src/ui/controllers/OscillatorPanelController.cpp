@@ -3,6 +3,7 @@
 */
 
 #include "ui/controllers/OscillatorPanelController.h"
+#include "ui/controllers/GpuRenderCoordinator.h"
 #include "ui/managers/DialogManager.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
@@ -46,9 +47,28 @@ void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogMana
     });
 }
 
+void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& oscillators,
+                                                const PaneLayoutManager& layoutManager)
+{
+    if (!sidebar_)
+        return;
+
+    sidebar_->refreshSourceList(serviceContext_.instanceRegistry.getAllSources());
+
+    auto panes = layoutManager.getPanes();
+    juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this), panes]() {
+        if (auto* controller = weakThis.get())
+            if (controller->sidebar_) controller->sidebar_->refreshPaneList(panes);
+    });
+
+    std::vector<Oscillator> sortedOscs = oscillators;
+    std::sort(sortedOscs.begin(), sortedOscs.end(),
+              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
+    sidebar_->refreshOscillatorList(sortedOscs);
+}
+
 void OscillatorPanelController::refreshPanels()
 {
-    // Prevent recursion; queue one trailing refresh pass if needed.
     if (isUpdating_)
     {
         pendingRefresh_ = true;
@@ -58,65 +78,22 @@ void OscillatorPanelController::refreshPanels()
     isUpdating_ = true;
     pendingRefresh_ = false;
 
-    // Clear GL renderer waveforms first to prevent stale data
     gpuCoordinator_.clearWaveforms();
-
-    // Clear existing components
     paneComponents_.clear();
-    
-    // Also clear from DisplaySettingsManager BEFORE recreating
-    // (DisplaySettingsManager holds raw pointers to components we just deleted)
-    // We need a way to tell DisplaySettingsManager to clear its list, 
-    // or simply re-register later. The manager likely rebuilds on demand or we pass the new list.
-    // Since DisplaySettingsManager::registerPanes isn't a method, we rely on
-    // the fact that it usually stores a reference to the vector or we pass it in methods.
-    // Looking at existing code: DisplaySettingsManager takes the vector reference in constructor.
-    // So clearing `paneComponents_` updates the manager's view automatically (as long as it doesn't cache).
 
-    // Get state
     auto oscillators = dataProvider_.getState().getOscillators();
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
 
-    // Recreate components
     createPaneComponents(oscillators, layoutManager);
-
-    // Update Sidebar
-    if (sidebar_)
-    {
-        // Refresh lists
-        auto sources = serviceContext_.instanceRegistry.getAllSources();
-        sidebar_->refreshSourceList(sources);
-
-        auto panes = layoutManager.getPanes();
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this), panes]() {
-            if (auto* controller = weakThis.get())
-                if (controller->sidebar_) controller->sidebar_->refreshPaneList(panes);
-        });
-
-        // Sort oscillators by order
-        std::vector<Oscillator> sortedOscs = oscillators;
-        std::sort(sortedOscs.begin(), sortedOscs.end(),
-                  [](const Oscillator& a, const Oscillator& b) {
-                      return a.getOrderIndex() < b.getOrderIndex();
-                  });
-        
-        sidebar_->refreshOscillatorList(sortedOscs);
-    }
-
-    // Apply settings
+    refreshSidebar(oscillators, layoutManager);
     reapplyGlobalSettings();
-
-    // Propagate GPU state
     gpuCoordinator_.propagateGpuStateToPanes(paneComponents_);
 
-    // CRITICAL: Notify that layout needs to be updated
-    // The container has no resized() override, so we must trigger layout externally
     if (layoutNeededCallback_)
         layoutNeededCallback_();
 
     isUpdating_ = false;
 
-    // Process any refresh request that arrived while we were rebuilding.
     if (pendingRefresh_)
     {
         pendingRefresh_ = false;

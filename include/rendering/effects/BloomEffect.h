@@ -21,13 +21,16 @@ namespace oscil
 class BloomEffect : public PostProcessEffect
 {
 public:
+    /// Create a bloom effect with default settings.
     BloomEffect();
     ~BloomEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "bloom"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Bloom"; }
 
+    /// Compile the bloom shader programs (prefilter, downsample, upsample, combine).
     bool compile(juce::OpenGLContext& context) override;
+    /// Release all bloom shader programs and mip chain framebuffers.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 
@@ -79,6 +82,12 @@ private:
     bool compiled_ = false;
     int lastWidth_ = 0;
     int lastHeight_ = 0;
+
+    void resizeMipChain(juce::OpenGLContext& context, int w, int h);
+    void passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, FramebufferPool& pool);
+    void passDownsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool);
+    void passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool);
+    void passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool);
 };
 
 } // namespace oscil

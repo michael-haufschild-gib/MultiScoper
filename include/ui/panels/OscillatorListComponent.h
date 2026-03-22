@@ -36,12 +36,19 @@ public:
     {
     public:
         virtual ~Listener() = default;
+        /// Called when user clicks/selects an oscillator in the list.
         virtual void oscillatorSelected(const OscillatorId& /*id*/) {}
+        /// Called when user toggles oscillator visibility (eye icon).
         virtual void oscillatorVisibilityChanged(const OscillatorId& /*id*/, bool /*visible*/) {}
+        /// Called when user changes oscillator processing mode.
         virtual void oscillatorModeChanged(const OscillatorId& /*id*/, ProcessingMode /*mode*/) {}
+        /// Called when user requests oscillator configuration dialog.
         virtual void oscillatorConfigRequested(const OscillatorId& /*id*/) {}
+        /// Called when user requests oscillator color picker.
         virtual void oscillatorColorConfigRequested(const OscillatorId& /*id*/) {}
+        /// Called when user requests oscillator deletion.
         virtual void oscillatorDeleteRequested(const OscillatorId& /*id*/) {}
+        /// Called when user drag-drops to reorder oscillators.
         virtual void oscillatorsReordered(int /*fromIndex*/, int /*toIndex*/) {}
         /**
          * Called when user tries to set an oscillator visible but it has no valid pane assignment.
@@ -54,36 +61,50 @@ public:
         virtual void oscillatorNameChanged(const OscillatorId& /*id*/, const juce::String& /*newName*/) {}
     };
 
+    /// Construct with full service context.
     explicit OscillatorListComponent(ServiceContext& context);
+    /// Construct with individual service dependencies.
     OscillatorListComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
     ~OscillatorListComponent() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
+    /// React to theme changes.
     void themeChanged(const ColorTheme& newTheme) override;
-
-    // OscillatorListToolbar::Listener
+    /// React to filter mode changes from toolbar.
     void filterModeChanged(OscillatorFilterMode mode) override;
 
-    // OscillatorListItemComponent::Listener
+    /// Forward list item events to listeners.
     void oscillatorSelected(const OscillatorId& id) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorVisibilityChanged
     void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorModeChanged
     void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorConfigRequested
     void oscillatorConfigRequested(const OscillatorId& id) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorColorConfigRequested
     void oscillatorColorConfigRequested(const OscillatorId& id) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorDeleteRequested
     void oscillatorDeleteRequested(const OscillatorId& id) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorDragStarted
     void oscillatorDragStarted(const OscillatorId& id) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorMoveRequested
     void oscillatorMoveRequested(const OscillatorId& id, int direction) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorPaneSelectionRequested
     void oscillatorPaneSelectionRequested(const OscillatorId& id) override;
+    /// @copydoc OscillatorListItemComponent::Listener::oscillatorNameChanged
     void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) override;
 
-    // DragAndDropTarget overrides
+    /// Check if drag source is an oscillator list item.
     bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override;
+    /// Handle drag enter event for reordering.
     void itemDragEnter(const SourceDetails& dragSourceDetails) override;
+    /// Update drop indicator position during drag.
     void itemDragMove(const SourceDetails& dragSourceDetails) override;
+    /// Clean up drag state when exiting.
     void itemDragExit(const SourceDetails& dragSourceDetails) override;
+    /// Execute oscillator reorder on drop.
     void itemDropped(const SourceDetails& dragSourceDetails) override;
 
     /**
@@ -97,7 +118,9 @@ public:
      */
     void setSelectedOscillator(const OscillatorId& oscillatorId);
 
+    /// Register a listener for oscillator list events.
     void addListener(Listener* listener);
+    /// Remove a previously registered listener.
     void removeListener(Listener* listener);
 
     // Layout constants
@@ -106,6 +129,8 @@ public:
     static constexpr int OSCILLATOR_TOOLBAR_HEIGHT = 32;
 
 private:
+    std::vector<Oscillator> filterOscillators(const std::vector<Oscillator>& oscillators) const;
+    void syncContainerChildren();
     void updateOscillatorCounts();
     int getItemIndexAtY(int y) const;
     void updateDragIndicator(int targetIndex);

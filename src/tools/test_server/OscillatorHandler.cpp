@@ -13,6 +13,80 @@
 namespace oscil
 {
 
+namespace
+{
+
+OscillatorId resolveOscillatorId(const std::string& idStr, int index, const std::vector<Oscillator>& oscillators)
+{
+    OscillatorId targetId;
+    if (!idStr.empty())
+        targetId.id = juce::String(idStr);
+    else if (index >= 0 && index < static_cast<int>(oscillators.size()))
+        targetId = oscillators[static_cast<size_t>(index)].getId();
+    return targetId;
+}
+
+nlohmann::json serializeOscillatorList(std::vector<Oscillator>& oscillators)
+{
+    std::sort(oscillators.begin(), oscillators.end(),
+              [](const Oscillator& a, const Oscillator& b) {
+                  return a.getOrderIndex() < b.getOrderIndex();
+              });
+
+    nlohmann::json oscList = nlohmann::json::array();
+    for (const auto& osc : oscillators)
+    {
+        nlohmann::json oscInfo;
+        oscInfo["id"] = osc.getId().id.toStdString();
+        oscInfo["name"] = osc.getName().toStdString();
+        oscInfo["orderIndex"] = osc.getOrderIndex();
+        oscList.push_back(oscInfo);
+    }
+    return oscList;
+}
+
+} // namespace
+
+nlohmann::json OscillatorHandler::updateOscillatorOnMessageThread(
+    const std::string& idStr, int index, int processingMode, int visible)
+{
+    nlohmann::json response;
+    auto& state = editor_.getProcessor().getState();
+    auto oscillators = state.getOscillators();
+    auto targetId = resolveOscillatorId(idStr, index, oscillators);
+
+    bool found = false;
+    for (auto& osc : oscillators)
+    {
+        if (osc.getId() != targetId) continue;
+
+        if (processingMode >= 0 && processingMode <= static_cast<int>(ProcessingMode::Right))
+        {
+            auto mode = static_cast<ProcessingMode>(processingMode);
+            osc.setProcessingMode(mode);
+            if (auto* ctrl = editor_.getOscillatorPanelController())
+                ctrl->oscillatorModeChanged(targetId, mode);
+        }
+        if (visible >= 0)
+        {
+            bool isVisible = visible != 0;
+            osc.setVisible(isVisible);
+            if (auto* ctrl = editor_.getOscillatorPanelController())
+                ctrl->oscillatorVisibilityChanged(targetId, isVisible);
+        }
+        found = true;
+        break;
+    }
+
+    if (!found) { response["error"] = "Oscillator not found"; return response; }
+
+    response["status"] = "ok";
+    response["oscillatorId"] = targetId.id.toStdString();
+    if (processingMode >= 0) response["processingMode"] = processingMode;
+    if (visible >= 0) response["visible"] = visible != 0;
+    return response;
+}
+
 void OscillatorHandler::handleAddOscillator(const httplib::Request& /*req*/, httplib::Response& res)
 {
     auto result = runOnMessageThread([this]() -> nlohmann::json {
@@ -137,67 +211,11 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
             return;
         }
 
-        auto result = runOnMessageThread([this, oscillatorIndex, oscillatorIdStr, processingMode, visible]() -> nlohmann::json {
-            nlohmann::json response;
-            auto& state = editor_.getProcessor().getState();
-            auto oscillators = state.getOscillators();
-
-            // Find the oscillator
-            OscillatorId targetId;
-            if (!oscillatorIdStr.empty())
-            {
-                targetId.id = juce::String(oscillatorIdStr);
-            }
-            else if (oscillatorIndex >= 0 && oscillatorIndex < static_cast<int>(oscillators.size()))
-            {
-                targetId = oscillators[static_cast<size_t>(oscillatorIndex)].getId();
-            }
-
-            // Find and update the oscillator
-            bool found = false;
-            for (auto& osc : oscillators)
-            {
-                if (osc.getId() == targetId)
-                {
-                    // Update processing mode if provided
-                    if (processingMode >= 0 && processingMode <= 3)
-                    {
-                        auto mode = static_cast<ProcessingMode>(processingMode);
-                        osc.setProcessingMode(mode);
-                        if (auto* controller = editor_.getOscillatorPanelController())
-                            controller->oscillatorModeChanged(targetId, mode);
-                    }
-
-                    // Update visibility if provided
-                    if (visible >= 0)
-                    {
-                        bool isVisible = visible != 0;
-                        osc.setVisible(isVisible);
-                        if (auto* controller = editor_.getOscillatorPanelController())
-                            controller->oscillatorVisibilityChanged(targetId, isVisible);
-                    }
-
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found)
-            {
-                response["error"] = "Oscillator not found";
-                return response;
-            }
-
-            response["status"] = "ok";
-            response["oscillatorId"] = targetId.id.toStdString();
-            if (processingMode >= 0)
-                response["processingMode"] = processingMode;
-            if (visible >= 0)
-                response["visible"] = visible != 0;
-
-            return response;
-        });
-
+        auto result = runOnMessageThread(
+            [this, oscillatorIndex, oscillatorIdStr, processingMode, visible]() {
+                return updateOscillatorOnMessageThread(oscillatorIdStr, oscillatorIndex,
+                                                      processingMode, visible);
+            });
         res.set_content(result.dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -265,36 +283,15 @@ void OscillatorHandler::handleReorderOscillator(const httplib::Request& req, htt
                 return response;
             }
 
-            // Perform the reorder
             state.reorderOscillators(fromIndex, toIndex);
-
-            // Refresh the UI
             editor_.refreshPanels();
 
-            // Get updated oscillators
             auto oscillatorsAfter = state.getOscillators();
-
-            // Sort by orderIndex for response
-            std::sort(oscillatorsAfter.begin(), oscillatorsAfter.end(),
-                      [](const Oscillator& a, const Oscillator& b) {
-                          return a.getOrderIndex() < b.getOrderIndex();
-                      });
-
-            nlohmann::json oscList = nlohmann::json::array();
-            for (const auto& osc : oscillatorsAfter)
-            {
-                nlohmann::json oscInfo;
-                oscInfo["id"] = osc.getId().id.toStdString();
-                oscInfo["name"] = osc.getName().toStdString();
-                oscInfo["orderIndex"] = osc.getOrderIndex();
-                oscList.push_back(oscInfo);
-            }
 
             response["status"] = "ok";
             response["fromIndex"] = fromIndex;
             response["toIndex"] = toIndex;
-            response["oscillators"] = oscList;
-
+            response["oscillators"] = serializeOscillatorList(oscillatorsAfter);
             return response;
         });
 

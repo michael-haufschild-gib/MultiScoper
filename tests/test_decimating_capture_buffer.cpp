@@ -377,3 +377,5 @@ TEST_F(DecimatingBufferWriteReadTest, DecimationNormalizesMetadataSampleRateAndT
     EXPECT_EQ(latest.numSamples, 240);
 }
 
+// Anti-aliasing and decimation accuracy tests in test_decimating_capture_buffer_edge.cpp
+

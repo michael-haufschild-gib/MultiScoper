@@ -22,69 +22,58 @@ AddOscillatorDialog::~AddOscillatorDialog()
     themeService_.removeListener(this);
 }
 
-void AddOscillatorDialog::setupComponents()
+void AddOscillatorDialog::createFormFields()
 {
-    // Source section
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
     addAndMakeVisible(*sourceLabel_);
-
     sourceDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select source...", "addOscillatorDialog_sourceDropdown");
     sourceDropdown_->onSelectionChanged = [this](int) { handleSourceChange(); };
     addAndMakeVisible(*sourceDropdown_);
 
-    // Pane section
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
     addAndMakeVisible(*paneLabel_);
-
     paneSelector_ = std::make_unique<PaneSelectorComponent>(themeService_, true, "addOscillatorDialog_paneSelector");
     paneSelector_->onSelectionChanged = [this](const PaneId&, bool) { clearError(); };
     addAndMakeVisible(*paneSelector_);
 
-    // Name section
     nameLabel_ = std::make_unique<juce::Label>("", "Name");
     addAndMakeVisible(*nameLabel_);
-
     nameField_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "addOscillatorDialog_nameField");
     nameField_->setPlaceholder("Oscillator name");
     addAndMakeVisible(*nameField_);
 
-    // Color section
     colorLabel_ = std::make_unique<juce::Label>("", "Color");
     addAndMakeVisible(*colorLabel_);
-
     colorSwatches_ = std::make_unique<OscilColorSwatches>(themeService_, "addOscillatorDialog_colorPicker");
     colorSwatches_->setColors(getDefaultColors());
     addAndMakeVisible(*colorSwatches_);
 
-    // Visual Preset section
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
-
     visualPresetDropdown_ = std::make_unique<OscilDropdown>(themeService_, "", "addOscillatorDialog_visualPresetDropdown");
     populateVisualPresetDropdown();
     addAndMakeVisible(*visualPresetDropdown_);
 
-    // Error label (hidden by default)
     errorLabel_ = std::make_unique<juce::Label>("", "");
     errorLabel_->setVisible(false);
     addAndMakeVisible(*errorLabel_);
+}
 
-    // OK button (Primary)
+void AddOscillatorDialog::setupComponents()
+{
+    createFormFields();
+
     okButton_ = std::make_unique<OscilButton>(themeService_, "OK", "addOscillatorDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() { handleOkClick(); };
     addAndMakeVisible(*okButton_);
 
-    // Cancel button (Secondary)
     cancelButton_ = std::make_unique<OscilButton>(themeService_, "Cancel", "addOscillatorDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() { handleCancelClick(); };
     addAndMakeVisible(*cancelButton_);
 
-    // Apply initial theme
     themeChanged(themeService_.getCurrentTheme());
-
-    // Set size for OscilModal
     setSize(getPreferredWidth(), getPreferredHeight());
 }
 
@@ -240,32 +229,19 @@ void AddOscillatorDialog::handleSourceChange()
     updateNameFromSource();
 }
 
-void AddOscillatorDialog::handleOkClick()
+AddOscillatorDialog::Result AddOscillatorDialog::buildResult() const
 {
-    if (!validateInput())
-    {
-        return;
-    }
-
-    // Build result
     Result result;
 
-    // Get selected source
     int sourceIndex = sourceDropdown_->getSelectedIndex();
     result.sourceId = sources_[static_cast<size_t>(sourceIndex)].sourceId;
 
-    // Get selected pane from PaneSelectorComponent
     result.createNewPane = paneSelector_->isNewPaneSelected();
     if (result.createNewPane)
-    {
-        result.paneId = PaneId{};  // Empty, will create new
-    }
+        result.paneId = PaneId{};
     else
-    {
         result.paneId = paneSelector_->getSelectedPaneId();
-    }
 
-    // Get name (or use source name as fallback)
     result.name = nameField_->getText();
     if (result.name.isEmpty())
     {
@@ -273,35 +249,30 @@ void AddOscillatorDialog::handleOkClick()
         result.name = source.name.isEmpty() ? "Oscillator" : source.name;
     }
 
-    // Get selected color
     if (colorSwatches_->getSelectedIndex() >= 0)
-    {
         result.color = colorSwatches_->getSelectedColor();
-    }
     else
-    {
-        // Should not happen if validation passes, but safe fallback
         result.color = WaveformColorPalette::getColor(0);
-    }
 
-    // Get selected visual preset
     int presetIndex = visualPresetDropdown_->getSelectedIndex();
     auto availablePresets = VisualConfiguration::getAvailablePresets();
     if (presetIndex >= 0 && static_cast<size_t>(presetIndex) < availablePresets.size())
-    {
         result.visualPresetId = availablePresets[static_cast<size_t>(presetIndex)].first;
-    }
     else
-    {
-        // Default to basic if nothing selected
         result.visualPresetId = "default";
-    }
 
-    // Call callback
+    return result;
+}
+
+void AddOscillatorDialog::handleOkClick()
+{
+    if (!validateInput())
+        return;
+
+    auto result = buildResult();
+
     if (callback_)
-    {
         callback_(result);
-    }
 }
 
 void AddOscillatorDialog::handleCancelClick()

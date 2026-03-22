@@ -37,6 +37,7 @@ public:
     // Narrower = more taps but flatter passband
     static constexpr float TRANSITION_WIDTH_RATIO = 0.1f;
 
+    /// Create a default decimation filter with no decimation (ratio = 1).
     DecimationFilter();
 
     /**

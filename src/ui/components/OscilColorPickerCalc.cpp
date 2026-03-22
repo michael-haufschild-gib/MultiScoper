@@ -83,9 +83,57 @@ void OscilColorPicker::paintWheelMode(juce::Graphics& g)
     g.drawEllipse(indicatorX - 5, indicatorY - 5, 10, 10, 1.0f);
 }
 
+void OscilColorPicker::updateSquareGradient(const juce::Rectangle<int>& bounds)
+{
+    cachedHue_ = hue_;
+    cachedIsWheelMode_ = false;
+
+    juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
+    float heightF = static_cast<float>(std::max(1, bounds.getHeight()));
+    float widthF = static_cast<float>(std::max(1, bounds.getWidth()));
+
+    for (int y = 0; y < bounds.getHeight(); ++y)
+    {
+        float brightness = 1.0f - (static_cast<float>(y) / heightF);
+        for (int x = 0; x < bounds.getWidth(); ++x)
+        {
+            float saturation = static_cast<float>(x) / widthF;
+            data.setPixelColour(x, y, juce::Colour::fromHSV(hue_, saturation, brightness, 1.0f));
+        }
+    }
+}
+
+void OscilColorPicker::updateWheelGradient(const juce::Rectangle<int>& bounds)
+{
+    cachedHue_ = -10.0f;
+    cachedIsWheelMode_ = true;
+    float radius = std::max(1.0f, static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f);
+    float cx = static_cast<float>(bounds.getWidth()) / 2.0f;
+    float cy = static_cast<float>(bounds.getHeight()) / 2.0f;
+
+    juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
+
+    for (int y = 0; y < bounds.getHeight(); ++y)
+    {
+        for (int x = 0; x < bounds.getWidth(); ++x)
+        {
+            float dx = static_cast<float>(x) - cx;
+            float dy = static_cast<float>(y) - cy;
+            float distance = std::sqrt(dx * dx + dy * dy);
+
+            if (distance <= radius)
+            {
+                float angle = std::atan2(dy, dx);
+                float hue = (angle + juce::MathConstants<float>::pi) / (2.0f * juce::MathConstants<float>::pi);
+                float sat = distance / radius;
+                data.setPixelColour(x, y, juce::Colour::fromHSV(hue, sat, brightness_, 1.0f));
+            }
+        }
+    }
+}
+
 void OscilColorPicker::updateGradientCache(const juce::Rectangle<int>& bounds)
 {
-    // Guard against zero or negative dimensions
     if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0)
         return;
 
@@ -93,58 +141,9 @@ void OscilColorPicker::updateGradientCache(const juce::Rectangle<int>& bounds)
     cachedGradientBounds_ = bounds;
 
     if (mode_ == Mode::Square)
-    {
-        cachedHue_ = hue_;
-        cachedIsWheelMode_ = false;
-
-        juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
-
-        float heightF = static_cast<float>(std::max(1, bounds.getHeight()));
-        float widthF = static_cast<float>(std::max(1, bounds.getWidth()));
-
-        for (int y = 0; y < bounds.getHeight(); ++y)
-        {
-            float brightness = 1.0f - (static_cast<float>(y) / heightF);
-
-            for (int x = 0; x < bounds.getWidth(); ++x)
-            {
-                float saturation = static_cast<float>(x) / widthF;
-                auto color = juce::Colour::fromHSV(hue_, saturation, brightness, 1.0f);
-                data.setPixelColour(x, y, color);
-            }
-        }
-    }
+        updateSquareGradient(bounds);
     else
-    {
-        cachedHue_ = -10.0f; // Not used in wheel mode
-        cachedIsWheelMode_ = true;
-        float radius = std::max(1.0f, static_cast<float>(std::min(bounds.getWidth(), bounds.getHeight())) / 2.0f);
-        float cx = static_cast<float>(bounds.getWidth()) / 2.0f;
-        float cy = static_cast<float>(bounds.getHeight()) / 2.0f;
-
-        juce::Image::BitmapData data(cachedGradientImage_, juce::Image::BitmapData::writeOnly);
-
-        for (int y = 0; y < bounds.getHeight(); ++y)
-        {
-            for (int x = 0; x < bounds.getWidth(); ++x)
-            {
-                float dx = static_cast<float>(x) - cx;
-                float dy = static_cast<float>(y) - cy;
-                float distance = std::sqrt(dx * dx + dy * dy);
-
-                if (distance <= radius)
-                {
-                    float angle = std::atan2(dy, dx);
-                    float hue = (angle + juce::MathConstants<float>::pi) /
-                               (2.0f * juce::MathConstants<float>::pi);
-                    float sat = distance / radius;
-
-                    auto color = juce::Colour::fromHSV(hue, sat, brightness_, 1.0f);
-                    data.setPixelColour(x, y, color);
-                }
-            }
-        }
-    }
+        updateWheelGradient(bounds);
 }
 
 void OscilColorPicker::paintHueSlider(juce::Graphics& g, juce::Rectangle<int> bounds)

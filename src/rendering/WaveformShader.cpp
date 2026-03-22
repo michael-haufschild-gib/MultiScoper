@@ -8,6 +8,32 @@
 namespace oscil
 {
 
+namespace
+{
+void strokeChannelPath(juce::Graphics& g,
+                       const std::vector<float>& samples,
+                       float centerY, float amplitude,
+                       float boundsX, float boundsWidth,
+                       float lineWidth)
+{
+    if (samples.size() < 2)
+        return;
+
+    juce::Path path;
+    float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
+
+    path.startNewSubPath(boundsX, centerY - samples[0] * amplitude);
+    for (size_t i = 1; i < samples.size(); ++i)
+    {
+        float x = boundsX + static_cast<float>(i) * xScale;
+        float y = centerY - samples[i] * amplitude;
+        path.lineTo(x, y);
+    }
+
+    g.strokePath(path, juce::PathStrokeType(lineWidth));
+}
+} // namespace
+
 void WaveformShader::renderSoftware(
     juce::Graphics& g,
     const std::vector<float>& channel1,
@@ -21,65 +47,31 @@ void WaveformShader::renderSoftware(
     float width = bounds.getWidth();
     float height = bounds.getHeight();
 
-    // Calculate layout based on stereo/mono
     float centerY1, centerY2;
     float amplitude1, amplitude2;
 
     if (params.isStereo && channel2 != nullptr)
     {
-        // Stereo stacked layout
         float halfHeight = height * 0.5f;
         centerY1 = bounds.getY() + halfHeight * 0.5f;
         centerY2 = bounds.getY() + halfHeight * 1.5f;
-        amplitude1 = halfHeight * 0.45f * params.verticalScale;
-        amplitude2 = halfHeight * 0.45f * params.verticalScale;
+        amplitude1 = amplitude2 = halfHeight * 0.45f * params.verticalScale;
     }
     else
     {
-        // Mono layout
-        centerY1 = bounds.getCentreY();
-        centerY2 = centerY1;
-        amplitude1 = height * 0.45f * params.verticalScale;
-        amplitude2 = amplitude1;
+        centerY1 = centerY2 = bounds.getCentreY();
+        amplitude1 = amplitude2 = height * 0.45f * params.verticalScale;
     }
 
     g.setColour(params.colour.withAlpha(params.opacity));
 
-    // Draw first channel
-    {
-        juce::Path path;
-        float xScale = width / static_cast<float>(channel1.size() - 1);
+    strokeChannelPath(g, channel1, centerY1, amplitude1,
+                      bounds.getX(), width, params.lineWidth);
 
-        float startY = centerY1 - channel1[0] * amplitude1;
-        path.startNewSubPath(bounds.getX(), startY);
-
-        for (size_t i = 1; i < channel1.size(); ++i)
-        {
-            float x = bounds.getX() + static_cast<float>(i) * xScale;
-            float y = centerY1 - channel1[i] * amplitude1;
-            path.lineTo(x, y);
-        }
-
-        g.strokePath(path, juce::PathStrokeType(params.lineWidth));
-    }
-
-    // Draw second channel if stereo
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        juce::Path path;
-        float xScale = width / static_cast<float>(channel2->size() - 1);
-
-        float startY = centerY2 - (*channel2)[0] * amplitude2;
-        path.startNewSubPath(bounds.getX(), startY);
-
-        for (size_t i = 1; i < channel2->size(); ++i)
-        {
-            float x = bounds.getX() + static_cast<float>(i) * xScale;
-            float y = centerY2 - (*channel2)[i] * amplitude2;
-            path.lineTo(x, y);
-        }
-
-        g.strokePath(path, juce::PathStrokeType(params.lineWidth));
+        strokeChannelPath(g, *channel2, centerY2, amplitude2,
+                          bounds.getX(), width, params.lineWidth);
     }
 }
 
@@ -130,6 +122,45 @@ void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params,
     }
 }
 
+namespace
+{
+void computeLineNormal(const std::vector<float>& samples, size_t i,
+                        float boundsX, float xScale, float centerY, float amplitude,
+                        float x, float y, float& nx, float& ny)
+{
+    nx = 0.0f;
+    ny = 1.0f;
+
+    if (i > 0 && i < samples.size() - 1)
+    {
+        float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
+        float prevY = centerY - samples[i - 1] * amplitude;
+        float nextX = boundsX + (static_cast<float>(i) + 1.0f) * xScale;
+        float nextY = centerY - samples[i + 1] * amplitude;
+        float dx = nextX - prevX;
+        float dy = nextY - prevY;
+        float len = std::sqrt(dx * dx + dy * dy);
+        if (len > 0.001f) { nx = -dy / len; ny = dx / len; }
+    }
+    else if (i == 0 && samples.size() > 1)
+    {
+        float dx = (boundsX + xScale) - x;
+        float dy = (centerY - samples[1] * amplitude) - y;
+        float len = std::sqrt(dx * dx + dy * dy);
+        if (len > 0.001f) { nx = -dy / len; ny = dx / len; }
+    }
+    else if (i == samples.size() - 1 && samples.size() > 1)
+    {
+        float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
+        float prevY = centerY - samples[i - 1] * amplitude;
+        float dx = x - prevX;
+        float dy = y - prevY;
+        float len = std::sqrt(dx * dx + dy * dy);
+        if (len > 0.001f) { nx = -dy / len; ny = dx / len; }
+    }
+}
+} // namespace
+
 void WaveformShader::buildLineGeometry(
     std::vector<float>& vertices,
     const std::vector<float>& samples,
@@ -142,80 +173,28 @@ void WaveformShader::buildLineGeometry(
     if (samples.size() < 2)
         return;
 
-    // Reserve space for triangle strip (2 vertices per sample point, 4 floats per vertex: x, y, distFromCenter, reserved)
     vertices.reserve(samples.size() * 2 * 4);
-
     float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
     float halfWidth = lineWidth * 0.5f;
 
     for (size_t i = 0; i < samples.size(); ++i)
     {
-        // FIX: Add boundsX to x coordinate for screen-space positioning
         float x = boundsX + static_cast<float>(i) * xScale;
         float y = centerY - samples[i] * amplitude;
+        float nx, ny;
+        computeLineNormal(samples, i, boundsX, xScale, centerY, amplitude, x, y, nx, ny);
 
-        // Calculate normal direction (perpendicular to line segment)
-        float nx = 0.0f, ny = 1.0f;
+        float t = static_cast<float>(i) / static_cast<float>(samples.size() - 1);
 
-        if (i > 0 && i < samples.size() - 1)
-        {
-            // Average of normals from adjacent segments
-            float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
-            float prevY = centerY - samples[i - 1] * amplitude;
-            float nextX = boundsX + (static_cast<float>(i) + 1.0f) * xScale;
-            float nextY = centerY - samples[i + 1] * amplitude;
-
-            float dx = nextX - prevX;
-            float dy = nextY - prevY;
-            float len = std::sqrt(dx * dx + dy * dy);
-
-            if (len > 0.001f)
-            {
-                nx = -dy / len;
-                ny = dx / len;
-            }
-        }
-        else if (i == 0 && samples.size() > 1)
-        {
-            float nextX = boundsX + xScale;
-            float nextY = centerY - samples[1] * amplitude;
-            float dx = nextX - x;
-            float dy = nextY - y;
-            float len = std::sqrt(dx * dx + dy * dy);
-
-            if (len > 0.001f)
-            {
-                nx = -dy / len;
-                ny = dx / len;
-            }
-        }
-        else if (i == samples.size() - 1 && samples.size() > 1)
-        {
-            float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
-            float prevY = centerY - samples[i - 1] * amplitude;
-            float dx = x - prevX;
-            float dy = y - prevY;
-            float len = std::sqrt(dx * dx + dy * dy);
-
-            if (len > 0.001f)
-            {
-                nx = -dy / len;
-                ny = dx / len;
-            }
-        }
-
-        // Add top and bottom vertices of the line strip
-        // Vertex 1: position + normal offset (top of line)
         vertices.push_back(x + nx * halfWidth);
         vertices.push_back(y + ny * halfWidth);
-        vertices.push_back(1.0f);  // Distance from center (for glow)
-        vertices.push_back(static_cast<float>(i) / static_cast<float>(samples.size() - 1)); // Normalized t along wave
+        vertices.push_back(1.0f);
+        vertices.push_back(t);
 
-        // Vertex 2: position - normal offset (bottom of line)
         vertices.push_back(x - nx * halfWidth);
         vertices.push_back(y - ny * halfWidth);
-        vertices.push_back(-1.0f);  // Distance from center (for glow)
-        vertices.push_back(static_cast<float>(i) / static_cast<float>(samples.size() - 1)); // Normalized t along wave
+        vertices.push_back(-1.0f);
+        vertices.push_back(t);
     }
 }
 
@@ -253,6 +232,27 @@ void WaveformShader::buildFillGeometry(
         vertices.push_back(0.0f); // v = 0 (bottom)
         vertices.push_back(t);    // u = t
     }
+}
+
+bool WaveformShader::setup2DProjection(juce::OpenGLContext& context,
+                                       juce::OpenGLExtensionFunctions& ext,
+                                       GLint projectionLoc)
+{
+    auto* target = context.getTargetComponent();
+    if (!target) return false;
+
+    float w = static_cast<float>(target->getWidth());
+    float h = static_cast<float>(target->getHeight());
+    if (w <= 0.0f || h <= 0.0f) return false;
+
+    float projection[16] = {
+        2.0f / w, 0.0f, 0.0f, 0.0f,
+        0.0f, -2.0f / h, 0.0f, 0.0f,
+        0.0f, 0.0f, -1.0f, 0.0f,
+        -1.0f, 1.0f, 0.0f, 1.0f
+    };
+    ext.glUniformMatrix4fv(projectionLoc, 1, juce::gl::GL_FALSE, projection);
+    return true;
 }
 
 bool WaveformShader::checkGLError([[maybe_unused]] const char* location)

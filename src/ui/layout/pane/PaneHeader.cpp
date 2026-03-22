@@ -49,19 +49,8 @@ void PaneHeader::setupComponents()
     addAndMakeVisible(*closeButton_);
 }
 
-void PaneHeader::paint(juce::Graphics& g)
+void PaneHeader::paintDragHandle(juce::Graphics& g, const juce::Rectangle<int>& handleBounds)
 {
-    const auto& theme = themeService_.getCurrentTheme();
-    auto bounds = getLocalBounds();
-
-    // Background
-    g.setColour(theme.backgroundSecondary);
-    g.fillRect(bounds);
-
-    // Draw drag handle (three horizontal lines)
-    auto handleBounds = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
-    g.setColour(theme.textSecondary.withAlpha(0.5f));
-
     int totalIconHeight = (3 * DRAG_HANDLE_LINE_HEIGHT) + (2 * DRAG_HANDLE_LINE_SPACING);
     int startY = handleBounds.getCentreY() - (totalIconHeight / 2);
 
@@ -74,44 +63,54 @@ void PaneHeader::paint(juce::Graphics& g)
             DRAG_HANDLE_LINE_HEIGHT
         );
     }
+}
 
-    // Skip name label area (handled by component)
-    bounds.removeFromLeft(NAME_LABEL_WIDTH + PADDING);
+void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& bounds,
+                                       const ColorTheme& theme)
+{
+    if (!primaryOscillator_.has_value())
+        return;
 
-    // Draw badge if we have oscillator info
-    if (primaryOscillator_.has_value())
+    auto mode = primaryOscillator_->getProcessingMode();
+    juce::Colour modeColor = primaryOscillator_->getColour();
+
+    g.setColour(theme.textSecondary);
+    g.setFont(juce::FontOptions(11.0f));
+    g.drawText("Processing:", bounds.removeFromLeft(70), juce::Justification::centredLeft);
+
+    auto badgeBounds = bounds.removeFromLeft(BADGE_WIDTH).toFloat();
+    g.setColour(modeColor.withAlpha(0.2f));
+    g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
+
+    g.setColour(modeColor);
+    g.setFont(juce::FontOptions(12.0f).withStyle("Bold"));
+    g.drawText(processingModeToString(mode), badgeBounds.toNearestInt(), juce::Justification::centred);
+
+    if (oscillatorCount_ > 1)
     {
-        auto mode = primaryOscillator_->getProcessingMode();
-        juce::String modeText = processingModeToString(mode);
-        juce::Colour modeColor = primaryOscillator_->getColour();
-
-        // "Processing:" label
-        auto labelBounds = bounds.removeFromLeft(70);
+        bounds.removeFromLeft(8);
         g.setColour(theme.textSecondary);
-        g.setFont(juce::FontOptions(11.0f));
-        g.drawText("Processing:", labelBounds, juce::Justification::centredLeft);
-
-        // Colored mode badge
-        auto badgeBounds = bounds.removeFromLeft(BADGE_WIDTH).toFloat();
-        g.setColour(modeColor.withAlpha(0.2f));
-        g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
-
-        g.setColour(modeColor);
-        g.setFont(juce::FontOptions(12.0f).withStyle("Bold"));
-        g.drawText(modeText, badgeBounds.toNearestInt(), juce::Justification::centred);
-
-        // Show additional oscillators count if more than one
-        if (oscillatorCount_ > 1)
-        {
-            bounds.removeFromLeft(8);
-            g.setColour(theme.textSecondary);
-            g.setFont(juce::FontOptions(10.0f));
-            g.drawText("+" + juce::String(oscillatorCount_ - 1) + " more",
-                       bounds, juce::Justification::centredLeft);
-        }
+        g.setFont(juce::FontOptions(10.0f));
+        g.drawText("+" + juce::String(oscillatorCount_ - 1) + " more",
+                   bounds, juce::Justification::centredLeft);
     }
+}
 
-    // Bottom separator line
+void PaneHeader::paint(juce::Graphics& g)
+{
+    const auto& theme = themeService_.getCurrentTheme();
+    auto bounds = getLocalBounds();
+
+    g.setColour(theme.backgroundSecondary);
+    g.fillRect(bounds);
+
+    auto handleBounds = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
+    g.setColour(theme.textSecondary.withAlpha(0.5f));
+    paintDragHandle(g, handleBounds);
+
+    bounds.removeFromLeft(NAME_LABEL_WIDTH + PADDING);
+    paintOscillatorBadge(g, bounds, theme);
+
     g.setColour(theme.controlBorder);
     g.drawHorizontalLine(getHeight() - 1, 0.0f, static_cast<float>(getWidth()));
 }

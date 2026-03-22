@@ -124,7 +124,7 @@ public:
      * - Linux: Reads GNOME/KDE animation settings if available
      */
 #if JUCE_MAC
-    // macOS implementation is in AnimationSettings.mm
+    /// Update animation preference from system accessibility settings (macOS .mm).
     static void updateFromSystem();
 #else
     static void updateFromSystem()

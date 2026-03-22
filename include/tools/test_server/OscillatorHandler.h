@@ -30,6 +30,10 @@ public:
     void handleGetOscillators(const httplib::Request& req, httplib::Response& res);
     void handleReorderOscillator(const httplib::Request& req, httplib::Response& res);
     void handleTestOscillatorReorder(const httplib::Request& req, httplib::Response& res);
+
+private:
+    nlohmann::json updateOscillatorOnMessageThread(const std::string& idStr, int index,
+                                                    int processingMode, int visible);
 };
 
 } // namespace oscil

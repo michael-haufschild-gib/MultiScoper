@@ -10,19 +10,8 @@ if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES "${CMAKE_SYSTEM_PROCESSOR}" CACHE STRING "" FORCE)
 endif()
 
-# Fetch cpp-httplib for HTTP server (header-only)
-CPMAddPackage(
-    NAME httplib
-    GITHUB_REPOSITORY yhirose/cpp-httplib
-    GIT_TAG v0.28.0
-)
-
-# Fetch nlohmann/json for JSON handling (header-only)
-CPMAddPackage(
-    NAME json
-    GITHUB_REPOSITORY nlohmann/json
-    GIT_TAG v3.11.3
-)
+# httplib and nlohmann/json are defined in the parent CMakeLists.txt via CPM.
+# Do NOT re-declare them here — version mismatches cause ODR violations.
 
 # Test harness sources
 set(TEST_HARNESS_SOURCES
@@ -32,9 +21,18 @@ set(TEST_HARNESS_SOURCES
     src/TestTrack.cpp
     src/TestDAW.cpp
     src/TestHttpServer.cpp
+    src/TestHttpServerTransport.cpp
+    src/TestHttpServerUI.cpp
+    src/TestHttpServerUIKeyboard.cpp
+    src/TestHttpServerVerification.cpp
+    src/TestHttpServerState.cpp
+    src/TestHttpServerMetrics.cpp
     src/TestElementRegistry.cpp
     src/TestUIController.cpp
+    src/TestUIControllerForms.cpp
+    src/TestUIControllerSimulation.cpp
     src/TestScreenshot.cpp
+    src/TestScreenshotAnalysis.cpp
     src/TestMetrics.cpp
 )
 
@@ -95,7 +93,6 @@ target_link_libraries(OscilTestHarness PRIVATE
     juce::juce_audio_basics
     juce::juce_dsp
     $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
-    httplib::httplib
     nlohmann_json::nlohmann_json
     PUBLIC
     juce::juce_recommended_config_flags

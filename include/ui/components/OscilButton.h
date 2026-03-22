@@ -58,11 +58,13 @@ public:
     void setEnabled(bool enabled);
     bool isEnabled() const { return enabled_; }
 
+    /// Set a raster icon image, optionally positioned to the left of the label.
     void setIcon(const juce::Image& icon, bool iconOnLeft = true);
     void clearIcon();
 
     // Path-based icon support (renders with theme colors)
     void setIconPath(const juce::Path& path);
+    /// Remove the vector icon path, reverting to text-only display.
     void clearIconPath();
     bool hasIconPath() const { return !iconPath_.isEmpty(); }
 
@@ -76,6 +78,7 @@ public:
     void setToggleable(bool toggleable);
     bool isToggleable() const { return toggleable_; }
 
+    /// Set the toggle state, optionally firing the onToggle callback.
     void setToggled(bool toggled, bool notify = true);
     bool isToggled() const { return isToggled_; }
     
@@ -115,7 +118,7 @@ public:
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
-    // Programmatic click - for test harness and accessibility
+    /// Simulate a click programmatically (for test harness and accessibility).
     void triggerClick();
 
 private:
@@ -128,6 +131,9 @@ private:
 
     // Rendering helpers
     void paintButton(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+    void paintButtonBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds, juce::Colour bgColour);
+    void paintButtonContent(juce::Graphics& g, const juce::Rectangle<float>& bounds,
+                            const juce::Rectangle<float>& contentBounds, juce::Colour textColour);
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
     juce::Colour getBackgroundColour() const;
     juce::Colour getTextColour() const;

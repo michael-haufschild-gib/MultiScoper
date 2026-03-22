@@ -94,17 +94,9 @@ void NeonGlowShader::render(
 
     gl_->program->use();
 
-    auto* target = context.getTargetComponent();
-    if (!target) return;
-    float w = static_cast<float>(target->getWidth());
-    float h = static_cast<float>(target->getHeight());
-    if (w <= 0.0f || h <= 0.0f) return;
+    if (!setup2DProjection(context, ext, gl_->projectionLoc))
+        return;
 
-    float projection[16] = {
-        2.0f / w, 0.0f, 0.0f, 0.0f, 0.0f, -2.0f / h, 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f
-    };
-    ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
     ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(), params.colour.getFloatGreen(),
         params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);

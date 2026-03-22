@@ -36,7 +36,7 @@ public:
     InlineEditLabel(IThemeService& themeService, const juce::String& testId);
     ~InlineEditLabel() override;
 
-    // Text content
+    /// Set the displayed text, optionally firing the onChange callback.
     void setText(const juce::String& text, bool notify = false);
     juce::String getText() const { return text_; }
 
@@ -52,8 +52,9 @@ public:
     void setReadOnly(bool readOnly);
     bool isReadOnly() const { return readOnly_; }
 
-    // Edit mode control
+    /// Enter inline text editing mode (shows the text editor overlay).
     void enterEditMode();
+    /// Exit inline editing, optionally committing the changed text.
     void exitEditMode(bool saveChanges);
     bool isInEditMode() const { return editMode_; }
 

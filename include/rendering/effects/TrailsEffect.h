@@ -22,13 +22,16 @@ namespace oscil
 class TrailsEffect : public PostProcessEffect
 {
 public:
+    /// Create a trails effect with default settings.
     TrailsEffect();
     ~TrailsEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "trails"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Trails"; }
 
+    /// Compile the trails blending shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

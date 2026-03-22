@@ -43,18 +43,25 @@ class OscilDropdownPopup : public ThemedComponent,
                            private juce::Timer
 {
 public:
+    /// Create a dropdown popup attached to the theme service.
     explicit OscilDropdownPopup(IThemeService& themeService);
     ~OscilDropdownPopup() override;
 
+    /// Set the list of items to display in the dropdown.
     void setItems(const std::vector<DropdownItem>& items);
+    /// Set indices of currently selected items.
     void setSelectedIndices(const std::set<int>& indices);
+    /// Enable multi-select mode (checkboxes instead of single selection).
     void setMultiSelect(bool multiSelect) { multiSelect_ = multiSelect; }
+    /// Enable inline search/filter text input at the top of the popup.
     void setSearchable(bool searchable);
 
     std::function<void(int)> onItemClicked;
     std::function<void()> onDismiss;
 
+    /// Show the popup anchored to the given button bounds.
     void show(juce::Component* parent, juce::Rectangle<int> buttonBounds);
+    /// Close the popup with animation.
     void dismiss();
 
     // Component overrides
@@ -115,28 +122,35 @@ class OscilDropdown : public ThemedComponent,
                       private juce::Timer
 {
 public:
+    /// Create dropdown with theme service.
     OscilDropdown(IThemeService& themeService);
+    /// Create dropdown with placeholder text.
     OscilDropdown(IThemeService& themeService, const juce::String& placeholder);
+    /// Create dropdown with placeholder text and test ID.
     OscilDropdown(IThemeService& themeService, const juce::String& placeholder, const juce::String& testId);
     ~OscilDropdown() override;
 
-    // Items management
+    /// Add a simple item by label (optionally with ID).
     void addItem(const juce::String& label, const juce::String& id = {});
+    /// Add a rich item with icon, description, etc.
     void addItem(const DropdownItem& item);
+    /// Bulk-add items by label strings.
     void addItems(const std::vector<juce::String>& labels);
+    /// Bulk-add rich items.
     void addItems(const std::vector<DropdownItem>& items);
+    /// Remove all items from the dropdown.
     void clearItems();
 
     int getNumItems() const { return static_cast<int>(items_.size()); }
     const DropdownItem& getItem(int index) const { return items_[static_cast<size_t>(index)]; }
 
-    // Single selection
+    /// Set the selected item by index. If notify is true, fires onSelectionChanged.
     void setSelectedIndex(int index, bool notify = true);
     int getSelectedIndex() const;
     juce::String getSelectedId() const;
     juce::String getSelectedLabel() const;
 
-    // Multi-selection
+    /// Set multiple selected items. If notify is true, fires onMultiSelectionChanged.
     void setSelectedIndices(const std::set<int>& indices, bool notify = true);
     std::set<int> getSelectedIndices() const { return selectedIndices_; }
     std::vector<juce::String> getSelectedIds() const;
@@ -155,8 +169,9 @@ public:
     void setEnabled(bool enabled);
     bool isEnabled() const { return enabled_; }
 
-    // Popup control
+    /// Open the dropdown popup (shows item list).
     void showPopup();
+    /// Close the dropdown popup.
     void hidePopup();
     bool isPopupVisible() const { return popupVisible_; }
 

@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <thread>
 #include <type_traits>
 #include <juce_core/juce_core.h>
 
@@ -34,41 +35,29 @@ struct SeqLock
 
     void write(const T& value)
     {
-        sequence_.fetch_add(1, std::memory_order_release);   // odd → write in progress
+        sequence_.fetch_add(1, std::memory_order_acq_rel);   // odd → write in progress
         std::memcpy(&data_, &value, sizeof(T));
+        std::atomic_thread_fence(std::memory_order_release); // ensure memcpy visible before seq
         sequence_.fetch_add(1, std::memory_order_release);   // even → write complete
     }
 
     T read() const
     {
-        static constexpr int MAX_RETRIES = 1000;
-        int retries = 0;
         T snapshot;
         for (;;)
         {
             uint32_t seq1 = sequence_.load(std::memory_order_acquire);
             if (seq1 & 1)
             {
-                if (++retries > MAX_RETRIES)
-                {
-                    // Writer appears stuck mid-write. Return best-effort data.
-                    // This fires a debug breakpoint in development builds.
-                    jassertfalse;
-                    std::memcpy(&snapshot, &data_, sizeof(T));
-                    return snapshot;
-                }
+                std::this_thread::yield();
                 continue;
             }
+            std::atomic_thread_fence(std::memory_order_acquire); // ensure data_ loads happen after seq1
             std::memcpy(&snapshot, &data_, sizeof(T));
+            std::atomic_thread_fence(std::memory_order_acquire); // ensure data_ loads complete before seq2
             uint32_t seq2 = sequence_.load(std::memory_order_acquire);
             if (seq1 == seq2)
                 return snapshot;
-            if (++retries > MAX_RETRIES)
-            {
-                // Sequence changed during read and retries exhausted. Return best-effort snapshot.
-                jassertfalse;
-                return snapshot;
-            }
         }
     }
 

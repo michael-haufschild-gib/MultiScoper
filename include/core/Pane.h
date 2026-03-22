@@ -199,12 +199,14 @@ public:
      * Get panes for a specific column
      */
     [[nodiscard]] std::vector<Pane*> getPanesInColumn(int column);
+    /// Get all panes assigned to a specific column (const version).
     [[nodiscard]] std::vector<const Pane*> getPanesInColumn(int column) const;
 
     /**
      * Get pane by ID
      */
     [[nodiscard]] Pane* getPane(const PaneId& paneId);
+    /// Get pane by ID (const version).
     [[nodiscard]] const Pane* getPane(const PaneId& paneId) const;
 
     /**

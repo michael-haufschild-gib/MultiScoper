@@ -68,6 +68,7 @@ struct WaveformRenderData
 class WaveformGLRenderer : public juce::OpenGLRenderer
 {
 public:
+    /// Create an uninitialized waveform GL renderer.
     WaveformGLRenderer();
     ~WaveformGLRenderer() override;
 
@@ -123,7 +124,7 @@ public:
 
     /**
      * Enable or disable the advanced render engine.
-     * When enabled, post-processing, particles, and 3D effects are available.
+     * When enabled, post-processing effects are available.
      * @param enabled Whether to use the render engine
      */
     void setRenderEngineEnabled(bool enabled) { useRenderEngine_ = enabled; }
@@ -176,7 +177,7 @@ private:
     GLint debugColorLoc_ = -1;
     bool debugShaderCompiled_ = false;
 
-    // Advanced render engine for post-processing, particles, 3D
+    // Advanced render engine for post-processing effects
     // Protected by engineLock_ for thread-safe access/lifecycle management
     juce::ReadWriteLock engineLock_;
     std::unique_ptr<RenderEngine> renderEngine_;

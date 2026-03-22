@@ -37,10 +37,11 @@ public:
     OscilCheckbox(IThemeService& themeService, const juce::String& label, const juce::String& testId);
     ~OscilCheckbox() override;
 
-    // State control
+    /// Set checked state, optionally firing the onChange callback.
     void setChecked(bool checked, bool notify = true);
     bool isChecked() const { return state_ == CheckState::Checked; }
 
+    /// Set the tri-state value, optionally firing the onChange callback.
     void setState(CheckState state, bool notify = true);
     CheckState getState() const { return state_; }
 

@@ -82,6 +82,7 @@ public:
     void setHoldDisplay(bool enabled);
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
+    /// Request all child waveforms to restart rendering from the given DAW timeline position.
     void requestRestartAtTimestamp(int64_t timelineSampleTimestamp);
 
     // Highlight a specific oscillator

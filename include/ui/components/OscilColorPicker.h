@@ -41,7 +41,7 @@ public:
     explicit OscilColorPicker(IThemeService& themeService, const juce::String& testId = "");
     ~OscilColorPicker() override;
 
-    // Color
+    /// Set the selected colour, optionally firing the onColorChanged callback.
     void setColor(juce::Colour color, bool notify = true);
     juce::Colour getColor() const { return currentColor_; }
 
@@ -132,6 +132,8 @@ private:
     bool cachedIsWheelMode_ = false;  // Explicit flag for cache mode
     juce::Rectangle<int> cachedGradientBounds_;
     void updateGradientCache(const juce::Rectangle<int>& bounds);
+    void updateSquareGradient(const juce::Rectangle<int>& bounds);
+    void updateWheelGradient(const juce::Rectangle<int>& bounds);
 
     // TestIdSupport
     void registerTestId() override;

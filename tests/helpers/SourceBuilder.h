@@ -186,78 +186,50 @@ public:
     /**
      * Build and return a unique_ptr to the Source
      */
+    void transitionToState(Source& source, SourceState targetState)
+    {
+        if (targetState == SourceState::DISCOVERED)
+            return;
+
+        (void)source.transitionTo(SourceState::ACTIVE);
+
+        if (targetState != SourceState::ACTIVE)
+            (void)source.transitionTo(targetState);
+    }
+
+    void applyProperties(Source& source)
+    {
+        if (owner_.has_value())
+            source.setOwningInstanceId(owner_.value());
+
+        for (const auto& backup : backupInstances_)
+            source.addBackupInstance(backup);
+
+        if (dawTrackId_.has_value())
+            source.setDawTrackId(dawTrackId_.value());
+
+        if (displayName_.has_value())
+            source.setDisplayName(displayName_.value());
+
+        source.setChannelConfig(channelConfig_);
+        source.setSampleRate(sampleRate_);
+        source.setBufferSize(bufferSize_);
+
+        if (hasCorrelation_)
+            source.updateCorrelationMetrics(correlationCoefficient_);
+
+        if (hasSignalMetrics_)
+            source.updateSignalMetrics(rmsDb_, peakDb_, dcOffset_);
+
+        if (captureBuffer_)
+            source.setCaptureBuffer(captureBuffer_);
+    }
+
     std::unique_ptr<Source> buildUnique()
     {
         auto source = std::make_unique<Source>(sourceId_);
-
-        // Transition to desired state
-        if (state_ != SourceState::DISCOVERED)
-        {
-            // Must go through ACTIVE first
-            if (state_ == SourceState::ACTIVE)
-            {
-                (void)source->transitionTo(SourceState::ACTIVE);
-            }
-            else if (state_ == SourceState::INACTIVE)
-            {
-                (void)source->transitionTo(SourceState::ACTIVE);
-                (void)source->transitionTo(SourceState::INACTIVE);
-            }
-            else if (state_ == SourceState::ORPHANED)
-            {
-                (void)source->transitionTo(SourceState::ACTIVE);
-                (void)source->transitionTo(SourceState::ORPHANED);
-            }
-            else if (state_ == SourceState::STALE)
-            {
-                (void)source->transitionTo(SourceState::ACTIVE);
-                (void)source->transitionTo(SourceState::STALE);
-            }
-        }
-
-        // Set owner and backups
-        if (owner_.has_value())
-        {
-            source->setOwningInstanceId(owner_.value());
-        }
-
-        for (const auto& backup : backupInstances_)
-        {
-            source->addBackupInstance(backup);
-        }
-
-        // Set properties
-        if (dawTrackId_.has_value())
-        {
-            source->setDawTrackId(dawTrackId_.value());
-        }
-
-        if (displayName_.has_value())
-        {
-            source->setDisplayName(displayName_.value());
-        }
-
-        source->setChannelConfig(channelConfig_);
-        source->setSampleRate(sampleRate_);
-        source->setBufferSize(bufferSize_);
-
-        // Set metrics if provided
-        if (hasCorrelation_)
-        {
-            source->updateCorrelationMetrics(correlationCoefficient_);
-        }
-
-        if (hasSignalMetrics_)
-        {
-            source->updateSignalMetrics(rmsDb_, peakDb_, dcOffset_);
-        }
-
-        // Set capture buffer if provided
-        if (captureBuffer_)
-        {
-            source->setCaptureBuffer(captureBuffer_);
-        }
-
+        transitionToState(*source, state_);
+        applyProperties(*source);
         return source;
     }
 

@@ -125,68 +125,35 @@ void StatsOverlay::updateStats(const std::vector<OscillatorStats>& stats)
 
 juce::String StatsOverlay::formatTable(const std::vector<OscillatorStats>& stats)
 {
-    juce::String s;
-    
-    // Header
-    s << juce::String("").paddedRight(' ', LABEL_COLUMN_WIDTH / 7); // Approx char width 7px
-    // Using simple padding assuming monospace
-    // 12px mono font -> approx 7px width?
-    // Let's use fixed char counts.
-    
-    // Column width in chars
-    const int colChars = 10;
-    const int labelChars = 8;
-    
-    s = juce::String("").paddedRight(' ', labelChars);
-    
+    static constexpr int colChars = 10;
+    static constexpr int labelChars = 8;
+
+    juce::String s = juce::String("").paddedRight(' ', labelChars);
     for (const auto& osc : stats)
-    {
-        // Truncate name
-        juce::String name = osc.name.substring(0, colChars - 1);
-        s << " " << name.paddedRight(' ', colChars);
-    }
+        s << " " << osc.name.substring(0, colChars - 1).paddedRight(' ', colChars);
     s << "\n";
-    
+
     auto appendRow = [&](const juce::String& label, auto valueGetter) {
         s << label.paddedRight(' ', labelChars);
         for (const auto& osc : stats)
-        {
             s << " " << valueGetter(osc).paddedRight(' ', colChars);
-        }
         s << "\n";
     };
-    
-    auto getMetric = [](const OscillatorStats& o, float MetricSnapshot::* field) -> float {
-        // Return max of L/R for simplicity in single column
-        return std::max(o.left.*field, o.right.*field);
-    };
-    
-    appendRow("Peak", [&](const OscillatorStats& o) { 
-        return formatDb(getMetric(o, &MetricSnapshot::peakDb)); 
-    });
-    
-    appendRow("RMS", [&](const OscillatorStats& o) { 
-        return formatDb(getMetric(o, &MetricSnapshot::rmsDb)); 
-    });
 
-    appendRow("Crest", [&](const OscillatorStats& o) { 
-        return formatDb(getMetric(o, &MetricSnapshot::crestFactorDb)); 
-    });
-    
-    appendRow("DC", [&](const OscillatorStats& o) { 
+    auto maxLR = [](const OscillatorStats& o, float MetricSnapshot::* f) {
+        return std::max(o.left.*f, o.right.*f);
+    };
+
+    appendRow("Peak",   [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::peakDb)); });
+    appendRow("RMS",    [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::rmsDb)); });
+    appendRow("Crest",  [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::crestFactorDb)); });
+    appendRow("DC",     [&](const OscillatorStats& o) {
         float dc = std::max(std::abs(o.left.dcOffset), std::abs(o.right.dcOffset));
-        if (dc > 0.001f) return formatPercent(dc);
-        return juce::String("-");
+        return dc > 0.001f ? formatPercent(dc) : juce::String("-");
     });
-    
-    appendRow("Attack", [&](const OscillatorStats& o) { 
-        return formatMs(getMetric(o, &MetricSnapshot::attackTimeMs)); 
-    });
-    
-    appendRow("Decay", [&](const OscillatorStats& o) { 
-        return formatMs(getMetric(o, &MetricSnapshot::decayTimeMs)); 
-    });
-    
+    appendRow("Attack", [&](const OscillatorStats& o) { return formatMs(maxLR(o, &MetricSnapshot::attackTimeMs)); });
+    appendRow("Decay",  [&](const OscillatorStats& o) { return formatMs(maxLR(o, &MetricSnapshot::decayTimeMs)); });
+
     return s;
 }
 

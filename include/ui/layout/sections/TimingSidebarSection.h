@@ -47,6 +47,7 @@ public:
         virtual void bpmChanged(float /*bpm*/) {}
     };
 
+    /// Construct the timing controls section with the given service context.
     explicit TimingSidebarSection(ServiceContext& context);
     explicit TimingSidebarSection(IThemeService& themeService);
     ~TimingSidebarSection() override;
@@ -83,6 +84,9 @@ public:
 
 private:
     void setupComponents();
+    void setupModeToggle();
+    void setupTimeControls();
+    void setupMelodicControls();
     void setupPresenterCallbacks();
     void updateModeVisibility();
     void updateUi(); // Sync UI from presenter

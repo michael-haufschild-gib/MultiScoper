@@ -106,6 +106,9 @@ private:
     IInstanceRegistry& instanceRegistry_;
 
     void setupComponents();
+    void setupSourceAndMode();
+    void setupAppearanceControls();
+    void setupPaneAndFooter();
     void updateFromOscillator(const Oscillator& oscillator);
     void notifyConfigChanged();
     void handleClose();

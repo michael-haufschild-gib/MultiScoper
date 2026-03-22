@@ -362,6 +362,35 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
     recalculateInterval();
 }
 
+namespace
+{
+void convertTriggerMode(const TimingConfigData& cfg, TimingConfig& out)
+{
+    if (cfg.triggerMode == WaveformTriggerMode::None ||
+        cfg.triggerMode == WaveformTriggerMode::Manual)
+    {
+        out.triggerMode = TriggerMode::FREE_RUNNING;
+        return;
+    }
+
+    if (cfg.triggerMode == WaveformTriggerMode::Midi)
+    {
+        out.triggerMode = TriggerMode::MIDI;
+        return;
+    }
+
+    out.triggerMode = TriggerMode::TRIGGERED;
+    switch (cfg.triggerMode)
+    {
+        case WaveformTriggerMode::RisingEdge:  out.triggerEdge = TriggerEdge::Rising;  break;
+        case WaveformTriggerMode::FallingEdge: out.triggerEdge = TriggerEdge::Falling; break;
+        case WaveformTriggerMode::BothEdges:
+        case WaveformTriggerMode::Level:       out.triggerEdge = TriggerEdge::Both;    break;
+        default: break;
+    }
+}
+} // namespace
+
 TimingConfig TimingEngine::toEntityConfig() const
 {
     auto cfg = configLock_.read();
@@ -375,48 +404,9 @@ TimingConfig TimingEngine::toEntityConfig() const
     entityConfig.hostBPM = static_cast<float>(hostInfo.bpm);
     entityConfig.syncToPlayhead = cfg.syncToPlayhead;
 
-    // Convert waveform trigger mode to entity trigger mode
-    if (cfg.triggerMode != WaveformTriggerMode::None &&
-        cfg.triggerMode != WaveformTriggerMode::Manual)
-    {
-        if (cfg.triggerMode == WaveformTriggerMode::Midi)
-        {
-            entityConfig.triggerMode = TriggerMode::MIDI;
-        }
-        else
-        {
-            entityConfig.triggerMode = TriggerMode::TRIGGERED;
-            switch (cfg.triggerMode)
-            {
-                case WaveformTriggerMode::RisingEdge:
-                    entityConfig.triggerEdge = TriggerEdge::Rising;
-                    break;
-                case WaveformTriggerMode::FallingEdge:
-                    entityConfig.triggerEdge = TriggerEdge::Falling;
-                    break;
-                case WaveformTriggerMode::BothEdges:
-                    entityConfig.triggerEdge = TriggerEdge::Both;
-                    break;
-                case WaveformTriggerMode::Level:
-                    entityConfig.triggerEdge = TriggerEdge::Both;
-                    break;
-                case WaveformTriggerMode::None:
-                case WaveformTriggerMode::Midi:
-                case WaveformTriggerMode::Manual:
-                    break;
-            }
-        }
-    }
-    else
-    {
-        entityConfig.triggerMode = TriggerMode::FREE_RUNNING;
-    }
+    convertTriggerMode(cfg, entityConfig);
 
-    // Convert linear threshold to dBFS
-    float threshold = cfg.triggerThreshold;
-    float thresholdDbfs = 20.0f * std::log10(juce::jmax(0.0001f, threshold));
-    entityConfig.triggerThreshold = thresholdDbfs;
-
+    entityConfig.triggerThreshold = 20.0f * std::log10(juce::jmax(0.0001f, cfg.triggerThreshold));
     entityConfig.midiTriggerNote = cfg.midiTriggerNote;
     entityConfig.midiTriggerChannel = cfg.midiTriggerChannel;
     entityConfig.actualIntervalMs = atomicActualIntervalMs_.load(std::memory_order_relaxed);

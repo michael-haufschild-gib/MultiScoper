@@ -21,13 +21,16 @@ namespace oscil
 class TiltShiftEffect : public PostProcessEffect
 {
 public:
+    /// Create a tilt shift effect with default settings.
     TiltShiftEffect();
     ~TiltShiftEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "tilt_shift"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Tilt Shift"; }
 
+    /// Compile the tilt shift shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

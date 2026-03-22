@@ -52,6 +52,7 @@ public:
     void setSize(ModalSize size);
     ModalSize getModalSize() const { return modalSize_; }
 
+    /// Override the preset size with explicit pixel dimensions.
     void setCustomSize(int width, int height);
 
     void setShowCloseButton(bool show);
@@ -63,8 +64,9 @@ public:
     void setCloseOnBackdropClick(bool close);
     bool getCloseOnBackdropClick() const { return closeOnBackdropClick_; }
 
-    // Show/Hide
+    /// Display the modal overlay, optionally parented to a specific component.
     void show(juce::Component* parent = nullptr);
+    /// Dismiss the modal overlay with a fade-out animation.
     void hide();
     bool isShowing() const { return isVisible() && showSpring_.position > 0.01f; }
 
@@ -84,7 +86,7 @@ public:
     void focusGained(FocusChangeType cause) override;
 
 
-    // FocusChangeListener
+    /// Dismiss the modal when focus moves outside it (FocusChangeListener).
     void globalFocusChanged(juce::Component* focusedComponent) override;
 
     // Accessibility

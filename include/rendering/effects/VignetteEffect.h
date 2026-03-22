@@ -21,13 +21,16 @@ namespace oscil
 class VignetteEffect : public PostProcessEffect
 {
 public:
+    /// Create a vignette effect with default settings.
     VignetteEffect();
     ~VignetteEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "vignette"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Vignette"; }
 
+    /// Compile the vignette shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

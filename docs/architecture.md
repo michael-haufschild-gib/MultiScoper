@@ -17,12 +17,15 @@ plugin/     → Entry points (AudioProcessor, AudioProcessorEditor)
     ↓
 ui/         → User interface (Components, Panels, Dialogs, Layout)
     ↓
-rendering/  → OpenGL visualization (Shaders, Effects, Particles)
+rendering/  → OpenGL visualization (Shaders, Effects)
     ↓
 core/       → Business logic (Oscillator, State, Registry, DSP)
 ```
 
-**Rule**: Never include `plugin/` or `ui/` headers from `core/` or `rendering/`.
+**Rule**: Never include upward. Enforced by `scripts/architecture_lint.py`:
+- `core/` must not include `ui/`, `rendering/`, `plugin/`, `tools/`
+- `rendering/` must not include `ui/`, `plugin/`, `tools/`
+- `ui/` must not include `plugin/`, `tools/`
 
 ### 2. Header/Source Separation
 
@@ -64,11 +67,8 @@ Is it a sidebar accordion section?           → ui/layout/sections/
 Is it pane-internal (header, body, overlay)? → ui/layout/pane/
 Is it theming/colors?                        → ui/theme/
 Is it OpenGL rendering core?                 → rendering/
-Is it a 2D waveform shader?                  → rendering/shaders/
-Is it a 3D visualization shader?             → rendering/shaders3d/
-Is it a material shader (glass, chrome)?     → rendering/materials/
+Is it a waveform shader?                     → rendering/shaders/
 Is it a post-process effect?                 → rendering/effects/
-Is it particle-related?                      → rendering/particles/
 Is it render subsystem logic?                → rendering/subsystems/
 Is it business logic/models?                 → core/
 Is it signal processing?                     → core/dsp/
@@ -183,9 +183,9 @@ private:
 } // namespace oscil
 ```
 
-### 2D Waveform Shader Pattern
+### Waveform Shader Pattern
 
-All 2D waveform shaders inherit from `WaveformShader`:
+All waveform shaders inherit from `WaveformShader`:
 
 ```cpp
 // include/rendering/shaders/MyShader.h
@@ -218,41 +218,6 @@ public:
 
 private:
     // OpenGL resources...
-};
-
-} // namespace oscil
-```
-
-### 3D Shader Pattern
-
-3D shaders go in `rendering/shaders3d/`:
-
-```cpp
-// include/rendering/shaders3d/My3DShader.h
-#pragma once
-
-#include "rendering/shaders3d/WaveformShader3D.h"
-
-namespace oscil
-{
-
-class My3DShader : public WaveformShader3D
-{
-public:
-    My3DShader() = default;
-    ~My3DShader() override = default;
-
-    [[nodiscard]] juce::String getId() const override { return "my_3d_shader"; }
-    [[nodiscard]] juce::String getDisplayName() const override { return "My 3D Shader"; }
-
-    // Uses Camera3D for view/projection matrices
-    void render(juce::OpenGLContext& context,
-                const std::vector<float>& samples,
-                const Shader3DRenderParams& params,
-                const Camera3D& camera) override;
-
-private:
-    // OpenGL resources, uniforms for camera matrices
 };
 
 } // namespace oscil
@@ -293,35 +258,6 @@ public:
 
 private:
     float intensity_ = 1.0f;
-};
-
-} // namespace oscil
-```
-
-### Material Shader Pattern
-
-Material shaders for advanced surface effects go in `rendering/materials/`:
-
-```cpp
-// include/rendering/materials/MyMaterialShader.h
-#pragma once
-
-#include "rendering/materials/MaterialShader.h"
-
-namespace oscil
-{
-
-class MyMaterialShader : public MaterialShader
-{
-public:
-    [[nodiscard]] juce::String getId() const override { return "my_material"; }
-
-    // Materials typically need environment maps or textures
-    void setEnvironmentMap(GLuint textureId);
-
-    void render(juce::OpenGLContext& context,
-                const std::vector<float>& samples,
-                const MaterialRenderParams& params) override;
 };
 
 } // namespace oscil
@@ -408,9 +344,7 @@ private:
 | Dialog | `{Name}Dialog.h/cpp` | `AddOscillatorDialog.h` |
 | Sidebar Section | `{Name}Section.h/cpp` | `TimingSidebarSection.h` |
 | Model | `{Name}.h/cpp` | `Oscillator.h` |
-| 2D Shader | `{Name}Shader.h/cpp` | `NeonGlowShader.h` |
-| 3D Shader | `{Name}Shader.h/cpp` | `ElectricFiligreeShader.h` |
-| Material | `{Name}Shader.h/cpp` | `LiquidChromeShader.h` |
+| Shader | `{Name}Shader.h/cpp` | `NeonGlowShader.h` |
 | Effect | `{Name}Effect.h/cpp` | `BloomEffect.h` |
 | Test | `test_{name}.cpp` | `test_oscillator.cpp` |
 | Interface | `I{Name}.h` | `IInstanceRegistry.h` |
@@ -443,10 +377,7 @@ private:
 // Rendering includes
 #include "rendering/WaveformShader.h"
 #include "rendering/shaders/NeonGlowShader.h"
-#include "rendering/shaders3d/ElectricFiligreeShader.h"
-#include "rendering/materials/LiquidChromeShader.h"
 #include "rendering/effects/BloomEffect.h"
-#include "rendering/particles/ParticleSystem.h"
 #include "rendering/subsystems/EffectPipeline.h"
 
 // Plugin includes (only from plugin/ or ui/)
@@ -549,13 +480,6 @@ void processBlock(...) {
 
 ---
 
-**Don't**: Mix 2D and 3D shader locations
-```cpp
-// Bad: 3D shader in 2D folder
-src/rendering/shaders/VolumetricRibbon.cpp  // NO!
-```
-**Do**: 2D in `shaders/`, 3D in `shaders3d/`, materials in `materials/`
-
 ---
 
 ## Quick Reference
@@ -566,9 +490,7 @@ src/rendering/shaders/VolumetricRibbon.cpp  // NO!
 - `juce::AudioProcessorEditor` - Plugin editor
 - `ThemeManagerListener` - Theme-aware components
 - `TestIdSupport` - E2E testable components
-- `WaveformShader` - 2D waveform shaders
-- `WaveformShader3D` - 3D visualization shaders
-- `MaterialShader` - Surface material shaders
+- `WaveformShader` - Waveform shaders
 - `PostProcessEffect` - Post-processing effects
 
 ### Key Namespaces

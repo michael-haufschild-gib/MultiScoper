@@ -350,6 +350,7 @@ private:
     void simulateKeyPress(juce::Component* component, const juce::KeyPress& key);
 
     json componentToJson(juce::Component* component, const juce::String& testId);
+    void appendComponentTypeInfo(json& info, juce::Component* component);
     juce::Component* getTargetComponent(const juce::String& elementId);
     juce::Component* getCurrentFocusedComponent();
 

@@ -174,23 +174,8 @@ int ThemeColorSection::getPreferredHeight() const
 // ThemeEditorComponent
 //==============================================================================
 
-ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
-    : themeService_(themeService)
+void ThemeEditorComponent::createButtons()
 {
-    themeService_.addListener(this);
-
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_TEST_ID("themeEditor");
-#endif
-
-    themeList_ = std::make_unique<juce::ListBox>("Themes", this);
-    themeList_->setRowHeight(24);
-    addAndMakeVisible(*themeList_);
-
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
-#endif
-
     createButton_ = std::make_unique<OscilButton>(themeService_, "New", "themeEditor_createBtn");
     createButton_->setVariant(ButtonVariant::Primary);
     createButton_->onClick = [this]() { handleCreateTheme(); };
@@ -223,12 +208,28 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
 
     closeButton_ = std::make_unique<OscilButton>(themeService_, "Close", "themeEditor_closeBtn");
     closeButton_->setVariant(ButtonVariant::Ghost);
-    closeButton_->onClick = [this]()
-    {
-        if (closeCallback_)
-            closeCallback_();
-    };
+    closeButton_->onClick = [this]() { if (closeCallback_) closeCallback_(); };
     addAndMakeVisible(*closeButton_);
+}
+
+ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
+    : themeService_(themeService)
+{
+    themeService_.addListener(this);
+
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_TEST_ID("themeEditor");
+#endif
+
+    themeList_ = std::make_unique<juce::ListBox>("Themes", this);
+    themeList_->setRowHeight(24);
+    addAndMakeVisible(*themeList_);
+
+#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+    OSCIL_REGISTER_CHILD_TEST_ID(*themeList_, "themeEditor_themeList");
+#endif
+
+    createButtons();
 
     nameLabel_ = std::make_unique<juce::Label>("", "Name:");
     addAndMakeVisible(*nameLabel_);
@@ -248,9 +249,7 @@ ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
     addAndMakeVisible(*colorViewport_);
 
     refreshThemeList();
-
-    auto currentThemeName = themeService_.getCurrentTheme().name;
-    selectTheme(currentThemeName);
+    selectTheme(themeService_.getCurrentTheme().name);
 }
 
 ThemeEditorComponent::~ThemeEditorComponent()
@@ -314,37 +313,32 @@ void ThemeEditorComponent::resized()
     bounds.removeFromTop(10);
 
     colorViewport_->setBounds(bounds);
+    layoutColorSections(bounds.getWidth() - 20);
+}
 
-    int contentHeight = 0;
-    int sectionWidth = bounds.getWidth() - 20;
+void ThemeEditorComponent::layoutColorSections(int sectionWidth)
+{
+    int y = 0;
+    auto layoutSection = [&](ThemeColorSection* section) {
+        if (!section) return;
+        int h = section->getPreferredHeight();
+        section->setBounds(0, y, sectionWidth, h);
+        y += h + 10;
+    };
 
-    if (backgroundSection_)
-    {
-        backgroundSection_->setBounds(0, contentHeight, sectionWidth, backgroundSection_->getPreferredHeight());
-        contentHeight += backgroundSection_->getPreferredHeight() + 10;
-    }
-    if (gridSection_)
-    {
-        gridSection_->setBounds(0, contentHeight, sectionWidth, gridSection_->getPreferredHeight());
-        contentHeight += gridSection_->getPreferredHeight() + 10;
-    }
-    if (textSection_)
-    {
-        textSection_->setBounds(0, contentHeight, sectionWidth, textSection_->getPreferredHeight());
-        contentHeight += textSection_->getPreferredHeight() + 10;
-    }
-    if (controlSection_)
-    {
-        controlSection_->setBounds(0, contentHeight, sectionWidth, controlSection_->getPreferredHeight());
-        contentHeight += controlSection_->getPreferredHeight() + 10;
-    }
+    layoutSection(backgroundSection_.get());
+    layoutSection(gridSection_.get());
+    layoutSection(textSection_.get());
+    layoutSection(controlSection_.get());
+
     if (statusSection_)
     {
-        statusSection_->setBounds(0, contentHeight, sectionWidth, statusSection_->getPreferredHeight());
-        contentHeight += statusSection_->getPreferredHeight();
+        int h = statusSection_->getPreferredHeight();
+        statusSection_->setBounds(0, y, sectionWidth, h);
+        y += h;
     }
 
-    colorContainer_->setSize(sectionWidth, contentHeight);
+    colorContainer_->setSize(sectionWidth, y);
 }
 
 int ThemeEditorComponent::getNumRows()

@@ -5,13 +5,10 @@
 #include "core/SharedCaptureBuffer.h"
 #include <cmath>
 #include <algorithm>
+#include <thread>
 
 namespace oscil
 {
-
-// Maximum retries for torn-read detection in lock-free reads.
-// After exhausting retries (writer continuously active), return best-effort data.
-static constexpr int MAX_READ_RETRIES = 3;
 
 // Round up to next power of 2 for fast bitwise modulo
 static size_t nextPowerOfTwo(size_t n)
@@ -86,7 +83,7 @@ void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamp
     const size_t secondCount = effectiveSamples - firstCount;
 
     // Increment epoch to odd → signals "write in progress" to readers
-    writeEpoch_.fetch_add(1, std::memory_order_release);
+    writeEpoch_.fetch_add(1, std::memory_order_acq_rel);
 
     for (int ch = 0; ch < static_cast<int>(MAX_CHANNELS); ++ch)
     {
@@ -115,9 +112,8 @@ void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamp
     meta.numChannels = actualChannels;
     metadata_.write(meta);
 
-    // Increment epoch to even → signals "write complete" to readers
-    // Metadata is written before this so readers seeing epoch-stable data
-    // are guaranteed the metadata for that frame has already been committed.
+    // Fence: ensure all data stores are visible before epoch even signal
+    std::atomic_thread_fence(std::memory_order_release);
     writeEpoch_.fetch_add(1, std::memory_order_release);
 }
 
@@ -156,23 +152,25 @@ int SharedCaptureBuffer::read(std::span<float> output, int channel) const
 
     // Torn-read detection: retry if a write occurred during our read.
     // The writer brackets data copies with odd/even epoch increments.
-    // We retry up to a bounded number of times to avoid infinite loops
-    // if the writer is continuously active (normal in real-time audio).
-    for (int attempt = 0; attempt <= MAX_READ_RETRIES; ++attempt)
+    // We spin with yield until we observe a consistent (untorn) snapshot.
+    for (;;)
     {
         uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
+        if (epoch1 & 1)
+        {
+            std::this_thread::yield();
+            continue;
+        }
 
         size_t available = getAvailableSamples();
         size_t requestedSamples = output.size();
 
-        // Clamp read request to available samples
         size_t safeAvailable = std::min(available, capacity_);
         size_t samplesToRead = std::min(requestedSamples, safeAvailable);
 
         if (samplesToRead == 0)
             return 0;
 
-        // Read from the most recent samples (before write position)
         size_t writePos = writePos_.load(std::memory_order_acquire);
 
         size_t readStart = (writePos + capacity_ - samplesToRead) & (capacity_ - 1);
@@ -181,43 +179,74 @@ int SharedCaptureBuffer::read(std::span<float> output, int channel) const
         size_t firstChunk = std::min(samplesToRead, capacity_ - readStart);
         size_t secondChunk = samplesToRead - firstChunk;
 
-        // Copy first chunk
+        // Fence: ensure buffer reads happen strictly after epoch1 load
+        std::atomic_thread_fence(std::memory_order_acquire);
+
         std::memcpy(output.data(), &buffer_[channelOffset + readStart], firstChunk * sizeof(float));
 
-        // Copy second chunk (wrapped)
         if (secondChunk > 0)
         {
             std::memcpy(output.data() + firstChunk, &buffer_[channelOffset], secondChunk * sizeof(float));
         }
 
+        // Fence: ensure buffer reads complete before epoch2 load
+        std::atomic_thread_fence(std::memory_order_acquire);
+
         uint32_t epoch2 = writeEpoch_.load(std::memory_order_acquire);
 
-        // If epoch unchanged and even, no write was in progress — data is consistent
-        if (epoch1 == epoch2 && (epoch1 & 1) == 0)
+        if (epoch1 == epoch2)
             return static_cast<int>(samplesToRead);
-
-        // A write overlapped our read; retry for a consistent snapshot.
-        // On the last attempt, return what we have (best-effort for UI display).
     }
-
-    // Exhausted retries — writer is very active. Return best-effort data.
-    // This is acceptable for visualization (minor glitch) but not for analysis.
-    return static_cast<int>(std::min(output.size(), std::min(getAvailableSamples(), capacity_)));
 }
 
 int SharedCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) const
 {
     int numChannels = std::min(output.getNumChannels(), static_cast<int>(MAX_CHANNELS));
-    int samplesRead = 0;
+    if (numChannels <= 0 || numSamples <= 0)
+        return 0;
 
-    for (int ch = 0; ch < numChannels; ++ch)
+    // Read all channels within a single epoch validation to guarantee
+    // cross-channel consistency. The per-channel read() method validates
+    // epochs independently, which can yield channels from different writes.
+    for (;;)
     {
-        int read = this->read(output.getWritePointer(ch), numSamples, ch);
-        if (ch == 0)
-            samplesRead = read;
-    }
+        uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
+        if (epoch1 & 1)
+        {
+            std::this_thread::yield();
+            continue;
+        }
 
-    return samplesRead;
+        size_t available = getAvailableSamples();
+        size_t safeAvailable = std::min(available, capacity_);
+        size_t samplesToRead = std::min(static_cast<size_t>(numSamples), safeAvailable);
+
+        if (samplesToRead == 0)
+            return 0;
+
+        size_t writePos = writePos_.load(std::memory_order_acquire);
+        size_t readStart = (writePos + capacity_ - samplesToRead) & (capacity_ - 1);
+        size_t firstChunk = std::min(samplesToRead, capacity_ - readStart);
+        size_t secondChunk = samplesToRead - firstChunk;
+
+        std::atomic_thread_fence(std::memory_order_acquire);
+
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            size_t channelOffset = static_cast<size_t>(ch) * capacity_;
+            float* dst = output.getWritePointer(ch);
+
+            std::memcpy(dst, &buffer_[channelOffset + readStart], firstChunk * sizeof(float));
+            if (secondChunk > 0)
+                std::memcpy(dst + firstChunk, &buffer_[channelOffset], secondChunk * sizeof(float));
+        }
+
+        std::atomic_thread_fence(std::memory_order_acquire);
+
+        uint32_t epoch2 = writeEpoch_.load(std::memory_order_acquire);
+        if (epoch1 == epoch2)
+            return static_cast<int>(samplesToRead);
+    }
 }
 
 CaptureFrameMetadata SharedCaptureBuffer::getLatestMetadata() const
@@ -233,14 +262,23 @@ size_t SharedCaptureBuffer::getAvailableSamples() const
 
 void SharedCaptureBuffer::clear()
 {
+    // Acquire writeLock_ to prevent concurrent audio-thread writes
+    // during the buffer reset.  Bracket with writeEpoch_ increments
+    // so readers can detect the concurrent modification.
+    const juce::SpinLock::ScopedLockType sl(writeLock_);
+
+    writeEpoch_.fetch_add(1, std::memory_order_acq_rel);   // odd → modification in progress
+
     std::fill(buffer_.begin(), buffer_.end(), 0.0f);
     writePos_.store(0, std::memory_order_release);
     samplesWritten_.store(0, std::memory_order_release);
 
-    // Preserve transport fields but clear frame-size semantics after buffer reset.
     auto meta = metadata_.read();
     meta.numSamples = 0;
     metadata_.write(meta);
+
+    std::atomic_thread_fence(std::memory_order_release);
+    writeEpoch_.fetch_add(1, std::memory_order_release);   // even → modification complete
 }
 
 float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
@@ -248,11 +286,14 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
     if (channel < 0 || channel >= static_cast<int>(MAX_CHANNELS))
         return 0.0f;
 
-    float peak = 0.0f;
-
-    for (int attempt = 0; attempt <= MAX_READ_RETRIES; ++attempt)
+    for (;;)
     {
         uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
+        if (epoch1 & 1)
+        {
+            std::this_thread::yield();
+            continue;
+        }
 
         size_t available = getAvailableSamples();
         size_t requestedSamples = static_cast<size_t>(numSamples);
@@ -265,9 +306,8 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
         size_t readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
         size_t channelOffset = static_cast<size_t>(channel) * capacity_;
 
-        peak = 0.0f;
+        float peak = 0.0f;
 
-        // Analyze in chunks to handle wrap-around
         auto analyzeChunk = [&](size_t start, size_t count) {
             for (size_t i = 0; i < count; ++i)
             {
@@ -275,6 +315,8 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
                 if (val > peak) peak = val;
             }
         };
+
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
         analyzeChunk(readStart, firstChunk);
@@ -284,15 +326,13 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
             analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
         }
 
+        std::atomic_thread_fence(std::memory_order_acquire);
+
         uint32_t epoch2 = writeEpoch_.load(std::memory_order_acquire);
 
-        // If epoch unchanged and even, no write was in progress — data is consistent
-        if (epoch1 == epoch2 && (epoch1 & 1) == 0)
+        if (epoch1 == epoch2)
             return peak;
     }
-
-    // Exhausted retries — return best-effort data (acceptable for level meters)
-    return peak;
 }
 
 float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
@@ -300,11 +340,14 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
     if (channel < 0 || channel >= static_cast<int>(MAX_CHANNELS))
         return 0.0f;
 
-    float rms = 0.0f;
-
-    for (int attempt = 0; attempt <= MAX_READ_RETRIES; ++attempt)
+    for (;;)
     {
         uint32_t epoch1 = writeEpoch_.load(std::memory_order_acquire);
+        if (epoch1 & 1)
+        {
+            std::this_thread::yield();
+            continue;
+        }
 
         size_t available = getAvailableSamples();
         size_t requestedSamples = static_cast<size_t>(numSamples);
@@ -327,6 +370,8 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
             }
         };
 
+        std::atomic_thread_fence(std::memory_order_acquire);
+
         size_t firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
         analyzeChunk(readStart, firstChunk);
 
@@ -335,17 +380,15 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
             analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
         }
 
-        rms = static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
+        float rms = static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
+
+        std::atomic_thread_fence(std::memory_order_acquire);
 
         uint32_t epoch2 = writeEpoch_.load(std::memory_order_acquire);
 
-        // If epoch unchanged and even, no write was in progress — data is consistent
-        if (epoch1 == epoch2 && (epoch1 & 1) == 0)
+        if (epoch1 == epoch2)
             return rms;
     }
-
-    // Exhausted retries — return best-effort data (acceptable for level meters)
-    return rms;
 }
 
 } // namespace oscil

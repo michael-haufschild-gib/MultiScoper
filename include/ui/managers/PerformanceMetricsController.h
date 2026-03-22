@@ -16,10 +16,12 @@ class IInstanceRegistry;
 class PerformanceMetricsController
 {
 public:
+    /// Construct the metrics controller wiring data sources to the status bar display.
     PerformanceMetricsController(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, StatusBarComponent& statusBar);
     ~PerformanceMetricsController() = default;
 
     void update();
+    /// Reset all accumulated metrics (CPU, source count) to zero.
     void reset();
 
 private:

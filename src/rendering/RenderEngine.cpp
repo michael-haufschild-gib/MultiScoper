@@ -153,14 +153,6 @@ void RenderEngine::beginFrame(float deltaTime)
 
     RE_LOG_THROTTLED(60, "beginFrame: dt=" << deltaTime);
 
-    // Update particle system
-    if (auto* ps = waveformPass_->getParticleSystem())
-        ps->update(deltaTime);
-
-    // Update camera animation
-    if (auto* cam = waveformPass_->getCamera())
-        cam->update(deltaTime);
-
     // Clear scene FBO
     if (auto* sceneFBO = effectPipeline_->getSceneFBO())
     {
@@ -170,99 +162,84 @@ void RenderEngine::beginFrame(float deltaTime)
     }
 }
 
+WaveformRenderState* RenderEngine::resolveWaveformState(int waveformId)
+{
+    // Called from renderWaveform(), which is always invoked under the
+    // WaveformGLRenderer::engineLock_ WriteLock.  No concurrent mutation
+    // of waveformStates_ is possible, so the SpinLock is not needed here
+    // and returning a raw pointer is safe for the duration of the render pass.
+
+    auto it = waveformStates_.find(waveformId);
+    if (it == waveformStates_.end())
+    {
+        WaveformRenderState newState;
+        newState.waveformId = waveformId;
+        waveformStates_[waveformId] = std::move(newState);
+        RE_LOG("RenderEngine: Registered waveform " << waveformId);
+        it = waveformStates_.find(waveformId);
+    }
+
+    return (it != waveformStates_.end()) ? &it->second : nullptr;
+}
+
+void RenderEngine::renderWaveformLayer(const WaveformRenderData& data, WaveformRenderState& state)
+{
+    const auto& config = state.visualConfig;
+    const bool hasWaveformGeometry = data.channel1.size() >= 2;
+
+    auto* pool = effectPipeline_->getFramebufferPool();
+    auto* waveformFBO = pool ? pool->getWaveformFBO() : nullptr;
+    if (!waveformFBO)
+        return;
+
+    waveformFBO->bind();
+    waveformFBO->clear(juce::Colours::transparentBlack, true);
+
+    if (hasWaveformGeometry)
+        waveformPass_->renderWaveformGeometry(data, config, stats_.getTime());
+
+    waveformFBO->unbind();
+
+    Framebuffer* processedFBO = waveformFBO;
+    if (config.hasPostProcessing())
+    {
+        processedFBO = effectPipeline_->applyPostProcessing(processedFBO, state, *context_,
+                                                            stats_.getDeltaTime(),
+                                                            bootstrapper_->getCompositeShader(),
+                                                            bootstrapper_->getCompositeTextureLoc());
+        if (!processedFBO)
+            processedFBO = waveformFBO;
+    }
+
+    executeComposite(processedFBO, config);
+}
+
 void RenderEngine::renderWaveform(const WaveformRenderData& data)
 {
     if (!initialized_ || !data.visible || data.bounds.isEmpty())
         return;
 
-    // Resolve waveform state under lock; rendering proceeds unlocked.
-    // Safety: all callers (renderOpenGL, openGLContextClosing, resize) run on
-    // the JUCE OpenGL thread, so the reference remains valid after unlock.
-    WaveformRenderState* statePtr = nullptr;
-    {
-        juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
-
-        auto it = waveformStates_.find(data.id);
-        if (it == waveformStates_.end())
-        {
-            WaveformRenderState newState;
-            newState.waveformId = data.id;
-            waveformStates_[data.id] = std::move(newState);
-            RE_LOG("RenderEngine: Registered waveform " << data.id);
-            it = waveformStates_.find(data.id);
-        }
-
-        if (it != waveformStates_.end())
-            statePtr = &it->second;
-    }
-
+    auto* statePtr = resolveWaveformState(data.id);
     if (statePtr == nullptr)
         return;
 
     WaveformRenderState& state = *statePtr;
-    const auto& config = state.visualConfig;
-    const bool hasWaveformGeometry = data.channel1.size() >= 2;
-    const bool shouldRenderWaveformLayer = hasWaveformGeometry || config.particles.enabled;
 
-    // Step 0: Prepare (Timing, Camera, Viewport)
-    // This sets up the camera and viewport for the waveform geometry.
     waveformPass_->prepareRender(data, state, stats_.getDeltaTime());
 
-    // Step 1: Render Grid Layer (Background) -> Scene FBO
-    // We render the grid directly to the scene FBO so it is NOT affected by waveform post-processing.
     if (data.gridConfig.enabled)
     {
         auto* sceneFBO = effectPipeline_->getSceneFBO();
         if (sceneFBO && sceneFBO->isValid())
         {
             sceneFBO->bind();
-            // Note: renderGrid handles its own viewport setting internally
             waveformPass_->renderGrid(data);
             sceneFBO->unbind();
         }
     }
 
-    // Step 2: Render Waveform & Particles -> Scratch FBO
-    if (shouldRenderWaveformLayer)
-    {
-        auto* pool = effectPipeline_->getFramebufferPool();
-        auto* waveformFBO = pool ? pool->getWaveformFBO() : nullptr;
-        if (waveformFBO)
-        {
-            waveformFBO->bind();
-            waveformFBO->clear(juce::Colours::transparentBlack, true);
-
-            // Render Geometry only when we have enough points for a line.
-            if (hasWaveformGeometry)
-                waveformPass_->renderWaveformGeometry(data, config, stats_.getTime());
-
-            // Render particles even if geometry is temporarily unavailable.
-            if (config.particles.enabled)
-            {
-                waveformPass_->renderWaveformParticles(data, state, stats_.getDeltaTime());
-            }
-
-            waveformFBO->unbind();
-
-            // Step 3: Apply Post-Processing Effects -> Processed FBO
-            Framebuffer* processedFBO = waveformFBO;
-            if (config.hasPostProcessing())
-            {
-                processedFBO = effectPipeline_->applyPostProcessing(processedFBO, state, *context_,
-                                                                    stats_.getDeltaTime(),
-                                                                    bootstrapper_->getCompositeShader(),
-                                                                    bootstrapper_->getCompositeTextureLoc());
-                if (!processedFBO)
-                {
-                    processedFBO = waveformFBO;
-                }
-            }
-
-            // Step 4: Composite IMMEDIATELY (Blend Waveform over Grid/Scene)
-            // This is critical because waveformFBO is reused for the next waveform
-            executeComposite(processedFBO, config);
-        }
-    }
+    if (data.channel1.size() >= 2)
+        renderWaveformLayer(data, state);
 }
 
 void RenderEngine::endFrame()

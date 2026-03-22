@@ -49,13 +49,13 @@ public:
     // bool parameter is toggle state (true if toggled on)
     std::function<void(PaneAction action, bool toggleState)> onActionTriggered;
 
-    // Get toggle state for an action
+    /// Query whether the button for the given action is in its toggled-on state.
     bool isActionToggled(PaneAction action) const;
 
-    // Set toggle state for an action
+    /// Programmatically set the toggled state of an action button.
     void setActionToggled(PaneAction action, bool toggled);
 
-    // Enable/disable an action
+    /// Enable or disable the button for the given action.
     void setActionEnabled(PaneAction action, bool enabled);
 
     // Get preferred width (sum of all button widths + spacing)

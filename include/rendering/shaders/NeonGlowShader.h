@@ -17,6 +17,7 @@ namespace oscil
 class NeonGlowShader : public WaveformShader
 {
 public:
+    /// Create a neon glow shader instance.
     NeonGlowShader();
     ~NeonGlowShader() override;
 
@@ -28,7 +29,9 @@ public:
     }
 
 #if OSCIL_ENABLE_OPENGL
+    /// Compile the neon glow shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program and GPU resources.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

@@ -8,7 +8,6 @@
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "rendering/LightingConfig.h"
 #include <vector>
 #include <utility>
 
@@ -24,26 +23,10 @@ namespace oscil
  */
 enum class ShaderType
 {
-    // 2D Shaders
     Basic2D,
     NeonGlow,
     GradientFill,
-    DualOutline,
-    PlasmaSine,
-    DigitalGlitch,
-
-    // 3D Shaders
-    VolumetricRibbon,
-    WireframeMesh,
-    VectorFlow,
-    StringTheory,
-    ElectricFlower,
-    ElectricFiligree,
-
-    // Material Shaders
-    GlassRefraction,
-    LiquidChrome,
-    Crystalline
+    DualOutline
 };
 
 /**
@@ -153,30 +136,6 @@ struct ScanlineSettings
 };
 
 /**
- * Distortion effect settings.
- */
-struct DistortionSettings
-{
-    bool enabled = false;
-    float intensity = 0.0f;      // Wave distortion amount
-    float frequency = 4.0f;      // Wave frequency
-    float speed = 1.0f;          // Animation speed
-};
-
-/**
- * Glitch settings for the effect.
- */
-struct GlitchSettings
-{
-    bool enabled = false;
-    float intensity = 0.5f;          // Overall glitch strength
-    float blockSize = 0.05f;         // Size of glitch blocks
-    float lineShift = 0.02f;         // Horizontal line displacement
-    float colorSeparation = 0.01f;   // RGB shift amount
-    float flickerRate = 10.0f;       // Flicker frequency
-};
-
-/**
  * Tilt Shift (Fake Depth of Field) settings.
  */
 struct TiltShiftSettings
@@ -186,113 +145,6 @@ struct TiltShiftSettings
     float range = 0.3f;          // In-focus range width (0.0 - 1.0)
     float blurRadius = 2.0f;     // Blur amount
     int iterations = 3;          // Blur quality
-};
-
-// ============================================================================
-// Particle System Settings
-// ============================================================================
-
-/**
- * Particle emission modes.
- */
-enum class ParticleEmissionMode
-{
-    AlongWaveform,       // Emit uniformly along waveform path
-    AtPeaks,             // Emit at amplitude peaks
-    AtZeroCrossings,     // Emit at zero crossings
-    Continuous,          // Emit from center regardless of waveform
-    Burst                // Emit all at once on trigger
-};
-
-/**
- * Particle blend modes.
- */
-enum class ParticleBlendMode
-{
-    Additive,            // Glow effect
-    Alpha,               // Standard transparency
-    Multiply,            // Darken
-    Screen               // Lighten
-};
-
-/**
- * Particle system settings for a waveform.
- */
-struct ParticleSettings
-{
-    bool enabled = false;
-    ParticleEmissionMode emissionMode = ParticleEmissionMode::AlongWaveform;
-    float emissionRate = 100.0f;           // Particles per second
-    float particleLife = 2.0f;             // Seconds
-    float particleSize = 4.0f;             // Pixels
-    juce::Colour particleColor{0xFFFFAA00};
-    ParticleBlendMode blendMode = ParticleBlendMode::Additive;
-
-    // Physics
-    float gravity = 0.0f;
-    float drag = 0.1f;
-    float randomness = 0.5f;
-    float velocityScale = 1.0f;
-
-    // Audio reactivity
-    bool audioReactive = true;
-    float audioEmissionBoost = 2.0f;       // Multiplier on transients
-
-    // Advanced Rendering
-    juce::String textureId = "";           // Texture name from TextureManager
-    int textureRows = 1;                   // Sprite sheet rows
-    int textureCols = 1;                   // Sprite sheet columns
-    bool softParticles = false;            // Enable depth-based fading
-    float softDepthSensitivity = 1.0f;     // How soft the intersection is
-
-    // Turbulence / Force Fields
-    bool useTurbulence = false;
-    float turbulenceStrength = 0.0f;       // Force strength
-    float turbulenceScale = 0.5f;          // Noise frequency
-    float turbulenceSpeed = 0.5f;          // Noise scrolling speed
-};
-
-// ============================================================================
-// 3D Rendering Settings
-// ============================================================================
-
-/**
- * 3D visualization settings.
- */
-struct Settings3D
-{
-    bool enabled = false;
-    float cameraDistance = 5.0f;
-    float cameraAngleX = 15.0f;            // Degrees (pitch)
-    float cameraAngleY = 0.0f;             // Degrees (yaw)
-    bool autoRotate = false;
-    float rotateSpeed = 10.0f;             // Degrees per second
-
-    // For mesh-based shaders
-    int meshResolutionX = 128;
-    int meshResolutionZ = 32;              // History depth
-    float meshScale = 1.0f;
-};
-
-// ============================================================================
-// Material Settings
-// ============================================================================
-
-/**
- * Material settings for advanced shaders.
- */
-struct MaterialSettings
-{
-    bool enabled = false;
-    float reflectivity = 0.5f;
-    float refractiveIndex = 1.5f;          // Glass = 1.5, Water = 1.33
-    float fresnelPower = 2.0f;
-    juce::Colour tintColor{0xFFFFFFFF};
-    float roughness = 0.1f;
-
-    // Environment
-    bool useEnvironmentMap = true;
-    juce::String environmentMapId = "default_studio";
 };
 
 // ============================================================================
@@ -317,19 +169,7 @@ struct VisualConfiguration
     FilmGrainSettings filmGrain;
     ChromaticAberrationSettings chromaticAberration;
     ScanlineSettings scanlines;
-    DistortionSettings distortion;
-    GlitchSettings glitch;
     TiltShiftSettings tiltShift;
-
-    // Particle system
-    ParticleSettings particles;
-
-    // 3D rendering
-    Settings3D settings3D;
-    LightingConfig lighting;
-
-    // Material properties
-    MaterialSettings material;
 
     // Compositing
     BlendMode compositeBlendMode = BlendMode::Alpha;
@@ -349,19 +189,9 @@ struct VisualConfiguration
     static VisualConfiguration fromValueTree(const juce::ValueTree& tree);
 
     /**
-     * Check if this configuration requires 3D rendering.
-     */
-    [[nodiscard]] bool requires3D() const;
-
-    /**
      * Check if this configuration has any enabled post-processing effects.
      */
     [[nodiscard]] bool hasPostProcessing() const;
-
-    /**
-     * Check if this configuration requires the particle system.
-     */
-    [[nodiscard]] bool hasParticles() const;
 
     /**
      * Get a default configuration preset.
@@ -379,43 +209,21 @@ struct VisualConfiguration
      */
     static std::vector<std::pair<juce::String, juce::String>> getAvailablePresets();
 
+private:
+    static void setupVectorScopePreset(VisualConfiguration& c);
+
+public:
     /**
-     * Apply overrides from a ValueTree.
-     * Only updates properties that are present in the tree.
+     * Clamp all settings to their documented valid ranges.
+     * Call after deserialization or user input to enforce invariants.
      */
-    static void applyOverrides(VisualConfiguration& config, const juce::ValueTree& overrides);
+    void validate();
+
 };
 
 // ============================================================================
 // Shader Type Utilities
 // ============================================================================
-
-/**
- * Check if a shader type is a 3D shader.
- */
-inline bool is3DShader(ShaderType type)
-{
-    return type == ShaderType::VolumetricRibbon ||
-           type == ShaderType::WireframeMesh ||
-           type == ShaderType::VectorFlow ||
-           type == ShaderType::StringTheory ||
-           type == ShaderType::ElectricFlower ||
-           type == ShaderType::ElectricFiligree ||
-           // Material shaders are also 3D shaders
-           type == ShaderType::GlassRefraction ||
-           type == ShaderType::LiquidChrome ||
-           type == ShaderType::Crystalline;
-}
-
-/**
- * Check if a shader type is a material shader.
- */
-inline bool isMaterialShader(ShaderType type)
-{
-    return type == ShaderType::GlassRefraction ||
-           type == ShaderType::LiquidChrome ||
-           type == ShaderType::Crystalline;
-}
 
 /**
  * Convert ShaderType to string ID for registry lookup.

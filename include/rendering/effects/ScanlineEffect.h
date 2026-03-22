@@ -21,13 +21,16 @@ namespace oscil
 class ScanlineEffect : public PostProcessEffect
 {
 public:
+    /// Create a scanline effect with default settings.
     ScanlineEffect();
     ~ScanlineEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "scanlines"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Scanlines"; }
 
+    /// Compile the scanline shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

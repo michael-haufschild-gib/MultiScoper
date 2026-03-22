@@ -15,6 +15,7 @@ namespace oscil
 class RenderBootstrapper
 {
 public:
+    /// Create an uninitialized render bootstrapper.
     RenderBootstrapper();
     ~RenderBootstrapper();
 

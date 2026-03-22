@@ -32,6 +32,7 @@ public:
 
     void setSelected(bool selected);
     void setFilterMatch(bool matches);
+    /// Test whether this source item's name matches the given search filter text.
     bool matchesFilter(const juce::String& filter) const;
 
     const SourceId& getSourceId() const { return sourceId_; }
@@ -94,6 +95,7 @@ public:
     void resized() override;
 
     void setSelectedSourceId(const SourceId& sourceId);
+    /// Rebuild the source list items from the current instance registry state.
     void refreshSources();
 
     std::function<void(const SourceId&)> onSourceSelected;

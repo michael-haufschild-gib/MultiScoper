@@ -91,6 +91,7 @@ struct SourceId
     bool operator!=(const SourceId& other) const { return !(*this == other); }
     bool operator<(const SourceId& other) const { return id < other.id; }
 
+    /// Generate a unique source identifier.
     [[nodiscard]] static SourceId generate();
     static SourceId invalid() { return SourceId{ "" }; }
     static SourceId noSource() { return SourceId{ "NO_SOURCE" }; }
@@ -105,7 +106,7 @@ struct SourceIdHash
 {
     std::size_t operator()(const SourceId& sid) const
     {
-        return std::hash<std::string>{}(sid.id.toStdString());
+        return static_cast<std::size_t>(sid.id.hashCode());
     }
 };
 
@@ -119,6 +120,7 @@ struct InstanceId
     bool operator==(const InstanceId& other) const { return id == other.id; }
     bool operator!=(const InstanceId& other) const { return !(*this == other); }
 
+    /// Generate a unique instance identifier.
     [[nodiscard]] static InstanceId generate();
     static InstanceId invalid() { return InstanceId{ "" }; }
     bool isValid() const { return id.isNotEmpty(); }
@@ -131,7 +133,7 @@ struct InstanceIdHash
 {
     std::size_t operator()(const InstanceId& iid) const
     {
-        return std::hash<std::string>{}(iid.id.toStdString());
+        return static_cast<std::size_t>(iid.id.hashCode());
     }
 };
 
@@ -212,7 +214,9 @@ public:
     void setOwningInstanceId(const InstanceId& instanceId);
 
     [[nodiscard]] const std::vector<InstanceId>& getBackupInstanceIds() const noexcept { return backupInstanceIds_; }
+    /// Register a backup instance for ownership failover.
     void addBackupInstance(const InstanceId& instanceId);
+    /// Remove a backup instance from the failover list.
     void removeBackupInstance(const InstanceId& instanceId);
     [[nodiscard]] bool hasBackupInstances() const noexcept { return !backupInstanceIds_.empty(); }
     [[nodiscard]] std::optional<InstanceId> getNextBackupInstance() const;
@@ -271,9 +275,11 @@ public:
 
     // === Metrics ===
     [[nodiscard]] const CorrelationMetrics& getCorrelationMetrics() const noexcept { return correlationMetrics_; }
+    /// Update stereo correlation coefficient from latest audio analysis.
     void updateCorrelationMetrics(float correlation) noexcept;
 
     [[nodiscard]] const SignalMetrics& getSignalMetrics() const noexcept { return signalMetrics_; }
+    /// Update signal level metrics from latest audio analysis.
     void updateSignalMetrics(float rms, float peak, float dcOffset) noexcept;
     
     // === Analysis ===

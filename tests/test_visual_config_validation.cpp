@@ -8,84 +8,37 @@
 
 using namespace oscil;
 
-// =============================================================================
-// ShaderType Utility Tests
-// =============================================================================
-
 class ShaderTypeTest : public ::testing::Test
 {
 };
-
-TEST_F(ShaderTypeTest, Is3DShader)
-{
-    // 2D shaders
-    EXPECT_FALSE(is3DShader(ShaderType::Basic2D));
-    EXPECT_FALSE(is3DShader(ShaderType::NeonGlow));
-    EXPECT_FALSE(is3DShader(ShaderType::GradientFill));
-    EXPECT_FALSE(is3DShader(ShaderType::DualOutline));
-    EXPECT_FALSE(is3DShader(ShaderType::PlasmaSine));
-    EXPECT_FALSE(is3DShader(ShaderType::DigitalGlitch));
-
-    // 3D shaders
-    EXPECT_TRUE(is3DShader(ShaderType::VolumetricRibbon));
-    EXPECT_TRUE(is3DShader(ShaderType::WireframeMesh));
-    EXPECT_TRUE(is3DShader(ShaderType::VectorFlow));
-    EXPECT_TRUE(is3DShader(ShaderType::StringTheory));
-
-    // Material shaders (also 3D)
-    EXPECT_TRUE(is3DShader(ShaderType::GlassRefraction));
-    EXPECT_TRUE(is3DShader(ShaderType::LiquidChrome));
-    EXPECT_TRUE(is3DShader(ShaderType::Crystalline));
-}
-
-TEST_F(ShaderTypeTest, IsMaterialShader)
-{
-    EXPECT_FALSE(isMaterialShader(ShaderType::Basic2D));
-    EXPECT_FALSE(isMaterialShader(ShaderType::VolumetricRibbon));
-
-    EXPECT_TRUE(isMaterialShader(ShaderType::GlassRefraction));
-    EXPECT_TRUE(isMaterialShader(ShaderType::LiquidChrome));
-    EXPECT_TRUE(isMaterialShader(ShaderType::Crystalline));
-}
 
 TEST_F(ShaderTypeTest, ShaderTypeToId)
 {
     EXPECT_EQ(shaderTypeToId(ShaderType::Basic2D), "basic");
     EXPECT_EQ(shaderTypeToId(ShaderType::NeonGlow), "neon_glow");
     EXPECT_EQ(shaderTypeToId(ShaderType::GradientFill), "gradient_fill");
-    EXPECT_EQ(shaderTypeToId(ShaderType::VolumetricRibbon), "volumetric_ribbon");
-    EXPECT_EQ(shaderTypeToId(ShaderType::GlassRefraction), "glass_refraction");
+    EXPECT_EQ(shaderTypeToId(ShaderType::DualOutline), "dual_outline");
 }
 
 TEST_F(ShaderTypeTest, IdToShaderType)
 {
     EXPECT_EQ(idToShaderType("basic"), ShaderType::Basic2D);
     EXPECT_EQ(idToShaderType("neon_glow"), ShaderType::NeonGlow);
-    EXPECT_EQ(idToShaderType("volumetric_ribbon"), ShaderType::VolumetricRibbon);
-    EXPECT_EQ(idToShaderType("glass_refraction"), ShaderType::GlassRefraction);
+    EXPECT_EQ(idToShaderType("gradient_fill"), ShaderType::GradientFill);
+    EXPECT_EQ(idToShaderType("dual_outline"), ShaderType::DualOutline);
 
-    // Unknown ID should default to Basic2D
+    // Unknown ID defaults to Basic2D
     EXPECT_EQ(idToShaderType("unknown"), ShaderType::Basic2D);
     EXPECT_EQ(idToShaderType(""), ShaderType::Basic2D);
 }
 
 TEST_F(ShaderTypeTest, RoundTripConversion)
 {
-    // Test all shader types round-trip correctly
     std::vector<ShaderType> allTypes = {
         ShaderType::Basic2D,
         ShaderType::NeonGlow,
         ShaderType::GradientFill,
-        ShaderType::DualOutline,
-        ShaderType::PlasmaSine,
-        ShaderType::DigitalGlitch,
-        ShaderType::VolumetricRibbon,
-        ShaderType::WireframeMesh,
-        ShaderType::VectorFlow,
-        ShaderType::StringTheory,
-        ShaderType::GlassRefraction,
-        ShaderType::LiquidChrome,
-        ShaderType::Crystalline
+        ShaderType::DualOutline
     };
 
     for (auto type : allTypes)
@@ -95,10 +48,6 @@ TEST_F(ShaderTypeTest, RoundTripConversion)
         EXPECT_EQ(restored, type);
     }
 }
-
-// =============================================================================
-// BloomSettings Tests
-// =============================================================================
 
 class BloomSettingsTest : public ::testing::Test
 {
@@ -115,10 +64,6 @@ TEST_F(BloomSettingsTest, DefaultValues)
     EXPECT_FLOAT_EQ(bloom.spread, 1.0f);
 }
 
-// =============================================================================
-// TrailSettings Tests
-// =============================================================================
-
 class TrailSettingsTest : public ::testing::Test
 {
 };
@@ -131,80 +76,6 @@ TEST_F(TrailSettingsTest, DefaultValues)
     EXPECT_FLOAT_EQ(trails.decay, 0.1f);
     EXPECT_FLOAT_EQ(trails.opacity, 0.8f);
 }
-
-// =============================================================================
-// ParticleSettings Tests
-// =============================================================================
-
-class ParticleSettingsTest : public ::testing::Test
-{
-};
-
-TEST_F(ParticleSettingsTest, DefaultValues)
-{
-    ParticleSettings particles;
-
-    EXPECT_FALSE(particles.enabled);
-    EXPECT_EQ(particles.emissionMode, ParticleEmissionMode::AlongWaveform);
-    EXPECT_FLOAT_EQ(particles.emissionRate, 100.0f);
-    EXPECT_FLOAT_EQ(particles.particleLife, 2.0f);
-    EXPECT_FLOAT_EQ(particles.particleSize, 4.0f);
-    EXPECT_EQ(particles.blendMode, ParticleBlendMode::Additive);
-    EXPECT_FLOAT_EQ(particles.gravity, 0.0f);
-    EXPECT_FLOAT_EQ(particles.drag, 0.1f);
-    EXPECT_FLOAT_EQ(particles.randomness, 0.5f);
-    EXPECT_FLOAT_EQ(particles.velocityScale, 1.0f);
-    EXPECT_TRUE(particles.audioReactive);
-    EXPECT_FLOAT_EQ(particles.audioEmissionBoost, 2.0f);
-}
-
-// =============================================================================
-// Settings3D Tests
-// =============================================================================
-
-class Settings3DTest : public ::testing::Test
-{
-};
-
-TEST_F(Settings3DTest, DefaultValues)
-{
-    Settings3D settings;
-
-    EXPECT_FALSE(settings.enabled);
-    EXPECT_FLOAT_EQ(settings.cameraDistance, 5.0f);
-    EXPECT_FLOAT_EQ(settings.cameraAngleX, 15.0f);
-    EXPECT_FLOAT_EQ(settings.cameraAngleY, 0.0f);
-    EXPECT_FALSE(settings.autoRotate);
-    EXPECT_FLOAT_EQ(settings.rotateSpeed, 10.0f);
-    EXPECT_EQ(settings.meshResolutionX, 128);
-    EXPECT_EQ(settings.meshResolutionZ, 32);
-    EXPECT_FLOAT_EQ(settings.meshScale, 1.0f);
-}
-
-// =============================================================================
-// MaterialSettings Tests
-// =============================================================================
-
-class MaterialSettingsTest : public ::testing::Test
-{
-};
-
-TEST_F(MaterialSettingsTest, DefaultValues)
-{
-    MaterialSettings material;
-
-    EXPECT_FALSE(material.enabled);
-    EXPECT_FLOAT_EQ(material.reflectivity, 0.5f);
-    EXPECT_FLOAT_EQ(material.refractiveIndex, 1.5f);
-    EXPECT_FLOAT_EQ(material.fresnelPower, 2.0f);
-    EXPECT_FLOAT_EQ(material.roughness, 0.1f);
-    EXPECT_TRUE(material.useEnvironmentMap);
-    EXPECT_EQ(material.environmentMapId, "default_studio");
-}
-
-// =============================================================================
-// TiltShiftSettings Tests
-// =============================================================================
 
 class TiltShiftSettingsTest : public ::testing::Test
 {
@@ -219,4 +90,77 @@ TEST_F(TiltShiftSettingsTest, DefaultValues)
     EXPECT_FLOAT_EQ(tilt.range, 0.3f);
     EXPECT_FLOAT_EQ(tilt.blurRadius, 2.0f);
     EXPECT_EQ(tilt.iterations, 3);
+}
+
+// ============================================================================
+// Validate() clamping
+// ============================================================================
+
+class VisualConfigValidationTest : public ::testing::Test
+{
+};
+
+TEST_F(VisualConfigValidationTest, ValidateClampsOutOfRangeBloom)
+{
+    VisualConfiguration config;
+    config.bloom.intensity = 10.0f;
+    config.bloom.threshold = -1.0f;
+    config.bloom.iterations = 100;
+    config.bloom.softKnee = 5.0f;
+
+    config.validate();
+
+    EXPECT_FLOAT_EQ(config.bloom.intensity, 2.0f);
+    EXPECT_FLOAT_EQ(config.bloom.threshold, 0.0f);
+    EXPECT_EQ(config.bloom.iterations, 8);
+    EXPECT_FLOAT_EQ(config.bloom.softKnee, 1.0f);
+}
+
+TEST_F(VisualConfigValidationTest, ValidateClampsOutOfRangeColorGrade)
+{
+    VisualConfiguration config;
+    config.colorGrade.brightness = 5.0f;
+    config.colorGrade.contrast = 0.0f;
+    config.colorGrade.saturation = -1.0f;
+    config.colorGrade.temperature = 99.0f;
+
+    config.validate();
+
+    EXPECT_FLOAT_EQ(config.colorGrade.brightness, 1.0f);
+    EXPECT_FLOAT_EQ(config.colorGrade.contrast, 0.5f);
+    EXPECT_FLOAT_EQ(config.colorGrade.saturation, 0.0f);
+    EXPECT_FLOAT_EQ(config.colorGrade.temperature, 1.0f);
+}
+
+TEST_F(VisualConfigValidationTest, ValidatePreservesInRangeValues)
+{
+    VisualConfiguration config;
+    config.bloom.intensity = 1.5f;
+    config.trails.decay = 0.2f;
+    config.compositeOpacity = 0.75f;
+
+    config.validate();
+
+    EXPECT_FLOAT_EQ(config.bloom.intensity, 1.5f);
+    EXPECT_FLOAT_EQ(config.trails.decay, 0.2f);
+    EXPECT_FLOAT_EQ(config.compositeOpacity, 0.75f);
+}
+
+TEST_F(VisualConfigValidationTest, DeserializationClampsInvalidValues)
+{
+    // Build a ValueTree with out-of-range values
+    juce::ValueTree tree("VisualConfiguration");
+    tree.setProperty("shaderType", "basic", nullptr);
+    tree.setProperty("compositeOpacity", 5.0f, nullptr);
+
+    juce::ValueTree bloomTree("Bloom");
+    bloomTree.setProperty("enabled", true, nullptr);
+    bloomTree.setProperty("intensity", 99.0f, nullptr);
+    tree.addChild(bloomTree, -1, nullptr);
+
+    auto config = VisualConfiguration::fromValueTree(tree);
+
+    EXPECT_FLOAT_EQ(config.compositeOpacity, 1.0f);
+    EXPECT_FLOAT_EQ(config.bloom.intensity, 2.0f);
+    EXPECT_TRUE(config.bloom.enabled);
 }

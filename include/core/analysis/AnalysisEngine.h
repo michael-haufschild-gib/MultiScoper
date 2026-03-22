@@ -28,6 +28,7 @@ struct AnalysisChannelState
 class AnalysisEngine
 {
 public:
+    /// Create an analysis engine with default configuration.
     AnalysisEngine();
     ~AnalysisEngine() = default;
 

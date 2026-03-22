@@ -60,7 +60,9 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    /// Add a named colour swatch row bound to the given colour variable.
     void addColorSwatch(const juce::String& label, juce::Colour* colorRef);
+    /// Refresh all swatch displays from the given theme's current colour values.
     void updateFromTheme(ColorTheme& theme);
     void setEnabled(bool enabled);
 
@@ -98,10 +100,11 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ListBoxModel interface
+    /// Return the number of saved themes for the list box (ListBoxModel).
     int getNumRows() override;
     void paintListBoxItem(int rowNumber, juce::Graphics& g,
                           int width, int height, bool rowIsSelected) override;
+    /// Apply the selected theme when the list selection changes (ListBoxModel).
     void selectedRowsChanged(int lastRowSelected) override;
 
     // ThemeManagerListener interface
@@ -116,6 +119,8 @@ public:
     static constexpr int PREFERRED_HEIGHT = 500;
 
 private:
+    void createButtons();
+    void layoutColorSections(int sectionWidth);
     void refreshThemeList();
     void selectTheme(const juce::String& name);
     void updateColorSections();

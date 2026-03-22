@@ -28,6 +28,7 @@ public:
                        IAudioDataProvider& dataProvider);
 
     void resized();
+    /// Recompute and apply column-based pane positioning for the current window size.
     void updateLayout(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents);
 
 private:

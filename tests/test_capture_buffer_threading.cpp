@@ -1,6 +1,7 @@
 /*
     Oscil - Capture Buffer Tests: Threading
-    Tests for thread safety, concurrent access, and lock-free operations
+    Core thread safety: torn reads, data integrity, ring wrap, metadata consistency.
+    Extended concurrency tests in test_capture_buffer_concurrent.cpp.
 */
 
 #include <gtest/gtest.h>
@@ -8,6 +9,9 @@
 #include "core/SharedCaptureBuffer.h"
 #include <thread>
 #include <atomic>
+#include <vector>
+#include <chrono>
+#include <cmath>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -15,141 +19,235 @@ using namespace oscil::test;
 class CaptureBufferThreadingTest : public ::testing::Test
 {
 protected:
+    static constexpr size_t kCapacity = 1024;
     std::unique_ptr<SharedCaptureBuffer> buffer;
 
-    void SetUp() override
-    {
-        buffer = std::make_unique<SharedCaptureBuffer>(1024);
-    }
+    void SetUp() override { buffer = std::make_unique<SharedCaptureBuffer>(kCapacity); }
 
-    // Generate test audio buffer
-    juce::AudioBuffer<float> generateTestBuffer(int numSamples, float value)
+    juce::AudioBuffer<float> generateDCBuffer(int numSamples, float value)
     {
-        return AudioBufferBuilder()
-            .withChannels(2)
-            .withSamples(numSamples)
-            .withDC(value)
-            .build();
+        return AudioBufferBuilder().withChannels(2).withSamples(numSamples).withDC(value).build();
     }
 };
 
-// Test: Thread safety - concurrent write and read
-TEST_F(CaptureBufferThreadingTest, ThreadSafetyConcurrentAccess)
+// ============================================================================
+// Concurrent write + read — verify data integrity, not just "no crash"
+// ============================================================================
+
+TEST_F(CaptureBufferThreadingTest, ConcurrentWriteReadDataIntegrity)
 {
     std::atomic<bool> running{true};
-    std::atomic<int> writeCount{0};
-    std::atomic<int> readCount{0};
+    std::atomic<int> wc{0}, rc{0}, torn{0};
+    constexpr int kBlock = 64;
 
-    // Writer thread (simulating audio thread)
-    std::thread writer([this, &running, &writeCount]()
-    {
-        while (running)
-        {
-            auto testBuffer = generateTestBuffer(64, 0.5f);
-            CaptureFrameMetadata metadata;
-            buffer->write(testBuffer, metadata);
-            writeCount++;
+    std::thread writer([&]() {
+        int i = 0;
+        while (running.load(std::memory_order_relaxed)) {
+            float dc = static_cast<float>(i % 1000) * 0.001f;
+            buffer->write(generateDCBuffer(kBlock, dc), CaptureFrameMetadata{});
+            wc.fetch_add(1, std::memory_order_relaxed);
+            ++i;
         }
     });
 
-    // Reader thread (simulating UI thread)
-    std::thread reader([this, &running, &readCount]()
-    {
-        std::vector<float> output(64);
-        while (running)
-        {
-            buffer->read(output.data(), 64, 0);
-            readCount++;
-        }
-    });
-
-    // Run for a short time
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    running = false;
-
-    writer.join();
-    reader.join();
-
-    // Should have completed multiple operations without crashes
-    EXPECT_GT(writeCount.load(), 0);
-    EXPECT_GT(readCount.load(), 0);
-}
-
-// Test: SeqLock metadata consistency under concurrent access
-// Verifies that metadata reads are always consistent (no torn reads)
-TEST_F(CaptureBufferThreadingTest, SeqLockMetadataConsistency)
-{
-    std::atomic<bool> running{true};
-    std::atomic<int> writeCount{0};
-    std::atomic<int> readCount{0};
-    std::atomic<int> inconsistentCount{0};
-
-    // Writer thread (simulating audio thread) - writes with related values
-    // Each write has sampleRate = 1000 * i, bpm = i, timestamp = i * 100
-    // If reads are consistent, these relationships must hold
-    std::thread writer([this, &running, &writeCount]()
-    {
-        int i = 1;
-        while (running)
-        {
-            auto testBuffer = generateTestBuffer(64, 0.5f);
-            CaptureFrameMetadata metadata;
-            metadata.sampleRate = 1000.0 * i;
-            metadata.bpm = static_cast<double>(i);
-            metadata.timestamp = i * 100;
-            metadata.numChannels = 2;
-            metadata.isPlaying = (i % 2 == 0);
-
-            buffer->write(testBuffer, metadata);
-            writeCount++;
-            i++;
-
-            // Small delay to allow reads and simulate realistic audio callback timing
-            // Without this, the writer spams updates faster than the reader can complete a SeqLock loop
-            std::this_thread::sleep_for(std::chrono::microseconds(100));
-        }
-    });
-
-    // Reader thread (simulating UI thread) - verifies consistency
-    std::thread reader([this, &running, &readCount, &inconsistentCount]()
-    {
-        while (running)
-        {
-            auto meta = buffer->getLatestMetadata();
-
-            // Check consistency: sampleRate should be 1000 * bpm
-            // and timestamp should be bpm * 100
-            // Only check if bpm >= 1.0 (writer starts at i=1, so bpm starts at 1.0)
-            // This excludes the initial default state (bpm=120.0 doesn't match our pattern)
-            if (meta.bpm >= 1.0 && meta.bpm < 100.0)  // Writer sets bpm = i where i starts at 1
-            {
-                double expectedSampleRate = 1000.0 * meta.bpm;
-                int64_t expectedTimestamp = static_cast<int64_t>(meta.bpm) * 100;
-
-                bool sampleRateConsistent = std::abs(meta.sampleRate - expectedSampleRate) < 0.01;
-                bool timestampConsistent = meta.timestamp == expectedTimestamp;
-
-                if (!sampleRateConsistent || !timestampConsistent)
-                {
-                    inconsistentCount++;
+    std::thread reader([&]() {
+        std::vector<float> out(kBlock);
+        while (running.load(std::memory_order_relaxed)) {
+            if (buffer->read(out.data(), kBlock, 0) == kBlock) {
+                float first = out[0];
+                for (int i = 1; i < kBlock; ++i) {
+                    if (std::abs(out[i] - first) > 0.0001f) {
+                        torn.fetch_add(1, std::memory_order_relaxed);
+                        break;
+                    }
                 }
             }
-            readCount++;
+            rc.fetch_add(1, std::memory_order_relaxed);
         }
     });
 
-    // Run for enough time to stress test
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    running = false;
-
+    running.store(false, std::memory_order_relaxed);
     writer.join();
     reader.join();
 
-    // Should have completed many operations
-    EXPECT_GT(writeCount.load(), 100);
-    EXPECT_GT(readCount.load(), 100);
+    EXPECT_GT(wc.load(), 100);
+    EXPECT_GT(rc.load(), 100);
+    EXPECT_EQ(torn.load(), 0) << "Torn reads: " << torn.load() << "/" << rc.load();
+}
 
-    // CRITICAL: No inconsistent reads should occur with SeqLock
-    EXPECT_EQ(inconsistentCount.load(), 0)
-        << "SeqLock failed: " << inconsistentCount.load() << " inconsistent reads detected";
+// ============================================================================
+// Multiple readers concurrently — epoch check under contention
+// ============================================================================
+
+TEST_F(CaptureBufferThreadingTest, MultiReaderConcurrentAccess)
+{
+    constexpr int kReaders = 4, kBlock = 64;
+    std::atomic<bool> running{true};
+    std::atomic<int> wc{0}, totalRc{0}, torn{0};
+
+    std::thread writer([&]() {
+        int i = 0;
+        while (running.load(std::memory_order_relaxed)) {
+            float dc = static_cast<float>(i % 500) * 0.002f;
+            buffer->write(generateDCBuffer(kBlock, dc), CaptureFrameMetadata{});
+            wc.fetch_add(1, std::memory_order_relaxed);
+            ++i;
+        }
+    });
+
+    std::vector<std::thread> readers;
+    for (int r = 0; r < kReaders; ++r) {
+        readers.emplace_back([&]() {
+            std::vector<float> out(kBlock);
+            while (running.load(std::memory_order_relaxed)) {
+                if (buffer->read(out.data(), kBlock, 0) == kBlock) {
+                    float first = out[0];
+                    for (int i = 1; i < kBlock; ++i)
+                        if (std::abs(out[i] - first) > 0.0001f) {
+                            torn.fetch_add(1, std::memory_order_relaxed);
+                            break;
+                        }
+                }
+                totalRc.fetch_add(1, std::memory_order_relaxed);
+            }
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    running.store(false, std::memory_order_relaxed);
+    writer.join();
+    for (auto& t : readers) t.join();
+
+    EXPECT_GT(wc.load(), 100);
+    EXPECT_GT(totalRc.load(), 100);
+    EXPECT_EQ(torn.load(), 0) << "Multi-reader torn: " << torn.load() << "/" << totalRc.load();
+}
+
+// ============================================================================
+// Metadata consistency (SeqLock) under rapid writes
+// ============================================================================
+
+TEST_F(CaptureBufferThreadingTest, MetadataConsistencyUnderConcurrency)
+{
+    std::atomic<bool> running{true};
+    std::atomic<int> wc{0}, rc{0}, bad{0};
+
+    std::thread writer([&]() {
+        for (int i = 1; running.load(std::memory_order_relaxed); ++i) {
+            CaptureFrameMetadata m{};
+            m.sampleRate = 1000.0 * i;
+            m.bpm = static_cast<double>(i);
+            m.timestamp = static_cast<int64_t>(i) * 100;
+            m.numChannels = 2;
+            m.isPlaying = (i % 2 == 0);
+            buffer->write(generateDCBuffer(64, 0.5f), m);
+            wc.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    std::thread reader([&]() {
+        while (running.load(std::memory_order_relaxed)) {
+            auto m = buffer->getLatestMetadata();
+            if (m.bpm >= 1.0 && m.bpm <= 1e7 && m.timestamp > 0) {
+                bool ok = std::abs(m.sampleRate - 1000.0 * m.bpm) < 0.01
+                       && m.timestamp == static_cast<int64_t>(m.bpm) * 100
+                       && m.isPlaying == (static_cast<int>(m.bpm) % 2 == 0);
+                if (!ok) bad.fetch_add(1, std::memory_order_relaxed);
+            }
+            rc.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    running.store(false, std::memory_order_relaxed);
+    writer.join();
+    reader.join();
+
+    EXPECT_GT(wc.load(), 100);
+    EXPECT_GT(rc.load(), 100);
+    EXPECT_EQ(bad.load(), 0) << "Metadata torn: " << bad.load() << "/" << rc.load();
+}
+
+// ============================================================================
+// clear() racing with concurrent reads
+// ============================================================================
+
+TEST_F(CaptureBufferThreadingTest, ClearDuringConcurrentReads)
+{
+    buffer->write(generateDCBuffer(static_cast<int>(kCapacity), 0.75f), CaptureFrameMetadata{});
+    std::atomic<bool> running{true};
+    std::atomic<int> rc{0}, mixed{0};
+
+    std::thread reader([&]() {
+        std::vector<float> out(128);
+        while (running.load(std::memory_order_relaxed)) {
+            int n = buffer->read(out.data(), 128, 0);
+            if (n > 0) {
+                bool hasOrig = false, hasZero = false;
+                for (int i = 0; i < n; ++i) {
+                    if (std::abs(out[i] - 0.75f) < 0.001f) hasOrig = true;
+                    else if (std::abs(out[i]) < 0.001f) hasZero = true;
+                }
+                if (hasOrig && hasZero) mixed.fetch_add(1, std::memory_order_relaxed);
+            }
+            rc.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    for (int c = 0; c < 50; ++c) {
+        buffer->clear();
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+        buffer->write(generateDCBuffer(static_cast<int>(kCapacity), 0.75f), CaptureFrameMetadata{});
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+    }
+
+    running.store(false, std::memory_order_relaxed);
+    reader.join();
+
+    EXPECT_GT(rc.load(), 10);
+    EXPECT_EQ(mixed.load(), 0) << "Clear-during-read mixed: " << mixed.load() << "/" << rc.load();
+}
+
+// ============================================================================
+// Ring wrap-around data integrity under concurrency (small buffer)
+// ============================================================================
+
+TEST_F(CaptureBufferThreadingTest, RingWrapDataIntegrity)
+{
+    buffer = std::make_unique<SharedCaptureBuffer>(256);
+    std::atomic<bool> running{true};
+    std::atomic<int> wc{0}, rc{0}, err{0};
+    constexpr int kBlock = 100; // not power-of-2 → split writes
+
+    std::thread writer([&]() {
+        int i = 0;
+        while (running.load(std::memory_order_relaxed)) {
+            float dc = static_cast<float>(i % 200) * 0.005f;
+            buffer->write(generateDCBuffer(kBlock, dc), CaptureFrameMetadata{});
+            wc.fetch_add(1, std::memory_order_relaxed);
+            ++i;
+        }
+    });
+
+    std::thread reader([&]() {
+        std::vector<float> out(kBlock);
+        while (running.load(std::memory_order_relaxed)) {
+            if (buffer->read(out.data(), kBlock, 0) == kBlock) {
+                float first = out[0];
+                for (int i = 1; i < kBlock; ++i)
+                    if (std::abs(out[i] - first) > 0.0001f) { err.fetch_add(1, std::memory_order_relaxed); break; }
+            }
+            rc.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    running.store(false, std::memory_order_relaxed);
+    writer.join();
+    reader.join();
+
+    EXPECT_GT(wc.load(), 200);
+    EXPECT_GT(rc.load(), 100);
+    EXPECT_EQ(err.load(), 0) << "Ring wrap corruption: " << err.load() << "/" << rc.load();
 }

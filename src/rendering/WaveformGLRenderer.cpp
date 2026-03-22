@@ -138,31 +138,17 @@ void WaveformGLRenderer::compileDebugShader()
     }
     GL_LOG("DEBUG SHADER: Link OK");
 
-    // Get uniform locations
     debugProjectionLoc_ = debugShader_->getUniformIDFromName("projection");
     debugColorLoc_ = debugShader_->getUniformIDFromName("color");
 
-    GL_LOG("DEBUG SHADER: projection loc=" << debugProjectionLoc_ << ", color loc=" << debugColorLoc_);
-
-    // Create VAO and VBO for debug rendering using JUCE's cross-platform extensions
-    // Note: OpenGL 3.2 Core Profile is set via setOpenGLVersionRequired() before attachTo()
     auto& ext = context_->extensions;
-
-    // Clear any pre-existing GL errors
     while (glGetError() != GL_NO_ERROR) {}
 
-    // Create VAO (required for OpenGL 3.2 Core Profile on macOS)
     ext.glGenVertexArrays(1, &debugVAO_);
-    GLenum vaoErr = glGetError();
-    GL_LOG("After glGenVertexArrays: VAO=" << static_cast<int>(debugVAO_) << ", error=" << static_cast<int>(vaoErr));
-
-    // Create VBO
     ext.glGenBuffers(1, &debugVBO_);
-    GLenum vboErr = glGetError();
-    GL_LOG("After glGenBuffers: VBO=" << static_cast<int>(debugVBO_) << ", error=" << static_cast<int>(vboErr));
 
     debugShaderCompiled_ = true;
-    GL_LOG("DEBUG SHADER: Compiled successfully, VAO=" << static_cast<int>(debugVAO_) << ", VBO=" << static_cast<int>(debugVBO_));
+    GL_LOG("DEBUG SHADER: Compiled, VAO=" << static_cast<int>(debugVAO_) << ", VBO=" << static_cast<int>(debugVBO_));
 }
 
 

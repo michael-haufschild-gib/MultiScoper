@@ -46,6 +46,56 @@ public:
         }
     }
 
+    void paintItemBackground(juce::Graphics& g, const juce::Rectangle<int>& bounds,
+                              bool isHovered, bool isSelected, bool isFocused,
+                              bool enabled, float alpha, const ColorTheme& theme)
+    {
+        if (isSelected)
+        {
+            g.setColour(theme.controlActive.withAlpha(alpha * 0.15f));
+            g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
+        }
+        else if (isFocused)
+        {
+            g.setColour(theme.controlActive.withAlpha(alpha * 0.1f));
+            g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
+        }
+
+        if (isHovered && enabled && !isSelected)
+        {
+            g.setColour(theme.backgroundSecondary.withAlpha(alpha * 0.8f));
+            g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
+        }
+    }
+
+    void paintCheckbox(juce::Graphics& g, juce::Rectangle<int>& contentBounds,
+                       bool isSelected, float alpha, float opacity, const ColorTheme& theme)
+    {
+        auto checkBounds = contentBounds.removeFromLeft(20).toFloat()
+            .withSizeKeepingCentre(16, 16);
+
+        g.setColour(theme.backgroundSecondary.withAlpha(alpha * opacity));
+        g.fillRoundedRectangle(checkBounds, 3.0f);
+
+        g.setColour((isSelected ? theme.controlActive : theme.controlBorder)
+            .withAlpha(alpha * opacity));
+        g.drawRoundedRectangle(checkBounds.reduced(0.5f), 3.0f, 1.0f);
+
+        if (isSelected)
+        {
+            g.setColour(theme.controlActive.withAlpha(alpha * opacity));
+            float cx = checkBounds.getCentreX();
+            float cy = checkBounds.getCentreY();
+            juce::Path checkPath;
+            checkPath.startNewSubPath(cx - 4, cy);
+            checkPath.lineTo(cx - 1, cy + 3);
+            checkPath.lineTo(cx + 4, cy - 2);
+            g.strokePath(checkPath, juce::PathStrokeType(1.5f));
+        }
+
+        contentBounds.removeFromLeft(4);
+    }
+
     void paintItem(juce::Graphics& g, const DropdownItem& item,
                   juce::Rectangle<int> bounds, bool isHovered, bool isSelected, bool isFocused, float alpha)
     {
@@ -59,23 +109,7 @@ public:
         }
 
         float opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-
-        if (isSelected)
-        {
-            g.setColour(theme.controlActive.withAlpha(alpha * 0.15f));
-            g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
-        }
-        else if (isFocused)
-        {
-            g.setColour(theme.controlActive.withAlpha(alpha * 0.1f));
-            g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
-        }
-
-        if (isHovered && item.enabled && !isSelected)
-        {
-            g.setColour(theme.backgroundSecondary.withAlpha(alpha * 0.8f));
-            g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
-        }
+        paintItemBackground(g, bounds, isHovered, isSelected, isFocused, item.enabled, alpha, theme);
 
         auto contentBounds = bounds.reduced(8, 0);
 
@@ -90,31 +124,7 @@ public:
         }
 
         if (owner_.multiSelect_)
-        {
-            auto checkBounds = contentBounds.removeFromLeft(20).toFloat()
-                .withSizeKeepingCentre(16, 16);
-
-            g.setColour(theme.backgroundSecondary.withAlpha(alpha * opacity));
-            g.fillRoundedRectangle(checkBounds, 3.0f);
-
-            g.setColour((isSelected ? theme.controlActive : theme.controlBorder)
-                .withAlpha(alpha * opacity));
-            g.drawRoundedRectangle(checkBounds.reduced(0.5f), 3.0f, 1.0f);
-
-            if (isSelected)
-            {
-                g.setColour(theme.controlActive.withAlpha(alpha * opacity));
-                float cx = checkBounds.getCentreX();
-                float cy = checkBounds.getCentreY();
-                juce::Path checkPath;
-                checkPath.startNewSubPath(cx - 4, cy);
-                checkPath.lineTo(cx - 1, cy + 3);
-                checkPath.lineTo(cx + 4, cy - 2);
-                g.strokePath(checkPath, juce::PathStrokeType(1.5f));
-            }
-
-            contentBounds.removeFromLeft(4);
-        }
+            paintCheckbox(g, contentBounds, isSelected, alpha, opacity, theme);
 
         g.setColour((isSelected ? theme.controlActive : theme.textPrimary)
             .withAlpha(alpha * opacity));

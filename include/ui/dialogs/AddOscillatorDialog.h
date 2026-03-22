@@ -94,6 +94,7 @@ public:
 
 private:
     void setupComponents();
+    void createFormFields();
     void populateSourceDropdown();
     void populateVisualPresetDropdown();
     void selectRandomColor();
@@ -101,6 +102,7 @@ private:
     void handleSourceChange();
     void handleOkClick();
     void handleCancelClick();
+    Result buildResult() const;
     void showError(const juce::String& message);
     void clearError();
     bool validateInput();

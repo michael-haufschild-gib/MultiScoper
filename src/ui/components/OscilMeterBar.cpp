@@ -191,6 +191,65 @@ void OscilMeterBar::paint(juce::Graphics& g)
     }
 }
 
+void OscilMeterBar::paintMeterVertical(juce::Graphics& g, const juce::Rectangle<int>& bounds,
+                                        juce::ColourGradient& gradient,
+                                        float levelPos, float rmsPos, float peakPos, bool clip)
+{
+    gradient.point1 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getBottom()) };
+    gradient.point2 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY()) };
+    gradient.isRadial = false;
+
+    int levelHeight = static_cast<int>(levelPos * bounds.getHeight());
+    if (levelHeight > 0)
+    {
+        g.setGradientFill(gradient);
+        g.fillRect(bounds.withTop(bounds.getBottom() - levelHeight));
+    }
+
+    if (meterType_ == MeterType::PeakWithRMS)
+    {
+        int rmsHeight = static_cast<int>(rmsPos * bounds.getHeight());
+        g.setColour(juce::Colours::white.withAlpha(0.3f));
+        g.fillRect(bounds.getX(), bounds.getBottom() - rmsHeight, bounds.getWidth(), 2);
+    }
+
+    int peakY = bounds.getBottom() - static_cast<int>(peakPos * bounds.getHeight());
+    g.setColour(getTheme().textPrimary);
+    g.fillRect(bounds.getX(), peakY - 1, bounds.getWidth(), 2);
+
+    if (clip)
+    {
+        g.setColour(getTheme().statusError);
+        g.fillRect(bounds.getX(), bounds.getY(), bounds.getWidth(), 4);
+    }
+}
+
+void OscilMeterBar::paintMeterHorizontal(juce::Graphics& g, const juce::Rectangle<int>& bounds,
+                                          juce::ColourGradient& gradient,
+                                          float levelPos, float peakPos, bool clip)
+{
+    gradient.point1 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY()) };
+    gradient.point2 = { static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY()) };
+    gradient.isRadial = false;
+
+    int levelWidth = static_cast<int>(levelPos * bounds.getWidth());
+    if (levelWidth > 0)
+    {
+        g.setGradientFill(gradient);
+        g.fillRect(bounds.withWidth(levelWidth));
+    }
+
+    int peakX = bounds.getX() + static_cast<int>(peakPos * bounds.getWidth());
+    g.setColour(getTheme().textPrimary);
+    g.fillRect(peakX - 1, bounds.getY(), 2, bounds.getHeight());
+
+    if (clip)
+    {
+        g.setColour(getTheme().statusError);
+        g.fillRect(bounds.getRight() - 4, bounds.getY(), 4, bounds.getHeight());
+    }
+}
+
 void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
                                 float level, float rms, float peakHold, bool clip)
 {
@@ -198,80 +257,15 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
     float rmsPos = levelToPosition(std::min(rms, 1.0f));
     float peakPos = levelToPosition(std::min(peakHold, 1.0f));
 
-    // Create gradient for the full meter range
     juce::ColourGradient gradient;
-    
-    // Define gradient colors (Green -> Yellow -> Red)
-    gradient.addColour(0.0, getTheme().statusActive);   // Bottom/Left
-    gradient.addColour(0.7, getTheme().statusWarning);  // Mid
-    gradient.addColour(1.0, getTheme().statusError);    // Top/Right
+    gradient.addColour(0.0, getTheme().statusActive);
+    gradient.addColour(0.7, getTheme().statusWarning);
+    gradient.addColour(1.0, getTheme().statusError);
 
     if (orientation_ == Orientation::Vertical)
-    {
-        // Setup vertical gradient (Bottom to Top)
-        gradient.point1 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getBottom()) };
-        gradient.point2 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY()) };
-        gradient.isRadial = false;
-
-        // Level fill
-        int levelHeight = static_cast<int>(levelPos * bounds.getHeight());
-        if (levelHeight > 0)
-        {
-            auto levelBounds = bounds.withTop(bounds.getBottom() - levelHeight);
-            g.setGradientFill(gradient);
-            g.fillRect(levelBounds);
-        }
-
-        // RMS indicator (if showing both)
-        if (meterType_ == MeterType::PeakWithRMS)
-        {
-            int rmsHeight = static_cast<int>(rmsPos * bounds.getHeight());
-            auto rmsBounds = bounds.withTop(bounds.getBottom() - rmsHeight);
-
-            g.setColour(juce::Colours::white.withAlpha(0.3f));
-            g.fillRect(rmsBounds.getX(), rmsBounds.getY(), rmsBounds.getWidth(), 2);
-        }
-
-        // Peak hold indicator
-        int peakY = bounds.getBottom() - static_cast<int>(peakPos * bounds.getHeight());
-        g.setColour(getTheme().textPrimary);
-        g.fillRect(bounds.getX(), peakY - 1, bounds.getWidth(), 2);
-
-        // Clip indicator
-        if (clip)
-        {
-            g.setColour(getTheme().statusError);
-            g.fillRect(bounds.getX(), bounds.getY(), bounds.getWidth(), 4);
-        }
-    }
+        paintMeterVertical(g, bounds, gradient, levelPos, rmsPos, peakPos, clip);
     else
-    {
-        // Setup horizontal gradient (Left to Right)
-        gradient.point1 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY()) };
-        gradient.point2 = { static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY()) };
-        gradient.isRadial = false;
-
-        // Horizontal orientation
-        int levelWidth = static_cast<int>(levelPos * bounds.getWidth());
-        if (levelWidth > 0)
-        {
-            auto levelBounds = bounds.withWidth(levelWidth);
-            g.setGradientFill(gradient);
-            g.fillRect(levelBounds);
-        }
-
-        // Peak hold
-        int peakX = bounds.getX() + static_cast<int>(peakPos * bounds.getWidth());
-        g.setColour(getTheme().textPrimary);
-        g.fillRect(peakX - 1, bounds.getY(), 2, bounds.getHeight());
-
-        // Clip
-        if (clip)
-        {
-            g.setColour(getTheme().statusError);
-            g.fillRect(bounds.getRight() - 4, bounds.getY(), 4, bounds.getHeight());
-        }
-    }
+        paintMeterHorizontal(g, bounds, gradient, levelPos, peakPos, clip);
 }
 
 void OscilMeterBar::paintScale(juce::Graphics& g, juce::Rectangle<int> bounds)

@@ -23,6 +23,7 @@ namespace oscil
 class ShaderRegistry
 {
 public:
+    /// Create a shader registry and register all built-in shaders.
     ShaderRegistry();
     ~ShaderRegistry();
 

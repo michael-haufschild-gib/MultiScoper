@@ -318,6 +318,93 @@ bool BloomEffect::isCompiled() const
     return compiled_;
 }
 
+void BloomEffect::resizeMipChain(juce::OpenGLContext& context, int w, int h)
+{
+    for (int i = 0; i < kMaxMipLevels; ++i)
+    {
+        int mipW = std::max(1, w >> (i + 1));
+        int mipH = std::max(1, h >> (i + 1));
+
+        if (mipChain_[static_cast<size_t>(i)]->isValid())
+            mipChain_[static_cast<size_t>(i)]->destroy(context);
+
+        mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false);
+    }
+    lastWidth_ = w;
+    lastHeight_ = h;
+}
+
+void BloomEffect::passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, FramebufferPool& pool)
+{
+    mipChain_[0]->bind();
+    prefilterShader_->use();
+    source->bindTexture(0);
+    ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
+    ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
+    ext.glUniform2f(prefilterResLoc_, (float)source->width, (float)source->height);
+    pool.renderFullscreenQuad();
+    mipChain_[0]->unbind();
+}
+
+void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool)
+{
+    downsampleShader_->use();
+    for (int i = 0; i < kMaxMipLevels - 1; ++i)
+    {
+        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
+        Framebuffer* dst = mipChain_[static_cast<size_t>(i) + 1].get();
+        dst->bind();
+        src->bindTexture(0);
+        ext.glUniform2f(downsampleResLoc_, (float)src->width, (float)src->height);
+        pool.renderFullscreenQuad();
+        dst->unbind();
+    }
+}
+
+void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool)
+{
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+
+    upsampleShader_->use();
+    ext.glUniform1f(upsampleFilterRadiusLoc_, settings_.spread);
+
+    for (int i = kMaxMipLevels - 1; i > 0; --i)
+    {
+        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
+        Framebuffer* dst = mipChain_[static_cast<size_t>(i) - 1].get();
+        dst->bind();
+        src->bindTexture(0);
+        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float)src->width, 1.0f / (float)src->height);
+        pool.renderFullscreenQuad();
+        dst->unbind();
+    }
+}
+
+void BloomEffect::passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool)
+{
+    glDisable(GL_BLEND);
+
+    destination->bind();
+    combineShader_->use();
+
+    source->bindTexture(0);
+    ext.glUniform1i(combineOriginalLoc_, 0);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, mipChain_[0]->colorTexture);
+    ext.glUniform1i(combineBloomLoc_, 1);
+    ext.glUniform1f(combineIntensityLoc_, settings_.intensity);
+
+    pool.renderFullscreenQuad();
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    destination->unbind();
+}
+
 void BloomEffect::apply(
     juce::OpenGLContext& context,
     Framebuffer* source,
@@ -328,117 +415,17 @@ void BloomEffect::apply(
     juce::ignoreUnused(deltaTime);
     if (!compiled_ || !source || !destination) return;
 
-    // 1. Check for resize
-    int w = source->width;
-    int h = source->height;
-
-    if (w != lastWidth_ || h != lastHeight_)
-    {
-        for (int i = 0; i < kMaxMipLevels; ++i)
-        {
-            // Mip 0 is half res, Mip 1 is quarter, etc.
-            // Use shift to divide by 2^(i+1)
-            int mipW = std::max(1, w >> (i + 1));
-            int mipH = std::max(1, h >> (i + 1));
-            
-            if (mipChain_[static_cast<size_t>(i)]->isValid())
-                mipChain_[static_cast<size_t>(i)]->destroy(context);
-            
-            // Use Linear/Clamp for all mips (default in Framebuffer::create)
-            mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false);
-        }
-        lastWidth_ = w;
-        lastHeight_ = h;
-    }
+    if (source->width != lastWidth_ || source->height != lastHeight_)
+        resizeMipChain(context, source->width, source->height);
 
     auto& ext = context.extensions;
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
-    // =========================================================================
-    // Pass 1: Prefilter + Downsample to Mip 0
-    // =========================================================================
-    mipChain_[0]->bind();
-    prefilterShader_->use();
-    source->bindTexture(0);
-    ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
-    ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
-    ext.glUniform2f(prefilterResLoc_, (float)source->width, (float)source->height);
-    pool.renderFullscreenQuad();
-    mipChain_[0]->unbind();
-
-    // =========================================================================
-    // Pass 2: Downsample Chain (Mip 0 -> 1 -> 2 -> 3 -> 4 -> 5)
-    // =========================================================================
-    downsampleShader_->use();
-    for (int i = 0; i < kMaxMipLevels - 1; ++i)
-    {
-        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
-        Framebuffer* dst = mipChain_[static_cast<size_t>(i)+1].get();
-
-        dst->bind();
-        src->bindTexture(0);
-        
-        // Pass resolution of SOURCE for the dual filter offset calculations
-        ext.glUniform2f(downsampleResLoc_, (float)src->width, (float)src->height);
-        
-        pool.renderFullscreenQuad();
-        dst->unbind();
-    }
-
-    // =========================================================================
-    // Pass 3: Upsample Chain (Mip 5 -> 4 -> 3 -> 2 -> 1 -> 0)
-    // =========================================================================
-    // Enable additive blending to accumulate the glow
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE);
-
-    upsampleShader_->use();
-    ext.glUniform1f(upsampleFilterRadiusLoc_, settings_.spread); // Controls tent radius
-
-    for (int i = kMaxMipLevels - 1; i > 0; --i)
-    {
-        Framebuffer* src = mipChain_[static_cast<size_t>(i)].get();
-        Framebuffer* dst = mipChain_[static_cast<size_t>(i)-1].get();
-
-        dst->bind();
-        src->bindTexture(0);
-        
-        // Pass texel size of the SOURCE (the smaller mip we are upsampling from)
-        // This ensures the filter kernel size is relative to the source pixels
-        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float)src->width, 1.0f / (float)src->height);
-
-        pool.renderFullscreenQuad();
-        dst->unbind();
-    }
-
-    // =========================================================================
-    // Pass 4: Combine
-    // =========================================================================
-    // Switch to standard blending for the final composition
-    glDisable(GL_BLEND); 
-
-    destination->bind();
-    combineShader_->use();
-
-    source->bindTexture(0);
-    ext.glUniform1i(combineOriginalLoc_, 0);
-
-    // Mip 0 now contains the accumulated bloom from all levels
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, mipChain_[0]->colorTexture);
-    ext.glUniform1i(combineBloomLoc_, 1);
-
-    ext.glUniform1f(combineIntensityLoc_, settings_.intensity);
-
-    pool.renderFullscreenQuad();
-
-    // Cleanup
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    destination->unbind();
+    passPrefilter(ext, source, pool);
+    passDownsample(ext, pool);
+    passUpsample(ext, pool);
+    passCombine(ext, source, destination, pool);
 }
 
 } // namespace oscil

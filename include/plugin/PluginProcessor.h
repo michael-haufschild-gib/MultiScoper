@@ -42,20 +42,20 @@ class OscilPluginProcessor : public juce::AudioProcessor
     , public juce::ValueTree::Listener
 {
 public:
-    // Primary constructor with aggregated config
+    /// Construct with aggregated dependency config.
     explicit OscilPluginProcessor(const PluginProcessorConfig& config);
 
-    // Legacy constructor — delegates to the config constructor
+    /// Legacy constructor — delegates to the config constructor.
     OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
                          ShaderRegistry& shaderRegistry, PresetManager& presetManager,
                          MemoryBudgetManager& memoryBudgetManager);
     ~OscilPluginProcessor() override;
 
-    // AudioProcessor interface
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    /// Handle DAW track property updates (name, colour).
     void updateTrackProperties(const TrackProperties& properties) override;
 
     juce::AudioProcessorEditor* createEditor() override;
@@ -77,23 +77,29 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
-    // Oscil-specific methods
+    /// Get the capture buffer for this instance's audio data.
     [[nodiscard]] std::shared_ptr<SharedCaptureBuffer> getCaptureBuffer() const;
 
-    // Service access for dependency injection
-    // UI components should use these instead of accessing singletons directly
+    /// Get the instance registry for source discovery.
     IInstanceRegistry& getInstanceRegistry();
+    /// Get the theme service for UI theming.
     IThemeService& getThemeService();
+    /// Get the shader registry for GPU waveform shaders.
     ShaderRegistry& getShaderRegistry();
+    /// Get the visual preset manager.
     PresetManager& getPresetManager();
 
     // IAudioDataProvider interface
+    /// Get the capture buffer for the given source (local or from registry).
     std::shared_ptr<IAudioBuffer> getBuffer(const SourceId& sourceId) override;
+    /// Get the mutable plugin state tree.
     OscilState& getState() override;
     float getCpuUsage() const override { return cpuUsage_.load(std::memory_order_relaxed); }
     double getSampleRate() const override { return currentSampleRate_.load(std::memory_order_relaxed); }
     int getCaptureRate() const override;
+    /// Get the timing engine for host-sync and trigger configuration.
     [[nodiscard]] TimingEngine& getTimingEngine() override;
+    /// Get the source ID assigned to this plugin instance.
     [[nodiscard]] SourceId getSourceId() const override;
 
     // ValueTree::Listener overrides

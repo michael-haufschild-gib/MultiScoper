@@ -83,6 +83,7 @@ struct OscillatorId
     bool operator==(const OscillatorId& other) const { return id == other.id; }
     bool operator!=(const OscillatorId& other) const { return !(*this == other); }
 
+    /// Generate a unique oscillator identifier.
     [[nodiscard]] static OscillatorId generate();
     static OscillatorId invalid() { return OscillatorId{""}; }
     bool isValid() const { return id.isNotEmpty(); }
@@ -98,6 +99,7 @@ struct PaneId
     bool operator==(const PaneId& other) const { return id == other.id; }
     bool operator!=(const PaneId& other) const { return !(*this == other); }
 
+    /// Generate a unique pane identifier.
     [[nodiscard]] static PaneId generate();
     static PaneId invalid() { return PaneId{""}; }
     bool isValid() const { return id.isNotEmpty(); }
@@ -207,8 +209,11 @@ public:
     void setVisualPresetId(const juce::String& presetId) noexcept { visualPresetId_ = presetId; }
 
     // Visual overrides
+    /// Set a per-oscillator visual property override.
     void setVisualOverride(const juce::Identifier& property, const juce::var& value);
+    /// Get a per-oscillator visual property override value.
     juce::var getVisualOverride(const juce::Identifier& property) const;
+    /// Remove all per-oscillator visual property overrides.
     void clearVisualOverrides();
     const juce::ValueTree& getVisualOverrides() const { return visualOverrides_; }
 

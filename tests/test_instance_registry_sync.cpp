@@ -265,36 +265,53 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegistration)
     EXPECT_EQ(successCount.load(), std::min(64, numThreads * registrationsPerThread));
 }
 
-TEST_F(InstanceRegistrySyncTest, ConcurrentReadWrite)
+TEST_F(InstanceRegistrySyncTest, ConcurrentReadWriteDataIntegrity)
 {
+    // Bug caught: reader seeing partially-updated source info (e.g., new name
+    // but old sampleRate) due to non-atomic update of SourceInfo fields.
     auto buffer = std::make_shared<SharedCaptureBuffer>();
     auto sourceId = getRegistry().registerInstance(
-        "concurrent_rw", buffer, "RW Track");
+        "concurrent_rw", buffer, "RW Track", 2, 44100.0);
 
     std::atomic<bool> stopFlag{false};
     std::atomic<int> readCount{0};
     std::atomic<int> updateCount{0};
+    std::atomic<int> inconsistentCount{0};
 
-    // Reader thread
-    std::thread reader([this, &stopFlag, &readCount, &sourceId]() {
+    // Reader thread: verifies name and sampleRate are from the same update
+    std::thread reader([this, &stopFlag, &readCount, &inconsistentCount, &sourceId]() {
         while (!stopFlag.load())
         {
             auto info = getRegistry().getSource(sourceId);
             if (info.has_value())
-                readCount++;
+            {
+                // The writer sets name = "Name_N" and sampleRate = 44100 + N
+                // If we see "Name_5" then sampleRate should be 44105.0
+                juce::String name = info->name;
+                if (name.startsWith("Name_"))
+                {
+                    int n = name.getTrailingIntValue();
+                    double expectedRate = 44100.0 + static_cast<double>(n);
+                    if (std::abs(info->sampleRate - expectedRate) > 0.01)
+                    {
+                        inconsistentCount.fetch_add(1, std::memory_order_relaxed);
+                    }
+                }
+                readCount.fetch_add(1, std::memory_order_relaxed);
+            }
         }
     });
 
-    // Writer thread
+    // Writer thread: updates with correlated name + sampleRate
     std::thread writer([this, &stopFlag, &updateCount, &sourceId]() {
-        for (int i = 0; i < 100; ++i)
+        for (int i = 0; i < 200; ++i)
         {
             getRegistry().updateSource(
                 sourceId,
-                "Name " + juce::String(i),
+                "Name_" + juce::String(i),
                 (i % 2) + 1,
                 44100.0 + static_cast<double>(i));
-            updateCount++;
+            updateCount.fetch_add(1, std::memory_order_relaxed);
         }
         stopFlag.store(true);
     });
@@ -302,12 +319,16 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentReadWrite)
     reader.join();
     writer.join();
 
-    EXPECT_EQ(updateCount.load(), 100);
-    EXPECT_GT(readCount.load(), 0);
+    EXPECT_EQ(updateCount.load(), 200);
+    EXPECT_GT(readCount.load(), 10);
+    EXPECT_EQ(inconsistentCount.load(), 0)
+        << "Source info torn read: name and sampleRate from different updates";
 }
 
 TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
 {
+    // Bug caught: shared_mutex deadlock when register and unregister race,
+    // or iterator invalidation when unregister modifies map during getAllSources iteration.
     constexpr int iterations = 100;
 
     std::atomic<int> registerSuccess{0};
@@ -321,7 +342,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
                 "churn_track_" + juce::String(i % 10), buffer, "Track");
 
             if (sourceId.isValid())
-                registerSuccess++;
+                registerSuccess.fetch_add(1, std::memory_order_relaxed);
         }
     });
 
@@ -332,8 +353,8 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
             for (const auto& source : sources)
             {
                 getRegistry().unregisterInstance(source.sourceId);
-                unregisterCalls++;
-                break; // Just remove one at a time
+                unregisterCalls.fetch_add(1, std::memory_order_relaxed);
+                break;
             }
         }
     });
@@ -341,6 +362,73 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
     registerThread.join();
     unregisterThread.join();
 
-    // Should complete without crashes or deadlocks
-    EXPECT_GT(registerSuccess.load(), 0);
+    EXPECT_GT(registerSuccess.load(), 10)
+        << "Too few registrations succeeded under contention";
+
+    // Final state should be consistent: sourceCount should match actual entries
+    auto allSources = getRegistry().getAllSources();
+    EXPECT_EQ(allSources.size(), getRegistry().getSourceCount())
+        << "getAllSources().size() and getSourceCount() diverged after concurrent churn";
+}
+
+// Test: getAllSources returns consistent snapshot during concurrent updates
+TEST_F(InstanceRegistrySyncTest, GetAllSourcesSnapshotConsistency)
+{
+    // Bug caught: getAllSources returning a mix of pre-update and post-update
+    // source infos because the shared_mutex was released between reads.
+
+    // Register 10 sources
+    std::vector<SourceId> ids;
+    for (int i = 0; i < 10; ++i)
+    {
+        auto buffer = std::make_shared<SharedCaptureBuffer>();
+        auto id = getRegistry().registerInstance(
+            "snapshot_track_" + juce::String(i), buffer,
+            "Track_" + juce::String(i), 2, 44100.0);
+        ids.push_back(id);
+    }
+
+    std::atomic<bool> running{true};
+    std::atomic<int> snapshotCount{0};
+
+    // Reader: takes snapshots and verifies all entries exist
+    std::thread reader([this, &running, &snapshotCount]() {
+        while (running.load(std::memory_order_relaxed))
+        {
+            auto sources = getRegistry().getAllSources();
+            size_t count = getRegistry().getSourceCount();
+            // Snapshot size should be consistent with count
+            // (may differ slightly due to concurrent modification, but
+            // should never have garbage entries)
+            for (const auto& src : sources)
+            {
+                EXPECT_TRUE(src.sourceId.isValid())
+                    << "Invalid sourceId in getAllSources snapshot";
+            }
+            snapshotCount.fetch_add(1, std::memory_order_relaxed);
+            (void)count; // Suppress unused warning
+        }
+    });
+
+    // Writer: churns registrations
+    for (int cycle = 0; cycle < 50; ++cycle)
+    {
+        // Unregister one, register a new one
+        if (!ids.empty())
+        {
+            getRegistry().unregisterInstance(ids.back());
+            ids.pop_back();
+        }
+        auto buffer = std::make_shared<SharedCaptureBuffer>();
+        auto newId = getRegistry().registerInstance(
+            "snapshot_new_" + juce::String(cycle), buffer,
+            "New_" + juce::String(cycle));
+        if (newId.isValid())
+            ids.push_back(newId);
+    }
+
+    running.store(false, std::memory_order_relaxed);
+    reader.join();
+
+    EXPECT_GT(snapshotCount.load(), 10);
 }

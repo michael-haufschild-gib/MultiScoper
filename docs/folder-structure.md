@@ -3,7 +3,7 @@
 ## Snapshot of the Current Layout
 - `src/core`, `src/dsp`, `src/rendering`, and `src/ui` mirror the public headers in `include/`, but the boundaries regularly blur (e.g., `src/ui/PluginTestServer.cpp` mixes UI concerns with HTTP test harness logic).
 - Pure UI widgets live beside entry points (`src/ui/components/OscilButton.cpp` vs. `src/ui/PluginEditor.cpp`) which makes it hard to isolate reusable UI code or bundle-only surfaces.
-- Rendering code mixes foundational objects (`src/rendering/RenderEngine.cpp`) with highly specific effects under the same directory, while some specializations are already tucked under `rendering/effects`, `rendering/materials`, etc., leading to two competing patterns.
+- Rendering code mixes foundational objects (`src/rendering/RenderEngine.cpp`) with highly specific effects under the same directory, while some specializations are already tucked under `rendering/effects`, `rendering/shaders`, etc., leading to two competing patterns.
 - Tooling-specific code (`src/ui/test_server/*` and `PluginTestServer_OLD.cpp`) sits inside the production UI tree, so test harness changes risk leaking into the plugin build.
 
 ## Re-organization Goals
@@ -74,7 +74,7 @@ src/
 
 ### Notes
 - Each `modules/<feature>` folder contains `core/`, `ui/`, and `coordinators/` subfolders when needed, so tests can target a single module.
-- `shared/rendering` keeps effect implementations under `effects/`, `materials/`, `particles/`, and `shaders/`, but wraps them with an index header (`RenderingPrimitives.h`) for consumers.
+- `shared/rendering` keeps effect implementations under `effects/` and `shaders/`, but wraps them with an index header (`RenderingPrimitives.h`) for consumers.
 - `platform/juce` becomes the home for `AnimationSettings.mm` and any Objective-C++ glue so platform tooling does not leak into cross-platform code.
 
 ## Migration Plan

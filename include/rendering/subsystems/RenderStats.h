@@ -33,6 +33,11 @@ public:
     {
         deltaTime_ = deltaTime;
         accumulatedTime_ += deltaTime;
+        // Wrap to prevent float precision loss after long sessions.
+        // 3600s (1 hour) is large enough for any animation period,
+        // and well within float precision for sub-millisecond accuracy.
+        if (accumulatedTime_ > 3600.0f)
+            accumulatedTime_ -= 3600.0f;
     }
 
     [[nodiscard]] float getDeltaTime() const { return deltaTime_; }

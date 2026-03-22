@@ -35,13 +35,14 @@ class PaneComponent : public juce::Component,
                        public TestIdSupport
 {
 public:
+    /// Construct a pane bound to the given data provider and assigned the given pane ID.
     PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, const PaneId& paneId);
     ~PaneComponent() override = default;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // DragAndDropTarget interface
+    /// Accept oscillator drag-drop sources for reassignment (DragAndDropTarget).
     bool isInterestedInDragSource(const SourceDetails& dragSourceDetails) override;
     void itemDragEnter(const SourceDetails& dragSourceDetails) override;
     void itemDragExit(const SourceDetails& dragSourceDetails) override;
@@ -180,8 +181,9 @@ public:
     // Drag-and-drop identifier
     static constexpr const char* PANE_DRAG_ID = "OscilPane";
 
-    // Test access - for automated testing only
+    /// Get the waveform component at the given stack index (test access only).
     WaveformComponent* getWaveformAt(size_t index) const;
+    /// Get the oscillator model at the given stack index (test access only).
     const Oscillator* getOscillatorAt(size_t index) const;
 
     // Component access for testing

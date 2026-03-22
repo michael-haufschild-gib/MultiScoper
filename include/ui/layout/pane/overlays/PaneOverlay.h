@@ -73,7 +73,7 @@ public:
     // Calculate preferred size based on content
     virtual juce::Rectangle<int> getPreferredBounds() const;
 
-    // Update position within parent bounds
+    /// Reposition the overlay within the given parent bounds using the anchor/margin rules.
     void updatePositionInParent(juce::Rectangle<int> parentBounds);
 
 protected:

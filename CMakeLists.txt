@@ -156,7 +156,7 @@ include(cmake/CPM.cmake)
 CPMAddPackage(
     NAME JUCE
     GITHUB_REPOSITORY juce-framework/JUCE
-    GIT_TAG 8.0.5
+    GIT_TAG 8.0.12
     OPTIONS "JUCE_BUILD_EXAMPLES OFF" "JUCE_BUILD_EXTRAS OFF"
 )
 
@@ -164,21 +164,23 @@ CPMAddPackage(
 CPMAddPackage(
     NAME httplib
     GITHUB_REPOSITORY yhirose/cpp-httplib
-    GIT_TAG v0.28.0
+    GIT_TAG v0.38.0
 )
 
 # nlohmann/json
 CPMAddPackage(
     NAME json
     GITHUB_REPOSITORY nlohmann/json
-    GIT_TAG v3.11.3
+    GIT_TAG v3.12.0
 )
 
 # CLAP format support via clap-juce-extensions
+# Pinned to a specific commit for reproducible builds.
+# Tags (0.24.0-0.26.0) are incompatible with JUCE 8.0.12; main branch tracks JUCE 8.
 CPMAddPackage(
     NAME clap-juce-extensions
     GITHUB_REPOSITORY free-audio/clap-juce-extensions
-    GIT_TAG 0.26.0
+    GIT_TAG e1f67893cc409a40c1154fa2e78c97046da24ce0
 )
 
 # Melatonin Inspector for UI debugging (browser-like devtools for JUCE)
@@ -235,27 +237,14 @@ juce_add_binary_data(OscilBinaryData
         resources/icomoon/SVG/pause2.svg
         resources/icomoon/SVG/play3.svg
         resources/icomoon/SVG/redo.svg
-        resources/textures/particle_cloud.png
-        resources/textures/particle_smoke_sheet.png
-        resources/textures/particle_fire_sheet.png
-        resources/textures/particle_electric_sheet.png
-        resources/textures/particle_sparkle.png
-        resources/textures/particle_halo.png
-        resources/textures/particle_shockwave.png
-        resources/textures/particle_point_soft.png
-        resources/textures/particle_wisp.png
         resources/shaders/basic.vert
         resources/shaders/basic.frag
         resources/shaders/neon_glow.vert
         resources/shaders/neon_glow.frag
-        resources/shaders/digital_glitch.vert
-        resources/shaders/digital_glitch.frag
         resources/shaders/dual_outline.vert
         resources/shaders/dual_outline.frag
         resources/shaders/gradient_fill.vert
         resources/shaders/gradient_fill.frag
-        resources/shaders/plasma_sine.vert
-        resources/shaders/plasma_sine.frag
 )
 
 # Source files
@@ -433,6 +422,8 @@ if(OSCIL_BUILD_TESTS)
         tests/test_capture_buffer_core.cpp
         tests/test_capture_buffer_metadata.cpp
         tests/test_capture_buffer_threading.cpp
+        tests/test_capture_buffer_concurrent.cpp
+        tests/test_capture_buffer_integrity.cpp
         tests/test_capture_buffer_lifecycle.cpp
 
         tests/test_oscillator_core.cpp
@@ -482,7 +473,6 @@ if(OSCIL_BUILD_TESTS)
         tests/test_sidebar_component.cpp
         tests/test_preset_manager.cpp
         tests/test_shaders.cpp
-        tests/test_waveform_shader_3d.cpp
         tests/test_effect_chain.cpp
         tests/test_framebuffer_pool.cpp
         tests/test_waveform_presenter.cpp
@@ -493,16 +483,12 @@ if(OSCIL_BUILD_TESTS)
         tests/test_pane_action_bar.cpp
         tests/test_pane_header.cpp
         tests/test_config_structs.cpp
-        tests/test_particle_system.cpp
 
         # New tests - 100% coverage initiative
         tests/test_window_layout.cpp
         tests/test_coordinator_lifecycle.cpp
         tests/test_coordinator_events.cpp
         tests/test_coordinator_state.cpp
-        tests/test_camera3d_math.cpp
-        tests/test_camera3d_interaction.cpp
-        tests/test_camera3d_animation.cpp
         tests/test_visual_config_validation.cpp
         tests/test_visual_config_application.cpp
         tests/test_visual_config_presets.cpp
@@ -529,6 +515,15 @@ if(OSCIL_BUILD_TESTS)
         tests/test_pane_selector.cpp
         tests/test_select_pane_dialog.cpp
         tests/test_oscillator_panel_controller.cpp
+
+        # Concurrency primitives
+        tests/test_seqlock.cpp
+
+        # Integration tests
+        tests/test_state_integration.cpp
+
+        # Performance benchmarks
+        tests/test_performance_benchmarks.cpp
 
         # Test Harness Dependencies
         test_harness/src/TestElementRegistry.cpp
@@ -643,6 +638,17 @@ if(OSCIL_BUILD_TESTS)
                 --paths include src
         )
         set_tests_properties(ArchitectureLint PROPERTIES LABELS "lint")
+    endif()
+
+    if(OSCIL_ENABLE_COMMENT_LINT)
+        add_test(NAME CommentLint
+            COMMAND ${Python3_EXECUTABLE} ${OSCIL_COMMENT_LINT_SCRIPT}
+                --root ${CMAKE_CURRENT_SOURCE_DIR}
+                --paths include src tests test_harness
+                --doc-paths include
+                --max-violations 0
+        )
+        set_tests_properties(CommentLint PROPERTIES LABELS "lint")
     endif()
 endif()
 

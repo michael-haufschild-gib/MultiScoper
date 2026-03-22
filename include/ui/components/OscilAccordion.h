@@ -27,15 +27,17 @@ class OscilAccordionSection : public ThemedComponent,
                               private juce::Timer
 {
 public:
+    /// Create accordion section with optional title.
     explicit OscilAccordionSection(IThemeService& themeService, const juce::String& title = "");
+    /// Create accordion section with title and test ID.
     OscilAccordionSection(IThemeService& themeService, const juce::String& title, const juce::String& testId);
     ~OscilAccordionSection() override;
 
-    // Configuration
     void setTitle(const juce::String& title);
     juce::String getTitle() const { return title_; }
 
     void setIcon(const juce::Image& icon);
+    /// Remove the header icon.
     void clearIcon();
 
     /**
@@ -47,9 +49,10 @@ public:
     void setContent(juce::Component* content);
     juce::Component* getContent() const { return content_; }
 
-    // State
+    /// Set expanded state with optional animation.
     void setExpanded(bool expanded, bool animate = true);
     bool isExpanded() const { return expanded_; }
+    /// Toggle between expanded and collapsed.
     void toggle();
 
     void setEnabled(bool enabled);
@@ -125,34 +128,41 @@ private:
 class OscilAccordion : public ThemedComponent
 {
 public:
+    /// Create an accordion container.
     explicit OscilAccordion(IThemeService& themeService);
     ~OscilAccordion() override;
 
-    // Section management
+    /// Add a section with title only (content set later via section->setContent).
     OscilAccordionSection* addSection(const juce::String& title);
+    /// Add a section with title and content component.
     OscilAccordionSection* addSection(const juce::String& title, juce::Component* content);
+    /// Remove the section at the given index.
     void removeSection(int index);
+    /// Remove all sections.
     void clearSections();
 
     int getNumSections() const { return static_cast<int>(sections_.size()); }
+    /// Get section by index (bounds-checked, returns nullptr if invalid).
     OscilAccordionSection* getSection(int index);
 
-    // Multi-expand control
     void setAllowMultiExpand(bool allow);
     bool getAllowMultiExpand() const { return allowMultiExpand_; }
 
-    // Expand control
+    /// Expand section at index (collapses others if multi-expand is off).
     void expandSection(int index);
+    /// Collapse section at index.
     void collapseSection(int index);
+    /// Expand all sections (only if multi-expand is enabled).
     void expandAll();
+    /// Collapse all sections.
     void collapseAll();
 
     // Configuration
     void setSpacing(int spacing);
     int getSpacing() const { return spacing_; }
 
-    // Size
     int getPreferredHeight() const;
+    /// Recalculate and apply section heights after content changes.
     void updateContentHeight();
 
     // Component overrides

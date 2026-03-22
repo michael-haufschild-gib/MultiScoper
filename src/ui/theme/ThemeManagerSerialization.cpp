@@ -70,6 +70,56 @@ juce::ValueTree ColorTheme::toValueTree() const
     return state;
 }
 
+namespace
+{
+
+using ColourReader = std::function<juce::Colour(const char*, juce::Colour)>;
+
+void loadButtonColors(ColorTheme& t, const ColourReader& getColour)
+{
+    t.btnPrimaryBg = getColour("btnPriBg", t.btnPrimaryBg);
+    t.btnPrimaryBgHover = getColour("btnPriBgH", t.btnPrimaryBgHover);
+    t.btnPrimaryBgActive = getColour("btnPriBgA", t.btnPrimaryBgActive);
+    t.btnPrimaryBgDisabled = getColour("btnPriBgD", t.btnPrimaryBgDisabled);
+    t.btnPrimaryText = getColour("btnPriTxt", t.btnPrimaryText);
+    t.btnPrimaryTextDisabled = getColour("btnPriTxtD", t.btnPrimaryTextDisabled);
+    t.btnPrimaryTextHover = t.btnPrimaryText;
+    t.btnPrimaryTextActive = t.btnPrimaryText;
+
+    t.btnSecondaryBg = getColour("btnSecBg", t.btnSecondaryBg);
+    t.btnSecondaryBgHover = getColour("btnSecBgH", t.btnSecondaryBgHover);
+    t.btnSecondaryBgActive = getColour("btnSecBgA", t.btnSecondaryBgActive);
+    t.btnSecondaryBgDisabled = getColour("btnSecBgD", t.btnSecondaryBgDisabled);
+    t.btnSecondaryText = getColour("btnSecTxt", t.btnSecondaryText);
+    t.btnSecondaryTextDisabled = getColour("btnSecTxtD", t.btnSecondaryTextDisabled);
+    t.btnSecondaryTextHover = t.btnSecondaryText;
+    t.btnSecondaryTextActive = t.btnSecondaryText;
+
+    t.btnTertiaryBg = getColour("btnTerBg", t.btnTertiaryBg);
+    t.btnTertiaryBgHover = getColour("btnTerBgH", t.btnTertiaryBgHover);
+    t.btnTertiaryBgActive = getColour("btnTerBgA", t.btnTertiaryBgActive);
+    t.btnTertiaryBgDisabled = getColour("btnTerBgD", t.btnTertiaryBgDisabled);
+    t.btnTertiaryText = getColour("btnTerTxt", t.btnTertiaryText);
+    t.btnTertiaryTextDisabled = getColour("btnTerTxtD", t.btnTertiaryTextDisabled);
+    t.btnTertiaryTextHover = t.btnTertiaryText;
+    t.btnTertiaryTextActive = t.btnTertiaryText;
+}
+
+void loadWaveformColors(ColorTheme& t, const juce::ValueTree& state)
+{
+    juce::String colorStr = state.getProperty("waveformColors", "");
+    if (colorStr.isNotEmpty())
+    {
+        t.waveformColors.clear();
+        juce::StringArray colors;
+        colors.addTokens(colorStr, ",", "");
+        for (const auto& c : colors)
+            t.waveformColors.push_back(juce::Colour(static_cast<juce::uint32>(c.getHexValue32())));
+    }
+}
+
+} // namespace
+
 void ColorTheme::fromValueTree(const juce::ValueTree& state)
 {
     if (!state.hasType("Theme"))
@@ -100,47 +150,8 @@ void ColorTheme::fromValueTree(const juce::ValueTree& state)
     statusWarning = getColour("statusWarning", statusWarning);
     statusError = getColour("statusError", statusError);
 
-    // Button Colors
-    btnPrimaryBg = getColour("btnPriBg", btnPrimaryBg);
-    btnPrimaryBgHover = getColour("btnPriBgH", btnPrimaryBgHover);
-    btnPrimaryBgActive = getColour("btnPriBgA", btnPrimaryBgActive);
-    btnPrimaryBgDisabled = getColour("btnPriBgD", btnPrimaryBgDisabled);
-    btnPrimaryText = getColour("btnPriTxt", btnPrimaryText);
-    btnPrimaryTextDisabled = getColour("btnPriTxtD", btnPrimaryTextDisabled);
-
-    btnPrimaryTextHover = btnPrimaryText;
-    btnPrimaryTextActive = btnPrimaryText;
-
-    btnSecondaryBg = getColour("btnSecBg", btnSecondaryBg);
-    btnSecondaryBgHover = getColour("btnSecBgH", btnSecondaryBgHover);
-    btnSecondaryBgActive = getColour("btnSecBgA", btnSecondaryBgActive);
-    btnSecondaryBgDisabled = getColour("btnSecBgD", btnSecondaryBgDisabled);
-    btnSecondaryText = getColour("btnSecTxt", btnSecondaryText);
-    btnSecondaryTextDisabled = getColour("btnSecTxtD", btnSecondaryTextDisabled);
-    btnSecondaryTextHover = btnSecondaryText;
-    btnSecondaryTextActive = btnSecondaryText;
-
-    btnTertiaryBg = getColour("btnTerBg", btnTertiaryBg);
-    btnTertiaryBgHover = getColour("btnTerBgH", btnTertiaryBgHover);
-    btnTertiaryBgActive = getColour("btnTerBgA", btnTertiaryBgActive);
-    btnTertiaryBgDisabled = getColour("btnTerBgD", btnTertiaryBgDisabled);
-    btnTertiaryText = getColour("btnTerTxt", btnTertiaryText);
-    btnTertiaryTextDisabled = getColour("btnTerTxtD", btnTertiaryTextDisabled);
-    btnTertiaryTextHover = btnTertiaryText;
-    btnTertiaryTextActive = btnTertiaryText;
-
-    // Parse waveform colors
-    juce::String colorStr = state.getProperty("waveformColors", "");
-    if (colorStr.isNotEmpty())
-    {
-        waveformColors.clear();
-        juce::StringArray colors;
-        colors.addTokens(colorStr, ",", "");
-        for (const auto& c : colors)
-        {
-            waveformColors.push_back(juce::Colour(static_cast<juce::uint32>(c.getHexValue32())));
-        }
-    }
+    loadButtonColors(*this, getColour);
+    loadWaveformColors(*this, state);
 }
 
 juce::String ColorTheme::toJson() const

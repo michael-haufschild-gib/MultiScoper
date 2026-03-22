@@ -444,55 +444,6 @@ std::unique_ptr<juce::AccessibilityHandler> OscilModal::createAccessibilityHandl
     return std::make_unique<OscilModalAccessibilityHandler>(*this);
 }
 
-// OscilAlertModal static helper
-void OscilAlertModal::show(IThemeService& themeService,
-                            const juce::String& title,
-                            const juce::String& message,
-                            [[maybe_unused]] Type type,
-                            std::function<void()> onOk)
-{
-    auto* content = new juce::Component();
-    content->setSize(400, 100);
-
-    auto* label = new juce::Label();
-    label->setText(message, juce::dontSendNotification);
-    label->setJustificationType(juce::Justification::topLeft);
-    label->setBounds(0, 0, 400, 60);
-    content->addAndMakeVisible(label);
-
-    auto* okButton = new OscilButton(themeService, "OK");
-    okButton->setVariant(ButtonVariant::Primary);
-    okButton->setBounds(400 - 80, 70, 80, 30);
-    content->addAndMakeVisible(okButton);
-
-    auto* modal = new OscilModal(themeService, title);
-    modal->setContent(content);
-    modal->setSize(ModalSize::Small);
-
-    modal->onClose = [modal, content, label, okButton, onOk]() {
-        if (onOk)
-            onOk();
-
-        juce::MessageManager::callAsync([modal, content, label, okButton]() {
-            delete label;
-            delete okButton;
-            delete content;
-            delete modal;
-        });
-    };
-
-    okButton->onClick = [modal]() {
-        modal->hide();
-    };
-
-    modal->show();
-}
-
-void OscilAlertModal::confirm([[maybe_unused]] IThemeService& themeService,
-                               [[maybe_unused]] const juce::String& title,
-                               [[maybe_unused]] const juce::String& message,
-                               [[maybe_unused]] std::function<void(bool)> onResult)
-{
-}
+// OscilAlertModal static methods are in OscilModalAlert.cpp
 
 } // namespace oscil

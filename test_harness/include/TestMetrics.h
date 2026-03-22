@@ -124,6 +124,7 @@ private:
     void collectSample();
     double calculateFps();
     double measureCpuUsage();
+    double computeCpuDeltaPercent(int64_t cpuTime);
     int64_t measureMemoryUsage();
 
     std::atomic<bool> collecting_{false};

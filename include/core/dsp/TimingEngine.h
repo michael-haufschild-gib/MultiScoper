@@ -43,6 +43,7 @@ struct TimingConfigData
 class TimingEngine
 {
 public:
+    /// Create a timing engine with default TIME mode at 500ms interval.
     TimingEngine();
     ~TimingEngine();
 

@@ -24,9 +24,12 @@ namespace oscil
 class TransientDetector
 {
 public:
+    /// Create a transient detector in idle state.
     TransientDetector();
 
+    /// Analyze samples for transient attack and decay characteristics.
     void process(const float* samples, int numSamples, double sampleRate);
+    /// Reset detector state and envelope followers.
     void reset();
 
     float getAttackTimeMs() const { return attackTimeMs_.load(std::memory_order_relaxed); }

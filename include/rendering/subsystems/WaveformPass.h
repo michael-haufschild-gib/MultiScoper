@@ -1,20 +1,15 @@
 /*
     Oscil - Waveform Pass
-    Handles rendering of individual waveforms (geometry, particles, grid).
+    Handles rendering of individual waveforms (geometry, grid).
 */
 
 #pragma once
 
-#include "rendering/Camera3D.h"
 #include "rendering/GridRenderer.h"
-#include "rendering/ParticleRenderer.h"
 #include "rendering/ShaderRegistry.h"
 #include "rendering/WaveformGLRenderer.h"
 #include "rendering/WaveformRenderState.h"
 #include "rendering/WaveformShader.h"
-#include "rendering/materials/EnvironmentMapManager.h"
-#include "rendering/materials/TextureManager.h"
-#include "rendering/subsystems/EffectPipeline.h"
 
 #include <juce_opengl/juce_opengl.h>
 
@@ -27,44 +22,29 @@ namespace oscil
 class WaveformPass
 {
 public:
+    /// Create an uninitialized waveform pass.
     WaveformPass();
     ~WaveformPass();
 
+    /// Initialize grid renderer, shader registry, and compile shaders.
     bool initialize(juce::OpenGLContext& context, int width, int height);
+    /// Release all GPU resources.
     void shutdown(juce::OpenGLContext& context);
 
-    Framebuffer* renderWaveform(const WaveformRenderData& data, WaveformRenderState& state,
-                                EffectPipeline& effectPipeline, float deltaTime, float accumulatedTime,
-                                juce::OpenGLShaderProgram* compositeShader, GLint compositeLoc);
-
-    // Subsystem accessors
-    ParticleSystem* getParticleSystem() { return particleSystem_.get(); }
-    Camera3D* getCamera() { return camera_.get(); }
-    EnvironmentMapManager* getEnvironmentMapManager() { return envMapManager_.get(); }
-    TextureManager* getTextureManager() { return textureManager_.get(); }
-
-    // Split Rendering API
+    /// Update render state (trails, timing) before drawing a waveform.
     void prepareRender(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime);
+    /// Render the background grid for a waveform pane.
     void renderGrid(const WaveformRenderData& data);
+    /// Render waveform geometry using the configured shader.
     void renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime);
-    void renderWaveformParticles(const WaveformRenderData& data, WaveformRenderState& state, float deltaTime);
 
 private:
-    void setupCamera2D();
-    void setupCamera3D(const Settings3D& settings, float deltaTime);
-    void createDefaultEnvironmentMaps();
-    void setWaveformViewport(const WaveformRenderData& data);
+    struct ViewportRect { int x, y, w, h; };
+    ViewportRect computePaneViewport(const juce::Rectangle<float>& bounds) const;
     WaveformShader* resolveShader(const juce::String& shaderId);
-    void configure3DShader(WaveformShader* shader, const VisualConfiguration& config,
-                            const WaveformRenderData& data);
 
     // Subsystems
-    std::unique_ptr<ParticleSystem> particleSystem_;
-    std::unique_ptr<ParticleRenderer> particleRenderer_;
     std::unique_ptr<GridRenderer> gridRenderer_;
-    std::unique_ptr<Camera3D> camera_;
-    std::unique_ptr<EnvironmentMapManager> envMapManager_;
-    std::unique_ptr<TextureManager> textureManager_;
     std::unique_ptr<ShaderRegistry> registry_;
 
     // Compiled per-instance shaders

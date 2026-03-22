@@ -31,7 +31,20 @@ OptionsSection::~OptionsSection()
 
 void OptionsSection::setupComponents()
 {
-    // Gain controls (from Master Controls)
+    setupGainControls();
+    setupDisplayToggles();
+    setupLayoutAndTheme();
+    setupRenderingControls();
+    setupCaptureQualityControls();
+
+    // Keep quality preset interactability consistent with default auto-adjust state.
+    qualityPresetDropdown_->setEnabled(!autoAdjustQualityEnabled_);
+
+    themeChanged(themeService_.getCurrentTheme());
+}
+
+void OptionsSection::setupGainControls()
+{
     gainSlider_ = std::make_unique<OscilSlider>(themeService_, "sidebar_options_gainSlider");
     gainSlider_->setLabel("Gain");
     gainSlider_->setRange(MIN_GAIN_DB, MAX_GAIN_DB);
@@ -44,14 +57,15 @@ void OptionsSection::setupComponents()
         notifyGainChanged();
     };
     addAndMakeVisible(*gainSlider_);
+}
 
-    // Display section label
+void OptionsSection::setupDisplayToggles()
+{
     displayLabel_ = std::make_unique<juce::Label>();
     displayLabel_->setText("DISPLAY", juce::dontSendNotification);
     displayLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*displayLabel_);
 
-    // Show Grid toggle
     showGridToggle_ = std::make_unique<OscilToggle>(themeService_, "Show Grid", "sidebar_options_gridToggle");
     showGridToggle_->setValue(showGridEnabled_, false);
     showGridToggle_->onValueChanged = [this](bool value)
@@ -61,25 +75,24 @@ void OptionsSection::setupComponents()
     };
     addAndMakeVisible(*showGridToggle_);
 
-    // Auto-Scale toggle
     autoScaleToggle_ = std::make_unique<OscilToggle>(themeService_, "Auto-Scale", "sidebar_options_autoScaleToggle");
     autoScaleToggle_->setValue(autoScaleEnabled_, false);
     autoScaleToggle_->onValueChanged = [this](bool value)
     {
         autoScaleEnabled_ = value;
-        // Disable gain slider when auto-scale is on (gain has no effect when auto-scaling)
         gainSlider_->setEnabled(!value);
         notifyAutoScaleChanged();
     };
     addAndMakeVisible(*autoScaleToggle_);
+}
 
-    // Layout section label
+void OptionsSection::setupLayoutAndTheme()
+{
     layoutLabel_ = std::make_unique<juce::Label>();
     layoutLabel_->setText("LAYOUT", juce::dontSendNotification);
     layoutLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*layoutLabel_);
 
-    // Layout dropdown
     layoutDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select layout", "sidebar_options_layoutDropdown");
     layoutDropdown_->addItem("1 Column", "1");
     layoutDropdown_->addItem("2 Columns", "2");
@@ -92,13 +105,11 @@ void OptionsSection::setupComponents()
     };
     addAndMakeVisible(*layoutDropdown_);
 
-    // Theme section label
     themeLabel_ = std::make_unique<juce::Label>();
     themeLabel_->setText("THEME", juce::dontSendNotification);
     themeLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*themeLabel_);
 
-    // Theme dropdown (items populated via setAvailableThemes)
     themeDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select theme", "sidebar_options_themeDropdown");
     themeDropdown_->onSelectionChangedId = [this](const juce::String& themeId)
     {
@@ -106,14 +117,15 @@ void OptionsSection::setupComponents()
         notifyThemeChanged();
     };
     addAndMakeVisible(*themeDropdown_);
+}
 
-    // Rendering section label
+void OptionsSection::setupRenderingControls()
+{
     renderingLabel_ = std::make_unique<juce::Label>();
     renderingLabel_->setText("RENDERING", juce::dontSendNotification);
     renderingLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*renderingLabel_);
 
-    // GPU rendering toggle
     gpuRenderingToggle_ = std::make_unique<OscilToggle>(themeService_, "GPU Acceleration", "sidebar_options_gpuRenderingToggle");
     gpuRenderingToggle_->setValue(gpuRenderingEnabled_, false);
     gpuRenderingToggle_->onValueChanged = [this](bool value)
@@ -122,14 +134,15 @@ void OptionsSection::setupComponents()
         notifyGpuRenderingChanged();
     };
     addAndMakeVisible(*gpuRenderingToggle_);
+}
 
-    // Capture quality section label
+void OptionsSection::setupCaptureQualityControls()
+{
     qualityLabel_ = std::make_unique<juce::Label>();
     qualityLabel_->setText("CAPTURE QUALITY", juce::dontSendNotification);
     qualityLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*qualityLabel_);
 
-    // Quality preset dropdown
     qualityPresetDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Quality", "sidebar_options_qualityPresetDropdown");
     qualityPresetDropdown_->addItem("Eco (11 kHz)", "eco");
     qualityPresetDropdown_->addItem("Standard (22 kHz)", "standard");
@@ -143,7 +156,6 @@ void OptionsSection::setupComponents()
     };
     addAndMakeVisible(*qualityPresetDropdown_);
 
-    // Buffer duration dropdown
     bufferDurationDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Buffer", "sidebar_options_bufferDurationDropdown");
     bufferDurationDropdown_->addItem("Short (1s)", "short");
     bufferDurationDropdown_->addItem("Medium (5s)", "medium");
@@ -156,23 +168,15 @@ void OptionsSection::setupComponents()
     };
     addAndMakeVisible(*bufferDurationDropdown_);
 
-    // Auto-adjust quality toggle
     autoAdjustQualityToggle_ = std::make_unique<OscilToggle>(themeService_, "Auto-Adjust", "sidebar_options_autoAdjustToggle");
     autoAdjustQualityToggle_->setValue(autoAdjustQualityEnabled_, false);
     autoAdjustQualityToggle_->onValueChanged = [this](bool value)
     {
         autoAdjustQualityEnabled_ = value;
-        // Enable/disable quality dropdown based on auto-adjust
         qualityPresetDropdown_->setEnabled(!value);
         notifyAutoAdjustQualityChanged();
     };
     addAndMakeVisible(*autoAdjustQualityToggle_);
-
-    // Keep quality preset interactability consistent with default auto-adjust state.
-    qualityPresetDropdown_->setEnabled(!autoAdjustQualityEnabled_);
-
-    // Apply initial theme
-    themeChanged(themeService_.getCurrentTheme());
 }
 
 void OptionsSection::paint(juce::Graphics& g)

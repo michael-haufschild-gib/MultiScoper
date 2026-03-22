@@ -50,6 +50,7 @@ public:
         virtual void oscillatorNameChanged(const OscillatorId& /*id*/, const juce::String& /*newName*/) {}
     };
 
+    /// Construct the oscillator management section with the given service context.
     explicit OscillatorSidebarSection(ServiceContext& context);
     ~OscillatorSidebarSection() override;
 
@@ -70,7 +71,7 @@ public:
     void oscillatorPaneSelectionRequested(const OscillatorId& id) override;
     void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) override;
 
-    // Pass-through methods for OscillatorListComponent
+    /// Refresh the oscillator list component with the current oscillator snapshot.
     void refreshList(const std::vector<Oscillator>& oscillators);
     void setSelectedOscillator(const OscillatorId& oscillatorId);
 

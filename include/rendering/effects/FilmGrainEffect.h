@@ -21,13 +21,16 @@ namespace oscil
 class FilmGrainEffect : public PostProcessEffect
 {
 public:
+    /// Create a film grain effect with default settings.
     FilmGrainEffect();
     ~FilmGrainEffect() override;
 
     [[nodiscard]] juce::String getId() const override { return "film_grain"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Film Grain"; }
 
+    /// Compile the film grain shader program.
     bool compile(juce::OpenGLContext& context) override;
+    /// Release the shader program.
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 

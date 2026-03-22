@@ -81,6 +81,40 @@ private:
                            const juce::String& channelLabel);
 
     /**
+     * Resolved grid division parameters from a NoteInterval.
+     */
+    struct GridDivisions
+    {
+        int count = 4;
+        bool barBased = false;
+    };
+
+    /**
+     * Resolve NoteInterval into division count and bar-based flag.
+     */
+    static GridDivisions resolveGridDivisions(NoteInterval interval, int beatsPerBar);
+
+    /**
+     * Draw time-based vertical grid lines
+     */
+    void drawTimeVerticalLines(juce::Graphics& g, juce::Rectangle<int> area) const;
+
+    /**
+     * Draw melodic vertical grid lines
+     */
+    void drawMelodicVerticalLines(juce::Graphics& g, juce::Rectangle<int> area) const;
+
+    /**
+     * Draw time-axis labels for TIME mode
+     */
+    void drawTimeAxisLabels(juce::Graphics& g, juce::Rectangle<int> bounds, int leftMargin) const;
+
+    /**
+     * Draw beat/bar-axis labels for MELODIC mode
+     */
+    void drawMelodicAxisLabels(juce::Graphics& g, juce::Rectangle<int> bounds, int leftMargin) const;
+
+    /**
      * Format time value for display
      */
     static juce::String formatTimeLabel(float ms);

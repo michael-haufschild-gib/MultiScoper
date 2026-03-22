@@ -56,6 +56,7 @@ public:
         virtual void oscillatorNameChanged(const OscillatorId& /*id*/, const juce::String& /*newName*/) {}
     };
 
+    /// Construct a list item representing the given oscillator.
     OscillatorListItemComponent(const Oscillator& oscillator, IInstanceRegistry& instanceRegistry, IThemeService& themeService);
     ~OscillatorListItemComponent() override;
 
@@ -79,6 +80,7 @@ public:
     void setSelected(bool selected);
     bool isSelected() const { return selected_; }
 
+    /// Refresh all displayed properties (name, colour, mode) from the oscillator model.
     void updateFromOscillator(const Oscillator& oscillator);
 
     OscillatorId getOscillatorId() const { return oscillatorId_; }
@@ -96,6 +98,9 @@ public:
 
 private:
     void setupComponents(int orderIndex);
+    void setupLabels();
+    void setupActionButtons(const juce::String& suffix);
+    void setupModeButtons(const juce::String& suffix);
     void updateVisibility();
     
     bool isInDragZone(const juce::Point<int>& pos) const;

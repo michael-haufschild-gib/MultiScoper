@@ -301,6 +301,30 @@ int64_t TestMetrics::measureMemoryUsage()
 #endif
 }
 
+double TestMetrics::computeCpuDeltaPercent(int64_t cpuTime)
+{
+    int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    if (lastCpuTime_ > 0 && lastSystemTime_ > 0)
+    {
+        int64_t cpuDelta = cpuTime - lastCpuTime_;
+        int64_t timeDelta = now - lastSystemTime_;
+
+        if (timeDelta > 0)
+        {
+            double percent = (static_cast<double>(cpuDelta) / timeDelta) * 100.0;
+            lastCpuTime_ = cpuTime;
+            lastSystemTime_ = now;
+            return std::clamp(percent, 0.0, 100.0);
+        }
+    }
+
+    lastCpuTime_ = cpuTime;
+    lastSystemTime_ = now;
+    return 0.0;
+}
+
 double TestMetrics::measureCpuUsage()
 {
 #if JUCE_MAC
@@ -311,32 +335,11 @@ double TestMetrics::measureCpuUsage()
     {
         int64_t cpuTime = (info.user_time.seconds + info.system_time.seconds) * 1000000LL
                          + info.user_time.microseconds + info.system_time.microseconds;
-
-        int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
-
-        if (lastCpuTime_ > 0 && lastSystemTime_ > 0)
-        {
-            int64_t cpuDelta = cpuTime - lastCpuTime_;
-            int64_t timeDelta = now - lastSystemTime_;
-
-            if (timeDelta > 0)
-            {
-                double percent = (static_cast<double>(cpuDelta) / timeDelta) * 100.0;
-                lastCpuTime_ = cpuTime;
-                lastSystemTime_ = now;
-                return std::clamp(percent, 0.0, 100.0);
-            }
-        }
-
-        lastCpuTime_ = cpuTime;
-        lastSystemTime_ = now;
-        return 0.0;
+        return computeCpuDeltaPercent(cpuTime);
     }
     return 0.0;
 
 #elif JUCE_WINDOWS
-    // Windows implementation uses GetProcessTimes
     FILETIME createTime, exitTime, kernelTime, userTime;
     if (GetProcessTimes(GetCurrentProcess(), &createTime, &exitTime, &kernelTime, &userTime))
     {
@@ -346,26 +349,8 @@ double TestMetrics::measureCpuUsage()
         user.LowPart = userTime.dwLowDateTime;
         user.HighPart = userTime.dwHighDateTime;
 
-        int64_t cpuTime = (kernel.QuadPart + user.QuadPart) / 10; // Convert to microseconds
-        int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
-
-        if (lastCpuTime_ > 0 && lastSystemTime_ > 0)
-        {
-            int64_t cpuDelta = cpuTime - lastCpuTime_;
-            int64_t timeDelta = now - lastSystemTime_;
-
-            if (timeDelta > 0)
-            {
-                double percent = (static_cast<double>(cpuDelta) / timeDelta) * 100.0;
-                lastCpuTime_ = cpuTime;
-                lastSystemTime_ = now;
-                return std::clamp(percent, 0.0, 100.0);
-            }
-        }
-
-        lastCpuTime_ = cpuTime;
-        lastSystemTime_ = now;
+        int64_t cpuTime = (kernel.QuadPart + user.QuadPart) / 10;
+        return computeCpuDeltaPercent(cpuTime);
     }
     return 0.0;
 
@@ -379,25 +364,7 @@ double TestMetrics::measureCpuUsage()
         stat >> utime >> stime;
 
         int64_t cpuTime = (utime + stime) * (1000000 / sysconf(_SC_CLK_TCK));
-        int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
-
-        if (lastCpuTime_ > 0 && lastSystemTime_ > 0)
-        {
-            int64_t cpuDelta = cpuTime - lastCpuTime_;
-            int64_t timeDelta = now - lastSystemTime_;
-
-            if (timeDelta > 0)
-            {
-                double percent = (static_cast<double>(cpuDelta) / timeDelta) * 100.0;
-                lastCpuTime_ = cpuTime;
-                lastSystemTime_ = now;
-                return std::clamp(percent, 0.0, 100.0);
-            }
-        }
-
-        lastCpuTime_ = cpuTime;
-        lastSystemTime_ = now;
+        return computeCpuDeltaPercent(cpuTime);
     }
     return 0.0;
 

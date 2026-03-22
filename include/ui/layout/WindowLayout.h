@@ -56,6 +56,7 @@ public:
 
     void setWindowWidth(int width);
     void setWindowHeight(int height);
+    /// Set both window dimensions at once, firing a single change notification.
     void setWindowSize(int width, int height);
 
     // Sidebar
@@ -64,6 +65,7 @@ public:
 
     void setSidebarWidth(int width);
     void setSidebarCollapsed(bool collapsed);
+    /// Toggle the sidebar between collapsed and expanded states.
     void toggleSidebarCollapsed();
 
     /**

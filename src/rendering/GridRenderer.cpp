@@ -3,7 +3,6 @@
 */
 
 #include "rendering/GridRenderer.h"
-#include "ui/theme/ThemeManager.h" // For grid colors if needed
 #include <cmath>
 
 namespace oscil

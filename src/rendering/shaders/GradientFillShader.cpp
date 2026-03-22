@@ -76,6 +76,28 @@ bool GradientFillShader::isCompiled() const
     return gl_->compiled;
 }
 
+void GradientFillShader::drawFillChannel(juce::OpenGLExtensionFunctions& ext,
+                                          const std::vector<float>& samples,
+                                          float centerY, float amplitude,
+                                          float boundsX, float boundsWidth,
+                                          GLint posLoc, GLint vLoc)
+{
+    std::vector<float> vertices;
+    buildFillGeometry(vertices, samples, centerY, centerY, amplitude, boundsX, boundsWidth);
+
+    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
+
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
+    ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+    ext.glEnableVertexAttribArray(static_cast<GLuint>(vLoc));
+    ext.glVertexAttribPointer(static_cast<GLuint>(vLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
+    ext.glDisableVertexAttribArray(static_cast<GLuint>(vLoc));
+}
+
 void GradientFillShader::render(
     juce::OpenGLContext& context,
     const std::vector<float>& channel1,
@@ -89,24 +111,9 @@ void GradientFillShader::render(
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     gl_->program->use();
-
-    auto* target = context.getTargetComponent();
-    if (!target) return;
-
-    float w = static_cast<float>(target->getWidth());
-    float h = static_cast<float>(target->getHeight());
-
-    if (w <= 0.0f || h <= 0.0f)
+    if (!setup2DProjection(context, ext, gl_->projectionLoc))
         return;
 
-    float projection[16] = {
-        2.0f / w, 0.0f, 0.0f, 0.0f,
-        0.0f, -2.0f / h, 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0f, 0.0f,
-        -1.0f, 1.0f, 0.0f, 1.0f
-    };
-
-    ext.glUniformMatrix4fv(gl_->projectionLoc, 1, GL_FALSE, projection);
     ext.glUniform4f(gl_->baseColorLoc,
         params.colour.getFloatRed(), params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
@@ -118,50 +125,16 @@ void GradientFillShader::render(
     float centerY1, centerY2, amp1, amp2;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    // Get attribute locations once
-    GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
-    GLint vLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "vParam");
-    if (posLoc < 0) posLoc = 0;
-    if (vLoc < 0) vLoc = 1;
+    GLint posLoc = std::max(0, static_cast<int>(ext.glGetAttribLocation(gl_->program->getProgramID(), "position")));
+    GLint vLoc = std::max(1, static_cast<int>(ext.glGetAttribLocation(gl_->program->getProgramID(), "vParam")));
 
-    // Render Channel 1
-    {
-        std::vector<float> vertices;
-        // Fill down to centerY (zero line for this channel)
-        buildFillGeometry(vertices, channel1, centerY1, centerY1, amp1, params.bounds.getX(), params.bounds.getWidth());
+    drawFillChannel(ext, channel1, centerY1, amp1,
+                    params.bounds.getX(), params.bounds.getWidth(), posLoc, vLoc);
 
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(vLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(vLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(vLoc));
-    }
-
-    // Render Channel 2 if stereo
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        std::vector<float> vertices;
-        buildFillGeometry(vertices, *channel2, centerY2, centerY2, amp2, params.bounds.getX(), params.bounds.getWidth());
-
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(vLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(vLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(vLoc));
+        drawFillChannel(ext, *channel2, centerY2, amp2,
+                        params.bounds.getX(), params.bounds.getWidth(), posLoc, vLoc);
     }
 
     ext.glBindVertexArray(0);
