@@ -110,6 +110,16 @@ void TestHttpServer::setupRoutes()
     setupVerificationRoutes();
     setupStateRoutes();
     setupMetricsRoutes();
+
+    // Waveform state (data-level verification, no screenshots)
+    server_->Get("/waveform/state", [this](const httplib::Request& req, httplib::Response& res) {
+        handleWaveformState(req, res);
+    });
+
+    // Diagnostic snapshot (complete state dump for AI agent consumption)
+    server_->Get("/diagnostic/snapshot", [this](const httplib::Request& req, httplib::Response& res) {
+        handleDiagnosticSnapshot(req, res);
+    });
 }
 
 json TestHttpServer::successResponse(const json& data)

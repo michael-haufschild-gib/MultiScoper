@@ -37,9 +37,20 @@ public:
     void unregisterElement(const juce::String& testId);
 
     /**
-     * Find a component by test ID
+     * Find a component by test ID.
+     * Returns nullptr if not registered.
+     * WARNING: The returned pointer may become stale if the component is
+     * deleted on the message thread after this call returns.
      */
     juce::Component* findElement(const juce::String& testId);
+
+    /**
+     * Find a component by test ID, returning nullptr if the component
+     * is registered but no longer part of a live component hierarchy
+     * (i.e., has no parent and is not on screen). This is safer than
+     * findElement() when the result will be used for rendering/interaction.
+     */
+    juce::Component* findValidElement(const juce::String& testId);
 
     /**
      * Get all registered elements

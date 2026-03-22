@@ -19,7 +19,7 @@ juce::Image captureNativeWindowMac(juce::Component* component, const juce::Strin
 
 bool TestScreenshot::captureElement(const juce::String& elementId, const juce::File& outputFile)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -92,7 +92,7 @@ juce::Image TestScreenshot::getComponentImage(juce::Component* component)
 
 juce::Image TestScreenshot::getElementImage(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return {};
 

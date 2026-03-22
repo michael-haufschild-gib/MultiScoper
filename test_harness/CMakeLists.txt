@@ -26,6 +26,8 @@ set(TEST_HARNESS_SOURCES
     src/TestHttpServerUIKeyboard.cpp
     src/TestHttpServerVerification.cpp
     src/TestHttpServerState.cpp
+    src/TestHttpServerWaveform.cpp
+    src/TestHttpServerDiagnostic.cpp
     src/TestHttpServerMetrics.cpp
     src/TestElementRegistry.cpp
     src/TestUIController.cpp
@@ -33,6 +35,7 @@ set(TEST_HARNESS_SOURCES
     src/TestUIControllerSimulation.cpp
     src/TestScreenshot.cpp
     src/TestScreenshotAnalysis.cpp
+    src/TestLogCapture.cpp
     src/TestMetrics.cpp
 )
 
@@ -51,6 +54,7 @@ set(TEST_HARNESS_HEADERS
     include/TestUIController.h
     include/TestScreenshot.h
     include/TestMetrics.h
+    include/TestLogCapture.h
     include/TestableComponent.h
 )
 

@@ -15,7 +15,7 @@ namespace oscil::test
 
 bool TestUIController::select(const juce::String& elementId, int itemId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -33,7 +33,7 @@ bool TestUIController::select(const juce::String& elementId, int itemId)
 
 bool TestUIController::selectByText(const juce::String& elementId, const juce::String& text)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -51,7 +51,7 @@ bool TestUIController::selectByText(const juce::String& elementId, const juce::S
 
 bool TestUIController::selectById(const juce::String& elementId, const juce::String& itemId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -98,7 +98,7 @@ bool TestUIController::selectById(const juce::String& elementId, const juce::Str
 
 bool TestUIController::toggle(const juce::String& elementId, bool value)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -127,7 +127,7 @@ bool TestUIController::toggle(const juce::String& elementId, bool value)
 
 bool TestUIController::setSliderValue(const juce::String& elementId, double value)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -145,7 +145,7 @@ bool TestUIController::setSliderValue(const juce::String& elementId, double valu
 
 bool TestUIController::incrementSlider(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -166,7 +166,7 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
 
 bool TestUIController::decrementSlider(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -193,7 +193,7 @@ bool TestUIController::resetSliderToDefault(const juce::String& elementId)
 
 bool TestUIController::typeText(const juce::String& elementId, const juce::String& text)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -229,7 +229,7 @@ bool TestUIController::clearText(const juce::String& elementId)
 
 bool TestUIController::setFocus(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -259,7 +259,7 @@ juce::String TestUIController::getFocusedElementId()
 
 bool TestUIController::hasFocus(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -315,7 +315,7 @@ json TestUIController::getUIState()
 
 json TestUIController::getElementInfo(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
     {
         return json{{"error", "Element not found"}};
@@ -326,7 +326,7 @@ json TestUIController::getElementInfo(const juce::String& elementId)
 
 bool TestUIController::isElementVisible(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -335,7 +335,7 @@ bool TestUIController::isElementVisible(const juce::String& elementId)
 
 bool TestUIController::isElementEnabled(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -344,7 +344,7 @@ bool TestUIController::isElementEnabled(const juce::String& elementId)
 
 bool TestUIController::isElementFocusable(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -353,7 +353,7 @@ bool TestUIController::isElementFocusable(const juce::String& elementId)
 
 double TestUIController::getSliderValue(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (auto* slider = dynamic_cast<juce::Slider*>(component))
         return slider->getValue();
     return 0.0;
@@ -361,7 +361,7 @@ double TestUIController::getSliderValue(const juce::String& elementId)
 
 std::pair<double, double> TestUIController::getSliderRange(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (auto* slider = dynamic_cast<juce::Slider*>(component))
         return { slider->getMinimum(), slider->getMaximum() };
     return { 0.0, 1.0 };
@@ -369,7 +369,7 @@ std::pair<double, double> TestUIController::getSliderRange(const juce::String& e
 
 bool TestUIController::getToggleState(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (auto* button = dynamic_cast<juce::Button*>(component))
         return button->getToggleState();
     return false;
@@ -377,7 +377,7 @@ bool TestUIController::getToggleState(const juce::String& elementId)
 
 juce::String TestUIController::getTextContent(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
 
     if (auto* textEditor = dynamic_cast<juce::TextEditor*>(component))
         return textEditor->getText();
@@ -393,7 +393,7 @@ juce::String TestUIController::getTextContent(const juce::String& elementId)
 
 int TestUIController::getSelectedItemId(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
         return comboBox->getSelectedId();
     return 0;

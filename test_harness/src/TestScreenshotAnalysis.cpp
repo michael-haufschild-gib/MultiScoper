@@ -329,7 +329,7 @@ bool TestScreenshot::colorsMatch(juce::Colour c1, juce::Colour c2, int tolerance
 
 juce::Rectangle<int> TestScreenshot::getElementBounds(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return {};
 
@@ -350,7 +350,7 @@ bool TestScreenshot::verifyElementBounds(const juce::String& elementId,
 
 bool TestScreenshot::verifyElementVisible(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 

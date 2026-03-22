@@ -147,6 +147,13 @@ private:
     void handleStateReorderOscillators(const httplib::Request& req, httplib::Response& res);
     void handleStatePanes(const httplib::Request& req, httplib::Response& res);
     void handleStateSources(const httplib::Request& req, httplib::Response& res);
+    void handleStateDeleteOscillator(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Waveform State
+    void handleWaveformState(const httplib::Request& req, httplib::Response& res);
+
+    // Route handlers - Diagnostic
+    void handleDiagnosticSnapshot(const httplib::Request& req, httplib::Response& res);
 
     // Health check
     void handleHealth(const httplib::Request& req, httplib::Response& res);

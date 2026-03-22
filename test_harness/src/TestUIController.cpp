@@ -29,7 +29,7 @@ juce::Component* TestUIController::getTargetComponent(const juce::String& elemen
 {
     if (elementId.isEmpty())
         return getCurrentFocusedComponent();
-    return TestElementRegistry::getInstance().findElement(elementId);
+    return TestElementRegistry::getInstance().findValidElement(elementId);
 }
 
 juce::Component* TestUIController::getCurrentFocusedComponent()
@@ -41,7 +41,7 @@ juce::Component* TestUIController::getCurrentFocusedComponent()
 
 bool TestUIController::click(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -55,7 +55,7 @@ bool TestUIController::click(const juce::String& elementId)
 
 bool TestUIController::clickWithModifiers(const juce::String& elementId, const ModifierKeyState& modifiers)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -70,7 +70,7 @@ bool TestUIController::clickWithModifiers(const juce::String& elementId, const M
 
 bool TestUIController::doubleClick(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -84,7 +84,7 @@ bool TestUIController::doubleClick(const juce::String& elementId)
 
 bool TestUIController::rightClick(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -98,7 +98,7 @@ bool TestUIController::rightClick(const juce::String& elementId)
 
 bool TestUIController::hover(const juce::String& elementId, int durationMs)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -135,8 +135,8 @@ bool TestUIController::hover(const juce::String& elementId, int durationMs)
 
 bool TestUIController::drag(const juce::String& fromElementId, const juce::String& toElementId)
 {
-    auto* fromComp = TestElementRegistry::getInstance().findElement(fromElementId);
-    auto* toComp = TestElementRegistry::getInstance().findElement(toElementId);
+    auto* fromComp = TestElementRegistry::getInstance().findValidElement(fromElementId);
+    auto* toComp = TestElementRegistry::getInstance().findValidElement(toElementId);
     if (fromComp == nullptr || toComp == nullptr)
         return false;
 
@@ -152,8 +152,8 @@ bool TestUIController::dragWithModifiers(const juce::String& fromElementId,
                                           const juce::String& toElementId,
                                           const ModifierKeyState& modifiers)
 {
-    auto* fromComp = TestElementRegistry::getInstance().findElement(fromElementId);
-    auto* toComp = TestElementRegistry::getInstance().findElement(toElementId);
+    auto* fromComp = TestElementRegistry::getInstance().findValidElement(fromElementId);
+    auto* toComp = TestElementRegistry::getInstance().findValidElement(toElementId);
     if (fromComp == nullptr || toComp == nullptr)
         return false;
 
@@ -168,7 +168,7 @@ bool TestUIController::dragWithModifiers(const juce::String& fromElementId,
 
 bool TestUIController::dragByOffset(const juce::String& elementId, int deltaX, int deltaY)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -184,7 +184,7 @@ bool TestUIController::dragByOffsetWithModifiers(const juce::String& elementId,
                                                   int deltaX, int deltaY,
                                                   const ModifierKeyState& modifiers)
 {
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
@@ -200,7 +200,7 @@ bool TestUIController::dragByOffsetWithModifiers(const juce::String& elementId,
 ScrollResult TestUIController::scroll(const juce::String& elementId, float deltaY, float deltaX)
 {
     ScrollResult result;
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return result;
 
@@ -218,7 +218,7 @@ ScrollResult TestUIController::scrollWithModifiers(const juce::String& elementId
                                                     const ModifierKeyState& modifiers)
 {
     ScrollResult result;
-    auto* component = TestElementRegistry::getInstance().findElement(elementId);
+    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return result;
 

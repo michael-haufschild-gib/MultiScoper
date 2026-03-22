@@ -24,6 +24,8 @@ json oscillatorToJson(const Oscillator& osc)
     j["mode"] = processingModeToString(osc.getProcessingMode()).toStdString();
     j["orderIndex"] = osc.getOrderIndex();
     j["visible"] = osc.isVisible();
+    j["opacity"] = osc.getOpacity();
+    j["lineWidth"] = osc.getLineWidth();
     return j;
 }
 
@@ -124,6 +126,9 @@ void TestHttpServer::setupStateRoutes()
     });
     server_->Get("/state/sources", [this](const httplib::Request& req, httplib::Response& res) {
         handleStateSources(req, res);
+    });
+    server_->Post("/state/oscillator/delete", [this](const httplib::Request& req, httplib::Response& res) {
+        handleStateDeleteOscillator(req, res);
     });
 }
 
@@ -394,5 +399,7 @@ void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Respon
 
     res.set_content(successResponse(sources).dump(), "application/json");
 }
+
+// handleStateDeleteOscillator and handleWaveformState are in TestHttpServerWaveform.cpp
 
 } // namespace oscil::test
