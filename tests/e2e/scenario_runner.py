@@ -176,6 +176,8 @@ def evaluate_assertion(assertion: dict, snapshot: dict) -> dict:
             ok = actual_val is not None and actual_val < expected_val
         elif op == ">=":
             ok = actual_val is not None and actual_val >= expected_val
+        elif op == "<=":
+            ok = actual_val is not None and actual_val <= expected_val
         elif op == "contains":
             ok = expected_val in (actual_val or "")
         else:
@@ -198,6 +200,17 @@ def execute_setup(client: OscilTestClient, setup: dict):
 
     if setup.get("open_editor", True):
         client.open_editor()
+
+        # The plugin auto-creates a default oscillator when the editor opens
+        # with empty state. Clear it so scenarios start from a known blank slate.
+        auto_oscs = client.get_oscillators()
+        if auto_oscs and setup.get("reset", True):
+            for osc in auto_oscs:
+                client.delete_oscillator(osc["id"])
+            client.wait_until(
+                lambda: len(client.get_oscillators()) == 0,
+                timeout_s=3.0, desc="clear auto-created oscillators",
+            )
 
     # Transport
     if setup.get("transport") == "playing":
@@ -269,29 +282,176 @@ def get_snapshot(client: OscilTestClient) -> dict:
     return {}
 
 
+def execute_action(client: OscilTestClient, action: dict):
+    """Execute a single action step. Actions map directly to HTTP API calls."""
+    if "update_oscillator" in action:
+        params = dict(action["update_oscillator"])  # copy to avoid mutating YAML
+        idx = params.pop("index", 0)
+        oscs = client.get_oscillators()
+        if idx < len(oscs):
+            client.update_oscillator(oscs[idx]["id"], **params)
+
+    elif "delete_oscillator" in action:
+        params = action["delete_oscillator"]
+        idx = params.get("index", 0)
+        oscs = client.get_oscillators()
+        if idx < len(oscs):
+            client.delete_oscillator(oscs[idx]["id"])
+            # Brief wait for async removal — don't wait_for_count as
+            # the editor may auto-recreate if state becomes empty
+            time.sleep(0.2)
+
+    elif "add_oscillator" in action:
+        params = action["add_oscillator"]
+        source = params.get("source", "auto")
+        if source == "auto":
+            sources = client.get_sources()
+            source = sources[0]["id"] if sources else ""
+        client.add_oscillator(
+            source, name=params.get("name", "Step Osc"),
+            colour=params.get("color", ""), mode=params.get("mode", "FullStereo"),
+        )
+
+    elif "set_track_audio" in action:
+        params = action["set_track_audio"]
+        client.set_track_audio(
+            params.get("track", 0), waveform=params.get("waveform", "sine"),
+            frequency=params.get("frequency", 440.0), amplitude=params.get("amplitude", 0.8),
+        )
+
+    elif "transport_play" in action:
+        client.transport_play()
+        client.wait_until(lambda: client.is_playing(), timeout_s=2.0, desc="transport play")
+
+    elif "transport_stop" in action:
+        client.transport_stop()
+        client.wait_until(lambda: not client.is_playing(), timeout_s=2.0, desc="transport stop")
+
+    elif "set_bpm" in action:
+        client.set_bpm(action["set_bpm"])
+
+    elif "click" in action:
+        client.click(action["click"])
+
+    elif "toggle" in action:
+        params = action["toggle"]
+        client.toggle(params["element"], params["state"])
+
+    elif "set_slider" in action:
+        params = action["set_slider"]
+        client.set_slider(params["element"], params["value"])
+
+    elif "select_dropdown" in action:
+        params = action["select_dropdown"]
+        client.select_dropdown_item(params["element"], params["item"])
+
+    elif "open_editor" in action:
+        client.open_editor()
+        # Note: do NOT clean auto-created oscillators here — step actions
+        # may intentionally have oscillators that should survive open/close.
+        # Auto-cleanup only happens in execute_setup.
+
+    elif "close_editor" in action:
+        client.close_editor()
+
+    elif "reset_state" in action:
+        client.reset_state()
+        time.sleep(0.2)
+
+    elif "save_state" in action:
+        client.save_state(action["save_state"])
+
+    elif "load_state" in action:
+        client.load_state(action["load_state"])
+
+    elif "add_pane" in action:
+        params = action["add_pane"]
+        client._post_json("/state/pane/add", {"name": params.get("name", "New Pane")})
+
+    elif "move_oscillator" in action:
+        params = action["move_oscillator"]
+        oscs = client.get_oscillators()
+        panes = client.get_panes()
+        osc_idx = params.get("oscillator", 0)
+        pane_idx = params.get("to_pane", 0)
+        if osc_idx < len(oscs) and pane_idx < len(panes):
+            client._post_json("/state/oscillator/move", {
+                "id": oscs[osc_idx]["id"], "paneId": panes[pane_idx]["id"],
+            })
+
+    elif "wait_for_waveform" in action:
+        try:
+            client.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        except TimeoutError:
+            pass
+
+
 def run_scenario(client: OscilTestClient, scenario: dict) -> dict:
-    """Run a single scenario. Returns structured result."""
+    """Run a single scenario. Returns structured result.
+
+    Supports two formats:
+    1. Simple: setup → assertions (snapshot taken once after setup)
+    2. Stepped: setup → steps[] where each step is action/check/wait
+    """
     name = scenario.get("name", "unnamed")
     result = {"name": name, "passed": False, "assertions": [], "snapshot": None, "error": None}
 
     try:
         execute_setup(client, scenario.get("setup", {}))
-        snapshot = get_snapshot(client)
-        result["snapshot"] = snapshot
 
-        assertions = scenario.get("assertions", [])
-        all_passed = True
-        for assertion_def in assertions:
-            a_result = evaluate_assertion(assertion_def, snapshot)
-            result["assertions"].append(a_result)
-            if not a_result["passed"]:
-                all_passed = False
-
-        result["passed"] = all_passed
+        steps = scenario.get("steps")
+        if steps:
+            # Multi-step mode: execute actions and checks in sequence
+            all_passed = True
+            for step in steps:
+                if "action" in step:
+                    execute_action(client, step["action"])
+                    # If the step has a wait_for condition, poll until met
+                    if "wait_for" in step:
+                        wf = step["wait_for"]
+                        if isinstance(wf, dict):
+                            wf = [wf]
+                        deadline = time.monotonic() + 5.0
+                        while time.monotonic() < deadline:
+                            snap = get_snapshot(client)
+                            if all(evaluate_assertion(c, snap)["passed"] for c in wf):
+                                break
+                            time.sleep(0.15)
+                elif "wait" in step:
+                    wait_val = step["wait"]
+                    if isinstance(wait_val, str) and wait_val.endswith("ms"):
+                        time.sleep(int(wait_val[:-2]) / 1000.0)
+                    elif isinstance(wait_val, str) and wait_val.endswith("s"):
+                        time.sleep(float(wait_val[:-1]))
+                    elif isinstance(wait_val, (int, float)):
+                        time.sleep(wait_val / 1000.0)
+                elif "check" in step:
+                    snapshot = get_snapshot(client)
+                    result["snapshot"] = snapshot  # keep latest
+                    checks = step["check"]
+                    if isinstance(checks, dict):
+                        checks = [checks]
+                    for assertion_def in checks:
+                        a_result = evaluate_assertion(assertion_def, snapshot)
+                        result["assertions"].append(a_result)
+                        if not a_result["passed"]:
+                            all_passed = False
+            result["passed"] = all_passed
+        else:
+            # Simple mode: single snapshot after setup
+            snapshot = get_snapshot(client)
+            result["snapshot"] = snapshot
+            assertions = scenario.get("assertions", [])
+            all_passed = True
+            for assertion_def in assertions:
+                a_result = evaluate_assertion(assertion_def, snapshot)
+                result["assertions"].append(a_result)
+                if not a_result["passed"]:
+                    all_passed = False
+            result["passed"] = all_passed
 
     except Exception as e:
         result["error"] = str(e)
-        # Try to get snapshot even on error
         try:
             result["snapshot"] = get_snapshot(client)
         except Exception:
@@ -428,8 +588,14 @@ def main():
     if args.dry_run:
         print(f"Parsed {len(scenarios)} scenarios:")
         for s in scenarios:
-            n_checks = len(s.get("assertions", []))
-            print(f"  - {s.get('name', 'unnamed')} ({n_checks} assertions)")
+            steps = s.get("steps", [])
+            if steps:
+                n_checks = sum(1 for st in steps if "check" in st)
+                n_actions = sum(1 for st in steps if "action" in st)
+                print(f"  - {s.get('name', 'unnamed')} ({n_actions} actions, {n_checks} checkpoints)")
+            else:
+                n_checks = len(s.get("assertions", []))
+                print(f"  - {s.get('name', 'unnamed')} ({n_checks} assertions)")
         return
 
     client = OscilTestClient(args.url)

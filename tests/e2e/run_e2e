@@ -1,20 +1,15 @@
 #!/bin/bash
 # Oscil E2E Test Suite — Unified Entry Point
 #
-# Runs scenario-based tests and pytest suite against the test harness.
-# Produces a combined diagnostic report.
+# One command to test everything. Auto-starts the harness if not running.
 #
 # Usage:
-#   ./run_e2e                    # Full suite (scenarios + pytest)
+#   ./run_e2e                    # Full suite (start harness → scenarios → pytest → stop)
 #   ./run_e2e --scenarios-only   # Scenario runner only
 #   ./run_e2e --pytest-only      # Pytest only
 #   ./run_e2e --json             # JSON output from scenarios
 #   ./run_e2e --quick            # Skip slow pytest tests
-#
-# Prerequisites:
-#   - Test harness must be running: build and start with:
-#     cmake --build --preset dev --target OscilTestHarness
-#     "./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &
+#   ./run_e2e --no-auto-start    # Don't auto-start harness (expect it running)
 
 set -euo pipefail
 
@@ -22,12 +17,16 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
 HARNESS_URL="${HARNESS_URL:-http://localhost:8765}"
+HARNESS_LOG="/tmp/oscil_harness.log"
+HARNESS_PID=""
+HARNESS_APP="$PROJECT_DIR/build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"
 
 # Parse arguments
 SCENARIOS_ONLY=false
 PYTEST_ONLY=false
 JSON_OUTPUT=false
 QUICK=false
+AUTO_START=true
 EXTRA_ARGS=()
 
 for arg in "$@"; do
@@ -36,9 +35,21 @@ for arg in "$@"; do
         --pytest-only)    PYTEST_ONLY=true ;;
         --json)           JSON_OUTPUT=true ;;
         --quick)          QUICK=true ;;
+        --no-auto-start)  AUTO_START=false ;;
         *)                EXTRA_ARGS+=("$arg") ;;
     esac
 done
+
+# Cleanup on exit
+cleanup() {
+    if [ -n "$HARNESS_PID" ]; then
+        echo "[CLEANUP] Stopping harness (PID $HARNESS_PID)..."
+        kill "$HARNESS_PID" 2>/dev/null || true
+        wait "$HARNESS_PID" 2>/dev/null || true
+        HARNESS_PID=""
+    fi
+}
+trap cleanup EXIT
 
 # Ensure venv and dependencies
 ensure_venv() {
@@ -47,28 +58,86 @@ ensure_venv() {
         python3 -m venv "$SCRIPT_DIR/.venv"
         "$VENV_PYTHON" -m pip install -q pytest requests pyyaml
     fi
-    # Ensure pyyaml is installed even if venv exists
     "$VENV_PYTHON" -c "import yaml" 2>/dev/null || "$VENV_PYTHON" -m pip install -q pyyaml
 }
 
-# Health check
-check_harness() {
-    if ! curl -sf "$HARNESS_URL/health" > /dev/null 2>&1; then
-        echo "ERROR: Test harness not running at $HARNESS_URL"
-        echo ""
-        echo "Build and start it:"
-        echo "  cmake --build --preset dev --target OscilTestHarness"
-        HARNESS_APP="$PROJECT_DIR/build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"
-        echo "  \"$HARNESS_APP\" &"
-        echo ""
-        echo "Then re-run: $0"
-        exit 1
+# Check if harness is already running
+harness_alive() {
+    curl -sf "$HARNESS_URL/health" > /dev/null 2>&1
+}
+
+# Start the harness
+start_harness() {
+    if ! [ -f "$HARNESS_APP" ]; then
+        echo "[BUILD] Harness not found, building..."
+        cmake --build --preset dev --target OscilTestHarness 2>&1 | tail -3
+        if ! [ -f "$HARNESS_APP" ]; then
+            echo "ERROR: Failed to build test harness"
+            exit 1
+        fi
     fi
-    echo "[OK] Harness responding at $HARNESS_URL"
+
+    echo "[START] Launching test harness..."
+    echo "  Log: $HARNESS_LOG"
+
+    # Launch in background, capture stderr (which has all DBG output)
+    "$HARNESS_APP" > /dev/null 2>"$HARNESS_LOG" &
+    HARNESS_PID=$!
+
+    # Wait for health
+    echo -n "[WAIT] Waiting for harness to start"
+    for i in $(seq 1 20); do
+        if harness_alive; then
+            echo " OK (${i}s)"
+            return 0
+        fi
+        # Check if process died
+        if ! kill -0 "$HARNESS_PID" 2>/dev/null; then
+            echo " FAILED"
+            echo "ERROR: Harness process died during startup"
+            echo "Last 20 lines of log:"
+            tail -20 "$HARNESS_LOG" 2>/dev/null || true
+            HARNESS_PID=""
+            exit 1
+        fi
+        echo -n "."
+        sleep 1
+    done
+
+    echo " TIMEOUT"
+    echo "ERROR: Harness did not respond within 20 seconds"
+    echo "Last 20 lines of log:"
+    tail -20 "$HARNESS_LOG" 2>/dev/null || true
+    exit 1
+}
+
+# Print harness log on failure
+print_harness_log() {
+    if [ -f "$HARNESS_LOG" ]; then
+        local lines
+        lines=$(wc -l < "$HARNESS_LOG" 2>/dev/null || echo "0")
+        if [ "$lines" -gt 0 ]; then
+            echo ""
+            echo "═══════════════════════════════════════════"
+            echo " Harness Debug Log (last 30 lines)"
+            echo "═══════════════════════════════════════════"
+            tail -30 "$HARNESS_LOG"
+        fi
+    fi
 }
 
 ensure_venv
-check_harness
+
+# Start harness if needed
+if harness_alive; then
+    echo "[OK] Harness already running at $HARNESS_URL"
+elif [ "$AUTO_START" = true ]; then
+    start_harness
+else
+    echo "ERROR: Harness not running at $HARNESS_URL"
+    echo "Start it manually or remove --no-auto-start"
+    exit 1
+fi
 
 EXIT_CODE=0
 
@@ -85,7 +154,10 @@ if [ "$PYTEST_ONLY" = false ]; then
     fi
     SCENARIO_ARGS+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
 
-    "$VENV_PYTHON" "$SCRIPT_DIR/scenario_runner.py" "${SCENARIO_ARGS[@]}" || EXIT_CODE=1
+    if ! "$VENV_PYTHON" "$SCRIPT_DIR/scenario_runner.py" "${SCENARIO_ARGS[@]}"; then
+        EXIT_CODE=1
+        print_harness_log
+    fi
 fi
 
 # ── Pytest ──────────────────────────────────────────────────────────────────
@@ -100,10 +172,12 @@ if [ "$SCENARIOS_ONLY" = false ]; then
         PYTEST_ARGS+=("-m" "not slow")
     fi
 
-    "$VENV_PYTHON" -m pytest "$SCRIPT_DIR" "${PYTEST_ARGS[@]}" \
+    if ! "$VENV_PYTHON" -m pytest "$SCRIPT_DIR" "${PYTEST_ARGS[@]}" \
         --ignore="$SCRIPT_DIR/scenario_runner.py" \
-        --ignore="$SCRIPT_DIR/run_all_e2e_tests.py" \
-        || EXIT_CODE=1
+        --ignore="$SCRIPT_DIR/run_all_e2e_tests.py"; then
+        EXIT_CODE=1
+        print_harness_log
+    fi
 fi
 
 echo ""
@@ -113,7 +187,7 @@ if [ $EXIT_CODE -eq 0 ]; then
     echo "═══════════════════════════════════════════"
 else
     echo "═══════════════════════════════════════════"
-    echo " SOME E2E TESTS FAILED (see above)"
+    echo " SOME E2E TESTS FAILED"
     echo "═══════════════════════════════════════════"
 fi
 
