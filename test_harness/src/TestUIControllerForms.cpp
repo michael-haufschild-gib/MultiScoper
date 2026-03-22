@@ -7,6 +7,7 @@
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilTextField.h"
 #include "ui/components/OscilSlider.h"
+#include "ui/components/InlineEditLabel.h"
 #include <thread>
 #include <chrono>
 
@@ -223,24 +224,51 @@ bool TestUIController::typeText(const juce::String& elementId, const juce::Strin
     if (component == nullptr)
         return false;
 
-    auto* textEditor = dynamic_cast<juce::TextEditor*>(component);
-    if (textEditor != nullptr)
+    if (auto* textEditor = dynamic_cast<juce::TextEditor*>(component))
     {
-        juce::MessageManager::callAsync([textEditor, text]()
+        juce::Component::SafePointer<juce::TextEditor> safe(textEditor);
+        juce::MessageManager::callAsync([safe, text]()
         {
-            textEditor->setText(text, juce::sendNotification);
+            if (auto* te = safe.getComponent())
+                te->setText(text, juce::sendNotification);
         });
         return true;
     }
 
-    auto* label = dynamic_cast<juce::Label*>(component);
-    if (label != nullptr && label->isEditable())
+    if (auto* oscilField = dynamic_cast<oscil::OscilTextField*>(component))
     {
-        juce::MessageManager::callAsync([label, text]()
+        juce::Component::SafePointer<oscil::OscilTextField> safe(oscilField);
+        juce::MessageManager::callAsync([safe, text]()
         {
-            label->setText(text, juce::sendNotification);
+            if (auto* tf = safe.getComponent())
+                tf->setText(text, true);
         });
         return true;
+    }
+
+    if (auto* inlineLabel = dynamic_cast<oscil::InlineEditLabel*>(component))
+    {
+        juce::Component::SafePointer<oscil::InlineEditLabel> safe(inlineLabel);
+        juce::MessageManager::callAsync([safe, text]()
+        {
+            if (auto* il = safe.getComponent())
+                il->setText(text, true);
+        });
+        return true;
+    }
+
+    if (auto* label = dynamic_cast<juce::Label*>(component))
+    {
+        if (label->isEditable())
+        {
+            juce::Component::SafePointer<juce::Label> safe(label);
+            juce::MessageManager::callAsync([safe, text]()
+            {
+                if (auto* l = safe.getComponent())
+                    l->setText(text, juce::sendNotification);
+            });
+            return true;
+        }
     }
 
     return false;

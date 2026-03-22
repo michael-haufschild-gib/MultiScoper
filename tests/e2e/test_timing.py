@@ -10,8 +10,18 @@ What bugs these tests catch:
 - Timing settings lost after editor close/reopen
 """
 
+import time
 import pytest
 from oscil_test_utils import OscilTestClient
+
+
+def wait_for_samples(client: OscilTestClient, predicate, desc: str, timeout_s: float = 3.0):
+    """Poll display samples until predicate(samples) is true."""
+    return client.wait_until(
+        lambda: predicate(client.get_display_samples()),
+        timeout_s=timeout_s,
+        desc=desc,
+    )
 
 # Actual test IDs from TimingSidebarSection.cpp:
 #   sidebar_timing_modeToggle          (parent bar)
@@ -121,16 +131,20 @@ class TestTimeIntervalField:
             pytest.skip("Cannot add oscillator")
 
         c.set_slider(INTERVAL_FIELD, 100.0)
+        time.sleep(0.3)  # Let async value propagate through timing engine
         samples_100 = c.get_display_samples()
         assert samples_100 > 0, (
             f"displaySamples should be positive at 100ms interval, got {samples_100}"
         )
 
         c.set_slider(INTERVAL_FIELD, 200.0)
-        samples_200 = c.get_display_samples()
-        assert samples_200 > 0, (
-            f"displaySamples should be positive at 200ms interval, got {samples_200}"
+        # Wait for display samples to change from the 100ms value
+        c.wait_until(
+            lambda: c.get_display_samples() != samples_100,
+            timeout_s=3.0,
+            desc="display samples to update after interval change",
         )
+        samples_200 = c.get_display_samples()
 
         # 200ms should produce roughly 2x the samples of 100ms
         assert samples_200 > samples_100, (
@@ -204,9 +218,11 @@ class TestMelodicMode:
             pytest.skip("Melodic mode segment not registered")
 
         c.click(MELODIC_SEG)
+        time.sleep(0.3)  # Let mode switch propagate
 
         # Set BPM to 120
         c.set_bpm(120.0)
+        time.sleep(0.3)
         samples_120 = c.get_display_samples()
         assert samples_120 > 0, (
             f"displaySamples should be positive at 120 BPM, got {samples_120}"
@@ -214,10 +230,13 @@ class TestMelodicMode:
 
         # Set BPM to 60 (half speed = double samples per beat)
         c.set_bpm(60.0)
-        samples_60 = c.get_display_samples()
-        assert samples_60 > 0, (
-            f"displaySamples should be positive at 60 BPM, got {samples_60}"
+        # Wait for display samples to change from the 120 BPM value
+        c.wait_until(
+            lambda: c.get_display_samples() != samples_120,
+            timeout_s=3.0,
+            desc="display samples to update after BPM change",
         )
+        samples_60 = c.get_display_samples()
 
         assert samples_60 > samples_120, (
             f"60 BPM should have more samples than 120 BPM "

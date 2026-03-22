@@ -9,7 +9,7 @@ Fixture hierarchy:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient, HarnessConnectionError
+from oscil_test_utils import OscilTestClient, HarnessConnectionError, HarnessCrashedError
 
 
 # ---------------------------------------------------------------------------
@@ -25,6 +25,19 @@ def client() -> OscilTestClient:
     except HarnessConnectionError:
         pytest.skip("Test harness not running on localhost:8765")
     return c
+
+
+@pytest.fixture(autouse=True)
+def _abort_on_harness_crash(client: OscilTestClient):
+    """Abort the entire test session immediately if the harness has crashed."""
+    try:
+        yield
+    except HarnessCrashedError:
+        pytest.exit(
+            "HARNESS CRASHED — aborting test session. "
+            "Check ~/Library/Logs/DiagnosticReports/ for crash details.",
+            returncode=99,
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -55,6 +55,10 @@ class HarnessConnectionError(Exception):
     """Raised when the test harness is unreachable."""
 
 
+class HarnessCrashedError(Exception):
+    """Raised when a previously connected harness stops responding (crash)."""
+
+
 class ElementNotFoundError(Exception):
     """Raised when a required element is not registered."""
 
@@ -68,8 +72,24 @@ class OscilTestClient:
     def __init__(self, base_url: str = DEFAULT_URL):
         self.base_url = base_url
         self.timeout = self.DEFAULT_TIMEOUT
+        self._was_connected = False
 
     # ── HTTP primitives ─────────────────────────────────────────────
+
+    def _check_crash(self) -> None:
+        """Raise immediately if harness was connected but is now unreachable."""
+        if not self._was_connected:
+            return
+        try:
+            r = requests.get(f"{self.base_url}/health", timeout=2.0)
+            if r.status_code == 200:
+                return
+        except requests.exceptions.ConnectionError:
+            pass
+        raise HarnessCrashedError(
+            "Test harness crashed — was connected but is no longer reachable. "
+            "Check crash logs in ~/Library/Logs/DiagnosticReports/"
+        )
 
     def _get(self, path: str, **kwargs) -> requests.Response:
         return requests.get(
@@ -87,7 +107,9 @@ class OscilTestClient:
         try:
             r = self._get(path, **kwargs)
         except requests.exceptions.ConnectionError:
+            self._check_crash()
             return None
+        self._was_connected = True
         if r.status_code == 200:
             return r.json()
         return None
@@ -96,7 +118,9 @@ class OscilTestClient:
         try:
             r = self._post(path, payload)
         except requests.exceptions.ConnectionError:
+            self._check_crash()
             return None
+        self._was_connected = True
         if r.status_code == 200:
             return r.json()
         return None
@@ -114,6 +138,7 @@ class OscilTestClient:
             try:
                 r = requests.get(f"{self.base_url}/health", timeout=2.0)
                 if r.status_code == 200:
+                    self._was_connected = True
                     return
             except requests.exceptions.ConnectionError:
                 pass
@@ -188,7 +213,11 @@ class OscilTestClient:
         Open the plugin editor and block until UI elements are registered.
         Raises on failure.
         """
-        r = self._post(f"/track/{track_id}/showEditor")
+        try:
+            r = self._post(f"/track/{track_id}/showEditor")
+        except requests.exceptions.ConnectionError:
+            self._check_crash()
+            raise RuntimeError("Failed to open editor: harness unreachable")
         resp = r.json()
         if r.status_code != 200 or not resp.get("success"):
             raise RuntimeError(f"Failed to open editor: {resp.get('error', 'unknown')}")
@@ -493,11 +522,16 @@ class OscilTestClient:
         return []
 
     def get_display_samples(self, pane_index: int = 0) -> int:
-        """Get displaySamples from the first waveform in the given pane."""
+        """Get displaySamples from the first waveform in the given pane,
+        falling back to the top-level value if no panes/waveforms exist."""
+        state = self.get_waveform_state()
+        if not state:
+            return 0
         waveforms = self.get_waveform_for_pane(pane_index)
         if waveforms:
             return waveforms[0].get("displaySamples", 0)
-        return 0
+        # Fall back to top-level displaySamples (from timing engine directly)
+        return state.get("displaySamples", 0)
 
     def wait_for_waveform_data(
         self, pane_index: int = 0, timeout_s: float = 5.0

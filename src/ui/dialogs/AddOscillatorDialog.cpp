@@ -154,6 +154,7 @@ void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
 void AddOscillatorDialog::setData(const std::vector<SourceInfo>& sources,
                                    const std::vector<Pane>& panes)
 {
+    submitted_ = false;
     sources_ = sources;
     panes_ = panes;
 
@@ -266,9 +267,13 @@ AddOscillatorDialog::Result AddOscillatorDialog::buildResult() const
 
 void AddOscillatorDialog::handleOkClick()
 {
+    if (submitted_)
+        return;
+
     if (!validateInput())
         return;
 
+    submitted_ = true;
     auto result = buildResult();
 
     if (callback_)

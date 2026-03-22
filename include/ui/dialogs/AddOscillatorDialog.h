@@ -112,6 +112,7 @@ private:
     std::vector<Pane> panes_;
     Callback callback_;
     CancelCallback cancelCallback_;
+    bool submitted_ = false;
 
     // Source section
     std::unique_ptr<juce::Label> sourceLabel_;
