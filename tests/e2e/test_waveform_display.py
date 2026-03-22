@@ -224,18 +224,20 @@ class TestWaveformRendering:
         )
         editor.set_track_audio(0, waveform="silence", amplitude=0.0)
 
-        # With silence, peak should be near zero
-        # Allow some time for audio to settle
-        import time
-        time.sleep(0.5)
+        # Wait for the circular buffer to flush old audio data.
+        # The capture buffer may hold several thousand samples of pre-silence
+        # audio, so we poll until peak drops below noise floor.
+        def peak_is_silent():
+            wfs = editor.get_waveform_for_pane(0)
+            if not wfs:
+                return False
+            return wfs[0].get("peakLevel", 1.0) < 0.05
 
-        waveforms = editor.get_waveform_for_pane(0)
-        if waveforms:
-            peak = waveforms[0].get("peakLevel", 0.0)
-            # With true silence, peak should be very small (allow noise floor)
-            assert peak < 0.05, (
-                f"Peak should be near zero with silence, got {peak}"
-            )
+        editor.wait_until(
+            peak_is_silent,
+            timeout_s=5.0,
+            desc="peak to drop below noise floor after silence",
+        )
 
         editor.transport_stop()
 

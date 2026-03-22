@@ -5,6 +5,8 @@
 #include "TestUIController.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/OscilTextField.h"
+#include "ui/components/OscilSlider.h"
 #include <thread>
 #include <chrono>
 
@@ -131,16 +133,40 @@ bool TestUIController::setSliderValue(const juce::String& elementId, double valu
     if (component == nullptr)
         return false;
 
-    auto* slider = dynamic_cast<juce::Slider*>(component);
-    if (slider == nullptr)
-        return false;
-
-    juce::MessageManager::callAsync([slider, value]()
+    if (auto* slider = dynamic_cast<juce::Slider*>(component))
     {
-        slider->setValue(value, juce::sendNotification);
-    });
+        juce::Component::SafePointer<juce::Slider> safe(slider);
+        juce::MessageManager::callAsync([safe, value]()
+        {
+            if (auto* s = safe.getComponent())
+                s->setValue(value, juce::sendNotification);
+        });
+        return true;
+    }
 
-    return true;
+    if (auto* textField = dynamic_cast<oscil::OscilTextField*>(component))
+    {
+        juce::Component::SafePointer<oscil::OscilTextField> safe(textField);
+        juce::MessageManager::callAsync([safe, value]()
+        {
+            if (auto* tf = safe.getComponent())
+                tf->setNumericValue(value, true);
+        });
+        return true;
+    }
+
+    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+    {
+        juce::Component::SafePointer<oscil::OscilSlider> safe(oscilSlider);
+        juce::MessageManager::callAsync([safe, value]()
+        {
+            if (auto* s = safe.getComponent())
+                s->setValue(value);
+        });
+        return true;
+    }
+
+    return false;
 }
 
 bool TestUIController::incrementSlider(const juce::String& elementId)
