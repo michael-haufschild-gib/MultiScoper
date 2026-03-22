@@ -4,8 +4,6 @@
 
 #include "TestElementRegistry.h"
 
-#include <iostream>
-
 namespace oscil::test
 {
 
@@ -26,7 +24,7 @@ void TestElementRegistry::unregisterElement(juce::Component* component)
     std::scoped_lock lock(mutex_);
     for (auto it = elements_.begin(); it != elements_.end(); )
     {
-        if (it->second == component)
+        if (it->second.getComponent() == component)
             it = elements_.erase(it);
         else
             ++it;
@@ -44,7 +42,16 @@ juce::Component* TestElementRegistry::findElement(const juce::String& testId)
     std::scoped_lock lock(mutex_);
     auto it = elements_.find(testId);
     if (it != elements_.end())
-        return it->second;
+    {
+        auto* comp = it->second.getComponent();
+        if (comp == nullptr)
+        {
+            // SafePointer detected destruction — clean up the stale entry
+            elements_.erase(it);
+            return nullptr;
+        }
+        return comp;
+    }
     return nullptr;
 }
 
@@ -55,11 +62,9 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
     if (it == elements_.end())
         return nullptr;
 
-    auto* comp = it->second;
+    auto* comp = it->second.getComponent();
 
-    // Check the component is still part of a live hierarchy.
-    // A component that has been removed from its parent (during editor
-    // teardown) but not yet unregistered will have no parent and no peer.
+    // SafePointer returns nullptr if the component was destroyed
     if (comp == nullptr)
     {
         elements_.erase(it);
@@ -71,7 +76,6 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
     // not currently on screen, it's likely stale.
     if (comp->getParentComponent() == nullptr && !comp->isOnDesktop())
     {
-        // Stale entry — remove it
         elements_.erase(it);
         return nullptr;
     }
@@ -82,7 +86,32 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
 std::map<juce::String, juce::Component*> TestElementRegistry::getAllElements()
 {
     std::scoped_lock lock(mutex_);
-    return elements_;
+    std::map<juce::String, juce::Component*> result;
+    for (auto it = elements_.begin(); it != elements_.end(); )
+    {
+        auto* comp = it->second.getComponent();
+        if (comp != nullptr)
+        {
+            result[it->first] = comp;
+            ++it;
+        }
+        else
+        {
+            // Clean up entries where SafePointer detected destruction
+            it = elements_.erase(it);
+        }
+    }
+    return result;
+}
+
+std::vector<juce::String> TestElementRegistry::getAllTestIds()
+{
+    std::scoped_lock lock(mutex_);
+    std::vector<juce::String> ids;
+    ids.reserve(elements_.size());
+    for (const auto& [id, _] : elements_)
+        ids.push_back(id);
+    return ids;
 }
 
 void TestElementRegistry::clear()
@@ -94,7 +123,15 @@ void TestElementRegistry::clear()
 bool TestElementRegistry::hasElement(const juce::String& testId)
 {
     std::scoped_lock lock(mutex_);
-    return elements_.find(testId) != elements_.end();
+    auto it = elements_.find(testId);
+    if (it == elements_.end())
+        return false;
+    if (it->second.getComponent() == nullptr)
+    {
+        elements_.erase(it);
+        return false;
+    }
+    return true;
 }
 
 juce::Rectangle<int> TestElementRegistry::getElementScreenBounds(const juce::String& testId)

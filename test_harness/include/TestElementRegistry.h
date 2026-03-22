@@ -15,6 +15,9 @@ namespace oscil::test
 /**
  * Singleton registry that tracks UI components by test IDs.
  * Components register themselves when created and unregister on destruction.
+ *
+ * Uses juce::Component::SafePointer internally so that destroyed components
+ * are automatically detected as null — no dangling pointer dereferences.
  */
 class TestElementRegistry
 {
@@ -38,9 +41,7 @@ public:
 
     /**
      * Find a component by test ID.
-     * Returns nullptr if not registered.
-     * WARNING: The returned pointer may become stale if the component is
-     * deleted on the message thread after this call returns.
+     * Returns nullptr if not registered or if the component has been destroyed.
      */
     juce::Component* findElement(const juce::String& testId);
 
@@ -53,9 +54,14 @@ public:
     juce::Component* findValidElement(const juce::String& testId);
 
     /**
-     * Get all registered elements
+     * Get all registered elements (only returns live components)
      */
     std::map<juce::String, juce::Component*> getAllElements();
+
+    /**
+     * Get all registered test IDs (safe — no component dereference)
+     */
+    std::vector<juce::String> getAllTestIds();
 
     /**
      * Clear all registrations
@@ -63,7 +69,7 @@ public:
     void clear();
 
     /**
-     * Check if element exists
+     * Check if element exists and is still alive
      */
     bool hasElement(const juce::String& testId);
 
@@ -81,7 +87,7 @@ private:
     TestElementRegistry() = default;
     ~TestElementRegistry() = default;
 
-    std::map<juce::String, juce::Component*> elements_;
+    std::map<juce::String, juce::Component::SafePointer<juce::Component>> elements_;
     std::mutex mutex_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestElementRegistry)

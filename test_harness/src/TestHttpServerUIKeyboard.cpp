@@ -311,9 +311,8 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 
 void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response& res)
 {
-    // Build the response on the message thread to avoid use-after-free:
-    // the HTTP thread must not call component methods (isVisible, isEnabled,
-    // getBounds) because the message thread may destroy components concurrently.
+    // Build the response on the message thread because component methods
+    // (isVisible, isEnabled, getBounds) must only be called there.
     json data;
     juce::WaitableEvent done;
 
@@ -322,15 +321,11 @@ void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response
         data["count"] = 0;
         data["elements"] = json::array();
 
-        auto& registry = TestElementRegistry::getInstance();
-        auto elements = registry.getAllElements();
-        for (const auto& [testId, rawComp] : elements)
+        // getAllElements() uses SafePointer internally — dead components
+        // are automatically filtered out and cleaned from the registry.
+        auto elements = TestElementRegistry::getInstance().getAllElements();
+        for (const auto& [testId, component] : elements)
         {
-            // Validate the component is still alive before accessing it
-            auto* component = registry.findValidElement(testId);
-            if (component == nullptr)
-                continue;
-
             json elementInfo;
             elementInfo["testId"] = testId.toStdString();
             elementInfo["visible"] = component->isVisible();
