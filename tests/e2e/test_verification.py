@@ -63,18 +63,17 @@ class TestServerSideVerification:
         result = editor.verify_element_bounds(
             sidebar, el.width, el.height, tolerance=10
         )
-        if result:
-            assert result.get("pass", False), (
-                f"Bounds verification should pass with actual dimensions "
-                f"({el.width}x{el.height})"
-            )
+        assert result, "verify_element_bounds should return data"
+        assert result.get("pass", False), (
+            f"Bounds verification should pass with actual dimensions "
+            f"({el.width}x{el.height})"
+        )
 
-    def test_verify_color_on_oscillator(
+    def test_verify_color_endpoint_does_not_crash(
         self, editor: OscilTestClient, source_id: str
     ):
         """
-        Bug caught: color verification not detecting oscillator's assigned
-        color in the rendered waveform area.
+        Bug caught: color verification endpoint crashing on valid element IDs.
         """
         osc_id = editor.add_oscillator(
             source_id, name="Color Verify", colour="#00FF00"
@@ -89,21 +88,21 @@ class TestServerSideVerification:
         )
         editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
 
-        # Wait for some rendering
+        # Wait for waveform data
         try:
             editor.wait_for_waveform_data(pane_index=0, timeout_s=3.0)
         except TimeoutError:
             editor.transport_stop()
             pytest.skip("Waveform data not available")
 
-        # The color check may not find #00FF00 if the rendering area
-        # doesn't have an element ID that matches. This test validates
-        # the API doesn't crash.
+        # The color check validates the API works without crashing.
+        # The actual color match depends on element IDs matching the waveform display.
         result = editor.verify_element_color(
             "waveformDisplay", "#00FF00", tolerance=50
         )
-        # Don't assert on result -- element ID may not match. The test
-        # validates the API itself works without error.
+        # Result may be True or False depending on element ID mapping —
+        # what matters is no crash occurred.
+        assert isinstance(result, bool), "verify_element_color should return bool"
 
         editor.transport_stop()
 
@@ -129,19 +128,18 @@ class TestServerSideVerification:
             editor.transport_stop()
             pytest.skip("Waveform data not available")
 
-        # Try analyzing (may fail if element ID doesn't match)
+        # Analyze via pixel analysis (may fail if element ID doesn't match)
         analysis = editor.analyze_waveform("waveformDisplay")
-        # The analysis may return None if element not found, which is OK.
-        # What matters is no crash.
+        # Analysis may return None if element not found — the API shouldn't crash.
 
         editor.transport_stop()
 
-    def test_verify_waveform_with_silence(
+    def test_waveform_state_verifies_silence(
         self, editor: OscilTestClient, source_id: str
     ):
         """
-        Bug caught: waveform verification returning true even when audio
-        is silent (false positive).
+        Bug caught: waveform state reporting non-zero levels with silent audio.
+        Uses data-level verification instead of pixel analysis.
         """
         osc_id = editor.add_oscillator(source_id, name="Silence Verify")
         assert osc_id is not None
@@ -152,13 +150,17 @@ class TestServerSideVerification:
         )
         editor.set_track_audio(0, waveform="silence", amplitude=0.0)
 
-        # With silence, waveform verification should return false
-        # (no amplitude detected above threshold)
-        result = editor.verify_waveform_rendered(
-            "waveformDisplay", min_amplitude=0.1
-        )
-        # Don't fail hard -- element ID may differ, but the test validates
-        # the endpoint handles the silence case without crashing.
+        # Allow time for silence to propagate through capture buffer
+        import time
+        time.sleep(0.5)
+
+        waveforms = editor.get_waveform_for_pane(0)
+        if waveforms:
+            peak = waveforms[0].get("peakLevel", 0.0)
+            # With silence, peak should be near zero
+            assert peak < 0.05, (
+                f"Peak should be near zero with silence, got {peak}"
+            )
 
         editor.transport_stop()
 

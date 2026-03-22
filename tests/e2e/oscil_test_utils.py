@@ -344,6 +344,10 @@ class OscilTestClient:
         payload = {"id": osc_id, **fields}
         return self._post_ok("/state/oscillator/update", payload)
 
+    def delete_oscillator(self, osc_id: str) -> bool:
+        """Delete an oscillator by ID via state API."""
+        return self._post_ok("/state/oscillator/delete", {"id": osc_id})
+
     def reorder_oscillators(self, from_index: int, to_index: int) -> bool:
         return self._post_ok("/state/oscillator/reorder", {"fromIndex": from_index, "toIndex": to_index})
 

@@ -154,6 +154,9 @@ class TestTimingAndOscillatorInteraction:
 
         editor.set_slider(interval_field, 25.0)
         samples_before = editor.get_display_samples()
+        assert samples_before > 0, (
+            f"displaySamples should be positive after setting interval, got {samples_before}"
+        )
 
         # Add an oscillator
         osc_id = editor.add_oscillator(source_id, name="Timing Preserve Test")
@@ -161,13 +164,15 @@ class TestTimingAndOscillatorInteraction:
         editor.wait_for_oscillator_count(1, timeout_s=3.0)
 
         samples_after = editor.get_display_samples()
+        assert samples_after > 0, (
+            f"displaySamples should be positive after adding oscillator, got {samples_after}"
+        )
 
-        if samples_before > 0 and samples_after > 0:
-            ratio = samples_after / samples_before
-            assert 0.5 < ratio < 2.0, (
-                f"Adding oscillator changed timing: "
-                f"{samples_before} -> {samples_after} (ratio {ratio:.2f})"
-            )
+        ratio = samples_after / samples_before
+        assert 0.5 < ratio < 2.0, (
+            f"Adding oscillator changed timing: "
+            f"{samples_before} -> {samples_after} (ratio {ratio:.2f})"
+        )
 
     def test_deleting_all_oscillators_preserves_timing(
         self, editor: OscilTestClient, source_id: str
@@ -191,6 +196,9 @@ class TestTimingAndOscillatorInteraction:
 
         editor.set_slider(interval_field, 50.0)
         samples_before = editor.get_display_samples()
+        assert samples_before > 0, (
+            f"displaySamples should be positive after setting interval, got {samples_before}"
+        )
 
         # Delete all oscillators
         editor.reset_state()
@@ -198,17 +206,12 @@ class TestTimingAndOscillatorInteraction:
 
         # Re-add oscillator to get displaySamples back
         osc_id2 = editor.add_oscillator(source_id, name="Post Delete")
-        if osc_id2:
-            editor.wait_for_oscillator_count(1, timeout_s=3.0)
-            samples_after = editor.get_display_samples()
-
-            if samples_before > 0 and samples_after > 0:
-                ratio = samples_after / samples_before
-                # Timing may reset on full state reset, so be lenient
-                assert samples_after > 0, (
-                    f"Timing should produce positive samples after re-add, "
-                    f"got {samples_after}"
-                )
+        assert osc_id2 is not None, "Should be able to add oscillator after reset"
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+        samples_after = editor.get_display_samples()
+        assert samples_after > 0, (
+            f"displaySamples should be positive after re-add, got {samples_after}"
+        )
 
 
 class TestTransportAndRenderingInteraction:

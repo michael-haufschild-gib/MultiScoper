@@ -1,0 +1,120 @@
+#!/bin/bash
+# Oscil E2E Test Suite — Unified Entry Point
+#
+# Runs scenario-based tests and pytest suite against the test harness.
+# Produces a combined diagnostic report.
+#
+# Usage:
+#   ./run_e2e                    # Full suite (scenarios + pytest)
+#   ./run_e2e --scenarios-only   # Scenario runner only
+#   ./run_e2e --pytest-only      # Pytest only
+#   ./run_e2e --json             # JSON output from scenarios
+#   ./run_e2e --quick            # Skip slow pytest tests
+#
+# Prerequisites:
+#   - Test harness must be running: build and start with:
+#     cmake --build --preset dev --target OscilTestHarness
+#     "./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
+HARNESS_URL="${HARNESS_URL:-http://localhost:8765}"
+
+# Parse arguments
+SCENARIOS_ONLY=false
+PYTEST_ONLY=false
+JSON_OUTPUT=false
+QUICK=false
+EXTRA_ARGS=()
+
+for arg in "$@"; do
+    case "$arg" in
+        --scenarios-only) SCENARIOS_ONLY=true ;;
+        --pytest-only)    PYTEST_ONLY=true ;;
+        --json)           JSON_OUTPUT=true ;;
+        --quick)          QUICK=true ;;
+        *)                EXTRA_ARGS+=("$arg") ;;
+    esac
+done
+
+# Ensure venv and dependencies
+ensure_venv() {
+    if [ ! -f "$VENV_PYTHON" ]; then
+        echo "[SETUP] Creating virtual environment..."
+        python3 -m venv "$SCRIPT_DIR/.venv"
+        "$VENV_PYTHON" -m pip install -q pytest requests pyyaml
+    fi
+    # Ensure pyyaml is installed even if venv exists
+    "$VENV_PYTHON" -c "import yaml" 2>/dev/null || "$VENV_PYTHON" -m pip install -q pyyaml
+}
+
+# Health check
+check_harness() {
+    if ! curl -sf "$HARNESS_URL/health" > /dev/null 2>&1; then
+        echo "ERROR: Test harness not running at $HARNESS_URL"
+        echo ""
+        echo "Build and start it:"
+        echo "  cmake --build --preset dev --target OscilTestHarness"
+        HARNESS_APP="$PROJECT_DIR/build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness"
+        echo "  \"$HARNESS_APP\" &"
+        echo ""
+        echo "Then re-run: $0"
+        exit 1
+    fi
+    echo "[OK] Harness responding at $HARNESS_URL"
+}
+
+ensure_venv
+check_harness
+
+EXIT_CODE=0
+
+# ── Scenario Runner ─────────────────────────────────────────────────────────
+if [ "$PYTEST_ONLY" = false ]; then
+    echo ""
+    echo "═══════════════════════════════════════════"
+    echo " Running Scenario Tests"
+    echo "═══════════════════════════════════════════"
+
+    SCENARIO_ARGS=("--url" "$HARNESS_URL")
+    if [ "$JSON_OUTPUT" = true ]; then
+        SCENARIO_ARGS+=("--json")
+    fi
+    SCENARIO_ARGS+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
+
+    "$VENV_PYTHON" "$SCRIPT_DIR/scenario_runner.py" "${SCENARIO_ARGS[@]}" || EXIT_CODE=1
+fi
+
+# ── Pytest ──────────────────────────────────────────────────────────────────
+if [ "$SCENARIOS_ONLY" = false ]; then
+    echo ""
+    echo "═══════════════════════════════════════════"
+    echo " Running Pytest Suite"
+    echo "═══════════════════════════════════════════"
+
+    PYTEST_ARGS=("-x" "--tb=short" "-q")
+    if [ "$QUICK" = true ]; then
+        PYTEST_ARGS+=("-m" "not slow")
+    fi
+
+    "$VENV_PYTHON" -m pytest "$SCRIPT_DIR" "${PYTEST_ARGS[@]}" \
+        --ignore="$SCRIPT_DIR/scenario_runner.py" \
+        --ignore="$SCRIPT_DIR/run_all_e2e_tests.py" \
+        || EXIT_CODE=1
+fi
+
+echo ""
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "═══════════════════════════════════════════"
+    echo " ALL E2E TESTS PASSED"
+    echo "═══════════════════════════════════════════"
+else
+    echo "═══════════════════════════════════════════"
+    echo " SOME E2E TESTS FAILED (see above)"
+    echo "═══════════════════════════════════════════"
+fi
+
+exit $EXIT_CODE

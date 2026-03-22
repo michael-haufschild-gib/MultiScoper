@@ -1,0 +1,199 @@
+# Core E2E Scenarios — fundamental functionality
+# Run with: python scenario_runner.py
+
+# ── Waveform Rendering ──────────────────────────────────────────────────────
+
+- name: "Single oscillator renders waveform with sine audio"
+  setup:
+    oscillators:
+      - {source: auto, color: "#00FF00", name: "Sine Test"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  assertions:
+    - {check: oscillator_count, expected: 1}
+    - {check: waveform_has_data, oscillator: 0}
+    - {check: peak_above, oscillator: 0, threshold: 0.1}
+    - {check: display_samples_positive}
+
+- name: "Silence produces near-zero peak"
+  setup:
+    oscillators:
+      - {source: auto, name: "Silence Test"}
+    transport: playing
+    audio: {waveform: silence, amplitude: 0.0}
+    wait_for: 500ms
+  assertions:
+    - {check: oscillator_count, expected: 1}
+    - {check: peak_below, oscillator: 0, threshold: 0.05}
+
+- name: "Multiple oscillators all receive waveform data"
+  setup:
+    oscillators:
+      - {source: auto, color: "#FF0000", name: "Red"}
+      - {source: auto, color: "#00FF00", name: "Green"}
+      - {source: auto, color: "#0000FF", name: "Blue"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  assertions:
+    - {check: oscillator_count, expected: 3}
+    - {check: all_waveforms_have_data}
+    - {check: all_peaks_above, threshold: 0.1}
+
+- name: "High amplitude sine has peak > 0.5"
+  setup:
+    oscillators:
+      - {source: auto, name: "High Amp"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 1.0}
+    wait_for: waveform_data
+  assertions:
+    - {check: peak_above, oscillator: 0, threshold: 0.5}
+
+- name: "Square wave renders with waveform data"
+  setup:
+    oscillators:
+      - {source: auto, name: "Square Test"}
+    transport: playing
+    audio: {waveform: square, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  assertions:
+    - {check: waveform_has_data, oscillator: 0}
+    - {check: peak_above, oscillator: 0, threshold: 0.1}
+
+# ── Oscillator State ────────────────────────────────────────────────────────
+
+- name: "Oscillator has valid source and pane assignment"
+  setup:
+    oscillators:
+      - {source: auto, name: "Assignment Test"}
+  assertions:
+    - {check: oscillator_count, expected: 1}
+    - {check: snapshot_field, path: "oscillators[0].sourceId", op: "!=", value: ""}
+    - {check: snapshot_field, path: "oscillators[0].paneId", op: "!=", value: ""}
+    - {check: pane_count, expected: 1}
+
+- name: "Oscillator starts visible"
+  setup:
+    oscillators:
+      - {source: auto, name: "Visibility Test"}
+  assertions:
+    - {check: oscillator_visible, oscillator: 0}
+
+- name: "Default processing mode is FullStereo"
+  setup:
+    oscillators:
+      - {source: auto, name: "Mode Test"}
+  assertions:
+    - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "FullStereo"}
+
+- name: "Mono mode persists in state"
+  setup:
+    oscillators:
+      - {source: auto, name: "Mono Test", mode: Mono}
+  assertions:
+    - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
+
+# ── Transport ───────────────────────────────────────────────────────────────
+
+- name: "Transport starts and stops"
+  setup:
+    transport: playing
+  assertions:
+    - {check: transport_playing}
+
+- name: "BPM is in valid range"
+  setup: {}
+  assertions:
+    - {check: snapshot_field, path: "transport.bpm", op: ">=", value: 20}
+    - {check: snapshot_field, path: "transport.bpm", op: "<=", value: 300}
+
+# ── Timing Engine ───────────────────────────────────────────────────────────
+
+- name: "Default timing mode is TIME"
+  setup: {}
+  assertions:
+    - {check: timing_mode, expected: "TIME"}
+    - {check: display_samples_positive}
+
+- name: "Display samples positive with oscillator"
+  setup:
+    oscillators:
+      - {source: auto, name: "DS Test"}
+  assertions:
+    - {check: display_samples_positive}
+    - {check: display_samples_above, threshold: 100}
+
+# ── Pane Management ─────────────────────────────────────────────────────────
+
+- name: "Pane auto-created when first oscillator added"
+  setup:
+    oscillators:
+      - {source: auto, name: "Pane Auto"}
+  assertions:
+    - {check: pane_count, expected: 1}
+    - {check: oscillator_count, expected: 1}
+
+- name: "Multiple oscillators share default pane"
+  setup:
+    oscillators:
+      - {source: auto, name: "Share 1"}
+      - {source: auto, name: "Share 2"}
+  assertions:
+    - {check: oscillator_count, expected: 2}
+    - {check: pane_count, expected: 1}
+
+# ── Sources ─────────────────────────────────────────────────────────────────
+
+- name: "At least one audio source is registered"
+  setup: {}
+  assertions:
+    - {check: snapshot_field, path: "sources", op: "!=", value: []}
+
+# ── Edge Cases ──────────────────────────────────────────────────────────────
+
+- name: "Empty state has zero oscillators and panes"
+  setup:
+    open_editor: true
+  assertions:
+    - {check: oscillator_count, expected: 0}
+    - {check: pane_count, expected: 0}
+
+- name: "Display samples still positive with no oscillators"
+  setup: {}
+  assertions:
+    - {check: display_samples_positive}
+
+- name: "Waveform renders after transport started late"
+  setup:
+    oscillators:
+      - {source: auto, name: "Late Transport"}
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    transport: playing
+    wait_for: waveform_data
+  assertions:
+    - {check: waveform_has_data, oscillator: 0}
+    - {check: peak_above, oscillator: 0, threshold: 0.1}
+
+# ── Audio Generator ─────────────────────────────────────────────────────────
+
+- name: "Audio generator state visible in snapshot"
+  setup:
+    transport: playing
+    audio: {waveform: triangle, frequency: 880, amplitude: 0.5}
+    wait_for: 200ms
+  assertions:
+    - {check: snapshot_field, path: "audioGenerators[0].waveform", op: "==", value: "Triangle"}
+    - {check: snapshot_field, path: "audioGenerators[0].frequency", op: "==", value: 880.0}
+    - {check: snapshot_field, path: "audioGenerators[0].amplitude", op: "==", value: 0.5}
+
+# ── Diagnostic Infrastructure ───────────────────────────────────────────────
+
+- name: "Diagnostic snapshot contains all required sections"
+  setup: {}
+  assertions:
+    - {check: snapshot_field, path: "transport.playing", op: "!=", value: null}
+    - {check: snapshot_field, path: "timing.mode", op: "!=", value: null}
+    - {check: snapshot_field, path: "timing.displaySamples", op: ">", value: 0}
+    - {check: snapshot_field, path: "transport.sampleRate", op: ">", value: 0}

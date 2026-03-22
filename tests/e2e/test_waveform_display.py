@@ -39,23 +39,18 @@ class TestWaveformRendering:
         )
         editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
 
-        # Wait for waveform data to flow through the pipeline (condition-based, not sleep)
-        try:
-            editor.wait_for_waveform_data(pane_index=0, timeout_s=3.0)
-            waveforms = editor.get_waveform_for_pane(0)
-            assert len(waveforms) >= 1, "Should have at least one waveform in pane"
-            assert waveforms[0].get("hasWaveformData"), (
-                "Waveform should have data with active audio"
-            )
-        except TimeoutError:
-            # Server-side waveform verification as fallback
-            rendered = editor.verify_waveform_rendered(
-                "waveformDisplay", min_amplitude=0.01
-            )
-            assert rendered, (
-                "Waveform should be rendered with active audio "
-                "(neither waveform state nor verify endpoint confirmed rendering)"
-            )
+        # Wait for waveform data to flow through the pipeline
+        waveforms = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        assert len(waveforms) >= 1, "Should have at least one waveform in pane"
+        assert waveforms[0].get("hasWaveformData"), (
+            "Waveform should have data with active audio"
+        )
+
+        # Verify peak level is reasonable for a 0.8 amplitude sine
+        peak = waveforms[0].get("peakLevel", 0.0)
+        assert peak > 0.01, (
+            f"Peak level should be > 0.01 with 0.8 amplitude sine, got {peak}"
+        )
 
         editor.transport_stop()
 
@@ -72,10 +67,12 @@ class TestWaveformRendering:
 
         # displaySamples should be positive once oscillator is added
         display_samples = editor.get_display_samples(0)
-        if display_samples > 0:
-            assert display_samples > 100, (
-                f"displaySamples should be a reasonable value, got {display_samples}"
-            )
+        assert display_samples > 0, (
+            f"displaySamples should be positive after adding oscillator, got {display_samples}"
+        )
+        assert display_samples > 100, (
+            f"displaySamples should be a reasonable value (>100), got {display_samples}"
+        )
 
     def test_waveform_peak_rms_with_audio(
         self, editor: OscilTestClient, source_id: str
@@ -94,21 +91,17 @@ class TestWaveformRendering:
         editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
 
         # Wait for waveform data
-        try:
-            waveforms = editor.wait_for_waveform_data(pane_index=0, timeout_s=3.0)
-            wf = waveforms[0]
-            peak = wf.get("peakLevel", 0.0)
-            rms = wf.get("rmsLevel", 0.0)
-            # With a sine at 0.8 amplitude, peak should be near 0.8 and RMS near 0.56
-            if peak > 0:
-                assert peak > 0.01, f"Peak level too low with 0.8 amplitude sine: {peak}"
-            if rms > 0:
-                assert rms > 0.01, f"RMS level too low with 0.8 amplitude sine: {rms}"
-                assert rms <= peak + 0.01, (
-                    f"RMS ({rms}) should not exceed peak ({peak})"
-                )
-        except TimeoutError:
-            pytest.skip("Waveform data not available in time")
+        waveforms = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        wf = waveforms[0]
+        peak = wf.get("peakLevel", 0.0)
+        rms = wf.get("rmsLevel", 0.0)
+
+        # With a sine at 0.8 amplitude, peak should be near 0.8 and RMS near 0.56
+        assert peak > 0.1, f"Peak level too low with 0.8 amplitude sine: {peak}"
+        assert rms > 0.05, f"RMS level too low with 0.8 amplitude sine: {rms}"
+        assert rms <= peak + 0.01, (
+            f"RMS ({rms}) should not exceed peak ({peak})"
+        )
 
         editor.transport_stop()
 
@@ -201,16 +194,50 @@ class TestWaveformRendering:
         editor.wait_for_oscillator_count(2, timeout_s=3.0)
 
         state = editor.get_waveform_state()
-        if state and "panes" in state and state["panes"]:
-            pane = state["panes"][0]
-            wf_count = len(pane.get("waveforms", []))
-            osc_count = pane.get("oscillatorCount", 0)
-            assert osc_count >= 2, (
-                f"Pane should report 2+ oscillators, got {osc_count}"
+        assert state is not None, "/waveform/state should return data"
+        assert "panes" in state, "Waveform state should have panes"
+        assert len(state["panes"]) > 0, "Should have at least one pane"
+
+        pane = state["panes"][0]
+        osc_count = pane.get("oscillatorCount", 0)
+        wf_count = len(pane.get("waveforms", []))
+        assert osc_count >= 2, (
+            f"Pane should report 2+ oscillators, got {osc_count}"
+        )
+        assert wf_count >= 2, (
+            f"Pane should have 2+ waveforms, got {wf_count}"
+        )
+
+    def test_waveform_data_disappears_with_silence(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: waveform state reporting hasWaveformData=true even
+        when audio is silent (false positive in the data pipeline).
+        """
+        osc_id = editor.add_oscillator(source_id, name="Silence Test")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+        editor.set_track_audio(0, waveform="silence", amplitude=0.0)
+
+        # With silence, peak should be near zero
+        # Allow some time for audio to settle
+        import time
+        time.sleep(0.5)
+
+        waveforms = editor.get_waveform_for_pane(0)
+        if waveforms:
+            peak = waveforms[0].get("peakLevel", 0.0)
+            # With true silence, peak should be very small (allow noise floor)
+            assert peak < 0.05, (
+                f"Peak should be near zero with silence, got {peak}"
             )
-            assert wf_count >= 2, (
-                f"Pane should have 2+ waveforms, got {wf_count}"
-            )
+
+        editor.transport_stop()
 
 
 class TestOscillatorProperties:
@@ -280,15 +307,14 @@ class TestOscillatorProperties:
 
         osc = editor.get_oscillator_by_id(osc_id)
         assert osc is not None
-        # Verify opacity changed if field is returned
-        if "opacity" in osc:
-            assert abs(osc["opacity"] - 0.5) < 0.01, (
-                f"Opacity should be 0.5, got {osc['opacity']}"
-            )
-        if "lineWidth" in osc:
-            assert abs(osc["lineWidth"] - 3.0) < 0.1, (
-                f"Line width should be 3.0, got {osc['lineWidth']}"
-            )
+        assert "opacity" in osc, "Oscillator state should include opacity field"
+        assert abs(osc["opacity"] - 0.5) < 0.01, (
+            f"Opacity should be 0.5, got {osc['opacity']}"
+        )
+        assert "lineWidth" in osc, "Oscillator state should include lineWidth field"
+        assert abs(osc["lineWidth"] - 3.0) < 0.1, (
+            f"Line width should be 3.0, got {osc['lineWidth']}"
+        )
 
     def test_oscillator_assigned_to_existing_pane(
         self, editor: OscilTestClient, source_id: str
@@ -326,3 +352,22 @@ class TestOscillatorProperties:
         assert osc["name"] == test_name, (
             f"Name should be '{test_name}', got '{osc['name']}'"
         )
+
+    def test_delete_oscillator_via_api(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: delete API not removing oscillator from state.
+        """
+        id1 = editor.add_oscillator(source_id, name="Delete API 1")
+        id2 = editor.add_oscillator(source_id, name="Delete API 2")
+        editor.wait_for_oscillator_count(2, timeout_s=3.0)
+
+        success = editor.delete_oscillator(id1)
+        assert success, "Delete API should succeed"
+
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+        remaining = editor.get_oscillators()
+        remaining_ids = [o["id"] for o in remaining]
+        assert id1 not in remaining_ids, "Deleted oscillator should be gone"
+        assert id2 in remaining_ids, "Other oscillator should remain"

@@ -102,6 +102,42 @@ class TestTimeIntervalField:
         assert c.set_slider(INTERVAL_FIELD, 50.0), "Field should accept value 50"
         assert c.set_slider(INTERVAL_FIELD, 200.0), "Field should accept value 200"
 
+    def test_interval_change_affects_display_samples(
+        self, timing_section: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: changing time interval does not recalculate displaySamples.
+        """
+        c = timing_section
+        if c.element_exists(TIME_SEG):
+            c.click(TIME_SEG)
+
+        if not c.element_exists(INTERVAL_FIELD):
+            pytest.skip("Interval field not registered")
+
+        # Need an oscillator for waveform state
+        osc_id = c.add_oscillator(source_id, name="Interval DS Test")
+        if not osc_id:
+            pytest.skip("Cannot add oscillator")
+
+        c.set_slider(INTERVAL_FIELD, 100.0)
+        samples_100 = c.get_display_samples()
+        assert samples_100 > 0, (
+            f"displaySamples should be positive at 100ms interval, got {samples_100}"
+        )
+
+        c.set_slider(INTERVAL_FIELD, 200.0)
+        samples_200 = c.get_display_samples()
+        assert samples_200 > 0, (
+            f"displaySamples should be positive at 200ms interval, got {samples_200}"
+        )
+
+        # 200ms should produce roughly 2x the samples of 100ms
+        assert samples_200 > samples_100, (
+            f"200ms interval should have more samples than 100ms: "
+            f"{samples_200} vs {samples_100}"
+        )
+
     def test_extreme_values(self, timing_section: OscilTestClient):
         """
         Bug caught: field not clamping at min/max, causing division by zero
@@ -140,17 +176,17 @@ class TestMelodicMode:
         # Ensure Time mode and record samples
         c.click(TIME_SEG)
         time_samples = c.get_display_samples()
+        assert time_samples > 0, (
+            f"Time mode should produce positive displaySamples, got {time_samples}"
+        )
 
         # Switch to Melodic
         c.click(MELODIC_SEG)
 
         melodic_samples = c.get_display_samples()
-
-        # Both should be positive
-        if time_samples > 0:
-            assert melodic_samples > 0, (
-                f"Melodic mode should produce positive displaySamples, got {melodic_samples}"
-            )
+        assert melodic_samples > 0, (
+            f"Melodic mode should produce positive displaySamples, got {melodic_samples}"
+        )
 
     def test_bpm_change_affects_melodic_samples(
         self, timing_section: OscilTestClient, source_id: str
@@ -172,16 +208,21 @@ class TestMelodicMode:
         # Set BPM to 120
         c.set_bpm(120.0)
         samples_120 = c.get_display_samples()
+        assert samples_120 > 0, (
+            f"displaySamples should be positive at 120 BPM, got {samples_120}"
+        )
 
         # Set BPM to 60 (half speed = double samples per beat)
         c.set_bpm(60.0)
         samples_60 = c.get_display_samples()
+        assert samples_60 > 0, (
+            f"displaySamples should be positive at 60 BPM, got {samples_60}"
+        )
 
-        if samples_120 > 0 and samples_60 > 0:
-            assert samples_60 > samples_120, (
-                f"60 BPM should have more samples than 120 BPM "
-                f"(got {samples_60} vs {samples_120})"
-            )
+        assert samples_60 > samples_120, (
+            f"60 BPM should have more samples than 120 BPM "
+            f"(got {samples_60} vs {samples_120})"
+        )
 
         c.set_bpm(120.0)
 
@@ -257,18 +298,23 @@ class TestTimingPersistence:
         editor.set_slider(INTERVAL_FIELD, 10.0)
 
         samples_before = editor.get_display_samples()
+        assert samples_before > 0, (
+            f"displaySamples should be positive after setting interval, got {samples_before}"
+        )
 
         # Click on an oscillator
         editor.click("sidebar_oscillators_item_0")
 
         samples_after = editor.get_display_samples()
+        assert samples_after > 0, (
+            f"displaySamples should be positive after clicking oscillator, got {samples_after}"
+        )
 
-        if samples_before > 0 and samples_after > 0:
-            ratio = samples_after / samples_before if samples_before else 0
-            assert 0.5 < ratio < 2.0, (
-                f"Timing reset after oscillator click: "
-                f"{samples_before} -> {samples_after} (ratio {ratio:.2f})"
-            )
+        ratio = samples_after / samples_before
+        assert 0.5 < ratio < 2.0, (
+            f"Timing reset after oscillator click: "
+            f"{samples_before} -> {samples_after} (ratio {ratio:.2f})"
+        )
 
     def test_timing_survives_editor_close_reopen(self, client: OscilTestClient):
         """
@@ -294,6 +340,9 @@ class TestTimingPersistence:
 
         client.set_slider(INTERVAL_FIELD, 75.0)
         samples_before = client.get_display_samples()
+        assert samples_before > 0, (
+            f"displaySamples should be positive after setting interval, got {samples_before}"
+        )
 
         client.close_editor()
         client.open_editor()
@@ -304,8 +353,11 @@ class TestTimingPersistence:
         samples_after = client.get_display_samples()
         client.close_editor()
 
-        if samples_before > 0 and samples_after > 0:
-            ratio = samples_after / samples_before if samples_before else 0
-            assert 0.5 < ratio < 2.0, (
-                f"Timing changed after reopen: {samples_before} -> {samples_after}"
-            )
+        assert samples_after > 0, (
+            f"displaySamples should be positive after reopen, got {samples_after}"
+        )
+
+        ratio = samples_after / samples_before
+        assert 0.5 < ratio < 2.0, (
+            f"Timing changed after reopen: {samples_before} -> {samples_after}"
+        )
