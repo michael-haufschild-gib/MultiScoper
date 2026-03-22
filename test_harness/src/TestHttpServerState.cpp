@@ -167,7 +167,10 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
         done.wait(3000);
     }
 
-    TestElementRegistry::getInstance().clear();
+    // Do NOT clear the element registry here — components that are still alive
+    // (sidebar, buttons, timing controls) keep their registrations.  Components
+    // tied to removed oscillators/panes will self-unregister via their RAII
+    // TestRegistration destructors when state listeners destroy them.
     res.set_content(successResponse().dump(), "application/json");
 }
 

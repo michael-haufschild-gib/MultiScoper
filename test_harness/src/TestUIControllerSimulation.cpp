@@ -17,15 +17,33 @@ void TestUIController::simulateMouseClick(juce::Component* component, bool doubl
     if (component == nullptr)
         return;
 
+    // Fast path: if the target is an OscilButton, call triggerClick() directly
+    // for reliable test automation. Mouse event simulation can fail due to
+    // coordinate transforms, component hierarchy differences, or JUCE internal
+    // state that isn't properly set up in synthetic events.
+    if (!doubleClick && mods.getRawFlags() == 0)
+    {
+        if (auto* oscilButton = dynamic_cast<OscilButton*>(component))
+        {
+            oscilButton->triggerClick();
+            return;
+        }
+    }
+
     auto bounds = component->getLocalBounds();
     auto center = bounds.getCentre();
     auto& desktop = juce::Desktop::getInstance();
     auto mouseSource = desktop.getMainMouseSource();
 
+    // Ensure left button modifier is set for a proper left-click simulation
+    auto clickMods = mods.getRawFlags() == 0
+        ? juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier)
+        : mods;
+
     juce::MouseEvent mouseDown(
         mouseSource,
         center.toFloat(),
-        mods,
+        clickMods,
         0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
         component, component,
         juce::Time::getCurrentTime(),

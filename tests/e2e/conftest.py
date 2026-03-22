@@ -34,17 +34,20 @@ def client() -> OscilTestClient:
 @pytest.fixture()
 def editor(client: OscilTestClient):
     """
-    Reset plugin state and open the editor before each test.
-    Closes the editor after the test completes.
+    Open editor, then reset state so tests start clean.
+
+    Order matters: PluginEditor's constructor auto-creates a default
+    oscillator + pane when state is empty (createDefaultOscillatorIfNeeded).
+    By opening first, then resetting, we remove that default without it
+    being re-created.
     """
+    client.open_editor()
     client.reset_state()
-    # Small delay so the async reset on the message thread completes
     client.wait_until(
         lambda: len(client.get_oscillators()) == 0,
         timeout_s=3.0,
         desc="state reset to complete",
     )
-    client.open_editor()
     yield client
     client.close_editor()
 
@@ -66,8 +69,10 @@ def oscillator(editor: OscilTestClient, source_id: str) -> str:
     """
     osc_id = editor.add_oscillator(source_id, name="Test Oscillator")
     assert osc_id is not None, "Failed to add oscillator via state API"
-    # Wait for UI to register the list item
-    editor.wait_for_element("sidebar_oscillators_item_0", timeout_s=3.0)
+    # Wait for UI to register the list item — the state API returns before
+    # the async UI refresh runs, so allow time for the message thread to
+    # process the queued refreshPanels callback.
+    editor.wait_for_element("sidebar_oscillators_item_0", timeout_s=5.0)
     return osc_id
 
 

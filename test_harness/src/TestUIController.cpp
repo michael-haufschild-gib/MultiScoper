@@ -45,9 +45,11 @@ bool TestUIController::click(const juce::String& elementId)
     if (component == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([component, this]()
+    juce::Component::SafePointer<juce::Component> safeComp(component);
+    juce::MessageManager::callAsync([safeComp, this]()
     {
-        simulateMouseClick(component);
+        if (auto* comp = safeComp.getComponent())
+            simulateMouseClick(comp);
     });
 
     return true;
@@ -60,9 +62,11 @@ bool TestUIController::clickWithModifiers(const juce::String& elementId, const M
         return false;
 
     auto mods = modifiers.toJuceModifiers();
-    juce::MessageManager::callAsync([component, mods, this]()
+    juce::Component::SafePointer<juce::Component> safeComp(component);
+    juce::MessageManager::callAsync([safeComp, mods, this]()
     {
-        simulateMouseClick(component, false, mods);
+        if (auto* comp = safeComp.getComponent())
+            simulateMouseClick(comp, false, mods);
     });
 
     return true;
@@ -74,9 +78,11 @@ bool TestUIController::doubleClick(const juce::String& elementId)
     if (component == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([component, this]()
+    juce::Component::SafePointer<juce::Component> safeComp(component);
+    juce::MessageManager::callAsync([safeComp, this]()
     {
-        simulateMouseClick(component, true);
+        if (auto* comp = safeComp.getComponent())
+            simulateMouseClick(comp, true);
     });
 
     return true;
@@ -88,9 +94,11 @@ bool TestUIController::rightClick(const juce::String& elementId)
     if (component == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([component, this]()
+    juce::Component::SafePointer<juce::Component> safeComp(component);
+    juce::MessageManager::callAsync([safeComp, this]()
     {
-        simulateMouseRightClick(component);
+        if (auto* comp = safeComp.getComponent())
+            simulateMouseRightClick(comp);
     });
 
     return true;
@@ -102,14 +110,21 @@ bool TestUIController::hover(const juce::String& elementId, int durationMs)
     if (component == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([component, durationMs, this]()
+    juce::Component::SafePointer<juce::Component> safeComp(component);
+    juce::MessageManager::callAsync([safeComp, durationMs, this]()
     {
+        auto* component = safeComp.getComponent();
+        if (component == nullptr) return;
         simulateMouseHover(component);
 
         // Schedule hover end
-        juce::Timer::callAfterDelay(durationMs, [component]()
+        juce::Component::SafePointer<juce::Component> hoverSafe(component);
+        juce::Timer::callAfterDelay(durationMs, [hoverSafe]()
         {
-            auto bounds = component->getLocalBounds();
+            auto* comp = hoverSafe.getComponent();
+            if (comp == nullptr) return;
+
+            auto bounds = comp->getLocalBounds();
             auto center = bounds.getCentre();
             auto& desktop = juce::Desktop::getInstance();
             auto mouseSource = desktop.getMainMouseSource();
@@ -119,14 +134,14 @@ bool TestUIController::hover(const juce::String& elementId, int durationMs)
                 center.toFloat(),
                 juce::ModifierKeys(),
                 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                component, component,
+                comp, comp,
                 juce::Time::getCurrentTime(),
                 center.toFloat(),
                 juce::Time::getCurrentTime(),
                 0, false
             );
 
-            component->mouseExit(mouseEvent);
+            comp->mouseExit(mouseEvent);
         });
     });
 

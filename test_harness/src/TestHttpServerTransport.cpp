@@ -51,14 +51,23 @@ void TestHttpServer::setupTrackRoutes()
 void TestHttpServer::handleTransportPlay(const httplib::Request&, httplib::Response& res)
 {
     juce::Logger::writeToLog("[Harness] Transport play");
-    daw_.start();
+    // Only toggle transport state — do NOT call daw_.start()/stop() which
+    // controls the timer-driven audio processing loop.  In a real DAW,
+    // stopping transport only pauses position advancement; processBlock
+    // keeps running.
+    daw_.getTransport().play();
+    // Ensure the DAW timer is running (it should be, but guard against
+    // earlier bugs that may have stopped it).
+    if (!daw_.isRunning())
+        daw_.start();
     res.set_content(successResponse().dump(), "application/json");
 }
 
 void TestHttpServer::handleTransportStop(const httplib::Request&, httplib::Response& res)
 {
     juce::Logger::writeToLog("[Harness] Transport stop");
-    daw_.stop();
+    // Only pause transport — keep DAW audio processing running.
+    daw_.getTransport().stop();
     res.set_content(successResponse().dump(), "application/json");
 }
 
@@ -230,12 +239,14 @@ void TestHttpServer::handleTrackShowEditor(const httplib::Request& req, httplib:
         });
         done.wait(5000);
 
+        // Report actual state after editor creation completes
+        int elemCount = static_cast<int>(TestElementRegistry::getInstance().getAllElements().size());
+        bool editorVisible = track->isEditorVisible();
         json data;
         data["trackId"] = trackId;
-        data["editorVisible"] = false;
-        data["elementsRegistered"] = 0;
-        data["async"] = true;
-        data["message"] = "Editor opening requested. Poll /ui/elements or use /ui/wait/element/{id} to wait for UI.";
+        data["editorVisible"] = editorVisible;
+        data["elementsRegistered"] = elemCount;
+        data["alreadyOpen"] = false;
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -257,12 +268,16 @@ void TestHttpServer::handleTrackHideEditor(const httplib::Request& req, httplib:
             return;
         }
 
-        juce::MessageManager::callAsync([track]() {
+        juce::WaitableEvent hideDone;
+        juce::MessageManager::callAsync([track, &hideDone]() {
             track->hideEditor();
+            hideDone.signal();
         });
+        hideDone.wait(5000);
 
         json data;
         data["trackId"] = trackId;
+        data["editorVisible"] = track->isEditorVisible();
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)

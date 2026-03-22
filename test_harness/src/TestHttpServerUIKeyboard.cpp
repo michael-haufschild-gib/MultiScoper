@@ -311,28 +311,45 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 
 void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response& res)
 {
+    // Build the response on the message thread to avoid use-after-free:
+    // the HTTP thread must not call component methods (isVisible, isEnabled,
+    // getBounds) because the message thread may destroy components concurrently.
     json data;
-    data["count"] = 0;
-    data["elements"] = json::array();
+    juce::WaitableEvent done;
 
-    auto elements = TestElementRegistry::getInstance().getAllElements();
-    for (const auto& [testId, component] : elements)
+    juce::MessageManager::callAsync([&data, &done]()
     {
-        json elementInfo;
-        elementInfo["testId"] = testId.toStdString();
-        elementInfo["visible"] = component->isVisible();
-        elementInfo["enabled"] = component->isEnabled();
+        data["count"] = 0;
+        data["elements"] = json::array();
 
-        auto bounds = component->getBounds();
-        elementInfo["bounds"] = {
-            {"x", bounds.getX()}, {"y", bounds.getY()},
-            {"width", bounds.getWidth()}, {"height", bounds.getHeight()}
-        };
+        auto& registry = TestElementRegistry::getInstance();
+        auto elements = registry.getAllElements();
+        for (const auto& [testId, rawComp] : elements)
+        {
+            // Validate the component is still alive before accessing it
+            auto* component = registry.findValidElement(testId);
+            if (component == nullptr)
+                continue;
 
-        data["elements"].push_back(elementInfo);
-    }
+            json elementInfo;
+            elementInfo["testId"] = testId.toStdString();
+            elementInfo["visible"] = component->isVisible();
+            elementInfo["enabled"] = component->isEnabled();
 
-    data["count"] = elements.size();
+            auto bounds = component->getBounds();
+            elementInfo["bounds"] = {
+                {"x", bounds.getX()}, {"y", bounds.getY()},
+                {"width", bounds.getWidth()}, {"height", bounds.getHeight()}
+            };
+
+            data["elements"].push_back(elementInfo);
+        }
+
+        data["count"] = static_cast<int>(data["elements"].size());
+        done.signal();
+    });
+
+    done.wait(5000);
     res.set_content(successResponse(data).dump(), "application/json");
 }
 

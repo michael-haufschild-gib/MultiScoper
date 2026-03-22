@@ -172,11 +172,14 @@ class OscilTestClient:
         """Wait until oscillator list reaches expected count."""
         def check():
             oscs = self.get_oscillators()
-            return oscs if len(oscs) == expected else None
-        return self.wait_until(
+            if len(oscs) == expected:
+                return oscs if oscs else True  # Avoid falsy [] for count==0
+            return None
+        result = self.wait_until(
             check, timeout_s=timeout_s,
             desc=f"oscillator count to be {expected}"
         )
+        return result if isinstance(result, list) else []
 
     # ── Editor lifecycle ────────────────────────────────────────────
 
