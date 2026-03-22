@@ -6,6 +6,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "TestDAW.h"
 #include "TestHttpServer.h"
+#include "TestLogCapture.h"
 
 namespace oscil::test
 {
@@ -330,6 +331,9 @@ public:
     {
         juce::ignoreUnused(commandLine);
 
+        // Install log capture before anything else logs
+        juce::Logger::setCurrentLogger(&TestLogCapture::getInstance());
+
         // Parse command line for port
         int port = TestHttpServer::DEFAULT_PORT;
         auto args = juce::JUCEApplication::getCommandLineParameterArray();
@@ -370,6 +374,7 @@ public:
     {
         std::cout << "Shutting down Oscil Test Harness..." << std::endl;
 
+        juce::Logger::setCurrentLogger(nullptr);
         mainWindow_.reset();
 
         if (server_)
