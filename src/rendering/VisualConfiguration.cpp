@@ -163,6 +163,8 @@ ShaderType idToShaderType(const juce::String& id)
     if (id == "neon_glow")      return ShaderType::NeonGlow;
     if (id == "gradient_fill")  return ShaderType::GradientFill;
     if (id == "dual_outline")   return ShaderType::DualOutline;
+
+    DBG("VisualConfiguration: unknown shader ID \"" + id + "\", falling back to Basic2D");
     return ShaderType::Basic2D;
 }
 

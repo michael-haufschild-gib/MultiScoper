@@ -232,6 +232,12 @@ jobs:
       - name: Run Unit Tests
         run: ctest --preset ${{ matrix.cmake_preset }}
 
+      # Build the E2E test harness to verify it compiles
+      - name: Build E2E Test Harness
+        run: |
+          cmake --preset ${{ matrix.cmake_preset }} -DOSCIL_BUILD_TEST_HARNESS=ON
+          cmake --build --preset ${{ matrix.cmake_preset }} --target OscilTestHarness
+
       # Download pluginval (skip if cached)
       - name: Download pluginval
         shell: bash
