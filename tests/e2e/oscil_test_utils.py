@@ -1,903 +1,544 @@
 """
-Oscil Test Harness Utilities
-Provides common functions for E2E testing via the test harness HTTP API
+Oscil Test Harness Client
+
+HTTP client for driving the Oscil test harness. All UI automation flows through
+the C++ TestHttpServer running on localhost:8765. This module provides:
+
+  - OscilTestClient: stateless HTTP client for element queries, interactions,
+    state management, transport control, and condition-based waits.
+  - No test assertions live here -- assertions belong in pytest test files.
 """
 
-import requests
 import time
-import sys
-import json
-from typing import Optional, Dict, Any, List, Tuple
-from dataclasses import dataclass
-from enum import Enum
-
-
-class TestResult(Enum):
-    PASSED = "passed"
-    FAILED = "failed"
-    SKIPPED = "skipped"
+import requests
+from typing import Optional, Dict, Any, List
+from dataclasses import dataclass, field
 
 
 @dataclass
 class ElementInfo:
-    """Information about a UI element"""
+    """Snapshot of a UI element's state from the test harness registry."""
     element_id: str
     visible: bool
     enabled: bool
     bounds: Dict[str, int]
     showing: bool = False
     focused: bool = False
-    extra: Dict[str, Any] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def width(self) -> int:
+        return self.bounds.get("width", 0)
+
+    @property
+    def height(self) -> int:
+        return self.bounds.get("height", 0)
+
+    @property
+    def is_interactive(self) -> bool:
+        return self.visible and self.showing and self.enabled
 
     @classmethod
-    def from_response(cls, element_id: str, data: Dict) -> 'ElementInfo':
+    def from_response(cls, element_id: str, data: Dict) -> "ElementInfo":
         return cls(
             element_id=element_id,
-            visible=data.get('visible', False),
-            enabled=data.get('enabled', True),
-            bounds=data.get('bounds', {}),
-            showing=data.get('showing', False),
-            focused=data.get('focused', False),
-            extra=data
+            visible=data.get("visible", False),
+            enabled=data.get("enabled", True),
+            bounds=data.get("bounds", {}),
+            showing=data.get("showing", False),
+            focused=data.get("focused", False),
+            extra=data,
         )
 
 
+class HarnessConnectionError(Exception):
+    """Raised when the test harness is unreachable."""
+
+
+class ElementNotFoundError(Exception):
+    """Raised when a required element is not registered."""
+
+
 class OscilTestClient:
-    """Client for interacting with the Oscil test harness"""
+    """HTTP client for the Oscil test harness."""
 
     DEFAULT_URL = "http://localhost:8765"
-    DEFAULT_TIMEOUT = 10.0  # Increased for editor open operations
+    DEFAULT_TIMEOUT = 10.0
 
-    def __init__(self, base_url: str = DEFAULT_URL, strict_mode: bool = True):
-        """
-        Initialize the test client.
-
-        Args:
-            base_url: URL of the test harness HTTP server
-            strict_mode: If True, assertion failures raise AssertionError and stop execution
-        """
+    def __init__(self, base_url: str = DEFAULT_URL):
         self.base_url = base_url
         self.timeout = self.DEFAULT_TIMEOUT
-        self.strict_mode = strict_mode
-        self._test_results: List[Tuple[str, TestResult, str]] = []
-        self._editor_open = False
 
-    # ==================== Health & Setup ====================
+    # ── HTTP primitives ─────────────────────────────────────────────
 
-    def wait_for_harness(self, max_retries: int = 10, delay: float = 1.0) -> bool:
-        """Wait for the test harness to be available"""
-        for attempt in range(max_retries):
-            try:
-                response = requests.get(f"{self.base_url}/health", timeout=2.0)
-                if response.status_code == 200:
-                    print(f"[OK] Connected to test harness at {self.base_url}")
-                    return True
-            except requests.exceptions.ConnectionError:
-                pass
-            print(f"[...] Waiting for harness (attempt {attempt + 1}/{max_retries})")
-            time.sleep(delay)
-        print(f"[FAIL] Could not connect to test harness at {self.base_url}")
-        return False
+    def _get(self, path: str, **kwargs) -> requests.Response:
+        return requests.get(
+            f"{self.base_url}{path}", timeout=self.timeout, **kwargs
+        )
 
-    def reset_state(self) -> bool:
-        """Reset plugin to default state"""
+    def _post(self, path: str, payload: Dict = None) -> requests.Response:
+        return requests.post(
+            f"{self.base_url}{path}",
+            json=payload or {},
+            timeout=self.timeout,
+        )
+
+    def _get_json(self, path: str, **kwargs) -> Optional[Dict]:
         try:
-            response = requests.post(
-                f"{self.base_url}/state/reset",
-                json={},  # httplib requires a body for POST requests
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Reset state failed: {e}")
-            return False
-
-    def open_editor(self, track_id: int = 0, wait_for_elements: bool = True, max_wait: float = 10.0) -> bool:
-        """
-        Open the plugin editor window and verify it loaded successfully.
-
-        Args:
-            track_id: Track index to open editor for
-            wait_for_elements: If True, poll until UI elements are registered
-            max_wait: Maximum seconds to wait for elements
-
-        Returns True only if editor opens and elements are registered.
-        """
-        try:
-            response = requests.post(
-                f"{self.base_url}/track/{track_id}/showEditor",
-                json={},  # httplib requires a body for POST requests
-                timeout=self.timeout
-            )
-            response_data = response.json()
-
-            if response.status_code != 200 or not response_data.get('success', False):
-                error_msg = response_data.get('error', 'Unknown error')
-                print(f"[ERROR] Failed to request editor open: {error_msg}")
-                self._editor_open = False
-                return False
-
-            data = response_data.get('data', {})
-
-            # If editor was already open, check if elements exist
-            if data.get('alreadyOpen', False):
-                elements_registered = data.get('elementsRegistered', 0)
-                print(f"[INFO] Editor already open: elements={elements_registered}")
-                self._editor_open = elements_registered > 0
-                return self._editor_open
-
-            # Editor opening was requested asynchronously - poll for elements
-            if not wait_for_elements:
-                print("[INFO] Editor open requested (async)")
-                self._editor_open = False  # Not confirmed yet
-                return True
-
-            # Poll for elements to be registered
-            print("[INFO] Waiting for editor to be ready...")
-            poll_interval = 0.2
-            elapsed = 0.0
-            while elapsed < max_wait:
-                time.sleep(poll_interval)
-                elapsed += poll_interval
-
-                try:
-                    elem_response = requests.get(
-                        f"{self.base_url}/ui/elements",
-                        timeout=2.0
-                    )
-                    if elem_response.status_code == 200:
-                        elem_data = elem_response.json().get('data', {})
-                        count = elem_data.get('count', 0)
-                        if count > 0:
-                            print(f"[OK] Editor ready with {count} UI elements (after {elapsed:.1f}s)")
-                            self._editor_open = True
-                            return True
-                except Exception:
-                    pass
-
-            # Timeout - editor didn't become ready
-            print(f"[ERROR] Editor failed to become ready after {max_wait}s (no UI elements registered)")
-            print("[ERROR] This usually means TEST_HARNESS is not defined in the plugin build")
-            self._editor_open = False
-            return False
-
-        except Exception as e:
-            print(f"[ERROR] Open editor failed: {e}")
-            self._editor_open = False
-            return False
-
-    def verify_editor_ready(self) -> bool:
-        """Verify the editor is open and has UI elements registered."""
-        try:
-            response = requests.get(
-                f"{self.base_url}/ui/elements",
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                data = response.json().get('data', {})
-                count = data.get('count', 0)
-                if count > 0:
-                    print(f"[OK] Editor ready with {count} UI elements")
-                    return True
-                else:
-                    print(f"[ERROR] Editor has no UI elements registered")
-                    return False
-            return False
-        except Exception as e:
-            print(f"[ERROR] Verify editor ready failed: {e}")
-            return False
-
-    def close_editor(self, track_id: int = 0) -> bool:
-        """Close the plugin editor window"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/track/{track_id}/hideEditor",
-                json={},  # httplib requires a body for POST requests
-                timeout=self.timeout
-            )
-            self._editor_open = False
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Close editor failed: {e}")
-            return False
-
-    # ==================== Element Queries ====================
-
-    def get_element(self, element_id: str) -> Optional[ElementInfo]:
-        """
-        Get information about a UI element by its test ID.
-
-        Returns None if:
-        - Element doesn't exist (404 response)
-        - Network error
-        - Response contains error
-
-        Returns ElementInfo only for valid element data.
-        """
-        try:
-            response = requests.get(
-                f"{self.base_url}/ui/element/{element_id}",
-                timeout=self.timeout
-            )
-
-            # 404 means element not found
-            if response.status_code == 404:
-                return None
-
-            if response.status_code == 200:
-                response_data = response.json()
-
-                # Check for success flag
-                if not response_data.get('success', False):
-                    return None
-
-                data = response_data.get('data', {})
-
-                # Check for error in data (shouldn't happen with 200, but be defensive)
-                if 'error' in data:
-                    return None
-
-                return ElementInfo.from_response(element_id, data)
-
-            return None
-        except Exception as e:
-            print(f"[ERROR] Get element '{element_id}' failed: {e}")
-            return None
-
-    def element_exists(self, element_id: str) -> bool:
-        """Check if an element exists in the TestElementRegistry"""
-        elem = self.get_element(element_id)
-        return elem is not None
-
-    def element_visible(self, element_id: str) -> bool:
-        """Check if an element is visible"""
-        elem = self.get_element(element_id)
-        return elem is not None and elem.visible and elem.showing
-
-    def wait_for_element(self, element_id: str, timeout_ms: int = 5000) -> bool:
-        """Wait for an element to appear"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/waitForElement",
-                json={"elementId": element_id, "timeoutMs": timeout_ms},
-                timeout=(timeout_ms / 1000) + 1
-            )
-            return response.status_code == 200 and response.json().get('status') == 'success'
-        except Exception as e:
-            print(f"[ERROR] Wait for element '{element_id}' failed: {e}")
-            return False
-
-    def wait_for_visible(self, element_id: str, timeout_ms: int = 5000) -> bool:
-        """Wait for an element to become visible"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/waitForVisible",
-                json={"elementId": element_id, "timeoutMs": timeout_ms},
-                timeout=(timeout_ms / 1000) + 1
-            )
-            return response.status_code == 200 and response.json().get('status') == 'success'
-        except Exception as e:
-            print(f"[ERROR] Wait for visible '{element_id}' failed: {e}")
-            return False
-
-    # ==================== UI Interactions ====================
-
-    def click(self, element_id: str) -> bool:
-        """Click on an element"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/click",
-                json={"elementId": element_id},
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                time.sleep(0.1)  # Small delay after click
-                return True
-            print(f"[WARN] Click on '{element_id}' returned status {response.status_code}")
-            return False
-        except Exception as e:
-            print(f"[ERROR] Click on '{element_id}' failed: {e}")
-            return False
-
-    def double_click(self, element_id: str) -> bool:
-        """Double-click on an element"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/doubleClick",
-                json={"elementId": element_id},
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                time.sleep(0.1)
-                return True
-            return False
-        except Exception as e:
-            print(f"[ERROR] Double-click on '{element_id}' failed: {e}")
-            return False
-
-    def type_text(self, element_id: str, text: str) -> bool:
-        """Type text into a text field"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/typeText",
-                json={"elementId": element_id, "text": text},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Type text in '{element_id}' failed: {e}")
-            return False
-
-    def clear_text(self, element_id: str) -> bool:
-        """Clear text from a text field"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/clearText",
-                json={"elementId": element_id},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Clear text in '{element_id}' failed: {e}")
-            return False
-
-    def select_dropdown_item(self, element_id: str, item_id: str) -> bool:
-        """Select an item in a dropdown by item ID"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/select",
-                json={"elementId": element_id, "itemId": item_id},
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                time.sleep(0.2)  # Wait for selection to apply
-                return True
-            return False
-        except Exception as e:
-            print(f"[ERROR] Select in '{element_id}' failed: {e}")
-            return False
-
-    def set_slider_value(self, element_id: str, value: float) -> bool:
-        """Set a slider to a specific value"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/slider",
-                json={"elementId": element_id, "value": value},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Set slider '{element_id}' failed: {e}")
-            return False
-
-    def toggle(self, element_id: str, state: bool) -> bool:
-        """Set a toggle button state"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/toggle",
-                json={"elementId": element_id, "state": state},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Toggle '{element_id}' failed: {e}")
-            return False
-
-    def drag(self, from_element_id: str, to_element_id: str) -> bool:
-        """Drag from one element to another"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/drag",
-                json={"fromElementId": from_element_id, "toElementId": to_element_id},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Drag failed: {e}")
-            return False
-
-    def drag_offset(self, element_id: str, delta_x: int, delta_y: int) -> bool:
-        """Drag an element by pixel offset"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/ui/dragOffset",
-                json={"elementId": element_id, "deltaX": delta_x, "deltaY": delta_y},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Drag offset failed: {e}")
-            return False
-
-    # ==================== State Queries ====================
-
-    def get_oscillators(self) -> List[Dict]:
-        """Get list of oscillators"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/state/oscillators",
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                data = response.json().get('data', [])
-                # API returns data as a list directly
-                if isinstance(data, list):
-                    return data
-                # Fallback for dict format
-                return data.get('oscillators', []) if isinstance(data, dict) else []
-            return []
-        except Exception as e:
-            print(f"[ERROR] Get oscillators failed: {e}")
-            return []
-
-    def get_panes(self) -> List[Dict]:
-        """Get list of panes"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/state/panes",
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                data = response.json().get('data', [])
-                # API returns data as a list directly
-                if isinstance(data, list):
-                    return data
-                # Fallback for dict format
-                return data.get('panes', []) if isinstance(data, dict) else []
-            return []
-        except Exception as e:
-            print(f"[ERROR] Get panes failed: {e}")
-            return []
-
-    def get_sources(self) -> List[Dict]:
-        """Get list of available sources"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/state/sources",
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                data = response.json().get('data', [])
-                # API returns data as a list directly
-                if isinstance(data, list):
-                    return data
-                # Fallback for dict format
-                return data.get('sources', []) if isinstance(data, dict) else []
-            return []
-        except Exception as e:
-            print(f"[ERROR] Get sources failed: {e}")
-            return []
-
-    def add_oscillator(self, source_id: str, pane_id: str = None,
-                       name: str = "Test Oscillator", color: str = "#00FF00") -> Optional[str]:
-        """Add an oscillator via state API (for test setup)"""
-        try:
-            payload = {
-                "sourceId": source_id,
-                "name": name,
-                "color": color
-            }
-            if pane_id:
-                payload["paneId"] = pane_id
-
-            response = requests.post(
-                f"{self.base_url}/state/oscillator/add",
-                json=payload,
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                data = response.json().get('data', {})
-                if isinstance(data, dict):
-                    return data.get('oscillatorId') or data.get('id')
-                return None
-            return None
-        except Exception as e:
-            print(f"[ERROR] Add oscillator failed: {e}")
-            return None
-
-    # ==================== Transport Control ====================
-
-    def transport_play(self) -> bool:
-        """Start DAW playback"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/transport/play",
-                json={},
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                time.sleep(0.1)  # Brief delay for state to update
-                return True
-            return False
-        except Exception as e:
-            print(f"[ERROR] Transport play failed: {e}")
-            return False
-
-    def transport_stop(self) -> bool:
-        """Stop DAW playback"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/transport/stop",
-                json={},
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                time.sleep(0.1)
-                return True
-            return False
-        except Exception as e:
-            print(f"[ERROR] Transport stop failed: {e}")
-            return False
-
-    def set_bpm(self, bpm: float) -> bool:
-        """Set DAW tempo in BPM"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/transport/setBpm",
-                json={"bpm": bpm},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Set BPM failed: {e}")
-            return False
-
-    def get_transport_state(self) -> Optional[Dict]:
-        """Get current transport state (playing, bpm, position)"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/transport/state",
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                return response.json().get('data', {})
-            return None
-        except Exception as e:
-            print(f"[ERROR] Get transport state failed: {e}")
-            return None
-
-    def is_playing(self) -> bool:
-        """Check if DAW is currently playing"""
-        state = self.get_transport_state()
-        return state.get('playing', False) if state else False
-
-    def get_bpm(self) -> float:
-        """Get current BPM"""
-        state = self.get_transport_state()
-        return state.get('bpm', 120.0) if state else 120.0
-
-    def set_position(self, samples: int) -> bool:
-        """Set transport position in samples"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/transport/setPosition",
-                json={"samples": samples},
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Set position failed: {e}")
-            return False
-
-    # ==================== Track Audio Control ====================
-
-    def set_track_audio(self, track_id: int, waveform: str = "sine",
-                        frequency: float = 440.0, amplitude: float = 0.8) -> bool:
-        """Set audio generator settings for a track"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/track/{track_id}/audio",
-                json={
-                    "waveform": waveform,
-                    "frequency": frequency,
-                    "amplitude": amplitude
-                },
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Set track audio failed: {e}")
-            return False
-
-    def get_track_info(self, track_id: int) -> Optional[Dict]:
-        """Get track information including audio generator state"""
-        try:
-            response = requests.get(
-                f"{self.base_url}/track/{track_id}/info",
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                return response.json().get('data', {})
-            return None
-        except Exception as e:
-            print(f"[ERROR] Get track info failed: {e}")
-            return None
-
-    def set_track_burst(self, track_id: int, samples: int, waveform: str = None) -> bool:
-        """Set track to burst mode (generate N samples then silence)"""
-        try:
-            payload = {"samples": samples}
-            if waveform:
-                payload["waveform"] = waveform
-            response = requests.post(
-                f"{self.base_url}/track/{track_id}/burst",
-                json=payload,
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Set track burst failed: {e}")
-            return False
-
-    # ==================== Waveform Analysis ====================
-
-    def verify_waveform(self, element_id: str, expected_type: str = None,
-                        min_amplitude: float = None) -> Dict:
-        """
-        Verify waveform properties in a display element.
-        Returns dict with 'pass' boolean and analysis results.
-        """
-        try:
-            payload = {"elementId": element_id}
-            if expected_type:
-                payload["expectedType"] = expected_type
-            if min_amplitude is not None:
-                payload["minAmplitude"] = min_amplitude
-
-            response = requests.post(
-                f"{self.base_url}/verify/waveform",
-                json=payload,
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                return response.json().get('data', {})
-            return {"pass": False, "error": "Request failed"}
-        except Exception as e:
-            print(f"[ERROR] Verify waveform failed: {e}")
-            return {"pass": False, "error": str(e)}
-
-    def analyze_waveform(self, element_id: str = None) -> Dict:
-        """Analyze waveform in display and return metrics"""
-        try:
-            params = {}
-            if element_id:
-                params["elementId"] = element_id
-
-            response = requests.get(
-                f"{self.base_url}/analyze/waveform",
-                params=params,
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                return response.json().get('data', {})
-            return {}
-        except Exception as e:
-            print(f"[ERROR] Analyze waveform failed: {e}")
-            return {}
-
-    # ==================== Screenshots & Verification ====================
-
-    def take_screenshot(self, path: str, element_id: str = None) -> bool:
-        """Take a screenshot"""
-        try:
-            payload = {"path": path}
-            if element_id:
-                payload["elementId"] = element_id
-
-            response = requests.post(
-                f"{self.base_url}/screenshot",
-                json=payload,
-                timeout=self.timeout
-            )
-            return response.status_code == 200
-        except Exception as e:
-            print(f"[ERROR] Screenshot failed: {e}")
-            return False
-
-    def verify_color(self, element_id: str, color: str, tolerance: int = 10) -> bool:
-        """Verify an element contains the expected color"""
-        try:
-            response = requests.post(
-                f"{self.base_url}/verify/color",
-                json={
-                    "elementId": element_id,
-                    "color": color,
-                    "tolerance": tolerance,
-                    "mode": "contains"
-                },
-                timeout=self.timeout
-            )
-            if response.status_code == 200:
-                return response.json().get('data', {}).get('pass', False)
-            return False
-        except Exception as e:
-            print(f"[ERROR] Verify color failed: {e}")
-            return False
-
-    # ==================== Test Assertions ====================
-
-    def _fail_assertion(self, message: str):
-        """Handle assertion failure based on strict_mode"""
-        if self.strict_mode:
-            raise AssertionError(message)
-
-    def assert_element_exists(self, element_id: str, message: str = None) -> bool:
-        """Assert that an element exists. Raises AssertionError in strict mode."""
-        exists = self.element_exists(element_id)
-        msg = message or f"Element '{element_id}' should exist"
-        self._record_result(msg, TestResult.PASSED if exists else TestResult.FAILED)
-        if not exists:
-            self._fail_assertion(msg)
-        return exists
-
-    def assert_element_visible(self, element_id: str, message: str = None) -> bool:
-        """Assert that an element is visible. Raises AssertionError in strict mode."""
-        visible = self.element_visible(element_id)
-        msg = message or f"Element '{element_id}' should be visible"
-        self._record_result(msg, TestResult.PASSED if visible else TestResult.FAILED)
-        if not visible:
-            self._fail_assertion(msg)
-        return visible
-
-    def assert_element_not_visible(self, element_id: str, message: str = None) -> bool:
-        """Assert that an element is not visible. Raises AssertionError in strict mode."""
-        elem = self.get_element(element_id)
-        not_visible = elem is None or not elem.visible or not elem.showing
-        msg = message or f"Element '{element_id}' should not be visible"
-        self._record_result(msg, TestResult.PASSED if not_visible else TestResult.FAILED)
-        if not not_visible:
-            self._fail_assertion(msg)
-        return not_visible
-
-    def assert_oscillator_count(self, expected: int, message: str = None) -> bool:
-        """Assert the number of oscillators. Raises AssertionError in strict mode."""
-        oscillators = self.get_oscillators()
-        actual = len(oscillators)
-        success = actual == expected
-        msg = message or f"Should have {expected} oscillators (got {actual})"
-        self._record_result(msg, TestResult.PASSED if success else TestResult.FAILED)
-        if not success:
-            self._fail_assertion(msg)
-        return success
-
-    def assert_true(self, condition: bool, message: str) -> bool:
-        """Assert a condition is true. Raises AssertionError in strict mode."""
-        self._record_result(message, TestResult.PASSED if condition else TestResult.FAILED)
-        if not condition:
-            self._fail_assertion(message)
-        return condition
-
-    def skip(self, message: str):
-        """Skip a test with a message"""
-        self._record_result(message, TestResult.SKIPPED)
-
-    def require_element(self, element_id: str, test_name: str = "") -> bool:
-        """
-        Check if an element exists, skip test if not.
-        Returns True if element exists, False if skipped.
-        """
-        if not self.element_exists(element_id):
-            msg = f"[SKIP] {test_name}: Element '{element_id}' not registered in test harness"
-            print(msg)
-            self._record_result(f"Skipped: {element_id} not found", TestResult.SKIPPED)
-            return False
-        return True
-
-    def require_any_element(self, element_ids: list, test_name: str = "") -> str:
-        """
-        Check if any of the elements exist, skip test if none found.
-        Returns the first found element_id or None if skipped.
-        """
-        for eid in element_ids:
-            if self.element_exists(eid):
-                return eid
-        msg = f"[SKIP] {test_name}: None of {element_ids} found in test harness"
-        print(msg)
-        self._record_result(f"Skipped: none of {element_ids} found", TestResult.SKIPPED)
+            r = self._get(path, **kwargs)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            pass
         return None
 
-    def _record_result(self, message: str, result: TestResult):
-        """Record a test result"""
-        self._test_results.append((message, result, ""))
-        if result == TestResult.PASSED:
-            symbol = "[PASS]"
-        elif result == TestResult.FAILED:
-            symbol = "[FAIL]"
-        else:
-            symbol = "[SKIP]"
-        print(f"  {symbol} {message}")
+    def _post_json(self, path: str, payload: Dict = None) -> Optional[Dict]:
+        try:
+            r = self._post(path, payload)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            pass
+        return None
 
-    def get_results_summary(self) -> Tuple[int, int, int]:
-        """Get summary of test results: (passed, failed, skipped)"""
-        passed = sum(1 for _, r, _ in self._test_results if r == TestResult.PASSED)
-        failed = sum(1 for _, r, _ in self._test_results if r == TestResult.FAILED)
-        skipped = sum(1 for _, r, _ in self._test_results if r == TestResult.SKIPPED)
-        return passed, failed, skipped
+    def _post_ok(self, path: str, payload: Dict = None) -> bool:
+        """POST and return True only if response has success=true."""
+        resp = self._post_json(path, payload)
+        return resp is not None and resp.get("success", False)
 
-    def print_summary(self):
-        """Print test results summary"""
-        passed, failed, skipped = self.get_results_summary()
-        total = passed + failed + skipped
-        print(f"\n{'='*50}")
-        print(f"TEST SUMMARY: {passed}/{total} passed, {failed} failed, {skipped} skipped")
-        if failed > 0:
-            print("FAILED TESTS:")
-            for msg, result, _ in self._test_results:
-                if result == TestResult.FAILED:
-                    print(f"  - {msg}")
-        print(f"{'='*50}")
-        return failed == 0
+    # ── Connection ──────────────────────────────────────────────────
 
-
-class OscilTestRunner:
-    """Test runner for organizing and executing E2E tests"""
-
-    def __init__(self, client: OscilTestClient = None):
-        self.client = client or OscilTestClient()
-        self._tests: List[Tuple[str, callable]] = []
-        self._setup: callable = None
-        self._teardown: callable = None
-
-    def setup(self, func: callable):
-        """Register setup function"""
-        self._setup = func
-        return func
-
-    def teardown(self, func: callable):
-        """Register teardown function"""
-        self._teardown = func
-        return func
-
-    def test(self, name: str):
-        """Decorator to register a test function"""
-        def decorator(func: callable):
-            self._tests.append((name, func))
-            return func
-        return decorator
-
-    def run(self) -> bool:
-        """Run all registered tests"""
-        if not self.client.wait_for_harness():
-            return False
-
-        print(f"\nRunning {len(self._tests)} tests...")
-
-        all_passed = True
-        for name, func in self._tests:
-            print(f"\n--- {name} ---")
+    def wait_for_harness(self, max_retries: int = 15, delay: float = 1.0) -> None:
+        """Block until the harness /health endpoint responds. Raises on timeout."""
+        for _ in range(max_retries):
             try:
-                if self._setup:
-                    self._setup(self.client)
+                r = requests.get(f"{self.base_url}/health", timeout=2.0)
+                if r.status_code == 200:
+                    return
+            except requests.exceptions.ConnectionError:
+                pass
+            time.sleep(delay)
+        raise HarnessConnectionError(
+            f"Test harness unreachable at {self.base_url} after {max_retries} attempts"
+        )
 
-                func(self.client)
+    def health_check(self) -> Dict:
+        """Raw health check. Returns full response dict or raises on failure."""
+        r = self._get("/health")
+        if r.status_code != 200:
+            raise RuntimeError(f"Health check failed with status {r.status_code}")
+        return r.json()
 
-                if self._teardown:
-                    self._teardown(self.client)
-            except Exception as e:
-                print(f"[ERROR] Test '{name}' threw exception: {e}")
-                all_passed = False
+    # ── Condition-based waits ───────────────────────────────────────
 
-        return self.client.print_summary()
+    def wait_until(
+        self, predicate, *, timeout_s: float = 5.0, poll_s: float = 0.15, desc: str = ""
+    ) -> bool:
+        """
+        Poll ``predicate()`` until it returns a truthy value or timeout expires.
+        Returns the truthy value on success; raises TimeoutError on failure.
+        """
+        deadline = time.monotonic() + timeout_s
+        last_result = None
+        while time.monotonic() < deadline:
+            last_result = predicate()
+            if last_result:
+                return last_result
+            time.sleep(poll_s)
+        msg = desc or "Condition not met"
+        raise TimeoutError(f"{msg} (waited {timeout_s}s, last={last_result})")
 
+    def wait_for_element(self, element_id: str, timeout_s: float = 5.0) -> ElementInfo:
+        """Wait for an element to be registered. Returns its ElementInfo."""
+        def check():
+            return self.get_element(element_id)
+        return self.wait_until(check, timeout_s=timeout_s, desc=f"element '{element_id}' to exist")
 
-# Convenience functions for running standalone tests
-def run_test(test_func: callable, setup_func: callable = None, teardown_func: callable = None) -> bool:
-    """Run a single test function"""
-    client = OscilTestClient()
+    def wait_for_visible(self, element_id: str, timeout_s: float = 5.0) -> ElementInfo:
+        """Wait for an element to be visible+showing."""
+        def check():
+            el = self.get_element(element_id)
+            return el if (el and el.visible and el.showing) else None
+        return self.wait_until(check, timeout_s=timeout_s, desc=f"element '{element_id}' to be visible")
 
-    if not client.wait_for_harness():
+    def wait_for_not_visible(self, element_id: str, timeout_s: float = 5.0) -> bool:
+        """Wait for an element to disappear or become invisible."""
+        def check():
+            el = self.get_element(element_id)
+            return el is None or not el.visible or not el.showing
+        return self.wait_until(check, timeout_s=timeout_s, desc=f"element '{element_id}' to disappear")
+
+    def wait_for_oscillator_count(self, expected: int, timeout_s: float = 5.0) -> List[Dict]:
+        """Wait until oscillator list reaches expected count."""
+        def check():
+            oscs = self.get_oscillators()
+            return oscs if len(oscs) == expected else None
+        return self.wait_until(
+            check, timeout_s=timeout_s,
+            desc=f"oscillator count to be {expected}"
+        )
+
+    # ── Editor lifecycle ────────────────────────────────────────────
+
+    def open_editor(self, track_id: int = 0, wait_timeout_s: float = 10.0) -> None:
+        """
+        Open the plugin editor and block until UI elements are registered.
+        Raises on failure.
+        """
+        r = self._post(f"/track/{track_id}/showEditor")
+        resp = r.json()
+        if r.status_code != 200 or not resp.get("success"):
+            raise RuntimeError(f"Failed to open editor: {resp.get('error', 'unknown')}")
+
+        data = resp.get("data", {})
+        if data.get("alreadyOpen") and data.get("elementsRegistered", 0) > 0:
+            return
+
+        # Poll for elements to appear
+        self.wait_until(
+            lambda: self._get_json("/ui/elements") and
+                    self._get_json("/ui/elements").get("data", {}).get("count", 0) > 0,
+            timeout_s=wait_timeout_s,
+            desc="editor UI elements to register",
+        )
+
+    def close_editor(self, track_id: int = 0) -> None:
+        self._post(f"/track/{track_id}/hideEditor")
+
+    def verify_editor_ready(self) -> int:
+        """Return the number of registered UI elements, or 0 if not ready."""
+        resp = self._get_json("/ui/elements")
+        if resp:
+            return resp.get("data", {}).get("count", 0)
+        return 0
+
+    # ── State management ────────────────────────────────────────────
+
+    def reset_state(self) -> None:
+        """Reset plugin to default state (remove all oscillators and panes)."""
+        self._post_ok("/state/reset")
+
+    def save_state(self, path: str = "/tmp/state.xml") -> bool:
+        return self._post_ok("/state/save", {"path": path})
+
+    def load_state(self, path: str) -> bool:
+        return self._post_ok("/state/load", {"path": path})
+
+    # ── Element queries ─────────────────────────────────────────────
+
+    def get_element(self, element_id: str) -> Optional[ElementInfo]:
+        """Query element info. Returns None if element not registered."""
+        try:
+            r = self._get(f"/ui/element/{element_id}")
+            if r.status_code == 404:
+                return None
+            if r.status_code == 200:
+                resp = r.json()
+                if not resp.get("success"):
+                    return None
+                return ElementInfo.from_response(element_id, resp.get("data", {}))
+        except Exception:
+            pass
+        return None
+
+    def element_exists(self, element_id: str) -> bool:
+        return self.get_element(element_id) is not None
+
+    def element_visible(self, element_id: str) -> bool:
+        el = self.get_element(element_id)
+        return el is not None and el.visible and el.showing
+
+    # ── UI interactions ─────────────────────────────────────────────
+
+    def click(self, element_id: str) -> bool:
+        return self._post_ok("/ui/click", {"elementId": element_id})
+
+    def double_click(self, element_id: str) -> bool:
+        return self._post_ok("/ui/doubleClick", {"elementId": element_id})
+
+    def right_click(self, element_id: str) -> bool:
+        return self._post_ok("/ui/rightClick", {"elementId": element_id})
+
+    def hover(self, element_id: str, duration_ms: int = 500) -> bool:
+        return self._post_ok("/ui/hover", {"elementId": element_id, "durationMs": duration_ms})
+
+    def type_text(self, element_id: str, text: str) -> bool:
+        return self._post_ok("/ui/typeText", {"elementId": element_id, "text": text})
+
+    def clear_text(self, element_id: str) -> bool:
+        return self._post_ok("/ui/clearText", {"elementId": element_id})
+
+    def select_dropdown_item(self, element_id: str, item_id: str) -> bool:
+        return self._post_ok("/ui/select", {"elementId": element_id, "itemId": item_id})
+
+    def select_dropdown_index(self, element_id: str, index: int) -> bool:
+        return self._post_ok("/ui/select", {"elementId": element_id, "itemId": index})
+
+    def set_slider(self, element_id: str, value: float) -> bool:
+        return self._post_ok("/ui/slider", {"elementId": element_id, "value": value})
+
+    def increment_slider(self, element_id: str) -> Optional[Dict]:
+        return self._post_json("/ui/slider/increment", {"elementId": element_id})
+
+    def decrement_slider(self, element_id: str) -> Optional[Dict]:
+        return self._post_json("/ui/slider/decrement", {"elementId": element_id})
+
+    def reset_slider(self, element_id: str) -> Optional[Dict]:
+        return self._post_json("/ui/slider/reset", {"elementId": element_id})
+
+    def toggle(self, element_id: str, state: bool) -> bool:
+        return self._post_ok("/ui/toggle", {"elementId": element_id, "value": state})
+
+    def drag(self, from_id: str, to_id: str) -> bool:
+        return self._post_ok("/ui/drag", {"from": from_id, "to": to_id})
+
+    def drag_offset(self, element_id: str, dx: int, dy: int) -> bool:
+        return self._post_ok("/ui/dragOffset", {"elementId": element_id, "deltaX": dx, "deltaY": dy})
+
+    def scroll(self, element_id: str, delta_y: float, delta_x: float = 0.0) -> Optional[Dict]:
+        resp = self._post_json("/ui/scroll", {"elementId": element_id, "deltaY": delta_y, "deltaX": delta_x})
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    def key_press(self, key: str) -> bool:
+        return self._post_ok("/ui/keyPress", {"key": key})
+
+    # ── Oscillator state ────────────────────────────────────────────
+
+    def get_oscillators(self) -> List[Dict]:
+        resp = self._get_json("/state/oscillators")
+        if resp and resp.get("success"):
+            data = resp.get("data", [])
+            return data if isinstance(data, list) else []
+        return []
+
+    def get_oscillator_by_id(self, osc_id: str) -> Optional[Dict]:
+        for osc in self.get_oscillators():
+            if osc.get("id") == osc_id:
+                return osc
+        return None
+
+    def add_oscillator(
+        self,
+        source_id: str,
+        *,
+        name: str = "Test Oscillator",
+        colour: str = "",
+        pane_id: str = "",
+        mode: str = "FullStereo",
+    ) -> Optional[str]:
+        """Add oscillator via state API. Returns oscillator ID or None."""
+        payload: Dict[str, Any] = {"sourceId": source_id, "name": name, "mode": mode}
+        if colour:
+            payload["colour"] = colour
+        if pane_id:
+            payload["paneId"] = pane_id
+        resp = self._post_json("/state/oscillator/add", payload)
+        if resp and resp.get("success"):
+            data = resp.get("data", {})
+            return data.get("id")
+        return None
+
+    def update_oscillator(self, osc_id: str, **fields) -> bool:
+        payload = {"id": osc_id, **fields}
+        return self._post_ok("/state/oscillator/update", payload)
+
+    def reorder_oscillators(self, from_index: int, to_index: int) -> bool:
+        return self._post_ok("/state/oscillator/reorder", {"fromIndex": from_index, "toIndex": to_index})
+
+    # ── Pane / Source state ─────────────────────────────────────────
+
+    def get_panes(self) -> List[Dict]:
+        resp = self._get_json("/state/panes")
+        if resp and resp.get("success"):
+            data = resp.get("data", [])
+            return data if isinstance(data, list) else []
+        return []
+
+    def get_sources(self) -> List[Dict]:
+        resp = self._get_json("/state/sources")
+        if resp and resp.get("success"):
+            data = resp.get("data", [])
+            return data if isinstance(data, list) else []
+        return []
+
+    def get_first_source_id(self) -> str:
+        """Return first source ID or raise if none available."""
+        sources = self.get_sources()
+        if not sources:
+            raise RuntimeError("No audio sources available in test harness")
+        return sources[0]["id"]
+
+    # ── Transport control ───────────────────────────────────────────
+
+    def transport_play(self) -> bool:
+        return self._post_ok("/transport/play")
+
+    def transport_stop(self) -> bool:
+        return self._post_ok("/transport/stop")
+
+    def set_bpm(self, bpm: float) -> bool:
+        return self._post_ok("/transport/setBpm", {"bpm": bpm})
+
+    def set_position(self, samples: int) -> bool:
+        return self._post_ok("/transport/setPosition", {"samples": samples})
+
+    def get_transport_state(self) -> Optional[Dict]:
+        resp = self._get_json("/transport/state")
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    def is_playing(self) -> bool:
+        state = self.get_transport_state()
+        return bool(state and state.get("playing"))
+
+    def get_bpm(self) -> float:
+        state = self.get_transport_state()
+        return state.get("bpm", 120.0) if state else 120.0
+
+    # ── Track audio control ─────────────────────────────────────────
+
+    def set_track_audio(
+        self, track_id: int, *, waveform: str = "sine",
+        frequency: float = 440.0, amplitude: float = 0.8
+    ) -> bool:
+        return self._post_ok(
+            f"/track/{track_id}/audio",
+            {"waveform": waveform, "frequency": frequency, "amplitude": amplitude},
+        )
+
+    def get_track_info(self, track_id: int) -> Optional[Dict]:
+        resp = self._get_json(f"/track/{track_id}/info")
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    # ── Verification (server-side) ──────────────────────────────────
+
+    def verify_waveform_rendered(self, element_id: str, min_amplitude: float = 0.05) -> bool:
+        resp = self._post_json("/verify/waveform", {"elementId": element_id, "minAmplitude": min_amplitude})
+        if resp and resp.get("success"):
+            return resp.get("data", {}).get("pass", False)
         return False
 
-    try:
-        if setup_func:
-            setup_func(client)
-
-        test_func(client)
-
-        if teardown_func:
-            teardown_func(client)
-    except Exception as e:
-        print(f"[ERROR] Test threw exception: {e}")
+    def verify_element_color(self, element_id: str, color_hex: str, tolerance: int = 10) -> bool:
+        resp = self._post_json("/verify/color", {
+            "elementId": element_id, "color": color_hex,
+            "tolerance": tolerance, "mode": "contains",
+        })
+        if resp and resp.get("success"):
+            return resp.get("data", {}).get("pass", False)
         return False
 
-    return client.print_summary()
+    def verify_element_bounds(self, element_id: str, width: int, height: int, tolerance: int = 5) -> Dict:
+        resp = self._post_json("/verify/bounds", {
+            "elementId": element_id, "width": width, "height": height, "tolerance": tolerance,
+        })
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return {}
+
+    def verify_visible(self, element_id: str) -> bool:
+        """Server-side visibility verification (pixel-based, not DOM)."""
+        resp = self._post_json("/verify/visible", {"elementId": element_id})
+        if resp and resp.get("success"):
+            return resp.get("data", {}).get("pass", False)
+        return False
+
+    def analyze_waveform(self, element_id: str, bg_color: str = "#000000") -> Optional[Dict]:
+        """Server-side waveform analysis: amplitude, activity, zero crossings."""
+        resp = self._get_json(
+            f"/analyze/waveform?elementId={element_id}&backgroundColor={bg_color}"
+        )
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    # ── Screenshots (last resort, for baselines only) ───────────────
+
+    def take_screenshot(self, path: str, element: str = "window") -> bool:
+        return self._post_ok("/screenshot", {"path": path, "element": element})
+
+    def compare_screenshot(self, element_id: str, baseline_path: str, tolerance: int = 5) -> Dict:
+        resp = self._post_json("/screenshot/compare", {
+            "elementId": element_id, "baseline": baseline_path, "tolerance": tolerance,
+        })
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return {}
+
+    # ── Waveform state ─────────────────────────────────────────────
+
+    def get_waveform_state(self) -> Optional[Dict]:
+        """Get full waveform render state including per-pane waveform info."""
+        resp = self._get_json("/waveform/state")
+        if resp:
+            return resp.get("data", resp)
+        return None
+
+    def get_waveform_for_pane(self, pane_index: int = 0) -> List[Dict]:
+        """Get waveform info for a specific pane. Returns list of waveform dicts."""
+        state = self.get_waveform_state()
+        if state and "panes" in state and len(state["panes"]) > pane_index:
+            return state["panes"][pane_index].get("waveforms", [])
+        return []
+
+    def get_display_samples(self, pane_index: int = 0) -> int:
+        """Get displaySamples from the first waveform in the given pane."""
+        waveforms = self.get_waveform_for_pane(pane_index)
+        if waveforms:
+            return waveforms[0].get("displaySamples", 0)
+        return 0
+
+    def wait_for_waveform_data(
+        self, pane_index: int = 0, timeout_s: float = 5.0
+    ) -> List[Dict]:
+        """Wait until at least one waveform in the pane has data."""
+        def check():
+            wfs = self.get_waveform_for_pane(pane_index)
+            return wfs if wfs and any(w.get("hasWaveformData") for w in wfs) else None
+        return self.wait_until(
+            check, timeout_s=timeout_s, desc="waveform data to be available"
+        )
+
+    # ── Metrics ─────────────────────────────────────────────────────
+
+    def metrics_start(self, interval_ms: int = 50) -> bool:
+        return self._post_ok("/metrics/start", {"intervalMs": interval_ms})
+
+    def metrics_stop(self) -> bool:
+        return self._post_ok("/metrics/stop")
+
+    def metrics_reset(self) -> bool:
+        return self._post_ok("/metrics/reset")
+
+    def metrics_current(self) -> Optional[Dict]:
+        resp = self._get_json("/metrics/current")
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    def metrics_stats(self) -> Optional[Dict]:
+        resp = self._get_json("/metrics/stats")
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    # ── Focus / keyboard navigation ────────────────────────────────
+
+    def focus(self, element_id: str) -> bool:
+        return self._post_ok("/ui/focus", {"elementId": element_id})
+
+    def get_focused(self) -> Optional[Dict]:
+        resp = self._get_json("/ui/focused")
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    def focus_next(self) -> bool:
+        return self._post_ok("/ui/focusNext")
+
+    def focus_previous(self) -> bool:
+        return self._post_ok("/ui/focusPrevious")
