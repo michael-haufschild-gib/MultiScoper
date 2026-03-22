@@ -1,0 +1,170 @@
+# State consistency scenarios
+# Verify state integrity under rapid mutations and edge conditions
+
+- name: "5 oscillators added rapidly — all present"
+  setup:
+    open_editor: true
+  steps:
+    - action: {add_oscillator: {name: "Rapid 1", color: "#FF0000"}}
+    - action: {add_oscillator: {name: "Rapid 2", color: "#00FF00"}}
+    - action: {add_oscillator: {name: "Rapid 3", color: "#0000FF"}}
+    - action: {add_oscillator: {name: "Rapid 4", color: "#FF00FF"}}
+    - action: {add_oscillator: {name: "Rapid 5", color: "#FFFF00"}}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 5}
+        - {check: pane_count, expected: 1}
+
+- name: "5 oscillators with audio — all have waveform data"
+  setup:
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+  steps:
+    - action: {add_oscillator: {name: "Load 1"}}
+    - action: {add_oscillator: {name: "Load 2"}}
+    - action: {add_oscillator: {name: "Load 3"}}
+    - action: {add_oscillator: {name: "Load 4"}}
+    - action: {add_oscillator: {name: "Load 5"}}
+    - wait: 500ms
+    - action: {wait_for_waveform: true}
+    - check:
+        - {check: oscillator_count, expected: 5}
+        - {check: all_waveforms_have_data}
+        - {check: all_peaks_above, threshold: 0.05}
+
+- name: "Rapid add-delete cycles — no orphaned state"
+  setup:
+    open_editor: true
+  steps:
+    - action: {add_oscillator: {name: "Cycle 1a"}}
+    - action: {add_oscillator: {name: "Cycle 1b"}}
+    - wait: 300ms
+    - action: {delete_oscillator: {index: 0}}
+    - action: {delete_oscillator: {index: 0}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+    - action: {add_oscillator: {name: "Cycle 2a"}}
+    - action: {add_oscillator: {name: "Cycle 2b"}}
+    - wait: 300ms
+    - action: {delete_oscillator: {index: 0}}
+    - action: {delete_oscillator: {index: 0}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+    - action: {add_oscillator: {name: "Final"}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Final"}
+
+- name: "BPM change during oscillator add — no crash"
+  setup:
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+  steps:
+    - action: {set_bpm: 80.0}
+    - action: {add_oscillator: {name: "BPM Race 1"}}
+    - action: {set_bpm: 140.0}
+    - action: {add_oscillator: {name: "BPM Race 2"}}
+    - action: {set_bpm: 100.0}
+    - action: {add_oscillator: {name: "BPM Race 3"}}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 3}
+        - {check: transport_playing}
+        - {check: snapshot_field, path: "transport.bpm", op: ">=", value: 99}
+    - action: {set_bpm: 120.0}
+
+- name: "Editor close/reopen with oscillators — state intact"
+  setup:
+    oscillators:
+      - {source: auto, name: "Survive 1", color: "#FF0000", mode: Mono}
+      - {source: auto, name: "Survive 2", color: "#00FF00", mode: Mid}
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 2}
+    - action: {close_editor: true}
+    - wait: 500ms
+    - action: {open_editor: true}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Survive 1"}
+        - {check: snapshot_field, path: "oscillators[1].name", op: "==", value: "Survive 2"}
+
+- name: "Save/load with diverse configs — all properties roundtrip"
+  setup:
+    oscillators:
+      - {source: auto, name: "Stereo Osc", mode: FullStereo, color: "#FF0000"}
+      - {source: auto, name: "Mono Osc", mode: Mono, color: "#00FF00"}
+      - {source: auto, name: "Mid Osc", mode: Mid, color: "#0000FF"}
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 3}
+    - action: {update_oscillator: {index: 0, opacity: 0.5, lineWidth: 3.0}}
+    - action: {update_oscillator: {index: 1, visible: false}}
+    - wait: 200ms
+    - action: {save_state: "/tmp/oscil_diverse.xml"}
+    - action: {reset_state: true}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+    - action: {load_state: "/tmp/oscil_diverse.xml"}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 3}
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "FullStereo"}
+        - {check: snapshot_field, path: "oscillators[1].mode", op: "==", value: "Mono"}
+        - {check: snapshot_field, path: "oscillators[1].visible", op: "==", value: false}
+        - {check: snapshot_field, path: "oscillators[2].mode", op: "==", value: "Mid"}
+
+- name: "Operations during playback — no state corruption"
+  setup:
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+  steps:
+    - action: {add_oscillator: {name: "Playing Add 1"}}
+    - action: {add_oscillator: {name: "Playing Add 2"}}
+    - action: {add_oscillator: {name: "Playing Add 3"}}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 3}
+        - {check: transport_playing}
+    - action: {update_oscillator: {index: 0, name: "Renamed During Play"}}
+    - action: {delete_oscillator: {index: 2}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: transport_playing}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Renamed During Play"}
+
+- name: "All processing modes settable — roundtrip through all 6"
+  setup:
+    oscillators:
+      - {source: auto, name: "All Modes"}
+  steps:
+    - action: {update_oscillator: {index: 0, mode: "Mono"}}
+    - wait: 100ms
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
+    - action: {update_oscillator: {index: 0, mode: "Mid"}}
+    - wait: 100ms
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mid"}
+    - action: {update_oscillator: {index: 0, mode: "Side"}}
+    - wait: 100ms
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Side"}
+    - action: {update_oscillator: {index: 0, mode: "Left"}}
+    - wait: 100ms
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Left"}
+    - action: {update_oscillator: {index: 0, mode: "Right"}}
+    - wait: 100ms
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Right"}
+    - action: {update_oscillator: {index: 0, mode: "FullStereo"}}
+    - wait: 100ms
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "FullStereo"}

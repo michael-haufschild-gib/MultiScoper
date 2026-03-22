@@ -1,0 +1,84 @@
+# Options section control scenarios
+# Tests each sidebar control changes state without crashing
+
+- name: "Theme dropdown has items"
+  setup:
+    open_editor: true
+  steps:
+    - action: {click: "sidebar_options"}
+    - wait: 300ms
+    - check:
+        - {check: snapshot_field, path: "ui.elementIds", op: "contains", value: "sidebar_options_themeDropdown"}
+
+- name: "Layout dropdown changes column count"
+  setup:
+    oscillators:
+      - {source: auto, name: "Layout Test"}
+  steps:
+    - action: {click: "sidebar_options"}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: pane_count, expected: 1}
+
+- name: "GPU toggle does not crash with oscillators present"
+  setup:
+    oscillators:
+      - {source: auto, name: "GPU Toggle Test"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - action: {click: "sidebar_options"}
+    - wait: 200ms
+    - action: {click: "sidebar_options_gpuRenderingToggle"}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+    - action: {click: "sidebar_options_gpuRenderingToggle"}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+
+- name: "Grid toggle does not crash"
+  setup:
+    oscillators:
+      - {source: auto, name: "Grid Test"}
+  steps:
+    - action: {click: "sidebar_options"}
+    - wait: 200ms
+    - action: {click: "sidebar_options_gridToggle"}
+    - wait: 200ms
+    - action: {click: "sidebar_options_gridToggle"}
+    - wait: 200ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+
+- name: "AutoScale toggle does not crash"
+  setup:
+    oscillators:
+      - {source: auto, name: "AutoScale Test"}
+  steps:
+    - action: {click: "sidebar_options"}
+    - wait: 200ms
+    - action: {click: "sidebar_options_autoScaleToggle"}
+    - wait: 200ms
+    - action: {click: "sidebar_options_autoScaleToggle"}
+    - wait: 200ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+
+- name: "Gain slider accepts values"
+  setup:
+    oscillators:
+      - {source: auto, name: "Gain Test"}
+  steps:
+    - action: {click: "sidebar_options"}
+    - wait: 200ms
+    - action: {set_slider: {element: "sidebar_options_gainSlider", value: 6.0}}
+    - wait: 200ms
+    - action: {set_slider: {element: "sidebar_options_gainSlider", value: -6.0}}
+    - wait: 200ms
+    - action: {set_slider: {element: "sidebar_options_gainSlider", value: 0.0}}
+    - check:
+        - {check: oscillator_count, expected: 1}

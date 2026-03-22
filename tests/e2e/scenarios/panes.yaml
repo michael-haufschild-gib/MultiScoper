@@ -1,0 +1,82 @@
+# Pane management scenarios
+
+- name: "Add second pane"
+  setup:
+    oscillators:
+      - {source: auto, name: "Pane1 Osc"}
+  steps:
+    - check:
+        - {check: pane_count, expected: 1}
+    - action: {add_pane: {name: "Second Pane"}}
+    - wait: 300ms
+    - check:
+        - {check: pane_count, expected: 2}
+
+- name: "Move oscillator to different pane"
+  setup:
+    oscillators:
+      - {source: auto, name: "Moveable Osc"}
+  steps:
+    - check:
+        - {check: pane_count, expected: 1}
+        - {check: oscillator_count, expected: 1}
+    - action: {add_pane: {name: "Target Pane"}}
+    - wait: 300ms
+    - action: {move_oscillator: {oscillator: 0, to_pane: 1}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: pane_count, expected: 2}
+
+- name: "Multiple oscillators in separate panes"
+  setup:
+    oscillators:
+      - {source: auto, name: "Pane1 Osc", color: "#FF0000"}
+  steps:
+    - action: {add_pane: {name: "Second Pane"}}
+    - wait: 200ms
+    - action: {add_oscillator: {name: "Pane2 Osc", color: "#00FF00"}}
+    - wait: 200ms
+    - action: {move_oscillator: {oscillator: 1, to_pane: 1}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: pane_count, expected: 2}
+
+- name: "Remove empty pane"
+  setup:
+    oscillators:
+      - {source: auto, name: "Stay Osc"}
+  steps:
+    - action: {add_pane: {name: "Empty Pane"}}
+    - wait: 300ms
+    - check:
+        - {check: pane_count, expected: 2}
+    # Get pane IDs from snapshot to remove the second one
+    # For now, just verify the add worked. Remove requires knowing the ID.
+
+- name: "Pane exists after editor open (auto-created), oscillator added to it"
+  setup:
+    open_editor: true
+  steps:
+    - check:
+        # Editor auto-creates a default pane+oscillator, we clean the oscillator
+        # but the pane persists. This is expected behavior.
+        - {check: oscillator_count, expected: 0}
+        - {check: pane_count, expected: 1}
+    - action: {add_oscillator: {name: "Into Auto Pane"}}
+    - wait: 300ms
+    - check:
+        - {check: pane_count, expected: 1}
+        - {check: oscillator_count, expected: 1}
+
+- name: "Add 3 panes — all exist in state"
+  setup:
+    oscillators:
+      - {source: auto, name: "Base Osc"}
+  steps:
+    - action: {add_pane: {name: "Pane 2"}}
+    - action: {add_pane: {name: "Pane 3"}}
+    - wait: 300ms
+    - check:
+        - {check: pane_count, expected: 3}

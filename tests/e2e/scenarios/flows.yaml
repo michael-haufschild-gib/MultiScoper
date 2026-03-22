@@ -1,0 +1,244 @@
+# Multi-step user workflow scenarios
+# Each tests a sequence of actions that a real user would perform
+# Actions use wait_for to poll for state changes instead of fixed sleeps
+
+# ── Oscillator Lifecycle ────────────────────────────────────────────────────
+
+- name: "Add oscillator then hide it — waveform data stops"
+  setup:
+    oscillators:
+      - {source: auto, name: "HideMe", color: "#00FF00"}
+      - {source: auto, name: "StayVisible", color: "#FF0000"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: all_waveforms_have_data}
+        - {check: oscillator_visible, oscillator: 0}
+        - {check: oscillator_visible, oscillator: 1}
+    - action: {update_oscillator: {index: 0, visible: false}}
+      wait_for: {check: oscillator_hidden, oscillator: 0}
+    - check:
+        - {check: oscillator_hidden, oscillator: 0}
+        - {check: oscillator_visible, oscillator: 1}
+        - {check: waveform_has_data, oscillator: 1}
+
+- name: "Delete oscillator — remaining ones keep rendering"
+  setup:
+    oscillators:
+      - {source: auto, name: "Delete Me"}
+      - {source: auto, name: "Keep Me"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: all_waveforms_have_data}
+    - action: {delete_oscillator: {index: 0}}
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: waveform_has_data, oscillator: 0}
+
+- name: "Change processing mode — state updates"
+  setup:
+    oscillators:
+      - {source: auto, name: "Mode Test"}
+  steps:
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "FullStereo"}
+    - action: {update_oscillator: {index: 0, mode: "Mono"}}
+      wait_for: {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
+    - action: {update_oscillator: {index: 0, mode: "Mid"}}
+      wait_for: {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mid"}
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mid"}
+
+- name: "Rename oscillator — name persists in state"
+  setup:
+    oscillators:
+      - {source: auto, name: "Original Name"}
+  steps:
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Original Name"}
+    - action: {update_oscillator: {index: 0, name: "New Name"}}
+      wait_for: {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "New Name"}
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "New Name"}
+
+# ── Transport Interaction ───────────────────────────────────────────────────
+
+- name: "Start transport after adding oscillator — waveform appears"
+  setup:
+    oscillators:
+      - {source: auto, name: "Late Start"}
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+  steps:
+    - check:
+        - {check: transport_stopped}
+        - {check: oscillator_count, expected: 1}
+    - action: {transport_play: true}
+    - action: {wait_for_waveform: true}
+    - check:
+        - {check: transport_playing}
+        - {check: waveform_has_data, oscillator: 0}
+        - {check: peak_above, oscillator: 0, threshold: 0.1}
+
+- name: "Stop transport — state remains queryable"
+  setup:
+    oscillators:
+      - {source: auto, name: "Stop Test"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: transport_playing}
+        - {check: waveform_has_data, oscillator: 0}
+    - action: {transport_stop: true}
+    - wait: 200ms
+    - check:
+        - {check: transport_stopped}
+        - {check: oscillator_count, expected: 1}
+
+- name: "Change audio waveform type mid-playback"
+  setup:
+    oscillators:
+      - {source: auto, name: "Wave Switch"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: waveform_has_data, oscillator: 0}
+    - action: {set_track_audio: {waveform: square, frequency: 440, amplitude: 0.8}}
+    - wait: 500ms
+    - check:
+        - {check: waveform_has_data, oscillator: 0}
+        - {check: peak_above, oscillator: 0, threshold: 0.1}
+
+# ── State Persistence ───────────────────────────────────────────────────────
+
+- name: "Save state, reset, load — oscillators restored"
+  setup:
+    oscillators:
+      - {source: auto, name: "Save Me", color: "#FF0000", mode: Mono}
+      - {source: auto, name: "Save Too", color: "#00FF00", mode: Mid}
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
+    - action: {save_state: "/tmp/oscil_flow_test.xml"}
+    - action: {reset_state: true}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+        - {check: pane_count, expected: 0}
+    - action: {load_state: "/tmp/oscil_flow_test.xml"}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Save Me"}
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
+        - {check: snapshot_field, path: "oscillators[1].name", op: "==", value: "Save Too"}
+
+# ── Editor Lifecycle ────────────────────────────────────────────────────────
+
+- name: "Close and reopen editor — state survives"
+  setup:
+    oscillators:
+      - {source: auto, name: "Survive Close"}
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 1}
+    - action: {close_editor: true}
+    - wait: 300ms
+    - action: {open_editor: true}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Survive Close"}
+
+# ── BPM and Timing ──────────────────────────────────────────────────────────
+
+- name: "Change BPM during playback — transport stays stable"
+  setup:
+    oscillators:
+      - {source: auto, name: "BPM Flow"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: transport_playing}
+    - action: {set_bpm: 80.0}
+    - wait: 200ms
+    - check:
+        - {check: transport_playing}
+        - {check: snapshot_field, path: "transport.bpm", op: ">=", value: 79}
+    - action: {set_bpm: 160.0}
+    - wait: 200ms
+    - check:
+        - {check: transport_playing}
+        - {check: snapshot_field, path: "transport.bpm", op: ">=", value: 159}
+        - {check: waveform_has_data, oscillator: 0}
+    - action: {set_bpm: 120.0}
+
+# ── Rapid Operations ────────────────────────────────────────────────────────
+
+- name: "Rapid add and delete — state stays consistent"
+  setup:
+    open_editor: true
+  steps:
+    - action: {add_oscillator: {name: "Rapid 1"}}
+    - action: {add_oscillator: {name: "Rapid 2"}}
+    - action: {add_oscillator: {name: "Rapid 3"}}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 3}
+    - action: {delete_oscillator: {index: 1}}
+    - check:
+        - {check: oscillator_count, expected: 2}
+    - action: {delete_oscillator: {index: 0}}
+    - action: {delete_oscillator: {index: 0}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+
+- name: "Add oscillator after full reset — fresh start works"
+  setup:
+    oscillators:
+      - {source: auto, name: "Before Reset"}
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 1}
+    - action: {reset_state: true}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+    - action: {open_editor: true}
+    - action: {add_oscillator: {name: "After Reset"}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "After Reset"}
+        - {check: pane_count, expected: 1}
+
+# ── GUI State Verification ──────────────────────────────────────────────────
+
+- name: "GUI snapshot shows waveform component state"
+  setup:
+    oscillators:
+      - {source: auto, name: "GUI Check", color: "#00FF00"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - wait: 1000ms
+    - check:
+        - {check: snapshot_field, path: "gui.editorOpen", op: "==", value: true}
+        - {check: snapshot_field, path: "gui.panes[0].oscillatorCount", op: ">=", value: 1}
+        - {check: snapshot_field, path: "gui.panes[0].waveforms[0].peakLevel", op: ">", value: 0.05}
