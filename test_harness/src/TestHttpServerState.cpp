@@ -162,9 +162,13 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
             auto panes = layoutManager.getPanes();
             for (const auto& pane : panes)
                 layoutManager.removePane(pane.getId());
-            done.signal();
+
+            // Wait for queued refreshPanels to complete before signalling
+            juce::MessageManager::callAsync([&done]() {
+                done.signal();
+            });
         });
-        done.wait(3000);
+        done.wait(5000);
     }
 
     // Do NOT clear the element registry here — components that are still alive
@@ -283,9 +287,14 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
         juce::WaitableEvent done;
         juce::MessageManager::callAsync([oscCopy, track, &done]() mutable {
             track->getProcessor().getState().addOscillator(oscCopy);
-            done.signal();
+            // The addOscillator triggers valueTreeChildAdded which queues
+            // refreshPanels via callAsync.  Queue another callback AFTER
+            // refreshPanels so we only signal done once the UI is updated.
+            juce::MessageManager::callAsync([&done]() {
+                done.signal();
+            });
         });
-        done.wait(3000);
+        done.wait(5000);
 
         res.set_content(successResponse(oscJson).dump(), "application/json");
     }
