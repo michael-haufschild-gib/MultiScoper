@@ -6,6 +6,7 @@
 #include "core/SharedCaptureBuffer.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace oscil
 {
@@ -83,15 +84,26 @@ WaveformPresenter::ReadResult WaveformPresenter::readAndPadSamples(int requested
     if (scratchBufferRight_.size() != static_cast<size_t>(displaySamples_))
         scratchBufferRight_.resize(static_cast<size_t>(displaySamples_));
 
-    int samplesReadLeft = captureBuffer_->read(scratchBufferLeft_.data(), requestedSamples, 0);
-    int samplesReadRight = captureBuffer_->read(scratchBufferRight_.data(), requestedSamples, 1);
+    // Use the multi-channel read to guarantee cross-channel epoch consistency.
+    // The per-channel read() validates epochs independently, which can yield
+    // L/R data from different write epochs under concurrent audio writes.
+    juce::AudioBuffer<float> stereoScratch(2, requestedSamples);
+    int samplesRead = captureBuffer_->read(stereoScratch, requestedSamples);
 
-    if (samplesReadLeft <= 0)
-        return {};
-
-    int samplesRead = (samplesReadRight > 0) ? std::min(samplesReadLeft, samplesReadRight) : samplesReadLeft;
     if (samplesRead <= 0)
         return {};
+
+    // Copy from the epoch-consistent stereoScratch into our scratch buffers
+    std::memcpy(scratchBufferLeft_.data(), stereoScratch.getReadPointer(0),
+                static_cast<size_t>(samplesRead) * sizeof(float));
+
+    int samplesReadRight = 0;
+    if (stereoScratch.getNumChannels() > 1)
+    {
+        std::memcpy(scratchBufferRight_.data(), stereoScratch.getReadPointer(1),
+                    static_cast<size_t>(samplesRead) * sizeof(float));
+        samplesReadRight = samplesRead;
+    }
 
     if (padTrailingSilence && samplesRead < displaySamples_)
     {

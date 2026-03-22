@@ -5,7 +5,9 @@
 
 using namespace oscil;
 
-// Mock SharedCaptureBuffer to control input data
+// Mock SharedCaptureBuffer to control input data.
+// Overrides both the per-channel and multi-channel read APIs so the
+// presenter's epoch-consistent multi-channel path is exercised.
 class MockCaptureBuffer : public SharedCaptureBuffer {
 public:
     std::vector<float> leftData;
@@ -29,11 +31,32 @@ public:
         for (int i = 0; i < count; ++i) {
             dest[i] = source[i];
         }
-        // Fill remainder with silence
         for (int i = count; i < numSamples; ++i) {
             dest[i] = 0.0f;
         }
         return count;
+    }
+
+    int read(juce::AudioBuffer<float>& output, int numSamples) const override {
+        lastRequestedSamplesLeft = numSamples;
+        lastRequestedSamplesRight = numSamples;
+
+        int numChannels = std::min(output.getNumChannels(), 2);
+        const std::vector<float>* sources[] = { &leftData, &rightData };
+
+        int samplesRead = 0;
+        for (int ch = 0; ch < numChannels; ++ch) {
+            const auto& source = *sources[ch];
+            int count = std::min(numSamples, static_cast<int>(source.size()));
+            samplesRead = std::max(samplesRead, count);
+
+            float* dest = output.getWritePointer(ch);
+            for (int i = 0; i < count; ++i)
+                dest[i] = source[i];
+            for (int i = count; i < numSamples; ++i)
+                dest[i] = 0.0f;
+        }
+        return samplesRead;
     }
 
     CaptureFrameMetadata getLatestMetadata() const override {
