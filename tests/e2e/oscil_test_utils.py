@@ -86,19 +86,19 @@ class OscilTestClient:
     def _get_json(self, path: str, **kwargs) -> Optional[Dict]:
         try:
             r = self._get(path, **kwargs)
-            if r.status_code == 200:
-                return r.json()
-        except Exception:
-            pass
+        except requests.exceptions.ConnectionError:
+            return None
+        if r.status_code == 200:
+            return r.json()
         return None
 
     def _post_json(self, path: str, payload: Dict = None) -> Optional[Dict]:
         try:
             r = self._post(path, payload)
-            if r.status_code == 200:
-                return r.json()
-        except Exception:
-            pass
+        except requests.exceptions.ConnectionError:
+            return None
+        if r.status_code == 200:
+            return r.json()
         return None
 
     def _post_ok(self, path: str, payload: Dict = None) -> bool:
@@ -230,15 +230,15 @@ class OscilTestClient:
         """Query element info. Returns None if element not registered."""
         try:
             r = self._get(f"/ui/element/{element_id}")
-            if r.status_code == 404:
+        except requests.exceptions.ConnectionError:
+            return None
+        if r.status_code == 404:
+            return None
+        if r.status_code == 200:
+            resp = r.json()
+            if not resp.get("success"):
                 return None
-            if r.status_code == 200:
-                resp = r.json()
-                if not resp.get("success"):
-                    return None
-                return ElementInfo.from_response(element_id, resp.get("data", {}))
-        except Exception:
-            pass
+            return ElementInfo.from_response(element_id, resp.get("data", {}))
         return None
 
     def element_exists(self, element_id: str) -> bool:

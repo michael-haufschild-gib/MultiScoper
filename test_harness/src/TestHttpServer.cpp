@@ -90,7 +90,7 @@ void TestHttpServer::stop()
 
 void TestHttpServer::serverThread()
 {
-    if (!server_->listen("0.0.0.0", port_))
+    if (!server_->listen("127.0.0.1", port_))
     {
         running_.store(false);
     }

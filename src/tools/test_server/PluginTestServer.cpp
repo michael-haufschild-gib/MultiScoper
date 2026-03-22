@@ -45,6 +45,9 @@ void PluginTestServer::start(int port)
 
     setupEndpoints();
 
+    // Set running before launching thread to prevent stop()/destructor race
+    // where stop() sees running_==false and skips join on a joinable thread
+    running_.store(true);
     serverThread_ = std::make_unique<std::thread>([this]() { serverThread(); });
 }
 
@@ -53,27 +56,18 @@ void PluginTestServer::stop()
     if (!running_.load())
         return;
 
+    running_.store(false);
+
     if (server_)
         server_->stop();
 
     if (serverThread_ && serverThread_->joinable())
         serverThread_->join();
 
-    // Handlers will be destroyed automatically, which will clear test sources via StateHandler
-    if (stateHandler_)
-    {
-        // Clear test sources before destroying handlers
-        nlohmann::json dummyReq, dummyRes;
-        httplib::Request req;
-        httplib::Response res;
-        // Note: We can't easily call handleStateReset here as it needs message thread
-        // The cleanup will happen when stateHandler_ is destroyed
-    }
-
     serverThread_.reset();
     server_.reset();
 
-    // Destroy handlers
+    // Destroy handlers (server is stopped, no concurrent request processing)
     stateHandler_.reset();
     waveformHandler_.reset();
     testRunnerHandler_.reset();
@@ -81,15 +75,11 @@ void PluginTestServer::stop()
     sourceHandler_.reset();
     oscillatorHandler_.reset();
     layoutHandler_.reset();
-
-    running_.store(false);
 }
 
 void PluginTestServer::serverThread()
 {
-    running_.store(true);
     server_->listen("127.0.0.1", port_);
-    running_.store(false);
 }
 
 void PluginTestServer::setupLayoutEndpoints()

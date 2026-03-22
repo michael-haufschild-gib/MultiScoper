@@ -90,16 +90,27 @@ nlohmann::json testUIResponsiveness(OscilPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "UIResponsiveness";
+
+    // Measure actual paint cost by rendering the component to an offscreen image.
+    // This tests real paint performance, not artificial sleep.
+    constexpr int iterations = 10;
+    auto bounds = editor.getLocalBounds();
+    juce::Image image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+
     auto startTime = juce::Time::getMillisecondCounterHiRes();
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < iterations; ++i)
     {
-        editor.repaint();
-        juce::Thread::sleep(16);
+        juce::Graphics g(image);
+        editor.paintEntireComponent(g, true);
     }
     double elapsedMs = juce::Time::getMillisecondCounterHiRes() - startTime;
-    test["passed"] = elapsedMs < 500.0;
-    test["details"] = "10 repaint cycles should complete within 500ms";
-    test["elapsedMs"] = elapsedMs;
+    double avgMs = elapsedMs / iterations;
+
+    test["passed"] = avgMs < 50.0;
+    test["details"] = "Average paint time should be under 50ms per frame";
+    test["totalMs"] = elapsedMs;
+    test["avgMs"] = avgMs;
+    test["iterations"] = iterations;
     return test;
 }
 
@@ -139,17 +150,24 @@ void TestRunnerHandler::handleRunLayoutTest(const httplib::Request& /*req*/, htt
         int availableHeight = std::max(100, editorBounds.getHeight() - 40 - 24);
         juce::Rectangle<int> availableArea(0, 0, availableWidth, availableHeight);
 
+        // Track panes added by this test so we can remove them afterward
+        std::vector<PaneId> addedPaneIds;
         while (layoutManager.getPaneCount() < 3)
         {
             Pane pane;
             pane.setName("Test Pane " + juce::String(layoutManager.getPaneCount() + 1));
             pane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
+            addedPaneIds.push_back(pane.getId());
             layoutManager.addPane(pane);
         }
 
         tests.push_back(testSingleColumnLayout(state, editor_, layoutManager, availableArea));
         tests.push_back(testDoubleColumnLayout(state, editor_, layoutManager, availableArea));
         tests.push_back(testTripleColumnLayout(state, editor_, layoutManager, availableArea));
+
+        // Remove panes added by this test to avoid leaking into live state
+        for (const auto& id : addedPaneIds)
+            layoutManager.removePane(id);
 
         countPassed(tests, response);
         return response;
