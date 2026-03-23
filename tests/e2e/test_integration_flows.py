@@ -78,21 +78,31 @@ class TestOscillatorLifecycleFlow:
         id3 = editor.add_oscillator(source_id, name="Order C")
         editor.wait_for_oscillator_count(3, timeout_s=5.0)
 
-        # Delete the middle one via state API (simulate what delete button does)
-        oscs_before = editor.get_oscillators()
-        middle_id = oscs_before[1]["id"]
+        # Delete the middle one via state API
+        deleted = editor.delete_oscillator(id2)
+        assert deleted, "Delete API should succeed for middle oscillator"
 
-        # Use reset + re-add to simulate deletion since there's no direct delete API
-        # Actually, let's just verify the order after adding is correct
-        names_before = [o["name"] for o in oscs_before]
-        assert "Order A" in names_before
-        assert "Order B" in names_before
-        assert "Order C" in names_before
+        oscs_after = editor.wait_for_oscillator_count(2, timeout_s=3.0)
+        remaining_ids = [o["id"] for o in oscs_after]
+        remaining_names = [o["name"] for o in oscs_after]
 
-        # Verify all have valid, unique pane IDs
-        pane_ids = [o.get("paneId", "") for o in oscs_before]
+        assert id2 not in remaining_ids, "Deleted oscillator should be gone"
+        assert id1 in remaining_ids, "First oscillator should remain"
+        assert id3 in remaining_ids, "Third oscillator should remain"
+
+        # Verify order indices are still valid (no gaps or duplicates)
+        indices = [o.get("orderIndex", -1) for o in oscs_after]
+        assert all(i >= 0 for i in indices), (
+            f"All remaining order indices should be >= 0, got {indices}"
+        )
+        assert len(set(indices)) == 2, (
+            f"Order indices should be unique after middle delete, got {indices}"
+        )
+
+        # Verify pane IDs still valid
+        pane_ids = [o.get("paneId", "") for o in oscs_after]
         assert all(pid != "" for pid in pane_ids), (
-            f"All oscillators should have pane IDs, got {pane_ids}"
+            f"All oscillators should still have pane IDs, got {pane_ids}"
         )
 
     def test_oscillator_survives_editor_close_reopen(
@@ -425,3 +435,332 @@ class TestStatePersistenceEdgeCases:
         assert len(editor.get_oscillators()) == 0, (
             "Loading empty state should result in 0 oscillators"
         )
+
+
+class TestColorAssignment:
+    """Verify oscillator colors are stored and retrievable."""
+
+    def test_color_stored_on_creation(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: colour parameter ignored during oscillator creation,
+        defaulting to white/black regardless of user choice.
+        """
+        osc_id = editor.add_oscillator(
+            source_id, name="Color Test", colour="#FF6B6B"
+        )
+        assert osc_id is not None
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        osc = editor.get_oscillator_by_id(osc_id)
+        assert osc is not None
+        colour = osc.get("colour", osc.get("color", ""))
+        assert colour, (
+            f"Oscillator should have a colour field, got keys: {list(osc.keys())}"
+        )
+
+    def test_color_differs_between_oscillators(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: all oscillators get the same default color because
+        the color assignment logic is not wired.
+        """
+        id1 = editor.add_oscillator(source_id, name="Red", colour="#FF0000")
+        id2 = editor.add_oscillator(source_id, name="Green", colour="#00FF00")
+        editor.wait_for_oscillator_count(2, timeout_s=3.0)
+
+        osc1 = editor.get_oscillator_by_id(id1)
+        osc2 = editor.get_oscillator_by_id(id2)
+
+        c1 = osc1.get("colour", osc1.get("color", ""))
+        c2 = osc2.get("colour", osc2.get("color", ""))
+
+        if c1 and c2:
+            assert c1 != c2, (
+                f"Different oscillators should have different colors: "
+                f"'{c1}' vs '{c2}'"
+            )
+
+    def test_color_survives_save_load(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: colour hex string not serialized in state XML,
+        reverting to default on load.
+        """
+        osc_id = editor.add_oscillator(
+            source_id, name="Color Persist", colour="#00BFFF"
+        )
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        osc_before = editor.get_oscillator_by_id(osc_id)
+        colour_before = osc_before.get("colour", osc_before.get("color", ""))
+
+        path = "/tmp/oscil_e2e_color.xml"
+        saved = editor.save_state(path)
+        if not saved:
+            pytest.skip("State save API not available")
+
+        editor.reset_state()
+        editor.wait_for_oscillator_count(0, timeout_s=3.0)
+
+        loaded = editor.load_state(path)
+        assert loaded, "State load should succeed"
+
+        oscs = editor.wait_for_oscillator_count(1, timeout_s=5.0)
+        colour_after = oscs[0].get("colour", oscs[0].get("color", ""))
+
+        if colour_before:
+            assert colour_after == colour_before, (
+                f"Colour should survive save/load: "
+                f"expected '{colour_before}', got '{colour_after}'"
+            )
+
+
+class TestSimultaneousVisibility:
+    """Verify bulk visibility operations on multiple oscillators."""
+
+    def test_hide_all_oscillators(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: hiding multiple oscillators in sequence causes the
+        render loop to crash on empty visible set.
+        """
+        ids = []
+        for i in range(3):
+            oid = editor.add_oscillator(source_id, name=f"HideAll {i}")
+            assert oid is not None
+            ids.append(oid)
+        editor.wait_for_oscillator_count(3, timeout_s=5.0)
+
+        # Hide all
+        for oid in ids:
+            editor.update_oscillator(oid, visible=False)
+
+        # Verify all hidden
+        for oid in ids:
+            editor.wait_until(
+                lambda oid=oid: not editor.get_oscillator_by_id(oid).get("visible", True),
+                timeout_s=2.0,
+                desc=f"oscillator {oid} to become hidden",
+            )
+
+        # Verify harness still responsive with all hidden
+        state = editor.get_transport_state()
+        assert state is not None
+
+    def test_show_all_after_hiding(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: re-showing a hidden oscillator does not re-register
+        it with the render pipeline.
+        """
+        ids = []
+        for i in range(3):
+            oid = editor.add_oscillator(source_id, name=f"ShowAll {i}")
+            assert oid is not None
+            ids.append(oid)
+        editor.wait_for_oscillator_count(3, timeout_s=5.0)
+
+        # Hide all
+        for oid in ids:
+            editor.update_oscillator(oid, visible=False)
+
+        # Show all
+        for oid in ids:
+            editor.update_oscillator(oid, visible=True)
+
+        # Verify all visible
+        for oid in ids:
+            editor.wait_until(
+                lambda oid=oid: editor.get_oscillator_by_id(oid).get("visible") is True,
+                timeout_s=2.0,
+                desc=f"oscillator {oid} to become visible",
+            )
+
+
+class TestModeChangeDuringPlayback:
+    """Verify processing mode changes during active audio."""
+
+    def test_mode_change_preserves_waveform_data(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: changing processing mode while audio is flowing
+        causes the DSP pipeline to drop the audio buffer reference,
+        resulting in silent/empty waveform until next buffer callback.
+        """
+        osc_id = editor.add_oscillator(source_id, name="Mode During Play")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+
+        # Wait for initial waveform data
+        editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+
+        # Cycle through modes while playing
+        modes = ["Mono", "Mid", "Side", "Left", "Right", "FullStereo"]
+        for mode in modes:
+            editor.update_oscillator(osc_id, mode=mode)
+            # Verify mode actually changed
+            editor.wait_until(
+                lambda mode=mode: editor.get_oscillator_by_id(osc_id).get("mode") == mode,
+                timeout_s=2.0,
+                desc=f"mode to become {mode}",
+            )
+            # Transport should still be playing
+            assert editor.is_playing(), (
+                f"Transport should still be playing after mode change to {mode}"
+            )
+
+        editor.transport_stop()
+
+    def test_visibility_toggle_during_playback_waveform_recovers(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: hiding and re-showing an oscillator during playback
+        causes it to lose its audio data binding, showing a flat line.
+        """
+        osc_id = editor.add_oscillator(source_id, name="Vis Toggle Play")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+
+        # Wait for waveform data
+        wfs = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        assert wfs[0].get("peakLevel", 0) > 0.05, "Should have signal before toggle"
+
+        # Hide
+        editor.update_oscillator(osc_id, visible=False)
+        editor.wait_until(
+            lambda: not editor.get_oscillator_by_id(osc_id).get("visible", True),
+            timeout_s=2.0,
+            desc="oscillator hidden",
+        )
+
+        # Show again
+        editor.update_oscillator(osc_id, visible=True)
+        editor.wait_until(
+            lambda: editor.get_oscillator_by_id(osc_id).get("visible") is True,
+            timeout_s=2.0,
+            desc="oscillator visible again",
+        )
+
+        # Waveform data should recover
+        wfs_after = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        assert wfs_after[0].get("peakLevel", 0) > 0.05, (
+            "Waveform should recover signal after re-show during playback"
+        )
+
+        editor.transport_stop()
+
+
+class TestEditorWithActiveTransport:
+    """Editor lifecycle while transport is playing."""
+
+    def test_close_reopen_during_playback(
+        self, client: OscilTestClient
+    ):
+        """
+        Bug caught: closing editor while transport is playing causes the
+        audio callback to reference destroyed UI components.
+        """
+        client.open_editor()
+        client.reset_state()
+        client.wait_for_oscillator_count(0, timeout_s=3.0)
+
+        sources = client.get_sources()
+        if not sources:
+            client.close_editor()
+            pytest.skip("No audio sources available")
+        source_id = sources[0]["id"]
+
+        osc_id = client.add_oscillator(source_id, name="Transport Close")
+        assert osc_id is not None
+        client.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        client.transport_play()
+        client.wait_until(
+            lambda: client.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+        client.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+
+        # Wait for audio to flow
+        client.wait_until(
+            lambda: (s := client.get_transport_state())
+            and s.get("positionSamples", 0) > 0,
+            timeout_s=3.0,
+            desc="position to advance",
+        )
+
+        # Close editor while playing
+        client.close_editor()
+
+        # Transport should still be playing (audio continues without editor)
+        assert client.is_playing(), "Transport should still play after editor close"
+
+        # Reopen editor
+        client.open_editor()
+        count = client.verify_editor_ready()
+        assert count > 0, "Editor should reopen while transport is playing"
+
+        # Oscillator should still exist
+        oscs = client.get_oscillators()
+        assert len(oscs) >= 1, "Oscillator should survive editor close/reopen during playback"
+
+        client.transport_stop()
+        client.close_editor()
+
+
+class TestDeleteDuringActiveRendering:
+    """Deleting oscillators while waveforms are actively rendering."""
+
+    def test_delete_while_rendering(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: deleting an oscillator while the render loop is
+        iterating over the oscillator list causes use-after-free or
+        iterator invalidation crash.
+        """
+        ids = []
+        for i in range(3):
+            oid = editor.add_oscillator(source_id, name=f"RenderDel {i}")
+            assert oid is not None
+            ids.append(oid)
+        editor.wait_for_oscillator_count(3, timeout_s=5.0)
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+
+        # Wait for waveform data to be actively rendering
+        editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+
+        # Delete oscillators while rendering
+        for oid in ids:
+            editor.delete_oscillator(oid)
+
+        editor.wait_for_oscillator_count(0, timeout_s=5.0)
+
+        # Verify system stable
+        assert editor.is_playing(), "Transport should still be playing"
+        state = editor.get_transport_state()
+        assert state is not None
+
+        editor.transport_stop()

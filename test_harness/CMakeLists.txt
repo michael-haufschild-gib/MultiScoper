@@ -2,7 +2,7 @@
 # Standalone application for autonomous testing of the plugin
 # Must be included from the main CMakeLists.txt as a subdirectory
 
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.25)
 
 # Build only for native architecture (not universal) to avoid linker issues
 # with libraries that don't have x86_64 versions
@@ -33,6 +33,7 @@ set(TEST_HARNESS_SOURCES
     src/TestElementRegistry.cpp
     src/TestUIController.cpp
     src/TestUIControllerForms.cpp
+    src/TestUIControllerQueries.cpp
     src/TestUIControllerSimulation.cpp
     src/TestScreenshot.cpp
     src/TestScreenshotAnalysis.cpp

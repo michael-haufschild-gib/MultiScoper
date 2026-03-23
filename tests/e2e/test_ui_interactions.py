@@ -186,16 +186,24 @@ class TestDragInteraction:
 
         oscs_before = editor.get_oscillators()
         ids_before = [o["id"] for o in oscs_before]
+        names_before = [o["name"] for o in oscs_before]
 
         result = editor.drag(item0, item1)
-        # Drag may or may not be supported
 
-        # Verify no data loss
+        # Verify no data loss regardless of whether drag is supported
         oscs_after = editor.get_oscillators()
         ids_after = [o["id"] for o in oscs_after]
         assert set(ids_after) == set(ids_before), (
             "Drag should not add or remove oscillators"
         )
+
+        # If drag succeeded, verify order changed
+        if result:
+            names_after = [o["name"] for o in oscs_after]
+            assert names_after != names_before, (
+                f"Successful drag should change order: "
+                f"before={names_before}, after={names_after}"
+            )
 
     def test_drag_offset_on_resize_handle(self, editor: OscilTestClient):
         """

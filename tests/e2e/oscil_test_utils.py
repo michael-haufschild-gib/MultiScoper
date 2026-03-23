@@ -383,6 +383,10 @@ class OscilTestClient:
     def reorder_oscillators(self, from_index: int, to_index: int) -> bool:
         return self._post_ok("/state/oscillator/reorder", {"fromIndex": from_index, "toIndex": to_index})
 
+    def move_oscillator(self, osc_id: str, pane_id: str) -> bool:
+        """Move an oscillator to a different pane."""
+        return self._post_ok("/state/oscillator/move", {"id": osc_id, "paneId": pane_id})
+
     # ── Pane / Source state ─────────────────────────────────────────
 
     def get_panes(self) -> List[Dict]:
@@ -391,6 +395,17 @@ class OscilTestClient:
             data = resp.get("data", [])
             return data if isinstance(data, list) else []
         return []
+
+    def add_pane(self, name: str = "New Pane") -> Optional[str]:
+        """Add a new pane. Returns pane ID or None."""
+        resp = self._post_json("/state/pane/add", {"name": name})
+        if resp and resp.get("success"):
+            return resp.get("data", {}).get("id")
+        return None
+
+    def remove_pane(self, pane_id: str) -> bool:
+        """Remove a pane by ID."""
+        return self._post_ok("/state/pane/remove", {"id": pane_id})
 
     def get_sources(self) -> List[Dict]:
         resp = self._get_json("/state/sources")
@@ -583,3 +598,20 @@ class OscilTestClient:
 
     def focus_previous(self) -> bool:
         return self._post_ok("/ui/focusPrevious")
+
+    # ── Diagnostic ─────────────────────────────────────────────────
+
+    def get_diagnostic_snapshot(self) -> Optional[Dict]:
+        """Fetch the full diagnostic snapshot (all state in one call)."""
+        resp = self._get_json("/diagnostic/snapshot")
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    def get_registered_element_ids(self) -> List[str]:
+        """Return all currently registered element IDs."""
+        resp = self._get_json("/ui/elements")
+        if resp and resp.get("success"):
+            data = resp.get("data", {})
+            return data.get("elementIds", [])
+        return []

@@ -12,25 +12,23 @@ What bugs these tests catch:
 
 import pytest
 from oscil_test_utils import OscilTestClient
+from page_objects import SidebarPage
 
 
 class TestAccordion:
     """Accordion section expand/collapse behavior."""
 
-    def test_timing_section_expand_reveals_content(self, editor: OscilTestClient):
+    def test_timing_section_expand_reveals_content(
+        self, editor: OscilTestClient, sidebar_page: SidebarPage
+    ):
         """
         Bug caught: accordion click handler not toggling content visibility.
         """
-        timing_id = "sidebar_timing"
-        if not editor.element_exists(timing_id):
-            pytest.skip("Timing section not registered")
-
-        editor.click(timing_id)
+        sidebar_page.expand_timing()
 
         # Look for a content element that should appear
         content_elements = [
             "sidebar_timing_modeToggle",
-            "sidebar_timing_intervalField",
             "sidebar_timing_intervalField",
         ]
         found = False
@@ -45,42 +43,38 @@ class TestAccordion:
 
         assert found, "No timing section content became visible after expanding"
 
-    def test_timing_section_collapse_hides_content(self, editor: OscilTestClient):
+    def test_timing_section_collapse_hides_content(
+        self, editor: OscilTestClient, sidebar_page: SidebarPage
+    ):
         """
         Bug caught: accordion not collapsing on second click.
         """
-        timing_id = "sidebar_timing"
-        if not editor.element_exists(timing_id):
-            pytest.skip("Timing section not registered")
-
         # Expand
-        editor.click(timing_id)
+        sidebar_page.expand_timing()
         content_id = None
         for eid in ["sidebar_timing_modeToggle", "sidebar_timing_intervalField"]:
             if editor.element_exists(eid):
                 content_id = eid
                 break
         if content_id is None:
-            pytest.skip("No timing content element found")
+            pytest.xfail("No timing content element found after expand")
 
         try:
             editor.wait_for_visible(content_id, timeout_s=2.0)
         except TimeoutError:
-            pytest.skip("Content did not become visible on expand")
+            pytest.xfail("Content did not become visible on expand")
 
         # Collapse
-        editor.click(timing_id)
+        editor.click("sidebar_timing")
         editor.wait_for_not_visible(content_id, timeout_s=2.0)
 
-    def test_options_section_expand(self, editor: OscilTestClient):
+    def test_options_section_expand(
+        self, editor: OscilTestClient, sidebar_page: SidebarPage
+    ):
         """
         Bug caught: options section not wired to accordion.
         """
-        options_id = "sidebar_options"
-        if not editor.element_exists(options_id):
-            pytest.skip("Options section not registered")
-
-        editor.click(options_id)
+        sidebar_page.expand_options()
 
         content_ids = [
             "sidebar_options_themeDropdown",
@@ -103,20 +97,19 @@ class TestOscillatorListSelection:
     """Selecting oscillators in the sidebar list."""
 
     def test_clicking_item_expands_it(
-        self, editor: OscilTestClient, two_oscillators
+        self, editor: OscilTestClient, two_oscillators, sidebar_page: SidebarPage
     ):
         """
         Bug caught: click handler not setting selection state, or expanded
         height calculation wrong.
         """
-        item0 = "sidebar_oscillators_item_0"
+        item0 = sidebar_page.item_id(0)
         el_before = editor.get_element(item0)
-        if el_before is None:
-            pytest.skip("List item 0 not registered")
+        assert el_before is not None, "List item 0 must be registered"
 
         height_before = el_before.height
 
-        editor.click(item0)
+        sidebar_page.select_oscillator(0)
         # Wait a moment for expansion animation
         try:
             editor.wait_until(
@@ -125,29 +118,22 @@ class TestOscillatorListSelection:
                 desc="item expansion",
             )
         except TimeoutError:
-            # Expansion may not change height if already selected
-            pass
+            pass  # Expansion may not change height if already selected
 
         el_after = editor.get_element(item0)
         assert el_after is not None
 
     def test_selecting_different_item_switches_expansion(
-        self, editor: OscilTestClient, two_oscillators
+        self, editor: OscilTestClient, two_oscillators, sidebar_page: SidebarPage
     ):
         """
         Bug caught: multi-select not deselecting previous item.
         """
-        item0 = "sidebar_oscillators_item_0"
-        item1 = "sidebar_oscillators_item_1"
-
-        if not (editor.element_exists(item0) and editor.element_exists(item1)):
-            pytest.skip("Both list items not registered")
-
-        editor.click(item0)
-        editor.click(item1)
+        sidebar_page.select_oscillator(0)
+        sidebar_page.select_oscillator(1)
 
         # Item 1 should now be the selected/expanded one
-        el1 = editor.get_element(item1)
+        el1 = editor.get_element(sidebar_page.item_id(1))
         assert el1 is not None and el1.visible
 
 
@@ -168,12 +154,20 @@ class TestListItemButtons:
         Bug caught: button not rendered, or has zero width/height due to
         layout calculation error.
         """
-        if not editor.element_exists(btn_id):
-            pytest.skip(f"{label} button not registered")
+        # Delete and Settings buttons are core -- they MUST exist.
+        # Visibility button is also expected but may have a variant name.
+        if btn_id.endswith("_vis_btn") and not editor.element_exists(btn_id):
+            alt_id = btn_id.replace("_vis_btn", "_vis_toggle")
+            if editor.element_exists(alt_id):
+                btn_id = alt_id
+            else:
+                pytest.xfail(f"{label} button not registered (tried _vis_btn and _vis_toggle)")
+        elif not editor.element_exists(btn_id):
+            assert False, f"{label} button '{btn_id}' must be registered"
 
         el = editor.get_element(btn_id)
         assert el is not None
-        assert el.visible, f"{label} button should be visible"
+        assert el.visible, f"{label} button must be visible"
         assert el.width > 0, f"{label} button has zero width"
         assert el.height > 0, f"{label} button has zero height"
 
@@ -188,11 +182,10 @@ class TestSidebarResize:
         """
         handle_id = "sidebar_resizeHandle"
         if not editor.element_exists(handle_id):
-            pytest.skip("Resize handle not registered")
+            pytest.xfail("Resize handle not registered")
 
         sidebar_before = editor.get_element("sidebar")
-        if sidebar_before is None:
-            pytest.skip("Sidebar element not registered")
+        assert sidebar_before is not None, "Sidebar element must be registered"
         width_before = sidebar_before.width
 
         # Drag left by 40px (sidebar is on the right, so left = wider)
@@ -206,7 +199,7 @@ class TestSidebarResize:
                 desc="sidebar width change",
             )
         except TimeoutError:
-            pytest.skip("Sidebar width did not change — resize may not be supported")
+            pytest.xfail("Sidebar width did not change -- resize may not be supported")
 
         sidebar_after = editor.get_element("sidebar")
         assert sidebar_after.width != width_before, (

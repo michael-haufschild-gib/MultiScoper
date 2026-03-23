@@ -69,11 +69,16 @@ class TestServerSideVerification:
             f"({el.width}x{el.height})"
         )
 
-    def test_verify_color_endpoint_does_not_crash(
+    def test_verify_color_endpoint_returns_bool(
         self, editor: OscilTestClient, source_id: str
     ):
         """
-        Bug caught: color verification endpoint crashing on valid element IDs.
+        Bug caught: color verification endpoint crashing on valid element
+        IDs, or returning non-boolean types that break assertion chains.
+
+        Note: we cannot assert the color matches because waveform rendering
+        depends on the pane element ID, which may differ from "waveformDisplay".
+        The test verifies the API contract (returns bool, does not crash).
         """
         osc_id = editor.add_oscillator(
             source_id, name="Color Verify", colour="#00FF00"
@@ -81,37 +86,45 @@ class TestServerSideVerification:
         assert osc_id is not None
         editor.wait_for_oscillator_count(1, timeout_s=3.0)
 
-        # Start transport so waveform renders
         editor.transport_play()
         editor.wait_until(
             lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
         )
         editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
 
-        # Wait for waveform data
         try:
             editor.wait_for_waveform_data(pane_index=0, timeout_s=3.0)
         except TimeoutError:
             editor.transport_stop()
             pytest.skip("Waveform data not available")
 
-        # The color check validates the API works without crashing.
-        # The actual color match depends on element IDs matching the waveform display.
-        result = editor.verify_element_color(
-            "waveformDisplay", "#00FF00", tolerance=50
+        # Test with sidebar (always exists) — verifies the API path works
+        sidebar_result = editor.verify_element_color(
+            "sidebar", "#000000", tolerance=100
         )
-        # Result may be True or False depending on element ID mapping —
-        # what matters is no crash occurred.
-        assert isinstance(result, bool), "verify_element_color should return bool"
+        assert isinstance(sidebar_result, bool), (
+            "verify_element_color should return bool for existing element"
+        )
+
+        # Test with nonexistent element — should return False, not crash
+        bad_result = editor.verify_element_color(
+            "nonexistent_element_xyz", "#FF0000", tolerance=10
+        )
+        assert bad_result is False, (
+            "verify_element_color should return False for nonexistent element"
+        )
 
         editor.transport_stop()
 
-    def test_analyze_waveform_returns_data(
+    def test_analyze_waveform_api_contract(
         self, editor: OscilTestClient, source_id: str
     ):
         """
         Bug caught: waveform analysis endpoint returning empty or malformed
         data, preventing automated visual regression tests.
+
+        Verifies the API returns a dict with expected fields when called
+        on a valid element, and returns None gracefully on invalid elements.
         """
         osc_id = editor.add_oscillator(source_id, name="Analyze Test")
         assert osc_id is not None
@@ -128,9 +141,16 @@ class TestServerSideVerification:
             editor.transport_stop()
             pytest.skip("Waveform data not available")
 
-        # Analyze via pixel analysis (may fail if element ID doesn't match)
-        analysis = editor.analyze_waveform("waveformDisplay")
-        # Analysis may return None if element not found — the API shouldn't crash.
+        # Analyze with a known element (pane_body always exists with an oscillator)
+        analysis = editor.analyze_waveform("pane_body")
+        if analysis is not None:
+            assert isinstance(analysis, dict), "Analysis should return a dict"
+
+        # Nonexistent element should return None without crashing
+        bad_analysis = editor.analyze_waveform("nonexistent_waveform_id")
+        assert bad_analysis is None or isinstance(bad_analysis, dict), (
+            "Analysis of nonexistent element should return None or empty dict"
+        )
 
         editor.transport_stop()
 

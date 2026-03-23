@@ -1,0 +1,149 @@
+# Stress test scenarios — push the system to its limits
+# These catch race conditions, resource leaks, and boundary failures
+
+# ---- High Oscillator Count ----
+
+- name: "10 oscillators all render simultaneously"
+  setup:
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+  steps:
+    - action: {add_oscillator: {name: "Stress 1", color: "#FF0000"}}
+    - action: {add_oscillator: {name: "Stress 2", color: "#00FF00"}}
+    - action: {add_oscillator: {name: "Stress 3", color: "#0000FF"}}
+    - action: {add_oscillator: {name: "Stress 4", color: "#FFFF00"}}
+    - action: {add_oscillator: {name: "Stress 5", color: "#FF00FF"}}
+    - action: {add_oscillator: {name: "Stress 6", color: "#00FFFF"}}
+    - action: {add_oscillator: {name: "Stress 7", color: "#FF8800"}}
+    - action: {add_oscillator: {name: "Stress 8", color: "#8800FF"}}
+    - action: {add_oscillator: {name: "Stress 9", color: "#00FF88"}}
+    - action: {add_oscillator: {name: "Stress 10", color: "#FF0088"}}
+    - wait: 1000ms
+    - action: {wait_for_waveform: true}
+    - check:
+        - {check: oscillator_count, expected: 10}
+        - {check: transport_playing}
+        - {check: all_waveforms_have_data}
+
+# ---- Rapid BPM Changes ----
+
+- name: "20 rapid BPM changes during playback — no crash"
+  setup:
+    oscillators:
+      - {source: auto, name: "BPM Stress"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - action: {set_bpm: 60.0}
+    - action: {set_bpm: 80.0}
+    - action: {set_bpm: 100.0}
+    - action: {set_bpm: 120.0}
+    - action: {set_bpm: 140.0}
+    - action: {set_bpm: 160.0}
+    - action: {set_bpm: 180.0}
+    - action: {set_bpm: 200.0}
+    - action: {set_bpm: 60.0}
+    - action: {set_bpm: 300.0}
+    - action: {set_bpm: 20.0}
+    - action: {set_bpm: 120.0}
+    - wait: 300ms
+    - check:
+        - {check: transport_playing}
+        - {check: oscillator_count, expected: 1}
+        - {check: snapshot_field, path: "transport.bpm", op: ">=", value: 119}
+
+# ---- Save/Load Under Pressure ----
+
+- name: "Save state with 5 oscillators — load restores all"
+  setup:
+    oscillators:
+      - {source: auto, name: "SaveStress 1", color: "#FF0000", mode: FullStereo}
+      - {source: auto, name: "SaveStress 2", color: "#00FF00", mode: Mono}
+      - {source: auto, name: "SaveStress 3", color: "#0000FF", mode: Mid}
+      - {source: auto, name: "SaveStress 4", color: "#FFFF00", mode: Side}
+      - {source: auto, name: "SaveStress 5", color: "#FF00FF", mode: Left}
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 5}
+    - action: {save_state: "/tmp/oscil_stress_5osc.xml"}
+    - action: {reset_state: true}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+    - action: {load_state: "/tmp/oscil_stress_5osc.xml"}
+    - wait: 1000ms
+    - check:
+        - {check: oscillator_count, expected: 5}
+        - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "FullStereo"}
+        - {check: snapshot_field, path: "oscillators[1].mode", op: "==", value: "Mono"}
+        - {check: snapshot_field, path: "oscillators[2].mode", op: "==", value: "Mid"}
+        - {check: snapshot_field, path: "oscillators[3].mode", op: "==", value: "Side"}
+        - {check: snapshot_field, path: "oscillators[4].mode", op: "==", value: "Left"}
+
+# ---- Multiple Editor Open/Close Cycles ----
+
+- name: "10 editor open/close cycles — last open works"
+  setup:
+    oscillators:
+      - {source: auto, name: "EditorCycle"}
+  steps:
+    - action: {close_editor: true}
+    - action: {open_editor: true}
+    - action: {close_editor: true}
+    - action: {open_editor: true}
+    - action: {close_editor: true}
+    - action: {open_editor: true}
+    - action: {close_editor: true}
+    - action: {open_editor: true}
+    - action: {close_editor: true}
+    - action: {open_editor: true}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "EditorCycle"}
+
+# ---- Mixed Operations Stress ----
+
+- name: "Interleaved add/delete/update/bpm during playback"
+  setup:
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+  steps:
+    - action: {add_oscillator: {name: "Mix 1"}}
+    - action: {set_bpm: 80.0}
+    - action: {add_oscillator: {name: "Mix 2"}}
+    - action: {add_oscillator: {name: "Mix 3"}}
+    - action: {set_bpm: 140.0}
+    - wait: 300ms
+    - action: {update_oscillator: {index: 0, visible: false}}
+    - action: {delete_oscillator: {index: 1}}
+    - action: {set_bpm: 120.0}
+    - action: {add_oscillator: {name: "Mix 4"}}
+    - wait: 500ms
+    - check:
+        - {check: transport_playing}
+        - {check: oscillator_count, expected: 3}
+        - {check: snapshot_field, path: "transport.bpm", op: ">=", value: 119}
+
+# ---- Waveform Switching Under Load ----
+
+- name: "Rapid waveform type switching with multiple oscillators"
+  setup:
+    oscillators:
+      - {source: auto, name: "WaveStress 1"}
+      - {source: auto, name: "WaveStress 2"}
+      - {source: auto, name: "WaveStress 3"}
+    transport: playing
+  steps:
+    - action: {set_track_audio: {waveform: sine, frequency: 440, amplitude: 0.8}}
+    - action: {set_track_audio: {waveform: square, frequency: 880, amplitude: 0.6}}
+    - action: {set_track_audio: {waveform: triangle, frequency: 220, amplitude: 0.9}}
+    - action: {set_track_audio: {waveform: saw, frequency: 440, amplitude: 0.7}}
+    - action: {set_track_audio: {waveform: sine, frequency: 1000, amplitude: 0.5}}
+    - wait: 500ms
+    - action: {wait_for_waveform: true}
+    - check:
+        - {check: oscillator_count, expected: 3}
+        - {check: transport_playing}
+        - {check: all_waveforms_have_data}

@@ -241,6 +241,83 @@ class TestWaveformRendering:
 
         editor.transport_stop()
 
+    def test_waveform_data_recovers_after_position_reset(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: resetting transport position to 0 while audio is
+        playing causes the capture buffer to read stale/misaligned data,
+        producing a momentary glitch in the waveform display.
+        """
+        osc_id = editor.add_oscillator(source_id, name="PosReset WF")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+
+        # Wait for waveform data to flow
+        wfs_before = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        assert wfs_before[0].get("peakLevel", 0) > 0.05, (
+            "Should have signal before position reset"
+        )
+
+        # Reset position to 0
+        editor.set_position(0)
+
+        # Waveform data should continue flowing after reset
+        wfs_after = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        assert wfs_after[0].get("hasWaveformData"), (
+            "Waveform should have data after position reset"
+        )
+        assert wfs_after[0].get("peakLevel", 0) > 0.05, (
+            "Peak level should recover after position reset"
+        )
+
+        editor.transport_stop()
+
+    def test_frequency_change_reflected_in_waveform(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: changing audio frequency does not update the capture
+        buffer fast enough, causing the waveform display to show the old
+        frequency pattern indefinitely.
+        """
+        osc_id = editor.add_oscillator(source_id, name="FreqChange")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+
+        # Start with 440Hz
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+        editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+
+        # Switch to 880Hz — waveform data should still be valid
+        editor.set_track_audio(0, waveform="sine", frequency=880.0, amplitude=0.8)
+
+        # Verify track info updated
+        editor.wait_until(
+            lambda: (info := editor.get_track_info(0))
+            and abs(info.get("frequency", 0) - 880.0) < 1.0,
+            timeout_s=2.0,
+            desc="frequency to update to 880Hz",
+        )
+
+        # Waveform data should still be present
+        wfs = editor.get_waveform_for_pane(0)
+        if wfs and wfs[0].get("hasWaveformData"):
+            assert wfs[0].get("peakLevel", 0) > 0.05, (
+                "Peak should be positive after frequency change"
+            )
+
+        editor.transport_stop()
+
 
 class TestOscillatorProperties:
     """Verify oscillator property values via state API."""
@@ -373,3 +450,115 @@ class TestOscillatorProperties:
         remaining_ids = [o["id"] for o in remaining]
         assert id1 not in remaining_ids, "Deleted oscillator should be gone"
         assert id2 in remaining_ids, "Other oscillator should remain"
+
+
+class TestWaveformFrequencyResponse:
+    """Verify waveform display responds to audio parameter changes."""
+
+    def test_amplitude_change_affects_peak_level(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: peak level computation using stale audio data after
+        amplitude parameter change, showing old peak value indefinitely.
+        """
+        osc_id = editor.add_oscillator(source_id, name="Amp Response")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+
+        # High amplitude
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=1.0)
+        wfs_high = editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        peak_high = wfs_high[0].get("peakLevel", 0.0)
+        assert peak_high > 0.3, f"High amplitude peak should be > 0.3, got {peak_high}"
+
+        # Low amplitude
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.1)
+        # Wait for peak to drop
+        editor.wait_until(
+            lambda: (wfs := editor.get_waveform_for_pane(0))
+            and wfs and wfs[0].get("peakLevel", 1.0) < peak_high * 0.5,
+            timeout_s=5.0,
+            desc="peak level to decrease after amplitude reduction",
+        )
+        wfs_low = editor.get_waveform_for_pane(0)
+        peak_low = wfs_low[0].get("peakLevel", 1.0)
+        assert peak_low < peak_high, (
+            f"Lower amplitude should produce lower peak: "
+            f"high={peak_high:.4f}, low={peak_low:.4f}"
+        )
+
+        editor.transport_stop()
+
+    def test_zero_amplitude_produces_near_silent_peak(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: amplitude=0 not actually producing silence in the
+        audio generator (e.g., DC offset or noise floor not handled).
+        """
+        osc_id = editor.add_oscillator(source_id, name="Zero Amp")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.0)
+
+        # Wait for peak to settle near zero
+        def peak_near_zero():
+            wfs = editor.get_waveform_for_pane(0)
+            if not wfs:
+                return False
+            return wfs[0].get("peakLevel", 1.0) < 0.05
+
+        editor.wait_until(
+            peak_near_zero,
+            timeout_s=5.0,
+            desc="peak to drop near zero with zero amplitude",
+        )
+
+        editor.transport_stop()
+
+    def test_waveform_type_switch_during_playback(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: switching waveform type while playing causes a torn
+        read on the waveform enum in the audio callback, producing
+        corrupted output.
+        """
+        osc_id = editor.add_oscillator(source_id, name="Type Switch")
+        assert osc_id is not None
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+
+        waveforms = ["sine", "square", "triangle", "saw"]
+        for wf in waveforms:
+            editor.set_track_audio(0, waveform=wf, frequency=440.0, amplitude=0.8)
+            # Wait briefly for the new waveform to take effect
+            editor.wait_until(
+                lambda: (info := editor.get_track_info(0))
+                and info.get("waveform", "").lower() == wf,
+                timeout_s=2.0,
+                desc=f"waveform to become {wf}",
+            )
+
+            # Verify waveform data still flowing
+            wfs = editor.get_waveform_for_pane(0)
+            if wfs and wfs[0].get("hasWaveformData"):
+                peak = wfs[0].get("peakLevel", 0)
+                assert peak > 0.01, (
+                    f"Peak should be positive with {wf} waveform, got {peak}"
+                )
+
+        editor.transport_stop()

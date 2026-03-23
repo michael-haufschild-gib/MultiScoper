@@ -270,6 +270,31 @@ def execute_setup(client: OscilTestClient, setup: dict):
             client.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
         except TimeoutError:
             pass  # Snapshot will show the state; assertion will catch the failure
+    elif wait_for == "settle":
+        # Condition-based wait: poll until oscillator count matches setup
+        # and transport state matches setup. Avoids arbitrary time.sleep.
+        expected_osc = len(setup.get("oscillators", []))
+        if expected_osc > 0:
+            try:
+                client.wait_for_oscillator_count(expected_osc, timeout_s=5.0)
+            except TimeoutError:
+                pass
+        if setup.get("transport") == "playing":
+            try:
+                client.wait_until(lambda: client.is_playing(), timeout_s=3.0, desc="transport")
+            except TimeoutError:
+                pass
+    elif wait_for == "silence":
+        # Wait for peak to drop below noise floor
+        def peak_silent():
+            wfs = client.get_waveform_for_pane(0)
+            if not wfs:
+                return False
+            return wfs[0].get("peakLevel", 1.0) < 0.05
+        try:
+            client.wait_until(peak_silent, timeout_s=5.0, desc="silence")
+        except TimeoutError:
+            pass
     elif wait_for and wait_for.endswith("ms"):
         time.sleep(int(wait_for[:-2]) / 1000.0)
 
@@ -296,10 +321,15 @@ def execute_action(client: OscilTestClient, action: dict):
         idx = params.get("index", 0)
         oscs = client.get_oscillators()
         if idx < len(oscs):
-            client.delete_oscillator(oscs[idx]["id"])
-            # Brief wait for async removal — don't wait_for_count as
-            # the editor may auto-recreate if state becomes empty
-            time.sleep(0.2)
+            deleted_id = oscs[idx]["id"]
+            client.delete_oscillator(deleted_id)
+            # Wait for the delete to propagate — the state API confirms
+            # removal before the async UI refresh runs.
+            client.wait_until(
+                lambda: client.get_oscillator_by_id(deleted_id) is None,
+                timeout_s=2.0,
+                desc="oscillator deletion to propagate",
+            )
 
     elif "add_oscillator" in action:
         params = action["add_oscillator"]
@@ -356,7 +386,11 @@ def execute_action(client: OscilTestClient, action: dict):
 
     elif "reset_state" in action:
         client.reset_state()
-        time.sleep(0.2)
+        client.wait_until(
+            lambda: len(client.get_oscillators()) == 0,
+            timeout_s=3.0,
+            desc="state reset to complete",
+        )
 
     elif "save_state" in action:
         client.save_state(action["save_state"])
@@ -366,7 +400,7 @@ def execute_action(client: OscilTestClient, action: dict):
 
     elif "add_pane" in action:
         params = action["add_pane"]
-        client._post_json("/state/pane/add", {"name": params.get("name", "New Pane")})
+        client.add_pane(params.get("name", "New Pane"))
 
     elif "move_oscillator" in action:
         params = action["move_oscillator"]
@@ -375,9 +409,7 @@ def execute_action(client: OscilTestClient, action: dict):
         osc_idx = params.get("oscillator", 0)
         pane_idx = params.get("to_pane", 0)
         if osc_idx < len(oscs) and pane_idx < len(panes):
-            client._post_json("/state/oscillator/move", {
-                "id": oscs[osc_idx]["id"], "paneId": panes[pane_idx]["id"],
-            })
+            client.move_oscillator(oscs[osc_idx]["id"], panes[pane_idx]["id"])
 
     elif "wait_for_waveform" in action:
         try:

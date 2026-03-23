@@ -1,0 +1,118 @@
+# UI control interaction scenarios
+# Tests that specific UI controls respond correctly to user input
+
+# ---- Add Oscillator Dialog ----
+
+- name: "Add dialog opens when add button clicked"
+  setup:
+    open_editor: true
+  steps:
+    - action: {click: "sidebar_addOscillator"}
+    - wait: 500ms
+    - check:
+        - {check: snapshot_field, path: "ui.elementIds", op: "contains", value: "addOscillatorDialog"}
+
+- name: "Add dialog cancel does not create oscillator"
+  setup:
+    open_editor: true
+  steps:
+    - action: {click: "sidebar_addOscillator"}
+    - wait: 300ms
+    - action: {click: "addOscillatorDialog_cancelBtn"}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+
+# ---- Sidebar Accordion ----
+
+- name: "Timing section expands on click"
+  setup:
+    open_editor: true
+  steps:
+    - action: {click: "sidebar_timing"}
+    - wait: 300ms
+    - check:
+        - {check: snapshot_field, path: "ui.elementIds", op: "contains", value: "sidebar_timing_modeToggle"}
+
+- name: "Options section expands on click"
+  setup:
+    open_editor: true
+  steps:
+    - action: {click: "sidebar_options"}
+    - wait: 300ms
+    - check:
+        - {check: snapshot_field, path: "ui.elementIds", op: "contains", value: "sidebar_options_themeDropdown"}
+
+# ---- Oscillator List Selection ----
+
+- name: "Clicking oscillator selects it"
+  setup:
+    oscillators:
+      - {source: auto, name: "Select Me 1"}
+      - {source: auto, name: "Select Me 2"}
+  steps:
+    - action: {click: "sidebar_oscillators_item_0"}
+    - wait: 200ms
+    - action: {click: "sidebar_oscillators_item_1"}
+    - wait: 200ms
+    - check:
+        - {check: oscillator_count, expected: 2}
+
+# ---- Config Popup ----
+
+- name: "Settings button opens config popup"
+  setup:
+    oscillators:
+      - {source: auto, name: "Config Test"}
+  steps:
+    - action: {click: "sidebar_oscillators_item_0_settings"}
+    - wait: 500ms
+    - check:
+        - {check: snapshot_field, path: "ui.elementIds", op: "contains", value: "configPopup"}
+
+# ---- Timing Controls ----
+
+- name: "Time interval field accepts new value"
+  setup:
+    oscillators:
+      - {source: auto, name: "Interval Test"}
+  steps:
+    - action: {click: "sidebar_timing"}
+    - wait: 200ms
+    - action: {click: "sidebar_timing_modeToggle_time"}
+    - wait: 200ms
+    - action: {set_slider: {element: "sidebar_timing_intervalField", value: 100.0}}
+    - wait: 200ms
+    - check:
+        - {check: display_samples_positive}
+
+- name: "Melodic mode switch shows different controls"
+  setup:
+    oscillators:
+      - {source: auto, name: "Melodic Switch"}
+  steps:
+    - action: {click: "sidebar_timing"}
+    - wait: 200ms
+    - action: {click: "sidebar_timing_modeToggle_melodic"}
+    - wait: 300ms
+    - check:
+        - {check: display_samples_positive}
+
+# ---- Transport Controls ----
+
+- name: "Transport play/stop via API during oscillator operations"
+  setup:
+    oscillators:
+      - {source: auto, name: "Transport API"}
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+  steps:
+    - action: {transport_play: true}
+    - action: {wait_for_waveform: true}
+    - check:
+        - {check: transport_playing}
+        - {check: waveform_has_data, oscillator: 0}
+    - action: {transport_stop: true}
+    - wait: 200ms
+    - check:
+        - {check: transport_stopped}
+        - {check: oscillator_count, expected: 1}

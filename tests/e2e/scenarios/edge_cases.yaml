@@ -1,0 +1,208 @@
+# Edge case scenarios that catch subtle state corruption bugs
+# These test conditions that are hard to reproduce manually
+
+# ---- Color and Property Persistence ----
+
+- name: "Oscillator colour survives save/load roundtrip"
+  setup:
+    oscillators:
+      - {source: auto, name: "Red Osc", color: "#FF0000", mode: FullStereo}
+      - {source: auto, name: "Blue Osc", color: "#0000FF", mode: Mono}
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: snapshot_field, path: "oscillators[0].colour", op: "!=", value: ""}
+        - {check: snapshot_field, path: "oscillators[1].colour", op: "!=", value: ""}
+    - action: {save_state: "/tmp/oscil_color_roundtrip.xml"}
+    - action: {reset_state: true}
+    - wait: 300ms
+    - action: {load_state: "/tmp/oscil_color_roundtrip.xml"}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Red Osc"}
+        - {check: snapshot_field, path: "oscillators[1].name", op: "==", value: "Blue Osc"}
+
+- name: "Opacity and lineWidth survive save/load"
+  setup:
+    oscillators:
+      - {source: auto, name: "Props Osc"}
+  steps:
+    - action: {update_oscillator: {index: 0, opacity: 0.3, lineWidth: 5.0}}
+    - wait: 200ms
+    - check:
+        - {check: snapshot_field, path: "oscillators[0].opacity", op: "==", value: 0.3}
+        - {check: snapshot_field, path: "oscillators[0].lineWidth", op: "==", value: 5.0}
+    - action: {save_state: "/tmp/oscil_props_roundtrip.xml"}
+    - action: {reset_state: true}
+    - wait: 300ms
+    - action: {load_state: "/tmp/oscil_props_roundtrip.xml"}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: snapshot_field, path: "oscillators[0].opacity", op: "==", value: 0.3}
+        - {check: snapshot_field, path: "oscillators[0].lineWidth", op: "==", value: 5.0}
+
+# ---- Visibility Edge Cases ----
+
+- name: "Hide all oscillators — system stays responsive"
+  setup:
+    oscillators:
+      - {source: auto, name: "Hide 1"}
+      - {source: auto, name: "Hide 2"}
+      - {source: auto, name: "Hide 3"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - action: {update_oscillator: {index: 0, visible: false}}
+    - action: {update_oscillator: {index: 1, visible: false}}
+    - action: {update_oscillator: {index: 2, visible: false}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_hidden, oscillator: 0}
+        - {check: oscillator_hidden, oscillator: 1}
+        - {check: oscillator_hidden, oscillator: 2}
+        - {check: transport_playing}
+
+- name: "Show all after hide — waveform data recovers"
+  setup:
+    oscillators:
+      - {source: auto, name: "ShowAll Osc"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: waveform_has_data, oscillator: 0}
+    - action: {update_oscillator: {index: 0, visible: false}}
+      wait_for: {check: oscillator_hidden, oscillator: 0}
+    - action: {update_oscillator: {index: 0, visible: true}}
+      wait_for: {check: oscillator_visible, oscillator: 0}
+    - action: {wait_for_waveform: true}
+    - check:
+        - {check: waveform_has_data, oscillator: 0}
+
+# ---- Delete During Playback ----
+
+- name: "Delete oscillator during playback — remaining keeps rendering"
+  setup:
+    oscillators:
+      - {source: auto, name: "Del During Play 1"}
+      - {source: auto, name: "Del During Play 2"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 2}
+        - {check: all_waveforms_have_data}
+    - action: {delete_oscillator: {index: 0}}
+    - wait: 300ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: transport_playing}
+        - {check: waveform_has_data, oscillator: 0}
+
+- name: "Delete all oscillators during playback — no crash"
+  setup:
+    oscillators:
+      - {source: auto, name: "DelAll 1"}
+      - {source: auto, name: "DelAll 2"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - action: {delete_oscillator: {index: 0}}
+    - action: {delete_oscillator: {index: 0}}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 0}
+        - {check: transport_playing}
+
+# ---- Mode Change During Playback ----
+
+- name: "Processing mode cycle during playback — state consistent"
+  setup:
+    oscillators:
+      - {source: auto, name: "Mode Cycle"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - action: {update_oscillator: {index: 0, mode: "Mono"}}
+      wait_for: {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
+    - check:
+        - {check: transport_playing}
+    - action: {update_oscillator: {index: 0, mode: "Side"}}
+      wait_for: {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Side"}
+    - check:
+        - {check: transport_playing}
+        - {check: waveform_has_data, oscillator: 0}
+    - action: {update_oscillator: {index: 0, mode: "FullStereo"}}
+      wait_for: {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "FullStereo"}
+
+# ---- Editor Lifecycle During Playback ----
+
+- name: "Close editor during playback — reopen with state intact"
+  setup:
+    oscillators:
+      - {source: auto, name: "Close During Play"}
+    transport: playing
+    audio: {waveform: sine, frequency: 440, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: transport_playing}
+    - action: {close_editor: true}
+    - wait: 500ms
+    - action: {open_editor: true}
+    - wait: 500ms
+    - check:
+        - {check: oscillator_count, expected: 1}
+        - {check: snapshot_field, path: "oscillators[0].name", op: "==", value: "Close During Play"}
+
+# ---- Waveform Type Changes ----
+
+- name: "Cycle all waveform types — all produce waveform data"
+  setup:
+    oscillators:
+      - {source: auto, name: "Wave Cycle"}
+    transport: playing
+  steps:
+    - action: {set_track_audio: {waveform: sine, frequency: 440, amplitude: 0.8}}
+    - action: {wait_for_waveform: true}
+    - check:
+        - {check: peak_above, oscillator: 0, threshold: 0.1}
+    - action: {set_track_audio: {waveform: square, frequency: 440, amplitude: 0.8}}
+    - wait: 500ms
+    - check:
+        - {check: peak_above, oscillator: 0, threshold: 0.1}
+    - action: {set_track_audio: {waveform: triangle, frequency: 440, amplitude: 0.8}}
+    - wait: 500ms
+    - check:
+        - {check: peak_above, oscillator: 0, threshold: 0.05}
+    - action: {set_track_audio: {waveform: saw, frequency: 440, amplitude: 0.8}}
+    - wait: 500ms
+    - check:
+        - {check: peak_above, oscillator: 0, threshold: 0.1}
+
+# ---- Frequency Changes ----
+
+- name: "Frequency change during playback updates waveform"
+  setup:
+    oscillators:
+      - {source: auto, name: "Freq Change"}
+    transport: playing
+    audio: {waveform: sine, frequency: 220, amplitude: 0.8}
+    wait_for: waveform_data
+  steps:
+    - check:
+        - {check: waveform_has_data, oscillator: 0}
+    - action: {set_track_audio: {waveform: sine, frequency: 880, amplitude: 0.8}}
+    - wait: 500ms
+    - check:
+        - {check: waveform_has_data, oscillator: 0}
+        - {check: peak_above, oscillator: 0, threshold: 0.1}
+        - {check: snapshot_field, path: "audioGenerators[0].frequency", op: "==", value: 880.0}

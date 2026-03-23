@@ -15,6 +15,7 @@ What bugs these tests catch:
 
 import pytest
 from oscil_test_utils import OscilTestClient
+from page_objects import AddOscillatorDialog
 
 
 # ── Add Oscillator ──────────────────────────────────────────────────────────
@@ -28,25 +29,20 @@ class TestAddOscillator:
         Bug caught: dialog submit handler not wired, or state not updated.
         """
         initial_count = len(editor.get_oscillators())
+        dialog = AddOscillatorDialog(editor)
 
         # Open the add dialog
         editor.click("sidebar_addOscillator")
-        editor.wait_for_visible("addOscillatorDialog", timeout_s=3.0)
+        dialog.wait_for_open()
 
         # Select source
-        dropdown_id = "addOscillatorDialog_sourceDropdown"
-        if editor.element_exists(dropdown_id):
-            editor.select_dropdown_item(dropdown_id, source_id)
+        dialog.select_source(source_id)
 
         # Enter name
-        name_field = "addOscillatorDialog_nameField"
-        if editor.element_exists(name_field):
-            editor.clear_text(name_field)
-            editor.type_text(name_field, "E2E Test Osc")
+        dialog.set_name("E2E Test Osc")
 
         # Confirm
-        editor.click("addOscillatorDialog_okBtn")
-        editor.wait_for_not_visible("addOscillatorDialog", timeout_s=3.0)
+        dialog.confirm()
 
         # Verify oscillator was created
         oscs = editor.wait_for_oscillator_count(initial_count + 1, timeout_s=3.0)
@@ -61,21 +57,12 @@ class TestAddOscillator:
         leaking between open/close cycles.
         """
         initial_count = len(editor.get_oscillators())
+        dialog = AddOscillatorDialog(editor)
 
         editor.click("sidebar_addOscillator")
-        editor.wait_for_visible("addOscillatorDialog", timeout_s=3.0)
+        dialog.wait_for_open()
 
-        # Try cancel button (fall back to close button)
-        cancel_id = "addOscillatorDialog_cancelBtn"
-        close_id = "addOscillatorDialog_closeBtn"
-        if editor.element_exists(cancel_id):
-            editor.click(cancel_id)
-        elif editor.element_exists(close_id):
-            editor.click(close_id)
-        else:
-            pytest.skip("No cancel/close button found on dialog")
-
-        editor.wait_for_not_visible("addOscillatorDialog", timeout_s=3.0)
+        dialog.cancel()
 
         final_count = len(editor.get_oscillators())
         assert final_count == initial_count, (
@@ -88,6 +75,87 @@ class TestAddOscillator:
         """
         el = editor.wait_for_visible("sidebar_addOscillator", timeout_s=3.0)
         assert el.width > 0 and el.height > 0, "Add button has zero size"
+
+    def test_dialog_name_field_accepts_text(self, editor: OscilTestClient):
+        """
+        Bug caught: name field in add dialog not wired to text input handler.
+        """
+        dialog = AddOscillatorDialog(editor)
+        editor.click("sidebar_addOscillator")
+        dialog.wait_for_open()
+
+        if not editor.element_exists(AddOscillatorDialog.NAME_FIELD):
+            dialog.cancel()
+            pytest.xfail("Name field not available in add dialog")
+
+        editor.clear_text(AddOscillatorDialog.NAME_FIELD)
+        result = editor.type_text(AddOscillatorDialog.NAME_FIELD, "Custom Name")
+
+        dialog.cancel()
+
+        assert result, "Name field must accept text input"
+
+    def test_dialog_color_picker_exists(self, editor: OscilTestClient):
+        """
+        Bug caught: color picker/swatches not rendered in add dialog.
+        """
+        dialog = AddOscillatorDialog(editor)
+        editor.click("sidebar_addOscillator")
+        dialog.wait_for_open()
+
+        exists = editor.element_exists(AddOscillatorDialog.COLOR_PICKER)
+
+        dialog.cancel()
+
+        if not exists:
+            pytest.xfail("Color picker not available in add dialog")
+
+    def test_dialog_pane_selector_exists(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: pane selector not rendered in add dialog, preventing
+        user from choosing which pane to add the oscillator to.
+        """
+        # Need at least one oscillator so panes exist
+        osc_id = editor.add_oscillator(source_id, name="PaneSelector Prereq")
+        assert osc_id is not None
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        dialog = AddOscillatorDialog(editor)
+        editor.click("sidebar_addOscillator")
+        dialog.wait_for_open()
+
+        exists = editor.element_exists(AddOscillatorDialog.PANE_SELECTOR)
+
+        dialog.cancel()
+
+        if not exists:
+            pytest.xfail("Pane selector not available in add dialog")
+
+    def test_dialog_source_dropdown_has_sources(self, editor: OscilTestClient):
+        """
+        Bug caught: source dropdown in add dialog is empty because
+        SourceManager not wired to the dialog, so user cannot select
+        a source to create an oscillator.
+        """
+        dialog = AddOscillatorDialog(editor)
+        editor.click("sidebar_addOscillator")
+        dialog.wait_for_open()
+
+        dropdown_id = AddOscillatorDialog.SOURCE_DROPDOWN
+        if not editor.element_exists(dropdown_id):
+            dialog.cancel()
+            pytest.xfail("Source dropdown not registered in add dialog")
+
+        el = editor.get_element(dropdown_id)
+        num_items = el.extra.get("numItems", 0) if el else 0
+
+        dialog.cancel()
+
+        assert num_items > 0, (
+            f"Source dropdown must have at least 1 source, got {num_items}"
+        )
 
     def test_add_multiple_oscillators_increments_count(
         self, editor: OscilTestClient, source_id: str
@@ -109,45 +177,33 @@ class TestAddOscillator:
 class TestDeleteOscillator:
     """User flows for deleting oscillators."""
 
-    def test_delete_from_list_item(self, editor: OscilTestClient, oscillator: str):
+    def test_delete_from_list_item(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
         Bug caught: delete button click handler not wired, or state not updated.
         """
         assert len(editor.get_oscillators()) == 1
 
-        delete_btn = "sidebar_oscillators_item_0_delete"
-        if not editor.element_exists(delete_btn):
-            pytest.skip("Delete button not registered in harness")
-
-        editor.click(delete_btn)
-
-        # Handle confirmation dialog if it exists
-        confirm_id = "confirmDeleteDialog_confirm"
-        if editor.element_exists("confirmDeleteDialog"):
-            editor.click(confirm_id)
+        sidebar_page.delete_oscillator(0)
 
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
 
-    def test_delete_all_one_by_one(self, editor: OscilTestClient, three_oscillators):
+    def test_delete_all_one_by_one(
+        self, editor: OscilTestClient, three_oscillators, sidebar_page
+    ):
         """
         Bug caught: index-based deletion corrupting when list shrinks
         (off-by-one after removing item 0 shifts remaining items).
         """
         for remaining in [2, 1, 0]:
-            delete_btn = "sidebar_oscillators_item_0_delete"
-            if not editor.element_exists(delete_btn):
-                pytest.skip("Delete button not registered")
-
-            editor.click(delete_btn)
-            if editor.element_exists("confirmDeleteDialog"):
-                editor.click("confirmDeleteDialog_confirm")
-
+            sidebar_page.delete_oscillator(0)
             editor.wait_for_oscillator_count(remaining, timeout_s=3.0)
 
         assert len(editor.get_oscillators()) == 0
 
     def test_deleted_oscillator_id_gone_from_state(
-        self, editor: OscilTestClient, two_oscillators
+        self, editor: OscilTestClient, two_oscillators, sidebar_page
     ):
         """
         Bug caught: UI removes list item but state still holds the oscillator.
@@ -155,13 +211,7 @@ class TestDeleteOscillator:
         oscs_before = editor.get_oscillators()
         target_id = oscs_before[0]["id"]
 
-        delete_btn = "sidebar_oscillators_item_0_delete"
-        if not editor.element_exists(delete_btn):
-            pytest.skip("Delete button not registered")
-
-        editor.click(delete_btn)
-        if editor.element_exists("confirmDeleteDialog"):
-            editor.click("confirmDeleteDialog_confirm")
+        sidebar_page.delete_oscillator(0)
 
         editor.wait_for_oscillator_count(1, timeout_s=3.0)
 
@@ -177,88 +227,87 @@ class TestDeleteOscillator:
 class TestEditOscillator:
     """User flows for editing oscillator properties via the config popup."""
 
-    def _open_config_popup(self, client: OscilTestClient) -> bool:
-        """Click settings button on item 0 and wait for popup."""
-        settings_btn = "sidebar_oscillators_item_0_settings"
-        if not client.element_exists(settings_btn):
-            return False
-        client.click(settings_btn)
-        try:
-            client.wait_for_visible("configPopup", timeout_s=3.0)
-            return True
-        except TimeoutError:
-            return False
-
-    def test_settings_button_opens_popup(self, editor: OscilTestClient, oscillator: str):
+    def test_settings_button_opens_popup(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
         Bug caught: settings button click not opening the config popup.
         """
-        opened = self._open_config_popup(editor)
-        if not opened:
-            pytest.skip("Config popup not available via settings button")
+        sidebar_page.open_settings(0)
         assert editor.element_visible("configPopup")
 
-    def test_popup_closes_on_close_button(self, editor: OscilTestClient, oscillator: str):
+    def test_popup_closes_on_close_button(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
         Bug caught: close button not dismissing the popup.
         """
-        if not self._open_config_popup(editor):
-            pytest.skip("Config popup not available")
+        from page_objects import ConfigPopup
+        sidebar_page.open_settings(0)
 
-        close_btn = "configPopup_closeBtn"
-        if not editor.element_exists(close_btn):
-            close_btn = "configPopup_footerCloseBtn"
-        if not editor.element_exists(close_btn):
-            pytest.skip("No close button found on config popup")
+        popup = ConfigPopup(editor)
+        popup.close()
+        assert not editor.element_visible("configPopup"), (
+            "Config popup should be dismissed after close"
+        )
 
-        editor.click(close_btn)
-        editor.wait_for_not_visible("configPopup", timeout_s=3.0)
-
-    def test_name_change_persists(self, editor: OscilTestClient, oscillator: str):
+    def test_name_change_persists(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
         Bug caught: name field edit not saved to oscillator state.
         """
-        if not self._open_config_popup(editor):
-            pytest.skip("Config popup not available")
+        from page_objects import ConfigPopup
+        sidebar_page.open_settings(0)
 
-        name_field = "configPopup_nameField"
-        if not editor.element_exists(name_field):
-            pytest.skip("Name field not in config popup")
+        popup = ConfigPopup(editor)
+        if not popup.has_element(ConfigPopup.NAME_FIELD):
+            popup.close()
+            pytest.xfail("Name field not available in config popup")
 
         new_name = "Renamed By E2E"
-        editor.clear_text(name_field)
-        editor.type_text(name_field, new_name)
-
-        # Close popup (changes auto-save)
-        close_btn = "configPopup_closeBtn"
-        if editor.element_exists(close_btn):
-            editor.click(close_btn)
-            editor.wait_for_not_visible("configPopup", timeout_s=2.0)
+        popup.set_name(new_name)
+        popup.close()
 
         # Verify via state API
         osc = editor.get_oscillator_by_id(oscillator)
-        if osc:
-            assert osc["name"] == new_name, (
-                f"Expected name '{new_name}', got '{osc['name']}'"
-            )
+        assert osc is not None
+        assert osc["name"] == new_name, (
+            f"Expected name '{new_name}', got '{osc['name']}'"
+        )
 
-    def test_slider_adjustment(self, editor: OscilTestClient, oscillator: str):
+    def test_slider_adjustment(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
         Bug caught: slider value not propagating to oscillator properties.
         """
-        if not self._open_config_popup(editor):
-            pytest.skip("Config popup not available")
+        from page_objects import ConfigPopup
+        sidebar_page.open_settings(0)
 
-        slider_id = "configPopup_lineWidthSlider"
-        if not editor.element_exists(slider_id):
-            pytest.skip("Line width slider not in config popup")
+        popup = ConfigPopup(editor)
+        if not popup.has_element(ConfigPopup.LINE_WIDTH_SLIDER):
+            popup.close()
+            pytest.xfail("Line width slider not available in config popup")
 
-        editor.set_slider(slider_id, 4.0)
+        popup.set_line_width(4.0)
 
-        # Close and check state
-        close_btn = "configPopup_closeBtn"
-        if editor.element_exists(close_btn):
-            editor.click(close_btn)
+        # Verify the state actually changed
+        editor.wait_until(
+            lambda: (osc := editor.get_oscillator_by_id(oscillator))
+            and osc.get("lineWidth") is not None
+            and abs(osc["lineWidth"] - 4.0) < 0.5,
+            timeout_s=2.0,
+            desc="lineWidth to update to ~4.0",
+        )
+        osc = editor.get_oscillator_by_id(oscillator)
+        assert osc is not None
+        assert "lineWidth" in osc, "Oscillator must have lineWidth after slider set"
+        assert abs(osc["lineWidth"] - 4.0) < 0.5, (
+            f"lineWidth must be ~4.0, got {osc['lineWidth']}"
+        )
+
+        popup.close()
 
 
 # ── Visibility Toggle ───────────────────────────────────────────────────────
@@ -267,59 +316,50 @@ class TestEditOscillator:
 class TestVisibilityToggle:
     """Toggle oscillator visibility from the sidebar list item."""
 
-    def test_toggle_changes_state(self, editor: OscilTestClient, oscillator: str):
+    def test_toggle_changes_state(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
         Bug caught: visibility button click not updating oscillator.visible.
         """
         osc_before = editor.get_oscillator_by_id(oscillator)
-        if osc_before is None:
-            pytest.skip("Cannot query oscillator state")
+        assert osc_before is not None, "Oscillator must be queryable"
         initial_visible = osc_before.get("visible", True)
 
         # Select the oscillator to expose controls
-        editor.click("sidebar_oscillators_item_0")
-
-        vis_btn = "sidebar_oscillators_item_0_vis_btn"
-        vis_toggle = "sidebar_oscillators_item_0_vis_toggle"
-        btn_id = vis_btn if editor.element_exists(vis_btn) else vis_toggle
-        if not editor.element_exists(btn_id):
-            pytest.skip("Visibility button not registered")
-
-        editor.click(btn_id)
+        sidebar_page.select_oscillator(0)
+        sidebar_page.toggle_visibility(0)
 
         # Wait for state to update
-        def visibility_changed():
-            osc = editor.get_oscillator_by_id(oscillator)
-            return osc and osc.get("visible") != initial_visible
-        editor.wait_until(visibility_changed, timeout_s=2.0, desc="visibility to toggle")
+        editor.wait_until(
+            lambda: editor.get_oscillator_by_id(oscillator).get("visible") != initial_visible,
+            timeout_s=2.0,
+            desc="visibility to toggle",
+        )
 
         osc_after = editor.get_oscillator_by_id(oscillator)
         assert osc_after["visible"] != initial_visible
 
-    def test_toggle_roundtrip(self, editor: OscilTestClient, oscillator: str):
+    def test_toggle_roundtrip(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
-        Bug caught: toggle not idempotent — second click doesn't restore.
+        Bug caught: toggle not idempotent -- second click doesn't restore.
         """
-        editor.click("sidebar_oscillators_item_0")
-
-        vis_btn = "sidebar_oscillators_item_0_vis_btn"
-        if not editor.element_exists(vis_btn):
-            vis_btn = "sidebar_oscillators_item_0_vis_toggle"
-        if not editor.element_exists(vis_btn):
-            pytest.skip("Visibility button not registered")
+        sidebar_page.select_oscillator(0)
 
         osc_before = editor.get_oscillator_by_id(oscillator)
         original = osc_before.get("visible", True)
 
         # Toggle off
-        editor.click(vis_btn)
+        sidebar_page.toggle_visibility(0)
         editor.wait_until(
             lambda: editor.get_oscillator_by_id(oscillator).get("visible") != original,
             timeout_s=2.0, desc="first toggle",
         )
 
         # Toggle back
-        editor.click(vis_btn)
+        sidebar_page.toggle_visibility(0)
         editor.wait_until(
             lambda: editor.get_oscillator_by_id(oscillator).get("visible") == original,
             timeout_s=2.0, desc="second toggle",
@@ -352,44 +392,26 @@ class TestProcessingMode:
         mode = osc.get("mode", osc.get("processingMode"))
         assert mode in ("FullStereo", 0), f"Default mode should be FullStereo, got {mode}"
 
-    def test_all_modes_via_config_popup(self, editor: OscilTestClient, oscillator: str):
+    def test_all_modes_via_config_popup(
+        self, editor: OscilTestClient, oscillator: str, sidebar_page
+    ):
         """
         Bug caught: mode button click handler not updating state,
         or mode enum serialization mismatch.
         """
-        settings_btn = "sidebar_oscillators_item_0_settings"
-        if not editor.element_exists(settings_btn):
-            pytest.skip("Settings button not registered")
+        from page_objects import ConfigPopup
+        sidebar_page.open_settings(0)
+        popup = ConfigPopup(editor)
 
-        editor.click(settings_btn)
-        try:
-            editor.wait_for_visible("configPopup", timeout_s=3.0)
-        except TimeoutError:
-            pytest.skip("Config popup not available")
-
-        mode_selector = "configPopup_modeSelector"
-        if not editor.element_exists(mode_selector):
-            pytest.skip("Mode selector not in config popup")
-
-        # Map button suffix to expected state value
-        suffix_to_expected = {
-            "mono": "Mono",
-            "mid": "Mid",
-            "side": "Side",
-            "left": "Left",
-            "right": "Right",
-            "stereo": "FullStereo",
-        }
+        if not popup.has_element(ConfigPopup.MODE_SELECTOR):
+            popup.close()
+            pytest.xfail("Mode selector not available in config popup")
 
         modes_tested = 0
-        for mode_suffix, expected_mode in suffix_to_expected.items():
-            btn_id = f"{mode_selector}_{mode_suffix}"
-            if not editor.element_exists(btn_id):
+        for suffix, expected_mode in ConfigPopup.MODE_BUTTONS.items():
+            if not popup.set_mode(suffix):
                 continue
 
-            editor.click(btn_id)
-
-            # Verify the mode actually changed in state
             def mode_matches(expected=expected_mode):
                 osc = editor.get_oscillator_by_id(oscillator)
                 if not osc:
@@ -397,13 +419,16 @@ class TestProcessingMode:
                 current = osc.get("mode", osc.get("processingMode", ""))
                 return current == expected
             try:
-                editor.wait_until(mode_matches, timeout_s=2.0, desc=f"mode to become {expected_mode}")
+                editor.wait_until(
+                    mode_matches, timeout_s=2.0,
+                    desc=f"mode to become {expected_mode}",
+                )
                 modes_tested += 1
             except TimeoutError:
-                pass  # Button may not map to the expected name
+                pass
 
-        assert modes_tested > 0, "At least one processing mode should be testable"
+        assert modes_tested >= 4, (
+            f"At least 4 processing modes must be testable, got {modes_tested}"
+        )
 
-        # Close popup
-        if editor.element_exists("configPopup_closeBtn"):
-            editor.click("configPopup_closeBtn")
+        popup.close()

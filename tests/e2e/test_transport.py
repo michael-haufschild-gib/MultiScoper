@@ -282,3 +282,79 @@ class TestWaveformAudio:
         if info:
             assert info.get("waveform", "").lower() == "silence"
         client.set_track_audio(0, waveform="sine")
+
+
+class TestTransportEdgeCases:
+    """Transport-related edge cases."""
+
+    def test_play_while_already_playing(self, client: OscilTestClient):
+        """
+        Bug caught: sending play command while already playing causes
+        double-start or state corruption.
+        """
+        client.transport_play()
+        client.wait_until(lambda: client.is_playing(), timeout_s=2.0, desc="transport to play")
+
+        # Send play again while already playing
+        client.transport_play()
+
+        assert client.is_playing(), "Should still be playing after double play"
+        client.transport_stop()
+
+    def test_stop_while_already_stopped(self, client: OscilTestClient):
+        """
+        Bug caught: sending stop command while already stopped causes
+        negative position or state corruption.
+        """
+        client.transport_stop()
+        client.wait_until(lambda: not client.is_playing(), timeout_s=2.0, desc="transport to stop")
+
+        # Send stop again
+        client.transport_stop()
+
+        assert not client.is_playing(), "Should still be stopped after double stop"
+
+    def test_position_set_while_stopped(self, client: OscilTestClient):
+        """
+        Bug caught: setting position while stopped either crashes or
+        is silently ignored.
+        """
+        client.transport_stop()
+        client.wait_until(lambda: not client.is_playing(), timeout_s=2.0, desc="transport to stop")
+
+        client.set_position(44100)  # 1 second at 44.1kHz
+
+        state = client.get_transport_state()
+        assert state is not None
+
+    def test_bpm_at_extreme_low(self, client: OscilTestClient):
+        """
+        Bug caught: BPM below minimum causes division by zero in
+        beat duration calculations.
+        """
+        initial = client.get_bpm()
+
+        # Try setting BPM to 1 (below reasonable range)
+        client.set_bpm(1.0)
+        actual = client.get_bpm()
+        # Should either accept or clamp -- not crash
+        assert actual > 0, f"BPM should be positive, got {actual}"
+
+        client.set_bpm(initial)
+
+    def test_bpm_at_extreme_high(self, client: OscilTestClient):
+        """
+        Bug caught: very high BPM causes integer overflow in sample
+        count calculations for beat-synced timing.
+        """
+        initial = client.get_bpm()
+
+        client.set_bpm(999.0)
+        actual = client.get_bpm()
+        assert actual > 0, f"BPM should be positive, got {actual}"
+
+        # Verify system stable
+        state = client.get_transport_state()
+        assert state is not None
+
+        client.set_bpm(initial)
