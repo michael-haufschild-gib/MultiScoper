@@ -4,6 +4,7 @@
 
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
+#include "core/OscilLog.h"
 #include "Oscil.h"
 
 namespace oscil
@@ -38,6 +39,7 @@ void InstanceRegistry::setDispatcher(Dispatcher dispatcher)
 
 void InstanceRegistry::shutdown()
 {
+    OSCIL_LOG(REGISTRY, "shutdown: clearing " << sources_.size() << " sources");
     // Set shutdown flag first to prevent new async notifications
     shuttingDown_.store(true, std::memory_order_release);
 
@@ -76,6 +78,9 @@ SourceId InstanceRegistry::tryReuseExistingSource(
     if (name.isNotEmpty())
         sourceIt->second.name = name;
 
+    OSCIL_LOG(REGISTRY, "tryReuseExistingSource: reused sourceId=" << existingIt->second.id
+        << " trackId=" << trackIdentifier << " name=" << sourceIt->second.name
+        << " channels=" << channelCount << " sampleRate=" << sampleRate);
     return existingIt->second;
 }
 
@@ -110,6 +115,7 @@ SourceId InstanceRegistry::registerInstance(
         }
         else if (sources_.size() >= MAX_TRACKS)
         {
+            OSCIL_LOG(REGISTRY, "registerInstance: REJECTED max=" << MAX_TRACKS);
             return SourceId::invalid();
         }
         else
@@ -127,6 +133,7 @@ SourceId InstanceRegistry::registerInstance(
             sources_[sourceId] = info;
             trackToSourceMap_[trackIdentifier] = sourceId;
             shouldNotifyAdded = true;
+            OSCIL_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name << " ch=" << channelCount << " sr=" << sampleRate << " total=" << sources_.size());
         }
     }
 
@@ -151,8 +158,15 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
+        {
+            OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " NOT FOUND");
             return;
+        }
 
+        OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id
+            << " name=" << it->second.name
+            << " trackId=" << it->second.trackIdentifier
+            << " remaining=" << (sources_.size() - 1));
         // Remove from track map using stored identifier (O(1))
         trackToSourceMap_.erase(it->second.trackIdentifier);
 
@@ -217,8 +231,14 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
+        {
+            OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " NOT FOUND");
             return;
+        }
 
+        OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id
+            << " name=" << name << " channels=" << channelCount
+            << " sampleRate=" << sampleRate);
         it->second.name = name;
         it->second.channelCount = channelCount;
         it->second.sampleRate = sampleRate;
@@ -254,6 +274,7 @@ void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
 
 void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 {
+    OSCIL_LOG(REGISTRY, "notifySourceAdded: sourceId=" << sourceId.id);
     auto weakThis = juce::WeakReference<InstanceRegistry>(this);
 
     // Use injected dispatcher (defaults to MessageManager::callAsync)
@@ -273,6 +294,7 @@ void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
 
 void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 {
+    OSCIL_LOG(REGISTRY, "notifySourceRemoved: sourceId=" << sourceId.id);
     auto weakThis = juce::WeakReference<InstanceRegistry>(this);
 
     dispatcher_([weakThis, sourceId]() {
@@ -291,6 +313,7 @@ void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 
 void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
 {
+    OSCIL_LOG(REGISTRY, "notifySourceUpdated: sourceId=" << sourceId.id);
     auto weakThis = juce::WeakReference<InstanceRegistry>(this);
 
     dispatcher_([weakThis, sourceId]() {

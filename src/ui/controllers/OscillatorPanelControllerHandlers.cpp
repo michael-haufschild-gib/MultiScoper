@@ -10,6 +10,7 @@
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "core/OscilState.h"
+#include "core/OscilLog.h"
 
 namespace oscil
 {
@@ -17,11 +18,13 @@ namespace oscil
 
 void OscillatorPanelController::oscillatorSelected(const OscillatorId& oscillatorId)
 {
+    OSCIL_LOG(CONTROLLER, "oscillatorSelected: id=" << oscillatorId.id);
     highlightOscillator(oscillatorId);
 }
 
 void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& oscillatorId)
 {
+    OSCIL_LOG(CONTROLLER, "oscillatorConfigRequested: id=" << oscillatorId.id);
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
 
@@ -75,12 +78,15 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
 
 void OscillatorPanelController::oscillatorDeleteRequested(const OscillatorId& oscillatorId)
 {
+    OSCIL_LOG(CONTROLLER, "oscillatorDeleteRequested: id=" << oscillatorId.id);
     dataProvider_.getState().removeOscillator(oscillatorId);
     refreshPanels();
 }
 
 void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)
 {
+    OSCIL_LOG(CONTROLLER, "oscillatorModeChanged: id=" << oscillatorId.id
+        << " mode=" << processingModeToString(mode));
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
@@ -96,6 +102,8 @@ void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscill
 
 void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible)
 {
+    OSCIL_LOG(CONTROLLER, "oscillatorVisibilityChanged: id=" << oscillatorId.id
+        << " visible=" << (visible ? "true" : "false"));
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
@@ -154,6 +162,7 @@ void OscillatorPanelController::oscillatorPaneSelectionRequested(const Oscillato
 
 void OscillatorPanelController::addOscillatorDialogRequested()
 {
+    OSCIL_LOG(CONTROLLER, "addOscillatorDialogRequested");
     if (!dialogManager_) return;
     auto sources = serviceContext_.instanceRegistry.getAllSources();
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
@@ -166,6 +175,11 @@ void OscillatorPanelController::addOscillatorDialogRequested()
 
 void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog::Result& result)
 {
+    OSCIL_LOG(CONTROLLER, "addOscillatorRequested: sourceId=" << result.sourceId.id
+        << " paneId=" << result.paneId.id
+        << " name=" << result.name
+        << " createNewPane=" << (result.createNewPane ? "true" : "false")
+        << " preset=" << result.visualPresetId);
     auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
     PaneId targetPaneId = result.paneId;
@@ -198,6 +212,8 @@ void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog
 
 void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId)
 {
+    OSCIL_LOG(CONTROLLER, "updateOscillatorSource: oscId=" << oscillatorId.id
+        << " newSourceId=" << newSourceId.id);
     auto& state = dataProvider_.getState();
     auto oscillators = state.getOscillators();
 
@@ -231,6 +247,8 @@ void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscil
 
 void OscillatorPanelController::applyOscillatorPropertyChange(const OscillatorId& oscId, const juce::Identifier& property)
 {
+    OSCIL_LOG(CONTROLLER, "applyOscillatorPropertyChange: oscId=" << oscId.id
+        << " property=" << property.toString());
     auto oscillators = dataProvider_.getState().getOscillators();
     bool handled = false;
 
@@ -267,6 +285,9 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
 {
     if (tree.hasType(StateIds::Oscillator))
     {
+        OSCIL_LOG(CONTROLLER, "valueTreePropertyChanged: Oscillator property="
+            << property.toString() << " oscId="
+            << tree.getProperty(StateIds::Id).toString());
         OscillatorId oscId{tree.getProperty(StateIds::Id).toString()};
 
         if (property == StateIds::Name || property == StateIds::Colour ||
@@ -287,6 +308,7 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
     }
     else if (tree.hasType(StateIds::Pane))
     {
+        OSCIL_LOG(CONTROLLER, "valueTreePropertyChanged: Pane property=" << property.toString());
         juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
             if (auto* controller = weakThis.get()) controller->refreshPanels();
         });
@@ -297,6 +319,8 @@ void OscillatorPanelController::valueTreeChildAdded(juce::ValueTree&, juce::Valu
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
+        OSCIL_LOG(CONTROLLER, "valueTreeChildAdded: type=" << child.getType().toString()
+            << " id=" << child.getProperty(StateIds::Id).toString());
         juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() { 
             if (auto* controller = weakThis.get()) controller->refreshPanels(); 
         });
@@ -307,6 +331,8 @@ void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree&, juce::Va
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
+        OSCIL_LOG(CONTROLLER, "valueTreeChildRemoved: type=" << child.getType().toString()
+            << " id=" << child.getProperty(StateIds::Id).toString());
         // Close dialog if open
         if (dialogManager_ && child.hasType(StateIds::Oscillator))
         {

@@ -4,6 +4,7 @@
 */
 
 #include "core/Pane.h"
+#include "core/OscilLog.h"
 #include "core/OscilState.h"
 #include <algorithm>
 #include <cmath>
@@ -67,6 +68,7 @@ void PaneLayoutManager::setColumnLayout(ColumnLayout layout)
     if (columnLayout_ == layout)
         return;  // No change, preserve existing pane arrangement
 
+    OSCIL_LOG(LAYOUT, "setColumnLayout: " << static_cast<int>(columnLayout_) << "->" << static_cast<int>(layout) << " " << panes_.size() << "panes");
     columnLayout_ = layout;
     redistributePanes();
     notifyColumnLayoutChanged();
@@ -96,6 +98,7 @@ void PaneLayoutManager::addPane(const Pane& pane)
     panes_.back().setColumnIndex(targetColumn);
     panes_.back().setOrderIndex(static_cast<int>(panes_.size()) - 1);
 
+    OSCIL_LOG(LAYOUT, "addPane: id=" << pane.getId().id << " name=" << pane.getName() << " col=" << targetColumn << " total=" << panes_.size());
     notifyPaneAdded(pane.getId());
     sortPanesByOrder();
 }
@@ -107,6 +110,7 @@ void PaneLayoutManager::removePane(const PaneId& paneId)
 
     if (it != panes_.end())
     {
+        OSCIL_LOG(LAYOUT, "removePane: id=" << paneId.id << " name=" << it->getName() << " remaining=" << (panes_.size() - 1));
         panes_.erase(it);
         notifyPaneRemoved(paneId);
 
@@ -177,6 +181,8 @@ void PaneLayoutManager::movePane(const PaneId& paneId, int newIndex)
     if (it == panes_.end())
         return;
 
+    OSCIL_LOG(LAYOUT, "movePane: id=" << paneId.id << " from=" << it->getOrderIndex() << " to=" << newIndex);
+
     // Get the pane
     Pane pane = *it;
     panes_.erase(it);
@@ -199,6 +205,8 @@ void PaneLayoutManager::movePaneToColumn(const PaneId& paneId, int targetColumn,
     Pane* pane = getPane(paneId);
     if (!pane)
         return;
+
+    OSCIL_LOG(LAYOUT, "movePaneToColumn: id=" << paneId.id << " col=" << pane->getColumnIndex() << "->" << targetColumn << " pos=" << positionInColumn);
 
     int numColumns = getColumnCount();
     targetColumn = std::clamp(targetColumn, 0, numColumns - 1);
@@ -405,7 +413,10 @@ void PaneLayoutManager::fromValueTree(const juce::ValueTree& state)
 
     // PaneIds::Panes and StateIds::Panes are both "Panes" (interned by juce::Identifier)
     if (!state.hasType(PaneIds::Panes))
+    {
+        OSCIL_LOG(LAYOUT, "fromValueTree: invalid node type=" << state.getType().toString());
         return;
+    }
 
     // Load column layout
     if (state.hasProperty(PaneIds::ColumnLayout))
@@ -441,6 +452,8 @@ void PaneLayoutManager::fromValueTree(const juce::ValueTree& state)
             }
         }
     }
+
+    OSCIL_LOG(LAYOUT, "fromValueTree: " << panes_.size() << "panes cols=" << static_cast<int>(columnLayout_));
 }
 
 void PaneLayoutManager::sortPanesByOrder()

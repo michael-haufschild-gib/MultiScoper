@@ -3,6 +3,7 @@
 */
 
 #include "core/OscilState.h"
+#include "core/OscilLog.h"
 #include <algorithm>
 namespace oscil
 {
@@ -47,8 +48,11 @@ juce::String OscilState::toXmlString()
 
     if (auto xml = state_.createXml())
     {
-        return xml->toString();
+        auto xmlStr = xml->toString();
+        OSCIL_LOG(STATE, "toXmlString: " << xmlStr.length() << "ch " << getOscillators().size() << "osc " << layoutManager_.getPaneCount() << "panes");
+        return xmlStr;
     }
+    OSCIL_LOG(STATE, "toXmlString: FAILED to create XML");
     return {};
 }
 
@@ -108,6 +112,7 @@ bool OscilState::fromXmlString(const juce::String& xmlString)
         layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
     }
 
+    OSCIL_LOG(STATE, "fromXmlString: " << getOscillators().size() << "osc " << layoutManager_.getPaneCount() << "panes v" << getSchemaVersion());
     return true;
 }
 
@@ -132,6 +137,7 @@ void OscilState::addOscillator(const Oscillator& oscillator)
 {
     auto oscillatorsNode = getOrCreateOscillatorsNode();
     oscillatorsNode.appendChild(oscillator.toValueTree(), nullptr);
+    OSCIL_LOG(STATE, "addOscillator: id=" << oscillator.getId().id << " name=" << oscillator.getName() << " src=" << oscillator.getSourceId().id << " pane=" << oscillator.getPaneId().id << " total=" << oscillatorsNode.getNumChildren());
 }
 
 void OscilState::removeOscillator(const OscillatorId& oscillatorId)
@@ -146,6 +152,7 @@ void OscilState::removeOscillator(const OscillatorId& oscillatorId)
         if (child.getProperty(StateIds::Id).toString() == oscillatorId.id)
         {
             removedIndex = child.getProperty(StateIds::Order, i);
+            OSCIL_LOG(STATE, "removeOscillator: id=" << oscillatorId.id << " name=" << child.getProperty(StateIds::Name).toString() << " remaining=" << (oscillatorsNode.getNumChildren() - 1));
             oscillatorsNode.removeChild(i, nullptr);
             break;
         }
@@ -175,9 +182,10 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
         auto child = oscillatorsNode.getChild(i);
         if (child.getProperty(StateIds::Id).toString() == oscillator.getId().id)
         {
+            OSCIL_LOG(STATE, "updateOscillator: id=" << oscillator.getId().id << " name=" << oscillator.getName() << " src=" << oscillator.getSourceId().id << " pane=" << oscillator.getPaneId().id << " vis=" << (int)oscillator.isVisible());
             // Update properties
             child.copyPropertiesFrom(oscillator.toValueTree(), nullptr);
-            
+
             // Update children (e.g. VisualOverrides)
             // copyPropertiesFrom does NOT copy children, so we must do it manually
             child.removeAllChildren(nullptr);
@@ -189,11 +197,13 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
             return;
         }
     }
+    OSCIL_LOG(STATE, "updateOscillator: id=" << oscillator.getId().id << " NOT FOUND");
 }
 
 void OscilState::reorderOscillators(int oldIndex, int newIndex)
 {
     if (oldIndex == newIndex) return;
+    OSCIL_LOG(STATE, "reorderOscillators: oldIndex=" << oldIndex << " newIndex=" << newIndex);
 
     auto oscillators = getOscillators();
     if (oldIndex < 0 || oldIndex >= static_cast<int>(oscillators.size()) ||
@@ -263,6 +273,7 @@ ColumnLayout OscilState::getColumnLayout() const
 
 void OscilState::setColumnLayout(ColumnLayout layout)
 {
+    OSCIL_LOG(STATE, "setColumnLayout: columns=" << static_cast<int>(layout));
     auto layoutNode = getOrCreateLayoutNode();
     layoutNode.setProperty(StateIds::Columns, static_cast<int>(layout), nullptr);
     layoutManager_.setColumnLayout(layout);
@@ -367,22 +378,14 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
 
     CaptureQualityConfig config;
 
-    // Load quality preset
-    int presetInt = qualityNode.getProperty(StateIds::QualityPreset,
-                                             static_cast<int>(QualityPreset::Standard));
-    config.qualityPreset = static_cast<QualityPreset>(
-        std::clamp(presetInt, 0, static_cast<int>(QualityPreset::Ultra)));
+    int presetInt = qualityNode.getProperty(StateIds::QualityPreset, static_cast<int>(QualityPreset::Standard));
+    config.qualityPreset = static_cast<QualityPreset>(std::clamp(presetInt, 0, static_cast<int>(QualityPreset::Ultra)));
 
-    // Load buffer duration
-    int durationInt = qualityNode.getProperty(StateIds::BufferDuration,
-                                               static_cast<int>(BufferDuration::Medium));
-    config.bufferDuration = static_cast<BufferDuration>(
-        std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
+    int durationInt = qualityNode.getProperty(StateIds::BufferDuration, static_cast<int>(BufferDuration::Medium));
+    config.bufferDuration = static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
 
-    // Load auto-adjust setting
     config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
 
-    // Load memory budget if present (stored as int64 to avoid overflow for large budgets)
     juce::int64 budgetBytes = qualityNode.getProperty(StateIds::MemoryBudgetBytes, static_cast<juce::int64>(0));
     if (budgetBytes > 0)
     {
@@ -420,7 +423,6 @@ int OscilState::getSchemaVersion() const
 {
     return state_.getProperty(StateIds::Version, 1);
 }
-
 
 // Const versions - just return what exists (may be invalid)
 juce::ValueTree OscilState::getOscillatorsNode() const
@@ -479,11 +481,8 @@ juce::ValueTree OscilState::getOrCreateCaptureQualityNode()
     if (!node.isValid())
     {
         node = juce::ValueTree(StateIds::CaptureQuality);
-        // Set defaults
-        node.setProperty(StateIds::QualityPreset,
-                         static_cast<int>(QualityPreset::Standard), nullptr);
-        node.setProperty(StateIds::BufferDuration,
-                         static_cast<int>(BufferDuration::Medium), nullptr);
+        node.setProperty(StateIds::QualityPreset, static_cast<int>(QualityPreset::Standard), nullptr);
+        node.setProperty(StateIds::BufferDuration, static_cast<int>(BufferDuration::Medium), nullptr);
         node.setProperty(StateIds::AutoAdjustQuality, true, nullptr);
         state_.appendChild(node, nullptr);
     }

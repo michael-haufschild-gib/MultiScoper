@@ -13,6 +13,7 @@
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
+#include "core/OscilLog.h"
 
 namespace oscil
 {
@@ -68,10 +69,14 @@ OscilPluginProcessor::OscilPluginProcessor(const PluginProcessorConfig& config)
 
     // Initialize cached state for real-time safe getStateInformation()
     updateCachedState();
+
+    OSCIL_LOG(PLUGIN, "PluginProcessor created: trackId=" << trackIdentifier_);
 }
 
 OscilPluginProcessor::~OscilPluginProcessor()
 {
+    OSCIL_LOG(PLUGIN, "PluginProcessor destroying: trackId=" << trackIdentifier_
+        << " sourceId=" << sourceId_.id);
     state_.getState().removeListener(this);
 
     // Unregister from MemoryBudgetManager
@@ -150,6 +155,9 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         analysisEngine_->reset();
     }
 
+    OSCIL_LOG(PLUGIN, "prepareToPlay: sampleRate=" << sampleRate
+        << " blockSize=" << samplesPerBlock
+        << " inputChannels=" << getTotalNumInputChannels());
     deferRegistration(sampleRate);
 }
 
@@ -162,6 +170,8 @@ void OscilPluginProcessor::updateTrackProperties(const TrackProperties& properti
     if (sourceDisplayName_ == normalizedName)
         return;
 
+    OSCIL_LOG(PLUGIN, "updateTrackProperties: name=" << normalizedName
+        << " (was " << sourceDisplayName_ << ")");
     sourceDisplayName_ = normalizedName;
 
     if (!sourceId_.isValid())
@@ -268,6 +278,8 @@ bool OscilPluginProcessor::hasEditor() const { return true; }
 
 juce::AudioProcessorEditor* OscilPluginProcessor::createEditor()
 {
+    OSCIL_LOG(PLUGIN, "createEditor: sourceId=" << sourceId_.id
+        << " trackId=" << trackIdentifier_);
     // Use unique_ptr for exception safety - if constructor throws, memory is cleaned up
     auto editor = std::make_unique<OscilPluginEditor>(*this);
     // JUCE API requires raw pointer (framework takes ownership and deletes the editor)
@@ -344,6 +356,7 @@ void OscilPluginProcessor::valueTreePropertyChanged(juce::ValueTree& tree, const
     if (tree.hasType(StateIds::CaptureQuality) ||
         (tree.getParent().isValid() && tree.getParent().hasType(StateIds::CaptureQuality)))
     {
+        OSCIL_LOG(PLUGIN, "captureQuality property changed, deferring reconfigure");
         // CRITICAL: Always defer to message thread to guarantee real-time safety
         // ValueTree listeners should be called on message thread, but we verify defensively.
         // The state read MUST happen on message thread to avoid race conditions.

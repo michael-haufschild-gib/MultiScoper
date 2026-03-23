@@ -5,6 +5,7 @@
 
 #include "plugin/PluginProcessor.h"
 #include "plugin/PluginEditor.h"
+#include "core/OscilLog.h"
 
 namespace oscil
 {
@@ -16,12 +17,14 @@ void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
     if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
     {
         // Audio thread path: read from active buffer (lock-free, no allocation)
+        // NOTE: Cannot log here — audio thread
         const auto& buf = cachedStateBuffers_[cachedStateActiveIndex_.load(std::memory_order_acquire)];
         if (!buf.empty())
             destData.replaceAll(buf.data(), buf.size());
         return;
     }
 
+    OSCIL_LOG(PLUGIN, "getStateInformation: serializing on message thread");
     // Message thread path: perform full serialization (allocates memory)
     updateCachedState();
 
@@ -40,7 +43,7 @@ void OscilPluginProcessor::updateCachedState()
     auto now = juce::Time::currentTimeMillis();
     if (lastCachedStateSwapTimeMs_ > 0)
     {
-        auto elapsed = now - lastCachedStateSwapTimeMs_;
+        [[maybe_unused]] auto elapsed = now - lastCachedStateSwapTimeMs_;
         // Log a warning if swaps happen too rapidly (< 1ms apart).
         // This would indicate a potential torn-read risk on the audio thread.
         jassert(elapsed >= 1);  // Double-buffer swap interval too short
@@ -87,13 +90,12 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
         if (!processor) return;
 
         // Parse and apply state (now safely on message thread)
+        OSCIL_LOG(PLUGIN, "setStateInformation: restoring state ("
+            << xmlString->length() << " chars)");
         if (!processor->state_.fromXmlString(*xmlString))
         {
-            // Log to both DBG (debug builds) and Logger (all builds) so that
-            // state restoration failures are always diagnosable in production.
-            DBG("PluginProcessor::setStateInformation - Failed to parse state XML");
-            juce::Logger::writeToLog("OscilPluginProcessor: setStateInformation failed to parse XML ("
-                                     + juce::String(xmlString->length()) + " chars)");
+            OSCIL_LOG(PLUGIN, "setStateInformation: FAILED to parse state XML ("
+                << xmlString->length() << " chars)");
             return;
         }
 
@@ -120,6 +122,9 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
 
         // Update cached state for real-time safe getStateInformation()
         processor->updateCachedState();
+
+        OSCIL_LOG(PLUGIN, "setStateInformation: restored successfully, "
+            << processor->state_.getOscillators().size() << " oscillators");
     };
 
     if (juce::MessageManager::getInstance()->isThisTheMessageThread())

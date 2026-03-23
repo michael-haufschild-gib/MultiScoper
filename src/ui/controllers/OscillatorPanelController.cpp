@@ -8,6 +8,7 @@
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "core/OscilState.h"
+#include "core/OscilLog.h"
 #include "core/dsp/TimingEngine.h"
 
 namespace oscil
@@ -71,6 +72,7 @@ void OscillatorPanelController::refreshPanels()
 {
     if (isUpdating_)
     {
+        OSCIL_LOG(CONTROLLER, "refreshPanels: DEFERRED (already updating)");
         pendingRefresh_ = true;
         return;
     }
@@ -83,6 +85,9 @@ void OscillatorPanelController::refreshPanels()
 
     auto oscillators = dataProvider_.getState().getOscillators();
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
+
+    OSCIL_LOG(CONTROLLER, "refreshPanels: " << oscillators.size() << " oscillators, "
+        << layoutManager.getPaneCount() << " panes");
 
     createPaneComponents(oscillators, layoutManager);
     refreshSidebar(oscillators, layoutManager);
@@ -103,6 +108,8 @@ void OscillatorPanelController::refreshPanels()
 
 void OscillatorPanelController::createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager)
 {
+    OSCIL_LOG(CONTROLLER, "createPaneComponents: " << layoutManager.getPaneCount()
+        << " panes, " << oscillators.size() << " oscillators");
     // Group oscillators by pane
     std::map<juce::String, std::vector<Oscillator>> oscillatorsByPane;
     for (const auto& osc : oscillators)
@@ -213,6 +220,8 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
 
     if (layoutManager.getPaneCount() == 0 && state.getOscillators().empty())
     {
+        OSCIL_LOG(CONTROLLER, "createDefaultOscillatorIfNeeded: creating default pane + oscillator"
+            << " sourceId=" << dataProvider_.getSourceId().id);
         // Need sources to create meaningful default
         // Just create placeholder if no sources yet, or use first source
         
@@ -242,6 +251,8 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
 
 void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId)
 {
+    OSCIL_LOG(CONTROLLER, "handlePaneReordered: moved=" << movedPaneId.id
+        << " target=" << targetPaneId.id);
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
     const Pane* sourcePanePtr = layoutManager.getPane(movedPaneId);
     const Pane* targetPanePtr = layoutManager.getPane(targetPaneId);
@@ -297,6 +308,7 @@ void OscillatorPanelController::handleEmptyColumnDrop(const PaneId& movedPaneId,
 
 void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
 {
+    OSCIL_LOG(CONTROLLER, "handlePaneClose: paneId=" << paneId.id);
     auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
 

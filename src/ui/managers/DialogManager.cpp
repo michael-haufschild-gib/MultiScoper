@@ -3,6 +3,7 @@
 */
 
 #include "ui/managers/DialogManager.h"
+#include "core/OscilLog.h"
 
 namespace oscil
 {
@@ -51,6 +52,8 @@ void DialogManager::showAddOscillatorDialog(const std::vector<SourceInfo>& sourc
                                             const std::vector<Pane>& panes,
                                             std::function<void(const AddOscillatorDialog::Result&)> onComplete)
 {
+    OSCIL_LOG(DIALOG, "showAddOscillatorDialog: " << sources.size() << " sources, "
+        << panes.size() << " panes");
     if (!addOscillatorModal_ || !addOscillatorDialogContent_)
         return;
 
@@ -72,6 +75,8 @@ void DialogManager::showAddOscillatorDialog(const std::vector<SourceInfo>& sourc
 void DialogManager::showColorDialog(juce::Colour initialColor,
                                     std::function<void(juce::Colour)> onColorSelected)
 {
+    OSCIL_LOG(DIALOG, "showColorDialog: initialColor=#"
+        << initialColor.toDisplayString(false));
     if (!colorModal_ || !colorDialogContent_)
         return;
 
@@ -95,6 +100,7 @@ void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes
                                          std::function<void(const SelectPaneDialog::Result&)> onComplete,
                                          std::function<void()> onCancel)
 {
+    OSCIL_LOG(DIALOG, "showSelectPaneDialog: " << availablePanes.size() << " panes");
     if (!selectPaneModal_ || !selectPaneDialogContent_)
         return;
 
@@ -118,6 +124,9 @@ void DialogManager::showSelectPaneDialog(const std::vector<Pane>& availablePanes
 void DialogManager::showConfigPopup(const Oscillator& oscillator,
                                     const std::vector<std::pair<PaneId, juce::String>>& availablePanes)
 {
+    OSCIL_LOG(DIALOG, "showConfigPopup: oscId=" << oscillator.getId().id
+        << " name=" << oscillator.getName()
+        << " panes=" << availablePanes.size());
     if (!configPopup_ || !configModal_)
         return;
 
@@ -129,6 +138,7 @@ void DialogManager::showConfigPopup(const Oscillator& oscillator,
 
 void DialogManager::closeConfigPopup()
 {
+    OSCIL_LOG(DIALOG, "closeConfigPopup");
     if (configModal_)
         configModal_->hide();
 }

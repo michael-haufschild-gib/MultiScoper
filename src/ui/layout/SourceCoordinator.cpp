@@ -3,6 +3,7 @@
 */
 
 #include "ui/layout/SourceCoordinator.h"
+#include "core/OscilLog.h"
 
 namespace oscil
 {
@@ -30,6 +31,8 @@ SourceCoordinator::~SourceCoordinator()
 
 void SourceCoordinator::sourceAdded(const SourceId& sourceId)
 {
+    OSCIL_LOG(SOURCE, "sourceAdded: id=" << sourceId.id
+        << " totalSources=" << (availableSources_.size() + 1));
     // Capture by value for thread safety
     postToMessageThread([this, sourceId]()
     {
@@ -41,6 +44,8 @@ void SourceCoordinator::sourceAdded(const SourceId& sourceId)
 
 void SourceCoordinator::sourceRemoved(const SourceId& sourceId)
 {
+    OSCIL_LOG(SOURCE, "sourceRemoved: id=" << sourceId.id
+        << " remainingSources=" << (availableSources_.size() > 0 ? availableSources_.size() - 1 : 0));
     postToMessageThread([this, sourceId]()
     {
         availableSources_.erase(
@@ -51,8 +56,10 @@ void SourceCoordinator::sourceRemoved(const SourceId& sourceId)
     });
 }
 
-void SourceCoordinator::sourceUpdated(const SourceId& /*sourceId*/)
+void SourceCoordinator::sourceUpdated(const SourceId& sourceId)
 {
+    OSCIL_LOG(SOURCE, "sourceUpdated: id=" << sourceId.id);
+    juce::ignoreUnused(sourceId);
     postToMessageThread([this]()
     {
         if (onSourcesChanged_)
@@ -68,6 +75,7 @@ void SourceCoordinator::refreshFromRegistry()
     {
         availableSources_.push_back(source.sourceId);
     }
+    OSCIL_LOG(SOURCE, "refreshFromRegistry: " << availableSources_.size() << " sources");
 }
 
 void SourceCoordinator::postToMessageThread(std::function<void()> cb)

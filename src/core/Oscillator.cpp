@@ -5,6 +5,7 @@
 
 #include "core/Oscillator.h"
 
+#include "core/OscilLog.h"
 #include "core/OscilState.h"
 
 namespace oscil
@@ -134,6 +135,15 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     visualOverrides_ = overrides.isValid() ? overrides.createCopy() : juce::ValueTree("VisualOverrides");
 
     schemaVersion_ = CURRENT_SCHEMA_VERSION;
+
+    OSCIL_LOG(STATE, "Oscillator::fromValueTree: id=" << id_.id
+        << " name=" << name_
+        << " sourceId=" << sourceId_.id
+        << " paneId=" << paneId_.id
+        << " state=" << static_cast<int>(state_)
+        << " mode=" << processingModeToString(processingMode_)
+        << " visible=" << (visible_ ? "true" : "false")
+        << " shader=" << shaderId_);
 }
 
 void Oscillator::setVisualOverride(const juce::Identifier& property, const juce::var& value)
@@ -153,6 +163,8 @@ void Oscillator::clearVisualOverrides()
 
 void Oscillator::setSourceId(const SourceId& sourceId)
 {
+    [[maybe_unused]] auto oldSourceId = sourceId_;
+    [[maybe_unused]] auto oldState = state_;
     sourceId_ = sourceId;
 
     // Automatically transition state based on source validity
@@ -164,10 +176,16 @@ void Oscillator::setSourceId(const SourceId& sourceId)
     {
         state_ = OscillatorState::NO_SOURCE;
     }
+    OSCIL_LOG(STATE, "Oscillator::setSourceId: id=" << id_.id
+        << " name=" << name_
+        << " source=" << oldSourceId.id << "->" << sourceId_.id
+        << " state=" << static_cast<int>(oldState) << "->" << static_cast<int>(state_));
 }
 
 void Oscillator::clearSource()
 {
+    OSCIL_LOG(STATE, "Oscillator::clearSource: id=" << id_.id
+        << " name=" << name_ << " previousSource=" << sourceId_.id);
     // Preserve configuration but transition to NO_SOURCE
     sourceId_ = SourceId::noSource();
     state_ = OscillatorState::NO_SOURCE;

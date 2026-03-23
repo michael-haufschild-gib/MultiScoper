@@ -55,10 +55,6 @@ private:
     GLint positionLoc_ = -1;
     GLint rangeLoc_ = -1;
     GLint blurRadiusLoc_ = -1;
-    GLint gradientLoc_ = -1;
-    GLint startLoc_ = -1;
-    GLint endLoc_ = -1;
-    GLint directionLoc_ = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TiltShiftEffect)
 };
