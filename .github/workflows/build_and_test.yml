@@ -228,6 +228,29 @@ jobs:
       - name: Build
         run: cmake --build --preset ${{ matrix.cmake_preset }}
 
+      # Run clang-tidy static analysis (macOS only — requires compile_commands.json from CMake)
+      - name: Run clang-tidy
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm
+          CLANG_TIDY="$(brew --prefix llvm)/bin/clang-tidy"
+          COMPILE_DB="build/${{ matrix.cmake_preset }}/compile_commands.json"
+          if [ ! -f "$COMPILE_DB" ]; then
+            echo "compile_commands.json not found at $COMPILE_DB"
+            exit 1
+          fi
+          ERRORS=0
+          while IFS= read -r -d '' file; do
+            if ! "$CLANG_TIDY" -p "build/${{ matrix.cmake_preset }}" "$file" 2>&1; then
+              ERRORS=$((ERRORS + 1))
+            fi
+          done < <(find src -type f -name '*.cpp' -print0)
+          if [ $ERRORS -gt 0 ]; then
+            echo "FAILED: clang-tidy found issues in $ERRORS file(s)."
+            exit 1
+          fi
+          echo "PASSED: clang-tidy found no issues."
+
       # Run unit tests
       - name: Run Unit Tests
         run: ctest --preset ${{ matrix.cmake_preset }}

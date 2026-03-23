@@ -53,8 +53,7 @@ fi
 if [ -n "$STAGED_CPP" ]; then
     if command -v python3 &>/dev/null && [ -f "$REPO_ROOT/scripts/size_lint.py" ]; then
         echo -n "  size-lint... "
-        # Size lint runs on the full codebase and is slow; delegate to CI.
-        # Pre-commit only warns about file-length violations in staged files.
+        # Run full size lint; filter violations to only staged files.
         STAGED_FILE_LIST=$(mktemp)
         echo "$STAGED_CPP" > "$STAGED_FILE_LIST"
         SIZE_OUTPUT=$(python3 "$REPO_ROOT/scripts/size_lint.py" \
@@ -66,7 +65,9 @@ if [ -n "$STAGED_CPP" ]; then
         rm -f "$STAGED_FILE_LIST"
         if [ -n "$STAGED_VIOLATIONS" ]; then
             VIOLATION_COUNT=$(echo "$STAGED_VIOLATIONS" | wc -l | tr -d ' ')
-            echo -e "${YELLOW}WARN${NC} ($VIOLATION_COUNT violations in staged files)"
+            echo -e "${RED}FAILED${NC} ($VIOLATION_COUNT violations in staged files)"
+            echo "$STAGED_VIOLATIONS" | head -20
+            FAILED=1
         else
             echo -e "${GREEN}OK${NC}"
         fi
@@ -146,6 +147,62 @@ if [ -n "$STAGED_CPP" ]; then
         else
             echo -e "${GREEN}OK${NC}"
         fi
+    fi
+fi
+
+# ─── 7. Comment lint ───
+if [ -n "$STAGED_CPP" ]; then
+    if command -v python3 &>/dev/null && [ -f "$REPO_ROOT/scripts/comment_lint.py" ]; then
+        echo -n "  comment-lint... "
+        CL_EXIT=0
+        CL_OUTPUT=$(python3 "$REPO_ROOT/scripts/comment_lint.py" \
+            --root "$REPO_ROOT" \
+            --paths include src tests test_harness \
+            --doc-paths include \
+            --max-violations 0 2>&1) || CL_EXIT=$?
+        if [ $CL_EXIT -ne 0 ]; then
+            echo -e "${RED}FAILED${NC}"
+            echo "$CL_OUTPUT" | grep -E "(ERROR|FAILED|violation)" | head -20
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    fi
+fi
+
+# ─── 8. clang-tidy (optional — only runs if compile_commands.json exists) ───
+if [ -n "$STAGED_CPP" ]; then
+    # Look for clang-tidy in common locations
+    CLANG_TIDY=""
+    for candidate in \
+        "clang-tidy" \
+        "/opt/homebrew/opt/llvm/bin/clang-tidy" \
+        "/usr/local/opt/llvm/bin/clang-tidy"; do
+        if command -v "$candidate" &>/dev/null; then
+            CLANG_TIDY="$candidate"
+            break
+        fi
+    done
+
+    COMPILE_DB="$REPO_ROOT/build/dev/compile_commands.json"
+    if [ -n "$CLANG_TIDY" ] && [ -f "$COMPILE_DB" ]; then
+        echo -n "  clang-tidy... "
+        CT_ERRORS=0
+        for file in $STAGED_CPP; do
+            # Only check source files (not headers — they're checked via HeaderFilterRegex)
+            if [[ "$file" == src/*.cpp ]]; then
+                if ! "$CLANG_TIDY" -p "$REPO_ROOT/build/dev" "$REPO_ROOT/$file" --quiet 2>/dev/null; then
+                    CT_ERRORS=$((CT_ERRORS + 1))
+                fi
+            fi
+        done
+        if [ $CT_ERRORS -gt 0 ]; then
+            echo -e "${YELLOW}WARN${NC} ($CT_ERRORS file(s) with findings — see CI for details)"
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    else
+        echo -e "  clang-tidy... ${YELLOW}SKIPPED${NC} (requires clang-tidy + build/dev/compile_commands.json)"
     fi
 fi
 
