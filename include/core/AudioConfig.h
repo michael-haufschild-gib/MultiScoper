@@ -31,8 +31,9 @@ inline juce::String pluginFormatToString(PluginFormat format)
         case PluginFormat::CLAP:       return "CLAP";
         case PluginFormat::AU:         return "AU";
         case PluginFormat::STANDALONE: return "STANDALONE";
-        default:                       return "UNKNOWN";
     }
+    jassertfalse; // Unhandled PluginFormat enum value
+    return "UNKNOWN";
 }
 
 /**

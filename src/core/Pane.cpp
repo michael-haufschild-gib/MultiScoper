@@ -38,7 +38,8 @@ juce::ValueTree Pane::toValueTree() const
 
 void Pane::fromValueTree(const juce::ValueTree& state)
 {
-    if (!state.hasType(PaneIds::Pane) && !state.hasType(StateIds::Pane))
+    // PaneIds::Pane and StateIds::Pane are both "Pane" (interned by juce::Identifier)
+    if (!state.hasType(PaneIds::Pane))
         return;
 
     id_.id = state.getProperty(PaneIds::Id, id_.id);
@@ -402,7 +403,8 @@ void PaneLayoutManager::fromValueTree(const juce::ValueTree& state)
 {
     panes_.clear();
 
-    if (!state.hasType(PaneIds::Panes) && !state.hasType(StateIds::Panes))
+    // PaneIds::Panes and StateIds::Panes are both "Panes" (interned by juce::Identifier)
+    if (!state.hasType(PaneIds::Panes))
         return;
 
     // Load column layout
@@ -415,7 +417,7 @@ void PaneLayoutManager::fromValueTree(const juce::ValueTree& state)
     for (int i = 0; i < state.getNumChildren(); ++i)
     {
         auto child = state.getChild(i);
-        if (child.hasType(PaneIds::Pane) || child.hasType(StateIds::Pane))
+        if (child.hasType(PaneIds::Pane))
         {
             panes_.emplace_back(child);
         }

@@ -44,8 +44,9 @@ inline juce::String sourceStateToString(SourceState state)
         case SourceState::INACTIVE:   return "INACTIVE";
         case SourceState::ORPHANED:   return "ORPHANED";
         case SourceState::STALE:      return "STALE";
-        default:                      return "UNKNOWN";
     }
+    jassertfalse; // Unhandled SourceState enum value
+    return "UNKNOWN";
 }
 
 /**

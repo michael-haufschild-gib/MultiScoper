@@ -36,8 +36,9 @@ inline juce::String qualityModeToString(QualityMode mode)
         case QualityMode::BALANCED:    return "BALANCED";
         case QualityMode::PERFORMANCE: return "PERFORMANCE";
         case QualityMode::MAXIMUM:     return "MAXIMUM";
-        default:                       return "BALANCED";
     }
+    jassertfalse; // Unhandled QualityMode enum value
+    return "BALANCED";
 }
 
 inline QualityMode stringToQualityMode(const juce::String& str)
@@ -130,8 +131,9 @@ struct PerformanceConfig
             case QualityMode::BALANCED:    return 45.0f;
             case QualityMode::PERFORMANCE: return 30.0f;
             case QualityMode::MAXIMUM:     return 15.0f;
-            default:                       return 45.0f;
         }
+        jassertfalse;
+        return 45.0f;
     }
 
     /**
@@ -146,8 +148,9 @@ struct PerformanceConfig
             case QualityMode::BALANCED:    return 2;
             case QualityMode::PERFORMANCE: return 3;
             case QualityMode::MAXIMUM:     return 4;
-            default:                       return 2;
         }
+        jassertfalse;
+        return 2;
     }
 
     /**
@@ -162,8 +165,9 @@ struct PerformanceConfig
             case QualityMode::BALANCED:    return 0.50f;
             case QualityMode::PERFORMANCE: return 0.25f;
             case QualityMode::MAXIMUM:     return 0.125f;
-            default:                       return 0.50f;
         }
+        jassertfalse;
+        return 0.50f;
     }
 
     /**
@@ -217,7 +221,7 @@ struct PerformanceConfig
                 case QualityMode::HIGH:        return QualityMode::BALANCED;
                 case QualityMode::BALANCED:    return QualityMode::PERFORMANCE;
                 case QualityMode::PERFORMANCE: return QualityMode::MAXIMUM;
-                default:                       return qualityMode;
+                case QualityMode::MAXIMUM:     return QualityMode::MAXIMUM; // Already at lowest
             }
         }
         return qualityMode;
@@ -265,10 +269,21 @@ struct PerformanceConfig
                                            sanitizeFloat(static_cast<float>(tree.getProperty("cpuWarningThreshold", 10.0f)), 10.0f));
         cpuCriticalThreshold = juce::jlimit(MIN_CPU_CRITICAL, MAX_CPU_CRITICAL,
                                             sanitizeFloat(static_cast<float>(tree.getProperty("cpuCriticalThreshold", 15.0f)), 15.0f));
+
+        // Enforce relational invariant: warning must be strictly less than critical.
+        // If deserialized values violate this, push critical above warning.
+        if (cpuWarningThreshold >= cpuCriticalThreshold)
+            cpuCriticalThreshold = std::min(cpuWarningThreshold + 1.0f, MAX_CPU_CRITICAL);
+
         memoryWarningThreshold = juce::jlimit(MIN_MEMORY_WARNING, MAX_MEMORY_WARNING,
                                               static_cast<int>(tree.getProperty("memoryWarningThreshold", 500)));
         memoryCriticalThreshold = juce::jlimit(MIN_MEMORY_CRITICAL, MAX_MEMORY_CRITICAL,
                                                static_cast<int>(tree.getProperty("memoryCriticalThreshold", 800)));
+
+        // Enforce relational invariant: warning must be strictly less than critical.
+        if (memoryWarningThreshold >= memoryCriticalThreshold)
+            memoryCriticalThreshold = std::min(memoryWarningThreshold + 100, MAX_MEMORY_CRITICAL);
+
         autoQualityReduction = static_cast<bool>(tree.getProperty("autoQualityReduction", true));
     }
 };

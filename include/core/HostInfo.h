@@ -32,8 +32,9 @@ inline juce::String transportStateToString(TransportState state)
         case TransportState::PLAYING:   return "PLAYING";
         case TransportState::RECORDING: return "RECORDING";
         case TransportState::PAUSED:    return "PAUSED";
-        default:                        return "STOPPED";
     }
+    jassertfalse; // Unhandled TransportState enum value
+    return "STOPPED";
 }
 
 inline TransportState stringToTransportState(const juce::String& str)

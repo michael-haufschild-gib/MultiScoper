@@ -153,8 +153,9 @@ juce::String shaderTypeToId(ShaderType type)
         case ShaderType::NeonGlow:     return "neon_glow";
         case ShaderType::GradientFill: return "gradient_fill";
         case ShaderType::DualOutline:  return "dual_outline";
-        default:                       return "basic";
     }
+    jassertfalse; // Unhandled ShaderType enum value
+    return "basic";
 }
 
 ShaderType idToShaderType(const juce::String& id)

@@ -13,8 +13,6 @@
 namespace oscil
 {
 
-using namespace juce::gl;
-
 /**
  * OpenGL framebuffer wrapper for off-screen rendering.
  * Supports color attachment and optional depth buffer for 3D rendering.
@@ -47,7 +45,7 @@ struct Framebuffer
     int width = 0;
     int height = 0;
     int numSamples = 0;
-    GLenum format = GL_RGBA8;
+    GLenum format = juce::gl::GL_RGBA8;
     bool hasDepth = false;
     bool hasDepthTexture = false;
 
@@ -62,7 +60,9 @@ struct Framebuffer
      * @param useDepthTexture Whether to create depth as a sampleable texture (for DoF, etc.) instead of Renderbuffer
      * @return true if creation succeeded
      */
-    virtual bool create(juce::OpenGLContext& context, int w, int h, int samples = 0, GLenum fmt = GL_RGBA8, bool withDepth = false, bool useDepthTexture = false);
+    virtual bool create(juce::OpenGLContext& context, int w, int h, int samples = 0,
+                        GLenum fmt = juce::gl::GL_RGBA8, bool withDepth = false,
+                        bool useDepthTexture = false);
 
     /**
      * Destroy the framebuffer and release all resources.

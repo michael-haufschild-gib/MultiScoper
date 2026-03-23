@@ -6,6 +6,8 @@
 
 #if OSCIL_ENABLE_OPENGL
 
+using namespace juce::gl;
+
 namespace oscil
 {
 
