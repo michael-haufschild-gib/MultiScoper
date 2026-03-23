@@ -18,7 +18,7 @@ class ThemeManagerListener;
 /**
  * Abstract interface for theme management.
  * Enables dependency injection and testability by decoupling
- * UI components from the concrete ThemeManager singleton.
+ * UI components from the concrete ThemeManager implementation.
  */
 class IThemeService
 {

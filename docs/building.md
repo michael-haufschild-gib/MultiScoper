@@ -1,7 +1,7 @@
 # Building Guide for LLM Coding Agents
 
 **Purpose**: Instructions for building, running, and developing the Oscil plugin locally.
-**Tech Stack**: CMake 3.21+, C++20, JUCE 8.0.5, GoogleTest 1.17.0, Ninja
+**Tech Stack**: CMake 3.25+, C++20, JUCE 8.0.12, GoogleTest 1.17.0, Ninja
 
 ## Quick Reference (Using CMake Presets)
 

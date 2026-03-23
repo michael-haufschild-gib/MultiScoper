@@ -5,9 +5,9 @@ This file provides context for GitHub Copilot coding agent when working on this 
 ## Project Overview
 
 **Oscil** is a multi-track oscilloscope VST3/AU audio plugin built with:
-- **Framework**: JUCE 8.0.5
+- **Framework**: JUCE 8.0.12
 - **Language**: C++20
-- **Build System**: CMake 3.21+ with CMakePresets.json
+- **Build System**: CMake 3.25+ with CMakePresets.json
 - **Testing**: GoogleTest 1.17.0
 - **CI/CD**: GitHub Actions (macOS, Linux, Windows)
 

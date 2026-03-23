@@ -61,7 +61,7 @@ public:
 /**
  * Abstract interface for the instance registry.
  * Enables dependency injection and testability by decoupling
- * UI components from the concrete InstanceRegistry singleton.
+ * UI components from the concrete InstanceRegistry implementation.
  */
 class IInstanceRegistry
 {

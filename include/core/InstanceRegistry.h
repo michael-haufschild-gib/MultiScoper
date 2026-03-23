@@ -1,6 +1,7 @@
 /*
     Oscil - Instance Registry
-    Singleton managing all active Oscil instances for multi-instance coordination
+    Thread-safe registry for all active Oscil instances, enabling multi-instance coordination.
+    Owned by PluginFactory and injected via IInstanceRegistry interface.
 */
 
 #pragma once
@@ -26,7 +27,7 @@ namespace oscil
  * Thread safety: All public methods are thread-safe.
  *
  * Implements IInstanceRegistry interface for dependency injection.
- * Owned by OscilPluginProcessor - do not create directly except in tests.
+ * Owned by PluginFactory - do not create directly except in tests.
  */
 class InstanceRegistry : public IInstanceRegistry
 {

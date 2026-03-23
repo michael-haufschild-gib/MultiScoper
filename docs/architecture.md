@@ -2,7 +2,7 @@
 
 **Purpose**: Instructions for WHERE to put code and WHAT patterns to follow in this JUCE audio plugin.
 
-**Tech Stack**: C++20, JUCE 8.0.5, OpenGL 3.3, CMake 3.21+, GoogleTest
+**Tech Stack**: C++20, JUCE 8.0.12, OpenGL 3.3, CMake 3.25+, GoogleTest
 
 ---
 

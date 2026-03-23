@@ -2,14 +2,14 @@
 
 **Purpose**: Teach agents HOW to build, run, and debug the Oscil audio plugin locally.
 
-**Tech Stack**: CMake 3.21+, Ninja, ccache, C++20, JUCE 8.0.5
+**Tech Stack**: CMake 3.25+, Ninja, ccache, C++20, JUCE 8.0.12
 
 ---
 
 ## Prerequisites
 
 ### Required
-- CMake 3.21+
+- CMake 3.25+
 - C++20 compiler (Clang 14+, GCC 11+, MSVC 2019+)
 - macOS: Xcode Command Line Tools
 

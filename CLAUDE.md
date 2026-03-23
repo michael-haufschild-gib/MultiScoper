@@ -100,8 +100,8 @@ If you cannot check all boxes, DELEGATE.
 **Project**: Oscil Multi-Track Oscilloscope
 **Type**: Professional Audio Plugin (VST3, AU, CLAP, Standalone)
 **Language**: C++20
-**Framework**: JUCE 8.0.5
-**Build System**: CMake 3.21+ (with Ninja & ccache support)
+**Framework**: JUCE 8.0.12
+**Build System**: CMake 3.25+ (with Ninja & ccache support)
 
 Oscil is a professional audio visualization platform designed for engineers and producers to analyze multi-track audio signals. It offers real-time oscilloscope visualization with cross-DAW compatibility, allowing multiple plugin instances to communicate and display signals on a single aggregator interface.
 
@@ -158,7 +158,7 @@ cmake/                      # CMake modules (Sources.cmake)
 The project uses CMake Presets for configuration.
 
 **Prerequisites:**
-- CMake 3.21+
+- CMake 3.25+
 - Ninja & ccache (Recommended)
 - C++20 compatible compiler (Clang 14+, GCC 11+, MSVC 2019+)
 
