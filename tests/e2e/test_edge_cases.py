@@ -30,7 +30,7 @@ class TestDialogEdgeCases:
         try:
             editor.wait_for_visible("addOscillatorDialog", timeout_s=3.0)
         except TimeoutError:
-            pytest.xfail("Add dialog did not appear")
+            pytest.fail("Add dialog did not appear")
 
         # Close editor without dismissing dialog
         editor.close_editor()
@@ -55,7 +55,7 @@ class TestDialogEdgeCases:
         try:
             editor.wait_for_visible("addOscillatorDialog", timeout_s=3.0)
         except TimeoutError:
-            pytest.xfail("Add dialog did not appear")
+            pytest.fail("Add dialog did not appear")
 
         # Fill in source
         dropdown_id = "addOscillatorDialog_sourceDropdown"
@@ -253,14 +253,14 @@ class TestStatePersistence:
         path = "/tmp/oscil_e2e_state.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
 
         loaded = editor.load_state(path)
         if not loaded:
-            pytest.skip("State load API not available")
+            pytest.fail("State load API not available")
 
         oscs = editor.wait_for_oscillator_count(2, timeout_s=5.0)
         names = {o["name"] for o in oscs}
@@ -284,7 +284,7 @@ class TestStatePersistence:
         path = "/tmp/oscil_e2e_ids.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -430,7 +430,7 @@ class TestReorderPersistence:
         # Reorder: move index 0 to index 2
         result = editor.reorder_oscillators(0, 2)
         if not result:
-            pytest.skip("Reorder API not available")
+            pytest.fail("Reorder API not available")
 
         oscs_reordered = editor.get_oscillators()
         names_reordered = [o["name"] for o in oscs_reordered]
@@ -439,7 +439,7 @@ class TestReorderPersistence:
         path = "/tmp/oscil_e2e_reorder.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -529,7 +529,7 @@ class TestStateLoadEdgeCases:
         sources = client.get_sources()
         if not sources:
             client.close_editor()
-            pytest.skip("No sources available")
+            pytest.fail("No sources available")
 
         # Create some state, save, close editor, then load
         osc_id = client.add_oscillator(sources[0]["id"], name="Load Without Editor")
@@ -540,7 +540,7 @@ class TestStateLoadEdgeCases:
         saved = client.save_state(path)
         if not saved:
             client.close_editor()
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         client.reset_state()
         client.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -570,7 +570,7 @@ class TestStateLoadEdgeCases:
         path = "/tmp/oscil_e2e_play_load.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         # Start transport
         editor.transport_play()
@@ -635,7 +635,7 @@ class TestSpecialCharacterNames:
         assert len(osc.get("name", "")) > 0
 
     @pytest.mark.parametrize("name,description", [
-        ('Test & <Osc> "quotes" \'apostrophe\'', "XML special characters"),
+        pytest.param('A & <B> "C" \'D\'', "XML special characters"),
         ("Line1\nLine2\tTabbed", "whitespace control characters"),
         ("Osc #1 (50% gain) [L+R]", "common music notation symbols"),
         ("  Leading Spaces  ", "leading/trailing whitespace"),
@@ -647,6 +647,7 @@ class TestSpecialCharacterNames:
         Bug caught: special characters not escaped in state serialization,
         producing invalid XML that fails to load or corrupts name data.
         Parametrized to cover: XML entities, whitespace, music symbols, padding.
+        Known failure (XML special characters): name truncated during XML serialization.
         """
         osc_id = editor.add_oscillator(source_id, name=name)
         assert osc_id is not None, f"Failed to add oscillator with {description}"
@@ -654,7 +655,7 @@ class TestSpecialCharacterNames:
         path = f"/tmp/oscil_e2e_special_{hash(name) & 0xFFFF:04x}.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -738,7 +739,7 @@ class TestEditorCloseWithPendingState:
         sources = client.get_sources()
         if not sources:
             client.close_editor()
-            pytest.skip("No sources available")
+            pytest.fail("No sources available")
 
         osc_id = client.add_oscillator(sources[0]["id"], name="CloseSave")
         assert osc_id
@@ -766,7 +767,7 @@ class TestEditorCloseWithPendingState:
         sources = client.get_sources()
         if not sources:
             client.close_editor()
-            pytest.skip("No sources available")
+            pytest.fail("No sources available")
 
         # Create state to save
         osc_id = client.add_oscillator(sources[0]["id"], name="CloseLoad")
@@ -777,7 +778,7 @@ class TestEditorCloseWithPendingState:
         saved = client.save_state(path)
         if not saved:
             client.close_editor()
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         client.reset_state()
         client.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -814,7 +815,7 @@ class TestMoveAndDeleteRace:
 
         pane2_id = editor.add_pane("MoveDel Pane")
         if pane2_id is None:
-            pytest.skip("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         # Move and immediately delete
         editor.move_oscillator(osc_id, pane2_id)
@@ -856,3 +857,169 @@ class TestMoveAndDeleteRace:
         assert state is not None, (
             "Harness should be stable after loading state saved during delete"
         )
+
+
+class TestStressOperations:
+    """High-frequency operations that stress thread safety boundaries."""
+
+    def test_rapid_oscillator_property_updates_during_playback(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: rapid property updates during audio callback cause torn
+        reads on oscillator properties, producing corrupted rendering state
+        (e.g., opacity=NaN, lineWidth=negative).
+        """
+        osc_id = editor.add_oscillator(source_id, name="Rapid Updates")
+        assert osc_id is not None
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+        editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+
+        # Rapid property updates while audio is playing
+        for i in range(20):
+            opacity = (i % 10) / 10.0 + 0.05
+            line_width = 1.0 + (i % 5)
+            mode = ["FullStereo", "Mono", "Mid", "Side", "Left", "Right"][i % 6]
+            editor.update_oscillator(osc_id, opacity=opacity, lineWidth=line_width, mode=mode)
+
+        # System must remain stable
+        osc = editor.get_oscillator_by_id(osc_id)
+        assert osc is not None, "Oscillator must survive rapid property updates"
+        assert osc.get("opacity") is not None, "Opacity must be set"
+        assert 0.0 <= osc["opacity"] <= 1.0, (
+            f"Opacity must be in [0, 1], got {osc['opacity']}"
+        )
+        assert osc.get("lineWidth") is not None, "lineWidth must be set"
+        assert osc["lineWidth"] > 0, f"lineWidth must be positive, got {osc['lineWidth']}"
+        assert editor.is_playing(), "Transport must still be playing"
+
+        editor.transport_stop()
+
+    def test_add_move_delete_cycle_across_panes(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: creating oscillator in pane A, moving to pane B, deleting,
+        then repeating — the second cycle crashes because the move handler
+        left a stale reference in pane A's oscillator list.
+        """
+        editor.transport_play()
+        editor.wait_until(
+            lambda: editor.is_playing(), timeout_s=2.0, desc="transport playing"
+        )
+
+        pane2_id = editor.add_pane("Stress Pane 2")
+        if pane2_id is None:
+            editor.transport_stop()
+            pytest.fail("Pane add API not available")
+
+        for cycle in range(5):
+            osc_id = editor.add_oscillator(
+                source_id, name=f"Cycle {cycle}"
+            )
+            assert osc_id is not None, f"Cycle {cycle}: add failed"
+            editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+            # Move to pane 2
+            editor.move_oscillator(osc_id, pane2_id)
+            editor.wait_until(
+                lambda: (o := editor.get_oscillator_by_id(osc_id))
+                and o.get("paneId") == pane2_id,
+                timeout_s=3.0,
+                desc=f"cycle {cycle}: move to pane 2",
+            )
+
+            # Delete
+            editor.delete_oscillator(osc_id)
+            editor.wait_for_oscillator_count(0, timeout_s=3.0)
+
+        # Verify system stable
+        assert editor.is_playing(), "Transport must still be playing after cycles"
+        panes = editor.get_panes()
+        assert isinstance(panes, list), "Panes must be queryable"
+
+        editor.transport_stop()
+
+    def test_editor_close_reopen_during_state_save_load(
+        self, client: OscilTestClient
+    ):
+        """
+        Bug caught: closing editor while a state save is in progress, then
+        reopening and loading — the load triggers UI refresh on components
+        that were destroyed and recreated, causing use-after-free.
+        """
+        client.open_editor()
+        client.reset_state()
+        client.wait_for_oscillator_count(0, timeout_s=3.0)
+
+        sources = client.get_sources()
+        if not sources:
+            client.close_editor()
+            pytest.fail("No sources available")
+
+        # Build up state
+        for i in range(3):
+            client.add_oscillator(sources[0]["id"], name=f"Stress {i}")
+        client.wait_for_oscillator_count(3, timeout_s=5.0)
+
+        path = "/tmp/oscil_e2e_stress_close_save.xml"
+
+        # Rapid save → close → open → load cycle
+        for cycle in range(3):
+            client.save_state(path)
+            client.close_editor()
+            client.open_editor()
+            client.load_state(path)
+
+        # Final verification
+        count = client.verify_editor_ready()
+        assert count > 0, "Editor must be functional after close/reopen/save/load cycles"
+
+        oscs = client.get_oscillators()
+        assert len(oscs) >= 1, "State must survive close/reopen/load cycles"
+
+        client.close_editor()
+
+    def test_simultaneous_pane_and_oscillator_operations(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: adding a pane while oscillators are being added causes
+        the pane assignment logic to race — new oscillator gets assigned to
+        a pane that was just added but not yet fully initialized.
+        """
+        # Rapid interleaving of pane and oscillator operations
+        pane_ids = []
+        osc_ids = []
+
+        for i in range(3):
+            # Add oscillator
+            osc_id = editor.add_oscillator(source_id, name=f"SimOsc {i}")
+            assert osc_id is not None, f"Failed to add oscillator {i}"
+            osc_ids.append(osc_id)
+
+            # Add pane
+            pane_id = editor.add_pane(f"SimPane {i}")
+            if pane_id:
+                pane_ids.append(pane_id)
+
+        editor.wait_for_oscillator_count(3, timeout_s=5.0)
+
+        # Move oscillators between panes
+        if pane_ids:
+            for osc_id in osc_ids:
+                target_pane = pane_ids[0]
+                editor.move_oscillator(osc_id, target_pane)
+
+        # Verify all oscillators have valid pane IDs
+        all_pane_ids = {p["id"] for p in editor.get_panes()}
+        for osc in editor.get_oscillators():
+            assert osc.get("paneId") in all_pane_ids, (
+                f"Oscillator '{osc['name']}' has orphaned paneId "
+                f"'{osc.get('paneId')}' after simultaneous ops"
+            )

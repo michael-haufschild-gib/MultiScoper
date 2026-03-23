@@ -613,5 +613,6 @@ class OscilTestClient:
         resp = self._get_json("/ui/elements")
         if resp and resp.get("success"):
             data = resp.get("data", {})
-            return data.get("elementIds", [])
+            elements = data.get("elements", [])
+            return [e["testId"] for e in elements if "testId" in e]
         return []

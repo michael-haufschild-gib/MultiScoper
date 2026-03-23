@@ -33,7 +33,7 @@ class TestSourceListAPI:
         """
         sources = client.get_sources()
         if not sources:
-            pytest.skip("No sources available")
+            pytest.fail("No sources available")
 
         for source in sources:
             assert "id" in source and source["id"], (
@@ -47,7 +47,7 @@ class TestSourceListAPI:
         """
         sources = client.get_sources()
         if len(sources) < 2:
-            pytest.skip("Need 2+ sources to test uniqueness")
+            pytest.fail("Need 2+ sources to test uniqueness")
 
         ids = [s["id"] for s in sources]
         assert len(ids) == len(set(ids)), (
@@ -61,7 +61,7 @@ class TestSourceListAPI:
         """
         sources = client.get_sources()
         if not sources:
-            pytest.skip("No sources available")
+            pytest.fail("No sources available")
 
         for source in sources:
             assert "name" in source, (
@@ -115,7 +115,7 @@ class TestSourceBinding:
         """
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         sources = snap.get("sources", [])
         assert len(sources) > 0, (

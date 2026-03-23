@@ -24,7 +24,7 @@ class TestHoverInteraction:
         """
         item_id = "sidebar_oscillators_item_0"
         if not editor.element_exists(item_id):
-            pytest.skip("List item 0 not registered")
+            pytest.fail("List item 0 not registered")
 
         result = editor.hover(item_id, duration_ms=200)
         # Hover should not crash; result may be True/False depending on impl
@@ -39,7 +39,7 @@ class TestHoverInteraction:
         """
         add_btn = "sidebar_addOscillator"
         if not editor.element_exists(add_btn):
-            pytest.skip("Add button not registered")
+            pytest.fail("Add button not registered")
 
         editor.hover(add_btn, duration_ms=200)
 
@@ -61,7 +61,7 @@ class TestDoubleClick:
         """
         item_id = "sidebar_oscillators_item_0"
         if not editor.element_exists(item_id):
-            pytest.skip("List item 0 not registered")
+            pytest.fail("List item 0 not registered")
 
         result = editor.double_click(item_id)
         # Should not crash; may open config popup or other action
@@ -83,7 +83,7 @@ class TestRightClick:
         """
         item_id = "sidebar_oscillators_item_0"
         if not editor.element_exists(item_id):
-            pytest.skip("List item 0 not registered")
+            pytest.fail("List item 0 not registered")
 
         result = editor.right_click(item_id)
         # Should not crash
@@ -106,7 +106,7 @@ class TestScrollInteraction:
         # Scroll on the sidebar
         sidebar_id = "sidebar"
         if not editor.element_exists(sidebar_id):
-            pytest.skip("Sidebar not registered")
+            pytest.fail("Sidebar not registered")
 
         result = editor.scroll(sidebar_id, delta_y=100.0)
         # Should not crash; result may be None if scroll not supported
@@ -122,7 +122,7 @@ class TestScrollInteraction:
         """
         sidebar_id = "sidebar"
         if not editor.element_exists(sidebar_id):
-            pytest.skip("Sidebar not registered")
+            pytest.fail("Sidebar not registered")
 
         editor.scroll(sidebar_id, delta_y=200.0)
         editor.scroll(sidebar_id, delta_y=-200.0)
@@ -141,20 +141,20 @@ class TestSliderControls:
         """
         settings_btn = "sidebar_oscillators_item_0_settings"
         if not editor.element_exists(settings_btn):
-            pytest.skip("Settings button not registered")
+            pytest.fail("Settings button not registered")
 
         editor.click(settings_btn)
         try:
             editor.wait_for_visible("configPopup", timeout_s=3.0)
         except TimeoutError:
-            pytest.skip("Config popup not available")
+            pytest.fail("Config popup not available")
 
         slider_id = "configPopup_lineWidthSlider"
         if not editor.element_exists(slider_id):
-            # Close popup and skip
+            # Close popup before failing
             if editor.element_exists("configPopup_closeBtn"):
                 editor.click("configPopup_closeBtn")
-            pytest.skip("Line width slider not in config popup")
+            pytest.fail("Line width slider not in config popup")
 
         # Get initial value (if available from extra)
         resp = editor.increment_slider(slider_id)
@@ -177,12 +177,13 @@ class TestDragInteraction:
         """
         Bug caught: drag-to-reorder handler not wired, or drag operation
         corrupting the item being dragged.
+        Known failure: drag between list items does not change order.
         """
         item0 = "sidebar_oscillators_item_0"
         item1 = "sidebar_oscillators_item_1"
 
         if not (editor.element_exists(item0) and editor.element_exists(item1)):
-            pytest.skip("Both list items not registered")
+            pytest.fail("Both list items not registered")
 
         oscs_before = editor.get_oscillators()
         ids_before = [o["id"] for o in oscs_before]
@@ -211,7 +212,7 @@ class TestDragInteraction:
         """
         handle_id = "sidebar_resizeHandle"
         if not editor.element_exists(handle_id):
-            pytest.skip("Resize handle not registered")
+            pytest.fail("Resize handle not registered")
 
         # Small drag should not crash
         editor.drag_offset(handle_id, dx=-10, dy=0)

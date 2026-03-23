@@ -75,9 +75,7 @@ class SidebarPage:
     def delete_oscillator(self, index: int):
         """Click the delete button on an oscillator list item."""
         btn = self.item_delete_id(index)
-        assert self.c.element_exists(btn), (
-            f"Delete button for item {index} must be registered"
-        )
+        self.c.wait_for_element(btn, timeout_s=5.0)
         self.c.click(btn)
         # Handle confirmation dialog if present
         if self.c.element_exists("confirmDeleteDialog"):
@@ -102,19 +100,36 @@ class SidebarPage:
         )
         self.c.click(btn)
 
+    def _is_section_expanded(self, section_id: str) -> bool:
+        """Check if an accordion section is currently expanded."""
+        el = self.c.get_element(section_id)
+        if el and el.extra:
+            return el.extra.get("expanded", False)
+        return False
+
     def expand_timing(self):
-        """Expand the timing accordion section."""
+        """Expand the timing accordion section (no-op if already expanded)."""
         assert self.c.element_exists(self.TIMING_SECTION), (
             "Timing section must be registered"
         )
-        self.c.click(self.TIMING_SECTION)
+        if not self._is_section_expanded(self.TIMING_SECTION):
+            self.c.click(self.TIMING_SECTION)
+
+    def collapse_timing(self):
+        """Collapse the timing accordion section (no-op if already collapsed)."""
+        assert self.c.element_exists(self.TIMING_SECTION), (
+            "Timing section must be registered"
+        )
+        if self._is_section_expanded(self.TIMING_SECTION):
+            self.c.click(self.TIMING_SECTION)
 
     def expand_options(self):
-        """Expand the options accordion section."""
+        """Expand the options accordion section (no-op if already expanded)."""
         assert self.c.element_exists(self.OPTIONS_SECTION), (
             "Options section must be registered"
         )
-        self.c.click(self.OPTIONS_SECTION)
+        if not self._is_section_expanded(self.OPTIONS_SECTION):
+            self.c.click(self.OPTIONS_SECTION)
 
 
 class AddOscillatorDialog:
@@ -399,7 +414,7 @@ def require_element(client: OscilTestClient, element_id: str, context: str = "")
     assert client.element_exists(element_id), msg
 
 
-def xfail_if_missing(client: OscilTestClient, element_id: str, reason: str = ""):
-    """Mark test as xfail if an optional element is missing."""
+def fail_if_missing(client: OscilTestClient, element_id: str, reason: str = ""):
+    """Fail the test if a required element is missing."""
     if not client.element_exists(element_id):
-        pytest.xfail(reason or f"Optional element '{element_id}' not registered")
+        pytest.fail(reason or f"Element '{element_id}' not registered")

@@ -63,7 +63,7 @@ def client() -> OscilTestClient:
     try:
         c.wait_for_harness(max_retries=15, delay=1.0)
     except HarnessConnectionError:
-        pytest.skip("Test harness not running on localhost:8765")
+        pytest.fail("Test harness not running on localhost:8765")
     return c
 
 
@@ -72,9 +72,9 @@ def harness_capabilities(client: OscilTestClient) -> dict:
     """
     Probe the harness once to discover which optional features are available.
 
-    Returns a dict of capability flags so tests can use ``xfail`` with a reason
-    instead of silently skipping. Core features are verified via assertion --
-    only genuinely optional features get entries here.
+    Returns a dict of capability flags so tests can fail with a clear reason
+    when optional features are unavailable. Core features are verified via
+    assertion -- only genuinely optional features get entries here.
     """
     caps = {}
 
@@ -164,11 +164,23 @@ def editor(client: OscilTestClient):
 
 
 @pytest.fixture()
-def source_id(client: OscilTestClient) -> str:
-    """Return the first available source ID. Skips if none available."""
-    sources = client.get_sources()
+def source_id(editor: OscilTestClient) -> str:
+    """Return track 0's source ID.
+
+    Depends on ``editor`` to ensure the editor is open before querying
+    track info — sources are only registered after prepareToPlay and
+    the editor being visible.
+
+    Tests that call ``set_track_audio(0, ...)`` expect the oscillator to be
+    bound to track 0's audio pipeline.
+    """
+    track_info = editor.get_track_info(0)
+    if track_info and "sourceId" in track_info:
+        return track_info["sourceId"]
+    # Fallback: first listed source
+    sources = editor.get_sources()
     if not sources:
-        pytest.skip("No audio sources available in test harness")
+        pytest.fail("No audio sources available in test harness")
     return sources[0]["id"]
 
 
@@ -201,6 +213,13 @@ def _make_oscillators(client: OscilTestClient, source_id: str, count: int) -> li
         ids.append(osc_id)
     # Wait for the last list item to appear
     client.wait_for_element(f"sidebar_oscillators_item_{count - 1}", timeout_s=5.0)
+    # Verify item_0 delete button is registered
+    all_ids = client.get_registered_element_ids()
+    item0_ids = [x for x in all_ids if 'item_0' in x]
+    if f"sidebar_oscillators_item_0_delete" not in all_ids:
+        import sys
+        print(f"WARN: item_0_delete not in registry. item_0 elements: {item0_ids}", file=sys.stderr)
+        print(f"WARN: total registered: {len(all_ids)}", file=sys.stderr)
     return ids
 
 
@@ -246,7 +265,7 @@ def timing_section(editor: OscilTestClient) -> OscilTestClient:
     try:
         editor.wait_for_element(sentinels[0], timeout_s=2.0)
     except TimeoutError:
-        pass  # Proceed anyway — tests will skip individual controls if missing
+        pass  # Proceed anyway — tests will fail on individual missing controls
     return editor
 
 
@@ -280,12 +299,12 @@ def config_popup(editor: OscilTestClient, oscillator: str):
     """
     settings_btn = "sidebar_oscillators_item_0_settings"
     if not editor.element_exists(settings_btn):
-        pytest.skip("Settings button not registered")
+        pytest.fail("Settings button not registered")
     editor.click(settings_btn)
     try:
         editor.wait_for_visible("configPopup", timeout_s=3.0)
     except TimeoutError:
-        pytest.skip("Config popup not available")
+        pytest.fail("Config popup not available")
     yield editor, oscillator
     # Teardown: close popup if still open
     for btn in ("configPopup_closeBtn", "configPopup_footerCloseBtn"):
@@ -314,7 +333,7 @@ def two_panes(editor: OscilTestClient, source_id: str):
 
     pane2_id = editor.add_pane("Second Pane")
     if pane2_id is None:
-        pytest.skip("Pane add API not available")
+        pytest.fail("Pane add API not available")
 
     return pane1_id, pane2_id
 
@@ -360,7 +379,7 @@ def saved_state_path(editor: OscilTestClient, source_id: str):
     path = "/tmp/oscil_e2e_fixture_state.xml"
     saved = editor.save_state(path)
     if not saved:
-        pytest.skip("State save API not available")
+        pytest.fail("State save API not available")
 
     yield editor, path, [id1, id2]
 
@@ -409,3 +428,5 @@ def state_mgr(editor: OscilTestClient) -> StateManager:
 def transport_ctrl(editor: OscilTestClient) -> TransportControl:
     """Transport control for play/stop operations."""
     return TransportControl(editor)
+
+

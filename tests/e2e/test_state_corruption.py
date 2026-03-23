@@ -114,7 +114,7 @@ class TestSnapshotStateConsistency:
         # Compare snapshot with state API
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.xfail("Diagnostic snapshot API not available")
+            pytest.fail("Diagnostic snapshot API not available")
 
         state_oscs = editor.get_oscillators()
         snap_oscs = snap.get("oscillators", [])
@@ -141,12 +141,12 @@ class TestSnapshotStateConsistency:
         """
         timing_id = "sidebar_timing"
         if not editor.element_exists(timing_id):
-            pytest.xfail("Timing section not registered")
+            pytest.fail("Timing section not registered")
         editor.click(timing_id)
 
         melodic_seg = "sidebar_timing_modeToggle_melodic"
         if not editor.element_exists(melodic_seg):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
 
         osc_id = editor.add_oscillator(source_id, name="Snap Timing")
         assert osc_id is not None
@@ -158,7 +158,7 @@ class TestSnapshotStateConsistency:
         # Verify snapshot reflects the mode change
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.xfail("Diagnostic snapshot API not available")
+            pytest.fail("Diagnostic snapshot API not available")
 
         snap_mode = snap.get("timing", {}).get("mode", "")
         # The mode should be MELODIC (or equivalent)
@@ -188,7 +188,7 @@ class TestPaneIntegrity:
         # Add second pane
         pane2_id = editor.add_pane("Integrity Pane 2")
         if pane2_id is None:
-            pytest.xfail("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         # Move one oscillator to pane 2
         editor.move_oscillator(ids[1], pane2_id)
@@ -326,7 +326,7 @@ class TestSaveLoadCornerCases:
 
         pane2_id = editor.add_pane("MultiPane P2")
         if pane2_id is None:
-            pytest.xfail("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         # Move B to pane 2
         editor.move_oscillator(id2, pane2_id)

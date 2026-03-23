@@ -86,7 +86,7 @@ class TestAddOscillator:
 
         if not editor.element_exists(AddOscillatorDialog.NAME_FIELD):
             dialog.cancel()
-            pytest.xfail("Name field not available in add dialog")
+            pytest.fail("Name field not available in add dialog")
 
         editor.clear_text(AddOscillatorDialog.NAME_FIELD)
         result = editor.type_text(AddOscillatorDialog.NAME_FIELD, "Custom Name")
@@ -108,7 +108,7 @@ class TestAddOscillator:
         dialog.cancel()
 
         if not exists:
-            pytest.xfail("Color picker not available in add dialog")
+            pytest.fail("Color picker not available in add dialog")
 
     def test_dialog_pane_selector_exists(
         self, editor: OscilTestClient, source_id: str
@@ -131,7 +131,7 @@ class TestAddOscillator:
         dialog.cancel()
 
         if not exists:
-            pytest.xfail("Pane selector not available in add dialog")
+            pytest.fail("Pane selector not available in add dialog")
 
     def test_dialog_source_dropdown_has_sources(self, editor: OscilTestClient):
         """
@@ -146,7 +146,7 @@ class TestAddOscillator:
         dropdown_id = AddOscillatorDialog.SOURCE_DROPDOWN
         if not editor.element_exists(dropdown_id):
             dialog.cancel()
-            pytest.xfail("Source dropdown not registered in add dialog")
+            pytest.fail("Source dropdown not registered in add dialog")
 
         el = editor.get_element(dropdown_id)
         num_items = el.extra.get("numItems", 0) if el else 0
@@ -195,6 +195,7 @@ class TestDeleteOscillator:
         """
         Bug caught: index-based deletion corrupting when list shrinks
         (off-by-one after removing item 0 shifts remaining items).
+        Known failure: delete button for item 0 not registered after three_oscillators fixture.
         """
         for remaining in [2, 1, 0]:
             sidebar_page.delete_oscillator(0)
@@ -263,7 +264,7 @@ class TestEditOscillator:
         popup = ConfigPopup(editor)
         if not popup.has_element(ConfigPopup.NAME_FIELD):
             popup.close()
-            pytest.xfail("Name field not available in config popup")
+            pytest.fail("Name field not available in config popup")
 
         new_name = "Renamed By E2E"
         popup.set_name(new_name)
@@ -288,7 +289,7 @@ class TestEditOscillator:
         popup = ConfigPopup(editor)
         if not popup.has_element(ConfigPopup.LINE_WIDTH_SLIDER):
             popup.close()
-            pytest.xfail("Line width slider not available in config popup")
+            pytest.fail("Line width slider not available in config popup")
 
         popup.set_line_width(4.0)
 
@@ -405,7 +406,7 @@ class TestProcessingMode:
 
         if not popup.has_element(ConfigPopup.MODE_SELECTOR):
             popup.close()
-            pytest.xfail("Mode selector not available in config popup")
+            pytest.fail("Mode selector not available in config popup")
 
         modes_tested = 0
         for suffix, expected_mode in ConfigPopup.MODE_BUTTONS.items():

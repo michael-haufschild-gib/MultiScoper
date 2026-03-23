@@ -47,11 +47,11 @@ class TestMultiPaneRendering:
         # Add second pane
         pane2_id = editor.add_pane("Pane 2")
         if pane2_id is None:
-            pytest.skip("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         panes = editor.get_panes()
         if len(panes) < 2:
-            pytest.skip("Could not create second pane")
+            pytest.fail("Could not create second pane")
 
         # Add oscillator to second pane
         id2 = editor.add_oscillator(

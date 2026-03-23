@@ -41,7 +41,7 @@ class TestThemeDropdown:
         c = options_section
         dropdown_id = "sidebar_options_themeDropdown"
         if not c.element_exists(dropdown_id):
-            pytest.skip("Theme dropdown not registered")
+            pytest.fail("Theme dropdown not registered")
 
         selected, num, items = _get_theme_info(c)
         assert num is not None and num > 0, (
@@ -55,11 +55,11 @@ class TestThemeDropdown:
         c = options_section
         dropdown_id = "sidebar_options_themeDropdown"
         if not c.element_exists(dropdown_id):
-            pytest.skip("Theme dropdown not registered")
+            pytest.fail("Theme dropdown not registered")
 
         current, num, items = _get_theme_info(c)
         if num is None or num < 2:
-            pytest.skip("Need at least 2 themes to test selection")
+            pytest.fail("Need at least 2 themes to test selection")
 
         # Pick a theme that is NOT the current selection
         new_theme = None
@@ -70,7 +70,7 @@ class TestThemeDropdown:
                 break
 
         if new_theme is None:
-            pytest.skip("Could not find an alternative theme")
+            pytest.fail("Could not find an alternative theme")
 
         c.select_dropdown_item(dropdown_id, new_theme)
 
@@ -93,11 +93,11 @@ class TestThemeDropdown:
         c = options_section
         dropdown_id = "sidebar_options_themeDropdown"
         if not c.element_exists(dropdown_id):
-            pytest.skip("Theme dropdown not registered")
+            pytest.fail("Theme dropdown not registered")
 
         _, _, items = _get_theme_info(c)
         if not items:
-            pytest.skip("No theme items to test")
+            pytest.fail("No theme items to test")
 
         failures = []
         for item in items:
@@ -130,18 +130,18 @@ class TestThemePersistence:
         options_id = "sidebar_options"
         if not client.element_exists(options_id):
             client.close_editor()
-            pytest.skip("Options section not registered")
+            pytest.fail("Options section not registered")
         client.click(options_id)
 
         dropdown_id = "sidebar_options_themeDropdown"
         if not client.element_exists(dropdown_id):
             client.close_editor()
-            pytest.skip("Theme dropdown not registered")
+            pytest.fail("Theme dropdown not registered")
 
         current, num, items = _get_theme_info(client)
         if num is None or num < 2:
             client.close_editor()
-            pytest.skip("Need at least 2 themes")
+            pytest.fail("Need at least 2 themes")
 
         # Select a non-default theme
         target = None
@@ -152,7 +152,7 @@ class TestThemePersistence:
                 break
         if not target:
             client.close_editor()
-            pytest.skip("No alternative theme found")
+            pytest.fail("No alternative theme found")
 
         client.select_dropdown_item(dropdown_id, target)
         client.wait_until(

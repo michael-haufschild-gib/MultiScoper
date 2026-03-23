@@ -35,7 +35,7 @@ class TestStatusBarVisibility:
         making it impossible for tests to verify metrics display.
         """
         if not editor.element_exists(label_id):
-            pytest.skip(f"{description} label not registered")
+            pytest.fail(f"{description} label not registered")
 
         el = editor.get_element(label_id)
         assert el is not None
@@ -53,21 +53,22 @@ class TestStatusBarContent:
         """
         osc_label = "statusBar_osc"
         if not editor.element_exists(osc_label):
-            pytest.skip("Oscillator count label not registered")
+            pytest.fail("Oscillator count label not registered")
 
         # Add oscillator
         osc_id = editor.add_oscillator(source_id, name="StatusBar Test")
         assert osc_id is not None
         editor.wait_for_oscillator_count(1, timeout_s=3.0)
 
-        # Check status bar reflects the oscillator count
-        el = editor.get_element(osc_label)
-        if el and el.extra.get("text"):
-            text = el.extra["text"]
-            # The label should contain "1" somewhere
-            assert "1" in text, (
-                f"Oscillator count label should show 1, got '{text}'"
-            )
+        # Status bar is updated by a timer-based metrics controller; poll
+        # until the label reflects the new oscillator count.
+        editor.wait_until(
+            lambda: (el := editor.get_element(osc_label))
+            and el.extra.get("text")
+            and "1" in el.extra["text"],
+            timeout_s=3.0,
+            desc="oscillator count label to update",
+        )
 
     def test_source_count_positive(self, editor: OscilTestClient):
         """
@@ -75,11 +76,11 @@ class TestStatusBarContent:
         """
         src_label = "statusBar_src"
         if not editor.element_exists(src_label):
-            pytest.skip("Source count label not registered")
+            pytest.fail("Source count label not registered")
 
         sources = editor.get_sources()
         if not sources:
-            pytest.skip("No sources available")
+            pytest.fail("No sources available")
 
         el = editor.get_element(src_label)
         if el and el.extra.get("text"):

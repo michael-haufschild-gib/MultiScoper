@@ -55,7 +55,7 @@ class TestPaneCreation:
         # Add a second pane
         pane_id = editor.add_pane("Second Pane")
         if pane_id is None:
-            pytest.skip("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         panes = editor.get_panes()
         assert len(panes) >= 2, (
@@ -141,7 +141,7 @@ class TestPaneRemoval:
 
         removed = editor.remove_pane(pane2_id)
         if not removed:
-            pytest.skip("Pane remove API not available")
+            pytest.fail("Pane remove API not available")
 
         editor.wait_until(
             lambda: len(editor.get_panes()) < count_before,
@@ -159,8 +159,7 @@ class TestPaneRemoval:
         """
         Bug caught: removing a pane that contains oscillators leaves them
         orphaned (paneId points to nonexistent pane), making them invisible.
-        The expected behavior is either: oscillators move to another pane,
-        or the pane removal is rejected.
+        The expected behavior is: oscillators move to another pane.
         """
         pane1_id, pane2_id = two_panes
 
@@ -174,14 +173,14 @@ class TestPaneRemoval:
             if osc_id:
                 editor.move_oscillator(osc_id, pane2_id)
         if osc_id is None:
-            pytest.skip("Cannot add oscillator to second pane")
+            pytest.fail("Cannot add oscillator to second pane")
 
         editor.wait_for_oscillator_count(2, timeout_s=3.0)
 
         # Remove the second pane
         removed = editor.remove_pane(pane2_id)
         if not removed:
-            pytest.skip("Pane remove API not available")
+            pytest.fail("Pane remove API not available")
 
         # Verify no orphaned oscillators
         remaining_pane_ids = {p["id"] for p in editor.get_panes()}
@@ -213,7 +212,7 @@ class TestOscillatorPaneMove:
         # Move to pane2
         moved = editor.move_oscillator(osc_id, pane2_id)
         if not moved:
-            pytest.skip("Oscillator move API not available")
+            pytest.fail("Oscillator move API not available")
 
         # Verify paneId updated
         editor.wait_until(
@@ -242,7 +241,7 @@ class TestOscillatorPaneMove:
 
         moved = editor.move_oscillator(osc_id, pane2_id)
         if not moved:
-            pytest.skip("Oscillator move API not available")
+            pytest.fail("Oscillator move API not available")
 
         editor.wait_until(
             lambda: (osc := editor.get_oscillator_by_id(osc_id))
@@ -299,7 +298,7 @@ class TestPaneStatePersistence:
         path = "/tmp/oscil_e2e_pane_persist.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -331,7 +330,7 @@ class TestPaneStatePersistence:
         path = "/tmp/oscil_e2e_binding_persist.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -352,3 +351,93 @@ class TestPaneStatePersistence:
         assert pane_after in pane_ids, (
             f"Restored paneId '{pane_after}' should exist in pane list"
         )
+
+    def test_pane_names_survive_save_load(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: pane name field not serialized in state XML, so panes
+        get default names (e.g., "Pane 1") after load even when user gave
+        them meaningful names via pane add API.
+        """
+        osc_id = editor.add_oscillator(source_id, name="PaneNamePersist")
+        assert osc_id is not None
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        # Add second pane with a distinctive name
+        pane2_id = editor.add_pane("My Custom Pane Name")
+        if pane2_id is None:
+            pytest.fail("Pane add API not available")
+
+        panes_before = editor.get_panes()
+        names_before = [p.get("name", "") for p in panes_before]
+        assert len(panes_before) >= 2, (
+            f"Should have 2+ panes, got {len(panes_before)}"
+        )
+
+        path = "/tmp/oscil_e2e_pane_names.xml"
+        saved = editor.save_state(path)
+        if not saved:
+            pytest.fail("State save API not available")
+
+        editor.reset_state()
+        editor.wait_for_oscillator_count(0, timeout_s=3.0)
+
+        loaded = editor.load_state(path)
+        assert loaded, "State load should succeed"
+
+        editor.wait_for_oscillator_count(1, timeout_s=5.0)
+        panes_after = editor.get_panes()
+        names_after = [p.get("name", "") for p in panes_after]
+
+        assert len(panes_after) >= 2, (
+            f"Should have 2+ panes after load, got {len(panes_after)}"
+        )
+
+        # Verify the custom pane name was preserved
+        assert "My Custom Pane Name" in names_after, (
+            f"Custom pane name should survive save/load: "
+            f"before={names_before}, after={names_after}"
+        )
+
+    def test_multiple_pane_names_survive_save_load(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: only the first pane's name is serialized, subsequent
+        pane names are lost (common with naive serialization that uses
+        a single name field instead of a per-pane list).
+        """
+        osc_id = editor.add_oscillator(source_id, name="MultiPaneName")
+        assert osc_id is not None
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        pane_names = ["Analysis View", "Reference Track", "Debug Output"]
+        for name in pane_names:
+            pid = editor.add_pane(name)
+            if pid is None:
+                pytest.fail("Pane add API not available")
+
+        panes_before = editor.get_panes()
+        assert len(panes_before) >= 4  # auto-created + 3 manual
+
+        path = "/tmp/oscil_e2e_multi_pane_names.xml"
+        saved = editor.save_state(path)
+        if not saved:
+            pytest.fail("State save API not available")
+
+        editor.reset_state()
+        editor.wait_for_oscillator_count(0, timeout_s=3.0)
+
+        loaded = editor.load_state(path)
+        assert loaded
+
+        editor.wait_for_oscillator_count(1, timeout_s=5.0)
+        panes_after = editor.get_panes()
+        names_after = set(p.get("name", "") for p in panes_after)
+
+        for expected_name in pane_names:
+            assert expected_name in names_after, (
+                f"Pane name '{expected_name}' should survive save/load. "
+                f"Got names: {names_after}"
+            )

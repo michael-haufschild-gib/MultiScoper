@@ -35,7 +35,7 @@ class TestOscillatorFilterTabs:
                 found += 1
 
         if found == 0:
-            pytest.skip("No filter tabs registered")
+            pytest.fail("No filter tabs registered")
 
         assert found >= 2, (
             f"Should have at least 2 filter tabs, found {found}"
@@ -47,7 +47,7 @@ class TestOscillatorFilterTabs:
         """
         tab_id = self._get_filter_tab_ids()["all"]
         if not editor.element_exists(tab_id):
-            pytest.skip("All tab not registered")
+            pytest.fail("All tab not registered")
 
         assert editor.click(tab_id), "All tab should be clickable"
 
@@ -63,10 +63,11 @@ class TestOscillatorFilterTabs:
         """
         Bug caught: "Visible" filter not actually filtering — shows all
         oscillators regardless of visibility state.
+        Known failure: hidden oscillator still appears in list after filter tab click.
         """
         tabs = self._get_filter_tab_ids()
         if not editor.element_exists(tabs["visible"]):
-            pytest.skip("Visible tab not registered")
+            pytest.fail("Visible tab not registered")
 
         # Create two oscillators, hide one
         id1 = editor.add_oscillator(source_id, name="FilterVis 1")
@@ -106,7 +107,7 @@ class TestOscillatorFilterTabs:
         """
         tabs = self._get_filter_tab_ids()
         if not editor.element_exists(tabs["hidden"]):
-            pytest.skip("Hidden tab not registered")
+            pytest.fail("Hidden tab not registered")
 
         id1 = editor.add_oscillator(source_id, name="FilterHid 1")
         id2 = editor.add_oscillator(source_id, name="FilterHid 2")
@@ -129,10 +130,10 @@ class TestOscillatorFilterTabs:
         try:
             editor.wait_for_element("sidebar_oscillators_item_0", timeout_s=2.0)
         except TimeoutError:
-            # Hidden filter may not be implemented — skip gracefully
+            # Hidden filter not implemented
             if editor.element_exists(tabs["all"]):
                 editor.click(tabs["all"])
-            pytest.skip("Hidden filter does not populate list")
+            pytest.fail("Hidden filter does not populate list")
 
         # Switch back to "All"
         if editor.element_exists(tabs["all"]):
@@ -147,7 +148,7 @@ class TestOscillatorFilterTabs:
         """
         tabs = self._get_filter_tab_ids()
         if not editor.element_exists(tabs["all"]):
-            pytest.skip("All tab not registered")
+            pytest.fail("All tab not registered")
 
         id1 = editor.add_oscillator(source_id, name="FilterAdd 1")
         editor.wait_for_oscillator_count(1, timeout_s=3.0)

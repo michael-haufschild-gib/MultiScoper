@@ -22,7 +22,7 @@ class TestRenderingModeToggle:
         c = options_section
         toggle_id = "sidebar_options_gpuRenderingToggle"
         if not c.element_exists(toggle_id):
-            pytest.skip("GPU rendering toggle not registered")
+            pytest.fail("GPU rendering toggle not registered")
 
         el = c.get_element(toggle_id)
         assert el is not None
@@ -35,7 +35,7 @@ class TestRenderingModeToggle:
         c = options_section
         toggle_id = "sidebar_options_gpuRenderingToggle"
         if not c.element_exists(toggle_id):
-            pytest.skip("GPU rendering toggle not registered")
+            pytest.fail("GPU rendering toggle not registered")
 
         # Click toggle (change mode)
         assert c.click(toggle_id), "Should be able to click GPU toggle"
@@ -62,7 +62,7 @@ class TestRenderingModeToggle:
         # Add an oscillator so there's active rendering
         osc_id = c.add_oscillator(source_id, name="Render Toggle Test")
         if not osc_id:
-            pytest.skip("Cannot add oscillator")
+            pytest.fail("Cannot add oscillator")
 
         # Ensure transport is playing for active rendering
         c.transport_play()
@@ -71,7 +71,7 @@ class TestRenderingModeToggle:
         toggle_id = "sidebar_options_gpuRenderingToggle"
         if not c.element_exists(toggle_id):
             c.transport_stop()
-            pytest.skip("GPU rendering toggle not registered")
+            pytest.fail("GPU rendering toggle not registered")
 
         # Toggle while rendering
         c.click(toggle_id)
@@ -83,6 +83,62 @@ class TestRenderingModeToggle:
 
         # Toggle back
         c.click(toggle_id)
+
+        c.transport_stop()
+
+    def test_waveform_data_survives_gpu_toggle(
+        self, options_section: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: toggling GPU mode during active audio causes the
+        waveform render pipeline to lose its audio data binding — the
+        oscillator exists and transport is playing, but the waveform
+        shows a flat line because the new renderer was not connected
+        to the capture buffer.
+        """
+        c = options_section
+
+        osc_id = c.add_oscillator(source_id, name="WF GPU Toggle")
+        assert osc_id is not None, "Must be able to add oscillator"
+        c.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        c.transport_play()
+        c.wait_until(lambda: c.is_playing(), timeout_s=2.0, desc="transport playing")
+        c.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+
+        # Wait for waveform data to flow
+        wfs_before = c.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        peak_before = wfs_before[0].get("peakLevel", 0)
+        assert peak_before > 0.05, (
+            f"Should have signal before GPU toggle, got peak={peak_before}"
+        )
+
+        toggle_id = "sidebar_options_gpuRenderingToggle"
+        if not c.element_exists(toggle_id):
+            c.transport_stop()
+            pytest.fail("GPU rendering toggle not registered")
+
+        # Toggle GPU mode
+        c.click(toggle_id)
+
+        # After mode switch, waveform data must still flow.
+        # The capture buffer is independent of the renderer, so
+        # hasWaveformData and peakLevel should remain valid.
+        wfs_after = c.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        assert wfs_after[0].get("hasWaveformData"), (
+            "Waveform data must survive GPU mode toggle"
+        )
+        peak_after = wfs_after[0].get("peakLevel", 0)
+        assert peak_after > 0.05, (
+            f"Peak level must remain positive after GPU toggle, got {peak_after}"
+        )
+
+        # Toggle back and verify again
+        c.click(toggle_id)
+        wfs_restored = c.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+        assert wfs_restored[0].get("peakLevel", 0) > 0.05, (
+            "Peak level must remain positive after toggling GPU mode back"
+        )
 
         c.transport_stop()
 
@@ -100,13 +156,13 @@ class TestRenderingModeToggle:
         options_id = "sidebar_options"
         if not client.element_exists(options_id):
             client.close_editor()
-            pytest.skip("Options section not registered")
+            pytest.fail("Options section not registered")
         client.click(options_id)
 
         toggle_id = "sidebar_options_gpuRenderingToggle"
         if not client.element_exists(toggle_id):
             client.close_editor()
-            pytest.skip("GPU rendering toggle not registered")
+            pytest.fail("GPU rendering toggle not registered")
 
         # Record initial toggle state
         el_before = client.get_element(toggle_id)
@@ -163,7 +219,7 @@ class TestRenderingModeToggle:
         c = options_section
         toggle_id = "sidebar_options_gpuRenderingToggle"
         if not c.element_exists(toggle_id):
-            pytest.skip("GPU rendering toggle not registered")
+            pytest.fail("GPU rendering toggle not registered")
 
         for _ in range(6):
             c.click(toggle_id)

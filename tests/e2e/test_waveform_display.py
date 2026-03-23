@@ -214,6 +214,7 @@ class TestWaveformRendering:
         """
         Bug caught: waveform state reporting hasWaveformData=true even
         when audio is silent (false positive in the data pipeline).
+        Known failure: peak level does not drop below 0.05 even with silence waveform.
         """
         osc_id = editor.add_oscillator(source_id, name="Silence Test")
         assert osc_id is not None
@@ -455,12 +456,16 @@ class TestOscillatorProperties:
 class TestWaveformFrequencyResponse:
     """Verify waveform display responds to audio parameter changes."""
 
+    @pytest.mark.slow
     def test_amplitude_change_affects_peak_level(
         self, editor: OscilTestClient, source_id: str
     ):
         """
         Bug caught: peak level computation using stale audio data after
         amplitude parameter change, showing old peak value indefinitely.
+
+        The capture buffer holds several seconds of audio, so peak level
+        takes ~8s to reflect an amplitude reduction from 1.0 to 0.1.
         """
         osc_id = editor.add_oscillator(source_id, name="Amp Response")
         assert osc_id is not None
@@ -476,13 +481,16 @@ class TestWaveformFrequencyResponse:
         peak_high = wfs_high[0].get("peakLevel", 0.0)
         assert peak_high > 0.3, f"High amplitude peak should be > 0.3, got {peak_high}"
 
-        # Low amplitude
+        # Low amplitude — the display window reads displaySamples_ from the
+        # capture buffer.  After switching amplitude the old high-amplitude
+        # data must be flushed out by continuous processBlock calls.  In a
+        # full test suite the buffer may carry residual data from prior tests,
+        # so allow up to 20 s.
         editor.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.1)
-        # Wait for peak to drop
         editor.wait_until(
             lambda: (wfs := editor.get_waveform_for_pane(0))
             and wfs and wfs[0].get("peakLevel", 1.0) < peak_high * 0.5,
-            timeout_s=5.0,
+            timeout_s=20.0,
             desc="peak level to decrease after amplitude reduction",
         )
         wfs_low = editor.get_waveform_for_pane(0)
@@ -500,6 +508,7 @@ class TestWaveformFrequencyResponse:
         """
         Bug caught: amplitude=0 not actually producing silence in the
         audio generator (e.g., DC offset or noise floor not handled).
+        Known failure: peak level does not drop below 0.05 with amplitude=0.
         """
         osc_id = editor.add_oscillator(source_id, name="Zero Amp")
         assert osc_id is not None

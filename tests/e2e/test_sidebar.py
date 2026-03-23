@@ -48,8 +48,9 @@ class TestAccordion:
     ):
         """
         Bug caught: accordion not collapsing on second click.
+        Known failure: timing content remains visible after collapse click.
         """
-        # Expand
+        # Ensure expanded
         sidebar_page.expand_timing()
         content_id = None
         for eid in ["sidebar_timing_modeToggle", "sidebar_timing_intervalField"]:
@@ -57,15 +58,12 @@ class TestAccordion:
                 content_id = eid
                 break
         if content_id is None:
-            pytest.xfail("No timing content element found after expand")
+            pytest.fail("No timing content element found after expand")
 
-        try:
-            editor.wait_for_visible(content_id, timeout_s=2.0)
-        except TimeoutError:
-            pytest.xfail("Content did not become visible on expand")
+        editor.wait_for_visible(content_id, timeout_s=2.0)
 
         # Collapse
-        editor.click("sidebar_timing")
+        sidebar_page.collapse_timing()
         editor.wait_for_not_visible(content_id, timeout_s=2.0)
 
     def test_options_section_expand(
@@ -161,7 +159,7 @@ class TestListItemButtons:
             if editor.element_exists(alt_id):
                 btn_id = alt_id
             else:
-                pytest.xfail(f"{label} button not registered (tried _vis_btn and _vis_toggle)")
+                pytest.fail(f"{label} button not registered (tried _vis_btn and _vis_toggle)")
         elif not editor.element_exists(btn_id):
             assert False, f"{label} button '{btn_id}' must be registered"
 
@@ -182,7 +180,7 @@ class TestSidebarResize:
         """
         handle_id = "sidebar_resizeHandle"
         if not editor.element_exists(handle_id):
-            pytest.xfail("Resize handle not registered")
+            pytest.fail("Resize handle not registered")
 
         sidebar_before = editor.get_element("sidebar")
         assert sidebar_before is not None, "Sidebar element must be registered"
@@ -199,7 +197,7 @@ class TestSidebarResize:
                 desc="sidebar width change",
             )
         except TimeoutError:
-            pytest.xfail("Sidebar width did not change -- resize may not be supported")
+            pytest.fail("Sidebar width did not change -- resize may not be supported")
 
         sidebar_after = editor.get_element("sidebar")
         assert sidebar_after.width != width_before, (
@@ -220,7 +218,7 @@ class TestOscillatorReorder:
 
         success = editor.reorder_oscillators(0, 1)
         if not success:
-            pytest.skip("Reorder API not available")
+            pytest.fail("Reorder API not available")
 
         oscs_after = editor.get_oscillators()
         id_order_after = [o["id"] for o in oscs_after]

@@ -22,7 +22,7 @@ class TestMetricsAPI:
         """
         metrics = client.metrics_current()
         if metrics is None:
-            pytest.skip("Metrics API not available")
+            pytest.fail("Metrics API not available")
 
         assert "fps" in metrics or "cpuPercent" in metrics, (
             f"Metrics should contain fps or cpuPercent, got keys: {list(metrics.keys())}"
@@ -35,7 +35,7 @@ class TestMetricsAPI:
         client.metrics_reset()
         started = client.metrics_start(interval_ms=50)
         if not started:
-            pytest.skip("Metrics start API not available")
+            pytest.fail("Metrics start API not available")
 
         # Wait for samples to accumulate (condition-based)
         client.wait_until(
@@ -62,7 +62,7 @@ class TestMetricsAPI:
         client.metrics_reset()
         started = client.metrics_start(interval_ms=50)
         if not started:
-            pytest.skip("Metrics start API not available")
+            pytest.fail("Metrics start API not available")
 
         # Collect some data
         client.wait_until(
@@ -88,7 +88,7 @@ class TestMetricsAPI:
         client.metrics_reset()
         started = client.metrics_start(interval_ms=100)
         if not started:
-            pytest.skip("Metrics start API not available")
+            pytest.fail("Metrics start API not available")
 
         client.metrics_stop()
         # Second stop should not crash
@@ -124,7 +124,7 @@ class TestPerformanceUnderLoad:
         if baseline is None or baseline.get("memoryMB", 0) == 0:
             editor.metrics_stop()
             editor.metrics_reset()
-            pytest.skip("Memory metrics not available")
+            pytest.fail("Memory metrics not available")
 
         baseline_mem = baseline["memoryMB"]
 
@@ -191,7 +191,7 @@ class TestPerformanceUnderLoad:
         editor.metrics_reset()
 
         if not stats or stats.get("sampleCount", 0) == 0:
-            pytest.skip("No performance data collected")
+            pytest.fail("No performance data collected")
 
         avg_fps = stats.get("avgFps", 0)
         min_fps = stats.get("minFps", 0)

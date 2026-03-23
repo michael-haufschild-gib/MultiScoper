@@ -29,7 +29,7 @@ class TestServerSideVerification:
         """
         sidebar = "sidebar"
         if not editor.element_exists(sidebar):
-            pytest.skip("Sidebar not registered")
+            pytest.fail("Sidebar not registered")
 
         result = editor.verify_visible(sidebar)
         assert result is True, "Sidebar should be verified as visible"
@@ -53,11 +53,11 @@ class TestServerSideVerification:
         """
         sidebar = "sidebar"
         if not editor.element_exists(sidebar):
-            pytest.skip("Sidebar not registered")
+            pytest.fail("Sidebar not registered")
 
         el = editor.get_element(sidebar)
         if not el or el.width == 0:
-            pytest.skip("Sidebar has no bounds data")
+            pytest.fail("Sidebar has no bounds data")
 
         # Verify with actual bounds (should pass)
         result = editor.verify_element_bounds(
@@ -96,7 +96,7 @@ class TestServerSideVerification:
             editor.wait_for_waveform_data(pane_index=0, timeout_s=3.0)
         except TimeoutError:
             editor.transport_stop()
-            pytest.skip("Waveform data not available")
+            pytest.fail("Waveform data not available")
 
         # Test with sidebar (always exists) — verifies the API path works
         sidebar_result = editor.verify_element_color(
@@ -139,7 +139,7 @@ class TestServerSideVerification:
             editor.wait_for_waveform_data(pane_index=0, timeout_s=3.0)
         except TimeoutError:
             editor.transport_stop()
-            pytest.skip("Waveform data not available")
+            pytest.fail("Waveform data not available")
 
         # Analyze with a known element (pane_body always exists with an oscillator)
         analysis = editor.analyze_waveform("pane_body")
@@ -160,6 +160,7 @@ class TestServerSideVerification:
         """
         Bug caught: waveform state reporting non-zero levels with silent audio.
         Uses data-level verification instead of pixel analysis.
+        Known failure: peak level does not drop below 0.05 with silence waveform.
         """
         osc_id = editor.add_oscillator(source_id, name="Silence Verify")
         assert osc_id is not None

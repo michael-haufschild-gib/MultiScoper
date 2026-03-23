@@ -38,11 +38,11 @@ class TestFocusManagement:
         """
         add_btn = "sidebar_addOscillator"
         if not editor.element_exists(add_btn):
-            pytest.skip("Add button not registered")
+            pytest.fail("Add button not registered")
 
         result = editor.focus(add_btn)
         if not result:
-            pytest.skip("Focus API returned false — focus not supported for this element")
+            pytest.fail("Focus API returned false — focus not supported for this element")
 
         focused = editor.get_focused()
         assert focused is not None, (
@@ -63,7 +63,7 @@ class TestFocusManagement:
         """
         add_btn = "sidebar_addOscillator"
         if not editor.element_exists(add_btn):
-            pytest.skip("Add button not registered")
+            pytest.fail("Add button not registered")
 
         editor.focus(add_btn)
         initial = editor.get_focused()
@@ -88,7 +88,7 @@ class TestFocusManagement:
         """
         add_btn = "sidebar_addOscillator"
         if not editor.element_exists(add_btn):
-            pytest.skip("Add button not registered")
+            pytest.fail("Add button not registered")
 
         editor.focus(add_btn)
         # Advance twice, then go back once
@@ -152,7 +152,7 @@ class TestKeyboardInput:
         try:
             editor.wait_for_visible("addOscillatorDialog", timeout_s=3.0)
         except TimeoutError:
-            pytest.skip("Add dialog did not appear")
+            pytest.fail("Add dialog did not appear")
 
         editor.key_press("escape")
 
@@ -164,7 +164,7 @@ class TestKeyboardInput:
                 if editor.element_exists(btn):
                     editor.click(btn)
                     break
-            pytest.skip("Escape key does not close dialog")
+            pytest.fail("Escape key does not close dialog")
 
         # Verify dialog is actually gone — not just hidden
         assert not editor.element_visible("addOscillatorDialog"), (
@@ -196,7 +196,7 @@ class TestKeyboardInput:
         try:
             editor.wait_for_visible("addOscillatorDialog", timeout_s=3.0)
         except TimeoutError:
-            pytest.skip("Add dialog did not appear")
+            pytest.fail("Add dialog did not appear")
 
         for btn in ["addOscillatorDialog_cancelBtn", "addOscillatorDialog_closeBtn"]:
             if editor.element_exists(btn):

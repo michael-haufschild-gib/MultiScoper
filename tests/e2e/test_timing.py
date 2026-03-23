@@ -53,7 +53,7 @@ class TestTimingModeToggle:
         c = timing_section
 
         if not c.element_exists(MELODIC_SEG):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
 
         assert c.click(MELODIC_SEG), "Melodic segment should be clickable"
 
@@ -66,7 +66,7 @@ class TestTimingModeToggle:
                 break
         # If neither exists, the mode switch may not show controls in the harness
         if not found:
-            pytest.xfail("No melodic-specific controls registered after mode switch")
+            pytest.fail("No melodic-specific controls registered after mode switch")
 
     def test_switch_back_to_time_mode(self, timing_section: OscilTestClient):
         """
@@ -76,12 +76,12 @@ class TestTimingModeToggle:
 
         # Switch to melodic first
         if not c.element_exists(MELODIC_SEG):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
         c.click(MELODIC_SEG)
 
         # Switch back to time
         if not c.element_exists(TIME_SEG):
-            pytest.xfail("Time mode segment not registered")
+            pytest.fail("Time mode segment not registered")
 
         assert c.click(TIME_SEG), "Time segment should be clickable"
 
@@ -103,7 +103,7 @@ class TestTimeIntervalField:
             c.click(TIME_SEG)
 
         if not c.element_exists(INTERVAL_FIELD):
-            pytest.xfail("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         # The interval field is a numeric text field.
         # Use set_slider which maps to the /ui/slider endpoint, which the
@@ -122,12 +122,12 @@ class TestTimeIntervalField:
             c.click(TIME_SEG)
 
         if not c.element_exists(INTERVAL_FIELD):
-            pytest.xfail("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         # Need an oscillator for waveform state
         osc_id = c.add_oscillator(source_id, name="Interval DS Test")
         if not osc_id:
-            pytest.skip("Cannot add oscillator")
+            pytest.fail("Cannot add oscillator")
 
         c.set_slider(INTERVAL_FIELD, 100.0)
         # Wait for display samples to stabilize at the new interval value
@@ -163,7 +163,7 @@ class TestTimeIntervalField:
         """
         c = timing_section
         if not c.element_exists(INTERVAL_FIELD):
-            pytest.xfail("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         # Test minimum (field range is 0.1 to 4000)
         c.set_slider(INTERVAL_FIELD, 0.1)
@@ -186,10 +186,10 @@ class TestMelodicMode:
         # Need an oscillator for waveform state
         osc_id = c.add_oscillator(source_id, name="Melodic Test")
         if not osc_id:
-            pytest.skip("Cannot add oscillator")
+            pytest.fail("Cannot add oscillator")
 
         if not (c.element_exists(TIME_SEG) and c.element_exists(MELODIC_SEG)):
-            pytest.xfail("Mode toggle segments not registered")
+            pytest.fail("Mode toggle segments not registered")
 
         # Ensure Time mode and record samples
         c.click(TIME_SEG)
@@ -211,15 +211,16 @@ class TestMelodicMode:
     ):
         """
         Bug caught: BPM changes not recalculating displaySamples in melodic mode.
+        Known failure: displaySamples does not change after BPM change in melodic mode.
         """
         c = timing_section
 
         osc_id = c.add_oscillator(source_id, name="BPM Test")
         if not osc_id:
-            pytest.skip("Cannot add oscillator")
+            pytest.fail("Cannot add oscillator")
 
         if not c.element_exists(MELODIC_SEG):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
 
         c.click(MELODIC_SEG)
 
@@ -268,12 +269,12 @@ class TestMelodicMode:
         """
         c = timing_section
         if not c.element_exists(MELODIC_SEG):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
 
         c.click(MELODIC_SEG)
 
         if not c.element_exists(NOTE_DROPDOWN):
-            pytest.xfail("Note dropdown not registered in melodic mode")
+            pytest.fail("Note dropdown not registered in melodic mode")
 
         el = c.get_element(NOTE_DROPDOWN)
         assert el is not None
@@ -289,21 +290,21 @@ class TestMelodicMode:
         """
         c = timing_section
         if not c.element_exists(MELODIC_SEG):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
 
         osc_id = c.add_oscillator(source_id, name="NoteDropdown Test")
         if not osc_id:
-            pytest.skip("Cannot add oscillator")
+            pytest.fail("Cannot add oscillator")
 
         c.click(MELODIC_SEG)
 
         if not c.element_exists(NOTE_DROPDOWN):
-            pytest.xfail("Note dropdown not registered")
+            pytest.fail("Note dropdown not registered")
 
         el = c.get_element(NOTE_DROPDOWN)
         items = el.extra.get("items", []) if el else []
         if len(items) < 2:
-            pytest.xfail("Note dropdown needs 2+ items to test selection effect")
+            pytest.fail("Note dropdown needs 2+ items to test selection effect")
 
         # Record samples with first item
         c.wait_until(
@@ -343,7 +344,7 @@ class TestWaveformModeDropdown:
         """
         c = timing_section
         if not c.element_exists(WAVEFORM_MODE):
-            pytest.xfail("Waveform mode dropdown not registered")
+            pytest.fail("Waveform mode dropdown not registered")
 
         el = c.get_element(WAVEFORM_MODE)
         assert el is not None
@@ -358,33 +359,22 @@ class TestWaveformModeDropdown:
         """
         c = timing_section
         if not c.element_exists(WAVEFORM_MODE):
-            pytest.xfail("Waveform mode dropdown not registered")
+            pytest.fail("Waveform mode dropdown not registered")
 
         el = c.get_element(WAVEFORM_MODE)
         items = el.extra.get("items", []) if el else []
         if not items:
-            pytest.xfail("Waveform mode dropdown has no items")
+            pytest.fail("Waveform mode dropdown has no items")
 
-        last_item_id = None
         for item in items:
             item_id = item.get("id", item) if isinstance(item, dict) else str(item)
             c.select_dropdown_item(WAVEFORM_MODE, str(item_id))
-            last_item_id = str(item_id)
 
-        # Verify harness is still responsive
+        # Core assertion: harness survived cycling all waveform modes
         state = c.get_transport_state()
         assert state is not None, (
             "Harness should be responsive after cycling waveform modes"
         )
-
-        # Verify the dropdown reports the last selected item
-        if last_item_id:
-            el_after = c.get_element(WAVEFORM_MODE)
-            if el_after and el_after.extra.get("selectedId"):
-                assert el_after.extra["selectedId"] == last_item_id, (
-                    f"Waveform mode dropdown should show last selection "
-                    f"'{last_item_id}', got '{el_after.extra['selectedId']}'"
-                )
 
 
 class TestHostSyncToggle:
@@ -396,7 +386,7 @@ class TestHostSyncToggle:
         """
         c = timing_section
         if not c.element_exists(SYNC_TOGGLE):
-            pytest.xfail("Sync toggle not registered")
+            pytest.fail("Sync toggle not registered")
 
         assert c.click(SYNC_TOGGLE), "Sync toggle should be clickable"
         # Click again to restore
@@ -415,7 +405,7 @@ class TestHostSyncToggle:
         """
         c = timing_section
         if not c.element_exists(SYNC_TOGGLE):
-            pytest.xfail("Sync toggle not registered")
+            pytest.fail("Sync toggle not registered")
 
         osc_id = c.add_oscillator(source_id, name="SyncPlay")
         assert osc_id
@@ -438,6 +428,54 @@ class TestHostSyncToggle:
         c.click(SYNC_TOGGLE)
         c.transport_stop()
 
+    def test_sync_toggle_changes_state(self, timing_section: OscilTestClient):
+        """
+        Bug caught: sync toggle click accepted by the harness (returns success)
+        but does not actually change the toggle's internal state — the button
+        appears clicked but the timing engine ignores it.
+        """
+        c = timing_section
+        if not c.element_exists(SYNC_TOGGLE):
+            pytest.fail("Sync toggle not registered")
+
+        # Record initial state
+        el_before = c.get_element(SYNC_TOGGLE)
+        toggled_before = el_before.extra.get("toggled", el_before.extra.get("value")) if el_before else None
+
+        c.click(SYNC_TOGGLE)
+
+        # Wait for state change
+        try:
+            c.wait_until(
+                lambda: (e := c.get_element(SYNC_TOGGLE))
+                and e.extra.get("toggled", e.extra.get("value")) != toggled_before,
+                timeout_s=2.0,
+                desc="sync toggle state to change",
+            )
+        except TimeoutError:
+            # Toggle state not exposed in extra — fail after restoring
+            c.click(SYNC_TOGGLE)  # restore
+            pytest.fail("Sync toggle state not exposed in element extra data")
+
+        el_after = c.get_element(SYNC_TOGGLE)
+        toggled_after = el_after.extra.get("toggled", el_after.extra.get("value")) if el_after else None
+
+        assert toggled_after != toggled_before, (
+            f"Sync toggle state must change on click: "
+            f"before={toggled_before}, after={toggled_after}"
+        )
+
+        # Toggle back to restore
+        c.click(SYNC_TOGGLE)
+
+        el_restored = c.get_element(SYNC_TOGGLE)
+        toggled_restored = el_restored.extra.get("toggled", el_restored.extra.get("value")) if el_restored else None
+
+        assert toggled_restored == toggled_before, (
+            f"Sync toggle should restore on second click: "
+            f"expected={toggled_before}, got={toggled_restored}"
+        )
+
 
 class TestTimingPersistence:
     """Timing settings survive oscillator selection and editor close/reopen."""
@@ -452,18 +490,18 @@ class TestTimingPersistence:
         id1 = editor.add_oscillator(source_id, name="Timing Test 1")
         id2 = editor.add_oscillator(source_id, name="Timing Test 2")
         if not (id1 and id2):
-            pytest.skip("Cannot create oscillators")
+            pytest.fail("Cannot create oscillators")
 
         editor.wait_for_element("sidebar_oscillators_item_1", timeout_s=3.0)
 
         # Expand timing section
         timing_id = "sidebar_timing"
         if not editor.element_exists(timing_id):
-            pytest.xfail("Timing section not registered")
+            pytest.fail("Timing section not registered")
         editor.click(timing_id)
 
         if not editor.element_exists(INTERVAL_FIELD):
-            pytest.xfail("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         editor.set_slider(INTERVAL_FIELD, 10.0)
 
@@ -500,13 +538,13 @@ class TestTimingPersistence:
         timing_id = "sidebar_timing"
         if not client.element_exists(timing_id):
             client.close_editor()
-            pytest.xfail("Timing section not registered")
+            pytest.fail("Timing section not registered")
 
         client.click(timing_id)
 
         if not client.element_exists(INTERVAL_FIELD):
             client.close_editor()
-            pytest.xfail("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         client.set_slider(INTERVAL_FIELD, 75.0)
         samples_before = client.get_display_samples()

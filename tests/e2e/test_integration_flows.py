@@ -46,7 +46,7 @@ class TestOscillatorLifecycleFlow:
         state_path = "/tmp/oscil_e2e_lifecycle.xml"
         saved = editor.save_state(state_path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         # Reset and verify clean
         editor.reset_state()
@@ -121,7 +121,7 @@ class TestOscillatorLifecycleFlow:
         sources = client.get_sources()
         if not sources:
             client.close_editor()
-            pytest.skip("No audio sources available")
+            pytest.fail("No audio sources available")
         source_id = sources[0]["id"]
 
         osc_id = client.add_oscillator(source_id, name="Survive Close")
@@ -154,12 +154,12 @@ class TestTimingAndOscillatorInteraction:
         # Set up timing
         timing_id = "sidebar_timing"
         if not editor.element_exists(timing_id):
-            pytest.skip("Timing section not registered")
+            pytest.fail("Timing section not registered")
         editor.click(timing_id)
 
         interval_field = "sidebar_timing_intervalField"
         if not editor.element_exists(interval_field):
-            pytest.skip("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         editor.set_slider(interval_field, 25.0)
         samples_before = editor.get_display_samples()
@@ -196,12 +196,12 @@ class TestTimingAndOscillatorInteraction:
 
         timing_id = "sidebar_timing"
         if not editor.element_exists(timing_id):
-            pytest.skip("Timing section not registered")
+            pytest.fail("Timing section not registered")
         editor.click(timing_id)
 
         interval_field = "sidebar_timing_intervalField"
         if not editor.element_exists(interval_field):
-            pytest.skip("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         editor.set_slider(interval_field, 50.0)
         samples_before = editor.get_display_samples()
@@ -381,7 +381,7 @@ class TestStatePersistenceEdgeCases:
         path = "/tmp/oscil_e2e_modes.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -427,7 +427,7 @@ class TestStatePersistenceEdgeCases:
         path = "/tmp/oscil_e2e_empty.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         loaded = editor.load_state(path)
         assert loaded, "Loading a saved empty state should succeed"
@@ -446,6 +446,7 @@ class TestColorAssignment:
         """
         Bug caught: colour parameter ignored during oscillator creation,
         defaulting to white/black regardless of user choice.
+        Known failure: oscillator state API does not include 'colour' key.
         """
         osc_id = editor.add_oscillator(
             source_id, name="Color Test", colour="#FF6B6B"
@@ -501,7 +502,7 @@ class TestColorAssignment:
         path = "/tmp/oscil_e2e_color.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -685,7 +686,7 @@ class TestEditorWithActiveTransport:
         sources = client.get_sources()
         if not sources:
             client.close_editor()
-            pytest.skip("No audio sources available")
+            pytest.fail("No audio sources available")
         source_id = sources[0]["id"]
 
         osc_id = client.add_oscillator(source_id, name="Transport Close")

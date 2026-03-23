@@ -36,7 +36,7 @@ class TestSnapshotStructure:
         """
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         assert "transport" in snap, (
             f"Snapshot should have transport section, got keys: {list(snap.keys())}"
@@ -51,7 +51,7 @@ class TestSnapshotStructure:
         """
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         assert "timing" in snap, (
             f"Snapshot should have timing section, got keys: {list(snap.keys())}"
@@ -66,7 +66,7 @@ class TestSnapshotStructure:
         """
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         assert "oscillators" in snap, (
             f"Snapshot should have oscillators section, got keys: {list(snap.keys())}"
@@ -79,7 +79,7 @@ class TestSnapshotStructure:
         """
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         assert "sources" in snap, (
             f"Snapshot should have sources section, got keys: {list(snap.keys())}"
@@ -101,7 +101,7 @@ class TestSnapshotConsistency:
 
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         state_oscs = editor.get_oscillators()
         snap_oscs = snap.get("oscillators", [])
@@ -124,7 +124,7 @@ class TestSnapshotConsistency:
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
             editor.transport_stop()
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         assert snap["transport"]["playing"] is True, (
             "Snapshot should show transport as playing"
@@ -149,7 +149,7 @@ class TestSnapshotConsistency:
         """
         snap1 = editor.get_diagnostic_snapshot()
         if snap1 is None:
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         count_before = len(snap1.get("oscillators", []))
 
@@ -176,7 +176,7 @@ class TestSnapshotConsistency:
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
             editor.set_bpm(initial_bpm)
-            pytest.skip("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         snap_bpm = snap.get("transport", {}).get("bpm", 0)
         assert abs(snap_bpm - target_bpm) < 1.0, (

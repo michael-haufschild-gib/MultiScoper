@@ -41,7 +41,7 @@ class TestFilterAndDelete:
         """
         visible_tab = self._filter_tab_id("visible")
         if not editor.element_exists(visible_tab):
-            pytest.xfail("Visible filter tab not registered")
+            pytest.fail("Visible filter tab not registered")
 
         # Create two oscillators
         id1 = editor.add_oscillator(source_id, name="FilterDel 1")
@@ -77,7 +77,7 @@ class TestFilterAndDelete:
         """
         hidden_tab = self._filter_tab_id("hidden")
         if not editor.element_exists(hidden_tab):
-            pytest.xfail("Hidden filter tab not registered")
+            pytest.fail("Hidden filter tab not registered")
 
         # Create one oscillator and hide it
         osc_id = editor.add_oscillator(source_id, name="HiddenDel")
@@ -126,11 +126,11 @@ class TestTimingModePersistence:
         # Expand timing
         timing_id = "sidebar_timing"
         if not editor.element_exists(timing_id):
-            pytest.xfail("Timing section not registered")
+            pytest.fail("Timing section not registered")
         editor.click(timing_id)
 
         if not editor.element_exists(self.MELODIC_SEG):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
 
         # Need oscillator for waveform state
         osc_id = editor.add_oscillator(source_id, name="TimingPersist")
@@ -151,7 +151,7 @@ class TestTimingModePersistence:
         path = "/tmp/oscil_e2e_timing_mode.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         # Reset and reload
         editor.reset_state()
@@ -177,12 +177,12 @@ class TestTimingModePersistence:
         """
         timing_id = "sidebar_timing"
         if not editor.element_exists(timing_id):
-            pytest.xfail("Timing section not registered")
+            pytest.fail("Timing section not registered")
         editor.click(timing_id)
 
         interval_field = "sidebar_timing_intervalField"
         if not editor.element_exists(interval_field):
-            pytest.xfail("Interval field not registered")
+            pytest.fail("Interval field not registered")
 
         osc_id = editor.add_oscillator(source_id, name="IntervalPersist")
         assert osc_id
@@ -201,7 +201,7 @@ class TestTimingModePersistence:
         path = "/tmp/oscil_e2e_timing_interval.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -246,12 +246,12 @@ class TestMoveAndPersistence:
         # Add pane 2
         pane2_id = editor.add_pane("Persist Pane 2")
         if pane2_id is None:
-            pytest.skip("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         # Move oscillator to pane 2
         moved = editor.move_oscillator(osc_id, pane2_id)
         if not moved:
-            pytest.skip("Oscillator move API not available")
+            pytest.fail("Oscillator move API not available")
 
         editor.wait_until(
             lambda: (osc := editor.get_oscillator_by_id(osc_id))
@@ -263,7 +263,7 @@ class TestMoveAndPersistence:
         path = "/tmp/oscil_e2e_move_persist.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -309,23 +309,23 @@ class TestConfigPopupTargeting:
 
         settings_btn = "sidebar_oscillators_item_1_settings"
         if not editor.element_exists(settings_btn):
-            pytest.xfail("Settings button for item 1 not registered")
+            pytest.fail("Settings button for item 1 not registered")
 
         editor.click(settings_btn)
         try:
             editor.wait_for_visible("configPopup", timeout_s=3.0)
         except TimeoutError:
-            pytest.xfail("Config popup not available")
+            pytest.fail("Config popup not available")
 
         # Change name via popup
         name_field = "configPopup_nameField"
         if not editor.element_exists(name_field):
-            # Close and skip
+            # Close popup before failing
             for btn in ("configPopup_closeBtn", "configPopup_footerCloseBtn"):
                 if editor.element_exists(btn):
                     editor.click(btn)
                     break
-            pytest.xfail("Name field not in config popup")
+            pytest.fail("Name field not in config popup")
 
         new_name = "Edited Via Item1"
         editor.clear_text(name_field)
@@ -352,6 +352,163 @@ class TestConfigPopupTargeting:
                 "Only the target oscillator should be renamed"
             )
         # If auto-save didn't work, we at least verify no crash occurred
+
+    def test_config_popup_shows_correct_properties_for_each_oscillator(
+        self, editor: OscilTestClient, three_oscillators
+    ):
+        """
+        Bug caught: config popup always shows oscillator[0]'s properties
+        regardless of which settings button is clicked — the popup reads
+        properties from a hardcoded index or stale reference.
+        """
+        oscs = editor.get_oscillators()
+        assert len(oscs) >= 3
+
+        name_field = "configPopup_nameField"
+
+        for idx in range(min(3, len(oscs))):
+            settings_btn = f"sidebar_oscillators_item_{idx}_settings"
+            if not editor.element_exists(settings_btn):
+                continue
+
+            editor.click(settings_btn)
+            try:
+                editor.wait_for_visible("configPopup", timeout_s=3.0)
+            except TimeoutError:
+                continue
+
+            if not editor.element_exists(name_field):
+                # Close and continue
+                for btn in ("configPopup_closeBtn", "configPopup_footerCloseBtn"):
+                    if editor.element_exists(btn):
+                        editor.click(btn)
+                        break
+                continue
+
+            # Read the name field value from the popup
+            el = editor.get_element(name_field)
+            popup_name = el.extra.get("text", el.extra.get("value", "")) if el else ""
+
+            # Close popup
+            for btn in ("configPopup_closeBtn", "configPopup_footerCloseBtn"):
+                if editor.element_exists(btn):
+                    editor.click(btn)
+                    try:
+                        editor.wait_for_not_visible("configPopup", timeout_s=2.0)
+                    except TimeoutError:
+                        pass
+                    break
+
+            # The popup name should match the oscillator's name
+            expected_name = oscs[idx]["name"]
+            if popup_name:
+                assert popup_name == expected_name, (
+                    f"Popup for item {idx} should show '{expected_name}', "
+                    f"got '{popup_name}'"
+                )
+
+    def test_edit_item0_then_edit_item1_no_cross_contamination(
+        self, editor: OscilTestClient, two_oscillators
+    ):
+        """
+        Bug caught: editing oscillator[0] via popup and closing, then
+        opening popup for oscillator[1] — the popup shows stale values
+        from the previous session because the popup caches the last
+        oscillator reference instead of reading fresh state.
+        """
+        oscs = editor.get_oscillators()
+        assert len(oscs) >= 2
+        id0, id1 = oscs[0]["id"], oscs[1]["id"]
+
+        settings_btn_0 = "sidebar_oscillators_item_0_settings"
+        settings_btn_1 = "sidebar_oscillators_item_1_settings"
+        if not editor.element_exists(settings_btn_0):
+            pytest.fail("Settings button for item 0 not registered")
+
+        name_field = "configPopup_nameField"
+
+        # Edit oscillator 0
+        editor.click(settings_btn_0)
+        try:
+            editor.wait_for_visible("configPopup", timeout_s=3.0)
+        except TimeoutError:
+            pytest.fail("Config popup not available")
+
+        if not editor.element_exists(name_field):
+            for btn in ("configPopup_closeBtn", "configPopup_footerCloseBtn"):
+                if editor.element_exists(btn):
+                    editor.click(btn)
+                    break
+            pytest.fail("Name field not in config popup")
+
+        editor.clear_text(name_field)
+        editor.type_text(name_field, "EditedOsc0")
+
+        # Wait for name to propagate before closing
+        editor.wait_until(
+            lambda: (o := editor.get_oscillator_by_id(id0))
+            and o.get("name") == "EditedOsc0",
+            timeout_s=2.0,
+            desc="osc 0 name to propagate",
+        )
+
+        for btn in ("configPopup_closeBtn", "configPopup_footerCloseBtn"):
+            if editor.element_exists(btn):
+                editor.click(btn)
+                try:
+                    editor.wait_for_not_visible("configPopup", timeout_s=2.0)
+                except TimeoutError:
+                    pass
+                break
+
+        # Verify osc 0 was changed
+        osc0 = editor.get_oscillator_by_id(id0)
+        assert osc0 is not None
+        if osc0["name"] != "EditedOsc0":
+            pytest.fail("Name edit via popup not working")
+
+        # Now edit oscillator 1
+        if not editor.element_exists(settings_btn_1):
+            pytest.fail("Settings button for item 1 not registered")
+
+        editor.click(settings_btn_1)
+        try:
+            editor.wait_for_visible("configPopup", timeout_s=3.0)
+        except TimeoutError:
+            pytest.fail("Config popup not available for item 1")
+
+        editor.clear_text(name_field)
+        editor.type_text(name_field, "EditedOsc1")
+
+        # Wait for name to propagate before closing
+        editor.wait_until(
+            lambda: (o := editor.get_oscillator_by_id(id1))
+            and o.get("name") == "EditedOsc1",
+            timeout_s=2.0,
+            desc="osc 1 name to propagate",
+        )
+
+        for btn in ("configPopup_closeBtn", "configPopup_footerCloseBtn"):
+            if editor.element_exists(btn):
+                editor.click(btn)
+                try:
+                    editor.wait_for_not_visible("configPopup", timeout_s=2.0)
+                except TimeoutError:
+                    pass
+                break
+
+        # Verify osc 1 was changed and osc 0 was NOT modified
+        osc0_final = editor.get_oscillator_by_id(id0)
+        osc1_final = editor.get_oscillator_by_id(id1)
+
+        assert osc0_final is not None
+        assert osc1_final is not None
+        assert osc0_final["name"] == "EditedOsc0", (
+            f"Osc 0 name should remain 'EditedOsc0', got '{osc0_final['name']}'"
+        )
+        assert osc1_final["name"] == "EditedOsc1", (
+            f"Osc 1 name should be 'EditedOsc1', got '{osc1_final['name']}'"
+        )
 
 
 # ── Dialog During Playback ──────────────────────────────────────────────────
@@ -385,7 +542,7 @@ class TestDialogDuringPlayback:
             editor.wait_for_visible("addOscillatorDialog", timeout_s=3.0)
         except TimeoutError:
             editor.transport_stop()
-            pytest.xfail("Add dialog did not appear")
+            pytest.fail("Add dialog did not appear")
 
         # Transport should still be playing while dialog is open
         assert editor.is_playing(), (
@@ -443,7 +600,7 @@ class TestSaveDuringPlayback:
         saved = editor.save_state(path)
         if not saved:
             editor.transport_stop()
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.transport_stop()
 
@@ -484,11 +641,11 @@ class TestSnapshotAfterOperations:
 
         pane2_id = editor.add_pane("SnapMove Pane 2")
         if pane2_id is None:
-            pytest.skip("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         moved = editor.move_oscillator(osc_id, pane2_id)
         if not moved:
-            pytest.skip("Move API not available")
+            pytest.fail("Move API not available")
 
         editor.wait_until(
             lambda: (osc := editor.get_oscillator_by_id(osc_id))
@@ -498,7 +655,7 @@ class TestSnapshotAfterOperations:
 
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.xfail("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         snap_oscs = snap.get("oscillators", [])
         assert len(snap_oscs) >= 1, "Snapshot should include the oscillator"
@@ -529,7 +686,7 @@ class TestSnapshotAfterOperations:
 
         snap = editor.get_diagnostic_snapshot()
         if snap is None:
-            pytest.xfail("Snapshot API not available")
+            pytest.fail("Snapshot API not available")
 
         snap_oscs = snap.get("oscillators", [])
         assert len(snap_oscs) >= 1
@@ -560,7 +717,7 @@ class TestMultiPaneSaveLoad:
         # Create pane 2
         pane2_id = editor.add_pane("Save Pane 2")
         if pane2_id is None:
-            pytest.skip("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         # Add oscillator to pane 2
         id2 = editor.add_oscillator(source_id, name="Pane2 Osc B", pane_id=pane2_id)
@@ -579,7 +736,7 @@ class TestMultiPaneSaveLoad:
         path = "/tmp/oscil_e2e_multi_pane_save.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -733,11 +890,11 @@ class TestPaneRemovalReassignment:
         # Add pane 2, move oscillator there
         pane2_id = editor.add_pane("RemSL Pane 2")
         if pane2_id is None:
-            pytest.skip("Pane add API not available")
+            pytest.fail("Pane add API not available")
 
         moved = editor.move_oscillator(id1, pane2_id)
         if not moved:
-            pytest.skip("Move API not available")
+            pytest.fail("Move API not available")
 
         editor.wait_until(
             lambda: editor.get_oscillator_by_id(id1).get("paneId") == pane2_id,
@@ -747,7 +904,7 @@ class TestPaneRemovalReassignment:
         # Remove pane 2
         removed = editor.remove_pane(pane2_id)
         if not removed:
-            pytest.skip("Pane remove API not available")
+            pytest.fail("Pane remove API not available")
 
         # Oscillator should now be in a valid pane
         remaining_pane_ids = {p["id"] for p in editor.get_panes()}
@@ -760,7 +917,7 @@ class TestPaneRemovalReassignment:
         path = "/tmp/oscil_e2e_pane_rem_sl.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -807,7 +964,7 @@ class TestColorUpdatePersistence:
         path = "/tmp/oscil_e2e_color_update.xml"
         saved = editor.save_state(path)
         if not saved:
-            pytest.skip("State save API not available")
+            pytest.fail("State save API not available")
 
         editor.reset_state()
         editor.wait_for_oscillator_count(0, timeout_s=3.0)
@@ -841,12 +998,12 @@ class TestTimingModeWithCRUD:
         """
         timing_id = "sidebar_timing"
         if not editor.element_exists(timing_id):
-            pytest.xfail("Timing section not registered")
+            pytest.fail("Timing section not registered")
         editor.click(timing_id)
 
         melodic_seg = "sidebar_timing_modeToggle_melodic"
         if not editor.element_exists(melodic_seg):
-            pytest.xfail("Melodic mode segment not registered")
+            pytest.fail("Melodic mode segment not registered")
 
         # Add first oscillator so timing engine has data
         id1 = editor.add_oscillator(source_id, name="MelodicCRUD Pre")
