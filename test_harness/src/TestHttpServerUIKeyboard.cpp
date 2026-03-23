@@ -2,8 +2,8 @@
     Oscil Test Harness - HTTP Server: UI Keyboard, Focus, Wait & Element Query Handlers
 */
 
-#include "TestHttpServer.h"
 #include "TestElementRegistry.h"
+#include "TestHttpServer.h"
 
 namespace oscil::test
 {
@@ -14,33 +14,60 @@ namespace
 // Maps a key name string to a JUCE key code. Returns 0 on unknown key.
 int mapKeyNameToCode(const std::string& key)
 {
-    if (key == "escape") return juce::KeyPress::escapeKey;
-    if (key == "enter" || key == "return") return juce::KeyPress::returnKey;
-    if (key == "space") return juce::KeyPress::spaceKey;
-    if (key == "tab") return juce::KeyPress::tabKey;
-    if (key == "backspace") return juce::KeyPress::backspaceKey;
-    if (key == "delete") return juce::KeyPress::deleteKey;
-    if (key == "up") return juce::KeyPress::upKey;
-    if (key == "down") return juce::KeyPress::downKey;
-    if (key == "left") return juce::KeyPress::leftKey;
-    if (key == "right") return juce::KeyPress::rightKey;
-    if (key == "home") return juce::KeyPress::homeKey;
-    if (key == "end") return juce::KeyPress::endKey;
-    if (key == "pageup") return juce::KeyPress::pageUpKey;
-    if (key == "pagedown") return juce::KeyPress::pageDownKey;
-    if (key == "f1") return juce::KeyPress::F1Key;
-    if (key == "f2") return juce::KeyPress::F2Key;
-    if (key == "f3") return juce::KeyPress::F3Key;
-    if (key == "f4") return juce::KeyPress::F4Key;
-    if (key == "f5") return juce::KeyPress::F5Key;
-    if (key == "f6") return juce::KeyPress::F6Key;
-    if (key == "f7") return juce::KeyPress::F7Key;
-    if (key == "f8") return juce::KeyPress::F8Key;
-    if (key == "f9") return juce::KeyPress::F9Key;
-    if (key == "f10") return juce::KeyPress::F10Key;
-    if (key == "f11") return juce::KeyPress::F11Key;
-    if (key == "f12") return juce::KeyPress::F12Key;
-    if (key.length() == 1) return key[0];
+    if (key == "escape")
+        return juce::KeyPress::escapeKey;
+    if (key == "enter" || key == "return")
+        return juce::KeyPress::returnKey;
+    if (key == "space")
+        return juce::KeyPress::spaceKey;
+    if (key == "tab")
+        return juce::KeyPress::tabKey;
+    if (key == "backspace")
+        return juce::KeyPress::backspaceKey;
+    if (key == "delete")
+        return juce::KeyPress::deleteKey;
+    if (key == "up")
+        return juce::KeyPress::upKey;
+    if (key == "down")
+        return juce::KeyPress::downKey;
+    if (key == "left")
+        return juce::KeyPress::leftKey;
+    if (key == "right")
+        return juce::KeyPress::rightKey;
+    if (key == "home")
+        return juce::KeyPress::homeKey;
+    if (key == "end")
+        return juce::KeyPress::endKey;
+    if (key == "pageup")
+        return juce::KeyPress::pageUpKey;
+    if (key == "pagedown")
+        return juce::KeyPress::pageDownKey;
+    if (key == "f1")
+        return juce::KeyPress::F1Key;
+    if (key == "f2")
+        return juce::KeyPress::F2Key;
+    if (key == "f3")
+        return juce::KeyPress::F3Key;
+    if (key == "f4")
+        return juce::KeyPress::F4Key;
+    if (key == "f5")
+        return juce::KeyPress::F5Key;
+    if (key == "f6")
+        return juce::KeyPress::F6Key;
+    if (key == "f7")
+        return juce::KeyPress::F7Key;
+    if (key == "f8")
+        return juce::KeyPress::F8Key;
+    if (key == "f9")
+        return juce::KeyPress::F9Key;
+    if (key == "f10")
+        return juce::KeyPress::F10Key;
+    if (key == "f11")
+        return juce::KeyPress::F11Key;
+    if (key == "f12")
+        return juce::KeyPress::F12Key;
+    if (key.length() == 1)
+        return key[0];
     return 0;
 }
 
@@ -49,51 +76,37 @@ int mapKeyNameToCode(const std::string& key)
 void TestHttpServer::setupUIKeyboardRoutes()
 {
     // Keyboard
-    server_->Post("/ui/keyPress", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIKeyPress(req, res);
-    });
-    server_->Post("/ui/typeText", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUITypeText(req, res);
-    });
-    server_->Post("/ui/clearText", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIClearText(req, res);
-    });
+    server_->Post("/ui/keyPress",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIKeyPress(req, res); });
+    server_->Post("/ui/typeText",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUITypeText(req, res); });
+    server_->Post("/ui/clearText",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIClearText(req, res); });
 
     // Focus
-    server_->Post("/ui/focus", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIFocus(req, res);
-    });
-    server_->Get("/ui/focused", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIGetFocused(req, res);
-    });
-    server_->Post("/ui/focusNext", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIFocusNext(req, res);
-    });
-    server_->Post("/ui/focusPrevious", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIFocusPrevious(req, res);
-    });
+    server_->Post("/ui/focus",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIFocus(req, res); });
+    server_->Get("/ui/focused",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleUIGetFocused(req, res); });
+    server_->Post("/ui/focusNext",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIFocusNext(req, res); });
+    server_->Post("/ui/focusPrevious",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIFocusPrevious(req, res); });
 
     // Wait
-    server_->Post("/ui/waitForElement", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIWaitForElement(req, res);
-    });
-    server_->Post("/ui/waitForVisible", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIWaitForVisible(req, res);
-    });
-    server_->Post("/ui/waitForEnabled", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIWaitForEnabled(req, res);
-    });
+    server_->Post("/ui/waitForElement",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIWaitForElement(req, res); });
+    server_->Post("/ui/waitForVisible",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIWaitForVisible(req, res); });
+    server_->Post("/ui/waitForEnabled",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIWaitForEnabled(req, res); });
 
     // State queries
-    server_->Get("/ui/state", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIState(req, res);
-    });
-    server_->Get("/ui/elements", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIElements(req, res);
-    });
-    server_->Get(R"(/ui/element/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIElement(req, res);
-    });
+    server_->Get("/ui/state", [this](const httplib::Request& req, httplib::Response& res) { handleUIState(req, res); });
+    server_->Get("/ui/elements",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleUIElements(req, res); });
+    server_->Get(R"(/ui/element/(.+))",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleUIElement(req, res); });
 }
 
 void TestHttpServer::handleUIKeyPress(const httplib::Request& req, httplib::Response& res)
@@ -303,8 +316,7 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
     json info;
     juce::WaitableEvent done;
     auto& ctrl = uiController_;
-    juce::MessageManager::callAsync([&info, &done, &ctrl, elementId]()
-    {
+    juce::MessageManager::callAsync([&info, &done, &ctrl, elementId]() {
         info = ctrl.getElementInfo(juce::String(elementId));
         done.signal();
     });
@@ -317,8 +329,8 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
         res.set_content(errorResponse("Timeout waiting for message thread: " + elementId).dump(), "application/json");
         return;
     }
-    fprintf(stderr, "[UIElement] callAsync completed for %s, info.contains(error)=%d\n",
-            elementId.c_str(), info.contains("error") ? 1 : 0);
+    fprintf(stderr, "[UIElement] callAsync completed for %s, info.contains(error)=%d\n", elementId.c_str(),
+            info.contains("error") ? 1 : 0);
 
     if (info.contains("error"))
     {
@@ -337,8 +349,7 @@ void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response
     json data;
     juce::WaitableEvent done;
 
-    juce::MessageManager::callAsync([&data, &done]()
-    {
+    juce::MessageManager::callAsync([&data, &done]() {
         data["count"] = 0;
         data["elements"] = json::array();
 
@@ -353,10 +364,10 @@ void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response
             elementInfo["enabled"] = component->isEnabled();
 
             auto bounds = component->getBounds();
-            elementInfo["bounds"] = {
-                {"x", bounds.getX()}, {"y", bounds.getY()},
-                {"width", bounds.getWidth()}, {"height", bounds.getHeight()}
-            };
+            elementInfo["bounds"] = {{"x", bounds.getX()},
+                                     {"y", bounds.getY()},
+                                     {"width", bounds.getWidth()},
+                                     {"height", bounds.getHeight()}};
 
             data["elements"].push_back(elementInfo);
         }

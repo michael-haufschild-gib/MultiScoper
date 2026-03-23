@@ -3,45 +3,30 @@
 */
 
 #include "ui/components/MagneticSnapController.h"
+
 #include <cmath>
 
 namespace oscil
 {
 
-void MagneticSnapController::setEnabled(bool enabled)
-{
-    enabled_ = enabled;
-}
+void MagneticSnapController::setEnabled(bool enabled) { enabled_ = enabled; }
 
-bool MagneticSnapController::isEnabled() const
-{
-    return enabled_;
-}
+bool MagneticSnapController::isEnabled() const { return enabled_; }
 
-void MagneticSnapController::setMagneticPoints(const std::vector<double>& points)
-{
-    magneticPoints_ = points;
-}
+void MagneticSnapController::setMagneticPoints(const std::vector<double>& points) { magneticPoints_ = points; }
 
 void MagneticSnapController::addMagneticPoint(double point)
 {
     // Only add if not already present
-    if (std::find(magneticPoints_.begin(), magneticPoints_.end(), point)
-        == magneticPoints_.end())
+    if (std::find(magneticPoints_.begin(), magneticPoints_.end(), point) == magneticPoints_.end())
     {
         magneticPoints_.push_back(point);
     }
 }
 
-void MagneticSnapController::clearMagneticPoints()
-{
-    magneticPoints_.clear();
-}
+void MagneticSnapController::clearMagneticPoints() { magneticPoints_.clear(); }
 
-const std::vector<double>& MagneticSnapController::getMagneticPoints() const
-{
-    return magneticPoints_;
-}
+const std::vector<double>& MagneticSnapController::getMagneticPoints() const { return magneticPoints_; }
 
 double MagneticSnapController::applySnapping(double value, double minValue, double maxValue, bool& didSnap)
 {

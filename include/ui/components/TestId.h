@@ -15,16 +15,15 @@
 
     // Note: These macros expand to member declarations, use with semicolon: OSCIL_TESTABLE();
     #define OSCIL_TESTABLE() std::unique_ptr<oscil::test::TestRegistration> testRegistration_
-    #define OSCIL_REGISTER_TEST_ID(id) \
-        testRegistration_ = std::make_unique<oscil::test::TestRegistration>(*this, id)
+    #define OSCIL_REGISTER_TEST_ID(id) testRegistration_ = std::make_unique<oscil::test::TestRegistration>(*this, id)
     #define OSCIL_REGISTER_CHILD_TEST_ID(component, id) REGISTER_TESTABLE_CHILD(component, id)
     #define OSCIL_UNREGISTER_CHILD_TEST_ID(id) UNREGISTER_TESTABLE_CHILD(id)
 #else
     // No test harness - provide empty stubs that are semicolon-safe
     #define OSCIL_TESTABLE() static_assert(true, "")
-    #define OSCIL_REGISTER_TEST_ID(id) ((void)0)
-    #define OSCIL_REGISTER_CHILD_TEST_ID(component, id) ((void)0)
-    #define OSCIL_UNREGISTER_CHILD_TEST_ID(id) ((void)0)
+    #define OSCIL_REGISTER_TEST_ID(id) ((void) 0)
+    #define OSCIL_REGISTER_CHILD_TEST_ID(component, id) ((void) 0)
+    #define OSCIL_UNREGISTER_CHILD_TEST_ID(id) ((void) 0)
 #endif
 
 namespace oscil

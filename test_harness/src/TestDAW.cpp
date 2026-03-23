@@ -7,9 +7,7 @@
 namespace oscil::test
 {
 
-TestDAW::TestDAW()
-{
-}
+TestDAW::TestDAW() {}
 
 TestDAW::~TestDAW()
 {
@@ -34,7 +32,7 @@ void TestDAW::initialize(int numTracks)
         track->prepare(sampleRate_, bufferSize_);
 
         // Set default audio - each track gets a different LFO frequency for visual testing
-        constexpr float trackFrequencies[] = { 2.0f, 6.0f, 3.0f };
+        constexpr float trackFrequencies[] = {2.0f, 6.0f, 3.0f};
         float freq = (i < 3) ? trackFrequencies[i] : 0.5f;
         track->getAudioGenerator().setFrequency(freq);
         track->getAudioGenerator().setWaveform(Waveform::Sine);

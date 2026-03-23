@@ -11,7 +11,8 @@ namespace oscil
 
 using namespace juce::gl;
 
-bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples, GLenum fmt, bool withDepth, bool useDepthTexture)
+bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples, GLenum fmt, bool withDepth,
+                         bool useDepthTexture)
 {
     if (w <= 0 || h <= 0)
         return false;
@@ -130,10 +131,7 @@ void Framebuffer::bindDepthTexture(int textureUnit)
 
 void Framebuffer::clear(juce::Colour colour, bool clearDepth)
 {
-    glClearColor(colour.getFloatRed(),
-                 colour.getFloatGreen(),
-                 colour.getFloatBlue(),
-                 colour.getFloatAlpha());
+    glClearColor(colour.getFloatRed(), colour.getFloatGreen(), colour.getFloatBlue(), colour.getFloatAlpha());
 
     GLbitfield clearMask = GL_COLOR_BUFFER_BIT;
     if (clearDepth && hasDepth)
@@ -172,8 +170,7 @@ bool Framebuffer::createColorTexture(juce::OpenGLContext& context)
         dataType = GL_FLOAT;
     }
 
-    glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(internalFormat),
-                 width, height, 0, GL_RGBA, dataType, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(internalFormat), width, height, 0, GL_RGBA, dataType, nullptr);
 
     // Set texture parameters for FBO usage
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -182,8 +179,7 @@ bool Framebuffer::createColorTexture(juce::OpenGLContext& context)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     // Attach to framebuffer
-    ext.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                               GL_TEXTURE_2D, colorTexture, 0);
+    ext.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
@@ -227,8 +223,7 @@ bool Framebuffer::createDepthBuffer(juce::OpenGLContext& context)
 
         ext.glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
         ext.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
-        ext.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                      GL_RENDERBUFFER, depthBuffer);
+        ext.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
         ext.glBindRenderbuffer(GL_RENDERBUFFER, 0);
         return true;
     }
@@ -256,7 +251,7 @@ bool Framebuffer::checkFramebufferComplete()
             DBG("Framebuffer: Unsupported format combination");
             break;
         default:
-            DBG("Framebuffer: Unknown error " << (int)status);
+            DBG("Framebuffer: Unknown error " << (int) status);
             break;
     }
     return false;

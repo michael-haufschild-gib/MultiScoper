@@ -10,9 +10,10 @@
     - Snapping to nearest point when multiple are within threshold
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/MagneticSnapController.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

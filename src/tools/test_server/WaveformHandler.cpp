@@ -3,12 +3,15 @@
 */
 
 #include "tools/test_server/WaveformHandler.h"
-#include "plugin/PluginEditor.h"
+
+#include "core/Oscillator.h"
+#include "core/SharedCaptureBuffer.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
+
+#include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
-#include "core/SharedCaptureBuffer.h"
-#include "core/Oscillator.h"
+
 #include <cmath>
 
 namespace oscil
@@ -17,8 +20,8 @@ namespace oscil
 namespace
 {
 
-void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType,
-                          float frequency, float amplitude, float sampleRate)
+void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType, float frequency,
+                          float amplitude, float sampleRate)
 {
     int numSamples = buffer.getNumSamples();
     float phase = 0.0f;
@@ -27,8 +30,10 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
     for (int i = 0; i < numSamples; ++i)
     {
         float sample = 0.0f;
-        if (waveformType == "sine") sample = std::sin(phase) * amplitude;
-        else if (waveformType == "square") sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
+        if (waveformType == "sine")
+            sample = std::sin(phase) * amplitude;
+        else if (waveformType == "square")
+            sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
         else if (waveformType == "triangle")
         {
             float t = phase / (2.0f * juce::MathConstants<float>::pi);
@@ -39,14 +44,17 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
             float t = phase / (2.0f * juce::MathConstants<float>::pi);
             sample = (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
         }
-        else if (waveformType == "noise") sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
-        else if (waveformType == "dc") sample = amplitude;
+        else if (waveformType == "noise")
+            sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
+        else if (waveformType == "dc")
+            sample = amplitude;
         // "silence" or unknown → sample remains 0.0f
 
         buffer.setSample(0, i, sample);
         buffer.setSample(1, i, sample * 0.8f);
         phase += phaseIncrement;
-        if (phase > 2.0f * juce::MathConstants<float>::pi) phase -= 2.0f * juce::MathConstants<float>::pi;
+        if (phase > 2.0f * juce::MathConstants<float>::pi)
+            phase -= 2.0f * juce::MathConstants<float>::pi;
     }
 }
 
@@ -69,8 +77,8 @@ nlohmann::json serializeWaveformInfo(WaveformComponent* waveform, const Oscillat
     wfInfo["processingMode"] = static_cast<int>(waveform->getProcessingMode());
 
     auto colour = waveform->getColour();
-    wfInfo["colour"] = {{"r", colour.getRed()}, {"g", colour.getGreen()},
-                        {"b", colour.getBlue()}, {"a", colour.getAlpha()}};
+    wfInfo["colour"] = {
+        {"r", colour.getRed()}, {"g", colour.getGreen()}, {"b", colour.getBlue()}, {"a", colour.getAlpha()}};
     return wfInfo;
 }
 
@@ -86,36 +94,42 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
         float amplitude = body.value("amplitude", 0.8f);
         int numSamples = body.value("samples", 4096);
         float sampleRate = body.value("sampleRate", 44100.0f);
-        if (sampleRate <= 0.0f) sampleRate = 44100.0f;
+        if (sampleRate <= 0.0f)
+            sampleRate = 44100.0f;
 
-        auto result = runOnMessageThread([this, waveformType, frequency, amplitude, numSamples, sampleRate]() -> nlohmann::json {
-            nlohmann::json response;
+        auto result =
+            runOnMessageThread([this, waveformType, frequency, amplitude, numSamples, sampleRate]() -> nlohmann::json {
+                nlohmann::json response;
 
-            auto captureBuffer = editor_.getProcessor().getCaptureBuffer();
-            if (!captureBuffer) { response["error"] = "No capture buffer available"; return response; }
+                auto captureBuffer = editor_.getProcessor().getCaptureBuffer();
+                if (!captureBuffer)
+                {
+                    response["error"] = "No capture buffer available";
+                    return response;
+                }
 
-            juce::AudioBuffer<float> testBuffer(2, numSamples);
-            generateTestWaveform(testBuffer, waveformType, frequency, amplitude, sampleRate);
+                juce::AudioBuffer<float> testBuffer(2, numSamples);
+                generateTestWaveform(testBuffer, waveformType, frequency, amplitude, sampleRate);
 
-            CaptureFrameMetadata metadata;
-            metadata.sampleRate = sampleRate;
-            metadata.numChannels = 2;
-            metadata.numSamples = numSamples;
-            metadata.isPlaying = true;
-            metadata.bpm = 120.0f;
-            metadata.timestamp = 0;
+                CaptureFrameMetadata metadata;
+                metadata.sampleRate = sampleRate;
+                metadata.numChannels = 2;
+                metadata.numSamples = numSamples;
+                metadata.isPlaying = true;
+                metadata.bpm = 120.0f;
+                metadata.timestamp = 0;
 
-            captureBuffer->write(testBuffer, metadata, false);
-            editor_.repaint();
+                captureBuffer->write(testBuffer, metadata, false);
+                editor_.repaint();
 
-            response["status"] = "ok";
-            response["waveformType"] = waveformType;
-            response["frequency"] = frequency;
-            response["amplitude"] = amplitude;
-            response["samplesInjected"] = numSamples;
-            response["sampleRate"] = sampleRate;
-            return response;
-        });
+                response["status"] = "ok";
+                response["waveformType"] = waveformType;
+                response["frequency"] = frequency;
+                response["amplitude"] = amplitude;
+                response["samplesInjected"] = numSamples;
+                response["sampleRate"] = sampleRate;
+                return response;
+            });
 
         res.set_content(result.dump(), "application/json");
     }
@@ -138,7 +152,8 @@ void WaveformHandler::handleGetWaveformState(const httplib::Request& /*req*/, ht
         for (size_t paneIdx = 0; paneIdx < paneComponents.size(); ++paneIdx)
         {
             auto* pane = paneComponents[paneIdx].get();
-            if (!pane) continue;
+            if (!pane)
+                continue;
 
             nlohmann::json paneInfo;
             paneInfo["index"] = paneIdx;

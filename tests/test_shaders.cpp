@@ -4,9 +4,10 @@
     that all built-in shaders must satisfy.
 */
 
-#include <gtest/gtest.h>
 #include "rendering/ShaderRegistry.h"
 #include "rendering/WaveformShader.h"
+
+#include <gtest/gtest.h>
 #include <set>
 
 namespace oscil
@@ -15,10 +16,7 @@ namespace oscil
 class ShaderRegistryTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        registry_ = std::make_unique<ShaderRegistry>();
-    }
+    void SetUp() override { registry_ = std::make_unique<ShaderRegistry>(); }
 
     ShaderRegistry& registry() { return *registry_; }
 
@@ -41,8 +39,7 @@ TEST_F(ShaderRegistryTest, DefaultShaderIdReferencesRegisteredShader)
     juce::String defaultId = registry().getDefaultShaderId();
     EXPECT_FALSE(defaultId.isEmpty()) << "Default shader ID must be non-empty";
     EXPECT_TRUE(registry().hasShader(defaultId))
-        << "Default shader ID '" << defaultId.toStdString()
-        << "' does not exist in registry";
+        << "Default shader ID '" << defaultId.toStdString() << "' does not exist in registry";
 
     auto* shader = registry().getShader(defaultId);
     ASSERT_NE(shader, nullptr);
@@ -58,14 +55,11 @@ TEST_F(ShaderRegistryTest, AllRegisteredShadersHaveUniqueNonEmptyIds)
 
     for (const auto& info : available)
     {
-        EXPECT_FALSE(info.id.isEmpty())
-            << "Shader has empty ID";
-        EXPECT_FALSE(info.displayName.isEmpty())
-            << "Shader '" << info.id.toStdString() << "' has empty display name";
+        EXPECT_FALSE(info.id.isEmpty()) << "Shader has empty ID";
+        EXPECT_FALSE(info.displayName.isEmpty()) << "Shader '" << info.id.toStdString() << "' has empty display name";
 
         auto [_, inserted] = seen.insert(info.id.toStdString());
-        EXPECT_TRUE(inserted)
-            << "Duplicate shader ID: '" << info.id.toStdString() << "'";
+        EXPECT_TRUE(inserted) << "Duplicate shader ID: '" << info.id.toStdString() << "'";
     }
 }
 
@@ -77,10 +71,8 @@ TEST_F(ShaderRegistryTest, GetShaderReturnsConsistentPrototype)
     for (const auto& info : available)
     {
         auto* shader = registry().getShader(info.id);
-        ASSERT_NE(shader, nullptr)
-            << "getShader returned nullptr for registered ID '" << info.id.toStdString() << "'";
-        EXPECT_EQ(shader->getId(), info.id)
-            << "Prototype ID mismatch for '" << info.id.toStdString() << "'";
+        ASSERT_NE(shader, nullptr) << "getShader returned nullptr for registered ID '" << info.id.toStdString() << "'";
+        EXPECT_EQ(shader->getId(), info.id) << "Prototype ID mismatch for '" << info.id.toStdString() << "'";
         EXPECT_EQ(shader->getDisplayName(), info.displayName)
             << "Prototype displayName mismatch for '" << info.id.toStdString() << "'";
     }
@@ -94,10 +86,8 @@ TEST_F(ShaderRegistryTest, CreateShaderReturnsNewInstanceForEveryRegisteredShade
     for (const auto& info : available)
     {
         auto instance = registry().createShader(info.id);
-        ASSERT_NE(instance, nullptr)
-            << "createShader returned nullptr for '" << info.id.toStdString() << "'";
-        EXPECT_EQ(instance->getId(), info.id)
-            << "Created shader has wrong ID for '" << info.id.toStdString() << "'";
+        ASSERT_NE(instance, nullptr) << "createShader returned nullptr for '" << info.id.toStdString() << "'";
+        EXPECT_EQ(instance->getId(), info.id) << "Created shader has wrong ID for '" << info.id.toStdString() << "'";
     }
 }
 
@@ -111,8 +101,7 @@ TEST_F(ShaderRegistryTest, CreateShaderReturnsDistinctInstances)
 
     ASSERT_NE(instance1, nullptr);
     ASSERT_NE(instance2, nullptr);
-    EXPECT_NE(instance1.get(), instance2.get())
-        << "createShader must return distinct instances, not the same pointer";
+    EXPECT_NE(instance1.get(), instance2.get()) << "createShader must return distinct instances, not the same pointer";
 
     // Neither should be the prototype
     auto* prototype = registry().getShader(defaultId);
@@ -144,8 +133,7 @@ TEST_F(ShaderRegistryTest, AllShadersHaveNonEmptyDescriptions)
     auto available = registry().getAvailableShaders();
     for (const auto& info : available)
     {
-        EXPECT_FALSE(info.description.isEmpty())
-            << "Shader '" << info.id.toStdString() << "' has empty description";
+        EXPECT_FALSE(info.description.isEmpty()) << "Shader '" << info.id.toStdString() << "' has empty description";
     }
 }
 

@@ -11,15 +11,9 @@
 namespace oscil
 {
 
-OscillatorId OscillatorId::generate()
-{
-    return OscillatorId{juce::Uuid().toString()};
-}
+OscillatorId OscillatorId::generate() { return OscillatorId{juce::Uuid().toString()}; }
 
-PaneId PaneId::generate()
-{
-    return PaneId{juce::Uuid().toString()};
-}
+PaneId PaneId::generate() { return PaneId{juce::Uuid().toString()}; }
 
 Oscillator::Oscillator()
     : id_(OscillatorId::generate())
@@ -29,9 +23,7 @@ Oscillator::Oscillator()
 {
 }
 
-Oscillator::Oscillator(const juce::ValueTree& state)
-    : id_(OscillatorId::generate())
-    , state_(OscillatorState::NO_SOURCE)
+Oscillator::Oscillator(const juce::ValueTree& state) : id_(OscillatorId::generate()), state_(OscillatorState::NO_SOURCE)
 {
     fromValueTree(state);
 }
@@ -72,9 +64,8 @@ juce::ValueTree Oscillator::toValueTree() const
     return state;
 }
 
-OscillatorState Oscillator::migrateOscillatorState(const juce::ValueTree& state,
-                                                    int schemaVersion,
-                                                    const SourceId& sourceId)
+OscillatorState Oscillator::migrateOscillatorState(const juce::ValueTree& state, int schemaVersion,
+                                                   const SourceId& sourceId)
 {
     if (schemaVersion >= 2)
     {
@@ -109,8 +100,8 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     state_ = migrateOscillatorState(state, loadedSchemaVersion, sourceId_);
 
     processingMode_ = stringToProcessingMode(state.getProperty(StateIds::ProcessingMode, "FullStereo"));
-    colour_ = juce::Colour(static_cast<juce::uint32>(static_cast<int>(
-        state.getProperty(StateIds::Colour, static_cast<int>(colour_.getARGB())))));
+    colour_ = juce::Colour(static_cast<juce::uint32>(
+        static_cast<int>(state.getProperty(StateIds::Colour, static_cast<int>(colour_.getARGB())))));
     opacity_ = state.getProperty(StateIds::Opacity, 1.0f);
     paneId_.id = state.getProperty(StateIds::PaneId, "");
     orderIndex_ = state.getProperty(StateIds::Order, 0);
@@ -119,12 +110,10 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
 
     lineWidth_ = state.getProperty(StateIds::LineWidth, DEFAULT_LINE_WIDTH);
     timeWindow_ = state.hasProperty(StateIds::TimeWindow)
-        ? std::optional<float>(static_cast<float>(state.getProperty(StateIds::TimeWindow)))
-        : std::nullopt;
+                      ? std::optional<float>(static_cast<float>(state.getProperty(StateIds::TimeWindow)))
+                      : std::nullopt;
 
-    auto sanitizeNaN = [](float value, float fallback) {
-        return std::isnan(value) ? fallback : value;
-    };
+    auto sanitizeNaN = [](float value, float fallback) { return std::isnan(value) ? fallback : value; };
     lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, sanitizeNaN(lineWidth_, DEFAULT_LINE_WIDTH));
     opacity_ = juce::jlimit(0.0f, 1.0f, sanitizeNaN(opacity_, 1.0f));
 
@@ -136,14 +125,10 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
 
     schemaVersion_ = CURRENT_SCHEMA_VERSION;
 
-    OSCIL_LOG(STATE, "Oscillator::fromValueTree: id=" << id_.id
-        << " name=" << name_
-        << " sourceId=" << sourceId_.id
-        << " paneId=" << paneId_.id
-        << " state=" << static_cast<int>(state_)
-        << " mode=" << processingModeToString(processingMode_)
-        << " visible=" << (visible_ ? "true" : "false")
-        << " shader=" << shaderId_);
+    OSCIL_LOG(STATE, "Oscillator::fromValueTree: id="
+                         << id_.id << " name=" << name_ << " sourceId=" << sourceId_.id << " paneId=" << paneId_.id
+                         << " state=" << static_cast<int>(state_) << " mode=" << processingModeToString(processingMode_)
+                         << " visible=" << (visible_ ? "true" : "false") << " shader=" << shaderId_);
 }
 
 void Oscillator::setVisualOverride(const juce::Identifier& property, const juce::var& value)
@@ -156,10 +141,7 @@ juce::var Oscillator::getVisualOverride(const juce::Identifier& property) const
     return visualOverrides_.getProperty(property);
 }
 
-void Oscillator::clearVisualOverrides()
-{
-    visualOverrides_.removeAllProperties(nullptr);
-}
+void Oscillator::clearVisualOverrides() { visualOverrides_.removeAllProperties(nullptr); }
 
 void Oscillator::setSourceId(const SourceId& sourceId)
 {
@@ -176,16 +158,15 @@ void Oscillator::setSourceId(const SourceId& sourceId)
     {
         state_ = OscillatorState::NO_SOURCE;
     }
-    OSCIL_LOG(STATE, "Oscillator::setSourceId: id=" << id_.id
-        << " name=" << name_
-        << " source=" << oldSourceId.id << "->" << sourceId_.id
-        << " state=" << static_cast<int>(oldState) << "->" << static_cast<int>(state_));
+    OSCIL_LOG(STATE, "Oscillator::setSourceId: id=" << id_.id << " name=" << name_ << " source=" << oldSourceId.id
+                                                    << "->" << sourceId_.id << " state=" << static_cast<int>(oldState)
+                                                    << "->" << static_cast<int>(state_));
 }
 
 void Oscillator::clearSource()
 {
-    OSCIL_LOG(STATE, "Oscillator::clearSource: id=" << id_.id
-        << " name=" << name_ << " previousSource=" << sourceId_.id);
+    OSCIL_LOG(STATE,
+              "Oscillator::clearSource: id=" << id_.id << " name=" << name_ << " previousSource=" << sourceId_.id);
     // Preserve configuration but transition to NO_SOURCE
     sourceId_ = SourceId::noSource();
     state_ = OscillatorState::NO_SOURCE;

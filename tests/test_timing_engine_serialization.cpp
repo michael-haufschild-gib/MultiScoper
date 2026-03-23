@@ -101,7 +101,7 @@ TEST_F(TimingEngineTest, AudioTrigger_UpdatesLastSyncTimestampFromHostSamplePosi
     engine.updateHostInfo(posInfo);
 
     auto lowBuffer = generateStep(64, -0.5f, -0.5f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
 
     auto risingBuffer = generateStep(64, -0.5f, 0.5f, 32);
     EXPECT_TRUE(engine.processBlock(risingBuffer));
@@ -178,7 +178,7 @@ TEST_F(TimingEngineTest, FromValueTree_ResetsRuntimeHostTransportSnapshot)
     posInfo.setPpqPosition(32.5);
     posInfo.setIsPlaying(true);
     posInfo.setTimeInSamples(16384);
-    posInfo.setTimeSignature(juce::AudioPlayHead::TimeSignature{ 7, 8 });
+    posInfo.setTimeSignature(juce::AudioPlayHead::TimeSignature{7, 8});
     engine.updateHostInfo(posInfo);
 
     const auto hostBefore = engine.getHostInfo();
@@ -233,7 +233,7 @@ TEST_F(TimingEngineTest, FromValueTree_ResetsLevelTriggerHistoryForNextBuffer)
 
     auto lowBuffer = generateStep(64, 0.2f, 0.2f, 64);
     auto highBuffer = generateStep(64, 0.9f, 0.9f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
     EXPECT_TRUE(engine.processBlock(highBuffer));
     EXPECT_FALSE(engine.processBlock(highBuffer));
 
@@ -250,7 +250,7 @@ TEST_F(TimingEngineTest, FromValueTree_ResetsRisingEdgeHistoryForNextBuffer)
     engine.setTriggerThreshold(0.5f);
 
     auto highBuffer = generateStep(64, 0.8f, 0.8f, 64);
-    (void)engine.processBlock(highBuffer);
+    (void) engine.processBlock(highBuffer);
     EXPECT_FALSE(engine.processBlock(highBuffer));
 
     auto persisted = engine.toValueTree();
@@ -287,4 +287,3 @@ TEST_F(TimingEngineTest, FromValueTree_DeferredHistoryResetHasNoSideEffectsInMan
     engine.requestManualTrigger();
     EXPECT_TRUE(engine.processBlock(buffer));
 }
-

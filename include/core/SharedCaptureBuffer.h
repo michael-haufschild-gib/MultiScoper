@@ -5,14 +5,16 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
+#include "core/SeqLock.h"
+#include "core/interfaces/IAudioBuffer.h"
+
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_core/juce_core.h>
+
 #include <atomic>
-#include <vector>
 #include <cstring>
 #include <span>
-#include "core/interfaces/IAudioBuffer.h"
-#include "core/SeqLock.h"
+#include <vector>
 
 namespace oscil
 {
@@ -24,7 +26,7 @@ struct CaptureFrameMetadata
 {
     double sampleRate = 44100.0;
     int numChannels = 2;
-    int64_t timestamp = 0;      // Sample position in DAW timeline
+    int64_t timestamp = 0; // Sample position in DAW timeline
     int numSamples = 0;
     bool isPlaying = false;
     double bpm = 120.0;
@@ -73,8 +75,8 @@ public:
      * @param metadata Frame metadata
      * @param tryLock If true, attempts to lock and returns immediately if failed.
      */
-    void write(const float* const* samples, int numSamples, int numChannels,
-               const CaptureFrameMetadata& metadata, bool tryLock = false);
+    void write(const float* const* samples, int numSamples, int numChannels, const CaptureFrameMetadata& metadata,
+               bool tryLock = false);
 
     /**
      * Read the most recent samples into a buffer.
@@ -149,16 +151,16 @@ private:
                        const CaptureFrameMetadata& metadata);
     size_t capacity_;
     std::vector<float> buffer_; // Flat buffer: [Channel 0][Channel 1]...
-    std::atomic<size_t> writePos_{ 0 };
-    std::atomic<size_t> samplesWritten_{ 0 };
-    
+    std::atomic<size_t> writePos_{0};
+    std::atomic<size_t> samplesWritten_{0};
+
     // SpinLock for thread-safe writing from multiple sources (e.g. audio thread + test injector)
     juce::SpinLock writeLock_;
 
     // Epoch counter for torn-read detection in read(). The writer increments
     // to odd before memcpy, then to even after. Readers bracket their copy
     // with two epoch loads and retry if they differ (concurrent write detected).
-    std::atomic<uint32_t> writeEpoch_{ 0 };
+    std::atomic<uint32_t> writeEpoch_{0};
 
     // Lock-free metadata using SeqLock pattern (no SpinLock needed)
     mutable SeqLock<CaptureFrameMetadata> metadata_;
@@ -168,9 +170,10 @@ private:
     size_t wrapPosition(size_t pos) const
     {
         jassert(capacity_ > 0);
-        jassert((capacity_ & (capacity_ - 1)) == 0);  // Assert power of 2
+        jassert((capacity_ & (capacity_ - 1)) == 0); // Assert power of 2
         // Runtime safety check in case capacity_ is 0 (should never happen)
-        if (capacity_ == 0) return 0;
+        if (capacity_ == 0)
+            return 0;
         return pos & (capacity_ - 1);
     }
 };

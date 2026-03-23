@@ -3,6 +3,7 @@
 */
 
 #include "TestTrack.h"
+
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
 
@@ -74,22 +75,17 @@ void TestTrack::showEditor()
     if (editor_ != nullptr)
     {
         // Create window to host the editor
-        editorWindow_ = std::make_unique<juce::DocumentWindow>(
-            name_ + " - Oscil",
-            juce::Colours::darkgrey,
-            juce::DocumentWindow::allButtons);
+        editorWindow_ = std::make_unique<juce::DocumentWindow>(name_ + " - Oscil", juce::Colours::darkgrey,
+                                                               juce::DocumentWindow::allButtons);
 
         editorWindow_->setUsingNativeTitleBar(true);
         editorWindow_->setContentOwned(editor_.release(), true);
         editorWindow_->setResizable(true, false);
-        editorWindow_->centreWithSize(
-            editorWindow_->getWidth(),
-            editorWindow_->getHeight());
+        editorWindow_->centreWithSize(editorWindow_->getWidth(), editorWindow_->getHeight());
         editorWindow_->setVisible(true);
 
         // Get editor back from window
-        editor_.reset(static_cast<juce::AudioProcessorEditor*>(
-            editorWindow_->getContentComponent()));
+        editor_.reset(static_cast<juce::AudioProcessorEditor*>(editorWindow_->getContentComponent()));
     }
 }
 
@@ -104,10 +100,7 @@ void TestTrack::hideEditor()
     editor_.reset();
 }
 
-bool TestTrack::isEditorVisible() const
-{
-    return editorWindow_ != nullptr && editorWindow_->isVisible();
-}
+bool TestTrack::isEditorVisible() const { return editorWindow_ != nullptr && editorWindow_->isVisible(); }
 
 juce::Optional<juce::AudioPlayHead::PositionInfo> TestTrack::getPosition() const
 {

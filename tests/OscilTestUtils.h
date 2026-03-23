@@ -9,10 +9,11 @@
 
 #pragma once
 
-#include <gtest/gtest.h>
 #include <juce_events/juce_events.h>
+
 #include <chrono>
 #include <functional>
+#include <gtest/gtest.h>
 
 namespace oscil::test
 {
@@ -108,9 +109,7 @@ inline bool runOnMessageThread(std::function<void()> func, int maxWaitMs = 1000)
         completed.store(true, std::memory_order_release);
     });
 
-    return waitForCondition([&completed]() {
-        return completed.load(std::memory_order_acquire);
-    }, maxWaitMs);
+    return waitForCondition([&completed]() { return completed.load(std::memory_order_acquire); }, maxWaitMs);
 }
 
 /**

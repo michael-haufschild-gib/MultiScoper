@@ -13,10 +13,14 @@
 #if OSCIL_ENABLE_INSPECTOR
     #include <melatonin_inspector/melatonin_inspector.h>
 #endif
+#include "core/ServiceContext.h"
 #include "ui/components/OscilModal.h"
 #include "ui/components/TestId.h"
+#include "ui/controllers/GpuRenderCoordinator.h"
+#include "ui/controllers/OscillatorPanelController.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/dialogs/OscillatorColorDialog.h"
+#include "ui/dialogs/OscillatorConfigDialog.h"
 #include "ui/dialogs/SelectPaneDialog.h"
 #include "ui/layout/PaneContainerComponent.h"
 #include "ui/layout/PluginEditorLayout.h"
@@ -24,15 +28,11 @@
 #include "ui/managers/DialogManager.h"
 #include "ui/managers/DisplaySettingsManager.h"
 #include "ui/managers/PerformanceMetricsController.h"
-#include "ui/dialogs/OscillatorConfigDialog.h"
 #include "ui/panels/StatusBarComponent.h"
 #include "ui/panels/WaveformComponent.h"
 #include "ui/theme/ThemeManager.h"
-#include "ui/controllers/OscillatorPanelController.h"
 
 #include "plugin/PluginProcessor.h"
-#include "ui/controllers/GpuRenderCoordinator.h"
-#include "core/ServiceContext.h"
 
 namespace oscil
 {
@@ -74,7 +74,8 @@ class TimingEngineListenerAdapter;
  * Uses coordinator classes to handle listener callbacks, reducing direct
  * coupling and improving testability.
  */
-class OscilPluginEditor : public juce::AudioProcessorEditor
+class OscilPluginEditor
+    : public juce::AudioProcessorEditor
     , public juce::DragAndDropContainer
     , public SidebarComponent::Listener
     , public TestIdSupport
@@ -139,7 +140,7 @@ public:
 
 private:
     void timerCallback() override;
-    
+
     // Coordinator callbacks
     void onSourcesChanged();
     void onThemeChanged(const ColorTheme& newTheme);
@@ -176,7 +177,7 @@ private:
     // UI Components
     std::unique_ptr<juce::Viewport> viewport_;
     std::unique_ptr<PaneContainerComponent> contentComponent_;
-    
+
     // Controller now manages pane components
     std::unique_ptr<OscillatorPanelController> oscillatorPanelController_;
 

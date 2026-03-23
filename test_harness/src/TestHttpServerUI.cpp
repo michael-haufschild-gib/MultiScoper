@@ -2,53 +2,39 @@
     Oscil Test Harness - HTTP Server: UI Mouse Interaction Handlers
 */
 
-#include "TestHttpServer.h"
 #include "TestElementRegistry.h"
+#include "TestHttpServer.h"
 
 namespace oscil::test
 {
 
 void TestHttpServer::setupUIMouseRoutes()
 {
-    server_->Post("/ui/click", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIClick(req, res);
-    });
-    server_->Post("/ui/doubleClick", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIDoubleClick(req, res);
-    });
-    server_->Post("/ui/rightClick", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIRightClick(req, res);
-    });
-    server_->Post("/ui/hover", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIHover(req, res);
-    });
-    server_->Post("/ui/select", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUISelect(req, res);
-    });
-    server_->Post("/ui/toggle", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIToggle(req, res);
-    });
-    server_->Post("/ui/slider", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUISlider(req, res);
-    });
-    server_->Post("/ui/slider/increment", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUISliderIncrement(req, res);
-    });
-    server_->Post("/ui/slider/decrement", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUISliderDecrement(req, res);
-    });
-    server_->Post("/ui/slider/reset", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUISliderReset(req, res);
-    });
-    server_->Post("/ui/drag", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIDrag(req, res);
-    });
-    server_->Post("/ui/dragOffset", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIDragOffset(req, res);
-    });
-    server_->Post("/ui/scroll", [this](const httplib::Request& req, httplib::Response& res) {
-        handleUIScroll(req, res);
-    });
+    server_->Post("/ui/click",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIClick(req, res); });
+    server_->Post("/ui/doubleClick",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIDoubleClick(req, res); });
+    server_->Post("/ui/rightClick",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIRightClick(req, res); });
+    server_->Post("/ui/hover",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIHover(req, res); });
+    server_->Post("/ui/select",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUISelect(req, res); });
+    server_->Post("/ui/toggle",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIToggle(req, res); });
+    server_->Post("/ui/slider",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUISlider(req, res); });
+    server_->Post("/ui/slider/increment",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUISliderIncrement(req, res); });
+    server_->Post("/ui/slider/decrement",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUISliderDecrement(req, res); });
+    server_->Post("/ui/slider/reset",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUISliderReset(req, res); });
+    server_->Post("/ui/drag", [this](const httplib::Request& req, httplib::Response& res) { handleUIDrag(req, res); });
+    server_->Post("/ui/dragOffset",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIDragOffset(req, res); });
+    server_->Post("/ui/scroll",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleUIScroll(req, res); });
 }
 
 void TestHttpServer::handleUIClick(const httplib::Request& req, httplib::Response& res)
@@ -302,9 +288,8 @@ void TestHttpServer::handleUIDrag(const httplib::Request& req, httplib::Response
         // Synthetic drag can't trigger JUCE DragAndDropContainer — interpret
         // oscillator item drags as reorder operations.
         const std::string prefix = "sidebar_oscillators_item_";
-        if (success && from.size() > prefix.size() && to.size() > prefix.size()
-            && from.compare(0, prefix.size(), prefix) == 0
-            && to.compare(0, prefix.size(), prefix) == 0)
+        if (success && from.size() > prefix.size() && to.size() > prefix.size() &&
+            from.compare(0, prefix.size(), prefix) == 0 && to.compare(0, prefix.size(), prefix) == 0)
         {
             int fromIdx = std::stoi(from.substr(prefix.size()));
             int toIdx = std::stoi(to.substr(prefix.size()));

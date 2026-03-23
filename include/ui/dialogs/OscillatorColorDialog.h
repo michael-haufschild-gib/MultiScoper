@@ -5,20 +5,21 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilColorSwatches.h"
+#include "ui/theme/IThemeService.h"
 #include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
-#include <functional>
 
-#include "ui/theme/IThemeService.h"
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include <functional>
 
 namespace oscil
 {
 
-class OscillatorColorDialog : public juce::Component,
-                              public ThemeManagerListener
+class OscillatorColorDialog
+    : public juce::Component
+    , public ThemeManagerListener
 {
 public:
     using ColorSelectedCallback = std::function<void(juce::Colour)>;

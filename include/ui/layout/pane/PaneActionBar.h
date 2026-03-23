@@ -5,10 +5,12 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/IThemeService.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
+#include "ui/theme/IThemeService.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 #include <memory>
 
@@ -35,8 +37,9 @@ enum class PaneAction
  * - Tooltips for each action
  * - Extensible - easy to add new actions
  */
-class PaneActionBar : public juce::Component,
-                       public TestIdSupport
+class PaneActionBar
+    : public juce::Component
+    , public TestIdSupport
 {
 public:
     explicit PaneActionBar(IThemeService& themeService);

@@ -7,8 +7,9 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
-#include <memory>
+
 #include <map>
+#include <memory>
 
 namespace oscil
 {
@@ -29,14 +30,14 @@ class UIAudioFeedback
 public:
     enum class SoundType
     {
-        Click,          // Button clicks
-        Toggle,         // Toggle/checkbox changes
-        SliderSnap,     // Magnetic snap on sliders
-        Error,          // Validation errors
-        Success,        // Successful actions
-        Focus,          // Focus changes
-        Hover,          // Hover effects (usually disabled)
-        Notification    // Alerts/notifications
+        Click,       // Button clicks
+        Toggle,      // Toggle/checkbox changes
+        SliderSnap,  // Magnetic snap on sliders
+        Error,       // Validation errors
+        Success,     // Successful actions
+        Focus,       // Focus changes
+        Hover,       // Hover effects (usually disabled)
+        Notification // Alerts/notifications
     };
 
     UIAudioFeedback();
@@ -68,7 +69,6 @@ public:
     UIAudioFeedback& operator=(const UIAudioFeedback&) = delete;
 
 private:
-
     // Generate synthesized sounds
     void generateSounds();
     juce::AudioBuffer<float> generateClickSound();
@@ -92,7 +92,7 @@ private:
     std::map<SoundType, bool> soundEnabled_;
 
     // State
-    bool enabled_ = false;  // Disabled by default
+    bool enabled_ = false; // Disabled by default
     float volume_ = 0.5f;
     float sampleRate_ = 44100.0f;
 

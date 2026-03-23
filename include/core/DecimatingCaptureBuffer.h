@@ -9,10 +9,12 @@
 #include "core/SharedCaptureBuffer.h"
 #include "core/dsp/CaptureQualityConfig.h"
 #include "core/interfaces/IAudioBuffer.h"
+
 #include <juce_dsp/juce_dsp.h>
-#include <vector>
+
 #include <array>
 #include <memory>
+#include <vector>
 
 namespace oscil
 {
@@ -184,8 +186,7 @@ public:
      * @param numChannels Number of channels
      * @param metadata Frame metadata
      */
-    void write(const float* const* samples, int numSamples, int numChannels,
-               const CaptureFrameMetadata& metadata);
+    void write(const float* const* samples, int numSamples, int numChannels, const CaptureFrameMetadata& metadata);
 
     //==========================================================================
     // Read Interface (Any Thread)
@@ -274,9 +275,8 @@ public:
 private:
     void reconfigure();
     void processAndWriteDecimated(const float* const* samples, int numSamples, int numChannels,
-                                   const CaptureFrameMetadata& metadata);
-    int decimateChannel(const float* src, float* dest, DecimationFilter& filter,
-                        int& counter, int numSamples) const;
+                                  const CaptureFrameMetadata& metadata);
+    int decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter, int numSamples) const;
 
     // Configuration
     CaptureQualityConfig config_;

@@ -6,9 +6,10 @@
 #pragma once
 
 #include "TestServerHandlerBase.h"
+
 #include <memory>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 namespace oscil
 {
@@ -24,8 +25,7 @@ class StateHandler : public TestServerHandlerBase
 {
 public:
     StateHandler(OscilPluginEditor& editor,
-                 std::unordered_map<std::string, std::shared_ptr<SharedCaptureBuffer>>& testSourceBuffers,
-                 int port)
+                 std::unordered_map<std::string, std::shared_ptr<SharedCaptureBuffer>>& testSourceBuffers, int port)
         : TestServerHandlerBase(editor)
         , testSourceBuffers_(testSourceBuffers)
         , port_(port)

@@ -3,10 +3,11 @@
     Standalone application for E2E testing
 */
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "TestDAW.h"
 #include "TestHttpServer.h"
 #include "TestLogCapture.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil::test
 {
@@ -19,11 +20,9 @@ class TestHarnessWindow : public juce::DocumentWindow
 {
 public:
     TestHarnessWindow(TestDAW& daw, TestHttpServer& server)
-        : DocumentWindow("Oscil Test Harness",
-                         juce::Colours::darkgrey,
-                         DocumentWindow::allButtons),
-          daw_(daw),
-          server_(server)
+        : DocumentWindow("Oscil Test Harness", juce::Colours::darkgrey, DocumentWindow::allButtons)
+        , daw_(daw)
+        , server_(server)
     {
         setUsingNativeTitleBar(true);
         setContentOwned(new StatusComponent(daw, server), true);
@@ -32,23 +31,20 @@ public:
         setVisible(true);
     }
 
-    void closeButtonPressed() override
-    {
-        juce::JUCEApplication::getInstance()->systemRequestedQuit();
-    }
+    void closeButtonPressed() override { juce::JUCEApplication::getInstance()->systemRequestedQuit(); }
 
 private:
     /**
      * Status display component showing DAW and server state with interactive controls.
      */
-    class StatusComponent : public juce::Component,
-                            private juce::Timer,
-                            private juce::Slider::Listener,
-                            private juce::Button::Listener
+    class StatusComponent
+        : public juce::Component
+        , private juce::Timer
+        , private juce::Slider::Listener
+        , private juce::Button::Listener
     {
     public:
-        StatusComponent(TestDAW& daw, TestHttpServer& server)
-            : daw_(daw), server_(server)
+        StatusComponent(TestDAW& daw, TestHttpServer& server) : daw_(daw), server_(server)
         {
             // Play/Stop button
             playStopButton_.setButtonText("Stop");
@@ -154,9 +150,8 @@ private:
             g.setFont(juce::FontOptions(14.0f));
 
             // Server status
-            auto serverStatus = server_.isRunning()
-                ? juce::String("Running on port ") + juce::String(server_.getPort())
-                : juce::String("Stopped");
+            auto serverStatus = server_.isRunning() ? juce::String("Running on port ") + juce::String(server_.getPort())
+                                                    : juce::String("Stopped");
             g.setColour(server_.isRunning() ? juce::Colours::lightgreen : juce::Colours::red);
             g.drawText("HTTP Server: " + serverStatus, 20, y, getWidth() - 40, lineHeight, juce::Justification::left);
             y += lineHeight;
@@ -168,7 +163,7 @@ private:
             g.setColour(juce::Colours::white);
             auto& transport = daw_.getTransport();
             g.drawText(juce::String("Position: ") + juce::String(transport.getPositionBeats(), 2) + " beats  |  " +
-                       juce::String(transport.getPositionSeconds(), 2) + " sec",
+                           juce::String(transport.getPositionSeconds(), 2) + " sec",
                        20, y, getWidth() - 40, lineHeight, juce::Justification::left);
             y += lineHeight + 6;
 
@@ -177,8 +172,8 @@ private:
             // API endpoint hint
             g.setColour(juce::Colours::grey);
             g.setFont(juce::FontOptions(11.0f));
-            g.drawText("API: http://localhost:" + juce::String(server_.getPort()) + "/health",
-                       20, getHeight() - 30, getWidth() - 40, 20, juce::Justification::centred);
+            g.drawText("API: http://localhost:" + juce::String(server_.getPort()) + "/health", 20, getHeight() - 30,
+                       getWidth() - 40, 20, juce::Justification::centred);
         }
 
         // Paints track header and per-track frequency info. Returns updated y position.
@@ -350,16 +345,14 @@ public:
         // Initialize the test DAW
         daw_ = std::make_unique<TestDAW>();
         daw_->initialize();
-        daw_->start();  // Start audio processing immediately so waveforms render
+        daw_->start(); // Start audio processing immediately so waveforms render
 
         // Create and start HTTP server
         server_ = std::make_unique<TestHttpServer>(*daw_);
         if (!server_->start(port))
         {
-            juce::NativeMessageBox::showMessageBoxAsync(
-                juce::MessageBoxIconType::WarningIcon,
-                "Server Error",
-                "Failed to start HTTP server on port " + juce::String(port));
+            juce::NativeMessageBox::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Server Error",
+                                                        "Failed to start HTTP server on port " + juce::String(port));
         }
 
         // Create the main window
@@ -391,10 +384,7 @@ public:
         std::cout << "Shutdown complete" << std::endl;
     }
 
-    void systemRequestedQuit() override
-    {
-        quit();
-    }
+    void systemRequestedQuit() override { quit(); }
 
     void anotherInstanceStarted(const juce::String&) override {}
 

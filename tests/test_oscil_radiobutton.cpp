@@ -3,9 +3,10 @@
     Tests for OscilRadioButton and OscilRadioGroup UI components
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilRadioButton.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -16,15 +17,9 @@ using namespace oscil;
 class OscilRadioButtonTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -111,9 +106,7 @@ TEST_F(OscilRadioButtonTest, OnSelectedCallback)
     OscilRadioButton radio(getThemeManager());
     int selectCount = 0;
 
-    radio.onSelected = [&selectCount]() {
-        selectCount++;
-    };
+    radio.onSelected = [&selectCount]() { selectCount++; };
 
     radio.setSelected(true, true);
     EXPECT_EQ(selectCount, 1);
@@ -124,9 +117,7 @@ TEST_F(OscilRadioButtonTest, NoCallbackWhenNotifyFalse)
     OscilRadioButton radio(getThemeManager());
     int selectCount = 0;
 
-    radio.onSelected = [&selectCount]() {
-        selectCount++;
-    };
+    radio.onSelected = [&selectCount]() { selectCount++; };
 
     radio.setSelected(true, false);
     EXPECT_EQ(selectCount, 0);
@@ -176,15 +167,9 @@ TEST_F(OscilRadioButtonTest, WantsKeyboardFocus)
 class OscilRadioGroupTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
     IThemeService& getThemeService() { return *themeManager_; }
@@ -321,9 +306,7 @@ TEST_F(OscilRadioGroupTest, NoCallbackWhenNotifyFalse)
 
     int changeCount = 0;
 
-    group.onSelectionChanged = [&changeCount](int) {
-        changeCount++;
-    };
+    group.onSelectionChanged = [&changeCount](int) { changeCount++; };
 
     group.setSelectedIndex(1, false);
     EXPECT_EQ(changeCount, 0);

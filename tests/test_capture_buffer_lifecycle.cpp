@@ -3,9 +3,11 @@
     Tests for buffer allocation, deallocation, clear, and edge cases
 */
 
-#include <gtest/gtest.h>
-#include "helpers/AudioBufferBuilder.h"
 #include "core/SharedCaptureBuffer.h"
+
+#include "helpers/AudioBufferBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -15,19 +17,12 @@ class CaptureBufferLifecycleTest : public ::testing::Test
 protected:
     std::unique_ptr<SharedCaptureBuffer> buffer;
 
-    void SetUp() override
-    {
-        buffer = std::make_unique<SharedCaptureBuffer>(1024);
-    }
+    void SetUp() override { buffer = std::make_unique<SharedCaptureBuffer>(1024); }
 
     // Generate test audio buffer
     juce::AudioBuffer<float> generateTestBuffer(int numSamples, float value)
     {
-        return AudioBufferBuilder()
-            .withChannels(2)
-            .withSamples(numSamples)
-            .withDC(value)
-            .build();
+        return AudioBufferBuilder().withChannels(2).withSamples(numSamples).withDC(value).build();
     }
 };
 

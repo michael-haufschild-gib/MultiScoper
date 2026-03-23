@@ -5,15 +5,17 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/components/TestId.h"
+#include "core/Oscillator.h"
+#include "ui/components/InlineEditLabel.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilToggle.h"
 #include "ui/components/SegmentedButtonBar.h"
-#include "ui/components/InlineEditLabel.h"
-#include "core/Oscillator.h"
+#include "ui/components/TestId.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -25,9 +27,10 @@ class IInstanceRegistry;
  * Oscillator list item component
  * Shows compact view for non-selected items, expands when selected to show mode/visibility controls
  */
-class OscillatorListItemComponent : public juce::Component,
-                                     public ThemeManagerListener,
-                                     public TestIdSupport
+class OscillatorListItemComponent
+    : public juce::Component
+    , public ThemeManagerListener
+    , public TestIdSupport
 {
 public:
     /**
@@ -57,7 +60,8 @@ public:
     };
 
     /// Construct a list item representing the given oscillator.
-    OscillatorListItemComponent(const Oscillator& oscillator, IInstanceRegistry& instanceRegistry, IThemeService& themeService);
+    OscillatorListItemComponent(const Oscillator& oscillator, IInstanceRegistry& instanceRegistry,
+                                IThemeService& themeService);
     ~OscillatorListItemComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -97,7 +101,7 @@ public:
 
     static constexpr int COMPACT_HEIGHT = 56;
     static constexpr int EXPANDED_HEIGHT = 100;
-    static constexpr int PREFERRED_HEIGHT = COMPACT_HEIGHT;  // Default for layout calculations
+    static constexpr int PREFERRED_HEIGHT = COMPACT_HEIGHT; // Default for layout calculations
 
 private:
     void setupComponents(int orderIndex);
@@ -105,7 +109,7 @@ private:
     void setupActionButtons(const juce::String& suffix);
     void setupModeButtons(const juce::String& suffix);
     void updateVisibility();
-    
+
     bool isInDragZone(const juce::Point<int>& pos) const;
 
     // Data
@@ -117,7 +121,7 @@ private:
     juce::Colour colour_;
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
     bool isVisible_ = true;
-    PaneId paneId_;  // For checking if oscillator has valid pane assignment
+    PaneId paneId_; // For checking if oscillator has valid pane assignment
 
     // UI state
     bool selected_ = false;

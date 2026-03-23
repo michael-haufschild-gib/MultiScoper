@@ -5,13 +5,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -24,7 +25,7 @@ struct TabItem
     juce::String id;
     juce::String label;
     juce::Image icon;
-    int badgeCount = 0;         // 0 = no badge
+    int badgeCount = 0; // 0 = no badge
     bool enabled = true;
 };
 
@@ -38,9 +39,10 @@ struct TabItem
  * - Keyboard navigation
  * - Full accessibility support
  */
-class OscilTabs : public ThemedComponent,
-                  public TestIdSupport,
-                  private juce::Timer
+class OscilTabs
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     enum class Orientation
@@ -51,9 +53,9 @@ public:
 
     enum class Variant
     {
-        Default,    // Underline indicator
-        Pills,      // Filled background indicator
-        Bordered    // Border around selected tab
+        Default, // Underline indicator
+        Pills,   // Filled background indicator
+        Bordered // Border around selected tab
     };
 
     explicit OscilTabs(IThemeService& themeService);
@@ -88,13 +90,13 @@ public:
     void setVariant(Variant variant);
     Variant getVariant() const { return variant_; }
 
-    void setTabWidth(int width);  // 0 = auto
+    void setTabWidth(int width); // 0 = auto
     int getTabWidth() const { return tabWidth_; }
 
-    void setTabHeight(int height);  // 0 = auto
+    void setTabHeight(int height); // 0 = auto
     int getTabHeight() const { return tabHeight_; }
 
-    void setStretchTabs(bool stretch);  // Fill available space
+    void setStretchTabs(bool stretch); // Fill available space
     bool isStretchTabs() const { return stretchTabs_; }
 
     // Callbacks
@@ -138,8 +140,8 @@ private:
 
     Orientation orientation_ = Orientation::Horizontal;
     Variant variant_ = Variant::Default;
-    int tabWidth_ = 0;   // 0 = auto
-    int tabHeight_ = 0;  // 0 = auto
+    int tabWidth_ = 0;  // 0 = auto
+    int tabHeight_ = 0; // 0 = auto
     bool stretchTabs_ = false;
 
     bool hasFocus_ = false;

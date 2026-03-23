@@ -3,14 +3,15 @@
     Tests for Source serialization, display names, metrics, audio config, and capture buffers
 */
 
-#include <gtest/gtest.h>
-#include "core/Source.h"
 #include "core/SharedCaptureBuffer.h"
-#include <limits>
+#include "core/Source.h"
+
+#include <atomic>
 #include <cmath>
+#include <gtest/gtest.h>
+#include <limits>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 using namespace oscil;
 
@@ -28,10 +29,7 @@ protected:
         source = std::make_unique<Source>(sourceId);
     }
 
-    void TearDown() override
-    {
-        source.reset();
-    }
+    void TearDown() override { source.reset(); }
 };
 
 // === Serialization Tests ===
@@ -270,7 +268,7 @@ TEST_F(SourceBufferTest, SignalMetricsWithMixedValues)
 
 TEST_F(SourceBufferTest, ConcurrentMetricsUpdate)
 {
-    std::atomic<bool> done{ false };
+    std::atomic<bool> done{false};
     std::vector<std::thread> threads;
 
     // Writer threads for correlation
@@ -359,10 +357,7 @@ TEST_F(SourceBufferTest, BufferSizeNegative)
 
 // === Capture Buffer Tests ===
 
-TEST_F(SourceBufferTest, CaptureBufferInitiallyNull)
-{
-    EXPECT_EQ(source->getCaptureBuffer(), nullptr);
-}
+TEST_F(SourceBufferTest, CaptureBufferInitiallyNull) { EXPECT_EQ(source->getCaptureBuffer(), nullptr); }
 
 TEST_F(SourceBufferTest, SetAndGetCaptureBuffer)
 {

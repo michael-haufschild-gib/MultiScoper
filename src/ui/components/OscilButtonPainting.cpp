@@ -14,10 +14,8 @@ void OscilButton::paint(juce::Graphics& g)
 
     if (std::abs(currentScale_ - 1.0f) > 0.001f)
     {
-        auto scaledBounds = bounds.withSizeKeepingCentre(
-            bounds.getWidth() * currentScale_,
-            bounds.getHeight() * currentScale_
-        );
+        auto scaledBounds =
+            bounds.withSizeKeepingCentre(bounds.getWidth() * currentScale_, bounds.getHeight() * currentScale_);
         bounds = scaledBounds;
     }
 
@@ -30,9 +28,7 @@ void OscilButton::paint(juce::Graphics& g)
 void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 {
     cachedButtonPath_.clear();
-    float cornerRadius = variant_ == ButtonVariant::Icon
-        ? ComponentLayout::RADIUS_MD
-        : ComponentLayout::RADIUS_LG;
+    float cornerRadius = variant_ == ButtonVariant::Icon ? ComponentLayout::RADIUS_MD : ComponentLayout::RADIUS_LG;
 
     if (segmentPosition_ == SegmentPosition::None || segmentPosition_ == SegmentPosition::Only)
     {
@@ -40,17 +36,13 @@ void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
     }
     else if (segmentPosition_ == SegmentPosition::First)
     {
-        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(),
-                                        bounds.getWidth(), bounds.getHeight(),
-                                        cornerRadius, cornerRadius,
-                                        true, false, true, false);
+        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
+                                              cornerRadius, cornerRadius, true, false, true, false);
     }
     else if (segmentPosition_ == SegmentPosition::Last)
     {
-        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(),
-                                        bounds.getWidth(), bounds.getHeight(),
-                                        cornerRadius, cornerRadius,
-                                        false, true, false, true);
+        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
+                                              cornerRadius, cornerRadius, false, true, false, true);
     }
     else
     {
@@ -130,13 +122,18 @@ void OscilButton::paintButtonContent(juce::Graphics& g, const juce::Rectangle<fl
 
         if (iconOnLeft_)
         {
-            g.drawImage(icon_, juce::Rectangle<float>(startX, iconY, ICON_SIZE, ICON_SIZE), juce::RectanglePlacement::centred);
-            g.drawText(label_, juce::Rectangle<float>(startX + ICON_SIZE + ICON_PADDING, 0, textWidth, bounds.getHeight()), juce::Justification::centredLeft);
+            g.drawImage(icon_, juce::Rectangle<float>(startX, iconY, ICON_SIZE, ICON_SIZE),
+                        juce::RectanglePlacement::centred);
+            g.drawText(label_,
+                       juce::Rectangle<float>(startX + ICON_SIZE + ICON_PADDING, 0, textWidth, bounds.getHeight()),
+                       juce::Justification::centredLeft);
         }
         else
         {
-            g.drawText(label_, juce::Rectangle<float>(startX, 0, textWidth, bounds.getHeight()), juce::Justification::centredLeft);
-            g.drawImage(icon_, juce::Rectangle<float>(startX + textWidth + ICON_PADDING, iconY, ICON_SIZE, ICON_SIZE), juce::RectanglePlacement::centred);
+            g.drawText(label_, juce::Rectangle<float>(startX, 0, textWidth, bounds.getHeight()),
+                       juce::Justification::centredLeft);
+            g.drawImage(icon_, juce::Rectangle<float>(startX + textWidth + ICON_PADDING, iconY, ICON_SIZE, ICON_SIZE),
+                        juce::RectanglePlacement::centred);
         }
     }
     else
@@ -161,7 +158,8 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
     if (segmentPosition_ != SegmentPosition::None)
         horizontalPadding = ComponentLayout::BUTTON_SEGMENT_PADDING;
     else if (bounds.getWidth() < TEXT_PADDING * 2.5f)
-        horizontalPadding = std::max(8, static_cast<int>(bounds.getWidth() * ComponentLayout::BUTTON_NARROW_PADDING_RATIO));
+        horizontalPadding =
+            std::max(8, static_cast<int>(bounds.getWidth() * ComponentLayout::BUTTON_NARROW_PADDING_RATIO));
     else
         horizontalPadding = TEXT_PADDING;
 
@@ -176,136 +174,93 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
 void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float cornerRadius = variant_ == ButtonVariant::Icon
-        ? ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET
-        : ComponentLayout::RADIUS_LG + ComponentLayout::FOCUS_RING_OFFSET;
+                             ? ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET
+                             : ComponentLayout::RADIUS_LG + ComponentLayout::FOCUS_RING_OFFSET;
 
     g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-    g.drawRoundedRectangle(
-        bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-        cornerRadius,
-        ComponentLayout::FOCUS_RING_WIDTH
-    );
+    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET), cornerRadius,
+                           ComponentLayout::FOCUS_RING_WIDTH);
 }
+
+namespace
+{
+
+struct VariantColours
+{
+    juce::Colour primary, secondary, tertiary, ghost, danger, icon;
+};
+
+juce::Colour resolveVariant(ButtonVariant v, const VariantColours& c)
+{
+    switch (v)
+    {
+        case ButtonVariant::Primary:
+            return c.primary;
+        case ButtonVariant::Secondary:
+            return c.secondary;
+        case ButtonVariant::Tertiary:
+            return c.tertiary;
+        case ButtonVariant::Ghost:
+            return c.ghost;
+        case ButtonVariant::Danger:
+            return c.danger;
+        case ButtonVariant::Icon:
+            return c.icon;
+    }
+    jassertfalse;
+    return c.primary;
+}
+
+} // namespace
 
 juce::Colour OscilButton::getBackgroundColour() const
 {
-    const auto& theme = getTheme();
+    const auto& t = getTheme();
 
     if (toggleable_ && isToggled_)
-        return theme.btnPrimaryBgActive;
+        return t.btnPrimaryBgActive;
 
     if (!enabled_)
-    {
-        switch (variant_)
-        {
-            case ButtonVariant::Primary:   return theme.btnPrimaryBgDisabled;
-            case ButtonVariant::Secondary: return theme.btnSecondaryBgDisabled;
-            case ButtonVariant::Tertiary:  return theme.btnTertiaryBgDisabled;
-            case ButtonVariant::Ghost:     return theme.btnTertiaryBgDisabled;
-            case ButtonVariant::Danger:    return theme.statusError.withAlpha(0.5f);
-            case ButtonVariant::Icon:      return theme.backgroundSecondary.withAlpha(0.5f);
-        }
-    }
+        return resolveVariant(variant_, {t.btnPrimaryBgDisabled, t.btnSecondaryBgDisabled, t.btnTertiaryBgDisabled,
+                                         t.btnTertiaryBgDisabled, t.statusError.withAlpha(0.5f),
+                                         t.backgroundSecondary.withAlpha(0.5f)});
 
     if (isPressed_)
-    {
-        switch (variant_)
-        {
-            case ButtonVariant::Primary:   return theme.btnPrimaryBgActive;
-            case ButtonVariant::Secondary: return theme.btnSecondaryBgActive;
-            case ButtonVariant::Tertiary:  return theme.btnTertiaryBgActive;
-            case ButtonVariant::Ghost:     return theme.btnTertiaryBgActive;
-            case ButtonVariant::Danger:    return theme.statusError.darker(0.2f);
-            case ButtonVariant::Icon:      return theme.controlHighlight;
-        }
-    }
+        return resolveVariant(variant_, {t.btnPrimaryBgActive, t.btnSecondaryBgActive, t.btnTertiaryBgActive,
+                                         t.btnTertiaryBgActive, t.statusError.darker(0.2f), t.controlHighlight});
 
     if (isHovered_)
-    {
-        switch (variant_)
-        {
-            case ButtonVariant::Primary:   return theme.btnPrimaryBgHover;
-            case ButtonVariant::Secondary: return theme.btnSecondaryBgHover;
-            case ButtonVariant::Tertiary:  return theme.btnTertiaryBgHover;
-            case ButtonVariant::Ghost:     return theme.btnTertiaryBgHover;
-            case ButtonVariant::Danger:    return theme.statusError.brighter(0.1f);
-            case ButtonVariant::Icon:      return theme.controlHighlight;
-        }
-    }
+        return resolveVariant(variant_, {t.btnPrimaryBgHover, t.btnSecondaryBgHover, t.btnTertiaryBgHover,
+                                         t.btnTertiaryBgHover, t.statusError.brighter(0.1f), t.controlHighlight});
 
-    switch (variant_)
-    {
-        case ButtonVariant::Primary:   return theme.btnPrimaryBg;
-        case ButtonVariant::Secondary: return theme.btnSecondaryBg;
-        case ButtonVariant::Tertiary:  return theme.btnTertiaryBg;
-        case ButtonVariant::Ghost:     return theme.btnTertiaryBg;
-        case ButtonVariant::Danger:    return theme.statusError;
-        case ButtonVariant::Icon:      return theme.backgroundSecondary;
-    }
-    jassertfalse;
-    return theme.btnPrimaryBg;
+    return resolveVariant(variant_, {t.btnPrimaryBg, t.btnSecondaryBg, t.btnTertiaryBg, t.btnTertiaryBg, t.statusError,
+                                     t.backgroundSecondary});
 }
 
 juce::Colour OscilButton::getTextColour() const
 {
+    const auto& t = getTheme();
+
     if (toggleable_ && isToggled_)
-        return getTheme().btnPrimaryTextActive;
+        return t.btnPrimaryTextActive;
 
     if (!enabled_)
-    {
-        switch (variant_)
-        {
-            case ButtonVariant::Primary:   return getTheme().btnPrimaryTextDisabled;
-            case ButtonVariant::Secondary: return getTheme().btnSecondaryTextDisabled;
-            case ButtonVariant::Tertiary:  return getTheme().btnTertiaryTextDisabled;
-            case ButtonVariant::Ghost:     return getTheme().btnTertiaryTextDisabled;
-            case ButtonVariant::Danger:    return getTheme().textSecondary;
-            case ButtonVariant::Icon:      return getTheme().textSecondary;
-        }
-    }
+        return resolveVariant(variant_,
+                              {t.btnPrimaryTextDisabled, t.btnSecondaryTextDisabled, t.btnTertiaryTextDisabled,
+                               t.btnTertiaryTextDisabled, t.textSecondary, t.textSecondary});
 
     if (isPressed_)
-    {
-        switch (variant_)
-        {
-            case ButtonVariant::Primary:   return getTheme().btnPrimaryTextActive;
-            case ButtonVariant::Secondary: return getTheme().btnSecondaryTextActive;
-            case ButtonVariant::Tertiary:  return getTheme().btnTertiaryTextActive;
-            case ButtonVariant::Ghost:     return getTheme().btnTertiaryTextActive;
-            case ButtonVariant::Danger:    return juce::Colours::white;
-            case ButtonVariant::Icon:      return getTheme().textHighlight;
-        }
-    }
+        return resolveVariant(variant_, {t.btnPrimaryTextActive, t.btnSecondaryTextActive, t.btnTertiaryTextActive,
+                                         t.btnTertiaryTextActive, juce::Colours::white, t.textHighlight});
 
     if (isHovered_)
-    {
-        switch (variant_)
-        {
-            case ButtonVariant::Primary:   return getTheme().btnPrimaryTextHover;
-            case ButtonVariant::Secondary: return getTheme().btnSecondaryTextHover;
-            case ButtonVariant::Tertiary:  return getTheme().btnTertiaryTextHover;
-            case ButtonVariant::Ghost:     return getTheme().btnTertiaryTextHover;
-            case ButtonVariant::Danger:    return juce::Colours::white;
-            case ButtonVariant::Icon:      return getTheme().textHighlight;
-        }
-    }
+        return resolveVariant(variant_, {t.btnPrimaryTextHover, t.btnSecondaryTextHover, t.btnTertiaryTextHover,
+                                         t.btnTertiaryTextHover, juce::Colours::white, t.textHighlight});
 
-    switch (variant_)
-    {
-        case ButtonVariant::Primary:   return getTheme().btnPrimaryText;
-        case ButtonVariant::Secondary: return getTheme().btnSecondaryText;
-        case ButtonVariant::Tertiary:  return getTheme().btnTertiaryText;
-        case ButtonVariant::Ghost:     return getTheme().btnTertiaryText;
-        case ButtonVariant::Danger:    return juce::Colours::white;
-        case ButtonVariant::Icon:      return getTheme().textPrimary;
-    }
-    jassertfalse;
-    return getTheme().btnPrimaryText;
+    return resolveVariant(variant_, {t.btnPrimaryText, t.btnSecondaryText, t.btnTertiaryText, t.btnTertiaryText,
+                                     juce::Colours::white, t.textPrimary});
 }
 
-juce::Colour OscilButton::getBorderColour() const
-{
-    return getTheme().controlBorder;
-}
+juce::Colour OscilButton::getBorderColour() const { return getTheme().controlBorder; }
 
 } // namespace oscil

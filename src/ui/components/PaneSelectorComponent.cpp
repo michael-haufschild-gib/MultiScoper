@@ -20,10 +20,7 @@ PaneSelectorComponent::PaneSelectorComponent(IThemeService& themeService, bool a
 
 PaneSelectorComponent::~PaneSelectorComponent() = default;
 
-void PaneSelectorComponent::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void PaneSelectorComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 void PaneSelectorComponent::setupDropdown()
 {
@@ -35,10 +32,7 @@ void PaneSelectorComponent::setupDropdown()
     populateDropdown();
 }
 
-void PaneSelectorComponent::resized()
-{
-    dropdown_->setBounds(getLocalBounds());
-}
+void PaneSelectorComponent::resized() { dropdown_->setBounds(getLocalBounds()); }
 
 void PaneSelectorComponent::setAvailablePanes(const std::vector<std::pair<PaneId, juce::String>>& panes)
 {

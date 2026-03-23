@@ -8,17 +8,12 @@
 namespace oscil
 {
 
-SegmentedButtonBar::SegmentedButtonBar(IThemeService& themeService)
-    : ThemedComponent(themeService)
+SegmentedButtonBar::SegmentedButtonBar(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setWantsKeyboardFocus(true);
 }
 
-
-
-SegmentedButtonBar::~SegmentedButtonBar()
-{
-}
+SegmentedButtonBar::~SegmentedButtonBar() {}
 
 void SegmentedButtonBar::paint(juce::Graphics& g)
 {
@@ -40,7 +35,8 @@ void SegmentedButtonBar::resized()
 
     // Center the buttons if they don't fill the width
     int startX = (bounds.getWidth() - totalWidth) / 2;
-    if (startX < 0) startX = 0;
+    if (startX < 0)
+        startX = 0;
 
     for (size_t i = 0; i < static_cast<size_t>(numButtons); ++i)
     {
@@ -49,7 +45,7 @@ void SegmentedButtonBar::resized()
 }
 
 void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce::String& testId,
-                                    const juce::String& tooltip)
+                                   const juce::String& tooltip)
 {
     auto button = std::make_unique<OscilButton>(getThemeService(), label, testId);
 
@@ -81,7 +77,7 @@ void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce
 }
 
 void SegmentedButtonBar::addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId,
-                                            const juce::String& tooltip)
+                                           const juce::String& tooltip)
 {
     auto button = std::make_unique<OscilButton>(getThemeService(), juce::String{}, testId);
 

@@ -5,11 +5,13 @@
 
 #pragma once
 
+#include "core/Oscillator.h"
+#include "core/Pane.h"
+#include "core/dsp/CaptureQualityConfig.h"
+
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "core/Oscillator.h"
-#include "core/dsp/CaptureQualityConfig.h"
-#include "core/Pane.h"
+
 #include <vector>
 
 namespace oscil
@@ -18,78 +20,78 @@ namespace oscil
 // ValueTree type identifiers
 namespace StateIds
 {
-    inline const juce::Identifier OscilState{ "OscilState" };
-    inline const juce::Identifier Oscillators{ "Oscillators" };
-    inline const juce::Identifier Oscillator{ "Oscillator" };
-    inline const juce::Identifier Panes{ "Panes" };
-    inline const juce::Identifier Pane{ "Pane" };
-    inline const juce::Identifier Layout{ "Layout" };
-    inline const juce::Identifier Theme{ "Theme" };
-    inline const juce::Identifier Timing{ "Timing" };
-    inline const juce::Identifier Version{ "version" };
+inline const juce::Identifier OscilState{"OscilState"};
+inline const juce::Identifier Oscillators{"Oscillators"};
+inline const juce::Identifier Oscillator{"Oscillator"};
+inline const juce::Identifier Panes{"Panes"};
+inline const juce::Identifier Pane{"Pane"};
+inline const juce::Identifier Layout{"Layout"};
+inline const juce::Identifier Theme{"Theme"};
+inline const juce::Identifier Timing{"Timing"};
+inline const juce::Identifier Version{"version"};
 
-    // Oscillator properties
-    inline const juce::Identifier Id{ "id" };
-    inline const juce::Identifier SourceId{ "sourceId" };
-    inline const juce::Identifier ProcessingMode{ "processingMode" };
-    inline const juce::Identifier Colour{ "colour" };
-    inline const juce::Identifier Opacity{ "opacity" };
-    inline const juce::Identifier PaneId{ "paneId" };
-    inline const juce::Identifier Order{ "order" };
-    inline const juce::Identifier Visible{ "visible" };
-    inline const juce::Identifier Name{ "name" };
-    inline const juce::Identifier SchemaVersion{ "schemaVersion" };
+// Oscillator properties
+inline const juce::Identifier Id{"id"};
+inline const juce::Identifier SourceId{"sourceId"};
+inline const juce::Identifier ProcessingMode{"processingMode"};
+inline const juce::Identifier Colour{"colour"};
+inline const juce::Identifier Opacity{"opacity"};
+inline const juce::Identifier PaneId{"paneId"};
+inline const juce::Identifier Order{"order"};
+inline const juce::Identifier Visible{"visible"};
+inline const juce::Identifier Name{"name"};
+inline const juce::Identifier SchemaVersion{"schemaVersion"};
 
-    // Extended oscillator properties (PRD aligned)
-    inline const juce::Identifier OscillatorState{ "oscillatorState" };
-    inline const juce::Identifier LineWidth{ "lineWidth" };
-    inline const juce::Identifier TimeWindow{ "timeWindow" };
-    inline const juce::Identifier Persistence{ "persistence" };
-    inline const juce::Identifier ShaderId{ "shaderId" };
-    inline const juce::Identifier VisualPresetId{ "visualPresetId" };
+// Extended oscillator properties (PRD aligned)
+inline const juce::Identifier OscillatorState{"oscillatorState"};
+inline const juce::Identifier LineWidth{"lineWidth"};
+inline const juce::Identifier TimeWindow{"timeWindow"};
+inline const juce::Identifier Persistence{"persistence"};
+inline const juce::Identifier ShaderId{"shaderId"};
+inline const juce::Identifier VisualPresetId{"visualPresetId"};
 
-    // Layout properties
-    inline const juce::Identifier Columns{ "columns" };
-    inline const juce::Identifier Collapsed{ "collapsed" };
+// Layout properties
+inline const juce::Identifier Columns{"columns"};
+inline const juce::Identifier Collapsed{"collapsed"};
 
-    // Theme properties
-    inline const juce::Identifier ThemeName{ "themeName" };
+// Theme properties
+inline const juce::Identifier ThemeName{"themeName"};
 
-    // Timing properties (PRD aligned)
-    inline const juce::Identifier TimeBase{ "timeBase" };
-    inline const juce::Identifier WindowSize{ "windowSize" };
-    inline const juce::Identifier TriggerMode{ "triggerMode" };
-    inline const juce::Identifier TriggerThreshold{ "triggerThreshold" };
-    inline const juce::Identifier TimingMode{ "timingMode" };
-    inline const juce::Identifier TimeIntervalMs{ "timeIntervalMs" };
-    inline const juce::Identifier NoteInterval{ "noteInterval" };
-    inline const juce::Identifier HostSyncEnabled{ "hostSyncEnabled" };
+// Timing properties (PRD aligned)
+inline const juce::Identifier TimeBase{"timeBase"};
+inline const juce::Identifier WindowSize{"windowSize"};
+inline const juce::Identifier TriggerMode{"triggerMode"};
+inline const juce::Identifier TriggerThreshold{"triggerThreshold"};
+inline const juce::Identifier TimingMode{"timingMode"};
+inline const juce::Identifier TimeIntervalMs{"timeIntervalMs"};
+inline const juce::Identifier NoteInterval{"noteInterval"};
+inline const juce::Identifier HostSyncEnabled{"hostSyncEnabled"};
 
-    // Window layout properties (PRD aligned)
-    inline const juce::Identifier SidebarWidth{ "sidebarWidth" };
-    inline const juce::Identifier SidebarCollapsed{ "sidebarCollapsed" };
-    inline const juce::Identifier StatusBarVisible{ "statusBarVisible" };
+// Window layout properties (PRD aligned)
+inline const juce::Identifier SidebarWidth{"sidebarWidth"};
+inline const juce::Identifier SidebarCollapsed{"sidebarCollapsed"};
+inline const juce::Identifier StatusBarVisible{"statusBarVisible"};
 
-    // Display options
-    inline const juce::Identifier ShowGrid{ "showGrid" };
-    inline const juce::Identifier AutoScale{ "autoScale" };
+// Display options
+inline const juce::Identifier ShowGrid{"showGrid"};
+inline const juce::Identifier AutoScale{"autoScale"};
 
-    // Value Tree structure
-    inline const juce::Identifier ConfigNode{ "config" };
-    inline const juce::Identifier LayoutNode{ "layout" };
+// Value Tree structure
+inline const juce::Identifier ConfigNode{"config"};
+inline const juce::Identifier LayoutNode{"layout"};
 
-    inline const juce::Identifier GainDb{ "gainDb" };
+inline const juce::Identifier GainDb{"gainDb"};
 
-    // Rendering mode
-    inline const juce::Identifier GpuRenderingEnabled{ "gpuRenderingEnabled" };
+// Rendering mode
+inline const juce::Identifier GpuRenderingEnabled{"gpuRenderingEnabled"};
 
-    // Capture quality configuration
-    inline const juce::Identifier CaptureQuality{ "CaptureQuality" };
-    inline const juce::Identifier QualityPreset{ "qualityPreset" };
-    inline const juce::Identifier BufferDuration{ "bufferDuration" };
-    inline const juce::Identifier AutoAdjustQuality{ "autoAdjustQuality" };
-    inline const juce::Identifier MemoryBudgetBytes{ "memoryBudgetBytes" };
-}
+// Capture quality configuration
+inline const juce::Identifier CaptureQuality{"CaptureQuality"};
+inline const juce::Identifier QualityPreset{"qualityPreset"};
+inline const juce::Identifier BufferDuration{"bufferDuration"};
+inline const juce::Identifier AutoAdjustQuality{"autoAdjustQuality"};
+inline const juce::Identifier MemoryBudgetBytes{"memoryBudgetBytes"};
+} // namespace StateIds
 
 /**
  * Central state manager for Oscil plugin.

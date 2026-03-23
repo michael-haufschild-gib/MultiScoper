@@ -3,7 +3,9 @@
 */
 
 #include "rendering/shaders/NeonGlowShader.h"
+
 #include "BinaryData.h"
+
 #include <cmath>
 
 namespace oscil
@@ -39,14 +41,18 @@ NeonGlowShader::~NeonGlowShader() = default;
 #if OSCIL_ENABLE_OPENGL
 bool NeonGlowShader::compile(juce::OpenGLContext& context)
 {
-    if (gl_->compiled) return true;
+    if (gl_->compiled)
+        return true;
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
-    
-    juce::String vertexCode = juce::String::createStringFromData(BinaryData::neon_glow_vert, BinaryData::neon_glow_vertSize);
-    juce::String fragmentCode = juce::String::createStringFromData(BinaryData::neon_glow_frag, BinaryData::neon_glow_fragSize);
 
-    if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) || !gl_->program->link())
+    juce::String vertexCode =
+        juce::String::createStringFromData(BinaryData::neon_glow_vert, BinaryData::neon_glow_vertSize);
+    juce::String fragmentCode =
+        juce::String::createStringFromData(BinaryData::neon_glow_frag, BinaryData::neon_glow_fragSize);
+
+    if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) ||
+        !gl_->program->link())
     {
         DBG("NeonGlowShader compile error: " << gl_->program->getLastError());
         gl_->program.reset();
@@ -68,25 +74,21 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
 
 void NeonGlowShader::release(juce::OpenGLContext& context)
 {
-    if (!gl_->compiled) return;
+    if (!gl_->compiled)
+        return;
     context.extensions.glDeleteBuffers(1, &gl_->vbo);
     context.extensions.glDeleteVertexArrays(1, &gl_->vao);
     gl_->program.reset();
     gl_->compiled = false;
 }
 
-bool NeonGlowShader::isCompiled() const
-{
-    return gl_->compiled;
-}
+bool NeonGlowShader::isCompiled() const { return gl_->compiled; }
 
-void NeonGlowShader::render(
-    juce::OpenGLContext& context,
-    const std::vector<float>& channel1,
-    const std::vector<float>* channel2,
-    const ShaderRenderParams& params)
+void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<float>& channel1,
+                            const std::vector<float>* channel2, const ShaderRenderParams& params)
 {
-    if (!gl_->compiled || channel1.size() < 2) return;
+    if (!gl_->compiled || channel1.size() < 2)
+        return;
 
     auto& ext = context.extensions;
     glEnable(GL_BLEND);
@@ -98,7 +100,7 @@ void NeonGlowShader::render(
         return;
 
     ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(), params.colour.getFloatGreen(),
-        params.colour.getFloatBlue(), params.colour.getFloatAlpha());
+                    params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
     ext.glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
 
@@ -114,18 +116,22 @@ void NeonGlowShader::render(
 
     GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
     GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-    if (posLoc < 0) posLoc = 0;
-    if (distLoc < 0) distLoc = 1;
+    if (posLoc < 0)
+        posLoc = 0;
+    if (distLoc < 0)
+        distLoc = 1;
 
     float visualWidth = params.lineWidth * kGeometryScale;
     auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {
         std::vector<float> vertices;
         buildLineGeometry(vertices, data, cy, amp, visualWidth, params.bounds.getX(), params.bounds.getWidth());
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
+        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(),
+                         GL_DYNAMIC_DRAW);
         ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
         ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+        ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                                  (void*) (2 * sizeof(float)));
         glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
         ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));

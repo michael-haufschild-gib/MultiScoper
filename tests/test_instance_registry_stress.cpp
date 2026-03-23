@@ -10,12 +10,14 @@
     - Rapid register/unregister cycle leaking SourceId allocations
 */
 
-#include <gtest/gtest.h>
-#include <juce_events/juce_events.h>
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
-#include <thread>
+
+#include <juce_events/juce_events.h>
+
 #include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 #include <vector>
 
 using namespace oscil;
@@ -36,10 +38,7 @@ protected:
         });
     }
 
-    void TearDown() override
-    {
-        registry_.reset();
-    }
+    void TearDown() override { registry_.reset(); }
 };
 
 TEST_F(InstanceRegistryStressTest, RapidRegisterUnregisterCycleDoesNotLeak)
@@ -49,8 +48,7 @@ TEST_F(InstanceRegistryStressTest, RapidRegisterUnregisterCycleDoesNotLeak)
     for (int i = 0; i < 200; ++i)
     {
         auto buffer = std::make_shared<SharedCaptureBuffer>(1024);
-        auto sourceId = registry_->registerInstance(
-            "track_" + juce::String(i), buffer, "Track " + juce::String(i));
+        auto sourceId = registry_->registerInstance("track_" + juce::String(i), buffer, "Track " + juce::String(i));
 
         ASSERT_TRUE(sourceId.isValid()) << "Registration failed at iteration " << i;
         EXPECT_EQ(registry_->getSourceCount(), 1u);
@@ -105,8 +103,7 @@ TEST_F(InstanceRegistryStressTest, MaxSourcesAndUnregisterThenReregister)
     {
         auto buf = std::make_shared<SharedCaptureBuffer>(1024);
         buffers.push_back(buf);
-        auto id = registry_->registerInstance(
-            "track_" + juce::String(i), buf, "Track " + juce::String(i));
+        auto id = registry_->registerInstance("track_" + juce::String(i), buf, "Track " + juce::String(i));
         ASSERT_TRUE(id.isValid()) << "Failed to register at " << i;
         ids.push_back(id);
     }
@@ -129,8 +126,7 @@ TEST_F(InstanceRegistryStressTest, MaxSourcesAndUnregisterThenReregister)
     for (int i = 0; i < 32; ++i)
     {
         auto buf = std::make_shared<SharedCaptureBuffer>(1024);
-        auto id = registry_->registerInstance(
-            "new_track_" + juce::String(i), buf, "New Track " + juce::String(i));
+        auto id = registry_->registerInstance("new_track_" + juce::String(i), buf, "New Track " + juce::String(i));
         EXPECT_TRUE(id.isValid()) << "Failed to re-register at slot " << i;
     }
     EXPECT_EQ(registry_->getSourceCount(), 64u);
@@ -179,20 +175,11 @@ public:
     std::atomic<int> removeCount{0};
     std::atomic<int> updateCount{0};
 
-    void sourceAdded(const SourceId&) override
-    {
-        addCount.fetch_add(1, std::memory_order_relaxed);
-    }
+    void sourceAdded(const SourceId&) override { addCount.fetch_add(1, std::memory_order_relaxed); }
 
-    void sourceRemoved(const SourceId&) override
-    {
-        removeCount.fetch_add(1, std::memory_order_relaxed);
-    }
+    void sourceRemoved(const SourceId&) override { removeCount.fetch_add(1, std::memory_order_relaxed); }
 
-    void sourceUpdated(const SourceId&) override
-    {
-        updateCount.fetch_add(1, std::memory_order_relaxed);
-    }
+    void sourceUpdated(const SourceId&) override { updateCount.fetch_add(1, std::memory_order_relaxed); }
 };
 
 TEST_F(InstanceRegistryStressTest, ListenerReceivesAllNotifications)
@@ -209,8 +196,7 @@ TEST_F(InstanceRegistryStressTest, ListenerReceivesAllNotifications)
     {
         auto buf = std::make_shared<SharedCaptureBuffer>(1024);
         bufs.push_back(buf);
-        auto id = registry_->registerInstance(
-            "rapid_" + juce::String(i), buf, "Rapid Track " + juce::String(i));
+        auto id = registry_->registerInstance("rapid_" + juce::String(i), buf, "Rapid Track " + juce::String(i));
         if (id.isValid())
             ids.push_back(id);
     }

@@ -36,10 +36,14 @@ public:
     /// Render the background grid for a waveform pane.
     void renderGrid(const WaveformRenderData& data);
     /// Render waveform geometry using the configured shader.
-    void renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime);
+    void renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config,
+                                float accumulatedTime);
 
 private:
-    struct ViewportRect { int x, y, w, h; };
+    struct ViewportRect
+    {
+        int x, y, w, h;
+    };
     ViewportRect computePaneViewport(const juce::Rectangle<float>& bounds) const;
     WaveformShader* resolveShader(const juce::String& shaderId);
 

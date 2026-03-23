@@ -3,13 +3,14 @@
     Tests for coordinator construction, destruction, and registration
 */
 
-#include <gtest/gtest.h>
+#include "core/InstanceRegistry.h"
+#include "ui/layout/LayoutCoordinator.h"
 #include "ui/layout/SourceCoordinator.h"
 #include "ui/theme/ThemeCoordinator.h"
-#include "ui/layout/LayoutCoordinator.h"
-#include "core/InstanceRegistry.h"
 #include "ui/theme/ThemeManager.h"
+
 #include <atomic>
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -20,20 +21,11 @@ using namespace oscil;
 class MockInstanceRegistry : public IInstanceRegistry
 {
 public:
-    void addListener(InstanceRegistryListener* listener) override
-    {
-        listeners_.add(listener);
-    }
+    void addListener(InstanceRegistryListener* listener) override { listeners_.add(listener); }
 
-    void removeListener(InstanceRegistryListener* listener) override
-    {
-        listeners_.remove(listener);
-    }
+    void removeListener(InstanceRegistryListener* listener) override { listeners_.remove(listener); }
 
-    std::vector<SourceInfo> getAllSources() const override
-    {
-        return sources_;
-    }
+    std::vector<SourceInfo> getAllSources() const override { return sources_; }
 
     std::shared_ptr<IAudioBuffer> getCaptureBuffer(const SourceId& sourceId) const override
     {
@@ -46,12 +38,9 @@ public:
     }
 
     // Additional required interface methods
-    SourceId registerInstance(const juce::String& /*trackIdentifier*/,
-                               std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
-                               const juce::String& /*name*/,
-                               int /*channelCount*/,
-                               double /*sampleRate*/,
-                               std::shared_ptr<AnalysisEngine> /*analysisEngine*/) override
+    SourceId registerInstance(const juce::String& /*trackIdentifier*/, std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
+                              const juce::String& /*name*/, int /*channelCount*/, double /*sampleRate*/,
+                              std::shared_ptr<AnalysisEngine> /*analysisEngine*/) override
     {
         return SourceId::generate();
     }
@@ -68,8 +57,10 @@ public:
         return std::nullopt;
     }
 
-    void updateSource(const SourceId& /*sourceId*/, const juce::String& /*name*/,
-                      int /*channelCount*/, double /*sampleRate*/) override {}
+    void updateSource(const SourceId& /*sourceId*/, const juce::String& /*name*/, int /*channelCount*/,
+                      double /*sampleRate*/) override
+    {
+    }
 
     size_t getSourceCount() const override { return sources_.size(); }
 
@@ -86,21 +77,14 @@ public:
     void removeSource(const SourceId& id)
     {
         sources_.erase(
-            std::remove_if(sources_.begin(), sources_.end(),
-                [&id](const SourceInfo& s) { return s.sourceId == id; }),
+            std::remove_if(sources_.begin(), sources_.end(), [&id](const SourceInfo& s) { return s.sourceId == id; }),
             sources_.end());
         notifySourceRemoved(id);
     }
 
-    void updateSourceNotify(const SourceId& id)
-    {
-        notifySourceUpdated(id);
-    }
+    void updateSourceNotify(const SourceId& id) { notifySourceUpdated(id); }
 
-    void clear()
-    {
-        sources_.clear();
-    }
+    void clear() { sources_.clear(); }
 
     int getListenerCount() const { return listeners_.size(); }
 
@@ -131,60 +115,27 @@ private:
 class MockThemeService : public IThemeService
 {
 public:
-    void addListener(ThemeManagerListener* listener) override
-    {
-        listeners_.add(listener);
-    }
+    void addListener(ThemeManagerListener* listener) override { listeners_.add(listener); }
 
-    void removeListener(ThemeManagerListener* listener) override
-    {
-        listeners_.remove(listener);
-    }
+    void removeListener(ThemeManagerListener* listener) override { listeners_.remove(listener); }
 
-    const ColorTheme& getCurrentTheme() const override
-    {
-        return currentTheme_;
-    }
+    const ColorTheme& getCurrentTheme() const override { return currentTheme_; }
 
-    bool setCurrentTheme(const juce::String& /*themeName*/) override
-    {
-        return true;
-    }
+    bool setCurrentTheme(const juce::String& /*themeName*/) override { return true; }
 
-    std::vector<juce::String> getAvailableThemes() const override
-    {
-        return {"default"};
-    }
+    std::vector<juce::String> getAvailableThemes() const override { return {"default"}; }
 
-    const ColorTheme* getTheme(const juce::String& /*themeName*/) const override
-    {
-        return &currentTheme_;
-    }
+    const ColorTheme* getTheme(const juce::String& /*themeName*/) const override { return &currentTheme_; }
 
-    bool isSystemTheme(const juce::String& /*name*/) const override
-    {
-        return true;
-    }
+    bool isSystemTheme(const juce::String& /*name*/) const override { return true; }
 
-    bool createTheme(const juce::String& /*name*/, const juce::String& /*sourceTheme*/) override
-    {
-        return true;
-    }
+    bool createTheme(const juce::String& /*name*/, const juce::String& /*sourceTheme*/) override { return true; }
 
-    bool updateTheme(const juce::String& /*name*/, const ColorTheme& /*theme*/) override
-    {
-        return true;
-    }
+    bool updateTheme(const juce::String& /*name*/, const ColorTheme& /*theme*/) override { return true; }
 
-    bool deleteTheme(const juce::String& /*name*/) override
-    {
-        return true;
-    }
+    bool deleteTheme(const juce::String& /*name*/) override { return true; }
 
-    bool cloneTheme(const juce::String& /*sourceName*/, const juce::String& /*newName*/) override
-    {
-        return true;
-    }
+    bool cloneTheme(const juce::String& /*sourceName*/, const juce::String& /*newName*/) override { return true; }
 
     bool importTheme(const juce::String& /*json*/) override { return true; }
     juce::String exportTheme(const juce::String& /*name*/) const override { return "{}"; }
@@ -252,11 +203,10 @@ TEST(ThemeCoordinatorLifecycleTests, RegistrationOnConstruction)
     EXPECT_EQ(mockThemeService.getListenerCount(), 0);
 
     {
-        ThemeCoordinator coordinator(mockThemeService,
-            [&callbackCount, &lastReceivedTheme](const ColorTheme& theme) {
-                ++callbackCount;
-                lastReceivedTheme = theme;
-            });
+        ThemeCoordinator coordinator(mockThemeService, [&callbackCount, &lastReceivedTheme](const ColorTheme& theme) {
+            ++callbackCount;
+            lastReceivedTheme = theme;
+        });
         EXPECT_EQ(mockThemeService.getListenerCount(), 1);
     }
 
@@ -268,8 +218,7 @@ TEST(ThemeCoordinatorLifecycleTests, NoCopyConstruction)
 {
     static_assert(!std::is_copy_constructible<ThemeCoordinator>::value,
                   "ThemeCoordinator should not be copy constructible");
-    static_assert(!std::is_copy_assignable<ThemeCoordinator>::value,
-                  "ThemeCoordinator should not be copy assignable");
+    static_assert(!std::is_copy_assignable<ThemeCoordinator>::value, "ThemeCoordinator should not be copy assignable");
     EXPECT_FALSE(std::is_copy_constructible<ThemeCoordinator>::value);
     EXPECT_FALSE(std::is_copy_assignable<ThemeCoordinator>::value);
 }

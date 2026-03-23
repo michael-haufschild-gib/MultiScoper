@@ -22,7 +22,7 @@ void TestElementRegistry::registerElement(const juce::String& testId, juce::Comp
 void TestElementRegistry::unregisterElement(juce::Component* component)
 {
     std::scoped_lock lock(mutex_);
-    for (auto it = elements_.begin(); it != elements_.end(); )
+    for (auto it = elements_.begin(); it != elements_.end();)
     {
         if (it->second.getComponent() == component)
             it = elements_.erase(it);
@@ -62,7 +62,8 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
     if (it == elements_.end())
     {
         if (testId.contains("item_0_delete"))
-            juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): NOT FOUND in map (size=" + juce::String(static_cast<int>(elements_.size())) + ")");
+            juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): NOT FOUND in map (size=" +
+                                     juce::String(static_cast<int>(elements_.size())) + ")");
         return nullptr;
     }
 
@@ -95,7 +96,7 @@ std::map<juce::String, juce::Component*> TestElementRegistry::getAllElements()
 {
     std::scoped_lock lock(mutex_);
     std::map<juce::String, juce::Component*> result;
-    for (auto it = elements_.begin(); it != elements_.end(); )
+    for (auto it = elements_.begin(); it != elements_.end();)
     {
         auto* comp = it->second.getComponent();
         if (comp != nullptr)

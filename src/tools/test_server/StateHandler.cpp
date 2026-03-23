@@ -3,12 +3,14 @@
 */
 
 #include "tools/test_server/StateHandler.h"
-#include "plugin/PluginEditor.h"
-#include "plugin/PluginProcessor.h"
-#include "plugin/PluginFactory.h"
+
+#include "core/InstanceRegistry.h"
 #include "core/OscilState.h"
 #include "core/Pane.h"
-#include "core/InstanceRegistry.h"
+
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginFactory.h"
+#include "plugin/PluginProcessor.h"
 
 namespace oscil
 {
@@ -31,7 +33,8 @@ void StateHandler::handleStateReset(const httplib::Request& /*req*/, httplib::Re
 
         // Remove all oscillators
         auto oscillators = state.getOscillators();
-        for (const auto& osc : oscillators) {
+        for (const auto& osc : oscillators)
+        {
             state.removeOscillator(osc.getId());
         }
 

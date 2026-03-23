@@ -3,7 +3,9 @@
 */
 
 #include "TestScreenshot.h"
+
 #include <juce_graphics/juce_graphics.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -101,9 +103,7 @@ juce::Image TestScreenshot::getElementImage(const juce::String& elementId)
 
 // ================== Image Comparison ==================
 
-ImageComparisonResult TestScreenshot::compareImages(const juce::Image& image1,
-                                                     const juce::Image& image2,
-                                                     int tolerance)
+ImageComparisonResult TestScreenshot::compareImages(const juce::Image& image1, const juce::Image& image2, int tolerance)
 {
     ImageComparisonResult result;
 
@@ -141,9 +141,7 @@ ImageComparisonResult TestScreenshot::compareImages(const juce::Image& image1,
 
     if (result.differentPixels > 0)
     {
-        result.diffBounds = juce::Rectangle<int>(minDiffX, minDiffY,
-                                                  maxDiffX - minDiffX + 1,
-                                                  maxDiffY - minDiffY + 1);
+        result.diffBounds = juce::Rectangle<int>(minDiffX, minDiffY, maxDiffX - minDiffX + 1, maxDiffY - minDiffY + 1);
     }
 
     result.similarity = 1.0f - (static_cast<float>(result.differentPixels) / result.totalPixels);
@@ -153,8 +151,7 @@ ImageComparisonResult TestScreenshot::compareImages(const juce::Image& image1,
 }
 
 ImageComparisonResult TestScreenshot::compareElementToBaseline(const juce::String& elementId,
-                                                                const juce::File& baselineFile,
-                                                                int tolerance)
+                                                               const juce::File& baselineFile, int tolerance)
 {
     auto currentImage = getElementImage(elementId);
     auto baselineImage = loadImage(baselineFile);
@@ -162,9 +159,8 @@ ImageComparisonResult TestScreenshot::compareElementToBaseline(const juce::Strin
     return compareImages(currentImage, baselineImage, tolerance);
 }
 
-juce::Image TestScreenshot::generateDiffImage(const juce::Image& image1,
-                                               const juce::Image& image2,
-                                               juce::Colour diffColor)
+juce::Image TestScreenshot::generateDiffImage(const juce::Image& image1, const juce::Image& image2,
+                                              juce::Colour diffColor)
 {
     if (image1.isNull() || image2.isNull())
         return {};

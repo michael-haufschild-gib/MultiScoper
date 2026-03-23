@@ -77,21 +77,16 @@ static const char* compositeFragmentShader = R"(
     }
 )";
 
-RenderBootstrapper::RenderBootstrapper()
-{
-}
+RenderBootstrapper::RenderBootstrapper() {}
 
-RenderBootstrapper::~RenderBootstrapper()
-{
-}
+RenderBootstrapper::~RenderBootstrapper() {}
 
 bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
 {
     // Compile blit shader (tone map + gamma) for final output
     blitShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    if (!blitShader_->addVertexShader(blitVertexShader) ||
-        !blitShader_->addFragmentShader(blitFragmentShader))
+    if (!blitShader_->addVertexShader(blitVertexShader) || !blitShader_->addFragmentShader(blitFragmentShader))
     {
         DBG("RenderBootstrapper: Failed to compile blit shader: " << blitShader_->getLastError());
         return false;

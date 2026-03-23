@@ -4,9 +4,10 @@
     Uses mock framebuffers since OpenGL context is not available in headless tests.
 */
 
-#include <gtest/gtest.h>
-#include "rendering/FramebufferPool.h"
 #include "rendering/Framebuffer.h"
+#include "rendering/FramebufferPool.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -27,7 +28,11 @@ public:
         fbo = 123;
         return true;
     }
-    void destroy(juce::OpenGLContext&) override { destroyCalled = true; fbo = 0; }
+    void destroy(juce::OpenGLContext&) override
+    {
+        destroyCalled = true;
+        fbo = 0;
+    }
     void resize(juce::OpenGLContext&, int w, int h) override
     {
         resizeCalled = true;
@@ -135,8 +140,7 @@ TEST(FramebufferPoolTest, ResizeToSameDimensionsIsNoOp)
 
     for (auto* fbo : pool.createdFBOs)
     {
-        EXPECT_FALSE(fbo->resizeCalled)
-            << "Resize to same dimensions should not trigger FBO resize";
+        EXPECT_FALSE(fbo->resizeCalled) << "Resize to same dimensions should not trigger FBO resize";
     }
 }
 
@@ -170,8 +174,7 @@ TEST(FramebufferPoolTest, IsInitializedFalseAfterShutdown)
     pool.initialize(context, 800, 600);
     pool.shutdown(context);
 
-    EXPECT_FALSE(pool.isInitialized())
-        << "Pool must report not-initialized after shutdown";
+    EXPECT_FALSE(pool.isInitialized()) << "Pool must report not-initialized after shutdown";
 
     // FBO objects still exist but are destroyed — verify destroy was called
     for (auto* fbo : pool.createdFBOs)

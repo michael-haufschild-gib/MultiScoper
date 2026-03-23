@@ -5,8 +5,9 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
 #include "core/dsp/QualityPreset.h"
+
+#include <juce_core/juce_core.h>
 
 namespace oscil
 {
@@ -17,7 +18,7 @@ namespace oscil
  */
 enum class QualityOverride
 {
-    UseGlobal,  // Use the global CaptureQualityConfig setting
+    UseGlobal, // Use the global CaptureQualityConfig setting
     Eco,
     Standard,
     High,
@@ -28,21 +29,30 @@ inline juce::String qualityOverrideToString(QualityOverride override)
 {
     switch (override)
     {
-        case QualityOverride::UseGlobal: return "UseGlobal";
-        case QualityOverride::Eco:       return "Eco";
-        case QualityOverride::Standard:  return "Standard";
-        case QualityOverride::High:      return "High";
-        case QualityOverride::Ultra:     return "Ultra";
+        case QualityOverride::UseGlobal:
+            return "UseGlobal";
+        case QualityOverride::Eco:
+            return "Eco";
+        case QualityOverride::Standard:
+            return "Standard";
+        case QualityOverride::High:
+            return "High";
+        case QualityOverride::Ultra:
+            return "Ultra";
     }
     return "UseGlobal";
 }
 
 inline QualityOverride stringToQualityOverride(const juce::String& str)
 {
-    if (str == "Eco")      return QualityOverride::Eco;
-    if (str == "Standard") return QualityOverride::Standard;
-    if (str == "High")     return QualityOverride::High;
-    if (str == "Ultra")    return QualityOverride::Ultra;
+    if (str == "Eco")
+        return QualityOverride::Eco;
+    if (str == "Standard")
+        return QualityOverride::Standard;
+    if (str == "High")
+        return QualityOverride::High;
+    if (str == "Ultra")
+        return QualityOverride::Ultra;
     return QualityOverride::UseGlobal;
 }
 
@@ -50,11 +60,16 @@ inline juce::String qualityOverrideToDisplayName(QualityOverride override)
 {
     switch (override)
     {
-        case QualityOverride::UseGlobal: return "Use Global";
-        case QualityOverride::Eco:       return "Eco (11 kHz)";
-        case QualityOverride::Standard:  return "Standard (22 kHz)";
-        case QualityOverride::High:      return "High (44 kHz)";
-        case QualityOverride::Ultra:     return "Ultra (Source Rate)";
+        case QualityOverride::UseGlobal:
+            return "Use Global";
+        case QualityOverride::Eco:
+            return "Eco (11 kHz)";
+        case QualityOverride::Standard:
+            return "Standard (22 kHz)";
+        case QualityOverride::High:
+            return "High (44 kHz)";
+        case QualityOverride::Ultra:
+            return "Ultra (Source Rate)";
     }
     return "Use Global";
 }
@@ -69,11 +84,16 @@ inline QualityPreset resolveQualityOverride(QualityOverride override, QualityPre
 {
     switch (override)
     {
-        case QualityOverride::UseGlobal: return globalPreset;
-        case QualityOverride::Eco:       return QualityPreset::Eco;
-        case QualityOverride::Standard:  return QualityPreset::Standard;
-        case QualityOverride::High:      return QualityPreset::High;
-        case QualityOverride::Ultra:     return QualityPreset::Ultra;
+        case QualityOverride::UseGlobal:
+            return globalPreset;
+        case QualityOverride::Eco:
+            return QualityPreset::Eco;
+        case QualityOverride::Standard:
+            return QualityPreset::Standard;
+        case QualityOverride::High:
+            return QualityPreset::High;
+        case QualityOverride::Ultra:
+            return QualityPreset::Ultra;
     }
     return globalPreset;
 }

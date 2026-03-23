@@ -3,14 +3,17 @@
 */
 
 #include "tools/test_server/SourceHandler.h"
-#include "plugin/PluginEditor.h"
-#include "plugin/PluginProcessor.h"
-#include "plugin/PluginFactory.h"
+
+#include "core/DecimatingCaptureBuffer.h"
+#include "core/InstanceRegistry.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
-#include "core/DecimatingCaptureBuffer.h"
-#include "core/InstanceRegistry.h"
+
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginFactory.h"
+#include "plugin/PluginProcessor.h"
+
 #include <cmath>
 
 namespace oscil
@@ -29,8 +32,8 @@ OscillatorId resolveOscId(const std::string& idStr, int index, const std::vector
     return targetId;
 }
 
-void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType,
-                          float frequency, float amplitude, float sampleRate)
+void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType, float frequency,
+                          float amplitude, float sampleRate)
 {
     int numSamples = buffer.getNumSamples();
     float phase = 0.0f;
@@ -128,13 +131,8 @@ void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Respon
             auto captureBuffer = std::make_shared<SharedCaptureBuffer>();
 
             // Register the source
-            SourceId sourceId = registry.registerInstance(
-                juce::String(trackId),
-                captureBuffer,
-                juce::String(name),
-                channelCount,
-                sampleRate
-            );
+            SourceId sourceId = registry.registerInstance(juce::String(trackId), captureBuffer, juce::String(name),
+                                                          channelCount, sampleRate);
 
             // Store the buffer reference so it doesn't get destroyed
             testSourceBuffers_[sourceId.id.toStdString()] = captureBuffer;
@@ -206,19 +204,24 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
     }
 }
 
-nlohmann::json SourceHandler::assignSourceOnMessageThread(
-    const std::string& oscillatorId, const std::string& sourceId, int oscillatorIndex)
+nlohmann::json SourceHandler::assignSourceOnMessageThread(const std::string& oscillatorId, const std::string& sourceId,
+                                                          int oscillatorIndex)
 {
     nlohmann::json response;
     auto& state = editor_.getProcessor().getState();
     auto oscillators = state.getOscillators();
 
     auto targetOscId = resolveOscId(oscillatorId, oscillatorIndex, oscillators);
-    if (!targetOscId.isValid()) { response["error"] = "Invalid oscillator index"; return response; }
+    if (!targetOscId.isValid())
+    {
+        response["error"] = "Invalid oscillator index";
+        return response;
+    }
 
     for (auto& osc : oscillators)
     {
-        if (osc.getId().id != targetOscId.id) continue;
+        if (osc.getId().id != targetOscId.id)
+            continue;
 
         SourceId newSourceId;
         newSourceId.id = juce::String(sourceId);
@@ -273,9 +276,9 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
     }
 }
 
-nlohmann::json SourceHandler::injectSourceDataOnMessageThread(
-    const std::string& sourceId, const std::string& waveformType,
-    float frequency, float amplitude, int numSamples, float sampleRate)
+nlohmann::json SourceHandler::injectSourceDataOnMessageThread(const std::string& sourceId,
+                                                              const std::string& waveformType, float frequency,
+                                                              float amplitude, int numSamples, float sampleRate)
 {
     nlohmann::json response;
 
@@ -291,7 +294,11 @@ nlohmann::json SourceHandler::injectSourceDataOnMessageThread(
             captureBuffer = it->second;
     }
 
-    if (!captureBuffer) { response["error"] = "Source not found or no capture buffer"; return response; }
+    if (!captureBuffer)
+    {
+        response["error"] = "Source not found or no capture buffer";
+        return response;
+    }
 
     juce::AudioBuffer<float> testBuffer(2, numSamples);
     generateTestWaveform(testBuffer, waveformType, frequency, amplitude, sampleRate);
@@ -303,7 +310,10 @@ nlohmann::json SourceHandler::injectSourceDataOnMessageThread(
     else if (auto sharedBuffer = std::dynamic_pointer_cast<SharedCaptureBuffer>(captureBuffer))
         sharedBuffer->write(testBuffer, metadata, false);
     else
-    { response["error"] = "Buffer is not writable (unknown type)"; return response; }
+    {
+        response["error"] = "Buffer is not writable (unknown type)";
+        return response;
+    }
 
     editor_.repaint();
 
@@ -337,10 +347,10 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             return;
         }
 
-        auto result = runOnMessageThread(
-            [this, sourceId, waveformType, frequency, amplitude, numSamples, sampleRate]() {
-                return injectSourceDataOnMessageThread(sourceId, waveformType, frequency,
-                                                       amplitude, numSamples, sampleRate);
+        auto result =
+            runOnMessageThread([this, sourceId, waveformType, frequency, amplitude, numSamples, sampleRate]() {
+                return injectSourceDataOnMessageThread(sourceId, waveformType, frequency, amplitude, numSamples,
+                                                       sampleRate);
             });
         res.set_content(result.dump(), "application/json");
     }

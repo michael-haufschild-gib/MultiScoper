@@ -3,8 +3,8 @@
     (Core setup and logic are in OscilTextField.cpp)
 */
 
-#include "ui/components/OscilTextField.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/OscilTextField.h"
 
 namespace oscil
 {
@@ -32,8 +32,7 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
 
     // Border
     auto borderColour = hasError() ? getTheme().statusError
-                                   : (focusAmount_ > 0.01f ? getTheme().controlActive
-                                                           : getTheme().controlBorder);
+                                   : (focusAmount_ > 0.01f ? getTheme().controlActive : getTheme().controlBorder);
     borderColour = borderColour.interpolatedWith(getTheme().controlActive, focusAmount_);
 
     g.setColour(borderColour.withAlpha(opacity));
@@ -44,9 +43,8 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     {
         g.setColour(getTheme().statusError.withAlpha(opacity));
         g.setFont(cachedErrorFont_);
-        g.drawText(errorMessage_,
-            bounds.translated(0, bounds.getHeight() + 2).withHeight(14),
-            juce::Justification::left);
+        g.drawText(errorMessage_, bounds.translated(0, bounds.getHeight() + 2).withHeight(14),
+                   juce::Justification::left);
     }
 }
 
@@ -62,18 +60,16 @@ void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<fl
 
     g.setColour(getTheme().textSecondary.withAlpha(opacity));
     g.drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2, ComponentLayout::BORDER_MEDIUM);
-    g.drawLine(cx + radius * 0.7f, cy + radius * 0.7f,
-               cx + radius * 1.5f, cy + radius * 1.5f, ComponentLayout::BORDER_MEDIUM);
+    g.drawLine(cx + radius * 0.7f, cy + radius * 0.7f, cx + radius * 1.5f, cy + radius * 1.5f,
+               ComponentLayout::BORDER_MEDIUM);
 }
 
 void OscilTextField::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA * focusAmount_));
-    g.drawRoundedRectangle(
-        bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-        ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET,
-        ComponentLayout::FOCUS_RING_WIDTH
-    );
+    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
+                           ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET,
+                           ComponentLayout::FOCUS_RING_WIDTH);
 }
 
 void OscilTextField::mouseDown(const juce::MouseEvent& /*e*/)
@@ -91,8 +87,7 @@ void OscilTextField::mouseDoubleClick(const juce::MouseEvent&)
     }
 }
 
-void OscilTextField::mouseWheelMove(const juce::MouseEvent& e,
-                                     const juce::MouseWheelDetails& wheel)
+void OscilTextField::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
 {
     if (variant_ != TextFieldVariant::Number || !enabled_)
         return;
@@ -166,11 +161,9 @@ void OscilTextField::updateEditorStyle()
 
 std::unique_ptr<juce::AccessibilityHandler> OscilTextField::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        variant_ == TextFieldVariant::Number ? juce::AccessibilityRole::slider
-                                              : juce::AccessibilityRole::editableText
-    );
+    return std::make_unique<juce::AccessibilityHandler>(*this, variant_ == TextFieldVariant::Number
+                                                                   ? juce::AccessibilityRole::slider
+                                                                   : juce::AccessibilityRole::editableText);
 }
 
 } // namespace oscil

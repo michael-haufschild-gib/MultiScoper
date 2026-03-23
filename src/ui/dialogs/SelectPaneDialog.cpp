@@ -8,23 +8,16 @@
 namespace oscil
 {
 
-SelectPaneDialog::SelectPaneDialog(IThemeService& themeService)
-    : themeService_(themeService)
+SelectPaneDialog::SelectPaneDialog(IThemeService& themeService) : themeService_(themeService)
 {
     OSCIL_REGISTER_TEST_ID("selectPaneDialog");
     setupComponents();
     themeService_.addListener(this);
 }
 
-SelectPaneDialog::~SelectPaneDialog()
-{
-    themeService_.removeListener(this);
-}
+SelectPaneDialog::~SelectPaneDialog() { themeService_.removeListener(this); }
 
-void SelectPaneDialog::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void SelectPaneDialog::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 void SelectPaneDialog::setupComponents()
 {
@@ -153,10 +146,7 @@ void SelectPaneDialog::handleCancelClick()
     }
 }
 
-void SelectPaneDialog::handlePaneSelectionChange(const PaneId&, bool)
-{
-    clearError();
-}
+void SelectPaneDialog::handlePaneSelectionChange(const PaneId&, bool) { clearError(); }
 
 void SelectPaneDialog::showError(const juce::String& message)
 {

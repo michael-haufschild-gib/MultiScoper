@@ -2,14 +2,16 @@
     Oscil - Sidebar Component Tests
 */
 
-#include <gtest/gtest.h>
-#include "ui/layout/SidebarComponent.h"
-#include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
 #include "core/ServiceContext.h"
-#include "rendering/ShaderRegistry.h"
+#include "ui/layout/SidebarComponent.h"
+
+#include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -32,13 +34,10 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor_ = std::make_unique<OscilPluginProcessor>(*registry_,
-                                                            *themeManager_,
-                                                            *shaderRegistry_,
-                                                            *presetManager_,
-                                                            *memoryBudgetManager_);
+        processor_ = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                            *presetManager_, *memoryBudgetManager_);
 
-        ServiceContext context{ *registry_, *themeManager_, *shaderRegistry_, *presetManager_ };
+        ServiceContext context{*registry_, *themeManager_, *shaderRegistry_, *presetManager_};
         sidebar_ = std::make_unique<SidebarComponent>(context);
     }
 
@@ -65,9 +64,9 @@ TEST_F(SidebarComponentTest, ResizeDragUsesGestureStartWidthForEachUpdate)
 
     resizeHandle->onResizeStart();
 
-    resizeHandle->onResizeDrag(-10);  // Drag left by 10px -> width +10
+    resizeHandle->onResizeDrag(-10); // Drag left by 10px -> width +10
     EXPECT_EQ(sidebar_->getSidebarWidth(), 310);
 
-    resizeHandle->onResizeDrag(-20);  // Drag left by 20px total -> width +20
+    resizeHandle->onResizeDrag(-20); // Drag left by 20px total -> width +20
     EXPECT_EQ(sidebar_->getSidebarWidth(), 320);
 }

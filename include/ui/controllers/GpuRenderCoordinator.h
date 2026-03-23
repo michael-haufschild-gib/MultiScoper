@@ -5,14 +5,14 @@
 
 #pragma once
 
+#include "ui/controllers/OpenGLLifecycleManager.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/StatusBarComponent.h"
 
-#include "ui/controllers/OpenGLLifecycleManager.h"
+#include <juce_audio_processors/juce_audio_processors.h>
 
 #include <memory>
 #include <vector>
-#include <juce_audio_processors/juce_audio_processors.h>
 
 namespace oscil
 {

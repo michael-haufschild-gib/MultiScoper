@@ -39,7 +39,8 @@ public:
      * Apply per-waveform post-processing.
      * @return The framebuffer containing the result (or source if no effects applied).
      */
-    Framebuffer* applyPostProcessing(Framebuffer* source, WaveformRenderState& state, juce::OpenGLContext& context, float deltaTime, juce::OpenGLShaderProgram* compositeShader, GLint compositeLoc);
+    Framebuffer* applyPostProcessing(Framebuffer* source, WaveformRenderState& state, juce::OpenGLContext& context,
+                                     float deltaTime, juce::OpenGLShaderProgram* compositeShader, GLint compositeLoc);
 
     /**
      * Apply global effects to the scene FBO.
@@ -60,7 +61,8 @@ public:
     void setQualityLevel(QualityLevel level);
 
     /// Copy the contents of one framebuffer to another using the composite shader.
-    void copyFramebuffer(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, juce::OpenGLShaderProgram* compositeShader, GLint compositeTextureLoc);
+    void copyFramebuffer(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                         juce::OpenGLShaderProgram* compositeShader, GLint compositeTextureLoc);
 
 private:
     void initializeEffects();
@@ -78,7 +80,8 @@ private:
 
     // Cache context for lazy compilation if needed (though methods pass context)
     // Better to pass context to getEffect if possible, but IEffectProvider interface might not allow it.
-    // We'll store a pointer to context only during active use if needed, or rely on lazy compilation happening during render.
+    // We'll store a pointer to context only during active use if needed, or rely on lazy compilation happening during
+    // render.
     juce::OpenGLContext* context_ = nullptr;
 };
 

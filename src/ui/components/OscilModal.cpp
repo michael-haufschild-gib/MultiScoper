@@ -4,6 +4,7 @@
 */
 
 #include "ui/components/OscilModal.h"
+
 #include "ui/components/OscilButton.h"
 
 namespace oscil
@@ -11,7 +12,7 @@ namespace oscil
 
 OscilModal::OscilModal(IThemeService& themeService)
     : ThemedComponent(themeService)
-    ,  showSpring_(SpringPresets::snappy())
+    , showSpring_(SpringPresets::snappy())
     , scaleSpring_(SpringPresets::bouncy())
 {
     setWantsKeyboardFocus(true);
@@ -21,8 +22,7 @@ OscilModal::OscilModal(IThemeService& themeService)
     scaleSpring_.position = 0.8f;
 }
 
-OscilModal::OscilModal(IThemeService& themeService, const juce::String& title)
-    : OscilModal(themeService)
+OscilModal::OscilModal(IThemeService& themeService, const juce::String& title) : OscilModal(themeService)
 {
     title_ = title;
 }
@@ -33,10 +33,7 @@ OscilModal::OscilModal(IThemeService& themeService, const juce::String& title, c
     setTestId(testId);
 }
 
-void OscilModal::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilModal::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 OscilModal::~OscilModal()
 {
@@ -94,15 +91,9 @@ void OscilModal::setShowCloseButton(bool show)
     repaint();
 }
 
-void OscilModal::setCloseOnEscape(bool close)
-{
-    closeOnEscape_ = close;
-}
+void OscilModal::setCloseOnEscape(bool close) { closeOnEscape_ = close; }
 
-void OscilModal::setCloseOnBackdropClick(bool close)
-{
-    closeOnBackdropClick_ = close;
-}
+void OscilModal::setCloseOnBackdropClick(bool close) { closeOnBackdropClick_ = close; }
 
 void OscilModal::show(juce::Component* parent)
 {
@@ -119,8 +110,7 @@ void OscilModal::show(juce::Component* parent)
     else
     {
         addToDesktop(juce::ComponentPeer::windowIsTemporary);
-        auto displayBounds = juce::Desktop::getInstance().getDisplays()
-            .getPrimaryDisplay()->userArea;
+        auto displayBounds = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
         setBounds(displayBounds);
     }
 
@@ -243,7 +233,8 @@ void OscilModal::mouseExit(const juce::MouseEvent&)
 
 void OscilModal::collectFocusableChildren(juce::Component* parent, juce::Array<juce::Component*>& result)
 {
-    if (!parent) return;
+    if (!parent)
+        return;
 
     for (int i = 0; i < parent->getNumChildComponents(); ++i)
     {
@@ -401,23 +392,18 @@ class OscilModalAccessibilityHandler : public juce::AccessibilityHandler
 public:
     explicit OscilModalAccessibilityHandler(OscilModal& modal)
         : juce::AccessibilityHandler(modal, juce::AccessibilityRole::window,
-            juce::AccessibilityActions()
-                .addAction(juce::AccessibilityActionType::press,
-                    [&modal] { if (modal.getCloseOnEscape()) modal.hide(); })
-          )
+                                     juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press,
+                                                                            [&modal] {
+                                                                                if (modal.getCloseOnEscape())
+                                                                                    modal.hide();
+                                                                            }))
         , modal_(modal)
     {
     }
 
-    juce::String getTitle() const override
-    {
-        return modal_.getTitle().isNotEmpty() ? modal_.getTitle() : "Dialog";
-    }
+    juce::String getTitle() const override { return modal_.getTitle().isNotEmpty() ? modal_.getTitle() : "Dialog"; }
 
-    juce::String getDescription() const override
-    {
-        return "Modal dialog";
-    }
+    juce::String getDescription() const override { return "Modal dialog"; }
 
     juce::String getHelp() const override
     {

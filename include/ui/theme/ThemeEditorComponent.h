@@ -5,15 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/IThemeService.h"
-#include "ThemeManager.h"
-#include "ColorPickerComponent.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilTextField.h"
 #include "ui/components/TestId.h"
-#include <memory>
+#include "ui/theme/IThemeService.h"
+
+#include "ColorPickerComponent.h"
+#include "ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
+#include <memory>
 
 namespace oscil
 {
@@ -33,10 +36,7 @@ public:
     void setColour(juce::Colour colour);
     juce::Colour getColour() const { return colour_; }
 
-    void onColourChanged(std::function<void(juce::Colour)> callback)
-    {
-        colourChangedCallback_ = std::move(callback);
-    }
+    void onColourChanged(std::function<void(juce::Colour)> callback) { colourChangedCallback_ = std::move(callback); }
 
     static constexpr int PREFERRED_HEIGHT = 28;
 
@@ -68,10 +68,7 @@ public:
 
     int getPreferredHeight() const;
 
-    void onColorChanged(std::function<void()> callback)
-    {
-        colorChangedCallback_ = std::move(callback);
-    }
+    void onColorChanged(std::function<void()> callback) { colorChangedCallback_ = std::move(callback); }
 
 private:
     IThemeService& themeService_;
@@ -88,10 +85,11 @@ private:
  * Main theme editor component
  * Allows creating, editing, and deleting themes
  */
-class ThemeEditorComponent : public juce::Component,
-                              public juce::ListBoxModel,
-                              public ThemeManagerListener,
-                              public TestIdSupport
+class ThemeEditorComponent
+    : public juce::Component
+    , public juce::ListBoxModel
+    , public ThemeManagerListener
+    , public TestIdSupport
 {
 public:
     explicit ThemeEditorComponent(IThemeService& themeService);
@@ -102,8 +100,8 @@ public:
 
     /// Return the number of saved themes for the list box (ListBoxModel).
     int getNumRows() override;
-    void paintListBoxItem(int rowNumber, juce::Graphics& g,
-                          int width, int height, bool rowIsSelected) override;
+    /// Draw a single row in the saved-themes list box (ListBoxModel).
+    void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
     /// Apply the selected theme when the list selection changes (ListBoxModel).
     void selectedRowsChanged(int lastRowSelected) override;
 
@@ -138,7 +136,7 @@ private:
     std::unique_ptr<juce::ListBox> themeList_;
     std::vector<juce::String> themeNames_;
     juce::String selectedThemeName_;
-    ColorTheme editingTheme_;  // Copy of theme being edited
+    ColorTheme editingTheme_; // Copy of theme being edited
 
     // Action buttons
     std::unique_ptr<OscilButton> createButton_;

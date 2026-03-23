@@ -3,14 +3,14 @@
 */
 
 #include "ui/panels/StatusBarComponent.h"
-#include "ui/theme/ThemeManager.h"
+
 #include "ui/components/TestId.h"
+#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
 
-StatusBarComponent::StatusBarComponent(IThemeService& themeService)
-    : themeService_(themeService)
+StatusBarComponent::StatusBarComponent(IThemeService& themeService) : themeService_(themeService)
 {
     setOpaque(true);
     // Detect rendering mode at construction time
@@ -75,7 +75,7 @@ void StatusBarComponent::paint(juce::Graphics& g)
 void StatusBarComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(10, 0);
-    
+
     // Manually position right-aligned item and reserve space
     if (renderModeLabel_)
     {
@@ -157,11 +157,12 @@ void StatusBarComponent::setRenderingMode(RenderingMode mode)
 
 void StatusBarComponent::updateFpsLabel()
 {
-    if (!fpsLabel_) return;
-    
+    if (!fpsLabel_)
+        return;
+
     const auto& theme = themeService_.getCurrentTheme();
     juce::Colour fpsColour = theme.statusActive;
-    
+
     if (currentFps_ < 30.0f)
         fpsColour = theme.statusError;
     else if (currentFps_ < 55.0f)
@@ -173,7 +174,8 @@ void StatusBarComponent::updateFpsLabel()
 
 void StatusBarComponent::updateCpuLabel()
 {
-    if (!cpuLabel_) return;
+    if (!cpuLabel_)
+        return;
 
     const auto& theme = themeService_.getCurrentTheme();
     cpuLabel_->setText(juce::String::formatted("CPU: %.1f%%", cpuUsage_), juce::dontSendNotification);
@@ -182,7 +184,8 @@ void StatusBarComponent::updateCpuLabel()
 
 void StatusBarComponent::updateMemoryLabel()
 {
-    if (!memoryLabel_) return;
+    if (!memoryLabel_)
+        return;
 
     const auto& theme = themeService_.getCurrentTheme();
     memoryLabel_->setText(juce::String::formatted("Mem: %.1f MB", memoryUsage_), juce::dontSendNotification);
@@ -191,7 +194,8 @@ void StatusBarComponent::updateMemoryLabel()
 
 void StatusBarComponent::updateOscillatorLabel()
 {
-    if (!oscillatorLabel_) return;
+    if (!oscillatorLabel_)
+        return;
 
     const auto& theme = themeService_.getCurrentTheme();
     oscillatorLabel_->setText(juce::String::formatted("Osc: %d", oscillatorCount_), juce::dontSendNotification);
@@ -200,7 +204,8 @@ void StatusBarComponent::updateOscillatorLabel()
 
 void StatusBarComponent::updateSourceLabel()
 {
-    if (!sourceLabel_) return;
+    if (!sourceLabel_)
+        return;
 
     const auto& theme = themeService_.getCurrentTheme();
     sourceLabel_->setText(juce::String::formatted("Src: %d", sourceCount_), juce::dontSendNotification);
@@ -209,7 +214,8 @@ void StatusBarComponent::updateSourceLabel()
 
 void StatusBarComponent::updateRenderModeLabel()
 {
-    if (!renderModeLabel_) return;
+    if (!renderModeLabel_)
+        return;
 
     const auto& theme = themeService_.getCurrentTheme();
     juce::String renderModeText = (renderingMode_ == RenderingMode::OpenGL) ? "OpenGL" : "Software";

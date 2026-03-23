@@ -37,15 +37,9 @@ OscilColorPicker::OscilColorPicker(IThemeService& themeService, const juce::Stri
     updateHexField();
 }
 
-void OscilColorPicker::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilColorPicker::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilColorPicker::~OscilColorPicker()
-{
-    stopTimer();
-}
+OscilColorPicker::~OscilColorPicker() { stopTimer(); }
 
 void OscilColorPicker::setColor(juce::Colour color, bool notify)
 {
@@ -108,7 +102,7 @@ void OscilColorPicker::setShowPreview(bool show)
 
 int OscilColorPicker::getPreferredHeight() const
 {
-    int height = GRADIENT_SIZE + SLIDER_SPACING + SLIDER_HEIGHT;  // Gradient + hue slider
+    int height = GRADIENT_SIZE + SLIDER_SPACING + SLIDER_HEIGHT; // Gradient + hue slider
 
     if (showAlpha_)
         height += SLIDER_SPACING + SLIDER_HEIGHT;
@@ -153,7 +147,7 @@ juce::Rectangle<int> OscilColorPicker::getHexInputBounds() const
 {
     auto previewBounds = getPreviewBounds();
     return juce::Rectangle<int>(previewBounds.getRight() + 8, previewBounds.getY(),
-                                 getWidth() - previewBounds.getRight() - 8, PREVIEW_HEIGHT);
+                                getWidth() - previewBounds.getRight() - 8, PREVIEW_HEIGHT);
 }
 
 void OscilColorPicker::resized()
@@ -230,8 +224,10 @@ void OscilColorPicker::handleGradientDrag(juce::Point<int> pos)
     if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0)
         return;
 
-    saturation_ = std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
-    brightness_ = std::clamp(1.0f - static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight()), 0.0f, 1.0f);
+    saturation_ =
+        std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
+    brightness_ = std::clamp(1.0f - static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight()),
+                             0.0f, 1.0f);
 
     updateFromHSV();
 }
@@ -276,9 +272,6 @@ void OscilColorPicker::updateHexField()
     hexInput_->setText(hex, juce::dontSendNotification);
 }
 
-void OscilColorPicker::timerCallback()
-{
-    stopTimer();
-}
+void OscilColorPicker::timerCallback() { stopTimer(); }
 
 } // namespace oscil

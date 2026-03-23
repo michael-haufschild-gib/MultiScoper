@@ -3,6 +3,7 @@
 */
 
 #include "rendering/subsystems/WaveformPass.h"
+
 #include "rendering/subsystems/RenderStats.h"
 
 namespace oscil
@@ -81,15 +82,14 @@ WaveformPass::ViewportRect WaveformPass::computePaneViewport(const juce::Rectang
 {
     float scale = static_cast<float>(context_->getRenderingScale());
     auto* target = context_->getTargetComponent();
-    if (!target) return {0, 0, 1, 1};
+    if (!target)
+        return {0, 0, 1, 1};
     float logicalHeight = static_cast<float>(target->getHeight());
 
-    return {
-        std::max(0, static_cast<int>(bounds.getX() * scale)),
-        std::max(0, static_cast<int>((logicalHeight - (bounds.getY() + bounds.getHeight())) * scale)),
-        std::max(1, static_cast<int>(bounds.getWidth() * scale)),
-        std::max(1, static_cast<int>(bounds.getHeight() * scale))
-    };
+    return {std::max(0, static_cast<int>(bounds.getX() * scale)),
+            std::max(0, static_cast<int>((logicalHeight - (bounds.getY() + bounds.getHeight())) * scale)),
+            std::max(1, static_cast<int>(bounds.getWidth() * scale)),
+            std::max(1, static_cast<int>(bounds.getHeight() * scale))};
 }
 
 WaveformShader* WaveformPass::resolveShader(const juce::String& shaderId)
@@ -112,10 +112,12 @@ WaveformShader* WaveformPass::resolveShader(const juce::String& shaderId)
     return (basicIt != compiledShaders_.end()) ? basicIt->second.get() : nullptr;
 }
 
-void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config, float accumulatedTime)
+void WaveformPass::renderWaveformGeometry(const WaveformRenderData& data, const VisualConfiguration& config,
+                                          float accumulatedTime)
 {
     WaveformShader* shader = resolveShader(shaderTypeToId(config.shaderType));
-    if (!shader || !shader->isCompiled()) return;
+    if (!shader || !shader->isCompiled())
+        return;
 
     ShaderRenderParams params;
     params.colour = data.colour;

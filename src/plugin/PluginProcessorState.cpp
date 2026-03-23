@@ -3,9 +3,10 @@
     getStateInformation, setStateInformation, and updateCachedState
 */
 
-#include "plugin/PluginProcessor.h"
-#include "plugin/PluginEditor.h"
 #include "core/OscilLog.h"
+
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginProcessor.h"
 
 namespace oscil
 {
@@ -46,7 +47,7 @@ void OscilPluginProcessor::updateCachedState()
         [[maybe_unused]] auto elapsed = now - lastCachedStateSwapTimeMs_;
         // Log a warning if swaps happen too rapidly (< 1ms apart).
         // This would indicate a potential torn-read risk on the audio thread.
-        jassert(elapsed >= 1);  // Double-buffer swap interval too short
+        jassert(elapsed >= 1); // Double-buffer swap interval too short
     }
 
     // Sync timing engine state to OscilState before saving
@@ -80,22 +81,19 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
 {
     // Defer to message thread: fromXmlString allocates, state_ isn't thread-safe.
     // WeakReference handles processor destruction before callback runs.
-    auto xmlString = std::make_shared<juce::String>(
-        juce::String::createStringFromData(data, sizeInBytes));
+    auto xmlString = std::make_shared<juce::String>(juce::String::createStringFromData(data, sizeInBytes));
     auto sampleRate = static_cast<int>(currentSampleRate_);
 
-    auto doRestoreState = [weakThis = juce::WeakReference<OscilPluginProcessor>(this),
-                           xmlString, sampleRate]() {
+    auto doRestoreState = [weakThis = juce::WeakReference<OscilPluginProcessor>(this), xmlString, sampleRate]() {
         auto* processor = weakThis.get();
-        if (!processor) return;
+        if (!processor)
+            return;
 
         // Parse and apply state (now safely on message thread)
-        OSCIL_LOG(PLUGIN, "setStateInformation: restoring state ("
-            << xmlString->length() << " chars)");
+        OSCIL_LOG(PLUGIN, "setStateInformation: restoring state (" << xmlString->length() << " chars)");
         if (!processor->state_.fromXmlString(*xmlString))
         {
-            OSCIL_LOG(PLUGIN, "setStateInformation: FAILED to parse state XML ("
-                << xmlString->length() << " chars)");
+            OSCIL_LOG(PLUGIN, "setStateInformation: FAILED to parse state XML (" << xmlString->length() << " chars)");
             return;
         }
 
@@ -123,8 +121,8 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
         // Update cached state for real-time safe getStateInformation()
         processor->updateCachedState();
 
-        OSCIL_LOG(PLUGIN, "setStateInformation: restored successfully, "
-            << processor->state_.getOscillators().size() << " oscillators");
+        OSCIL_LOG(PLUGIN, "setStateInformation: restored successfully, " << processor->state_.getOscillators().size()
+                                                                         << " oscillators");
     };
 
     if (juce::MessageManager::getInstance()->isThisTheMessageThread())

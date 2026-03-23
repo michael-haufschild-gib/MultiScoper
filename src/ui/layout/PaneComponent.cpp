@@ -3,9 +3,10 @@
 */
 
 #include "ui/layout/PaneComponent.h"
-#include "ui/theme/ThemeManager.h"
-#include "core/interfaces/IAudioDataProvider.h"
+
 #include "core/OscilState.h"
+#include "core/interfaces/IAudioDataProvider.h"
+#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
@@ -31,12 +32,8 @@ PaneComponent::PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& c
         if (paneCloseCallback_)
             paneCloseCallback_(paneId_);
     };
-    header_->onActionTriggered = [this](PaneAction action, bool state) {
-        handleHeaderAction(action, state);
-    };
-    header_->onDragStarted = [this](const juce::MouseEvent& event) {
-        handleDragStarted(event);
-    };
+    header_->onActionTriggered = [this](PaneAction action, bool state) { handleHeaderAction(action, state); };
+    header_->onDragStarted = [this](const juce::MouseEvent& event) { handleDragStarted(event); };
     addAndMakeVisible(*header_);
 
     // Create body
@@ -105,7 +102,7 @@ void PaneComponent::handleHeaderAction(PaneAction action, bool state)
             if (body_)
                 body_->setStatsVisible(state);
             break;
-            
+
         case PaneAction::ToggleHold:
             setHoldDisplay(state);
             break;
@@ -144,11 +141,7 @@ void PaneComponent::handleDragStarted(const juce::MouseEvent& event)
         mouseDownInPane.y = juce::jlimit(0, juce::jmax(0, dragImage.getHeight() - 1), mouseDownInPane.y);
         juce::Point<int> dragImageOffset(-mouseDownInPane.x, -mouseDownInPane.y);
 
-        container->startDragging(dragDescription,
-                                 this,
-                                 juce::ScaledImage(dragImage),
-                                 true,
-                                 &dragImageOffset,
+        container->startDragging(dragDescription, this, juce::ScaledImage(dragImage), true, &dragImageOffset,
                                  &event.source);
     }
 }
@@ -283,10 +276,7 @@ void PaneComponent::updateOscillatorFull(const Oscillator& oscillator)
     }
 }
 
-size_t PaneComponent::getOscillatorCount() const
-{
-    return body_ ? body_->getOscillatorCount() : 0;
-}
+size_t PaneComponent::getOscillatorCount() const { return body_ ? body_->getOscillatorCount() : 0; }
 
 // Display settings - delegates to body
 
@@ -308,17 +298,14 @@ void PaneComponent::setAutoScale(bool enabled)
         body_->setAutoScale(enabled);
 }
 
-void PaneComponent::toggleHoldDisplay()
-{
-    setHoldDisplay(!isHeld_);
-}
+void PaneComponent::toggleHoldDisplay() { setHoldDisplay(!isHeld_); }
 
 void PaneComponent::setHoldDisplay(bool enabled)
 {
     isHeld_ = enabled;
     if (body_)
         body_->setHoldDisplay(enabled);
-        
+
     // Update header button state if this was called programmatically
     if (header_ && header_->getActionBar())
     {
@@ -367,10 +354,7 @@ void PaneComponent::setPaneName(const juce::String& name)
         header_->setPaneName(name);
 }
 
-juce::String PaneComponent::getPaneName() const
-{
-    return paneName_;
-}
+juce::String PaneComponent::getPaneName() const { return paneName_; }
 
 // Test access
 

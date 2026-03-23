@@ -4,22 +4,21 @@
 */
 
 #include "core/dsp/TimingEngine.h"
+
 #include <cmath>
 
 namespace oscil
 {
 
-TimingEngine::TimingEngine()
-{
-    recalculateInterval();
-}
+TimingEngine::TimingEngine() { recalculateInterval(); }
 
 TimingEngine::~TimingEngine() = default;
 
 void TimingEngine::updateHostBPM(const juce::AudioPlayHead::PositionInfo& positionInfo)
 {
     auto bpm = positionInfo.getBpm();
-    if (!bpm) return;
+    if (!bpm)
+        return;
 
     double newBPM = juce::jlimit<double>(EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM, *bpm);
     if (std::abs(audioThreadHostInfo_.bpm - newBPM) <= 0.01)
@@ -40,9 +39,8 @@ void TimingEngine::updateHostBPM(const juce::AudioPlayHead::PositionInfo& positi
     }
 }
 
-void TimingEngine::updateSyncState(bool wasPlaying, bool isPlaying,
-                                    const juce::Optional<int64_t>& timeInSamples,
-                                    int64_t previousTimeInSamples)
+void TimingEngine::updateSyncState(bool wasPlaying, bool isPlaying, const juce::Optional<int64_t>& timeInSamples,
+                                   int64_t previousTimeInSamples)
 {
     bool playStateChanged = (wasPlaying != isPlaying);
     auto cfg = configLock_.read();
@@ -73,7 +71,8 @@ void TimingEngine::updateSyncState(bool wasPlaying, bool isPlaying,
 void TimingEngine::updateHostTimeSignature(const juce::AudioPlayHead::PositionInfo& positionInfo)
 {
     auto timeSig = positionInfo.getTimeSignature();
-    if (!timeSig) return;
+    if (!timeSig)
+        return;
 
     if (timeSig->numerator != audioThreadHostInfo_.timeSigNumerator ||
         timeSig->denominator != audioThreadHostInfo_.timeSigDenominator)
@@ -105,9 +104,8 @@ void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& posit
 
     HostTimingInfo::TransportState transportState = HostTimingInfo::TransportState::STOPPED;
     if (isPlaying)
-        transportState = positionInfo.getIsRecording()
-            ? HostTimingInfo::TransportState::RECORDING
-            : HostTimingInfo::TransportState::PLAYING;
+        transportState = positionInfo.getIsRecording() ? HostTimingInfo::TransportState::RECORDING
+                                                       : HostTimingInfo::TransportState::PLAYING;
     audioThreadHostInfo_.transportState = transportState;
 
     updateSyncState(wasPlaying, isPlaying, timeInSamples, previousTimeInSamples);
@@ -150,9 +148,8 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
     if (detectTrigger(samples, buffer.getNumSamples()))
     {
         triggered_.store(true, std::memory_order_relaxed);
-        atomicLastSyncTimestamp_.store(
-            static_cast<double>(audioThreadHostInfo_.timeInSamples),
-            std::memory_order_relaxed);
+        atomicLastSyncTimestamp_.store(static_cast<double>(audioThreadHostInfo_.timeInSamples),
+                                       std::memory_order_relaxed);
         return true;
     }
 
@@ -165,10 +162,7 @@ int TimingEngine::getDisplaySampleCount(double sampleRate) const
     return static_cast<int>(windowSeconds * sampleRate);
 }
 
-float TimingEngine::getActualIntervalMs() const
-{
-    return atomicActualIntervalMs_.load(std::memory_order_relaxed);
-}
+float TimingEngine::getActualIntervalMs() const { return atomicActualIntervalMs_.load(std::memory_order_relaxed); }
 
 double TimingEngine::getWindowSizeSeconds() const
 {
@@ -193,9 +187,7 @@ void TimingEngine::recalculateInterval()
             int timeSigNumerator = hostInfo.timeSigNumerator;
             double beats = engineNoteIntervalToBeats(cfg.noteInterval, timeSigNumerator);
 
-            float effectiveBPM = cfg.hostSyncEnabled
-                ? static_cast<float>(hostInfo.bpm)
-                : cfg.internalBPM;
+            float effectiveBPM = cfg.hostSyncEnabled ? static_cast<float>(hostInfo.bpm) : cfg.internalBPM;
 
             if (!std::isfinite(effectiveBPM))
                 effectiveBPM = EngineTimingConfig::MIN_BPM;
@@ -206,11 +198,8 @@ void TimingEngine::recalculateInterval()
         }
     }
 
-    newInterval = juce::jlimit(
-        static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS),
-        static_cast<float>(EngineTimingConfig::MAX_TIME_INTERVAL_MS),
-        newInterval
-    );
+    newInterval = juce::jlimit(static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS),
+                               static_cast<float>(EngineTimingConfig::MAX_TIME_INTERVAL_MS), newInterval);
 
     float oldInterval = atomicActualIntervalMs_.exchange(newInterval, std::memory_order_relaxed);
 
@@ -237,9 +226,8 @@ bool TimingEngine::processMidi(const juce::MidiBuffer& midiMessages)
                 continue;
 
             triggered_.store(true, std::memory_order_relaxed);
-            atomicLastSyncTimestamp_.store(
-                static_cast<double>(audioThreadHostInfo_.timeInSamples),
-                std::memory_order_relaxed);
+            atomicLastSyncTimestamp_.store(static_cast<double>(audioThreadHostInfo_.timeInSamples),
+                                           std::memory_order_relaxed);
             return true;
         }
     }
@@ -247,10 +235,7 @@ bool TimingEngine::processMidi(const juce::MidiBuffer& midiMessages)
     return false;
 }
 
-bool TimingEngine::checkAndClearManualTrigger()
-{
-    return manualTrigger_.exchange(false, std::memory_order_relaxed);
-}
+bool TimingEngine::checkAndClearManualTrigger() { return manualTrigger_.exchange(false, std::memory_order_relaxed); }
 
 bool TimingEngine::checkAndClearTrigger()
 {
@@ -265,9 +250,7 @@ void TimingEngine::requestManualTrigger()
     manualTrigger_.store(true, std::memory_order_relaxed);
     triggered_.store(true, std::memory_order_relaxed);
     auto hostInfo = hostInfoLock_.read();
-    atomicLastSyncTimestamp_.store(
-        static_cast<double>(hostInfo.timeInSamples),
-        std::memory_order_relaxed);
+    atomicLastSyncTimestamp_.store(static_cast<double>(hostInfo.timeInSamples), std::memory_order_relaxed);
 }
 
 void TimingEngine::setSampleRate(double sampleRate)
@@ -340,10 +323,10 @@ bool TimingEngine::detectFallingEdge(float sample)
 bool TimingEngine::detectBothEdges(float sample)
 {
     auto cfg = configLock_.read();
-    bool risingEdge = previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis) &&
-                      sample >= cfg.triggerThreshold;
-    bool fallingEdge = previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis) &&
-                       sample <= cfg.triggerThreshold;
+    bool risingEdge =
+        previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis) && sample >= cfg.triggerThreshold;
+    bool fallingEdge =
+        previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis) && sample <= cfg.triggerThreshold;
     return risingEdge || fallingEdge;
 }
 
@@ -423,24 +406,12 @@ void TimingEngine::dispatchPendingUpdates()
     }
 }
 
-void TimingEngine::notifyTimingModeChanged()
-{
-    pendingFlags_.fetch_or(kPendingTimingMode, std::memory_order_relaxed);
-}
+void TimingEngine::notifyTimingModeChanged() { pendingFlags_.fetch_or(kPendingTimingMode, std::memory_order_relaxed); }
 
-void TimingEngine::notifyIntervalChanged()
-{
-    pendingFlags_.fetch_or(kPendingInterval, std::memory_order_relaxed);
-}
+void TimingEngine::notifyIntervalChanged() { pendingFlags_.fetch_or(kPendingInterval, std::memory_order_relaxed); }
 
-void TimingEngine::notifyHostBPMChanged()
-{
-    pendingFlags_.fetch_or(kPendingHostBPM, std::memory_order_relaxed);
-}
+void TimingEngine::notifyHostBPMChanged() { pendingFlags_.fetch_or(kPendingHostBPM, std::memory_order_relaxed); }
 
-void TimingEngine::notifyHostSyncStateChanged()
-{
-    pendingFlags_.fetch_or(kPendingHostSync, std::memory_order_relaxed);
-}
+void TimingEngine::notifyHostSyncStateChanged() { pendingFlags_.fetch_or(kPendingHostSync, std::memory_order_relaxed); }
 
 } // namespace oscil

@@ -2,19 +2,18 @@
     Oscil - TimingConfig Entity Tests
 */
 
-#include <gtest/gtest.h>
 #include "core/dsp/TimingConfig.h"
-#include <limits>
+
 #include <cmath>
+#include <gtest/gtest.h>
+#include <limits>
 
 using namespace oscil;
 
 class TimingConfigTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-    }
+    void SetUp() override {}
 };
 
 // === Default Values Tests ===
@@ -25,7 +24,7 @@ TEST_F(TimingConfigTest, DefaultValues)
 
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
     EXPECT_EQ(config.triggerMode, TriggerMode::FREE_RUNNING);
-    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f); // New default: 500ms
     EXPECT_EQ(config.noteInterval, NoteInterval::QUARTER);
     EXPECT_FALSE(config.hostSyncEnabled);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
@@ -48,11 +47,11 @@ TEST_F(TimingConfigTest, TimeIntervalClamping)
     config.setTimingMode(TimingMode::TIME);
 
     // Test minimum clamping
-    config.setTimeInterval(0.1f);  // Below minimum
+    config.setTimeInterval(0.1f); // Below minimum
     EXPECT_FLOAT_EQ(config.actualIntervalMs, TimingConfig::MIN_TIME_INTERVAL_MS);
 
     // Test maximum clamping
-    config.setTimeInterval(100000.0f);  // Above maximum
+    config.setTimeInterval(100000.0f); // Above maximum
     EXPECT_FLOAT_EQ(config.actualIntervalMs, TimingConfig::MAX_TIME_INTERVAL_MS);
 }
 
@@ -176,7 +175,7 @@ TEST_F(TimingConfigTest, IntervalInSamples)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::TIME);
-    config.setTimeInterval(100.0f);  // 100ms
+    config.setTimeInterval(100.0f); // 100ms
 
     // At 44100 Hz, 100ms = 4410 samples
     EXPECT_EQ(config.getIntervalInSamples(44100.0f), 4410);
@@ -251,7 +250,7 @@ TEST_F(TimingConfigTest, TimingModeStringConversion)
 
     EXPECT_EQ(stringToTimingMode("TIME"), TimingMode::TIME);
     EXPECT_EQ(stringToTimingMode("MELODIC"), TimingMode::MELODIC);
-    EXPECT_EQ(stringToTimingMode("INVALID"), TimingMode::TIME);  // Default
+    EXPECT_EQ(stringToTimingMode("INVALID"), TimingMode::TIME); // Default
 }
 
 TEST_F(TimingConfigTest, NoteIntervalStringConversion)
@@ -265,7 +264,7 @@ TEST_F(TimingConfigTest, NoteIntervalStringConversion)
     EXPECT_EQ(stringToNoteInterval("1/8"), NoteInterval::EIGHTH);
     EXPECT_EQ(stringToNoteInterval("1/4."), NoteInterval::DOTTED_QUARTER);
     EXPECT_EQ(stringToNoteInterval("1/4T"), NoteInterval::TRIPLET_QUARTER);
-    EXPECT_EQ(stringToNoteInterval("INVALID"), NoteInterval::QUARTER);  // Default
+    EXPECT_EQ(stringToNoteInterval("INVALID"), NoteInterval::QUARTER); // Default
 }
 
 TEST_F(TimingConfigTest, TriggerModeStringConversion)
@@ -277,7 +276,7 @@ TEST_F(TimingConfigTest, TriggerModeStringConversion)
     EXPECT_EQ(stringToTriggerMode("FREE_RUNNING"), TriggerMode::FREE_RUNNING);
     EXPECT_EQ(stringToTriggerMode("HOST_SYNC"), TriggerMode::HOST_SYNC);
     EXPECT_EQ(stringToTriggerMode("TRIGGERED"), TriggerMode::TRIGGERED);
-    EXPECT_EQ(stringToTriggerMode("INVALID"), TriggerMode::FREE_RUNNING);  // Default
+    EXPECT_EQ(stringToTriggerMode("INVALID"), TriggerMode::FREE_RUNNING); // Default
 }
 
 TEST_F(TimingConfigTest, NoteIntervalDisplayNames)
@@ -297,10 +296,10 @@ TEST_F(TimingConfigTest, HostSyncAvailability)
     config.hostBPM = 120.0f;
     EXPECT_TRUE(config.isHostSyncAvailable());
 
-    config.hostBPM = 10.0f;  // Below minimum
+    config.hostBPM = 10.0f; // Below minimum
     EXPECT_FALSE(config.isHostSyncAvailable());
 
-    config.hostBPM = 400.0f;  // Above maximum
+    config.hostBPM = 400.0f; // Above maximum
     EXPECT_FALSE(config.isHostSyncAvailable());
 }
 
@@ -365,7 +364,7 @@ TEST_F(TimingConfigTest, TriggerEdgeStringConversion)
     EXPECT_EQ(stringToTriggerEdge("Rising"), TriggerEdge::Rising);
     EXPECT_EQ(stringToTriggerEdge("Falling"), TriggerEdge::Falling);
     EXPECT_EQ(stringToTriggerEdge("Both"), TriggerEdge::Both);
-    EXPECT_EQ(stringToTriggerEdge("INVALID"), TriggerEdge::Rising);  // Default
+    EXPECT_EQ(stringToTriggerEdge("INVALID"), TriggerEdge::Rising); // Default
 }
 
 // =============================================================================
@@ -397,7 +396,7 @@ TEST_F(TimingConfigTest, DeserializeValueTreeMissingProperties)
     // Should have default values
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
     EXPECT_EQ(config.triggerMode, TriggerMode::FREE_RUNNING);
-    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f); // New default: 500ms
     EXPECT_EQ(config.noteInterval, NoteInterval::QUARTER);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
 }
@@ -428,4 +427,3 @@ TEST_F(TimingConfigTest, DeserializeOutOfRangeNumericFieldsAreClamped)
     EXPECT_EQ(config.midiTriggerNote, -1);
     EXPECT_EQ(config.midiTriggerChannel, 0);
 }
-

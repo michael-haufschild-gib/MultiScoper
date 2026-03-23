@@ -3,24 +3,19 @@
     Tests for OscilMeterBar UI component
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilMeterBar.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilMeterBarTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -96,7 +91,7 @@ TEST_F(OscilMeterBarTest, ClipDetection)
 {
     OscilMeterBar meter(getThemeManager());
 
-    meter.setLevel(1.5f);  // Over 1.0
+    meter.setLevel(1.5f); // Over 1.0
     EXPECT_TRUE(meter.isClipping());
 }
 

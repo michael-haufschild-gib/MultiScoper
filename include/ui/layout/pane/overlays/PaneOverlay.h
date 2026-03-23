@@ -5,10 +5,11 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -23,9 +24,10 @@ namespace oscil
  * - Click-through support (passes mouse events to components below)
  * - Auto-sizing to content
  */
-class PaneOverlay : public juce::Component,
-                    public ThemeManagerListener,
-                    public TestIdSupport
+class PaneOverlay
+    : public juce::Component
+    , public ThemeManagerListener
+    , public TestIdSupport
 {
 public:
     /**
@@ -91,7 +93,7 @@ protected:
     /**
      * Get the preferred content size (subclasses override)
      */
-    virtual juce::Rectangle<int> getPreferredContentSize() const { return { 0, 0, 100, 60 }; }
+    virtual juce::Rectangle<int> getPreferredContentSize() const { return {0, 0, 100, 60}; }
 
     /**
      * Get current animation opacity (0.0 - 1.0)
@@ -112,7 +114,7 @@ private:
 
     // Animation state
     bool isAnimating_ = false;
-    bool fadeDirection_ = true;  // true = fade in, false = fade out
+    bool fadeDirection_ = true; // true = fade in, false = fade out
     float currentOpacity_ = 0.0f;
     float targetOpacity_ = 0.0f;
     std::unique_ptr<juce::Timer> fadeTimer_;
@@ -123,7 +125,7 @@ private:
 
     // Animation timing
     static constexpr int FADE_DURATION_MS = ComponentLayout::ANIMATION_FAST_MS;
-    static constexpr int FADE_TIMER_INTERVAL_MS = 16;  // ~60fps
+    static constexpr int FADE_TIMER_INTERVAL_MS = 16; // ~60fps
 
     // TestIdSupport
     OSCIL_TESTABLE();

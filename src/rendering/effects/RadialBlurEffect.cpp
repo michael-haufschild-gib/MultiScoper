@@ -64,9 +64,7 @@ static const char* radialBlurFragmentShader = R"(
     }
 )";
 
-RadialBlurEffect::RadialBlurEffect()
-{
-}
+RadialBlurEffect::RadialBlurEffect() {}
 
 RadialBlurEffect::~RadialBlurEffect() = default;
 
@@ -102,17 +100,10 @@ void RadialBlurEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool RadialBlurEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool RadialBlurEffect::isCompiled() const { return compiled_; }
 
-void RadialBlurEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void RadialBlurEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                             FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
 

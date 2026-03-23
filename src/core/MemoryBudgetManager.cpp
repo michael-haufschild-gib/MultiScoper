@@ -3,6 +3,7 @@
 */
 
 #include "core/MemoryBudgetManager.h"
+
 #include "core/DecimatingCaptureBuffer.h"
 
 namespace oscil
@@ -10,10 +11,7 @@ namespace oscil
 
 MemoryBudgetManager::MemoryBudgetManager() = default;
 
-MemoryBudgetManager::~MemoryBudgetManager()
-{
-    shuttingDown_.store(true, std::memory_order_release);
-}
+MemoryBudgetManager::~MemoryBudgetManager() { shuttingDown_.store(true, std::memory_order_release); }
 
 void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, int sourceRate)
 {
@@ -34,8 +32,7 @@ void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, in
     }
 }
 
-void MemoryBudgetManager::registerBuffer(const juce::String& id,
-                                          std::shared_ptr<DecimatingCaptureBuffer> buffer)
+void MemoryBudgetManager::registerBuffer(const juce::String& id, std::shared_ptr<DecimatingCaptureBuffer> buffer)
 {
     // NEVER call from audio thread - uses blocking locks.
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
@@ -228,8 +225,8 @@ MemoryUsageSnapshot MemoryBudgetManager::getMemorySnapshot() const
 
     if (snapshot.budgetBytes > 0)
     {
-        snapshot.usagePercent = (static_cast<float>(snapshot.totalUsageBytes) /
-                                  static_cast<float>(snapshot.budgetBytes)) * 100.0f;
+        snapshot.usagePercent =
+            (static_cast<float>(snapshot.totalUsageBytes) / static_cast<float>(snapshot.budgetBytes)) * 100.0f;
     }
 
     snapshot.isOverBudget = snapshot.totalUsageBytes > snapshot.budgetBytes;
@@ -354,8 +351,7 @@ void MemoryBudgetManager::reconfigureAllBuffers()
             }
             else if (globalConfig_.autoAdjustQuality)
             {
-                effectivePreset = globalConfig_.getEffectiveQuality(
-                    static_cast<int>(buffers_.size()), sourceRate_);
+                effectivePreset = globalConfig_.getEffectiveQuality(static_cast<int>(buffers_.size()), sourceRate_);
             }
             else
             {
@@ -407,7 +403,7 @@ bool MemoryBudgetManager::pruneExpiredBuffersLocked() const
 {
     bool removed = false;
 
-    for (auto it = buffers_.begin(); it != buffers_.end(); )
+    for (auto it = buffers_.begin(); it != buffers_.end();)
     {
         if (it->second.buffer.expired())
         {
@@ -454,8 +450,7 @@ void MemoryBudgetManager::postNotification(std::function<void(MemoryBudgetManage
     if (messageManager == nullptr)
         return;
 
-    auto dispatch = [weakThis = juce::WeakReference<MemoryBudgetManager>(this),
-                     cb = std::move(callback)]() mutable {
+    auto dispatch = [weakThis = juce::WeakReference<MemoryBudgetManager>(this), cb = std::move(callback)]() mutable {
         auto* self = weakThis.get();
         if (self == nullptr || self->shuttingDown_.load(std::memory_order_acquire))
             return;

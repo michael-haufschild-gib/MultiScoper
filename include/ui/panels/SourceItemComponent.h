@@ -5,12 +5,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/InstanceRegistry.h"
-#include "ui/theme/IThemeService.h"
 #include "core/Pane.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/TestId.h"
+#include "ui/theme/IThemeService.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 #include <memory>
 
@@ -76,7 +78,7 @@ private:
     bool isSelected_ = false;
 
     std::unique_ptr<OscilDropdown> addToPaneDropdown_;
-    std::vector<PaneId> paneIds_;  // Maps dropdown index to PaneId
+    std::vector<PaneId> paneIds_; // Maps dropdown index to PaneId
 
     static constexpr int ITEM_HEIGHT = 36;
     static constexpr int ACTIVITY_DOT_SIZE = 8;

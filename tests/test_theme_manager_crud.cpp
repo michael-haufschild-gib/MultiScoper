@@ -3,23 +3,18 @@
     Tests for creating, reading, updating, and deleting themes
 */
 
-#include <gtest/gtest.h>
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class ThemeManagerCRUDTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -43,8 +38,10 @@ TEST_F(ThemeManagerCRUDTest, SystemThemesExist)
 
     for (const auto& name : themes)
     {
-        if (name == "Dark Professional") hasDarkPro = true;
-        if (name == "Classic Green") hasClassicGreen = true;
+        if (name == "Dark Professional")
+            hasDarkPro = true;
+        if (name == "Classic Green")
+            hasClassicGreen = true;
     }
 
     EXPECT_TRUE(hasDarkPro);
@@ -384,6 +381,5 @@ TEST_F(ThemeManagerCRUDTest, DeleteCurrentThemeSwitchesTheme)
 
     // Current should now be a different (system) theme
     EXPECT_NE(getThemeManager().getCurrentTheme().name, "TempCurrent");
-    EXPECT_TRUE(getThemeManager().isSystemTheme(
-        getThemeManager().getCurrentTheme().name));
+    EXPECT_TRUE(getThemeManager().isSystemTheme(getThemeManager().getCurrentTheme().name));
 }

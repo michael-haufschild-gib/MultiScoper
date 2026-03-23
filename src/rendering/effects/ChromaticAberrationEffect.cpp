@@ -43,9 +43,7 @@ static const char* chromaticFragmentShader = R"(
     }
 )";
 
-ChromaticAberrationEffect::ChromaticAberrationEffect()
-{
-}
+ChromaticAberrationEffect::ChromaticAberrationEffect() {}
 
 ChromaticAberrationEffect::~ChromaticAberrationEffect() = default;
 
@@ -85,17 +83,10 @@ void ChromaticAberrationEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool ChromaticAberrationEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool ChromaticAberrationEffect::isCompiled() const { return compiled_; }
 
-void ChromaticAberrationEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void ChromaticAberrationEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                                      FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
 

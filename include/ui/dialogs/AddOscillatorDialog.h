@@ -6,18 +6,20 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/InstanceRegistry.h"
 #include "core/Pane.h"
 #include "core/WaveformColorPalette.h"
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/OscilColorSwatches.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilTextField.h"
-#include "ui/components/OscilColorSwatches.h"
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/TestId.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 #include <vector>
 
@@ -28,9 +30,10 @@ namespace oscil
  * Content component for the add oscillator dialog
  * Designed to be hosted inside an OscilModal
  */
-class AddOscillatorDialog : public juce::Component,
-                             public ThemeManagerListener,
-                             public TestIdSupport
+class AddOscillatorDialog
+    : public juce::Component
+    , public ThemeManagerListener
+    , public TestIdSupport
 {
 public:
     /**
@@ -39,11 +42,11 @@ public:
     struct Result
     {
         SourceId sourceId;
-        PaneId paneId;                  // Empty if createNewPane is true
-        bool createNewPane = false;     // True if "New pane" was selected
+        PaneId paneId;              // Empty if createNewPane is true
+        bool createNewPane = false; // True if "New pane" was selected
         juce::String name;
         juce::Colour color;
-        juce::String visualPresetId;    // Visual preset to use
+        juce::String visualPresetId; // Visual preset to use
     };
 
     /**
@@ -67,8 +70,7 @@ public:
      * @param sources List of available audio sources
      * @param panes List of available panes
      */
-    void setData(const std::vector<SourceInfo>& sources,
-                 const std::vector<Pane>& panes);
+    void setData(const std::vector<SourceInfo>& sources, const std::vector<Pane>& panes);
 
     /**
      * Set the callback for when OK is clicked with valid data

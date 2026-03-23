@@ -6,14 +6,14 @@
 #include "plugin/PluginProcessor.h"
 
 #include "core/InstanceRegistry.h"
+#include "core/OscilLog.h"
 #include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
-#include "rendering/PresetManager.h"
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
-#include "core/OscilLog.h"
+#include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
 
 namespace oscil
 {
@@ -36,7 +36,8 @@ juce::String normaliseSourceDisplayName(const juce::AudioProcessor::TrackPropert
 OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
                                            ShaderRegistry& shaderRegistry, PresetManager& presetManager,
                                            MemoryBudgetManager& memoryBudgetManager)
-    : OscilPluginProcessor(PluginProcessorConfig{instanceRegistry, themeService, shaderRegistry, presetManager, memoryBudgetManager})
+    : OscilPluginProcessor(
+          PluginProcessorConfig{instanceRegistry, themeService, shaderRegistry, presetManager, memoryBudgetManager})
 {
 }
 
@@ -61,8 +62,7 @@ OscilPluginProcessor::OscilPluginProcessor(const PluginProcessorConfig& config)
     // Use default sample rate until prepareToPlay is called
     auto qualityConfig = state_.getCaptureQualityConfig();
     setCaptureQualityConfig(qualityConfig);
-    memoryBudgetManager_.setGlobalConfig(qualityConfig,
-                                         static_cast<int>(currentSampleRate_));
+    memoryBudgetManager_.setGlobalConfig(qualityConfig, static_cast<int>(currentSampleRate_));
 
     // Listen for state changes (quality settings)
     state_.getState().addListener(this);
@@ -75,8 +75,7 @@ OscilPluginProcessor::OscilPluginProcessor(const PluginProcessorConfig& config)
 
 OscilPluginProcessor::~OscilPluginProcessor()
 {
-    OSCIL_LOG(PLUGIN, "PluginProcessor destroying: trackId=" << trackIdentifier_
-        << " sourceId=" << sourceId_.id);
+    OSCIL_LOG(PLUGIN, "PluginProcessor destroying: trackId=" << trackIdentifier_ << " sourceId=" << sourceId_.id);
     state_.getState().removeListener(this);
 
     // Unregister from MemoryBudgetManager
@@ -89,10 +88,7 @@ OscilPluginProcessor::~OscilPluginProcessor()
     }
 }
 
-const juce::String OscilPluginProcessor::getName() const
-{
-    return "Oscil";
-}
+const juce::String OscilPluginProcessor::getName() const { return "Oscil"; }
 
 bool OscilPluginProcessor::acceptsMidi() const { return true; }
 bool OscilPluginProcessor::producesMidi() const { return false; }
@@ -110,13 +106,12 @@ void OscilPluginProcessor::deferRegistration(double sampleRate)
 {
     // Memory allocation and mutex operations must happen on message thread.
     // prepareToPlay can be called from audio thread in some hosts (Pro Tools, Reaper).
-    auto doRegistration = [weakThis = juce::WeakReference<OscilPluginProcessor>(this),
-                           sampleRate,
-                           captureConfig = getCaptureQualityConfig(),
-                           trackId = trackIdentifier_,
+    auto doRegistration = [weakThis = juce::WeakReference<OscilPluginProcessor>(this), sampleRate,
+                           captureConfig = getCaptureQualityConfig(), trackId = trackIdentifier_,
                            channelCount = getTotalNumInputChannels()]() {
         auto* p = weakThis.get();
-        if (!p) return;
+        if (!p)
+            return;
 
         p->memoryBudgetManager_.setGlobalConfig(captureConfig, static_cast<int>(sampleRate));
         p->captureBuffer_->configure(captureConfig, static_cast<int>(sampleRate));
@@ -124,14 +119,12 @@ void OscilPluginProcessor::deferRegistration(double sampleRate)
 
         if (!p->sourceId_.isValid())
         {
-            p->sourceId_ = p->instanceRegistry_.registerInstance(
-                trackId, p->captureBuffer_, p->sourceDisplayName_,
-                channelCount, sampleRate, p->analysisEngine_);
+            p->sourceId_ = p->instanceRegistry_.registerInstance(trackId, p->captureBuffer_, p->sourceDisplayName_,
+                                                                 channelCount, sampleRate, p->analysisEngine_);
         }
         else
         {
-            p->instanceRegistry_.updateSource(p->sourceId_, p->sourceDisplayName_,
-                                               channelCount, sampleRate);
+            p->instanceRegistry_.updateSource(p->sourceId_, p->sourceDisplayName_, channelCount, sampleRate);
         }
     };
 
@@ -155,9 +148,8 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         analysisEngine_->reset();
     }
 
-    OSCIL_LOG(PLUGIN, "prepareToPlay: sampleRate=" << sampleRate
-        << " blockSize=" << samplesPerBlock
-        << " inputChannels=" << getTotalNumInputChannels());
+    OSCIL_LOG(PLUGIN, "prepareToPlay: sampleRate=" << sampleRate << " blockSize=" << samplesPerBlock
+                                                   << " inputChannels=" << getTotalNumInputChannels());
     deferRegistration(sampleRate);
 }
 
@@ -170,16 +162,13 @@ void OscilPluginProcessor::updateTrackProperties(const TrackProperties& properti
     if (sourceDisplayName_ == normalizedName)
         return;
 
-    OSCIL_LOG(PLUGIN, "updateTrackProperties: name=" << normalizedName
-        << " (was " << sourceDisplayName_ << ")");
+    OSCIL_LOG(PLUGIN, "updateTrackProperties: name=" << normalizedName << " (was " << sourceDisplayName_ << ")");
     sourceDisplayName_ = normalizedName;
 
     if (!sourceId_.isValid())
         return;
 
-    instanceRegistry_.updateSource(sourceId_,
-                                   sourceDisplayName_,
-                                   getTotalNumInputChannels(),
+    instanceRegistry_.updateSource(sourceId_, sourceDisplayName_, getTotalNumInputChannels(),
                                    currentSampleRate_.load(std::memory_order_relaxed));
 }
 
@@ -192,19 +181,20 @@ bool OscilPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
 {
     // CRITICAL: Reject disabled buses - this prevents hosts from passing 0-channel buffers
     // Without this check, some hosts (FL Studio, Ableton) may disable audio routing entirely
-    if (layouts.getMainInputChannelSet() == juce::AudioChannelSet::disabled() || layouts.getMainOutputChannelSet() == juce::AudioChannelSet::disabled())
+    if (layouts.getMainInputChannelSet() == juce::AudioChannelSet::disabled() ||
+        layouts.getMainOutputChannelSet() == juce::AudioChannelSet::disabled())
         return false;
 
     // Support mono and stereo only
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() &&
+        layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
     // Input must match output for effect plugins
     return layouts.getMainInputChannelSet() == layouts.getMainOutputChannelSet();
 }
 
-void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-                                        juce::MidiBuffer& midiMessages)
+void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -263,7 +253,8 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 void OscilPluginProcessor::updateCpuUsage(int64_t startTicks, int numSamples)
 {
     double sampleRate = currentSampleRate_.load(std::memory_order_relaxed);
-    if (sampleRate <= 0.0) return;
+    if (sampleRate <= 0.0)
+        return;
 
     auto endTime = juce::Time::getHighResolutionTicks();
     double elapsed = static_cast<double>(endTime - startTicks) * ticksToSecondsScale_;
@@ -278,8 +269,7 @@ bool OscilPluginProcessor::hasEditor() const { return true; }
 
 juce::AudioProcessorEditor* OscilPluginProcessor::createEditor()
 {
-    OSCIL_LOG(PLUGIN, "createEditor: sourceId=" << sourceId_.id
-        << " trackId=" << trackIdentifier_);
+    OSCIL_LOG(PLUGIN, "createEditor: sourceId=" << sourceId_.id << " trackId=" << trackIdentifier_);
     // Use unique_ptr for exception safety - if constructor throws, memory is cleaned up
     auto editor = std::make_unique<OscilPluginEditor>(*this);
     // JUCE API requires raw pointer (framework takes ownership and deletes the editor)
@@ -295,15 +285,9 @@ std::shared_ptr<SharedCaptureBuffer> OscilPluginProcessor::getCaptureBuffer() co
     return captureBuffer_->getInternalBuffer();
 }
 
-SourceId OscilPluginProcessor::getSourceId() const
-{
-    return sourceId_;
-}
+SourceId OscilPluginProcessor::getSourceId() const { return sourceId_; }
 
-OscilState& OscilPluginProcessor::getState()
-{
-    return state_;
-}
+OscilState& OscilPluginProcessor::getState() { return state_; }
 
 int OscilPluginProcessor::getCaptureRate() const
 {
@@ -313,30 +297,15 @@ int OscilPluginProcessor::getCaptureRate() const
     return CaptureRate::STANDARD;
 }
 
-TimingEngine& OscilPluginProcessor::getTimingEngine()
-{
-    return timingEngine_;
-}
+TimingEngine& OscilPluginProcessor::getTimingEngine() { return timingEngine_; }
 
-IInstanceRegistry& OscilPluginProcessor::getInstanceRegistry()
-{
-    return instanceRegistry_;
-}
+IInstanceRegistry& OscilPluginProcessor::getInstanceRegistry() { return instanceRegistry_; }
 
-IThemeService& OscilPluginProcessor::getThemeService()
-{
-    return themeService_;
-}
+IThemeService& OscilPluginProcessor::getThemeService() { return themeService_; }
 
-ShaderRegistry& OscilPluginProcessor::getShaderRegistry()
-{
-    return shaderRegistry_;
-}
+ShaderRegistry& OscilPluginProcessor::getShaderRegistry() { return shaderRegistry_; }
 
-PresetManager& OscilPluginProcessor::getPresetManager()
-{
-    return presetManager_;
-}
+PresetManager& OscilPluginProcessor::getPresetManager() { return presetManager_; }
 
 std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& sourceId)
 {

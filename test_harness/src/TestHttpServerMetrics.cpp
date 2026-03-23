@@ -9,24 +9,18 @@ namespace oscil::test
 
 void TestHttpServer::setupMetricsRoutes()
 {
-    server_->Post("/metrics/start", [this](const httplib::Request& req, httplib::Response& res) {
-        handleMetricsStart(req, res);
-    });
-    server_->Post("/metrics/stop", [this](const httplib::Request& req, httplib::Response& res) {
-        handleMetricsStop(req, res);
-    });
-    server_->Get("/metrics/current", [this](const httplib::Request& req, httplib::Response& res) {
-        handleMetricsCurrent(req, res);
-    });
-    server_->Get("/metrics/stats", [this](const httplib::Request& req, httplib::Response& res) {
-        handleMetricsStats(req, res);
-    });
-    server_->Post("/metrics/reset", [this](const httplib::Request& req, httplib::Response& res) {
-        handleMetricsReset(req, res);
-    });
-    server_->Post("/metrics/recordFrame", [this](const httplib::Request& req, httplib::Response& res) {
-        handleMetricsRecordFrame(req, res);
-    });
+    server_->Post("/metrics/start",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleMetricsStart(req, res); });
+    server_->Post("/metrics/stop",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleMetricsStop(req, res); });
+    server_->Get("/metrics/current",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleMetricsCurrent(req, res); });
+    server_->Get("/metrics/stats",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleMetricsStats(req, res); });
+    server_->Post("/metrics/reset",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleMetricsReset(req, res); });
+    server_->Post("/metrics/recordFrame",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleMetricsRecordFrame(req, res); });
 }
 
 void TestHttpServer::handleMetricsStart(const httplib::Request& req, httplib::Response& res)

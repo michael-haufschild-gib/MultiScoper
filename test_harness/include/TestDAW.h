@@ -5,11 +5,13 @@
 
 #pragma once
 
-#include <juce_audio_devices/juce_audio_devices.h>
 #include "TestTrack.h"
 #include "TestTransport.h"
-#include <vector>
+
+#include <juce_audio_devices/juce_audio_devices.h>
+
 #include <memory>
+#include <vector>
 
 namespace oscil::test
 {

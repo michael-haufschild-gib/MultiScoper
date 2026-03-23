@@ -5,8 +5,10 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/layout/PaneComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -16,7 +18,9 @@ namespace oscil
  * Custom content component that acts as a DragAndDropTarget proxy.
  * When drops occur, it forwards them to the appropriate child PaneComponent.
  */
-class PaneContainerComponent : public juce::Component, public juce::DragAndDropTarget
+class PaneContainerComponent
+    : public juce::Component
+    , public juce::DragAndDropTarget
 {
 public:
     using PaneDropCallback = std::function<void(const PaneId& movedPaneId, const PaneId& targetPaneId)>;

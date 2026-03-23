@@ -3,18 +3,22 @@
     Tests for state serialization, XML output, and save operations
 */
 
-#include <gtest/gtest.h>
-#include "helpers/StateBuilder.h"
-#include "helpers/OscillatorBuilder.h"
-#include "helpers/Fixtures.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 
+#include "helpers/Fixtures.h"
+#include "helpers/OscillatorBuilder.h"
+#include "helpers/StateBuilder.h"
+
+#include <gtest/gtest.h>
+
 using namespace oscil;
 using namespace oscil::test;
 
-class StatePersistenceSaveTest : public StateTestFixture {};
+class StatePersistenceSaveTest : public StateTestFixture
+{
+};
 
 // Test: Default state initialization
 TEST_F(StatePersistenceSaveTest, DefaultStateInitialization)
@@ -27,10 +31,7 @@ TEST_F(StatePersistenceSaveTest, DefaultStateInitialization)
 // Test: Add oscillator
 TEST_F(StatePersistenceSaveTest, AddOscillator)
 {
-    auto osc = OscillatorBuilder()
-        .withName("Test Oscillator")
-        .asMid()
-        .build();
+    auto osc = OscillatorBuilder().withName("Test Oscillator").asMid().build();
 
     state->addOscillator(osc);
 
@@ -107,20 +108,15 @@ TEST_F(StatePersistenceSaveTest, ColumnLayoutPersistence)
 // Test: XML serialization round-trip
 TEST_F(StatePersistenceSaveTest, XmlSerializationRoundTrip)
 {
-    auto state = StateBuilder()
-        .withThemeName("High Contrast")
-        .withDoubleColumn()
-        .withOscillator(OscillatorBuilder()
-            .withName("Oscillator 1")
-            .asMid()
-            .withColour(juce::Colour(0xFF112233))
-            .build())
-        .withOscillator(OscillatorBuilder()
-            .withName("Oscillator 2")
-            .asSide()
-            .withColour(juce::Colour(0xFF445566))
-            .build())
-        .buildUnique();
+    auto state =
+        StateBuilder()
+            .withThemeName("High Contrast")
+            .withDoubleColumn()
+            .withOscillator(
+                OscillatorBuilder().withName("Oscillator 1").asMid().withColour(juce::Colour(0xFF112233)).build())
+            .withOscillator(
+                OscillatorBuilder().withName("Oscillator 2").asSide().withColour(juce::Colour(0xFF445566)).build())
+            .buildUnique();
 
     // Serialize to XML
     juce::String xmlString = state->toXmlString();
@@ -179,7 +175,7 @@ TEST_F(StatePersistenceSaveTest, PaneLayoutManagerIntegration)
     juce::String xmlString = state->toXmlString();
 
     OscilState restored;
-    (void)restored.fromXmlString(xmlString);
+    (void) restored.fromXmlString(xmlString);
 
     // Note: Pane layout manager serialization is handled separately
     // This tests that the state can hold pane data
@@ -190,23 +186,12 @@ TEST_F(StatePersistenceSaveTest, MultipleOscillatorsSameSource)
 {
     SourceId sharedSource = SourceId::generate();
 
-    auto state = StateBuilder()
-        .withOscillator(OscillatorBuilder()
-            .withSourceId(sharedSource)
-            .asMid()
-            .withName("Mid View")
-            .build())
-        .withOscillator(OscillatorBuilder()
-            .withSourceId(sharedSource)
-            .asSide()
-            .withName("Side View")
-            .build())
-        .withOscillator(OscillatorBuilder()
-            .withSourceId(sharedSource)
-            .asMono()
-            .withName("Mono View")
-            .build())
-        .buildUnique();
+    auto state =
+        StateBuilder()
+            .withOscillator(OscillatorBuilder().withSourceId(sharedSource).asMid().withName("Mid View").build())
+            .withOscillator(OscillatorBuilder().withSourceId(sharedSource).asSide().withName("Side View").build())
+            .withOscillator(OscillatorBuilder().withSourceId(sharedSource).asMono().withName("Mono View").build())
+            .buildUnique();
 
     auto oscillators = state->getOscillators();
     EXPECT_EQ(oscillators.size(), 3);
@@ -238,11 +223,7 @@ TEST_F(StatePersistenceSaveTest, SchemaVersionInSerializedState)
 // Test: Display options persistence
 TEST_F(StatePersistenceSaveTest, DisplayOptionsPersistence)
 {
-    auto original = StateBuilder()
-        .withoutGrid()
-        .withoutAutoScaling()
-        .withGainDb(-12.0f)
-        .buildUnique();
+    auto original = StateBuilder().withoutGrid().withoutAutoScaling().withGainDb(-12.0f).buildUnique();
 
     juce::String xml = original->toXmlString();
 
@@ -257,11 +238,7 @@ TEST_F(StatePersistenceSaveTest, DisplayOptionsPersistence)
 // Test: Sidebar persistence
 TEST_F(StatePersistenceSaveTest, SidebarPersistence)
 {
-    auto original = StateBuilder()
-        .withSidebarWidth(400)
-        .withCollapsedSidebar()
-        .withoutStatusBar()
-        .buildUnique();
+    auto original = StateBuilder().withSidebarWidth(400).withCollapsedSidebar().withoutStatusBar().buildUnique();
 
     juce::String xml = original->toXmlString();
 
@@ -327,20 +304,11 @@ public:
     int childAddedCount = 0;
     int childRemovedCount = 0;
 
-    void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override
-    {
-        propertyChangedCount++;
-    }
+    void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override { propertyChangedCount++; }
 
-    void valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&) override
-    {
-        childAddedCount++;
-    }
+    void valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&) override { childAddedCount++; }
 
-    void valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree&, int) override
-    {
-        childRemovedCount++;
-    }
+    void valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree&, int) override { childRemovedCount++; }
 };
 
 TEST_F(StatePersistenceSaveTest, ListenerNotifications)

@@ -14,10 +14,7 @@ GpuRenderCoordinator::GpuRenderCoordinator(juce::AudioProcessorEditor& editor, S
     glManager_ = std::make_unique<OpenGLLifecycleManager>(editor);
 }
 
-GpuRenderCoordinator::~GpuRenderCoordinator()
-{
-    detach();
-}
+GpuRenderCoordinator::~GpuRenderCoordinator() { detach(); }
 
 void GpuRenderCoordinator::setGpuRenderingEnabled(bool enabled)
 {
@@ -28,10 +25,7 @@ void GpuRenderCoordinator::setGpuRenderingEnabled(bool enabled)
     }
 }
 
-bool GpuRenderCoordinator::isGpuRenderingEnabled() const
-{
-    return glManager_ && glManager_->isGpuRenderingEnabled();
-}
+bool GpuRenderCoordinator::isGpuRenderingEnabled() const { return glManager_ && glManager_->isGpuRenderingEnabled(); }
 
 void GpuRenderCoordinator::updateRendering(const std::vector<std::unique_ptr<PaneComponent>>& panes)
 {

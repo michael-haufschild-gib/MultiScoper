@@ -6,6 +6,7 @@
 #pragma once
 
 #include "Framebuffer.h"
+
 #include <memory>
 
 #if OSCIL_ENABLE_OPENGL

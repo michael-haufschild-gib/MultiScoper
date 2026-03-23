@@ -10,24 +10,19 @@
     - Shortcut key not retained after construction
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilButton.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilButtonTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -181,8 +176,8 @@ TEST_F(OscilButtonTest, AllVariantsAccepted)
 {
     OscilButton button(getThemeManager());
 
-    for (auto variant : {ButtonVariant::Primary, ButtonVariant::Secondary,
-                         ButtonVariant::Danger, ButtonVariant::Ghost, ButtonVariant::Icon})
+    for (auto variant : {ButtonVariant::Primary, ButtonVariant::Secondary, ButtonVariant::Danger, ButtonVariant::Ghost,
+                         ButtonVariant::Icon})
     {
         button.setVariant(variant);
         EXPECT_EQ(button.getVariant(), variant);

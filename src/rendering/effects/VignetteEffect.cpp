@@ -47,9 +47,7 @@ static const char* vignetteFragmentShader = R"(
     }
 )";
 
-VignetteEffect::VignetteEffect()
-{
-}
+VignetteEffect::VignetteEffect() {}
 
 VignetteEffect::~VignetteEffect() = default;
 
@@ -92,17 +90,10 @@ void VignetteEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool VignetteEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool VignetteEffect::isCompiled() const { return compiled_; }
 
-void VignetteEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void VignetteEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                           FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
 
@@ -128,11 +119,8 @@ void VignetteEffect::apply(
     // Set uniforms
     ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
     ext.glUniform1f(softnessLoc_, settings_.softness);
-    ext.glUniform4f(colorLoc_,
-        settings_.colour.getFloatRed(),
-        settings_.colour.getFloatGreen(),
-        settings_.colour.getFloatBlue(),
-        settings_.colour.getFloatAlpha());
+    ext.glUniform4f(colorLoc_, settings_.colour.getFloatRed(), settings_.colour.getFloatGreen(),
+                    settings_.colour.getFloatBlue(), settings_.colour.getFloatAlpha());
 
     // Render fullscreen quad
     pool.renderFullscreenQuad();

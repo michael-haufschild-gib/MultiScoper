@@ -4,18 +4,20 @@
     and lifecycle robustness of the audio processing path.
 */
 
-#include <gtest/gtest.h>
-#include "plugin/PluginProcessor.h"
-#include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
+#include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
+
+#include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
-#include <thread>
+#include "rendering/ShaderRegistry.h"
+
 #include <atomic>
 #include <cmath>
+#include <gtest/gtest.h>
 #include <limits>
+#include <thread>
 
 using namespace oscil;
 
@@ -36,8 +38,8 @@ protected:
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
     }
 
     void TearDown() override
@@ -59,14 +61,13 @@ protected:
         return buffer;
     }
 
-    juce::AudioBuffer<float> generateSineBuffer(int numChannels, int numSamples,
-                                                 float frequency = 440.0f, float sampleRate = 44100.0f)
+    juce::AudioBuffer<float> generateSineBuffer(int numChannels, int numSamples, float frequency = 440.0f,
+                                                float sampleRate = 44100.0f)
     {
         juce::AudioBuffer<float> buffer(numChannels, numSamples);
         for (int ch = 0; ch < numChannels; ++ch)
             for (int i = 0; i < numSamples; ++i)
-                buffer.setSample(ch, i,
-                    std::sin(2.0f * juce::MathConstants<float>::pi * frequency * i / sampleRate));
+                buffer.setSample(ch, i, std::sin(2.0f * juce::MathConstants<float>::pi * frequency * i / sampleRate));
         return buffer;
     }
 };
@@ -207,8 +208,7 @@ TEST_F(PluginProcessorAudioTest, NaNInAudioDoesNotCorruptProcessorState)
 
     for (int i = 0; i < 512; ++i)
     {
-        EXPECT_FLOAT_EQ(cleanBuffer.getSample(0, i), 0.3f)
-            << "Clean buffer corrupted after NaN buffer at sample " << i;
+        EXPECT_FLOAT_EQ(cleanBuffer.getSample(0, i), 0.3f) << "Clean buffer corrupted after NaN buffer at sample " << i;
     }
 }
 

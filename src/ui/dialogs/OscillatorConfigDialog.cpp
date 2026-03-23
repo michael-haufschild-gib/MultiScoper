@@ -4,14 +4,16 @@
 */
 
 #include "ui/dialogs/OscillatorConfigDialog.h"
-#include "ui/panels/SourceSelectorComponent.h"
-#include "ui/components/SegmentedButtonBar.h"
-#include "ui/components/ProcessingModeIcons.h"
-#include "ui/components/ListItemIcons.h"
-#include "ui/components/ComponentConstants.h"
-#include "rendering/VisualConfiguration.h"
+
 #include "core/OscilState.h"
+#include "ui/components/ComponentConstants.h"
+#include "ui/components/ListItemIcons.h"
+#include "ui/components/ProcessingModeIcons.h"
+#include "ui/components/SegmentedButtonBar.h"
+#include "ui/panels/SourceSelectorComponent.h"
 #include "ui/theme/IThemeService.h"
+
+#include "rendering/VisualConfiguration.h"
 
 namespace oscil
 {
@@ -53,12 +55,18 @@ void OscillatorConfigDialog::setupSourceAndMode()
 
     modeButtons_ = std::make_unique<SegmentedButtonBar>(themeService_);
     modeButtons_->setMinButtonWidth(40);
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(16), static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(16), static_cast<int>(ProcessingMode::Mono), "configPopup_modeSelector_mono");
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMidIcon(16), static_cast<int>(ProcessingMode::Mid), "configPopup_modeSelector_mid");
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createSideIcon(16), static_cast<int>(ProcessingMode::Side), "configPopup_modeSelector_side");
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createLeftIcon(16), static_cast<int>(ProcessingMode::Left), "configPopup_modeSelector_left");
-    modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(16), static_cast<int>(ProcessingMode::Right), "configPopup_modeSelector_right");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(16),
+                                    static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMonoIcon(16), static_cast<int>(ProcessingMode::Mono),
+                                    "configPopup_modeSelector_mono");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createMidIcon(16), static_cast<int>(ProcessingMode::Mid),
+                                    "configPopup_modeSelector_mid");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createSideIcon(16), static_cast<int>(ProcessingMode::Side),
+                                    "configPopup_modeSelector_side");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createLeftIcon(16), static_cast<int>(ProcessingMode::Left),
+                                    "configPopup_modeSelector_left");
+    modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(16), static_cast<int>(ProcessingMode::Right),
+                                    "configPopup_modeSelector_right");
     modeButtons_->onSelectionChanged = [this](int id) { handleProcessingModeChange(id); };
     addAndMakeVisible(*modeButtons_);
     OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
@@ -234,7 +242,7 @@ void OscillatorConfigDialog::updateFromOscillator(const Oscillator& oscillator)
             break;
         }
     }
-    
+
     paneSelectorComponent_->setSelectedPaneId(paneId_, false);
 
     repaint();
@@ -261,7 +269,7 @@ void OscillatorConfigDialog::notifyConfigChanged()
     state.setProperty("order", orderIndex_, nullptr);
     state.setProperty(StateIds::VisualPresetId, visualPresetId_, nullptr);
     state.setProperty(StateIds::SchemaVersion, Oscillator::CURRENT_SCHEMA_VERSION, nullptr);
-    
+
     if (visualOverrides_.isValid() && visualOverrides_.getNumProperties() > 0)
     {
         state.addChild(visualOverrides_.createCopy(), -1, nullptr);
@@ -269,9 +277,7 @@ void OscillatorConfigDialog::notifyConfigChanged()
 
     Oscillator updated(state);
 
-    listeners_.call([this, &updated](Listener& l) {
-        l.oscillatorConfigChanged(oscillatorId_, updated);
-    });
+    listeners_.call([this, &updated](Listener& l) { l.oscillatorConfigChanged(oscillatorId_, updated); });
 }
 
 void OscillatorConfigDialog::handleClose()
@@ -346,14 +352,8 @@ void OscillatorConfigDialog::handleVisualPresetChange()
     }
 }
 
-void OscillatorConfigDialog::addListener(Listener* listener)
-{
-    listeners_.add(listener);
-}
+void OscillatorConfigDialog::addListener(Listener* listener) { listeners_.add(listener); }
 
-void OscillatorConfigDialog::removeListener(Listener* listener)
-{
-    listeners_.remove(listener);
-}
+void OscillatorConfigDialog::removeListener(Listener* listener) { listeners_.remove(listener); }
 
 } // namespace oscil

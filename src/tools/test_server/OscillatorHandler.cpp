@@ -3,11 +3,14 @@
 */
 
 #include "tools/test_server/OscillatorHandler.h"
-#include "plugin/PluginEditor.h"
-#include "plugin/PluginProcessor.h"
+
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
+
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginProcessor.h"
+
 #include <algorithm>
 
 namespace oscil
@@ -29,9 +32,7 @@ OscillatorId resolveOscillatorId(const std::string& idStr, int index, const std:
 nlohmann::json serializeOscillatorList(std::vector<Oscillator>& oscillators)
 {
     std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) {
-                  return a.getOrderIndex() < b.getOrderIndex();
-              });
+              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
     nlohmann::json oscList = nlohmann::json::array();
     for (const auto& osc : oscillators)
@@ -47,8 +48,8 @@ nlohmann::json serializeOscillatorList(std::vector<Oscillator>& oscillators)
 
 } // namespace
 
-nlohmann::json OscillatorHandler::updateOscillatorOnMessageThread(
-    const std::string& idStr, int index, int processingMode, int visible)
+nlohmann::json OscillatorHandler::updateOscillatorOnMessageThread(const std::string& idStr, int index,
+                                                                  int processingMode, int visible)
 {
     nlohmann::json response;
     auto& state = editor_.getProcessor().getState();
@@ -58,7 +59,8 @@ nlohmann::json OscillatorHandler::updateOscillatorOnMessageThread(
     bool found = false;
     for (auto& osc : oscillators)
     {
-        if (osc.getId() != targetId) continue;
+        if (osc.getId() != targetId)
+            continue;
 
         if (processingMode >= 0 && processingMode <= static_cast<int>(ProcessingMode::Right))
         {
@@ -78,12 +80,18 @@ nlohmann::json OscillatorHandler::updateOscillatorOnMessageThread(
         break;
     }
 
-    if (!found) { response["error"] = "Oscillator not found"; return response; }
+    if (!found)
+    {
+        response["error"] = "Oscillator not found";
+        return response;
+    }
 
     response["status"] = "ok";
     response["oscillatorId"] = targetId.id.toStdString();
-    if (processingMode >= 0) response["processingMode"] = processingMode;
-    if (visible >= 0) response["visible"] = visible != 0;
+    if (processingMode >= 0)
+        response["processingMode"] = processingMode;
+    if (visible >= 0)
+        response["visible"] = visible != 0;
     return response;
 }
 
@@ -211,11 +219,9 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
             return;
         }
 
-        auto result = runOnMessageThread(
-            [this, oscillatorIndex, oscillatorIdStr, processingMode, visible]() {
-                return updateOscillatorOnMessageThread(oscillatorIdStr, oscillatorIndex,
-                                                      processingMode, visible);
-            });
+        auto result = runOnMessageThread([this, oscillatorIndex, oscillatorIdStr, processingMode, visible]() {
+            return updateOscillatorOnMessageThread(oscillatorIdStr, oscillatorIndex, processingMode, visible);
+        });
         res.set_content(result.dump(), "application/json");
     }
     catch (const std::exception& e)

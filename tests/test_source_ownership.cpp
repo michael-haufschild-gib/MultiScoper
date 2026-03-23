@@ -3,8 +3,9 @@
     Tests for Source owner assignment, backup instances, and ownership transfer
 */
 
-#include <gtest/gtest.h>
 #include "core/Source.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -22,10 +23,7 @@ protected:
         source = std::make_unique<Source>(sourceId);
     }
 
-    void TearDown() override
-    {
-        source.reset();
-    }
+    void TearDown() override { source.reset(); }
 };
 
 // === Basic Ownership Tests ===
@@ -75,7 +73,7 @@ TEST_F(SourceOwnershipTest, OwnerNotAddedAsBackup)
     auto owner = InstanceId::generate();
 
     source->setOwningInstanceId(owner);
-    source->addBackupInstance(owner);  // Should not add
+    source->addBackupInstance(owner); // Should not add
 
     EXPECT_FALSE(source->hasBackupInstances());
 }
@@ -113,7 +111,7 @@ TEST_F(SourceOwnershipTest, TransferOwnershipWithNoBackups)
     source->setOwningInstanceId(owner);
 
     EXPECT_FALSE(source->transferOwnership());
-    EXPECT_EQ(source->getOwningInstanceId(), owner);  // Owner unchanged
+    EXPECT_EQ(source->getOwningInstanceId(), owner); // Owner unchanged
 }
 
 // === Edge Case Tests ===
@@ -131,8 +129,8 @@ TEST_F(SourceOwnershipTest, AddDuplicateBackupInstance)
     auto backup = InstanceId::generate();
 
     source->addBackupInstance(backup);
-    source->addBackupInstance(backup);  // Duplicate
-    source->addBackupInstance(backup);  // Duplicate again
+    source->addBackupInstance(backup); // Duplicate
+    source->addBackupInstance(backup); // Duplicate again
 
     // Should only have one entry
     EXPECT_EQ(source->getBackupInstanceIds().size(), 1);

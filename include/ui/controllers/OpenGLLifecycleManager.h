@@ -5,10 +5,11 @@
 
 #pragma once
 
+#include "rendering/WaveformGLRenderer.h"
+
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
-#include <juce_audio_processors/juce_audio_processors.h>
-#include "rendering/WaveformGLRenderer.h"
 
 namespace oscil
 {

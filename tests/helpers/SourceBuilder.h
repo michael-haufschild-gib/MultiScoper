@@ -6,6 +6,7 @@
 #pragma once
 
 #include "core/Source.h"
+
 #include <memory>
 
 namespace oscil::test
@@ -40,7 +41,7 @@ public:
      */
     SourceBuilder& withId(const juce::String& id)
     {
-        sourceId_ = SourceId{ id };
+        sourceId_ = SourceId{id};
         return *this;
     }
 
@@ -191,10 +192,10 @@ public:
         if (targetState == SourceState::DISCOVERED)
             return;
 
-        (void)source.transitionTo(SourceState::ACTIVE);
+        (void) source.transitionTo(SourceState::ACTIVE);
 
         if (targetState != SourceState::ACTIVE)
-            (void)source.transitionTo(targetState);
+            (void) source.transitionTo(targetState);
     }
 
     void applyProperties(Source& source)
@@ -246,10 +247,7 @@ public:
     /**
      * Build and return a shared_ptr to the Source
      */
-    std::shared_ptr<Source> buildShared()
-    {
-        return std::shared_ptr<Source>(buildUnique().release());
-    }
+    std::shared_ptr<Source> buildShared() { return std::shared_ptr<Source>(buildUnique().release()); }
 
 private:
     SourceId sourceId_;
@@ -276,17 +274,11 @@ private:
 /**
  * Helper function to quickly create a SourceId
  */
-inline SourceId makeSourceId(const juce::String& id)
-{
-    return SourceId{ id };
-}
+inline SourceId makeSourceId(const juce::String& id) { return SourceId{id}; }
 
 /**
  * Helper function to quickly create an InstanceId
  */
-inline InstanceId makeInstanceId(const juce::String& id)
-{
-    return InstanceId{ id };
-}
+inline InstanceId makeInstanceId(const juce::String& id) { return InstanceId{id}; }
 
 } // namespace oscil::test

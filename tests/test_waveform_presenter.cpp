@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
-#include "ui/panels/WaveformPresenter.h"
 #include "core/SharedCaptureBuffer.h"
+#include "ui/panels/WaveformPresenter.h"
+
+#include <gtest/gtest.h>
 #include <vector>
 
 using namespace oscil;
@@ -8,7 +9,8 @@ using namespace oscil;
 // Mock SharedCaptureBuffer to control input data.
 // Overrides both the per-channel and multi-channel read APIs so the
 // presenter's epoch-consistent multi-channel path is exercised.
-class MockCaptureBuffer : public SharedCaptureBuffer {
+class MockCaptureBuffer : public SharedCaptureBuffer
+{
 public:
     std::vector<float> leftData;
     std::vector<float> rightData;
@@ -20,7 +22,8 @@ public:
 
     using SharedCaptureBuffer::read;
 
-    int read(float* dest, int numSamples, int channel) const override {
+    int read(float* dest, int numSamples, int channel) const override
+    {
         if (channel == 0)
             lastRequestedSamplesLeft = numSamples;
         else if (channel == 1)
@@ -28,24 +31,28 @@ public:
 
         const auto& source = (channel == 0) ? leftData : rightData;
         int count = std::min(numSamples, static_cast<int>(source.size()));
-        for (int i = 0; i < count; ++i) {
+        for (int i = 0; i < count; ++i)
+        {
             dest[i] = source[i];
         }
-        for (int i = count; i < numSamples; ++i) {
+        for (int i = count; i < numSamples; ++i)
+        {
             dest[i] = 0.0f;
         }
         return count;
     }
 
-    int read(juce::AudioBuffer<float>& output, int numSamples) const override {
+    int read(juce::AudioBuffer<float>& output, int numSamples) const override
+    {
         lastRequestedSamplesLeft = numSamples;
         lastRequestedSamplesRight = numSamples;
 
         int numChannels = std::min(output.getNumChannels(), 2);
-        const std::vector<float>* sources[] = { &leftData, &rightData };
+        const std::vector<float>* sources[] = {&leftData, &rightData};
 
         int samplesRead = 0;
-        for (int ch = 0; ch < numChannels; ++ch) {
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
             const auto& source = *sources[ch];
             int count = std::min(numSamples, static_cast<int>(source.size()));
             samplesRead = std::max(samplesRead, count);
@@ -59,36 +66,37 @@ public:
         return samplesRead;
     }
 
-    CaptureFrameMetadata getLatestMetadata() const override {
-        return metadata;
-    }
+    CaptureFrameMetadata getLatestMetadata() const override { return metadata; }
 };
 
-class WaveformPresenterTest : public ::testing::Test {
+class WaveformPresenterTest : public ::testing::Test
+{
 protected:
     WaveformPresenter presenter;
     std::shared_ptr<MockCaptureBuffer> buffer;
 
-    void SetUp() override {
+    void SetUp() override
+    {
         buffer = std::make_shared<MockCaptureBuffer>();
         // Fill with some dummy data
         buffer->leftData.assign(2048, 0.5f);
         buffer->rightData.assign(2048, -0.5f);
         buffer->metadata.timestamp = 0;
         buffer->metadata.numSamples = 512;
-        
+
         presenter.setCaptureBuffer(buffer);
         presenter.setDisplaySamples(1024);
         presenter.setDisplayWidth(100);
     }
 };
 
-TEST_F(WaveformPresenterTest, ProcessReadsBuffer) {
+TEST_F(WaveformPresenterTest, ProcessReadsBuffer)
+{
     presenter.process();
-    
+
     EXPECT_TRUE(presenter.hasData());
     EXPECT_FALSE(presenter.getDisplayBuffer1().empty());
-    
+
     // Check that data matches input (decimated/processed)
     // Input is constant 0.5, so output should be 0.5
     // Note: SignalProcessor might process in place
@@ -96,50 +104,56 @@ TEST_F(WaveformPresenterTest, ProcessReadsBuffer) {
     EXPECT_NEAR(presenter.getDisplayBuffer1()[0], 0.5f, 0.01f);
 }
 
-TEST_F(WaveformPresenterTest, ProcessingModeMono) {
+TEST_F(WaveformPresenterTest, ProcessingModeMono)
+{
     presenter.setProcessingMode(ProcessingMode::Mono);
     presenter.process();
-    
+
     EXPECT_FALSE(presenter.isStereo());
     // Mono mix: (L+R)/2 = (0.5 + -0.5)/2 = 0
     EXPECT_NEAR(presenter.getDisplayBuffer1()[0], 0.0f, 0.01f);
 }
 
-TEST_F(WaveformPresenterTest, AutoScaleLogic) {
+TEST_F(WaveformPresenterTest, AutoScaleLogic)
+{
     presenter.setAutoScale(true);
-    
+
     // Input peak is 0.5 (constant 0.5 signal)
     // Target scale should be ~ 0.9 / 0.5 = 1.8
-    
+
     // Process multiple times to allow smoothing to settle
-    for(int i=0; i<200; ++i) {
+    for (int i = 0; i < 200; ++i)
+    {
         presenter.process();
     }
-    
+
     float scale = presenter.getEffectiveScale();
     EXPECT_GT(scale, 1.0f);
     EXPECT_NEAR(scale, 1.8f, 0.1f) << "Scale: " << scale << ", Peak: " << presenter.getPeakLevel();
 }
 
-TEST_F(WaveformPresenterTest, ManualScaleDoesNotChange) {
+TEST_F(WaveformPresenterTest, ManualScaleDoesNotChange)
+{
     presenter.setAutoScale(false);
     presenter.process();
-    
+
     EXPECT_EQ(presenter.getEffectiveScale(), 1.0f);
 }
 
-TEST_F(WaveformPresenterTest, GainProcessing) {
+TEST_F(WaveformPresenterTest, GainProcessing)
+{
     // +6dB = 2.0x
     presenter.setGainDb(6.0f);
     presenter.setAutoScale(false);
-    
+
     presenter.process();
-    
+
     // Input 0.5 * 2.0 = 1.0
     EXPECT_NEAR(presenter.getDisplayBuffer1()[0], 1.0f, 0.01f);
 }
 
-TEST_F(WaveformPresenterTest, RestartRequestWaitsUntilTriggerTimestampIsReached) {
+TEST_F(WaveformPresenterTest, RestartRequestWaitsUntilTriggerTimestampIsReached)
+{
     buffer->metadata.timestamp = 9000;
     buffer->metadata.numSamples = 128;
 
@@ -151,7 +165,8 @@ TEST_F(WaveformPresenterTest, RestartRequestWaitsUntilTriggerTimestampIsReached)
     EXPECT_FALSE(presenter.hasData());
 }
 
-TEST_F(WaveformPresenterTest, RestartRequestClampsReadWindowUntilDisplayWindowIsFilled) {
+TEST_F(WaveformPresenterTest, RestartRequestClampsReadWindowUntilDisplayWindowIsFilled)
+{
     presenter.requestRestartAtTimestamp(10000);
 
     buffer->metadata.timestamp = 10000;
@@ -177,7 +192,8 @@ TEST_F(WaveformPresenterTest, RestartRequestClampsReadWindowUntilDisplayWindowIs
     EXPECT_EQ(buffer->lastRequestedSamplesLeft, 1024);
 }
 
-TEST_F(WaveformPresenterTest, RestartRequestNewerTriggerOverridesPendingWindow) {
+TEST_F(WaveformPresenterTest, RestartRequestNewerTriggerOverridesPendingWindow)
+{
     presenter.requestRestartAtTimestamp(10000);
 
     buffer->metadata.timestamp = 10000;
@@ -202,7 +218,8 @@ TEST_F(WaveformPresenterTest, RestartRequestNewerTriggerOverridesPendingWindow) 
     EXPECT_EQ(buffer->lastRequestedSamplesLeft, 96);
 }
 
-TEST_F(WaveformPresenterTest, RestartBurstEventuallyReturnsToFullWindowWhenTriggersStop) {
+TEST_F(WaveformPresenterTest, RestartBurstEventuallyReturnsToFullWindowWhenTriggersStop)
+{
     presenter.requestRestartAtTimestamp(10000);
 
     // Simulate rapid trigger bursts by repeatedly replacing restart timestamp
@@ -237,7 +254,8 @@ TEST_F(WaveformPresenterTest, RestartBurstEventuallyReturnsToFullWindowWhenTrigg
     EXPECT_EQ(buffer->lastRequestedSamplesLeft, 1024);
 }
 
-TEST_F(WaveformPresenterTest, RestartRequestWithZeroTimestampAnchorsToCurrentFrameEnd) {
+TEST_F(WaveformPresenterTest, RestartRequestWithZeroTimestampAnchorsToCurrentFrameEnd)
+{
     buffer->metadata.timestamp = 5000;
     buffer->metadata.numSamples = 128;
 
@@ -254,7 +272,8 @@ TEST_F(WaveformPresenterTest, RestartRequestWithZeroTimestampAnchorsToCurrentFra
     EXPECT_EQ(buffer->lastRequestedSamplesLeft, 64);
 }
 
-TEST_F(WaveformPresenterTest, RestartRequestWithNegativeTimestampAnchorsToCurrentFrameEnd) {
+TEST_F(WaveformPresenterTest, RestartRequestWithNegativeTimestampAnchorsToCurrentFrameEnd)
+{
     buffer->metadata.timestamp = 7000;
     buffer->metadata.numSamples = 64;
 
@@ -270,13 +289,14 @@ TEST_F(WaveformPresenterTest, RestartRequestWithNegativeTimestampAnchorsToCurren
     EXPECT_EQ(buffer->lastRequestedSamplesLeft, 96);
 }
 
-TEST_F(WaveformPresenterTest, RestartRequestKeepsFixedDisplayWindowWithTrailingSilence) {
+TEST_F(WaveformPresenterTest, RestartRequestKeepsFixedDisplayWindowWithTrailingSilence)
+{
     presenter.setDisplaySamples(8);
     presenter.setDisplayWidth(2); // targetSamples = 4
     presenter.setAutoScale(false);
 
-    buffer->leftData = { 1.0f, 0.0f };
-    buffer->rightData = { 1.0f, 0.0f };
+    buffer->leftData = {1.0f, 0.0f};
+    buffer->rightData = {1.0f, 0.0f};
     buffer->metadata.timestamp = 1000;
     buffer->metadata.numSamples = 2;
 
@@ -291,7 +311,8 @@ TEST_F(WaveformPresenterTest, RestartRequestKeepsFixedDisplayWindowWithTrailingS
     EXPECT_NEAR(display[3], 0.0f, 0.01f);
 }
 
-TEST_F(WaveformPresenterTest, NoSamplesReadClearsPreviouslyRenderedData) {
+TEST_F(WaveformPresenterTest, NoSamplesReadClearsPreviouslyRenderedData)
+{
     presenter.process();
     ASSERT_TRUE(presenter.hasData());
 

@@ -22,6 +22,6 @@ void AnimationSettings::updateFromSystem()
     }
 }
 
-} // namespace oscil
+}  // namespace oscil
 
-#endif // JUCE_MAC
+#endif  // JUCE_MAC

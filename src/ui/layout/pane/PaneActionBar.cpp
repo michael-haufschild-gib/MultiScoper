@@ -3,6 +3,7 @@
 */
 
 #include "ui/layout/pane/PaneActionBar.h"
+
 #include "ui/components/ListItemIcons.h"
 
 namespace oscil
@@ -27,11 +28,7 @@ void applyHoldButtonVisuals(OscilButton& button, IThemeService& themeService, bo
 }
 } // namespace
 
-PaneActionBar::PaneActionBar(IThemeService& themeService)
-    : themeService_(themeService)
-{
-    setupButtons();
-}
+PaneActionBar::PaneActionBar(IThemeService& themeService) : themeService_(themeService) { setupButtons(); }
 
 void PaneActionBar::setupButtons()
 {

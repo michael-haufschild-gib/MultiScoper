@@ -5,10 +5,12 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -28,8 +30,9 @@ class IThemeService;
  * - Validation: Optional callback to validate before saving
  * - Empty text handling: Reverts to original if empty string entered
  */
-class InlineEditLabel : public ThemedComponent,
-                        public TestIdSupport
+class InlineEditLabel
+    : public ThemedComponent
+    , public TestIdSupport
 {
 public:
     explicit InlineEditLabel(IThemeService& themeService);
@@ -81,7 +84,6 @@ public:
     void mouseDoubleClick(const juce::MouseEvent& e) override;
     void focusLost(FocusChangeType cause) override;
 
-
     // Size hints
     int getPreferredHeight() const;
 
@@ -106,7 +108,7 @@ private:
     int maxLength_ = 256;
 
     // Styling
-    juce::Font font_{ juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT) };
+    juce::Font font_{juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT)};
     juce::Justification justification_ = juce::Justification::centredLeft;
     juce::Colour textColour_;
     bool useCustomTextColour_ = false;

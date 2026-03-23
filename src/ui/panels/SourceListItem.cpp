@@ -52,9 +52,8 @@ void SourceListItem::paint(juce::Graphics& g)
     {
         g.setColour(theme.statusActive);
         float dotSize = 8.0f;
-        g.fillEllipse(activityBounds.getCentreX() - dotSize / 2,
-                      activityBounds.getCentreY() - dotSize / 2,
-                      dotSize, dotSize);
+        g.fillEllipse(activityBounds.getCentreX() - dotSize / 2, activityBounds.getCentreY() - dotSize / 2, dotSize,
+                      dotSize);
     }
 
     bounds.removeFromRight(4);
@@ -95,20 +94,20 @@ juce::String SourceListItem::getIconForSource() const
     auto nameLower = name_.toLowerCase();
 
     if (nameLower.contains("vocal") || nameLower.contains("voice") || nameLower.contains("mic"))
-        return juce::String::charToString(0x1F3A4);  // Microphone
+        return juce::String::charToString(0x1F3A4); // Microphone
     if (nameLower.contains("drum") || nameLower.contains("perc"))
-        return juce::String::charToString(0x1F941);  // Drum
+        return juce::String::charToString(0x1F941); // Drum
     if (nameLower.contains("bass"))
-        return juce::String::charToString(0x1F3B8);  // Guitar (bass)
+        return juce::String::charToString(0x1F3B8); // Guitar (bass)
     if (nameLower.contains("guitar") || nameLower.contains("gtr"))
-        return juce::String::charToString(0x1F3B8);  // Guitar
+        return juce::String::charToString(0x1F3B8); // Guitar
     if (nameLower.contains("synth") || nameLower.contains("keys") || nameLower.contains("piano"))
-        return juce::String::charToString(0x1F3B9);  // Keyboard
+        return juce::String::charToString(0x1F3B9); // Keyboard
     if (nameLower.contains("master") || nameLower.contains("main") || nameLower.contains("mix"))
-        return juce::String::charToString(0x1F50A);  // Speaker
+        return juce::String::charToString(0x1F50A); // Speaker
 
     // Default audio icon
-    return juce::String::charToString(0x1F3B5);  // Musical note
+    return juce::String::charToString(0x1F3B5); // Musical note
 }
 
 void SourceListItem::mouseEnter(const juce::MouseEvent&)
@@ -161,8 +160,7 @@ bool SourceListItem::matchesFilter(const juce::String& filter) const
 // NoSourceItem implementation
 //==============================================================================
 
-NoSourceItem::NoSourceItem(IThemeService& themeService)
-    : themeService_(themeService)
+NoSourceItem::NoSourceItem(IThemeService& themeService) : themeService_(themeService)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
@@ -186,8 +184,7 @@ void NoSourceItem::paint(juce::Graphics& g)
     // Icon and text
     g.setColour(theme.textSecondary);
     g.setFont(juce::FontOptions(13.0f));
-    g.drawText(juce::String::charToString(0x26D4) + "  No Source (Disconnect)",
-               bounds.reduced(12, 0).toNearestInt(),
+    g.drawText(juce::String::charToString(0x26D4) + "  No Source (Disconnect)", bounds.reduced(12, 0).toNearestInt(),
                juce::Justification::centredLeft);
 }
 
@@ -239,8 +236,7 @@ SourceSelectorPopup::SourceSelectorPopup(IThemeService& themeService, IInstanceR
 
     // No Source option
     noSourceItem_ = std::make_unique<NoSourceItem>(themeService_);
-    noSourceItem_->onClick = [this]()
-    {
+    noSourceItem_->onClick = [this]() {
         if (onDisconnect)
             onDisconnect();
     };
@@ -271,10 +267,7 @@ void SourceSelectorPopup::paint(juce::Graphics& g)
     g.drawRect(getLocalBounds(), 1);
 }
 
-void SourceSelectorPopup::resized()
-{
-    layoutContent();
-}
+void SourceSelectorPopup::resized() { layoutContent(); }
 
 void SourceSelectorPopup::layoutContent()
 {
@@ -331,8 +324,7 @@ void SourceSelectorPopup::refreshSources()
     {
         auto item = std::make_unique<SourceListItem>(themeService_, source);
         item->setSelected(source.sourceId == selectedSourceId_);
-        item->onClick = [this](const SourceId& id)
-        {
+        item->onClick = [this](const SourceId& id) {
             if (onSourceSelected)
                 onSourceSelected(id);
         };
@@ -385,10 +377,7 @@ void SourceSelectorPopup::sourceUpdated(const SourceId&)
     });
 }
 
-void SourceSelectorPopup::themeChanged(const ColorTheme& newTheme)
-{
-    updateThemeColors(newTheme);
-}
+void SourceSelectorPopup::themeChanged(const ColorTheme& newTheme) { updateThemeColors(newTheme); }
 
 void SourceSelectorPopup::updateThemeColors(const ColorTheme& newTheme)
 {

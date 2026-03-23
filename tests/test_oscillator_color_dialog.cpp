@@ -1,7 +1,8 @@
-#include <gtest/gtest.h>
-#include "ui/dialogs/OscillatorColorDialog.h"
 #include "core/WaveformColorPalette.h"
+#include "ui/dialogs/OscillatorColorDialog.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 namespace oscil
 {

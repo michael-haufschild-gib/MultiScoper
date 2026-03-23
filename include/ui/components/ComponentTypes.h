@@ -183,8 +183,7 @@ struct RichTooltipContent
     bool showColourPreview = false;
 
     RichTooltipContent() = default;
-    RichTooltipContent(const juce::String& t, const juce::String& v = {})
-        : title(t), value(v) {}
+    RichTooltipContent(const juce::String& t, const juce::String& v = {}) : title(t), value(v) {}
 };
 
 // Validation result

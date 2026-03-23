@@ -7,10 +7,11 @@
 
 #include "rendering/Framebuffer.h"
 #include "rendering/FramebufferPool.h"
+
 #include <juce_core/juce_core.h>
 
 #if OSCIL_ENABLE_OPENGL
-#include <juce_opengl/juce_opengl.h>
+    #include <juce_opengl/juce_opengl.h>
 
 namespace oscil
 {
@@ -67,13 +68,8 @@ public:
      * @param pool The framebuffer pool (for fullscreen quad rendering)
      * @param deltaTime Time since last frame in seconds (for animated effects)
      */
-    virtual void apply(
-        juce::OpenGLContext& context,
-        Framebuffer* source,
-        Framebuffer* destination,
-        FramebufferPool& pool,
-        float deltaTime = 0.0f
-    ) = 0;
+    virtual void apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                       FramebufferPool& pool, float deltaTime = 0.0f) = 0;
 
     /**
      * Set effect intensity/strength (0.0 = disabled, 1.0 = full effect).
@@ -94,10 +90,7 @@ public:
      * Default implementation does nothing (for effects that configure via other means).
      * @param config The full visual configuration
      */
-    virtual void configure(const struct VisualConfiguration& config)
-    {
-        juce::ignoreUnused(config);
-    }
+    virtual void configure(const struct VisualConfiguration& config) { juce::ignoreUnused(config); }
 
 protected:
     PostProcessEffect() = default;
@@ -108,10 +101,7 @@ protected:
      * @param fragmentSource The fragment shader source (legacy GLSL syntax)
      * @return true if compilation succeeded
      */
-    static bool compileEffectShader(
-        juce::OpenGLShaderProgram& program,
-        const char* fragmentSource
-    );
+    static bool compileEffectShader(juce::OpenGLShaderProgram& program, const char* fragmentSource);
 
     /**
      * Standard fullscreen quad vertex shader source (legacy GLSL).

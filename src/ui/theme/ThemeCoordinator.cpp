@@ -29,9 +29,6 @@ void ThemeCoordinator::themeChanged(const ColorTheme& newTheme)
     }
 }
 
-const ColorTheme& ThemeCoordinator::getCurrentTheme() const
-{
-    return themeService_.getCurrentTheme();
-}
+const ColorTheme& ThemeCoordinator::getCurrentTheme() const { return themeService_.getCurrentTheme(); }
 
 } // namespace oscil

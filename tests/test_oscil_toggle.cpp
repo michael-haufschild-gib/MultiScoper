@@ -10,24 +10,19 @@
     - Label width calculation incorrect (no-label narrower than with-label)
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilToggle.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilToggleTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 

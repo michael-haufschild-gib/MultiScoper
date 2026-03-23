@@ -4,27 +4,22 @@
 */
 
 #include "tools/test_server/PluginTestServer.h"
+
 #include "plugin/PluginEditor.h"
 #include "tools/test_server/LayoutHandler.h"
 #include "tools/test_server/OscillatorHandler.h"
-#include "tools/test_server/SourceHandler.h"
 #include "tools/test_server/ScreenshotHandler.h"
+#include "tools/test_server/SourceHandler.h"
+#include "tools/test_server/StateHandler.h"
 #include "tools/test_server/TestRunnerHandler.h"
 #include "tools/test_server/WaveformHandler.h"
-#include "tools/test_server/StateHandler.h"
 
 namespace oscil
 {
 
-PluginTestServer::PluginTestServer(OscilPluginEditor& editor)
-    : editor_(editor)
-{
-}
+PluginTestServer::PluginTestServer(OscilPluginEditor& editor) : editor_(editor) {}
 
-PluginTestServer::~PluginTestServer()
-{
-    stop();
-}
+PluginTestServer::~PluginTestServer() { stop(); }
 
 void PluginTestServer::start(int port)
 {
@@ -77,10 +72,7 @@ void PluginTestServer::stop()
     layoutHandler_.reset();
 }
 
-void PluginTestServer::serverThread()
-{
-    server_->listen("127.0.0.1", port_);
-}
+void PluginTestServer::serverThread() { server_->listen("127.0.0.1", port_); }
 
 void PluginTestServer::setupLayoutEndpoints()
 {

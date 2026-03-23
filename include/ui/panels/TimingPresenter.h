@@ -7,8 +7,10 @@
 #pragma once
 
 #include "core/dsp/TimingConfig.h"
-#include <functional>
+
 #include <juce_core/juce_core.h>
+
+#include <functional>
 
 namespace oscil
 {
@@ -64,7 +66,7 @@ public:
     void setOnWaveformModeChanged(WaveformModeCallback cb) { onWaveformModeChanged_ = std::move(cb); }
     void setOnBPMChanged(BPMCallback cb) { onBPMChanged_ = std::move(cb); }
     void setOnSyncStatusChanged(SyncStatusCallback cb) { onSyncStatusChanged_ = std::move(cb); }
-    
+
     // Combined callback for when the View needs to refresh visibility/layout
     void setOnStateChanged(StateChangedCallback cb) { onStateChanged_ = std::move(cb); }
 

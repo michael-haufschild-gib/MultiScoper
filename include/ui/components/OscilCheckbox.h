@@ -5,14 +5,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
-
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -26,10 +26,12 @@ namespace oscil
  * - Optional label
  * - Full keyboard accessibility
  */
-class OscilCheckbox : public ThemedComponent,
-                      
-                      public TestIdSupport,
-                      private juce::Timer
+class OscilCheckbox
+    : public ThemedComponent
+    ,
+
+      public TestIdSupport
+    , private juce::Timer
 {
 public:
     explicit OscilCheckbox(IThemeService& themeService);
@@ -78,7 +80,6 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
-
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
@@ -103,7 +104,7 @@ private:
     bool labelOnRight_ = true;
 
     // Animation
-    SpringAnimation checkSpring_;      // 0 = unchecked, 1 = checked
+    SpringAnimation checkSpring_; // 0 = unchecked, 1 = checked
     SpringAnimation hoverSpring_;
 
     // Theme

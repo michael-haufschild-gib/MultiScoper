@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>
+
 #include <atomic>
 
 namespace oscil
@@ -38,7 +39,7 @@ public:
 private:
     enum class State
     {
-        Idle,           // Waiting for transient onset
+        Idle,            // Waiting for transient onset
         MeasuringAttack, // Transient detected, measuring rise to peak
         MeasuringDecay   // Peak passed, measuring fall to baseline
     };
@@ -46,18 +47,18 @@ private:
     State state_ = State::Idle;
 
     // Dual envelope followers
-    float fastEnvelope_ = 0.0f;   // Quick attack, quick release
-    float slowEnvelope_ = 0.0f;   // Slow attack, slow release
+    float fastEnvelope_ = 0.0f; // Quick attack, quick release
+    float slowEnvelope_ = 0.0f; // Slow attack, slow release
 
     // Transient measurement
-    float transientPeak_ = 0.0f;       // Peak level during current transient
-    float onsetLevel_ = 0.0f;          // Level at transient onset
-    double samplesInState_ = 0;        // Sample counter for timing
+    float transientPeak_ = 0.0f;          // Peak level during current transient
+    float onsetLevel_ = 0.0f;             // Level at transient onset
+    double samplesInState_ = 0;           // Sample counter for timing
     double samplesSincePeakIncrease_ = 0; // Counter for plateau detection
 
     // Results (atomic for thread-safe UI read)
-    std::atomic<float> attackTimeMs_{ 0.0f };
-    std::atomic<float> decayTimeMs_{ 0.0f };
+    std::atomic<float> attackTimeMs_{0.0f};
+    std::atomic<float> decayTimeMs_{0.0f};
 
     // Envelope coefficients (set based on sample rate)
     float fastAttackCoef_ = 0.0f;
@@ -75,10 +76,10 @@ private:
     float processDecayState(double sampleRate, float currentDecay);
 
     // Detection thresholds
-    static constexpr float ONSET_RATIO = 2.0f;      // Fast/slow ratio to detect onset
-    static constexpr float PEAK_THRESHOLD = 0.9f;   // Fraction of peak to consider "at peak"
-    static constexpr float DECAY_THRESHOLD = 0.2f;  // Fraction of peak to consider "decayed"
-    static constexpr float NOISE_FLOOR = 0.001f;    // Minimum level to consider signal present
+    static constexpr float ONSET_RATIO = 2.0f;     // Fast/slow ratio to detect onset
+    static constexpr float PEAK_THRESHOLD = 0.9f;  // Fraction of peak to consider "at peak"
+    static constexpr float DECAY_THRESHOLD = 0.2f; // Fraction of peak to consider "decayed"
+    static constexpr float NOISE_FLOOR = 0.001f;   // Minimum level to consider signal present
 
     // Envelope time constants (in milliseconds)
     static constexpr float FAST_ATTACK_MS = 0.5f;

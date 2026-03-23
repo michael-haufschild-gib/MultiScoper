@@ -9,30 +9,22 @@ namespace oscil::test
 
 void TestHttpServer::setupVerificationRoutes()
 {
-    server_->Post("/screenshot", [this](const httplib::Request& req, httplib::Response& res) {
-        handleScreenshot(req, res);
-    });
-    server_->Post("/screenshot/compare", [this](const httplib::Request& req, httplib::Response& res) {
-        handleScreenshotCompare(req, res);
-    });
-    server_->Post("/baseline/save", [this](const httplib::Request& req, httplib::Response& res) {
-        handleBaselineSave(req, res);
-    });
-    server_->Post("/verify/waveform", [this](const httplib::Request& req, httplib::Response& res) {
-        handleVerifyWaveform(req, res);
-    });
-    server_->Post("/verify/color", [this](const httplib::Request& req, httplib::Response& res) {
-        handleVerifyColor(req, res);
-    });
-    server_->Post("/verify/bounds", [this](const httplib::Request& req, httplib::Response& res) {
-        handleVerifyBounds(req, res);
-    });
-    server_->Post("/verify/visible", [this](const httplib::Request& req, httplib::Response& res) {
-        handleVerifyVisible(req, res);
-    });
-    server_->Get("/analyze/waveform", [this](const httplib::Request& req, httplib::Response& res) {
-        handleAnalyzeWaveform(req, res);
-    });
+    server_->Post("/screenshot",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleScreenshot(req, res); });
+    server_->Post("/screenshot/compare",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleScreenshotCompare(req, res); });
+    server_->Post("/baseline/save",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleBaselineSave(req, res); });
+    server_->Post("/verify/waveform",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleVerifyWaveform(req, res); });
+    server_->Post("/verify/color",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleVerifyColor(req, res); });
+    server_->Post("/verify/bounds",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleVerifyBounds(req, res); });
+    server_->Post("/verify/visible",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleVerifyVisible(req, res); });
+    server_->Get("/analyze/waveform",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleAnalyzeWaveform(req, res); });
 }
 
 void TestHttpServer::handleScreenshot(const httplib::Request& req, httplib::Response& res)
@@ -93,10 +85,10 @@ void TestHttpServer::handleScreenshotCompare(const httplib::Request& req, httpli
 
         if (!result.diffBounds.isEmpty())
         {
-            data["diffBounds"] = {
-                {"x", result.diffBounds.getX()}, {"y", result.diffBounds.getY()},
-                {"width", result.diffBounds.getWidth()}, {"height", result.diffBounds.getHeight()}
-            };
+            data["diffBounds"] = {{"x", result.diffBounds.getX()},
+                                  {"y", result.diffBounds.getY()},
+                                  {"width", result.diffBounds.getWidth()},
+                                  {"height", result.diffBounds.getHeight()}};
         }
 
         res.set_content(successResponse(data).dump(), "application/json");
@@ -206,9 +198,7 @@ void TestHttpServer::handleVerifyBounds(const httplib::Request& req, httplib::Re
         data["pass"] = pass;
         data["elementId"] = elementId;
         data["actualBounds"] = {
-            {"x", bounds.getX()}, {"y", bounds.getY()},
-            {"width", bounds.getWidth()}, {"height", bounds.getHeight()}
-        };
+            {"x", bounds.getX()}, {"y", bounds.getY()}, {"width", bounds.getWidth()}, {"height", bounds.getHeight()}};
         data["expectedWidth"] = expectedWidth;
         data["expectedHeight"] = expectedHeight;
         res.set_content(successResponse(data).dump(), "application/json");
@@ -244,9 +234,7 @@ void TestHttpServer::handleAnalyzeWaveform(const httplib::Request& req, httplib:
         std::string elementId = req.get_param_value("elementId");
         std::string bgColorHex = req.get_param_value("backgroundColor");
 
-        juce::Colour backgroundColor = bgColorHex.empty()
-            ? juce::Colours::black
-            : juce::Colour::fromString(bgColorHex);
+        juce::Colour backgroundColor = bgColorHex.empty() ? juce::Colours::black : juce::Colour::fromString(bgColorHex);
 
         auto image = screenshot_.getElementImage(elementId);
         if (image.isNull())

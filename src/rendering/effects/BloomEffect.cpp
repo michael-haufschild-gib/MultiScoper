@@ -267,29 +267,34 @@ BloomEffect::~BloomEffect() = default;
 
 bool BloomEffect::compile(juce::OpenGLContext& context)
 {
-    if (compiled_) return true;
+    if (compiled_)
+        return true;
 
     // 1. Prefilter
     prefilterShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*prefilterShader_, prefilterFragmentShader)) return false;
+    if (!compileEffectShader(*prefilterShader_, prefilterFragmentShader))
+        return false;
     prefilterThreshLoc_ = prefilterShader_->getUniformIDFromName("threshold");
     prefilterSoftKneeLoc_ = prefilterShader_->getUniformIDFromName("softKnee");
     prefilterResLoc_ = prefilterShader_->getUniformIDFromName("srcResolution");
 
     // 2. Downsample
     downsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*downsampleShader_, downsampleFragmentShader)) return false;
+    if (!compileEffectShader(*downsampleShader_, downsampleFragmentShader))
+        return false;
     downsampleResLoc_ = downsampleShader_->getUniformIDFromName("srcResolution");
 
     // 3. Upsample
     upsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*upsampleShader_, upsampleFragmentShader)) return false;
+    if (!compileEffectShader(*upsampleShader_, upsampleFragmentShader))
+        return false;
     upsampleFilterRadiusLoc_ = upsampleShader_->getUniformIDFromName("filterRadius");
     upsampleTexelSizeLoc_ = upsampleShader_->getUniformIDFromName("texelSize");
 
     // 4. Combine
     combineShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-    if (!compileEffectShader(*combineShader_, combineFragmentShader)) return false;
+    if (!compileEffectShader(*combineShader_, combineFragmentShader))
+        return false;
     combineOriginalLoc_ = combineShader_->getUniformIDFromName("originalTexture");
     combineBloomLoc_ = combineShader_->getUniformIDFromName("bloomTexture");
     combineIntensityLoc_ = combineShader_->getUniformIDFromName("intensity");
@@ -313,10 +318,7 @@ void BloomEffect::release(juce::OpenGLContext& context)
     lastHeight_ = 0;
 }
 
-bool BloomEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool BloomEffect::isCompiled() const { return compiled_; }
 
 void BloomEffect::resizeMipChain(juce::OpenGLContext& context, int w, int h)
 {
@@ -341,7 +343,7 @@ void BloomEffect::passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer
     source->bindTexture(0);
     ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
     ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
-    ext.glUniform2f(prefilterResLoc_, (float)source->width, (float)source->height);
+    ext.glUniform2f(prefilterResLoc_, (float) source->width, (float) source->height);
     pool.renderFullscreenQuad();
     mipChain_[0]->unbind();
 }
@@ -355,7 +357,7 @@ void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, Framebuffe
         Framebuffer* dst = mipChain_[static_cast<size_t>(i) + 1].get();
         dst->bind();
         src->bindTexture(0);
-        ext.glUniform2f(downsampleResLoc_, (float)src->width, (float)src->height);
+        ext.glUniform2f(downsampleResLoc_, (float) src->width, (float) src->height);
         pool.renderFullscreenQuad();
         dst->unbind();
     }
@@ -375,13 +377,14 @@ void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferP
         Framebuffer* dst = mipChain_[static_cast<size_t>(i) - 1].get();
         dst->bind();
         src->bindTexture(0);
-        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float)src->width, 1.0f / (float)src->height);
+        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float) src->width, 1.0f / (float) src->height);
         pool.renderFullscreenQuad();
         dst->unbind();
     }
 }
 
-void BloomEffect::passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool)
+void BloomEffect::passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination,
+                              FramebufferPool& pool)
 {
     glDisable(GL_BLEND);
 
@@ -405,15 +408,12 @@ void BloomEffect::passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* 
     destination->unbind();
 }
 
-void BloomEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void BloomEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                        FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
-    if (!compiled_ || !source || !destination) return;
+    if (!compiled_ || !source || !destination)
+        return;
 
     if (source->width != lastWidth_ || source->height != lastHeight_)
         resizeMipChain(context, source->width, source->height);

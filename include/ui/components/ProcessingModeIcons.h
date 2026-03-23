@@ -31,13 +31,11 @@ inline juce::Path createStereoIcon(float size, float strokeWidth = 1.5f)
 
     // Create left circle outline
     juce::Path leftCircle;
-    leftCircle.addEllipse(leftCenterX - circleRadius, centerY - circleRadius,
-                          circleRadius * 2, circleRadius * 2);
+    leftCircle.addEllipse(leftCenterX - circleRadius, centerY - circleRadius, circleRadius * 2, circleRadius * 2);
 
     // Create right circle outline
     juce::Path rightCircle;
-    rightCircle.addEllipse(rightCenterX - circleRadius, centerY - circleRadius,
-                           circleRadius * 2, circleRadius * 2);
+    rightCircle.addEllipse(rightCenterX - circleRadius, centerY - circleRadius, circleRadius * 2, circleRadius * 2);
 
     // Convert to stroked paths (outlines)
     juce::PathStrokeType stroke(strokeWidth);
@@ -66,8 +64,7 @@ inline juce::Path createMonoIcon(float size, float strokeWidth = 1.5f)
     float centerY = size * 0.5f;
 
     juce::Path circle;
-    circle.addEllipse(centerX - circleRadius, centerY - circleRadius,
-                      circleRadius * 2, circleRadius * 2);
+    circle.addEllipse(centerX - circleRadius, centerY - circleRadius, circleRadius * 2, circleRadius * 2);
 
     // Convert to stroked path (outline)
     juce::PathStrokeType stroke(strokeWidth);
@@ -83,13 +80,13 @@ inline juce::Path createMonoIcon(float size, float strokeWidth = 1.5f)
 inline juce::Path createMidIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
-    
+
     float pad = size * 0.25f;
     float w = size - 2 * pad;
     float h = size - 2 * pad;
     float x = pad;
     float y = pad;
-    
+
     path.startNewSubPath(x, y + h);
     path.lineTo(x, y);
     path.lineTo(x + w * 0.5f, y + h * 0.8f);
@@ -100,7 +97,7 @@ inline juce::Path createMidIcon(float size, float strokeWidth = 1.5f)
     juce::PathStrokeType stroke(strokeWidth);
     stroke.setJointStyle(juce::PathStrokeType::mitered);
     stroke.createStrokedPath(stroked, path);
-    
+
     return stroked;
 }
 
@@ -111,13 +108,13 @@ inline juce::Path createMidIcon(float size, float strokeWidth = 1.5f)
 inline juce::Path createSideIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
-    
+
     float pad = size * 0.25f;
     float w = size - 2 * pad;
     float h = size - 2 * pad;
     float x = pad;
     float y = pad;
-    
+
     // Simplified S shape (3 segments)
     path.startNewSubPath(x + w, y);
     path.lineTo(x, y);
@@ -130,7 +127,7 @@ inline juce::Path createSideIcon(float size, float strokeWidth = 1.5f)
     juce::PathStrokeType stroke(strokeWidth);
     stroke.setJointStyle(juce::PathStrokeType::curved); // Use curved joins for S feel
     stroke.createStrokedPath(stroked, path);
-    
+
     return stroked;
 }
 
@@ -141,13 +138,13 @@ inline juce::Path createSideIcon(float size, float strokeWidth = 1.5f)
 inline juce::Path createLeftIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
-    
+
     float pad = size * 0.25f;
     float w = size - 2 * pad;
     float h = size - 2 * pad;
     float x = pad;
     float y = pad;
-    
+
     path.startNewSubPath(x, y);
     path.lineTo(x, y + h);
     path.lineTo(x + w, y + h);
@@ -156,7 +153,7 @@ inline juce::Path createLeftIcon(float size, float strokeWidth = 1.5f)
     juce::PathStrokeType stroke(strokeWidth);
     stroke.setJointStyle(juce::PathStrokeType::mitered);
     stroke.createStrokedPath(stroked, path);
-    
+
     return stroked;
 }
 
@@ -167,22 +164,22 @@ inline juce::Path createLeftIcon(float size, float strokeWidth = 1.5f)
 inline juce::Path createRightIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
-    
+
     float pad = size * 0.25f;
     float w = size - 2 * pad;
     float h = size - 2 * pad;
     float x = pad;
     float y = pad;
-    
+
     // Vertical line
     path.startNewSubPath(x, y + h);
     path.lineTo(x, y);
-    
+
     // Loop (P shape)
     path.lineTo(x + w * 0.8f, y);
     path.lineTo(x + w * 0.8f, y + h * 0.5f);
     path.lineTo(x, y + h * 0.5f);
-    
+
     // Leg
     path.startNewSubPath(x + w * 0.2f, y + h * 0.5f);
     path.lineTo(x + w, y + h);
@@ -191,7 +188,7 @@ inline juce::Path createRightIcon(float size, float strokeWidth = 1.5f)
     juce::PathStrokeType stroke(strokeWidth);
     stroke.setJointStyle(juce::PathStrokeType::mitered);
     stroke.createStrokedPath(stroked, path);
-    
+
     return stroked;
 }
 

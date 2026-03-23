@@ -2,10 +2,11 @@
     Oscil - Test Runner Handler - Drag/Drop Tests
 */
 
-#include "tools/test_server/TestRunnerHandler.h"
-#include "plugin/PluginEditor.h"
 #include "core/OscilState.h"
 #include "core/Pane.h"
+
+#include "plugin/PluginEditor.h"
+#include "tools/test_server/TestRunnerHandler.h"
 
 namespace oscil
 {

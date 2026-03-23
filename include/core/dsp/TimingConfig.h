@@ -6,12 +6,13 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
-#include <cmath>
-
 #include "core/dsp/NoteInterval.h"
 #include "core/dsp/TriggerTypes.h"
+
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+
+#include <cmath>
 
 namespace oscil
 {
@@ -23,14 +24,11 @@ namespace oscil
  */
 enum class TimingMode
 {
-    TIME,     // Millisecond-based timing
-    MELODIC   // Musical note-based timing (requires BPM)
+    TIME,   // Millisecond-based timing
+    MELODIC // Musical note-based timing (requires BPM)
 };
 
-inline juce::String timingModeToString(TimingMode mode)
-{
-    return mode == TimingMode::TIME ? "TIME" : "MELODIC";
-}
+inline juce::String timingModeToString(TimingMode mode) { return mode == TimingMode::TIME ? "TIME" : "MELODIC"; }
 
 inline TimingMode stringToTimingMode(const juce::String& str)
 {
@@ -48,24 +46,24 @@ struct TimingConfig
     TriggerMode triggerMode = TriggerMode::FREE_RUNNING;
 
     // TIME mode settings
-    float timeIntervalMs = 500.0f;  // 0.1-4000.0 ms (default 500ms)
+    float timeIntervalMs = 500.0f; // 0.1-4000.0 ms (default 500ms)
 
     // MELODIC mode settings
     NoteInterval noteInterval = NoteInterval::QUARTER;
 
     // Host sync settings
     bool hostSyncEnabled = false;
-    float hostBPM = 120.0f;        // 20.0-300.0 BPM (from host)
-    bool syncToPlayhead = false;   // Align display to host playhead position
+    float hostBPM = 120.0f;      // 20.0-300.0 BPM (from host)
+    bool syncToPlayhead = false; // Align display to host playhead position
 
     // Trigger settings
-    float triggerThreshold = -20.0f;  // dBFS trigger level
-    TriggerEdge triggerEdge = TriggerEdge::Rising;  // Edge detection mode
-    int midiTriggerNote = -1;         // -1 for any note, 0-127 for specific note
-    int midiTriggerChannel = 0;       // 0 for omni, 1-16 for specific channel
+    float triggerThreshold = -20.0f;               // dBFS trigger level
+    TriggerEdge triggerEdge = TriggerEdge::Rising; // Edge detection mode
+    int midiTriggerNote = -1;                      // -1 for any note, 0-127 for specific note
+    int midiTriggerChannel = 0;                    // 0 for omni, 1-16 for specific channel
 
     // Computed values (read-only, updated by calculateActualInterval)
-    float actualIntervalMs = 500.0f;   // Final calculated interval in ms
+    float actualIntervalMs = 500.0f; // Final calculated interval in ms
 
     // Constraints from PRD
     static constexpr float MIN_TIME_INTERVAL_MS = 0.1f;
@@ -91,10 +89,7 @@ struct TimingConfig
      */
     void calculateActualInterval()
     {
-        auto sanitizeNaN = [](float value, float fallback)
-        {
-            return std::isnan(value) ? fallback : value;
-        };
+        auto sanitizeNaN = [](float value, float fallback) { return std::isnan(value) ? fallback : value; };
 
         if (timingMode == TimingMode::TIME)
         {
@@ -105,7 +100,7 @@ struct TimingConfig
         {
             float safeHostBpm = sanitizeNaN(hostBPM, DEFAULT_BPM);
             float effectiveBpm = juce::jlimit(MIN_BPM, MAX_BPM, safeHostBpm);
-            float msPerBeat = 60000.0f / effectiveBpm;  // ms per quarter note
+            float msPerBeat = 60000.0f / effectiveBpm; // ms per quarter note
 
             float multiplier = getNoteIntervalMultiplier(noteInterval);
             if (!std::isfinite(multiplier) || multiplier <= 0.0f)
@@ -116,10 +111,8 @@ struct TimingConfig
             actualIntervalMs = msPerBeat * multiplier;
 
             // Clamp to valid range
-            actualIntervalMs = juce::jlimit(
-                MIN_TIME_INTERVAL_MS,
-                MAX_TIME_INTERVAL_MS,
-                sanitizeNaN(actualIntervalMs, DEFAULT_TIME_INTERVAL_MS));
+            actualIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS,
+                                            sanitizeNaN(actualIntervalMs, DEFAULT_TIME_INTERVAL_MS));
         }
     }
 
@@ -181,10 +174,7 @@ struct TimingConfig
     /**
      * Check if host sync is available (host must provide BPM)
      */
-    bool isHostSyncAvailable() const
-    {
-        return hostBPM >= MIN_BPM && hostBPM <= MAX_BPM;
-    }
+    bool isHostSyncAvailable() const { return hostBPM >= MIN_BPM && hostBPM <= MAX_BPM; }
 
     /**
      * Serialize to ValueTree
@@ -211,26 +201,21 @@ struct TimingConfig
      */
     void fromValueTree(const juce::ValueTree& tree)
     {
-        if (!tree.isValid()) return;
+        if (!tree.isValid())
+            return;
 
-        auto sanitizeFloat = [](float value, float fallback)
-        {
-            return std::isfinite(value) ? value : fallback;
-        };
+        auto sanitizeFloat = [](float value, float fallback) { return std::isfinite(value) ? value : fallback; };
 
         timingMode = stringToTimingMode(tree.getProperty("timingMode", "TIME").toString());
         triggerMode = stringToTriggerMode(tree.getProperty("triggerMode", "FREE_RUNNING").toString());
-        timeIntervalMs = juce::jlimit(
-            MIN_TIME_INTERVAL_MS,
-            MAX_TIME_INTERVAL_MS,
-            sanitizeFloat(static_cast<float>(tree.getProperty("timeIntervalMs", DEFAULT_TIME_INTERVAL_MS)),
-                          DEFAULT_TIME_INTERVAL_MS));
+        timeIntervalMs =
+            juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS,
+                         sanitizeFloat(static_cast<float>(tree.getProperty("timeIntervalMs", DEFAULT_TIME_INTERVAL_MS)),
+                                       DEFAULT_TIME_INTERVAL_MS));
         noteInterval = stringToNoteInterval(tree.getProperty("noteInterval", "1/4").toString());
         hostSyncEnabled = static_cast<bool>(tree.getProperty("hostSyncEnabled", false));
         hostBPM = juce::jlimit(
-            MIN_BPM,
-            MAX_BPM,
-            sanitizeFloat(static_cast<float>(tree.getProperty("hostBPM", DEFAULT_BPM)), DEFAULT_BPM));
+            MIN_BPM, MAX_BPM, sanitizeFloat(static_cast<float>(tree.getProperty("hostBPM", DEFAULT_BPM)), DEFAULT_BPM));
         syncToPlayhead = static_cast<bool>(tree.getProperty("syncToPlayhead", false));
         triggerThreshold = sanitizeFloat(static_cast<float>(tree.getProperty("triggerThreshold", -20.0f)), -20.0f);
         triggerEdge = stringToTriggerEdge(tree.getProperty("triggerEdge", "Rising").toString());

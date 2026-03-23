@@ -11,13 +11,15 @@
     - Maximum oscillator limits interacting with serialization
 */
 
-#include <gtest/gtest.h>
-#include "helpers/OscillatorBuilder.h"
-#include "helpers/StateBuilder.h"
-#include "helpers/Fixtures.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
+
+#include "helpers/Fixtures.h"
+#include "helpers/OscillatorBuilder.h"
+#include "helpers/StateBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -27,10 +29,7 @@ class StateIntegrationTest : public ::testing::Test
 protected:
     std::unique_ptr<OscilState> state;
 
-    void SetUp() override
-    {
-        state = std::make_unique<OscilState>();
-    }
+    void SetUp() override { state = std::make_unique<OscilState>(); }
 
     // Create a pane, add it to state, and return its ID
     PaneId addPane(const juce::String& name, int orderIndex = 0)
@@ -44,13 +43,9 @@ protected:
 
     // Create and add an oscillator attached to a pane
     OscillatorId addOscillatorToPane(const juce::String& name, const PaneId& paneId,
-                                      const SourceId& sourceId = SourceId::generate())
+                                     const SourceId& sourceId = SourceId::generate())
     {
-        auto osc = OscillatorBuilder()
-            .withName(name)
-            .withSourceId(sourceId)
-            .withPaneId(paneId)
-            .build();
+        auto osc = OscillatorBuilder().withName(name).withSourceId(sourceId).withPaneId(paneId).build();
         state->addOscillator(osc);
         return osc.getId();
     }
@@ -183,7 +178,8 @@ TEST_F(StateIntegrationTest, ReorderOscillatorsPreservesPaneAssignments)
 
     auto findByName = [&](const juce::String& name) -> std::optional<Oscillator> {
         for (const auto& o : oscillators)
-            if (o.getName() == name) return o;
+            if (o.getName() == name)
+                return o;
         return std::nullopt;
     };
 
@@ -216,12 +212,12 @@ TEST_F(StateIntegrationTest, MaxOscillatorsSerializationRoundTrip)
     for (int i = 0; i < kMaxOsc; ++i)
     {
         auto osc = OscillatorBuilder()
-            .withName("Osc_" + juce::String(i))
-            .withPaneId(paneId)
-            .withSourceId(SourceId::generate())
-            .withProcessingMode(static_cast<ProcessingMode>(i % 6))
-            .withOrderIndex(i)
-            .build();
+                       .withName("Osc_" + juce::String(i))
+                       .withPaneId(paneId)
+                       .withSourceId(SourceId::generate())
+                       .withProcessingMode(static_cast<ProcessingMode>(i % 6))
+                       .withOrderIndex(i)
+                       .build();
         state->addOscillator(osc);
         ids.push_back(osc.getId());
     }
@@ -303,10 +299,7 @@ TEST_F(StateIntegrationTest, OscillatorWithoutPaneSurvivesRoundTrip)
 {
     // Bug caught: oscillators without a pane assignment being dropped
     // during serialization because the pane lookup fails.
-    auto osc = OscillatorBuilder()
-        .withName("Orphan Osc")
-        .withSourceId(SourceId::generate())
-        .build();
+    auto osc = OscillatorBuilder().withName("Orphan Osc").withSourceId(SourceId::generate()).build();
     // No pane assigned (PaneId is invalid)
     state->addOscillator(osc);
 
@@ -331,11 +324,11 @@ TEST_F(StateIntegrationTest, OscillatorVisualConfigSurvivesRoundTrip)
     auto paneId = addPane("Config Pane");
 
     auto osc = OscillatorBuilder()
-        .withName("Styled Osc")
-        .withPaneId(paneId)
-        .withSourceId(SourceId::generate())
-        .withProcessingMode(ProcessingMode::Mid)
-        .build();
+                   .withName("Styled Osc")
+                   .withPaneId(paneId)
+                   .withSourceId(SourceId::generate())
+                   .withProcessingMode(ProcessingMode::Mid)
+                   .build();
     osc.setColour(juce::Colour(0xFFAA5500));
     osc.setLineWidth(3.5f);
     osc.setOpacity(0.65f);
@@ -409,11 +402,7 @@ TEST_F(StateIntegrationTest, ReorderThenSerializePreservesOrder)
 
     for (int i = 0; i < 5; ++i)
     {
-        auto osc = OscillatorBuilder()
-            .withName("Osc_" + juce::String(i))
-            .withPaneId(paneId)
-            .withOrderIndex(i)
-            .build();
+        auto osc = OscillatorBuilder().withName("Osc_" + juce::String(i)).withPaneId(paneId).withOrderIndex(i).build();
         state->addOscillator(osc);
     }
 
@@ -429,9 +418,7 @@ TEST_F(StateIntegrationTest, ReorderThenSerializePreservesOrder)
 
     // Sort by orderIndex and verify the reorder was persisted
     std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) {
-                  return a.getOrderIndex() < b.getOrderIndex();
-              });
+              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
     // After moving index 0 to 4, the order should be: Osc_1, Osc_2, Osc_3, Osc_4, Osc_0
     EXPECT_EQ(oscillators[0].getName(), "Osc_1");

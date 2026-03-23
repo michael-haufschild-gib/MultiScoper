@@ -2,10 +2,11 @@
     Oscil - Pane Body Tests
 */
 
-#include <gtest/gtest.h>
+#include "ui/layout/pane/PaneBody.h"
 
 #include "OscilTestFixtures.h"
-#include "ui/layout/pane/PaneBody.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -48,7 +49,7 @@ TEST_F(PaneBodyTest, WaveformLayerPassesMouseHitTestingToPaneBody)
     EXPECT_FALSE(interceptsThis);
     EXPECT_FALSE(interceptsChildren);
 
-    auto* hitComponent = waveformStack->getComponentAt(juce::Point<int>{ 20, 20 });
+    auto* hitComponent = waveformStack->getComponentAt(juce::Point<int>{20, 20});
     EXPECT_EQ(hitComponent, nullptr);
 }
 

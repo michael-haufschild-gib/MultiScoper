@@ -2,8 +2,9 @@
     Oscil Test Harness - HTTP Server: Pane Management Handlers
 */
 
-#include "TestHttpServer.h"
 #include "core/OscilState.h"
+
+#include "TestHttpServer.h"
 
 namespace oscil::test
 {
@@ -69,7 +70,7 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
             return;
         }
 
-        PaneId paneId{ juce::String(idStr) };
+        PaneId paneId{juce::String(idStr)};
         auto& state = track->getProcessor().getState();
         auto& layoutManager = state.getLayoutManager();
 
@@ -84,7 +85,11 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
             // Find fallback pane and reassign orphaned oscillators
             PaneId fallback = PaneId::invalid();
             for (const auto& pane : layoutManager.getPanes())
-                if (pane.getId() != paneId) { fallback = pane.getId(); break; }
+                if (pane.getId() != paneId)
+                {
+                    fallback = pane.getId();
+                    break;
+                }
 
             for (auto& osc : state.getOscillators())
             {
@@ -132,8 +137,8 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
 
         auto& state = track->getProcessor().getState();
         auto& layoutManager = state.getLayoutManager();
-        OscillatorId oscId{ juce::String(idStr) };
-        PaneId targetPaneId{ juce::String(paneIdStr) };
+        OscillatorId oscId{juce::String(idStr)};
+        PaneId targetPaneId{juce::String(paneIdStr)};
 
         auto existingOsc = state.getOscillator(oscId);
         if (!existingOsc.has_value())

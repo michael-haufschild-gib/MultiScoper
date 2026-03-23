@@ -11,9 +11,7 @@ namespace oscil
 
 using namespace juce::gl;
 
-FramebufferPool::FramebufferPool()
-{
-}
+FramebufferPool::FramebufferPool() {}
 
 FramebufferPool::~FramebufferPool()
 {
@@ -21,10 +19,7 @@ FramebufferPool::~FramebufferPool()
     jassert(!initialized_ && "FramebufferPool::shutdown() must be called before destruction");
 }
 
-std::unique_ptr<Framebuffer> FramebufferPool::createFramebuffer()
-{
-    return std::make_unique<Framebuffer>();
-}
+std::unique_ptr<Framebuffer> FramebufferPool::createFramebuffer() { return std::make_unique<Framebuffer>(); }
 
 bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int height)
 {
@@ -36,9 +31,12 @@ bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int he
     height_ = height;
 
     // Ensure FBOs are created
-    if (!waveformFBO_) waveformFBO_ = createFramebuffer();
-    if (!pingFBO_) pingFBO_ = createFramebuffer();
-    if (!pongFBO_) pongFBO_ = createFramebuffer();
+    if (!waveformFBO_)
+        waveformFBO_ = createFramebuffer();
+    if (!pingFBO_)
+        pingFBO_ = createFramebuffer();
+    if (!pongFBO_)
+        pongFBO_ = createFramebuffer();
 
     // Create waveform FBO with depth buffer (for 3D rendering) and HDR format
     // Enable depth texture for post-processing effects like Depth of Field
@@ -126,13 +124,13 @@ bool FramebufferPool::createFullscreenQuad(juce::OpenGLContext& context)
     // Covers NDC space [-1, 1] for position, [0, 1] for texcoords
     static const float quadVertices[] = {
         // Position    TexCoord
-        -1.0f,  1.0f,  0.0f, 1.0f,   // Top-left
-        -1.0f, -1.0f,  0.0f, 0.0f,   // Bottom-left
-         1.0f, -1.0f,  1.0f, 0.0f,   // Bottom-right
+        -1.0f, 1.0f,  0.0f, 1.0f, // Top-left
+        -1.0f, -1.0f, 0.0f, 0.0f, // Bottom-left
+        1.0f,  -1.0f, 1.0f, 0.0f, // Bottom-right
 
-        -1.0f,  1.0f,  0.0f, 1.0f,   // Top-left
-         1.0f, -1.0f,  1.0f, 0.0f,   // Bottom-right
-         1.0f,  1.0f,  1.0f, 1.0f    // Top-right
+        -1.0f, 1.0f,  0.0f, 1.0f, // Top-left
+        1.0f,  -1.0f, 1.0f, 0.0f, // Bottom-right
+        1.0f,  1.0f,  1.0f, 1.0f  // Top-right
     };
 
     // Create VAO
@@ -165,8 +163,7 @@ bool FramebufferPool::createFullscreenQuad(juce::OpenGLContext& context)
 
     // Attribute 1: texcoord (vec2)
     ext.glEnableVertexAttribArray(1);
-    ext.glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                              reinterpret_cast<void*>(2 * sizeof(float)));
+    ext.glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
 
     // Unbind
     ext.glBindBuffer(GL_ARRAY_BUFFER, 0);

@@ -3,8 +3,8 @@
     RAII-based OscilAlertModal::show and confirm implementations
 */
 
-#include "ui/components/OscilModal.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/OscilModal.h"
 
 namespace oscil
 {
@@ -21,15 +21,13 @@ struct AlertResources
 
     ~AlertResources()
     {
-        if (content) content->removeAllChildren();
+        if (content)
+            content->removeAllChildren();
     }
 };
 
-void OscilAlertModal::show(IThemeService& themeService,
-                            const juce::String& title,
-                            const juce::String& message,
-                            [[maybe_unused]] Type type,
-                            std::function<void()> onOk)
+void OscilAlertModal::show(IThemeService& themeService, const juce::String& title, const juce::String& message,
+                           [[maybe_unused]] Type type, std::function<void()> onOk)
 {
     auto res = std::make_shared<AlertResources>();
 
@@ -53,7 +51,8 @@ void OscilAlertModal::show(IThemeService& themeService,
 
     auto* modalPtr = res->modal.get();
     res->modal->onClose = [res, onOk]() {
-        if (onOk) onOk();
+        if (onOk)
+            onOk();
         // Destroy resources on next message loop iteration (after callback returns)
         juce::MessageManager::callAsync([prevent_destruction = res]() {});
     };
@@ -62,10 +61,9 @@ void OscilAlertModal::show(IThemeService& themeService,
     res->modal->show();
 }
 
-void OscilAlertModal::confirm([[maybe_unused]] IThemeService& themeService,
-                               [[maybe_unused]] const juce::String& title,
-                               [[maybe_unused]] const juce::String& message,
-                               [[maybe_unused]] std::function<void(bool)> onResult)
+void OscilAlertModal::confirm([[maybe_unused]] IThemeService& themeService, [[maybe_unused]] const juce::String& title,
+                              [[maybe_unused]] const juce::String& message,
+                              [[maybe_unused]] std::function<void(bool)> onResult)
 {
 }
 

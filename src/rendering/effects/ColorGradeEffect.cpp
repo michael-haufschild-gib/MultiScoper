@@ -90,9 +90,7 @@ static const char* colorGradeFragmentShader = R"(
     }
 )";
 
-ColorGradeEffect::ColorGradeEffect()
-{
-}
+ColorGradeEffect::ColorGradeEffect() {}
 
 ColorGradeEffect::~ColorGradeEffect() = default;
 
@@ -138,17 +136,10 @@ void ColorGradeEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool ColorGradeEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool ColorGradeEffect::isCompiled() const { return compiled_; }
 
-void ColorGradeEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void ColorGradeEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                             FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
 
@@ -175,14 +166,10 @@ void ColorGradeEffect::apply(
     ext.glUniform1f(tintLoc_, settings_.tint * scale);
 
     // Shadow and highlight colors
-    ext.glUniform3f(shadowsLoc_,
-        settings_.shadows.getFloatRed(),
-        settings_.shadows.getFloatGreen(),
-        settings_.shadows.getFloatBlue());
-    ext.glUniform3f(highlightsLoc_,
-        settings_.highlights.getFloatRed(),
-        settings_.highlights.getFloatGreen(),
-        settings_.highlights.getFloatBlue());
+    ext.glUniform3f(shadowsLoc_, settings_.shadows.getFloatRed(), settings_.shadows.getFloatGreen(),
+                    settings_.shadows.getFloatBlue());
+    ext.glUniform3f(highlightsLoc_, settings_.highlights.getFloatRed(), settings_.highlights.getFloatGreen(),
+                    settings_.highlights.getFloatBlue());
 
     pool.renderFullscreenQuad();
     destination->unbind();

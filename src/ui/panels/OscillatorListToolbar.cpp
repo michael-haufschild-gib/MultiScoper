@@ -8,17 +8,7 @@
 namespace oscil
 {
 
-OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context)
-    : themeService_(context.themeService)
-{
-    setTestId("sidebar_oscillators_toolbar");
-    
-    setupComponents();
-    themeService_.addListener(this);
-}
-
-OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService)
-    : themeService_(themeService)
+OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context) : themeService_(context.themeService)
 {
     setTestId("sidebar_oscillators_toolbar");
 
@@ -26,26 +16,29 @@ OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService)
     themeService_.addListener(this);
 }
 
-OscillatorListToolbar::~OscillatorListToolbar()
+OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService) : themeService_(themeService)
 {
-    themeService_.removeListener(this);
+    setTestId("sidebar_oscillators_toolbar");
+
+    setupComponents();
+    themeService_.addListener(this);
 }
 
-void OscillatorListToolbar::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+OscillatorListToolbar::~OscillatorListToolbar() { themeService_.removeListener(this); }
+
+void OscillatorListToolbar::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 void OscillatorListToolbar::setupComponents()
 {
     // Filter tabs
     filterTabs_ = std::make_unique<SegmentedButtonBar>(themeService_);
     filterTabs_->addButton("All", static_cast<int>(OscillatorFilterMode::All), "sidebar_oscillators_toolbar_allTab");
-    filterTabs_->addButton("Visible", static_cast<int>(OscillatorFilterMode::Visible), "sidebar_oscillators_toolbar_visibleTab");
-    filterTabs_->addButton("Hidden", static_cast<int>(OscillatorFilterMode::Hidden), "sidebar_oscillators_toolbar_hiddenTab");
+    filterTabs_->addButton("Visible", static_cast<int>(OscillatorFilterMode::Visible),
+                           "sidebar_oscillators_toolbar_visibleTab");
+    filterTabs_->addButton("Hidden", static_cast<int>(OscillatorFilterMode::Hidden),
+                           "sidebar_oscillators_toolbar_hiddenTab");
     filterTabs_->setSelectedId(static_cast<int>(currentFilterMode_));
-    filterTabs_->onSelectionChanged = [this](int id)
-    {
+    filterTabs_->onSelectionChanged = [this](int id) {
         currentFilterMode_ = static_cast<OscillatorFilterMode>(id);
         listeners_.call([this](Listener& l) { l.filterModeChanged(currentFilterMode_); });
     };
@@ -106,10 +99,7 @@ void OscillatorListToolbar::resized()
     filterTabs_->setBounds(bounds);
 }
 
-void OscillatorListToolbar::themeChanged(const ColorTheme& /*newTheme*/)
-{
-    repaint();
-}
+void OscillatorListToolbar::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 void OscillatorListToolbar::updateCountLabel()
 {
@@ -134,14 +124,8 @@ void OscillatorListToolbar::setOscillatorCount(int total, int visible)
     updateCountLabel();
 }
 
-void OscillatorListToolbar::addListener(Listener* listener)
-{
-    listeners_.add(listener);
-}
+void OscillatorListToolbar::addListener(Listener* listener) { listeners_.add(listener); }
 
-void OscillatorListToolbar::removeListener(Listener* listener)
-{
-    listeners_.remove(listener);
-}
+void OscillatorListToolbar::removeListener(Listener* listener) { listeners_.remove(listener); }
 
 } // namespace oscil

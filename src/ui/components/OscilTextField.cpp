@@ -3,6 +3,7 @@
 */
 
 #include "ui/components/OscilTextField.h"
+
 #include "ui/components/OscilButton.h"
 
 namespace oscil
@@ -19,23 +20,15 @@ OscilTextField::OscilTextField(IThemeService& themeService)
     focusSpring_.target = 0.0f;
 }
 
-
-
-OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant)
-    : OscilTextField(themeService)
+OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant) : OscilTextField(themeService)
 {
     setVariant(variant);
 }
 
-
-
-OscilTextField::OscilTextField(IThemeService& themeService, const juce::String& testId)
-    : OscilTextField(themeService)
+OscilTextField::OscilTextField(IThemeService& themeService, const juce::String& testId) : OscilTextField(themeService)
 {
     setTestId(testId);
 }
-
-
 
 OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant, const juce::String& testId)
     : OscilTextField(themeService)
@@ -44,17 +37,9 @@ OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant var
     setTestId(testId);
 }
 
+void OscilTextField::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-
-void OscilTextField::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
-
-OscilTextField::~OscilTextField()
-{
-    stopTimer();
-}
+OscilTextField::~OscilTextField() { stopTimer(); }
 
 void OscilTextField::setupComponents()
 {
@@ -66,9 +51,7 @@ void OscilTextField::setupComponents()
     editor_->setPopupMenuEnabled(true);
     editor_->setSelectAllWhenFocused(true);
 
-    editor_->onTextChange = [this] {
-        validateAndUpdate();
-    };
+    editor_->onTextChange = [this] { validateAndUpdate(); };
 
     editor_->onReturnKey = [this] {
         if (onReturnPressed)
@@ -110,7 +93,8 @@ void OscilTextField::setupComponents()
 
 void OscilTextField::setVariant(TextFieldVariant variant)
 {
-    if (variant_ == variant) return;
+    if (variant_ == variant)
+        return;
 
     variant_ = variant;
 
@@ -139,10 +123,7 @@ void OscilTextField::setText(const juce::String& text, bool notify)
     editor_->setText(text, notify ? juce::sendNotification : juce::dontSendNotification);
 }
 
-juce::String OscilTextField::getText() const
-{
-    return editor_->getText();
-}
+juce::String OscilTextField::getText() const { return editor_->getText(); }
 
 void OscilTextField::setPlaceholder(const juce::String& placeholder)
 {
@@ -163,10 +144,7 @@ void OscilTextField::setRange(double min, double max)
         setNumericValue(constrained, false);
 }
 
-void OscilTextField::setDefaultValue(double defaultValue)
-{
-    defaultValue_ = defaultValue;
-}
+void OscilTextField::setDefaultValue(double defaultValue) { defaultValue_ = defaultValue; }
 
 void OscilTextField::setStep(double step)
 {
@@ -217,10 +195,7 @@ void OscilTextField::updateFromNumericValue()
     editor_->setText(valueText, juce::dontSendNotification);
 }
 
-void OscilTextField::setValidator(Callbacks::ValidationCallback validator)
-{
-    validator_ = validator;
-}
+void OscilTextField::setValidator(Callbacks::ValidationCallback validator) { validator_ = validator; }
 
 void OscilTextField::setError(const juce::String& errorMessage)
 {
@@ -231,10 +206,7 @@ void OscilTextField::setError(const juce::String& errorMessage)
     }
 }
 
-void OscilTextField::clearError()
-{
-    setError({});
-}
+void OscilTextField::clearError() { setError({}); }
 
 void OscilTextField::setEnabled(bool enabled)
 {
@@ -248,22 +220,15 @@ void OscilTextField::setEnabled(bool enabled)
     }
 }
 
-void OscilTextField::attachToParameter(juce::AudioProcessorValueTreeState& apvts,
-                                         const juce::String& paramId)
+void OscilTextField::attachToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId)
 {
-    attachment_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvts, paramId, internalSlider_);
+    attachment_ =
+        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, paramId, internalSlider_);
 }
 
-void OscilTextField::detachFromParameter()
-{
-    attachment_.reset();
-}
+void OscilTextField::detachFromParameter() { attachment_.reset(); }
 
-int OscilTextField::getPreferredHeight() const
-{
-    return ComponentLayout::INPUT_HEIGHT;
-}
+int OscilTextField::getPreferredHeight() const { return ComponentLayout::INPUT_HEIGHT; }
 
 // paint, paintBackground, paintSearchIcon, paintFocusRing are in OscilTextFieldPainting.cpp
 
@@ -332,15 +297,9 @@ void OscilTextField::validateAndUpdate()
     }
 }
 
-void OscilTextField::incrementValue()
-{
-    setNumericValue(numValue_ + step_, true);
-}
+void OscilTextField::incrementValue() { setNumericValue(numValue_ + step_, true); }
 
-void OscilTextField::decrementValue()
-{
-    setNumericValue(numValue_ - step_, true);
-}
+void OscilTextField::decrementValue() { setNumericValue(numValue_ - step_, true); }
 
 void OscilTextField::applyNumericConstraints(double& value)
 {

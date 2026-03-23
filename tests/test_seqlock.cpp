@@ -11,14 +11,15 @@
     - Default-initialization of data
 */
 
-#include <gtest/gtest.h>
 #include "core/SeqLock.h"
 #include "core/SharedCaptureBuffer.h"
-#include <thread>
+
 #include <atomic>
-#include <vector>
 #include <chrono>
 #include <cmath>
+#include <gtest/gtest.h>
+#include <thread>
+#include <vector>
 
 using namespace oscil;
 
@@ -152,8 +153,7 @@ TEST(SeqLockTest, ConcurrentSingleWriterSingleReaderConsistency)
         {
             auto snapshot = lock.read();
             // All fields must be from the same write
-            if (snapshot.a != snapshot.b || snapshot.b != snapshot.c ||
-                static_cast<double>(snapshot.a) != snapshot.d)
+            if (snapshot.a != snapshot.b || snapshot.b != snapshot.c || static_cast<double>(snapshot.a) != snapshot.d)
             {
                 inconsistentCount.fetch_add(1, std::memory_order_relaxed);
             }
@@ -173,8 +173,7 @@ TEST(SeqLockTest, ConcurrentSingleWriterSingleReaderConsistency)
     EXPECT_GT(writeCount.load(), 1000) << "Writer thread didn't run enough iterations";
     EXPECT_GT(readCount.load(), 1000) << "Reader thread didn't run enough iterations";
     EXPECT_EQ(inconsistentCount.load(), 0)
-        << "Torn read detected: " << inconsistentCount.load()
-        << " inconsistent reads out of " << readCount.load();
+        << "Torn read detected: " << inconsistentCount.load() << " inconsistent reads out of " << readCount.load();
 }
 
 // ============================================================================
@@ -232,9 +231,8 @@ TEST(SeqLockTest, ConcurrentSingleWriterMultipleReadersConsistency)
 
     EXPECT_GT(writeCount.load(), 1000);
     EXPECT_GT(totalReadCount.load(), 1000);
-    EXPECT_EQ(inconsistentCount.load(), 0)
-        << "Torn read with multiple readers: " << inconsistentCount.load()
-        << " inconsistent out of " << totalReadCount.load();
+    EXPECT_EQ(inconsistentCount.load(), 0) << "Torn read with multiple readers: " << inconsistentCount.load()
+                                           << " inconsistent out of " << totalReadCount.load();
 }
 
 // ============================================================================
@@ -290,8 +288,7 @@ TEST(SeqLockTest, ConcurrentLargePayloadConsistency)
     EXPECT_GT(writeCount.load(), 1000);
     EXPECT_GT(readCount.load(), 1000);
     EXPECT_EQ(inconsistentCount.load(), 0)
-        << "Large payload torn read: " << inconsistentCount.load()
-        << " inconsistent out of " << readCount.load();
+        << "Large payload torn read: " << inconsistentCount.load() << " inconsistent out of " << readCount.load();
 }
 
 // ============================================================================
@@ -337,25 +334,30 @@ TEST(SeqLockTest, CaptureFrameMetadataConcurrentConsistency)
     std::atomic<int> wc{0}, rc{0}, bad{0};
 
     std::thread writer([&]() {
-        for (int i = 1; running.load(std::memory_order_relaxed); ++i) {
+        for (int i = 1; running.load(std::memory_order_relaxed); ++i)
+        {
             CaptureFrameMetadata m;
-            m.sampleRate = 1000.0 * i; m.numChannels = 2;
+            m.sampleRate = 1000.0 * i;
+            m.numChannels = 2;
             m.timestamp = static_cast<int64_t>(i) * 100;
-            m.numSamples = i; m.isPlaying = (i % 2 == 0);
+            m.numSamples = i;
+            m.isPlaying = (i % 2 == 0);
             m.bpm = static_cast<double>(i);
             lock.write(m);
             wc.fetch_add(1, std::memory_order_relaxed);
         }
     });
     std::thread reader([&]() {
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             auto s = lock.read();
-            if (s.bpm >= 1.0) {
-                bool ok = std::abs(s.sampleRate - 1000.0 * s.bpm) < 0.01
-                       && s.timestamp == static_cast<int64_t>(s.bpm) * 100
-                       && s.numSamples == static_cast<int>(s.bpm)
-                       && s.isPlaying == (static_cast<int>(s.bpm) % 2 == 0);
-                if (!ok) bad.fetch_add(1, std::memory_order_relaxed);
+            if (s.bpm >= 1.0)
+            {
+                bool ok = std::abs(s.sampleRate - 1000.0 * s.bpm) < 0.01 &&
+                          s.timestamp == static_cast<int64_t>(s.bpm) * 100 && s.numSamples == static_cast<int>(s.bpm) &&
+                          s.isPlaying == (static_cast<int>(s.bpm) % 2 == 0);
+                if (!ok)
+                    bad.fetch_add(1, std::memory_order_relaxed);
             }
             rc.fetch_add(1, std::memory_order_relaxed);
         }

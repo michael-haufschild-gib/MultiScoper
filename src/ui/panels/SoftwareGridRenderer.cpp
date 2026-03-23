@@ -4,16 +4,15 @@
 */
 
 #include "ui/panels/SoftwareGridRenderer.h"
+
 #include "ui/theme/ThemeManager.h"
+
 #include <cmath>
 
 namespace oscil
 {
 
-SoftwareGridRenderer::SoftwareGridRenderer(IThemeService& themeService)
-    : themeService_(themeService)
-{
-}
+SoftwareGridRenderer::SoftwareGridRenderer(IThemeService& themeService) : themeService_(themeService) {}
 
 void SoftwareGridRenderer::setShowGrid(bool show)
 {
@@ -59,13 +58,12 @@ SoftwareGridRenderer::GridDivisions SoftwareGridRenderer::resolveGridDivisions(N
             break;
     }
 
-    if (result.count <= 0) result.count = 1;
+    if (result.count <= 0)
+        result.count = 1;
     return result;
 }
 
-void SoftwareGridRenderer::render(juce::Graphics& g,
-                                  juce::Rectangle<int> bounds,
-                                  ProcessingMode processingMode)
+void SoftwareGridRenderer::render(juce::Graphics& g, juce::Rectangle<int> bounds, ProcessingMode processingMode)
 {
     if (!showGrid_)
         return;
@@ -82,12 +80,15 @@ void SoftwareGridRenderer::render(juce::Graphics& g,
         drawChannelGrid(g, bottomBounds);
 
         g.setColour(theme.gridMajor);
-        g.drawHorizontalLine(topBounds.getBottom(), static_cast<float>(bounds.getX()), static_cast<float>(bounds.getRight()));
+        g.drawHorizontalLine(topBounds.getBottom(), static_cast<float>(bounds.getX()),
+                             static_cast<float>(bounds.getRight()));
 
         g.setColour(theme.textSecondary.withAlpha(0.6f));
         g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
-        g.drawText("L", topBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2), juce::Justification::centredLeft);
-        g.drawText("R", bottomBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2), juce::Justification::centredLeft);
+        g.drawText("L", topBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2),
+                   juce::Justification::centredLeft);
+        g.drawText("R", bottomBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2),
+                   juce::Justification::centredLeft);
     }
     else
     {
@@ -108,17 +109,21 @@ void SoftwareGridRenderer::drawChannelGrid(juce::Graphics& g, juce::Rectangle<in
     {
         float y = area.getY() + (static_cast<float>(i) / numMinorLines) * static_cast<float>(height);
         if (std::abs(y - centerY) > 1.0f)
-            g.drawHorizontalLine(static_cast<int>(y), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+            g.drawHorizontalLine(static_cast<int>(y), static_cast<float>(area.getX()),
+                                 static_cast<float>(area.getRight()));
     }
 
     // Major horizontal lines (top/bottom quarters)
     g.setColour(theme.gridMajor);
-    g.drawHorizontalLine(static_cast<int>(area.getY() + height * 0.25f), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
-    g.drawHorizontalLine(static_cast<int>(area.getY() + height * 0.75f), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+    g.drawHorizontalLine(static_cast<int>(area.getY() + height * 0.25f), static_cast<float>(area.getX()),
+                         static_cast<float>(area.getRight()));
+    g.drawHorizontalLine(static_cast<int>(area.getY() + height * 0.75f), static_cast<float>(area.getX()),
+                         static_cast<float>(area.getRight()));
 
     // Zero line
     g.setColour(theme.gridZeroLine);
-    g.drawHorizontalLine(static_cast<int>(centerY), static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+    g.drawHorizontalLine(static_cast<int>(centerY), static_cast<float>(area.getX()),
+                         static_cast<float>(area.getRight()));
 
     // Vertical lines
     if (gridConfig_.timingMode == TimingMode::TIME)
@@ -133,18 +138,24 @@ void SoftwareGridRenderer::drawTimeVerticalLines(juce::Graphics& g, juce::Rectan
     int width = area.getWidth();
 
     float durationMs = gridConfig_.visibleDurationMs;
-    if (durationMs <= 0.0001f) durationMs = 1.0f;
+    if (durationMs <= 0.0001f)
+        durationMs = 1.0f;
 
     float targetStep = durationMs / 8.0f;
-    if (targetStep <= 0.0f) targetStep = 1.0f;
+    if (targetStep <= 0.0f)
+        targetStep = 1.0f;
     float magnitude = std::pow(10.0f, std::floor(std::log10(targetStep)));
-    if (magnitude <= 0.0f || !std::isfinite(magnitude)) magnitude = 1.0f;
+    if (magnitude <= 0.0f || !std::isfinite(magnitude))
+        magnitude = 1.0f;
     float normalizedStep = targetStep / magnitude;
 
     float stepSize;
-    if (normalizedStep < 2.0f) stepSize = 1.0f * magnitude;
-    else if (normalizedStep < 5.0f) stepSize = 2.0f * magnitude;
-    else stepSize = 5.0f * magnitude;
+    if (normalizedStep < 2.0f)
+        stepSize = 1.0f * magnitude;
+    else if (normalizedStep < 5.0f)
+        stepSize = 2.0f * magnitude;
+    else
+        stepSize = 5.0f * magnitude;
 
     g.setColour(theme.gridMajor.withAlpha(0.5f));
 
@@ -184,7 +195,8 @@ void SoftwareGridRenderer::drawMelodicVerticalLines(juce::Graphics& g, juce::Rec
             for (int j = 1; j < subBeatsPerDiv; ++j)
             {
                 float x = baseX + j * subBeatWidth;
-                g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()), static_cast<float>(area.getBottom()));
+                g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()),
+                                   static_cast<float>(area.getBottom()));
             }
         }
     }
@@ -241,9 +253,7 @@ float SoftwareGridRenderer::calculateGridStepSize(float totalDuration, int targe
     return niceStep;
 }
 
-void SoftwareGridRenderer::renderLabels(juce::Graphics& g,
-                                       juce::Rectangle<int> bounds,
-                                       ProcessingMode processingMode)
+void SoftwareGridRenderer::renderLabels(juce::Graphics& g, juce::Rectangle<int> bounds, ProcessingMode processingMode)
 {
     const auto& theme = themeService_.getCurrentTheme();
 
@@ -287,8 +297,7 @@ void SoftwareGridRenderer::drawTimeAxisLabels(juce::Graphics& g, juce::Rectangle
 
     float stepSize = calculateGridStepSize(durationMs, 6);
 
-    g.drawText("0", bounds.getX() + leftMargin, bounds.getBottom() - 14, 30, 12,
-               juce::Justification::centredLeft);
+    g.drawText("0", bounds.getX() + leftMargin, bounds.getBottom() - 14, 30, 12, juce::Justification::centredLeft);
 
     for (float t = stepSize; t < durationMs - stepSize * 0.1f; t += stepSize)
     {
@@ -297,14 +306,13 @@ void SoftwareGridRenderer::drawTimeAxisLabels(juce::Graphics& g, juce::Rectangle
 
         juce::String label = formatTimeLabel(t);
         int labelWidth = 40;
-        g.drawText(label, x - labelWidth / 2, bounds.getBottom() - 14, labelWidth, 12,
-                   juce::Justification::centred);
+        g.drawText(label, x - labelWidth / 2, bounds.getBottom() - 14, labelWidth, 12, juce::Justification::centred);
     }
 
     juce::String totalLabel = formatTimeLabel(durationMs);
     int totalLabelWidth = 50;
-    g.drawText(totalLabel, bounds.getRight() - totalLabelWidth - 2, bounds.getBottom() - 14,
-               totalLabelWidth, 12, juce::Justification::centredRight);
+    g.drawText(totalLabel, bounds.getRight() - totalLabelWidth - 2, bounds.getBottom() - 14, totalLabelWidth, 12,
+               juce::Justification::centredRight);
 }
 
 void SoftwareGridRenderer::drawMelodicAxisLabels(juce::Graphics& g, juce::Rectangle<int> bounds, int leftMargin) const
@@ -329,10 +337,8 @@ void SoftwareGridRenderer::drawMelodicAxisLabels(juce::Graphics& g, juce::Rectan
     }
 }
 
-void SoftwareGridRenderer::drawAmplitudeLabels(juce::Graphics& g,
-                                              juce::Rectangle<int> area,
-                                              bool showChannelLabel,
-                                              const juce::String& channelLabel)
+void SoftwareGridRenderer::drawAmplitudeLabels(juce::Graphics& g, juce::Rectangle<int> area, bool showChannelLabel,
+                                               const juce::String& channelLabel)
 {
     int centerY = area.getCentreY();
 
@@ -343,8 +349,7 @@ void SoftwareGridRenderer::drawAmplitudeLabels(juce::Graphics& g,
     if (showChannelLabel && !channelLabel.isEmpty())
     {
         g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
-        g.drawText(channelLabel, area.getRight() - 18, area.getY() + 2, 14, 12,
-                   juce::Justification::centredRight);
+        g.drawText(channelLabel, area.getRight() - 18, area.getY() + 2, 14, 12, juce::Justification::centredRight);
         g.setFont(juce::FontOptions(9.0f));
     }
 }

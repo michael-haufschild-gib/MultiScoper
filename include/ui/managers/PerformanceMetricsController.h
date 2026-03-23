@@ -17,7 +17,8 @@ class PerformanceMetricsController
 {
 public:
     /// Construct the metrics controller wiring data sources to the status bar display.
-    PerformanceMetricsController(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, StatusBarComponent& statusBar);
+    PerformanceMetricsController(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry,
+                                 StatusBarComponent& statusBar);
     ~PerformanceMetricsController() = default;
 
     void update();

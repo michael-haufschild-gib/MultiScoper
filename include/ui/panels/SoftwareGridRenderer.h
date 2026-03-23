@@ -6,11 +6,12 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
-#include "core/dsp/TimingConfig.h"
 #include "core/Oscillator.h"
+#include "core/dsp/TimingConfig.h"
 #include "ui/theme/IThemeService.h"
+
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -51,9 +52,7 @@ public:
      * @param bounds Drawing area
      * @param processingMode Current processing mode (determines stereo vs mono layout)
      */
-    void render(juce::Graphics& g,
-                juce::Rectangle<int> bounds,
-                ProcessingMode processingMode);
+    void render(juce::Graphics& g, juce::Rectangle<int> bounds, ProcessingMode processingMode);
 
     /**
      * Render grid labels (time/beat axis and amplitude axis)
@@ -61,24 +60,19 @@ public:
      * @param bounds Drawing area
      * @param processingMode Current processing mode (determines stereo vs mono layout)
      */
-    void renderLabels(juce::Graphics& g,
-                     juce::Rectangle<int> bounds,
-                     ProcessingMode processingMode);
+    void renderLabels(juce::Graphics& g, juce::Rectangle<int> bounds, ProcessingMode processingMode);
 
 private:
     /**
      * Draw grid for a single channel area
      */
-    void drawChannelGrid(juce::Graphics& g,
-                        juce::Rectangle<int> area);
+    void drawChannelGrid(juce::Graphics& g, juce::Rectangle<int> area);
 
     /**
      * Draw amplitude labels for a channel area
      */
-    void drawAmplitudeLabels(juce::Graphics& g,
-                           juce::Rectangle<int> area,
-                           bool showChannelLabel,
-                           const juce::String& channelLabel);
+    void drawAmplitudeLabels(juce::Graphics& g, juce::Rectangle<int> area, bool showChannelLabel,
+                             const juce::String& channelLabel);
 
     /**
      * Resolved grid division parameters from a NoteInterval.

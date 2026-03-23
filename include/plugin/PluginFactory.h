@@ -7,6 +7,7 @@
 #pragma once
 
 #include "plugin/PluginProcessor.h"
+
 #include <memory>
 
 namespace oscil

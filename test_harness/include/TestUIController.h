@@ -13,8 +13,10 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "TestElementRegistry.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <nlohmann/json.hpp>
 
 namespace oscil::test
@@ -28,9 +30,9 @@ using json = nlohmann::json;
 struct ModifierKeyState
 {
     bool shift = false;
-    bool alt = false;      // Option on macOS
-    bool ctrl = false;     // Command on macOS for most shortcuts
-    bool cmd = false;      // For explicit Command key on macOS
+    bool alt = false;  // Option on macOS
+    bool ctrl = false; // Command on macOS for most shortcuts
+    bool cmd = false;  // For explicit Command key on macOS
 
     juce::ModifierKeys toJuceModifiers() const;
 };
@@ -91,8 +93,7 @@ public:
     /**
      * Drag with modifier keys (Alt for fine control, Shift for coarse)
      */
-    bool dragWithModifiers(const juce::String& fromElementId,
-                           const juce::String& toElementId,
+    bool dragWithModifiers(const juce::String& fromElementId, const juce::String& toElementId,
                            const ModifierKeyState& modifiers);
 
     /**
@@ -103,9 +104,8 @@ public:
     /**
      * Drag by pixel offset with modifiers
      */
-    bool dragByOffsetWithModifiers(const juce::String& elementId,
-                                    int deltaX, int deltaY,
-                                    const ModifierKeyState& modifiers);
+    bool dragByOffsetWithModifiers(const juce::String& elementId, int deltaX, int deltaY,
+                                   const ModifierKeyState& modifiers);
 
     /**
      * Scroll wheel on an element
@@ -117,9 +117,8 @@ public:
     /**
      * Scroll with modifier keys
      */
-    ScrollResult scrollWithModifiers(const juce::String& elementId,
-                                      float deltaY, float deltaX,
-                                      const ModifierKeyState& modifiers);
+    ScrollResult scrollWithModifiers(const juce::String& elementId, float deltaY, float deltaX,
+                                     const ModifierKeyState& modifiers);
 
     // ================== Keyboard Interactions ==================
 
@@ -133,8 +132,7 @@ public:
     /**
      * Press a key with modifiers
      */
-    bool pressKeyWithModifiers(int keyCode, const ModifierKeyState& modifiers,
-                                const juce::String& elementId = {});
+    bool pressKeyWithModifiers(int keyCode, const ModifierKeyState& modifiers, const juce::String& elementId = {});
 
     /**
      * Press Escape key
@@ -333,17 +331,14 @@ public:
     /**
      * Wait for slider to reach a value (within tolerance)
      */
-    bool waitForSliderValue(const juce::String& elementId, double value,
-                            double tolerance = 0.01, int timeoutMs = 5000);
+    bool waitForSliderValue(const juce::String& elementId, double value, double tolerance = 0.01, int timeoutMs = 5000);
 
 private:
-    void simulateMouseClick(juce::Component* component, bool doubleClick = false,
-                            const juce::ModifierKeys& mods = {});
+    void simulateMouseClick(juce::Component* component, bool doubleClick = false, const juce::ModifierKeys& mods = {});
     void simulateMouseRightClick(juce::Component* component);
-    void simulateMouseDrag(juce::Component* from, juce::Component* to,
-                           const juce::ModifierKeys& mods = {});
+    void simulateMouseDrag(juce::Component* from, juce::Component* to, const juce::ModifierKeys& mods = {});
     void simulateMouseDragOffset(juce::Component* component, int deltaX, int deltaY,
-                                  const juce::ModifierKeys& mods = {});
+                                 const juce::ModifierKeys& mods = {});
     void simulateMouseWheel(juce::Component* component, float deltaX, float deltaY,
                             const juce::ModifierKeys& mods = {});
     void simulateMouseHover(juce::Component* component);

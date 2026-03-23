@@ -3,9 +3,10 @@
     Tests for buffer tracking, memory calculations, and auto-quality adjustment
 */
 
-#include <gtest/gtest.h>
-#include "core/MemoryBudgetManager.h"
 #include "core/DecimatingCaptureBuffer.h"
+#include "core/MemoryBudgetManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -59,20 +60,13 @@ class MemoryBudgetManagerTestBase : public ::testing::Test
 protected:
     std::unique_ptr<MemoryBudgetManager> manager_;
 
-    void SetUp() override
-    {
-        manager_ = std::make_unique<MemoryBudgetManager>();
-    }
+    void SetUp() override { manager_ = std::make_unique<MemoryBudgetManager>(); }
 
-    void TearDown() override
-    {
-        manager_.reset();
-    }
+    void TearDown() override { manager_.reset(); }
 
     MemoryBudgetManager& manager() { return *manager_; }
 
-    std::shared_ptr<DecimatingCaptureBuffer> createBuffer(
-        QualityPreset preset = QualityPreset::Standard)
+    std::shared_ptr<DecimatingCaptureBuffer> createBuffer(QualityPreset preset = QualityPreset::Standard)
     {
         CaptureQualityConfig config;
         config.qualityPreset = preset;
@@ -85,22 +79,18 @@ protected:
 // Construction Tests
 //==============================================================================
 
-class MemoryBudgetManagerConstructionTest : public MemoryBudgetManagerTestBase {};
+class MemoryBudgetManagerConstructionTest : public MemoryBudgetManagerTestBase
+{
+};
 
 TEST_F(MemoryBudgetManagerConstructionTest, DefaultConfigIsStandard)
 {
     EXPECT_EQ(manager().getGlobalConfig().qualityPreset, QualityPreset::Standard);
 }
 
-TEST_F(MemoryBudgetManagerConstructionTest, DefaultSourceRateIs44100)
-{
-    EXPECT_EQ(manager().getSourceRate(), 44100);
-}
+TEST_F(MemoryBudgetManagerConstructionTest, DefaultSourceRateIs44100) { EXPECT_EQ(manager().getSourceRate(), 44100); }
 
-TEST_F(MemoryBudgetManagerConstructionTest, InitialBufferCountIsZero)
-{
-    EXPECT_EQ(manager().getBufferCount(), 0);
-}
+TEST_F(MemoryBudgetManagerConstructionTest, InitialBufferCountIsZero) { EXPECT_EQ(manager().getBufferCount(), 0); }
 
 TEST_F(MemoryBudgetManagerConstructionTest, InitialMemoryUsageIsZero)
 {
@@ -111,7 +101,9 @@ TEST_F(MemoryBudgetManagerConstructionTest, InitialMemoryUsageIsZero)
 // Buffer Registration Tests
 //==============================================================================
 
-class MemoryBudgetBufferRegistrationTest : public MemoryBudgetManagerTestBase {};
+class MemoryBudgetBufferRegistrationTest : public MemoryBudgetManagerTestBase
+{
+};
 
 TEST_F(MemoryBudgetBufferRegistrationTest, RegisterBufferIncreasesCount)
 {
@@ -178,7 +170,9 @@ TEST_F(MemoryBudgetBufferRegistrationTest, RegisterNullBufferIsIgnored)
 // Memory Tracking Tests
 //==============================================================================
 
-class MemoryBudgetTrackingTest : public MemoryBudgetManagerTestBase {};
+class MemoryBudgetTrackingTest : public MemoryBudgetManagerTestBase
+{
+};
 
 TEST_F(MemoryBudgetTrackingTest, TotalMemoryUsageIncludesAllBuffers)
 {
@@ -228,14 +222,16 @@ TEST_F(MemoryBudgetTrackingTest, UsagePercentCalculatedCorrectly)
     float percent = manager().getUsagePercent();
 
     EXPECT_GT(percent, 0.0f);
-    EXPECT_LT(percent, 100.0f);  // Single buffer shouldn't exceed budget
+    EXPECT_LT(percent, 100.0f); // Single buffer shouldn't exceed budget
 }
 
 //==============================================================================
 // Memory Snapshot Tests
 //==============================================================================
 
-class MemoryBudgetSnapshotTest : public MemoryBudgetManagerTestBase {};
+class MemoryBudgetSnapshotTest : public MemoryBudgetManagerTestBase
+{
+};
 
 TEST_F(MemoryBudgetSnapshotTest, SnapshotContainsCorrectBufferCount)
 {
@@ -276,7 +272,7 @@ TEST_F(MemoryBudgetSnapshotTest, SnapshotDetectsOverBudget)
 {
     // Create many buffers to potentially exceed budget
     CaptureQualityConfig smallBudgetConfig;
-    smallBudgetConfig.memoryBudget.totalBudgetBytes = 1024;  // Very small budget (1KB)
+    smallBudgetConfig.memoryBudget.totalBudgetBytes = 1024; // Very small budget (1KB)
     manager().setGlobalConfig(smallBudgetConfig, 44100);
 
     auto buffer = createBuffer();
@@ -317,4 +313,3 @@ TEST_F(MemoryBudgetSnapshotTest, SnapshotEffectiveQualityUsesRecommendedWhenAuto
 
     EXPECT_EQ(snapshot.effectiveQuality, manager().getRecommendedQuality());
 }
-

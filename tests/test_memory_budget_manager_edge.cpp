@@ -3,9 +3,10 @@
     Quality overrides, auto-quality, listeners, global config, pruning
 */
 
-#include <gtest/gtest.h>
-#include "core/MemoryBudgetManager.h"
 #include "core/DecimatingCaptureBuffer.h"
+#include "core/MemoryBudgetManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -59,20 +60,13 @@ class MemoryBudgetManagerEdgeTestBase : public ::testing::Test
 protected:
     std::unique_ptr<MemoryBudgetManager> manager_;
 
-    void SetUp() override
-    {
-        manager_ = std::make_unique<MemoryBudgetManager>();
-    }
+    void SetUp() override { manager_ = std::make_unique<MemoryBudgetManager>(); }
 
-    void TearDown() override
-    {
-        manager_.reset();
-    }
+    void TearDown() override { manager_.reset(); }
 
     MemoryBudgetManager& manager() { return *manager_; }
 
-    std::shared_ptr<DecimatingCaptureBuffer> createBuffer(
-        QualityPreset preset = QualityPreset::Standard)
+    std::shared_ptr<DecimatingCaptureBuffer> createBuffer(QualityPreset preset = QualityPreset::Standard)
     {
         CaptureQualityConfig config;
         config.qualityPreset = preset;
@@ -85,7 +79,9 @@ protected:
 // Quality Override Tests
 //==============================================================================
 
-class MemoryBudgetQualityOverrideEdgeTest : public MemoryBudgetManagerEdgeTestBase {};
+class MemoryBudgetQualityOverrideEdgeTest : public MemoryBudgetManagerEdgeTestBase
+{
+};
 
 TEST_F(MemoryBudgetQualityOverrideEdgeTest, DefaultOverrideIsUseGlobal)
 {
@@ -140,7 +136,7 @@ TEST_F(MemoryBudgetQualityOverrideEdgeTest, UseGlobalOverrideUsesRecommendedWhen
     CaptureQualityConfig config;
     config.qualityPreset = QualityPreset::High;
     config.autoAdjustQuality = true;
-    config.memoryBudget.totalBudgetBytes = 1024;  // Force low recommended quality
+    config.memoryBudget.totalBudgetBytes = 1024; // Force low recommended quality
     manager().setGlobalConfig(config, 44100);
 
     auto buffer = createBuffer(QualityPreset::High);
@@ -157,7 +153,9 @@ TEST_F(MemoryBudgetQualityOverrideEdgeTest, UseGlobalOverrideUsesRecommendedWhen
 // Auto-Quality Adjustment Tests
 //==============================================================================
 
-class MemoryBudgetAutoQualityEdgeTest : public MemoryBudgetManagerEdgeTestBase {};
+class MemoryBudgetAutoQualityEdgeTest : public MemoryBudgetManagerEdgeTestBase
+{
+};
 
 TEST_F(MemoryBudgetAutoQualityEdgeTest, RecommendedQualityForFewBuffers)
 {
@@ -269,7 +267,9 @@ TEST_F(MemoryBudgetListenerEdgeTest, MemoryUsageChangedCalledOnConfigChange)
 // Global Config Tests
 //==============================================================================
 
-class MemoryBudgetGlobalConfigEdgeTest : public MemoryBudgetManagerEdgeTestBase {};
+class MemoryBudgetGlobalConfigEdgeTest : public MemoryBudgetManagerEdgeTestBase
+{
+};
 
 TEST_F(MemoryBudgetGlobalConfigEdgeTest, SetGlobalConfigUpdatesConfig)
 {
@@ -302,7 +302,9 @@ TEST_F(MemoryBudgetGlobalConfigEdgeTest, SetGlobalConfigReconfiguresBuffers)
 // Prune Expired Buffers Tests
 //==============================================================================
 
-class MemoryBudgetPruneEdgeTest : public MemoryBudgetManagerEdgeTestBase {};
+class MemoryBudgetPruneEdgeTest : public MemoryBudgetManagerEdgeTestBase
+{
+};
 
 TEST_F(MemoryBudgetPruneEdgeTest, PruneRemovesExpiredBuffers)
 {

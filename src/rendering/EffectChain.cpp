@@ -11,22 +11,12 @@ namespace oscil
 
 using namespace juce::gl;
 
-void EffectChain::addStep(EffectStep step)
-{
-    steps_.push_back(std::move(step));
-}
+void EffectChain::addStep(EffectStep step) { steps_.push_back(std::move(step)); }
 
-void EffectChain::clear()
-{
-    steps_.clear();
-}
+void EffectChain::clear() { steps_.clear(); }
 
-Framebuffer* EffectChain::process(juce::OpenGLContext& context,
-                                  Framebuffer* source,
-                                  FramebufferPool& pool,
-                                  float deltaTime,
-                                  const VisualConfiguration& config,
-                                  IEffectProvider& effectProvider)
+Framebuffer* EffectChain::process(juce::OpenGLContext& context, Framebuffer* source, FramebufferPool& pool,
+                                  float deltaTime, const VisualConfiguration& config, IEffectProvider& effectProvider)
 {
     Framebuffer* current = source;
     Framebuffer* ping = pool.getPingFBO();
@@ -56,7 +46,7 @@ Framebuffer* EffectChain::process(juce::OpenGLContext& context,
         if (!dest || !dest->isValid())
         {
             // Should not happen if pool is working
-            continue; 
+            continue;
         }
 
         // Apply effect

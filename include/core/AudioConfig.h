@@ -7,6 +7,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+
 #include <cmath>
 
 namespace oscil
@@ -27,10 +28,14 @@ inline juce::String pluginFormatToString(PluginFormat format)
 {
     switch (format)
     {
-        case PluginFormat::VST3:       return "VST3";
-        case PluginFormat::CLAP:       return "CLAP";
-        case PluginFormat::AU:         return "AU";
-        case PluginFormat::STANDALONE: return "STANDALONE";
+        case PluginFormat::VST3:
+            return "VST3";
+        case PluginFormat::CLAP:
+            return "CLAP";
+        case PluginFormat::AU:
+            return "AU";
+        case PluginFormat::STANDALONE:
+            return "STANDALONE";
     }
     jassertfalse; // Unhandled PluginFormat enum value
     return "UNKNOWN";
@@ -41,9 +46,9 @@ inline juce::String pluginFormatToString(PluginFormat format)
  */
 enum class HostThreadingModel
 {
-    SINGLE,            // Single-threaded host
-    MULTI,             // Multi-threaded host
-    REALTIME_SEPARATE  // Separate real-time audio thread
+    SINGLE,           // Single-threaded host
+    MULTI,            // Multi-threaded host
+    REALTIME_SEPARATE // Separate real-time audio thread
 };
 
 /**
@@ -51,9 +56,9 @@ enum class HostThreadingModel
  */
 enum class HostTimingPrecision
 {
-    SAMPLE_ACCURATE,  // Sample-accurate timing
-    BLOCK_ACCURATE,   // Block-accurate timing
-    APPROXIMATE       // Approximate timing
+    SAMPLE_ACCURATE, // Sample-accurate timing
+    BLOCK_ACCURATE,  // Block-accurate timing
+    APPROXIMATE      // Approximate timing
 };
 
 /**
@@ -63,15 +68,15 @@ enum class HostTimingPrecision
 struct AudioConfig
 {
     // Audio format
-    float sampleRate = 44100.0f;       // 44.1kHz-192kHz
-    int bufferSize = 512;              // 32-2048 samples
-    int channelCount = 2;              // 1-2 (mono/stereo)
-    int bitDepth = 32;                 // 16, 24, 32
+    float sampleRate = 44100.0f; // 44.1kHz-192kHz
+    int bufferSize = 512;        // 32-2048 samples
+    int channelCount = 2;        // 1-2 (mono/stereo)
+    int bitDepth = 32;           // 16, 24, 32
 
     // Processing state
-    bool isRealtime = true;            // Real-time audio processing flag
-    int reportedLatency = 0;           // 0-2048 samples - Latency reported to host
-    bool bypassState = false;          // Current plugin bypass state from host
+    bool isRealtime = true;   // Real-time audio processing flag
+    int reportedLatency = 0;  // 0-2048 samples - Latency reported to host
+    bool bypassState = false; // Current plugin bypass state from host
 
     // Constraints from PRD
     static constexpr float MIN_SAMPLE_RATE = 44100.0f;
@@ -85,34 +90,22 @@ struct AudioConfig
     /**
      * Validate sample rate is within supported range
      */
-    bool isValidSampleRate() const
-    {
-        return sampleRate >= MIN_SAMPLE_RATE && sampleRate <= MAX_SAMPLE_RATE;
-    }
+    bool isValidSampleRate() const { return sampleRate >= MIN_SAMPLE_RATE && sampleRate <= MAX_SAMPLE_RATE; }
 
     /**
      * Validate buffer size is within supported range
      */
-    bool isValidBufferSize() const
-    {
-        return bufferSize >= MIN_BUFFER_SIZE && bufferSize <= MAX_BUFFER_SIZE;
-    }
+    bool isValidBufferSize() const { return bufferSize >= MIN_BUFFER_SIZE && bufferSize <= MAX_BUFFER_SIZE; }
 
     /**
      * Validate channel count
      */
-    bool isValidChannelCount() const
-    {
-        return channelCount >= MIN_CHANNELS && channelCount <= MAX_CHANNELS;
-    }
+    bool isValidChannelCount() const { return channelCount >= MIN_CHANNELS && channelCount <= MAX_CHANNELS; }
 
     /**
      * Check if configuration is completely valid
      */
-    bool isValid() const
-    {
-        return isValidSampleRate() && isValidBufferSize() && isValidChannelCount();
-    }
+    bool isValid() const { return isValidSampleRate() && isValidBufferSize() && isValidChannelCount(); }
 
     /**
      * Get buffer duration in milliseconds
@@ -185,7 +178,7 @@ struct HostContext
     bool supportsSampleRateChange = true;
     bool supportsBufferSizeChange = true;
 
-    int maxParameterCount = 1000;  // Maximum parameters supported by host
+    int maxParameterCount = 1000; // Maximum parameters supported by host
 };
 
 } // namespace oscil

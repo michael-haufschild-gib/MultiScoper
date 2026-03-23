@@ -3,7 +3,9 @@
 */
 
 #include "core/analysis/AnalysisEngine.h"
+
 #include <juce_audio_basics/juce_audio_basics.h>
+
 #include <cmath>
 
 namespace oscil
@@ -42,7 +44,7 @@ void AnalysisEngine::reset()
     rightTransient_.reset();
     midTransient_.reset();
     sideTransient_.reset();
-    
+
     leftState_ = {};
     rightState_ = {};
     midState_ = {};
@@ -56,13 +58,13 @@ void AnalysisEngine::resetAccumulated()
     metrics_.right.maxPeakDb = -100.0f;
     metrics_.mid.maxPeakDb = -100.0f;
     metrics_.side.maxPeakDb = -100.0f;
-    
+
     // Reset transient detectors to recalculate attack/decay
     leftTransient_.reset();
     rightTransient_.reset();
     midTransient_.reset();
     sideTransient_.reset();
-    
+
     metrics_.left.attackTimeMs = 0.0f;
     metrics_.left.decayTimeMs = 0.0f;
     metrics_.right.attackTimeMs = 0.0f;
@@ -81,11 +83,10 @@ void AnalysisEngine::prepare(double /*sampleRate*/, int samplesPerBlock)
     //
     // If samplesPerBlock > kDefaultBufferSize, process() will safely skip Mid/Side
     // analysis rather than risk audio dropouts from allocation.
-    (void) samplesPerBlock;  // Intentionally unused - allocation-free implementation
+    (void) samplesPerBlock; // Intentionally unused - allocation-free implementation
 }
 
-void AnalysisEngine::processMidSide(const float* left, const float* right,
-                                     int numSamples, double sampleRate)
+void AnalysisEngine::processMidSide(const float* left, const float* right, int numSamples, double sampleRate)
 {
     size_t requiredSize = static_cast<size_t>(numSamples);
     if (midBuffer_.size() < requiredSize || sideBuffer_.size() < requiredSize)
@@ -112,7 +113,8 @@ void AnalysisEngine::processMidSide(const float* left, const float* right,
 void AnalysisEngine::process(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
     int numSamples = buffer.getNumSamples();
-    if (numSamples == 0) return;
+    if (numSamples == 0)
+        return;
     const int numChannels = buffer.getNumChannels();
 
     if (numChannels <= 0)
@@ -160,7 +162,7 @@ SampleStats computeSampleStats(const float* samples, int numSamples)
         sum += s;
     }
     float n = static_cast<float>(numSamples);
-    return { peak, std::sqrt(sumSq / n), sum / n };
+    return {peak, std::sqrt(sumSq / n), sum / n};
 }
 
 float safeToDb(float linear, float floor = -100.0f)
@@ -172,12 +174,16 @@ float safeToDb(float linear, float floor = -100.0f)
 } // namespace
 
 void AnalysisEngine::processChannel(const float* samples, int numSamples, ChannelMetrics& metrics,
-                                   TransientDetector& transientDetector, AnalysisChannelState& state, double sampleRate)
+                                    TransientDetector& transientDetector, AnalysisChannelState& state,
+                                    double sampleRate)
 {
-    if (numSamples <= 0) return;
+    if (numSamples <= 0)
+        return;
 
-    if (!std::isfinite(state.rmsSmooth)) state.rmsSmooth = 0.0f;
-    if (!std::isfinite(state.dcSmooth)) state.dcSmooth = 0.0f;
+    if (!std::isfinite(state.rmsSmooth))
+        state.rmsSmooth = 0.0f;
+    if (!std::isfinite(state.dcSmooth))
+        state.dcSmooth = 0.0f;
 
     auto stats = computeSampleStats(samples, numSamples);
 
@@ -188,9 +194,7 @@ void AnalysisEngine::processChannel(const float* samples, int numSamples, Channe
 
     float rmsDb = safeToDb(smoothedRms);
     float peakDb = safeToDb(stats.peak);
-    float crestDb = (smoothedRms > 0.0001f)
-        ? safeToDb(stats.peak / smoothedRms, 0.0f)
-        : 0.0f;
+    float crestDb = (smoothedRms > 0.0001f) ? safeToDb(stats.peak / smoothedRms, 0.0f) : 0.0f;
 
     metrics.rmsDb.store(rmsDb, std::memory_order_relaxed);
     metrics.peakDb.store(peakDb, std::memory_order_relaxed);

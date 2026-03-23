@@ -7,6 +7,7 @@
 
 #include "PostProcessEffect.h"
 #include "rendering/VisualConfiguration.h"
+
 #include <memory>
 
 #if OSCIL_ENABLE_OPENGL
@@ -34,13 +35,8 @@ public:
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 
-    void apply(
-        juce::OpenGLContext& context,
-        Framebuffer* source,
-        Framebuffer* destination,
-        FramebufferPool& pool,
-        float deltaTime
-    ) override;
+    void apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool,
+               float deltaTime) override;
 
     /**
      * Configure from VisualConfiguration.

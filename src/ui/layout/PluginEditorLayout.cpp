@@ -3,18 +3,16 @@
 */
 
 #include "ui/layout/PluginEditorLayout.h"
-#include "core/interfaces/IAudioDataProvider.h"
+
 #include "core/OscilState.h"
+#include "core/interfaces/IAudioDataProvider.h"
 
 namespace oscil
 {
 
-PluginEditorLayout::PluginEditorLayout(juce::Component& editor,
-                                       juce::Viewport& viewport,
-                                       PaneContainerComponent& content,
-                                       SidebarComponent& sidebar,
-                                       StatusBarComponent& statusBar,
-                                       IAudioDataProvider& dataProvider)
+PluginEditorLayout::PluginEditorLayout(juce::Component& editor, juce::Viewport& viewport,
+                                       PaneContainerComponent& content, SidebarComponent& sidebar,
+                                       StatusBarComponent& statusBar, IAudioDataProvider& dataProvider)
     : editor_(editor)
     , viewport_(viewport)
     , content_(content)
@@ -79,8 +77,8 @@ void PluginEditorLayout::updateLayout(const std::vector<std::unique_ptr<PaneComp
     // Position panes
     for (int i = 0; i < numPanes; ++i)
     {
-        auto bounds = layoutManager.getPaneBounds(i,
-                                                  juce::Rectangle<int>(0, 0, content_.getWidth(), content_.getHeight()));
+        auto bounds =
+            layoutManager.getPaneBounds(i, juce::Rectangle<int>(0, 0, content_.getWidth(), content_.getHeight()));
         paneComponents[static_cast<size_t>(i)]->setBounds(bounds);
     }
 }

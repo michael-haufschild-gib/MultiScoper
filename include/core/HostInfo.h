@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+
 #include <cmath>
 
 namespace oscil
@@ -28,10 +29,14 @@ inline juce::String transportStateToString(TransportState state)
 {
     switch (state)
     {
-        case TransportState::STOPPED:   return "STOPPED";
-        case TransportState::PLAYING:   return "PLAYING";
-        case TransportState::RECORDING: return "RECORDING";
-        case TransportState::PAUSED:    return "PAUSED";
+        case TransportState::STOPPED:
+            return "STOPPED";
+        case TransportState::PLAYING:
+            return "PLAYING";
+        case TransportState::RECORDING:
+            return "RECORDING";
+        case TransportState::PAUSED:
+            return "PAUSED";
     }
     jassertfalse; // Unhandled TransportState enum value
     return "STOPPED";
@@ -39,9 +44,12 @@ inline juce::String transportStateToString(TransportState state)
 
 inline TransportState stringToTransportState(const juce::String& str)
 {
-    if (str == "PLAYING")   return TransportState::PLAYING;
-    if (str == "RECORDING") return TransportState::RECORDING;
-    if (str == "PAUSED")    return TransportState::PAUSED;
+    if (str == "PLAYING")
+        return TransportState::PLAYING;
+    if (str == "RECORDING")
+        return TransportState::RECORDING;
+    if (str == "PAUSED")
+        return TransportState::PAUSED;
     return TransportState::STOPPED;
 }
 
@@ -50,18 +58,15 @@ inline TransportState stringToTransportState(const juce::String& str)
  */
 struct TimeSignature
 {
-    int numerator = 4;     // Beats per bar
-    int denominator = 4;   // Note value that gets one beat
+    int numerator = 4;   // Beats per bar
+    int denominator = 4; // Note value that gets one beat
 
     bool operator==(const TimeSignature& other) const
     {
         return numerator == other.numerator && denominator == other.denominator;
     }
 
-    juce::String toString() const
-    {
-        return juce::String(numerator) + "/" + juce::String(denominator);
-    }
+    juce::String toString() const { return juce::String(numerator) + "/" + juce::String(denominator); }
 
     static TimeSignature fromString(const juce::String& str)
     {
@@ -83,23 +88,23 @@ struct TimeSignature
 struct HostInfo
 {
     // DAW identification
-    juce::String dawName;          // Max 64 chars - DAW application name
-    juce::String dawVersion;       // Max 32 chars - DAW version string
-    int processId = 0;             // > 0 - Operating system process ID
+    juce::String dawName;    // Max 64 chars - DAW application name
+    juce::String dawVersion; // Max 32 chars - DAW version string
+    int processId = 0;       // > 0 - Operating system process ID
 
     // Track information
-    juce::String trackName;        // Max 128 chars - DAW track name (if available)
-    int trackIndex = 0;            // >= 0 - DAW track number/index
+    juce::String trackName; // Max 128 chars - DAW track name (if available)
+    int trackIndex = 0;     // >= 0 - DAW track number/index
 
     // Tempo and timing
-    float bpm = 120.0f;            // 20.0-999.0 - Current host BPM
-    TimeSignature timeSignature;   // Current time signature (4/4, 3/4, etc.)
+    float bpm = 120.0f;          // 20.0-999.0 - Current host BPM
+    TimeSignature timeSignature; // Current time signature (4/4, 3/4, etc.)
     TransportState transportState = TransportState::STOPPED;
 
     // Playhead position
-    double ppqPosition = 0.0;      // Position in pulses per quarter note
-    double timeInSeconds = 0.0;    // Position in seconds
-    int64_t timeInSamples = 0;     // Position in samples
+    double ppqPosition = 0.0;   // Position in pulses per quarter note
+    double timeInSeconds = 0.0; // Position in seconds
+    int64_t timeInSamples = 0;  // Position in samples
 
     // Loop information
     bool isLooping = false;
@@ -123,8 +128,8 @@ struct HostInfo
             double bpmValue = *bpmOpt;
             if (std::isfinite(bpmValue))
             {
-                bpm = static_cast<float>(juce::jlimit(static_cast<double>(MIN_BPM),
-                                                       static_cast<double>(MAX_BPM), bpmValue));
+                bpm = static_cast<float>(
+                    juce::jlimit(static_cast<double>(MIN_BPM), static_cast<double>(MAX_BPM), bpmValue));
             }
         }
 
@@ -166,10 +171,7 @@ struct HostInfo
     /**
      * Check if BPM is within valid range
      */
-    bool isValidBpm() const
-    {
-        return bpm >= MIN_BPM && bpm <= MAX_BPM;
-    }
+    bool isValidBpm() const { return bpm >= MIN_BPM && bpm <= MAX_BPM; }
 
     /**
      * Get bar position from PPQ

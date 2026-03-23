@@ -2,9 +2,11 @@
     Oscil - Capture Buffer Tests: Metadata, Peak/RMS Edge Cases, Write Position
 */
 
-#include <gtest/gtest.h>
-#include "helpers/AudioBufferBuilder.h"
 #include "core/SharedCaptureBuffer.h"
+
+#include "helpers/AudioBufferBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -14,18 +16,11 @@ class CaptureBufferMetadataTest : public ::testing::Test
 protected:
     std::unique_ptr<SharedCaptureBuffer> buffer;
 
-    void SetUp() override
-    {
-        buffer = std::make_unique<SharedCaptureBuffer>(1024);
-    }
+    void SetUp() override { buffer = std::make_unique<SharedCaptureBuffer>(1024); }
 
     juce::AudioBuffer<float> generateTestBuffer(int numSamples, float value)
     {
-        return AudioBufferBuilder()
-            .withChannels(2)
-            .withSamples(numSamples)
-            .withDC(value)
-            .build();
+        return AudioBufferBuilder().withChannels(2).withSamples(numSamples).withDC(value).build();
     }
 };
 
@@ -50,7 +45,7 @@ TEST_F(CaptureBufferMetadataTest, PeakLevelNegativeValues)
 {
     juce::AudioBuffer<float> testBuf(2, 100);
     testBuf.clear();
-    testBuf.setSample(0, 50, -0.9f);  // Negative peak
+    testBuf.setSample(0, 50, -0.9f); // Negative peak
 
     CaptureFrameMetadata meta;
     buffer->write(testBuf, meta);
@@ -81,11 +76,7 @@ TEST_F(CaptureBufferMetadataTest, RMSAlternatingValues)
 // Test: Peak/RMS requesting more samples than available
 TEST_F(CaptureBufferMetadataTest, PeakRMSMoreThanAvailable)
 {
-    auto testBuf = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(50)
-        .withDC(0.5f)
-        .build();
+    auto testBuf = AudioBufferBuilder().withChannels(2).withSamples(50).withDC(0.5f).build();
 
     CaptureFrameMetadata meta;
     buffer->write(testBuf, meta);
@@ -122,7 +113,7 @@ TEST_F(CaptureBufferMetadataTest, MetadataExtremeValues)
 
     CaptureFrameMetadata meta;
     meta.sampleRate = 192000.0;
-    meta.numChannels = 64;  // This will be overwritten by actual buffer channels
+    meta.numChannels = 64; // This will be overwritten by actual buffer channels
     meta.bpm = 300.0;
     meta.isPlaying = true;
     meta.timestamp = std::numeric_limits<int64_t>::max();
@@ -179,11 +170,7 @@ TEST_F(CaptureBufferMetadataTest, WritePositionWrapping)
     EXPECT_LE(pos, buffer->getCapacity());
 
     // Write one more sample
-    auto oneSample = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(1)
-        .withDC(0.9f)
-        .build();
+    auto oneSample = AudioBufferBuilder().withChannels(2).withSamples(1).withDC(0.9f).build();
     buffer->write(oneSample, meta);
 
     // Position should have advanced and possibly wrapped

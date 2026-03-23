@@ -5,16 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
+#include "core/dsp/TimingConfig.h"
+#include "ui/components/TestId.h"
 #include "ui/panels/WaveformComponent.h"
 #include "ui/theme/IThemeService.h"
-#include "ui/components/TestId.h"
-#include "core/dsp/TimingConfig.h"
-#include <vector>
-#include <memory>
-#include <functional>
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <cstdint>
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace oscil
 {
@@ -35,8 +37,9 @@ class IAudioBuffer;
  *
  * Extracted from PaneComponent for better separation of concerns.
  */
-class WaveformStack : public juce::Component,
-                       public TestIdSupport
+class WaveformStack
+    : public juce::Component
+    , public TestIdSupport
 {
 public:
     /**
@@ -44,13 +47,12 @@ public:
      */
     enum class LayoutMode
     {
-        Stacked,    // Waveforms stacked vertically (default)
-        Overlapped  // Waveforms overlaid on same area (future)
+        Stacked,   // Waveforms stacked vertically (default)
+        Overlapped // Waveforms overlaid on same area (future)
     };
 
-    WaveformStack(IAudioDataProvider& dataProvider,
-                  IThemeService& themeService,
-                  ShaderRegistry& shaderRegistry);
+    /// Construct a waveform stack that renders oscillator entries using the given providers.
+    WaveformStack(IAudioDataProvider& dataProvider, IThemeService& themeService, ShaderRegistry& shaderRegistry);
     ~WaveformStack() override = default;
 
     // Component overrides
@@ -89,10 +91,12 @@ public:
     void highlightOscillator(const OscillatorId& oscillatorId);
 
     // Test access
-    WaveformComponent* getWaveformAt(size_t index) const {
+    WaveformComponent* getWaveformAt(size_t index) const
+    {
         return (index < entries_.size()) ? entries_[index].waveform.get() : nullptr;
     }
-    const Oscillator* getOscillatorAt(size_t index) const {
+    const Oscillator* getOscillatorAt(size_t index) const
+    {
         return (index < entries_.size()) ? &entries_[index].oscillator : nullptr;
     }
 

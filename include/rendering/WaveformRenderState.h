@@ -7,6 +7,7 @@
 
 #include "Framebuffer.h"
 #include "VisualConfiguration.h"
+
 #include <memory>
 
 #if OSCIL_ENABLE_OPENGL
@@ -45,10 +46,7 @@ struct WaveformRenderState
     /// Release all GPU resources owned by this state.
     void release(juce::OpenGLContext& context);
 
-    [[nodiscard]] bool needsHistoryFBO() const
-    {
-        return visualConfig.trails.enabled;
-    }
+    [[nodiscard]] bool needsHistoryFBO() const { return visualConfig.trails.enabled; }
 };
 
 } // namespace oscil

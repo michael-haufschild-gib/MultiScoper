@@ -3,14 +3,17 @@
 */
 
 #include "ui/managers/PerformanceMetricsController.h"
+
+#include "core/OscilState.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
-#include "core/OscilState.h"
 
 namespace oscil
 {
 
-PerformanceMetricsController::PerformanceMetricsController(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, StatusBarComponent& statusBar)
+PerformanceMetricsController::PerformanceMetricsController(IAudioDataProvider& dataProvider,
+                                                           IInstanceRegistry& instanceRegistry,
+                                                           StatusBarComponent& statusBar)
     : dataProvider_(dataProvider)
     , instanceRegistry_(instanceRegistry)
     , statusBar_(statusBar)

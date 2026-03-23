@@ -20,12 +20,8 @@ class IAudioDataProvider;
 class PluginEditorLayout
 {
 public:
-    PluginEditorLayout(juce::Component& editor,
-                       juce::Viewport& viewport,
-                       PaneContainerComponent& content,
-                       SidebarComponent& sidebar,
-                       StatusBarComponent& statusBar,
-                       IAudioDataProvider& dataProvider);
+    PluginEditorLayout(juce::Component& editor, juce::Viewport& viewport, PaneContainerComponent& content,
+                       SidebarComponent& sidebar, StatusBarComponent& statusBar, IAudioDataProvider& dataProvider);
 
     void resized();
     /// Recompute and apply column-based pane positioning for the current window size.

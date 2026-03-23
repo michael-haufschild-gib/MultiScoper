@@ -7,8 +7,7 @@
 namespace oscil
 {
 
-ThemedComponent::ThemedComponent(IThemeService& themeService)
-    : themeService_(themeService)
+ThemedComponent::ThemedComponent(IThemeService& themeService) : themeService_(themeService)
 {
     // Initialize theme cache from service
     theme_ = themeService_.getCurrentTheme();

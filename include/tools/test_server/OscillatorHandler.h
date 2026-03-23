@@ -32,8 +32,8 @@ public:
     void handleTestOscillatorReorder(const httplib::Request& req, httplib::Response& res);
 
 private:
-    nlohmann::json updateOscillatorOnMessageThread(const std::string& idStr, int index,
-                                                    int processingMode, int visible);
+    nlohmann::json updateOscillatorOnMessageThread(const std::string& idStr, int index, int processingMode,
+                                                   int visible);
 };
 
 } // namespace oscil

@@ -6,9 +6,10 @@
 
 #pragma once
 
+#include "BinaryData.h"
+
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "BinaryData.h"
 
 namespace oscil
 {
@@ -71,9 +72,8 @@ inline juce::Path getPathFromDrawable(juce::Drawable* drawable, float targetSize
     }
 
     // Transform: scale and center
-    auto transform = juce::AffineTransform::scale(scale)
-                         .translated(padding - bounds.getX() * scale,
-                                    padding - bounds.getY() * scale);
+    auto transform = juce::AffineTransform::scale(scale).translated(padding - bounds.getX() * scale,
+                                                                    padding - bounds.getY() * scale);
     path.applyTransform(transform);
 
     return path;

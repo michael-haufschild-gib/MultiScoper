@@ -2,8 +2,9 @@
     Oscil - Preset Manager Tests
 */
 
-#include <gtest/gtest.h>
 #include "rendering/PresetManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -44,8 +45,10 @@ TEST_F(PresetManagerTest, BuiltInPresetsAvailable)
     bool foundVectorScope = false;
     for (const auto& p : presets)
     {
-        if (p.id == "default") foundDefault = true;
-        if (p.id == "vector_scope") foundVectorScope = true;
+        if (p.id == "default")
+            foundDefault = true;
+        if (p.id == "vector_scope")
+            foundVectorScope = true;
         EXPECT_TRUE(p.isBuiltIn);
     }
     EXPECT_TRUE(foundDefault);
@@ -113,8 +116,7 @@ TEST_F(PresetManagerTest, ExportAndImportPreset)
     config.chromaticAberration.intensity = 0.015f;
     ASSERT_TRUE(manager.saveUserPreset("Exportable", config));
 
-    auto exportFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                          .getChildFile("test_export.oscpreset");
+    auto exportFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("test_export.oscpreset");
     ASSERT_TRUE(manager.exportPreset("user_exportable", exportFile));
     EXPECT_TRUE(exportFile.existsAsFile());
 

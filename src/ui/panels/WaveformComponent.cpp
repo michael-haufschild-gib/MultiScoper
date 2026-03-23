@@ -90,10 +90,7 @@ public:
         return "Peak: " + peakDb + ", RMS: " + rmsDb;
     }
 
-    juce::String getHelp() const override
-    {
-        return "Audio waveform visualization. Peak and RMS levels are announced.";
-    }
+    juce::String getHelp() const override { return "Audio waveform visualization. Peak and RMS levels are announced."; }
 
 private:
     WaveformComponent& waveform_;
@@ -197,15 +194,9 @@ void WaveformComponent::setProcessingMode(ProcessingMode mode)
         presenter_->setProcessingMode(mode);
 }
 
-void WaveformComponent::setColour(juce::Colour colour)
-{
-    colour_ = colour;
-}
+void WaveformComponent::setColour(juce::Colour colour) { colour_ = colour; }
 
-void WaveformComponent::setOpacity(float opacity)
-{
-    opacity_ = juce::jlimit(0.0f, 1.0f, opacity);
-}
+void WaveformComponent::setOpacity(float opacity) { opacity_ = juce::jlimit(0.0f, 1.0f, opacity); }
 
 void WaveformComponent::setLineWidth(float width)
 {
@@ -219,10 +210,7 @@ void WaveformComponent::setDisplaySamples(int samples)
         presenter_->setDisplaySamples(samples);
 }
 
-void WaveformComponent::setShaderId(const juce::String& shaderId)
-{
-    shaderId_ = shaderId;
-}
+void WaveformComponent::setShaderId(const juce::String& shaderId) { shaderId_ = shaderId; }
 
 void WaveformComponent::setVisualPresetId(const juce::String& presetId)
 {
@@ -234,10 +222,7 @@ void WaveformComponent::setVisualOverrides(const juce::ValueTree& overrides)
     visualOverrides_ = overrides.createCopy();
 }
 
-void WaveformComponent::setGpuRenderingEnabled(bool enabled)
-{
-    gpuRenderingEnabled_ = enabled;
-}
+void WaveformComponent::setGpuRenderingEnabled(bool enabled) { gpuRenderingEnabled_ = enabled; }
 
 void WaveformComponent::setGridConfig(const GridConfiguration& config)
 {
@@ -259,10 +244,7 @@ void WaveformComponent::setAutoScale(bool enabled)
         presenter_->setAutoScale(enabled);
 }
 
-void WaveformComponent::setHoldDisplay(bool enabled)
-{
-    holdDisplay_ = enabled;
-}
+void WaveformComponent::setHoldDisplay(bool enabled) { holdDisplay_ = enabled; }
 
 void WaveformComponent::setGainDb(float dB)
 {
@@ -282,10 +264,7 @@ void WaveformComponent::setHighlighted(bool highlighted)
     repaint();
 }
 
-void WaveformComponent::setStereoDisplayMode(StereoDisplayMode mode)
-{
-    stereoDisplayMode_ = mode;
-}
+void WaveformComponent::setStereoDisplayMode(StereoDisplayMode mode) { stereoDisplayMode_ = mode; }
 
 void WaveformComponent::forceUpdateWaveformData()
 {
@@ -305,10 +284,7 @@ void WaveformComponent::processAudioData()
 // drawWaveformWithShader, drawWaveform, and updateWaveformPath
 // are in WaveformComponentRendering.cpp
 
-void WaveformComponent::setWaveformId(int id)
-{
-    waveformId_ = id;
-}
+void WaveformComponent::setWaveformId(int id) { waveformId_ = id; }
 
 juce::Component* WaveformComponent::findEditorAncestor() const
 {
@@ -326,9 +302,9 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     data.id = waveformId_;
 
     auto* editorComponent = findEditorAncestor();
-    data.bounds = (editorComponent != nullptr
-        ? editorComponent->getLocalArea(this, getLocalBounds())
-        : getLocalBounds()).toFloat();
+    data.bounds =
+        (editorComponent != nullptr ? editorComponent->getLocalArea(this, getLocalBounds()) : getLocalBounds())
+            .toFloat();
 
     if (presenter_)
     {
@@ -371,6 +347,9 @@ bool WaveformComponent::isGridVisible() const { return gridRenderer_ ? gridRende
 bool WaveformComponent::isAutoScaleEnabled() const { return presenter_ ? presenter_->isAutoScaleEnabled() : true; }
 float WaveformComponent::getGainLinear() const { return presenter_ ? presenter_->getGainLinear() : 1.0f; }
 int WaveformComponent::getDisplaySamples() const { return presenter_ ? presenter_->getDisplaySamples() : 2048; }
-std::shared_ptr<IAudioBuffer> WaveformComponent::getCaptureBuffer() const { return presenter_ ? presenter_->getCaptureBuffer() : nullptr; }
+std::shared_ptr<IAudioBuffer> WaveformComponent::getCaptureBuffer() const
+{
+    return presenter_ ? presenter_->getCaptureBuffer() : nullptr;
+}
 
 } // namespace oscil

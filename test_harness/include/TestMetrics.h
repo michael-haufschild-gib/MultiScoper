@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+
 #include <atomic>
 #include <chrono>
 #include <deque>
@@ -19,13 +20,13 @@ namespace oscil::test
  */
 struct PerformanceSnapshot
 {
-    double fps = 0.0;              // Frames per second
-    double cpuPercent = 0.0;       // CPU usage percentage (0-100)
-    int64_t memoryBytes = 0;       // Memory usage in bytes
-    double memoryMB = 0.0;         // Memory usage in megabytes
-    int oscillatorCount = 0;       // Current oscillator count
-    int sourceCount = 0;           // Current source count
-    int64_t timestamp = 0;         // Timestamp in milliseconds
+    double fps = 0.0;        // Frames per second
+    double cpuPercent = 0.0; // CPU usage percentage (0-100)
+    int64_t memoryBytes = 0; // Memory usage in bytes
+    double memoryMB = 0.0;   // Memory usage in megabytes
+    int oscillatorCount = 0; // Current oscillator count
+    int sourceCount = 0;     // Current source count
+    int64_t timestamp = 0;   // Timestamp in milliseconds
 };
 
 /**

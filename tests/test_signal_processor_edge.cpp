@@ -3,13 +3,14 @@
 */
 
 #ifndef _USE_MATH_DEFINES
-#define _USE_MATH_DEFINES
+    #define _USE_MATH_DEFINES
 #endif
+#include "core/dsp/SignalProcessor.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 #include <limits>
 #include <random>
-#include <gtest/gtest.h>
-#include "core/dsp/SignalProcessor.h"
 #include <span>
 
 using namespace oscil;
@@ -23,7 +24,8 @@ protected:
     std::vector<float> generateSine(int numSamples, float frequency, float amplitude, float sampleRate)
     {
         std::vector<float> samples(numSamples);
-        for(int i=0; i<numSamples; ++i) {
+        for (int i = 0; i < numSamples; ++i)
+        {
             samples[i] = amplitude * std::sin(2.0f * static_cast<float>(M_PI) * frequency * i / sampleRate);
         }
         return samples;
@@ -34,7 +36,8 @@ protected:
         std::vector<float> samples(numSamples);
         std::mt19937 gen(seed);
         std::uniform_real_distribution<float> dist(min, max);
-        for(int i=0; i<numSamples; ++i) {
+        for (int i = 0; i < numSamples; ++i)
+        {
             samples[i] = dist(gen);
         }
         return samples;
@@ -64,7 +67,7 @@ TEST_F(SignalProcessorEdgeTest, ProcessOutOfRangeValues)
 // Test: Peak with negative values
 TEST_F(SignalProcessorEdgeTest, PeakNegativeValues)
 {
-    std::vector<float> samples = { -0.9f, -0.5f, -0.1f };
+    std::vector<float> samples = {-0.9f, -0.5f, -0.1f};
 
     float peak = SignalProcessor::calculatePeak(samples);
 
@@ -176,7 +179,7 @@ TEST_F(SignalProcessorEdgeTest, DecimateToOneSample)
 // Test: Decimate from single sample (upsampling case)
 TEST_F(SignalProcessorEdgeTest, DecimateFromOneSample)
 {
-    std::vector<float> input = { 0.75f };
+    std::vector<float> input = {0.75f};
     std::vector<float> output(10, 0.0f);
 
     SignalProcessor::decimate(input, output, true);
@@ -225,17 +228,11 @@ TEST_F(SignalProcessorEdgeTest, DecimateWithoutPeakPreservation)
 // Test: All processing modes work with minimal buffer
 TEST_F(SignalProcessorEdgeTest, AllModesMinimalBuffer)
 {
-    std::vector<float> left = { 0.5f, -0.5f };
-    std::vector<float> right = { 0.3f, -0.3f };
+    std::vector<float> left = {0.5f, -0.5f};
+    std::vector<float> right = {0.3f, -0.3f};
 
-    std::vector<ProcessingMode> modes = {
-        ProcessingMode::FullStereo,
-        ProcessingMode::Mono,
-        ProcessingMode::Mid,
-        ProcessingMode::Side,
-        ProcessingMode::Left,
-        ProcessingMode::Right
-    };
+    std::vector<ProcessingMode> modes = {ProcessingMode::FullStereo, ProcessingMode::Mono, ProcessingMode::Mid,
+                                         ProcessingMode::Side,       ProcessingMode::Left, ProcessingMode::Right};
 
     for (auto mode : modes)
     {
@@ -300,8 +297,8 @@ TEST_F(SignalProcessorEdgeTest, ProcessedSignalResize)
 // out-of-bounds read in the shorter channel when processing Mid/Side.
 TEST_F(SignalProcessorEdgeTest, MismatchedChannelLengthsLeftLonger)
 {
-    std::vector<float> left = { 0.5f, 0.5f, 0.5f, 0.5f };
-    std::vector<float> right = { 0.3f, 0.3f };
+    std::vector<float> left = {0.5f, 0.5f, 0.5f, 0.5f};
+    std::vector<float> right = {0.3f, 0.3f};
 
     processor.process(left, right, ProcessingMode::FullStereo, output);
 
@@ -312,15 +309,14 @@ TEST_F(SignalProcessorEdgeTest, MismatchedChannelLengthsLeftLonger)
     // However many samples we get, they must all be finite
     for (int i = 0; i < output.numSamples; ++i)
     {
-        EXPECT_TRUE(std::isfinite(output.channel1[i]))
-            << "channel1[" << i << "] is not finite";
+        EXPECT_TRUE(std::isfinite(output.channel1[i])) << "channel1[" << i << "] is not finite";
     }
 }
 
 TEST_F(SignalProcessorEdgeTest, MismatchedChannelLengthsRightLonger)
 {
-    std::vector<float> left = { 0.2f };
-    std::vector<float> right = { 0.8f, 0.8f, 0.8f };
+    std::vector<float> left = {0.2f};
+    std::vector<float> right = {0.8f, 0.8f, 0.8f};
 
     processor.process(left, right, ProcessingMode::Mono, output);
 
@@ -355,8 +351,8 @@ TEST_F(SignalProcessorEdgeTest, DenormalValuesDoNotCauseIssues)
 // Bug caught: correlation of mismatched-length vectors reads past end of shorter.
 TEST_F(SignalProcessorEdgeTest, CorrelationMismatchedLengths)
 {
-    std::vector<float> left = { 0.5f, 0.5f, 0.5f };
-    std::vector<float> right = { 0.5f };
+    std::vector<float> left = {0.5f, 0.5f, 0.5f};
+    std::vector<float> right = {0.5f};
 
     float correlation = SignalProcessor::calculateCorrelation(left, right);
 
@@ -385,4 +381,3 @@ TEST_F(SignalProcessorEdgeTest, ProcessedSignalClear)
         EXPECT_FLOAT_EQ(signal.channel2[i], 0.0f);
     }
 }
-

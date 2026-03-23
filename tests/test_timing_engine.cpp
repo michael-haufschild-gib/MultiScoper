@@ -14,7 +14,7 @@ TEST_F(TimingEngineTest, DefaultConfiguration)
     const auto& config = engine.getConfig();
 
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
-    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f); // New default: 500ms
     EXPECT_EQ(config.noteInterval, EngineNoteInterval::NOTE_1_4TH);
     EXPECT_FALSE(config.hostSyncEnabled);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
@@ -179,12 +179,12 @@ TEST_F(TimingEngineTest, MelodicModeBPMChange)
 {
     engine.setTimingMode(TimingMode::MELODIC);
     engine.setNoteInterval(EngineNoteInterval::NOTE_1_4TH);
-    engine.setHostSyncEnabled(true);  // Enable host sync so hostBPM is used
+    engine.setHostSyncEnabled(true); // Enable host sync so hostBPM is used
 
     // 120 BPM -> 500ms
     EngineTimingConfig config = engine.getConfig();
     config.hostBPM = 120.0f;
-    config.hostSyncEnabled = true;  // Ensure sync is enabled in config too
+    config.hostSyncEnabled = true; // Ensure sync is enabled in config too
     engine.setConfig(config);
     EXPECT_FLOAT_EQ(engine.getActualIntervalMs(), 500.0f);
 
@@ -246,7 +246,7 @@ TEST_F(TimingEngineTest, TriggerRisingEdge_DetectsRisingCross)
 
     // First process a low sample to set previous state
     auto lowBuffer = generateStep(64, 0.0f, 0.0f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
 
     // Now process buffer with rising edge crossing 0.5
     auto risingBuffer = generateStep(64, 0.2f, 0.8f, 32);
@@ -260,7 +260,7 @@ TEST_F(TimingEngineTest, TriggerRisingEdge_NoTriggerWhenAlreadyHigh)
 
     // Start with high sample
     auto highBuffer = generateStep(64, 0.8f, 0.8f, 64);
-    (void)engine.processBlock(highBuffer);
+    (void) engine.processBlock(highBuffer);
 
     // Stay high - should not trigger
     auto stillHighBuffer = generateStep(64, 0.9f, 1.0f, 32);
@@ -274,7 +274,7 @@ TEST_F(TimingEngineTest, TriggerFallingEdge_DetectsFallingCross)
 
     // First process a high sample
     auto highBuffer = generateStep(64, 1.0f, 1.0f, 64);
-    (void)engine.processBlock(highBuffer);
+    (void) engine.processBlock(highBuffer);
 
     // Now process buffer with falling edge crossing 0.5
     auto fallingBuffer = generateStep(64, 0.8f, 0.2f, 32);
@@ -288,7 +288,7 @@ TEST_F(TimingEngineTest, TriggerFallingEdge_NoTriggerWhenAlreadyLow)
 
     // Start with low sample
     auto lowBuffer = generateStep(64, 0.2f, 0.2f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
 
     // Stay low - should not trigger
     auto stillLowBuffer = generateStep(64, 0.1f, 0.0f, 32);
@@ -302,7 +302,7 @@ TEST_F(TimingEngineTest, TriggerLevel_DetectsLevelExceedance)
 
     // Start below threshold
     auto lowBuffer = generateStep(64, 0.2f, 0.2f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
 
     // Jump above threshold - should trigger
     auto highBuffer = generateStep(64, 0.2f, 0.8f, 32);
@@ -316,7 +316,7 @@ TEST_F(TimingEngineTest, TriggerLevel_NoRetriggerWhileHigh)
 
     // First trigger
     auto lowBuffer = generateStep(64, 0.2f, 0.2f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
 
     auto highBuffer = generateStep(64, 0.2f, 0.8f, 32);
     EXPECT_TRUE(engine.processBlock(highBuffer));
@@ -333,7 +333,7 @@ TEST_F(TimingEngineTest, TriggerBothEdges_DetectsRisingCross)
 
     // Start with low sample to set previous state
     auto lowBuffer = generateStep(64, 0.0f, 0.0f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
 
     // Rising edge crossing 0.5 should trigger
     auto risingBuffer = generateStep(64, 0.2f, 0.8f, 32);
@@ -347,7 +347,7 @@ TEST_F(TimingEngineTest, TriggerBothEdges_DetectsFallingCross)
 
     // Start with high sample
     auto highBuffer = generateStep(64, 1.0f, 1.0f, 64);
-    (void)engine.processBlock(highBuffer);
+    (void) engine.processBlock(highBuffer);
 
     // Falling edge crossing 0.5 should trigger
     auto fallingBuffer = generateStep(64, 0.8f, 0.2f, 32);
@@ -361,7 +361,7 @@ TEST_F(TimingEngineTest, TriggerBothEdges_NoTriggerWhenStable)
 
     // Start below threshold
     auto lowBuffer = generateStep(64, 0.2f, 0.2f, 64);
-    (void)engine.processBlock(lowBuffer);
+    (void) engine.processBlock(lowBuffer);
 
     // Stay below threshold - should not trigger
     auto stillLowBuffer = generateStep(64, 0.1f, 0.3f, 32);
@@ -386,7 +386,7 @@ TEST_F(TimingEngineTest, TriggerThresholdBoundary_Zero)
 
     // With threshold at 0, any positive signal should trigger
     auto buffer = generateStep(64, -0.1f, 0.1f, 32);
-    (void)engine.processBlock(buffer);
+    (void) engine.processBlock(buffer);
 
     // Check threshold is valid
     EXPECT_GE(engine.getConfig().triggerThreshold, 0.0f);
@@ -447,7 +447,7 @@ TEST_F(TimingEngineTest, ManualTrigger_ProcessBlockReturnsTriggerState)
     EXPECT_TRUE(engine.processBlock(buffer));
 
     // Clear it explicitly
-    (void)engine.checkAndClearManualTrigger();
+    (void) engine.checkAndClearManualTrigger();
     EXPECT_FALSE(engine.processBlock(buffer));
 }
 

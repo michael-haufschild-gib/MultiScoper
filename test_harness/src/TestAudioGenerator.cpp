@@ -3,15 +3,13 @@
 */
 
 #include "TestAudioGenerator.h"
+
 #include <cmath>
 
 namespace oscil::test
 {
 
-TestAudioGenerator::TestAudioGenerator()
-    : rng_(std::random_device{}())
-{
-}
+TestAudioGenerator::TestAudioGenerator() : rng_(std::random_device{}()) {}
 
 void TestAudioGenerator::prepare(double sampleRate)
 {
@@ -108,10 +106,7 @@ float TestAudioGenerator::generateSample()
     }
 }
 
-void TestAudioGenerator::setWaveform(Waveform type)
-{
-    waveform_.store(type);
-}
+void TestAudioGenerator::setWaveform(Waveform type) { waveform_.store(type); }
 
 void TestAudioGenerator::setFrequency(float hz)
 {
@@ -122,10 +117,7 @@ void TestAudioGenerator::setFrequency(float hz)
         phaseIncrement_ = frequency_.load() / sampleRate_;
 }
 
-void TestAudioGenerator::setAmplitude(float gain)
-{
-    amplitude_.store(juce::jlimit(0.0f, 1.0f, gain));
-}
+void TestAudioGenerator::setAmplitude(float gain) { amplitude_.store(juce::jlimit(0.0f, 1.0f, gain)); }
 
 void TestAudioGenerator::setBurstSamples(int samples)
 {
@@ -148,25 +140,38 @@ juce::String TestAudioGenerator::waveformToString(Waveform wf)
 {
     switch (wf)
     {
-        case Waveform::Sine:     return "sine";
-        case Waveform::Square:   return "square";
-        case Waveform::Saw:      return "saw";
-        case Waveform::Triangle: return "triangle";
-        case Waveform::Noise:    return "noise";
-        case Waveform::Silence:  return "silence";
-        default:                 return "unknown";
+        case Waveform::Sine:
+            return "sine";
+        case Waveform::Square:
+            return "square";
+        case Waveform::Saw:
+            return "saw";
+        case Waveform::Triangle:
+            return "triangle";
+        case Waveform::Noise:
+            return "noise";
+        case Waveform::Silence:
+            return "silence";
+        default:
+            return "unknown";
     }
 }
 
 Waveform TestAudioGenerator::stringToWaveform(const juce::String& str)
 {
     auto lower = str.toLowerCase();
-    if (lower == "sine")     return Waveform::Sine;
-    if (lower == "square")   return Waveform::Square;
-    if (lower == "saw")      return Waveform::Saw;
-    if (lower == "triangle") return Waveform::Triangle;
-    if (lower == "noise")    return Waveform::Noise;
-    if (lower == "silence")  return Waveform::Silence;
+    if (lower == "sine")
+        return Waveform::Sine;
+    if (lower == "square")
+        return Waveform::Square;
+    if (lower == "saw")
+        return Waveform::Saw;
+    if (lower == "triangle")
+        return Waveform::Triangle;
+    if (lower == "noise")
+        return Waveform::Noise;
+    if (lower == "silence")
+        return Waveform::Silence;
     return Waveform::Silence;
 }
 

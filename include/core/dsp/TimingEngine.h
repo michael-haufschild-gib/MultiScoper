@@ -6,12 +6,14 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include <juce_audio_processors/juce_audio_processors.h>
-#include <atomic>
-
 #include "core/SeqLock.h"
+
 #include "TimingEngineTypes.h"
+
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+
+#include <atomic>
 
 namespace oscil
 {
@@ -155,10 +157,7 @@ public:
     /**
      * Set note interval from entity type (convenience method)
      */
-    void setNoteIntervalFromEntity(NoteInterval interval)
-    {
-        setNoteInterval(entityToEngineNoteInterval(interval));
-    }
+    void setNoteIntervalFromEntity(NoteInterval interval) { setNoteInterval(entityToEngineNoteInterval(interval)); }
 
     /**
      * Get note interval as entity type (convenience method)
@@ -203,8 +202,7 @@ public:
 
 private:
     void updateHostBPM(const juce::AudioPlayHead::PositionInfo& positionInfo);
-    void updateSyncState(bool wasPlaying, bool isPlaying,
-                         const juce::Optional<int64_t>& timeInSamples,
+    void updateSyncState(bool wasPlaying, bool isPlaying, const juce::Optional<int64_t>& timeInSamples,
                          int64_t previousTimeInSamples);
     void updateHostTimeSignature(const juce::AudioPlayHead::PositionInfo& positionInfo);
     void resetRuntimeStateForLoad();
@@ -244,11 +242,11 @@ private:
 
     // Pending update flags packed into a single atomic bitmask.
     // Writers set bits with fetch_or; the dispatcher clears consumed bits with fetch_and.
-    static constexpr uint8_t kPendingTimingMode     = 1 << 0;
-    static constexpr uint8_t kPendingInterval       = 1 << 1;
-    static constexpr uint8_t kPendingHostBPM        = 1 << 2;
-    static constexpr uint8_t kPendingHostSync       = 1 << 3;
-    static constexpr uint8_t kPendingTimeSignature  = 1 << 4;
+    static constexpr uint8_t kPendingTimingMode = 1 << 0;
+    static constexpr uint8_t kPendingInterval = 1 << 1;
+    static constexpr uint8_t kPendingHostBPM = 1 << 2;
+    static constexpr uint8_t kPendingHostSync = 1 << 3;
+    static constexpr uint8_t kPendingTimeSignature = 1 << 4;
     std::atomic<uint8_t> pendingFlags_{0};
 
     // Trigger detection
@@ -268,19 +266,19 @@ private:
 // ValueTree identifiers for TimingConfig
 namespace TimingIds
 {
-    inline const juce::Identifier Timing{"Timing"};
-    inline const juce::Identifier TimingMode{"timingMode"};
-    inline const juce::Identifier HostSyncEnabled{"hostSyncEnabled"};
-    inline const juce::Identifier SyncToPlayhead{"syncToPlayhead"};
-    inline const juce::Identifier TimeIntervalMs{"timeIntervalMs"};
-    inline const juce::Identifier NoteInterval{"noteInterval"};
-    inline const juce::Identifier TriggerMode{"triggerMode"};
-    inline const juce::Identifier TriggerThreshold{"triggerThreshold"};
-    inline const juce::Identifier MidiTriggerNote{"midiTriggerNote"};
-    inline const juce::Identifier MidiTriggerChannel{"midiTriggerChannel"};
-    inline const juce::Identifier InternalBPM{"internalBPM"};
-    inline const juce::Identifier TriggerChannel{"triggerChannel"};
-    inline const juce::Identifier TriggerHysteresis{"triggerHysteresis"};
-}
+inline const juce::Identifier Timing{"Timing"};
+inline const juce::Identifier TimingMode{"timingMode"};
+inline const juce::Identifier HostSyncEnabled{"hostSyncEnabled"};
+inline const juce::Identifier SyncToPlayhead{"syncToPlayhead"};
+inline const juce::Identifier TimeIntervalMs{"timeIntervalMs"};
+inline const juce::Identifier NoteInterval{"noteInterval"};
+inline const juce::Identifier TriggerMode{"triggerMode"};
+inline const juce::Identifier TriggerThreshold{"triggerThreshold"};
+inline const juce::Identifier MidiTriggerNote{"midiTriggerNote"};
+inline const juce::Identifier MidiTriggerChannel{"midiTriggerChannel"};
+inline const juce::Identifier InternalBPM{"internalBPM"};
+inline const juce::Identifier TriggerChannel{"triggerChannel"};
+inline const juce::Identifier TriggerHysteresis{"triggerHysteresis"};
+} // namespace TimingIds
 
 } // namespace oscil

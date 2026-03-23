@@ -7,6 +7,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+
 #include <mutex>
 
 namespace oscil
@@ -72,7 +73,7 @@ private:
     /** Persist preferences to disk without acquiring mutex_ (caller must hold it). */
     void saveUnlocked();
 
-    mutable std::mutex mutex_;  // Thread safety for multi-instance access
+    mutable std::mutex mutex_; // Thread safety for multi-instance access
     juce::ValueTree preferences_;
 };
 

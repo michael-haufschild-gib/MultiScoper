@@ -4,16 +4,14 @@
 */
 
 #include "core/analysis/TransientDetector.h"
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
 
 namespace oscil
 {
 
-TransientDetector::TransientDetector()
-{
-    reset();
-}
+TransientDetector::TransientDetector() { reset(); }
 
 void TransientDetector::reset()
 {
@@ -38,7 +36,8 @@ void TransientDetector::updateCoefficients(double sampleRate)
     // Convert time constants to coefficients: coef = exp(-1 / (time * sampleRate))
     // For time in ms: coef = exp(-1000 / (timeMs * sampleRate))
     auto msToCoef = [sampleRate](float timeMs) -> float {
-        if (timeMs <= 0.0f) return 0.0f;
+        if (timeMs <= 0.0f)
+            return 0.0f;
         return std::exp(-1000.0f / (timeMs * static_cast<float>(sampleRate)));
     };
 
@@ -145,10 +144,14 @@ void TransientDetector::process(const float* samples, int numSamples, double sam
 
     updateCoefficients(sampleRate);
 
-    if (!std::isfinite(fastEnvelope_)) fastEnvelope_ = 0.0f;
-    if (!std::isfinite(slowEnvelope_)) slowEnvelope_ = 0.0f;
-    if (!std::isfinite(transientPeak_)) transientPeak_ = 0.0f;
-    if (!std::isfinite(onsetLevel_)) onsetLevel_ = 0.0f;
+    if (!std::isfinite(fastEnvelope_))
+        fastEnvelope_ = 0.0f;
+    if (!std::isfinite(slowEnvelope_))
+        slowEnvelope_ = 0.0f;
+    if (!std::isfinite(transientPeak_))
+        transientPeak_ = 0.0f;
+    if (!std::isfinite(onsetLevel_))
+        onsetLevel_ = 0.0f;
 
     float currentAttack = attackTimeMs_.load(std::memory_order_relaxed);
     float currentDecay = decayTimeMs_.load(std::memory_order_relaxed);

@@ -5,10 +5,11 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -27,9 +28,10 @@ namespace oscil
  * - Follows mouse position
  * - Has no fade animation (instant show/hide based on mouse hover)
  */
-class CrosshairOverlay : public juce::Component,
-                          public ThemeManagerListener,
-                          public TestIdSupport
+class CrosshairOverlay
+    : public juce::Component
+    , public ThemeManagerListener
+    , public TestIdSupport
 {
 public:
     explicit CrosshairOverlay(IThemeService& themeService);
@@ -67,7 +69,7 @@ private:
     IThemeService& themeService_;
 
     // Mouse position
-    juce::Point<int> mousePos_{ -100, -100 };  // Start off-screen
+    juce::Point<int> mousePos_{-100, -100}; // Start off-screen
     bool crosshairVisible_ = false;
 
     // Data values

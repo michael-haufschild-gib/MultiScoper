@@ -14,9 +14,7 @@ GlobalPreferences::GlobalPreferences()
     load();
 }
 
-GlobalPreferences::~GlobalPreferences()
-{
-}
+GlobalPreferences::~GlobalPreferences() {}
 
 juce::File GlobalPreferences::getPreferencesFile() const
 {

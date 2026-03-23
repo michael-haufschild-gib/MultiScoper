@@ -40,7 +40,7 @@ TEST_F(TimingEngineTest, FromValueTree_InvalidTypeResetsRuntimeStateAndPreserves
     posInfo.setTimeInSamples(4096);
     posInfo.setBpm(147.0);
     posInfo.setPpqPosition(8.0);
-    posInfo.setTimeSignature(juce::AudioPlayHead::TimeSignature{ 7, 8 });
+    posInfo.setTimeSignature(juce::AudioPlayHead::TimeSignature{7, 8});
     engine.updateHostInfo(posInfo);
     engine.requestManualTrigger();
 

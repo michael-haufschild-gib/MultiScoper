@@ -3,11 +3,12 @@
     Tests for Source state machine, transitions, validation, and activity tracking
 */
 
-#include <gtest/gtest.h>
 #include "core/Source.h"
+
+#include <atomic>
+#include <gtest/gtest.h>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 using namespace oscil;
 
@@ -25,10 +26,7 @@ protected:
         source = std::make_unique<Source>(sourceId);
     }
 
-    void TearDown() override
-    {
-        source.reset();
-    }
+    void TearDown() override { source.reset(); }
 };
 
 // === Basic State Machine Tests ===
@@ -63,7 +61,7 @@ TEST_F(SourceStateTest, InvalidStateTransitions)
     // DISCOVERED cannot transition to INACTIVE directly
     EXPECT_FALSE(source->canTransitionTo(SourceState::INACTIVE));
     EXPECT_FALSE(source->transitionTo(SourceState::INACTIVE));
-    EXPECT_EQ(source->getState(), SourceState::DISCOVERED);  // State unchanged
+    EXPECT_EQ(source->getState(), SourceState::DISCOVERED); // State unchanged
 
     // DISCOVERED cannot transition to STALE directly
     EXPECT_FALSE(source->canTransitionTo(SourceState::STALE));
@@ -133,7 +131,7 @@ TEST_F(SourceStateTest, InactiveToStaleTransitionInvalid)
     // INACTIVE -> STALE is NOT a valid transition per state machine
     EXPECT_FALSE(source->canTransitionTo(SourceState::STALE));
     EXPECT_FALSE(source->transitionTo(SourceState::STALE));
-    EXPECT_EQ(source->getState(), SourceState::INACTIVE);  // State unchanged
+    EXPECT_EQ(source->getState(), SourceState::INACTIVE); // State unchanged
 }
 
 TEST_F(SourceStateTest, AllInvalidTransitionsFromDiscovered)
@@ -174,7 +172,7 @@ TEST_F(SourceStateTest, SourceStateStringConversion)
     EXPECT_EQ(stringToSourceState("INACTIVE"), SourceState::INACTIVE);
     EXPECT_EQ(stringToSourceState("ORPHANED"), SourceState::ORPHANED);
     EXPECT_EQ(stringToSourceState("STALE"), SourceState::STALE);
-    EXPECT_EQ(stringToSourceState("INVALID"), SourceState::DISCOVERED);  // Default
+    EXPECT_EQ(stringToSourceState("INVALID"), SourceState::DISCOVERED); // Default
 }
 
 TEST_F(SourceStateTest, ChannelConfigStringConversion)
@@ -184,7 +182,7 @@ TEST_F(SourceStateTest, ChannelConfigStringConversion)
 
     EXPECT_EQ(stringToChannelConfig("MONO"), ChannelConfig::MONO);
     EXPECT_EQ(stringToChannelConfig("STEREO"), ChannelConfig::STEREO);
-    EXPECT_EQ(stringToChannelConfig("INVALID"), ChannelConfig::STEREO);  // Default
+    EXPECT_EQ(stringToChannelConfig("INVALID"), ChannelConfig::STEREO); // Default
 }
 
 // === Activity State Tests ===
@@ -205,13 +203,13 @@ TEST_F(SourceStateTest, GetTimeSinceLastAudio)
 {
     // Just created, should be very small
     auto elapsed = source->getTimeSinceLastAudio();
-    EXPECT_LT(elapsed, 100);  // Less than 100ms since just created
+    EXPECT_LT(elapsed, 100); // Less than 100ms since just created
 
     // Wait a bit
     juce::Thread::sleep(50);
 
     auto elapsed2 = source->getTimeSinceLastAudio();
-    EXPECT_GE(elapsed2, 40);  // At least 40ms (accounting for timing variance)
+    EXPECT_GE(elapsed2, 40); // At least 40ms (accounting for timing variance)
 }
 
 TEST_F(SourceStateTest, UpdateLastAudioTimeTransitionsToActive)
@@ -268,7 +266,7 @@ TEST_F(SourceStateTest, ConcurrentUpdateLastAudioTime)
 {
     EXPECT_TRUE(source->transitionTo(SourceState::ACTIVE));
 
-    std::atomic<int> callCount{ 0 };
+    std::atomic<int> callCount{0};
     std::vector<std::thread> threads;
 
     // Spawn multiple threads calling updateLastAudioTime concurrently

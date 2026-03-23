@@ -4,17 +4,15 @@
 */
 
 #include "ui/managers/DisplaySettingsManager.h"
-#include "ui/layout/PaneComponent.h"
-#include "core/dsp/TimingConfig.h"
+
 #include "core/Oscillator.h"
+#include "core/dsp/TimingConfig.h"
+#include "ui/layout/PaneComponent.h"
 
 namespace oscil
 {
 
-DisplaySettingsManager::DisplaySettingsManager(PaneGetter paneGetter)
-    : paneGetter_(std::move(paneGetter))
-{
-}
+DisplaySettingsManager::DisplaySettingsManager(PaneGetter paneGetter) : paneGetter_(std::move(paneGetter)) {}
 
 void DisplaySettingsManager::setShowGridForAll(bool show)
 {

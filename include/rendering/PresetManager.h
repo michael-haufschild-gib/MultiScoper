@@ -1,7 +1,9 @@
 #pragma once
 
 #include "rendering/VisualConfiguration.h"
+
 #include <juce_core/juce_core.h>
+
 #include <vector>
 
 namespace oscil
@@ -27,19 +29,16 @@ public:
     VisualConfiguration loadPreset(const juce::String& presetId) const;
 
     /// Save a visual configuration as a user preset.
-    bool saveUserPreset(const juce::String& name,
-                        const VisualConfiguration& config);
+    bool saveUserPreset(const juce::String& name, const VisualConfiguration& config);
 
     /// Delete a user preset by ID.
     bool deleteUserPreset(const juce::String& presetId);
 
     /// Rename a user preset.
-    bool renameUserPreset(const juce::String& presetId,
-                          const juce::String& newName);
+    bool renameUserPreset(const juce::String& presetId, const juce::String& newName);
 
     /// Export a preset to an external file.
-    bool exportPreset(const juce::String& presetId,
-                      const juce::File& destination) const;
+    bool exportPreset(const juce::String& presetId, const juce::File& destination) const;
 
     /// Import a preset from an external file.
     bool importPreset(const juce::File& source);

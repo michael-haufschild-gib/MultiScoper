@@ -124,7 +124,8 @@ static void serializeTiltShift(juce::ValueTree& parent, const TiltShiftSettings&
 static void deserializeBloom(const juce::ValueTree& tree, BloomSettings& bloom)
 {
     auto t = tree.getChildWithName(BLOOM_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     bloom.enabled = t.getProperty("enabled", false);
     bloom.intensity = t.getProperty("intensity", 1.0f);
     bloom.threshold = t.getProperty("threshold", 0.8f);
@@ -137,7 +138,8 @@ static void deserializeBloom(const juce::ValueTree& tree, BloomSettings& bloom)
 static void deserializeRadialBlur(const juce::ValueTree& tree, RadialBlurSettings& rb)
 {
     auto t = tree.getChildWithName(RADIALBLUR_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     rb.enabled = t.getProperty("enabled", false);
     rb.amount = t.getProperty("amount", 0.1f);
     rb.glow = t.getProperty("glow", 1.0f);
@@ -147,7 +149,8 @@ static void deserializeRadialBlur(const juce::ValueTree& tree, RadialBlurSetting
 static void deserializeTrails(const juce::ValueTree& tree, TrailSettings& trails)
 {
     auto t = tree.getChildWithName(TRAILS_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     trails.enabled = t.getProperty("enabled", false);
     trails.decay = t.getProperty("decay", 0.1f);
     trails.opacity = t.getProperty("opacity", 0.8f);
@@ -156,7 +159,8 @@ static void deserializeTrails(const juce::ValueTree& tree, TrailSettings& trails
 static void deserializeColorGrade(const juce::ValueTree& tree, ColorGradeSettings& cg)
 {
     auto t = tree.getChildWithName(COLORGRADE_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     cg.enabled = t.getProperty("enabled", false);
     cg.brightness = t.getProperty("brightness", 0.0f);
     cg.contrast = t.getProperty("contrast", 1.0f);
@@ -172,7 +176,8 @@ static void deserializeColorGrade(const juce::ValueTree& tree, ColorGradeSetting
 static void deserializeVignette(const juce::ValueTree& tree, VignetteSettings& v)
 {
     auto t = tree.getChildWithName(VIGNETTE_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     v.enabled = t.getProperty("enabled", false);
     v.intensity = t.getProperty("intensity", 0.5f);
     v.softness = t.getProperty("softness", 0.5f);
@@ -183,7 +188,8 @@ static void deserializeVignette(const juce::ValueTree& tree, VignetteSettings& v
 static void deserializeFilmGrain(const juce::ValueTree& tree, FilmGrainSettings& fg)
 {
     auto t = tree.getChildWithName(FILMGRAIN_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     fg.enabled = t.getProperty("enabled", false);
     fg.intensity = t.getProperty("intensity", 0.1f);
     fg.speed = t.getProperty("speed", 24.0f);
@@ -192,7 +198,8 @@ static void deserializeFilmGrain(const juce::ValueTree& tree, FilmGrainSettings&
 static void deserializeChromaticAberration(const juce::ValueTree& tree, ChromaticAberrationSettings& ca)
 {
     auto t = tree.getChildWithName(CHROMATIC_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     ca.enabled = t.getProperty("enabled", false);
     ca.intensity = t.getProperty("intensity", 0.005f);
 }
@@ -200,7 +207,8 @@ static void deserializeChromaticAberration(const juce::ValueTree& tree, Chromati
 static void deserializeScanlines(const juce::ValueTree& tree, ScanlineSettings& s)
 {
     auto t = tree.getChildWithName(SCANLINES_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     s.enabled = t.getProperty("enabled", false);
     s.intensity = t.getProperty("intensity", 0.3f);
     s.density = t.getProperty("density", 2.0f);
@@ -210,7 +218,8 @@ static void deserializeScanlines(const juce::ValueTree& tree, ScanlineSettings& 
 static void deserializeTiltShift(const juce::ValueTree& tree, TiltShiftSettings& ts)
 {
     auto t = tree.getChildWithName(TILTSHIFT_TYPE);
-    if (!t.isValid()) return;
+    if (!t.isValid())
+        return;
     ts.enabled = t.getProperty("enabled", false);
     ts.position = t.getProperty("position", 0.5f);
     ts.range = t.getProperty("range", 0.3f);

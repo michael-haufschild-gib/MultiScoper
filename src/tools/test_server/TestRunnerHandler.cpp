@@ -3,12 +3,14 @@
 */
 
 #include "tools/test_server/TestRunnerHandler.h"
-#include "plugin/PluginEditor.h"
-#include "ui/layout/PaneComponent.h"
-#include "ui/panels/WaveformComponent.h"
-#include "plugin/PluginProcessor.h"
+
 #include "core/OscilState.h"
 #include "core/Pane.h"
+#include "ui/layout/PaneComponent.h"
+#include "ui/panels/WaveformComponent.h"
+
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginProcessor.h"
 
 namespace oscil
 {
@@ -29,8 +31,7 @@ void countPassed(const nlohmann::json& tests, nlohmann::json& response)
     response["failed"] = static_cast<int>(tests.size()) - passedCount;
     response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
 }
-nlohmann::json testSingleColumnLayout(OscilState& state, OscilPluginEditor& editor,
-                                      PaneLayoutManager& layoutManager,
+nlohmann::json testSingleColumnLayout(OscilState& state, OscilPluginEditor& editor, PaneLayoutManager& layoutManager,
                                       const juce::Rectangle<int>& availableArea)
 {
     nlohmann::json test;
@@ -43,8 +44,7 @@ nlohmann::json testSingleColumnLayout(OscilState& state, OscilPluginEditor& edit
     return test;
 }
 
-nlohmann::json testDoubleColumnLayout(OscilState& state, OscilPluginEditor& editor,
-                                      PaneLayoutManager& layoutManager,
+nlohmann::json testDoubleColumnLayout(OscilState& state, OscilPluginEditor& editor, PaneLayoutManager& layoutManager,
                                       const juce::Rectangle<int>& availableArea)
 {
     nlohmann::json test;
@@ -62,8 +62,7 @@ nlohmann::json testDoubleColumnLayout(OscilState& state, OscilPluginEditor& edit
     return test;
 }
 
-nlohmann::json testTripleColumnLayout(OscilState& state, OscilPluginEditor& editor,
-                                      PaneLayoutManager& layoutManager,
+nlohmann::json testTripleColumnLayout(OscilState& state, OscilPluginEditor& editor, PaneLayoutManager& layoutManager,
                                       const juce::Rectangle<int>& availableArea)
 {
     nlohmann::json test;
@@ -75,12 +74,10 @@ nlohmann::json testTripleColumnLayout(OscilState& state, OscilPluginEditor& edit
     auto bounds2 = layoutManager.getPaneBounds(2, availableArea);
     int columnWidth = availableArea.getWidth() / 3;
     int expectedPaneWidth = columnWidth - 4;
-    bool widthsCorrect = (bounds0.getWidth() == expectedPaneWidth) &&
-                         (bounds1.getWidth() == expectedPaneWidth) &&
+    bool widthsCorrect = (bounds0.getWidth() == expectedPaneWidth) && (bounds1.getWidth() == expectedPaneWidth) &&
                          (bounds2.getWidth() == expectedPaneWidth);
-    bool columnsCorrect = (bounds0.getX() == 2) &&
-                          (bounds1.getX() == columnWidth + 2) &&
-                          (bounds2.getX() == 2 * columnWidth + 2);
+    bool columnsCorrect =
+        (bounds0.getX() == 2) && (bounds1.getX() == columnWidth + 2) && (bounds2.getX() == 2 * columnWidth + 2);
     test["passed"] = widthsCorrect && columnsCorrect;
     test["details"] = "Each pane should be one-third width, in separate columns";
     return test;
@@ -186,15 +183,15 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
         {
             nlohmann::json test;
             test["name"] = "RenderingModeCheck";
-            #if OSCIL_ENABLE_OPENGL
+#if OSCIL_ENABLE_OPENGL
             test["renderingMode"] = "OpenGL";
             test["passed"] = true;
             test["details"] = "OpenGL rendering is enabled";
-            #else
+#else
             test["renderingMode"] = "Software";
             test["passed"] = true;
             test["details"] = "Software rendering is enabled (OpenGL not compiled)";
-            #endif
+#endif
             tests.push_back(test);
         }
 
@@ -207,7 +204,11 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
             const auto& paneComponents = editor_.getPaneComponents();
             bool allPanesValid = true;
             for (size_t i = 0; i < paneComponents.size(); ++i)
-                if (!paneComponents[i].get()) { allPanesValid = false; break; }
+                if (!paneComponents[i].get())
+                {
+                    allPanesValid = false;
+                    break;
+                }
             test["passed"] = allPanesValid;
             test["details"] = "All pane components should be valid";
             test["paneCount"] = paneComponents.size();

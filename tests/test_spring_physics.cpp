@@ -3,8 +3,9 @@
     Tests for spring calculations, damping, stiffness, and settling behavior
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/SpringAnimation.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

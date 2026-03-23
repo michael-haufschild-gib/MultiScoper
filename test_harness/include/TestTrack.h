@@ -5,11 +5,13 @@
 
 #pragma once
 
-#include <juce_audio_processors/juce_audio_processors.h>
+#include "core/InstanceRegistry.h"
+
 #include "TestAudioGenerator.h"
 #include "TestTransport.h"
 #include "plugin/PluginProcessor.h"
-#include "core/InstanceRegistry.h"
+
+#include <juce_audio_processors/juce_audio_processors.h>
 
 namespace oscil::test
 {

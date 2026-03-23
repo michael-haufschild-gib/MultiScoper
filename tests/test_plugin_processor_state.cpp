@@ -3,17 +3,19 @@
     Tests for state get/set, persistence, and restoration
 */
 
-#include <gtest/gtest.h>
-#include "OscilTestUtils.h"
-#include "plugin/PluginProcessor.h"
-#include "core/SharedCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
+#include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
+
+#include "OscilTestUtils.h"
+#include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
-#include <thread>
+#include "rendering/ShaderRegistry.h"
+
 #include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -37,12 +39,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_,
-            *themeManager_,
-            *shaderRegistry_,
-            *presetManager_,
-            *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
     }
 
     void TearDown() override
@@ -73,12 +71,8 @@ TEST_F(PluginProcessorStateTest, StateInformation_SaveAndRestore)
     EXPECT_GT(savedState.getSize(), 0u);
 
     // Create new processor and restore state
-    auto newProcessor = std::make_unique<OscilPluginProcessor>(
-        *registry_,
-        *themeManager_,
-        *shaderRegistry_,
-        *presetManager_,
-        *memoryBudgetManager_);
+    auto newProcessor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                               *presetManager_, *memoryBudgetManager_);
     newProcessor->prepareToPlay(44100.0, 512);
 
     newProcessor->setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
@@ -156,8 +150,8 @@ TEST_F(PluginProcessorStateTest, StateInformation_ContainsTimingState)
     processor->getStateInformation(savedState);
 
     // Convert to string and check for timing data
-    juce::String stateXml = juce::String::createStringFromData(savedState.getData(),
-                                                                static_cast<int>(savedState.getSize()));
+    juce::String stateXml =
+        juce::String::createStringFromData(savedState.getData(), static_cast<int>(savedState.getSize()));
 
     EXPECT_TRUE(stateXml.contains("Timing") || stateXml.contains("timing"));
 }
@@ -235,8 +229,7 @@ TEST_F(PluginProcessorStateTest, StateInformation_MissingTimingNodeClearsRuntime
     processor->getStateInformation(savedState);
     ASSERT_GT(savedState.getSize(), 0u);
 
-    auto xmlText = juce::String::createStringFromData(savedState.getData(),
-                                                      static_cast<int>(savedState.getSize()));
+    auto xmlText = juce::String::createStringFromData(savedState.getData(), static_cast<int>(savedState.getSize()));
     auto xml = juce::XmlDocument::parse(xmlText);
     ASSERT_NE(xml, nullptr);
 
@@ -246,8 +239,7 @@ TEST_F(PluginProcessorStateTest, StateInformation_MissingTimingNodeClearsRuntime
     xml->removeChildElement(timingNode, true);
 
     auto modifiedXml = xml->toString();
-    processor->setStateInformation(modifiedXml.toRawUTF8(),
-                                   modifiedXml.getNumBytesAsUTF8());
+    processor->setStateInformation(modifiedXml.toRawUTF8(), modifiedXml.getNumBytesAsUTF8());
     pumpMessageQueue(200);
 
     // Runtime-only timing state must be neutralized even when Timing node is absent.
@@ -280,12 +272,8 @@ TEST_F(PluginProcessorStateTest, StateInformation_VeryLargeState)
     EXPECT_GT(savedState.getSize(), 1000u); // Should be reasonably large
 
     // Create new processor and restore
-    auto newProcessor = std::make_unique<OscilPluginProcessor>(
-        *registry_,
-        *themeManager_,
-        *shaderRegistry_,
-        *presetManager_,
-        *memoryBudgetManager_);
+    auto newProcessor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                               *presetManager_, *memoryBudgetManager_);
     newProcessor->prepareToPlay(44100.0, 512);
 
     newProcessor->setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
@@ -301,8 +289,7 @@ TEST_F(PluginProcessorStateTest, StateAccessDuringProcessing)
     std::atomic<bool> running{true};
 
     // Thread that processes audio
-    std::thread audioThread([this, &running]()
-    {
+    std::thread audioThread([this, &running]() {
         while (running)
         {
             juce::AudioBuffer<float> buffer(2, 256);
@@ -313,15 +300,14 @@ TEST_F(PluginProcessorStateTest, StateAccessDuringProcessing)
     });
 
     // Thread that accesses state
-    std::thread stateThread([this, &running]()
-    {
+    std::thread stateThread([this, &running]() {
         while (running)
         {
             juce::MemoryBlock stateData;
             processor->getStateInformation(stateData);
 
             auto& engine = processor->getTimingEngine();
-            (void)engine.getConfig();
+            (void) engine.getConfig();
         }
     });
 

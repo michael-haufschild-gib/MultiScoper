@@ -3,24 +3,19 @@
     Tests for OscilTextField UI component
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilTextField.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilTextFieldTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -185,7 +180,7 @@ TEST_F(OscilTextFieldTest, SetNumericValue)
 {
     OscilTextField field(getThemeManager());
     field.setVariant(TextFieldVariant::Number);
-    field.setStep(0.5);  // Set step to allow non-integer values
+    field.setStep(0.5); // Set step to allow non-integer values
 
     field.setNumericValue(42.5, false);
     EXPECT_NEAR(field.getNumericValue(), 42.5, 0.01);
@@ -299,9 +294,7 @@ TEST_F(OscilTextFieldTest, NoCallbackWhenNotifyFalse)
 
     int changeCount = 0;
 
-    field.onTextChanged = [&changeCount](const juce::String&) {
-        changeCount++;
-    };
+    field.onTextChanged = [&changeCount](const juce::String&) { changeCount++; };
 
     field.setText("Test", false);
     EXPECT_EQ(changeCount, 0);
@@ -330,9 +323,7 @@ TEST_F(OscilTextFieldTest, OnReturnPressedCallback)
     OscilTextField field(getThemeManager());
 
     bool returnPressed = false;
-    field.onReturnPressed = [&returnPressed]() {
-        returnPressed = true;
-    };
+    field.onReturnPressed = [&returnPressed]() { returnPressed = true; };
 
     // Callback would be triggered by keyboard event
     // Just verify callback can be set
@@ -344,9 +335,7 @@ TEST_F(OscilTextFieldTest, OnEscapePressedCallback)
     OscilTextField field(getThemeManager());
 
     bool escapePressed = false;
-    field.onEscapePressed = [&escapePressed]() {
-        escapePressed = true;
-    };
+    field.onEscapePressed = [&escapePressed]() { escapePressed = true; };
 
     // Callback would be triggered by keyboard event
     // Just verify callback can be set

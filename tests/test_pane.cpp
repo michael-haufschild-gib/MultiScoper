@@ -4,9 +4,9 @@
 
 #include "core/Pane.h"
 
+#include <cmath>
 #include <gtest/gtest.h>
 #include <limits>
-#include <cmath>
 
 using namespace oscil;
 

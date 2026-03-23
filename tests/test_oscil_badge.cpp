@@ -9,24 +9,19 @@
     - Theme change corrupting color/variant state
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilBadge.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilBadgeTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -115,8 +110,8 @@ TEST_F(OscilBadgeTest, AllColorVariantsAccepted)
 {
     OscilBadge badge(getThemeManager());
 
-    for (auto color : {BadgeColor::Default, BadgeColor::Success,
-                       BadgeColor::Warning, BadgeColor::Error, BadgeColor::Info})
+    for (auto color :
+         {BadgeColor::Default, BadgeColor::Success, BadgeColor::Warning, BadgeColor::Error, BadgeColor::Info})
     {
         badge.setColor(color);
         EXPECT_EQ(badge.getColor(), color);

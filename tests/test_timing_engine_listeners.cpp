@@ -59,13 +59,13 @@ TEST_F(TimingEngineTest, Listener_DeterministicNotification)
 
     // 1. Change mode
     engine.setTimingMode(TimingMode::MELODIC);
-    
+
     // Verify listener NOT called yet (it's pending)
     EXPECT_EQ(listener.modeChangedCount, 0);
-    
+
     // Dispatch updates
     engine.dispatchPendingUpdates();
-    
+
     // Verify listener CALLED
     EXPECT_EQ(listener.modeChangedCount, 1);
     EXPECT_EQ(listener.lastMode, TimingMode::MELODIC);
@@ -73,19 +73,20 @@ TEST_F(TimingEngineTest, Listener_DeterministicNotification)
     // 2. Change Interval
     // Switch back to TIME mode first so timeIntervalMs affects actualIntervalMs
     engine.setTimingMode(TimingMode::TIME);
-    engine.dispatchPendingUpdates(); // Dispatch mode change and potential interval change (if switching to TIME changed it)
-    
+    engine.dispatchPendingUpdates(); // Dispatch mode change and potential interval change (if switching to TIME changed
+                                     // it)
+
     // Reset counts for clarity or just check increment
     int prevIntervalCount = listener.intervalChangedCount;
-    
+
     engine.setTimeIntervalMs(123.4f);
     // Should be pending
     EXPECT_EQ(listener.intervalChangedCount, prevIntervalCount);
-    
+
     engine.dispatchPendingUpdates();
     // Should have incremented
     EXPECT_EQ(listener.intervalChangedCount, prevIntervalCount + 1);
-    
+
     engine.setTimeIntervalMs(250.0f);
     engine.dispatchPendingUpdates();
     EXPECT_EQ(listener.intervalChangedCount, prevIntervalCount + 2);
@@ -109,7 +110,7 @@ TEST_F(TimingEngineTest, Listener_AddAndRemove)
     // Change mode again
     engine.setTimingMode(TimingMode::TIME);
     engine.dispatchPendingUpdates();
-    
+
     // Should NOT have incremented
     EXPECT_EQ(listener.modeChangedCount, 1);
 }
@@ -129,7 +130,7 @@ TEST_F(TimingEngineTest, FromValueTree_ClearsPendingNotificationFlags)
 
     juce::AudioPlayHead::PositionInfo posInfo;
     posInfo.setBpm(147.0);
-    posInfo.setTimeSignature(juce::AudioPlayHead::TimeSignature{ 7, 8 });
+    posInfo.setTimeSignature(juce::AudioPlayHead::TimeSignature{7, 8});
     engine.updateHostInfo(posInfo);
 
     EXPECT_EQ(listener.modeChangedCount, 0);
@@ -161,8 +162,7 @@ TEST_F(TimingEngineTest, ThreadSafety_ConcurrentConfigChanges)
     std::atomic<int> iterations{0};
 
     // Thread that changes timing mode
-    std::thread modeChanger([this, &running, &iterations]()
-    {
+    std::thread modeChanger([this, &running, &iterations]() {
         while (running)
         {
             engine.setTimingMode(TimingMode::TIME);
@@ -172,20 +172,18 @@ TEST_F(TimingEngineTest, ThreadSafety_ConcurrentConfigChanges)
     });
 
     // Thread that reads config
-    std::thread configReader([this, &running]()
-    {
+    std::thread configReader([this, &running]() {
         while (running)
         {
             auto config = engine.getConfig();
             auto interval = engine.getActualIntervalMs();
-            (void)config;
-            (void)interval;
+            (void) config;
+            (void) interval;
         }
     });
 
     // Thread that changes interval
-    std::thread intervalChanger([this, &running]()
-    {
+    std::thread intervalChanger([this, &running]() {
         int i = 0;
         while (running)
         {
@@ -214,8 +212,7 @@ TEST_F(TimingEngineTest, ThreadSafety_ManualTriggerAtomic)
     std::atomic<bool> running{true};
 
     // Thread that requests triggers
-    std::thread requester([this, &running]()
-    {
+    std::thread requester([this, &running]() {
         while (running)
         {
             engine.requestManualTrigger();
@@ -223,8 +220,7 @@ TEST_F(TimingEngineTest, ThreadSafety_ManualTriggerAtomic)
     });
 
     // Thread that checks/clears triggers
-    std::thread checker([this, &running, &triggerCount]()
-    {
+    std::thread checker([this, &running, &triggerCount]() {
         while (running)
         {
             if (engine.checkAndClearManualTrigger())

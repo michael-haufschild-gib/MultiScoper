@@ -3,9 +3,10 @@
     Tests for decimation, anti-aliasing filter, and memory management
 */
 
-#include <gtest/gtest.h>
 #include "core/DecimatingCaptureBuffer.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 #include <numeric>
 
 using namespace oscil;
@@ -103,7 +104,7 @@ TEST_F(DecimationFilterTest, FilterAttenuatesHighFrequencies)
     for (int i = 0; i < 1000; ++i)
     {
         float output = filter.processSample(1.0f);
-        if (i > 50)  // Skip initial transient
+        if (i > 50) // Skip initial transient
             lowFreqEnergy += output * output;
     }
 
@@ -244,8 +245,8 @@ protected:
     std::unique_ptr<DecimatingCaptureBuffer> buffer;
 
     // Helper to create test audio buffer
-    juce::AudioBuffer<float> createTestBuffer(int numSamples, int numChannels = 2,
-                                               float frequency = 440.0f, float sampleRate = 44100.0f)
+    juce::AudioBuffer<float> createTestBuffer(int numSamples, int numChannels = 2, float frequency = 440.0f,
+                                              float sampleRate = 44100.0f)
     {
         juce::AudioBuffer<float> audioBuffer(numChannels, numSamples);
 
@@ -313,7 +314,7 @@ TEST_F(DecimatingBufferWriteReadTest, DCSignalPreservedAfterDecimation)
     // DC should be preserved (allow for filter warmup)
     float avgOutput = 0.0f;
     int validSamples = 0;
-    for (int i = 100; i < samplesRead; ++i)  // Skip initial transient
+    for (int i = 100; i < samplesRead; ++i) // Skip initial transient
     {
         avgOutput += output[static_cast<size_t>(i)];
         validSamples++;
@@ -341,12 +342,12 @@ TEST_F(DecimatingBufferWriteReadTest, NoDecimationWithUltraPreset)
 
 TEST_F(DecimatingBufferWriteReadTest, NoDecimationNormalizesMetadataSampleRateToCaptureRate)
 {
-    config.qualityPreset = QualityPreset::High;  // 44.1kHz capture, no decimation at 44.1kHz source
+    config.qualityPreset = QualityPreset::High; // 44.1kHz capture, no decimation at 44.1kHz source
     buffer = std::make_unique<DecimatingCaptureBuffer>(config, 44100);
 
     auto audioBuffer = createTestBuffer(256);
     CaptureFrameMetadata meta;
-    meta.sampleRate = 12345.0;  // Deliberately mismatched upstream metadata
+    meta.sampleRate = 12345.0; // Deliberately mismatched upstream metadata
     meta.numChannels = 2;
 
     buffer->write(audioBuffer, meta);
@@ -378,4 +379,3 @@ TEST_F(DecimatingBufferWriteReadTest, DecimationNormalizesMetadataSampleRateAndT
 }
 
 // Anti-aliasing and decimation accuracy tests in test_decimating_capture_buffer_edge.cpp
-

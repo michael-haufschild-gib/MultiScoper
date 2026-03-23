@@ -3,12 +3,12 @@
     (Core setup and state management are in OscillatorListItem.cpp)
 */
 
-#include "ui/panels/OscillatorListItem.h"
-#include "ui/components/ProcessingModeIcons.h"
-#include "ui/components/ListItemIcons.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/InlineEditLabel.h"
-#include "core/interfaces/IInstanceRegistry.h"
+#include "ui/components/ListItemIcons.h"
+#include "ui/components/ProcessingModeIcons.h"
+#include "ui/panels/OscillatorListItem.h"
 
 namespace oscil
 {
@@ -53,13 +53,16 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
     float startY = dragArea.getCentreY() - dotSpacing;
     for (int row = 0; row < 3; ++row)
         for (int col = 0; col < 2; ++col)
-            g.fillEllipse(startX + col * dotSpacing - dotSize/2, startY + row * dotSpacing - dotSize/2, dotSize, dotSize);
+            g.fillEllipse(startX + col * dotSpacing - dotSize / 2, startY + row * dotSpacing - dotSize / 2, dotSize,
+                          dotSize);
 
     // Color indicator
     bounds.removeFromLeft(4);
-    float colorY = selected_ ? (COMPACT_HEIGHT / 2.0f - COLOR_INDICATOR_SIZE / 2.0f) : (bounds.getCentreY() - COLOR_INDICATOR_SIZE / 2.0f);
+    float colorY = selected_ ? (COMPACT_HEIGHT / 2.0f - COLOR_INDICATOR_SIZE / 2.0f)
+                             : (bounds.getCentreY() - COLOR_INDICATOR_SIZE / 2.0f);
     g.setColour(colour_.withAlpha(alpha));
-    g.fillEllipse(bounds.getX(), colorY, static_cast<float>(COLOR_INDICATOR_SIZE), static_cast<float>(COLOR_INDICATOR_SIZE));
+    g.fillEllipse(bounds.getX(), colorY, static_cast<float>(COLOR_INDICATOR_SIZE),
+                  static_cast<float>(COLOR_INDICATOR_SIZE));
 }
 
 void OscillatorListItemComponent::mouseEnter(const juce::MouseEvent&)
@@ -85,10 +88,7 @@ void OscillatorListItemComponent::mouseMove(const juce::MouseEvent& e)
     }
 }
 
-void OscillatorListItemComponent::mouseDown(const juce::MouseEvent& e)
-{
-    dragStartPos_ = e.getPosition();
-}
+void OscillatorListItemComponent::mouseDown(const juce::MouseEvent& e) { dragStartPos_ = e.getPosition(); }
 
 void OscillatorListItemComponent::mouseDrag(const juce::MouseEvent& e)
 {
@@ -114,8 +114,7 @@ void OscillatorListItemComponent::mouseDoubleClick(const juce::MouseEvent& e)
     // Then color indicator (size 14)
 
     int indicatorX = DRAG_HANDLE_WIDTH + 4;
-    int indicatorY = selected_ ? (COMPACT_HEIGHT - COLOR_INDICATOR_SIZE) / 2
-                               : (getHeight() - COLOR_INDICATOR_SIZE) / 2;
+    int indicatorY = selected_ ? (COMPACT_HEIGHT - COLOR_INDICATOR_SIZE) / 2 : (getHeight() - COLOR_INDICATOR_SIZE) / 2;
 
     auto indicatorBounds = juce::Rectangle<int>(indicatorX, indicatorY, COLOR_INDICATOR_SIZE, COLOR_INDICATOR_SIZE);
 
@@ -126,8 +125,8 @@ void OscillatorListItemComponent::mouseDoubleClick(const juce::MouseEvent& e)
         return;
     }
 
-    // Otherwise treat as selection (already handled by mouseDown/Up but double click might need specific handling if we wanted to open config)
-    // For now, just select
+    // Otherwise treat as selection (already handled by mouseDown/Up but double click might need specific handling if we
+    // wanted to open config) For now, just select
     listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); });
 }
 
@@ -173,7 +172,7 @@ bool OscillatorListItemComponent::keyPressed(const juce::KeyPress& key)
             return true;
         }
         isVisible_ = !isVisible_;
-        updateVisibility();  // Must call updateVisibility to sync child components
+        updateVisibility(); // Must call updateVisibility to sync child components
         listeners_.call([this](Listener& l) { l.oscillatorVisibilityChanged(oscillatorId_, isVisible_); });
         return true;
     }

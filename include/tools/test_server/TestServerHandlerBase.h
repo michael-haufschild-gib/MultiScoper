@@ -5,11 +5,12 @@
 
 #pragma once
 
-#include <httplib.h>
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <nlohmann/json.hpp>
+
 #include <functional>
+#include <httplib.h>
+#include <nlohmann/json.hpp>
 
 namespace oscil
 {
@@ -24,10 +25,7 @@ class OscilPluginEditor;
 class TestServerHandlerBase
 {
 public:
-    explicit TestServerHandlerBase(OscilPluginEditor& editor)
-        : editor_(editor)
-    {
-    }
+    explicit TestServerHandlerBase(OscilPluginEditor& editor) : editor_(editor) {}
 
     virtual ~TestServerHandlerBase() = default;
 
@@ -36,7 +34,7 @@ protected:
      * Execute a function on the JUCE message thread and wait for completion.
      * Handles both void and non-void return types.
      */
-    template<typename Func>
+    template <typename Func>
     auto runOnMessageThread(Func&& func) -> decltype(func())
     {
         if (juce::MessageManager::getInstance()->isThisTheMessageThread())

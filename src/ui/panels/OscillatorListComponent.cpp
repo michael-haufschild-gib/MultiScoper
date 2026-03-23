@@ -3,6 +3,7 @@
 */
 
 #include "ui/panels/OscillatorListComponent.h"
+
 #include "ui/components/ComponentConstants.h"
 
 namespace oscil
@@ -33,7 +34,8 @@ OscillatorListComponent::OscillatorListComponent(ServiceContext& context)
 
     // Empty state label
     emptyStateLabel_ = std::make_unique<juce::Label>();
-    emptyStateLabel_->setText("No oscillators yet.\nClick '+ Add Oscillator' above to get started.", juce::dontSendNotification);
+    emptyStateLabel_->setText("No oscillators yet.\nClick '+ Add Oscillator' above to get started.",
+                              juce::dontSendNotification);
     emptyStateLabel_->setJustificationType(juce::Justification::centred);
     emptyStateLabel_->setColour(juce::Label::textColourId, themeService_.getCurrentTheme().textSecondary);
     addChildComponent(emptyStateLabel_.get());
@@ -63,7 +65,8 @@ OscillatorListComponent::OscillatorListComponent(IThemeService& themeService, II
 
     // Empty state label
     emptyStateLabel_ = std::make_unique<juce::Label>();
-    emptyStateLabel_->setText("No oscillators yet.\nClick '+ Add Oscillator' above to get started.", juce::dontSendNotification);
+    emptyStateLabel_->setText("No oscillators yet.\nClick '+ Add Oscillator' above to get started.",
+                              juce::dontSendNotification);
     emptyStateLabel_->setJustificationType(juce::Justification::centred);
     emptyStateLabel_->setColour(juce::Label::textColourId, themeService_.getCurrentTheme().textSecondary);
     addChildComponent(emptyStateLabel_.get());
@@ -83,10 +86,7 @@ OscillatorListComponent::~OscillatorListComponent()
     }
 }
 
-void OscillatorListComponent::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscillatorListComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 void OscillatorListComponent::paint(juce::Graphics& g)
 {
@@ -100,19 +100,19 @@ void OscillatorListComponent::paint(juce::Graphics& g)
         // We need to account for viewport scroll position
         int yPos = 0;
         int viewY = viewport_->getViewPositionY();
-        
+
         // Sum heights up to target index
         for (int i = 0; i < dragTargetIndex_; ++i)
         {
             if (static_cast<size_t>(i) < items_.size())
                 yPos += items_[static_cast<size_t>(i)]->getHeight();
         }
-        
+
         // Adjust for scroll and relative positioning
         // container_ is inside viewport_, so yPos is relative to container
         // viewport_ is child of OscillatorListComponent
         int relativeY = yPos - viewY + viewport_->getY();
-        
+
         g.setColour(theme.controlActive);
         g.drawHorizontalLine(relativeY, 0.0f, static_cast<float>(getWidth()));
         g.fillEllipse(0.0f, static_cast<float>(relativeY - 3), 6.0f, 6.0f);
@@ -130,7 +130,7 @@ void OscillatorListComponent::resized()
     {
         emptyStateLabel_->setBounds(bounds.reduced(ComponentLayout::SPACING_MD));
     }
-    
+
     viewport_->setBounds(bounds);
 
     if (!items_.empty())
@@ -177,9 +177,15 @@ std::vector<Oscillator> OscillatorListComponent::filterOscillators(const std::ve
         bool include = false;
         switch (currentFilterMode_)
         {
-            case OscillatorFilterMode::All:     include = true; break;
-            case OscillatorFilterMode::Visible: include = osc.isVisible(); break;
-            case OscillatorFilterMode::Hidden:  include = !osc.isVisible(); break;
+            case OscillatorFilterMode::All:
+                include = true;
+                break;
+            case OscillatorFilterMode::Visible:
+                include = osc.isVisible();
+                break;
+            case OscillatorFilterMode::Hidden:
+                include = !osc.isVisible();
+                break;
         }
         if (include)
             filtered.push_back(osc);
@@ -223,12 +229,14 @@ void OscillatorListComponent::rebuildItems(
             item = std::move(it->second);
             reusedItems.erase(it);
             item->updateFromOscillator(osc);
-            juce::Logger::writeToLog("[OscList] Reused item for " + osc.getName() + " order=" + juce::String(osc.getOrderIndex()));
+            juce::Logger::writeToLog("[OscList] Reused item for " + osc.getName() +
+                                     " order=" + juce::String(osc.getOrderIndex()));
         }
         else
         {
             item = std::make_unique<OscillatorListItemComponent>(osc, instanceRegistry_, themeService_);
-            juce::Logger::writeToLog("[OscList] Created new item for " + osc.getName() + " order=" + juce::String(osc.getOrderIndex()));
+            juce::Logger::writeToLog("[OscList] Created new item for " + osc.getName() +
+                                     " order=" + juce::String(osc.getOrderIndex()));
         }
 
         item->setSelected(osc.getId() == selectedOscillatorId_);
@@ -246,9 +254,9 @@ void OscillatorListComponent::refreshList(const std::vector<Oscillator>& oscilla
     allOscillators_ = oscillators;
     auto filtered = filterOscillators(oscillators);
 
-    juce::Logger::writeToLog("[OscList] refreshList: " + juce::String(static_cast<int>(oscillators.size()))
-        + " total, " + juce::String(static_cast<int>(filtered.size())) + " filtered, "
-        + juce::String(static_cast<int>(items_.size())) + " existing items");
+    juce::Logger::writeToLog("[OscList] refreshList: " + juce::String(static_cast<int>(oscillators.size())) +
+                             " total, " + juce::String(static_cast<int>(filtered.size())) + " filtered, " +
+                             juce::String(static_cast<int>(items_.size())) + " existing items");
 
     // Map existing items by ID for reuse
     std::unordered_map<juce::String, std::unique_ptr<OscillatorListItemComponent>> reusedItems;
@@ -286,7 +294,7 @@ void OscillatorListComponent::setSelectedOscillator(const OscillatorId& oscillat
         if (item)
             item->setSelected(item->getOscillatorId() == selectedOscillatorId_);
     }
-    
+
     // Layout needs to update because selected item expands
     resized();
 }
@@ -319,8 +327,7 @@ void OscillatorListComponent::oscillatorColorConfigRequested(const OscillatorId&
 
 void OscillatorListComponent::oscillatorDeleteRequested(const OscillatorId& id)
 {
-    juce::MessageManager::callAsync([safeThis = juce::Component::SafePointer<OscillatorListComponent>(this), id]()
-    {
+    juce::MessageManager::callAsync([safeThis = juce::Component::SafePointer<OscillatorListComponent>(this), id]() {
         if (safeThis != nullptr)
             safeThis->listeners_.call([id](Listener& l) { l.oscillatorDeleteRequested(id); });
     });
@@ -361,8 +368,7 @@ void OscillatorListComponent::oscillatorDragStarted(const OscillatorId& id)
 
 bool OscillatorListComponent::isInterestedInDragSource(const SourceDetails& dragSourceDetails)
 {
-    if (dragSourceDetails.description.isObject() && 
-        dragSourceDetails.description.hasProperty("type") && 
+    if (dragSourceDetails.description.isObject() && dragSourceDetails.description.hasProperty("type") &&
         dragSourceDetails.description.getProperty("type", "").toString() == "oscillator")
     {
         return true;
@@ -370,18 +376,15 @@ bool OscillatorListComponent::isInterestedInDragSource(const SourceDetails& drag
     return false;
 }
 
-void OscillatorListComponent::itemDragEnter(const SourceDetails& dragSourceDetails)
-{
-    itemDragMove(dragSourceDetails);
-}
+void OscillatorListComponent::itemDragEnter(const SourceDetails& dragSourceDetails) { itemDragMove(dragSourceDetails); }
 
 void OscillatorListComponent::itemDragMove(const SourceDetails& dragSourceDetails)
 {
     auto mousePos = dragSourceDetails.localPosition;
-    
+
     // Convert mouse Y to container coordinates to check against items
     int containerY = mousePos.y - viewport_->getY() + viewport_->getViewPositionY();
-    
+
     int newTarget = getItemIndexAtY(containerY);
     if (newTarget != dragTargetIndex_)
     {
@@ -389,16 +392,13 @@ void OscillatorListComponent::itemDragMove(const SourceDetails& dragSourceDetail
     }
 }
 
-void OscillatorListComponent::itemDragExit(const SourceDetails& /*dragSourceDetails*/)
-{
-    updateDragIndicator(-1);
-}
+void OscillatorListComponent::itemDragExit(const SourceDetails& /*dragSourceDetails*/) { updateDragIndicator(-1); }
 
 void OscillatorListComponent::itemDropped(const SourceDetails& dragSourceDetails)
 {
     int sourceIndex = static_cast<int>(dragSourceDetails.description.getProperty("index", -1));
     int targetIndex = dragTargetIndex_;
-    
+
     updateDragIndicator(-1);
 
     if (sourceIndex != -1 && targetIndex != -1 && sourceIndex != targetIndex)
@@ -407,7 +407,7 @@ void OscillatorListComponent::itemDropped(const SourceDetails& dragSourceDetails
         {
             targetIndex--;
         }
-        
+
         listeners_.call([sourceIndex, targetIndex](Listener& l) { l.oscillatorsReordered(sourceIndex, targetIndex); });
     }
 }
@@ -425,7 +425,8 @@ void OscillatorListComponent::oscillatorMoveRequested(const OscillatorId& id, in
         }
     }
 
-    if (currentIndex == -1) return;
+    if (currentIndex == -1)
+        return;
 
     int newIndex = currentIndex + direction;
     if (newIndex >= 0 && newIndex < static_cast<int>(items_.size()))
@@ -446,7 +447,8 @@ void OscillatorListComponent::oscillatorNameChanged(const OscillatorId& id, cons
 
 int OscillatorListComponent::getItemIndexAtY(int y) const
 {
-    if (items_.empty()) return 0;
+    if (items_.empty())
+        return 0;
 
     int currentY = 0;
     for (size_t i = 0; i < items_.size(); ++i)
@@ -458,7 +460,7 @@ int OscillatorListComponent::getItemIndexAtY(int y) const
         }
         currentY += height;
     }
-    
+
     return static_cast<int>(items_.size());
 }
 
@@ -471,10 +473,7 @@ void OscillatorListComponent::updateDragIndicator(int targetIndex)
     }
 }
 
-void OscillatorListComponent::themeChanged(const ColorTheme&)
-{
-    repaint();
-}
+void OscillatorListComponent::themeChanged(const ColorTheme&) { repaint(); }
 
 void OscillatorListComponent::filterModeChanged(OscillatorFilterMode mode)
 {
@@ -482,14 +481,8 @@ void OscillatorListComponent::filterModeChanged(OscillatorFilterMode mode)
     refreshList(allOscillators_);
 }
 
-void OscillatorListComponent::addListener(Listener* listener)
-{
-    listeners_.add(listener);
-}
+void OscillatorListComponent::addListener(Listener* listener) { listeners_.add(listener); }
 
-void OscillatorListComponent::removeListener(Listener* listener)
-{
-    listeners_.remove(listener);
-}
+void OscillatorListComponent::removeListener(Listener* listener) { listeners_.remove(listener); }
 
 } // namespace oscil

@@ -8,7 +8,7 @@
 #include <juce_core/juce_core.h>
 
 #if OSCIL_ENABLE_OPENGL
-#include <juce_opengl/juce_opengl.h>
+    #include <juce_opengl/juce_opengl.h>
 
 namespace oscil
 {
@@ -60,9 +60,8 @@ struct Framebuffer
      * @param useDepthTexture Whether to create depth as a sampleable texture (for DoF, etc.) instead of Renderbuffer
      * @return true if creation succeeded
      */
-    virtual bool create(juce::OpenGLContext& context, int w, int h, int samples = 0,
-                        GLenum fmt = juce::gl::GL_RGBA8, bool withDepth = false,
-                        bool useDepthTexture = false);
+    virtual bool create(juce::OpenGLContext& context, int w, int h, int samples = 0, GLenum fmt = juce::gl::GL_RGBA8,
+                        bool withDepth = false, bool useDepthTexture = false);
 
     /**
      * Destroy the framebuffer and release all resources.

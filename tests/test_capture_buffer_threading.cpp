@@ -4,14 +4,16 @@
     Extended concurrency tests in test_capture_buffer_concurrent.cpp.
 */
 
-#include <gtest/gtest.h>
-#include "helpers/AudioBufferBuilder.h"
 #include "core/SharedCaptureBuffer.h"
-#include <thread>
+
+#include "helpers/AudioBufferBuilder.h"
+
 #include <atomic>
-#include <vector>
 #include <chrono>
 #include <cmath>
+#include <gtest/gtest.h>
+#include <thread>
+#include <vector>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -42,7 +44,8 @@ TEST_F(CaptureBufferThreadingTest, ConcurrentWriteReadDataIntegrity)
 
     std::thread writer([&]() {
         int i = 0;
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             float dc = static_cast<float>(i % 1000) * 0.001f;
             buffer->write(generateDCBuffer(kBlock, dc), CaptureFrameMetadata{});
             wc.fetch_add(1, std::memory_order_relaxed);
@@ -52,11 +55,15 @@ TEST_F(CaptureBufferThreadingTest, ConcurrentWriteReadDataIntegrity)
 
     std::thread reader([&]() {
         std::vector<float> out(kBlock);
-        while (running.load(std::memory_order_relaxed)) {
-            if (buffer->read(out.data(), kBlock, 0) == kBlock) {
+        while (running.load(std::memory_order_relaxed))
+        {
+            if (buffer->read(out.data(), kBlock, 0) == kBlock)
+            {
                 float first = out[0];
-                for (int i = 1; i < kBlock; ++i) {
-                    if (std::abs(out[i] - first) > 0.0001f) {
+                for (int i = 1; i < kBlock; ++i)
+                {
+                    if (std::abs(out[i] - first) > 0.0001f)
+                    {
                         torn.fetch_add(1, std::memory_order_relaxed);
                         break;
                     }
@@ -88,7 +95,8 @@ TEST_F(CaptureBufferThreadingTest, MultiReaderConcurrentAccess)
 
     std::thread writer([&]() {
         int i = 0;
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             float dc = static_cast<float>(i % 500) * 0.002f;
             buffer->write(generateDCBuffer(kBlock, dc), CaptureFrameMetadata{});
             wc.fetch_add(1, std::memory_order_relaxed);
@@ -97,14 +105,18 @@ TEST_F(CaptureBufferThreadingTest, MultiReaderConcurrentAccess)
     });
 
     std::vector<std::thread> readers;
-    for (int r = 0; r < kReaders; ++r) {
+    for (int r = 0; r < kReaders; ++r)
+    {
         readers.emplace_back([&]() {
             std::vector<float> out(kBlock);
-            while (running.load(std::memory_order_relaxed)) {
-                if (buffer->read(out.data(), kBlock, 0) == kBlock) {
+            while (running.load(std::memory_order_relaxed))
+            {
+                if (buffer->read(out.data(), kBlock, 0) == kBlock)
+                {
                     float first = out[0];
                     for (int i = 1; i < kBlock; ++i)
-                        if (std::abs(out[i] - first) > 0.0001f) {
+                        if (std::abs(out[i] - first) > 0.0001f)
+                        {
                             torn.fetch_add(1, std::memory_order_relaxed);
                             break;
                         }
@@ -117,7 +129,8 @@ TEST_F(CaptureBufferThreadingTest, MultiReaderConcurrentAccess)
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     running.store(false, std::memory_order_relaxed);
     writer.join();
-    for (auto& t : readers) t.join();
+    for (auto& t : readers)
+        t.join();
 
     EXPECT_GT(wc.load(), 100);
     EXPECT_GT(totalRc.load(), 100);
@@ -134,7 +147,8 @@ TEST_F(CaptureBufferThreadingTest, MetadataConsistencyUnderConcurrency)
     std::atomic<int> wc{0}, rc{0}, bad{0};
 
     std::thread writer([&]() {
-        for (int i = 1; running.load(std::memory_order_relaxed); ++i) {
+        for (int i = 1; running.load(std::memory_order_relaxed); ++i)
+        {
             CaptureFrameMetadata m{};
             m.sampleRate = 1000.0 * i;
             m.bpm = static_cast<double>(i);
@@ -147,13 +161,16 @@ TEST_F(CaptureBufferThreadingTest, MetadataConsistencyUnderConcurrency)
     });
 
     std::thread reader([&]() {
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             auto m = buffer->getLatestMetadata();
-            if (m.bpm >= 1.0 && m.bpm <= 1e7 && m.timestamp > 0) {
-                bool ok = std::abs(m.sampleRate - 1000.0 * m.bpm) < 0.01
-                       && m.timestamp == static_cast<int64_t>(m.bpm) * 100
-                       && m.isPlaying == (static_cast<int>(m.bpm) % 2 == 0);
-                if (!ok) bad.fetch_add(1, std::memory_order_relaxed);
+            if (m.bpm >= 1.0 && m.bpm <= 1e7 && m.timestamp > 0)
+            {
+                bool ok = std::abs(m.sampleRate - 1000.0 * m.bpm) < 0.01 &&
+                          m.timestamp == static_cast<int64_t>(m.bpm) * 100 &&
+                          m.isPlaying == (static_cast<int>(m.bpm) % 2 == 0);
+                if (!ok)
+                    bad.fetch_add(1, std::memory_order_relaxed);
             }
             rc.fetch_add(1, std::memory_order_relaxed);
         }
@@ -181,21 +198,28 @@ TEST_F(CaptureBufferThreadingTest, ClearDuringConcurrentReads)
 
     std::thread reader([&]() {
         std::vector<float> out(128);
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             int n = buffer->read(out.data(), 128, 0);
-            if (n > 0) {
+            if (n > 0)
+            {
                 bool hasOrig = false, hasZero = false;
-                for (int i = 0; i < n; ++i) {
-                    if (std::abs(out[i] - 0.75f) < 0.001f) hasOrig = true;
-                    else if (std::abs(out[i]) < 0.001f) hasZero = true;
+                for (int i = 0; i < n; ++i)
+                {
+                    if (std::abs(out[i] - 0.75f) < 0.001f)
+                        hasOrig = true;
+                    else if (std::abs(out[i]) < 0.001f)
+                        hasZero = true;
                 }
-                if (hasOrig && hasZero) mixed.fetch_add(1, std::memory_order_relaxed);
+                if (hasOrig && hasZero)
+                    mixed.fetch_add(1, std::memory_order_relaxed);
             }
             rc.fetch_add(1, std::memory_order_relaxed);
         }
     });
 
-    for (int c = 0; c < 50; ++c) {
+    for (int c = 0; c < 50; ++c)
+    {
         buffer->clear();
         std::this_thread::sleep_for(std::chrono::microseconds(50));
         buffer->write(generateDCBuffer(static_cast<int>(kCapacity), 0.75f), CaptureFrameMetadata{});
@@ -222,7 +246,8 @@ TEST_F(CaptureBufferThreadingTest, RingWrapDataIntegrity)
 
     std::thread writer([&]() {
         int i = 0;
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             float dc = static_cast<float>(i % 200) * 0.005f;
             buffer->write(generateDCBuffer(kBlock, dc), CaptureFrameMetadata{});
             wc.fetch_add(1, std::memory_order_relaxed);
@@ -232,11 +257,17 @@ TEST_F(CaptureBufferThreadingTest, RingWrapDataIntegrity)
 
     std::thread reader([&]() {
         std::vector<float> out(kBlock);
-        while (running.load(std::memory_order_relaxed)) {
-            if (buffer->read(out.data(), kBlock, 0) == kBlock) {
+        while (running.load(std::memory_order_relaxed))
+        {
+            if (buffer->read(out.data(), kBlock, 0) == kBlock)
+            {
                 float first = out[0];
                 for (int i = 1; i < kBlock; ++i)
-                    if (std::abs(out[i] - first) > 0.0001f) { err.fetch_add(1, std::memory_order_relaxed); break; }
+                    if (std::abs(out[i] - first) > 0.0001f)
+                    {
+                        err.fetch_add(1, std::memory_order_relaxed);
+                        break;
+                    }
             }
             rc.fetch_add(1, std::memory_order_relaxed);
         }

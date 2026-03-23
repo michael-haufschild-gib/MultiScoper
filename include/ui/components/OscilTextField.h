@@ -5,14 +5,15 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_audio_processors/juce_audio_processors.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -30,9 +31,10 @@ class OscilButton;
  * - Full keyboard accessibility
  * - APVTS support for Number variant
  */
-class OscilTextField : public ThemedComponent,
-                       public TestIdSupport,
-                       private juce::Timer
+class OscilTextField
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     OscilTextField(IThemeService& themeService);
@@ -72,9 +74,8 @@ public:
     void setEnabled(bool enabled);
     bool isEnabled() const { return enabled_; }
 
-    // APVTS integration (Number variant only)
-    void attachToParameter(juce::AudioProcessorValueTreeState& apvts,
-                           const juce::String& paramId);
+    /// Bind this text field to an APVTS parameter (number variant only).
+    void attachToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId);
     void detachFromParameter();
 
     // Callbacks
@@ -92,8 +93,7 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
-    void mouseWheelMove(const juce::MouseEvent& e,
-                        const juce::MouseWheelDetails& wheel) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
@@ -153,7 +153,7 @@ private:
 
     // Layout constants
     static constexpr int ICON_WIDTH = 32;
-    static constexpr int STEPPER_WIDTH = 32;  // Larger for clear +/- visibility
+    static constexpr int STEPPER_WIDTH = 32; // Larger for clear +/- visibility
 
     // TestIdSupport
     void registerTestId() override;

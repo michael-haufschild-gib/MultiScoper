@@ -3,14 +3,18 @@
     Tests for version migrations and backward compatibility
 */
 
-#include <gtest/gtest.h>
-#include "helpers/Fixtures.h"
 #include "core/OscilState.h"
+
+#include "helpers/Fixtures.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
 
-class StatePersistenceMigrationTest : public StateTestFixture {};
+class StatePersistenceMigrationTest : public StateTestFixture
+{
+};
 
 // Test: Missing schema version
 TEST_F(StatePersistenceMigrationTest, MissingSchemaVersion)
@@ -72,9 +76,7 @@ TEST_F(StatePersistenceMigrationTest, MalformedXmlRecovery)
 // Test: Truncated XML recovery
 TEST_F(StatePersistenceMigrationTest, TruncatedXmlRecovery)
 {
-    auto original = StateBuilder()
-        .withThemeName("Test Theme")
-        .buildUnique();
+    auto original = StateBuilder().withThemeName("Test Theme").buildUnique();
 
     juce::String xmlString = original->toXmlString();
 

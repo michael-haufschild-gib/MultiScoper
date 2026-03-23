@@ -25,14 +25,9 @@ static const char* fullscreenVertexShaderSource = R"(
     }
 )";
 
-const char* PostProcessEffect::getFullscreenVertexShader()
-{
-    return fullscreenVertexShaderSource;
-}
+const char* PostProcessEffect::getFullscreenVertexShader() { return fullscreenVertexShaderSource; }
 
-bool PostProcessEffect::compileEffectShader(
-    juce::OpenGLShaderProgram& program,
-    const char* fragmentSource)
+bool PostProcessEffect::compileEffectShader(juce::OpenGLShaderProgram& program, const char* fragmentSource)
 {
     if (!program.addVertexShader(fullscreenVertexShaderSource))
     {

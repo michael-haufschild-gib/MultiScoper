@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include "ui/layout/WindowLayout.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -146,9 +147,9 @@ TEST_F(WindowLayoutTest, IsValidWindowSize)
     EXPECT_TRUE(layout.isValidWindowSize(WindowLayout::MAX_WINDOW_WIDTH, WindowLayout::MAX_WINDOW_HEIGHT));
 
     // Invalid sizes
-    EXPECT_FALSE(layout.isValidWindowSize(100, 768));  // Width too small
-    EXPECT_FALSE(layout.isValidWindowSize(1024, 100)); // Height too small
-    EXPECT_FALSE(layout.isValidWindowSize(5000, 768)); // Width too large
+    EXPECT_FALSE(layout.isValidWindowSize(100, 768));   // Width too small
+    EXPECT_FALSE(layout.isValidWindowSize(1024, 100));  // Height too small
+    EXPECT_FALSE(layout.isValidWindowSize(5000, 768));  // Width too large
     EXPECT_FALSE(layout.isValidWindowSize(1024, 5000)); // Height too large
 }
 
@@ -195,9 +196,9 @@ TEST_F(WindowLayoutTest, DeserializeEmptyValueTree)
 TEST_F(WindowLayoutTest, DeserializeWithOutOfRangeValues)
 {
     juce::ValueTree tree(WindowLayoutIds::WindowLayout);
-    tree.setProperty(WindowLayoutIds::WindowWidth, 50, nullptr);     // Too small
-    tree.setProperty(WindowLayoutIds::WindowHeight, 50, nullptr);    // Too small
-    tree.setProperty(WindowLayoutIds::SidebarWidth, 50, nullptr);    // Too small
+    tree.setProperty(WindowLayoutIds::WindowWidth, 50, nullptr);  // Too small
+    tree.setProperty(WindowLayoutIds::WindowHeight, 50, nullptr); // Too small
+    tree.setProperty(WindowLayoutIds::SidebarWidth, 50, nullptr); // Too small
 
     WindowLayout restored(tree);
 
@@ -216,8 +217,7 @@ TEST_F(WindowLayoutTest, DeserializeClampsSidebarAgainstWindowWidthConstraint)
 
     WindowLayout restored(tree);
 
-    const int maxAllowedSidebar =
-        WindowLayout::MIN_WINDOW_WIDTH - WindowLayout::MIN_OSCILLOSCOPE_WIDTH;
+    const int maxAllowedSidebar = WindowLayout::MIN_WINDOW_WIDTH - WindowLayout::MIN_OSCILLOSCOPE_WIDTH;
 
     EXPECT_LE(restored.getSidebarWidth(), maxAllowedSidebar);
     EXPECT_GE(restored.getOscilloscopeAreaWidth(), WindowLayout::MIN_OSCILLOSCOPE_WIDTH);
@@ -304,7 +304,7 @@ TEST_F(WindowLayoutTest, ListenerNotCalledWhenValueUnchanged)
     layout.addListener(&listener);
 
     int initialWidth = layout.getWindowWidth();
-    layout.setWindowWidth(initialWidth);  // Same value
+    layout.setWindowWidth(initialWidth); // Same value
 
     // Should not be called
     EXPECT_EQ(listener.windowSizeChangedCount, 0);
@@ -355,8 +355,7 @@ TEST_F(WindowLayoutTest, ConstantsAreConsistent)
     EXPECT_LT(WindowLayout::COLLAPSED_SIDEBAR_WIDTH, WindowLayout::MIN_SIDEBAR_WIDTH);
 
     // Minimum window width should accommodate minimum sidebar + minimum oscilloscope
-    EXPECT_GE(WindowLayout::MIN_WINDOW_WIDTH,
-              WindowLayout::MIN_SIDEBAR_WIDTH + WindowLayout::MIN_OSCILLOSCOPE_WIDTH);
+    EXPECT_GE(WindowLayout::MIN_WINDOW_WIDTH, WindowLayout::MIN_SIDEBAR_WIDTH + WindowLayout::MIN_OSCILLOSCOPE_WIDTH);
 }
 
 class SidebarResizeStateTest : public ::testing::Test
@@ -424,8 +423,7 @@ TEST_F(SidebarResizeStateTest, UpdateResizeClampsToMaximum)
     resizeState.updateResize(0, 1200);
 
     // Should be clamped to maximum (considering oscilloscope minimum)
-    int expectedMax = juce::jmin(WindowLayout::MAX_SIDEBAR_WIDTH,
-                                  1200 - WindowLayout::MIN_OSCILLOSCOPE_WIDTH);
+    int expectedMax = juce::jmin(WindowLayout::MAX_SIDEBAR_WIDTH, 1200 - WindowLayout::MIN_OSCILLOSCOPE_WIDTH);
     EXPECT_EQ(resizeState.previewWidth, expectedMax);
 }
 
@@ -441,7 +439,7 @@ TEST_F(SidebarResizeStateTest, UpdateResizeNotResizing)
 TEST_F(SidebarResizeStateTest, EndResize)
 {
     resizeState.startResize(500, 300);
-    resizeState.updateResize(400, 1200);  // Preview = 400
+    resizeState.updateResize(400, 1200); // Preview = 400
 
     resizeState.endResize();
 
@@ -452,12 +450,12 @@ TEST_F(SidebarResizeStateTest, EndResize)
 TEST_F(SidebarResizeStateTest, CancelResize)
 {
     resizeState.startResize(500, 300);
-    resizeState.updateResize(400, 1200);  // Preview = 400
+    resizeState.updateResize(400, 1200); // Preview = 400
 
     resizeState.cancelResize();
 
     EXPECT_FALSE(resizeState.isResizing);
-    EXPECT_EQ(resizeState.previewWidth, 300);  // Restored to original
+    EXPECT_EQ(resizeState.previewWidth, 300); // Restored to original
 }
 
 TEST_F(SidebarResizeStateTest, EndResizeWhenNotResizing)

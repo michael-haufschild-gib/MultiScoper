@@ -3,7 +3,9 @@
 */
 
 #include "core/Source.h"
+
 #include <juce_core/juce_core.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -12,40 +14,29 @@ namespace oscil
 
 // === SourceId Implementation ===
 
-SourceId SourceId::generate()
-{
-    return SourceId{ juce::Uuid().toString() };
-}
+SourceId SourceId::generate() { return SourceId{juce::Uuid().toString()}; }
 
 // === InstanceId Implementation ===
 
-InstanceId InstanceId::generate()
-{
-    return InstanceId{ juce::Uuid().toString() };
-}
+InstanceId InstanceId::generate() { return InstanceId{juce::Uuid().toString()}; }
 
 // === Source Implementation ===
 
-Source::Source()
-    : id_(SourceId::generate())
-    , createdAt_(juce::Time::getCurrentTime())
+Source::Source() : id_(SourceId::generate()), createdAt_(juce::Time::getCurrentTime())
 {
     auto now = juce::Time::currentTimeMillis();
     lastHeartbeatMs_.store(now, std::memory_order_relaxed);
     lastAudioTimeMs_.store(now, std::memory_order_relaxed);
 }
 
-Source::Source(const SourceId& sourceId)
-    : id_(sourceId)
-    , createdAt_(juce::Time::getCurrentTime())
+Source::Source(const SourceId& sourceId) : id_(sourceId), createdAt_(juce::Time::getCurrentTime())
 {
     auto now = juce::Time::currentTimeMillis();
     lastHeartbeatMs_.store(now, std::memory_order_relaxed);
     lastAudioTimeMs_.store(now, std::memory_order_relaxed);
 }
 
-Source::Source(const juce::ValueTree& state)
-    : createdAt_(juce::Time::getCurrentTime())
+Source::Source(const juce::ValueTree& state) : createdAt_(juce::Time::getCurrentTime())
 {
     auto now = juce::Time::currentTimeMillis();
     lastHeartbeatMs_.store(now, std::memory_order_relaxed);
@@ -150,10 +141,9 @@ void Source::addBackupInstance(const InstanceId& instanceId)
 
 void Source::removeBackupInstance(const InstanceId& instanceId)
 {
-    backupInstanceIds_.erase(
-        std::remove_if(backupInstanceIds_.begin(), backupInstanceIds_.end(),
-            [&instanceId](const InstanceId& id) { return id == instanceId; }),
-        backupInstanceIds_.end());
+    backupInstanceIds_.erase(std::remove_if(backupInstanceIds_.begin(), backupInstanceIds_.end(),
+                                            [&instanceId](const InstanceId& id) { return id == instanceId; }),
+                             backupInstanceIds_.end());
 }
 
 std::optional<InstanceId> Source::getNextBackupInstance() const
@@ -187,9 +177,7 @@ bool Source::transitionTo(SourceState newState)
     // Loop to handle spurious failures from compare_exchange_weak
     while (isValidTransition(currentState, newState))
     {
-        if (state_.compare_exchange_weak(currentState, newState,
-                                          std::memory_order_acq_rel,
-                                          std::memory_order_acquire))
+        if (state_.compare_exchange_weak(currentState, newState, std::memory_order_acq_rel, std::memory_order_acquire))
         {
             lastHeartbeatMs_.store(juce::Time::currentTimeMillis(), std::memory_order_relaxed);
 
@@ -205,10 +193,7 @@ bool Source::transitionTo(SourceState newState)
     return false;
 }
 
-bool Source::canTransitionTo(SourceState targetState) const
-{
-    return isValidTransition(state_, targetState);
-}
+bool Source::canTransitionTo(SourceState targetState) const { return isValidTransition(state_, targetState); }
 
 bool Source::isValidTransition(SourceState from, SourceState to)
 {
@@ -219,20 +204,16 @@ bool Source::isValidTransition(SourceState from, SourceState to)
             return to == SourceState::ACTIVE;
 
         case SourceState::ACTIVE:
-            return to == SourceState::INACTIVE ||
-                   to == SourceState::ORPHANED ||
-                   to == SourceState::STALE;
+            return to == SourceState::INACTIVE || to == SourceState::ORPHANED || to == SourceState::STALE;
 
         case SourceState::INACTIVE:
-            return to == SourceState::ACTIVE ||
-                   to == SourceState::ORPHANED;
+            return to == SourceState::ACTIVE || to == SourceState::ORPHANED;
 
         case SourceState::ORPHANED:
             return to == SourceState::ACTIVE;
 
         case SourceState::STALE:
-            return to == SourceState::ACTIVE ||
-                   to == SourceState::ORPHANED;
+            return to == SourceState::ACTIVE || to == SourceState::ORPHANED;
 
         default:
             return false;
@@ -253,7 +234,7 @@ void Source::setDisplayName(const juce::String& name)
 
 void Source::updateLastAudioTime()
 {
-    // Just update the timestamp atomically. 
+    // Just update the timestamp atomically.
     // State transition is handled in updateActivityState() on the message thread
     // to avoid race conditions and complex locking on the audio thread.
     lastAudioTimeMs_.store(juce::Time::currentTimeMillis(), std::memory_order_relaxed);
@@ -278,7 +259,7 @@ void Source::updateActivityState()
     {
         if (currentState != SourceState::ACTIVE && currentState != SourceState::ORPHANED)
         {
-            (void)transitionTo(SourceState::ACTIVE);
+            (void) transitionTo(SourceState::ACTIVE);
         }
         // Already active or explicitly orphaned, nothing to do
     }
@@ -287,11 +268,11 @@ void Source::updateActivityState()
     {
         if (timeSinceAudio > STALE_THRESHOLD_MS)
         {
-            (void)transitionTo(SourceState::STALE);
+            (void) transitionTo(SourceState::STALE);
         }
         else if (timeSinceAudio > INACTIVE_THRESHOLD_MS)
         {
-            (void)transitionTo(SourceState::INACTIVE);
+            (void) transitionTo(SourceState::INACTIVE);
         }
     }
     // Check for transitions from Inactive
@@ -299,7 +280,7 @@ void Source::updateActivityState()
     {
         if (timeSinceAudio > STALE_THRESHOLD_MS)
         {
-            (void)transitionTo(SourceState::STALE);
+            (void) transitionTo(SourceState::STALE);
         }
     }
 }
@@ -313,10 +294,7 @@ void Source::updateCorrelationMetrics(float correlation) noexcept
 
 void Source::updateSignalMetrics(float rms, float peak, float dcOffset) noexcept
 {
-    auto sanitizeFinite = [](float value, float fallback)
-    {
-        return std::isfinite(value) ? value : fallback;
-    };
+    auto sanitizeFinite = [](float value, float fallback) { return std::isfinite(value) ? value : fallback; };
 
     signalMetrics_.rmsLevel = sanitizeFinite(rms, -100.0f);
     signalMetrics_.peakLevel = sanitizeFinite(peak, -100.0f);

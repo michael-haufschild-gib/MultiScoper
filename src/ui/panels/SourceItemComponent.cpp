@@ -11,7 +11,7 @@ SourceItemComponent::SourceItemComponent(IThemeService& themeService, const Sour
     : themeService_(themeService)
     , sourceId_(sourceInfo.sourceId)
     , displayName_(sourceInfo.name)
-    , trackName_("")  // SourceInfo doesn't have separate track name
+    , trackName_("") // SourceInfo doesn't have separate track name
 {
     // Register test ID with source ID
     juce::String testId = "sidebar_sources_item_" + sourceId_.id;
@@ -54,8 +54,7 @@ void SourceItemComponent::paint(juce::Graphics& g)
     {
         g.setColour(theme.textSecondary.withAlpha(0.3f));
     }
-    g.fillEllipse(dotBounds.getX() + 2, dotY,
-                  static_cast<float>(ACTIVITY_DOT_SIZE),
+    g.fillEllipse(dotBounds.getX() + 2, dotY, static_cast<float>(ACTIVITY_DOT_SIZE),
                   static_cast<float>(ACTIVITY_DOT_SIZE));
 
     // Source name
@@ -63,7 +62,7 @@ void SourceItemComponent::paint(juce::Graphics& g)
     g.setFont(juce::FontOptions(13.0f));
 
     auto textArea = leftArea.reduced(4, 0);
-    textArea.removeFromRight(DROPDOWN_WIDTH + 4);  // Leave space for dropdown
+    textArea.removeFromRight(DROPDOWN_WIDTH + 4); // Leave space for dropdown
 
     // Display name (truncated if needed)
     juce::String text = displayName_;
@@ -121,11 +120,11 @@ void SourceItemComponent::updateAvailablePanes(const std::vector<Pane>& panes)
 
     // Add "New Pane" option (index 0)
     addToPaneDropdown_->addItem("New Pane");
-    paneIds_.push_back(PaneId{});  // Empty ID means create new
+    paneIds_.push_back(PaneId{}); // Empty ID means create new
 
     // Add separator (index 1)
     addToPaneDropdown_->addItem(DropdownItem::separator());
-    paneIds_.push_back(PaneId{});  // Placeholder for separator
+    paneIds_.push_back(PaneId{}); // Placeholder for separator
 
     // Add existing panes (indices 2+)
     int paneNum = 1;
@@ -179,8 +178,7 @@ void SourceItemComponent::handleAddToPaneSelection()
     // Defer the callback execution to prevent crash when component is destroyed
     // during callback. The callAsync ensures the dropdown callback stack unwinds
     // completely before triggering UI refresh that destroys this component.
-    juce::MessageManager::callAsync([callback, srcId, targetPaneId]()
-    {
+    juce::MessageManager::callAsync([callback, srcId, targetPaneId]() {
         if (callback)
         {
             callback(srcId, targetPaneId);

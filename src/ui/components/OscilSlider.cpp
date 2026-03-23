@@ -5,6 +5,7 @@
 */
 
 #include "ui/components/OscilSlider.h"
+
 #include <cmath>
 
 namespace oscil
@@ -35,18 +36,16 @@ OscilSlider::OscilSlider(IThemeService& themeService)
     };
 
     // Default magnetic points
-    snapController_.setMagneticPoints({ minValue_, maxValue_ * 0.25, maxValue_ * 0.5,
-                                        maxValue_ * 0.75, maxValue_, defaultValue_ });
+    snapController_.setMagneticPoints(
+        {minValue_, maxValue_ * 0.25, maxValue_ * 0.5, maxValue_ * 0.75, maxValue_, defaultValue_});
 }
 
-OscilSlider::OscilSlider(IThemeService& themeService, SliderVariant variant)
-    : OscilSlider(themeService)
+OscilSlider::OscilSlider(IThemeService& themeService, SliderVariant variant) : OscilSlider(themeService)
 {
     setVariant(variant);
 }
 
-OscilSlider::OscilSlider(IThemeService& themeService, const juce::String& testId)
-    : OscilSlider(themeService)
+OscilSlider::OscilSlider(IThemeService& themeService, const juce::String& testId) : OscilSlider(themeService)
 {
     setTestId(testId);
 }
@@ -58,15 +57,9 @@ OscilSlider::OscilSlider(IThemeService& themeService, SliderVariant variant, con
     setTestId(testId);
 }
 
-void OscilSlider::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilSlider::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilSlider::~OscilSlider()
-{
-    stopTimer();
-}
+OscilSlider::~OscilSlider() { stopTimer(); }
 
 void OscilSlider::setVariant(SliderVariant variant)
 {
@@ -101,8 +94,7 @@ void OscilSlider::setRangeValues(double start, double end, bool notify)
     if (start > end)
         std::swap(start, end);
 
-    if (std::abs(rangeStart_ - start) < 0.0001 &&
-        std::abs(rangeEnd_ - end) < 0.0001)
+    if (std::abs(rangeStart_ - start) < 0.0001 && std::abs(rangeEnd_ - end) < 0.0001)
         return;
 
     rangeStart_ = start;
@@ -120,9 +112,8 @@ void OscilSlider::setRange(double min, double max)
     maxValue_ = max;
     internalSlider_.setRange(min, max, step_);
 
-    snapController_.setMagneticPoints({ minValue_, (minValue_ + maxValue_) * 0.25,
-                                        (minValue_ + maxValue_) * 0.5,
-                                        (minValue_ + maxValue_) * 0.75, maxValue_, defaultValue_ });
+    snapController_.setMagneticPoints({minValue_, (minValue_ + maxValue_) * 0.25, (minValue_ + maxValue_) * 0.5,
+                                       (minValue_ + maxValue_) * 0.75, maxValue_, defaultValue_});
 
     setValue(constrainValue(value_), false);
 }
@@ -163,72 +154,41 @@ void OscilSlider::setDecimalPlaces(int places)
     repaint();
 }
 
-void OscilSlider::setShowValueOnHover(bool show)
-{
-    showValueOnHover_ = show;
-}
+void OscilSlider::setShowValueOnHover(bool show) { showValueOnHover_ = show; }
 
-void OscilSlider::setMagneticSnappingEnabled(bool enabled)
-{
-    snapController_.setEnabled(enabled);
-}
+void OscilSlider::setMagneticSnappingEnabled(bool enabled) { snapController_.setEnabled(enabled); }
 
-void OscilSlider::setMagneticPoints(const std::vector<double>& points)
-{
-    snapController_.setMagneticPoints(points);
-}
+void OscilSlider::setMagneticPoints(const std::vector<double>& points) { snapController_.setMagneticPoints(points); }
 
-void OscilSlider::addMagneticPoint(double point)
-{
-    snapController_.addMagneticPoint(point);
-}
+void OscilSlider::addMagneticPoint(double point) { snapController_.addMagneticPoint(point); }
 
-void OscilSlider::clearMagneticPoints()
-{
-    snapController_.clearMagneticPoints();
-}
+void OscilSlider::clearMagneticPoints() { snapController_.clearMagneticPoints(); }
 
-void OscilSlider::setValueFormatter(Callbacks::FormatCallback formatter)
-{
-    valueFormatter_ = formatter;
-}
+void OscilSlider::setValueFormatter(Callbacks::FormatCallback formatter) { valueFormatter_ = formatter; }
 
 void OscilSlider::setEnabled(bool enabled)
 {
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
-        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor
-                               : juce::MouseCursor::NormalCursor);
+        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
 }
 
-void OscilSlider::attachToParameter(juce::AudioProcessorValueTreeState& apvts,
-                                     const juce::String& paramId)
+void OscilSlider::attachToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId)
 {
-    attachment_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvts, paramId, internalSlider_);
+    attachment_ =
+        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, paramId, internalSlider_);
 }
 
-void OscilSlider::detachFromParameter()
-{
-    attachment_.reset();
-}
+void OscilSlider::detachFromParameter() { attachment_.reset(); }
 
-int OscilSlider::getPreferredWidth() const
-{
-    return variant_ == SliderVariant::Vertical ? THUMB_SIZE + 8 : 150;
-}
+int OscilSlider::getPreferredWidth() const { return variant_ == SliderVariant::Vertical ? THUMB_SIZE + 8 : 150; }
 
-int OscilSlider::getPreferredHeight() const
-{
-    return variant_ == SliderVariant::Vertical ? 100 : THUMB_SIZE + 8;
-}
+int OscilSlider::getPreferredHeight() const { return variant_ == SliderVariant::Vertical ? 100 : THUMB_SIZE + 8; }
 
-void OscilSlider::resized()
-{
-}
+void OscilSlider::resized() {}
 
 double OscilSlider::constrainValue(double value) const
 {

@@ -5,11 +5,12 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -25,9 +26,10 @@ namespace oscil
  * - Stereo or mono mode
  * - Theme integration
  */
-class OscilMeterBar : public ThemedComponent,
-                      public TestIdSupport,
-                      private juce::Timer
+class OscilMeterBar
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     enum class Orientation
@@ -49,7 +51,7 @@ public:
 
     // Level input (0.0 to 1.0, can exceed for clip detection)
     void setLevel(float level);
-    void setLevels(float left, float right);  // Stereo
+    void setLevels(float left, float right); // Stereo
     void setRMSLevel(float rms);
     /// Set per-channel RMS levels for stereo metering.
     void setRMSLevels(float leftRMS, float rightRMS);
@@ -98,7 +100,6 @@ public:
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
 
-
 private:
     void timerCallback() override;
 
@@ -106,13 +107,10 @@ private:
     float dbToLevel(float db) const;
     juce::Colour getLevelColour(float level) const;
 
-    void paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
-                    float level, float rms, float peakHold, bool clip);
-    void paintMeterVertical(juce::Graphics& g, const juce::Rectangle<int>& bounds,
-                            juce::ColourGradient& gradient,
+    void paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds, float level, float rms, float peakHold, bool clip);
+    void paintMeterVertical(juce::Graphics& g, const juce::Rectangle<int>& bounds, juce::ColourGradient& gradient,
                             float levelPos, float rmsPos, float peakPos, bool clip);
-    void paintMeterHorizontal(juce::Graphics& g, const juce::Rectangle<int>& bounds,
-                              juce::ColourGradient& gradient,
+    void paintMeterHorizontal(juce::Graphics& g, const juce::Rectangle<int>& bounds, juce::ColourGradient& gradient,
                               float levelPos, float peakPos, bool clip);
     void paintScale(juce::Graphics& g, juce::Rectangle<int> bounds);
 
@@ -141,11 +139,10 @@ private:
     MeterType meterType_ = MeterType::PeakWithRMS;
     bool stereo_ = false;
     int peakHoldTimeMs_ = 2000;
-    float peakDecayRate_ = 0.5f;  // Per second
+    float peakDecayRate_ = 0.5f; // Per second
     float minDb_ = -60.0f;
     float maxDb_ = 6.0f;
     bool showScale_ = false;
-
 
     static constexpr int MONO_WIDTH = 12;
     static constexpr int STEREO_WIDTH = 24;

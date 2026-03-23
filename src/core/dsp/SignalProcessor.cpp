@@ -3,8 +3,9 @@
 */
 
 #include "core/dsp/SignalProcessor.h"
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
 
 namespace oscil
 {
@@ -17,12 +18,10 @@ void resetOutput(ProcessedSignal& output)
     output.numSamples = 0;
     output.isStereo = false;
 }
-}
+} // namespace
 
-void SignalProcessor::process(std::span<const float> leftChannel,
-                               std::span<const float> rightChannel,
-                               ProcessingMode mode,
-                               ProcessedSignal& output) const
+void SignalProcessor::process(std::span<const float> leftChannel, std::span<const float> rightChannel,
+                              ProcessingMode mode, ProcessedSignal& output) const
 {
     // Validate input
     if (leftChannel.empty())
@@ -33,7 +32,7 @@ void SignalProcessor::process(std::span<const float> leftChannel,
 
     // If right channel is provided, ensure size matches left
     // If mismatch, use minimum size (or treat as mono if right is empty)
-    
+
     switch (mode)
     {
         case ProcessingMode::FullStereo:
@@ -71,9 +70,7 @@ void SignalProcessor::process(std::span<const float> leftChannel,
     }
 }
 
-void SignalProcessor::process(const juce::AudioBuffer<float>& input,
-                               ProcessingMode mode,
-                               ProcessedSignal& output) const
+void SignalProcessor::process(const juce::AudioBuffer<float>& input, ProcessingMode mode, ProcessedSignal& output) const
 {
     // Handle empty buffer case
     if (input.getNumChannels() == 0 || input.getNumSamples() == 0)
@@ -85,7 +82,7 @@ void SignalProcessor::process(const juce::AudioBuffer<float>& input,
     // Construct spans from buffer
     std::span<const float> left(input.getReadPointer(0), static_cast<size_t>(input.getNumSamples()));
     std::span<const float> right;
-    
+
     if (input.getNumChannels() > 1)
     {
         right = std::span<const float>(input.getReadPointer(1), static_cast<size_t>(input.getNumSamples()));
@@ -95,7 +92,7 @@ void SignalProcessor::process(const juce::AudioBuffer<float>& input,
 }
 
 void SignalProcessor::processFullStereo(std::span<const float> left, std::span<const float> right,
-                                         ProcessedSignal& output) const
+                                        ProcessedSignal& output) const
 {
     int numSamples = static_cast<int>(left.size());
     output.resize(numSamples, true);
@@ -107,7 +104,7 @@ void SignalProcessor::processFullStereo(std::span<const float> left, std::span<c
         // Ensure right has enough samples, copy available
         size_t copyCount = std::min(right.size(), static_cast<size_t>(numSamples));
         std::copy(right.begin(), right.begin() + static_cast<std::ptrdiff_t>(copyCount), output.channel2.begin());
-        
+
         // Fill remaining with silence if right is shorter (unlikely in normal usage)
         if (copyCount < static_cast<size_t>(numSamples))
         {
@@ -122,7 +119,7 @@ void SignalProcessor::processFullStereo(std::span<const float> left, std::span<c
 }
 
 void SignalProcessor::processMono(std::span<const float> left, std::span<const float> right,
-                                   ProcessedSignal& output) const
+                                  ProcessedSignal& output) const
 {
     int numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
@@ -139,14 +136,14 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
 }
 
 void SignalProcessor::processMid(std::span<const float> left, std::span<const float> right,
-                                  ProcessedSignal& output) const
+                                 ProcessedSignal& output) const
 {
     // Mid = (L+R)/2 - identical to mono
     processMono(left, right, output);
 }
 
 void SignalProcessor::processSide(std::span<const float> left, std::span<const float> right,
-                                   ProcessedSignal& output) const
+                                  ProcessedSignal& output) const
 {
     int numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
@@ -182,8 +179,7 @@ void SignalProcessor::processRight(std::span<const float> right, ProcessedSignal
     std::copy(right.begin(), right.end(), output.channel1.begin());
 }
 
-float SignalProcessor::calculateCorrelation(std::span<const float> leftChannel,
-                                             std::span<const float> rightChannel)
+float SignalProcessor::calculateCorrelation(std::span<const float> leftChannel, std::span<const float> rightChannel)
 {
     if (leftChannel.empty() || rightChannel.empty())
         return 0.0f;
@@ -276,11 +272,10 @@ void SignalProcessor::upsample(std::span<const float> input, std::span<float> ou
     }
 }
 
-void SignalProcessor::decimate(std::span<const float> input,
-                                std::span<float> output,
-                                bool preservePeaks)
+void SignalProcessor::decimate(std::span<const float> input, std::span<float> output, bool preservePeaks)
 {
-    if (input.empty() || output.empty()) return;
+    if (input.empty() || output.empty())
+        return;
 
     if (input.size() <= output.size())
     {
@@ -301,7 +296,11 @@ void SignalProcessor::decimate(std::span<const float> input,
             for (size_t j = startIdx; j < endIdx; ++j)
             {
                 float absVal = std::abs(input[j]);
-                if (absVal > maxVal) { maxVal = absVal; maxSample = input[j]; }
+                if (absVal > maxVal)
+                {
+                    maxVal = absVal;
+                    maxSample = input[j];
+                }
             }
             output[i] = maxSample;
         }
@@ -324,8 +323,7 @@ void AdaptiveDecimator::setDisplayWidth(int widthPixels)
     targetSamples_ = displayWidth_ * 2; // 2 samples per pixel for good visual quality
 }
 
-void AdaptiveDecimator::process(std::span<const float> input,
-                                 std::vector<float>& output) const
+void AdaptiveDecimator::process(std::span<const float> input, std::vector<float>& output) const
 {
     output.resize(static_cast<size_t>(targetSamples_));
     // Wrap output vector in span
@@ -333,9 +331,8 @@ void AdaptiveDecimator::process(std::span<const float> input,
     SignalProcessor::decimate(input, outSpan, true);
 }
 
-void AdaptiveDecimator::processWithEnvelope(std::span<const float> input,
-                                             std::vector<float>& minEnvelope,
-                                             std::vector<float>& maxEnvelope) const
+void AdaptiveDecimator::processWithEnvelope(std::span<const float> input, std::vector<float>& minEnvelope,
+                                            std::vector<float>& maxEnvelope) const
 {
     minEnvelope.resize(static_cast<size_t>(displayWidth_));
     maxEnvelope.resize(static_cast<size_t>(displayWidth_));
@@ -358,9 +355,9 @@ void AdaptiveDecimator::processWithEnvelope(std::span<const float> input,
 
         if (startIdx >= endIdx) // Should not happen if calculation is correct
         {
-             minEnvelope[static_cast<size_t>(i)] = 0.0f;
-             maxEnvelope[static_cast<size_t>(i)] = 0.0f;
-             continue;
+            minEnvelope[static_cast<size_t>(i)] = 0.0f;
+            maxEnvelope[static_cast<size_t>(i)] = 0.0f;
+            continue;
         }
 
         float minVal = input[startIdx];

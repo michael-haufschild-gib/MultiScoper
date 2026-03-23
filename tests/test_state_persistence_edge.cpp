@@ -3,16 +3,20 @@
     Tests for edge cases, boundary conditions, and error handling
 */
 
-#include <gtest/gtest.h>
-#include "helpers/StateBuilder.h"
-#include "helpers/OscillatorBuilder.h"
-#include "helpers/Fixtures.h"
 #include "core/OscilState.h"
+
+#include "helpers/Fixtures.h"
+#include "helpers/OscillatorBuilder.h"
+#include "helpers/StateBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
 
-class StatePersistenceEdgeTest : public StateTestFixture {};
+class StatePersistenceEdgeTest : public StateTestFixture
+{
+};
 
 // Test: Remove non-existent oscillator
 TEST_F(StatePersistenceEdgeTest, RemoveNonExistentOscillator)
@@ -176,8 +180,7 @@ void simulatePaneClose(OscilState& state, const PaneId& paneId)
 }
 
 // Verify oscillator is detached (invisible, invalid pane)
-void verifyOscillatorDetached(const OscilState& state, const OscillatorId& oscId,
-                               const juce::String& label)
+void verifyOscillatorDetached(const OscilState& state, const OscillatorId& oscId, const juce::String& label)
 {
     auto osc = state.getOscillator(oscId);
     ASSERT_TRUE(osc.has_value()) << label;
@@ -186,8 +189,8 @@ void verifyOscillatorDetached(const OscilState& state, const OscillatorId& oscId
 }
 
 // Verify oscillator is still attached to a pane
-void verifyOscillatorAttached(const OscilState& state, const OscillatorId& oscId,
-                               const PaneId& expectedPaneId, const juce::String& label)
+void verifyOscillatorAttached(const OscilState& state, const OscillatorId& oscId, const PaneId& expectedPaneId,
+                              const juce::String& label)
 {
     auto osc = state.getOscillator(oscId);
     ASSERT_TRUE(osc.has_value()) << label;
@@ -203,8 +206,10 @@ TEST_F(StatePersistenceEdgeTest, PaneCloseUpdatesOscillatorState)
     auto& layoutManager = state->getLayoutManager();
 
     Pane pane1, pane2;
-    pane1.setName("Pane 1"); pane1.setOrderIndex(0);
-    pane2.setName("Pane 2"); pane2.setOrderIndex(1);
+    pane1.setName("Pane 1");
+    pane1.setOrderIndex(0);
+    pane2.setName("Pane 2");
+    pane2.setOrderIndex(1);
     layoutManager.addPane(pane1);
     layoutManager.addPane(pane2);
 

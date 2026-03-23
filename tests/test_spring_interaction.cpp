@@ -3,8 +3,9 @@
     Tests for user interaction, velocity injection, and interpolation
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/SpringAnimation.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

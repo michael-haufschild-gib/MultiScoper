@@ -31,12 +31,19 @@
 //
 // Usage: OSCIL_LOG(STATE, "addOscillator: name=" << osc.getName())
 #if JUCE_DEBUG
-  #define OSCIL_LOG(category, msg)                                       \
-      do {                                                               \
-          juce::String _oscil_log_msg;                                   \
-          _oscil_log_msg << "[" #category "] " << msg; /* NOLINT(bugprone-macro-parentheses) stream expression fragment */ \
-          juce::Logger::writeToLog(_oscil_log_msg);                      \
-      } while (0)
+    #define OSCIL_LOG(category, msg)                                                                   \
+        do                                                                                             \
+        {                                                                                              \
+            juce::String _oscil_log_msg;                                                               \
+            _oscil_log_msg << "[" #category "] "                                                       \
+                           << msg; /* NOLINT(bugprone-macro-parentheses) stream expression fragment */ \
+            juce::Logger::writeToLog(_oscil_log_msg);                                                  \
+        }                                                                                              \
+        while (0)
 #else
-  #define OSCIL_LOG(category, msg) do {} while (0)
+    #define OSCIL_LOG(category, msg) \
+        do                           \
+        {                            \
+        }                            \
+        while (0)
 #endif

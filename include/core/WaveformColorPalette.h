@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_graphics/juce_graphics.h>
+
 #include <array>
 #include <random>
 
@@ -22,27 +23,24 @@ struct WaveformColorPalette
 
     // Predefined synthwave/retro color palette
     static constexpr std::array<juce::uint32, NUM_COLORS> colors = {{
-        0xFFFF355E,  // Radical Red
-        0xFFFF6037,  // Outrun Orange
-        0xFFFFCC00,  // VHS Gold
-        0xFFCCFF00,  // Mutant Green
-        0xFF39FF14,  // Arcade Green
-        0xFF00FF99,  // Turbo Teal
-        0xFF40E0D0,  // Poolside Aqua
-        0xFF00FFFF,  // Miami Cyan
-        0xFF1E90FF,  // Dodger Blue
-        0xFF3333FF,  // Video Blue
-        0xFF9933FF,  // Electric Violet
-        0xFFFF00CC   // Hot Magenta
+        0xFFFF355E, // Radical Red
+        0xFFFF6037, // Outrun Orange
+        0xFFFFCC00, // VHS Gold
+        0xFFCCFF00, // Mutant Green
+        0xFF39FF14, // Arcade Green
+        0xFF00FF99, // Turbo Teal
+        0xFF40E0D0, // Poolside Aqua
+        0xFF00FFFF, // Miami Cyan
+        0xFF1E90FF, // Dodger Blue
+        0xFF3333FF, // Video Blue
+        0xFF9933FF, // Electric Violet
+        0xFFFF00CC  // Hot Magenta
     }};
 
     /**
      * Get a color by index (wraps around if out of bounds)
      */
-    static juce::Colour getColor(size_t index)
-    {
-        return juce::Colour(colors[index % NUM_COLORS]);
-    }
+    static juce::Colour getColor(size_t index) { return juce::Colour(colors[index % NUM_COLORS]); }
 
     /**
      * Get all colors as a vector (useful for UI components)

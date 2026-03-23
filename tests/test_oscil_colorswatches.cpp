@@ -3,24 +3,19 @@
     Tests for OscilColorSwatches UI component
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilColorSwatches.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilColorSwatchesTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -55,11 +50,7 @@ TEST_F(OscilColorSwatchesTest, SetColors)
 {
     OscilColorSwatches swatches(getThemeManager());
 
-    std::vector<juce::Colour> colors = {
-        juce::Colours::red,
-        juce::Colours::green,
-        juce::Colours::blue
-    };
+    std::vector<juce::Colour> colors = {juce::Colours::red, juce::Colours::green, juce::Colours::blue};
 
     swatches.setColors(colors);
     EXPECT_EQ(swatches.getColors().size(), 3u);
@@ -180,7 +171,7 @@ TEST_F(OscilColorSwatchesTest, SetColumnsZeroForAuto)
 {
     OscilColorSwatches swatches(getThemeManager());
 
-    swatches.setColumns(0);  // Auto columns
+    swatches.setColumns(0); // Auto columns
     EXPECT_EQ(swatches.getColumns(), 0);
 }
 
@@ -228,9 +219,7 @@ TEST_F(OscilColorSwatchesTest, NoCallbackWhenNotifyFalse)
 
     int changeCount = 0;
 
-    swatches.onColorSelected = [&changeCount](int, juce::Colour) {
-        changeCount++;
-    };
+    swatches.onColorSelected = [&changeCount](int, juce::Colour) { changeCount++; };
 
     swatches.setSelectedIndex(0, false);
     EXPECT_EQ(changeCount, 0);
@@ -242,9 +231,7 @@ TEST_F(OscilColorSwatchesTest, OnColorHoveredCallback)
     swatches.addColor(juce::Colours::red);
 
     bool hoverCalled = false;
-    swatches.onColorHovered = [&hoverCalled](juce::Colour) {
-        hoverCalled = true;
-    };
+    swatches.onColorHovered = [&hoverCalled](juce::Colour) { hoverCalled = true; };
 
     // Hover would be triggered by mouse events
     // Just verify callback can be set

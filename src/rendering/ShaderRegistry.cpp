@@ -3,18 +3,16 @@
 */
 
 #include "rendering/ShaderRegistry.h"
+
 #include "rendering/shaders/BasicShader.h"
-#include "rendering/shaders/NeonGlowShader.h"
-#include "rendering/shaders/GradientFillShader.h"
 #include "rendering/shaders/DualOutlineShader.h"
+#include "rendering/shaders/GradientFillShader.h"
+#include "rendering/shaders/NeonGlowShader.h"
 
 namespace oscil
 {
 
-ShaderRegistry::ShaderRegistry()
-{
-    registerBuiltInShaders();
-}
+ShaderRegistry::ShaderRegistry() { registerBuiltInShaders(); }
 
 ShaderRegistry::~ShaderRegistry() = default;
 

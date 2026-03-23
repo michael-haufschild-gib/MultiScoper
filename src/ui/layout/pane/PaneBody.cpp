@@ -3,17 +3,17 @@
 */
 
 #include "ui/layout/pane/PaneBody.h"
+
+#include "core/OscilState.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
-#include "core/OscilState.h"
+
 #include "rendering/ShaderRegistry.h"
 
 namespace oscil
 {
 
-PaneBody::PaneBody(IAudioDataProvider& dataProvider,
-                   IInstanceRegistry& instanceRegistry,
-                   IThemeService& themeService,
+PaneBody::PaneBody(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, IThemeService& themeService,
                    ShaderRegistry& shaderRegistry)
     : dataProvider_(dataProvider)
     , instanceRegistry_(instanceRegistry)
@@ -38,10 +38,7 @@ PaneBody::PaneBody(IAudioDataProvider& dataProvider,
     // Overlay starts invisible - use setVisibleAnimated(true) via setStatsVisible to show
 }
 
-PaneBody::~PaneBody()
-{
-    stopTimer();
-}
+PaneBody::~PaneBody() { stopTimer(); }
 
 void PaneBody::paint(juce::Graphics& g)
 {
@@ -73,10 +70,7 @@ void PaneBody::resized()
         statsOverlay_->updatePositionInParent(bounds);
 }
 
-void PaneBody::mouseMove(const juce::MouseEvent& event)
-{
-    updateCrosshairPosition(event.getPosition());
-}
+void PaneBody::mouseMove(const juce::MouseEvent& event) { updateCrosshairPosition(event.getPosition()); }
 
 void PaneBody::mouseEnter(const juce::MouseEvent& event)
 {
@@ -199,10 +193,7 @@ void PaneBody::updateOscillatorFull(const Oscillator& oscillator)
         waveformStack_->updateOscillatorFull(oscillator);
 }
 
-size_t PaneBody::getOscillatorCount() const
-{
-    return waveformStack_ ? waveformStack_->getOscillatorCount() : 0;
-}
+size_t PaneBody::getOscillatorCount() const { return waveformStack_ ? waveformStack_->getOscillatorCount() : 0; }
 
 // Display settings (delegates to WaveformStack)
 
@@ -277,10 +268,7 @@ void PaneBody::setStatsVisible(bool visible)
     }
 }
 
-bool PaneBody::isStatsVisible() const
-{
-    return statsOverlay_ && statsOverlay_->isVisible();
-}
+bool PaneBody::isStatsVisible() const { return statsOverlay_ && statsOverlay_->isVisible(); }
 
 void PaneBody::timerCallback()
 {
@@ -301,21 +289,24 @@ void PaneBody::updateStats()
 
     std::vector<OscillatorStats> stats;
     size_t count = waveformStack_->getOscillatorCount();
-    
+
     for (size_t i = 0; i < count; ++i)
     {
         const auto* osc = waveformStack_->getOscillatorAt(i);
-        if (!osc) continue;
-        
+        if (!osc)
+            continue;
+
         auto sourceId = osc->getSourceId();
-        if (!sourceId.isValid()) continue;
-        
+        if (!sourceId.isValid())
+            continue;
+
         auto sourceInfo = instanceRegistry_.getSource(sourceId);
-        if (!sourceInfo.has_value() || !sourceInfo->analysisEngine) continue;
-        
+        if (!sourceInfo.has_value() || !sourceInfo->analysisEngine)
+            continue;
+
         OscillatorStats os;
         os.name = osc->getName();
-        
+
         // Copy metrics manually from atomics to snapshot
         auto copyMetrics = [](const ChannelMetrics& src, MetricSnapshot& dest) {
             dest.rmsDb = src.rmsDb.load(std::memory_order_relaxed);
@@ -326,32 +317,35 @@ void PaneBody::updateStats()
             dest.decayTimeMs = src.decayTimeMs.load(std::memory_order_relaxed);
             dest.maxPeakDb = src.maxPeakDb.load(std::memory_order_relaxed);
         };
-        
+
         const auto& srcMetrics = sourceInfo->analysisEngine->getMetrics();
         copyMetrics(srcMetrics.left, os.left);
         copyMetrics(srcMetrics.right, os.right);
-        
+
         os.hasSignal = (os.left.rmsDb > -90.0f || os.right.rmsDb > -90.0f);
-        
+
         stats.push_back(std::move(os));
     }
-    
+
     statsOverlay_->updateStats(stats);
 }
 
 void PaneBody::resetStats()
 {
-    if (!waveformStack_) return;
+    if (!waveformStack_)
+        return;
     size_t count = waveformStack_->getOscillatorCount();
-    
+
     for (size_t i = 0; i < count; ++i)
     {
         const auto* osc = waveformStack_->getOscillatorAt(i);
-        if (!osc) continue;
-        
+        if (!osc)
+            continue;
+
         auto sourceId = osc->getSourceId();
-        if (!sourceId.isValid()) continue;
-        
+        if (!sourceId.isValid())
+            continue;
+
         auto sourceInfo = instanceRegistry_.getSource(sourceId);
         if (sourceInfo.has_value() && sourceInfo->analysisEngine)
         {

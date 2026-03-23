@@ -2,15 +2,17 @@
     Oscil - Test Runner Handler - Waveform & Settings Tests
 */
 
-#include "tools/test_server/TestRunnerHandler.h"
-#include "plugin/PluginEditor.h"
+#include "core/OscilState.h"
+#include "core/Oscillator.h"
+#include "core/Pane.h"
+#include "core/SharedCaptureBuffer.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
+
+#include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
-#include "core/OscilState.h"
-#include "core/Pane.h"
-#include "core/Oscillator.h"
-#include "core/SharedCaptureBuffer.h"
+#include "tools/test_server/TestRunnerHandler.h"
+
 #include <cmath>
 
 namespace oscil
@@ -87,7 +89,8 @@ WaveformComponent* getFirstWaveform(const OscilPluginEditor& editor)
         return nullptr;
     return panes[0]->getWaveformAt(0);
 }
-nlohmann::json testSineWaveRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer, const OscilPluginEditor& editor)
+nlohmann::json testSineWaveRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer,
+                                     const OscilPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "SineWaveRendering";
@@ -96,13 +99,19 @@ nlohmann::json testSineWaveRendering(const std::shared_ptr<SharedCaptureBuffer>&
     auto* wf = getFirstWaveform(editor);
     bool hasData = false;
     float peak = 0.0f;
-    if (wf) { wf->forceUpdateWaveformData(); hasData = wf->hasWaveformData(); peak = wf->getPeakLevel(); }
+    if (wf)
+    {
+        wf->forceUpdateWaveformData();
+        hasData = wf->hasWaveformData();
+        peak = wf->getPeakLevel();
+    }
     test["passed"] = hasData && peak > 0.5f;
     test["details"] = "Sine wave should generate waveform data with peak > 0.5";
     return test;
 }
 
-nlohmann::json testSilenceRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer, const OscilPluginEditor& editor)
+nlohmann::json testSilenceRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer,
+                                    const OscilPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "SilenceRendering";
@@ -111,13 +120,18 @@ nlohmann::json testSilenceRendering(const std::shared_ptr<SharedCaptureBuffer>& 
     captureBuffer->write(buf, testMetadata(4096));
     auto* wf = getFirstWaveform(editor);
     float peak = 1.0f;
-    if (wf) { wf->forceUpdateWaveformData(); peak = wf->getPeakLevel(); }
+    if (wf)
+    {
+        wf->forceUpdateWaveformData();
+        peak = wf->getPeakLevel();
+    }
     test["passed"] = peak < 0.01f;
     test["details"] = "Silence should produce near-zero peak level";
     return test;
 }
 
-nlohmann::json testHighAmplitudeRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer, const OscilPluginEditor& editor)
+nlohmann::json testHighAmplitudeRendering(const std::shared_ptr<SharedCaptureBuffer>& captureBuffer,
+                                          const OscilPluginEditor& editor)
 {
     nlohmann::json test;
     test["name"] = "HighAmplitudeRendering";
@@ -125,21 +139,26 @@ nlohmann::json testHighAmplitudeRendering(const std::shared_ptr<SharedCaptureBuf
     captureBuffer->write(buf, testMetadata(4096));
     auto* wf = getFirstWaveform(editor);
     float peak = 0.0f;
-    if (wf) { wf->forceUpdateWaveformData(); peak = wf->getPeakLevel(); }
+    if (wf)
+    {
+        wf->forceUpdateWaveformData();
+        peak = wf->getPeakLevel();
+    }
     test["passed"] = peak > 0.9f;
     test["details"] = "Full amplitude sine should produce peak > 0.9";
     return test;
 }
 
-nlohmann::json testToggleSetting(OscilPluginEditor& editor,
-                                 const char* name, const char* details,
+nlohmann::json testToggleSetting(OscilPluginEditor& editor, const char* name, const char* details,
                                  std::function<void(bool)> setter, std::function<bool()> getter)
 {
     nlohmann::json test;
     test["name"] = name;
-    setter(false); editor.repaint();
+    setter(false);
+    editor.repaint();
     bool off = !getter();
-    setter(true); editor.repaint();
+    setter(true);
+    editor.repaint();
     bool on = getter();
     test["passed"] = off && on;
     test["details"] = details;
@@ -150,9 +169,11 @@ nlohmann::json testGainAdjustment(PaneComponent* pane, WaveformComponent* wavefo
 {
     nlohmann::json test;
     test["name"] = "GainAdjustment";
-    pane->setGainDb(6.0f); editor.repaint();
+    pane->setGainDb(6.0f);
+    editor.repaint();
     bool gain6ok = std::abs(waveform->getGainLinear() - 1.995f) < 0.1f;
-    pane->setGainDb(-6.0f); editor.repaint();
+    pane->setGainDb(-6.0f);
+    editor.repaint();
     bool gainM6ok = std::abs(waveform->getGainLinear() - 0.501f) < 0.1f;
     pane->setGainDb(0.0f);
     test["passed"] = gain6ok && gainM6ok;
@@ -164,13 +185,17 @@ nlohmann::json testColumnLayoutChange(OscilState& state, OscilPluginEditor& edit
 {
     nlohmann::json test;
     test["name"] = "ColumnLayoutChange";
-    state.setColumnLayout(ColumnLayout::Single); editor.resized();
+    state.setColumnLayout(ColumnLayout::Single);
+    editor.resized();
     bool s = state.getLayoutManager().getColumnCount() == 1;
-    state.setColumnLayout(ColumnLayout::Double); editor.resized();
+    state.setColumnLayout(ColumnLayout::Double);
+    editor.resized();
     bool d = state.getLayoutManager().getColumnCount() == 2;
-    state.setColumnLayout(ColumnLayout::Triple); editor.resized();
+    state.setColumnLayout(ColumnLayout::Triple);
+    editor.resized();
     bool t = state.getLayoutManager().getColumnCount() == 3;
-    state.setColumnLayout(ColumnLayout::Single); editor.resized();
+    state.setColumnLayout(ColumnLayout::Single);
+    editor.resized();
     test["passed"] = s && d && t;
     test["details"] = "Column layout changes should be applied correctly";
     return test;
@@ -218,20 +243,17 @@ void TestRunnerHandler::handleRunSettingsTest(const httplib::Request& /*req*/, h
         auto* pane = paneComponents[0].get();
         auto* waveform = pane->getWaveformAt(0);
 
-        tests.push_back(testToggleSetting(editor_, "GridToggle",
-            "Grid setting should propagate to waveform component",
-            [pane](bool v) { pane->setShowGrid(v); },
-            [waveform]() { return waveform->isGridVisible(); }));
+        tests.push_back(testToggleSetting(
+            editor_, "GridToggle", "Grid setting should propagate to waveform component",
+            [pane](bool v) { pane->setShowGrid(v); }, [waveform]() { return waveform->isGridVisible(); }));
 
-        tests.push_back(testToggleSetting(editor_, "AutoScaleToggle",
-            "AutoScale setting should propagate",
-            [pane](bool v) { pane->setAutoScale(v); },
+        tests.push_back(testToggleSetting(
+            editor_, "AutoScaleToggle", "AutoScale setting should propagate", [pane](bool v) { pane->setAutoScale(v); },
             [waveform]() { return waveform->isAutoScaleEnabled(); }));
 
-        tests.push_back(testToggleSetting(editor_, "HoldDisplayToggle",
-            "HoldDisplay setting should propagate",
-            [pane](bool v) { pane->setHoldDisplay(v); },
-            [waveform]() { return waveform->isHoldDisplayEnabled(); }));
+        tests.push_back(testToggleSetting(
+            editor_, "HoldDisplayToggle", "HoldDisplay setting should propagate",
+            [pane](bool v) { pane->setHoldDisplay(v); }, [waveform]() { return waveform->isHoldDisplayEnabled(); }));
 
         tests.push_back(testGainAdjustment(pane, waveform, editor_));
         tests.push_back(testColumnLayoutChange(state, editor_));

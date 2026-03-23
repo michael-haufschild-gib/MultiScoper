@@ -3,9 +3,10 @@
     Tests for settings validation, duration calculations, and intensity
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/SpringAnimation.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -158,7 +159,7 @@ TEST_F(AnimationSettingsValidationTest, LargeDurationInput)
 {
     AnimationSettings::setAppPreference(false);
 
-    int largeDuration = 1000000;  // 1 million ms = ~16 minutes
+    int largeDuration = 1000000; // 1 million ms = ~16 minutes
     EXPECT_EQ(AnimationSettings::getAnimationDuration(largeDuration), largeDuration);
     EXPECT_FLOAT_EQ(AnimationSettings::getAnimationDurationSeconds(largeDuration), 1000.0f);
 }

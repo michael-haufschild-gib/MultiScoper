@@ -2,8 +2,8 @@
     Oscil Test Harness - HTTP Server: Transport & Track Handlers
 */
 
-#include "TestHttpServer.h"
 #include "TestElementRegistry.h"
+#include "TestHttpServer.h"
 #include "plugin/PluginEditor.h"
 
 namespace oscil::test
@@ -11,40 +11,31 @@ namespace oscil::test
 
 void TestHttpServer::setupTransportRoutes()
 {
-    server_->Post("/transport/play", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTransportPlay(req, res);
-    });
-    server_->Post("/transport/stop", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTransportStop(req, res);
-    });
-    server_->Post("/transport/setBpm", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTransportSetBpm(req, res);
-    });
+    server_->Post("/transport/play",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleTransportPlay(req, res); });
+    server_->Post("/transport/stop",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleTransportStop(req, res); });
+    server_->Post("/transport/setBpm",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleTransportSetBpm(req, res); });
     server_->Post("/transport/setPosition", [this](const httplib::Request& req, httplib::Response& res) {
         handleTransportSetPosition(req, res);
     });
-    server_->Get("/transport/state", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTransportState(req, res);
-    });
+    server_->Get("/transport/state",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleTransportState(req, res); });
 }
 
 void TestHttpServer::setupTrackRoutes()
 {
-    server_->Post(R"(/track/(\d+)/audio)", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTrackAudio(req, res);
-    });
-    server_->Post(R"(/track/(\d+)/burst)", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTrackBurst(req, res);
-    });
-    server_->Get(R"(/track/(\d+)/info)", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTrackInfo(req, res);
-    });
-    server_->Post(R"(/track/(\d+)/showEditor)", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTrackShowEditor(req, res);
-    });
-    server_->Post(R"(/track/(\d+)/hideEditor)", [this](const httplib::Request& req, httplib::Response& res) {
-        handleTrackHideEditor(req, res);
-    });
+    server_->Post(R"(/track/(\d+)/audio)",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleTrackAudio(req, res); });
+    server_->Post(R"(/track/(\d+)/burst)",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleTrackBurst(req, res); });
+    server_->Get(R"(/track/(\d+)/info)",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleTrackInfo(req, res); });
+    server_->Post(R"(/track/(\d+)/showEditor)",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleTrackShowEditor(req, res); });
+    server_->Post(R"(/track/(\d+)/hideEditor)",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleTrackHideEditor(req, res); });
 }
 
 // Transport handlers
@@ -214,8 +205,7 @@ void TestHttpServer::handleTrackInfo(const httplib::Request& req, httplib::Respo
         data["index"] = track->getTrackIndex();
         data["name"] = track->getName().toStdString();
         data["sourceId"] = track->getSourceId().id.toStdString();
-        data["waveform"] = TestAudioGenerator::waveformToString(
-            track->getAudioGenerator().getWaveform()).toStdString();
+        data["waveform"] = TestAudioGenerator::waveformToString(track->getAudioGenerator().getWaveform()).toStdString();
         data["frequency"] = track->getAudioGenerator().getFrequency();
         data["amplitude"] = track->getAudioGenerator().getAmplitude();
         data["generating"] = track->getAudioGenerator().isGenerating();

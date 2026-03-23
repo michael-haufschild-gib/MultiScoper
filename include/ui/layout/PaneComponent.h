@@ -5,16 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
 #include "core/Pane.h"
-#include "ui/components/TestId.h"
-#include "ui/layout/pane/PaneHeader.h"
-#include "ui/layout/pane/PaneBody.h"
 #include "core/ServiceContext.h"
-#include <memory>
-#include <functional>
+#include "ui/components/TestId.h"
+#include "ui/layout/pane/PaneBody.h"
+#include "ui/layout/pane/PaneHeader.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <cstdint>
+#include <functional>
+#include <memory>
 
 namespace oscil
 {
@@ -30,9 +32,10 @@ class ShaderRegistry;
  * - PaneHeader: Drag handle, name, badges, action bar, close button
  * - PaneBody: WaveformStack, CrosshairOverlay, StatsOverlay
  */
-class PaneComponent : public juce::Component,
-                       public juce::DragAndDropTarget,
-                       public TestIdSupport
+class PaneComponent
+    : public juce::Component
+    , public juce::DragAndDropTarget
+    , public TestIdSupport
 {
 public:
     /// Construct a pane bound to the given data provider and assigned the given pane ID.
@@ -152,22 +155,22 @@ public:
     void setShowGrid(bool enabled);
     void setGridConfig(const GridConfiguration& config);
     void setAutoScale(bool enabled);
-    
+
     /**
      * Toggle hold/pause display for this pane
      */
     void toggleHoldDisplay();
-    
+
     /**
      * Set hold display directly
      */
     void setHoldDisplay(bool enabled);
-    
+
     /**
      * Check if pane is currently held/paused
      */
     bool isHoldDisplayEnabled() const { return isHeld_; }
-    
+
     void setGainDb(float dB);
     void setDisplaySamples(int samples);
     void setSampleRate(int sampleRate);
@@ -209,7 +212,7 @@ private:
     // Drag state
     bool isDragOver_ = false;
     juce::Point<int> dragStartPos_;
-    
+
     // Pane state
     bool isHeld_ = false;
 

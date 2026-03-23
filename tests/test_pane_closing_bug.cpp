@@ -3,12 +3,13 @@
     Regression test for issue where closing a pane affected other panes
 */
 
-#include "OscilTestFixtures.h"
 #include "ui/controllers/GpuRenderCoordinator.h"
 #include "ui/controllers/OscillatorPanelController.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/layout/PaneContainerComponent.h"
 #include "ui/panels/WaveformComponent.h"
+
+#include "OscilTestFixtures.h"
 
 using namespace oscil;
 using namespace oscil::test;
@@ -19,7 +20,7 @@ protected:
     void SetUp() override
     {
         OscilPluginTestFixture::SetUp();
-        
+
         container = std::make_unique<PaneContainerComponent>();
         // Hacky but we need a coordinator.
         // Actually GpuRenderCoordinator needs a real editor.
@@ -29,17 +30,17 @@ protected:
         if (statusBar)
             gpuCoordinator = std::make_unique<GpuRenderCoordinator>(*editor, *statusBar);
     }
-    
+
     // Helper to find a pane component by ID
     PaneComponent* findPaneComponent(const PaneId& paneId)
     {
         // This is tricky because OscillatorPanelController owns them and doesn't expose map easily
         // But we can iterate children of container if we had access.
         // Better: OscillatorPanelController exposes `getPaneComponents()` for testing in my updated code.
-        
+
         // Wait, I can't easily access the controller inside Editor from here without a getter.
         // I added `getPaneComponents` to PluginEditor.
-        
+
         auto& panes = editor->getPaneComponents();
         for (const auto& pane : panes)
         {
@@ -102,11 +103,21 @@ TEST_F(PaneClosingBugTest, ClosingPaneRemovesItAndHidesOscillator)
     clearAllPanesAndOscillators();
 
     // Setup: Create 2 panes, each with 1 oscillator
-    Pane pane1; pane1.setName("Pane 1"); layoutManager.addPane(pane1);
-    Pane pane2; pane2.setName("Pane 2"); layoutManager.addPane(pane2);
+    Pane pane1;
+    pane1.setName("Pane 1");
+    layoutManager.addPane(pane1);
+    Pane pane2;
+    pane2.setName("Pane 2");
+    layoutManager.addPane(pane2);
 
-    Oscillator osc1; osc1.setName("Osc 1"); osc1.setPaneId(pane1.getId()); state.addOscillator(osc1);
-    Oscillator osc2; osc2.setName("Osc 2"); osc2.setPaneId(pane2.getId()); state.addOscillator(osc2);
+    Oscillator osc1;
+    osc1.setName("Osc 1");
+    osc1.setPaneId(pane1.getId());
+    state.addOscillator(osc1);
+    Oscillator osc2;
+    osc2.setName("Osc 2");
+    osc2.setPaneId(pane2.getId());
+    state.addOscillator(osc2);
 
     editor->refreshPanels();
     ASSERT_EQ(editor->getPaneComponents().size(), 2);
@@ -137,13 +148,25 @@ TEST_F(PaneClosingBugTest, ClosingOnePaneDoesNotAffectOthers)
 
     clearAllPanesAndOscillators();
 
-    Pane pane1; pane1.setName("Pane 1"); layoutManager.addPane(pane1);
-    Pane pane2; pane2.setName("Pane 2"); layoutManager.addPane(pane2);
-    Pane pane3; pane3.setName("Pane 3"); layoutManager.addPane(pane3);
+    Pane pane1;
+    pane1.setName("Pane 1");
+    layoutManager.addPane(pane1);
+    Pane pane2;
+    pane2.setName("Pane 2");
+    layoutManager.addPane(pane2);
+    Pane pane3;
+    pane3.setName("Pane 3");
+    layoutManager.addPane(pane3);
 
-    Oscillator osc1; osc1.setPaneId(pane1.getId()); state.addOscillator(osc1);
-    Oscillator osc2; osc2.setPaneId(pane2.getId()); state.addOscillator(osc2);
-    Oscillator osc3; osc3.setPaneId(pane3.getId()); state.addOscillator(osc3);
+    Oscillator osc1;
+    osc1.setPaneId(pane1.getId());
+    state.addOscillator(osc1);
+    Oscillator osc2;
+    osc2.setPaneId(pane2.getId());
+    state.addOscillator(osc2);
+    Oscillator osc3;
+    osc3.setPaneId(pane3.getId());
+    state.addOscillator(osc3);
 
     editor->refreshPanels();
 

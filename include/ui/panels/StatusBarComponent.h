@@ -5,8 +5,9 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/components/TestId.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -25,8 +26,9 @@ enum class RenderingMode
 /**
  * Status bar showing FPS, CPU usage, memory usage, and rendering mode
  */
-class StatusBarComponent : public juce::Component,
-                           public TestIdSupport
+class StatusBarComponent
+    : public juce::Component
+    , public TestIdSupport
 {
 public:
     explicit StatusBarComponent(IThemeService& themeService);

@@ -5,17 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <vector>
-#include <memory>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
-
+#include "ui/components/ThemedComponent.h"
 #include "ui/theme/IThemeService.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include <memory>
+#include <vector>
 
 namespace oscil
 {
@@ -32,9 +33,10 @@ class OscilRadioGroup;
  * - Focus ring for keyboard navigation
  * - Designed to work within OscilRadioGroup
  */
-class OscilRadioButton : public ThemedComponent,
-                         public TestIdSupport,
-                         private juce::Timer
+class OscilRadioButton
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     explicit OscilRadioButton(IThemeService& themeService);
@@ -75,7 +77,6 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
-
 
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
@@ -129,7 +130,7 @@ private:
  * - Keyboard navigation between options
  */
 class OscilRadioGroup : public ThemedComponent
-                        
+
 {
 public:
     enum class Orientation
@@ -178,14 +179,14 @@ public:
 
     bool keyPressed(const juce::KeyPress& key) override;
 
-
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
     // Access buttons (for internal use by OscilRadioButton)
     OscilRadioButton* getButton(int index) const
     {
-        return (index >= 0 && static_cast<size_t>(index) < buttons_.size()) ? buttons_[static_cast<size_t>(index)].get() : nullptr;
+        return (index >= 0 && static_cast<size_t>(index) < buttons_.size()) ? buttons_[static_cast<size_t>(index)].get()
+                                                                            : nullptr;
     }
 
 private:
@@ -198,7 +199,6 @@ private:
     Orientation orientation_ = Orientation::Vertical;
     int spacing_ = ComponentLayout::SPACING_SM;
     bool enabled_ = true;
-
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilRadioGroup)
 };

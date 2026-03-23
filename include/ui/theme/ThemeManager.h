@@ -5,14 +5,16 @@
 
 #pragma once
 
+#include "IThemeService.h"
+
 #include <juce_core/juce_core.h>
-#include <juce_graphics/juce_graphics.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
-#include <vector>
-#include <unordered_map>
+#include <juce_graphics/juce_graphics.h>
+
 #include <set>
-#include "IThemeService.h"
+#include <unordered_map>
+#include <vector>
 
 namespace oscil
 {
@@ -27,74 +29,71 @@ class PluginFactory;
 struct ColorTheme
 {
     juce::String name;
-    bool isSystemTheme = false;     // System themes cannot be edited/deleted
+    bool isSystemTheme = false; // System themes cannot be edited/deleted
 
     // Background colors
-    juce::Colour backgroundPrimary{ 0xFF1E1E1E };
-    juce::Colour backgroundSecondary{ 0xFF2D2D2D };
-    juce::Colour backgroundPane{ 0xFF252525 };
+    juce::Colour backgroundPrimary{0xFF1E1E1E};
+    juce::Colour backgroundSecondary{0xFF2D2D2D};
+    juce::Colour backgroundPane{0xFF252525};
 
     // Grid colors
-    juce::Colour gridMajor{ 0xFF3A3A3A };
-    juce::Colour gridMinor{ 0xFF2A2A2A };
-    juce::Colour gridZeroLine{ 0xFF4A4A4A };
+    juce::Colour gridMajor{0xFF3A3A3A};
+    juce::Colour gridMinor{0xFF2A2A2A};
+    juce::Colour gridZeroLine{0xFF4A4A4A};
 
     // Crosshair color
-    juce::Colour crosshairLine{ 0x80FFFFFF };
+    juce::Colour crosshairLine{0x80FFFFFF};
 
     // Text colors
-    juce::Colour textPrimary{ 0xFFE0E0E0 };
-    juce::Colour textSecondary{ 0xFFA0A0A0 };
-    juce::Colour textHighlight{ 0xFFFFFFFF };
+    juce::Colour textPrimary{0xFFE0E0E0};
+    juce::Colour textSecondary{0xFFA0A0A0};
+    juce::Colour textHighlight{0xFFFFFFFF};
 
     // Control colors
-    juce::Colour controlBackground{ 0xFF353535 };
-    juce::Colour controlBorder{ 0xFF454545 };
-    juce::Colour controlHighlight{ 0xFF505050 };
-    juce::Colour controlActive{ 0xFF007ACC };
+    juce::Colour controlBackground{0xFF353535};
+    juce::Colour controlBorder{0xFF454545};
+    juce::Colour controlHighlight{0xFF505050};
+    juce::Colour controlActive{0xFF007ACC};
 
     // Status colors
-    juce::Colour statusActive{ 0xFF00CC00 };
-    juce::Colour statusWarning{ 0xFFCCAA00 };
-    juce::Colour statusError{ 0xFFCC0000 };
+    juce::Colour statusActive{0xFF00CC00};
+    juce::Colour statusWarning{0xFFCCAA00};
+    juce::Colour statusError{0xFFCC0000};
 
     // Button Colors - Primary
-    juce::Colour btnPrimaryBg{ 0xFF007ACC };
-    juce::Colour btnPrimaryBgHover{ 0xFF008AD9 };
-    juce::Colour btnPrimaryBgActive{ 0xFF0062A3 };
-    juce::Colour btnPrimaryBgDisabled{ 0xFF353535 }; // Often dimmed
-    juce::Colour btnPrimaryText{ 0xFFFFFFFF };
-    juce::Colour btnPrimaryTextHover{ 0xFFFFFFFF };
-    juce::Colour btnPrimaryTextActive{ 0xFFFFFFFF };
-    juce::Colour btnPrimaryTextDisabled{ 0xFFA0A0A0 };
+    juce::Colour btnPrimaryBg{0xFF007ACC};
+    juce::Colour btnPrimaryBgHover{0xFF008AD9};
+    juce::Colour btnPrimaryBgActive{0xFF0062A3};
+    juce::Colour btnPrimaryBgDisabled{0xFF353535}; // Often dimmed
+    juce::Colour btnPrimaryText{0xFFFFFFFF};
+    juce::Colour btnPrimaryTextHover{0xFFFFFFFF};
+    juce::Colour btnPrimaryTextActive{0xFFFFFFFF};
+    juce::Colour btnPrimaryTextDisabled{0xFFA0A0A0};
 
     // Button Colors - Secondary
-    juce::Colour btnSecondaryBg{ 0xFF3A3A3A };
-    juce::Colour btnSecondaryBgHover{ 0xFF454545 };
-    juce::Colour btnSecondaryBgActive{ 0xFF303030 };
-    juce::Colour btnSecondaryBgDisabled{ 0xFF252525 };
-    juce::Colour btnSecondaryText{ 0xFFE0E0E0 };
-    juce::Colour btnSecondaryTextHover{ 0xFFFFFFFF };
-    juce::Colour btnSecondaryTextActive{ 0xFFFFFFFF };
-    juce::Colour btnSecondaryTextDisabled{ 0xFF606060 };
+    juce::Colour btnSecondaryBg{0xFF3A3A3A};
+    juce::Colour btnSecondaryBgHover{0xFF454545};
+    juce::Colour btnSecondaryBgActive{0xFF303030};
+    juce::Colour btnSecondaryBgDisabled{0xFF252525};
+    juce::Colour btnSecondaryText{0xFFE0E0E0};
+    juce::Colour btnSecondaryTextHover{0xFFFFFFFF};
+    juce::Colour btnSecondaryTextActive{0xFFFFFFFF};
+    juce::Colour btnSecondaryTextDisabled{0xFF606060};
 
     // Button Colors - Tertiary
-    juce::Colour btnTertiaryBg{ 0x00000000 }; // Transparent
-    juce::Colour btnTertiaryBgHover{ 0x1AFFFFFF }; // Slight overlay
-    juce::Colour btnTertiaryBgActive{ 0x33FFFFFF };
-    juce::Colour btnTertiaryBgDisabled{ 0x00000000 };
-    juce::Colour btnTertiaryText{ 0xFFE0E0E0 };
-    juce::Colour btnTertiaryTextHover{ 0xFFFFFFFF };
-    juce::Colour btnTertiaryTextActive{ 0xFFFFFFFF };
-    juce::Colour btnTertiaryTextDisabled{ 0xFF606060 };
+    juce::Colour btnTertiaryBg{0x00000000};      // Transparent
+    juce::Colour btnTertiaryBgHover{0x1AFFFFFF}; // Slight overlay
+    juce::Colour btnTertiaryBgActive{0x33FFFFFF};
+    juce::Colour btnTertiaryBgDisabled{0x00000000};
+    juce::Colour btnTertiaryText{0xFFE0E0E0};
+    juce::Colour btnTertiaryTextHover{0xFFFFFFFF};
+    juce::Colour btnTertiaryTextActive{0xFFFFFFFF};
+    juce::Colour btnTertiaryTextDisabled{0xFF606060};
 
     // Default waveform colors (up to 64)
     std::vector<juce::Colour> waveformColors;
 
-    ColorTheme()
-    {
-        initializeDefaultWaveformColors();
-    }
+    ColorTheme() { initializeDefaultWaveformColors(); }
 
     /// Populate the waveformColors vector with the default HSL-distributed palette.
     void initializeDefaultWaveformColors();
@@ -140,9 +139,7 @@ struct ColorTheme
     static float calculateLuminance(juce::Colour colour)
     {
         auto linearize = [](float channel) {
-            return channel <= 0.03928f
-                ? channel / 12.92f
-                : std::pow((channel + 0.055f) / 1.055f, 2.4f);
+            return channel <= 0.03928f ? channel / 12.92f : std::pow((channel + 0.055f) / 1.055f, 2.4f);
         };
 
         float r = linearize(colour.getFloatRed());
@@ -171,18 +168,12 @@ struct ColorTheme
     /**
      * Check if contrast meets WCAG AA standard for normal text (4.5:1)
      */
-    static bool meetsContrastAA(juce::Colour fg, juce::Colour bg)
-    {
-        return calculateContrastRatio(fg, bg) >= 4.5f;
-    }
+    static bool meetsContrastAA(juce::Colour fg, juce::Colour bg) { return calculateContrastRatio(fg, bg) >= 4.5f; }
 
     /**
      * Check if contrast meets WCAG AAA standard for normal text (7:1)
      */
-    static bool meetsContrastAAA(juce::Colour fg, juce::Colour bg)
-    {
-        return calculateContrastRatio(fg, bg) >= 7.0f;
-    }
+    static bool meetsContrastAAA(juce::Colour fg, juce::Colour bg) { return calculateContrastRatio(fg, bg) >= 7.0f; }
 
     /**
      * Check if contrast meets WCAG AA standard for large text (3:1)
@@ -242,8 +233,9 @@ public:
  * Implements IThemeService interface for dependency injection.
  * Owned by PluginFactory - do not create directly except in tests.
  */
-class ThemeManager : public IThemeService,
-                     private juce::Timer
+class ThemeManager
+    : public IThemeService
+    , private juce::Timer
 {
 public:
     ThemeManager();
@@ -359,11 +351,11 @@ private:
 // Pre-defined system themes
 namespace SystemThemes
 {
-    ColorTheme createDarkProfessional();
-    ColorTheme createClassicGreen();
-    ColorTheme createClassicAmber();
-    ColorTheme createHighContrast();
-    ColorTheme createLightMode();
-}
+ColorTheme createDarkProfessional();
+ColorTheme createClassicGreen();
+ColorTheme createClassicAmber();
+ColorTheme createHighContrast();
+ColorTheme createLightMode();
+} // namespace SystemThemes
 
 } // namespace oscil

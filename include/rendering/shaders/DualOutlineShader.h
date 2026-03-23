@@ -6,6 +6,7 @@
 #pragma once
 
 #include "rendering/WaveformShader.h"
+
 #include <memory>
 
 namespace oscil
@@ -23,10 +24,7 @@ public:
 
     [[nodiscard]] juce::String getId() const override { return "dual_outline"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Dual Outline"; }
-    [[nodiscard]] juce::String getDescription() const override
-    {
-        return "Waveform with double outline effect";
-    }
+    [[nodiscard]] juce::String getDescription() const override { return "Waveform with double outline effect"; }
 
 #if OSCIL_ENABLE_OPENGL
     /// Compile the dual outline shader program.
@@ -35,12 +33,8 @@ public:
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 
-    void render(
-        juce::OpenGLContext& context,
-        const std::vector<float>& channel1,
-        const std::vector<float>* channel2,
-        const ShaderRenderParams& params
-    ) override;
+    void render(juce::OpenGLContext& context, const std::vector<float>& channel1, const std::vector<float>* channel2,
+                const ShaderRenderParams& params) override;
 #endif
 
 private:
@@ -48,11 +42,8 @@ private:
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
 
-    void drawChannel(juce::OpenGLExtensionFunctions& ext,
-                     const std::vector<float>& samples,
-                     float centerY, float amplitude,
-                     float boundsX, float boundsWidth,
-                     float lineWidth, GLint posLoc, GLint distLoc);
+    void drawChannel(juce::OpenGLExtensionFunctions& ext, const std::vector<float>& samples, float centerY,
+                     float amplitude, float boundsX, float boundsWidth, float lineWidth, GLint posLoc, GLint distLoc);
 #endif
 };
 

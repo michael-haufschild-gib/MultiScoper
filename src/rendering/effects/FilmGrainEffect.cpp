@@ -68,9 +68,7 @@ static const char* filmGrainFragmentShader = R"(
     }
 )";
 
-FilmGrainEffect::FilmGrainEffect()
-{
-}
+FilmGrainEffect::FilmGrainEffect() {}
 
 FilmGrainEffect::~FilmGrainEffect() = default;
 
@@ -113,17 +111,10 @@ void FilmGrainEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool FilmGrainEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool FilmGrainEffect::isCompiled() const { return compiled_; }
 
-void FilmGrainEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void FilmGrainEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                            FramebufferPool& pool, float deltaTime)
 {
     if (!compiled_ || !source || !destination)
         return;
@@ -152,9 +143,7 @@ void FilmGrainEffect::apply(
     // Set uniforms
     ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
     ext.glUniform1f(timeLoc_, accumulatedTime_);
-    ext.glUniform2f(resolutionLoc_,
-        static_cast<float>(source->width),
-        static_cast<float>(source->height));
+    ext.glUniform2f(resolutionLoc_, static_cast<float>(source->width), static_cast<float>(source->height));
 
     // Render fullscreen quad
     pool.renderFullscreenQuad();

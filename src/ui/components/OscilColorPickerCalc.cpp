@@ -42,7 +42,8 @@ void OscilColorPicker::paintSquareMode(juce::Graphics& g)
 
     // Indicator
     float indicatorX = static_cast<float>(bounds.getX()) + saturation_ * static_cast<float>(bounds.getWidth());
-    float indicatorY = static_cast<float>(bounds.getY()) + (1.0f - brightness_) * static_cast<float>(bounds.getHeight());
+    float indicatorY =
+        static_cast<float>(bounds.getY()) + (1.0f - brightness_) * static_cast<float>(bounds.getHeight());
 
     g.setColour(juce::Colours::white);
     g.drawEllipse(indicatorX - 6, indicatorY - 6, 12, 12, 2.0f);
@@ -55,9 +56,8 @@ void OscilColorPicker::paintWheelMode(juce::Graphics& g)
     auto bounds = getGradientBounds();
 
     // Check if cache is stale: bounds changed, image invalid, or mode changed from square to wheel
-    bool needsUpdate = cachedGradientBounds_ != bounds ||
-                       !cachedGradientImage_.isValid() ||
-                       !cachedIsWheelMode_;  // Was in square mode, need to regenerate for wheel
+    bool needsUpdate = cachedGradientBounds_ != bounds || !cachedGradientImage_.isValid() ||
+                       !cachedIsWheelMode_; // Was in square mode, need to regenerate for wheel
 
     if (needsUpdate)
     {
@@ -182,9 +182,8 @@ void OscilColorPicker::paintAlphaSlider(juce::Graphics& g, juce::Rectangle<int> 
         {
             bool isWhite = ((x - bounds.getX()) / checkerSize + (y - bounds.getY()) / checkerSize) % 2 == 0;
             g.setColour(isWhite ? juce::Colours::white : juce::Colours::lightgrey);
-            g.fillRect(x, y,
-                std::min(checkerSize, bounds.getRight() - x),
-                std::min(checkerSize, bounds.getBottom() - y));
+            g.fillRect(x, y, std::min(checkerSize, bounds.getRight() - x),
+                       std::min(checkerSize, bounds.getBottom() - y));
         }
     }
 
@@ -230,11 +229,11 @@ void OscilColorPicker::paintPreview(juce::Graphics& g, juce::Rectangle<int> boun
         {
             for (int x = currentBounds.getX(); x < currentBounds.getRight(); x += checkerSize)
             {
-                bool isWhite = ((x - currentBounds.getX()) / checkerSize + (y - currentBounds.getY()) / checkerSize) % 2 == 0;
+                bool isWhite =
+                    ((x - currentBounds.getX()) / checkerSize + (y - currentBounds.getY()) / checkerSize) % 2 == 0;
                 g.setColour(isWhite ? juce::Colours::white : juce::Colours::lightgrey);
-                g.fillRect(x, y,
-                    std::min(checkerSize, currentBounds.getRight() - x),
-                    std::min(checkerSize, currentBounds.getBottom() - y));
+                g.fillRect(x, y, std::min(checkerSize, currentBounds.getRight() - x),
+                           std::min(checkerSize, currentBounds.getBottom() - y));
             }
         }
     }

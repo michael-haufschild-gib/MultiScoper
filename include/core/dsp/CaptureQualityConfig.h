@@ -6,11 +6,12 @@
 
 #pragma once
 
+#include "core/dsp/QualityPreset.h"
+
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include <cstddef>
 
-#include "core/dsp/QualityPreset.h"
+#include <cstddef>
 
 namespace oscil
 {
@@ -24,9 +25,9 @@ namespace oscil
  */
 struct MemoryBudget
 {
-    size_t totalBudgetBytes = 50 * 1024 * 1024;     // 50 MB default total budget
-    size_t perTrackMinBytes = 100 * 1024;            // 100 KB minimum per track
-    size_t perTrackMaxBytes = 2 * 1024 * 1024;       // 2 MB maximum per track
+    size_t totalBudgetBytes = 50 * 1024 * 1024; // 50 MB default total budget
+    size_t perTrackMinBytes = 100 * 1024;       // 100 KB minimum per track
+    size_t perTrackMaxBytes = 2 * 1024 * 1024;  // 2 MB maximum per track
 
     /**
      * Calculate optimal per-track budget based on track count
@@ -64,15 +65,11 @@ struct MemoryBudget
 
     bool operator==(const MemoryBudget& other) const
     {
-        return totalBudgetBytes == other.totalBudgetBytes &&
-               perTrackMinBytes == other.perTrackMinBytes &&
+        return totalBudgetBytes == other.totalBudgetBytes && perTrackMinBytes == other.perTrackMinBytes &&
                perTrackMaxBytes == other.perTrackMaxBytes;
     }
 
-    bool operator!=(const MemoryBudget& other) const
-    {
-        return !(*this == other);
-    }
+    bool operator!=(const MemoryBudget& other) const { return !(*this == other); }
 };
 
 //==============================================================================
@@ -88,7 +85,7 @@ struct CaptureQualityConfig
     QualityPreset qualityPreset = QualityPreset::Standard;
     BufferDuration bufferDuration = BufferDuration::Medium;
     MemoryBudget memoryBudget;
-    bool autoAdjustQuality = true;  // Automatically reduce quality when tracks increase
+    bool autoAdjustQuality = true; // Automatically reduce quality when tracks increase
 
     //==========================================================================
     // Calculation Helpers
@@ -114,9 +111,12 @@ struct CaptureQualityConfig
     {
         switch (preset)
         {
-            case QualityPreset::Eco:      return CaptureRate::ECO;
-            case QualityPreset::Standard: return CaptureRate::STANDARD;
-            case QualityPreset::High:     return CaptureRate::HIGH;
+            case QualityPreset::Eco:
+                return CaptureRate::ECO;
+            case QualityPreset::Standard:
+                return CaptureRate::STANDARD;
+            case QualityPreset::High:
+                return CaptureRate::HIGH;
             case QualityPreset::Ultra:
                 if (sourceRate <= 0)
                     return CaptureRate::HIGH;
@@ -171,7 +171,7 @@ struct CaptureQualityConfig
     {
         int captureRate = getCaptureRate(sourceRate);
         size_t samples = calculateBufferSizeSamples(captureRate);
-        return samples * 2 * sizeof(float);  // 2 channels, 4 bytes per sample
+        return samples * 2 * sizeof(float); // 2 channels, 4 bytes per sample
     }
 
     /**
@@ -189,8 +189,7 @@ struct CaptureQualityConfig
         QualityPreset recommended = memoryBudget.calculateRecommendedPreset(numTracks, durationSec);
 
         // Return the lower of configured and recommended
-        return static_cast<QualityPreset>(
-            juce::jmin(static_cast<int>(qualityPreset), static_cast<int>(recommended)));
+        return static_cast<QualityPreset>(juce::jmin(static_cast<int>(qualityPreset), static_cast<int>(recommended)));
     }
 
     //==========================================================================
@@ -215,10 +214,8 @@ struct CaptureQualityConfig
 
         if (tree.isValid())
         {
-            config.qualityPreset = stringToQualityPreset(
-                tree.getProperty("qualityPreset", "Standard").toString());
-            config.bufferDuration = stringToBufferDuration(
-                tree.getProperty("bufferDuration", "4s").toString());
+            config.qualityPreset = stringToQualityPreset(tree.getProperty("qualityPreset", "Standard").toString());
+            config.bufferDuration = stringToBufferDuration(tree.getProperty("bufferDuration", "4s").toString());
 
             int totalMB = static_cast<int>(tree.getProperty("totalBudgetMB", DEFAULT_TOTAL_BUDGET_MB));
             if (totalMB <= 0 || totalMB > MAX_TOTAL_BUDGET_MB)
@@ -233,16 +230,11 @@ struct CaptureQualityConfig
 
     bool operator==(const CaptureQualityConfig& other) const
     {
-        return qualityPreset == other.qualityPreset &&
-               bufferDuration == other.bufferDuration &&
-               memoryBudget == other.memoryBudget &&
-               autoAdjustQuality == other.autoAdjustQuality;
+        return qualityPreset == other.qualityPreset && bufferDuration == other.bufferDuration &&
+               memoryBudget == other.memoryBudget && autoAdjustQuality == other.autoAdjustQuality;
     }
 
-    bool operator!=(const CaptureQualityConfig& other) const
-    {
-        return !(*this == other);
-    }
+    bool operator!=(const CaptureQualityConfig& other) const { return !(*this == other); }
 };
 
 } // namespace oscil

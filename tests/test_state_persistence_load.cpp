@@ -3,15 +3,19 @@
     Tests for state deserialization, XML parsing, and load operations
 */
 
-#include <gtest/gtest.h>
-#include "helpers/StateBuilder.h"
-#include "helpers/Fixtures.h"
 #include "core/OscilState.h"
+
+#include "helpers/Fixtures.h"
+#include "helpers/StateBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
 
-class StatePersistenceLoadTest : public StateTestFixture {};
+class StatePersistenceLoadTest : public StateTestFixture
+{
+};
 
 // Test: Empty XML handling
 TEST_F(StatePersistenceLoadTest, EmptyXmlHandling)

@@ -6,7 +6,9 @@
 #pragma once
 
 #include "WaveformShader.h"
+
 #include <juce_core/juce_core.h>
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -77,11 +79,11 @@ private:
     std::unordered_map<std::string, std::unique_ptr<WaveformShader>> shaders_;
     // Factory storage
     std::unordered_map<std::string, std::function<std::unique_ptr<WaveformShader>()>> factories_;
-    
+
     juce::String defaultShaderId_ = "basic";
-    
+
     // Helper to register a shader type with both prototype and factory
-    template<typename T>
+    template <typename T>
     void registerShaderType()
     {
         auto prototype = std::make_unique<T>();

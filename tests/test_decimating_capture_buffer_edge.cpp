@@ -3,9 +3,10 @@
     Memory usage, clear/reset, metering, reconfiguration, internal access
 */
 
-#include <gtest/gtest.h>
 #include "core/DecimatingCaptureBuffer.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 #include <numeric>
 
 using namespace oscil;
@@ -93,10 +94,7 @@ TEST_F(DecimatingBufferMemoryEdgeTest, MemoryUsageIncludesRetainedGraveyardBuffe
 class DecimatingBufferClearEdgeTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        buffer = std::make_unique<DecimatingCaptureBuffer>();
-    }
+    void SetUp() override { buffer = std::make_unique<DecimatingCaptureBuffer>(); }
 
     std::unique_ptr<DecimatingCaptureBuffer> buffer;
 };
@@ -122,10 +120,7 @@ TEST_F(DecimatingBufferClearEdgeTest, ClearResetsAvailableSamples)
 class DecimatingBufferMeteringEdgeTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        buffer = std::make_unique<DecimatingCaptureBuffer>();
-    }
+    void SetUp() override { buffer = std::make_unique<DecimatingCaptureBuffer>(); }
 
     std::unique_ptr<DecimatingCaptureBuffer> buffer;
 };
@@ -149,7 +144,7 @@ TEST_F(DecimatingBufferMeteringEdgeTest, PeakLevelDetectsSignal)
         auto* data = audioBuffer.getWritePointer(ch);
         for (int i = 0; i < 4096; ++i)
         {
-            data[i] = 0.5f;  // Constant 0.5 signal
+            data[i] = 0.5f; // Constant 0.5 signal
         }
     }
 
@@ -171,10 +166,7 @@ TEST_F(DecimatingBufferMeteringEdgeTest, PeakLevelDetectsSignal)
 class DecimatingBufferReconfigureEdgeTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        buffer = std::make_unique<DecimatingCaptureBuffer>();
-    }
+    void SetUp() override { buffer = std::make_unique<DecimatingCaptureBuffer>(); }
 
     std::unique_ptr<DecimatingCaptureBuffer> buffer;
 };
@@ -220,10 +212,7 @@ TEST_F(DecimatingBufferReconfigureEdgeTest, ConfigurePreservesDataIntegrity)
 class DecimatingBufferInternalAccessEdgeTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        buffer = std::make_unique<DecimatingCaptureBuffer>();
-    }
+    void SetUp() override { buffer = std::make_unique<DecimatingCaptureBuffer>(); }
 
     std::unique_ptr<DecimatingCaptureBuffer> buffer;
 };
@@ -298,7 +287,11 @@ TEST_F(DecimatingBufferAccuracyTest, AntiAliasingRemovesHighFrequencyContent)
 
     double sumSq = 0.0;
     int count = 0;
-    for (int i = 200; i < n; ++i) { sumSq += out[static_cast<size_t>(i)] * out[static_cast<size_t>(i)]; ++count; }
+    for (int i = 200; i < n; ++i)
+    {
+        sumSq += out[static_cast<size_t>(i)] * out[static_cast<size_t>(i)];
+        ++count;
+    }
     float rms = count > 0 ? static_cast<float>(std::sqrt(sumSq / count)) : 0.0f;
 
     EXPECT_LT(rms, 0.1f) << "High-frequency not attenuated: RMS=" << rms;
@@ -327,7 +320,11 @@ TEST_F(DecimatingBufferAccuracyTest, LowFrequencySignalPreservedAfterDecimation)
 
     double sumSq = 0.0;
     int count = 0;
-    for (int i = 200; i < n; ++i) { sumSq += out[static_cast<size_t>(i)] * out[static_cast<size_t>(i)]; ++count; }
+    for (int i = 200; i < n; ++i)
+    {
+        sumSq += out[static_cast<size_t>(i)] * out[static_cast<size_t>(i)];
+        ++count;
+    }
     float rms = count > 0 ? static_cast<float>(std::sqrt(sumSq / count)) : 0.0f;
 
     EXPECT_GT(rms, 0.5f) << "Low-frequency attenuated: RMS=" << rms;
@@ -337,15 +334,14 @@ TEST_F(DecimatingBufferAccuracyTest, LowFrequencySignalPreservedAfterDecimation)
 // Concurrent Reconfiguration Stress Tests
 //==============================================================================
 
-#include <thread>
 #include <atomic>
+#include <thread>
 
 namespace
 {
 
 // Helper: run continuous audio writes until signaled to stop
-void runAudioWriter(DecimatingCaptureBuffer& buffer,
-                    std::atomic<bool>& running, std::atomic<int>& writeCount)
+void runAudioWriter(DecimatingCaptureBuffer& buffer, std::atomic<bool>& running, std::atomic<int>& writeCount)
 {
     juce::AudioBuffer<float> audioBuf(2, 512);
     for (int ch = 0; ch < 2; ++ch)
@@ -365,8 +361,7 @@ void runAudioWriter(DecimatingCaptureBuffer& buffer,
 }
 
 // Helper: run periodic reconfigures, then signal stop
-void runReconfigurer(DecimatingCaptureBuffer& buffer,
-                     std::atomic<bool>& running, std::atomic<int>& reconfigureCount)
+void runReconfigurer(DecimatingCaptureBuffer& buffer, std::atomic<bool>& running, std::atomic<int>& reconfigureCount)
 {
     CaptureQualityConfig configs[4];
     configs[0].qualityPreset = QualityPreset::Eco;
@@ -388,8 +383,7 @@ void runReconfigurer(DecimatingCaptureBuffer& buffer,
 }
 
 // Helper: read buffer continuously, checking for non-finite values
-void runReader(DecimatingCaptureBuffer& buffer,
-               std::atomic<bool>& running, std::atomic<int>& readCount,
+void runReader(DecimatingCaptureBuffer& buffer, std::atomic<bool>& running, std::atomic<int>& readCount,
                std::atomic<int>& invalidReads)
 {
     std::vector<float> output(1024);

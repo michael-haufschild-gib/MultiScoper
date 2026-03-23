@@ -5,8 +5,9 @@
 
 #pragma once
 
-#include <juce_opengl/juce_opengl.h>
 #include "rendering/WaveformGLRenderer.h" // For WaveformRenderData
+
+#include <juce_opengl/juce_opengl.h>
 
 namespace oscil
 {
@@ -37,8 +38,10 @@ private:
 
     static void addLine(std::vector<float>& dest, float x1, float y1, float x2, float y2)
     {
-        dest.push_back(x1); dest.push_back(y1);
-        dest.push_back(x2); dest.push_back(y2);
+        dest.push_back(x1);
+        dest.push_back(y1);
+        dest.push_back(x2);
+        dest.push_back(y2);
     }
 
     std::unique_ptr<juce::OpenGLShaderProgram> colorShader_;

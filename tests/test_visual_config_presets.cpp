@@ -3,8 +3,9 @@
     Tests for preset management and serialization
 */
 
-#include <gtest/gtest.h>
 #include "rendering/VisualConfiguration.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -185,8 +186,10 @@ TEST_F(VisualConfigPresetTest, GetAvailablePresets)
 
     for (const auto& preset : presets)
     {
-        if (preset.first == "default") foundDefault = true;
-        if (preset.first == "vector_scope") foundVectorScope = true;
+        if (preset.first == "default")
+            foundDefault = true;
+        if (preset.first == "vector_scope")
+            foundVectorScope = true;
     }
 
     EXPECT_TRUE(foundDefault);

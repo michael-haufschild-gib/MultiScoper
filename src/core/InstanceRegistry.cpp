@@ -3,8 +3,10 @@
 */
 
 #include "core/InstanceRegistry.h"
-#include "core/SharedCaptureBuffer.h"
+
 #include "core/OscilLog.h"
+#include "core/SharedCaptureBuffer.h"
+
 #include "Oscil.h"
 
 namespace oscil
@@ -27,15 +29,9 @@ InstanceRegistry::InstanceRegistry()
     };
 }
 
-InstanceRegistry::~InstanceRegistry()
-{
-    shutdown();
-}
+InstanceRegistry::~InstanceRegistry() { shutdown(); }
 
-void InstanceRegistry::setDispatcher(Dispatcher dispatcher)
-{
-    dispatcher_ = std::move(dispatcher);
-}
+void InstanceRegistry::setDispatcher(Dispatcher dispatcher) { dispatcher_ = std::move(dispatcher); }
 
 void InstanceRegistry::shutdown()
 {
@@ -55,13 +51,10 @@ void InstanceRegistry::shutdown()
     // For now, just clearing sources breaks the reference cycles.
 }
 
-SourceId InstanceRegistry::tryReuseExistingSource(
-    const juce::String& trackIdentifier,
-    std::shared_ptr<IAudioBuffer> captureBuffer,
-    const juce::String& name,
-    int channelCount,
-    double sampleRate,
-    std::shared_ptr<AnalysisEngine> analysisEngine)
+SourceId InstanceRegistry::tryReuseExistingSource(const juce::String& trackIdentifier,
+                                                  std::shared_ptr<IAudioBuffer> captureBuffer, const juce::String& name,
+                                                  int channelCount, double sampleRate,
+                                                  std::shared_ptr<AnalysisEngine> analysisEngine)
 {
     auto existingIt = trackToSourceMap_.find(trackIdentifier);
     if (existingIt == trackToSourceMap_.end())
@@ -78,19 +71,16 @@ SourceId InstanceRegistry::tryReuseExistingSource(
     if (name.isNotEmpty())
         sourceIt->second.name = name;
 
-    OSCIL_LOG(REGISTRY, "tryReuseExistingSource: reused sourceId=" << existingIt->second.id
-        << " trackId=" << trackIdentifier << " name=" << sourceIt->second.name
-        << " channels=" << channelCount << " sampleRate=" << sampleRate);
+    OSCIL_LOG(REGISTRY, "tryReuseExistingSource: reused sourceId="
+                            << existingIt->second.id << " trackId=" << trackIdentifier << " name="
+                            << sourceIt->second.name << " channels=" << channelCount << " sampleRate=" << sampleRate);
     return existingIt->second;
 }
 
-SourceId InstanceRegistry::registerInstance(
-    const juce::String& trackIdentifier,
-    std::shared_ptr<IAudioBuffer> captureBuffer,
-    const juce::String& name,
-    int channelCount,
-    double sampleRate,
-    std::shared_ptr<AnalysisEngine> analysisEngine)
+SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
+                                            std::shared_ptr<IAudioBuffer> captureBuffer, const juce::String& name,
+                                            int channelCount, double sampleRate,
+                                            std::shared_ptr<AnalysisEngine> analysisEngine)
 {
     // Preconditions: caller must provide a valid buffer and track identifier
     jassert(captureBuffer != nullptr);
@@ -107,8 +97,8 @@ SourceId InstanceRegistry::registerInstance(
     {
         std::unique_lock<std::shared_mutex> lock(mutex_);
 
-        sourceId = tryReuseExistingSource(trackIdentifier, captureBuffer, name,
-                                           channelCount, sampleRate, analysisEngine);
+        sourceId =
+            tryReuseExistingSource(trackIdentifier, captureBuffer, name, channelCount, sampleRate, analysisEngine);
         if (sourceId.isValid())
         {
             shouldNotifyUpdated = true;
@@ -133,7 +123,9 @@ SourceId InstanceRegistry::registerInstance(
             sources_[sourceId] = info;
             trackToSourceMap_[trackIdentifier] = sourceId;
             shouldNotifyAdded = true;
-            OSCIL_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name << " ch=" << channelCount << " sr=" << sampleRate << " total=" << sources_.size());
+            OSCIL_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name
+                                                            << " ch=" << channelCount << " sr=" << sampleRate
+                                                            << " total=" << sources_.size());
         }
     }
 
@@ -163,10 +155,9 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
             return;
         }
 
-        OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id
-            << " name=" << it->second.name
-            << " trackId=" << it->second.trackIdentifier
-            << " remaining=" << (sources_.size() - 1));
+        OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " name=" << it->second.name
+                                                            << " trackId=" << it->second.trackIdentifier
+                                                            << " remaining=" << (sources_.size() - 1));
         // Remove from track map using stored identifier (O(1))
         trackToSourceMap_.erase(it->second.trackIdentifier);
 
@@ -218,7 +209,8 @@ std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId&
     return nullptr;
 }
 
-void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String& name, int channelCount, double sampleRate)
+void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String& name, int channelCount,
+                                    double sampleRate)
 {
     // NEVER call from audio thread - uses blocking locks.
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
@@ -236,9 +228,8 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
             return;
         }
 
-        OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id
-            << " name=" << name << " channels=" << channelCount
-            << " sampleRate=" << sampleRate);
+        OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " name=" << name << " channels=" << channelCount
+                                                      << " sampleRate=" << sampleRate);
         it->second.name = name;
         it->second.channelCount = channelCount;
         it->second.sampleRate = sampleRate;
@@ -286,9 +277,7 @@ void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
         // Guard against use-after-free during shutdown
         if (self->shuttingDown_.load(std::memory_order_acquire))
             return;
-        self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
-            l.sourceAdded(sourceId);
-        });
+        self->listeners_.call([&sourceId](InstanceRegistryListener& l) { l.sourceAdded(sourceId); });
     });
 }
 
@@ -305,9 +294,7 @@ void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
         // Guard against use-after-free during shutdown
         if (self->shuttingDown_.load(std::memory_order_acquire))
             return;
-        self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
-            l.sourceRemoved(sourceId);
-        });
+        self->listeners_.call([&sourceId](InstanceRegistryListener& l) { l.sourceRemoved(sourceId); });
     });
 }
 
@@ -324,9 +311,7 @@ void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
         // Guard against use-after-free during shutdown
         if (self->shuttingDown_.load(std::memory_order_acquire))
             return;
-        self->listeners_.call([&sourceId](InstanceRegistryListener& l) {
-            l.sourceUpdated(sourceId);
-        });
+        self->listeners_.call([&sourceId](InstanceRegistryListener& l) { l.sourceUpdated(sourceId); });
     });
 }
 

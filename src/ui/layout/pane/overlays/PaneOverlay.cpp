@@ -3,6 +3,7 @@
 */
 
 #include "ui/layout/pane/overlays/PaneOverlay.h"
+
 #include "ui/theme/ThemeManager.h"
 
 namespace oscil
@@ -12,8 +13,7 @@ namespace oscil
 class FadeAnimationTimer : public juce::Timer
 {
 public:
-    explicit FadeAnimationTimer(std::function<void()> callback)
-        : callback_(std::move(callback)) {}
+    explicit FadeAnimationTimer(std::function<void()> callback) : callback_(std::move(callback)) {}
 
     void timerCallback() override
     {
@@ -25,17 +25,15 @@ private:
     std::function<void()> callback_;
 };
 
-PaneOverlay::PaneOverlay(IThemeService& themeService)
-    : themeService_(themeService)
+PaneOverlay::PaneOverlay(IThemeService& themeService) : themeService_(themeService)
 {
     setOpaque(false);
-    setInterceptsMouseClicks(false, false);  // Default click-through
+    setInterceptsMouseClicks(false, false); // Default click-through
 
     themeService_.addListener(this);
 }
 
-PaneOverlay::PaneOverlay(IThemeService& themeService, const juce::String& testId)
-    : PaneOverlay(themeService)
+PaneOverlay::PaneOverlay(IThemeService& themeService, const juce::String& testId) : PaneOverlay(themeService)
 {
 #if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
     OSCIL_REGISTER_TEST_ID(testId.toRawUTF8());
@@ -89,9 +87,7 @@ void PaneOverlay::startFadeAnimation(bool fadeIn)
 
     if (!fadeTimer_)
     {
-        fadeTimer_ = std::make_unique<FadeAnimationTimer>([this]() {
-            updateFadeAnimation();
-        });
+        fadeTimer_ = std::make_unique<FadeAnimationTimer>([this]() { updateFadeAnimation(); });
     }
 
     fadeTimer_->startTimer(FADE_TIMER_INTERVAL_MS);
@@ -158,23 +154,15 @@ bool PaneOverlay::hitTest(int x, int y)
     return getLocalBounds().contains(x, y);
 }
 
-void PaneOverlay::themeChanged(const ColorTheme& /*newTheme*/)
-{
-    repaint();
-}
+void PaneOverlay::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
-juce::Rectangle<int> PaneOverlay::getContentBounds() const
-{
-    return getLocalBounds().reduced(CONTENT_PADDING);
-}
+juce::Rectangle<int> PaneOverlay::getContentBounds() const { return getLocalBounds().reduced(CONTENT_PADDING); }
 
 juce::Rectangle<int> PaneOverlay::getPreferredBounds() const
 {
     auto contentSize = getPreferredContentSize();
-    return contentSize.withSizeKeepingCentre(
-        contentSize.getWidth() + 2 * CONTENT_PADDING,
-        contentSize.getHeight() + 2 * CONTENT_PADDING
-    );
+    return contentSize.withSizeKeepingCentre(contentSize.getWidth() + 2 * CONTENT_PADDING,
+                                             contentSize.getHeight() + 2 * CONTENT_PADDING);
 }
 
 void PaneOverlay::updatePositionInParent(juce::Rectangle<int> parentBounds)

@@ -5,14 +5,16 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/panels/OscillatorListItem.h"
-#include "ui/panels/OscillatorListToolbar.h"
 #include "core/Oscillator.h"
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
 #include "core/ServiceContext.h"
 #include "ui/components/TestId.h"
+#include "ui/panels/OscillatorListItem.h"
+#include "ui/panels/OscillatorListToolbar.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <unordered_map>
 
 namespace oscil
@@ -24,13 +26,14 @@ class IInstanceRegistry;
  * Component that displays and manages the list of oscillators.
  * Handles drag-and-drop reordering, filtering, and selection.
  */
-class OscillatorListComponent : public juce::Component,
-                                public ThemeManagerListener,
-                                public OscillatorListItemComponent::Listener,
-                                public OscillatorListToolbar::Listener,
-                                public TestIdSupport,
-                                public juce::DragAndDropContainer,
-                                public juce::DragAndDropTarget
+class OscillatorListComponent
+    : public juce::Component
+    , public ThemeManagerListener
+    , public OscillatorListItemComponent::Listener
+    , public OscillatorListToolbar::Listener
+    , public TestIdSupport
+    , public juce::DragAndDropContainer
+    , public juce::DragAndDropTarget
 {
 public:
     class Listener

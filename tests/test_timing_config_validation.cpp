@@ -3,11 +3,13 @@
     Tests for configuration validation, bounds checking, and mode calculations
 */
 
-#include <gtest/gtest.h>
 #include "core/dsp/TimingConfig.h"
+
 #include "helpers/TimingConfigBuilder.h"
-#include <limits>
+
 #include <cmath>
+#include <gtest/gtest.h>
+#include <limits>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -15,9 +17,7 @@ using namespace oscil::test;
 class TimingConfigValidationTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-    }
+    void SetUp() override {}
 };
 
 // === Default Values Tests ===
@@ -28,7 +28,7 @@ TEST_F(TimingConfigValidationTest, DefaultValues)
 
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
     EXPECT_EQ(config.triggerMode, TriggerMode::FREE_RUNNING);
-    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f); // New default: 500ms
     EXPECT_EQ(config.noteInterval, NoteInterval::QUARTER);
     EXPECT_FALSE(config.hostSyncEnabled);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
@@ -51,11 +51,11 @@ TEST_F(TimingConfigValidationTest, TimeIntervalClamping)
     config.setTimingMode(TimingMode::TIME);
 
     // Test minimum clamping
-    config.setTimeInterval(0.1f);  // Below minimum
+    config.setTimeInterval(0.1f); // Below minimum
     EXPECT_FLOAT_EQ(config.actualIntervalMs, TimingConfig::MIN_TIME_INTERVAL_MS);
 
     // Test maximum clamping
-    config.setTimeInterval(100000.0f);  // Above maximum
+    config.setTimeInterval(100000.0f); // Above maximum
     EXPECT_FLOAT_EQ(config.actualIntervalMs, TimingConfig::MAX_TIME_INTERVAL_MS);
 }
 
@@ -179,7 +179,7 @@ TEST_F(TimingConfigValidationTest, IntervalInSamples)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::TIME);
-    config.setTimeInterval(100.0f);  // 100ms
+    config.setTimeInterval(100.0f); // 100ms
 
     // At 44100 Hz, 100ms = 4410 samples
     EXPECT_EQ(config.getIntervalInSamples(44100.0f), 4410);
@@ -220,10 +220,10 @@ TEST_F(TimingConfigValidationTest, HostSyncAvailability)
     config.hostBPM = 120.0f;
     EXPECT_TRUE(config.isHostSyncAvailable());
 
-    config.hostBPM = 10.0f;  // Below minimum
+    config.hostBPM = 10.0f; // Below minimum
     EXPECT_FALSE(config.isHostSyncAvailable());
 
-    config.hostBPM = 400.0f;  // Above maximum
+    config.hostBPM = 400.0f; // Above maximum
     EXPECT_FALSE(config.isHostSyncAvailable());
 }
 
@@ -266,7 +266,7 @@ TEST_F(TimingConfigValidationTest, MultiBarIntervalClampedToMax)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(20.0f);  // Very slow
+    config.setHostBPM(20.0f); // Very slow
     config.setNoteInterval(NoteInterval::EIGHT_BARS);
 
     // At 20 BPM, 8 bars = 96000ms, but clamped to 60000ms
@@ -279,7 +279,7 @@ TEST_F(TimingConfigValidationTest, VerySlowBPM)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(TimingConfig::MIN_BPM);  // 20 BPM
+    config.setHostBPM(TimingConfig::MIN_BPM); // 20 BPM
     config.setNoteInterval(NoteInterval::QUARTER);
 
     // At 20 BPM, quarter note = 3000ms
@@ -290,7 +290,7 @@ TEST_F(TimingConfigValidationTest, VeryFastBPM)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(TimingConfig::MAX_BPM);  // 300 BPM
+    config.setHostBPM(TimingConfig::MAX_BPM); // 300 BPM
     config.setNoteInterval(NoteInterval::QUARTER);
 
     // At 300 BPM, quarter note = 200ms
@@ -301,7 +301,7 @@ TEST_F(TimingConfigValidationTest, VeryFastNoteWithFastBPM)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(300.0f);  // Max BPM
+    config.setHostBPM(300.0f); // Max BPM
     config.setNoteInterval(NoteInterval::THIRTY_SECOND);
 
     // At 300 BPM, 32nd note = 200 * 0.125 = 25ms

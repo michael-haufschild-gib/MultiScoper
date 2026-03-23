@@ -3,33 +3,41 @@
 */
 
 #include "TestHttpServer.h"
-#include "TestElementRegistry.h"
+
 #include "core/OscilState.h"
+
+#include "TestElementRegistry.h"
 #include "plugin/PluginFactory.h"
 
 namespace oscil::test
 {
 
-TestHttpServer::TestHttpServer(TestDAW& daw)
-    : daw_(daw)
+TestHttpServer::TestHttpServer(TestDAW& daw) : daw_(daw)
 {
     server_ = std::make_unique<httplib::Server>();
 
     server_->set_read_timeout(30, 0);
     server_->set_write_timeout(30, 0);
 
-    server_->set_pre_routing_handler([](const httplib::Request& req, httplib::Response&) -> httplib::Server::HandlerResponse {
-        std::cerr << "[HTTP IN] " << req.method << " " << req.path << std::endl;
-        return httplib::Server::HandlerResponse::Unhandled;
-    });
+    server_->set_pre_routing_handler(
+        [](const httplib::Request& req, httplib::Response&) -> httplib::Server::HandlerResponse {
+            std::cerr << "[HTTP IN] " << req.method << " " << req.path << std::endl;
+            return httplib::Server::HandlerResponse::Unhandled;
+        });
 
     server_->set_exception_handler([](const httplib::Request& req, httplib::Response& res, std::exception_ptr ep) {
         std::string errMsg;
-        try {
-            if (ep) std::rethrow_exception(ep);
-        } catch (const std::exception& e) {
+        try
+        {
+            if (ep)
+                std::rethrow_exception(ep);
+        }
+        catch (const std::exception& e)
+        {
             errMsg = e.what();
-        } catch (...) {
+        }
+        catch (...)
+        {
             errMsg = "Unknown exception";
         }
         std::cerr << "[HTTP EXCEPTION] " << req.method << " " << req.path << " - " << errMsg << std::endl;
@@ -40,9 +48,9 @@ TestHttpServer::TestHttpServer(TestDAW& daw)
         res.set_content(errJson.dump(), "application/json");
     });
 
-    server_->set_error_handler([](const httplib::Request& req, httplib::Response& res)
-    {
-        std::string errMsg = "Internal server error on " + req.method + " " + req.path + " (status: " + std::to_string(res.status) + ")";
+    server_->set_error_handler([](const httplib::Request& req, httplib::Response& res) {
+        std::string errMsg =
+            "Internal server error on " + req.method + " " + req.path + " (status: " + std::to_string(res.status) + ")";
         std::cerr << "[HTTP ERROR] " << errMsg << std::endl;
         nlohmann::json errJson;
         errJson["success"] = false;
@@ -53,10 +61,7 @@ TestHttpServer::TestHttpServer(TestDAW& daw)
     setupRoutes();
 }
 
-TestHttpServer::~TestHttpServer()
-{
-    stop();
-}
+TestHttpServer::~TestHttpServer() { stop(); }
 
 bool TestHttpServer::start(int port)
 {
@@ -99,9 +104,7 @@ void TestHttpServer::serverThread()
 void TestHttpServer::setupRoutes()
 {
     // Health check
-    server_->Get("/health", [this](const httplib::Request& req, httplib::Response& res) {
-        handleHealth(req, res);
-    });
+    server_->Get("/health", [this](const httplib::Request& req, httplib::Response& res) { handleHealth(req, res); });
 
     setupTransportRoutes();
     setupTrackRoutes();
@@ -112,14 +115,12 @@ void TestHttpServer::setupRoutes()
     setupMetricsRoutes();
 
     // Waveform state (data-level verification, no screenshots)
-    server_->Get("/waveform/state", [this](const httplib::Request& req, httplib::Response& res) {
-        handleWaveformState(req, res);
-    });
+    server_->Get("/waveform/state",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleWaveformState(req, res); });
 
     // Diagnostic snapshot (complete state dump for AI agent consumption)
-    server_->Get("/diagnostic/snapshot", [this](const httplib::Request& req, httplib::Response& res) {
-        handleDiagnosticSnapshot(req, res);
-    });
+    server_->Get("/diagnostic/snapshot",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleDiagnosticSnapshot(req, res); });
 }
 
 json TestHttpServer::successResponse(const json& data)
@@ -133,10 +134,7 @@ json TestHttpServer::successResponse(const json& data)
     return response;
 }
 
-json TestHttpServer::errorResponse(const std::string& message)
-{
-    return {{"success", false}, {"error", message}};
-}
+json TestHttpServer::errorResponse(const std::string& message) { return {{"success", false}, {"error", message}}; }
 
 void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& res)
 {

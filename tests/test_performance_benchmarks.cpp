@@ -8,13 +8,15 @@
     If a threshold trips on CI, measure the actual time before raising it.
 */
 
-#include <gtest/gtest.h>
-#include "core/SharedCaptureBuffer.h"
-#include "core/SeqLock.h"
 #include "core/Oscillator.h"
+#include "core/SeqLock.h"
+#include "core/SharedCaptureBuffer.h"
+
 #include "rendering/VisualConfiguration.h"
+
 #include <chrono>
 #include <cmath>
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -45,9 +47,8 @@ TEST(PerformanceBenchmarks, SharedCaptureBufferWriteThroughput)
     auto elapsed = std::chrono::steady_clock::now() - start;
 
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
-    std::cout << "[PERF] SharedCaptureBuffer write: " << kIterations << " x "
-              << kBlockSize << " samples in " << us << " us ("
-              << (us / static_cast<double>(kIterations)) << " us/block)" << std::endl;
+    std::cout << "[PERF] SharedCaptureBuffer write: " << kIterations << " x " << kBlockSize << " samples in " << us
+              << " us (" << (us / static_cast<double>(kIterations)) << " us/block)" << std::endl;
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
     EXPECT_LT(ms, 10) << "Write throughput too slow: " << ms << " ms for " << kIterations << " blocks";
@@ -84,9 +85,8 @@ TEST(PerformanceBenchmarks, SharedCaptureBufferReadThroughput)
     auto elapsed = std::chrono::steady_clock::now() - start;
 
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
-    std::cout << "[PERF] SharedCaptureBuffer read: " << kIterations << " x "
-              << kReadSize << " samples in " << us << " us ("
-              << (us / static_cast<double>(kIterations)) << " us/block)" << std::endl;
+    std::cout << "[PERF] SharedCaptureBuffer read: " << kIterations << " x " << kReadSize << " samples in " << us
+              << " us (" << (us / static_cast<double>(kIterations)) << " us/block)" << std::endl;
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
     EXPECT_LT(ms, 20) << "Read throughput too slow: " << ms << " ms for " << kIterations << " blocks";
@@ -123,8 +123,7 @@ TEST(PerformanceBenchmarks, VisualConfigurationSerializationRoundTrip)
     auto elapsed = std::chrono::steady_clock::now() - start;
 
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
-    std::cout << "[PERF] VisualConfiguration round-trip: " << kIterations
-              << " iterations in " << us << " us ("
+    std::cout << "[PERF] VisualConfiguration round-trip: " << kIterations << " iterations in " << us << " us ("
               << (us / static_cast<double>(kIterations)) << " us/iter)" << std::endl;
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
@@ -167,8 +166,7 @@ TEST(PerformanceBenchmarks, OscillatorSerializationRoundTrip)
     auto elapsed = std::chrono::steady_clock::now() - start;
 
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
-    std::cout << "[PERF] Oscillator round-trip: " << kIterations
-              << " iterations in " << us << " us ("
+    std::cout << "[PERF] Oscillator round-trip: " << kIterations << " iterations in " << us << " us ("
               << (us / static_cast<double>(kIterations)) << " us/iter)" << std::endl;
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
@@ -201,8 +199,7 @@ TEST(PerformanceBenchmarks, SeqLockWriteReadThroughput)
     auto elapsedWrite = std::chrono::steady_clock::now() - startWrite;
 
     auto writeUs = std::chrono::duration_cast<std::chrono::microseconds>(elapsedWrite).count();
-    std::cout << "[PERF] SeqLock write: " << kIterations
-              << " iterations in " << writeUs << " us ("
+    std::cout << "[PERF] SeqLock write: " << kIterations << " iterations in " << writeUs << " us ("
               << (writeUs / static_cast<double>(kIterations) * 1000.0) << " ns/write)" << std::endl;
 
     // Measure read throughput
@@ -217,10 +214,10 @@ TEST(PerformanceBenchmarks, SeqLockWriteReadThroughput)
     auto elapsedRead = std::chrono::steady_clock::now() - startRead;
 
     auto readUs = std::chrono::duration_cast<std::chrono::microseconds>(elapsedRead).count();
-    std::cout << "[PERF] SeqLock read: " << kIterations
-              << " iterations in " << readUs << " us ("
+    std::cout << "[PERF] SeqLock read: " << kIterations << " iterations in " << readUs << " us ("
               << (readUs / static_cast<double>(kIterations) * 1000.0) << " ns/read)" << std::endl;
 
     auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedWrite + elapsedRead).count();
-    EXPECT_LT(totalMs, 10) << "SeqLock throughput too slow: " << totalMs << " ms for " << kIterations << " write+read cycles";
+    EXPECT_LT(totalMs, 10) << "SeqLock throughput too slow: " << totalMs << " ms for " << kIterations
+                           << " write+read cycles";
 }

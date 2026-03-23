@@ -5,8 +5,9 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
 #include "TimingConfig.h"
+
+#include <juce_core/juce_core.h>
 
 namespace oscil
 {
@@ -58,23 +59,40 @@ inline double engineNoteIntervalToBeats(EngineNoteInterval interval, int timeSig
 {
     switch (interval)
     {
-        case EngineNoteInterval::NOTE_1_32ND:        return 0.125;
-        case EngineNoteInterval::NOTE_1_16TH:        return 0.25;
-        case EngineNoteInterval::NOTE_1_12TH:        return 1.0 / 3.0;
-        case EngineNoteInterval::NOTE_1_8TH:         return 0.5;
-        case EngineNoteInterval::NOTE_1_4TH:         return 1.0;
-        case EngineNoteInterval::NOTE_1_2:           return 2.0;
-        case EngineNoteInterval::NOTE_1_1:           return static_cast<double>(timeSigNumerator);
-        case EngineNoteInterval::NOTE_2_1:           return static_cast<double>(timeSigNumerator) * 2.0;
-        case EngineNoteInterval::NOTE_3_1:           return static_cast<double>(timeSigNumerator) * 3.0;
-        case EngineNoteInterval::NOTE_4_1:           return static_cast<double>(timeSigNumerator) * 4.0;
-        case EngineNoteInterval::NOTE_8_1:           return static_cast<double>(timeSigNumerator) * 8.0;
-        case EngineNoteInterval::NOTE_DOTTED_1_8TH:  return 0.75;
-        case EngineNoteInterval::NOTE_DOTTED_1_4TH:  return 1.5;
-        case EngineNoteInterval::NOTE_DOTTED_1_2:    return 3.0;
-        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return 2.0 / 3.0;
-        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return 4.0 / 3.0;
-        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return 1.0 / 3.0;
+        case EngineNoteInterval::NOTE_1_32ND:
+            return 0.125;
+        case EngineNoteInterval::NOTE_1_16TH:
+            return 0.25;
+        case EngineNoteInterval::NOTE_1_12TH:
+            return 1.0 / 3.0;
+        case EngineNoteInterval::NOTE_1_8TH:
+            return 0.5;
+        case EngineNoteInterval::NOTE_1_4TH:
+            return 1.0;
+        case EngineNoteInterval::NOTE_1_2:
+            return 2.0;
+        case EngineNoteInterval::NOTE_1_1:
+            return static_cast<double>(timeSigNumerator);
+        case EngineNoteInterval::NOTE_2_1:
+            return static_cast<double>(timeSigNumerator) * 2.0;
+        case EngineNoteInterval::NOTE_3_1:
+            return static_cast<double>(timeSigNumerator) * 3.0;
+        case EngineNoteInterval::NOTE_4_1:
+            return static_cast<double>(timeSigNumerator) * 4.0;
+        case EngineNoteInterval::NOTE_8_1:
+            return static_cast<double>(timeSigNumerator) * 8.0;
+        case EngineNoteInterval::NOTE_DOTTED_1_8TH:
+            return 0.75;
+        case EngineNoteInterval::NOTE_DOTTED_1_4TH:
+            return 1.5;
+        case EngineNoteInterval::NOTE_DOTTED_1_2:
+            return 3.0;
+        case EngineNoteInterval::NOTE_TRIPLET_1_4TH:
+            return 2.0 / 3.0;
+        case EngineNoteInterval::NOTE_TRIPLET_1_2:
+            return 4.0 / 3.0;
+        case EngineNoteInterval::NOTE_TRIPLET_1_8TH:
+            return 1.0 / 3.0;
     }
     return 1.0;
 }
@@ -84,23 +102,40 @@ inline juce::String engineNoteIntervalToString(EngineNoteInterval interval)
 {
     switch (interval)
     {
-        case EngineNoteInterval::NOTE_1_32ND:        return "1/32";
-        case EngineNoteInterval::NOTE_1_16TH:        return "1/16";
-        case EngineNoteInterval::NOTE_1_12TH:        return "1/12";
-        case EngineNoteInterval::NOTE_1_8TH:         return "1/8";
-        case EngineNoteInterval::NOTE_1_4TH:         return "1/4";
-        case EngineNoteInterval::NOTE_1_2:           return "1/2";
-        case EngineNoteInterval::NOTE_1_1:           return "1 Bar";
-        case EngineNoteInterval::NOTE_2_1:           return "2 Bars";
-        case EngineNoteInterval::NOTE_3_1:           return "3 Bars";
-        case EngineNoteInterval::NOTE_4_1:           return "4 Bars";
-        case EngineNoteInterval::NOTE_8_1:           return "8 Bars";
-        case EngineNoteInterval::NOTE_DOTTED_1_8TH:  return "1/8.";
-        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return "1/4T";
-        case EngineNoteInterval::NOTE_DOTTED_1_4TH:  return "1/4.";
-        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return "1/2T";
-        case EngineNoteInterval::NOTE_DOTTED_1_2:    return "1/2.";
-        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return "1/8T";
+        case EngineNoteInterval::NOTE_1_32ND:
+            return "1/32";
+        case EngineNoteInterval::NOTE_1_16TH:
+            return "1/16";
+        case EngineNoteInterval::NOTE_1_12TH:
+            return "1/12";
+        case EngineNoteInterval::NOTE_1_8TH:
+            return "1/8";
+        case EngineNoteInterval::NOTE_1_4TH:
+            return "1/4";
+        case EngineNoteInterval::NOTE_1_2:
+            return "1/2";
+        case EngineNoteInterval::NOTE_1_1:
+            return "1 Bar";
+        case EngineNoteInterval::NOTE_2_1:
+            return "2 Bars";
+        case EngineNoteInterval::NOTE_3_1:
+            return "3 Bars";
+        case EngineNoteInterval::NOTE_4_1:
+            return "4 Bars";
+        case EngineNoteInterval::NOTE_8_1:
+            return "8 Bars";
+        case EngineNoteInterval::NOTE_DOTTED_1_8TH:
+            return "1/8.";
+        case EngineNoteInterval::NOTE_TRIPLET_1_4TH:
+            return "1/4T";
+        case EngineNoteInterval::NOTE_DOTTED_1_4TH:
+            return "1/4.";
+        case EngineNoteInterval::NOTE_TRIPLET_1_2:
+            return "1/2T";
+        case EngineNoteInterval::NOTE_DOTTED_1_2:
+            return "1/2.";
+        case EngineNoteInterval::NOTE_TRIPLET_1_8TH:
+            return "1/8T";
     }
     return "1/4";
 }
@@ -110,23 +145,40 @@ inline EngineNoteInterval entityToEngineNoteInterval(NoteInterval interval)
 {
     switch (interval)
     {
-        case NoteInterval::THIRTY_SECOND:   return EngineNoteInterval::NOTE_1_32ND;
-        case NoteInterval::SIXTEENTH:       return EngineNoteInterval::NOTE_1_16TH;
-        case NoteInterval::TWELFTH:         return EngineNoteInterval::NOTE_1_12TH;
-        case NoteInterval::EIGHTH:          return EngineNoteInterval::NOTE_1_8TH;
-        case NoteInterval::QUARTER:         return EngineNoteInterval::NOTE_1_4TH;
-        case NoteInterval::HALF:            return EngineNoteInterval::NOTE_1_2;
-        case NoteInterval::WHOLE:           return EngineNoteInterval::NOTE_1_1;
-        case NoteInterval::TWO_BARS:        return EngineNoteInterval::NOTE_2_1;
-        case NoteInterval::THREE_BARS:      return EngineNoteInterval::NOTE_3_1;
-        case NoteInterval::FOUR_BARS:       return EngineNoteInterval::NOTE_4_1;
-        case NoteInterval::EIGHT_BARS:      return EngineNoteInterval::NOTE_8_1;
-        case NoteInterval::DOTTED_EIGHTH:   return EngineNoteInterval::NOTE_DOTTED_1_8TH;
-        case NoteInterval::DOTTED_QUARTER:  return EngineNoteInterval::NOTE_DOTTED_1_4TH;
-        case NoteInterval::DOTTED_HALF:     return EngineNoteInterval::NOTE_DOTTED_1_2;
-        case NoteInterval::TRIPLET_EIGHTH:  return EngineNoteInterval::NOTE_TRIPLET_1_8TH;
-        case NoteInterval::TRIPLET_QUARTER: return EngineNoteInterval::NOTE_TRIPLET_1_4TH;
-        case NoteInterval::TRIPLET_HALF:    return EngineNoteInterval::NOTE_TRIPLET_1_2;
+        case NoteInterval::THIRTY_SECOND:
+            return EngineNoteInterval::NOTE_1_32ND;
+        case NoteInterval::SIXTEENTH:
+            return EngineNoteInterval::NOTE_1_16TH;
+        case NoteInterval::TWELFTH:
+            return EngineNoteInterval::NOTE_1_12TH;
+        case NoteInterval::EIGHTH:
+            return EngineNoteInterval::NOTE_1_8TH;
+        case NoteInterval::QUARTER:
+            return EngineNoteInterval::NOTE_1_4TH;
+        case NoteInterval::HALF:
+            return EngineNoteInterval::NOTE_1_2;
+        case NoteInterval::WHOLE:
+            return EngineNoteInterval::NOTE_1_1;
+        case NoteInterval::TWO_BARS:
+            return EngineNoteInterval::NOTE_2_1;
+        case NoteInterval::THREE_BARS:
+            return EngineNoteInterval::NOTE_3_1;
+        case NoteInterval::FOUR_BARS:
+            return EngineNoteInterval::NOTE_4_1;
+        case NoteInterval::EIGHT_BARS:
+            return EngineNoteInterval::NOTE_8_1;
+        case NoteInterval::DOTTED_EIGHTH:
+            return EngineNoteInterval::NOTE_DOTTED_1_8TH;
+        case NoteInterval::DOTTED_QUARTER:
+            return EngineNoteInterval::NOTE_DOTTED_1_4TH;
+        case NoteInterval::DOTTED_HALF:
+            return EngineNoteInterval::NOTE_DOTTED_1_2;
+        case NoteInterval::TRIPLET_EIGHTH:
+            return EngineNoteInterval::NOTE_TRIPLET_1_8TH;
+        case NoteInterval::TRIPLET_QUARTER:
+            return EngineNoteInterval::NOTE_TRIPLET_1_4TH;
+        case NoteInterval::TRIPLET_HALF:
+            return EngineNoteInterval::NOTE_TRIPLET_1_2;
     }
     return EngineNoteInterval::NOTE_1_4TH;
 }
@@ -136,23 +188,40 @@ inline NoteInterval engineToEntityNoteInterval(EngineNoteInterval interval)
 {
     switch (interval)
     {
-        case EngineNoteInterval::NOTE_1_32ND:        return NoteInterval::THIRTY_SECOND;
-        case EngineNoteInterval::NOTE_1_16TH:        return NoteInterval::SIXTEENTH;
-        case EngineNoteInterval::NOTE_1_12TH:        return NoteInterval::TWELFTH;
-        case EngineNoteInterval::NOTE_1_8TH:         return NoteInterval::EIGHTH;
-        case EngineNoteInterval::NOTE_1_4TH:         return NoteInterval::QUARTER;
-        case EngineNoteInterval::NOTE_1_2:           return NoteInterval::HALF;
-        case EngineNoteInterval::NOTE_1_1:           return NoteInterval::WHOLE;
-        case EngineNoteInterval::NOTE_2_1:           return NoteInterval::TWO_BARS;
-        case EngineNoteInterval::NOTE_3_1:           return NoteInterval::THREE_BARS;
-        case EngineNoteInterval::NOTE_4_1:           return NoteInterval::FOUR_BARS;
-        case EngineNoteInterval::NOTE_8_1:           return NoteInterval::EIGHT_BARS;
-        case EngineNoteInterval::NOTE_DOTTED_1_8TH:  return NoteInterval::DOTTED_EIGHTH;
-        case EngineNoteInterval::NOTE_TRIPLET_1_4TH: return NoteInterval::TRIPLET_QUARTER;
-        case EngineNoteInterval::NOTE_DOTTED_1_4TH:  return NoteInterval::DOTTED_QUARTER;
-        case EngineNoteInterval::NOTE_TRIPLET_1_2:   return NoteInterval::TRIPLET_HALF;
-        case EngineNoteInterval::NOTE_DOTTED_1_2:    return NoteInterval::DOTTED_HALF;
-        case EngineNoteInterval::NOTE_TRIPLET_1_8TH: return NoteInterval::TRIPLET_EIGHTH;
+        case EngineNoteInterval::NOTE_1_32ND:
+            return NoteInterval::THIRTY_SECOND;
+        case EngineNoteInterval::NOTE_1_16TH:
+            return NoteInterval::SIXTEENTH;
+        case EngineNoteInterval::NOTE_1_12TH:
+            return NoteInterval::TWELFTH;
+        case EngineNoteInterval::NOTE_1_8TH:
+            return NoteInterval::EIGHTH;
+        case EngineNoteInterval::NOTE_1_4TH:
+            return NoteInterval::QUARTER;
+        case EngineNoteInterval::NOTE_1_2:
+            return NoteInterval::HALF;
+        case EngineNoteInterval::NOTE_1_1:
+            return NoteInterval::WHOLE;
+        case EngineNoteInterval::NOTE_2_1:
+            return NoteInterval::TWO_BARS;
+        case EngineNoteInterval::NOTE_3_1:
+            return NoteInterval::THREE_BARS;
+        case EngineNoteInterval::NOTE_4_1:
+            return NoteInterval::FOUR_BARS;
+        case EngineNoteInterval::NOTE_8_1:
+            return NoteInterval::EIGHT_BARS;
+        case EngineNoteInterval::NOTE_DOTTED_1_8TH:
+            return NoteInterval::DOTTED_EIGHTH;
+        case EngineNoteInterval::NOTE_TRIPLET_1_4TH:
+            return NoteInterval::TRIPLET_QUARTER;
+        case EngineNoteInterval::NOTE_DOTTED_1_4TH:
+            return NoteInterval::DOTTED_QUARTER;
+        case EngineNoteInterval::NOTE_TRIPLET_1_2:
+            return NoteInterval::TRIPLET_HALF;
+        case EngineNoteInterval::NOTE_DOTTED_1_2:
+            return NoteInterval::DOTTED_HALF;
+        case EngineNoteInterval::NOTE_TRIPLET_1_8TH:
+            return NoteInterval::TRIPLET_EIGHTH;
     }
     return NoteInterval::QUARTER;
 }
@@ -199,7 +268,13 @@ struct HostTimingInfo
     int timeSigNumerator = 4;
     int timeSigDenominator = 4;
 
-    enum class TransportState { STOPPED, PLAYING, RECORDING, PAUSED };
+    enum class TransportState
+    {
+        STOPPED,
+        PLAYING,
+        RECORDING,
+        PAUSED
+    };
     TransportState transportState = TransportState::STOPPED;
 };
 

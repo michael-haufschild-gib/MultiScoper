@@ -4,16 +4,18 @@
     OptionsSection with the names supplied by ThemeManager.
 */
 
-#include <gtest/gtest.h>
-#include "ui/layout/SidebarComponent.h"
-#include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
 #include "core/ServiceContext.h"
+#include "ui/layout/SidebarComponent.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
+
+#include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -36,8 +38,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
 
         ServiceContext context{*registry_, *themeManager_, *shaderRegistry_, *presetManager_};
         sidebar = std::make_unique<SidebarComponent>(context);
@@ -80,8 +82,7 @@ TEST_F(SidebarThemePopulationTest, EveryAvailableThemeNameIsNonEmpty)
 
     for (size_t i = 0; i < availableThemes.size(); ++i)
     {
-        EXPECT_FALSE(availableThemes[i].isEmpty())
-            << "Theme at index " << i << " has an empty name";
+        EXPECT_FALSE(availableThemes[i].isEmpty()) << "Theme at index " << i << " has an empty name";
     }
 }
 
@@ -100,6 +101,6 @@ TEST_F(SidebarThemePopulationTest, DropdownSelectionMatchesCurrentTheme)
 
     juce::String selectedId = themeDropdown->getSelectedId();
     EXPECT_EQ(selectedId, currentThemeName)
-        << "Dropdown selection '" << selectedId.toStdString()
-        << "' does not match active theme '" << currentThemeName.toStdString() << "'";
+        << "Dropdown selection '" << selectedId.toStdString() << "' does not match active theme '"
+        << currentThemeName.toStdString() << "'";
 }

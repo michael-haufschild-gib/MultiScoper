@@ -8,12 +8,10 @@
 namespace oscil
 {
 
-ColorPickerComponent::ColorPickerComponent(IThemeService& themeService)
-    : themeService_(themeService)
+ColorPickerComponent::ColorPickerComponent(IThemeService& themeService) : themeService_(themeService)
 {
     // Create sliders for RGBA channels
-    auto createSlider = [this](std::unique_ptr<OscilSlider>& slider)
-    {
+    auto createSlider = [this](std::unique_ptr<OscilSlider>& slider) {
         slider = std::make_unique<OscilSlider>(themeService_);
         slider->setRange(0, 255);
         slider->setStep(1);
@@ -29,8 +27,7 @@ ColorPickerComponent::ColorPickerComponent(IThemeService& themeService)
     createSlider(alphaSlider_);
 
     // Create labels
-    auto createLabel = [this](std::unique_ptr<juce::Label>& label, const juce::String& text)
-    {
+    auto createLabel = [this](std::unique_ptr<juce::Label>& label, const juce::String& text) {
         label = std::make_unique<juce::Label>("", text);
         label->setJustificationType(juce::Justification::centredRight);
         addAndMakeVisible(*label);
@@ -69,7 +66,8 @@ void ColorPickerComponent::paint(juce::Graphics& g)
         {
             for (int x = previewBounds_.getX(); x < previewBounds_.getRight(); x += checkSize)
             {
-                bool isLight = ((x - previewBounds_.getX()) / checkSize + (y - previewBounds_.getY()) / checkSize) % 2 == 0;
+                bool isLight =
+                    ((x - previewBounds_.getX()) / checkSize + (y - previewBounds_.getY()) / checkSize) % 2 == 0;
                 g.setColour(isLight ? juce::Colours::white : juce::Colours::lightgrey);
                 g.fillRect(x, y, checkSize, checkSize);
             }
@@ -99,8 +97,7 @@ void ColorPickerComponent::resized()
     bounds.removeFromRight(10); // spacing
 
     // Layout sliders vertically
-    auto layoutRow = [&](juce::Label* label, OscilSlider* slider)
-    {
+    auto layoutRow = [&](juce::Label* label, OscilSlider* slider) {
         auto row = bounds.removeFromTop(sliderHeight);
         label->setBounds(row.removeFromLeft(labelWidth));
         slider->setBounds(row);
@@ -165,20 +162,15 @@ bool ColorPickerComponent::parseHexColour(const juce::String& hex, juce::Colour&
     int b = cleaned.substring(4, 6).getHexValue32();
     int a = (cleaned.length() == 8) ? cleaned.substring(6, 8).getHexValue32() : 255;
 
-    outColour = juce::Colour(static_cast<juce::uint8>(r),
-                             static_cast<juce::uint8>(g),
-                             static_cast<juce::uint8>(b),
+    outColour = juce::Colour(static_cast<juce::uint8>(r), static_cast<juce::uint8>(g), static_cast<juce::uint8>(b),
                              static_cast<juce::uint8>(a));
     return true;
 }
 
 juce::String ColorPickerComponent::toHexString(juce::Colour colour)
 {
-    return juce::String::formatted("#%02X%02X%02X%02X",
-                                    colour.getRed(),
-                                    colour.getGreen(),
-                                    colour.getBlue(),
-                                    colour.getAlpha());
+    return juce::String::formatted("#%02X%02X%02X%02X", colour.getRed(), colour.getGreen(), colour.getBlue(),
+                                   colour.getAlpha());
 }
 
 void ColorPickerComponent::updateFromSliders()
@@ -189,11 +181,8 @@ void ColorPickerComponent::updateFromSliders()
     isUpdating_ = true;
 
     currentColour_ = juce::Colour(
-        static_cast<juce::uint8>(redSlider_->getValue()),
-        static_cast<juce::uint8>(greenSlider_->getValue()),
-        static_cast<juce::uint8>(blueSlider_->getValue()),
-        static_cast<juce::uint8>(alphaSlider_->getValue())
-    );
+        static_cast<juce::uint8>(redSlider_->getValue()), static_cast<juce::uint8>(greenSlider_->getValue()),
+        static_cast<juce::uint8>(blueSlider_->getValue()), static_cast<juce::uint8>(alphaSlider_->getValue()));
 
     hexInput_->setText(toHexString(currentColour_), false);
     repaint();

@@ -20,10 +20,7 @@ SourceSelectorComponent::SourceSelectorComponent(IThemeService& themeService, II
     updateDisplayText();
 }
 
-SourceSelectorComponent::~SourceSelectorComponent()
-{
-    instanceRegistry_.removeListener(this);
-}
+SourceSelectorComponent::~SourceSelectorComponent() { instanceRegistry_.removeListener(this); }
 
 void SourceSelectorComponent::paint(juce::Graphics& g)
 {
@@ -96,8 +93,7 @@ void SourceSelectorComponent::showPopup()
     // Set up callbacks
     juce::Component::SafePointer<SourceSelectorComponent> safeThis(this);
 
-    popup->onSourceSelected = [safeThis](const SourceId& id)
-    {
+    popup->onSourceSelected = [safeThis](const SourceId& id) {
         if (safeThis != nullptr)
         {
             safeThis->setSelectedSourceId(id);
@@ -106,8 +102,7 @@ void SourceSelectorComponent::showPopup()
         }
     };
 
-    popup->onDisconnect = [safeThis]()
-    {
+    popup->onDisconnect = [safeThis]() {
         if (safeThis != nullptr)
         {
             safeThis->setSelectedSourceId(SourceId::noSource());
@@ -116,10 +111,7 @@ void SourceSelectorComponent::showPopup()
         }
     };
 
-    juce::CallOutBox::launchAsynchronously(
-        std::move(popup),
-        getScreenBounds(),
-        nullptr);
+    juce::CallOutBox::launchAsynchronously(std::move(popup), getScreenBounds(), nullptr);
 }
 
 void SourceSelectorComponent::setSelectedSourceId(const SourceId& sourceId)

@@ -3,24 +3,19 @@
     Tests for OscilAccordion and OscilAccordionSection UI components
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilAccordion.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilAccordionTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
     IThemeService& getThemeService() { return *themeManager_; }
@@ -133,13 +128,11 @@ TEST_F(OscilAccordionTest, SectionExpandedCallbackCalledWithAnimation)
 
     int changeCount = 0;
 
-    section.onExpandedChanged = [&changeCount](bool) {
-        changeCount++;
-    };
+    section.onExpandedChanged = [&changeCount](bool) { changeCount++; };
 
     // Second parameter is `animate`, not `notify` - callback always fires
-    section.setExpanded(true, false);  // no animation
-    EXPECT_EQ(changeCount, 1);  // Callback is still called
+    section.setExpanded(true, false); // no animation
+    EXPECT_EQ(changeCount, 1);        // Callback is still called
 }
 
 TEST_F(OscilAccordionTest, SectionHeaderHeight)

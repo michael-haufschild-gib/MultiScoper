@@ -3,8 +3,9 @@
     Tests for quality presets, memory budget calculations, and buffer sizing
 */
 
-#include <gtest/gtest.h>
 #include "core/dsp/CaptureQualityConfig.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -182,7 +183,7 @@ protected:
 TEST_F(BufferSizeCalculationTest, BufferSizeForStandard4Seconds)
 {
     config.qualityPreset = QualityPreset::Standard;
-    config.bufferDuration = BufferDuration::Medium;  // 4 seconds
+    config.bufferDuration = BufferDuration::Medium; // 4 seconds
 
     // 22050 Hz * 4 seconds = 88200 samples
     EXPECT_EQ(config.calculateBufferSizeSamples(CaptureRate::STANDARD), 88200u);
@@ -191,7 +192,7 @@ TEST_F(BufferSizeCalculationTest, BufferSizeForStandard4Seconds)
 TEST_F(BufferSizeCalculationTest, BufferSizeForEco1Second)
 {
     config.qualityPreset = QualityPreset::Eco;
-    config.bufferDuration = BufferDuration::Short;  // 1 second
+    config.bufferDuration = BufferDuration::Short; // 1 second
 
     // 11025 Hz * 1 second = 11025 samples
     EXPECT_EQ(config.calculateBufferSizeSamples(CaptureRate::ECO), 11025u);
@@ -200,7 +201,7 @@ TEST_F(BufferSizeCalculationTest, BufferSizeForEco1Second)
 TEST_F(BufferSizeCalculationTest, BufferSizeForHigh30Seconds)
 {
     config.qualityPreset = QualityPreset::High;
-    config.bufferDuration = BufferDuration::VeryLong;  // 30 seconds
+    config.bufferDuration = BufferDuration::VeryLong; // 30 seconds
 
     // 44100 Hz * 30 seconds = 1,323,000 samples
     EXPECT_EQ(config.calculateBufferSizeSamples(CaptureRate::HIGH), 1323000u);
@@ -273,4 +274,3 @@ TEST_F(MemoryUsageCalculationTest, UltraPresetMemoryIsCappedAtMaxSupportedRate)
 
     EXPECT_EQ(memoryAt384k, memoryAt192k);
 }
-

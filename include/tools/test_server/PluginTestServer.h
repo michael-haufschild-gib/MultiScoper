@@ -8,20 +8,20 @@
 // Ensure OpenSSL and Brotli support are NOT enabled for httplib
 // (httplib uses #ifdef to check these, so we must ensure they are not defined)
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-#undef CPPHTTPLIB_OPENSSL_SUPPORT
+    #undef CPPHTTPLIB_OPENSSL_SUPPORT
 #endif
 #ifdef CPPHTTPLIB_BROTLI_SUPPORT
-#undef CPPHTTPLIB_BROTLI_SUPPORT
+    #undef CPPHTTPLIB_BROTLI_SUPPORT
 #endif
-
-#include <httplib.h>
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#include <atomic>
+#include <httplib.h>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <thread>
-#include <atomic>
-#include <memory>
 #include <unordered_map>
 
 namespace oscil

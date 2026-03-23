@@ -45,9 +45,7 @@ static const char* trailsFragmentShader = R"(
     }
 )";
 
-TrailsEffect::TrailsEffect()
-{
-}
+TrailsEffect::TrailsEffect() {}
 
 TrailsEffect::~TrailsEffect() = default;
 
@@ -70,8 +68,7 @@ bool TrailsEffect::compile(juce::OpenGLContext& context)
     decayLoc_ = shader_->getUniformIDFromName("decay");
     opacityLoc_ = shader_->getUniformIDFromName("opacity");
 
-    if (currentTextureLoc_ < 0 || historyTextureLoc_ < 0 ||
-        decayLoc_ < 0 || opacityLoc_ < 0)
+    if (currentTextureLoc_ < 0 || historyTextureLoc_ < 0 || decayLoc_ < 0 || opacityLoc_ < 0)
     {
         DBG("TrailsEffect: Missing uniforms");
         shader_.reset();
@@ -90,17 +87,10 @@ void TrailsEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool TrailsEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool TrailsEffect::isCompiled() const { return compiled_; }
 
-void TrailsEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void TrailsEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                         FramebufferPool& pool, float deltaTime)
 {
     // This version doesn't have access to history - requires applyWithHistory
     // Just copy source to destination as fallback
@@ -128,13 +118,8 @@ void TrailsEffect::apply(
     destination->unbind();
 }
 
-void TrailsEffect::applyWithHistory(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* history,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void TrailsEffect::applyWithHistory(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* history,
+                                    Framebuffer* destination, FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
 

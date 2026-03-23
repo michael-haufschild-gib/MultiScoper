@@ -5,13 +5,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -26,9 +27,10 @@ namespace oscil
  * - Keyboard navigation
  * - Accessibility support
  */
-class OscilColorSwatches : public ThemedComponent,
-                           public TestIdSupport,
-                           private juce::Timer
+class OscilColorSwatches
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     explicit OscilColorSwatches(IThemeService& themeService, const juce::String& testId = "");
@@ -58,7 +60,7 @@ public:
     void setSpacing(int spacing);
     int getSpacing() const { return spacing_; }
 
-    void setColumns(int cols);  // 0 = auto
+    void setColumns(int cols); // 0 = auto
     int getColumns() const { return columns_; }
 
     void setShowCheckmark(bool show);
@@ -66,7 +68,7 @@ public:
 
     // Callbacks
     std::function<void(int, juce::Colour)> onColorSelected;
-    std::function<void(juce::Colour)> onColorHovered;  // For live preview
+    std::function<void(juce::Colour)> onColorHovered; // For live preview
 
     // Size hints
     int getPreferredWidth() const;
@@ -83,7 +85,6 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
-
 
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
@@ -105,14 +106,13 @@ private:
 
     int swatchSize_ = 24;
     int spacing_ = 4;
-    int columns_ = 0;  // 0 = auto
+    int columns_ = 0; // 0 = auto
     bool showCheckmark_ = true;
 
     bool hasFocus_ = false;
     int focusedIndex_ = 0;
 
     SpringAnimation hoverSpring_;
-
 
     // TestIdSupport
     void registerTestId() override;

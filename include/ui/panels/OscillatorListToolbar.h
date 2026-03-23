@@ -5,16 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
+#include "core/Oscillator.h"
 #include "core/ServiceContext.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilTextField.h"
 #include "ui/components/SegmentedButtonBar.h"
-#include "core/Oscillator.h"
 #include "ui/components/TestId.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -34,9 +36,10 @@ enum class OscillatorFilterMode
  * Toolbar component for oscillator list
  * Provides filter and count display
  */
-class OscillatorListToolbar : public juce::Component,
-                               public ThemeManagerListener,
-                               public TestIdSupport
+class OscillatorListToolbar
+    : public juce::Component
+    , public ThemeManagerListener
+    , public TestIdSupport
 {
 public:
     /**
@@ -71,7 +74,7 @@ public:
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
-    static constexpr int PREFERRED_HEIGHT = 36;  // Reduced since we removed a row
+    static constexpr int PREFERRED_HEIGHT = 36; // Reduced since we removed a row
 
 private:
     void setupComponents();

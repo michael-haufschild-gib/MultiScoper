@@ -5,19 +5,21 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
 #include "core/ServiceContext.h"
-#include "ui/components/SegmentedButtonBar.h"
-#include "ui/layout/sections/SectionConstants.h"
-#include "ui/layout/sections/DynamicHeightContent.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilToggle.h"
-#include "ui/components/OscilTextField.h"
-#include "ui/components/TestId.h"
 #include "core/dsp/TimingConfig.h"
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/OscilTextField.h"
+#include "ui/components/OscilToggle.h"
+#include "ui/components/SegmentedButtonBar.h"
+#include "ui/components/TestId.h"
+#include "ui/layout/sections/DynamicHeightContent.h"
+#include "ui/layout/sections/SectionConstants.h"
 #include "ui/panels/TimingPresenter.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -27,9 +29,10 @@ namespace oscil
  * Timing section component for the sidebar
  * Provides TIME/MELODIC mode toggle, interval controls, and host sync options
  */
-class TimingSidebarSection : public juce::Component,
-                              public ThemeManagerListener,
-                              public DynamicHeightContent
+class TimingSidebarSection
+    : public juce::Component
+    , public ThemeManagerListener
+    , public DynamicHeightContent
 {
 public:
     /**
@@ -113,8 +116,8 @@ private:
 
     // BPM controls (MELODIC mode only)
     std::unique_ptr<juce::Label> bpmLabel_;
-    std::unique_ptr<OscilTextField> bpmField_;       // Free Running mode
-    std::unique_ptr<juce::Label> bpmValueLabel_;     // Host Sync mode (read-only)
+    std::unique_ptr<OscilTextField> bpmField_;   // Free Running mode
+    std::unique_ptr<juce::Label> bpmValueLabel_; // Host Sync mode (read-only)
 
     // Sync status indicator
     std::unique_ptr<juce::Label> syncStatusLabel_;

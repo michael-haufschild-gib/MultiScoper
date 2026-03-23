@@ -5,13 +5,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -26,9 +27,10 @@ namespace oscil
  * - Shortcut key support
  * - Icon support (left, right, or center)
  */
-class OscilButton : public ThemedComponent,
-                    public TestIdSupport,
-                    private juce::Timer
+class OscilButton
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     /**
@@ -81,7 +83,7 @@ public:
     /// Set the toggle state, optionally firing the onToggle callback.
     void setToggled(bool toggled, bool notify = true);
     bool isToggled() const { return isToggled_; }
-    
+
     void setBorder(juce::Colour color, float thickness); // New: Custom border
 
     // Segment position for segmented button bars
@@ -143,7 +145,7 @@ private:
     ButtonVariant variant_ = ButtonVariant::Primary;
     juce::String label_;
     juce::Image icon_;
-    juce::Path iconPath_;  // Path-based icon (takes precedence over icon_ and label_)
+    juce::Path iconPath_; // Path-based icon (takes precedence over icon_ and label_)
     bool iconOnLeft_ = true;
     bool enabled_ = true;
     bool isHovered_ = false;

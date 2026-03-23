@@ -5,12 +5,13 @@
 
 #pragma once
 
+#include <juce_core/juce_core.h>
+
 #include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <thread>
 #include <type_traits>
-#include <juce_core/juce_core.h>
 
 namespace oscil
 {
@@ -30,12 +31,11 @@ namespace oscil
 template <typename T>
 struct SeqLock
 {
-    static_assert(std::is_trivially_copyable_v<T>,
-                  "SeqLock<T> requires T to be trivially copyable");
+    static_assert(std::is_trivially_copyable_v<T>, "SeqLock<T> requires T to be trivially copyable");
 
     void write(const T& value)
     {
-        sequence_.fetch_add(1, std::memory_order_acq_rel);   // odd → write in progress
+        sequence_.fetch_add(1, std::memory_order_acq_rel); // odd → write in progress
         std::memcpy(&data_, &value, sizeof(T));
         std::atomic_thread_fence(std::memory_order_release); // ensure memcpy visible before seq
         sequence_.fetch_add(1, std::memory_order_release);   // even → write complete

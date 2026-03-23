@@ -9,21 +9,22 @@
 // httplib v0.38+ uses #ifdef (existence check), not #if (value check),
 // so we must ensure these macros are NOT defined at all.
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-#undef CPPHTTPLIB_OPENSSL_SUPPORT
+    #undef CPPHTTPLIB_OPENSSL_SUPPORT
 #endif
 #ifdef CPPHTTPLIB_BROTLI_SUPPORT
-#undef CPPHTTPLIB_BROTLI_SUPPORT
+    #undef CPPHTTPLIB_BROTLI_SUPPORT
 #endif
 
-#include <httplib.h>
-#include <nlohmann/json.hpp>
 #include "TestDAW.h"
-#include "TestUIController.h"
-#include "TestScreenshot.h"
 #include "TestMetrics.h"
-#include <thread>
+#include "TestScreenshot.h"
+#include "TestUIController.h"
+
 #include <atomic>
 #include <future>
+#include <httplib.h>
+#include <nlohmann/json.hpp>
+#include <thread>
 
 namespace oscil::test
 {

@@ -6,16 +6,17 @@
 
 #pragma once
 
+#include "core/interfaces/IInstanceRegistry.h"
+
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+
+#include <atomic>
+#include <functional>
 #include <memory>
-#include <unordered_map>
 #include <mutex>
 #include <shared_mutex>
-#include <functional>
-#include <atomic>
-
-#include "core/interfaces/IInstanceRegistry.h"
+#include <unordered_map>
 
 namespace oscil
 {
@@ -45,13 +46,11 @@ public:
      * @param channelCount Number of audio channels
      * @param sampleRate Current sample rate
      */
-    [[nodiscard]] SourceId registerInstance(
-        const juce::String& trackIdentifier,
-        std::shared_ptr<IAudioBuffer> captureBuffer,
-        const juce::String& name = "Track",
-        int channelCount = 2,
-        double sampleRate = 44100.0,
-        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) override;
+    [[nodiscard]] SourceId registerInstance(const juce::String& trackIdentifier,
+                                            std::shared_ptr<IAudioBuffer> captureBuffer,
+                                            const juce::String& name = "Track", int channelCount = 2,
+                                            double sampleRate = 44100.0,
+                                            std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) override;
 
     /**
      * Unregister a plugin instance.
@@ -117,12 +116,9 @@ public:
     InstanceRegistry& operator=(const InstanceRegistry&) = delete;
 
 private:
-    SourceId tryReuseExistingSource(const juce::String& trackIdentifier,
-                                     std::shared_ptr<IAudioBuffer> captureBuffer,
-                                     const juce::String& name,
-                                     int channelCount,
-                                     double sampleRate,
-                                     std::shared_ptr<AnalysisEngine> analysisEngine);
+    SourceId tryReuseExistingSource(const juce::String& trackIdentifier, std::shared_ptr<IAudioBuffer> captureBuffer,
+                                    const juce::String& name, int channelCount, double sampleRate,
+                                    std::shared_ptr<AnalysisEngine> analysisEngine);
     void notifySourceAdded(const SourceId& sourceId);
     void notifySourceRemoved(const SourceId& sourceId);
     void notifySourceUpdated(const SourceId& sourceId);

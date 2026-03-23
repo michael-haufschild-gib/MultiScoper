@@ -3,20 +3,19 @@
 */
 
 #include "core/OscilState.h"
+
 #include "core/OscilLog.h"
+
 #include <algorithm>
 namespace oscil
 {
 
-OscilState::OscilState()
-{
-    initializeDefaultState();
-}
+OscilState::OscilState() { initializeDefaultState(); }
 
 OscilState::OscilState(const juce::String& xmlString)
 {
     initializeDefaultState();
-    (void)fromXmlString(xmlString);
+    (void) fromXmlString(xmlString);
 }
 
 void OscilState::initializeDefaultState()
@@ -49,7 +48,8 @@ juce::String OscilState::toXmlString()
     if (auto xml = state_.createXml())
     {
         auto xmlStr = xml->toString();
-        OSCIL_LOG(STATE, "toXmlString: " << xmlStr.length() << "ch " << getOscillators().size() << "osc " << layoutManager_.getPaneCount() << "panes");
+        OSCIL_LOG(STATE, "toXmlString: " << xmlStr.length() << "ch " << getOscillators().size() << "osc "
+                                         << layoutManager_.getPaneCount() << "panes");
         return xmlStr;
     }
     OSCIL_LOG(STATE, "toXmlString: FAILED to create XML");
@@ -80,22 +80,23 @@ bool OscilState::fromXmlString(const juce::String& xmlString)
     auto xml = juce::XmlDocument::parse(xmlString);
     if (!xml)
     {
-        juce::Logger::writeToLog("OscilState::fromXmlString: XML parse failed ("
-                                 + juce::String(xmlString.length()) + " chars)");
+        juce::Logger::writeToLog("OscilState::fromXmlString: XML parse failed (" + juce::String(xmlString.length()) +
+                                 " chars)");
         return false;
     }
 
     auto loadedState = juce::ValueTree::fromXml(*xml);
     if (!loadedState.isValid() || !loadedState.hasType(StateIds::OscilState))
     {
-        juce::Logger::writeToLog("OscilState::fromXmlString: invalid root node type '"
-                                 + loadedState.getType().toString() + "' (expected '"
-                                 + StateIds::OscilState.toString() + "')");
+        juce::Logger::writeToLog("OscilState::fromXmlString: invalid root node type '" +
+                                 loadedState.getType().toString() + "' (expected '" + StateIds::OscilState.toString() +
+                                 "')");
         return false;
     }
 
     if (int v = loadedState.getProperty(StateIds::Version, 0); v != CURRENT_SCHEMA_VERSION)
-        juce::Logger::writeToLog("OscilState: loaded schema v" + juce::String(v) + ", current v" + juce::String(CURRENT_SCHEMA_VERSION));
+        juce::Logger::writeToLog("OscilState: loaded schema v" + juce::String(v) + ", current v" +
+                                 juce::String(CURRENT_SCHEMA_VERSION));
     state_ = loadedState;
 
     // Load layout manager state
@@ -112,7 +113,8 @@ bool OscilState::fromXmlString(const juce::String& xmlString)
         layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
     }
 
-    OSCIL_LOG(STATE, "fromXmlString: " << getOscillators().size() << "osc " << layoutManager_.getPaneCount() << "panes v" << getSchemaVersion());
+    OSCIL_LOG(STATE, "fromXmlString: " << getOscillators().size() << "osc " << layoutManager_.getPaneCount()
+                                       << "panes v" << getSchemaVersion());
     return true;
 }
 
@@ -137,7 +139,9 @@ void OscilState::addOscillator(const Oscillator& oscillator)
 {
     auto oscillatorsNode = getOrCreateOscillatorsNode();
     oscillatorsNode.appendChild(oscillator.toValueTree(), nullptr);
-    OSCIL_LOG(STATE, "addOscillator: id=" << oscillator.getId().id << " name=" << oscillator.getName() << " src=" << oscillator.getSourceId().id << " pane=" << oscillator.getPaneId().id << " total=" << oscillatorsNode.getNumChildren());
+    OSCIL_LOG(STATE, "addOscillator: id=" << oscillator.getId().id << " name=" << oscillator.getName() << " src="
+                                          << oscillator.getSourceId().id << " pane=" << oscillator.getPaneId().id
+                                          << " total=" << oscillatorsNode.getNumChildren());
 }
 
 void OscilState::removeOscillator(const OscillatorId& oscillatorId)
@@ -152,7 +156,9 @@ void OscilState::removeOscillator(const OscillatorId& oscillatorId)
         if (child.getProperty(StateIds::Id).toString() == oscillatorId.id)
         {
             removedIndex = child.getProperty(StateIds::Order, i);
-            OSCIL_LOG(STATE, "removeOscillator: id=" << oscillatorId.id << " name=" << child.getProperty(StateIds::Name).toString() << " remaining=" << (oscillatorsNode.getNumChildren() - 1));
+            OSCIL_LOG(STATE, "removeOscillator: id=" << oscillatorId.id
+                                                     << " name=" << child.getProperty(StateIds::Name).toString()
+                                                     << " remaining=" << (oscillatorsNode.getNumChildren() - 1));
             oscillatorsNode.removeChild(i, nullptr);
             break;
         }
@@ -182,7 +188,10 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
         auto child = oscillatorsNode.getChild(i);
         if (child.getProperty(StateIds::Id).toString() == oscillator.getId().id)
         {
-            OSCIL_LOG(STATE, "updateOscillator: id=" << oscillator.getId().id << " name=" << oscillator.getName() << " src=" << oscillator.getSourceId().id << " pane=" << oscillator.getPaneId().id << " vis=" << (int)oscillator.isVisible());
+            OSCIL_LOG(STATE, "updateOscillator: id=" << oscillator.getId().id << " name=" << oscillator.getName()
+                                                     << " src=" << oscillator.getSourceId().id
+                                                     << " pane=" << oscillator.getPaneId().id
+                                                     << " vis=" << (int) oscillator.isVisible());
             // Update properties
             child.copyPropertiesFrom(oscillator.toValueTree(), nullptr);
 
@@ -202,21 +211,20 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
 
 void OscilState::reorderOscillators(int oldIndex, int newIndex)
 {
-    if (oldIndex == newIndex) return;
+    if (oldIndex == newIndex)
+        return;
     OSCIL_LOG(STATE, "reorderOscillators: oldIndex=" << oldIndex << " newIndex=" << newIndex);
 
     auto oscillators = getOscillators();
-    if (oldIndex < 0 || oldIndex >= static_cast<int>(oscillators.size()) ||
-        newIndex < 0 || newIndex >= static_cast<int>(oscillators.size()))
+    if (oldIndex < 0 || oldIndex >= static_cast<int>(oscillators.size()) || newIndex < 0 ||
+        newIndex >= static_cast<int>(oscillators.size()))
     {
         return;
     }
 
     // Sort oscillators by current orderIndex
     std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) {
-                  return a.getOrderIndex() < b.getOrderIndex();
-              });
+              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
     // Move the item from oldIndex to newIndex
     auto movedOsc = oscillators[static_cast<size_t>(oldIndex)];
@@ -354,12 +362,12 @@ void OscilState::setGainDb(float dB)
 bool OscilState::isGpuRenderingEnabled() const
 {
     auto layoutNode = getLayoutNode();
-    // Default to true if OpenGL is available at compile time
-    #if OSCIL_ENABLE_OPENGL
+// Default to true if OpenGL is available at compile time
+#if OSCIL_ENABLE_OPENGL
     return layoutNode.getProperty(StateIds::GpuRenderingEnabled, true);
-    #else
+#else
     return false;
-    #endif
+#endif
 }
 
 void OscilState::setGpuRenderingEnabled(bool enabled)
@@ -373,7 +381,7 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
     auto qualityNode = getCaptureQualityNode();
     if (!qualityNode.isValid())
     {
-        return CaptureQualityConfig();  // Return defaults
+        return CaptureQualityConfig(); // Return defaults
     }
 
     CaptureQualityConfig config;
@@ -382,7 +390,8 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
     config.qualityPreset = static_cast<QualityPreset>(std::clamp(presetInt, 0, static_cast<int>(QualityPreset::Ultra)));
 
     int durationInt = qualityNode.getProperty(StateIds::BufferDuration, static_cast<int>(BufferDuration::Medium));
-    config.bufferDuration = static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
+    config.bufferDuration =
+        static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
 
     config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
 
@@ -399,46 +408,25 @@ void OscilState::setCaptureQualityConfig(const CaptureQualityConfig& config)
 {
     auto qualityNode = getOrCreateCaptureQualityNode();
 
-    qualityNode.setProperty(StateIds::QualityPreset,
-                            static_cast<int>(config.qualityPreset), nullptr);
-    qualityNode.setProperty(StateIds::BufferDuration,
-                            static_cast<int>(config.bufferDuration), nullptr);
-    qualityNode.setProperty(StateIds::AutoAdjustQuality,
-                            config.autoAdjustQuality, nullptr);
-    qualityNode.setProperty(StateIds::MemoryBudgetBytes,
-                            static_cast<juce::int64>(config.memoryBudget.totalBudgetBytes), nullptr);
+    qualityNode.setProperty(StateIds::QualityPreset, static_cast<int>(config.qualityPreset), nullptr);
+    qualityNode.setProperty(StateIds::BufferDuration, static_cast<int>(config.bufferDuration), nullptr);
+    qualityNode.setProperty(StateIds::AutoAdjustQuality, config.autoAdjustQuality, nullptr);
+    qualityNode.setProperty(StateIds::MemoryBudgetBytes, static_cast<juce::int64>(config.memoryBudget.totalBudgetBytes),
+                            nullptr);
 }
 
-void OscilState::addListener(juce::ValueTree::Listener* listener)
-{
-    state_.addListener(listener);
-}
+void OscilState::addListener(juce::ValueTree::Listener* listener) { state_.addListener(listener); }
 
-void OscilState::removeListener(juce::ValueTree::Listener* listener)
-{
-    state_.removeListener(listener);
-}
+void OscilState::removeListener(juce::ValueTree::Listener* listener) { state_.removeListener(listener); }
 
-int OscilState::getSchemaVersion() const
-{
-    return state_.getProperty(StateIds::Version, 1);
-}
+int OscilState::getSchemaVersion() const { return state_.getProperty(StateIds::Version, 1); }
 
 // Const versions - just return what exists (may be invalid)
-juce::ValueTree OscilState::getOscillatorsNode() const
-{
-    return state_.getChildWithName(StateIds::Oscillators);
-}
+juce::ValueTree OscilState::getOscillatorsNode() const { return state_.getChildWithName(StateIds::Oscillators); }
 
-juce::ValueTree OscilState::getPanesNode() const
-{
-    return state_.getChildWithName(StateIds::Panes);
-}
+juce::ValueTree OscilState::getPanesNode() const { return state_.getChildWithName(StateIds::Panes); }
 
-juce::ValueTree OscilState::getLayoutNode() const
-{
-    return state_.getChildWithName(StateIds::Layout);
-}
+juce::ValueTree OscilState::getLayoutNode() const { return state_.getChildWithName(StateIds::Layout); }
 
 // Non-const versions - create if missing
 juce::ValueTree OscilState::getOrCreateOscillatorsNode()
@@ -489,10 +477,7 @@ juce::ValueTree OscilState::getOrCreateCaptureQualityNode()
     return node;
 }
 
-juce::ValueTree OscilState::getCaptureQualityNode() const
-{
-    return state_.getChildWithName(StateIds::CaptureQuality);
-}
+juce::ValueTree OscilState::getCaptureQualityNode() const { return state_.getChildWithName(StateIds::CaptureQuality); }
 
 // GlobalPreferences implementation is in GlobalPreferences.cpp
 

@@ -3,8 +3,9 @@
     Tests for theme application, colors, listeners, and properties
 */
 
-#include <gtest/gtest.h>
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -13,20 +14,11 @@ class ThemeManagerApplyTest : public ::testing::Test
 protected:
     std::unique_ptr<ThemeManager> themeManager_;
 
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
-    ThemeManager& getThemeManager()
-    {
-        return *themeManager_;
-    }
+    ThemeManager& getThemeManager() { return *themeManager_; }
 };
 
 // =============================================================================

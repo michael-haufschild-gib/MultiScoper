@@ -5,9 +5,10 @@
 
 #pragma once
 
-#include "ui/layout/pane/overlays/PaneOverlay.h"
 #include "core/analysis/AnalysisTypes.h"
 #include "ui/components/OscilButton.h"
+#include "ui/layout/pane/overlays/PaneOverlay.h"
+
 #include <vector>
 
 namespace oscil
@@ -73,7 +74,7 @@ private:
     void setupComponents();
     void rebuildTable(const std::vector<OscillatorStats>& stats);
     juce::String formatTable(const std::vector<OscillatorStats>& stats);
-    
+
     // Formatting helpers
     static juce::String formatDb(float dB);
     static juce::String formatPercent(float value);

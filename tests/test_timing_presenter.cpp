@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
-#include "ui/panels/TimingPresenter.h"
 #include "core/dsp/TimingConfig.h"
+#include "ui/panels/TimingPresenter.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -75,7 +76,7 @@ TEST_F(TimingPresenterTest, SyncBadgeVisibility)
 
     presenter.setSyncStatus(true);
     EXPECT_TRUE(presenter.shouldShowSyncedBadge());
-    
+
     presenter.setTimingMode(TimingMode::TIME);
     EXPECT_FALSE(presenter.shouldShowSyncedBadge());
 }

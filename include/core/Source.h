@@ -6,12 +6,14 @@
 
 #pragma once
 
+#include "core/analysis/AnalysisEngine.h"
+
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "core/analysis/AnalysisEngine.h"
+
 #include <atomic>
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace oscil
 {
@@ -25,11 +27,11 @@ class SharedCaptureBuffer;
  */
 enum class SourceState
 {
-    DISCOVERED,  // New source detected, awaiting audio data
-    ACTIVE,      // Receiving audio samples, owning instance operational
-    INACTIVE,    // No audio samples received for >1 second, but owning instance alive
-    ORPHANED,    // Owning instance terminated, no backup instances available
-    STALE        // No audio samples for >30 seconds, ownership questionable
+    DISCOVERED, // New source detected, awaiting audio data
+    ACTIVE,     // Receiving audio samples, owning instance operational
+    INACTIVE,   // No audio samples received for >1 second, but owning instance alive
+    ORPHANED,   // Owning instance terminated, no backup instances available
+    STALE       // No audio samples for >30 seconds, ownership questionable
 };
 
 /**
@@ -39,11 +41,16 @@ inline juce::String sourceStateToString(SourceState state)
 {
     switch (state)
     {
-        case SourceState::DISCOVERED: return "DISCOVERED";
-        case SourceState::ACTIVE:     return "ACTIVE";
-        case SourceState::INACTIVE:   return "INACTIVE";
-        case SourceState::ORPHANED:   return "ORPHANED";
-        case SourceState::STALE:      return "STALE";
+        case SourceState::DISCOVERED:
+            return "DISCOVERED";
+        case SourceState::ACTIVE:
+            return "ACTIVE";
+        case SourceState::INACTIVE:
+            return "INACTIVE";
+        case SourceState::ORPHANED:
+            return "ORPHANED";
+        case SourceState::STALE:
+            return "STALE";
     }
     jassertfalse; // Unhandled SourceState enum value
     return "UNKNOWN";
@@ -54,11 +61,16 @@ inline juce::String sourceStateToString(SourceState state)
  */
 inline SourceState stringToSourceState(const juce::String& str)
 {
-    if (str == "DISCOVERED") return SourceState::DISCOVERED;
-    if (str == "ACTIVE")     return SourceState::ACTIVE;
-    if (str == "INACTIVE")   return SourceState::INACTIVE;
-    if (str == "ORPHANED")   return SourceState::ORPHANED;
-    if (str == "STALE")      return SourceState::STALE;
+    if (str == "DISCOVERED")
+        return SourceState::DISCOVERED;
+    if (str == "ACTIVE")
+        return SourceState::ACTIVE;
+    if (str == "INACTIVE")
+        return SourceState::INACTIVE;
+    if (str == "ORPHANED")
+        return SourceState::ORPHANED;
+    if (str == "STALE")
+        return SourceState::STALE;
     return SourceState::DISCOVERED;
 }
 
@@ -94,8 +106,8 @@ struct SourceId
 
     /// Generate a unique source identifier.
     [[nodiscard]] static SourceId generate();
-    static SourceId invalid() { return SourceId{ "" }; }
-    static SourceId noSource() { return SourceId{ "NO_SOURCE" }; }
+    static SourceId invalid() { return SourceId{""}; }
+    static SourceId noSource() { return SourceId{"NO_SOURCE"}; }
     bool isValid() const { return id.isNotEmpty() && id != "NO_SOURCE"; }
     bool isNoSource() const { return id == "NO_SOURCE"; }
 };
@@ -105,10 +117,7 @@ struct SourceId
  */
 struct SourceIdHash
 {
-    std::size_t operator()(const SourceId& sid) const
-    {
-        return static_cast<std::size_t>(sid.id.hashCode());
-    }
+    std::size_t operator()(const SourceId& sid) const { return static_cast<std::size_t>(sid.id.hashCode()); }
 };
 
 /**
@@ -123,7 +132,7 @@ struct InstanceId
 
     /// Generate a unique instance identifier.
     [[nodiscard]] static InstanceId generate();
-    static InstanceId invalid() { return InstanceId{ "" }; }
+    static InstanceId invalid() { return InstanceId{""}; }
     bool isValid() const { return id.isNotEmpty(); }
 };
 
@@ -132,10 +141,7 @@ struct InstanceId
  */
 struct InstanceIdHash
 {
-    std::size_t operator()(const InstanceId& iid) const
-    {
-        return static_cast<std::size_t>(iid.id.hashCode());
-    }
+    std::size_t operator()(const InstanceId& iid) const { return static_cast<std::size_t>(iid.id.hashCode()); }
 };
 
 /**
@@ -143,7 +149,7 @@ struct InstanceIdHash
  */
 struct CorrelationMetrics
 {
-    float correlationCoefficient = 0.0f;  // -1.0 to 1.0, Pearson correlation
+    float correlationCoefficient = 0.0f; // -1.0 to 1.0, Pearson correlation
     bool isValid = false;
 };
 
@@ -152,10 +158,10 @@ struct CorrelationMetrics
  */
 struct SignalMetrics
 {
-    float rmsLevel = 0.0f;       // RMS level in dBFS
-    float peakLevel = 0.0f;      // Peak level in dBFS
-    float dcOffset = 0.0f;       // DC offset measurement
-    bool hasSignal = false;      // True if signal detected above noise floor
+    float rmsLevel = 0.0f;  // RMS level in dBFS
+    float peakLevel = 0.0f; // Peak level in dBFS
+    float dcOffset = 0.0f;  // DC offset measurement
+    bool hasSignal = false; // True if signal detected above noise floor
 };
 
 /**
@@ -172,10 +178,10 @@ class Source
 {
 public:
     // Timing constants for state transitions (PRD defined)
-    static constexpr int INACTIVE_THRESHOLD_MS = 1000;    // 1 second to INACTIVE
-    static constexpr int STALE_THRESHOLD_MS = 30000;      // 30 seconds to STALE
-    static constexpr int ORPHAN_CLEANUP_MS = 300000;      // 5 minutes for orphan cleanup
-    static constexpr int HEARTBEAT_INTERVAL_MS = 100;     // 100ms heartbeat
+    static constexpr int INACTIVE_THRESHOLD_MS = 1000; // 1 second to INACTIVE
+    static constexpr int STALE_THRESHOLD_MS = 30000;   // 30 seconds to STALE
+    static constexpr int ORPHAN_CLEANUP_MS = 300000;   // 5 minutes for orphan cleanup
+    static constexpr int HEARTBEAT_INTERVAL_MS = 100;  // 100ms heartbeat
 
     // Display name constraints
     static constexpr int MAX_DISPLAY_NAME_LENGTH = 64;
@@ -282,7 +288,7 @@ public:
     [[nodiscard]] const SignalMetrics& getSignalMetrics() const noexcept { return signalMetrics_; }
     /// Update signal level metrics from latest audio analysis.
     void updateSignalMetrics(float rms, float peak, float dcOffset) noexcept;
-    
+
     // === Analysis ===
     [[nodiscard]] AnalysisEngine& getAnalysisEngine() { return analysisEngine_; }
     [[nodiscard]] const AnalysisEngine& getAnalysisEngine() const { return analysisEngine_; }
@@ -320,19 +326,19 @@ private:
     int bufferSize_ = 512;
 
     // State
-    std::atomic<SourceState> state_{ SourceState::DISCOVERED };
-    std::atomic<bool> isActiveFlag_{ false };
+    std::atomic<SourceState> state_{SourceState::DISCOVERED};
+    std::atomic<bool> isActiveFlag_{false};
     juce::String displayName_;
 
     // Timestamps
     juce::Time createdAt_;
-    std::atomic<int64_t> lastHeartbeatMs_{ 0 };  // Thread-safe heartbeat timestamp
-    std::atomic<int64_t> lastAudioTimeMs_{ 0 };
+    std::atomic<int64_t> lastHeartbeatMs_{0}; // Thread-safe heartbeat timestamp
+    std::atomic<int64_t> lastAudioTimeMs_{0};
 
     // Metrics
     CorrelationMetrics correlationMetrics_;
     SignalMetrics signalMetrics_;
-    
+
     // Analysis Engine
     AnalysisEngine analysisEngine_;
 

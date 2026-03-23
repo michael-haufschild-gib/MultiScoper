@@ -3,7 +3,9 @@
 */
 
 #include "ui/panels/WaveformPresenter.h"
+
 #include "core/SharedCaptureBuffer.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -11,24 +13,13 @@
 namespace oscil
 {
 
-WaveformPresenter::WaveformPresenter()
-{
-}
+WaveformPresenter::WaveformPresenter() {}
 
-void WaveformPresenter::setCaptureBuffer(std::shared_ptr<IAudioBuffer> buffer)
-{
-    captureBuffer_ = buffer;
-}
+void WaveformPresenter::setCaptureBuffer(std::shared_ptr<IAudioBuffer> buffer) { captureBuffer_ = buffer; }
 
-void WaveformPresenter::setProcessingMode(ProcessingMode mode)
-{
-    processingMode_ = mode;
-}
+void WaveformPresenter::setProcessingMode(ProcessingMode mode) { processingMode_ = mode; }
 
-void WaveformPresenter::setDisplaySamples(int samples)
-{
-    displaySamples_ = std::max(64, samples);
-}
+void WaveformPresenter::setDisplaySamples(int samples) { displaySamples_ = std::max(64, samples); }
 
 void WaveformPresenter::setGainDb(float dB)
 {
@@ -36,15 +27,9 @@ void WaveformPresenter::setGainDb(float dB)
     gainLinear_ = std::pow(10.0f, dB / 20.0f);
 }
 
-void WaveformPresenter::setAutoScale(bool enabled)
-{
-    autoScale_ = enabled;
-}
+void WaveformPresenter::setAutoScale(bool enabled) { autoScale_ = enabled; }
 
-void WaveformPresenter::setDisplayWidth(int width)
-{
-    decimator_.setDisplayWidth(width);
-}
+void WaveformPresenter::setDisplayWidth(int width) { decimator_.setDisplayWidth(width); }
 
 void WaveformPresenter::requestRestartAtTimestamp(int64_t timelineSampleTimestamp)
 {
@@ -59,8 +44,7 @@ std::pair<int, bool> WaveformPresenter::resolveRequestedSamples()
     const auto metadata = captureBuffer_->getLatestMetadata();
     if (*restartTimelineSample_ <= 0)
     {
-        *restartTimelineSample_ = metadata.timestamp +
-            static_cast<int64_t>(juce::jmax(0, metadata.numSamples));
+        *restartTimelineSample_ = metadata.timestamp + static_cast<int64_t>(juce::jmax(0, metadata.numSamples));
     }
 
     const int64_t frameEndSample = metadata.timestamp + static_cast<int64_t>(juce::jmax(0, metadata.numSamples));
@@ -149,7 +133,8 @@ void WaveformPresenter::processAndDecimate(int samplesRead, int samplesReadRight
     }
 
     // Calculate levels
-    std::span<const float> outputSpan(processedSignal_.channel1.data(), static_cast<size_t>(processedSignal_.numSamples));
+    std::span<const float> outputSpan(processedSignal_.channel1.data(),
+                                      static_cast<size_t>(processedSignal_.numSamples));
     currentPeak_ = SignalProcessor::calculatePeak(outputSpan);
     currentRMS_ = SignalProcessor::calculateRMS(outputSpan);
 }

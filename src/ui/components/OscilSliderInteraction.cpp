@@ -5,6 +5,7 @@
 */
 
 #include "ui/components/OscilSlider.h"
+
 #include <cmath>
 
 namespace oscil
@@ -12,7 +13,8 @@ namespace oscil
 
 void OscilSlider::mouseEnter(const juce::MouseEvent&)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     isHovered_ = true;
 
@@ -51,7 +53,8 @@ void OscilSlider::mouseExit(const juce::MouseEvent&)
 
 void OscilSlider::mouseDown(const juce::MouseEvent& e)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     isDragging_ = true;
     dragStartPoint_ = e.getPosition();
@@ -90,7 +93,8 @@ void OscilSlider::mouseDown(const juce::MouseEvent& e)
 
 void OscilSlider::mouseDrag(const juce::MouseEvent& e)
 {
-    if (!isDragging_ || !enabled_) return;
+    if (!isDragging_ || !enabled_)
+        return;
 
     auto bounds = getLocalBounds();
     bool isVertical = variant_ == SliderVariant::Vertical;
@@ -142,7 +146,8 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
 
 void OscilSlider::mouseUp(const juce::MouseEvent&)
 {
-    if (!isDragging_) return;
+    if (!isDragging_)
+        return;
 
     isDragging_ = false;
 
@@ -167,14 +172,15 @@ void OscilSlider::mouseUp(const juce::MouseEvent&)
 
 void OscilSlider::mouseDoubleClick(const juce::MouseEvent&)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
     setValue(defaultValue_, true);
 }
 
-void OscilSlider::mouseWheelMove(const juce::MouseEvent& e,
-                                  const juce::MouseWheelDetails& wheel)
+void OscilSlider::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     double delta = wheel.deltaY * step_;
 
@@ -189,7 +195,8 @@ void OscilSlider::mouseWheelMove(const juce::MouseEvent& e,
 
 bool OscilSlider::keyPressed(const juce::KeyPress& key)
 {
-    if (!enabled_) return false;
+    if (!enabled_)
+        return false;
 
     double delta = 0.0;
 
@@ -301,14 +308,12 @@ bool OscilSlider::hitTestThumb(const juce::Point<int>& point, float thumbPositio
     if (isVertical)
     {
         float cx = static_cast<float>(getWidth()) / 2.0f;
-        return juce::Rectangle<float>(cx - size / 2, thumbPosition - size / 2, size, size)
-            .contains(point.toFloat());
+        return juce::Rectangle<float>(cx - size / 2, thumbPosition - size / 2, size, size).contains(point.toFloat());
     }
     else
     {
         float cy = static_cast<float>(getHeight()) / 2.0f;
-        return juce::Rectangle<float>(thumbPosition - size / 2, cy - size / 2, size, size)
-            .contains(point.toFloat());
+        return juce::Rectangle<float>(thumbPosition - size / 2, cy - size / 2, size, size).contains(point.toFloat());
     }
 }
 
@@ -317,10 +322,10 @@ class OscilSliderAccessibilityHandler : public juce::AccessibilityHandler
 {
 public:
     explicit OscilSliderAccessibilityHandler(OscilSlider& slider)
-        : juce::AccessibilityHandler(slider, juce::AccessibilityRole::slider,
-            juce::AccessibilityActions()
-                .addAction(juce::AccessibilityActionType::press, [&slider] { slider.setValue(slider.getDefaultValue(), true); })
-        )
+        : juce::AccessibilityHandler(
+              slider, juce::AccessibilityRole::slider,
+              juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press,
+                                                     [&slider] { slider.setValue(slider.getDefaultValue(), true); }))
         , slider_(slider)
     {
     }
@@ -338,16 +343,13 @@ public:
         if (slider_.getSuffix().isNotEmpty())
             text += " " + slider_.getSuffix();
 
-        juce::String range = " (Range: " + juce::String(slider_.getMinimum(), slider_.getDecimalPlaces())
-            + " to " + juce::String(slider_.getMaximum(), slider_.getDecimalPlaces()) + ")";
+        juce::String range = " (Range: " + juce::String(slider_.getMinimum(), slider_.getDecimalPlaces()) + " to " +
+                             juce::String(slider_.getMaximum(), slider_.getDecimalPlaces()) + ")";
 
         return "Value: " + text + range;
     }
 
-    juce::String getHelp() const override
-    {
-        return "Use arrow keys to adjust. Double-click to reset to default.";
-    }
+    juce::String getHelp() const override { return "Use arrow keys to adjust. Double-click to reset to default."; }
 
 private:
     OscilSlider& slider_;

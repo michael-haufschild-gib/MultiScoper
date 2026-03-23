@@ -3,19 +3,19 @@
 */
 
 #include "ui/controllers/OscillatorPanelController.h"
-#include "ui/controllers/GpuRenderCoordinator.h"
-#include "ui/managers/DialogManager.h"
+
+#include "core/OscilLog.h"
+#include "core/OscilState.h"
+#include "core/dsp/TimingEngine.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
-#include "core/OscilState.h"
-#include "core/OscilLog.h"
-#include "core/dsp/TimingEngine.h"
+#include "ui/controllers/GpuRenderCoordinator.h"
+#include "ui/managers/DialogManager.h"
 
 namespace oscil
 {
 
-OscillatorPanelController::OscillatorPanelController(IAudioDataProvider& dataProvider,
-                                                     ServiceContext& serviceContext,
+OscillatorPanelController::OscillatorPanelController(IAudioDataProvider& dataProvider, ServiceContext& serviceContext,
                                                      PaneContainerComponent& container,
                                                      GpuRenderCoordinator& gpuCoordinator)
     : dataProvider_(dataProvider)
@@ -25,12 +25,10 @@ OscillatorPanelController::OscillatorPanelController(IAudioDataProvider& dataPro
 {
 }
 
-OscillatorPanelController::~OscillatorPanelController()
-{
-    dataProvider_.getState().removeListener(this);
-}
+OscillatorPanelController::~OscillatorPanelController() { dataProvider_.getState().removeListener(this); }
 
-void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogManager* dialogManager, DisplaySettingsManager* displaySettings)
+void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogManager* dialogManager,
+                                           DisplaySettingsManager* displaySettings)
 {
     sidebar_ = sidebar;
     dialogManager_ = dialogManager;
@@ -40,16 +38,13 @@ void OscillatorPanelController::initialize(SidebarComponent* sidebar, DialogMana
     dataProvider_.getState().addListener(this);
 
     // Setup container callbacks
-    container_.setPaneDropCallback([this](const PaneId& moved, const PaneId& target) {
-        handlePaneReordered(moved, target);
-    });
-    container_.setEmptyColumnDropCallback([this](const PaneId& moved, int col) {
-        handleEmptyColumnDrop(moved, col);
-    });
+    container_.setPaneDropCallback(
+        [this](const PaneId& moved, const PaneId& target) { handlePaneReordered(moved, target); });
+    container_.setEmptyColumnDropCallback([this](const PaneId& moved, int col) { handleEmptyColumnDrop(moved, col); });
 }
 
 void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& oscillators,
-                                                const PaneLayoutManager& layoutManager)
+                                               const PaneLayoutManager& layoutManager)
 {
     if (!sidebar_)
         return;
@@ -59,7 +54,8 @@ void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& os
     auto panes = layoutManager.getPanes();
     juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this), panes]() {
         if (auto* controller = weakThis.get())
-            if (controller->sidebar_) controller->sidebar_->refreshPaneList(panes);
+            if (controller->sidebar_)
+                controller->sidebar_->refreshPaneList(panes);
     });
 
     std::vector<Oscillator> sortedOscs = oscillators;
@@ -86,8 +82,8 @@ void OscillatorPanelController::refreshPanels()
     auto oscillators = dataProvider_.getState().getOscillators();
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
 
-    OSCIL_LOG(CONTROLLER, "refreshPanels: " << oscillators.size() << " oscillators, "
-        << layoutManager.getPaneCount() << " panes");
+    OSCIL_LOG(CONTROLLER,
+              "refreshPanels: " << oscillators.size() << " oscillators, " << layoutManager.getPaneCount() << " panes");
 
     createPaneComponents(oscillators, layoutManager);
     refreshSidebar(oscillators, layoutManager);
@@ -106,10 +102,11 @@ void OscillatorPanelController::refreshPanels()
     }
 }
 
-void OscillatorPanelController::createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager)
+void OscillatorPanelController::createPaneComponents(const std::vector<Oscillator>& oscillators,
+                                                     const PaneLayoutManager& layoutManager)
 {
-    OSCIL_LOG(CONTROLLER, "createPaneComponents: " << layoutManager.getPaneCount()
-        << " panes, " << oscillators.size() << " oscillators");
+    OSCIL_LOG(CONTROLLER, "createPaneComponents: " << layoutManager.getPaneCount() << " panes, " << oscillators.size()
+                                                   << " oscillators");
     // Group oscillators by pane
     std::map<juce::String, std::vector<Oscillator>> oscillatorsByPane;
     for (const auto& osc : oscillators)
@@ -124,14 +121,11 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
         paneComponent->setPaneIndex(paneIndex++);
 
         // Set up drag-and-drop reorder callback - managed by Container now, but component initiates drag
-        paneComponent->onPaneReordered([this](const PaneId& moved, const PaneId& target) {
-            handlePaneReordered(moved, target);
-        });
+        paneComponent->onPaneReordered(
+            [this](const PaneId& moved, const PaneId& target) { handlePaneReordered(moved, target); });
 
         // Set up pane close callback
-        paneComponent->onPaneCloseRequested([this](const PaneId& id) {
-            handlePaneClose(id);
-        });
+        paneComponent->onPaneCloseRequested([this](const PaneId& id) { handlePaneClose(id); });
 
         // Set up pane name change callback
         paneComponent->onPaneNameChanged([this](const PaneId& paneId, const juce::String& newName) {
@@ -170,18 +164,19 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
 void OscillatorPanelController::reapplyGlobalSettings()
 {
     auto& state = dataProvider_.getState();
-    
+
     // Re-apply timing settings (display samples)
     // IMPORTANT: Use capture rate (decimated), not source rate, since display buffers are decimated
     auto timingConfig = dataProvider_.getTimingEngine().toEntityConfig();
     int captureRate = dataProvider_.getCaptureRate();
-    juce::Logger::writeToLog("[Controller] reapplyGlobalSettings: captureRate=" + juce::String(captureRate)
-        + " actualIntervalMs=" + juce::String(timingConfig.actualIntervalMs)
-        + " hostBPM=" + juce::String(timingConfig.hostBPM)
-        + " timingMode=" + juce::String(static_cast<int>(timingConfig.timingMode)));
+    juce::Logger::writeToLog("[Controller] reapplyGlobalSettings: captureRate=" + juce::String(captureRate) +
+                             " actualIntervalMs=" + juce::String(timingConfig.actualIntervalMs) +
+                             " hostBPM=" + juce::String(timingConfig.hostBPM) +
+                             " timingMode=" + juce::String(static_cast<int>(timingConfig.timingMode)));
     if (captureRate > 0)
     {
-        int displaySamples = static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
+        int displaySamples = static_cast<int>(static_cast<double>(captureRate) *
+                                              (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
         juce::Logger::writeToLog("[Controller] displaySamples=" + juce::String(displaySamples));
         if (displaySettings_)
         {
@@ -221,10 +216,10 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
     if (layoutManager.getPaneCount() == 0 && state.getOscillators().empty())
     {
         OSCIL_LOG(CONTROLLER, "createDefaultOscillatorIfNeeded: creating default pane + oscillator"
-            << " sourceId=" << dataProvider_.getSourceId().id);
+                                  << " sourceId=" << dataProvider_.getSourceId().id);
         // Need sources to create meaningful default
         // Just create placeholder if no sources yet, or use first source
-        
+
         // Create default pane
         Pane defaultPane;
         defaultPane.setName("Pane 1");
@@ -236,7 +231,7 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
         osc.setProcessingMode(ProcessingMode::FullStereo);
         osc.setName("Oscillator 1");
         osc.setVisualPresetId("default");
-        
+
         // Only auto-bind to this processor's own source.
         // If registration is not ready yet, keep NO_SOURCE so later source
         // notifications can bind correctly instead of latching onto a foreign source.
@@ -251,13 +246,13 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
 
 void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId)
 {
-    OSCIL_LOG(CONTROLLER, "handlePaneReordered: moved=" << movedPaneId.id
-        << " target=" << targetPaneId.id);
+    OSCIL_LOG(CONTROLLER, "handlePaneReordered: moved=" << movedPaneId.id << " target=" << targetPaneId.id);
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
     const Pane* sourcePanePtr = layoutManager.getPane(movedPaneId);
     const Pane* targetPanePtr = layoutManager.getPane(targetPaneId);
 
-    if (!sourcePanePtr || !targetPanePtr) return;
+    if (!sourcePanePtr || !targetPanePtr)
+        return;
 
     int sourceColumn = sourcePanePtr->getColumnIndex();
     int targetColumn = targetPanePtr->getColumnIndex();
@@ -330,9 +325,9 @@ void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
 
 void OscillatorPanelController::highlightOscillator(const OscillatorId& oscillatorId)
 {
-    if (displaySettings_) displaySettings_->highlightOscillator(oscillatorId);
+    if (displaySettings_)
+        displaySettings_->highlightOscillator(oscillatorId);
 }
-
 
 // Sidebar listener overrides, dialog handlers, and ValueTree listeners
 // are in OscillatorPanelControllerHandlers.cpp

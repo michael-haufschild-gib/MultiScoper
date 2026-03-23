@@ -5,12 +5,10 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
-#include "core/interfaces/IInstanceRegistry.h"
 #include "core/Pane.h"
 #include "core/WaveformColorPalette.h"
-#include "ui/theme/ThemeManager.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilColorSwatches.h"
 #include "ui/components/OscilDropdown.h"
@@ -19,6 +17,10 @@
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 #include <vector>
 
@@ -33,8 +35,9 @@ class IThemeService;
  * Modal dialog for configuring an oscillator's settings
  * Provides comprehensive controls as per PRD requirements
  */
-class OscillatorConfigDialog : public juce::Component,
-                               public ThemeManagerListener
+class OscillatorConfigDialog
+    : public juce::Component
+    , public ThemeManagerListener
 {
 public:
     /**
@@ -81,7 +84,7 @@ public:
     // Preferred dimensions
     static constexpr int DIALOG_WIDTH = 360;
     static constexpr int DIALOG_HEIGHT = 550;
-    
+
     int getPreferredWidth() const { return DIALOG_WIDTH; }
     int getPreferredHeight() const { return DIALOG_HEIGHT; }
 
@@ -125,13 +128,13 @@ private:
     OscillatorId oscillatorId_;
     SourceId sourceId_;
     ProcessingMode processingMode_ = ProcessingMode::FullStereo;
-    juce::Colour colour_{ WaveformColorPalette::getColor(0) };
+    juce::Colour colour_{WaveformColorPalette::getColor(0)};
     float opacity_ = 1.0f;
     bool visible_ = true;
     juce::String name_;
     float lineWidth_ = Oscillator::DEFAULT_LINE_WIDTH;
     PaneId paneId_;
-    int orderIndex_ = 0;  // Track order to preserve during config changes
+    int orderIndex_ = 0; // Track order to preserve during config changes
     juce::ValueTree visualOverrides_;
 
     // Header section

@@ -10,7 +10,8 @@ namespace oscil
 
 void OscilDropdown::mouseDown(const juce::MouseEvent&)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     if (popupVisible_)
         hidePopup();
@@ -20,7 +21,8 @@ void OscilDropdown::mouseDown(const juce::MouseEvent&)
 
 void OscilDropdown::mouseEnter(const juce::MouseEvent&)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     isHovered_ = true;
 
@@ -54,7 +56,8 @@ void OscilDropdown::mouseExit(const juce::MouseEvent&)
 
 bool OscilDropdown::keyPressed(const juce::KeyPress& key)
 {
-    if (!enabled_) return false;
+    if (!enabled_)
+        return false;
 
     if (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey)
     {
@@ -83,8 +86,7 @@ bool OscilDropdown::keyPressed(const juce::KeyPress& key)
 
         if (key == juce::KeyPress::downKey)
         {
-            setSelectedIndex(std::min(static_cast<int>(items_.size()) - 1,
-                                       current + 1));
+            setSelectedIndex(std::min(static_cast<int>(items_.size()) - 1, current + 1));
             return true;
         }
     }
@@ -122,18 +124,22 @@ class OscilDropdownAccessibilityHandler : public juce::AccessibilityHandler
 public:
     explicit OscilDropdownAccessibilityHandler(OscilDropdown& dropdown)
         : juce::AccessibilityHandler(dropdown, juce::AccessibilityRole::comboBox,
-            juce::AccessibilityActions()
-                .addAction(juce::AccessibilityActionType::press, [&dropdown] { if (dropdown.isEnabled()) dropdown.showPopup(); })
-                .addAction(juce::AccessibilityActionType::showMenu, [&dropdown] { if (dropdown.isEnabled()) dropdown.showPopup(); })
-        )
+                                     juce::AccessibilityActions()
+                                         .addAction(juce::AccessibilityActionType::press,
+                                                    [&dropdown] {
+                                                        if (dropdown.isEnabled())
+                                                            dropdown.showPopup();
+                                                    })
+                                         .addAction(juce::AccessibilityActionType::showMenu,
+                                                    [&dropdown] {
+                                                        if (dropdown.isEnabled())
+                                                            dropdown.showPopup();
+                                                    }))
         , dropdown_(dropdown)
     {
     }
 
-    juce::String getTitle() const override
-    {
-        return dropdown_.getPlaceholder();
-    }
+    juce::String getTitle() const override { return dropdown_.getPlaceholder(); }
 
     juce::String getDescription() const override
     {

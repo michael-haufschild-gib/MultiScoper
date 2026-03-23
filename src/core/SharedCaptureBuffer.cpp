@@ -3,8 +3,9 @@
 */
 
 #include "core/SharedCaptureBuffer.h"
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
 #include <thread>
 
 namespace oscil
@@ -13,12 +14,15 @@ namespace oscil
 // Round up to next power of 2 for fast bitwise modulo
 static size_t nextPowerOfTwo(size_t n)
 {
-    if (n == 0) return 1;
+    if (n == 0)
+        return 1;
     // Check if already power of 2
-    if ((n & (n - 1)) == 0) return n;
+    if ((n & (n - 1)) == 0)
+        return n;
     // Prevent overflow: if n is too large, return max representable power of 2
     constexpr size_t maxPowerOf2 = size_t{1} << (sizeof(size_t) * 8 - 1);
-    if (n > maxPowerOf2) return maxPowerOf2;
+    if (n > maxPowerOf2)
+        return maxPowerOf2;
     // Round up using bit manipulation
     --n;
     n |= n >> 1;
@@ -35,15 +39,15 @@ static size_t nextPowerOfTwo(size_t n)
     return n + 1;
 }
 
-SharedCaptureBuffer::SharedCaptureBuffer(size_t bufferSamples)
-    : capacity_(nextPowerOfTwo(bufferSamples))
+SharedCaptureBuffer::SharedCaptureBuffer(size_t bufferSamples) : capacity_(nextPowerOfTwo(bufferSamples))
 {
     // Allocate flat buffer for all channels
     // Layout: [Channel 0 Data] [Channel 1 Data] ...
     buffer_.resize(capacity_ * MAX_CHANNELS, 0.0f);
 }
 
-void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata, bool tryLock)
+void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata,
+                                bool tryLock)
 {
     // Preconditions: buffer must have valid dimensions
     jassert(buffer.getNumChannels() > 0);
@@ -54,7 +58,7 @@ void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const Ca
     const int numSamples = buffer.getNumSamples();
 
     // Get channel pointers
-    const float* channels[MAX_CHANNELS] = { nullptr };
+    const float* channels[MAX_CHANNELS] = {nullptr};
     for (int ch = 0; ch < numChannels; ++ch)
     {
         channels[ch] = buffer.getReadPointer(ch);
@@ -64,7 +68,7 @@ void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const Ca
 }
 
 void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamples, int numChannels,
-                                         const CaptureFrameMetadata& metadata)
+                                        const CaptureFrameMetadata& metadata)
 {
     jassert(capacity_ > 0 && (capacity_ & (capacity_ - 1)) == 0); // power-of-2 invariant
     jassert(numChannels >= 0 && numChannels <= static_cast<int>(MAX_CHANNELS));
@@ -125,7 +129,7 @@ void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamp
 }
 
 void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int numChannels,
-                                 const CaptureFrameMetadata& metadata, bool tryLock)
+                                const CaptureFrameMetadata& metadata, bool tryLock)
 {
     if (numSamples <= 0 || numChannels <= 0)
         return;
@@ -256,10 +260,7 @@ int SharedCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) 
     }
 }
 
-CaptureFrameMetadata SharedCaptureBuffer::getLatestMetadata() const
-{
-    return metadata_.read();
-}
+CaptureFrameMetadata SharedCaptureBuffer::getLatestMetadata() const { return metadata_.read(); }
 
 size_t SharedCaptureBuffer::getAvailableSamples() const
 {
@@ -274,7 +275,7 @@ void SharedCaptureBuffer::clear()
     // so readers can detect the concurrent modification.
     const juce::SpinLock::ScopedLockType sl(writeLock_);
 
-    writeEpoch_.fetch_add(1, std::memory_order_acq_rel);   // odd → modification in progress
+    writeEpoch_.fetch_add(1, std::memory_order_acq_rel); // odd → modification in progress
 
     std::fill(buffer_.begin(), buffer_.end(), 0.0f);
     writePos_.store(0, std::memory_order_release);
@@ -285,7 +286,7 @@ void SharedCaptureBuffer::clear()
     metadata_.write(meta);
 
     std::atomic_thread_fence(std::memory_order_release);
-    writeEpoch_.fetch_add(1, std::memory_order_release);   // even → modification complete
+    writeEpoch_.fetch_add(1, std::memory_order_release); // even → modification complete
 }
 
 float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
@@ -319,7 +320,8 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
             for (size_t i = 0; i < count; ++i)
             {
                 float val = std::abs(buffer_[channelOffset + start + i]);
-                if (val > peak) peak = val;
+                if (val > peak)
+                    peak = val;
             }
         };
 

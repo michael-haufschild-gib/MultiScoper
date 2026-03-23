@@ -7,21 +7,23 @@
     results when wired together — the class of bugs that unit tests miss.
 */
 
-#include <gtest/gtest.h>
-#include "OscilTestUtils.h"
-#include "OscilTestFixtures.h"
-#include "helpers/OscillatorBuilder.h"
-#include "helpers/AudioBufferBuilder.h"
-#include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
-#include "core/SharedCaptureBuffer.h"
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
+#include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
+
+#include "OscilTestFixtures.h"
+#include "OscilTestUtils.h"
+#include "helpers/AudioBufferBuilder.h"
+#include "helpers/OscillatorBuilder.h"
+#include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -44,8 +46,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
         processor->getState().setGpuRenderingEnabled(false);
         processor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(200);
@@ -81,11 +83,7 @@ TEST_F(ProcessorIntegrationTest, CaptureBufferRetrievableViaRegistry)
     ASSERT_NE(bufferViaProcessor, nullptr);
 
     // Process some audio to populate the buffer
-    auto audioBuffer = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(512)
-        .withDC(0.6f)
-        .build();
+    auto audioBuffer = AudioBufferBuilder().withChannels(2).withSamples(512).withDC(0.6f).build();
     juce::MidiBuffer midi;
     processor->processBlock(audioBuffer, midi);
 
@@ -124,8 +122,8 @@ TEST_F(ProcessorIntegrationTest, OscillatorSourceIdMatchesRegisteredSource)
 // source or causes ID collision.
 TEST_F(ProcessorIntegrationTest, TwoProcessorsRegisterDistinctSources)
 {
-    auto processor2 = std::make_unique<OscilPluginProcessor>(
-        *registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
+    auto processor2 = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                             *presetManager_, *memoryBudgetManager_);
     processor2->getState().setGpuRenderingEnabled(false);
     processor2->prepareToPlay(48000.0, 256);
     pumpMessageQueue(200);
@@ -174,8 +172,8 @@ TEST_F(ProcessorIntegrationTest, StateRoundTripPreservesOscillators)
     ASSERT_GT(stateData.getSize(), 0u);
 
     // Create a new processor and restore state
-    auto processor2 = std::make_unique<OscilPluginProcessor>(
-        *registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
+    auto processor2 = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                             *presetManager_, *memoryBudgetManager_);
     processor2->getState().setGpuRenderingEnabled(false);
     processor2->setStateInformation(stateData.getData(), static_cast<int>(stateData.getSize()));
     processor2->prepareToPlay(44100.0, 512);
@@ -244,11 +242,7 @@ TEST_F(ProcessorIntegrationTest, SetStateInformationWithEmptyDataDoesNotCrash)
     processor->setStateInformation(emptyData, 0);
 
     // Processor should still be fully functional
-    auto buffer = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(512)
-        .withDC(0.5f)
-        .build();
+    auto buffer = AudioBufferBuilder().withChannels(2).withSamples(512).withDC(0.5f).build();
     juce::MidiBuffer midi;
     processor->processBlock(buffer, midi);
 
@@ -259,7 +253,7 @@ TEST_F(ProcessorIntegrationTest, SetStateInformationWithEmptyDataDoesNotCrash)
 // Bug caught: corrupt/truncated state data crashes setStateInformation.
 TEST_F(ProcessorIntegrationTest, SetStateInformationWithGarbageDataDoesNotCrash)
 {
-    uint8_t garbage[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03 };
+    uint8_t garbage[] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03};
     processor->setStateInformation(garbage, sizeof(garbage));
 
     // Must remain functional

@@ -5,9 +5,9 @@
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 
+#include <cmath>
 #include <gtest/gtest.h>
 #include <limits>
-#include <cmath>
 
 using namespace oscil;
 
@@ -330,10 +330,7 @@ TEST_F(OscillatorCoreTest, NameMinLength)
     EXPECT_TRUE(Oscillator::isValidName("A"));
 }
 
-TEST_F(OscillatorCoreTest, NameEmptyIsInvalid)
-{
-    EXPECT_FALSE(Oscillator::isValidName(""));
-}
+TEST_F(OscillatorCoreTest, NameEmptyIsInvalid) { EXPECT_FALSE(Oscillator::isValidName("")); }
 
 TEST_F(OscillatorCoreTest, NameExactlyMaxLength)
 {

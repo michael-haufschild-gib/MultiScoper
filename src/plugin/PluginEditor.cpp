@@ -16,9 +16,9 @@
 #include "ui/panels/WaveformComponent.h"
 #include "ui/theme/ThemeCoordinator.h"
 #include "ui/theme/ThemeManager.h"
+
 #include "rendering/ShaderRegistry.h"
 #include "rendering/VisualConfiguration.h"
-
 #include "tools/PluginEditor_Adapters.h"
 #include "tools/test_server/PluginTestServer.h"
 
@@ -35,8 +35,8 @@ int64_t convertTimelineTimestampToCaptureDomain(int64_t timestamp, int sourceRat
     if (sourceRate <= 0 || captureRate <= 0 || sourceRate == captureRate)
         return timestamp;
 
-    const long double scaled = (static_cast<long double>(timestamp) * static_cast<long double>(captureRate))
-                             / static_cast<long double>(sourceRate);
+    const long double scaled = (static_cast<long double>(timestamp) * static_cast<long double>(captureRate)) /
+                               static_cast<long double>(sourceRate);
     if (!std::isfinite(static_cast<double>(scaled)))
         return timestamp;
     if (scaled <= 0.0L)
@@ -56,20 +56,17 @@ namespace oscil
 OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processor_(p)
-    , serviceContext_{ processor_.getInstanceRegistry(), processor_.getThemeService(), processor_.getShaderRegistry(), processor_.getPresetManager() }
+    , serviceContext_{processor_.getInstanceRegistry(), processor_.getThemeService(), processor_.getShaderRegistry(),
+                      processor_.getPresetManager()}
 {
     // Create coordinators
-    sourceCoordinator_ = std::make_unique<SourceCoordinator>(
-        processor_.getInstanceRegistry(),
-        [this]() { onSourcesChanged(); });
+    sourceCoordinator_ =
+        std::make_unique<SourceCoordinator>(processor_.getInstanceRegistry(), [this]() { onSourcesChanged(); });
 
-    themeCoordinator_ = std::make_unique<ThemeCoordinator>(
-        processor_.getThemeService(),
-        [this](const ColorTheme& theme) { onThemeChanged(theme); });
+    themeCoordinator_ = std::make_unique<ThemeCoordinator>(processor_.getThemeService(),
+                                                           [this](const ColorTheme& theme) { onThemeChanged(theme); });
 
-    layoutCoordinator_ = std::make_unique<LayoutCoordinator>(
-        windowLayout_,
-        [this]() { onLayoutChanged(); });
+    layoutCoordinator_ = std::make_unique<LayoutCoordinator>(windowLayout_, [this]() { onLayoutChanged(); });
 
     // Apply theme
     processor_.getThemeService().setCurrentTheme(processor_.getState().getThemeName());
@@ -88,12 +85,15 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     addAndMakeVisible(*statusBar_);
 
     // Create managers and coordinators
-    dialogManager_ = std::make_unique<DialogManager>(*this, processor_.getThemeService(), processor_.getInstanceRegistry());
+    dialogManager_ =
+        std::make_unique<DialogManager>(*this, processor_.getThemeService(), processor_.getInstanceRegistry());
     configPopupAdapter_ = std::make_unique<ConfigPopupListenerAdapter>(*this);
     dialogManager_->addConfigPopupListener(configPopupAdapter_.get());
 
-    metricsController_ = std::make_unique<PerformanceMetricsController>(processor_, processor_.getInstanceRegistry(), *statusBar_);
-    editorLayout_ = std::make_unique<PluginEditorLayout>(*this, *viewport_, *contentComponent_, *sidebar_, *statusBar_, processor_);
+    metricsController_ =
+        std::make_unique<PerformanceMetricsController>(processor_, processor_.getInstanceRegistry(), *statusBar_);
+    editorLayout_ =
+        std::make_unique<PluginEditorLayout>(*this, *viewport_, *contentComponent_, *sidebar_, *statusBar_, processor_);
     renderCoordinator_ = std::make_unique<GpuRenderCoordinator>(*this, *statusBar_);
 
     // Initialize GPU Rendering
@@ -112,10 +112,9 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     // circular dependency: Controller owns the pane vector, Manager needs to reference it,
     // but Controller needs Manager for applying settings. Solution: Controller constructed first,
     // Manager constructed with Controller's vector reference, then Manager passed to initialize().
-    oscillatorPanelController_ = std::make_unique<OscillatorPanelController>(
-        processor_, serviceContext_, *contentComponent_, *renderCoordinator_
-    );
-    
+    oscillatorPanelController_ = std::make_unique<OscillatorPanelController>(processor_, serviceContext_,
+                                                                             *contentComponent_, *renderCoordinator_);
+
     // Create DisplaySettingsManager with a callback that returns snapshot of current panes.
     // This prevents iterator invalidation if pane vector changes during settings updates.
     displaySettingsManager_ = std::make_unique<DisplaySettingsManager>([this]() {
@@ -127,7 +126,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         }
         return snapshot;
     });
-    
+
     oscillatorPanelController_->initialize(sidebar_.get(), dialogManager_.get(), displaySettingsManager_.get());
 
     // Register Controller as Sidebar Listener (Handles Oscillator Events)
@@ -145,7 +144,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     // Timing Engine
     timingEngineAdapter_ = std::make_unique<TimingEngineListenerAdapter>(*this);
     processor_.getTimingEngine().addListener(timingEngineAdapter_.get());
-    
+
     // Sync timing UI
     auto timingConfig = processor_.getTimingEngine().toEntityConfig();
     auto engineTimingConfig = processor_.getTimingEngine().getConfig();
@@ -177,8 +176,8 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     // Window setup
     setResizable(true, true);
-    setResizeLimits(WindowLayout::MIN_WINDOW_WIDTH, WindowLayout::MIN_WINDOW_HEIGHT,
-                    WindowLayout::MAX_WINDOW_WIDTH, WindowLayout::MAX_WINDOW_HEIGHT);
+    setResizeLimits(WindowLayout::MIN_WINDOW_WIDTH, WindowLayout::MIN_WINDOW_HEIGHT, WindowLayout::MAX_WINDOW_WIDTH,
+                    WindowLayout::MAX_WINDOW_HEIGHT);
     setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
     startTimerHz(TIMER_REFRESH_RATE_HZ);
@@ -257,13 +256,11 @@ void OscilPluginEditor::timerCallback()
         auto& timingEngine = processor_.getTimingEngine();
         const auto timingConfig = timingEngine.getConfig();
         const bool restartModeActive =
-            timingConfig.syncToPlayhead ||
-            timingConfig.triggerMode == WaveformTriggerMode::Midi;
+            timingConfig.syncToPlayhead || timingConfig.triggerMode == WaveformTriggerMode::Midi;
 
         if (restartModeActive && timingEngine.checkAndClearTrigger())
         {
-            int64_t triggerTimestamp = static_cast<int64_t>(
-                std::llround(timingConfig.lastSyncTimestamp));
+            int64_t triggerTimestamp = static_cast<int64_t>(std::llround(timingConfig.lastSyncTimestamp));
             if (triggerTimestamp <= 0)
             {
                 auto hostTimestamp = timingEngine.getHostInfo().timeInSamples;
@@ -271,15 +268,11 @@ void OscilPluginEditor::timerCallback()
                     triggerTimestamp = hostTimestamp;
             }
 
-            const int sourceRate = juce::jmax(1, static_cast<int>(
-                std::llround(processor_.getSampleRate())));
+            const int sourceRate = juce::jmax(1, static_cast<int>(std::llround(processor_.getSampleRate())));
             const int captureRate = juce::jmax(1, processor_.getCaptureRate());
-            triggerTimestamp = convertTimelineTimestampToCaptureDomain(triggerTimestamp,
-                                                                       sourceRate,
-                                                                       captureRate);
+            triggerTimestamp = convertTimelineTimestampToCaptureDomain(triggerTimestamp, sourceRate, captureRate);
 
-            displaySettingsManager_->requestWaveformRestartAtTimestampForAll(
-                juce::jmax<int64_t>(0, triggerTimestamp));
+            displaySettingsManager_->requestWaveformRestartAtTimestampForAll(juce::jmax<int64_t>(0, triggerTimestamp));
         }
     }
 

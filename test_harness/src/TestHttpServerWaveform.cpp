@@ -6,10 +6,12 @@
     deterministic, numeric assertions about audio data flow and rendering state.
 */
 
-#include "TestHttpServer.h"
 #include "core/OscilState.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/interfaces/IAudioBuffer.h"
+
+#include "TestHttpServer.h"
+
 #include <algorithm>
 
 namespace oscil::test
@@ -35,7 +37,7 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
         }
 
         auto& state = track->getProcessor().getState();
-        OscillatorId oscId{ juce::String(idStr) };
+        OscillatorId oscId{juce::String(idStr)};
 
         if (!state.getOscillator(oscId).has_value())
         {
@@ -47,9 +49,7 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
         juce::WaitableEvent done;
         juce::MessageManager::callAsync([oscId, track, &done]() {
             track->getProcessor().getState().removeOscillator(oscId);
-            juce::MessageManager::callAsync([&done]() {
-                done.signal();
-            });
+            juce::MessageManager::callAsync([&done]() { done.signal(); });
         });
         done.wait(5000);
 

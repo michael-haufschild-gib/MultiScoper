@@ -46,7 +46,8 @@ void OscilRadioButton::mouseUp(const juce::MouseEvent& e)
 
 void OscilRadioButton::mouseEnter(const juce::MouseEvent&)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     isHovered_ = true;
 
@@ -140,12 +141,11 @@ void OscilRadioButton::updateAnimations()
 std::unique_ptr<juce::AccessibilityHandler> OscilRadioButton::createAccessibilityHandler()
 {
     return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::radioButton,
-        juce::AccessibilityActions()
-            .addAction(juce::AccessibilityActionType::press,
-                [this] { if (enabled_ && !selected_) setSelected(true); })
-    );
+        *this, juce::AccessibilityRole::radioButton,
+        juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] {
+            if (enabled_ && !selected_)
+                setSelected(true);
+        }));
 }
 
 } // namespace oscil

@@ -3,7 +3,9 @@
 */
 
 #include "tools/test_server/ScreenshotHandler.h"
+
 #include "plugin/PluginEditor.h"
+
 #include <juce_graphics/juce_graphics.h>
 
 namespace oscil
@@ -26,7 +28,8 @@ void ScreenshotHandler::handleTakeScreenshot(const httplib::Request& req, httpli
             editor_.paintEntireComponent(g, true);
 
             // Save to file
-            juce::File outputFile(juce::File::getCurrentWorkingDirectory().getChildFile("screenshots").getChildFile(filename));
+            juce::File outputFile(
+                juce::File::getCurrentWorkingDirectory().getChildFile("screenshots").getChildFile(filename));
             outputFile.getParentDirectory().createDirectory();
 
             juce::FileOutputStream stream(outputFile);

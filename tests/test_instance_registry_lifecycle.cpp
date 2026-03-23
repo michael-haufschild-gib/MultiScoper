@@ -3,10 +3,12 @@
     Tests for startup, shutdown, cleanup, null inputs, boundaries, and lifecycle scenarios
 */
 
-#include <gtest/gtest.h>
-#include <juce_events/juce_events.h>
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
+
+#include <juce_events/juce_events.h>
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -30,10 +32,7 @@ protected:
         });
     }
 
-    void TearDown() override
-    {
-        registry_.reset();
-    }
+    void TearDown() override { registry_.reset(); }
 };
 
 class CountingRegistryListener final : public InstanceRegistryListener
@@ -54,8 +53,7 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterNullBuffer)
 {
     std::shared_ptr<SharedCaptureBuffer> nullBuffer = nullptr;
 
-    auto sourceId = getRegistry().registerInstance(
-        "track_null", nullBuffer, "Null Buffer Track");
+    auto sourceId = getRegistry().registerInstance("track_null", nullBuffer, "Null Buffer Track");
 
     // Should still register (buffer might be set later)
     // But getCaptureBuffer should return nullptr
@@ -70,8 +68,7 @@ TEST_F(InstanceRegistryLifecycleTest, EmptyTrackIdentifier)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
 
-    auto sourceId = getRegistry().registerInstance(
-        "", buffer, "Empty ID Track");
+    auto sourceId = getRegistry().registerInstance("", buffer, "Empty ID Track");
 
     EXPECT_TRUE(sourceId.isValid());
     auto info = getRegistry().getSource(sourceId);
@@ -83,8 +80,7 @@ TEST_F(InstanceRegistryLifecycleTest, UnicodeTrackIdentifier)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
 
-    auto sourceId = getRegistry().registerInstance(
-        u8"日本語トラック", buffer, "Japanese Track");
+    auto sourceId = getRegistry().registerInstance(u8"日本語トラック", buffer, "Japanese Track");
 
     EXPECT_TRUE(sourceId.isValid());
 
@@ -97,8 +93,7 @@ TEST_F(InstanceRegistryLifecycleTest, SpecialCharactersInTrackId)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
 
-    auto sourceId = getRegistry().registerInstance(
-        "track/with\\special:chars*?\"<>|", buffer, "Special Track");
+    auto sourceId = getRegistry().registerInstance("track/with\\special:chars*?\"<>|", buffer, "Special Track");
 
     EXPECT_TRUE(sourceId.isValid());
     auto info = getRegistry().getSource(sourceId);
@@ -114,8 +109,7 @@ TEST_F(InstanceRegistryLifecycleTest, VeryLongTrackIdentifier)
     for (int i = 0; i < 10000; ++i)
         longId += "a";
 
-    auto sourceId = getRegistry().registerInstance(
-        longId, buffer, "Long ID Track");
+    auto sourceId = getRegistry().registerInstance(longId, buffer, "Long ID Track");
 
     EXPECT_TRUE(sourceId.isValid());
     auto retrievedBuffer = getRegistry().getCaptureBuffer(sourceId);
@@ -127,8 +121,7 @@ TEST_F(InstanceRegistryLifecycleTest, VeryLongTrackIdentifier)
 TEST_F(InstanceRegistryLifecycleTest, ZeroChannelCount)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "track_zero_ch", buffer, "Zero Channels", 0, 44100.0);
+    auto sourceId = getRegistry().registerInstance("track_zero_ch", buffer, "Zero Channels", 0, 44100.0);
 
     EXPECT_TRUE(sourceId.isValid());
 
@@ -140,8 +133,7 @@ TEST_F(InstanceRegistryLifecycleTest, ZeroChannelCount)
 TEST_F(InstanceRegistryLifecycleTest, NegativeSampleRate)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "track_neg_sr", buffer, "Negative SR", 2, -44100.0);
+    auto sourceId = getRegistry().registerInstance("track_neg_sr", buffer, "Negative SR", 2, -44100.0);
 
     EXPECT_TRUE(sourceId.isValid());
     auto info = getRegistry().getSource(sourceId);
@@ -152,8 +144,7 @@ TEST_F(InstanceRegistryLifecycleTest, NegativeSampleRate)
 TEST_F(InstanceRegistryLifecycleTest, HighChannelCount)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "track_many_ch", buffer, "Many Channels", 1000, 44100.0);
+    auto sourceId = getRegistry().registerInstance("track_many_ch", buffer, "Many Channels", 1000, 44100.0);
 
     EXPECT_TRUE(sourceId.isValid());
 
@@ -165,8 +156,7 @@ TEST_F(InstanceRegistryLifecycleTest, HighChannelCount)
 TEST_F(InstanceRegistryLifecycleTest, ZeroSampleRate)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "track_zero_sr", buffer, "Zero SR", 2, 0.0);
+    auto sourceId = getRegistry().registerInstance("track_zero_sr", buffer, "Zero SR", 2, 0.0);
 
     EXPECT_TRUE(sourceId.isValid());
     auto info = getRegistry().getSource(sourceId);
@@ -177,8 +167,7 @@ TEST_F(InstanceRegistryLifecycleTest, ZeroSampleRate)
 TEST_F(InstanceRegistryLifecycleTest, ExtremeSampleRate)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "track_extreme_sr", buffer, "Extreme SR", 2, 10000000.0);
+    auto sourceId = getRegistry().registerInstance("track_extreme_sr", buffer, "Extreme SR", 2, 10000000.0);
 
     EXPECT_TRUE(sourceId.isValid());
 
@@ -194,8 +183,7 @@ TEST_F(InstanceRegistryLifecycleTest, BufferExpires)
     SourceId sourceId;
     {
         auto buffer = std::make_shared<SharedCaptureBuffer>();
-        sourceId = getRegistry().registerInstance(
-            "track_expire", buffer, "Expiring Track");
+        sourceId = getRegistry().registerInstance("track_expire", buffer, "Expiring Track");
         EXPECT_TRUE(sourceId.isValid());
 
         auto retrievedBuffer = getRegistry().getCaptureBuffer(sourceId);
@@ -215,9 +203,8 @@ TEST_F(InstanceRegistryLifecycleTest, BufferExpires)
 TEST_F(InstanceRegistryLifecycleTest, PendingAsyncNotificationsAreIgnoredAfterDestruction)
 {
     std::vector<std::function<void()>> queuedCallbacks;
-    getRegistry().setDispatcher([&queuedCallbacks](std::function<void()> callback) {
-        queuedCallbacks.push_back(std::move(callback));
-    });
+    getRegistry().setDispatcher(
+        [&queuedCallbacks](std::function<void()> callback) { queuedCallbacks.push_back(std::move(callback)); });
 
     CountingRegistryListener listener;
     getRegistry().addListener(&listener);
@@ -248,10 +235,7 @@ TEST_F(InstanceRegistryLifecycleTest, GetAllSourcesWhenEmpty)
     EXPECT_EQ(sources.size(), 0);
 }
 
-TEST_F(InstanceRegistryLifecycleTest, GetSourceCountWhenEmpty)
-{
-    EXPECT_EQ(getRegistry().getSourceCount(), 0);
-}
+TEST_F(InstanceRegistryLifecycleTest, GetSourceCountWhenEmpty) { EXPECT_EQ(getRegistry().getSourceCount(), 0); }
 
 // === Stress Tests ===
 
@@ -262,8 +246,7 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAndUnregisterManyTimes)
     for (int i = 0; i < iterations; ++i)
     {
         auto buffer = std::make_shared<SharedCaptureBuffer>();
-        auto sourceId = getRegistry().registerInstance(
-            "stress_track", buffer, "Stress Track");
+        auto sourceId = getRegistry().registerInstance("stress_track", buffer, "Stress Track");
 
         EXPECT_TRUE(sourceId.isValid());
         EXPECT_EQ(getRegistry().getSourceCount(), 1);
@@ -281,8 +264,7 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterManyDifferentSources)
     for (int i = 0; i < count; ++i)
     {
         auto buffer = std::make_shared<SharedCaptureBuffer>();
-        auto sourceId = getRegistry().registerInstance(
-            "track_" + juce::String(i), buffer, "Track " + juce::String(i));
+        auto sourceId = getRegistry().registerInstance("track_" + juce::String(i), buffer, "Track " + juce::String(i));
 
         EXPECT_TRUE(sourceId.isValid());
         sourceIds.push_back(sourceId);
@@ -316,8 +298,7 @@ TEST_F(InstanceRegistryLifecycleTest, VeryLongDisplayName)
     for (int i = 0; i < 10000; ++i)
         longName += "N";
 
-    auto sourceId = getRegistry().registerInstance(
-        "track_long_name", buffer, longName);
+    auto sourceId = getRegistry().registerInstance("track_long_name", buffer, longName);
 
     EXPECT_TRUE(sourceId.isValid());
 
@@ -330,8 +311,7 @@ TEST_F(InstanceRegistryLifecycleTest, EmptyDisplayName)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
 
-    auto sourceId = getRegistry().registerInstance(
-        "track_empty_name", buffer, "");
+    auto sourceId = getRegistry().registerInstance("track_empty_name", buffer, "");
 
     EXPECT_TRUE(sourceId.isValid());
 
@@ -346,8 +326,7 @@ TEST_F(InstanceRegistryLifecycleTest, UnicodeDisplayName)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
 
-    auto sourceId = getRegistry().registerInstance(
-        "track_unicode", buffer, u8"日本語 🎵 Track");
+    auto sourceId = getRegistry().registerInstance("track_unicode", buffer, u8"日本語 🎵 Track");
 
     EXPECT_TRUE(sourceId.isValid());
 
@@ -361,22 +340,17 @@ TEST_F(InstanceRegistryLifecycleTest, UnicodeDisplayName)
 TEST_F(InstanceRegistryLifecycleTest, MultipleUpdatesToSameSource)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "track_updates", buffer, "Original Name");
+    auto sourceId = getRegistry().registerInstance("track_updates", buffer, "Original Name");
 
     // Update multiple times
     for (int i = 0; i < 100; ++i)
     {
-        getRegistry().updateSource(
-            sourceId,
-            "Name " + juce::String(i),
-            i % 8 + 1,
-            44100.0 + i * 1000.0);
+        getRegistry().updateSource(sourceId, "Name " + juce::String(i), i % 8 + 1, 44100.0 + i * 1000.0);
     }
 
     auto info = getRegistry().getSource(sourceId);
     ASSERT_TRUE(info.has_value());
     EXPECT_EQ(info->name, "Name 99");
-    EXPECT_EQ(info->channelCount, 4);  // 99 % 8 + 1 = 4
+    EXPECT_EQ(info->channelCount, 4); // 99 % 8 + 1 = 4
     EXPECT_EQ(info->sampleRate, 44100.0 + 99 * 1000.0);
 }

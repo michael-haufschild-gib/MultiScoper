@@ -6,6 +6,7 @@
 #pragma once
 
 #include "core/Oscillator.h"
+
 #include <memory>
 
 namespace oscil::test
@@ -41,7 +42,7 @@ public:
      */
     OscillatorBuilder& withId(const juce::String& id)
     {
-        id_ = OscillatorId{ id };
+        id_ = OscillatorId{id};
         return *this;
     }
 
@@ -253,10 +254,7 @@ public:
     /**
      * Build and return a shared_ptr to the Oscillator
      */
-    std::shared_ptr<Oscillator> buildShared()
-    {
-        return std::shared_ptr<Oscillator>(buildUnique().release());
-    }
+    std::shared_ptr<Oscillator> buildShared() { return std::shared_ptr<Oscillator>(buildUnique().release()); }
 
 private:
     OscillatorId id_;
@@ -273,17 +271,11 @@ private:
 /**
  * Helper function to quickly create an OscillatorId
  */
-inline OscillatorId makeOscillatorId(const juce::String& id)
-{
-    return OscillatorId{ id };
-}
+inline OscillatorId makeOscillatorId(const juce::String& id) { return OscillatorId{id}; }
 
 /**
  * Helper function to quickly create a PaneId
  */
-inline PaneId makePaneId(const juce::String& id)
-{
-    return PaneId{ id };
-}
+inline PaneId makePaneId(const juce::String& id) { return PaneId{id}; }
 
 } // namespace oscil::test

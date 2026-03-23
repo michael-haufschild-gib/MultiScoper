@@ -3,13 +3,14 @@
 */
 
 #ifndef _USE_MATH_DEFINES
-#define _USE_MATH_DEFINES
+    #define _USE_MATH_DEFINES
 #endif
+#include "core/dsp/SignalProcessor.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 #include <limits>
 #include <random>
-#include <gtest/gtest.h>
-#include "core/dsp/SignalProcessor.h"
 #include <span>
 
 using namespace oscil;
@@ -31,18 +32,16 @@ protected:
         return samples;
     }
 
-    std::vector<float> generateDC(int numSamples, float level)
-    {
-        return std::vector<float>(numSamples, level);
-    }
-    
+    std::vector<float> generateDC(int numSamples, float level) { return std::vector<float>(numSamples, level); }
+
     // Generate random signal
     std::vector<float> generateRandom(int numSamples, float min, float max, int seed = 12345)
     {
         std::vector<float> samples(numSamples);
         std::mt19937 gen(seed);
         std::uniform_real_distribution<float> dist(min, max);
-        for(int i=0; i<numSamples; ++i) {
+        for (int i = 0; i < numSamples; ++i)
+        {
             samples[i] = dist(gen);
         }
         return samples;
@@ -212,8 +211,8 @@ TEST_F(SignalProcessorTest, PeakLevelCalculation)
 {
     const int numSamples = 100;
     std::vector<float> samples(numSamples, 0.0f);
-    samples[50] = 0.75f;  // Peak positive
-    samples[75] = -0.5f;  // Peak negative
+    samples[50] = 0.75f; // Peak positive
+    samples[75] = -0.5f; // Peak negative
 
     float peak = SignalProcessor::calculatePeak(samples);
 
@@ -271,8 +270,8 @@ TEST_F(SignalProcessorTest, ProcessZeroSamples)
 
 TEST_F(SignalProcessorTest, ProcessZeroSamplesAfterPreviousFrameResetsOutputState)
 {
-    std::vector<float> left = { 0.5f, -0.25f };
-    std::vector<float> right = { 0.2f, 0.8f };
+    std::vector<float> left = {0.5f, -0.25f};
+    std::vector<float> right = {0.2f, 0.8f};
 
     processor.process(left, right, ProcessingMode::FullStereo, output);
     ASSERT_EQ(output.numSamples, 2);
@@ -290,8 +289,8 @@ TEST_F(SignalProcessorTest, ProcessZeroSamplesAfterPreviousFrameResetsOutputStat
 // Test: Process with one sample
 TEST_F(SignalProcessorTest, ProcessOneSample)
 {
-    std::vector<float> left = { 0.5f };
-    std::vector<float> right = { -0.3f };
+    std::vector<float> left = {0.5f};
+    std::vector<float> right = {-0.3f};
 
     processor.process(left, right, ProcessingMode::FullStereo, output);
 
@@ -416,7 +415,7 @@ TEST_F(SignalProcessorTest, ProcessWithInfinity)
 // Test: Peak with NaN — result must not be negative
 TEST_F(SignalProcessorTest, PeakWithNaN)
 {
-    std::vector<float> samples = { 0.1f, 0.5f, std::nanf(""), 0.3f };
+    std::vector<float> samples = {0.1f, 0.5f, std::nanf(""), 0.3f};
 
     float peak = SignalProcessor::calculatePeak(samples);
 
@@ -428,7 +427,7 @@ TEST_F(SignalProcessorTest, PeakWithNaN)
 // Test: Peak with Infinity — must return infinity (it is the largest absolute value)
 TEST_F(SignalProcessorTest, PeakWithInfinity)
 {
-    std::vector<float> samples = { 0.1f, 0.5f, std::numeric_limits<float>::infinity(), 0.3f };
+    std::vector<float> samples = {0.1f, 0.5f, std::numeric_limits<float>::infinity(), 0.3f};
 
     float peak = SignalProcessor::calculatePeak(samples);
 
@@ -439,7 +438,7 @@ TEST_F(SignalProcessorTest, PeakWithInfinity)
 // Test: RMS with NaN — result non-negative or NaN
 TEST_F(SignalProcessorTest, RMSWithNaN)
 {
-    std::vector<float> samples = { 0.5f, 0.5f, std::nanf(""), 0.5f };
+    std::vector<float> samples = {0.5f, 0.5f, std::nanf(""), 0.5f};
 
     float rms = SignalProcessor::calculateRMS(samples);
 
@@ -451,12 +450,11 @@ TEST_F(SignalProcessorTest, RMSWithNaN)
 // Test: Correlation with NaN — result in valid range or NaN
 TEST_F(SignalProcessorTest, CorrelationWithNaN)
 {
-    std::vector<float> left = { 0.5f, 0.5f, std::nanf(""), 0.5f };
-    std::vector<float> right = { 0.5f, 0.5f, 0.5f, 0.5f };
+    std::vector<float> left = {0.5f, 0.5f, std::nanf(""), 0.5f};
+    std::vector<float> right = {0.5f, 0.5f, 0.5f, 0.5f};
 
     float correlation = SignalProcessor::calculateCorrelation(left, right);
 
     // Correlation with NaN input: result may be NaN or a finite value in [-1, 1].
     EXPECT_TRUE(std::isnan(correlation) || (correlation >= -1.0f && correlation <= 1.0f));
 }
-

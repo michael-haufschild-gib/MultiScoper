@@ -3,6 +3,7 @@
 */
 
 #include "rendering/WaveformShader.h"
+
 #include <cmath>
 
 namespace oscil
@@ -10,11 +11,8 @@ namespace oscil
 
 namespace
 {
-void strokeChannelPath(juce::Graphics& g,
-                       const std::vector<float>& samples,
-                       float centerY, float amplitude,
-                       float boundsX, float boundsWidth,
-                       float lineWidth)
+void strokeChannelPath(juce::Graphics& g, const std::vector<float>& samples, float centerY, float amplitude,
+                       float boundsX, float boundsWidth, float lineWidth)
 {
     if (samples.size() < 2)
         return;
@@ -34,11 +32,8 @@ void strokeChannelPath(juce::Graphics& g,
 }
 } // namespace
 
-void WaveformShader::renderSoftware(
-    juce::Graphics& g,
-    const std::vector<float>& channel1,
-    const std::vector<float>* channel2,
-    const ShaderRenderParams& params)
+void WaveformShader::renderSoftware(juce::Graphics& g, const std::vector<float>& channel1,
+                                    const std::vector<float>* channel2, const ShaderRenderParams& params)
 {
     if (channel1.size() < 2)
         return;
@@ -65,21 +60,17 @@ void WaveformShader::renderSoftware(
 
     g.setColour(params.colour.withAlpha(params.opacity));
 
-    strokeChannelPath(g, channel1, centerY1, amplitude1,
-                      bounds.getX(), width, params.lineWidth);
+    strokeChannelPath(g, channel1, centerY1, amplitude1, bounds.getX(), width, params.lineWidth);
 
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        strokeChannelPath(g, *channel2, centerY2, amplitude2,
-                          bounds.getX(), width, params.lineWidth);
+        strokeChannelPath(g, *channel2, centerY2, amplitude2, bounds.getX(), width, params.lineWidth);
     }
 }
 
 #if OSCIL_ENABLE_OPENGL
-bool WaveformShader::compileShaderProgram(
-    juce::OpenGLShaderProgram& program,
-    const char* vertexSource,
-    const char* fragmentSource)
+bool WaveformShader::compileShaderProgram(juce::OpenGLShaderProgram& program, const char* vertexSource,
+                                          const char* fragmentSource)
 {
     if (!program.addVertexShader(vertexSource))
     {
@@ -102,11 +93,8 @@ bool WaveformShader::compileShaderProgram(
     return true;
 }
 
-void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params,
-                                            const std::vector<float>* channel2,
-                                            float height,
-                                            float& centerY1, float& centerY2,
-                                            float& amp1, float& amp2)
+void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params, const std::vector<float>* channel2,
+                                           float height, float& centerY1, float& centerY2, float& amp1, float& amp2)
 {
     if (params.isStereo && channel2 != nullptr)
     {
@@ -124,9 +112,8 @@ void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params,
 
 namespace
 {
-void computeLineNormal(const std::vector<float>& samples, size_t i,
-                        float boundsX, float xScale, float centerY, float amplitude,
-                        float x, float y, float& nx, float& ny)
+void computeLineNormal(const std::vector<float>& samples, size_t i, float boundsX, float xScale, float centerY,
+                       float amplitude, float x, float y, float& nx, float& ny)
 {
     nx = 0.0f;
     ny = 1.0f;
@@ -140,14 +127,22 @@ void computeLineNormal(const std::vector<float>& samples, size_t i,
         float dx = nextX - prevX;
         float dy = nextY - prevY;
         float len = std::sqrt(dx * dx + dy * dy);
-        if (len > 0.001f) { nx = -dy / len; ny = dx / len; }
+        if (len > 0.001f)
+        {
+            nx = -dy / len;
+            ny = dx / len;
+        }
     }
     else if (i == 0 && samples.size() > 1)
     {
         float dx = (boundsX + xScale) - x;
         float dy = (centerY - samples[1] * amplitude) - y;
         float len = std::sqrt(dx * dx + dy * dy);
-        if (len > 0.001f) { nx = -dy / len; ny = dx / len; }
+        if (len > 0.001f)
+        {
+            nx = -dy / len;
+            ny = dx / len;
+        }
     }
     else if (i == samples.size() - 1 && samples.size() > 1)
     {
@@ -156,19 +151,17 @@ void computeLineNormal(const std::vector<float>& samples, size_t i,
         float dx = x - prevX;
         float dy = y - prevY;
         float len = std::sqrt(dx * dx + dy * dy);
-        if (len > 0.001f) { nx = -dy / len; ny = dx / len; }
+        if (len > 0.001f)
+        {
+            nx = -dy / len;
+            ny = dx / len;
+        }
     }
 }
 } // namespace
 
-void WaveformShader::buildLineGeometry(
-    std::vector<float>& vertices,
-    const std::vector<float>& samples,
-    float centerY,
-    float amplitude,
-    float lineWidth,
-    float boundsX,
-    float boundsWidth)
+void WaveformShader::buildLineGeometry(std::vector<float>& vertices, const std::vector<float>& samples, float centerY,
+                                       float amplitude, float lineWidth, float boundsX, float boundsWidth)
 {
     if (samples.size() < 2)
         return;
@@ -198,14 +191,8 @@ void WaveformShader::buildLineGeometry(
     }
 }
 
-void WaveformShader::buildFillGeometry(
-    std::vector<float>& vertices,
-    const std::vector<float>& samples,
-    float centerY,
-    float zeroY,
-    float amplitude,
-    float boundsX,
-    float boundsWidth)
+void WaveformShader::buildFillGeometry(std::vector<float>& vertices, const std::vector<float>& samples, float centerY,
+                                       float zeroY, float amplitude, float boundsX, float boundsWidth)
 {
     if (samples.size() < 2)
         return;
@@ -234,23 +221,20 @@ void WaveformShader::buildFillGeometry(
     }
 }
 
-bool WaveformShader::setup2DProjection(juce::OpenGLContext& context,
-                                       juce::OpenGLExtensionFunctions& ext,
+bool WaveformShader::setup2DProjection(juce::OpenGLContext& context, juce::OpenGLExtensionFunctions& ext,
                                        GLint projectionLoc)
 {
     auto* target = context.getTargetComponent();
-    if (!target) return false;
+    if (!target)
+        return false;
 
     float w = static_cast<float>(target->getWidth());
     float h = static_cast<float>(target->getHeight());
-    if (w <= 0.0f || h <= 0.0f) return false;
+    if (w <= 0.0f || h <= 0.0f)
+        return false;
 
-    float projection[16] = {
-        2.0f / w, 0.0f, 0.0f, 0.0f,
-        0.0f, -2.0f / h, 0.0f, 0.0f,
-        0.0f, 0.0f, -1.0f, 0.0f,
-        -1.0f, 1.0f, 0.0f, 1.0f
-    };
+    float projection[16] = {2.0f / w, 0.0f, 0.0f,  0.0f, 0.0f,  -2.0f / h, 0.0f, 0.0f,
+                            0.0f,     0.0f, -1.0f, 0.0f, -1.0f, 1.0f,      0.0f, 1.0f};
     ext.glUniformMatrix4fv(projectionLoc, 1, juce::gl::GL_FALSE, projection);
     return true;
 }
@@ -266,18 +250,32 @@ bool WaveformShader::checkGLError([[maybe_unused]] const char* location)
     [[maybe_unused]] const char* errorStr = "Unknown error";
     switch (error)
     {
-        case GL_INVALID_ENUM:                  errorStr = "GL_INVALID_ENUM"; break;
-        case GL_INVALID_VALUE:                 errorStr = "GL_INVALID_VALUE"; break;
-        case GL_INVALID_OPERATION:             errorStr = "GL_INVALID_OPERATION"; break;
-        case GL_INVALID_FRAMEBUFFER_OPERATION: errorStr = "GL_INVALID_FRAMEBUFFER_OPERATION"; break;
-        case GL_OUT_OF_MEMORY:                 errorStr = "GL_OUT_OF_MEMORY"; break;
-        default: break;
+        case GL_INVALID_ENUM:
+            errorStr = "GL_INVALID_ENUM";
+            break;
+        case GL_INVALID_VALUE:
+            errorStr = "GL_INVALID_VALUE";
+            break;
+        case GL_INVALID_OPERATION:
+            errorStr = "GL_INVALID_OPERATION";
+            break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            errorStr = "GL_INVALID_FRAMEBUFFER_OPERATION";
+            break;
+        case GL_OUT_OF_MEMORY:
+            errorStr = "GL_OUT_OF_MEMORY";
+            break;
+        default:
+            break;
     }
 
-    DBG("OpenGL error at " << location << ": " << errorStr << " (0x" << juce::String::toHexString(static_cast<int>(error)) << ")");
+    DBG("OpenGL error at " << location << ": " << errorStr << " (0x"
+                           << juce::String::toHexString(static_cast<int>(error)) << ")");
 
     // Clear any remaining errors
-    while (glGetError() != GL_NO_ERROR) {}
+    while (glGetError() != GL_NO_ERROR)
+    {
+    }
 
     return false;
 }

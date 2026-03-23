@@ -9,14 +9,17 @@
 #include <juce_graphics/juce_graphics.h>
 
 #if OSCIL_ENABLE_OPENGL
-#include <juce_opengl/juce_opengl.h>
-#include "rendering/WaveformShader.h"
-#include "rendering/VisualConfiguration.h"
-#include "core/dsp/TimingConfig.h"
-#include <vector>
-#include <unordered_map>
-#include <atomic>
-#include <memory>
+    #include "core/dsp/TimingConfig.h"
+
+    #include "rendering/VisualConfiguration.h"
+    #include "rendering/WaveformShader.h"
+
+    #include <juce_opengl/juce_opengl.h>
+
+    #include <atomic>
+    #include <memory>
+    #include <unordered_map>
+    #include <vector>
 
 namespace oscil
 {
@@ -30,9 +33,9 @@ class RenderEngine;
  */
 struct GridColors
 {
-    juce::Colour gridMinor{ 0x33FFFFFF };
-    juce::Colour gridMajor{ 0x66FFFFFF };
-    juce::Colour gridZeroLine{ 0x99FFFFFF };
+    juce::Colour gridMinor{0x33FFFFFF};
+    juce::Colour gridMajor{0x66FFFFFF};
+    juce::Colour gridZeroLine{0x99FFFFFF};
 };
 
 /**
@@ -41,19 +44,19 @@ struct GridColors
  */
 struct WaveformRenderData
 {
-    int id = 0;                          // Unique identifier
-    juce::Rectangle<float> bounds;       // Screen position and size
-    std::vector<float> channel1;         // First channel samples
-    std::vector<float> channel2;         // Second channel (stereo only)
-    juce::Colour colour{ 0xFF00FFFF };   // Waveform color (default, overwritten by oscillator)
-    float opacity = 1.0f;                // Opacity (0-1)
-    float lineWidth = 1.5f;              // Line thickness
-    bool isStereo = false;               // Whether to render channel2
-    bool visible = true;                 // Whether to render this waveform
-    float verticalScale = 1.0f;          // Vertical scale factor (includes auto-scale)
-    VisualConfiguration visualConfig;    // Full visual configuration for render engine
-    GridConfiguration gridConfig;        // Grid configuration
-    GridColors gridColors;               // Grid colors (copied from theme on message thread)
+    int id = 0;                       // Unique identifier
+    juce::Rectangle<float> bounds;    // Screen position and size
+    std::vector<float> channel1;      // First channel samples
+    std::vector<float> channel2;      // Second channel (stereo only)
+    juce::Colour colour{0xFF00FFFF};  // Waveform color (default, overwritten by oscillator)
+    float opacity = 1.0f;             // Opacity (0-1)
+    float lineWidth = 1.5f;           // Line thickness
+    bool isStereo = false;            // Whether to render channel2
+    bool visible = true;              // Whether to render this waveform
+    float verticalScale = 1.0f;       // Vertical scale factor (includes auto-scale)
+    VisualConfiguration visualConfig; // Full visual configuration for render engine
+    GridConfiguration gridConfig;     // Grid configuration
+    GridColors gridColors;            // Grid colors (copied from theme on message thread)
 };
 
 /**
@@ -134,7 +137,7 @@ public:
      * Execute an operation on the RenderEngine safely.
      * The operation is executed under a lock to ensure thread safety between
      * the OpenGL thread (rendering) and the Message thread (configuration).
-     * 
+     *
      * @param func A function/lambda that takes RenderEngine& as argument.
      *             If the engine is not initialized, the function is not called.
      */
@@ -151,14 +154,12 @@ private:
     void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);
     std::vector<WaveformRenderData> collectWaveformsToRender();
     void renderWithEngine(const std::vector<WaveformRenderData>& waveformsToRender, float deltaTime);
-    void setupDebugProjection(juce::OpenGLExtensionFunctions& ext,
-                              GLint projLoc, GLint colorLoc,
-                              float viewportWidth, float viewportHeight,
-                              juce::Colour colour);
+    void setupDebugProjection(juce::OpenGLExtensionFunctions& ext, GLint projLoc, GLint colorLoc, float viewportWidth,
+                              float viewportHeight, juce::Colour colour);
 
     juce::OpenGLContext* context_ = nullptr;
-    std::atomic<bool> contextReady_{ false };
-    std::atomic<bool> cleanupPerformed_{ false };  // Guard for idempotent cleanup
+    std::atomic<bool> contextReady_{false};
+    std::atomic<bool> cleanupPerformed_{false}; // Guard for idempotent cleanup
 
     // Thread-safe waveform data storage
     // Using SpinLock for fast synchronization (short critical sections)
@@ -166,7 +167,7 @@ private:
     std::unordered_map<int, WaveformRenderData> waveforms_;
 
     // Render state
-    juce::Colour backgroundColour_{ juce::Colours::transparentBlack };
+    juce::Colour backgroundColour_{juce::Colours::transparentBlack};
     bool shadersCompiled_ = false;
 
     // Debug rendering resources
@@ -181,7 +182,7 @@ private:
     // Protected by engineLock_ for thread-safe access/lifecycle management
     juce::ReadWriteLock engineLock_;
     std::unique_ptr<RenderEngine> renderEngine_;
-    bool useRenderEngine_ = true;  // Enable by default
+    bool useRenderEngine_ = true; // Enable by default
     std::chrono::steady_clock::time_point lastFrameTime_;
 
     // Per-instance resize tracking (not static - each instance needs its own)

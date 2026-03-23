@@ -3,10 +3,12 @@
 */
 
 #include "TestUIController.h"
-#include "ui/components/OscilDropdown.h"
+
 #include "ui/components/OscilButton.h"
-#include <thread>
+#include "ui/components/OscilDropdown.h"
+
 #include <chrono>
+#include <thread>
 
 namespace oscil::test
 {
@@ -16,10 +18,14 @@ namespace oscil::test
 juce::ModifierKeys ModifierKeyState::toJuceModifiers() const
 {
     int flags = 0;
-    if (shift) flags |= juce::ModifierKeys::shiftModifier;
-    if (alt)   flags |= juce::ModifierKeys::altModifier;
-    if (ctrl)  flags |= juce::ModifierKeys::ctrlModifier;
-    if (cmd)   flags |= juce::ModifierKeys::commandModifier;
+    if (shift)
+        flags |= juce::ModifierKeys::shiftModifier;
+    if (alt)
+        flags |= juce::ModifierKeys::altModifier;
+    if (ctrl)
+        flags |= juce::ModifierKeys::ctrlModifier;
+    if (cmd)
+        flags |= juce::ModifierKeys::commandModifier;
     return juce::ModifierKeys(flags);
 }
 
@@ -64,15 +70,12 @@ bool TestUIController::click(const juce::String& elementId)
 
     juce::Component::SafePointer<juce::Component> safeComp(component);
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([safeComp, this, &done]()
-    {
+    juce::MessageManager::callAsync([safeComp, this, &done]() {
         if (auto* comp = safeComp.getComponent())
             simulateMouseClick(comp);
         // Post a second callback to drain any pending callAsync items
         // (e.g., pendingRefresh_ from refreshPanels reentrancy guard)
-        juce::MessageManager::callAsync([&done]() {
-            done.signal();
-        });
+        juce::MessageManager::callAsync([&done]() { done.signal(); });
     });
     done.wait(3000);
 
@@ -87,8 +90,7 @@ bool TestUIController::clickWithModifiers(const juce::String& elementId, const M
 
     auto mods = modifiers.toJuceModifiers();
     juce::Component::SafePointer<juce::Component> safeComp(component);
-    juce::MessageManager::callAsync([safeComp, mods, this]()
-    {
+    juce::MessageManager::callAsync([safeComp, mods, this]() {
         if (auto* comp = safeComp.getComponent())
             simulateMouseClick(comp, false, mods);
     });
@@ -103,8 +105,7 @@ bool TestUIController::doubleClick(const juce::String& elementId)
         return false;
 
     juce::Component::SafePointer<juce::Component> safeComp(component);
-    juce::MessageManager::callAsync([safeComp, this]()
-    {
+    juce::MessageManager::callAsync([safeComp, this]() {
         if (auto* comp = safeComp.getComponent())
             simulateMouseClick(comp, true);
     });
@@ -119,8 +120,7 @@ bool TestUIController::rightClick(const juce::String& elementId)
         return false;
 
     juce::Component::SafePointer<juce::Component> safeComp(component);
-    juce::MessageManager::callAsync([safeComp, this]()
-    {
+    juce::MessageManager::callAsync([safeComp, this]() {
         if (auto* comp = safeComp.getComponent())
             simulateMouseRightClick(comp);
     });
@@ -135,35 +135,27 @@ bool TestUIController::hover(const juce::String& elementId, int durationMs)
         return false;
 
     juce::Component::SafePointer<juce::Component> safeComp(component);
-    juce::MessageManager::callAsync([safeComp, durationMs, this]()
-    {
+    juce::MessageManager::callAsync([safeComp, durationMs, this]() {
         auto* component = safeComp.getComponent();
-        if (component == nullptr) return;
+        if (component == nullptr)
+            return;
         simulateMouseHover(component);
 
         // Schedule hover end
         juce::Component::SafePointer<juce::Component> hoverSafe(component);
-        juce::Timer::callAfterDelay(durationMs, [hoverSafe]()
-        {
+        juce::Timer::callAfterDelay(durationMs, [hoverSafe]() {
             auto* comp = hoverSafe.getComponent();
-            if (comp == nullptr) return;
+            if (comp == nullptr)
+                return;
 
             auto bounds = comp->getLocalBounds();
             auto center = bounds.getCentre();
             auto& desktop = juce::Desktop::getInstance();
             auto mouseSource = desktop.getMainMouseSource();
 
-            juce::MouseEvent mouseEvent(
-                mouseSource,
-                center.toFloat(),
-                juce::ModifierKeys(),
-                0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                comp, comp,
-                juce::Time::getCurrentTime(),
-                center.toFloat(),
-                juce::Time::getCurrentTime(),
-                0, false
-            );
+            juce::MouseEvent mouseEvent(mouseSource, center.toFloat(), juce::ModifierKeys(), 0.0f, 0.0f, 0.0f, 0.0f,
+                                        0.0f, comp, comp, juce::Time::getCurrentTime(), center.toFloat(),
+                                        juce::Time::getCurrentTime(), 0, false);
 
             comp->mouseExit(mouseEvent);
         });
@@ -180,8 +172,7 @@ bool TestUIController::drag(const juce::String& fromElementId, const juce::Strin
         return false;
 
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([fromComp, toComp, this, &done]()
-    {
+    juce::MessageManager::callAsync([fromComp, toComp, this, &done]() {
         simulateMouseDrag(fromComp, toComp);
         done.signal();
     });
@@ -190,9 +181,8 @@ bool TestUIController::drag(const juce::String& fromElementId, const juce::Strin
     return true;
 }
 
-bool TestUIController::dragWithModifiers(const juce::String& fromElementId,
-                                          const juce::String& toElementId,
-                                          const ModifierKeyState& modifiers)
+bool TestUIController::dragWithModifiers(const juce::String& fromElementId, const juce::String& toElementId,
+                                         const ModifierKeyState& modifiers)
 {
     auto* fromComp = TestElementRegistry::getInstance().findValidElement(fromElementId);
     auto* toComp = TestElementRegistry::getInstance().findValidElement(toElementId);
@@ -200,10 +190,7 @@ bool TestUIController::dragWithModifiers(const juce::String& fromElementId,
         return false;
 
     auto mods = modifiers.toJuceModifiers();
-    juce::MessageManager::callAsync([fromComp, toComp, mods, this]()
-    {
-        simulateMouseDrag(fromComp, toComp, mods);
-    });
+    juce::MessageManager::callAsync([fromComp, toComp, mods, this]() { simulateMouseDrag(fromComp, toComp, mods); });
 
     return true;
 }
@@ -215,8 +202,7 @@ bool TestUIController::dragByOffset(const juce::String& elementId, int deltaX, i
         return false;
 
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([component, deltaX, deltaY, this, &done]()
-    {
+    juce::MessageManager::callAsync([component, deltaX, deltaY, this, &done]() {
         simulateMouseDragOffset(component, deltaX, deltaY);
         done.signal();
     });
@@ -225,19 +211,16 @@ bool TestUIController::dragByOffset(const juce::String& elementId, int deltaX, i
     return true;
 }
 
-bool TestUIController::dragByOffsetWithModifiers(const juce::String& elementId,
-                                                  int deltaX, int deltaY,
-                                                  const ModifierKeyState& modifiers)
+bool TestUIController::dragByOffsetWithModifiers(const juce::String& elementId, int deltaX, int deltaY,
+                                                 const ModifierKeyState& modifiers)
 {
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
 
     auto mods = modifiers.toJuceModifiers();
-    juce::MessageManager::callAsync([component, deltaX, deltaY, mods, this]()
-    {
-        simulateMouseDragOffset(component, deltaX, deltaY, mods);
-    });
+    juce::MessageManager::callAsync(
+        [component, deltaX, deltaY, mods, this]() { simulateMouseDragOffset(component, deltaX, deltaY, mods); });
 
     return true;
 }
@@ -250,17 +233,14 @@ ScrollResult TestUIController::scroll(const juce::String& elementId, float delta
         return result;
 
     result.success = true;
-    juce::MessageManager::callAsync([component, deltaX, deltaY, this]()
-    {
-        simulateMouseWheel(component, deltaX, deltaY);
-    });
+    juce::MessageManager::callAsync(
+        [component, deltaX, deltaY, this]() { simulateMouseWheel(component, deltaX, deltaY); });
 
     return result;
 }
 
-ScrollResult TestUIController::scrollWithModifiers(const juce::String& elementId,
-                                                    float deltaY, float deltaX,
-                                                    const ModifierKeyState& modifiers)
+ScrollResult TestUIController::scrollWithModifiers(const juce::String& elementId, float deltaY, float deltaX,
+                                                   const ModifierKeyState& modifiers)
 {
     ScrollResult result;
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
@@ -269,10 +249,8 @@ ScrollResult TestUIController::scrollWithModifiers(const juce::String& elementId
 
     result.success = true;
     auto mods = modifiers.toJuceModifiers();
-    juce::MessageManager::callAsync([component, deltaX, deltaY, mods, this]()
-    {
-        simulateMouseWheel(component, deltaX, deltaY, mods);
-    });
+    juce::MessageManager::callAsync(
+        [component, deltaX, deltaY, mods, this]() { simulateMouseWheel(component, deltaX, deltaY, mods); });
 
     return result;
 }
@@ -287,8 +265,7 @@ bool TestUIController::pressKey(int keyCode, const juce::String& elementId)
 
     juce::KeyPress key(keyCode);
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([component, key, this, &done]()
-    {
+    juce::MessageManager::callAsync([component, key, this, &done]() {
         simulateKeyPress(component, key);
         done.signal();
     });
@@ -298,17 +275,14 @@ bool TestUIController::pressKey(int keyCode, const juce::String& elementId)
 }
 
 bool TestUIController::pressKeyWithModifiers(int keyCode, const ModifierKeyState& modifiers,
-                                              const juce::String& elementId)
+                                             const juce::String& elementId)
 {
     auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
     juce::KeyPress key(keyCode, modifiers.toJuceModifiers(), 0);
-    juce::MessageManager::callAsync([component, key, this]()
-    {
-        simulateKeyPress(component, key);
-    });
+    juce::MessageManager::callAsync([component, key, this]() { simulateKeyPress(component, key); });
 
     return true;
 }
@@ -344,24 +318,27 @@ bool TestUIController::pressArrow(int direction, const juce::String& elementId)
     int keyCode;
     switch (direction)
     {
-        case 0: keyCode = juce::KeyPress::upKey; break;
-        case 1: keyCode = juce::KeyPress::downKey; break;
-        case 2: keyCode = juce::KeyPress::leftKey; break;
-        case 3: keyCode = juce::KeyPress::rightKey; break;
-        default: return false;
+        case 0:
+            keyCode = juce::KeyPress::upKey;
+            break;
+        case 1:
+            keyCode = juce::KeyPress::downKey;
+            break;
+        case 2:
+            keyCode = juce::KeyPress::leftKey;
+            break;
+        case 3:
+            keyCode = juce::KeyPress::rightKey;
+            break;
+        default:
+            return false;
     }
     return pressKey(keyCode, elementId);
 }
 
-bool TestUIController::pressHome(const juce::String& elementId)
-{
-    return pressKey(juce::KeyPress::homeKey, elementId);
-}
+bool TestUIController::pressHome(const juce::String& elementId) { return pressKey(juce::KeyPress::homeKey, elementId); }
 
-bool TestUIController::pressEnd(const juce::String& elementId)
-{
-    return pressKey(juce::KeyPress::endKey, elementId);
-}
+bool TestUIController::pressEnd(const juce::String& elementId) { return pressKey(juce::KeyPress::endKey, elementId); }
 
 bool TestUIController::pressDelete(const juce::String& elementId)
 {
@@ -374,8 +351,7 @@ bool TestUIController::typeCharacters(const juce::String& text, const juce::Stri
     if (component == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([component, text, this]()
-    {
+    juce::MessageManager::callAsync([component, text, this]() {
         for (int i = 0; i < text.length(); ++i)
         {
             juce::juce_wchar ch = text[i];

@@ -3,19 +3,22 @@
     Tests for OscillatorListComponent logic
 */
 
-#include <gtest/gtest.h>
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "core/Oscillator.h"
+#include "core/interfaces/IInstanceRegistry.h"
+#include "ui/components/InlineEditLabel.h"
+#include "ui/components/SegmentedButtonBar.h"
 #include "ui/panels/OscillatorListComponent.h"
 #include "ui/panels/OscillatorListItem.h"
-#include "core/interfaces/IInstanceRegistry.h"
-#include "core/Oscillator.h"
-#include "ui/components/SegmentedButtonBar.h"
-#include "ui/components/InlineEditLabel.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
-#include "TestElementRegistry.h"
+
 #include "OscilTestFixtures.h"
 #include "OscilTestUtils.h"
+#include "TestElementRegistry.h"
+#include "rendering/ShaderRegistry.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -24,7 +27,11 @@ using namespace oscil::test;
 class DummyRegistry : public IInstanceRegistry
 {
 public:
-    SourceId registerInstance(const juce::String&, std::shared_ptr<IAudioBuffer>, const juce::String&, int, double, std::shared_ptr<AnalysisEngine>) override { return SourceId::generate(); }
+    SourceId registerInstance(const juce::String&, std::shared_ptr<IAudioBuffer>, const juce::String&, int, double,
+                              std::shared_ptr<AnalysisEngine>) override
+    {
+        return SourceId::generate();
+    }
     void unregisterInstance(const SourceId&) override {}
     std::vector<SourceInfo> getAllSources() const override { return {}; }
     std::optional<SourceInfo> getSource(const SourceId&) const override { return std::nullopt; }
@@ -113,7 +120,7 @@ TEST_F(OscillatorListComponentTest, FilteringVisiblity)
 {
     DummyRegistry registry;
     OscillatorListComponent list(getThemeService(), registry);
-    
+
     Oscillator visibleOsc;
     visibleOsc.setName("Visible");
     visibleOsc.setVisible(true);
@@ -124,8 +131,8 @@ TEST_F(OscillatorListComponentTest, FilteringVisiblity)
     hiddenOsc.setVisible(false);
     hiddenOsc.setOrderIndex(1);
 
-    std::vector<Oscillator> oscillators = { visibleOsc, hiddenOsc };
-    
+    std::vector<Oscillator> oscillators = {visibleOsc, hiddenOsc};
+
     // 1. All mode
     list.filterModeChanged(OscillatorFilterMode::All);
     list.refreshList(oscillators);
@@ -153,12 +160,14 @@ public:
     int selectionCount = 0;
     int deleteCount = 0;
 
-    void oscillatorSelected(const OscillatorId& id) override {
+    void oscillatorSelected(const OscillatorId& id) override
+    {
         lastSelectedId = id;
         selectionCount++;
     }
 
-    void oscillatorDeleteRequested(const OscillatorId& id) override {
+    void oscillatorDeleteRequested(const OscillatorId& id) override
+    {
         lastDeletedId = id;
         deleteCount++;
     }
@@ -181,7 +190,7 @@ TEST_F(OscillatorListComponentTest, SelectionPropagatesToListener)
 
     EXPECT_EQ(listener.selectionCount, 1);
     EXPECT_EQ(listener.lastSelectedId, osc1.getId());
-    
+
     list.removeListener(&listener);
 }
 
@@ -284,6 +293,6 @@ TEST_F(OscillatorListComponentTest, NameLabelIsVisible)
         }
     }
     ASSERT_NE(nameLabel, nullptr);
-    
+
     EXPECT_TRUE(nameLabel->isVisible());
 }

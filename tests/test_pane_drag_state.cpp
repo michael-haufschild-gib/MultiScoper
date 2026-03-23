@@ -10,8 +10,9 @@
     - double endDrag corrupting state
 */
 
-#include <gtest/gtest.h>
 #include "core/Pane.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

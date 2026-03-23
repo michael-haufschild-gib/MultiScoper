@@ -5,13 +5,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -39,8 +40,9 @@ struct DropdownItem
 /**
  * Dropdown popup that displays the list of options
  */
-class OscilDropdownPopup : public ThemedComponent,
-                           private juce::Timer
+class OscilDropdownPopup
+    : public ThemedComponent
+    , private juce::Timer
 {
 public:
     /// Create a dropdown popup attached to the theme service.
@@ -117,9 +119,10 @@ private:
  * - Keyboard navigation
  * - Full accessibility support
  */
-class OscilDropdown : public ThemedComponent,
-                      public TestIdSupport,
-                      private juce::Timer
+class OscilDropdown
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     /// Create dropdown with theme service.

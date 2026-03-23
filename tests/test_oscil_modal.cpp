@@ -3,24 +3,19 @@
     Tests for OscilModal UI component
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilModal.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilModalTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -223,9 +218,7 @@ TEST_F(OscilModalTest, OnCloseCallback)
     OscilModal modal(getThemeManager());
 
     bool closeCalled = false;
-    modal.onClose = [&closeCalled]() {
-        closeCalled = true;
-    };
+    modal.onClose = [&closeCalled]() { closeCalled = true; };
 
     // Callback would be triggered when modal closes
     // Just verify callback can be set
@@ -239,7 +232,7 @@ TEST_F(OscilModalTest, OnCloseRequestedCallback)
     bool requestCalled = false;
     modal.onCloseRequested = [&requestCalled]() {
         requestCalled = true;
-        return true;  // Allow close
+        return true; // Allow close
     };
 
     // Callback would be triggered when close is requested

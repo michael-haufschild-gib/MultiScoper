@@ -4,12 +4,13 @@
     Note: AddOscillatorDialog is now a content component designed to be hosted in OscilModal
 */
 
-#include <gtest/gtest.h>
-#include "ui/dialogs/AddOscillatorDialog.h"
-#include "ui/theme/ThemeManager.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 #include "core/Source.h"
+#include "ui/dialogs/AddOscillatorDialog.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -111,17 +112,13 @@ TEST_F(AddOscillatorDialogTest, DialogCanBeReset)
     int callbackCount = 0;
 
     // Set up dialog
-    setupDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) {
-        callbackCount++;
-    });
+    setupDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) { callbackCount++; });
 
     // Reset
     dialog_->reset();
 
     // Set up again
-    setupDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) {
-        callbackCount++;
-    });
+    setupDialogWithCallback([&callbackCount](const AddOscillatorDialog::Result&) { callbackCount++; });
 
     // Verify callback count is still 0 (no OK clicked)
     EXPECT_EQ(callbackCount, 0);
@@ -234,8 +231,8 @@ TEST_F(AddOscillatorDialogTest, DialogDimensionsReasonable)
     // Dialog exposes preferred dimensions via getPreferredWidth/Height
     EXPECT_GT(dialog_->getPreferredWidth(), 0);
     EXPECT_GT(dialog_->getPreferredHeight(), 0);
-    EXPECT_LE(dialog_->getPreferredWidth(), 500);   // Reasonable max
-    EXPECT_LE(dialog_->getPreferredHeight(), 600);  // Reasonable max
+    EXPECT_LE(dialog_->getPreferredWidth(), 500);  // Reasonable max
+    EXPECT_LE(dialog_->getPreferredHeight(), 600); // Reasonable max
 }
 
 // Test: Multiple sources with same name handled correctly
@@ -244,13 +241,13 @@ TEST_F(AddOscillatorDialogTest, HandlesDuplicateSourceNames)
     // Add a 4th source with duplicate name using default constructor
     SourceInfo source4;
     source4.sourceId = SourceId{"source_4"};
-    source4.name = "Track 1";  // Duplicate name
+    source4.name = "Track 1"; // Duplicate name
     testSources_.push_back(source4);
 
     setupDialogWithCallback([](const AddOscillatorDialog::Result&) {});
 
     // Verify sources count
-    EXPECT_EQ(testSources_.size(), 4u);  // Now 4 sources
+    EXPECT_EQ(testSources_.size(), 4u); // Now 4 sources
     // No crash with duplicate names
 }
 
@@ -260,12 +257,10 @@ TEST_F(AddOscillatorDialogTest, CancelCallbackCalled)
     bool cancelCalled = false;
 
     dialog_->setData(testSources_, testPanes_);
-    dialog_->setOnCancel([&cancelCalled]() {
-        cancelCalled = true;
-    });
+    dialog_->setOnCancel([&cancelCalled]() { cancelCalled = true; });
 
     // The cancel callback would be triggered by the cancel button click
     // We can't easily simulate that without more test infrastructure
     // but we verify the callback can be set
-    EXPECT_FALSE(cancelCalled);  // Not called yet
+    EXPECT_FALSE(cancelCalled); // Not called yet
 }

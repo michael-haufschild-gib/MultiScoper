@@ -5,10 +5,12 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
 #include "core/Oscillator.h"
-#include <vector>
+
+#include <juce_core/juce_core.h>
+
 #include <cmath>
+#include <vector>
 
 namespace oscil
 {
@@ -23,9 +25,9 @@ class Pane
 {
 public:
     // Height constraints
-    static constexpr float MIN_HEIGHT_RATIO = 0.1f;  // Minimum 10% of column height
-    static constexpr float MAX_HEIGHT_RATIO = 1.0f;  // Maximum full column height
-    static constexpr float DEFAULT_HEIGHT_RATIO = 0.33f;  // Default 1/3 of column
+    static constexpr float MIN_HEIGHT_RATIO = 0.1f;      // Minimum 10% of column height
+    static constexpr float MAX_HEIGHT_RATIO = 1.0f;      // Maximum full column height
+    static constexpr float DEFAULT_HEIGHT_RATIO = 0.33f; // Default 1/3 of column
 
     /**
      * Create a new pane with generated ID
@@ -72,7 +74,7 @@ private:
     bool collapsed_ = false;
     juce::String name_;
     float heightRatio_ = DEFAULT_HEIGHT_RATIO;
-    int columnIndex_ = 0;  // Which column this pane is in (0-2)
+    int columnIndex_ = 0; // Which column this pane is in (0-2)
 };
 
 /**
@@ -111,10 +113,7 @@ struct PaneDragState
         isValidDropTarget = false;
     }
 
-    void updateDrag(juce::Point<int> position)
-    {
-        currentPosition = position;
-    }
+    void updateDrag(juce::Point<int> position) { currentPosition = position; }
 
     void setDropTarget(const PaneId& targetId, int targetIndex, int targetColumn, bool isValid)
     {
@@ -136,10 +135,7 @@ struct PaneDragState
         isValidDropTarget = false;
     }
 
-    void cancelDrag()
-    {
-        endDrag();
-    }
+    void cancelDrag() { endDrag(); }
 
     [[nodiscard]] bool isSamePositionDrop() const noexcept
     {
@@ -248,7 +244,8 @@ public:
     /**
      * Calculate pane bounds for a pane in a specific column
      */
-    [[nodiscard]] juce::Rectangle<int> getPaneBoundsInColumn(const PaneId& paneId, juce::Rectangle<int> columnArea) const;
+    [[nodiscard]] juce::Rectangle<int> getPaneBoundsInColumn(const PaneId& paneId,
+                                                             juce::Rectangle<int> columnArea) const;
 
     /**
      * Redistribute panes across columns after layout change
@@ -297,15 +294,15 @@ private:
 // ValueTree identifiers for Pane and PaneLayout
 namespace PaneIds
 {
-    inline const juce::Identifier Pane{ "Pane" };
-    inline const juce::Identifier Panes{ "Panes" };
-    inline const juce::Identifier Id{ "id" };
-    inline const juce::Identifier OrderIndex{ "orderIndex" };
-    inline const juce::Identifier Collapsed{ "collapsed" };
-    inline const juce::Identifier Name{ "name" };
-    inline const juce::Identifier HeightRatio{ "heightRatio" };
-    inline const juce::Identifier ColumnIndex{ "columnIndex" };
-    inline const juce::Identifier ColumnLayout{ "columnLayout" };
-}
+inline const juce::Identifier Pane{"Pane"};
+inline const juce::Identifier Panes{"Panes"};
+inline const juce::Identifier Id{"id"};
+inline const juce::Identifier OrderIndex{"orderIndex"};
+inline const juce::Identifier Collapsed{"collapsed"};
+inline const juce::Identifier Name{"name"};
+inline const juce::Identifier HeightRatio{"heightRatio"};
+inline const juce::Identifier ColumnIndex{"columnIndex"};
+inline const juce::Identifier ColumnLayout{"columnLayout"};
+} // namespace PaneIds
 
 } // namespace oscil

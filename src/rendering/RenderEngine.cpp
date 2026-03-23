@@ -203,8 +203,7 @@ void RenderEngine::renderWaveformLayer(const WaveformRenderData& data, WaveformR
     Framebuffer* processedFBO = waveformFBO;
     if (config.hasPostProcessing())
     {
-        processedFBO = effectPipeline_->applyPostProcessing(processedFBO, state, *context_,
-                                                            stats_.getDeltaTime(),
+        processedFBO = effectPipeline_->applyPostProcessing(processedFBO, state, *context_, stats_.getDeltaTime(),
                                                             bootstrapper_->getCompositeShader(),
                                                             bootstrapper_->getCompositeTextureLoc());
         if (!processedFBO)
@@ -277,13 +276,13 @@ void RenderEngine::executeComposite(Framebuffer* source, const VisualConfigurati
     }
 
     glEnable(GL_BLEND);
-    
+
     auto* shader = bootstrapper_->getCompositeShader();
     if (shader)
     {
         shader->use();
         context_->extensions.glUniform1i(bootstrapper_->getCompositeTextureLoc(), 0);
-        
+
         // Set blend mode based on config
         switch (config.compositeBlendMode)
         {

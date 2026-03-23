@@ -5,9 +5,11 @@
 
 #pragma once
 
+#include "TestSignals.h"
+
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
-#include "TestSignals.h"
+
 #include <cmath>
 
 namespace oscil::test
@@ -26,12 +28,7 @@ namespace oscil::test
 class AudioBufferBuilder
 {
 public:
-    AudioBufferBuilder()
-        : numChannels_(2)
-        , numSamples_(512)
-        , sampleRate_(44100.0f)
-    {
-    }
+    AudioBufferBuilder() : numChannels_(2), numSamples_(512), sampleRate_(44100.0f) {}
 
     /**
      * Set the number of channels (default: 2)

@@ -2,9 +2,9 @@
     Oscil - Transient Detector Tests
 */
 
-#include <gtest/gtest.h>
-
 #include "core/analysis/TransientDetector.h"
+
+#include <gtest/gtest.h>
 
 namespace oscil
 {
@@ -199,7 +199,7 @@ TEST(TransientDetectorTest, IdleToAttackResetsPlateauCounter)
     TransientDetectorTestAccess::fastEnvelope(detector) = 0.6f;
     TransientDetectorTestAccess::slowEnvelope(detector) = 0.2f;
 
-    const float onsetSample[1] = { 8.0f };
+    const float onsetSample[1] = {8.0f};
     detector.process(onsetSample, 1, sampleRate);
 
     ASSERT_EQ(TransientDetectorTestAccess::state(detector), TransientDetectorTestAccess::State::MeasuringAttack);
@@ -220,7 +220,7 @@ TEST(TransientDetectorTest, DecayRetriggerResetsPlateauCounter)
     TransientDetectorTestAccess::samplesInState(detector) = 12.0;
     TransientDetectorTestAccess::samplesSincePeakIncrease(detector) = 51.0;
 
-    const float retriggerSample[1] = { 10.0f };
+    const float retriggerSample[1] = {10.0f};
     detector.process(retriggerSample, 1, sampleRate);
 
     ASSERT_EQ(TransientDetectorTestAccess::state(detector), TransientDetectorTestAccess::State::MeasuringAttack);

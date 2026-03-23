@@ -4,6 +4,7 @@
 */
 
 #include "core/dsp/TimingEngine.h"
+
 #include <cmath>
 
 namespace oscil
@@ -35,10 +36,7 @@ EngineTimingConfig TimingEngine::getConfig() const
     return result;
 }
 
-HostTimingInfo TimingEngine::getHostInfo() const
-{
-    return hostInfoLock_.read();
-}
+HostTimingInfo TimingEngine::getHostInfo() const { return hostInfoLock_.read(); }
 
 // === Configuration Setters ===
 
@@ -110,8 +108,7 @@ void TimingEngine::setInternalBPM(float bpm)
 
 void TimingEngine::setTimeIntervalMs(float ms)
 {
-    ms = juce::jlimit(EngineTimingConfig::MIN_TIME_INTERVAL_MS,
-                      EngineTimingConfig::MAX_TIME_INTERVAL_MS, ms);
+    ms = juce::jlimit(EngineTimingConfig::MIN_TIME_INTERVAL_MS, EngineTimingConfig::MAX_TIME_INTERVAL_MS, ms);
 
     auto cfg = configLock_.read();
     if (std::abs(cfg.timeIntervalMs - ms) > 0.001f)
@@ -225,8 +222,7 @@ void TimingEngine::resetRuntimeStateForLoad()
 
 static int sanitizeTimingMode(int value)
 {
-    if (value == static_cast<int>(TimingMode::TIME) ||
-        value == static_cast<int>(TimingMode::MELODIC))
+    if (value == static_cast<int>(TimingMode::TIME) || value == static_cast<int>(TimingMode::MELODIC))
         return value;
     return static_cast<int>(TimingMode::TIME);
 }
@@ -238,7 +234,8 @@ static int sanitizeEnumRange(int value, int minVal, int maxVal, int defaultVal)
 
 static float sanitizeFloat(float value, float defaultVal, float minVal, float maxVal)
 {
-    if (!std::isfinite(value)) return defaultVal;
+    if (!std::isfinite(value))
+        return defaultVal;
     return juce::jlimit(minVal, maxVal, value);
 }
 
@@ -246,46 +243,32 @@ void TimingEngine::loadTimingProperties(const juce::ValueTree& state)
 {
     TimingConfigData cfg;
 
-    cfg.timingMode = static_cast<TimingMode>(
-        sanitizeTimingMode(static_cast<int>(state.getProperty(TimingIds::TimingMode, 0))));
+    cfg.timingMode =
+        static_cast<TimingMode>(sanitizeTimingMode(static_cast<int>(state.getProperty(TimingIds::TimingMode, 0))));
     cfg.hostSyncEnabled = state.getProperty(TimingIds::HostSyncEnabled, false);
     cfg.syncToPlayhead = state.getProperty(TimingIds::SyncToPlayhead, false);
 
     cfg.timeIntervalMs = sanitizeFloat(
-        state.getProperty(TimingIds::TimeIntervalMs, 500.0f),
-        EngineTimingConfig::DEFAULT_TIME_INTERVAL_MS,
-        EngineTimingConfig::MIN_TIME_INTERVAL_MS,
-        EngineTimingConfig::MAX_TIME_INTERVAL_MS);
+        state.getProperty(TimingIds::TimeIntervalMs, 500.0f), EngineTimingConfig::DEFAULT_TIME_INTERVAL_MS,
+        EngineTimingConfig::MIN_TIME_INTERVAL_MS, EngineTimingConfig::MAX_TIME_INTERVAL_MS);
 
-    cfg.noteInterval = static_cast<EngineNoteInterval>(
-        sanitizeEnumRange(
-            static_cast<int>(state.getProperty(TimingIds::NoteInterval,
-                static_cast<int>(EngineNoteInterval::NOTE_1_4TH))),
-            static_cast<int>(EngineNoteInterval::NOTE_1_32ND),
-            static_cast<int>(EngineNoteInterval::NOTE_TRIPLET_1_8TH),
-            static_cast<int>(EngineNoteInterval::NOTE_1_4TH)));
+    cfg.noteInterval = static_cast<EngineNoteInterval>(sanitizeEnumRange(
+        static_cast<int>(state.getProperty(TimingIds::NoteInterval, static_cast<int>(EngineNoteInterval::NOTE_1_4TH))),
+        static_cast<int>(EngineNoteInterval::NOTE_1_32ND), static_cast<int>(EngineNoteInterval::NOTE_TRIPLET_1_8TH),
+        static_cast<int>(EngineNoteInterval::NOTE_1_4TH)));
 
-    cfg.triggerMode = static_cast<WaveformTriggerMode>(
-        sanitizeEnumRange(
-            static_cast<int>(state.getProperty(TimingIds::TriggerMode,
-                static_cast<int>(WaveformTriggerMode::None))),
-            static_cast<int>(WaveformTriggerMode::None),
-            static_cast<int>(WaveformTriggerMode::BothEdges),
-            static_cast<int>(WaveformTriggerMode::None)));
+    cfg.triggerMode = static_cast<WaveformTriggerMode>(sanitizeEnumRange(
+        static_cast<int>(state.getProperty(TimingIds::TriggerMode, static_cast<int>(WaveformTriggerMode::None))),
+        static_cast<int>(WaveformTriggerMode::None), static_cast<int>(WaveformTriggerMode::BothEdges),
+        static_cast<int>(WaveformTriggerMode::None)));
 
-    cfg.triggerThreshold = sanitizeFloat(
-        state.getProperty(TimingIds::TriggerThreshold, 0.1f), 0.1f, 0.0f, 1.0f);
-    cfg.midiTriggerNote = juce::jlimit(-1, 127,
-        static_cast<int>(state.getProperty(TimingIds::MidiTriggerNote, -1)));
-    cfg.midiTriggerChannel = juce::jlimit(0, 16,
-        static_cast<int>(state.getProperty(TimingIds::MidiTriggerChannel, 0)));
-    cfg.internalBPM = sanitizeFloat(
-        state.getProperty(TimingIds::InternalBPM, 120.0f),
-        120.0f, EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM);
-    cfg.triggerChannel = juce::jmax(0,
-        static_cast<int>(state.getProperty(TimingIds::TriggerChannel, 0)));
-    cfg.triggerHysteresis = sanitizeFloat(
-        state.getProperty(TimingIds::TriggerHysteresis, 0.01f), 0.01f, 0.0f, 1.0f);
+    cfg.triggerThreshold = sanitizeFloat(state.getProperty(TimingIds::TriggerThreshold, 0.1f), 0.1f, 0.0f, 1.0f);
+    cfg.midiTriggerNote = juce::jlimit(-1, 127, static_cast<int>(state.getProperty(TimingIds::MidiTriggerNote, -1)));
+    cfg.midiTriggerChannel = juce::jlimit(0, 16, static_cast<int>(state.getProperty(TimingIds::MidiTriggerChannel, 0)));
+    cfg.internalBPM = sanitizeFloat(state.getProperty(TimingIds::InternalBPM, 120.0f), 120.0f,
+                                    EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM);
+    cfg.triggerChannel = juce::jmax(0, static_cast<int>(state.getProperty(TimingIds::TriggerChannel, 0)));
+    cfg.triggerHysteresis = sanitizeFloat(state.getProperty(TimingIds::TriggerHysteresis, 0.01f), 0.01f, 0.0f, 1.0f);
 
     configLock_.write(cfg);
 }
@@ -366,8 +349,7 @@ namespace
 {
 void convertTriggerMode(const TimingConfigData& cfg, TimingConfig& out)
 {
-    if (cfg.triggerMode == WaveformTriggerMode::None ||
-        cfg.triggerMode == WaveformTriggerMode::Manual)
+    if (cfg.triggerMode == WaveformTriggerMode::None || cfg.triggerMode == WaveformTriggerMode::Manual)
     {
         out.triggerMode = TriggerMode::FREE_RUNNING;
         return;
@@ -382,11 +364,18 @@ void convertTriggerMode(const TimingConfigData& cfg, TimingConfig& out)
     out.triggerMode = TriggerMode::TRIGGERED;
     switch (cfg.triggerMode)
     {
-        case WaveformTriggerMode::RisingEdge:  out.triggerEdge = TriggerEdge::Rising;  break;
-        case WaveformTriggerMode::FallingEdge: out.triggerEdge = TriggerEdge::Falling; break;
+        case WaveformTriggerMode::RisingEdge:
+            out.triggerEdge = TriggerEdge::Rising;
+            break;
+        case WaveformTriggerMode::FallingEdge:
+            out.triggerEdge = TriggerEdge::Falling;
+            break;
         case WaveformTriggerMode::BothEdges:
-        case WaveformTriggerMode::Level:       out.triggerEdge = TriggerEdge::Both;    break;
-        default: break;
+        case WaveformTriggerMode::Level:
+            out.triggerEdge = TriggerEdge::Both;
+            break;
+        default:
+            break;
     }
 }
 } // namespace

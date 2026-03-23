@@ -3,14 +3,14 @@
 */
 
 #include "ui/components/InlineEditLabel.h"
-#include "ui/components/OscilButton.h"
+
 #include "ui/components/ListItemIcons.h"
+#include "ui/components/OscilButton.h"
 
 namespace oscil
 {
 
-InlineEditLabel::InlineEditLabel(IThemeService& themeService)
-    : ThemedComponent(themeService)
+InlineEditLabel::InlineEditLabel(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setupComponents();
     updateEditorStyle();
@@ -22,9 +22,7 @@ InlineEditLabel::InlineEditLabel(IThemeService& themeService, const juce::String
     setTestId(testId);
 }
 
-InlineEditLabel::~InlineEditLabel()
-{
-}
+InlineEditLabel::~InlineEditLabel() {}
 
 void InlineEditLabel::setupComponents()
 {
@@ -36,13 +34,9 @@ void InlineEditLabel::setupComponents()
     editor_->setCaretVisible(true);
     editor_->setPopupMenuEnabled(false);
 
-    editor_->onReturnKey = [this]() {
-        saveChanges();
-    };
+    editor_->onReturnKey = [this]() { saveChanges(); };
 
-    editor_->onEscapeKey = [this]() {
-        cancelChanges();
-    };
+    editor_->onEscapeKey = [this]() { cancelChanges(); };
 
     editor_->onFocusLost = [this]() {
         // Only cancel if we're still in edit mode and mouse isn't over buttons
@@ -65,9 +59,7 @@ void InlineEditLabel::setupComponents()
     saveButton_->setVariant(ButtonVariant::Icon);
     saveButton_->setIconPath(ListItemIcons::createCheckmarkIcon(static_cast<float>(BUTTON_SIZE)));
     saveButton_->setTooltip("Save (Enter)");
-    saveButton_->onClick = [this]() {
-        saveChanges();
-    };
+    saveButton_->onClick = [this]() { saveChanges(); };
     addChildComponent(*saveButton_);
 
     // Create cancel button
@@ -75,18 +67,13 @@ void InlineEditLabel::setupComponents()
     cancelButton_->setVariant(ButtonVariant::Icon);
     cancelButton_->setIconPath(ListItemIcons::createCloseIcon(static_cast<float>(BUTTON_SIZE)));
     cancelButton_->setTooltip("Cancel (Escape)");
-    cancelButton_->onClick = [this]() {
-        cancelChanges();
-    };
+    cancelButton_->onClick = [this]() { cancelChanges(); };
     addChildComponent(*cancelButton_);
 
     updateEditorStyle();
 }
 
-void InlineEditLabel::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void InlineEditLabel::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 void InlineEditLabel::setText(const juce::String& text, bool notify)
 {
@@ -106,8 +93,7 @@ void InlineEditLabel::setPlaceholder(const juce::String& placeholder)
 {
     placeholder_ = placeholder;
     if (editor_)
-        editor_->setTextToShowWhenEmpty(placeholder,
-            getTheme().textSecondary);
+        editor_->setTextToShowWhenEmpty(placeholder, getTheme().textSecondary);
 }
 
 void InlineEditLabel::setMaxLength(int maxLength)
@@ -328,10 +314,7 @@ void InlineEditLabel::paint(juce::Graphics& g)
     g.drawText(displayText, bounds.toNearestInt(), justification_, false);
 }
 
-void InlineEditLabel::resized()
-{
-    updateLayout();
-}
+void InlineEditLabel::resized() { updateLayout(); }
 
 void InlineEditLabel::updateLayout()
 {
@@ -345,16 +328,16 @@ void InlineEditLabel::updateLayout()
 
         if (cancelButton_)
         {
-            cancelButton_->setBounds(buttonArea.removeFromRight(BUTTON_SIZE)
-                .withSizeKeepingCentre(BUTTON_SIZE, BUTTON_SIZE));
+            cancelButton_->setBounds(
+                buttonArea.removeFromRight(BUTTON_SIZE).withSizeKeepingCentre(BUTTON_SIZE, BUTTON_SIZE));
         }
 
         buttonArea.removeFromRight(BUTTON_SPACING);
 
         if (saveButton_)
         {
-            saveButton_->setBounds(buttonArea.removeFromRight(BUTTON_SIZE)
-                .withSizeKeepingCentre(BUTTON_SIZE, BUTTON_SIZE));
+            saveButton_->setBounds(
+                buttonArea.removeFromRight(BUTTON_SIZE).withSizeKeepingCentre(BUTTON_SIZE, BUTTON_SIZE));
         }
 
         // Editor takes remaining space

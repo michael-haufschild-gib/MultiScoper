@@ -7,6 +7,7 @@
 
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
+
 #include <memory>
 #include <vector>
 
@@ -296,10 +297,7 @@ public:
     /**
      * Build and return a shared_ptr to the OscilState
      */
-    std::shared_ptr<OscilState> buildShared()
-    {
-        return std::shared_ptr<OscilState>(buildUnique().release());
-    }
+    std::shared_ptr<OscilState> buildShared() { return std::shared_ptr<OscilState>(buildUnique().release()); }
 
     /**
      * Build and serialize to XML string

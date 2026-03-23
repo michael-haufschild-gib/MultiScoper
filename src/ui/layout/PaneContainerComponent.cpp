@@ -7,24 +7,16 @@
 namespace oscil
 {
 
-PaneContainerComponent::PaneContainerComponent()
-{
-}
+PaneContainerComponent::PaneContainerComponent() {}
 
-void PaneContainerComponent::setPaneDropCallback(PaneDropCallback callback)
-{
-    paneDropCallback_ = std::move(callback);
-}
+void PaneContainerComponent::setPaneDropCallback(PaneDropCallback callback) { paneDropCallback_ = std::move(callback); }
 
 void PaneContainerComponent::setEmptyColumnDropCallback(EmptyColumnDropCallback callback)
 {
     emptyColumnDropCallback_ = std::move(callback);
 }
 
-void PaneContainerComponent::setColumnCount(int count)
-{
-    columnCount_ = count;
-}
+void PaneContainerComponent::setColumnCount(int count) { columnCount_ = count; }
 
 bool PaneContainerComponent::isInterestedInDragSource(const SourceDetails& dragSourceDetails)
 {
@@ -47,10 +39,7 @@ void PaneContainerComponent::itemDragMove(const SourceDetails& dragSourceDetails
     updateDropTarget(dragSourceDetails);
 }
 
-void PaneContainerComponent::itemDragExit(const SourceDetails& /*dragSourceDetails*/)
-{
-    clearDropHighlight();
-}
+void PaneContainerComponent::itemDragExit(const SourceDetails& /*dragSourceDetails*/) { clearDropHighlight(); }
 
 void PaneContainerComponent::itemDropped(const SourceDetails& dragSourceDetails)
 {

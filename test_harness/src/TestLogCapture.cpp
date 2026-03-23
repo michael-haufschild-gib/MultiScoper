@@ -7,10 +7,7 @@
 namespace oscil::test
 {
 
-TestLogCapture::TestLogCapture()
-    : startTimeMs_(juce::Time::getMillisecondCounter())
-{
-}
+TestLogCapture::TestLogCapture() : startTimeMs_(juce::Time::getMillisecondCounter()) {}
 
 TestLogCapture& TestLogCapture::getInstance()
 {
@@ -38,7 +35,7 @@ std::vector<LogEntry> TestLogCapture::getRecentLogs(size_t maxEntries) const
     std::scoped_lock lock(mutex_);
     size_t count = std::min(maxEntries, entries_.size());
     auto start = entries_.end() - static_cast<std::ptrdiff_t>(count);
-    return { start, entries_.end() };
+    return {start, entries_.end()};
 }
 
 void TestLogCapture::clear()

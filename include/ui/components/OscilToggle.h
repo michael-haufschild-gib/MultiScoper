@@ -5,14 +5,15 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_audio_processors/juce_audio_processors.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -28,9 +29,10 @@ namespace oscil
  * - Optional label
  * - E2E test automation via testId
  */
-class OscilToggle : public ThemedComponent,
-                    public TestIdSupport,
-                    private juce::Timer
+class OscilToggle
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     OscilToggle(IThemeService& themeService);
@@ -54,9 +56,8 @@ public:
     void setEnabled(bool enabled);
     bool isEnabled() const { return enabled_; }
 
-    // APVTS integration
-    void attachToParameter(juce::AudioProcessorValueTreeState& apvts,
-                           const juce::String& paramId);
+    /// Bind this toggle to an APVTS parameter for two-way synchronization.
+    void attachToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId);
     void detachFromParameter();
     bool isAttachedToParameter() const { return attachment_ != nullptr; }
 
@@ -100,8 +101,8 @@ private:
     bool labelOnRight_ = true;
 
     // Animation
-    SpringAnimation positionSpring_;       // Knob position (0 = off, 1 = on)
-    SpringAnimation celebrationSpring_;    // Scale pulse on activation
+    SpringAnimation positionSpring_;    // Knob position (0 = off, 1 = on)
+    SpringAnimation celebrationSpring_; // Scale pulse on activation
 
     // APVTS
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> attachment_;

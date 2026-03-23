@@ -4,9 +4,10 @@
     Note: These are unit tests for mathematical calculations, not E2E UI tests
 */
 
-#include <gtest/gtest.h>
-#include "ui/layout/sections/TimingSidebarSection.h"
 #include "core/dsp/TimingConfig.h"
+#include "ui/layout/sections/TimingSidebarSection.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -34,11 +35,11 @@ TEST_F(TimingCalculationsTest, TimeIntervalChangesDisplaySamples)
     EXPECT_EQ(expectedSamples, 2205);
 
     // Test with different intervals
-    intervalMs = 100;  // 100ms
+    intervalMs = 100; // 100ms
     expectedSamples = static_cast<int>(sampleRate * (static_cast<double>(intervalMs) / 1000.0));
     EXPECT_EQ(expectedSamples, 4410);
 
-    intervalMs = 10;  // 10ms
+    intervalMs = 10; // 10ms
     expectedSamples = static_cast<int>(sampleRate * (static_cast<double>(intervalMs) / 1000.0));
     EXPECT_EQ(expectedSamples, 441);
 }
@@ -48,22 +49,22 @@ TEST_F(TimingCalculationsTest, GainDbConvertsCorrectly)
 {
     // Test gain conversion: amplitude = 10^(dB/20)
     float dB0 = 0.0f;
-    float expected0 = 1.0f;  // Unity gain
+    float expected0 = 1.0f; // Unity gain
     float amplitude0 = std::pow(10.0f, dB0 / 20.0f);
     EXPECT_NEAR(amplitude0, expected0, 0.001f);
 
     float dB6 = 6.0f;
-    float expected6 = 1.995f;  // ~2x gain
+    float expected6 = 1.995f; // ~2x gain
     float amplitude6 = std::pow(10.0f, dB6 / 20.0f);
     EXPECT_NEAR(amplitude6, expected6, 0.01f);
 
     float dBNeg6 = -6.0f;
-    float expectedNeg6 = 0.501f;  // ~0.5x gain
+    float expectedNeg6 = 0.501f; // ~0.5x gain
     float amplitudeNeg6 = std::pow(10.0f, dBNeg6 / 20.0f);
     EXPECT_NEAR(amplitudeNeg6, expectedNeg6, 0.01f);
 
     float dBNeg60 = -60.0f;
-    float expectedNeg60 = 0.001f;  // Nearly silent
+    float expectedNeg60 = 0.001f; // Nearly silent
     float amplitudeNeg60 = std::pow(10.0f, dBNeg60 / 20.0f);
     EXPECT_NEAR(amplitudeNeg60, expectedNeg60, 0.0001f);
 }
@@ -199,7 +200,7 @@ TEST_F(TimingCalculationsTest, NoteIntervalMultipliers)
     // Eighth note = 0.5x
     // Sixteenth note = 0.25x
 
-    float quarterNoteDuration = 500.0f;  // At 120 BPM
+    float quarterNoteDuration = 500.0f; // At 120 BPM
 
     // Half note (2 beats)
     float halfNoteDuration = quarterNoteDuration * 2.0f;
@@ -227,10 +228,10 @@ TEST_F(TimingCalculationsTest, DisplaySamplesBounds)
     int intervalMs = 1;
     int samples = static_cast<int>(sampleRate * (static_cast<double>(intervalMs) / 1000.0));
     EXPECT_GT(samples, 0);
-    EXPECT_EQ(samples, 44);  // 44.1 rounded down
+    EXPECT_EQ(samples, 44); // 44.1 rounded down
 
     // Large interval (60 seconds = 60000ms)
     intervalMs = 60000;
     samples = static_cast<int>(sampleRate * (static_cast<double>(intervalMs) / 1000.0));
-    EXPECT_EQ(samples, 2646000);  // 60 seconds worth of samples
+    EXPECT_EQ(samples, 2646000); // 60 seconds worth of samples
 }

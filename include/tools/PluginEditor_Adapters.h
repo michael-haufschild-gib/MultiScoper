@@ -5,12 +5,13 @@
 
 #pragma once
 
+#include "core/MemoryBudgetManager.h"
+#include "core/dsp/TimingEngine.h"
+#include "ui/dialogs/OscillatorConfigDialog.h"
+#include "ui/layout/SidebarComponent.h"
+
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
-#include "ui/layout/SidebarComponent.h"
-#include "ui/dialogs/OscillatorConfigDialog.h"
-#include "core/dsp/TimingEngine.h"
-#include "core/MemoryBudgetManager.h"
 
 namespace oscil
 {
@@ -21,10 +22,7 @@ namespace oscil
 class ConfigPopupListenerAdapter : public OscillatorConfigDialog::Listener
 {
 public:
-    explicit ConfigPopupListenerAdapter(OscilPluginEditor& editor)
-        : editor_(editor)
-    {
-    }
+    explicit ConfigPopupListenerAdapter(OscilPluginEditor& editor) : editor_(editor) {}
 
     void oscillatorConfigChanged(const OscillatorId& oscillatorId, const Oscillator& updated) override
     {
@@ -32,13 +30,13 @@ public:
         if (auto* controller = editor_.getOscillatorPanelController())
         {
             // This method isn't in the SidebarListener interface we inherited.
-            // We need to expose `onOscillatorConfigChanged` on the Controller or access `updateOscillator` via state directly.
-            // But the Controller handles state updates.
-            
-            // Let's use the `updateOscillator` method on state via processor, 
+            // We need to expose `onOscillatorConfigChanged` on the Controller or access `updateOscillator` via state
+            // directly. But the Controller handles state updates.
+
+            // Let's use the `updateOscillator` method on state via processor,
             // but also we need to handle source changes.
             // `updateOscillatorSource` is public on controller now.
-            
+
             auto& state = editor_.getProcessor().getState();
             auto currentOscillators = state.getOscillators();
             for (const auto& existing : currentOscillators)
@@ -64,10 +62,7 @@ public:
         }
     }
 
-    void configDialogClosed() override
-    {
-        editor_.onConfigPopupClosed();
-    }
+    void configDialogClosed() override { editor_.onConfigPopupClosed(); }
 
 private:
     OscilPluginEditor& editor_;
@@ -80,8 +75,7 @@ private:
 class TimingEngineListenerAdapter : public TimingEngine::Listener
 {
 public:
-    explicit TimingEngineListenerAdapter(OscilPluginEditor& editor)
-        : editor_(editor) {}
+    explicit TimingEngineListenerAdapter(OscilPluginEditor& editor) : editor_(editor) {}
 
     void timingModeChanged(TimingMode mode) override
     {
@@ -125,7 +119,8 @@ private:
         if (captureRate > 0)
         {
             float actualIntervalMs = timingEngine.getActualIntervalMs();
-            int displaySamples = static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(actualIntervalMs) / 1000.0));
+            int displaySamples =
+                static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(actualIntervalMs) / 1000.0));
             editor_.setDisplaySamplesForAllPanes(displaySamples);
             editor_.setSampleRateForAllPanes(captureRate);
 

@@ -11,11 +11,13 @@
     - Missing preferences directory preventing save
 */
 
-#include <gtest/gtest.h>
 #include "core/GlobalPreferences.h"
+
 #include <juce_core/juce_core.h>
-#include <thread>
+
 #include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 #include <vector>
 
 using namespace oscil;
@@ -64,35 +66,17 @@ TEST_F(GlobalPreferencesTest, DefaultThemeIsDarkProfessional)
     EXPECT_EQ(prefs_->getDefaultTheme(), juce::String("Dark Professional"));
 }
 
-TEST_F(GlobalPreferencesTest, DefaultColumnLayoutIsOne)
-{
-    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 1);
-}
+TEST_F(GlobalPreferencesTest, DefaultColumnLayoutIsOne) { EXPECT_EQ(prefs_->getDefaultColumnLayout(), 1); }
 
-TEST_F(GlobalPreferencesTest, DefaultShowStatusBarIsTrue)
-{
-    EXPECT_TRUE(prefs_->getShowStatusBar());
-}
+TEST_F(GlobalPreferencesTest, DefaultShowStatusBarIsTrue) { EXPECT_TRUE(prefs_->getShowStatusBar()); }
 
-TEST_F(GlobalPreferencesTest, DefaultReducedMotionIsFalse)
-{
-    EXPECT_FALSE(prefs_->getReducedMotion());
-}
+TEST_F(GlobalPreferencesTest, DefaultReducedMotionIsFalse) { EXPECT_FALSE(prefs_->getReducedMotion()); }
 
-TEST_F(GlobalPreferencesTest, DefaultUIAudioFeedbackIsFalse)
-{
-    EXPECT_FALSE(prefs_->getUIAudioFeedback());
-}
+TEST_F(GlobalPreferencesTest, DefaultUIAudioFeedbackIsFalse) { EXPECT_FALSE(prefs_->getUIAudioFeedback()); }
 
-TEST_F(GlobalPreferencesTest, DefaultTooltipsEnabledIsTrue)
-{
-    EXPECT_TRUE(prefs_->getTooltipsEnabled());
-}
+TEST_F(GlobalPreferencesTest, DefaultTooltipsEnabledIsTrue) { EXPECT_TRUE(prefs_->getTooltipsEnabled()); }
 
-TEST_F(GlobalPreferencesTest, DefaultSidebarWidthIs280)
-{
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 280);
-}
+TEST_F(GlobalPreferencesTest, DefaultSidebarWidthIs280) { EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 280); }
 
 // ============================================================================
 // Set-Then-Get Round Trip
@@ -158,8 +142,7 @@ TEST_F(GlobalPreferencesTest, SpecialCharactersInThemeName)
 {
     // Bug caught: XML special characters corrupting preferences file
     prefs_->setDefaultTheme("Theme <with> \"quotes\" & 'apostrophes'");
-    EXPECT_EQ(prefs_->getDefaultTheme(),
-              juce::String("Theme <with> \"quotes\" & 'apostrophes'"));
+    EXPECT_EQ(prefs_->getDefaultTheme(), juce::String("Theme <with> \"quotes\" & 'apostrophes'"));
 }
 
 TEST_F(GlobalPreferencesTest, NegativeColumnLayout)
@@ -264,8 +247,7 @@ TEST_F(GlobalPreferencesTest, ConcurrentReadsDoNotCorruptDuringWrite)
     writer.join();
     reader.join();
 
-    EXPECT_EQ(readErrors.load(), 0)
-        << "Reader saw invalid column layout during concurrent writes";
+    EXPECT_EQ(readErrors.load(), 0) << "Reader saw invalid column layout during concurrent writes";
 
     // Final state must be deterministic (last write wins)
     EXPECT_EQ(prefs_->getDefaultColumnLayout(), 9);

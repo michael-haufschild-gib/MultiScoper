@@ -5,18 +5,20 @@
     Designed to be consumed by AI coding agents and scenario-based test runners.
 */
 
-#include "TestHttpServer.h"
-#include "TestLogCapture.h"
-#include "TestElementRegistry.h"
-#include "TestAudioGenerator.h"
 #include "core/OscilState.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/dsp/TimingEngineTypes.h"
 #include "core/interfaces/IAudioBuffer.h"
-#include "plugin/PluginFactory.h"
-#include "plugin/PluginEditor.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
+
+#include "TestAudioGenerator.h"
+#include "TestElementRegistry.h"
+#include "TestHttpServer.h"
+#include "TestLogCapture.h"
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginFactory.h"
+
 #include <algorithm>
 
 namespace oscil::test
@@ -51,21 +53,18 @@ json snapshotOscillators(OscilPluginProcessor& processor)
             auto available = static_cast<int64_t>(buffer->getAvailableSamples());
             float peakL = buffer->getPeakLevel(0, 1024);
             float peakR = buffer->getPeakLevel(1, 1024);
-            j["captureBuffer"] = {
-                {"available", available},
-                {"peakL", peakL}, {"peakR", peakR},
-                {"rmsL", buffer->getRMSLevel(0, 1024)},
-                {"rmsR", buffer->getRMSLevel(1, 1024)},
-                {"peak", std::max(peakL, peakR)},
-                {"hasData", available > 0 && std::max(peakL, peakR) > 0.0001f}
-            };
+            j["captureBuffer"] = {{"available", available},
+                                  {"peakL", peakL},
+                                  {"peakR", peakR},
+                                  {"rmsL", buffer->getRMSLevel(0, 1024)},
+                                  {"rmsR", buffer->getRMSLevel(1, 1024)},
+                                  {"peak", std::max(peakL, peakR)},
+                                  {"hasData", available > 0 && std::max(peakL, peakR) > 0.0001f}};
         }
         else
         {
-            j["captureBuffer"] = {
-                {"available", 0}, {"peakL", 0}, {"peakR", 0},
-                {"rmsL", 0}, {"rmsR", 0}, {"peak", 0}, {"hasData", false}
-            };
+            j["captureBuffer"] = {{"available", 0}, {"peakL", 0}, {"peakR", 0},      {"rmsL", 0},
+                                  {"rmsR", 0},      {"peak", 0},  {"hasData", false}};
         }
 
         arr.push_back(j);
@@ -79,13 +78,11 @@ json snapshotPanes(const OscilState& state)
     json arr = json::array();
     for (const auto& pane : layoutManager.getPanes())
     {
-        arr.push_back({
-            {"id", pane.getId().id.toStdString()},
-            {"name", pane.getName().toStdString()},
-            {"column", pane.getColumnIndex()},
-            {"order", pane.getOrderIndex()},
-            {"collapsed", pane.isCollapsed()}
-        });
+        arr.push_back({{"id", pane.getId().id.toStdString()},
+                       {"name", pane.getName().toStdString()},
+                       {"column", pane.getColumnIndex()},
+                       {"order", pane.getOrderIndex()},
+                       {"collapsed", pane.isCollapsed()}});
     }
     return arr;
 }
@@ -93,12 +90,10 @@ json snapshotPanes(const OscilState& state)
 json snapshotTransport(TestDAW& daw)
 {
     auto& transport = daw.getTransport();
-    return {
-        {"playing", transport.isPlaying()},
-        {"bpm", transport.getBpm()},
-        {"positionSamples", transport.getPositionSamples()},
-        {"sampleRate", daw.getSampleRate()}
-    };
+    return {{"playing", transport.isPlaying()},
+            {"bpm", transport.getBpm()},
+            {"positionSamples", transport.getPositionSamples()},
+            {"sampleRate", daw.getSampleRate()}};
 }
 
 json snapshotTiming(OscilPluginProcessor& processor)
@@ -106,17 +101,15 @@ json snapshotTiming(OscilPluginProcessor& processor)
     auto& timingEngine = processor.getTimingEngine();
     auto config = timingEngine.getConfig();
     double sr = processor.getSampleRate();
-    return {
-        {"mode", config.timingMode == TimingMode::TIME ? "TIME" : "MELODIC"},
-        {"timeIntervalMs", config.timeIntervalMs},
-        {"actualIntervalMs", config.actualIntervalMs},
-        {"noteInterval", static_cast<int>(config.noteInterval)},
-        {"internalBPM", config.internalBPM},
-        {"hostBPM", config.hostBPM},
-        {"hostSyncEnabled", config.hostSyncEnabled},
-        {"displaySamples", timingEngine.getDisplaySampleCount(sr)},
-        {"triggerMode", static_cast<int>(config.triggerMode)}
-    };
+    return {{"mode", config.timingMode == TimingMode::TIME ? "TIME" : "MELODIC"},
+            {"timeIntervalMs", config.timeIntervalMs},
+            {"actualIntervalMs", config.actualIntervalMs},
+            {"noteInterval", static_cast<int>(config.noteInterval)},
+            {"internalBPM", config.internalBPM},
+            {"hostBPM", config.hostBPM},
+            {"hostSyncEnabled", config.hostSyncEnabled},
+            {"displaySamples", timingEngine.getDisplaySampleCount(sr)},
+            {"triggerMode", static_cast<int>(config.triggerMode)}};
 }
 
 json snapshotSources()
@@ -125,12 +118,10 @@ json snapshotSources()
     auto allSources = PluginFactory::getInstance().getInstanceRegistry().getAllSources();
     for (const auto& s : allSources)
     {
-        arr.push_back({
-            {"id", s.sourceId.id.toStdString()},
-            {"name", s.name.toStdString()},
-            {"channels", s.channelCount},
-            {"sampleRate", s.sampleRate}
-        });
+        arr.push_back({{"id", s.sourceId.id.toStdString()},
+                       {"name", s.name.toStdString()},
+                       {"channels", s.channelCount},
+                       {"sampleRate", s.sampleRate}});
     }
     return arr;
 }
@@ -148,13 +139,11 @@ json snapshotUI()
 json snapshotMetrics(TestMetrics& metrics)
 {
     auto snapshot = metrics.getCurrentSnapshot();
-    return {
-        {"fps", snapshot.fps},
-        {"cpuPercent", snapshot.cpuPercent},
-        {"memoryMB", snapshot.memoryMB},
-        {"oscillatorCount", snapshot.oscillatorCount},
-        {"sourceCount", snapshot.sourceCount}
-    };
+    return {{"fps", snapshot.fps},
+            {"cpuPercent", snapshot.cpuPercent},
+            {"memoryMB", snapshot.memoryMB},
+            {"oscillatorCount", snapshot.oscillatorCount},
+            {"sourceCount", snapshot.sourceCount}};
 }
 
 json snapshotLogs()
@@ -163,10 +152,7 @@ json snapshotLogs()
     json arr = json::array();
     for (const auto& e : entries)
     {
-        arr.push_back({
-            {"t", e.timestampMs},
-            {"msg", e.message}
-        });
+        arr.push_back({{"t", e.timestampMs}, {"msg", e.message}});
     }
     return arr;
 }
@@ -177,15 +163,14 @@ json snapshotAudioGenerators(TestDAW& daw)
     for (int i = 0; i < daw.getNumTracks(); ++i)
     {
         auto* track = daw.getTrack(i);
-        if (!track) continue;
+        if (!track)
+            continue;
         auto& gen = track->getAudioGenerator();
-        arr.push_back({
-            {"track", i},
-            {"waveform", TestAudioGenerator::waveformToString(gen.getWaveform()).toStdString()},
-            {"frequency", gen.getFrequency()},
-            {"amplitude", gen.getAmplitude()},
-            {"generating", gen.isGenerating()}
-        });
+        arr.push_back({{"track", i},
+                       {"waveform", TestAudioGenerator::waveformToString(gen.getWaveform()).toStdString()},
+                       {"frequency", gen.getFrequency()},
+                       {"amplitude", gen.getAmplitude()},
+                       {"generating", gen.isGenerating()}});
     }
     return arr;
 }
@@ -210,8 +195,7 @@ json serializeWaveformState(WaveformComponent* wf, const Oscillator* osc)
     auto c = wf->getColour();
     j["colour"] = {{"r", c.getRed()}, {"g", c.getGreen()}, {"b", c.getBlue()}, {"a", c.getAlpha()}};
     auto bounds = wf->getBounds();
-    j["bounds"] = {{"x", bounds.getX()}, {"y", bounds.getY()},
-                   {"w", bounds.getWidth()}, {"h", bounds.getHeight()}};
+    j["bounds"] = {{"x", bounds.getX()}, {"y", bounds.getY()}, {"w", bounds.getWidth()}, {"h", bounds.getHeight()}};
     return j;
 }
 
@@ -241,14 +225,17 @@ json snapshotGUI(TestDAW& daw)
         for (size_t pi = 0; pi < paneComponents.size(); ++pi)
         {
             auto* pane = paneComponents[pi].get();
-            if (!pane) continue;
+            if (!pane)
+                continue;
             json paneJson;
             paneJson["index"] = pi;
             paneJson["paneId"] = pane->getPaneId().id.toStdString();
             paneJson["oscillatorCount"] = pane->getOscillatorCount();
             auto paneBounds = pane->getBounds();
-            paneJson["bounds"] = {{"x", paneBounds.getX()}, {"y", paneBounds.getY()},
-                                  {"w", paneBounds.getWidth()}, {"h", paneBounds.getHeight()}};
+            paneJson["bounds"] = {{"x", paneBounds.getX()},
+                                  {"y", paneBounds.getY()},
+                                  {"w", paneBounds.getWidth()},
+                                  {"h", paneBounds.getHeight()}};
 
             json waveformsArr = json::array();
             for (size_t wi = 0; wi < pane->getOscillatorCount(); ++wi)

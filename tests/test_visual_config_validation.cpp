@@ -3,8 +3,9 @@
     Tests for shader type validation, enum conversions, and default values
 */
 
-#include <gtest/gtest.h>
 #include "rendering/VisualConfiguration.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -34,12 +35,8 @@ TEST_F(ShaderTypeTest, IdToShaderType)
 
 TEST_F(ShaderTypeTest, RoundTripConversion)
 {
-    std::vector<ShaderType> allTypes = {
-        ShaderType::Basic2D,
-        ShaderType::NeonGlow,
-        ShaderType::GradientFill,
-        ShaderType::DualOutline
-    };
+    std::vector<ShaderType> allTypes = {ShaderType::Basic2D, ShaderType::NeonGlow, ShaderType::GradientFill,
+                                        ShaderType::DualOutline};
 
     for (auto type : allTypes)
     {

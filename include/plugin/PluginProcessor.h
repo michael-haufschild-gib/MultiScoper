@@ -37,7 +37,8 @@ struct PluginProcessorConfig
     MemoryBudgetManager& memoryBudgetManager;
 };
 
-class OscilPluginProcessor : public juce::AudioProcessor
+class OscilPluginProcessor
+    : public juce::AudioProcessor
     , public IAudioDataProvider
     , public juce::ValueTree::Listener
 {
@@ -113,11 +114,11 @@ private:
     void deferRegistration(double sampleRate);
     void updateCpuUsage(int64_t startTicks, int numSamples);
 
-    IInstanceRegistry& instanceRegistry_;       // Injected dependency
-    IThemeService& themeService_;               // Injected dependency
-    ShaderRegistry& shaderRegistry_;            // Injected dependency
-    PresetManager& presetManager_;              // Injected dependency
-    MemoryBudgetManager& memoryBudgetManager_;  // Injected dependency
+    IInstanceRegistry& instanceRegistry_;      // Injected dependency
+    IThemeService& themeService_;              // Injected dependency
+    ShaderRegistry& shaderRegistry_;           // Injected dependency
+    PresetManager& presetManager_;             // Injected dependency
+    MemoryBudgetManager& memoryBudgetManager_; // Injected dependency
 
     // Capture buffer
     std::shared_ptr<DecimatingCaptureBuffer> captureBuffer_;
@@ -151,7 +152,7 @@ private:
     // interactions (state changes), which are orders of magnitude slower.
     std::vector<char> cachedStateBuffers_[2];
     std::atomic<int> cachedStateActiveIndex_{0};
-    int64_t lastCachedStateSwapTimeMs_{0};  // Debug: tracks last swap time for invariant check
+    int64_t lastCachedStateSwapTimeMs_{0}; // Debug: tracks last swap time for invariant check
 
     // Helper to update cached state (call from message thread only)
     void updateCachedState();
@@ -163,7 +164,7 @@ private:
 
     // Helper to thread-safely get current capture config
     CaptureQualityConfig getCaptureQualityConfig() const;
-    
+
     // Helper to thread-safely set current capture config
     void setCaptureQualityConfig(const CaptureQualityConfig& config);
 

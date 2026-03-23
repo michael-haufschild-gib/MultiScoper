@@ -4,6 +4,7 @@
 */
 
 #include "ui/panels/WaveformComponent.h"
+
 #include "rendering/ShaderRegistry.h"
 #include "rendering/WaveformShader.h"
 
@@ -56,11 +57,11 @@ void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int>)
     }
 }
 
-static void buildChannelPath(juce::Path& path, const std::vector<float>& buffer,
-                              int width, float centerY, float amplitude, float scale,
-                              float yMin, float yMax)
+static void buildChannelPath(juce::Path& path, const std::vector<float>& buffer, int width, float centerY,
+                             float amplitude, float scale, float yMin, float yMax)
 {
-    if (buffer.size() < 2) return;
+    if (buffer.size() < 2)
+        return;
 
     float xScale = static_cast<float>(width) / static_cast<float>(buffer.size() - 1);
     float yStart = juce::jlimit(yMin, yMax, centerY - buffer[0] * amplitude * scale);
@@ -102,15 +103,13 @@ void WaveformComponent::updateWaveformPath()
     if (isStereo)
     {
         float halfH = h * 0.5f;
-        buildChannelPath(waveformPath1_, displayBuffer1, width,
-                         halfH * 0.5f, halfH * 0.5f, effectiveScale, 0.0f, halfH);
-        buildChannelPath(waveformPath2_, displayBuffer2, width,
-                         halfH * 1.5f, halfH * 0.5f, effectiveScale, halfH, h);
+        buildChannelPath(waveformPath1_, displayBuffer1, width, halfH * 0.5f, halfH * 0.5f, effectiveScale, 0.0f,
+                         halfH);
+        buildChannelPath(waveformPath2_, displayBuffer2, width, halfH * 1.5f, halfH * 0.5f, effectiveScale, halfH, h);
     }
     else
     {
-        buildChannelPath(waveformPath1_, displayBuffer1, width,
-                         h * 0.5f, h * 0.5f, effectiveScale, 0.0f, h);
+        buildChannelPath(waveformPath1_, displayBuffer1, width, h * 0.5f, h * 0.5f, effectiveScale, 0.0f, h);
     }
 }
 

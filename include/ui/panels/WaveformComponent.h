@@ -17,8 +17,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <atomic>
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 namespace oscil
 {

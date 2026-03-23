@@ -7,9 +7,10 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
-#include <vector>
+
 #include <cmath>
 #include <random>
+#include <vector>
 
 namespace oscil::test
 {
@@ -28,7 +29,8 @@ inline juce::AudioBuffer<float> generateSineWave(int numSamples, float frequency
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float value = amplitude * std::sin(2.0f * juce::MathConstants<float>::pi * frequency * static_cast<float>(i) / sampleRate);
+        float value = amplitude *
+                      std::sin(2.0f * juce::MathConstants<float>::pi * frequency * static_cast<float>(i) / sampleRate);
         buffer.setSample(0, i, value);
         buffer.setSample(1, i, value);
     }
@@ -45,14 +47,17 @@ inline juce::AudioBuffer<float> generateSineWave(int numSamples, float frequency
  * @param sampleRate Sample rate in Hz
  * @return AudioBuffer containing the stereo sine waves
  */
-inline juce::AudioBuffer<float> generateStereoSineWave(int numSamples, float leftFreq, float rightFreq, float amplitude, float sampleRate)
+inline juce::AudioBuffer<float> generateStereoSineWave(int numSamples, float leftFreq, float rightFreq, float amplitude,
+                                                       float sampleRate)
 {
     juce::AudioBuffer<float> buffer(2, numSamples);
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float leftValue = amplitude * std::sin(2.0f * juce::MathConstants<float>::pi * leftFreq * static_cast<float>(i) / sampleRate);
-        float rightValue = amplitude * std::sin(2.0f * juce::MathConstants<float>::pi * rightFreq * static_cast<float>(i) / sampleRate);
+        float leftValue =
+            amplitude * std::sin(2.0f * juce::MathConstants<float>::pi * leftFreq * static_cast<float>(i) / sampleRate);
+        float rightValue = amplitude * std::sin(2.0f * juce::MathConstants<float>::pi * rightFreq *
+                                                static_cast<float>(i) / sampleRate);
         buffer.setSample(0, i, leftValue);
         buffer.setSample(1, i, rightValue);
     }

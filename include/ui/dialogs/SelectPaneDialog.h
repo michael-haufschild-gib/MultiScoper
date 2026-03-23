@@ -6,17 +6,17 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/PaneSelectorComponent.h"
-#include "ui/components/OscilButton.h"
 #include "core/Pane.h"
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 #include <vector>
-
-#include "ui/theme/IThemeService.h"
 
 namespace oscil
 {
@@ -28,9 +28,10 @@ namespace oscil
  * Shows a dropdown to select an existing pane or create a new one,
  * with OK/Cancel buttons and error display.
  */
-class SelectPaneDialog : public juce::Component,
-                          public ThemeManagerListener,
-                          public TestIdSupport
+class SelectPaneDialog
+    : public juce::Component
+    , public ThemeManagerListener
+    , public TestIdSupport
 {
 public:
     /**
@@ -38,8 +39,8 @@ public:
      */
     struct Result
     {
-        PaneId paneId;          // Valid if createNewPane is false
-        bool createNewPane;     // True if "New pane" was selected
+        PaneId paneId;      // Valid if createNewPane is false
+        bool createNewPane; // True if "New pane" was selected
     };
 
     /**

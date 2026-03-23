@@ -3,10 +3,12 @@
     Tests for the reusable pane selector component
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/theme/ThemeManager.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#include <gtest/gtest.h>
 
 namespace oscil::test
 {
@@ -21,10 +23,7 @@ protected:
         themeManager_ = std::make_unique<ThemeManager>();
     }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     IThemeService& getThemeService() { return *themeManager_; }
 
@@ -48,7 +47,7 @@ protected:
         std::vector<std::pair<PaneId, juce::String>> panes;
         for (int i = 0; i < count; ++i)
         {
-            PaneId id;  // Auto-generates UUID
+            PaneId id; // Auto-generates UUID
             panes.emplace_back(id, "Pane " + juce::String(i + 1));
         }
         return panes;
@@ -81,7 +80,7 @@ TEST_F(PaneSelectorTest, SetAvailablePanesFromPaneVector)
 
     // Should have 4 options: New pane + 3 existing panes
     // Can't directly check count without exposing internal dropdown
-    EXPECT_FALSE(selector.getSelectedPaneId().isValid());  // New pane selected by default
+    EXPECT_FALSE(selector.getSelectedPaneId().isValid()); // New pane selected by default
     EXPECT_TRUE(selector.isNewPaneSelected());
 }
 
@@ -120,9 +119,7 @@ TEST_F(PaneSelectorTest, SetSelectedPaneIdValid)
     selector.setAvailablePanes(panes);
 
     // Select second pane - no exception should occur
-    EXPECT_NO_THROW({
-        selector.setSelectedPaneId(panes[1].first, false);
-    });
+    EXPECT_NO_THROW({ selector.setSelectedPaneId(panes[1].first, false); });
 
     // Note: Selection may not update synchronously in headless test environment
     // The component uses OscilDropdown internally which may need message loop
@@ -188,14 +185,10 @@ TEST_F(PaneSelectorTest, OnSelectionChangedCallback)
 
     bool callbackSet = false;
 
-    selector.onSelectionChanged = [&callbackSet](const PaneId&, bool) {
-        callbackSet = true;
-    };
+    selector.onSelectionChanged = [&callbackSet](const PaneId&, bool) { callbackSet = true; };
 
     // Verify callback can be set without throwing
-    EXPECT_NO_THROW({
-        selector.setSelectedPaneId(panes[1].first, true);
-    });
+    EXPECT_NO_THROW({ selector.setSelectedPaneId(panes[1].first, true); });
 
     // Note: Callback may not be triggered from setSelectedPaneId in headless tests
     // The callback is primarily designed for UI dropdown changes
@@ -208,9 +201,7 @@ TEST_F(PaneSelectorTest, OnSelectionChangedCallbackNotCalledWithNotifyFalse)
     selector.setAvailablePanes(panes);
 
     bool callbackCalled = false;
-    selector.onSelectionChanged = [&](const PaneId&, bool) {
-        callbackCalled = true;
-    };
+    selector.onSelectionChanged = [&](const PaneId&, bool) { callbackCalled = true; };
 
     // Select a pane without notify
     selector.setSelectedPaneId(panes[1].first, false);

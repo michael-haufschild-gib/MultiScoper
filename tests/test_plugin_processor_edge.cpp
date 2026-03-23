@@ -11,15 +11,17 @@
     - processBlock with denormals causing CPU spike
 */
 
-#include <gtest/gtest.h>
-#include "OscilTestUtils.h"
-#include "plugin/PluginProcessor.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
+
+#include "OscilTestUtils.h"
+#include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 #include <limits>
 
 using namespace oscil;
@@ -42,8 +44,8 @@ protected:
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(200);
     }
@@ -89,8 +91,7 @@ TEST_F(PluginProcessorEdgeTest, ProcessBlockWithNaNAudioPassesThroughAndDoesNotC
 
     for (int i = 0; i < 512; ++i)
     {
-        EXPECT_FLOAT_EQ(cleanBuffer.getSample(0, i), 0.5f)
-            << "Clean audio corrupted after NaN input at sample " << i;
+        EXPECT_FLOAT_EQ(cleanBuffer.getSample(0, i), 0.5f) << "Clean audio corrupted after NaN input at sample " << i;
     }
 }
 
@@ -206,8 +207,7 @@ TEST_F(PluginProcessorEdgeTest, UpdateTrackPropertiesUpdatesSourceName)
     // all sources to show as "Oscil Track" in the aggregator UI.
     // Registration is deferred via callAsync, so we must pump the message queue.
     auto sourceId = processor->getSourceId();
-    ASSERT_TRUE(sourceId.isValid())
-        << "Source not registered after prepareToPlay + pumpMessageQueue";
+    ASSERT_TRUE(sourceId.isValid()) << "Source not registered after prepareToPlay + pumpMessageQueue";
 
     juce::AudioProcessor::TrackProperties props;
     props.name = "Vocals";

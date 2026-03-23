@@ -8,8 +8,7 @@
 namespace oscil
 {
 
-OscillatorSidebarSection::OscillatorSidebarSection(ServiceContext& context)
-    : themeService_(context.themeService)
+OscillatorSidebarSection::OscillatorSidebarSection(ServiceContext& context) : themeService_(context.themeService)
 {
     themeService_.addListener(this);
     setupComponents();
@@ -62,10 +61,7 @@ void OscillatorSidebarSection::resized()
     }
 }
 
-void OscillatorSidebarSection::themeChanged(const ColorTheme&)
-{
-    repaint();
-}
+void OscillatorSidebarSection::themeChanged(const ColorTheme&) { repaint(); }
 
 int OscillatorSidebarSection::getPreferredHeight() const
 {
@@ -85,15 +81,9 @@ void OscillatorSidebarSection::setSelectedOscillator(const OscillatorId& oscilla
         oscillatorList_->setSelectedOscillator(oscillatorId);
 }
 
-void OscillatorSidebarSection::addListener(Listener* listener)
-{
-    listeners_.add(listener);
-}
+void OscillatorSidebarSection::addListener(Listener* listener) { listeners_.add(listener); }
 
-void OscillatorSidebarSection::removeListener(Listener* listener)
-{
-    listeners_.remove(listener);
-}
+void OscillatorSidebarSection::removeListener(Listener* listener) { listeners_.remove(listener); }
 
 // OscillatorListComponent::Listener forwarding
 

@@ -3,17 +3,18 @@
 */
 
 #include "ui/layout/pane/overlays/CrosshairOverlay.h"
+
 #include "ui/theme/ThemeManager.h"
+
 #include <cmath>
 
 namespace oscil
 {
 
-CrosshairOverlay::CrosshairOverlay(IThemeService& themeService)
-    : themeService_(themeService)
+CrosshairOverlay::CrosshairOverlay(IThemeService& themeService) : themeService_(themeService)
 {
     setOpaque(false);
-    setInterceptsMouseClicks(false, false);  // Always click-through
+    setInterceptsMouseClicks(false, false); // Always click-through
 
     themeService_.addListener(this);
 }
@@ -28,10 +29,7 @@ CrosshairOverlay::CrosshairOverlay(IThemeService& themeService, const juce::Stri
 #endif
 }
 
-CrosshairOverlay::~CrosshairOverlay()
-{
-    themeService_.removeListener(this);
-}
+CrosshairOverlay::~CrosshairOverlay() { themeService_.removeListener(this); }
 
 void CrosshairOverlay::setMousePosition(juce::Point<int> pos)
 {
@@ -165,7 +163,7 @@ juce::Rectangle<int> CrosshairOverlay::calculateTooltipBounds() const
     x = juce::jmax(bounds.getX(), juce::jmin(x, bounds.getRight() - tooltipWidth));
     y = juce::jmax(bounds.getY(), juce::jmin(y, bounds.getBottom() - tooltipHeight));
 
-    return { x, y, tooltipWidth, tooltipHeight };
+    return {x, y, tooltipWidth, tooltipHeight};
 }
 
 bool CrosshairOverlay::hitTest(int /*x*/, int /*y*/)
@@ -174,9 +172,6 @@ bool CrosshairOverlay::hitTest(int /*x*/, int /*y*/)
     return false;
 }
 
-void CrosshairOverlay::themeChanged(const ColorTheme& /*newTheme*/)
-{
-    repaint();
-}
+void CrosshairOverlay::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 } // namespace oscil

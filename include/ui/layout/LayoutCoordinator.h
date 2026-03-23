@@ -6,6 +6,7 @@
 #pragma once
 
 #include "ui/layout/WindowLayout.h"
+
 #include <functional>
 
 namespace oscil

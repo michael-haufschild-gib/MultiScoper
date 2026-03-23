@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <string>
 
@@ -26,9 +26,9 @@ struct SpringAnimation
     float target = 0.0f;
 
     // Spring parameters
-    float stiffness = 300.0f;   // Higher = faster/snappier
-    float damping = 20.0f;      // Higher = less oscillation
-    float mass = 1.0f;          // Higher = more momentum
+    float stiffness = 300.0f; // Higher = faster/snappier
+    float damping = 20.0f;    // Higher = less oscillation
+    float mass = 1.0f;        // Higher = more momentum
 
     /**
      * Create a spring animation with default parameters
@@ -38,16 +38,12 @@ struct SpringAnimation
     /**
      * Create a spring animation with custom parameters
      */
-    SpringAnimation(float stiff, float damp, float m = 1.0f)
-        : stiffness(stiff), damping(damp), mass(m) {}
+    SpringAnimation(float stiff, float damp, float m = 1.0f) : stiffness(stiff), damping(damp), mass(m) {}
 
     /**
      * Set the target value (animation destination)
      */
-    void setTarget(float newTarget)
-    {
-        target = newTarget;
-    }
+    void setTarget(float newTarget) { target = newTarget; }
 
     /**
      * Set the target and immediately start from a specific position
@@ -94,17 +90,13 @@ struct SpringAnimation
      */
     bool isSettled(float threshold = 0.001f) const
     {
-        return std::abs(position - target) < threshold &&
-               std::abs(velocity) < threshold;
+        return std::abs(position - target) < threshold && std::abs(velocity) < threshold;
     }
 
     /**
      * Check if animation needs updating (not yet settled)
      */
-    bool needsUpdate(float threshold = 0.001f) const
-    {
-        return !isSettled(threshold);
-    }
+    bool needsUpdate(float threshold = 0.001f) const { return !isSettled(threshold); }
 
     /**
      * Immediately snap to target (skip animation)
@@ -128,15 +120,12 @@ struct SpringAnimation
     /**
      * Get current value (clamped between 0 and 1 for normalized animations)
      */
-    float getNormalized() const
-    {
-        return std::clamp(position, 0.0f, 1.0f);
-    }
+    float getNormalized() const { return std::clamp(position, 0.0f, 1.0f); }
 
     /**
      * Get interpolated value between two values based on current position
      */
-    template<typename T>
+    template <typename T>
     T interpolate(const T& from, const T& to) const
     {
         float t = std::clamp(position, 0.0f, 1.0f);
@@ -146,10 +135,7 @@ struct SpringAnimation
     /**
      * Apply a brief impulse (for celebration effects, etc.)
      */
-    void impulse(float amount)
-    {
-        velocity += amount;
-    }
+    void impulse(float amount) { velocity += amount; }
 };
 
 /**
@@ -157,60 +143,42 @@ struct SpringAnimation
  */
 namespace SpringPresets
 {
-    /**
-     * Snappy - Quick response, minimal overshoot
-     * Use for: Button presses, quick state changes
-     */
-    inline SpringAnimation snappy()
-    {
-        return SpringAnimation(400.0f, 30.0f, 1.0f);
-    }
+/**
+ * Snappy - Quick response, minimal overshoot
+ * Use for: Button presses, quick state changes
+ */
+inline SpringAnimation snappy() { return SpringAnimation(400.0f, 30.0f, 1.0f); }
 
-    /**
-     * Bouncy - Playful with noticeable overshoot
-     * Use for: Toggle celebrations, success states
-     */
-    inline SpringAnimation bouncy()
-    {
-        return SpringAnimation(300.0f, 15.0f, 1.0f);
-    }
+/**
+ * Bouncy - Playful with noticeable overshoot
+ * Use for: Toggle celebrations, success states
+ */
+inline SpringAnimation bouncy() { return SpringAnimation(300.0f, 15.0f, 1.0f); }
 
-    /**
-     * Smooth - Gentle, no overshoot
-     * Use for: Panel transitions, layout animations
-     */
-    inline SpringAnimation smooth()
-    {
-        return SpringAnimation(200.0f, 25.0f, 1.0f);
-    }
+/**
+ * Smooth - Gentle, no overshoot
+ * Use for: Panel transitions, layout animations
+ */
+inline SpringAnimation smooth() { return SpringAnimation(200.0f, 25.0f, 1.0f); }
 
-    /**
-     * Gentle - Slow, dreamy motion
-     * Use for: Background effects, ambient animations
-     */
-    inline SpringAnimation gentle()
-    {
-        return SpringAnimation(150.0f, 20.0f, 1.0f);
-    }
+/**
+ * Gentle - Slow, dreamy motion
+ * Use for: Background effects, ambient animations
+ */
+inline SpringAnimation gentle() { return SpringAnimation(150.0f, 20.0f, 1.0f); }
 
-    /**
-     * Stiff - Very fast, almost instant
-     * Use for: Hover states, micro-interactions
-     */
-    inline SpringAnimation stiff()
-    {
-        return SpringAnimation(500.0f, 40.0f, 1.0f);
-    }
+/**
+ * Stiff - Very fast, almost instant
+ * Use for: Hover states, micro-interactions
+ */
+inline SpringAnimation stiff() { return SpringAnimation(500.0f, 40.0f, 1.0f); }
 
-    /**
-     * Wobbly - Fun, exaggerated motion
-     * Use for: Playful UI, game-like interfaces
-     */
-    inline SpringAnimation wobbly()
-    {
-        return SpringAnimation(250.0f, 10.0f, 1.0f);
-    }
-}
+/**
+ * Wobbly - Fun, exaggerated motion
+ * Use for: Playful UI, game-like interfaces
+ */
+inline SpringAnimation wobbly() { return SpringAnimation(250.0f, 10.0f, 1.0f); }
+} // namespace SpringPresets
 
 /**
  * Helper class for managing multiple spring animations

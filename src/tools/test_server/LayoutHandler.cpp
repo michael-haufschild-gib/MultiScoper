@@ -3,10 +3,12 @@
 */
 
 #include "tools/test_server/LayoutHandler.h"
-#include "plugin/PluginEditor.h"
-#include "plugin/PluginProcessor.h"
+
 #include "core/OscilState.h"
 #include "core/Pane.h"
+
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginProcessor.h"
 
 namespace oscil
 {
@@ -86,12 +88,7 @@ void LayoutHandler::handleGetPaneBounds(const httplib::Request& /*req*/, httplib
 
         juce::Rectangle<int> availableArea(0, 0, availableWidth, availableHeight);
 
-        response["availableArea"] = {
-            {"x", 0},
-            {"y", 0},
-            {"width", availableWidth},
-            {"height", availableHeight}
-        };
+        response["availableArea"] = {{"x", 0}, {"y", 0}, {"width", availableWidth}, {"height", availableHeight}};
 
         nlohmann::json panes = nlohmann::json::array();
         const auto& paneList = layoutManager.getPanes();
@@ -104,12 +101,10 @@ void LayoutHandler::handleGetPaneBounds(const httplib::Request& /*req*/, httplib
             paneInfo["id"] = paneList[i].getId().id.toStdString();
             paneInfo["name"] = paneList[i].getName().toStdString();
             paneInfo["columnIndex"] = paneList[i].getColumnIndex();
-            paneInfo["bounds"] = {
-                {"x", bounds.getX()},
-                {"y", bounds.getY()},
-                {"width", bounds.getWidth()},
-                {"height", bounds.getHeight()}
-            };
+            paneInfo["bounds"] = {{"x", bounds.getX()},
+                                  {"y", bounds.getY()},
+                                  {"width", bounds.getWidth()},
+                                  {"height", bounds.getHeight()}};
             panes.push_back(paneInfo);
         }
 

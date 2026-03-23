@@ -3,8 +3,8 @@
     Rendering, backdrop, title bar, and layout bounds for OscilModal
 */
 
-#include "ui/components/OscilModal.h"
 #include "ui/components/ListItemIcons.h"
+#include "ui/components/OscilModal.h"
 
 namespace oscil
 {
@@ -26,12 +26,8 @@ void OscilModal::paint(juce::Graphics& g)
     auto scaledWidth = static_cast<int>(static_cast<float>(modalBounds.getWidth()) * scale);
     auto scaledHeight = static_cast<int>(static_cast<float>(modalBounds.getHeight()) * scale);
 
-    auto scaledBounds = juce::Rectangle<int>(
-        centreX - scaledWidth / 2,
-        centreY - scaledHeight / 2,
-        scaledWidth,
-        scaledHeight
-    );
+    auto scaledBounds =
+        juce::Rectangle<int>(centreX - scaledWidth / 2, centreY - scaledHeight / 2, scaledWidth, scaledHeight);
 
     paintModal(g, scaledBounds);
 }
@@ -54,8 +50,7 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
     g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_LG);
 
     g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.3f));
-    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f),
-                           ComponentLayout::RADIUS_LG, 1.0f);
+    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_LG, 1.0f);
 
     if (title_.isNotEmpty())
     {
@@ -87,8 +82,7 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
             g.fillRoundedRectangle(closeBounds, ComponentLayout::RADIUS_SM);
         }
 
-        auto iconColor = getTheme().textSecondary.interpolatedWith(
-            getTheme().textPrimary, hoverAlpha);
+        auto iconColor = getTheme().textSecondary.interpolatedWith(getTheme().textPrimary, hoverAlpha);
         g.setColour(iconColor.withAlpha(alpha));
         float iconSize = 14.0f;
         auto iconPath = ListItemIcons::createCloseIcon(iconSize);
@@ -169,12 +163,8 @@ juce::Rectangle<int> OscilModal::getContentBounds() const
 juce::Rectangle<int> OscilModal::getCloseButtonBounds() const
 {
     auto titleBounds = getTitleBarBounds();
-    return juce::Rectangle<int>(
-        titleBounds.getRight() - MODAL_PADDING - CLOSE_BUTTON_SIZE,
-        titleBounds.getCentreY() - CLOSE_BUTTON_SIZE / 2,
-        CLOSE_BUTTON_SIZE,
-        CLOSE_BUTTON_SIZE
-    );
+    return juce::Rectangle<int>(titleBounds.getRight() - MODAL_PADDING - CLOSE_BUTTON_SIZE,
+                                titleBounds.getCentreY() - CLOSE_BUTTON_SIZE / 2, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE);
 }
 
 } // namespace oscil

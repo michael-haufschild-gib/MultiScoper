@@ -3,13 +3,15 @@
     Stereo consistency, analysis methods, oversized writes, and tryLock under concurrency
 */
 
-#include <gtest/gtest.h>
-#include "helpers/AudioBufferBuilder.h"
 #include "core/SharedCaptureBuffer.h"
-#include <thread>
+
+#include "helpers/AudioBufferBuilder.h"
+
 #include <atomic>
-#include <vector>
 #include <cmath>
+#include <gtest/gtest.h>
+#include <thread>
+#include <vector>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -36,13 +38,15 @@ TEST_F(CaptureBufferConcurrentTest, TryLockDropsWriteUnderContention)
     std::atomic<int> w1{0}, w2{0};
 
     std::thread writer1([&]() {
-        for (int i = 0; i < kIterations; ++i) {
+        for (int i = 0; i < kIterations; ++i)
+        {
             buffer->write(generateDCBuffer(64, 0.3f), CaptureFrameMetadata{}, true);
             w1.fetch_add(1, std::memory_order_relaxed);
         }
     });
     std::thread writer2([&]() {
-        for (int i = 0; i < kIterations; ++i) {
+        for (int i = 0; i < kIterations; ++i)
+        {
             buffer->write(generateDCBuffer(64, 0.7f), CaptureFrameMetadata{}, true);
             w2.fetch_add(1, std::memory_order_relaxed);
         }
@@ -66,14 +70,16 @@ TEST_F(CaptureBufferConcurrentTest, OversizedWriteUnderConcurrency)
     buffer->write(generateDCBuffer(256, 0.42f), CaptureFrameMetadata{});
 
     std::thread writer([&]() {
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             buffer->write(generateDCBuffer(256, 0.42f), CaptureFrameMetadata{});
             wc.fetch_add(1, std::memory_order_relaxed);
         }
     });
     std::thread reader([&]() {
         std::vector<float> out(128);
-        for (int i = 0; i < kReaderIterations; ++i) {
+        for (int i = 0; i < kReaderIterations; ++i)
+        {
             int n = buffer->read(out.data(), 128, 0);
             for (int j = 0; j < n; ++j)
                 EXPECT_NEAR(out[static_cast<size_t>(j)], 0.42f, 0.001f);
@@ -96,7 +102,8 @@ TEST_F(CaptureBufferConcurrentTest, StereoChannelConsistency)
     // Seed the buffer with stereo DC data
     {
         juce::AudioBuffer<float> seed(2, kBlock);
-        for (int s = 0; s < kBlock; ++s) {
+        for (int s = 0; s < kBlock; ++s)
+        {
             seed.setSample(0, s, 0.5f);
             seed.setSample(1, s, 0.5f);
         }
@@ -105,10 +112,12 @@ TEST_F(CaptureBufferConcurrentTest, StereoChannelConsistency)
 
     std::thread writer([&]() {
         int i = 0;
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             float dc = static_cast<float>(i % 500) * 0.002f;
             juce::AudioBuffer<float> buf(2, kBlock);
-            for (int s = 0; s < kBlock; ++s) {
+            for (int s = 0; s < kBlock; ++s)
+            {
                 buf.setSample(0, s, dc);
                 buf.setSample(1, s, dc);
             }
@@ -121,10 +130,14 @@ TEST_F(CaptureBufferConcurrentTest, StereoChannelConsistency)
     // AudioBuffer overload reads both channels within one epoch check
     std::thread reader([&]() {
         juce::AudioBuffer<float> out(2, kBlock);
-        for (int i = 0; i < kReaderIterations; ++i) {
-            if (buffer->read(out, kBlock) == kBlock) {
-                for (int s = 0; s < kBlock; ++s) {
-                    if (std::abs(out.getSample(0, s) - out.getSample(1, s)) > 0.001f) {
+        for (int i = 0; i < kReaderIterations; ++i)
+        {
+            if (buffer->read(out, kBlock) == kBlock)
+            {
+                for (int s = 0; s < kBlock; ++s)
+                {
+                    if (std::abs(out.getSample(0, s) - out.getSample(1, s)) > 0.001f)
+                    {
                         mismatch.fetch_add(1, std::memory_order_relaxed);
                         break;
                     }
@@ -153,7 +166,8 @@ TEST_F(CaptureBufferConcurrentTest, AnalysisMethodsReturnValidResults)
     std::atomic<int> analysisCompleted{0};
 
     std::thread writer([&]() {
-        while (running.load(std::memory_order_relaxed)) {
+        while (running.load(std::memory_order_relaxed))
+        {
             buffer->write(generateDCBuffer(128, 0.5f), CaptureFrameMetadata{});
             wc.fetch_add(1, std::memory_order_relaxed);
         }
@@ -162,7 +176,8 @@ TEST_F(CaptureBufferConcurrentTest, AnalysisMethodsReturnValidResults)
     // Iteration-based: run a fixed number of analysis rounds instead of
     // relying on wall-clock time which varies under CI load.
     std::thread analyzer([&]() {
-        for (int i = 0; i < kTargetIterations; ++i) {
+        for (int i = 0; i < kTargetIterations; ++i)
+        {
             float peak = buffer->getPeakLevel(0, 64);
             float rms = buffer->getRMSLevel(0, 64);
             // Each method independently validates its epoch, so peak and rms

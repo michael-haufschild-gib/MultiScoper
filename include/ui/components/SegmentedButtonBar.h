@@ -6,9 +6,11 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <vector>
 
 namespace oscil
@@ -29,7 +31,6 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-
 
     // Keyboard navigation
     bool keyPressed(const juce::KeyPress& key) override;
@@ -105,7 +106,6 @@ private:
     int selectedId_ = -1;
     bool enabled_ = true;
     int minButtonWidth_ = 60;
-
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SegmentedButtonBar)
 };

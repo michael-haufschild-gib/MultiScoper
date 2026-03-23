@@ -2,9 +2,10 @@
     Oscil - Pane Action Bar Tests
 */
 
-#include <gtest/gtest.h>
 #include "ui/layout/pane/PaneActionBar.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -44,7 +45,7 @@ class PaneActionBarTest : public ::testing::Test
 {
 protected:
     ThemeManager themeManager;
-    PaneActionBar actionBar{ themeManager };
+    PaneActionBar actionBar{themeManager};
 };
 
 TEST_F(PaneActionBarTest, ProgrammaticHoldToggleUpdatesToggleState)
@@ -61,8 +62,8 @@ TEST_F(PaneActionBarTest, ProgrammaticHoldToggleUpdatesToggleState)
 
 TEST_F(PaneActionBarTest, UserAndProgrammaticHoldToggleHaveConsistentVisualState)
 {
-    PaneActionBar userPathBar{ themeManager };
-    PaneActionBar programmaticPathBar{ themeManager };
+    PaneActionBar userPathBar{themeManager};
+    PaneActionBar programmaticPathBar{themeManager};
     userPathBar.setBounds(0, 0, 80, 24);
     programmaticPathBar.setBounds(0, 0, 80, 24);
 
@@ -75,7 +76,8 @@ TEST_F(PaneActionBarTest, UserAndProgrammaticHoldToggleHaveConsistentVisualState
     programmaticPathBar.setActionToggled(PaneAction::ToggleHold, true);
 
     auto userSnapshot = userButton->createComponentSnapshot(userButton->getLocalBounds(), true, 1.0f);
-    auto programmaticSnapshot = programmaticButton->createComponentSnapshot(programmaticButton->getLocalBounds(), true, 1.0f);
+    auto programmaticSnapshot =
+        programmaticButton->createComponentSnapshot(programmaticButton->getLocalBounds(), true, 1.0f);
 
     EXPECT_TRUE(imagesEqual(userSnapshot, programmaticSnapshot));
 }

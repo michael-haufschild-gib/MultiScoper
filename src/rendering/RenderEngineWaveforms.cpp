@@ -4,8 +4,8 @@
 */
 
 #include "rendering/RenderEngine.h"
-#include "rendering/subsystems/WaveformPass.h"
 #include "rendering/subsystems/EffectPipeline.h"
+#include "rendering/subsystems/WaveformPass.h"
 
 namespace oscil
 {
@@ -69,7 +69,6 @@ void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& 
             {
                 it->second.disableTrails(*context_);
             }
-
         }
     }
 }
@@ -133,9 +132,6 @@ void RenderEngine::setGlobalPostProcessingEnabled(bool enabled)
     effectPipeline_->setGlobalPostProcessingEnabled(enabled);
 }
 
-bool RenderEngine::isGlobalPostProcessingEnabled() const
-{
-    return effectPipeline_->isGlobalPostProcessingEnabled();
-}
+bool RenderEngine::isGlobalPostProcessingEnabled() const { return effectPipeline_->isGlobalPostProcessingEnabled(); }
 
 } // namespace oscil

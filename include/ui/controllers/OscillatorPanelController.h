@@ -5,14 +5,16 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include "ui/layout/PaneContainerComponent.h"
+#include "core/ServiceContext.h"
 #include "ui/layout/PaneComponent.h"
+#include "ui/layout/PaneContainerComponent.h"
 #include "ui/layout/SidebarComponent.h"
 #include "ui/managers/DisplaySettingsManager.h"
-#include "core/ServiceContext.h"
-#include <vector>
+
+#include <juce_core/juce_core.h>
+
 #include <memory>
+#include <vector>
 
 namespace oscil
 {
@@ -26,14 +28,13 @@ class GpuRenderCoordinator;
  * Controller responsible for managing the dynamic grid of Oscillator Panes.
  * Extracts complex pane management logic from PluginEditor.
  */
-class OscillatorPanelController : public juce::ValueTree::Listener,
-                                  public SidebarComponent::Listener
+class OscillatorPanelController
+    : public juce::ValueTree::Listener
+    , public SidebarComponent::Listener
 {
 public:
-    OscillatorPanelController(IAudioDataProvider& dataProvider,
-                              ServiceContext& serviceContext,
-                              PaneContainerComponent& container,
-                              GpuRenderCoordinator& gpuCoordinator);
+    OscillatorPanelController(IAudioDataProvider& dataProvider, ServiceContext& serviceContext,
+                              PaneContainerComponent& container, GpuRenderCoordinator& gpuCoordinator);
 
     ~OscillatorPanelController() override;
 
@@ -122,22 +123,22 @@ public:
 private:
     void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
     void applyOscillatorPropertyChange(const OscillatorId& oscId, const juce::Identifier& property);
-    
+
     IAudioDataProvider& dataProvider_;
     ServiceContext& serviceContext_;
     PaneContainerComponent& container_;
     GpuRenderCoordinator& gpuCoordinator_;
-    
+
     // Weak references
     DisplaySettingsManager* displaySettings_ = nullptr;
     SidebarComponent* sidebar_ = nullptr;
     DialogManager* dialogManager_ = nullptr;
 
     std::vector<std::unique_ptr<PaneComponent>> paneComponents_;
-    bool isUpdating_ = false; // Guard against recursive updates
+    bool isUpdating_ = false;     // Guard against recursive updates
     bool pendingRefresh_ = false; // Coalesce refresh requests that arrive mid-update
     std::function<void()> layoutNeededCallback_;
-    
+
     // Track oscillator pending visibility change (for pane selection dialog)
     OscillatorId pendingVisibilityOscillatorId_;
 

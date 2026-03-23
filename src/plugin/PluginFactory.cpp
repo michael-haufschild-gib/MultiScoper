@@ -4,12 +4,15 @@
 */
 
 #include "plugin/PluginFactory.h"
+
+#include "core/GlobalPreferences.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
-#include "core/GlobalPreferences.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
+
 #include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
+
 #include <atomic>
 
 namespace oscil
@@ -17,10 +20,10 @@ namespace oscil
 
 namespace
 {
-    // The single factory instance - composition root
-    // Using atomic for thread-safe access from multiple threads
-    std::atomic<PluginFactory*> currentFactory{nullptr};
-}
+// The single factory instance - composition root
+// Using atomic for thread-safe access from multiple threads
+std::atomic<PluginFactory*> currentFactory{nullptr};
+} // namespace
 
 PluginFactory::PluginFactory()
     : themeManager_(std::make_unique<ThemeManager>())
@@ -52,44 +55,21 @@ void PluginFactory::setInstance(PluginFactory* factory)
 
 std::unique_ptr<juce::AudioProcessor> PluginFactory::createPluginProcessor()
 {
-    PluginProcessorConfig config{
-        *instanceRegistry_,
-        *themeManager_,
-        *shaderRegistry_,
-        *presetManager_,
-        *memoryBudgetManager_
-    };
+    PluginProcessorConfig config{*instanceRegistry_, *themeManager_, *shaderRegistry_, *presetManager_,
+                                 *memoryBudgetManager_};
     return std::make_unique<OscilPluginProcessor>(config);
 }
 
-ThemeManager& PluginFactory::getThemeManager()
-{
-    return *themeManager_;
-}
+ThemeManager& PluginFactory::getThemeManager() { return *themeManager_; }
 
-InstanceRegistry& PluginFactory::getInstanceRegistry()
-{
-    return *instanceRegistry_;
-}
+InstanceRegistry& PluginFactory::getInstanceRegistry() { return *instanceRegistry_; }
 
-ShaderRegistry& PluginFactory::getShaderRegistry()
-{
-    return *shaderRegistry_;
-}
+ShaderRegistry& PluginFactory::getShaderRegistry() { return *shaderRegistry_; }
 
-MemoryBudgetManager& PluginFactory::getMemoryBudgetManager()
-{
-    return *memoryBudgetManager_;
-}
+MemoryBudgetManager& PluginFactory::getMemoryBudgetManager() { return *memoryBudgetManager_; }
 
-GlobalPreferences& PluginFactory::getGlobalPreferences()
-{
-    return *globalPreferences_;
-}
+GlobalPreferences& PluginFactory::getGlobalPreferences() { return *globalPreferences_; }
 
-PresetManager& PluginFactory::getPresetManager()
-{
-    return *presetManager_;
-}
+PresetManager& PluginFactory::getPresetManager() { return *presetManager_; }
 
 } // namespace oscil

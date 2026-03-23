@@ -3,8 +3,9 @@
     Tests for theme import/export, JSON, and ValueTree serialization
 */
 
-#include <gtest/gtest.h>
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

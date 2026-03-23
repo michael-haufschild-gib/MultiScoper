@@ -5,16 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <vector>
-#include <memory>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include <memory>
+#include <vector>
 
 namespace oscil
 {
@@ -22,9 +24,10 @@ namespace oscil
 /**
  * Individual accordion section with animated expand/collapse
  */
-class OscilAccordionSection : public ThemedComponent,
-                              public TestIdSupport,
-                              private juce::Timer
+class OscilAccordionSection
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     /// Create accordion section with optional title.
@@ -96,13 +99,13 @@ private:
     bool enabled_ = true;
     bool isHovered_ = false;
     bool hasFocus_ = false;
-    bool mouseDownInHeader_ = false;  // Track if mouseDown occurred in header for proper click detection
+    bool mouseDownInHeader_ = false; // Track if mouseDown occurred in header for proper click detection
 
-    SpringAnimation expandSpring_;     // 0 = collapsed, 1 = expanded
+    SpringAnimation expandSpring_; // 0 = collapsed, 1 = expanded
     SpringAnimation hoverSpring_;
-    SpringAnimation chevronSpring_;    // Rotation animation
+    SpringAnimation chevronSpring_; // Rotation animation
 
-    int lastReportedHeight_ = -1;      // For optimizing parent layout updates
+    int lastReportedHeight_ = -1; // For optimizing parent layout updates
 
     static constexpr int HEADER_HEIGHT = 40;
     static constexpr int CHEVRON_SIZE = 16;

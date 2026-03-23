@@ -4,8 +4,6 @@
 
 #include "rendering/subsystems/EffectPipeline.h"
 
-#include <array>
-
 #include "rendering/effects/BloomEffect.h"
 #include "rendering/effects/ChromaticAberrationEffect.h"
 #include "rendering/effects/ColorGradeEffect.h"
@@ -16,6 +14,8 @@
 #include "rendering/effects/TrailsEffect.h"
 #include "rendering/effects/VignetteEffect.h"
 #include "rendering/subsystems/RenderStats.h" // For logging macros
+
+#include <array>
 
 namespace oscil
 {
@@ -87,20 +87,22 @@ void EffectPipeline::buildEffectChain()
 {
     effectChain_.clear();
 
-    auto configureVirtual = [](PostProcessEffect* e, const VisualConfiguration& c) {
-        e->configure(c);
-    };
+    auto configureVirtual = [](PostProcessEffect* e, const VisualConfiguration& c) { e->configure(c); };
 
-    struct ChainEntry { const char* id; bool (*isEnabled)(const VisualConfiguration&); };
+    struct ChainEntry
+    {
+        const char* id;
+        bool (*isEnabled)(const VisualConfiguration&);
+    };
     static constexpr auto entries = std::to_array<ChainEntry>({
-        {"bloom",                [](const VisualConfiguration& c) { return c.bloom.enabled; }},
-        {"radial_blur",          [](const VisualConfiguration& c) { return c.radialBlur.enabled; }},
-        {"tilt_shift",           [](const VisualConfiguration& c) { return c.tiltShift.enabled; }},
-        {"color_grade",          [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
+        {"bloom", [](const VisualConfiguration& c) { return c.bloom.enabled; }},
+        {"radial_blur", [](const VisualConfiguration& c) { return c.radialBlur.enabled; }},
+        {"tilt_shift", [](const VisualConfiguration& c) { return c.tiltShift.enabled; }},
+        {"color_grade", [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
         {"chromatic_aberration", [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; }},
-        {"scanlines",            [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
-        {"vignette",             [](const VisualConfiguration& c) { return c.vignette.enabled; }},
-        {"film_grain",           [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
+        {"scanlines", [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
+        {"vignette", [](const VisualConfiguration& c) { return c.vignette.enabled; }},
+        {"film_grain", [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
     });
 
     for (const auto& entry : entries)
@@ -151,15 +153,16 @@ PostProcessEffect* EffectPipeline::getEffect(const juce::String& effectId)
     return nullptr;
 }
 
-Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRenderState& state, juce::OpenGLContext& context, float deltaTime, juce::OpenGLShaderProgram* compositeShader, GLint compositeLoc)
+Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRenderState& state,
+                                                 juce::OpenGLContext& context, float deltaTime,
+                                                 juce::OpenGLShaderProgram* compositeShader, GLint compositeLoc)
 {
     const auto& config = state.visualConfig;
     Framebuffer* current = source;
 
     // Step 1: Apply trails effect BEFORE the generic effect chain
     // Trails requires per-waveform history FBO from WaveformRenderState
-    if (config.trails.enabled && state.trailsEnabled &&
-        state.historyFBO && state.historyFBO->isValid())
+    if (config.trails.enabled && state.trailsEnabled && state.historyFBO && state.historyFBO->isValid())
     {
         auto* trailsEffect = dynamic_cast<TrailsEffect*>(getEffect("trails"));
         if (trailsEffect && trailsEffect->isCompiled())
@@ -171,18 +174,15 @@ Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRe
             if (trailsDest && trailsDest->isValid())
             {
                 // Apply trails blending current frame with history
-                trailsEffect->applyWithHistory(
-                    context,
-                    current,                // Current frame
-                    state.historyFBO.get(), // Previous frame history
-                    trailsDest,             // Output
-                    *fbPool_,
-                    deltaTime
-                );
+                trailsEffect->applyWithHistory(context,
+                                               current,                // Current frame
+                                               state.historyFBO.get(), // Previous frame history
+                                               trailsDest,             // Output
+                                               *fbPool_, deltaTime);
 
                 // Copy the result back to historyFBO for the next frame
-                // We need to pass compositeShader to applyPostProcessing or have EffectPipeline hold a reference to Bootstrapper.
-                // Now we have it passed in.
+                // We need to pass compositeShader to applyPostProcessing or have EffectPipeline hold a reference to
+                // Bootstrapper. Now we have it passed in.
                 copyFramebuffer(context, trailsDest, state.historyFBO.get(), compositeShader, compositeLoc);
 
                 // Use trails output as input for the rest of the chain
@@ -196,7 +196,8 @@ Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRe
     return effectChain_.process(context, current, *fbPool_, deltaTime, config, *this);
 }
 
-void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, juce::OpenGLShaderProgram* compositeShader, GLint compositeTextureLoc)
+void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                                     juce::OpenGLShaderProgram* compositeShader, GLint compositeTextureLoc)
 {
     if (!source || !destination || !source->isValid() || !destination->isValid() || !compositeShader)
         return;

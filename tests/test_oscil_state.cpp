@@ -14,10 +14,12 @@
     - fromXmlString succeeding on non-OscilState root element
 */
 
-#include <gtest/gtest.h>
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
+
 #include "helpers/OscillatorBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -27,18 +29,12 @@ class OscilStateTest : public ::testing::Test
 protected:
     std::unique_ptr<OscilState> state;
 
-    void SetUp() override
-    {
-        state = std::make_unique<OscilState>();
-    }
+    void SetUp() override { state = std::make_unique<OscilState>(); }
 
     OscillatorId addOscillator(const juce::String& name, int orderIndex = 0)
     {
-        auto osc = OscillatorBuilder()
-            .withName(name)
-            .withSourceId(SourceId::generate())
-            .withOrderIndex(orderIndex)
-            .build();
+        auto osc =
+            OscillatorBuilder().withName(name).withSourceId(SourceId::generate()).withOrderIndex(orderIndex).build();
         state->addOscillator(osc);
         return osc.getId();
     }
@@ -53,55 +49,25 @@ TEST_F(OscilStateTest, DefaultStateHasCurrentSchemaVersion)
     EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
 }
 
-TEST_F(OscilStateTest, DefaultStateHasNoOscillators)
-{
-    EXPECT_EQ(state->getOscillators().size(), 0);
-}
+TEST_F(OscilStateTest, DefaultStateHasNoOscillators) { EXPECT_EQ(state->getOscillators().size(), 0); }
 
-TEST_F(OscilStateTest, DefaultStateHasNoPanes)
-{
-    EXPECT_EQ(state->getLayoutManager().getPaneCount(), 0);
-}
+TEST_F(OscilStateTest, DefaultStateHasNoPanes) { EXPECT_EQ(state->getLayoutManager().getPaneCount(), 0); }
 
-TEST_F(OscilStateTest, DefaultThemeIsDarkProfessional)
-{
-    EXPECT_EQ(state->getThemeName(), "Dark Professional");
-}
+TEST_F(OscilStateTest, DefaultThemeIsDarkProfessional) { EXPECT_EQ(state->getThemeName(), "Dark Professional"); }
 
-TEST_F(OscilStateTest, DefaultColumnLayoutIsSingle)
-{
-    EXPECT_EQ(state->getColumnLayout(), ColumnLayout::Single);
-}
+TEST_F(OscilStateTest, DefaultColumnLayoutIsSingle) { EXPECT_EQ(state->getColumnLayout(), ColumnLayout::Single); }
 
-TEST_F(OscilStateTest, DefaultSidebarWidth)
-{
-    EXPECT_EQ(state->getSidebarWidth(), 300);
-}
+TEST_F(OscilStateTest, DefaultSidebarWidth) { EXPECT_EQ(state->getSidebarWidth(), 300); }
 
-TEST_F(OscilStateTest, DefaultSidebarNotCollapsed)
-{
-    EXPECT_FALSE(state->isSidebarCollapsed());
-}
+TEST_F(OscilStateTest, DefaultSidebarNotCollapsed) { EXPECT_FALSE(state->isSidebarCollapsed()); }
 
-TEST_F(OscilStateTest, DefaultStatusBarVisible)
-{
-    EXPECT_TRUE(state->isStatusBarVisible());
-}
+TEST_F(OscilStateTest, DefaultStatusBarVisible) { EXPECT_TRUE(state->isStatusBarVisible()); }
 
-TEST_F(OscilStateTest, DefaultShowGridEnabled)
-{
-    EXPECT_TRUE(state->isShowGridEnabled());
-}
+TEST_F(OscilStateTest, DefaultShowGridEnabled) { EXPECT_TRUE(state->isShowGridEnabled()); }
 
-TEST_F(OscilStateTest, DefaultAutoScaleEnabled)
-{
-    EXPECT_TRUE(state->isAutoScaleEnabled());
-}
+TEST_F(OscilStateTest, DefaultAutoScaleEnabled) { EXPECT_TRUE(state->isAutoScaleEnabled()); }
 
-TEST_F(OscilStateTest, DefaultGainDbIsZero)
-{
-    EXPECT_FLOAT_EQ(state->getGainDb(), 0.0f);
-}
+TEST_F(OscilStateTest, DefaultGainDbIsZero) { EXPECT_FLOAT_EQ(state->getGainDb(), 0.0f); }
 
 TEST_F(OscilStateTest, DefaultCaptureQualityIsStandard)
 {
@@ -235,9 +201,7 @@ TEST_F(OscilStateTest, ReorderOscillatorsSameIndexIsNoOp)
 
     auto oscillators = state->getOscillators();
     std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) {
-                  return a.getOrderIndex() < b.getOrderIndex();
-              });
+              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
     EXPECT_EQ(oscillators[0].getName(), "A");
     EXPECT_EQ(oscillators[1].getName(), "B");
 }
@@ -263,9 +227,7 @@ TEST_F(OscilStateTest, ReorderOscillatorsMovesForward)
 
     auto oscillators = state->getOscillators();
     std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) {
-                  return a.getOrderIndex() < b.getOrderIndex();
-              });
+              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
     EXPECT_EQ(oscillators[0].getName(), "B");
     EXPECT_EQ(oscillators[1].getName(), "C");
@@ -283,9 +245,7 @@ TEST_F(OscilStateTest, ReorderOscillatorsMovesBackward)
 
     auto oscillators = state->getOscillators();
     std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) {
-                  return a.getOrderIndex() < b.getOrderIndex();
-              });
+              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
     EXPECT_EQ(oscillators[0].getName(), "C");
     EXPECT_EQ(oscillators[1].getName(), "A");
@@ -373,15 +333,9 @@ TEST_F(OscilStateTest, SetCaptureQualityConfigPersists)
 // Serialization Edge Cases
 // ============================================================================
 
-TEST_F(OscilStateTest, FromXmlStringRejectsEmptyString)
-{
-    EXPECT_FALSE(state->fromXmlString(""));
-}
+TEST_F(OscilStateTest, FromXmlStringRejectsEmptyString) { EXPECT_FALSE(state->fromXmlString("")); }
 
-TEST_F(OscilStateTest, FromXmlStringRejectsMalformedXml)
-{
-    EXPECT_FALSE(state->fromXmlString("<not <valid xml"));
-}
+TEST_F(OscilStateTest, FromXmlStringRejectsMalformedXml) { EXPECT_FALSE(state->fromXmlString("<not <valid xml")); }
 
 TEST_F(OscilStateTest, FromXmlStringRejectsWrongRootElement)
 {
@@ -402,10 +356,7 @@ TEST_F(OscilStateTest, ValueTreeListenerReceivesPropertyChanges)
     struct TestListener : juce::ValueTree::Listener
     {
         int changeCount = 0;
-        void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override
-        {
-            changeCount++;
-        }
+        void valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&) override { changeCount++; }
     };
 
     TestListener listener;

@@ -138,7 +138,8 @@ struct SidebarResizeState
 
     void updateResize(int mouseX, int windowWidth)
     {
-        if (!isResizing) return;
+        if (!isResizing)
+            return;
 
         // Sidebar is on the right, so moving left increases width
         int delta = dragStartX - mouseX;
@@ -147,10 +148,8 @@ struct SidebarResizeState
         // Clamp to valid range
         previewWidth = juce::jlimit(
             WindowLayout::MIN_SIDEBAR_WIDTH,
-            juce::jmin(WindowLayout::MAX_SIDEBAR_WIDTH,
-                       windowWidth - WindowLayout::MIN_OSCILLOSCOPE_WIDTH),
-            previewWidth
-        );
+            juce::jmin(WindowLayout::MAX_SIDEBAR_WIDTH, windowWidth - WindowLayout::MIN_OSCILLOSCOPE_WIDTH),
+            previewWidth);
     }
 
     void endResize()
@@ -172,11 +171,11 @@ struct SidebarResizeState
 // ValueTree identifiers for WindowLayout
 namespace WindowLayoutIds
 {
-    inline const juce::Identifier WindowLayout{ "WindowLayout" };
-    inline const juce::Identifier WindowWidth{ "windowWidth" };
-    inline const juce::Identifier WindowHeight{ "windowHeight" };
-    inline const juce::Identifier SidebarWidth{ "sidebarWidth" };
-    inline const juce::Identifier SidebarCollapsed{ "sidebarCollapsed" };
-}
+inline const juce::Identifier WindowLayout{"WindowLayout"};
+inline const juce::Identifier WindowWidth{"windowWidth"};
+inline const juce::Identifier WindowHeight{"windowHeight"};
+inline const juce::Identifier SidebarWidth{"sidebarWidth"};
+inline const juce::Identifier SidebarCollapsed{"sidebarCollapsed"};
+} // namespace WindowLayoutIds
 
 } // namespace oscil

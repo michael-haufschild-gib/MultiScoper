@@ -5,16 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
 #include "core/dsp/TimingConfig.h"
-#include "ui/theme/IThemeService.h"
+#include "ui/components/TestId.h"
 #include "ui/layout/pane/WaveformStack.h"
 #include "ui/layout/pane/overlays/CrosshairOverlay.h"
 #include "ui/layout/pane/overlays/StatsOverlay.h"
-#include "ui/components/TestId.h"
-#include <memory>
+#include "ui/theme/IThemeService.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <cstdint>
+#include <memory>
 
 namespace oscil
 {
@@ -32,14 +34,13 @@ class ShaderRegistry;
  * - CrosshairOverlay (mouse-following crosshair with tooltip)
  * - StatsOverlay (statistics display)
  */
-class PaneBody : public juce::Component,
-                  public TestIdSupport,
-                  private juce::Timer
+class PaneBody
+    : public juce::Component
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
-    PaneBody(IAudioDataProvider& dataProvider,
-             IInstanceRegistry& instanceRegistry,
-             IThemeService& themeService,
+    PaneBody(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, IThemeService& themeService,
              ShaderRegistry& shaderRegistry);
     ~PaneBody() override;
 

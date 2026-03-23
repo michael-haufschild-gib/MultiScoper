@@ -3,6 +3,7 @@
 */
 
 #include "TestMetrics.h"
+
 #include <algorithm>
 #include <numeric>
 
@@ -10,24 +11,19 @@
     #include <mach/mach.h>
     #include <mach/task.h>
 #elif JUCE_WINDOWS
-    #include <windows.h>
     #include <psapi.h>
+    #include <windows.h>
 #elif JUCE_LINUX
-    #include <unistd.h>
     #include <fstream>
+    #include <unistd.h>
 #endif
 
 namespace oscil::test
 {
 
-TestMetrics::TestMetrics()
-{
-}
+TestMetrics::TestMetrics() {}
 
-TestMetrics::~TestMetrics()
-{
-    stopCollection();
-}
+TestMetrics::~TestMetrics() { stopCollection(); }
 
 void TestMetrics::startCollection(int intervalMs)
 {
@@ -45,10 +41,7 @@ void TestMetrics::stopCollection()
     stopTimer();
 }
 
-void TestMetrics::timerCallback()
-{
-    collectSample();
-}
+void TestMetrics::timerCallback() { collectSample(); }
 
 void TestMetrics::collectSample()
 {
@@ -200,10 +193,7 @@ void TestMetrics::recordFrame()
         frameTimes_.pop_front();
 }
 
-double TestMetrics::getCurrentFps()
-{
-    return calculateFps();
-}
+double TestMetrics::getCurrentFps() { return calculateFps(); }
 
 double TestMetrics::calculateFps()
 {
@@ -241,30 +231,15 @@ double TestMetrics::calculateFps()
     return 0.0;
 }
 
-int64_t TestMetrics::getCurrentMemoryBytes()
-{
-    return measureMemoryUsage();
-}
+int64_t TestMetrics::getCurrentMemoryBytes() { return measureMemoryUsage(); }
 
-double TestMetrics::getCurrentMemoryMB()
-{
-    return static_cast<double>(measureMemoryUsage()) / (1024.0 * 1024.0);
-}
+double TestMetrics::getCurrentMemoryMB() { return static_cast<double>(measureMemoryUsage()) / (1024.0 * 1024.0); }
 
-double TestMetrics::getCurrentCpuPercent()
-{
-    return measureCpuUsage();
-}
+double TestMetrics::getCurrentCpuPercent() { return measureCpuUsage(); }
 
-void TestMetrics::setOscillatorCount(int count)
-{
-    oscillatorCount_.store(count);
-}
+void TestMetrics::setOscillatorCount(int count) { oscillatorCount_.store(count); }
 
-void TestMetrics::setSourceCount(int count)
-{
-    sourceCount_.store(count);
-}
+void TestMetrics::setSourceCount(int count) { sourceCount_.store(count); }
 
 int64_t TestMetrics::measureMemoryUsage()
 {
@@ -272,7 +247,7 @@ int64_t TestMetrics::measureMemoryUsage()
     task_basic_info_data_t info;
     mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
 
-    if (task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t)&info, &count) == KERN_SUCCESS)
+    if (task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &info, &count) == KERN_SUCCESS)
     {
         return static_cast<int64_t>(info.resident_size);
     }
@@ -303,8 +278,9 @@ int64_t TestMetrics::measureMemoryUsage()
 
 double TestMetrics::computeCpuDeltaPercent(int64_t cpuTime)
 {
-    int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
+    int64_t now =
+        std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch())
+            .count();
 
     if (lastCpuTime_ > 0 && lastSystemTime_ > 0)
     {
@@ -331,10 +307,10 @@ double TestMetrics::measureCpuUsage()
     task_thread_times_info_data_t info;
     mach_msg_type_number_t count = TASK_THREAD_TIMES_INFO_COUNT;
 
-    if (task_info(mach_task_self(), TASK_THREAD_TIMES_INFO, (task_info_t)&info, &count) == KERN_SUCCESS)
+    if (task_info(mach_task_self(), TASK_THREAD_TIMES_INFO, (task_info_t) &info, &count) == KERN_SUCCESS)
     {
-        int64_t cpuTime = (info.user_time.seconds + info.system_time.seconds) * 1000000LL
-                         + info.user_time.microseconds + info.system_time.microseconds;
+        int64_t cpuTime = (info.user_time.seconds + info.system_time.seconds) * 1000000LL +
+                          info.user_time.microseconds + info.system_time.microseconds;
         return computeCpuDeltaPercent(cpuTime);
     }
     return 0.0;
@@ -360,7 +336,8 @@ double TestMetrics::measureCpuUsage()
     {
         std::string ignore;
         long utime, stime;
-        for (int i = 0; i < 13; ++i) stat >> ignore;
+        for (int i = 0; i < 13; ++i)
+            stat >> ignore;
         stat >> utime >> stime;
 
         int64_t cpuTime = (utime + stime) * (1000000 / sysconf(_SC_CLK_TCK));

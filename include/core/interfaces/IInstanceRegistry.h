@@ -5,12 +5,14 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include <memory>
-#include <vector>
-#include <optional>
 #include "core/Source.h"
 #include "core/interfaces/IAudioBuffer.h"
+
+#include <juce_core/juce_core.h>
+
+#include <memory>
+#include <optional>
+#include <vector>
 
 namespace oscil
 {
@@ -37,11 +39,11 @@ class AnalysisEngine;
 struct SourceInfo
 {
     SourceId sourceId;
-    juce::String name;                          // User-friendly name (DAW track name if available)
-    juce::String trackIdentifier;               // DAW-provided track identifier
-    int channelCount = 2;                       // Number of channels (1 = mono, 2 = stereo)
+    juce::String name;            // User-friendly name (DAW track name if available)
+    juce::String trackIdentifier; // DAW-provided track identifier
+    int channelCount = 2;         // Number of channels (1 = mono, 2 = stereo)
     double sampleRate = 44100.0;
-    std::weak_ptr<IAudioBuffer> buffer;         // Non-owning ref; see ownership contract above
+    std::weak_ptr<IAudioBuffer> buffer;             // Non-owning ref; see ownership contract above
     std::shared_ptr<AnalysisEngine> analysisEngine; // Analysis engine for this source
     bool active = true;
 };
@@ -71,13 +73,10 @@ public:
     /**
      * Register a new plugin instance as a signal source.
      */
-    virtual SourceId registerInstance(
-        const juce::String& trackIdentifier,
-        std::shared_ptr<IAudioBuffer> captureBuffer,
-        const juce::String& name = "Track",
-        int channelCount = 2,
-        double sampleRate = 44100.0,
-        std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) = 0;
+    virtual SourceId registerInstance(const juce::String& trackIdentifier, std::shared_ptr<IAudioBuffer> captureBuffer,
+                                      const juce::String& name = "Track", int channelCount = 2,
+                                      double sampleRate = 44100.0,
+                                      std::shared_ptr<AnalysisEngine> analysisEngine = nullptr) = 0;
 
     /**
      * Unregister a plugin instance.
@@ -102,8 +101,8 @@ public:
     /**
      * Update source metadata
      */
-    virtual void updateSource(const SourceId& sourceId, const juce::String& name,
-                              int channelCount, double sampleRate) = 0;
+    virtual void updateSource(const SourceId& sourceId, const juce::String& name, int channelCount,
+                              double sampleRate) = 0;
 
     /**
      * Get the number of registered sources

@@ -5,14 +5,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
 #include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -31,10 +31,11 @@ namespace oscil
  * - Click outside to dismiss (optional)
  * - Accessibility support
  */
-class OscilModal : public ThemedComponent,
-                   public TestIdSupport,
-                   private juce::Timer,
-                   private juce::FocusChangeListener
+class OscilModal
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
+    , private juce::FocusChangeListener
 {
 public:
     explicit OscilModal(IThemeService& themeService);
@@ -72,7 +73,7 @@ public:
 
     // Callbacks
     std::function<void()> onClose;
-    std::function<bool()> onCloseRequested;  // Return false to prevent close
+    std::function<bool()> onCloseRequested; // Return false to prevent close
 
     // Component overrides
     void paint(juce::Graphics& g) override;
@@ -84,7 +85,6 @@ public:
 
     bool keyPressed(const juce::KeyPress& key) override;
     void focusGained(FocusChangeType cause) override;
-
 
     /// Dismiss the modal when focus moves outside it (FocusChangeListener).
     void globalFocusChanged(juce::Component* focusedComponent) override;
@@ -109,7 +109,6 @@ private:
     void updateFocusTrap();
     void collectFocusableChildren(juce::Component* parent, juce::Array<juce::Component*>& result);
 
-
     juce::String title_;
     juce::Component* content_ = nullptr;
     ModalSize modalSize_ = ModalSize::Medium;
@@ -129,11 +128,10 @@ private:
     SpringAnimation scaleSpring_;
     SpringAnimation closeHoverSpring_ = SpringPresets::stiff();
 
-
     static constexpr int TITLE_BAR_HEIGHT = 48;
     static constexpr int CLOSE_BUTTON_SIZE = 28;
     static constexpr int MODAL_PADDING = 24;
-    static constexpr int MODAL_MARGIN = 40;  // For fullscreen
+    static constexpr int MODAL_MARGIN = 40; // For fullscreen
 
     static constexpr int SIZE_SMALL = 320;
     static constexpr int SIZE_MEDIUM = 480;
@@ -160,15 +158,10 @@ public:
         Confirm
     };
 
-    static void show(IThemeService& themeService,
-                     const juce::String& title,
-                     const juce::String& message,
-                     Type type = Type::Info,
-                     std::function<void()> onOk = nullptr);
+    static void show(IThemeService& themeService, const juce::String& title, const juce::String& message,
+                     Type type = Type::Info, std::function<void()> onOk = nullptr);
 
-    static void confirm(IThemeService& themeService,
-                        const juce::String& title,
-                        const juce::String& message,
+    static void confirm(IThemeService& themeService, const juce::String& title, const juce::String& message,
                         std::function<void(bool)> onResult);
 
 private:

@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "core/dsp/TimingEngine.h"
 #include "core/dsp/TimingConfig.h"
+#include "core/dsp/TimingEngine.h"
 
 namespace oscil::test
 {
@@ -63,9 +63,8 @@ public:
      */
     TimingConfigBuilder& withTimeIntervalMs(float ms)
     {
-        config_.timeIntervalMs = juce::jlimit(EngineTimingConfig::MIN_TIME_INTERVAL_MS,
-                                              EngineTimingConfig::MAX_TIME_INTERVAL_MS,
-                                              ms);
+        config_.timeIntervalMs =
+            juce::jlimit(EngineTimingConfig::MIN_TIME_INTERVAL_MS, EngineTimingConfig::MAX_TIME_INTERVAL_MS, ms);
         return *this;
     }
 
@@ -110,9 +109,7 @@ public:
      */
     TimingConfigBuilder& withHostBPM(float bpm)
     {
-        config_.hostBPM = juce::jlimit(EngineTimingConfig::MIN_BPM,
-                                       EngineTimingConfig::MAX_BPM,
-                                       bpm);
+        config_.hostBPM = juce::jlimit(EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM, bpm);
         return *this;
     }
 
@@ -218,18 +215,12 @@ public:
     /**
      * Build and return the EngineTimingConfig
      */
-    EngineTimingConfig build() const
-    {
-        return config_;
-    }
+    EngineTimingConfig build() const { return config_; }
 
     /**
      * Build and apply to a TimingEngine
      */
-    void applyTo(TimingEngine& engine) const
-    {
-        engine.setConfig(config_);
-    }
+    void applyTo(TimingEngine& engine) const { engine.setConfig(config_); }
 
 private:
     EngineTimingConfig config_;
@@ -248,10 +239,7 @@ private:
 class HostTimingInfoBuilder
 {
 public:
-    HostTimingInfoBuilder()
-    {
-        info_ = HostTimingInfo();
-    }
+    HostTimingInfoBuilder() { info_ = HostTimingInfo(); }
 
     /**
      * Set BPM
@@ -340,10 +328,7 @@ public:
     /**
      * Build and return the HostTimingInfo
      */
-    HostTimingInfo build() const
-    {
-        return info_;
-    }
+    HostTimingInfo build() const { return info_; }
 
 private:
     HostTimingInfo info_;

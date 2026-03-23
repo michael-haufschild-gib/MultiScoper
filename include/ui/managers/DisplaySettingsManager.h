@@ -6,10 +6,11 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
-#include <cstdint>
 
 namespace oscil
 {

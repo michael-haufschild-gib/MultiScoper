@@ -5,15 +5,17 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_audio_processors/juce_audio_processors.h>
-#include "ui/components/ThemedComponent.h"
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
-#include "ui/components/SpringAnimation.h"
-#include "ui/components/AnimationSettings.h"
-#include "ui/components/TestId.h"
 #include "ui/components/MagneticSnapController.h"
+#include "ui/components/SpringAnimation.h"
+#include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
+
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <vector>
 
 namespace oscil
@@ -34,9 +36,10 @@ namespace oscil
  * - Full keyboard accessibility
  * - E2E test automation via testId
  */
-class OscilSlider : public ThemedComponent,
-                    public TestIdSupport,
-                    private juce::Timer
+class OscilSlider
+    : public ThemedComponent
+    , public TestIdSupport
+    , private juce::Timer
 {
 public:
     OscilSlider(IThemeService& themeService);
@@ -100,9 +103,8 @@ public:
     void setEnabled(bool enabled);
     bool isEnabled() const { return enabled_; }
 
-    // APVTS integration
-    void attachToParameter(juce::AudioProcessorValueTreeState& apvts,
-                           const juce::String& paramId);
+    /// Bind this slider to an APVTS parameter for two-way synchronization.
+    void attachToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId);
     void detachFromParameter();
     bool isAttachedToParameter() const { return attachment_ != nullptr; }
 
@@ -126,8 +128,7 @@ public:
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
-    void mouseWheelMove(const juce::MouseEvent& e,
-                        const juce::MouseWheelDetails& wheel) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     bool keyPressed(const juce::KeyPress& key) override;
     void focusGained(FocusChangeType cause) override;
@@ -151,7 +152,8 @@ private:
     void paintHorizontal(juce::Graphics& g);
     void paintVertical(juce::Graphics& g);
     void paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds, bool isVertical);
-    void paintThumb(juce::Graphics& g, float position, bool isVertical, bool isRangeEnd = false, float labelOffset = 0.0f);
+    void paintThumb(juce::Graphics& g, float position, bool isVertical, bool isRangeEnd = false,
+                    float labelOffset = 0.0f);
     void paintValueTooltip(juce::Graphics& g, float thumbPosition, bool isVertical);
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
     juce::String formatValue(double value) const;
@@ -178,7 +180,7 @@ private:
 
     // Magnetic snapping
     MagneticSnapController snapController_;
-    bool justSnapped_ = false;  // Local flag for animation feedback
+    bool justSnapped_ = false; // Local flag for animation feedback
 
     // State
     bool isHovered_ = false;
@@ -205,7 +207,7 @@ private:
     static constexpr int THUMB_SIZE = 14;
     static constexpr int TOOLTIP_HEIGHT = 24;
     static constexpr int TOOLTIP_PADDING = 8;
-    static constexpr float THUMB_HIT_EXTRA = 15.0f;  // Increased for WCAG 44px touch target
+    static constexpr float THUMB_HIT_EXTRA = 15.0f; // Increased for WCAG 44px touch target
 
     // TestIdSupport
     void registerTestId() override;

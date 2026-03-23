@@ -33,11 +33,8 @@ void OscilTabs::paint(juce::Graphics& g)
     {
         auto selectedBounds = getTabBounds(selectedIndex_).toFloat();
         g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRoundedRectangle(
-            selectedBounds.reduced(-ComponentLayout::FOCUS_RING_OFFSET),
-            ComponentLayout::RADIUS_SM,
-            ComponentLayout::FOCUS_RING_WIDTH
-        );
+        g.drawRoundedRectangle(selectedBounds.reduced(-ComponentLayout::FOCUS_RING_OFFSET), ComponentLayout::RADIUS_SM,
+                               ComponentLayout::FOCUS_RING_WIDTH);
     }
 }
 
@@ -76,16 +73,15 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     {
         g.setOpacity(opacity);
         g.drawImage(tab.icon,
-            juce::Rectangle<float>(static_cast<float>(startX),
-                                   static_cast<float>(centerY - ICON_SIZE / 2),
-                                   ICON_SIZE, ICON_SIZE),
-            juce::RectanglePlacement::centred);
+                    juce::Rectangle<float>(static_cast<float>(startX), static_cast<float>(centerY - ICON_SIZE / 2),
+                                           ICON_SIZE, ICON_SIZE),
+                    juce::RectanglePlacement::centred);
         startX += ICON_SIZE + 8;
     }
 
-    auto textColour = isSelected ? getTheme().controlActive
-                    : isHovered && tab.enabled ? getTheme().textPrimary
-                    : getTheme().textSecondary;
+    auto textColour = isSelected                 ? getTheme().controlActive
+                      : isHovered && tab.enabled ? getTheme().textPrimary
+                                                 : getTheme().textSecondary;
 
     g.setColour(textColour.withAlpha(opacity));
     g.setFont(font);
@@ -96,8 +92,7 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
 
     if (tab.badgeCount > 0)
     {
-        auto badgeBounds = juce::Rectangle<int>(
-            startX + 4, centerY - BADGE_SIZE / 2, BADGE_SIZE, BADGE_SIZE);
+        auto badgeBounds = juce::Rectangle<int>(startX + 4, centerY - BADGE_SIZE / 2, BADGE_SIZE, BADGE_SIZE);
         paintBadge(g, badgeBounds, tab.badgeCount);
     }
 }
@@ -115,23 +110,13 @@ void OscilTabs::paintIndicator(juce::Graphics& g)
             g.setColour(getTheme().controlActive);
             if (orientation_ == Orientation::Horizontal)
             {
-                g.fillRoundedRectangle(
-                    indicatorBounds.getX(),
-                    static_cast<float>(getHeight() - INDICATOR_HEIGHT),
-                    indicatorBounds.getWidth(),
-                    INDICATOR_HEIGHT,
-                    INDICATOR_HEIGHT / 2.0f
-                );
+                g.fillRoundedRectangle(indicatorBounds.getX(), static_cast<float>(getHeight() - INDICATOR_HEIGHT),
+                                       indicatorBounds.getWidth(), INDICATOR_HEIGHT, INDICATOR_HEIGHT / 2.0f);
             }
             else
             {
-                g.fillRoundedRectangle(
-                    0,
-                    indicatorBounds.getY(),
-                    INDICATOR_HEIGHT,
-                    indicatorBounds.getHeight(),
-                    INDICATOR_HEIGHT / 2.0f
-                );
+                g.fillRoundedRectangle(0, indicatorBounds.getY(), INDICATOR_HEIGHT, indicatorBounds.getHeight(),
+                                       INDICATOR_HEIGHT / 2.0f);
             }
             break;
 
@@ -235,18 +220,14 @@ juce::Rectangle<float> OscilTabs::getIndicatorBounds() const
     if (orientation_ == Orientation::Horizontal)
     {
         int height = tabHeight_ > 0 ? tabHeight_ : getHeight();
-        return juce::Rectangle<float>(
-            indicatorXSpring_.position, 0,
-            indicatorWidthSpring_.position, static_cast<float>(height)
-        );
+        return juce::Rectangle<float>(indicatorXSpring_.position, 0, indicatorWidthSpring_.position,
+                                      static_cast<float>(height));
     }
     else
     {
         int width = tabWidth_ > 0 ? tabWidth_ : getWidth();
-        return juce::Rectangle<float>(
-            0, indicatorXSpring_.position,
-            static_cast<float>(width), indicatorWidthSpring_.position
-        );
+        return juce::Rectangle<float>(0, indicatorXSpring_.position, static_cast<float>(width),
+                                      indicatorWidthSpring_.position);
     }
 }
 

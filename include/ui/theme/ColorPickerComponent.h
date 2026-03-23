@@ -5,10 +5,12 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/IThemeService.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilTextField.h"
+#include "ui/theme/IThemeService.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -50,10 +52,7 @@ public:
     /**
      * Set callback for color changes
      */
-    void onColourChanged(std::function<void(juce::Colour)> callback)
-    {
-        colourChangedCallback_ = std::move(callback);
-    }
+    void onColourChanged(std::function<void(juce::Colour)> callback) { colourChangedCallback_ = std::move(callback); }
 
     /**
      * Parse hex color string (#RRGGBB or #RRGGBBAA)
@@ -76,7 +75,7 @@ private:
     void notifyColourChanged();
 
     IThemeService& themeService_;
-    juce::Colour currentColour_{ juce::Colours::green };
+    juce::Colour currentColour_{juce::Colours::green};
 
     // RGBA Sliders
     std::unique_ptr<OscilSlider> redSlider_;

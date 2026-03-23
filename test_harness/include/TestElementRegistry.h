@@ -6,6 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+
 #include <map>
 #include <mutex>
 
@@ -97,14 +98,12 @@ private:
  * Helper macro to register a component for testing.
  * Use in component constructors.
  */
-#define TEST_REGISTER_ELEMENT(testId) \
-    TestElementRegistry::getInstance().registerElement(testId, this)
+#define TEST_REGISTER_ELEMENT(testId) TestElementRegistry::getInstance().registerElement(testId, this)
 
 /**
  * Helper macro to unregister a component.
  * Use in component destructors.
  */
-#define TEST_UNREGISTER_ELEMENT() \
-    TestElementRegistry::getInstance().unregisterElement(this)
+#define TEST_UNREGISTER_ELEMENT() TestElementRegistry::getInstance().unregisterElement(this)
 
 } // namespace oscil::test

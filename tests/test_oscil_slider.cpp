@@ -13,20 +13,18 @@
     - Range mode silently dropping one endpoint
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilSlider.h"
 #include "ui/theme/ThemeManager.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilSliderTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
     void TearDown() override
     {
@@ -124,7 +122,10 @@ TEST_F(OscilSliderTest, SetValueWithNotifyTrueFiresCallback)
     int callCount = 0;
     double lastValue = -1.0;
 
-    slider.onValueChanged = [&](double v) { callCount++; lastValue = v; };
+    slider.onValueChanged = [&](double v) {
+        callCount++;
+        lastValue = v;
+    };
 
     slider.setValue(50.0, true);
     EXPECT_EQ(callCount, 1);
@@ -196,7 +197,10 @@ TEST_F(OscilSliderTest, RangeCallbackReceivesNormalizedValues)
     slider.setRange(0.0, 100.0);
 
     double cbStart = -1, cbEnd = -1;
-    slider.onRangeChanged = [&](double s, double e) { cbStart = s; cbEnd = e; };
+    slider.onRangeChanged = [&](double s, double e) {
+        cbStart = s;
+        cbEnd = e;
+    };
 
     slider.setRangeValues(70.0, 30.0, true);
     EXPECT_DOUBLE_EQ(cbStart, 30.0);

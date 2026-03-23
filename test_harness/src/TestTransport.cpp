@@ -7,34 +7,17 @@
 namespace oscil::test
 {
 
-TestTransport::TestTransport()
-{
-}
+TestTransport::TestTransport() {}
 
-void TestTransport::prepare(double sampleRate)
-{
-    sampleRate_ = sampleRate;
-}
+void TestTransport::prepare(double sampleRate) { sampleRate_ = sampleRate; }
 
-void TestTransport::play()
-{
-    playing_.store(true);
-}
+void TestTransport::play() { playing_.store(true); }
 
-void TestTransport::stop()
-{
-    playing_.store(false);
-}
+void TestTransport::stop() { playing_.store(false); }
 
-void TestTransport::setBpm(double bpm)
-{
-    bpm_.store(juce::jlimit(20.0, 300.0, bpm));
-}
+void TestTransport::setBpm(double bpm) { bpm_.store(juce::jlimit(20.0, 300.0, bpm)); }
 
-void TestTransport::setPositionSamples(int64_t samples)
-{
-    positionSamples_.store(std::max(int64_t(0), samples));
-}
+void TestTransport::setPositionSamples(int64_t samples) { positionSamples_.store(std::max(int64_t(0), samples)); }
 
 double TestTransport::getPositionSeconds() const
 {

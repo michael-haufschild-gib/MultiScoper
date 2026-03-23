@@ -5,16 +5,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
-#include "core/ServiceContext.h"
-#include "ui/layout/sections/SectionConstants.h"
-#include "ui/layout/sections/DynamicHeightContent.h"
-#include "ui/components/OscilButton.h"
-#include "ui/panels/OscillatorListComponent.h"
-#include "ui/components/TestId.h"
 #include "core/Oscillator.h"
+#include "core/ServiceContext.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/TestId.h"
+#include "ui/layout/sections/DynamicHeightContent.h"
+#include "ui/layout/sections/SectionConstants.h"
+#include "ui/panels/OscillatorListComponent.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -25,10 +27,11 @@ namespace oscil
  * Contains the Add Oscillator button and the oscillator list with filter tabs
  * Designed to be used inside an OscilAccordion for collapsibility
  */
-class OscillatorSidebarSection : public juce::Component,
-                                  public ThemeManagerListener,
-                                  public DynamicHeightContent,
-                                  public OscillatorListComponent::Listener
+class OscillatorSidebarSection
+    : public juce::Component
+    , public ThemeManagerListener
+    , public DynamicHeightContent
+    , public OscillatorListComponent::Listener
 {
 public:
     /**

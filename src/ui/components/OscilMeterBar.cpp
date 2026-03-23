@@ -3,32 +3,22 @@
 */
 
 #include "ui/components/OscilMeterBar.h"
+
 #include <cmath>
 
 namespace oscil
 {
 
-OscilMeterBar::OscilMeterBar(IThemeService& themeService)
-    : ThemedComponent(themeService)
-{
-    startTimerHz(TIMER_HZ);
-}
+OscilMeterBar::OscilMeterBar(IThemeService& themeService) : ThemedComponent(themeService) { startTimerHz(TIMER_HZ); }
 
-OscilMeterBar::OscilMeterBar(IThemeService& themeService, const juce::String& testId)
-    : OscilMeterBar(themeService)
+OscilMeterBar::OscilMeterBar(IThemeService& themeService, const juce::String& testId) : OscilMeterBar(themeService)
 {
     setTestId(testId);
 }
 
-void OscilMeterBar::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilMeterBar::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilMeterBar::~OscilMeterBar()
-{
-    stopTimer();
-}
+OscilMeterBar::~OscilMeterBar() { stopTimer(); }
 
 void OscilMeterBar::setLevel(float level)
 {
@@ -70,10 +60,7 @@ void OscilMeterBar::setLevels(float left, float right)
     }
 }
 
-void OscilMeterBar::setRMSLevel(float rms)
-{
-    leftRMS_ = rightRMS_ = rms;
-}
+void OscilMeterBar::setRMSLevel(float rms) { leftRMS_ = rightRMS_ = rms; }
 
 void OscilMeterBar::setRMSLevels(float leftRMS, float rightRMS)
 {
@@ -108,25 +95,13 @@ void OscilMeterBar::setStereo(bool stereo)
     }
 }
 
-void OscilMeterBar::setPeakHoldTime(int milliseconds)
-{
-    peakHoldTimeMs_ = milliseconds;
-}
+void OscilMeterBar::setPeakHoldTime(int milliseconds) { peakHoldTimeMs_ = milliseconds; }
 
-void OscilMeterBar::setPeakDecayRate(float decayPerSecond)
-{
-    peakDecayRate_ = decayPerSecond;
-}
+void OscilMeterBar::setPeakDecayRate(float decayPerSecond) { peakDecayRate_ = decayPerSecond; }
 
-void OscilMeterBar::setMinDb(float db)
-{
-    minDb_ = db;
-}
+void OscilMeterBar::setMinDb(float db) { minDb_ = db; }
 
-void OscilMeterBar::setMaxDb(float db)
-{
-    maxDb_ = db;
-}
+void OscilMeterBar::setMaxDb(float db) { maxDb_ = db; }
 
 void OscilMeterBar::setShowScale(bool show)
 {
@@ -155,10 +130,7 @@ int OscilMeterBar::getPreferredWidth() const
     return meterWidth + (showScale_ ? SCALE_WIDTH : 0);
 }
 
-int OscilMeterBar::getPreferredHeight() const
-{
-    return 100;
-}
+int OscilMeterBar::getPreferredHeight() const { return 100; }
 
 void OscilMeterBar::paint(juce::Graphics& g)
 {
@@ -192,11 +164,11 @@ void OscilMeterBar::paint(juce::Graphics& g)
 }
 
 void OscilMeterBar::paintMeterVertical(juce::Graphics& g, const juce::Rectangle<int>& bounds,
-                                        juce::ColourGradient& gradient,
-                                        float levelPos, float rmsPos, float peakPos, bool clip)
+                                       juce::ColourGradient& gradient, float levelPos, float rmsPos, float peakPos,
+                                       bool clip)
 {
-    gradient.point1 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getBottom()) };
-    gradient.point2 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY()) };
+    gradient.point1 = {static_cast<float>(bounds.getX()), static_cast<float>(bounds.getBottom())};
+    gradient.point2 = {static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY())};
     gradient.isRadial = false;
 
     int levelHeight = static_cast<int>(levelPos * bounds.getHeight());
@@ -225,11 +197,10 @@ void OscilMeterBar::paintMeterVertical(juce::Graphics& g, const juce::Rectangle<
 }
 
 void OscilMeterBar::paintMeterHorizontal(juce::Graphics& g, const juce::Rectangle<int>& bounds,
-                                          juce::ColourGradient& gradient,
-                                          float levelPos, float peakPos, bool clip)
+                                         juce::ColourGradient& gradient, float levelPos, float peakPos, bool clip)
 {
-    gradient.point1 = { static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY()) };
-    gradient.point2 = { static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY()) };
+    gradient.point1 = {static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY())};
+    gradient.point2 = {static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY())};
     gradient.isRadial = false;
 
     int levelWidth = static_cast<int>(levelPos * bounds.getWidth());
@@ -250,8 +221,8 @@ void OscilMeterBar::paintMeterHorizontal(juce::Graphics& g, const juce::Rectangl
     }
 }
 
-void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds,
-                                float level, float rms, float peakHold, bool clip)
+void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds, float level, float rms, float peakHold,
+                               bool clip)
 {
     float levelPos = levelToPosition(std::min(level, 1.0f));
     float rmsPos = levelToPosition(std::min(rms, 1.0f));
@@ -286,8 +257,7 @@ void OscilMeterBar::paintScale(juce::Graphics& g, juce::Rectangle<int> bounds)
 
         int y = bounds.getBottom() - static_cast<int>(pos * bounds.getHeight());
 
-        g.drawText(juce::String(static_cast<int>(db)),
-                   bounds.getX(), y - 6, bounds.getWidth(), 12,
+        g.drawText(juce::String(static_cast<int>(db)), bounds.getX(), y - 6, bounds.getWidth(), 12,
                    juce::Justification::centredLeft);
 
         // Tick mark
@@ -311,20 +281,17 @@ float OscilMeterBar::levelToPosition(float level) const
     return (db - minDb_) / range;
 }
 
-float OscilMeterBar::dbToLevel(float db) const
-{
-    return std::pow(10.0f, db / 20.0f);
-}
+float OscilMeterBar::dbToLevel(float db) const { return std::pow(10.0f, db / 20.0f); }
 
 juce::Colour OscilMeterBar::getLevelColour(float normalizedLevel) const
 {
     // Green -> Yellow -> Red gradient
     if (normalizedLevel < 0.7f)
-        return getTheme().statusActive;  // Green
+        return getTheme().statusActive; // Green
     else if (normalizedLevel < 0.9f)
-        return getTheme().statusWarning;  // Yellow
+        return getTheme().statusWarning; // Yellow
     else
-        return getTheme().statusError;    // Red
+        return getTheme().statusError; // Red
 }
 
 void OscilMeterBar::resized()
@@ -358,7 +325,8 @@ void OscilMeterBar::timerCallback()
     else
     {
         leftPeakHold_ -= peakDecayRate_ * FRAME_TIME_SEC;
-        if (leftPeakHold_ < 0) leftPeakHold_ = 0;
+        if (leftPeakHold_ < 0)
+            leftPeakHold_ = 0;
     }
 
     if (rightPeakHoldCounter_ > 0)
@@ -368,7 +336,8 @@ void OscilMeterBar::timerCallback()
     else
     {
         rightPeakHold_ -= peakDecayRate_ * FRAME_TIME_SEC;
-        if (rightPeakHold_ < 0) rightPeakHold_ = 0;
+        if (rightPeakHold_ < 0)
+            rightPeakHold_ = 0;
     }
 
     repaint();

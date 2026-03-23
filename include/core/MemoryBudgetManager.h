@@ -7,12 +7,14 @@
 #pragma once
 
 #include "core/dsp/CaptureQualityConfig.h"
+
 #include <juce_core/juce_core.h>
-#include <memory>
-#include <map>
-#include <mutex>
+
 #include <atomic>
 #include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
 
 namespace oscil
 {

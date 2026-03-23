@@ -31,15 +31,10 @@ OscilToggle::OscilToggle(IThemeService& themeService)
     };
 }
 
-
-
-OscilToggle::OscilToggle(IThemeService& themeService, const juce::String& label)
-    : OscilToggle(themeService)
+OscilToggle::OscilToggle(IThemeService& themeService, const juce::String& label) : OscilToggle(themeService)
 {
     label_ = label;
 }
-
-
 
 OscilToggle::OscilToggle(IThemeService& themeService, const juce::String& label, const juce::String& testId)
     : OscilToggle(themeService)
@@ -48,21 +43,14 @@ OscilToggle::OscilToggle(IThemeService& themeService, const juce::String& label,
     setTestId(testId);
 }
 
+void OscilToggle::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-
-void OscilToggle::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
-
-OscilToggle::~OscilToggle()
-{
-    stopTimer();
-}
+OscilToggle::~OscilToggle() { stopTimer(); }
 
 void OscilToggle::setValue(bool value, bool animate)
 {
-    if (value_ == value) return;
+    if (value_ == value)
+        return;
 
     bool wasOff = !value_;
     value_ = value;
@@ -120,23 +108,18 @@ void OscilToggle::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
-        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor
-                               : juce::MouseCursor::NormalCursor);
+        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
 }
 
-void OscilToggle::attachToParameter(juce::AudioProcessorValueTreeState& apvts,
-                                     const juce::String& paramId)
+void OscilToggle::attachToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId)
 {
-    attachment_ = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        apvts, paramId, internalButton_);
+    attachment_ =
+        std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, paramId, internalButton_);
 }
 
-void OscilToggle::detachFromParameter()
-{
-    attachment_.reset();
-}
+void OscilToggle::detachFromParameter() { attachment_.reset(); }
 
 int OscilToggle::getPreferredWidth() const
 {
@@ -156,8 +139,9 @@ int OscilToggle::getPreferredWidth() const
 
 int OscilToggle::getPreferredHeight() const
 {
-    return std::max(ComponentLayout::TOGGLE_HEIGHT,
-                    static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
+    return std::max(
+        ComponentLayout::TOGGLE_HEIGHT,
+        static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
 }
 
 void OscilToggle::paint(juce::Graphics& g)
@@ -174,13 +158,12 @@ void OscilToggle::paint(juce::Graphics& g)
     }
     else if (labelOnRight_)
     {
-        trackBounds = juce::Rectangle<float>(
-            0, static_cast<float>(bounds.getHeight() - ComponentLayout::TOGGLE_HEIGHT) / 2.0f,
-            ComponentLayout::TOGGLE_WIDTH, ComponentLayout::TOGGLE_HEIGHT);
+        trackBounds =
+            juce::Rectangle<float>(0, static_cast<float>(bounds.getHeight() - ComponentLayout::TOGGLE_HEIGHT) / 2.0f,
+                                   ComponentLayout::TOGGLE_WIDTH, ComponentLayout::TOGGLE_HEIGHT);
 
         // Draw label
-        auto labelBounds = bounds.toFloat()
-            .withLeft(ComponentLayout::TOGGLE_WIDTH + ComponentLayout::SPACING_SM);
+        auto labelBounds = bounds.toFloat().withLeft(ComponentLayout::TOGGLE_WIDTH + ComponentLayout::SPACING_SM);
 
         g.setColour(getTheme().textPrimary.withAlpha(opacity));
         g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
@@ -194,17 +177,17 @@ void OscilToggle::paint(juce::Graphics& g)
         int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
 
         // Draw label on left
-        auto labelBounds = juce::Rectangle<float>(
-            0, 0, static_cast<float>(labelWidth), static_cast<float>(bounds.getHeight()));
+        auto labelBounds =
+            juce::Rectangle<float>(0, 0, static_cast<float>(labelWidth), static_cast<float>(bounds.getHeight()));
 
         g.setColour(getTheme().textPrimary.withAlpha(opacity));
         g.setFont(font);
         g.drawText(label_, labelBounds, juce::Justification::centredRight);
 
-        trackBounds = juce::Rectangle<float>(
-            static_cast<float>(labelWidth + ComponentLayout::SPACING_SM),
-            static_cast<float>(bounds.getHeight() - ComponentLayout::TOGGLE_HEIGHT) / 2.0f,
-            ComponentLayout::TOGGLE_WIDTH, ComponentLayout::TOGGLE_HEIGHT);
+        trackBounds =
+            juce::Rectangle<float>(static_cast<float>(labelWidth + ComponentLayout::SPACING_SM),
+                                   static_cast<float>(bounds.getHeight() - ComponentLayout::TOGGLE_HEIGHT) / 2.0f,
+                                   ComponentLayout::TOGGLE_WIDTH, ComponentLayout::TOGGLE_HEIGHT);
     }
 
     paintTrack(g, trackBounds);
@@ -246,8 +229,7 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
     float scaledSize = knobSize * scale;
     float offset = (scaledSize - knobSize) / 2.0f;
 
-    auto knobBounds = juce::Rectangle<float>(
-        knobX - offset, knobY - offset, scaledSize, scaledSize);
+    auto knobBounds = juce::Rectangle<float>(knobX - offset, knobY - offset, scaledSize, scaledSize);
 
     // Draw knob shadow
     g.setColour(juce::Colours::black.withAlpha(0.2f * opacity));
@@ -261,11 +243,9 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
 void OscilToggle::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-    g.drawRoundedRectangle(
-        bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-        bounds.getHeight() / 2.0f + ComponentLayout::FOCUS_RING_OFFSET,
-        ComponentLayout::FOCUS_RING_WIDTH
-    );
+    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
+                           bounds.getHeight() / 2.0f + ComponentLayout::FOCUS_RING_OFFSET,
+                           ComponentLayout::FOCUS_RING_WIDTH);
 }
 
 void OscilToggle::resized()
@@ -353,7 +333,6 @@ void OscilToggle::updateAnimations()
     celebrationSpring_.update(dt);
 }
 
-
 //==============================================================================
 // Accessibility Handler for OscilToggle
 //==============================================================================
@@ -362,18 +341,16 @@ class OscilToggleAccessibilityHandler : public juce::AccessibilityHandler
 public:
     explicit OscilToggleAccessibilityHandler(OscilToggle& toggle)
         : juce::AccessibilityHandler(toggle, juce::AccessibilityRole::toggleButton,
-            juce::AccessibilityActions()
-                .addAction(juce::AccessibilityActionType::toggle,
-                    [&toggle] { if (toggle.isEnabled()) toggle.toggle(); })
-          )
+                                     juce::AccessibilityActions().addAction(juce::AccessibilityActionType::toggle,
+                                                                            [&toggle] {
+                                                                                if (toggle.isEnabled())
+                                                                                    toggle.toggle();
+                                                                            }))
         , toggle_(toggle)
     {
     }
 
-    juce::String getTitle() const override
-    {
-        return toggle_.getLabel().isNotEmpty() ? toggle_.getLabel() : "Toggle";
-    }
+    juce::String getTitle() const override { return toggle_.getLabel().isNotEmpty() ? toggle_.getLabel() : "Toggle"; }
 
     juce::String getDescription() const override
     {
@@ -385,10 +362,7 @@ public:
         return state;
     }
 
-    juce::String getHelp() const override
-    {
-        return "Press Space or Enter to toggle.";
-    }
+    juce::String getHelp() const override { return "Press Space or Enter to toggle."; }
 
     juce::AccessibleState getCurrentState() const override
     {

@@ -5,14 +5,15 @@
 
 #pragma once
 
-#include "VisualConfiguration.h"
 #include "Framebuffer.h"
 #include "FramebufferPool.h"
-#include "effects/PostProcessEffect.h"
 #include "IEffectProvider.h"
-#include <vector>
+#include "VisualConfiguration.h"
+#include "effects/PostProcessEffect.h"
+
 #include <functional>
 #include <string>
+#include <vector>
 
 #if OSCIL_ENABLE_OPENGL
 
@@ -60,12 +61,8 @@ public:
      * @param effectProvider Reference to IEffectProvider to retrieve effect instances
      * @return The final output framebuffer (might be source, or a pool buffer)
      */
-    virtual Framebuffer* process(juce::OpenGLContext& context,
-                         Framebuffer* source,
-                         FramebufferPool& pool,
-                         float deltaTime,
-                         const VisualConfiguration& config,
-                         IEffectProvider& effectProvider);
+    virtual Framebuffer* process(juce::OpenGLContext& context, Framebuffer* source, FramebufferPool& pool,
+                                 float deltaTime, const VisualConfiguration& config, IEffectProvider& effectProvider);
 
 protected:
     /**

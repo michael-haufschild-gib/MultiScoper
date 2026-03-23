@@ -10,7 +10,7 @@ namespace oscil
 OscilColorSwatches::OscilColorSwatches(IThemeService& themeService, const juce::String& testId)
     : ThemedComponent(themeService)
     , hoverSpring_(SpringPresets::stiff())
-    {
+{
     if (testId.isNotEmpty())
         setTestId(testId);
 
@@ -18,15 +18,9 @@ OscilColorSwatches::OscilColorSwatches(IThemeService& themeService, const juce::
     hoverSpring_.position = 0.0f;
 }
 
-void OscilColorSwatches::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilColorSwatches::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilColorSwatches::~OscilColorSwatches()
-{
-    stopTimer();
-}
+OscilColorSwatches::~OscilColorSwatches() { stopTimer(); }
 
 void OscilColorSwatches::setColors(const std::vector<juce::Colour>& colors)
 {
@@ -131,7 +125,7 @@ int OscilColorSwatches::getColumnCount() const
     // Auto-calculate based on width
     int width = getWidth();
     if (width <= 0)
-        return 8;  // Default
+        return 8; // Default
 
     return std::max(1, (width + spacing_) / (swatchSize_ + spacing_));
 }
@@ -171,11 +165,8 @@ void OscilColorSwatches::paint(juce::Graphics& g)
     {
         auto bounds = getSwatchBounds(focusedIndex_).toFloat();
         g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRoundedRectangle(
-            bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-            ComponentLayout::RADIUS_SM,
-            ComponentLayout::FOCUS_RING_WIDTH
-        );
+        g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET), ComponentLayout::RADIUS_SM,
+                               ComponentLayout::FOCUS_RING_WIDTH);
     }
 }
 
@@ -201,9 +192,8 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
             {
                 bool isWhite = ((x - bounds.getX()) / checkerSize + (y - bounds.getY()) / checkerSize) % 2 == 0;
                 g.setColour(isWhite ? juce::Colours::white : juce::Colours::lightgrey);
-                g.fillRect(x, y,
-                    std::min(checkerSize, bounds.getRight() - x),
-                    std::min(checkerSize, bounds.getBottom() - y));
+                g.fillRect(x, y, std::min(checkerSize, bounds.getRight() - x),
+                           std::min(checkerSize, bounds.getBottom() - y));
             }
         }
     }
@@ -213,13 +203,12 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
     g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
 
     // Border
-    auto borderColour = isSelected ? getTheme().controlActive
-                      : color.getBrightness() > 0.9f ? getTheme().controlBorder
-                      : color.darker(0.3f);
+    auto borderColour = isSelected                     ? getTheme().controlActive
+                        : color.getBrightness() > 0.9f ? getTheme().controlBorder
+                                                       : color.darker(0.3f);
 
     g.setColour(borderColour);
-    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM,
-                           isSelected ? 2.0f : 1.0f);
+    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM, isSelected ? 2.0f : 1.0f);
 
     // Selection checkmark
     if (isSelected && showCheckmark_)
@@ -244,8 +233,7 @@ void OscilColorSwatches::paintCheckmark(juce::Graphics& g, juce::Rectangle<int> 
     checkPath.lineTo(cx - size * 0.3f, cy + size * 0.7f);
     checkPath.lineTo(cx + size, cy - size * 0.5f);
 
-    g.strokePath(checkPath, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved,
-                                                  juce::PathStrokeType::rounded));
+    g.strokePath(checkPath, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 void OscilColorSwatches::resized()
@@ -395,10 +383,7 @@ void OscilColorSwatches::timerCallback()
 
 std::unique_ptr<juce::AccessibilityHandler> OscilColorSwatches::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::group
-    );
+    return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
 }
 
 } // namespace oscil

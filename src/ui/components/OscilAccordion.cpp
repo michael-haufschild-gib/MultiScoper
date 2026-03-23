@@ -7,14 +7,9 @@
 
 namespace oscil
 {
-OscilAccordion::OscilAccordion(IThemeService& themeService)
-    : ThemedComponent(themeService)
-{
-}
+OscilAccordion::OscilAccordion(IThemeService& themeService) : ThemedComponent(themeService) {}
 
-OscilAccordion::~OscilAccordion()
-{
-}
+OscilAccordion::~OscilAccordion() {}
 
 OscilAccordionSection* OscilAccordion::addSection(const juce::String& title)
 {
@@ -35,9 +30,7 @@ OscilAccordionSection* OscilAccordion::addSection(const juce::String& title)
         if (currentIndex >= 0)
             handleSectionExpanded(currentIndex, expanded);
     };
-    section->onHeightChanged = [this]() {
-        updateContentHeight();
-    };
+    section->onHeightChanged = [this]() { updateContentHeight(); };
 
     addAndMakeVisible(*section);
     sections_.push_back(std::move(section));
@@ -155,14 +148,11 @@ void OscilAccordion::updateContentHeight()
     int preferredHeight = getPreferredHeight();
     if (getHeight() != preferredHeight)
         setSize(getWidth(), preferredHeight);
-    
+
     layoutSections();
 }
 
-void OscilAccordion::resized()
-{
-    layoutSections();
-}
+void OscilAccordion::resized() { layoutSections(); }
 
 void OscilAccordion::handleSectionExpanded(int index, bool expanded)
 {

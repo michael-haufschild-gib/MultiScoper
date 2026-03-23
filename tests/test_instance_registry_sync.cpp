@@ -3,12 +3,14 @@
     Tests for cross-instance sync, discovery, deduplication, and listener notifications
 */
 
-#include <gtest/gtest.h>
-#include <juce_events/juce_events.h>
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
-#include <thread>
+
+#include <juce_events/juce_events.h>
+
 #include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace oscil;
 
@@ -32,10 +34,7 @@ protected:
         });
     }
 
-    void TearDown() override
-    {
-        registry_.reset();
-    }
+    void TearDown() override { registry_.reset(); }
 };
 
 // === Deduplication Tests ===
@@ -45,10 +44,8 @@ TEST_F(InstanceRegistrySyncTest, DeduplicationSameTrack)
     auto buffer1 = std::make_shared<SharedCaptureBuffer>();
     auto buffer2 = std::make_shared<SharedCaptureBuffer>();
 
-    auto sourceId1 = getRegistry().registerInstance(
-        "track_1", buffer1, "Track 1");
-    auto sourceId2 = getRegistry().registerInstance(
-        "track_1", buffer2, "Track 1 Copy");
+    auto sourceId1 = getRegistry().registerInstance("track_1", buffer1, "Track 1");
+    auto sourceId2 = getRegistry().registerInstance("track_1", buffer2, "Track 1 Copy");
 
     // Should return the same source ID
     EXPECT_EQ(sourceId1, sourceId2);
@@ -60,10 +57,8 @@ TEST_F(InstanceRegistrySyncTest, DeduplicationRefreshesBufferAndMetadataForExist
     auto primaryBuffer = std::make_shared<SharedCaptureBuffer>();
     auto duplicateBuffer = std::make_shared<SharedCaptureBuffer>();
 
-    auto sourceId = getRegistry().registerInstance(
-        "track_primary", primaryBuffer, "Primary Track");
-    auto dedupedId = getRegistry().registerInstance(
-        "track_primary", duplicateBuffer, "Backup Track");
+    auto sourceId = getRegistry().registerInstance("track_primary", primaryBuffer, "Primary Track");
+    auto dedupedId = getRegistry().registerInstance("track_primary", duplicateBuffer, "Backup Track");
 
     EXPECT_EQ(sourceId, dedupedId);
     EXPECT_EQ(getRegistry().getSourceCount(), 1);
@@ -79,16 +74,14 @@ TEST_F(InstanceRegistrySyncTest, DeduplicationPromotesNewBufferWhenPrimaryExpire
     SourceId sourceId;
     {
         auto primaryBuffer = std::make_shared<SharedCaptureBuffer>();
-        sourceId = getRegistry().registerInstance(
-            "track_failover", primaryBuffer, "Primary Track");
+        sourceId = getRegistry().registerInstance("track_failover", primaryBuffer, "Primary Track");
         ASSERT_TRUE(sourceId.isValid());
     }
 
     EXPECT_EQ(getRegistry().getCaptureBuffer(sourceId), nullptr);
 
     auto replacementBuffer = std::make_shared<SharedCaptureBuffer>();
-    auto dedupedId = getRegistry().registerInstance(
-        "track_failover", replacementBuffer, "Replacement Track");
+    auto dedupedId = getRegistry().registerInstance("track_failover", replacementBuffer, "Replacement Track");
 
     EXPECT_EQ(sourceId, dedupedId);
     EXPECT_EQ(getRegistry().getCaptureBuffer(sourceId), replacementBuffer);
@@ -133,8 +126,7 @@ TEST_F(InstanceRegistrySyncTest, ListenerNotifications)
     getRegistry().addListener(&listener);
 
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "track_1", buffer, "Track 1");
+    auto sourceId = getRegistry().registerInstance("track_1", buffer, "Track 1");
 
     EXPECT_EQ(listener.addedCount, 1);
     EXPECT_EQ(listener.lastSourceId, sourceId);
@@ -159,7 +151,7 @@ TEST_F(InstanceRegistrySyncTest, MultipleListeners)
     getRegistry().addListener(&listener3);
 
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    (void)getRegistry().registerInstance("track_multi", buffer, "Multi Track");
+    (void) getRegistry().registerInstance("track_multi", buffer, "Multi Track");
 
     EXPECT_EQ(listener1.addedCount, 1);
     EXPECT_EQ(listener2.addedCount, 1);
@@ -182,7 +174,7 @@ TEST_F(InstanceRegistrySyncTest, RemoveListenerTwice)
 
     // Registering should not notify removed listener
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    (void)getRegistry().registerInstance("track_removed", buffer, "Track");
+    (void) getRegistry().registerInstance("track_removed", buffer, "Track");
 
     EXPECT_EQ(listener.addedCount, 0);
 }
@@ -215,8 +207,8 @@ TEST_F(InstanceRegistrySyncTest, ListenerRemovesDuringCallback)
     auto buffer1 = std::make_shared<SharedCaptureBuffer>();
     auto buffer2 = std::make_shared<SharedCaptureBuffer>();
 
-    (void)getRegistry().registerInstance("track_self1", buffer1, "Track 1");
-    (void)getRegistry().registerInstance("track_self2", buffer2, "Track 2");
+    (void) getRegistry().registerInstance("track_self1", buffer1, "Track 1");
+    (void) getRegistry().registerInstance("track_self2", buffer2, "Track 2");
 
     // Should only have been called once (removed self during first call)
     EXPECT_EQ(listener.callCount, 1);
@@ -245,10 +237,9 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegistration)
             for (int i = 0; i < registrationsPerThread; ++i)
             {
                 int idx = t * registrationsPerThread + i;
-                auto sourceId = getRegistry().registerInstance(
-                    "concurrent_track_" + juce::String(idx),
-                    buffers[static_cast<size_t>(idx)],
-                    "Track " + juce::String(idx));
+                auto sourceId =
+                    getRegistry().registerInstance("concurrent_track_" + juce::String(idx),
+                                                   buffers[static_cast<size_t>(idx)], "Track " + juce::String(idx));
 
                 if (sourceId.isValid())
                     successCount++;
@@ -270,8 +261,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentReadWriteDataIntegrity)
     // Bug caught: reader seeing partially-updated source info (e.g., new name
     // but old sampleRate) due to non-atomic update of SourceInfo fields.
     auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto sourceId = getRegistry().registerInstance(
-        "concurrent_rw", buffer, "RW Track", 2, 44100.0);
+    auto sourceId = getRegistry().registerInstance("concurrent_rw", buffer, "RW Track", 2, 44100.0);
 
     std::atomic<bool> stopFlag{false};
     std::atomic<int> readCount{0};
@@ -306,11 +296,8 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentReadWriteDataIntegrity)
     std::thread writer([this, &stopFlag, &updateCount, &sourceId]() {
         for (int i = 0; i < 200; ++i)
         {
-            getRegistry().updateSource(
-                sourceId,
-                "Name_" + juce::String(i),
-                (i % 2) + 1,
-                44100.0 + static_cast<double>(i));
+            getRegistry().updateSource(sourceId, "Name_" + juce::String(i), (i % 2) + 1,
+                                       44100.0 + static_cast<double>(i));
             updateCount.fetch_add(1, std::memory_order_relaxed);
         }
         stopFlag.store(true);
@@ -321,8 +308,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentReadWriteDataIntegrity)
 
     EXPECT_EQ(updateCount.load(), 200);
     EXPECT_GT(readCount.load(), 10);
-    EXPECT_EQ(inconsistentCount.load(), 0)
-        << "Source info torn read: name and sampleRate from different updates";
+    EXPECT_EQ(inconsistentCount.load(), 0) << "Source info torn read: name and sampleRate from different updates";
 }
 
 TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
@@ -338,8 +324,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
         for (int i = 0; i < iterations; ++i)
         {
             auto buffer = std::make_shared<SharedCaptureBuffer>();
-            auto sourceId = getRegistry().registerInstance(
-                "churn_track_" + juce::String(i % 10), buffer, "Track");
+            auto sourceId = getRegistry().registerInstance("churn_track_" + juce::String(i % 10), buffer, "Track");
 
             if (sourceId.isValid())
                 registerSuccess.fetch_add(1, std::memory_order_relaxed);
@@ -362,8 +347,7 @@ TEST_F(InstanceRegistrySyncTest, ConcurrentRegisterUnregister)
     registerThread.join();
     unregisterThread.join();
 
-    EXPECT_GT(registerSuccess.load(), 10)
-        << "Too few registrations succeeded under contention";
+    EXPECT_GT(registerSuccess.load(), 10) << "Too few registrations succeeded under contention";
 
     // Final state should be consistent: sourceCount should match actual entries
     auto allSources = getRegistry().getAllSources();
@@ -382,9 +366,8 @@ TEST_F(InstanceRegistrySyncTest, GetAllSourcesSnapshotConsistency)
     for (int i = 0; i < 10; ++i)
     {
         auto buffer = std::make_shared<SharedCaptureBuffer>();
-        auto id = getRegistry().registerInstance(
-            "snapshot_track_" + juce::String(i), buffer,
-            "Track_" + juce::String(i), 2, 44100.0);
+        auto id = getRegistry().registerInstance("snapshot_track_" + juce::String(i), buffer,
+                                                 "Track_" + juce::String(i), 2, 44100.0);
         ids.push_back(id);
     }
 
@@ -402,11 +385,10 @@ TEST_F(InstanceRegistrySyncTest, GetAllSourcesSnapshotConsistency)
             // should never have garbage entries)
             for (const auto& src : sources)
             {
-                EXPECT_TRUE(src.sourceId.isValid())
-                    << "Invalid sourceId in getAllSources snapshot";
+                EXPECT_TRUE(src.sourceId.isValid()) << "Invalid sourceId in getAllSources snapshot";
             }
             snapshotCount.fetch_add(1, std::memory_order_relaxed);
-            (void)count; // Suppress unused warning
+            (void) count; // Suppress unused warning
         }
     });
 
@@ -420,9 +402,8 @@ TEST_F(InstanceRegistrySyncTest, GetAllSourcesSnapshotConsistency)
             ids.pop_back();
         }
         auto buffer = std::make_shared<SharedCaptureBuffer>();
-        auto newId = getRegistry().registerInstance(
-            "snapshot_new_" + juce::String(cycle), buffer,
-            "New_" + juce::String(cycle));
+        auto newId =
+            getRegistry().registerInstance("snapshot_new_" + juce::String(cycle), buffer, "New_" + juce::String(cycle));
         if (newId.isValid())
             ids.push_back(newId);
     }

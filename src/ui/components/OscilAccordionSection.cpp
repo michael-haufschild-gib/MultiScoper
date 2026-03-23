@@ -23,21 +23,16 @@ OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const 
     chevronSpring_.position = 0.0f;
 }
 
-OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title, const juce::String& testId)
+OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title,
+                                             const juce::String& testId)
     : OscilAccordionSection(themeService, title)
 {
     setTestId(testId);
 }
 
-void OscilAccordionSection::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilAccordionSection::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilAccordionSection::~OscilAccordionSection()
-{
-    stopTimer();
-}
+OscilAccordionSection::~OscilAccordionSection() { stopTimer(); }
 
 void OscilAccordionSection::setTitle(const juce::String& title)
 {
@@ -85,9 +80,7 @@ void OscilAccordionSection::setContent(juce::Component* content)
             dynamicContent_ = dynamic_cast<DynamicHeightContent*>(content_);
             if (dynamicContent_)
             {
-                dynamicContent_->onPreferredHeightChanged = [this] {
-                    contentHeightChanged();
-                };
+                dynamicContent_->onPreferredHeightChanged = [this] { contentHeightChanged(); };
             }
         }
 
@@ -222,15 +215,15 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
     auto contentBounds = bounds.reduced(PADDING_H, 0);
 
     // Chevron
-    auto chevronBounds = contentBounds.removeFromLeft(CHEVRON_SIZE + 8).toFloat()
-        .withSizeKeepingCentre(CHEVRON_SIZE, CHEVRON_SIZE);
+    auto chevronBounds =
+        contentBounds.removeFromLeft(CHEVRON_SIZE + 8).toFloat().withSizeKeepingCentre(CHEVRON_SIZE, CHEVRON_SIZE);
     paintChevron(g, chevronBounds);
 
     // Icon
     if (icon_.isValid())
     {
-        auto iconBounds = contentBounds.removeFromLeft(ICON_SIZE + 8).toFloat()
-            .withSizeKeepingCentre(ICON_SIZE, ICON_SIZE);
+        auto iconBounds =
+            contentBounds.removeFromLeft(ICON_SIZE + 8).toFloat().withSizeKeepingCentre(ICON_SIZE, ICON_SIZE);
 
         g.setOpacity(opacity);
         g.drawImage(icon_, iconBounds, juce::RectanglePlacement::centred);
@@ -269,7 +262,7 @@ void OscilAccordionSection::paintChevron(juce::Graphics& g, juce::Rectangle<floa
     chevron.applyTransform(juce::AffineTransform::rotation(rotation, cx, cy));
 
     g.strokePath(chevron, juce::PathStrokeType(ComponentLayout::BORDER_MEDIUM, juce::PathStrokeType::curved,
-                                                juce::PathStrokeType::rounded));
+                                               juce::PathStrokeType::rounded));
 }
 
 void OscilAccordionSection::resized()
@@ -286,9 +279,7 @@ void OscilAccordionSection::mouseDown(const juce::MouseEvent& e)
 {
     // Track if mouseDown started in header area for proper click detection
     // This prevents trackpad gestures from triggering false toggles
-    mouseDownInHeader_ = e.mods.isLeftButtonDown() && !e.mods.isPopupMenu() &&
-                         e.y < HEADER_HEIGHT && enabled_;
-
+    mouseDownInHeader_ = e.mods.isLeftButtonDown() && !e.mods.isPopupMenu() && e.y < HEADER_HEIGHT && enabled_;
 }
 
 void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
@@ -306,7 +297,8 @@ void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
 
 void OscilAccordionSection::mouseEnter(const juce::MouseEvent&)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     isHovered_ = true;
 

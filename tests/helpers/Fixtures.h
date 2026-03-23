@@ -5,17 +5,19 @@
 
 #pragma once
 
-#include <gtest/gtest.h>
-#include "core/dsp/TimingEngine.h"
-#include "core/Source.h"
-#include "core/Oscillator.h"
 #include "core/OscilState.h"
-#include "TestSignals.h"
+#include "core/Oscillator.h"
+#include "core/Source.h"
+#include "core/dsp/TimingEngine.h"
+
 #include "AudioBufferBuilder.h"
-#include "SourceBuilder.h"
 #include "OscillatorBuilder.h"
-#include "TimingConfigBuilder.h"
+#include "SourceBuilder.h"
 #include "StateBuilder.h"
+#include "TestSignals.h"
+#include "TimingConfigBuilder.h"
+
+#include <gtest/gtest.h>
 #include <memory>
 
 namespace oscil::test
@@ -46,11 +48,7 @@ protected:
      */
     juce::AudioBuffer<float> createTestBuffer(int numSamples = 512)
     {
-        return AudioBufferBuilder()
-            .withChannels(2)
-            .withSamples(numSamples)
-            .withSilence()
-            .build();
+        return AudioBufferBuilder().withChannels(2).withSamples(numSamples).withSilence().build();
     }
 
     /**
@@ -82,27 +80,19 @@ protected:
         source = std::make_unique<Source>(sourceId);
     }
 
-    void TearDown() override
-    {
-        source.reset();
-    }
+    void TearDown() override { source.reset(); }
 
     /**
      * Create an additional source with auto-generated ID
      */
-    std::unique_ptr<Source> createSource()
-    {
-        return SourceBuilder().buildUnique();
-    }
+    std::unique_ptr<Source> createSource() { return SourceBuilder().buildUnique(); }
 
     /**
      * Create a source with specific state
      */
     std::unique_ptr<Source> createSourceWithState(SourceState state)
     {
-        return SourceBuilder()
-            .withState(state)
-            .buildUnique();
+        return SourceBuilder().withState(state).buildUnique();
     }
 
     /**
@@ -110,10 +100,7 @@ protected:
      */
     std::unique_ptr<Source> createSourceWithOwner(const InstanceId& owner)
     {
-        return SourceBuilder()
-            .withOwner(owner)
-            .withState(SourceState::ACTIVE)
-            .buildUnique();
+        return SourceBuilder().withOwner(owner).withState(SourceState::ACTIVE).buildUnique();
     }
 
     SourceId sourceId;
@@ -134,27 +121,19 @@ protected:
         oscillator = std::make_unique<Oscillator>();
     }
 
-    void TearDown() override
-    {
-        oscillator.reset();
-    }
+    void TearDown() override { oscillator.reset(); }
 
     /**
      * Create an additional oscillator with auto-generated ID
      */
-    std::unique_ptr<Oscillator> createOscillator()
-    {
-        return OscillatorBuilder().buildUnique();
-    }
+    std::unique_ptr<Oscillator> createOscillator() { return OscillatorBuilder().buildUnique(); }
 
     /**
      * Create an oscillator with specific processing mode
      */
     std::unique_ptr<Oscillator> createOscillatorWithMode(ProcessingMode mode)
     {
-        return OscillatorBuilder()
-            .withProcessingMode(mode)
-            .buildUnique();
+        return OscillatorBuilder().withProcessingMode(mode).buildUnique();
     }
 
     /**
@@ -162,9 +141,7 @@ protected:
      */
     std::unique_ptr<Oscillator> createOscillatorWithSource(const SourceId& sid)
     {
-        return OscillatorBuilder()
-            .withSourceId(sid)
-            .buildUnique();
+        return OscillatorBuilder().withSourceId(sid).buildUnique();
     }
 
     SourceId sourceId;
@@ -178,15 +155,9 @@ protected:
 class StateTestFixture : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        state = std::make_unique<OscilState>();
-    }
+    void SetUp() override { state = std::make_unique<OscilState>(); }
 
-    void TearDown() override
-    {
-        state.reset();
-    }
+    void TearDown() override { state.reset(); }
 
     /**
      * Create a state with oscillators
@@ -198,9 +169,9 @@ protected:
         for (int i = 0; i < count; ++i)
         {
             auto osc = OscillatorBuilder()
-                .withName(juce::String("Oscillator ") + juce::String(i + 1))
-                .withOrderIndex(i)
-                .build();
+                           .withName(juce::String("Oscillator ") + juce::String(i + 1))
+                           .withOrderIndex(i)
+                           .build();
             builder.withOscillator(osc);
         }
 
@@ -214,7 +185,7 @@ protected:
     {
         juce::String xml = original.toXmlString();
         auto restored = std::make_unique<OscilState>();
-        (void)restored->fromXmlString(xml);
+        (void) restored->fromXmlString(xml);
         return restored;
     }
 
@@ -234,16 +205,9 @@ protected:
         sourceId = SourceId::generate();
         instanceId = InstanceId::generate();
 
-        source = SourceBuilder()
-            .withId(sourceId)
-            .withOwner(instanceId)
-            .withState(SourceState::ACTIVE)
-            .buildUnique();
+        source = SourceBuilder().withId(sourceId).withOwner(instanceId).withState(SourceState::ACTIVE).buildUnique();
 
-        oscillator = OscillatorBuilder()
-            .withSourceId(sourceId)
-            .withName("Test Oscillator")
-            .buildUnique();
+        oscillator = OscillatorBuilder().withSourceId(sourceId).withName("Test Oscillator").buildUnique();
     }
 
     void TearDown() override
@@ -256,10 +220,7 @@ protected:
     /**
      * Add the oscillator to the state
      */
-    void addOscillatorToState()
-    {
-        state->addOscillator(*oscillator);
-    }
+    void addOscillatorToState() { state->addOscillator(*oscillator); }
 
     std::unique_ptr<OscilState> state;
     SourceId sourceId;

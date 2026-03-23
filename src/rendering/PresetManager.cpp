@@ -11,8 +11,7 @@ static const juce::Identifier PRESET_WRAPPER_TYPE("OscilPreset");
 
 PresetManager::PresetManager()
 {
-    presetsDir_ = juce::File::getSpecialLocation(
-                      juce::File::userApplicationDataDirectory)
+    presetsDir_ = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
 #if JUCE_MAC
                       .getChildFile("Application Support")
 #endif
@@ -82,8 +81,7 @@ VisualConfiguration PresetManager::loadPreset(const juce::String& presetId) cons
     return VisualConfiguration::getPreset(presetId);
 }
 
-bool PresetManager::saveUserPreset(const juce::String& name,
-                                   const VisualConfiguration& config)
+bool PresetManager::saveUserPreset(const juce::String& name, const VisualConfiguration& config)
 {
     if (name.isEmpty())
         return false;
@@ -114,8 +112,7 @@ bool PresetManager::deleteUserPreset(const juce::String& presetId)
     return file.deleteFile();
 }
 
-bool PresetManager::renameUserPreset(const juce::String& presetId,
-                                     const juce::String& newName)
+bool PresetManager::renameUserPreset(const juce::String& presetId, const juce::String& newName)
 {
     auto file = getUserPresetFile(presetId);
     if (!file.existsAsFile())
@@ -148,8 +145,7 @@ bool PresetManager::renameUserPreset(const juce::String& presetId,
     return true;
 }
 
-bool PresetManager::exportPreset(const juce::String& presetId,
-                                 const juce::File& destination) const
+bool PresetManager::exportPreset(const juce::String& presetId, const juce::File& destination) const
 {
     // Try user preset first
     auto file = getUserPresetFile(presetId);
@@ -204,10 +200,7 @@ bool PresetManager::importPreset(const juce::File& source)
     return xml->writeTo(destFile);
 }
 
-juce::File PresetManager::getPresetsDirectory() const
-{
-    return presetsDir_;
-}
+juce::File PresetManager::getPresetsDirectory() const { return presetsDir_; }
 
 bool PresetManager::isUserPreset(const juce::String& presetId) const
 {
@@ -216,9 +209,7 @@ bool PresetManager::isUserPreset(const juce::String& presetId) const
 
 juce::String PresetManager::sanitizeFilename(const juce::String& name)
 {
-    return name.replaceCharacters(" /\\:*?\"<>|", "__________")
-        .trimCharactersAtStart(".")
-        .substring(0, 64);
+    return name.replaceCharacters(" /\\:*?\"<>|", "__________").trimCharactersAtStart(".").substring(0, 64);
 }
 
 juce::String PresetManager::generatePresetId(const juce::String& name)
@@ -234,8 +225,7 @@ juce::File PresetManager::getUserPresetFile(const juce::String& presetId) const
 std::vector<juce::File> PresetManager::getUserPresetFiles() const
 {
     std::vector<juce::File> files;
-    for (const auto& entry :
-         juce::RangedDirectoryIterator(presetsDir_, false, "*.oscpreset"))
+    for (const auto& entry : juce::RangedDirectoryIterator(presetsDir_, false, "*.oscpreset"))
     {
         files.push_back(entry.getFile());
     }

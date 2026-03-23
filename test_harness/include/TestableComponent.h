@@ -25,16 +25,12 @@ namespace oscil::test
 class TestRegistration
 {
 public:
-    TestRegistration(juce::Component& component, const juce::String& testId)
-        : component_(component), testId_(testId)
+    TestRegistration(juce::Component& component, const juce::String& testId) : component_(component), testId_(testId)
     {
         TestElementRegistry::getInstance().registerElement(testId_, &component_);
     }
 
-    ~TestRegistration()
-    {
-        TestElementRegistry::getInstance().unregisterElement(testId_);
-    }
+    ~TestRegistration() { TestElementRegistry::getInstance().unregisterElement(testId_); }
 
     const juce::String& getTestId() const { return testId_; }
 
@@ -58,10 +54,7 @@ private:
 class TestableComponentMixin
 {
 public:
-    TestableComponentMixin(juce::Component& component, const juce::String& testId)
-        : registration_(component, testId)
-    {
-    }
+    TestableComponentMixin(juce::Component& component, const juce::String& testId) : registration_(component, testId) {}
 
     const juce::String& getTestId() const { return registration_.getTestId(); }
 
@@ -77,8 +70,7 @@ private:
  * Declare a testable component member.
  * Use in the private section of your component class.
  */
-#define DECLARE_TESTABLE() \
-    std::unique_ptr<oscil::test::TestRegistration> testRegistration_
+#define DECLARE_TESTABLE() std::unique_ptr<oscil::test::TestRegistration> testRegistration_
 
 /**
  * Register this component for testing.
@@ -86,8 +78,7 @@ private:
  *
  * @param testId The unique identifier for this element
  */
-#define REGISTER_TESTABLE(testId) \
-    testRegistration_ = std::make_unique<oscil::test::TestRegistration>(*this, testId)
+#define REGISTER_TESTABLE(testId) testRegistration_ = std::make_unique<oscil::test::TestRegistration>(*this, testId)
 
 /**
  * Register a child component for testing.
@@ -104,19 +95,16 @@ private:
  *
  * @param testId The identifier used during registration
  */
-#define UNREGISTER_TESTABLE_CHILD(testId) \
-    oscil::test::TestElementRegistry::getInstance().unregisterElement(testId)
+#define UNREGISTER_TESTABLE_CHILD(testId) oscil::test::TestElementRegistry::getInstance().unregisterElement(testId)
 
 /**
  * Generate a unique testId for indexed elements.
  * Example: TEST_ID_WITH_INDEX("pane", 2) returns "pane-2"
  */
-#define TEST_ID_WITH_INDEX(prefix, index) \
-    (juce::String(prefix) + "-" + juce::String(index))
+#define TEST_ID_WITH_INDEX(prefix, index) (juce::String(prefix) + "-" + juce::String(index))
 
 /**
  * Generate a compound testId.
  * Example: TEST_ID_COMPOUND("osc", "1", "freq") returns "osc-1-freq"
  */
-#define TEST_ID_COMPOUND(a, b, c) \
-    (juce::String(a) + "-" + juce::String(b) + "-" + juce::String(c))
+#define TEST_ID_COMPOUND(a, b, c) (juce::String(a) + "-" + juce::String(b) + "-" + juce::String(c))

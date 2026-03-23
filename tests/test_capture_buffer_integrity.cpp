@@ -4,9 +4,11 @@
     clear-then-write sequences, and metadata update correctness.
 */
 
-#include <gtest/gtest.h>
-#include "helpers/AudioBufferBuilder.h"
 #include "core/SharedCaptureBuffer.h"
+
+#include "helpers/AudioBufferBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -29,7 +31,8 @@ TEST_F(CaptureBufferIntegrityTest, MultipleWrapsPreserveExactSampleValues)
     // Off-by-one in wrapPosition after multiple wraps
     constexpr int kBlock = 300; // not factor of 1024 → split writes
     float lastDC = 0.0f;
-    for (int b = 0; b < 10; ++b) {
+    for (int b = 0; b < 10; ++b)
+    {
         lastDC = static_cast<float>(b) * 0.1f + 0.05f;
         buffer->write(generateDC(kBlock, lastDC), CaptureFrameMetadata{});
     }
@@ -45,7 +48,8 @@ TEST_F(CaptureBufferIntegrityTest, StereoChannelSeparationAllSamples)
     // Channel offset error causing L/R crosstalk
     constexpr int kN = 200;
     juce::AudioBuffer<float> buf(2, kN);
-    for (int i = 0; i < kN; ++i) {
+    for (int i = 0; i < kN; ++i)
+    {
         buf.setSample(0, i, 0.3f);
         buf.setSample(1, i, -0.4f);
     }
@@ -55,7 +59,8 @@ TEST_F(CaptureBufferIntegrityTest, StereoChannelSeparationAllSamples)
     ASSERT_EQ(buffer->read(L.data(), kN, 0), kN);
     ASSERT_EQ(buffer->read(R.data(), kN, 1), kN);
 
-    for (int i = 0; i < kN; ++i) {
+    for (int i = 0; i < kN; ++i)
+    {
         EXPECT_NEAR(L[i], 0.3f, 0.001f) << "L[" << i << "] crosstalk";
         EXPECT_NEAR(R[i], -0.4f, 0.001f) << "R[" << i << "] crosstalk";
     }
@@ -221,8 +226,7 @@ TEST_F(CaptureBufferIntegrityTest, AudioBufferReadCrossChannelConsistency)
     for (int i = 0; i < kN; ++i)
     {
         float sum = output.getSample(0, i) + output.getSample(1, i);
-        EXPECT_NEAR(sum, 1.0f, 0.001f)
-            << "Cross-channel invariant violated at sample " << i
-            << " (L=" << output.getSample(0, i) << " R=" << output.getSample(1, i) << ")";
+        EXPECT_NEAR(sum, 1.0f, 0.001f) << "Cross-channel invariant violated at sample " << i
+                                       << " (L=" << output.getSample(0, i) << " R=" << output.getSample(1, i) << ")";
     }
 }

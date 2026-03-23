@@ -3,14 +3,14 @@
 */
 
 #include "ui/controllers/OpenGLLifecycleManager.h"
+
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
 
 namespace oscil
 {
 
-OpenGLLifecycleManager::OpenGLLifecycleManager(juce::AudioProcessorEditor& editor)
-    : editor_(editor)
+OpenGLLifecycleManager::OpenGLLifecycleManager(juce::AudioProcessorEditor& editor) : editor_(editor)
 {
 #if OSCIL_ENABLE_OPENGL
     renderer_ = std::make_unique<WaveformGLRenderer>();
@@ -18,10 +18,7 @@ OpenGLLifecycleManager::OpenGLLifecycleManager(juce::AudioProcessorEditor& edito
 #endif
 }
 
-OpenGLLifecycleManager::~OpenGLLifecycleManager()
-{
-    detach();
-}
+OpenGLLifecycleManager::~OpenGLLifecycleManager() { detach(); }
 
 void OpenGLLifecycleManager::detach()
 {
@@ -86,12 +83,14 @@ void OpenGLLifecycleManager::updateWaveformData(const std::vector<std::unique_pt
 
     for (const auto& pane : paneComponents)
     {
-        if (!pane) continue;
+        if (!pane)
+            continue;
 
         for (size_t i = 0; i < pane->getOscillatorCount(); ++i)
         {
             auto* waveform = pane->getWaveformAt(i);
-            if (!waveform) continue;
+            if (!waveform)
+                continue;
 
             waveform->forceUpdateWaveformData();
 

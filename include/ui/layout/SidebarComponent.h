@@ -5,23 +5,25 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "core/ServiceContext.h"
-#include "ui/layout/WindowLayout.h"
-#include "core/Oscillator.h"
 #include "core/InstanceRegistry.h"
+#include "core/Oscillator.h"
 #include "core/Pane.h"
+#include "core/ServiceContext.h"
+#include "core/dsp/CaptureQualityConfig.h"
+#include "ui/components/ComponentConstants.h"
+#include "ui/components/OscilAccordion.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/SpringAnimation.h"
+#include "ui/components/TestId.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
-#include "ui/layout/sections/TimingSidebarSection.h"
+#include "ui/layout/WindowLayout.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/layout/sections/OscillatorSidebarSection.h"
-#include "ui/components/OscilAccordion.h"
-#include "core/dsp/CaptureQualityConfig.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/TestId.h"
-#include "ui/components/SpringAnimation.h"
-#include "ui/components/ComponentConstants.h"
+#include "ui/layout/sections/TimingSidebarSection.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <vector>
 
 namespace oscil
@@ -33,8 +35,9 @@ class OscilPluginProcessor;
 /**
  * Resize handle component for sidebar edge
  */
-class SidebarResizeHandle : public juce::Component,
-                            public TestIdSupport
+class SidebarResizeHandle
+    : public juce::Component
+    , public TestIdSupport
 {
 public:
     explicit SidebarResizeHandle(IThemeService& themeService);
@@ -91,13 +94,14 @@ private:
 /**
  * Collapsible sidebar component with oscillator list
  */
-class SidebarComponent : public juce::Component,
-                         public juce::Timer,
-                         public ThemeManagerListener,
-                         public OscillatorSidebarSection::Listener,
-                         public TimingSidebarSection::Listener,
-                         public OptionsSection::Listener,
-                         public TestIdSupport
+class SidebarComponent
+    : public juce::Component
+    , public juce::Timer
+    , public ThemeManagerListener
+    , public OscillatorSidebarSection::Listener
+    , public TimingSidebarSection::Listener
+    , public OptionsSection::Listener
+    , public TestIdSupport
 {
 public:
     /**
@@ -221,7 +225,7 @@ private:
     int expandedWidth_ = WindowLayout::DEFAULT_SIDEBAR_WIDTH;
     int dragStartWidth_ = WindowLayout::DEFAULT_SIDEBAR_WIDTH;
     OscillatorId selectedOscillatorId_;
-    std::vector<Pane> currentPanes_;  // Cached for source dropdown updates
+    std::vector<Pane> currentPanes_; // Cached for source dropdown updates
 
     // Collapse animation
     SpringAnimation widthSpring_ = SpringPresets::smooth();
@@ -230,7 +234,7 @@ private:
 
     void notifySidebarWidthChanged();
     void notifySidebarCollapsedStateChanged();
-    
+
     void setupSections();
 
     // OscillatorSidebarSection::Listener overrides

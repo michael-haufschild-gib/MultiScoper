@@ -1,10 +1,11 @@
 #pragma once
 
-#include <gtest/gtest.h>
 #include "core/dsp/TimingEngine.h"
-#include <thread>
+
 #include <atomic>
 #include <cmath>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace oscil;
 

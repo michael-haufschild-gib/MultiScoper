@@ -8,26 +8,21 @@
 namespace oscil
 {
 
-OptionsSection::OptionsSection(ServiceContext& context)
-    : themeService_(context.themeService)
+OptionsSection::OptionsSection(ServiceContext& context) : themeService_(context.themeService)
 {
     OSCIL_REGISTER_TEST_ID("sidebar_options");
     setupComponents();
     themeService_.addListener(this);
 }
 
-OptionsSection::OptionsSection(IThemeService& themeService)
-    : themeService_(themeService)
+OptionsSection::OptionsSection(IThemeService& themeService) : themeService_(themeService)
 {
     OSCIL_REGISTER_TEST_ID("sidebar_options");
     setupComponents();
     themeService_.addListener(this);
 }
 
-OptionsSection::~OptionsSection()
-{
-    themeService_.removeListener(this);
-}
+OptionsSection::~OptionsSection() { themeService_.removeListener(this); }
 
 void OptionsSection::setupComponents()
 {
@@ -51,8 +46,7 @@ void OptionsSection::setupGainControls()
     gainSlider_->setStep(0.1);
     gainSlider_->setValue(currentGainDb_, false);
     gainSlider_->setSuffix(" dB");
-    gainSlider_->onValueChanged = [this](double value)
-    {
+    gainSlider_->onValueChanged = [this](double value) {
         currentGainDb_ = static_cast<float>(value);
         notifyGainChanged();
     };
@@ -68,8 +62,7 @@ void OptionsSection::setupDisplayToggles()
 
     showGridToggle_ = std::make_unique<OscilToggle>(themeService_, "Show Grid", "sidebar_options_gridToggle");
     showGridToggle_->setValue(showGridEnabled_, false);
-    showGridToggle_->onValueChanged = [this](bool value)
-    {
+    showGridToggle_->onValueChanged = [this](bool value) {
         showGridEnabled_ = value;
         notifyShowGridChanged();
     };
@@ -77,8 +70,7 @@ void OptionsSection::setupDisplayToggles()
 
     autoScaleToggle_ = std::make_unique<OscilToggle>(themeService_, "Auto-Scale", "sidebar_options_autoScaleToggle");
     autoScaleToggle_->setValue(autoScaleEnabled_, false);
-    autoScaleToggle_->onValueChanged = [this](bool value)
-    {
+    autoScaleToggle_->onValueChanged = [this](bool value) {
         autoScaleEnabled_ = value;
         gainSlider_->setEnabled(!value);
         notifyAutoScaleChanged();
@@ -98,8 +90,7 @@ void OptionsSection::setupLayoutAndTheme()
     layoutDropdown_->addItem("2 Columns", "2");
     layoutDropdown_->addItem("3 Columns", "3");
     layoutDropdown_->setSelectedIndex(currentColumnCount_ - 1, false);
-    layoutDropdown_->onSelectionChanged = [this](int index)
-    {
+    layoutDropdown_->onSelectionChanged = [this](int index) {
         currentColumnCount_ = index + 1;
         notifyLayoutChanged();
     };
@@ -111,8 +102,7 @@ void OptionsSection::setupLayoutAndTheme()
     addAndMakeVisible(*themeLabel_);
 
     themeDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select theme", "sidebar_options_themeDropdown");
-    themeDropdown_->onSelectionChangedId = [this](const juce::String& themeId)
-    {
+    themeDropdown_->onSelectionChangedId = [this](const juce::String& themeId) {
         currentThemeName_ = themeId;
         notifyThemeChanged();
     };
@@ -126,10 +116,10 @@ void OptionsSection::setupRenderingControls()
     renderingLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*renderingLabel_);
 
-    gpuRenderingToggle_ = std::make_unique<OscilToggle>(themeService_, "GPU Acceleration", "sidebar_options_gpuRenderingToggle");
+    gpuRenderingToggle_ =
+        std::make_unique<OscilToggle>(themeService_, "GPU Acceleration", "sidebar_options_gpuRenderingToggle");
     gpuRenderingToggle_->setValue(gpuRenderingEnabled_, false);
-    gpuRenderingToggle_->onValueChanged = [this](bool value)
-    {
+    gpuRenderingToggle_->onValueChanged = [this](bool value) {
         gpuRenderingEnabled_ = value;
         notifyGpuRenderingChanged();
     };
@@ -143,35 +133,35 @@ void OptionsSection::setupCaptureQualityControls()
     qualityLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*qualityLabel_);
 
-    qualityPresetDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Quality", "sidebar_options_qualityPresetDropdown");
+    qualityPresetDropdown_ =
+        std::make_unique<OscilDropdown>(themeService_, "Quality", "sidebar_options_qualityPresetDropdown");
     qualityPresetDropdown_->addItem("Eco (11 kHz)", "eco");
     qualityPresetDropdown_->addItem("Standard (22 kHz)", "standard");
     qualityPresetDropdown_->addItem("High (44 kHz)", "high");
     qualityPresetDropdown_->addItem("Ultra (Source)", "ultra");
     qualityPresetDropdown_->setSelectedIndex(static_cast<int>(currentQualityPreset_), false);
-    qualityPresetDropdown_->onSelectionChanged = [this](int index)
-    {
+    qualityPresetDropdown_->onSelectionChanged = [this](int index) {
         currentQualityPreset_ = static_cast<QualityPreset>(index);
         notifyQualityPresetChanged();
     };
     addAndMakeVisible(*qualityPresetDropdown_);
 
-    bufferDurationDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Buffer", "sidebar_options_bufferDurationDropdown");
+    bufferDurationDropdown_ =
+        std::make_unique<OscilDropdown>(themeService_, "Buffer", "sidebar_options_bufferDurationDropdown");
     bufferDurationDropdown_->addItem("Short (1s)", "short");
     bufferDurationDropdown_->addItem("Medium (5s)", "medium");
     bufferDurationDropdown_->addItem("Long (10s)", "long");
     bufferDurationDropdown_->setSelectedIndex(static_cast<int>(currentBufferDuration_), false);
-    bufferDurationDropdown_->onSelectionChanged = [this](int index)
-    {
+    bufferDurationDropdown_->onSelectionChanged = [this](int index) {
         currentBufferDuration_ = static_cast<BufferDuration>(index);
         notifyBufferDurationChanged();
     };
     addAndMakeVisible(*bufferDurationDropdown_);
 
-    autoAdjustQualityToggle_ = std::make_unique<OscilToggle>(themeService_, "Auto-Adjust", "sidebar_options_autoAdjustToggle");
+    autoAdjustQualityToggle_ =
+        std::make_unique<OscilToggle>(themeService_, "Auto-Adjust", "sidebar_options_autoAdjustToggle");
     autoAdjustQualityToggle_->setValue(autoAdjustQualityEnabled_, false);
-    autoAdjustQualityToggle_->onValueChanged = [this](bool value)
-    {
+    autoAdjustQualityToggle_->onValueChanged = [this](bool value) {
         autoAdjustQualityEnabled_ = value;
         qualityPresetDropdown_->setEnabled(!value);
         notifyAutoAdjustQualityChanged();
@@ -293,34 +283,28 @@ void OptionsSection::setAutoScale(bool enabled)
     gainSlider_->setEnabled(!enabled);
 }
 
-void OptionsSection::addListener(Listener* listener)
-{
-    listeners_.add(listener);
-}
+void OptionsSection::addListener(Listener* listener) { listeners_.add(listener); }
 
-void OptionsSection::removeListener(Listener* listener)
-{
-    listeners_.remove(listener);
-}
+void OptionsSection::removeListener(Listener* listener) { listeners_.remove(listener); }
 int OptionsSection::getPreferredHeight() const
 {
     using namespace SectionLayout;
 
-    int height = SECTION_PADDING * 2;                // Top and bottom padding
-    height += 40 + SPACING_LARGE;                    // Gain slider
-    height += LABEL_HEIGHT + SPACING_MEDIUM;         // Display label
-    height += ROW_HEIGHT + SPACING_MEDIUM;           // Show Grid
-    height += ROW_HEIGHT + SPACING_LARGE;            // Auto-Scale
-    height += LABEL_HEIGHT + SPACING_MEDIUM;         // Layout label
-    height += DROPDOWN_HEIGHT + SPACING_LARGE;       // Layout dropdown
-    height += LABEL_HEIGHT + SPACING_MEDIUM;         // Theme label
-    height += DROPDOWN_HEIGHT + SPACING_LARGE;       // Theme dropdown
-    height += LABEL_HEIGHT + SPACING_MEDIUM;         // Rendering label
-    height += ROW_HEIGHT + SPACING_LARGE;            // GPU toggle
-    height += LABEL_HEIGHT + SPACING_MEDIUM;         // Capture quality label
-    height += DROPDOWN_HEIGHT + SPACING_MEDIUM;      // Quality preset dropdown
-    height += DROPDOWN_HEIGHT + SPACING_MEDIUM;      // Buffer duration dropdown
-    height += ROW_HEIGHT;                            // Auto-adjust toggle
+    int height = SECTION_PADDING * 2;           // Top and bottom padding
+    height += 40 + SPACING_LARGE;               // Gain slider
+    height += LABEL_HEIGHT + SPACING_MEDIUM;    // Display label
+    height += ROW_HEIGHT + SPACING_MEDIUM;      // Show Grid
+    height += ROW_HEIGHT + SPACING_LARGE;       // Auto-Scale
+    height += LABEL_HEIGHT + SPACING_MEDIUM;    // Layout label
+    height += DROPDOWN_HEIGHT + SPACING_LARGE;  // Layout dropdown
+    height += LABEL_HEIGHT + SPACING_MEDIUM;    // Theme label
+    height += DROPDOWN_HEIGHT + SPACING_LARGE;  // Theme dropdown
+    height += LABEL_HEIGHT + SPACING_MEDIUM;    // Rendering label
+    height += ROW_HEIGHT + SPACING_LARGE;       // GPU toggle
+    height += LABEL_HEIGHT + SPACING_MEDIUM;    // Capture quality label
+    height += DROPDOWN_HEIGHT + SPACING_MEDIUM; // Quality preset dropdown
+    height += DROPDOWN_HEIGHT + SPACING_MEDIUM; // Buffer duration dropdown
+    height += ROW_HEIGHT;                       // Auto-adjust toggle
     return height;
 }
 

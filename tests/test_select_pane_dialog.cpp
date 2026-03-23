@@ -3,10 +3,12 @@
     Tests for the select pane dialog component
 */
 
-#include <gtest/gtest.h>
 #include "ui/dialogs/SelectPaneDialog.h"
 #include "ui/theme/ThemeManager.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#include <gtest/gtest.h>
 
 namespace oscil::test
 {
@@ -21,10 +23,7 @@ protected:
         themeManager_ = std::make_unique<ThemeManager>();
     }
 
-    void TearDown() override
-    {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
@@ -68,9 +67,7 @@ TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPaneVector)
     SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanes(3);
 
-    EXPECT_NO_THROW({
-        dialog.setAvailablePanes(panes);
-    });
+    EXPECT_NO_THROW({ dialog.setAvailablePanes(panes); });
 }
 
 TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPairVector)
@@ -78,9 +75,7 @@ TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPairVector)
     SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanePairs(3);
 
-    EXPECT_NO_THROW({
-        dialog.setAvailablePanes(panes);
-    });
+    EXPECT_NO_THROW({ dialog.setAvailablePanes(panes); });
 }
 
 TEST_F(SelectPaneDialogTest, Reset)
@@ -89,9 +84,7 @@ TEST_F(SelectPaneDialogTest, Reset)
     auto panes = createTestPanes(2);
     dialog.setAvailablePanes(panes);
 
-    EXPECT_NO_THROW({
-        dialog.reset();
-    });
+    EXPECT_NO_THROW({ dialog.reset(); });
 }
 
 TEST_F(SelectPaneDialogTest, SetOnCompleteCallback)
@@ -99,12 +92,10 @@ TEST_F(SelectPaneDialogTest, SetOnCompleteCallback)
     SelectPaneDialog dialog(getThemeManager());
     bool callbackSet = false;
 
-    dialog.setOnComplete([&callbackSet](const SelectPaneDialog::Result&) {
-        callbackSet = true;
-    });
+    dialog.setOnComplete([&callbackSet](const SelectPaneDialog::Result&) { callbackSet = true; });
 
     // Just verify callback can be set without error
-    EXPECT_FALSE(callbackSet);  // Not called yet
+    EXPECT_FALSE(callbackSet); // Not called yet
 }
 
 TEST_F(SelectPaneDialogTest, SetOnCancelCallback)
@@ -112,12 +103,10 @@ TEST_F(SelectPaneDialogTest, SetOnCancelCallback)
     SelectPaneDialog dialog(getThemeManager());
     bool callbackSet = false;
 
-    dialog.setOnCancel([&callbackSet]() {
-        callbackSet = true;
-    });
+    dialog.setOnCancel([&callbackSet]() { callbackSet = true; });
 
     // Just verify callback can be set without error
-    EXPECT_FALSE(callbackSet);  // Not called yet
+    EXPECT_FALSE(callbackSet); // Not called yet
 }
 
 TEST_F(SelectPaneDialogTest, PreferredDimensionsPositive)
@@ -142,9 +131,7 @@ TEST_F(SelectPaneDialogTest, ResizeDoesNotThrow)
     SelectPaneDialog dialog(getThemeManager());
     dialog.setSize(dialog.getPreferredWidth(), dialog.getPreferredHeight());
 
-    EXPECT_NO_THROW({
-        dialog.resized();
-    });
+    EXPECT_NO_THROW({ dialog.resized(); });
 }
 
 } // namespace oscil::test

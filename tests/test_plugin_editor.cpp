@@ -3,14 +3,16 @@
     Tests for the main plugin editor and its refactored components
 */
 
-#include <gtest/gtest.h>
-#include "OscilTestFixtures.h"
 #include "core/SharedCaptureBuffer.h"
-#include "ui/managers/PerformanceMetricsController.h"
-#include "ui/layout/sections/TimingSidebarSection.h"
-#include "ui/layout/sections/OptionsSection.h"
 #include "ui/components/OscilToggle.h"
+#include "ui/layout/sections/OptionsSection.h"
+#include "ui/layout/sections/TimingSidebarSection.h"
+#include "ui/managers/PerformanceMetricsController.h"
+
+#include "OscilTestFixtures.h"
 #include "tools/PluginEditor_Adapters.h"
+
+#include <gtest/gtest.h>
 #include <limits>
 
 using namespace oscil;
@@ -450,12 +452,8 @@ TEST_F(PluginEditorTest, DisconnectedSourceRemainsDisconnectedWhenSourceListChan
     ASSERT_TRUE(disconnectedOsc->getSourceId().isNoSource());
 
     auto externalBuffer = std::make_shared<SharedCaptureBuffer>();
-    auto externalSourceId = getRegistry().registerInstance(
-        "external_disconnect_regression_track",
-        externalBuffer,
-        "External Disconnect Regression",
-        2,
-        44100.0);
+    auto externalSourceId = getRegistry().registerInstance("external_disconnect_regression_track", externalBuffer,
+                                                           "External Disconnect Regression", 2, 44100.0);
     ASSERT_TRUE(externalSourceId.isValid());
 
     pumpMessageQueue(80);

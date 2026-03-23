@@ -3,7 +3,9 @@
 */
 
 #include "rendering/shaders/BasicShader.h"
+
 #include "BinaryData.h"
+
 #include <cmath>
 
 namespace oscil
@@ -65,27 +67,43 @@ void BasicShader::resolveUniforms(juce::OpenGLContext& context)
     gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
 
-    BASIC_LOG("Uniform locations - projection=" << gl_->projectionLoc
-             << ", baseColor=" << gl_->baseColorLoc
-             << ", opacity=" << gl_->opacityLoc
-             << ", glowIntensity=" << gl_->glowIntensityLoc);
+    BASIC_LOG("Uniform locations - projection=" << gl_->projectionLoc << ", baseColor=" << gl_->baseColorLoc
+                                                << ", opacity=" << gl_->opacityLoc
+                                                << ", glowIntensity=" << gl_->glowIntensityLoc);
 
     gl_->positionLoc = context.extensions.glGetAttribLocation(gl_->program->getProgramID(), "position");
     gl_->distFromCenterLoc = context.extensions.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-    if (gl_->positionLoc < 0) gl_->positionLoc = 0;
-    if (gl_->distFromCenterLoc < 0) gl_->distFromCenterLoc = 1;
+    if (gl_->positionLoc < 0)
+        gl_->positionLoc = 0;
+    if (gl_->distFromCenterLoc < 0)
+        gl_->distFromCenterLoc = 1;
 
-    BASIC_LOG("Attribute locations - position=" << gl_->positionLoc
-             << ", distFromCenter=" << gl_->distFromCenterLoc);
+    BASIC_LOG("Attribute locations - position=" << gl_->positionLoc << ", distFromCenter=" << gl_->distFromCenterLoc);
 }
 
 bool BasicShader::validateUniforms() const
 {
     bool valid = true;
-    if (gl_->projectionLoc < 0) { BASIC_LOG("Failed to find uniform 'projection'"); valid = false; }
-    if (gl_->baseColorLoc < 0)  { BASIC_LOG("Failed to find uniform 'baseColor'");  valid = false; }
-    if (gl_->opacityLoc < 0)    { BASIC_LOG("Failed to find uniform 'opacity'");    valid = false; }
-    if (gl_->glowIntensityLoc < 0) { BASIC_LOG("Failed to find uniform 'glowIntensity'"); valid = false; }
+    if (gl_->projectionLoc < 0)
+    {
+        BASIC_LOG("Failed to find uniform 'projection'");
+        valid = false;
+    }
+    if (gl_->baseColorLoc < 0)
+    {
+        BASIC_LOG("Failed to find uniform 'baseColor'");
+        valid = false;
+    }
+    if (gl_->opacityLoc < 0)
+    {
+        BASIC_LOG("Failed to find uniform 'opacity'");
+        valid = false;
+    }
+    if (gl_->glowIntensityLoc < 0)
+    {
+        BASIC_LOG("Failed to find uniform 'glowIntensity'");
+        valid = false;
+    }
     return valid;
 }
 
@@ -151,10 +169,7 @@ void BasicShader::release(juce::OpenGLContext& context)
     gl_->compiled = false;
 }
 
-bool BasicShader::isCompiled() const
-{
-    return gl_->compiled;
-}
+bool BasicShader::isCompiled() const { return gl_->compiled; }
 
 void BasicShader::drawGlowPasses(juce::OpenGLExtensionFunctions& ext, int vertexCount)
 {
@@ -166,26 +181,21 @@ void BasicShader::drawGlowPasses(juce::OpenGLExtensionFunctions& ext, int vertex
     }
 }
 
-void BasicShader::renderChannel(juce::OpenGLExtensionFunctions& ext,
-                                const std::vector<float>& samples,
-                                float centerY, float amplitude, float glowWidth,
-                                float boundsX, float boundsWidth)
+void BasicShader::renderChannel(juce::OpenGLExtensionFunctions& ext, const std::vector<float>& samples, float centerY,
+                                float amplitude, float glowWidth, float boundsX, float boundsWidth)
 {
     vertexBuffer_.clear();
-    buildLineGeometry(vertexBuffer_, samples, centerY, amplitude,
-        glowWidth, boundsX, boundsWidth);
+    buildLineGeometry(vertexBuffer_, samples, centerY, amplitude, glowWidth, boundsX, boundsWidth);
     ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
-        vertexBuffer_.data(), GL_DYNAMIC_DRAW);
+                     vertexBuffer_.data(), GL_DYNAMIC_DRAW);
     drawGlowPasses(ext, static_cast<int>(vertexBuffer_.size() / 4));
 }
 
-void BasicShader::render(
-    juce::OpenGLContext& context,
-    const std::vector<float>& channel1,
-    const std::vector<float>* channel2,
-    const ShaderRenderParams& params)
+void BasicShader::render(juce::OpenGLContext& context, const std::vector<float>& channel1,
+                         const std::vector<float>* channel2, const ShaderRenderParams& params)
 {
-    if (!gl_->compiled || channel1.size() < 2) return;
+    if (!gl_->compiled || channel1.size() < 2)
+        return;
 
     auto& ext = context.extensions;
     glEnable(GL_BLEND);
@@ -196,8 +206,8 @@ void BasicShader::render(
     if (!setup2DProjection(context, ext, gl_->projectionLoc))
         return;
 
-    ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
-        params.colour.getFloatGreen(), params.colour.getFloatBlue(), params.colour.getFloatAlpha());
+    ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(), params.colour.getFloatGreen(),
+                    params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
     ext.glUniform1f(gl_->glowIntensityLoc, GLOW_INTENSITY);
 
@@ -212,7 +222,7 @@ void BasicShader::render(
     ext.glVertexAttribPointer(static_cast<GLuint>(gl_->positionLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
     ext.glEnableVertexAttribArray(static_cast<GLuint>(gl_->distFromCenterLoc));
     ext.glVertexAttribPointer(static_cast<GLuint>(gl_->distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-        reinterpret_cast<void*>(2 * sizeof(float)));
+                              reinterpret_cast<void*>(2 * sizeof(float)));
 
     float glowWidth = params.lineWidth * 10.0f;
     renderChannel(ext, channel1, centerY1, amp1, glowWidth, params.bounds.getX(), params.bounds.getWidth());
@@ -230,11 +240,8 @@ void BasicShader::render(
 
 namespace
 {
-void drawGlowingChannel(juce::Graphics& g,
-                        const std::vector<float>& samples,
-                        float centerY, float amplitude,
-                        float boundsX, float boundsWidth,
-                        const ShaderRenderParams& params)
+void drawGlowingChannel(juce::Graphics& g, const std::vector<float>& samples, float centerY, float amplitude,
+                        float boundsX, float boundsWidth, const ShaderRenderParams& params)
 {
     juce::Path path;
     float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
@@ -252,8 +259,8 @@ void drawGlowingChannel(juce::Graphics& g,
         float glowWidth = params.lineWidth * (1.0f + static_cast<float>(pass) * 1.5f);
         float alpha = params.opacity * (0.15f + 0.25f * (1.0f - static_cast<float>(pass) / BasicShader::GLOW_PASSES));
         g.setColour(params.colour.withAlpha(alpha));
-        g.strokePath(path, juce::PathStrokeType(glowWidth,
-            juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        g.strokePath(path,
+                     juce::PathStrokeType(glowWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
     g.setColour(params.colour.withAlpha(params.opacity));
@@ -264,11 +271,8 @@ void drawGlowingChannel(juce::Graphics& g,
 }
 } // namespace
 
-void BasicShader::renderSoftware(
-    juce::Graphics& g,
-    const std::vector<float>& channel1,
-    const std::vector<float>* channel2,
-    const ShaderRenderParams& params)
+void BasicShader::renderSoftware(juce::Graphics& g, const std::vector<float>& channel1,
+                                 const std::vector<float>* channel2, const ShaderRenderParams& params)
 {
     if (channel1.size() < 2)
         return;
@@ -290,13 +294,11 @@ void BasicShader::renderSoftware(
         amp1 = amp2 = height * 0.45f * params.verticalScale;
     }
 
-    drawGlowingChannel(g, channel1, centerY1, amp1,
-                       bounds.getX(), bounds.getWidth(), params);
+    drawGlowingChannel(g, channel1, centerY1, amp1, bounds.getX(), bounds.getWidth(), params);
 
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        drawGlowingChannel(g, *channel2, centerY2, amp2,
-                           bounds.getX(), bounds.getWidth(), params);
+        drawGlowingChannel(g, *channel2, centerY2, amp2, bounds.getX(), bounds.getWidth(), params);
     }
 }
 

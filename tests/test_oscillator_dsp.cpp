@@ -5,12 +5,15 @@
 */
 
 #include "core/Oscillator.h"
+
 #include <gtest/gtest.h>
 #include <limits>
 
 using namespace oscil;
 
-class OscillatorDspTest : public ::testing::Test {};
+class OscillatorDspTest : public ::testing::Test
+{
+};
 
 // =============================================================================
 // Single-trace detection: determines stereo vs mono rendering path
@@ -29,16 +32,13 @@ TEST_F(OscillatorDspTest, AllNonStereoModesAreSingleTrace)
 {
     Oscillator osc;
 
-    const ProcessingMode singleTraceModes[] = {
-        ProcessingMode::Mono, ProcessingMode::Mid, ProcessingMode::Side,
-        ProcessingMode::Left, ProcessingMode::Right
-    };
+    const ProcessingMode singleTraceModes[] = {ProcessingMode::Mono, ProcessingMode::Mid, ProcessingMode::Side,
+                                               ProcessingMode::Left, ProcessingMode::Right};
 
     for (auto mode : singleTraceModes)
     {
         osc.setProcessingMode(mode);
-        EXPECT_TRUE(osc.isSingleTrace())
-            << processingModeToString(mode).toStdString() << " should be single-trace";
+        EXPECT_TRUE(osc.isSingleTrace()) << processingModeToString(mode).toStdString() << " should be single-trace";
     }
 }
 
@@ -51,21 +51,16 @@ TEST_F(OscillatorDspTest, AllNonStereoModesAreSingleTrace)
 // and their Mid/Side oscillators are gone.
 TEST_F(OscillatorDspTest, ProcessingModeStringRoundTripForAllModes)
 {
-    const ProcessingMode allModes[] = {
-        ProcessingMode::FullStereo, ProcessingMode::Mono,
-        ProcessingMode::Mid, ProcessingMode::Side,
-        ProcessingMode::Left, ProcessingMode::Right
-    };
+    const ProcessingMode allModes[] = {ProcessingMode::FullStereo, ProcessingMode::Mono, ProcessingMode::Mid,
+                                       ProcessingMode::Side,       ProcessingMode::Left, ProcessingMode::Right};
 
     for (auto mode : allModes)
     {
         juce::String str = processingModeToString(mode);
-        EXPECT_FALSE(str.isEmpty())
-            << "Mode " << static_cast<int>(mode) << " has empty string representation";
+        EXPECT_FALSE(str.isEmpty()) << "Mode " << static_cast<int>(mode) << " has empty string representation";
 
         ProcessingMode roundTripped = stringToProcessingMode(str);
-        EXPECT_EQ(roundTripped, mode)
-            << "Round-trip failed for '" << str.toStdString() << "'";
+        EXPECT_EQ(roundTripped, mode) << "Round-trip failed for '" << str.toStdString() << "'";
     }
 }
 
@@ -135,11 +130,8 @@ TEST_F(OscillatorDspTest, InfinityLineWidthClamped)
 // string (or vice versa), causing silent mode change on project reload.
 TEST_F(OscillatorDspTest, ProcessingModeSerializationRoundTrip)
 {
-    const ProcessingMode allModes[] = {
-        ProcessingMode::FullStereo, ProcessingMode::Mono,
-        ProcessingMode::Mid, ProcessingMode::Side,
-        ProcessingMode::Left, ProcessingMode::Right
-    };
+    const ProcessingMode allModes[] = {ProcessingMode::FullStereo, ProcessingMode::Mono, ProcessingMode::Mid,
+                                       ProcessingMode::Side,       ProcessingMode::Left, ProcessingMode::Right};
 
     for (auto mode : allModes)
     {

@@ -3,9 +3,10 @@
 */
 
 #include "TestUIController.h"
-#include <thread>
+
 #include <chrono>
 #include <cmath>
+#include <thread>
 
 namespace oscil::test
 {
@@ -20,8 +21,7 @@ bool TestUIController::setFocus(const juce::String& elementId)
 
     juce::Component::SafePointer<juce::Component> safeComp(component);
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([safeComp, &done]()
-    {
+    juce::MessageManager::callAsync([safeComp, &done]() {
         if (auto* comp = safeComp.getComponent())
             comp->grabKeyboardFocus();
         done.signal();
@@ -64,8 +64,7 @@ bool TestUIController::focusNext()
 
     juce::Component::SafePointer<juce::Component> safeFocused(focused);
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([safeFocused, &done]()
-    {
+    juce::MessageManager::callAsync([safeFocused, &done]() {
         if (auto* comp = safeFocused.getComponent())
             comp->moveKeyboardFocusToSibling(true);
         done.signal();
@@ -83,8 +82,7 @@ bool TestUIController::focusPrevious()
 
     juce::Component::SafePointer<juce::Component> safeFocused(focused);
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([safeFocused, &done]()
-    {
+    juce::MessageManager::callAsync([safeFocused, &done]() {
         if (auto* comp = safeFocused.getComponent())
             comp->moveKeyboardFocusToSibling(false);
         done.signal();
@@ -166,8 +164,8 @@ std::pair<double, double> TestUIController::getSliderRange(const juce::String& e
 {
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (auto* slider = dynamic_cast<juce::Slider*>(component))
-        return { slider->getMinimum(), slider->getMaximum() };
-    return { 0.0, 1.0 };
+        return {slider->getMinimum(), slider->getMaximum()};
+    return {0.0, 1.0};
 }
 
 bool TestUIController::getToggleState(const juce::String& elementId)
@@ -213,8 +211,8 @@ bool TestUIController::waitForElement(const juce::String& elementId, int timeout
         if (TestElementRegistry::getInstance().hasElement(elementId))
             return true;
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime).count();
+        auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 
         if (elapsed >= timeoutMs)
             return false;
@@ -232,8 +230,8 @@ bool TestUIController::waitForVisible(const juce::String& elementId, int timeout
         if (isElementVisible(elementId))
             return true;
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime).count();
+        auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 
         if (elapsed >= timeoutMs)
             return false;
@@ -251,8 +249,8 @@ bool TestUIController::waitForEnabled(const juce::String& elementId, int timeout
         if (isElementEnabled(elementId))
             return true;
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime).count();
+        auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 
         if (elapsed >= timeoutMs)
             return false;
@@ -261,8 +259,7 @@ bool TestUIController::waitForEnabled(const juce::String& elementId, int timeout
     }
 }
 
-bool TestUIController::waitForSliderValue(const juce::String& elementId, double value,
-                                           double tolerance, int timeoutMs)
+bool TestUIController::waitForSliderValue(const juce::String& elementId, double value, double tolerance, int timeoutMs)
 {
     auto startTime = std::chrono::steady_clock::now();
 
@@ -272,8 +269,8 @@ bool TestUIController::waitForSliderValue(const juce::String& elementId, double 
         if (std::abs(currentValue - value) <= tolerance)
             return true;
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime).count();
+        auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 
         if (elapsed >= timeoutMs)
             return false;

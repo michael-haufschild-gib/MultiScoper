@@ -38,19 +38,14 @@ OscilRadioButton::OscilRadioButton(IThemeService& themeService, const juce::Stri
     setTestId(testId);
 }
 
-void OscilRadioButton::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilRadioButton::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilRadioButton::~OscilRadioButton()
-{
-    stopTimer();
-}
+OscilRadioButton::~OscilRadioButton() { stopTimer(); }
 
 void OscilRadioButton::setSelected(bool selected, bool notify)
 {
-    if (selected_ == selected) return;
+    if (selected_ == selected)
+        return;
 
     selected_ = selected;
 
@@ -92,8 +87,7 @@ void OscilRadioButton::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
-        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor
-                               : juce::MouseCursor::NormalCursor);
+        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
 }
@@ -116,7 +110,9 @@ int OscilRadioButton::getPreferredWidth() const
 
 int OscilRadioButton::getPreferredHeight() const
 {
-    return std::max(RADIO_SIZE, static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
+    return std::max(
+        RADIO_SIZE,
+        static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
 }
 
 // paint, paintCircle, paintDot, paintFocusRing are in OscilRadioButtonPainting.cpp
@@ -133,21 +129,17 @@ void OscilRadioButton::resized()
 // OscilRadioGroup Implementation
 //==============================================================================
 
-OscilRadioGroup::OscilRadioGroup(IThemeService& themeService)
-    : ThemedComponent(themeService)
+OscilRadioGroup::OscilRadioGroup(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setWantsKeyboardFocus(true);
 }
 
-OscilRadioGroup::OscilRadioGroup(IThemeService& themeService, Orientation orientation)
-    : OscilRadioGroup(themeService)
+OscilRadioGroup::OscilRadioGroup(IThemeService& themeService, Orientation orientation) : OscilRadioGroup(themeService)
 {
     orientation_ = orientation;
 }
 
-OscilRadioGroup::~OscilRadioGroup()
-{
-}
+OscilRadioGroup::~OscilRadioGroup() {}
 
 void OscilRadioGroup::addOption(const juce::String& label)
 {
@@ -155,9 +147,7 @@ void OscilRadioGroup::addOption(const juce::String& label)
     button->parentGroup_ = this;
 
     int index = static_cast<int>(buttons_.size());
-    button->onSelected = [this, index]() {
-        handleButtonSelected(index);
-    };
+    button->onSelected = [this, index]() { handleButtonSelected(index); };
 
     addAndMakeVisible(*button);
     buttons_.push_back(std::move(button));
@@ -295,10 +285,7 @@ int OscilRadioGroup::getPreferredHeight() const
     }
 }
 
-void OscilRadioGroup::resized()
-{
-    layoutButtons();
-}
+void OscilRadioGroup::resized() { layoutButtons(); }
 
 void OscilRadioGroup::layoutButtons()
 {
@@ -361,10 +348,7 @@ bool OscilRadioGroup::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilRadioGroup::handleButtonSelected(int index)
-{
-    setSelectedIndex(index);
-}
+void OscilRadioGroup::handleButtonSelected(int index) { setSelectedIndex(index); }
 
 void OscilRadioGroup::updateButtonStates()
 {
@@ -372,13 +356,9 @@ void OscilRadioGroup::updateButtonStates()
         buttons_[i]->setSelected(static_cast<int>(i) == selectedIndex_, false);
 }
 
-
 std::unique_ptr<juce::AccessibilityHandler> OscilRadioGroup::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::group
-    );
+    return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
 }
 
 } // namespace oscil

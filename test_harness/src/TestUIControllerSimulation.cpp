@@ -2,16 +2,17 @@
     Oscil Test Harness - UI Controller: Simulation Methods & JSON Serialization
 */
 
-#include "TestUIController.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilButton.h"
 #include "ui/components/OscilAccordion.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/OscilButton.h"
+#include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilTextField.h"
-#include "ui/panels/OscillatorListItem.h"
-#include "ui/panels/OscillatorListComponent.h"
+#include "ui/components/OscilToggle.h"
 #include "ui/layout/SidebarComponent.h"
+#include "ui/panels/OscillatorListComponent.h"
+#include "ui/panels/OscillatorListItem.h"
+
+#include "TestUIController.h"
 
 namespace oscil::test
 {
@@ -38,8 +39,7 @@ bool TestUIController::tryClickFastPath(juce::Component* component)
     return false;
 }
 
-void TestUIController::simulateMouseClick(juce::Component* component, bool doubleClick,
-                                           const juce::ModifierKeys& mods)
+void TestUIController::simulateMouseClick(juce::Component* component, bool doubleClick, const juce::ModifierKeys& mods)
 {
     if (component == nullptr)
         return;
@@ -50,22 +50,11 @@ void TestUIController::simulateMouseClick(juce::Component* component, bool doubl
 
     auto center = component->getLocalBounds().getCentre();
     auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
-    auto clickMods = mods.getRawFlags() == 0
-        ? juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier)
-        : mods;
+    auto clickMods = mods.getRawFlags() == 0 ? juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier) : mods;
 
-    juce::MouseEvent mouseDown(
-        mouseSource,
-        center.toFloat(),
-        clickMods,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component,
-        juce::Time::getCurrentTime(),
-        center.toFloat(),
-        juce::Time::getCurrentTime(),
-        doubleClick ? 2 : 1,
-        false
-    );
+    juce::MouseEvent mouseDown(mouseSource, center.toFloat(), clickMods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, component,
+                               component, juce::Time::getCurrentTime(), center.toFloat(), juce::Time::getCurrentTime(),
+                               doubleClick ? 2 : 1, false);
 
     component->mouseDown(mouseDown);
     component->mouseUp(mouseDown);
@@ -86,17 +75,8 @@ void TestUIController::simulateMouseRightClick(juce::Component* component)
 
     juce::ModifierKeys mods(juce::ModifierKeys::popupMenuClickModifier);
 
-    juce::MouseEvent mouseDown(
-        mouseSource,
-        center.toFloat(),
-        mods,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component,
-        juce::Time::getCurrentTime(),
-        center.toFloat(),
-        juce::Time::getCurrentTime(),
-        1, false
-    );
+    juce::MouseEvent mouseDown(mouseSource, center.toFloat(), mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, component, component,
+                               juce::Time::getCurrentTime(), center.toFloat(), juce::Time::getCurrentTime(), 1, false);
 
     component->mouseDown(mouseDown);
     component->mouseUp(mouseDown);
@@ -121,8 +101,7 @@ bool TestUIController::tryDragFastPathListItems(juce::Component* from, juce::Com
     return false;
 }
 
-void TestUIController::simulateMouseDrag(juce::Component* from, juce::Component* to,
-                                          const juce::ModifierKeys& mods)
+void TestUIController::simulateMouseDrag(juce::Component* from, juce::Component* to, const juce::ModifierKeys& mods)
 {
     if (from == nullptr || to == nullptr)
         return;
@@ -135,20 +114,14 @@ void TestUIController::simulateMouseDrag(juce::Component* from, juce::Component*
     auto toCenter = to->getScreenBounds().getCentre() - from->getScreenPosition();
     auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
 
-    juce::MouseEvent mouseDown(
-        mouseSource, fromCenter.toFloat(), mods,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        from, from, juce::Time::getCurrentTime(),
-        fromCenter.toFloat(), juce::Time::getCurrentTime(), 1, false
-    );
+    juce::MouseEvent mouseDown(mouseSource, fromCenter.toFloat(), mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, from, from,
+                               juce::Time::getCurrentTime(), fromCenter.toFloat(), juce::Time::getCurrentTime(), 1,
+                               false);
     from->mouseDown(mouseDown);
 
-    juce::MouseEvent mouseDrag(
-        mouseSource, toCenter.toFloat(), mods,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        from, from, juce::Time::getCurrentTime(),
-        fromCenter.toFloat(), juce::Time::getCurrentTime(), 1, true
-    );
+    juce::MouseEvent mouseDrag(mouseSource, toCenter.toFloat(), mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, from, from,
+                               juce::Time::getCurrentTime(), fromCenter.toFloat(), juce::Time::getCurrentTime(), 1,
+                               true);
     from->mouseDrag(mouseDrag);
     from->mouseUp(mouseDrag);
 }
@@ -160,9 +133,12 @@ bool TestUIController::tryDragOffsetFastPathSidebar(juce::Component* component, 
         return false;
 
     juce::Logger::writeToLog("[DragOffset] SidebarResizeHandle fast path: deltaX=" + juce::String(deltaX));
-    if (handle->onResizeStart) handle->onResizeStart();
-    if (handle->onResizeDrag)  handle->onResizeDrag(deltaX);
-    if (handle->onResizeEnd)   handle->onResizeEnd();
+    if (handle->onResizeStart)
+        handle->onResizeStart();
+    if (handle->onResizeDrag)
+        handle->onResizeDrag(deltaX);
+    if (handle->onResizeEnd)
+        handle->onResizeEnd();
 
     // Snap the sidebar's width spring so getEffectiveWidth() reflects the new width immediately
     for (auto* p = component->getParentComponent(); p != nullptr; p = p->getParentComponent())
@@ -177,7 +153,7 @@ bool TestUIController::tryDragOffsetFastPathSidebar(juce::Component* component, 
 }
 
 void TestUIController::simulateMouseDragOffset(juce::Component* component, int deltaX, int deltaY,
-                                                const juce::ModifierKeys& mods)
+                                               const juce::ModifierKeys& mods)
 {
     if (component == nullptr)
         return;
@@ -189,26 +165,19 @@ void TestUIController::simulateMouseDragOffset(juce::Component* component, int d
     auto endPoint = center + juce::Point<int>(deltaX, deltaY);
     auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
 
-    juce::MouseEvent mouseDown(
-        mouseSource, center.toFloat(), mods,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component, juce::Time::getCurrentTime(),
-        center.toFloat(), juce::Time::getCurrentTime(), 1, false
-    );
+    juce::MouseEvent mouseDown(mouseSource, center.toFloat(), mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, component, component,
+                               juce::Time::getCurrentTime(), center.toFloat(), juce::Time::getCurrentTime(), 1, false);
     component->mouseDown(mouseDown);
 
-    juce::MouseEvent mouseDrag(
-        mouseSource, endPoint.toFloat(), mods,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component, juce::Time::getCurrentTime(),
-        center.toFloat(), juce::Time::getCurrentTime(), 1, true
-    );
+    juce::MouseEvent mouseDrag(mouseSource, endPoint.toFloat(), mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, component,
+                               component, juce::Time::getCurrentTime(), center.toFloat(), juce::Time::getCurrentTime(),
+                               1, true);
     component->mouseDrag(mouseDrag);
     component->mouseUp(mouseDrag);
 }
 
 void TestUIController::simulateMouseWheel(juce::Component* component, float deltaX, float deltaY,
-                                           const juce::ModifierKeys& mods)
+                                          const juce::ModifierKeys& mods)
 {
     if (component == nullptr)
         return;
@@ -217,17 +186,8 @@ void TestUIController::simulateMouseWheel(juce::Component* component, float delt
     auto& desktop = juce::Desktop::getInstance();
     auto mouseSource = desktop.getMainMouseSource();
 
-    juce::MouseEvent mouseEvent(
-        mouseSource,
-        center.toFloat(),
-        mods,
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component,
-        juce::Time::getCurrentTime(),
-        center.toFloat(),
-        juce::Time::getCurrentTime(),
-        1, false
-    );
+    juce::MouseEvent mouseEvent(mouseSource, center.toFloat(), mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, component, component,
+                                juce::Time::getCurrentTime(), center.toFloat(), juce::Time::getCurrentTime(), 1, false);
 
     juce::MouseWheelDetails wheel;
     wheel.deltaX = deltaX;
@@ -248,17 +208,9 @@ void TestUIController::simulateMouseHover(juce::Component* component)
     auto& desktop = juce::Desktop::getInstance();
     auto mouseSource = desktop.getMainMouseSource();
 
-    juce::MouseEvent mouseEvent(
-        mouseSource,
-        center.toFloat(),
-        juce::ModifierKeys(),
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component,
-        juce::Time::getCurrentTime(),
-        center.toFloat(),
-        juce::Time::getCurrentTime(),
-        0, false
-    );
+    juce::MouseEvent mouseEvent(mouseSource, center.toFloat(), juce::ModifierKeys(), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                                component, component, juce::Time::getCurrentTime(), center.toFloat(),
+                                juce::Time::getCurrentTime(), 0, false);
 
     component->mouseEnter(mouseEvent);
     component->mouseMove(mouseEvent);
@@ -406,15 +358,13 @@ json TestUIController::componentToJson(juce::Component* component, const juce::S
 
     auto bounds = component->getBounds();
     info["bounds"] = {
-        {"x", bounds.getX()}, {"y", bounds.getY()},
-        {"width", bounds.getWidth()}, {"height", bounds.getHeight()}
-    };
+        {"x", bounds.getX()}, {"y", bounds.getY()}, {"width", bounds.getWidth()}, {"height", bounds.getHeight()}};
 
     auto screenBounds = component->getScreenBounds();
-    info["screenBounds"] = {
-        {"x", screenBounds.getX()}, {"y", screenBounds.getY()},
-        {"width", screenBounds.getWidth()}, {"height", screenBounds.getHeight()}
-    };
+    info["screenBounds"] = {{"x", screenBounds.getX()},
+                            {"y", screenBounds.getY()},
+                            {"width", screenBounds.getWidth()},
+                            {"height", screenBounds.getHeight()}};
 
     appendComponentTypeInfo(info, component);
     return info;

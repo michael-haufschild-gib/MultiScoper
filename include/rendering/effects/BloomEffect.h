@@ -7,6 +7,7 @@
 
 #include "PostProcessEffect.h"
 #include "rendering/VisualConfiguration.h"
+
 #include <memory>
 
 #if OSCIL_ENABLE_OPENGL
@@ -34,13 +35,8 @@ public:
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
 
-    void apply(
-        juce::OpenGLContext& context,
-        Framebuffer* source,
-        Framebuffer* destination,
-        FramebufferPool& pool,
-        float deltaTime
-    ) override;
+    void apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool,
+               float deltaTime) override;
 
     /**
      * Configure the bloom effect from VisualConfiguration.
@@ -61,7 +57,7 @@ private:
     GLint prefilterThreshLoc_ = -1;
     GLint prefilterSoftKneeLoc_ = -1;
     GLint prefilterResLoc_ = -1;
-    
+
     std::unique_ptr<juce::OpenGLShaderProgram> downsampleShader_;
     GLint downsampleResLoc_ = -1;
 
@@ -87,7 +83,8 @@ private:
     void passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, FramebufferPool& pool);
     void passDownsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool);
     void passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool);
-    void passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool);
+    void passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination,
+                     FramebufferPool& pool);
 };
 
 } // namespace oscil

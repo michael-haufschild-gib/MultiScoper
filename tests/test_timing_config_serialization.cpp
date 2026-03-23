@@ -3,11 +3,13 @@
     Tests for serialization, string conversion, and edge cases
 */
 
-#include <gtest/gtest.h>
 #include "core/dsp/TimingConfig.h"
+
 #include "helpers/TimingConfigBuilder.h"
-#include <limits>
+
 #include <cmath>
+#include <gtest/gtest.h>
+#include <limits>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -15,9 +17,7 @@ using namespace oscil::test;
 class TimingConfigSerializationTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-    }
+    void SetUp() override {}
 };
 
 // === Serialization Tests ===
@@ -63,7 +63,7 @@ TEST_F(TimingConfigSerializationTest, TimingModeStringConversion)
 
     EXPECT_EQ(stringToTimingMode("TIME"), TimingMode::TIME);
     EXPECT_EQ(stringToTimingMode("MELODIC"), TimingMode::MELODIC);
-    EXPECT_EQ(stringToTimingMode("INVALID"), TimingMode::TIME);  // Default
+    EXPECT_EQ(stringToTimingMode("INVALID"), TimingMode::TIME); // Default
 }
 
 TEST_F(TimingConfigSerializationTest, NoteIntervalStringConversion)
@@ -77,7 +77,7 @@ TEST_F(TimingConfigSerializationTest, NoteIntervalStringConversion)
     EXPECT_EQ(stringToNoteInterval("1/8"), NoteInterval::EIGHTH);
     EXPECT_EQ(stringToNoteInterval("1/4."), NoteInterval::DOTTED_QUARTER);
     EXPECT_EQ(stringToNoteInterval("1/4T"), NoteInterval::TRIPLET_QUARTER);
-    EXPECT_EQ(stringToNoteInterval("INVALID"), NoteInterval::QUARTER);  // Default
+    EXPECT_EQ(stringToNoteInterval("INVALID"), NoteInterval::QUARTER); // Default
 }
 
 TEST_F(TimingConfigSerializationTest, TriggerModeStringConversion)
@@ -89,7 +89,7 @@ TEST_F(TimingConfigSerializationTest, TriggerModeStringConversion)
     EXPECT_EQ(stringToTriggerMode("FREE_RUNNING"), TriggerMode::FREE_RUNNING);
     EXPECT_EQ(stringToTriggerMode("HOST_SYNC"), TriggerMode::HOST_SYNC);
     EXPECT_EQ(stringToTriggerMode("TRIGGERED"), TriggerMode::TRIGGERED);
-    EXPECT_EQ(stringToTriggerMode("INVALID"), TriggerMode::FREE_RUNNING);  // Default
+    EXPECT_EQ(stringToTriggerMode("INVALID"), TriggerMode::FREE_RUNNING); // Default
 }
 
 TEST_F(TimingConfigSerializationTest, NoteIntervalDisplayNames)
@@ -109,7 +109,7 @@ TEST_F(TimingConfigSerializationTest, TriggerEdgeStringConversion)
     EXPECT_EQ(stringToTriggerEdge("Rising"), TriggerEdge::Rising);
     EXPECT_EQ(stringToTriggerEdge("Falling"), TriggerEdge::Falling);
     EXPECT_EQ(stringToTriggerEdge("Both"), TriggerEdge::Both);
-    EXPECT_EQ(stringToTriggerEdge("INVALID"), TriggerEdge::Rising);  // Default
+    EXPECT_EQ(stringToTriggerEdge("INVALID"), TriggerEdge::Rising); // Default
 }
 
 TEST_F(TimingConfigSerializationTest, AllNoteIntervalStrings)
@@ -249,7 +249,7 @@ TEST_F(TimingConfigSerializationTest, DeserializeValueTreeMissingProperties)
     // Should have default values
     EXPECT_EQ(config.timingMode, TimingMode::TIME);
     EXPECT_EQ(config.triggerMode, TriggerMode::FREE_RUNNING);
-    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f);  // New default: 500ms
+    EXPECT_FLOAT_EQ(config.timeIntervalMs, 500.0f); // New default: 500ms
     EXPECT_EQ(config.noteInterval, NoteInterval::QUARTER);
     EXPECT_FLOAT_EQ(config.hostBPM, 120.0f);
 }
@@ -361,7 +361,7 @@ TEST_F(TimingConfigSerializationTest, IntervalInSamplesVeryHighSampleRate)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::TIME);
-    config.setTimeInterval(100.0f);  // 100ms
+    config.setTimeInterval(100.0f); // 100ms
 
     // At 192000 Hz, 100ms = 19200 samples
     EXPECT_EQ(config.getIntervalInSamples(192000.0f), 19200);

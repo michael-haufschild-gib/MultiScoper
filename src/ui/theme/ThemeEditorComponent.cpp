@@ -5,8 +5,9 @@
 */
 
 #include "ui/theme/ThemeEditorComponent.h"
-#include "ui/theme/ThemeManager.h"
+
 #include "ui/components/TestId.h"
+#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
@@ -58,9 +59,7 @@ void ColorSwatchButton::paint(juce::Graphics& g)
     g.drawRect(swatchBounds, 1.0f);
 }
 
-void ColorSwatchButton::resized()
-{
-}
+void ColorSwatchButton::resized() {}
 
 void ColorSwatchButton::mouseUp(const juce::MouseEvent& e)
 {
@@ -71,18 +70,14 @@ void ColorSwatchButton::mouseUp(const juce::MouseEvent& e)
         colorPicker->setSize(280, ColorPickerComponent::PREFERRED_HEIGHT);
 
         juce::Component::SafePointer<ColorSwatchButton> safeThis(this);
-        colorPicker->onColourChanged([safeThis](juce::Colour newColour)
-        {
+        colorPicker->onColourChanged([safeThis](juce::Colour newColour) {
             if (safeThis != nullptr)
             {
                 safeThis->setColour(newColour);
             }
         });
 
-        juce::CallOutBox::launchAsynchronously(
-            std::move(colorPicker),
-            getScreenBounds(),
-            nullptr);
+        juce::CallOutBox::launchAsynchronously(std::move(colorPicker), getScreenBounds(), nullptr);
     }
 }
 
@@ -136,8 +131,7 @@ void ThemeColorSection::resized()
 void ThemeColorSection::addColorSwatch(const juce::String& label, juce::Colour* colorRef)
 {
     auto swatch = std::make_unique<ColorSwatchButton>(themeService_, label, *colorRef);
-    swatch->onColourChanged([this, colorRef](juce::Colour c)
-    {
+    swatch->onColourChanged([this, colorRef](juce::Colour c) {
         *colorRef = c;
         if (colorChangedCallback_)
             colorChangedCallback_();
@@ -208,12 +202,14 @@ void ThemeEditorComponent::createButtons()
 
     closeButton_ = std::make_unique<OscilButton>(themeService_, "Close", "themeEditor_closeBtn");
     closeButton_->setVariant(ButtonVariant::Ghost);
-    closeButton_->onClick = [this]() { if (closeCallback_) closeCallback_(); };
+    closeButton_->onClick = [this]() {
+        if (closeCallback_)
+            closeCallback_();
+    };
     addAndMakeVisible(*closeButton_);
 }
 
-ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService)
-    : themeService_(themeService)
+ThemeEditorComponent::ThemeEditorComponent(IThemeService& themeService) : themeService_(themeService)
 {
     themeService_.addListener(this);
 
@@ -320,7 +316,8 @@ void ThemeEditorComponent::layoutColorSections(int sectionWidth)
 {
     int y = 0;
     auto layoutSection = [&](ThemeColorSection* section) {
-        if (!section) return;
+        if (!section)
+            return;
         int h = section->getPreferredHeight();
         section->setBounds(0, y, sectionWidth, h);
         y += h + 10;
@@ -341,13 +338,9 @@ void ThemeEditorComponent::layoutColorSections(int sectionWidth)
     colorContainer_->setSize(sectionWidth, y);
 }
 
-int ThemeEditorComponent::getNumRows()
-{
-    return static_cast<int>(themeNames_.size());
-}
+int ThemeEditorComponent::getNumRows() { return static_cast<int>(themeNames_.size()); }
 
-void ThemeEditorComponent::paintListBoxItem(int rowNumber, juce::Graphics& g,
-                                             int width, int height, bool rowIsSelected)
+void ThemeEditorComponent::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected)
 {
     const auto& theme = themeService_.getCurrentTheme();
 
@@ -381,10 +374,7 @@ void ThemeEditorComponent::selectedRowsChanged(int lastRowSelected)
     }
 }
 
-void ThemeEditorComponent::themeChanged(const ColorTheme& /*newTheme*/)
-{
-    repaint();
-}
+void ThemeEditorComponent::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 void ThemeEditorComponent::refreshThemeList()
 {

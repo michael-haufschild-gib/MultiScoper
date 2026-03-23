@@ -110,18 +110,12 @@ struct PaneId
  */
 struct OscillatorIdHash
 {
-    std::size_t operator()(const OscillatorId& oid) const
-    {
-        return static_cast<std::size_t>(oid.id.hashCode());
-    }
+    std::size_t operator()(const OscillatorId& oid) const { return static_cast<std::size_t>(oid.id.hashCode()); }
 };
 
 struct PaneIdHash
 {
-    std::size_t operator()(const PaneId& pid) const
-    {
-        return static_cast<std::size_t>(pid.id.hashCode());
-    }
+    std::size_t operator()(const PaneId& pid) const { return static_cast<std::size_t>(pid.id.hashCode()); }
 };
 
 /**
@@ -236,19 +230,13 @@ public:
     /**
      * Get the effective colour with opacity applied
      */
-    [[nodiscard]] juce::Colour getEffectiveColour() const noexcept
-    {
-        return colour_.withAlpha(opacity_);
-    }
+    [[nodiscard]] juce::Colour getEffectiveColour() const noexcept { return colour_.withAlpha(opacity_); }
 
     /**
      * Check if this oscillator produces a single trace (mono-like modes)
      * vs two traces (FullStereo)
      */
-    [[nodiscard]] bool isSingleTrace() const noexcept
-    {
-        return processingMode_ != ProcessingMode::FullStereo;
-    }
+    [[nodiscard]] bool isSingleTrace() const noexcept { return processingMode_ != ProcessingMode::FullStereo; }
 
     /**
      * Validate name according to PRD constraints (1-32 characters)
@@ -259,9 +247,8 @@ public:
     static constexpr int CURRENT_SCHEMA_VERSION = 2;
 
 private:
-    static OscillatorState migrateOscillatorState(const juce::ValueTree& state,
-                                                   int schemaVersion,
-                                                   const SourceId& sourceId);
+    static OscillatorState migrateOscillatorState(const juce::ValueTree& state, int schemaVersion,
+                                                  const SourceId& sourceId);
     OscillatorId id_;
     SourceId sourceId_;
     OscillatorState state_ = OscillatorState::NO_SOURCE;

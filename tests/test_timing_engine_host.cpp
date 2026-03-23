@@ -12,7 +12,7 @@ TEST_F(TimingEngineTest, HostInfoUpdate_BPMChange)
 {
     engine.setTimingMode(TimingMode::MELODIC);
     engine.setNoteInterval(EngineNoteInterval::NOTE_1_4TH);
-    engine.setHostSyncEnabled(true);  // Enable host sync so hostBPM affects interval
+    engine.setHostSyncEnabled(true); // Enable host sync so hostBPM affects interval
 
     // Create position info with new BPM
     juce::AudioPlayHead::PositionInfo posInfo;
@@ -298,5 +298,3 @@ TEST_F(TimingEngineTest, HostInfoUpdate_PlayTransitionWithoutAnyKnownSampleUsesZ
     EXPECT_FALSE(engine.checkAndClearTrigger());
     EXPECT_DOUBLE_EQ(engine.getConfig().lastSyncTimestamp, 0.0);
 }
-
-

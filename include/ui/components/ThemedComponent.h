@@ -5,9 +5,10 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
 #include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace oscil
 {
@@ -44,8 +45,9 @@ namespace oscil
  *       }
  *   };
  */
-class ThemedComponent : public juce::Component,
-                        public ThemeManagerListener
+class ThemedComponent
+    : public juce::Component
+    , public ThemeManagerListener
 {
 public:
     /**

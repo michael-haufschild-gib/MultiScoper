@@ -11,13 +11,15 @@
     - Stale context_ pointer used after reconfigure() replaces it
 */
 
-#include <gtest/gtest.h>
 #include "core/DecimatingCaptureBuffer.h"
+
 #include "helpers/AudioBufferBuilder.h"
-#include <thread>
+
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -29,11 +31,7 @@ protected:
 
     juce::AudioBuffer<float> generateDCBuffer(int numSamples, float value)
     {
-        return AudioBufferBuilder()
-            .withChannels(2)
-            .withSamples(numSamples)
-            .withDC(value)
-            .build();
+        return AudioBufferBuilder().withChannels(2).withSamples(numSamples).withDC(value).build();
     }
 };
 
@@ -184,10 +182,7 @@ TEST_F(DecimatingCaptureBufferConcurrentTest, ReconfigureDuringConcurrentWriteDo
     });
 
     // Main thread reconfigures repeatedly (message thread operation)
-    QualityPreset presets[] = {
-        QualityPreset::Eco, QualityPreset::Standard,
-        QualityPreset::High, QualityPreset::Ultra
-    };
+    QualityPreset presets[] = {QualityPreset::Eco, QualityPreset::Standard, QualityPreset::High, QualityPreset::Ultra};
 
     for (int i = 0; i < 20; ++i)
     {
@@ -243,10 +238,10 @@ TEST_F(DecimatingCaptureBufferConcurrentTest, ReadDuringReconfigureDoesNotCrash)
         while (running.load(std::memory_order_relaxed))
         {
             // These calls must not crash, even during reconfigure
-            (void)buffer.read(out.data(), 256, 0);
-            (void)buffer.getLatestMetadata();
-            (void)buffer.getAvailableSamples();
-            (void)buffer.getCapacity();
+            (void) buffer.read(out.data(), 256, 0);
+            (void) buffer.getLatestMetadata();
+            (void) buffer.getAvailableSamples();
+            (void) buffer.getCapacity();
             rc.fetch_add(1, std::memory_order_relaxed);
         }
     });
@@ -301,11 +296,11 @@ TEST_F(DecimatingCaptureBufferConcurrentTest, MultipleReadersWithConcurrentWrite
             std::vector<float> out(128);
             while (running.load(std::memory_order_relaxed))
             {
-                (void)buffer.read(out.data(), 128, 0);
-                (void)buffer.read(out.data(), 128, 1);
-                (void)buffer.getLatestMetadata();
-                (void)buffer.getPeakLevel(0, 128);
-                (void)buffer.getRMSLevel(0, 128);
+                (void) buffer.read(out.data(), 128, 0);
+                (void) buffer.read(out.data(), 128, 1);
+                (void) buffer.getLatestMetadata();
+                (void) buffer.getPeakLevel(0, 128);
+                (void) buffer.getRMSLevel(0, 128);
                 totalRc.fetch_add(1, std::memory_order_relaxed);
             }
         });

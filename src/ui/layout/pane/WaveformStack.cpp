@@ -3,8 +3,9 @@
 */
 
 #include "ui/layout/pane/WaveformStack.h"
-#include "core/interfaces/IAudioDataProvider.h"
+
 #include "core/interfaces/IAudioBuffer.h"
+#include "core/interfaces/IAudioDataProvider.h"
 
 namespace oscil
 {
@@ -30,9 +31,8 @@ std::shared_ptr<IAudioBuffer> resolveCaptureBufferForSource(IAudioDataProvider& 
 }
 } // namespace
 
-WaveformStack::WaveformStack(IAudioDataProvider& dataProvider,
-                              IThemeService& themeService,
-                              ShaderRegistry& shaderRegistry)
+WaveformStack::WaveformStack(IAudioDataProvider& dataProvider, IThemeService& themeService,
+                             ShaderRegistry& shaderRegistry)
     : dataProvider_(dataProvider)
     , themeService_(themeService)
     , shaderRegistry_(shaderRegistry)
@@ -42,10 +42,7 @@ WaveformStack::WaveformStack(IAudioDataProvider& dataProvider,
     setInterceptsMouseClicks(false, false);
 }
 
-void WaveformStack::resized()
-{
-    updateLayout();
-}
+void WaveformStack::resized() { updateLayout(); }
 
 void WaveformStack::addOscillator(const Oscillator& oscillator)
 {
@@ -75,10 +72,9 @@ void WaveformStack::addOscillator(const Oscillator& oscillator)
 
 void WaveformStack::removeOscillator(const OscillatorId& oscillatorId)
 {
-    auto it = std::find_if(entries_.begin(), entries_.end(),
-        [&oscillatorId](const OscillatorEntry& entry) {
-            return entry.oscillator.getId() == oscillatorId;
-        });
+    auto it = std::find_if(entries_.begin(), entries_.end(), [&oscillatorId](const OscillatorEntry& entry) {
+        return entry.oscillator.getId() == oscillatorId;
+    });
 
     if (it != entries_.end())
     {
@@ -280,7 +276,7 @@ void WaveformStack::updateLayout()
         {
             // For the last item, take the remaining space to handle rounding errors
             int height = (i == entries_.size() - 1) ? bounds.getHeight() : waveformHeight;
-            
+
             auto waveformBounds = bounds.removeFromTop(height);
             entries_[i].waveform->setBounds(waveformBounds);
         }

@@ -6,17 +6,19 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/theme/ThemeManager.h"
-#include "ui/theme/IThemeService.h"
 #include "core/ServiceContext.h"
-#include "ui/layout/sections/SectionConstants.h"
-#include "ui/layout/sections/DynamicHeightContent.h"
+#include "core/dsp/CaptureQualityConfig.h"
+#include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilToggle.h"
-#include "ui/components/OscilDropdown.h"
 #include "ui/components/TestId.h"
-#include "core/dsp/CaptureQualityConfig.h"
+#include "ui/layout/sections/DynamicHeightContent.h"
+#include "ui/layout/sections/SectionConstants.h"
+#include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -30,10 +32,11 @@ namespace oscil
  *
  * This section is designed to be wrapped in a CollapsibleSection
  */
-class OptionsSection : public juce::Component,
-                       public ThemeManagerListener,
-                       public TestIdSupport,
-                       public DynamicHeightContent
+class OptionsSection
+    : public juce::Component
+    , public ThemeManagerListener
+    , public TestIdSupport
+    , public DynamicHeightContent
 {
 public:
     /**
@@ -177,7 +180,7 @@ private:
     bool autoScaleEnabled_ = true;
     int currentColumnCount_ = 1;
     juce::String currentThemeName_ = "Dark";
-    bool gpuRenderingEnabled_ = true;  // Default to GPU mode when available
+    bool gpuRenderingEnabled_ = true; // Default to GPU mode when available
     QualityPreset currentQualityPreset_ = QualityPreset::Standard;
     BufferDuration currentBufferDuration_ = BufferDuration::Medium;
     bool autoAdjustQualityEnabled_ = true;

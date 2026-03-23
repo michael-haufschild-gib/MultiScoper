@@ -3,7 +3,9 @@
 */
 
 #include "TestScreenshot.h"
+
 #include <juce_graphics/juce_graphics.h>
+
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -21,14 +23,11 @@ juce::Colour findDominantColor(const std::map<uint32_t, int>& colorCounts)
         return juce::Colours::black;
 
     auto maxIt = std::max_element(colorCounts.begin(), colorCounts.end(),
-        [](const auto& a, const auto& b) { return a.second < b.second; });
+                                  [](const auto& a, const auto& b) { return a.second < b.second; });
 
     uint32_t key = maxIt->first;
-    return juce::Colour(
-        static_cast<uint8_t>((key / (256 * 256)) * 16),
-        static_cast<uint8_t>(((key / 256) % 256) * 16),
-        static_cast<uint8_t>((key % 256) * 16)
-    );
+    return juce::Colour(static_cast<uint8_t>((key / (256 * 256)) * 16), static_cast<uint8_t>(((key / 256) % 256) * 16),
+                        static_cast<uint8_t>((key % 256) * 16));
 }
 
 } // anonymous namespace
@@ -36,9 +35,8 @@ juce::Colour findDominantColor(const std::map<uint32_t, int>& colorCounts)
 // ================== Waveform Verification ==================
 
 // Scan a single image column for waveform pixels. Returns the topmost waveform Y, or -1 if none.
-int scanColumnForWaveform(const juce::Image& image, int x, int height, int centerY,
-                           juce::Colour backgroundColor, int& totalNonBackground,
-                           float& maxAmplitude, std::map<uint32_t, int>& colorCounts)
+int scanColumnForWaveform(const juce::Image& image, int x, int height, int centerY, juce::Colour backgroundColor,
+                          int& totalNonBackground, float& maxAmplitude, std::map<uint32_t, int>& colorCounts)
 {
     int waveformY = -1;
     for (int y = 0; y < height; ++y)
@@ -47,10 +45,11 @@ int scanColumnForWaveform(const juce::Image& image, int x, int height, int cente
         if (!TestScreenshot::colorsMatch(pixel, backgroundColor, 30))
         {
             totalNonBackground++;
-            if (waveformY < 0) waveformY = y;
+            if (waveformY < 0)
+                waveformY = y;
 
-            uint32_t colorKey = (pixel.getRed() / 16) * 256 * 256 +
-                                (pixel.getGreen() / 16) * 256 + (pixel.getBlue() / 16);
+            uint32_t colorKey =
+                (pixel.getRed() / 16) * 256 * 256 + (pixel.getGreen() / 16) * 256 + (pixel.getBlue() / 16);
             colorCounts[colorKey]++;
 
             if (centerY > 0)
@@ -63,11 +62,11 @@ int scanColumnForWaveform(const juce::Image& image, int x, int height, int cente
     return waveformY;
 }
 
-WaveformAnalysis TestScreenshot::analyzeWaveform(const juce::Image& image,
-                                                  juce::Colour backgroundColor)
+WaveformAnalysis TestScreenshot::analyzeWaveform(const juce::Image& image, juce::Colour backgroundColor)
 {
     WaveformAnalysis result;
-    if (image.isNull()) return result;
+    if (image.isNull())
+        return result;
 
     int width = image.getWidth();
     int height = image.getHeight();
@@ -79,11 +78,12 @@ WaveformAnalysis TestScreenshot::analyzeWaveform(const juce::Image& image,
 
     for (int x = 0; x < width; x += 2)
     {
-        int waveformY = scanColumnForWaveform(image, x, height, centerY, backgroundColor,
-                                               totalNonBackground, maxAmplitude, colorCounts);
+        int waveformY = scanColumnForWaveform(image, x, height, centerY, backgroundColor, totalNonBackground,
+                                              maxAmplitude, colorCounts);
         if (waveformY >= 0 && lastY >= 0 && (lastY < centerY) != (waveformY < centerY))
             zeroCrossings++;
-        if (waveformY >= 0) lastY = waveformY;
+        if (waveformY >= 0)
+            lastY = waveformY;
     }
 
     result.detected = (totalNonBackground > (width * height * 0.01f));
@@ -104,9 +104,7 @@ bool TestScreenshot::verifyWaveformRendered(const juce::String& elementId, float
     return analysis.detected && analysis.amplitude >= minAmplitude;
 }
 
-bool TestScreenshot::verifyWaveformColor(const juce::String& elementId,
-                                          juce::Colour expectedColor,
-                                          int tolerance)
+bool TestScreenshot::verifyWaveformColor(const juce::String& elementId, juce::Colour expectedColor, int tolerance)
 {
     auto image = getElementImage(elementId);
     if (image.isNull())
@@ -202,11 +200,8 @@ juce::Colour TestScreenshot::getAverageColor(const juce::Image& image, juce::Rec
     if (count == 0)
         return juce::Colours::black;
 
-    return juce::Colour(
-        static_cast<uint8_t>(totalR / count),
-        static_cast<uint8_t>(totalG / count),
-        static_cast<uint8_t>(totalB / count)
-    );
+    return juce::Colour(static_cast<uint8_t>(totalR / count), static_cast<uint8_t>(totalG / count),
+                        static_cast<uint8_t>(totalB / count));
 }
 
 juce::Colour TestScreenshot::getDominantColor(const juce::Image& image, juce::Rectangle<int> region)
@@ -223,19 +218,15 @@ juce::Colour TestScreenshot::getDominantColor(const juce::Image& image, juce::Re
         return juce::Colours::black;
 
     auto maxIt = std::max_element(histogram.begin(), histogram.end(),
-        [](const auto& a, const auto& b) { return a.second < b.second; });
+                                  [](const auto& a, const auto& b) { return a.second < b.second; });
 
     uint32_t key = maxIt->first;
-    return juce::Colour(
-        static_cast<uint8_t>((key >> 16) & 0xFF),
-        static_cast<uint8_t>((key >> 8) & 0xFF),
-        static_cast<uint8_t>(key & 0xFF)
-    );
+    return juce::Colour(static_cast<uint8_t>((key >> 16) & 0xFF), static_cast<uint8_t>((key >> 8) & 0xFF),
+                        static_cast<uint8_t>(key & 0xFF));
 }
 
-std::map<uint32_t, int> TestScreenshot::getColorHistogram(const juce::Image& image,
-                                                           juce::Rectangle<int> region,
-                                                           int bucketSize)
+std::map<uint32_t, int> TestScreenshot::getColorHistogram(const juce::Image& image, juce::Rectangle<int> region,
+                                                          int bucketSize)
 {
     std::map<uint32_t, int> histogram;
 
@@ -255,9 +246,8 @@ std::map<uint32_t, int> TestScreenshot::getColorHistogram(const juce::Image& ima
             uint8_t g = static_cast<uint8_t>((pixel.getGreen() / bucketSize) * bucketSize);
             uint8_t b = static_cast<uint8_t>((pixel.getBlue() / bucketSize) * bucketSize);
 
-            uint32_t key = (static_cast<uint32_t>(r) << 16) |
-                           (static_cast<uint32_t>(g) << 8) |
-                           static_cast<uint32_t>(b);
+            uint32_t key =
+                (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) | static_cast<uint32_t>(b);
 
             histogram[key]++;
         }
@@ -266,20 +256,14 @@ std::map<uint32_t, int> TestScreenshot::getColorHistogram(const juce::Image& ima
     return histogram;
 }
 
-bool TestScreenshot::verifyBackgroundColor(const juce::String& elementId,
-                                            juce::Colour expectedColor,
-                                            int tolerance)
+bool TestScreenshot::verifyBackgroundColor(const juce::String& elementId, juce::Colour expectedColor, int tolerance)
 {
     auto image = getElementImage(elementId);
     if (image.isNull())
         return false;
 
     std::vector<juce::Point<int>> samplePoints = {
-        {2, 2},
-        {image.getWidth() - 3, 2},
-        {2, image.getHeight() - 3},
-        {image.getWidth() - 3, image.getHeight() - 3}
-    };
+        {2, 2}, {image.getWidth() - 3, 2}, {2, image.getHeight() - 3}, {image.getWidth() - 3, image.getHeight() - 3}};
 
     int matchCount = 0;
     for (const auto& point : samplePoints)
@@ -292,10 +276,8 @@ bool TestScreenshot::verifyBackgroundColor(const juce::String& elementId,
     return matchCount >= 3;
 }
 
-bool TestScreenshot::verifyContainsColor(const juce::String& elementId,
-                                          juce::Colour expectedColor,
-                                          float minCoverage,
-                                          int tolerance)
+bool TestScreenshot::verifyContainsColor(const juce::String& elementId, juce::Colour expectedColor, float minCoverage,
+                                         int tolerance)
 {
     auto image = getElementImage(elementId);
     if (image.isNull())
@@ -320,8 +302,7 @@ bool TestScreenshot::verifyContainsColor(const juce::String& elementId,
 
 bool TestScreenshot::colorsMatch(juce::Colour c1, juce::Colour c2, int tolerance)
 {
-    return std::abs(c1.getRed() - c2.getRed()) <= tolerance &&
-           std::abs(c1.getGreen() - c2.getGreen()) <= tolerance &&
+    return std::abs(c1.getRed() - c2.getRed()) <= tolerance && std::abs(c1.getGreen() - c2.getGreen()) <= tolerance &&
            std::abs(c1.getBlue() - c2.getBlue()) <= tolerance;
 }
 
@@ -336,9 +317,8 @@ juce::Rectangle<int> TestScreenshot::getElementBounds(const juce::String& elemen
     return component->getBounds();
 }
 
-bool TestScreenshot::verifyElementBounds(const juce::String& elementId,
-                                          int expectedWidth, int expectedHeight,
-                                          int tolerance)
+bool TestScreenshot::verifyElementBounds(const juce::String& elementId, int expectedWidth, int expectedHeight,
+                                         int tolerance)
 {
     auto bounds = getElementBounds(elementId);
     if (bounds.isEmpty())
@@ -369,9 +349,8 @@ bool TestScreenshot::verifyElementVisible(const juce::String& elementId)
 
 // ================== Baseline Management ==================
 
-bool TestScreenshot::saveBaseline(const juce::String& elementId,
-                                   const juce::File& baselineDir,
-                                   const juce::String& name)
+bool TestScreenshot::saveBaseline(const juce::String& elementId, const juce::File& baselineDir,
+                                  const juce::String& name)
 {
     auto image = getElementImage(elementId);
     if (image.isNull())
@@ -384,10 +363,7 @@ bool TestScreenshot::saveBaseline(const juce::String& elementId,
     return saveImage(image, file);
 }
 
-juce::Image TestScreenshot::loadBaseline(const juce::File& baselineFile)
-{
-    return loadImage(baselineFile);
-}
+juce::Image TestScreenshot::loadBaseline(const juce::File& baselineFile) { return loadImage(baselineFile); }
 
 // ================== Utility ==================
 

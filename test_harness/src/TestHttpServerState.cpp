@@ -2,12 +2,13 @@
     Oscil Test Harness - HTTP Server: State Handlers
 */
 
-#include "TestHttpServer.h"
-#include "TestElementRegistry.h"
-#include "TestAudioGenerator.h"
 #include "core/OscilState.h"
-#include "plugin/PluginFactory.h"
+
+#include "TestAudioGenerator.h"
+#include "TestElementRegistry.h"
+#include "TestHttpServer.h"
 #include "plugin/PluginEditor.h"
+#include "plugin/PluginFactory.h"
 
 namespace oscil::test
 {
@@ -34,8 +35,7 @@ json oscillatorToJson(const Oscillator& osc)
 }
 
 // Configure an Oscillator from JSON request body fields
-void configureOscillatorFromJson(Oscillator& osc, const json& body,
-                                  OscilState& state, TestTrack* track)
+void configureOscillatorFromJson(Oscillator& osc, const json& body, OscilState& state, TestTrack* track)
 {
     // Name
     std::string name = body.value("name", "");
@@ -46,7 +46,7 @@ void configureOscillatorFromJson(Oscillator& osc, const json& body,
     // Source ID
     std::string sourceIdStr = body.value("sourceId", "");
     if (!sourceIdStr.empty())
-        osc.setSourceId(SourceId{ juce::String(sourceIdStr) });
+        osc.setSourceId(SourceId{juce::String(sourceIdStr)});
     else if (track->getProcessor().getSourceId().isValid())
         osc.setSourceId(track->getProcessor().getSourceId());
 
@@ -54,7 +54,7 @@ void configureOscillatorFromJson(Oscillator& osc, const json& body,
     std::string paneIdStr = body.value("paneId", "");
     if (!paneIdStr.empty())
     {
-        osc.setPaneId(PaneId{ juce::String(paneIdStr) });
+        osc.setPaneId(PaneId{juce::String(paneIdStr)});
     }
     else
     {
@@ -76,9 +76,8 @@ void configureOscillatorFromJson(Oscillator& osc, const json& body,
     else
     {
         static const juce::Colour defaultColors[] = {
-            juce::Colour(0xFF00FF00), juce::Colour(0xFF0088FF),
-            juce::Colour(0xFFFF8800), juce::Colour(0xFFFF0088),
-            juce::Colour(0xFF88FF00),
+            juce::Colour(0xFF00FF00), juce::Colour(0xFF0088FF), juce::Colour(0xFFFF8800),
+            juce::Colour(0xFFFF0088), juce::Colour(0xFF88FF00),
         };
         int colorIndex = static_cast<int>(state.getOscillators().size()) % 5;
         osc.setColour(defaultColors[colorIndex]);
@@ -106,45 +105,35 @@ void applyOscillatorJsonUpdates(Oscillator& osc, const json& body)
 
 void TestHttpServer::setupStateRoutes()
 {
-    server_->Post("/state/reset", [this](const httplib::Request& req, httplib::Response& res) {
-        handleStateReset(req, res);
-    });
-    server_->Post("/state/save", [this](const httplib::Request& req, httplib::Response& res) {
-        handleStateSave(req, res);
-    });
-    server_->Post("/state/load", [this](const httplib::Request& req, httplib::Response& res) {
-        handleStateLoad(req, res);
-    });
-    server_->Get("/state/oscillators", [this](const httplib::Request& req, httplib::Response& res) {
-        handleStateOscillators(req, res);
-    });
-    server_->Post("/state/oscillator/add", [this](const httplib::Request& req, httplib::Response& res) {
-        handleStateAddOscillator(req, res);
-    });
+    server_->Post("/state/reset",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleStateReset(req, res); });
+    server_->Post("/state/save",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleStateSave(req, res); });
+    server_->Post("/state/load",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleStateLoad(req, res); });
+    server_->Get("/state/oscillators",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleStateOscillators(req, res); });
+    server_->Post("/state/oscillator/add",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleStateAddOscillator(req, res); });
     server_->Post("/state/oscillator/update", [this](const httplib::Request& req, httplib::Response& res) {
         handleStateUpdateOscillator(req, res);
     });
     server_->Post("/state/oscillator/reorder", [this](const httplib::Request& req, httplib::Response& res) {
         handleStateReorderOscillators(req, res);
     });
-    server_->Get("/state/panes", [this](const httplib::Request& req, httplib::Response& res) {
-        handleStatePanes(req, res);
-    });
-    server_->Get("/state/sources", [this](const httplib::Request& req, httplib::Response& res) {
-        handleStateSources(req, res);
-    });
+    server_->Get("/state/panes",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleStatePanes(req, res); });
+    server_->Get("/state/sources",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleStateSources(req, res); });
     server_->Post("/state/oscillator/delete", [this](const httplib::Request& req, httplib::Response& res) {
         handleStateDeleteOscillator(req, res);
     });
-    server_->Post("/state/pane/add", [this](const httplib::Request& req, httplib::Response& res) {
-        handlePaneAdd(req, res);
-    });
-    server_->Post("/state/pane/remove", [this](const httplib::Request& req, httplib::Response& res) {
-        handlePaneRemove(req, res);
-    });
-    server_->Post("/state/oscillator/move", [this](const httplib::Request& req, httplib::Response& res) {
-        handleOscillatorMove(req, res);
-    });
+    server_->Post("/state/pane/add",
+                  [this](const httplib::Request& req, httplib::Response& res) { handlePaneAdd(req, res); });
+    server_->Post("/state/pane/remove",
+                  [this](const httplib::Request& req, httplib::Response& res) { handlePaneRemove(req, res); });
+    server_->Post("/state/oscillator/move",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleOscillatorMove(req, res); });
 }
 
 void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response& res)
@@ -168,9 +157,7 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
                 layoutManager.removePane(pane.getId());
 
             // Wait for queued refreshPanels to complete before signalling
-            juce::MessageManager::callAsync([&done]() {
-                done.signal();
-            });
+            juce::MessageManager::callAsync([&done]() { done.signal(); });
         });
         done.wait(5000);
     }
@@ -235,7 +222,7 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         juce::String xml = file.loadFileAsString();
         if (auto* track = daw_.getTrack(0))
         {
-            (void)track->getProcessor().getState().fromXmlString(xml);
+            (void) track->getProcessor().getState().fromXmlString(xml);
             res.set_content(successResponse().dump(), "application/json");
         }
         else
@@ -258,9 +245,8 @@ void TestHttpServer::handleStateOscillators(const httplib::Request&, httplib::Re
         auto& state = track->getProcessor().getState();
         auto oscList = state.getOscillators();
 
-        std::sort(oscList.begin(), oscList.end(), [](const auto& a, const auto& b) {
-            return a.getOrderIndex() < b.getOrderIndex();
-        });
+        std::sort(oscList.begin(), oscList.end(),
+                  [](const auto& a, const auto& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
         for (const auto& osc : oscList)
             oscillators.push_back(oscillatorToJson(osc));
@@ -297,8 +283,8 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
 
         json oscJson = oscillatorToJson(osc);
 
-        juce::Logger::writeToLog("[Harness] Adding oscillator: " + osc.getName()
-            + " source=" + osc.getSourceId().id + " pane=" + osc.getPaneId().id);
+        juce::Logger::writeToLog("[Harness] Adding oscillator: " + osc.getName() + " source=" + osc.getSourceId().id +
+                                 " pane=" + osc.getPaneId().id);
         Oscillator oscCopy = osc;
         juce::WaitableEvent done;
         juce::MessageManager::callAsync([oscCopy, track, &done]() mutable {
@@ -306,9 +292,7 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
             // The addOscillator triggers valueTreeChildAdded which queues
             // refreshPanels via callAsync.  Queue another callback AFTER
             // refreshPanels so we only signal done once the UI is updated.
-            juce::MessageManager::callAsync([&done]() {
-                done.signal();
-            });
+            juce::MessageManager::callAsync([&done]() { done.signal(); });
         });
         done.wait(5000);
 
@@ -340,7 +324,7 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
         }
 
         auto& state = track->getProcessor().getState();
-        OscillatorId oscId{ juce::String(idStr) };
+        OscillatorId oscId{juce::String(idStr)};
 
         auto existingOsc = state.getOscillator(oscId);
         if (!existingOsc.has_value())

@@ -6,19 +6,20 @@
 
 #if OSCIL_ENABLE_OPENGL
 
-#include "rendering/ShaderRegistry.h"
-#include "rendering/WaveformShader.h"
-#include "rendering/RenderEngine.h"
-#include <chrono>
-#include <unordered_set>
+    #include "rendering/RenderEngine.h"
+    #include "rendering/ShaderRegistry.h"
+    #include "rendering/WaveformShader.h"
+
+    #include <chrono>
+    #include <unordered_set>
 
 namespace oscil
 {
 
 using namespace juce::gl;
 
-// Debug-only logging macro — no output in release builds
-#define GL_LOG(msg) DBG("[GL] " << msg)
+    // Debug-only logging macro — no output in release builds
+    #define GL_LOG(msg) DBG("[GL] " << msg)
 
 // Debug mode: set to true to draw colored rectangles instead of waveforms
 // This bypasses shaders and tests basic GL rendering pipeline
@@ -105,7 +106,7 @@ void WaveformGLRenderer::newOpenGLContextCreated()
 void WaveformGLRenderer::compileDebugShader()
 {
     GL_LOG("compileDebugShader called, context_=" << (context_ ? "valid" : "nullptr")
-           << ", already compiled=" << static_cast<int>(debugShaderCompiled_));
+                                                  << ", already compiled=" << static_cast<int>(debugShaderCompiled_));
 
     if (!context_ || debugShaderCompiled_)
         return;
@@ -142,7 +143,9 @@ void WaveformGLRenderer::compileDebugShader()
     debugColorLoc_ = debugShader_->getUniformIDFromName("color");
 
     auto& ext = context_->extensions;
-    while (glGetError() != GL_NO_ERROR) {}
+    while (glGetError() != GL_NO_ERROR)
+    {
+    }
 
     ext.glGenVertexArrays(1, &debugVAO_);
     ext.glGenBuffers(1, &debugVBO_);
@@ -150,7 +153,6 @@ void WaveformGLRenderer::compileDebugShader()
     debugShaderCompiled_ = true;
     GL_LOG("DEBUG SHADER: Compiled, VAO=" << static_cast<int>(debugVAO_) << ", VBO=" << static_cast<int>(debugVBO_));
 }
-
 
 // renderOpenGL() and renderDebugRect() are in WaveformGLRendererPainting.cpp
 
@@ -228,10 +230,7 @@ void WaveformGLRenderer::updateWaveform(const WaveformRenderData& data)
     waveforms_[data.id] = data;
 }
 
-void WaveformGLRenderer::setBackgroundColour(juce::Colour colour)
-{
-    backgroundColour_ = colour;
-}
+void WaveformGLRenderer::setBackgroundColour(juce::Colour colour) { backgroundColour_ = colour; }
 
 int WaveformGLRenderer::getWaveformCount() const
 {

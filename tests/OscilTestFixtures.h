@@ -9,23 +9,24 @@
 
 #pragma once
 
-#include <gtest/gtest.h>
-#include <juce_events/juce_events.h>
-#include <map>
-#include <set>
-
 #include "core/InstanceRegistry.h"
-#include "core/interfaces/IInstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
 #include "core/ServiceContext.h"
-#include "ui/theme/ThemeManager.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "ui/theme/IThemeService.h"
-#include "plugin/PluginProcessor.h"
-#include "plugin/PluginEditor.h"
-#include "rendering/ShaderRegistry.h"
-#include "rendering/PresetManager.h"
+#include "ui/theme/ThemeManager.h"
 
 #include "OscilTestUtils.h"
+#include "plugin/PluginEditor.h"
+#include "plugin/PluginProcessor.h"
+#include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
+
+#include <juce_events/juce_events.h>
+
+#include <gtest/gtest.h>
+#include <map>
+#include <set>
 
 namespace oscil::test
 {
@@ -41,13 +42,10 @@ namespace oscil::test
 class MockInstanceRegistry : public IInstanceRegistry
 {
 public:
-    SourceId registerInstance(
-        const juce::String& /*trackIdentifier*/,
-        std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
-        const juce::String& /*name*/ = "Track",
-        int /*channelCount*/ = 2,
-        double /*sampleRate*/ = 44100.0,
-        std::shared_ptr<AnalysisEngine> /*analysisEngine*/ = nullptr) override
+    SourceId registerInstance(const juce::String& /*trackIdentifier*/, std::shared_ptr<IAudioBuffer> /*captureBuffer*/,
+                              const juce::String& /*name*/ = "Track", int /*channelCount*/ = 2,
+                              double /*sampleRate*/ = 44100.0,
+                              std::shared_ptr<AnalysisEngine> /*analysisEngine*/ = nullptr) override
     {
         return SourceId::generate();
     }
@@ -101,15 +99,9 @@ public:
 
     size_t getSourceCount() const override { return sources_.size(); }
 
-    void addListener(InstanceRegistryListener* listener) override
-    {
-        listeners_.insert(listener);
-    }
+    void addListener(InstanceRegistryListener* listener) override { listeners_.insert(listener); }
 
-    void removeListener(InstanceRegistryListener* listener) override
-    {
-        listeners_.erase(listener);
-    }
+    void removeListener(InstanceRegistryListener* listener) override { listeners_.erase(listener); }
 
 private:
     std::map<juce::String, SourceInfo> sources_;
@@ -149,10 +141,7 @@ public:
         return true;
     }
 
-    std::vector<juce::String> getAvailableThemes() const override
-    {
-        return {"Test Theme", "Dark", "Light"};
-    }
+    std::vector<juce::String> getAvailableThemes() const override { return {"Test Theme", "Dark", "Light"}; }
 
     const ColorTheme* getTheme(const juce::String& name) const override
     {
@@ -163,10 +152,7 @@ public:
 
     bool isSystemTheme(const juce::String&) const override { return false; }
 
-    bool createTheme(const juce::String& name, const juce::String&) override
-    {
-        return !name.isEmpty();
-    }
+    bool createTheme(const juce::String& name, const juce::String&) override { return !name.isEmpty(); }
 
     bool updateTheme(const juce::String&, const ColorTheme&) override { return true; }
     bool deleteTheme(const juce::String&) override { return true; }
@@ -174,15 +160,9 @@ public:
     bool importTheme(const juce::String&) override { return true; }
     juce::String exportTheme(const juce::String&) const override { return "{}"; }
 
-    void addListener(ThemeManagerListener* listener) override
-    {
-        listeners_.insert(listener);
-    }
+    void addListener(ThemeManagerListener* listener) override { listeners_.insert(listener); }
 
-    void removeListener(ThemeManagerListener* listener) override
-    {
-        listeners_.erase(listener);
-    }
+    void removeListener(ThemeManagerListener* listener) override { listeners_.erase(listener); }
 
     // Test helper: trigger theme change notifications
     void notifyListeners()
@@ -224,7 +204,8 @@ protected:
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_, *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
 
         // Disable GPU rendering for headless test environment
         // OpenGL context operations crash without a real display/window
@@ -376,8 +357,8 @@ protected:
         return buffer;
     }
 
-    juce::AudioBuffer<float> createSineBuffer(int numChannels, int numSamples,
-                                               float frequency = 440.0f, float sampleRate = 44100.0f)
+    juce::AudioBuffer<float> createSineBuffer(int numChannels, int numSamples, float frequency = 440.0f,
+                                              float sampleRate = 44100.0f)
     {
         juce::AudioBuffer<float> buffer(numChannels, numSamples);
         for (int ch = 0; ch < numChannels; ++ch)

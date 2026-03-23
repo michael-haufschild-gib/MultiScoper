@@ -3,6 +3,7 @@
 */
 
 #include "rendering/GridRenderer.h"
+
 #include <cmath>
 
 namespace oscil
@@ -35,9 +36,7 @@ static const char* colorFragmentShader = R"(
     }
 )";
 
-GridRenderer::GridRenderer()
-{
-}
+GridRenderer::GridRenderer() {}
 
 GridRenderer::~GridRenderer()
 {
@@ -92,9 +91,8 @@ void GridRenderer::createBuffers(juce::OpenGLContext& context)
     context.extensions.glBindVertexArray(gridVAO_);
     context.extensions.glBindBuffer(GL_ARRAY_BUFFER, gridVBO_);
     // Pre-allocate buffer with GL_STREAM_DRAW for frequent updates
-    context.extensions.glBufferData(GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(gridBufferCapacity_ * 2 * sizeof(float)),
-        nullptr, GL_STREAM_DRAW);
+    context.extensions.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(gridBufferCapacity_ * 2 * sizeof(float)),
+                                    nullptr, GL_STREAM_DRAW);
     context.extensions.glEnableVertexAttribArray(0);
     context.extensions.glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
     context.extensions.glBindVertexArray(0);
@@ -133,7 +131,8 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
 
 void GridRenderer::drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col)
 {
-    if (verts.empty()) return;
+    if (verts.empty())
+        return;
 
     size_t vertexCount = verts.size() / 2;
     if (vertexCount > gridBufferCapacity_)
@@ -141,12 +140,11 @@ void GridRenderer::drawLines(juce::OpenGLContext& context, const std::vector<flo
 
     context.extensions.glBindVertexArray(gridVAO_);
     context.extensions.glBindBuffer(GL_ARRAY_BUFFER, gridVBO_);
-    context.extensions.glBufferData(GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(vertexCount * 2 * sizeof(float)),
-        verts.data(), GL_STREAM_DRAW);
+    context.extensions.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexCount * 2 * sizeof(float)),
+                                    verts.data(), GL_STREAM_DRAW);
 
-    context.extensions.glUniform4f(colorUniformLoc_,
-        col.getFloatRed(), col.getFloatGreen(), col.getFloatBlue(), col.getFloatAlpha());
+    context.extensions.glUniform4f(colorUniformLoc_, col.getFloatRed(), col.getFloatGreen(), col.getFloatBlue(),
+                                   col.getFloatAlpha());
 
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertexCount));
     context.extensions.glBindVertexArray(0);
@@ -158,7 +156,8 @@ void GridRenderer::generateHorizontalGrid(float yTop, float yBottom)
     float yCenter = yBottom + height * 0.5f;
 
     // Minor (8 divisions)
-    for (int i = 1; i < 8; ++i) {
+    for (int i = 1; i < 8; ++i)
+    {
         float y = yTop - (i / 8.0f) * height;
         if (std::abs(y - yCenter) > 0.01f)
             addLine(minorLines_, -1.0f, y, 1.0f, y);
@@ -188,11 +187,15 @@ void GridRenderer::generateTimeGrid(const GridConfiguration& config, float yTop,
 
     float normalizedStep = targetStep / magnitude;
     float stepSize;
-    if (normalizedStep < 2.0f) stepSize = magnitude;
-    else if (normalizedStep < 5.0f) stepSize = 2.0f * magnitude;
-    else stepSize = 5.0f * magnitude;
+    if (normalizedStep < 2.0f)
+        stepSize = magnitude;
+    else if (normalizedStep < 5.0f)
+        stepSize = 2.0f * magnitude;
+    else
+        stepSize = 5.0f * magnitude;
 
-    for (float t = stepSize; t < durationMs; t += stepSize) {
+    for (float t = stepSize; t < durationMs; t += stepSize)
+    {
         float x = -1.0f + (t / durationMs) * 2.0f;
         addLine(timeMajorLines_, x, yTop, x, yBottom);
     }
@@ -204,25 +207,39 @@ void GridRenderer::generateMusicalGrid(const GridConfiguration& config, float yT
     bool isBarBased = false;
     int beatsPerBar = config.timeSigNumerator;
 
-    switch (config.noteInterval) {
+    switch (config.noteInterval)
+    {
         case NoteInterval::WHOLE:
-            numDivisions = beatsPerBar; isBarBased = true; break;
+            numDivisions = beatsPerBar;
+            isBarBased = true;
+            break;
         case NoteInterval::TWO_BARS:
-            numDivisions = 2; isBarBased = true; break;
+            numDivisions = 2;
+            isBarBased = true;
+            break;
         case NoteInterval::THREE_BARS:
-            numDivisions = 3; isBarBased = true; break;
+            numDivisions = 3;
+            isBarBased = true;
+            break;
         case NoteInterval::FOUR_BARS:
-            numDivisions = 4; isBarBased = true; break;
+            numDivisions = 4;
+            isBarBased = true;
+            break;
         case NoteInterval::EIGHT_BARS:
-            numDivisions = 8; isBarBased = true; break;
+            numDivisions = 8;
+            isBarBased = true;
+            break;
         default:
-            numDivisions = 4; break;
+            numDivisions = 4;
+            break;
     }
 
-    if (numDivisions <= 0) numDivisions = 1;
+    if (numDivisions <= 0)
+        numDivisions = 1;
     float widthPerDiv = 2.0f / static_cast<float>(numDivisions);
 
-    for (int i = 1; i < numDivisions; ++i) {
+    for (int i = 1; i < numDivisions; ++i)
+    {
         float x = -1.0f + i * widthPerDiv;
         if (isBarBased)
             addLine(majorLines_, x, yTop, x, yBottom);
@@ -230,10 +247,12 @@ void GridRenderer::generateMusicalGrid(const GridConfiguration& config, float yT
             addLine(timeMajorLines_, x, yTop, x, yBottom);
     }
 
-    if (isBarBased && config.noteInterval >= NoteInterval::TWO_BARS) {
+    if (isBarBased && config.noteInterval >= NoteInterval::TWO_BARS)
+    {
         int subBeatsPerDiv = std::max(1, beatsPerBar);
         float subBeatWidth = widthPerDiv / static_cast<float>(subBeatsPerDiv);
-        for (int i = 0; i < numDivisions; ++i) {
+        for (int i = 0; i < numDivisions; ++i)
+        {
             float baseX = -1.0f + i * widthPerDiv;
             for (int j = 1; j < subBeatsPerDiv; ++j)
                 addLine(timeMinorLines_, baseX + j * subBeatWidth, yTop, baseX + j * subBeatWidth, yBottom);
@@ -253,7 +272,8 @@ void GridRenderer::generateChannelGrid(const GridConfiguration& config, float yT
 
 void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData& data)
 {
-    if (!initialized_ || !colorShader_ || gridVAO_ == 0 || gridVBO_ == 0) return;
+    if (!initialized_ || !colorShader_ || gridVAO_ == 0 || gridVBO_ == 0)
+        return;
 
     const auto& gridColors = data.gridColors;
     const auto& config = data.gridConfig;
@@ -269,11 +289,14 @@ void GridRenderer::render(juce::OpenGLContext& context, const WaveformRenderData
     timeMajorLines_.clear();
     timeMinorLines_.clear();
 
-    if (data.isStereo) {
+    if (data.isStereo)
+    {
         generateChannelGrid(config, 1.0f, 0.0f);
         generateChannelGrid(config, 0.0f, -1.0f);
         addLine(majorLines_, -1.0f, 0.0f, 1.0f, 0.0f);
-    } else {
+    }
+    else
+    {
         generateChannelGrid(config, 1.0f, -1.0f);
     }
 

@@ -36,15 +36,9 @@ OscilButton::OscilButton(IThemeService& themeService, const juce::Image& icon)
     icon_ = icon;
 }
 
-void OscilButton::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilButton::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilButton::~OscilButton()
-{
-    stopTimer();
-}
+OscilButton::~OscilButton() { stopTimer(); }
 
 void OscilButton::setText(const juce::String& text)
 {
@@ -69,8 +63,7 @@ void OscilButton::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
-        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor
-                               : juce::MouseCursor::NormalCursor);
+        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
 }
@@ -100,10 +93,7 @@ void OscilButton::clearIconPath()
     repaint();
 }
 
-void OscilButton::setShortcut(const juce::KeyPress& key)
-{
-    shortcutKey_ = key;
-}
+void OscilButton::setShortcut(const juce::KeyPress& key) { shortcutKey_ = key; }
 
 void OscilButton::setTooltip(const juce::String& tooltip)
 {
@@ -111,10 +101,7 @@ void OscilButton::setTooltip(const juce::String& tooltip)
     setHelpText(tooltip);
 }
 
-void OscilButton::setToggleable(bool toggleable)
-{
-    toggleable_ = toggleable;
-}
+void OscilButton::setToggleable(bool toggleable) { toggleable_ = toggleable; }
 
 void OscilButton::setToggled(bool toggled, bool notify)
 {
@@ -171,13 +158,12 @@ int OscilButton::getPreferredHeight() const
     return ComponentLayout::BUTTON_HEIGHT;
 }
 
-void OscilButton::resized()
-{
-}
+void OscilButton::resized() {}
 
 void OscilButton::mouseEnter(const juce::MouseEvent&)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     isHovered_ = true;
 
@@ -216,7 +202,8 @@ void OscilButton::mouseExit(const juce::MouseEvent&)
 
 void OscilButton::mouseDown(const juce::MouseEvent& e)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     isPressed_ = true;
 
@@ -241,7 +228,8 @@ void OscilButton::mouseDown(const juce::MouseEvent& e)
 
 void OscilButton::mouseUp(const juce::MouseEvent& e)
 {
-    if (!enabled_) return;
+    if (!enabled_)
+        return;
 
     bool wasPressed = isPressed_;
     isPressed_ = false;
@@ -331,20 +319,18 @@ class OscilButtonAccessibilityHandler : public juce::AccessibilityHandler
 {
 public:
     explicit OscilButtonAccessibilityHandler(OscilButton& button)
-        : juce::AccessibilityHandler(button,
-            button.isToggleable() ? juce::AccessibilityRole::toggleButton : juce::AccessibilityRole::button,
-            juce::AccessibilityActions()
-                .addAction(juce::AccessibilityActionType::press,
-                    [&button] { if (button.isEnabled()) button.triggerClick(); })
-          )
+        : juce::AccessibilityHandler(
+              button, button.isToggleable() ? juce::AccessibilityRole::toggleButton : juce::AccessibilityRole::button,
+              juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press,
+                                                     [&button] {
+                                                         if (button.isEnabled())
+                                                             button.triggerClick();
+                                                     }))
         , button_(button)
     {
     }
 
-    juce::String getTitle() const override
-    {
-        return button_.getText().isNotEmpty() ? button_.getText() : "Button";
-    }
+    juce::String getTitle() const override { return button_.getText().isNotEmpty() ? button_.getText() : "Button"; }
 
     juce::String getDescription() const override
     {
@@ -365,10 +351,7 @@ public:
         return desc;
     }
 
-    juce::String getHelp() const override
-    {
-        return "Press Enter or Space to activate.";
-    }
+    juce::String getHelp() const override { return "Press Enter or Space to activate."; }
 
     juce::AccessibleState getCurrentState() const override
     {

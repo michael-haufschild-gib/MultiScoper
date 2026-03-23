@@ -5,11 +5,13 @@
 
 #pragma once
 
+#include "core/Oscillator.h"
+
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_events/juce_events.h>
-#include "core/Oscillator.h"
-#include <vector>
+
 #include <span>
+#include <vector>
 
 namespace oscil
 {
@@ -24,10 +26,10 @@ namespace oscil
  */
 struct ProcessedSignal
 {
-    std::vector<float> channel1;    // Primary channel (or Left for stereo)
-    std::vector<float> channel2;    // Secondary channel (or Right for stereo, empty for mono modes)
+    std::vector<float> channel1; // Primary channel (or Left for stereo)
+    std::vector<float> channel2; // Secondary channel (or Right for stereo, empty for mono modes)
     int numSamples = 0;
-    bool isStereo = false;          // True if channel2 contains valid data
+    bool isStereo = false; // True if channel2 contains valid data
 
     void resize(int samples, bool stereo)
     {
@@ -45,16 +47,16 @@ struct ProcessedSignal
 
         // Optimization: reserve capacity to avoid reallocations if possible
         if (channel1.capacity() < static_cast<size_t>(samples))
-             channel1.reserve(static_cast<size_t>(samples));
+            channel1.reserve(static_cast<size_t>(samples));
 
         numSamples = samples;
         isStereo = stereo;
         channel1.resize(static_cast<size_t>(samples));
-        
+
         if (stereo)
         {
             if (channel2.capacity() < static_cast<size_t>(samples))
-                 channel2.reserve(static_cast<size_t>(samples));
+                channel2.reserve(static_cast<size_t>(samples));
             channel2.resize(static_cast<size_t>(samples));
         }
         else
@@ -91,17 +93,13 @@ public:
      * @param mode         Processing mode to apply
      * @param output       Output structure to receive processed samples
      */
-    void process(std::span<const float> leftChannel,
-                 std::span<const float> rightChannel,
-                 ProcessingMode mode,
+    void process(std::span<const float> leftChannel, std::span<const float> rightChannel, ProcessingMode mode,
                  ProcessedSignal& output) const;
 
     /**
      * Process audio from a JUCE AudioBuffer
      */
-    void process(const juce::AudioBuffer<float>& input,
-                 ProcessingMode mode,
-                 ProcessedSignal& output) const;
+    void process(const juce::AudioBuffer<float>& input, ProcessingMode mode, ProcessedSignal& output) const;
 
     /**
      * Calculate stereo correlation coefficient for the given samples.
@@ -131,9 +129,7 @@ public:
      * @param output       Output buffer (must be pre-allocated)
      * @param preservePeaks If true, preserves peak values during decimation
      */
-    static void decimate(std::span<const float> input,
-                         std::span<float> output,
-                         bool preservePeaks = true);
+    static void decimate(std::span<const float> input, std::span<float> output, bool preservePeaks = true);
 
 private:
     static void upsample(std::span<const float> input, std::span<float> output);
@@ -168,14 +164,12 @@ public:
     /**
      * Decimate samples for display
      */
-    void process(std::span<const float> input,
-                 std::vector<float>& output) const;
+    void process(std::span<const float> input, std::vector<float>& output) const;
 
     /**
      * Decimate with min/max envelope for peak preservation
      */
-    void processWithEnvelope(std::span<const float> input,
-                             std::vector<float>& minEnvelope,
+    void processWithEnvelope(std::span<const float> input, std::vector<float>& minEnvelope,
                              std::vector<float>& maxEnvelope) const;
 
 private:

@@ -3,9 +3,11 @@
     Tests for basic buffer operations, capacity, peak/RMS, and metadata
 */
 
-#include <gtest/gtest.h>
-#include "helpers/AudioBufferBuilder.h"
 #include "core/SharedCaptureBuffer.h"
+
+#include "helpers/AudioBufferBuilder.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -15,19 +17,12 @@ class CaptureBufferCoreTest : public ::testing::Test
 protected:
     std::unique_ptr<SharedCaptureBuffer> buffer;
 
-    void SetUp() override
-    {
-        buffer = std::make_unique<SharedCaptureBuffer>(1024);
-    }
+    void SetUp() override { buffer = std::make_unique<SharedCaptureBuffer>(1024); }
 
     // Generate test audio buffer
     juce::AudioBuffer<float> generateTestBuffer(int numSamples, float value)
     {
-        return AudioBufferBuilder()
-            .withChannels(2)
-            .withSamples(numSamples)
-            .withDC(value)
-            .build();
+        return AudioBufferBuilder().withChannels(2).withSamples(numSamples).withDC(value).build();
     }
 };
 
@@ -70,8 +65,7 @@ TEST_F(CaptureBufferCoreTest, RingBufferWrappingPreservesLatestData)
     ASSERT_EQ(samplesRead, 100);
     for (int i = 0; i < 100; ++i)
     {
-        EXPECT_NEAR(output[i], lastValue, 0.001f)
-            << "Sample " << i << " has stale data after ring wrap";
+        EXPECT_NEAR(output[i], lastValue, 0.001f) << "Sample " << i << " has stale data after ring wrap";
     }
 }
 
@@ -110,7 +104,7 @@ TEST_F(CaptureBufferCoreTest, PeakLevel)
 {
     juce::AudioBuffer<float> testBuffer(2, 100);
     testBuffer.clear();
-    testBuffer.setSample(0, 50, 0.8f);  // Peak in left channel
+    testBuffer.setSample(0, 50, 0.8f); // Peak in left channel
 
     CaptureFrameMetadata metadata;
     buffer->write(testBuffer, metadata);
@@ -122,11 +116,7 @@ TEST_F(CaptureBufferCoreTest, PeakLevel)
 // Test: RMS level calculation
 TEST_F(CaptureBufferCoreTest, RMSLevel)
 {
-    auto testBuffer = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(100)
-        .withDC(0.5f)
-        .build();
+    auto testBuffer = AudioBufferBuilder().withChannels(2).withSamples(100).withDC(0.5f).build();
 
     CaptureFrameMetadata metadata;
     buffer->write(testBuffer, metadata);
@@ -164,8 +154,8 @@ TEST_F(CaptureBufferCoreTest, StereoChannelSeparation)
     juce::AudioBuffer<float> testBuffer(2, 100);
     for (int i = 0; i < 100; ++i)
     {
-        testBuffer.setSample(0, i, 0.3f);  // Left
-        testBuffer.setSample(1, i, 0.7f);  // Right
+        testBuffer.setSample(0, i, 0.3f); // Left
+        testBuffer.setSample(1, i, 0.7f); // Right
     }
 
     CaptureFrameMetadata metadata;
@@ -215,11 +205,7 @@ TEST_F(CaptureBufferCoreTest, SmallCapacity)
     EXPECT_GE(smallBuffer->getCapacity(), 2u);
 
     // Write and read should still work
-    auto testBuf = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(1)
-        .withSineWave(440.0f, 0.5f)
-        .build();
+    auto testBuf = AudioBufferBuilder().withChannels(2).withSamples(1).withSineWave(440.0f, 0.5f).build();
 
     CaptureFrameMetadata meta;
     smallBuffer->write(testBuf, meta);
@@ -237,11 +223,7 @@ TEST_F(CaptureBufferCoreTest, CapacityOne)
     auto tinyBuffer = std::make_unique<SharedCaptureBuffer>(1);
     EXPECT_GE(tinyBuffer->getCapacity(), 1u);
 
-    auto testBuf = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(1)
-        .withDC(0.5f)
-        .build();
+    auto testBuf = AudioBufferBuilder().withChannels(2).withSamples(1).withDC(0.5f).build();
 
     CaptureFrameMetadata meta;
     tinyBuffer->write(testBuf, meta);
@@ -261,11 +243,7 @@ TEST_F(CaptureBufferCoreTest, LargeCapacity)
     EXPECT_EQ(largeBuffer->getCapacity(), 262144u);
 
     // Should handle large writes
-    auto largeBuf = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(8192)
-        .withDC(0.5f)
-        .build();
+    auto largeBuf = AudioBufferBuilder().withChannels(2).withSamples(8192).withDC(0.5f).build();
 
     CaptureFrameMetadata meta;
     largeBuffer->write(largeBuf, meta);
@@ -276,11 +254,7 @@ TEST_F(CaptureBufferCoreTest, LargeCapacity)
 // Test: Write with mono buffer (1 channel)
 TEST_F(CaptureBufferCoreTest, WriteMonoBuffer)
 {
-    auto monoBuf = AudioBufferBuilder()
-        .withChannels(1)
-        .withSamples(100)
-        .withDC(0.7f)
-        .build();
+    auto monoBuf = AudioBufferBuilder().withChannels(1).withSamples(100).withDC(0.7f).build();
 
     CaptureFrameMetadata meta;
     meta.numChannels = 1;
@@ -295,17 +269,14 @@ TEST_F(CaptureBufferCoreTest, WriteMonoBuffer)
 // Test: Raw write with null channel pointer writes silence for that channel
 TEST_F(CaptureBufferCoreTest, WriteNullChannelPointerWritesSilence)
 {
-    auto initialStereo = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(static_cast<int>(buffer->getCapacity()))
-        .withDC(0.9f)
-        .build();
+    auto initialStereo =
+        AudioBufferBuilder().withChannels(2).withSamples(static_cast<int>(buffer->getCapacity())).withDC(0.9f).build();
 
     CaptureFrameMetadata meta;
     buffer->write(initialStereo, meta);
 
     std::vector<float> left(64, 0.25f);
-    const float* channels[2] = { left.data(), nullptr };
+    const float* channels[2] = {left.data(), nullptr};
     buffer->write(channels, 64, 2, meta);
 
     std::vector<float> rightOutput(64, -1.0f);
@@ -381,11 +352,7 @@ TEST_F(CaptureBufferCoreTest, WriteExceedsCapacityPreservesLastSamples)
     // be stored when write size > capacity
     // Buffer is 1024 samples, write 2048 with a ramp from 0.0 to 1.0
     // The last 1024 samples should be the upper half of the ramp (0.5 to 1.0)
-    auto largeBuf = AudioBufferBuilder()
-        .withChannels(2)
-        .withSamples(2048)
-        .withRamp(0.0f, 1.0f)
-        .build();
+    auto largeBuf = AudioBufferBuilder().withChannels(2).withSamples(2048).withRamp(0.0f, 1.0f).build();
 
     CaptureFrameMetadata meta;
     buffer->write(largeBuf, meta);
@@ -413,8 +380,7 @@ TEST_F(CaptureBufferCoreTest, ReadFromEmptyBuffer)
     // Output should be untouched since no data was available
     for (int i = 0; i < 100; ++i)
     {
-        EXPECT_FLOAT_EQ(output[i], -999.0f)
-            << "Read from empty buffer modified output at index " << i;
+        EXPECT_FLOAT_EQ(output[i], -999.0f) << "Read from empty buffer modified output at index " << i;
     }
 }
 
@@ -497,4 +463,3 @@ TEST_F(CaptureBufferCoreTest, ReadZeroSamples)
 
     EXPECT_EQ(read, 0);
 }
-

@@ -15,13 +15,16 @@ namespace oscil
 
 // Rate-limited logging macro (logs every N frames)
 #define RE_LOG_THROTTLED(interval_frames, msg) \
-    do { \
-        static int _log_counter = 0; \
-        if (++_log_counter >= interval_frames) { \
-            _log_counter = 0; \
-            RE_LOG(msg); \
-        } \
-    } while (0)
+    do                                         \
+    {                                          \
+        static int _log_counter = 0;           \
+        if (++_log_counter >= interval_frames) \
+        {                                      \
+            _log_counter = 0;                  \
+            RE_LOG(msg);                       \
+        }                                      \
+    }                                          \
+    while (0)
 
 class RenderStats
 {

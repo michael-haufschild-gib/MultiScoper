@@ -2,8 +2,9 @@
     Oscil - UI Audio Feedback Tests
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/UIAudioFeedback.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -12,15 +13,9 @@ class UIAudioFeedbackTest : public ::testing::Test
 protected:
     std::unique_ptr<UIAudioFeedback> feedback_;
 
-    void SetUp() override
-    {
-        feedback_ = std::make_unique<UIAudioFeedback>();
-    }
+    void SetUp() override { feedback_ = std::make_unique<UIAudioFeedback>(); }
 
-    void TearDown() override
-    {
-        feedback_.reset();
-    }
+    void TearDown() override { feedback_.reset(); }
 };
 
 // Test: Default state - disabled
@@ -69,7 +64,7 @@ TEST_F(UIAudioFeedbackTest, IndividualSoundEnabled)
     // Check default states
     EXPECT_TRUE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Click));
     EXPECT_TRUE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Toggle));
-    EXPECT_FALSE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Hover));  // Disabled by default
+    EXPECT_FALSE(feedback_->isSoundEnabled(UIAudioFeedback::SoundType::Hover)); // Disabled by default
 }
 
 // Test: Enable/disable individual sounds
@@ -358,7 +353,7 @@ TEST_F(UIAudioFeedbackTest, StateAfterManyOperations)
     }
 
     // Final state should be predictable
-    EXPECT_FALSE(feedback_->isEnabled()); // 99 % 2 == 1, so false
+    EXPECT_FALSE(feedback_->isEnabled());             // 99 % 2 == 1, so false
     EXPECT_NEAR(feedback_->getVolume(), 0.9f, 0.01f); // 99 % 10 = 9, so 0.9
 }
 
@@ -391,7 +386,7 @@ TEST_F(UIAudioFeedbackTest, DisableAlreadyDisabledSound)
 // Test: Volume precision
 TEST_F(UIAudioFeedbackTest, VolumePrecision)
 {
-    float testValues[] = { 0.123f, 0.456f, 0.789f, 0.111f, 0.999f };
+    float testValues[] = {0.123f, 0.456f, 0.789f, 0.111f, 0.999f};
 
     for (float val : testValues)
     {
@@ -440,7 +435,7 @@ TEST_F(UIAudioFeedbackTest, MultipleInstancesIndependent)
 
     // Second instance should have its own state
     EXPECT_FALSE(feedback2->isEnabled());
-    EXPECT_FLOAT_EQ(feedback2->getVolume(), 0.5f);  // Default volume
+    EXPECT_FLOAT_EQ(feedback2->getVolume(), 0.5f); // Default volume
 
     // Changes to one shouldn't affect the other
     feedback2->setEnabled(true);

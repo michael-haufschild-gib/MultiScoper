@@ -55,15 +55,14 @@ static const char* tiltShiftFragmentShader = R"(
     }
 )";
 
-TiltShiftEffect::TiltShiftEffect()
-{
-}
+TiltShiftEffect::TiltShiftEffect() {}
 
 TiltShiftEffect::~TiltShiftEffect() = default;
 
 bool TiltShiftEffect::compile(juce::OpenGLContext& context)
 {
-    if (compiled_) return true;
+    if (compiled_)
+        return true;
 
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
@@ -97,17 +96,10 @@ void TiltShiftEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool TiltShiftEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool TiltShiftEffect::isCompiled() const { return compiled_; }
 
-void TiltShiftEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void TiltShiftEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                            FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
 

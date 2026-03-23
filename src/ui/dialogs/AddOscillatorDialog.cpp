@@ -4,29 +4,27 @@
 */
 
 #include "ui/dialogs/AddOscillatorDialog.h"
+
 #include "rendering/VisualConfiguration.h"
 
 namespace oscil
 {
 
-AddOscillatorDialog::AddOscillatorDialog(IThemeService& themeService)
-    : themeService_(themeService)
+AddOscillatorDialog::AddOscillatorDialog(IThemeService& themeService) : themeService_(themeService)
 {
     OSCIL_REGISTER_TEST_ID("addOscillatorDialog");
     setupComponents();
     themeService_.addListener(this);
 }
 
-AddOscillatorDialog::~AddOscillatorDialog()
-{
-    themeService_.removeListener(this);
-}
+AddOscillatorDialog::~AddOscillatorDialog() { themeService_.removeListener(this); }
 
 void AddOscillatorDialog::createFormFields()
 {
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
     addAndMakeVisible(*sourceLabel_);
-    sourceDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select source...", "addOscillatorDialog_sourceDropdown");
+    sourceDropdown_ =
+        std::make_unique<OscilDropdown>(themeService_, "Select source...", "addOscillatorDialog_sourceDropdown");
     sourceDropdown_->onSelectionChanged = [this](int) { handleSourceChange(); };
     addAndMakeVisible(*sourceDropdown_);
 
@@ -38,7 +36,8 @@ void AddOscillatorDialog::createFormFields()
 
     nameLabel_ = std::make_unique<juce::Label>("", "Name");
     addAndMakeVisible(*nameLabel_);
-    nameField_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "addOscillatorDialog_nameField");
+    nameField_ =
+        std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "addOscillatorDialog_nameField");
     nameField_->setPlaceholder("Oscillator name");
     addAndMakeVisible(*nameField_);
 
@@ -50,7 +49,8 @@ void AddOscillatorDialog::createFormFields()
 
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
-    visualPresetDropdown_ = std::make_unique<OscilDropdown>(themeService_, "", "addOscillatorDialog_visualPresetDropdown");
+    visualPresetDropdown_ =
+        std::make_unique<OscilDropdown>(themeService_, "", "addOscillatorDialog_visualPresetDropdown");
     populateVisualPresetDropdown();
     addAndMakeVisible(*visualPresetDropdown_);
 
@@ -151,8 +151,7 @@ void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
     repaint();
 }
 
-void AddOscillatorDialog::setData(const std::vector<SourceInfo>& sources,
-                                   const std::vector<Pane>& panes)
+void AddOscillatorDialog::setData(const std::vector<SourceInfo>& sources, const std::vector<Pane>& panes)
 {
     submitted_ = false;
     sources_ = sources;

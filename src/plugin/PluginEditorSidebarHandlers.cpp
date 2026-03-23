@@ -20,10 +20,7 @@ SourceIdSet collectAvailableSourceIds(const std::vector<SourceInfo>& sources)
     return ids;
 }
 
-bool sourceIdExists(const SourceIdSet& ids, const SourceId& sourceId)
-{
-    return ids.find(sourceId.id) != ids.end();
-}
+bool sourceIdExists(const SourceIdSet& ids, const SourceId& sourceId) { return ids.find(sourceId.id) != ids.end(); }
 } // namespace
 
 void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators)
@@ -38,8 +35,7 @@ void OscilPluginEditor::onSourcesChanged()
     const auto availableSourceIds = collectAvailableSourceIds(sources);
 
     const auto ownSourceId = processor_.getSourceId();
-    const bool ownSourceAvailable =
-        ownSourceId.isValid() && sourceIdExists(availableSourceIds, ownSourceId);
+    const bool ownSourceAvailable = ownSourceId.isValid() && sourceIdExists(availableSourceIds, ownSourceId);
 
     if (sidebar_ != nullptr)
         sidebar_->refreshSourceList(sources);
@@ -124,35 +120,20 @@ void OscilPluginEditor::onSidebarCollapsedStateChanged(bool collapsed)
     resized();
 }
 
-void OscilPluginEditor::sidebarWidthChanged(int newWidth)
-{
-    onSidebarWidthChanged(newWidth);
-}
+void OscilPluginEditor::sidebarWidthChanged(int newWidth) { onSidebarWidthChanged(newWidth); }
 
-void OscilPluginEditor::sidebarCollapsedStateChanged(bool collapsed)
-{
-    onSidebarCollapsedStateChanged(collapsed);
-}
+void OscilPluginEditor::sidebarCollapsedStateChanged(bool collapsed) { onSidebarCollapsedStateChanged(collapsed); }
 
-void OscilPluginEditor::timingModeChanged(TimingMode mode)
-{
-    processor_.getTimingEngine().setTimingMode(mode);
-}
+void OscilPluginEditor::timingModeChanged(TimingMode mode) { processor_.getTimingEngine().setTimingMode(mode); }
 
 void OscilPluginEditor::noteIntervalChanged(NoteInterval interval)
 {
     processor_.getTimingEngine().setNoteIntervalFromEntity(interval);
 }
 
-void OscilPluginEditor::timeIntervalChanged(float ms)
-{
-    processor_.getTimingEngine().setTimeIntervalMs(ms);
-}
+void OscilPluginEditor::timeIntervalChanged(float ms) { processor_.getTimingEngine().setTimeIntervalMs(ms); }
 
-void OscilPluginEditor::hostSyncChanged(bool enabled)
-{
-    processor_.getTimingEngine().setHostSyncEnabled(enabled);
-}
+void OscilPluginEditor::hostSyncChanged(bool enabled) { processor_.getTimingEngine().setHostSyncEnabled(enabled); }
 
 void OscilPluginEditor::waveformModeChanged(WaveformMode mode)
 {
@@ -175,10 +156,7 @@ void OscilPluginEditor::waveformModeChanged(WaveformMode mode)
     }
 }
 
-void OscilPluginEditor::bpmChanged(float bpm)
-{
-    processor_.getTimingEngine().setInternalBPM(bpm);
-}
+void OscilPluginEditor::bpmChanged(float bpm) { processor_.getTimingEngine().setInternalBPM(bpm); }
 
 void OscilPluginEditor::gainChanged(float dB)
 {
@@ -211,10 +189,7 @@ void OscilPluginEditor::themeChanged(const juce::String& themeName)
     processor_.getThemeService().setCurrentTheme(themeName);
 }
 
-void OscilPluginEditor::gpuRenderingChanged(bool enabled)
-{
-    setGpuRenderingEnabled(enabled);
-}
+void OscilPluginEditor::gpuRenderingChanged(bool enabled) { setGpuRenderingEnabled(enabled); }
 
 void OscilPluginEditor::qualityPresetChanged(QualityPreset preset)
 {

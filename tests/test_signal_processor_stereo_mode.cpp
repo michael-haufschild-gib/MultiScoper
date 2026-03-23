@@ -4,13 +4,14 @@
 */
 
 #ifndef _USE_MATH_DEFINES
-#define _USE_MATH_DEFINES
+    #define _USE_MATH_DEFINES
 #endif
+#include "core/dsp/SignalProcessor.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 #include <limits>
 #include <random>
-#include <gtest/gtest.h>
-#include "core/dsp/SignalProcessor.h"
 #include <span>
 
 using namespace oscil;
@@ -26,7 +27,8 @@ protected:
         std::vector<float> samples(numSamples);
         std::mt19937 gen(seed);
         std::uniform_real_distribution<float> dist(min, max);
-        for(int i=0; i<numSamples; ++i) {
+        for (int i = 0; i < numSamples; ++i)
+        {
             samples[i] = dist(gen);
         }
         return samples;
@@ -110,7 +112,8 @@ TEST_F(SignalProcessorStereoTest, AdaptiveDecimatorEnvelope)
 TEST_F(SignalProcessorStereoTest, FuzzTest_RandomBuffers)
 {
     // Iterate many times with random data
-    for(int i=0; i<100; ++i) {
+    for (int i = 0; i < 100; ++i)
+    {
         int numSamples = 10 + (i * 10); // Variable size
 
         // Generate very loud noise, possibly outside [-1, 1]
@@ -125,7 +128,8 @@ TEST_F(SignalProcessorStereoTest, FuzzTest_RandomBuffers)
         ASSERT_EQ(output.numSamples, numSamples);
 
         // Basic sanity check
-        if (output.numSamples > 0) {
+        if (output.numSamples > 0)
+        {
             EXPECT_TRUE(std::isfinite(output.channel1[0]));
         }
     }
@@ -142,7 +146,8 @@ TEST_F(SignalProcessorStereoTest, DenormalStress)
 
     // Create denormal values: ~ 1e-40
     float val = 1.0e-30f;
-    for(int i=0; i<numSamples; ++i) {
+    for (int i = 0; i < numSamples; ++i)
+    {
         denormals[i] = val;
         val *= 0.9f; // Quickly becomes denormal
     }
@@ -150,7 +155,8 @@ TEST_F(SignalProcessorStereoTest, DenormalStress)
     processor.process(denormals, denormals, ProcessingMode::FullStereo, output);
 
     // Verify output is finite and consistent
-    for(int i=0; i<numSamples; ++i) {
+    for (int i = 0; i < numSamples; ++i)
+    {
         EXPECT_TRUE(std::isfinite(output.channel1[i]));
         // If FTZ is on, these might become zero, which is fine.
     }

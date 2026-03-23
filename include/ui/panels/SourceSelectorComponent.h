@@ -5,10 +5,12 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/InstanceRegistry.h"
-#include "ui/theme/ThemeManager.h"
 #include "ui/components/OscilTextField.h"
+#include "ui/theme/ThemeManager.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 
 namespace oscil
@@ -83,9 +85,10 @@ private:
 /**
  * Popup content for source selection with search and rich list
  */
-class SourceSelectorPopup : public juce::Component,
-                             public InstanceRegistryListener,
-                             public ThemeManagerListener
+class SourceSelectorPopup
+    : public juce::Component
+    , public InstanceRegistryListener
+    , public ThemeManagerListener
 {
 public:
     SourceSelectorPopup(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
@@ -112,9 +115,9 @@ public:
     int getPreferredHeight() const;
 
 private:
-    IThemeService& themeService_; // Dependency
+    IThemeService& themeService_;         // Dependency
     IInstanceRegistry& instanceRegistry_; // Dependency
-    
+
     void handleFilterChange();
     void applyFilter();
 
@@ -142,8 +145,9 @@ private:
  * Dropdown button component for selecting a signal source.
  * Shows current selection and opens rich popup on click.
  */
-class SourceSelectorComponent : public juce::Component,
-                                 public InstanceRegistryListener
+class SourceSelectorComponent
+    : public juce::Component
+    , public InstanceRegistryListener
 {
 public:
     explicit SourceSelectorComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
@@ -188,7 +192,7 @@ private:
     void showPopup();
     void updateDisplayText();
 
-    IThemeService& themeService_; // Dependency
+    IThemeService& themeService_;         // Dependency
     IInstanceRegistry& instanceRegistry_; // Dependency
     SourceId selectedSourceId_;
     juce::String displayText_;

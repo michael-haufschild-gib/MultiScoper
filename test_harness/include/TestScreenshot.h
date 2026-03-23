@@ -5,8 +5,10 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "TestElementRegistry.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <vector>
 
 namespace oscil::test
@@ -17,10 +19,10 @@ namespace oscil::test
  */
 struct ImageComparisonResult
 {
-    bool match = false;            // True if images match within tolerance
-    float similarity = 0.0f;       // 0.0 to 1.0 (1.0 = identical)
-    int differentPixels = 0;       // Number of pixels that differ
-    int totalPixels = 0;           // Total pixels compared
+    bool match = false;              // True if images match within tolerance
+    float similarity = 0.0f;         // 0.0 to 1.0 (1.0 = identical)
+    int differentPixels = 0;         // Number of pixels that differ
+    int totalPixels = 0;             // Total pixels compared
     juce::Rectangle<int> diffBounds; // Bounding box of differences
 };
 
@@ -29,11 +31,11 @@ struct ImageComparisonResult
  */
 struct WaveformAnalysis
 {
-    bool detected = false;         // True if waveform content detected
-    float amplitude = 0.0f;        // Peak amplitude (0.0 to 1.0)
-    float activity = 0.0f;         // Amount of non-zero content (0.0 to 1.0)
-    int zeroCrossings = 0;         // Estimated zero crossings (frequency indicator)
-    juce::Colour dominantColor;    // Most common waveform color
+    bool detected = false;      // True if waveform content detected
+    float amplitude = 0.0f;     // Peak amplitude (0.0 to 1.0)
+    float activity = 0.0f;      // Amount of non-zero content (0.0 to 1.0)
+    int zeroCrossings = 0;      // Estimated zero crossings (frequency indicator)
+    juce::Colour dominantColor; // Most common waveform color
 };
 
 /**
@@ -41,9 +43,9 @@ struct WaveformAnalysis
  */
 struct ThemeColorVerification
 {
-    bool pass = false;             // True if all colors match expected
+    bool pass = false;                                      // True if all colors match expected
     std::vector<std::pair<juce::String, bool>> colorChecks; // Component -> pass/fail
-    juce::String errorMessage;     // Description of first failure
+    juce::String errorMessage;                              // Description of first failure
 };
 
 /**
@@ -96,23 +98,19 @@ public:
      * @param tolerance Allowed color difference per channel (0-255)
      * @return Comparison result with similarity metrics
      */
-    ImageComparisonResult compareImages(const juce::Image& image1,
-                                         const juce::Image& image2,
-                                         int tolerance = 5);
+    ImageComparisonResult compareImages(const juce::Image& image1, const juce::Image& image2, int tolerance = 5);
 
     /**
      * Compare element screenshot against baseline file
      */
-    ImageComparisonResult compareElementToBaseline(const juce::String& elementId,
-                                                    const juce::File& baselineFile,
-                                                    int tolerance = 5);
+    ImageComparisonResult compareElementToBaseline(const juce::String& elementId, const juce::File& baselineFile,
+                                                   int tolerance = 5);
 
     /**
      * Generate a diff image highlighting differences
      */
-    juce::Image generateDiffImage(const juce::Image& image1,
-                                   const juce::Image& image2,
-                                   juce::Colour diffColor = juce::Colours::red);
+    juce::Image generateDiffImage(const juce::Image& image1, const juce::Image& image2,
+                                  juce::Colour diffColor = juce::Colours::red);
 
     // ================== Waveform Verification ==================
 
@@ -122,21 +120,17 @@ public:
      * @param backgroundColor Expected background color
      * @return Analysis results
      */
-    WaveformAnalysis analyzeWaveform(const juce::Image& image,
-                                      juce::Colour backgroundColor = juce::Colours::black);
+    WaveformAnalysis analyzeWaveform(const juce::Image& image, juce::Colour backgroundColor = juce::Colours::black);
 
     /**
      * Verify waveform is rendered (not flat/empty)
      */
-    bool verifyWaveformRendered(const juce::String& elementId,
-                                 float minAmplitude = 0.05f);
+    bool verifyWaveformRendered(const juce::String& elementId, float minAmplitude = 0.05f);
 
     /**
      * Verify waveform color matches expected
      */
-    bool verifyWaveformColor(const juce::String& elementId,
-                              juce::Colour expectedColor,
-                              int tolerance = 20);
+    bool verifyWaveformColor(const juce::String& elementId, juce::Colour expectedColor, int tolerance = 20);
 
     /**
      * Verify that a region has non-uniform pixels (something is rendered)
@@ -164,24 +158,19 @@ public:
      * Get color histogram for a region
      * @return Map of color -> count
      */
-    std::map<uint32_t, int> getColorHistogram(const juce::Image& image,
-                                               juce::Rectangle<int> region = {},
-                                               int bucketSize = 8);
+    std::map<uint32_t, int> getColorHistogram(const juce::Image& image, juce::Rectangle<int> region = {},
+                                              int bucketSize = 8);
 
     /**
      * Verify element has expected background color
      */
-    bool verifyBackgroundColor(const juce::String& elementId,
-                                juce::Colour expectedColor,
-                                int tolerance = 10);
+    bool verifyBackgroundColor(const juce::String& elementId, juce::Colour expectedColor, int tolerance = 10);
 
     /**
      * Verify element contains expected color (anywhere in region)
      */
-    bool verifyContainsColor(const juce::String& elementId,
-                              juce::Colour expectedColor,
-                              float minCoverage = 0.01f,
-                              int tolerance = 20);
+    bool verifyContainsColor(const juce::String& elementId, juce::Colour expectedColor, float minCoverage = 0.01f,
+                             int tolerance = 20);
 
     /**
      * Check if two colors match within tolerance
@@ -198,9 +187,7 @@ public:
     /**
      * Verify element is visible and has expected size
      */
-    bool verifyElementBounds(const juce::String& elementId,
-                              int expectedWidth, int expectedHeight,
-                              int tolerance = 5);
+    bool verifyElementBounds(const juce::String& elementId, int expectedWidth, int expectedHeight, int tolerance = 5);
 
     /**
      * Verify element is within parent bounds (not clipped off-screen)
@@ -212,9 +199,7 @@ public:
     /**
      * Save baseline image for future comparisons
      */
-    bool saveBaseline(const juce::String& elementId,
-                       const juce::File& baselineDir,
-                       const juce::String& name = {});
+    bool saveBaseline(const juce::String& elementId, const juce::File& baselineDir, const juce::String& name = {});
 
     /**
      * Load baseline image

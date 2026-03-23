@@ -3,19 +3,18 @@
     NaN/infinity, sample rate, multi-bar, extreme BPM, mode switching, multipliers
 */
 
-#include <gtest/gtest.h>
 #include "core/dsp/TimingConfig.h"
-#include <limits>
+
 #include <cmath>
+#include <gtest/gtest.h>
+#include <limits>
 
 using namespace oscil;
 
 class TimingConfigEdgeTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-    }
+    void SetUp() override {}
 };
 
 // =============================================================================
@@ -145,7 +144,7 @@ TEST_F(TimingConfigEdgeTest, IntervalInSamplesVeryHighSampleRate)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::TIME);
-    config.setTimeInterval(100.0f);  // 100ms
+    config.setTimeInterval(100.0f); // 100ms
 
     // At 192000 Hz, 100ms = 19200 samples
     EXPECT_EQ(config.getIntervalInSamples(192000.0f), 19200);
@@ -192,7 +191,7 @@ TEST_F(TimingConfigEdgeTest, MultiBarIntervalClampedToMax)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(20.0f);  // Very slow
+    config.setHostBPM(20.0f); // Very slow
     config.setNoteInterval(NoteInterval::EIGHT_BARS);
 
     // At 20 BPM, 8 bars = 96000ms, but clamped to 60000ms
@@ -207,7 +206,7 @@ TEST_F(TimingConfigEdgeTest, VerySlowBPM)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(TimingConfig::MIN_BPM);  // 20 BPM
+    config.setHostBPM(TimingConfig::MIN_BPM); // 20 BPM
     config.setNoteInterval(NoteInterval::QUARTER);
 
     // At 20 BPM, quarter note = 3000ms
@@ -218,7 +217,7 @@ TEST_F(TimingConfigEdgeTest, VeryFastBPM)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(TimingConfig::MAX_BPM);  // 300 BPM
+    config.setHostBPM(TimingConfig::MAX_BPM); // 300 BPM
     config.setNoteInterval(NoteInterval::QUARTER);
 
     // At 300 BPM, quarter note = 200ms
@@ -229,7 +228,7 @@ TEST_F(TimingConfigEdgeTest, VeryFastNoteWithFastBPM)
 {
     TimingConfig config;
     config.setTimingMode(TimingMode::MELODIC);
-    config.setHostBPM(300.0f);  // Max BPM
+    config.setHostBPM(300.0f); // Max BPM
     config.setNoteInterval(NoteInterval::THIRTY_SECOND);
 
     // At 300 BPM, 32nd note = 200 * 0.125 = 25ms

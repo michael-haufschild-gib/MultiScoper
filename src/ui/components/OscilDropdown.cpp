@@ -26,8 +26,7 @@ OscilDropdown::OscilDropdown(IThemeService& themeService)
     chevronSpring_.target = 0.0f;
 }
 
-OscilDropdown::OscilDropdown(IThemeService& themeService, const juce::String& placeholder)
-    : OscilDropdown(themeService)
+OscilDropdown::OscilDropdown(IThemeService& themeService, const juce::String& placeholder) : OscilDropdown(themeService)
 {
     placeholder_ = placeholder;
 }
@@ -39,15 +38,9 @@ OscilDropdown::OscilDropdown(IThemeService& themeService, const juce::String& pl
     setTestId(testId);
 }
 
-void OscilDropdown::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilDropdown::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilDropdown::~OscilDropdown()
-{
-    stopTimer();
-}
+OscilDropdown::~OscilDropdown() { stopTimer(); }
 
 void OscilDropdown::addItem(const juce::String& label, const juce::String& id)
 {
@@ -57,10 +50,7 @@ void OscilDropdown::addItem(const juce::String& label, const juce::String& id)
     items_.push_back(item);
 }
 
-void OscilDropdown::addItem(const DropdownItem& item)
-{
-    items_.push_back(item);
-}
+void OscilDropdown::addItem(const DropdownItem& item) { items_.push_back(item); }
 
 void OscilDropdown::addItems(const std::vector<juce::String>& labels)
 {
@@ -91,23 +81,20 @@ void OscilDropdown::setSelectedIndex(int index, bool notify)
     setSelectedIndices(newSelection, notify);
 }
 
-int OscilDropdown::getSelectedIndex() const
-{
-    return selectedIndices_.empty() ? -1 : *selectedIndices_.begin();
-}
+int OscilDropdown::getSelectedIndex() const { return selectedIndices_.empty() ? -1 : *selectedIndices_.begin(); }
 
 juce::String OscilDropdown::getSelectedId() const
 {
     int index = getSelectedIndex();
-    return (index >= 0 && index < static_cast<int>(items_.size()))
-        ? items_[static_cast<size_t>(index)].id : juce::String();
+    return (index >= 0 && index < static_cast<int>(items_.size())) ? items_[static_cast<size_t>(index)].id
+                                                                   : juce::String();
 }
 
 juce::String OscilDropdown::getSelectedLabel() const
 {
     int index = getSelectedIndex();
-    return (index >= 0 && index < static_cast<int>(items_.size()))
-        ? items_[static_cast<size_t>(index)].label : juce::String();
+    return (index >= 0 && index < static_cast<int>(items_.size())) ? items_[static_cast<size_t>(index)].label
+                                                                   : juce::String();
 }
 
 void OscilDropdown::setSelectedIndices(const std::set<int>& indices, bool notify)
@@ -173,18 +160,14 @@ void OscilDropdown::setMultiSelect(bool multiSelect)
     }
 }
 
-void OscilDropdown::setSearchable(bool searchable)
-{
-    searchable_ = searchable;
-}
+void OscilDropdown::setSearchable(bool searchable) { searchable_ = searchable; }
 
 void OscilDropdown::setEnabled(bool enabled)
 {
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
-        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor
-                               : juce::MouseCursor::NormalCursor);
+        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
 }
@@ -202,9 +185,7 @@ void OscilDropdown::showPopup()
     popup_->setMultiSelect(multiSelect_);
     popup_->setSearchable(searchable_);
 
-    popup_->onItemClicked = [this](int index) {
-        handleItemClicked(index);
-    };
+    popup_->onItemClicked = [this](int index) { handleItemClicked(index); };
 
     popup_->onDismiss = [this]() {
         popupVisible_ = false;
@@ -296,10 +277,7 @@ int OscilDropdown::getPreferredWidth() const
     return maxWidth + PADDING_H * 2 + CHEVRON_SIZE + 8;
 }
 
-int OscilDropdown::getPreferredHeight() const
-{
-    return ComponentLayout::INPUT_HEIGHT;
-}
+int OscilDropdown::getPreferredHeight() const { return ComponentLayout::INPUT_HEIGHT; }
 
 void OscilDropdown::paint(juce::Graphics& g)
 {
@@ -315,8 +293,8 @@ void OscilDropdown::paint(juce::Graphics& g)
     g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
 
     auto borderColour = popupVisible_ ? getTheme().controlActive
-                      : hasFocus_ ? getTheme().controlActive
-                      : getTheme().controlBorder;
+                        : hasFocus_   ? getTheme().controlActive
+                                      : getTheme().controlBorder;
 
     g.setColour(borderColour.withAlpha(opacity));
     g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
@@ -324,24 +302,21 @@ void OscilDropdown::paint(juce::Graphics& g)
     if (hasFocus_ && enabled_)
     {
         g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRoundedRectangle(
-            bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-            ComponentLayout::RADIUS_SM + ComponentLayout::FOCUS_RING_OFFSET,
-            ComponentLayout::FOCUS_RING_WIDTH
-        );
+        g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
+                               ComponentLayout::RADIUS_SM + ComponentLayout::FOCUS_RING_OFFSET,
+                               ComponentLayout::FOCUS_RING_WIDTH);
     }
 
     auto textBounds = bounds.reduced(PADDING_H, 0);
     textBounds.removeFromRight(CHEVRON_SIZE + 8);
 
     bool isPlaceholder = selectedIndices_.empty();
-    g.setColour((isPlaceholder ? getTheme().textSecondary : getTheme().textPrimary)
-        .withAlpha(opacity));
+    g.setColour((isPlaceholder ? getTheme().textSecondary : getTheme().textPrimary).withAlpha(opacity));
     g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
     g.drawText(displayText_, textBounds, juce::Justification::centredLeft);
 
-    auto chevronBounds = bounds.removeFromRight(CHEVRON_SIZE + PADDING_H)
-        .withSizeKeepingCentre(CHEVRON_SIZE, CHEVRON_SIZE);
+    auto chevronBounds =
+        bounds.removeFromRight(CHEVRON_SIZE + PADDING_H).withSizeKeepingCentre(CHEVRON_SIZE, CHEVRON_SIZE);
 
     paintChevron(g, chevronBounds);
 }
@@ -362,17 +337,12 @@ void OscilDropdown::paintChevron(juce::Graphics& g, juce::Rectangle<float> bound
     chevron.lineTo(cx, cy + size * 0.3f);
     chevron.lineTo(cx + size, cy - size * 0.3f);
 
-    chevron.applyTransform(
-        juce::AffineTransform::rotation(rotation, cx, cy)
-    );
+    chevron.applyTransform(juce::AffineTransform::rotation(rotation, cx, cy));
 
-    g.strokePath(chevron, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved,
-                                                juce::PathStrokeType::rounded));
+    g.strokePath(chevron, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
-void OscilDropdown::resized()
-{
-}
+void OscilDropdown::resized() {}
 
 // mouseDown, mouseEnter, mouseExit, keyPressed, focusGained, focusLost,
 // timerCallback, createAccessibilityHandler are in OscilDropdownInteraction.cpp

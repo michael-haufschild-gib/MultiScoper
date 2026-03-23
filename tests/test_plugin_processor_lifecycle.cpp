@@ -3,16 +3,18 @@
     Tests for construction, metadata, bus layouts, prepare, release, and destruction
 */
 
-#include <gtest/gtest.h>
-#include "OscilTestUtils.h"
-#include "plugin/PluginProcessor.h"
-#include "core/SharedCaptureBuffer.h"
-#include "core/interfaces/IInstanceRegistry.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
+#include "core/SharedCaptureBuffer.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "ui/theme/ThemeManager.h"
-#include "rendering/ShaderRegistry.h"
+
+#include "OscilTestUtils.h"
+#include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
+#include "rendering/ShaderRegistry.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 using namespace oscil::test;
@@ -37,12 +39,8 @@ protected:
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_,
-            *themeManager_,
-            *shaderRegistry_,
-            *presetManager_,
-            *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, 512);
     }
 
@@ -59,10 +57,7 @@ protected:
 
 // === Plugin Metadata Tests ===
 
-TEST_F(PluginProcessorLifecycleTest, PluginName)
-{
-    EXPECT_EQ(processor->getName(), "Oscil");
-}
+TEST_F(PluginProcessorLifecycleTest, PluginName) { EXPECT_EQ(processor->getName(), "Oscil"); }
 
 TEST_F(PluginProcessorLifecycleTest, MidiSupport)
 {
@@ -71,10 +66,7 @@ TEST_F(PluginProcessorLifecycleTest, MidiSupport)
     EXPECT_FALSE(processor->isMidiEffect());
 }
 
-TEST_F(PluginProcessorLifecycleTest, ZeroTailLength)
-{
-    EXPECT_DOUBLE_EQ(processor->getTailLengthSeconds(), 0.0);
-}
+TEST_F(PluginProcessorLifecycleTest, ZeroTailLength) { EXPECT_DOUBLE_EQ(processor->getTailLengthSeconds(), 0.0); }
 
 TEST_F(PluginProcessorLifecycleTest, SingleProgram)
 {
@@ -83,10 +75,7 @@ TEST_F(PluginProcessorLifecycleTest, SingleProgram)
     EXPECT_EQ(processor->getProgramName(0), "");
 }
 
-TEST_F(PluginProcessorLifecycleTest, HasEditor)
-{
-    EXPECT_TRUE(processor->hasEditor());
-}
+TEST_F(PluginProcessorLifecycleTest, HasEditor) { EXPECT_TRUE(processor->hasEditor()); }
 
 // === Bus Layout Tests ===
 
@@ -165,7 +154,7 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_SetsSampleRate)
 TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_RegistersWithInstanceRegistry)
 {
     processor->prepareToPlay(44100.0, 256);
-    pumpMessageQueue(200);  // Allow async registration to complete
+    pumpMessageQueue(200); // Allow async registration to complete
 
     SourceId sourceId = processor->getSourceId();
     EXPECT_TRUE(sourceId.isValid());
@@ -219,16 +208,11 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
 
     for (double rate : sampleRates)
     {
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_,
-            *themeManager_,
-            *shaderRegistry_,
-            *presetManager_,
-            *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(rate, 512);
 
-        EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate)
-            << "Failed for sample rate: " << rate;
+        EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate) << "Failed for sample rate: " << rate;
     }
 }
 
@@ -239,18 +223,13 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentBlockSizes)
 
     for (int blockSize : blockSizes)
     {
-        processor = std::make_unique<OscilPluginProcessor>(
-            *registry_,
-            *themeManager_,
-            *shaderRegistry_,
-            *presetManager_,
-            *memoryBudgetManager_);
+        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                           *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, blockSize);
         pumpMessageQueue(200);
 
         // Should not crash
-        EXPECT_TRUE(processor->getSourceId().isValid())
-            << "Failed for block size: " << blockSize;
+        EXPECT_TRUE(processor->getSourceId().isValid()) << "Failed for block size: " << blockSize;
     }
 }
 
@@ -410,12 +389,8 @@ TEST_F(PluginProcessorLifecycleTest, DestructorUnregistersFromRegistry)
 TEST_F(PluginProcessorLifecycleTest, SourceIdBeforePrepare)
 {
     // Create a fresh processor not yet prepared
-    auto freshProcessor = std::make_unique<OscilPluginProcessor>(
-        *registry_,
-        *themeManager_,
-        *shaderRegistry_,
-        *presetManager_,
-        *memoryBudgetManager_);
+    auto freshProcessor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
 
     // Source ID before prepareToPlay should be invalid
     SourceId sourceId = freshProcessor->getSourceId();

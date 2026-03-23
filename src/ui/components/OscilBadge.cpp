@@ -7,20 +7,12 @@
 namespace oscil
 {
 
-OscilBadge::OscilBadge(IThemeService& themeService)
-    : ThemedComponent(themeService)
-{
-}
+OscilBadge::OscilBadge(IThemeService& themeService) : ThemedComponent(themeService) {}
 
-
-
-OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text)
-    : OscilBadge(themeService)
+OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text) : OscilBadge(themeService)
 {
     text_ = text;
 }
-
-
 
 OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text, BadgeColor color)
     : OscilBadge(themeService, text)
@@ -28,24 +20,16 @@ OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text, Ba
     color_ = color;
 }
 
-
-
-OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text, BadgeColor color, const juce::String& testId)
+OscilBadge::OscilBadge(IThemeService& themeService, const juce::String& text, BadgeColor color,
+                       const juce::String& testId)
     : OscilBadge(themeService, text, color)
 {
     setTestId(testId);
 }
 
+void OscilBadge::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-
-void OscilBadge::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
-
-OscilBadge::~OscilBadge()
-{
-}
+OscilBadge::~OscilBadge() {}
 
 void OscilBadge::setText(const juce::String& text)
 {
@@ -109,8 +93,7 @@ int OscilBadge::getPreferredWidth() const
 
 int OscilBadge::getPreferredHeight() const
 {
-    return compact_ ? ComponentLayout::BADGE_COMPACT_HEIGHT - 4
-                    : ComponentLayout::BADGE_HEIGHT;
+    return compact_ ? ComponentLayout::BADGE_COMPACT_HEIGHT - 4 : ComponentLayout::BADGE_HEIGHT;
 }
 
 void OscilBadge::paint(juce::Graphics& g)
@@ -144,9 +127,8 @@ void OscilBadge::paint(juce::Graphics& g)
     if (icon_.isValid())
     {
         float iconY = (bounds.getHeight() - ICON_SIZE) / 2.0f;
-        g.drawImage(icon_,
-            juce::Rectangle<float>(contentBounds.getX(), iconY, ICON_SIZE, ICON_SIZE),
-            juce::RectanglePlacement::centred);
+        g.drawImage(icon_, juce::Rectangle<float>(contentBounds.getX(), iconY, ICON_SIZE, ICON_SIZE),
+                    juce::RectanglePlacement::centred);
 
         contentBounds.removeFromLeft(ICON_SIZE + 4);
     }
@@ -161,11 +143,11 @@ juce::Colour OscilBadge::getBackgroundColour() const
     switch (color_)
     {
         case BadgeColor::Success:
-            return getTheme().statusActive;  // Green
+            return getTheme().statusActive; // Green
         case BadgeColor::Warning:
             return getTheme().statusWarning; // Yellow
         case BadgeColor::Error:
-            return getTheme().statusError;   // Red
+            return getTheme().statusError; // Red
         case BadgeColor::Info:
             return juce::Colour(0xFF06B6D4); // Cyan
         case BadgeColor::Default:
@@ -188,10 +170,6 @@ juce::Colour OscilBadge::getTextColour() const
     }
 }
 
-juce::Colour OscilBadge::getBorderColour() const
-{
-    return getBackgroundColour();
-}
-
+juce::Colour OscilBadge::getBorderColour() const { return getBackgroundColour(); }
 
 } // namespace oscil

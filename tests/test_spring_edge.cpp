@@ -3,8 +3,9 @@
     Tests for numerical stability, extreme values, and SpringAnimationGroup
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/SpringAnimation.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

@@ -3,21 +3,20 @@
 */
 
 #include "ui/layout/pane/overlays/StatsOverlay.h"
-#include "ui/theme/ThemeManager.h"
+
 #include "ui/components/ListItemIcons.h"
+#include "ui/theme/ThemeManager.h"
 
 namespace oscil
 {
 
-StatsOverlay::StatsOverlay(IThemeService& themeService)
-    : PaneOverlay(themeService)
+StatsOverlay::StatsOverlay(IThemeService& themeService) : PaneOverlay(themeService)
 {
     setTestId("statsOverlay");
     setupComponents();
 }
 
-StatsOverlay::StatsOverlay(IThemeService& themeService, const juce::String& testId)
-    : PaneOverlay(themeService, testId)
+StatsOverlay::StatsOverlay(IThemeService& themeService, const juce::String& testId) : PaneOverlay(themeService, testId)
 {
     setupComponents();
 }
@@ -47,7 +46,8 @@ void StatsOverlay::setupComponents()
     resetButton_->setIconPath(ListItemIcons::createRedoIcon(static_cast<float>(RESET_BUTTON_SIZE)));
     resetButton_->setTooltip("Reset Accumulated Stats");
     resetButton_->onClick = [this]() {
-        if (onResetStats) onResetStats();
+        if (onResetStats)
+            onResetStats();
     };
     addChildComponent(*resetButton_);
 }
@@ -55,11 +55,11 @@ void StatsOverlay::setupComponents()
 void StatsOverlay::resized()
 {
     auto bounds = getContentBounds();
-    
+
     // Reset button at top-right
     auto headerRow = bounds.removeFromTop(HEADER_HEIGHT);
     resetButton_->setBounds(headerRow.removeFromRight(RESET_BUTTON_SIZE + 4).withWidth(RESET_BUTTON_SIZE));
-    
+
     // Stats display fills the rest
     statsDisplay_->setBounds(bounds);
 }
@@ -100,7 +100,7 @@ juce::Rectangle<int> StatsOverlay::getPreferredContentSize() const
 {
     int width = LABEL_COLUMN_WIDTH + (numOscillators_ * DATA_COLUMN_WIDTH) + PADDING * 2;
     int height = HEADER_HEIGHT + (ROW_HEIGHT * 7) + PADDING; // 6 metrics + header row
-    return { 0, 0, width, height };
+    return {0, 0, width, height};
 }
 
 void StatsOverlay::updateStats(const std::vector<OscillatorStats>& stats)
@@ -112,10 +112,10 @@ void StatsOverlay::updateStats(const std::vector<OscillatorStats>& stats)
         if (getParentComponent())
             updatePositionInParent(getParentComponent()->getLocalBounds().reduced(4)); // Re-layout
     }
-    
+
     // Rebuild table content
     juce::String tableText = formatTable(stats);
-    
+
     // Only update if changed to avoid caret/selection reset flicker
     if (statsDisplay_ && statsDisplay_->getText() != tableText)
     {
@@ -140,43 +140,37 @@ juce::String StatsOverlay::formatTable(const std::vector<OscillatorStats>& stats
         s << "\n";
     };
 
-    auto maxLR = [](const OscillatorStats& o, float MetricSnapshot::* f) {
-        return std::max(o.left.*f, o.right.*f);
-    };
+    auto maxLR = [](const OscillatorStats& o, float MetricSnapshot::* f) { return std::max(o.left.*f, o.right.*f); };
 
-    appendRow("Peak",   [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::peakDb)); });
-    appendRow("RMS",    [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::rmsDb)); });
-    appendRow("Crest",  [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::crestFactorDb)); });
-    appendRow("DC",     [&](const OscillatorStats& o) {
+    appendRow("Peak", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::peakDb)); });
+    appendRow("RMS", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::rmsDb)); });
+    appendRow("Crest", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::crestFactorDb)); });
+    appendRow("DC", [&](const OscillatorStats& o) {
         float dc = std::max(std::abs(o.left.dcOffset), std::abs(o.right.dcOffset));
         return dc > 0.001f ? formatPercent(dc) : juce::String("-");
     });
     appendRow("Attack", [&](const OscillatorStats& o) { return formatMs(maxLR(o, &MetricSnapshot::attackTimeMs)); });
-    appendRow("Decay",  [&](const OscillatorStats& o) { return formatMs(maxLR(o, &MetricSnapshot::decayTimeMs)); });
+    appendRow("Decay", [&](const OscillatorStats& o) { return formatMs(maxLR(o, &MetricSnapshot::decayTimeMs)); });
 
     return s;
 }
 
 juce::String StatsOverlay::formatDb(float dB)
 {
-    if (dB < -90.0f) return "-inf";
+    if (dB < -90.0f)
+        return "-inf";
     return juce::String(dB, 1) + " dB";
 }
 
-juce::String StatsOverlay::formatPercent(float value)
-{
-    return juce::String(value * 100.0f, 1) + "%";
-}
+juce::String StatsOverlay::formatPercent(float value) { return juce::String(value * 100.0f, 1) + "%"; }
 
 juce::String StatsOverlay::formatMs(float ms)
 {
-    if (ms < 0.1f) return "-";
+    if (ms < 0.1f)
+        return "-";
     return juce::String(ms, 0) + " ms";
 }
 
-juce::String StatsOverlay::getDisplayedText() const
-{
-    return statsDisplay_->getText();
-}
+juce::String StatsOverlay::getDisplayedText() const { return statsDisplay_->getText(); }
 
 } // namespace oscil

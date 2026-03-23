@@ -3,8 +3,9 @@
     Tests for OscilDropdown UI component
 */
 
-#include "OscilTestFixtures.h"
 #include "ui/components/OscilDropdown.h"
+
+#include "OscilTestFixtures.h"
 
 using namespace oscil;
 using namespace oscil::test;
@@ -364,9 +365,7 @@ TEST_F(OscilDropdownTest, OnSelectionChangedIdCallback)
 
     juce::String lastId;
 
-    dropdown.onSelectionChangedId = [&](const juce::String& id) {
-        lastId = id;
-    };
+    dropdown.onSelectionChangedId = [&](const juce::String& id) { lastId = id; };
 
     dropdown.setSelectedIndex(1, true);
 
@@ -401,9 +400,7 @@ TEST_F(OscilDropdownTest, NoCallbackWhenNotifyFalse)
 
     int changeCount = 0;
 
-    dropdown.onSelectionChanged = [&](int) {
-        changeCount++;
-    };
+    dropdown.onSelectionChanged = [&](int) { changeCount++; };
 
     dropdown.setSelectedIndex(0, false);
 

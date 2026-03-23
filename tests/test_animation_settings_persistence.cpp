@@ -3,10 +3,11 @@
     Tests for scope overrides, state persistence, and thread safety
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/AnimationSettings.h"
-#include <thread>
+
 #include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 #include <vector>
 
 using namespace oscil;
@@ -57,7 +58,7 @@ TEST_F(AnimationSettingsPersistenceTest, NestedScopedReducedMotion_DocumentLimit
         {
             ScopedReducedMotion inner;
             EXPECT_TRUE(AnimationSettings::prefersReducedMotion());
-        }  // inner destructor calls clearOverride()
+        } // inner destructor calls clearOverride()
 
         // DESIGN LIMITATION: Override is cleared even though outer is in scope
         // This test documents current behavior - outer scope no longer active
@@ -105,7 +106,7 @@ TEST_F(AnimationSettingsPersistenceTest, MultipleScopesSequential)
 TEST_F(AnimationSettingsPersistenceTest, ConcurrentAppPreferenceChanges)
 {
     std::vector<std::thread> threads;
-    std::atomic<int> iterations{ 0 };
+    std::atomic<int> iterations{0};
 
     for (int t = 0; t < 4; ++t)
     {
@@ -115,7 +116,7 @@ TEST_F(AnimationSettingsPersistenceTest, ConcurrentAppPreferenceChanges)
                 AnimationSettings::setAppPreference(t % 2 == 0);
                 // Read should always succeed without crash/UB
                 bool result = AnimationSettings::prefersReducedMotion();
-                (void)result;
+                (void) result;
                 iterations++;
             }
         });
@@ -133,7 +134,7 @@ TEST_F(AnimationSettingsPersistenceTest, ConcurrentAppPreferenceChanges)
 TEST_F(AnimationSettingsPersistenceTest, ConcurrentOverrideChanges)
 {
     std::vector<std::thread> threads;
-    std::atomic<int> iterations{ 0 };
+    std::atomic<int> iterations{0};
 
     for (int t = 0; t < 4; ++t)
     {
@@ -149,7 +150,7 @@ TEST_F(AnimationSettingsPersistenceTest, ConcurrentOverrideChanges)
 
                 // All reads should be valid (no torn reads)
                 bool result = AnimationSettings::prefersReducedMotion();
-                (void)result;
+                (void) result;
                 iterations++;
             }
         });
@@ -166,8 +167,8 @@ TEST_F(AnimationSettingsPersistenceTest, ConcurrentOverrideChanges)
 // Test: Concurrent reads while writing
 TEST_F(AnimationSettingsPersistenceTest, ConcurrentReadWhileWriting)
 {
-    std::atomic<bool> running{ true };
-    std::atomic<int> readCount{ 0 };
+    std::atomic<bool> running{true};
+    std::atomic<int> readCount{0};
 
     // Writer thread
     std::thread writer([&running]() {

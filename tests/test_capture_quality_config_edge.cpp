@@ -3,8 +3,9 @@
     Memory budget, buffer duration, effective quality, serialization, quality override
 */
 
-#include <gtest/gtest.h>
 #include "core/dsp/CaptureQualityConfig.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -20,9 +21,9 @@ protected:
 
 TEST_F(MemoryBudgetConfigEdgeTest, DefaultBudgetValues)
 {
-    EXPECT_EQ(budget.totalBudgetBytes, 50u * 1024 * 1024);  // 50 MB
-    EXPECT_EQ(budget.perTrackMinBytes, 100u * 1024);         // 100 KB
-    EXPECT_EQ(budget.perTrackMaxBytes, 2u * 1024 * 1024);    // 2 MB
+    EXPECT_EQ(budget.totalBudgetBytes, 50u * 1024 * 1024); // 50 MB
+    EXPECT_EQ(budget.perTrackMinBytes, 100u * 1024);       // 100 KB
+    EXPECT_EQ(budget.perTrackMaxBytes, 2u * 1024 * 1024);  // 2 MB
 }
 
 TEST_F(MemoryBudgetConfigEdgeTest, PerTrackBudgetWithFewTracks)
@@ -86,8 +87,8 @@ TEST_F(BufferDurationEdgeTest, DurationToSecondsConversion)
 
 TEST_F(BufferDurationEdgeTest, StringConversionRoundTrip)
 {
-    for (auto duration : {BufferDuration::Short, BufferDuration::Medium,
-                          BufferDuration::Long, BufferDuration::VeryLong})
+    for (auto duration :
+         {BufferDuration::Short, BufferDuration::Medium, BufferDuration::Long, BufferDuration::VeryLong})
     {
         juce::String str = bufferDurationToString(duration);
         EXPECT_EQ(stringToBufferDuration(str), duration);
@@ -158,7 +159,7 @@ TEST_F(CaptureQualitySerializationEdgeTest, RoundTripPreservesValues)
     CaptureQualityConfig original;
     original.qualityPreset = QualityPreset::High;
     original.bufferDuration = BufferDuration::Long;
-    original.memoryBudget.totalBudgetBytes = 100 * 1024 * 1024;  // 100 MB
+    original.memoryBudget.totalBudgetBytes = 100 * 1024 * 1024; // 100 MB
     original.autoAdjustQuality = false;
 
     juce::ValueTree tree = original.toValueTree();
@@ -226,8 +227,8 @@ TEST_F(QualityOverrideEdgeTest, ExplicitOverrideIgnoresGlobal)
 
 TEST_F(QualityOverrideEdgeTest, StringConversionRoundTrip)
 {
-    for (auto override : {QualityOverride::UseGlobal, QualityOverride::Eco,
-                          QualityOverride::Standard, QualityOverride::High, QualityOverride::Ultra})
+    for (auto override : {QualityOverride::UseGlobal, QualityOverride::Eco, QualityOverride::Standard,
+                          QualityOverride::High, QualityOverride::Ultra})
     {
         juce::String str = qualityOverrideToString(override);
         EXPECT_EQ(stringToQualityOverride(str), override);

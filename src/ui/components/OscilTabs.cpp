@@ -23,8 +23,7 @@ OscilTabs::OscilTabs(IThemeService& themeService)
     hoverSpring_.position = 0.0f;
 }
 
-OscilTabs::OscilTabs(IThemeService& themeService, Orientation orientation)
-    : OscilTabs(themeService)
+OscilTabs::OscilTabs(IThemeService& themeService, Orientation orientation) : OscilTabs(themeService)
 {
     orientation_ = orientation;
 }
@@ -36,15 +35,9 @@ OscilTabs::OscilTabs(IThemeService& themeService, Orientation orientation, const
     setTestId(testId);
 }
 
-void OscilTabs::registerTestId()
-{
-    OSCIL_REGISTER_TEST_ID(testId_);
-}
+void OscilTabs::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilTabs::~OscilTabs()
-{
-    stopTimer();
-}
+OscilTabs::~OscilTabs() { stopTimer(); }
 
 void OscilTabs::addTab(const juce::String& label, const juce::String& id)
 {
@@ -410,14 +403,12 @@ bool OscilTabs::keyPressed(const juce::KeyPress& key)
     }
 
     int direction = (newIndex > selectedIndex_) ? 1 : -1;
-    while (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) &&
-           !tabs_[static_cast<size_t>(newIndex)].enabled)
+    while (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) && !tabs_[static_cast<size_t>(newIndex)].enabled)
     {
         newIndex += direction;
     }
 
-    if (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) &&
-        newIndex != selectedIndex_)
+    if (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) && newIndex != selectedIndex_)
     {
         setSelectedIndex(newIndex);
         return true;
@@ -442,8 +433,7 @@ void OscilTabs::timerCallback()
 {
     updateAnimations();
 
-    if (indicatorXSpring_.isSettled() && indicatorWidthSpring_.isSettled() &&
-        hoverSpring_.isSettled())
+    if (indicatorXSpring_.isSettled() && indicatorWidthSpring_.isSettled() && hoverSpring_.isSettled())
     {
         stopTimer();
     }
@@ -461,10 +451,7 @@ void OscilTabs::updateAnimations()
 
 std::unique_ptr<juce::AccessibilityHandler> OscilTabs::createAccessibilityHandler()
 {
-    return std::make_unique<juce::AccessibilityHandler>(
-        *this,
-        juce::AccessibilityRole::group
-    );
+    return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
 }
 
 } // namespace oscil

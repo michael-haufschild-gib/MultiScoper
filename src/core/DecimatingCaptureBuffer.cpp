@@ -4,8 +4,9 @@
 */
 
 #include "core/DecimatingCaptureBuffer.h"
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 namespace oscil
@@ -21,8 +22,8 @@ int64_t scaleTimelineTimestamp(int64_t timestamp, int sourceRate, int targetRate
     if (sourceRate <= 0 || targetRate <= 0 || sourceRate == targetRate)
         return timestamp;
 
-    const long double scaled = (static_cast<long double>(timestamp) * static_cast<long double>(targetRate))
-                             / static_cast<long double>(sourceRate);
+    const long double scaled = (static_cast<long double>(timestamp) * static_cast<long double>(targetRate)) /
+                               static_cast<long double>(sourceRate);
     if (!std::isfinite(static_cast<double>(scaled)))
         return timestamp;
     if (scaled <= 0.0L)
@@ -71,30 +72,19 @@ void DecimationFilter::configure(int decimationRatio, double sourceRate)
     double sourceNyquist = sourceRate / 2.0;
     double transitionBand = targetNyquist - cutoffFrequency;
 
-    float normalisedTransitionWidth = static_cast<float>(
-        juce::jlimit(0.01, 0.49, transitionBand / sourceNyquist));
+    float normalisedTransitionWidth = static_cast<float>(juce::jlimit(0.01, 0.49, transitionBand / sourceNyquist));
 
     coefficients_ = juce::dsp::FilterDesign<float>::designFIRLowpassKaiserMethod(
-        static_cast<float>(cutoffFrequency),
-        sourceRate,
-        normalisedTransitionWidth,
-        STOPBAND_ATTENUATION_DB
-    );
+        static_cast<float>(cutoffFrequency), sourceRate, normalisedTransitionWidth, STOPBAND_ATTENUATION_DB);
 
     filter_.coefficients = coefficients_;
     reset();
     // Logging removed for real-time safety (configure may be called from audio-adjacent paths)
 }
 
-float DecimationFilter::processSample(float sample)
-{
-    return filter_.processSample(sample);
-}
+float DecimationFilter::processSample(float sample) { return filter_.processSample(sample); }
 
-void DecimationFilter::reset()
-{
-    filter_.reset();
-}
+void DecimationFilter::reset() { filter_.reset(); }
 
 size_t DecimationFilter::getFilterOrder() const
 {
@@ -189,9 +179,8 @@ void DecimatingCaptureBuffer::reconfigure()
         graveyard_.reserve(kGraveyardCapacity);
 
     decimationRatio_ = config_.getDecimationRatio(sourceRate_);
-    captureRate_ = (sourceRate_ > 0 && decimationRatio_ > 0)
-        ? juce::jmax(1, sourceRate_ / decimationRatio_)
-        : juce::jmax(1, config_.getCaptureRate(sourceRate_));
+    captureRate_ = (sourceRate_ > 0 && decimationRatio_ > 0) ? juce::jmax(1, sourceRate_ / decimationRatio_)
+                                                             : juce::jmax(1, config_.getCaptureRate(sourceRate_));
 
     size_t bufferSamples = config_.calculateBufferSizeSamples(captureRate_);
     size_t powerOf2Size = 1;
@@ -230,20 +219,16 @@ void DecimatingCaptureBuffer::cleanUpGarbage()
     const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
     graveyard_.erase(
         std::remove_if(graveyard_.begin(), graveyard_.end(),
-            [now](const GraveyardItem& item) {
-                return (now - item.timestampMs) > RETENTION_MS;
-            }),
+                       [now](const GraveyardItem& item) { return (now - item.timestampMs) > RETENTION_MS; }),
         graveyard_.end());
 }
 
-void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer,
-                                     const CaptureFrameMetadata& metadata)
+void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata)
 {
-    const int numChannels = juce::jmin(buffer.getNumChannels(),
-                                        static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
+    const int numChannels = juce::jmin(buffer.getNumChannels(), static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
     const int numSamples = buffer.getNumSamples();
 
-    const float* channels[SharedCaptureBuffer::MAX_CHANNELS] = { nullptr };
+    const float* channels[SharedCaptureBuffer::MAX_CHANNELS] = {nullptr};
     for (int ch = 0; ch < numChannels; ++ch)
     {
         channels[ch] = buffer.getReadPointer(ch);
@@ -253,7 +238,7 @@ void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer,
 }
 
 void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples, int numChannels,
-                                     const CaptureFrameMetadata& metadata)
+                                    const CaptureFrameMetadata& metadata)
 {
     std::shared_ptr<SharedCaptureBuffer> buf;
     std::shared_ptr<ProcessingContext> ctx;
@@ -263,7 +248,7 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
         // If reconfigure() is holding the lock (allocating memory), we drop this frame
         const juce::SpinLock::ScopedTryLockType sl(bufferSwapLock_);
         if (!sl.isLocked())
-            return;  // Drop frame rather than block audio thread
+            return; // Drop frame rather than block audio thread
         buf = buffer_;
         ctx = context_;
     }
@@ -271,8 +256,7 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
     if (numSamples <= 0 || numChannels <= 0 || !buf || !ctx)
         return;
 
-    const int actualChannels = juce::jmin(numChannels,
-                                           static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
+    const int actualChannels = juce::jmin(numChannels, static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
 
     if (decimationRatio_ <= 1)
     {
@@ -289,9 +273,8 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
     processAndWriteDecimated(samples, numSamples, actualChannels, metadata);
 }
 
-int DecimatingCaptureBuffer::decimateChannel(const float* src, float* dest,
-                                               DecimationFilter& filter, int& counter,
-                                               int numSamples) const
+int DecimatingCaptureBuffer::decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter,
+                                             int numSamples) const
 {
     int writeIdx = 0;
     for (int i = 0; i < numSamples; ++i)
@@ -306,20 +289,21 @@ int DecimatingCaptureBuffer::decimateChannel(const float* src, float* dest,
     return writeIdx;
 }
 
-void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* samples,
-                                                        int numSamples, int numChannels,
-                                                        const CaptureFrameMetadata& metadata)
+void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* samples, int numSamples, int numChannels,
+                                                       const CaptureFrameMetadata& metadata)
 {
     std::shared_ptr<SharedCaptureBuffer> buf;
     std::shared_ptr<ProcessingContext> ctx;
     {
         const juce::SpinLock::ScopedTryLockType sl(bufferSwapLock_);
-        if (!sl.isLocked()) return;
+        if (!sl.isLocked())
+            return;
         buf = buffer_;
         ctx = context_;
     }
 
-    if (!buf || !ctx) return;
+    if (!buf || !ctx)
+        return;
 
     const size_t maxPerCh = ctx->scratchBuffer.size() / SharedCaptureBuffer::MAX_CHANNELS;
     const int safeSamples = std::min(numSamples, static_cast<int>(maxPerCh * static_cast<size_t>(decimationRatio_)));
@@ -330,11 +314,10 @@ void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* sampl
     for (int ch = 0; ch < numChannels; ++ch)
     {
         scratchPtrs[ch] = ctx->scratchBuffer.data() + (static_cast<size_t>(ch) * maxPerCh);
-        int count = decimateChannel(samples[ch], scratchPtrs[ch],
-                                     ctx->filters[static_cast<size_t>(ch)],
-                                     ctx->decimationCounters[static_cast<size_t>(ch)],
-                                     safeSamples);
-        if (ch == 0) decimatedCount = count;
+        int count = decimateChannel(samples[ch], scratchPtrs[ch], ctx->filters[static_cast<size_t>(ch)],
+                                    ctx->decimationCounters[static_cast<size_t>(ch)], safeSamples);
+        if (ch == 0)
+            decimatedCount = count;
     }
 
     if (decimatedCount > 0)

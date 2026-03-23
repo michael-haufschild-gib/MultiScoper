@@ -4,6 +4,7 @@
 */
 
 #include "ui/layout/SidebarComponent.h"
+
 #include "ui/components/TestId.h"
 
 namespace oscil
@@ -11,8 +12,7 @@ namespace oscil
 
 // SidebarResizeHandle implementation
 
-SidebarResizeHandle::SidebarResizeHandle(IThemeService& themeService)
-    : themeService_(themeService)
+SidebarResizeHandle::SidebarResizeHandle(IThemeService& themeService) : themeService_(themeService)
 {
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
 
@@ -84,8 +84,7 @@ void SidebarResizeHandle::mouseUp(const juce::MouseEvent&)
 
 // SidebarCollapseButton implementation
 
-SidebarCollapseButton::SidebarCollapseButton(IThemeService& themeService)
-    : themeService_(themeService)
+SidebarCollapseButton::SidebarCollapseButton(IThemeService& themeService) : themeService_(themeService)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
@@ -125,8 +124,7 @@ void SidebarCollapseButton::paint(juce::Graphics& g)
         chevron.lineTo(centerX + size / 2, centerY + size);
     }
 
-    g.strokePath(chevron, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved,
-                                                juce::PathStrokeType::rounded));
+    g.strokePath(chevron, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 void SidebarCollapseButton::mouseEnter(const juce::MouseEvent&)
@@ -172,16 +170,10 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
 
     // Create resize handle
     resizeHandle_ = std::make_unique<SidebarResizeHandle>(themeService_);
-    resizeHandle_->onResizeStart = [this]()
-    {
-        dragStartWidth_ = expandedWidth_;
-    };
-    resizeHandle_->onResizeDrag = [this](int deltaX)
-    {
+    resizeHandle_->onResizeStart = [this]() { dragStartWidth_ = expandedWidth_; };
+    resizeHandle_->onResizeDrag = [this](int deltaX) {
         int newWidth = dragStartWidth_ - deltaX;
-        newWidth = juce::jlimit(WindowLayout::MIN_SIDEBAR_WIDTH,
-                                WindowLayout::MAX_SIDEBAR_WIDTH,
-                                newWidth);
+        newWidth = juce::jlimit(WindowLayout::MIN_SIDEBAR_WIDTH, WindowLayout::MAX_SIDEBAR_WIDTH, newWidth);
 
         if (newWidth != expandedWidth_)
         {
@@ -264,16 +256,14 @@ void SidebarComponent::resized()
         // Update accordion width to match viewport
         if (accordion_)
         {
-            int width = juce::jmax(1, accordionViewport_->getWidth() - (accordionViewport_->getScrollBarThickness() + PADDING_SMALL));
+            int width = juce::jmax(1, accordionViewport_->getWidth() -
+                                          (accordionViewport_->getScrollBarThickness() + PADDING_SMALL));
             accordion_->setSize(width, accordion_->getPreferredHeight());
         }
     }
 }
 
-void SidebarComponent::themeChanged(const ColorTheme&)
-{
-    repaint();
-}
+void SidebarComponent::themeChanged(const ColorTheme&) { repaint(); }
 
 void SidebarComponent::timerCallback()
 {
@@ -284,9 +274,9 @@ void SidebarComponent::timerCallback()
     notifySidebarWidthChanged();
 
     // Stop timer when animation settles
-    if (widthSpring_.isSettled(1.0f))  // 1px threshold for width
+    if (widthSpring_.isSettled(1.0f)) // 1px threshold for width
     {
-        widthSpring_.snapToTarget();  // Ensure we're exactly at target
+        widthSpring_.snapToTarget(); // Ensure we're exactly at target
         stopTimer();
     }
 }
@@ -299,8 +289,8 @@ void SidebarComponent::setCollapsed(bool collapsed)
         collapseButton_->setCollapsed(collapsed);
 
         // Animate width transition
-        float targetWidth = collapsed ? static_cast<float>(WindowLayout::COLLAPSED_SIDEBAR_WIDTH)
-                                       : static_cast<float>(expandedWidth_);
+        float targetWidth =
+            collapsed ? static_cast<float>(WindowLayout::COLLAPSED_SIDEBAR_WIDTH) : static_cast<float>(expandedWidth_);
         widthSpring_.setTarget(targetWidth);
         startTimerHz(ComponentLayout::ANIMATION_FPS);
 
@@ -309,16 +299,11 @@ void SidebarComponent::setCollapsed(bool collapsed)
     }
 }
 
-void SidebarComponent::toggleCollapsed()
-{
-    setCollapsed(!collapsed_);
-}
+void SidebarComponent::toggleCollapsed() { setCollapsed(!collapsed_); }
 
 void SidebarComponent::setSidebarWidth(int width)
 {
-    int newWidth = juce::jlimit(WindowLayout::MIN_SIDEBAR_WIDTH,
-                                WindowLayout::MAX_SIDEBAR_WIDTH,
-                                width);
+    int newWidth = juce::jlimit(WindowLayout::MIN_SIDEBAR_WIDTH, WindowLayout::MAX_SIDEBAR_WIDTH, width);
     if (expandedWidth_ != newWidth)
     {
         expandedWidth_ = newWidth;
@@ -364,15 +349,9 @@ void SidebarComponent::setSelectedOscillator(const OscillatorId& oscillatorId)
     }
 }
 
-void SidebarComponent::addListener(Listener* listener)
-{
-    listeners_.add(listener);
-}
+void SidebarComponent::addListener(Listener* listener) { listeners_.add(listener); }
 
-void SidebarComponent::removeListener(Listener* listener)
-{
-    listeners_.remove(listener);
-}
+void SidebarComponent::removeListener(Listener* listener) { listeners_.remove(listener); }
 
 void SidebarComponent::notifySidebarWidthChanged()
 {
@@ -389,10 +368,7 @@ void SidebarComponent::refreshSourceList(const std::vector<SourceInfo>& /*source
     // Handled by PluginEditor/AddOscillatorDialog
 }
 
-void SidebarComponent::refreshPaneList(const std::vector<Pane>& panes)
-{
-    currentPanes_ = panes;
-}
+void SidebarComponent::refreshPaneList(const std::vector<Pane>& panes) { currentPanes_ = panes; }
 
 void SidebarComponent::setupSections()
 {

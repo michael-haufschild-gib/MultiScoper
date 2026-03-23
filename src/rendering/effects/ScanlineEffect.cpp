@@ -88,9 +88,7 @@ static const char* scanlineFragmentShader = R"(
     }
 )";
 
-ScanlineEffect::ScanlineEffect()
-{
-}
+ScanlineEffect::ScanlineEffect() {}
 
 ScanlineEffect::~ScanlineEffect() = default;
 
@@ -127,17 +125,10 @@ void ScanlineEffect::release(juce::OpenGLContext& context)
     compiled_ = false;
 }
 
-bool ScanlineEffect::isCompiled() const
-{
-    return compiled_;
-}
+bool ScanlineEffect::isCompiled() const { return compiled_; }
 
-void ScanlineEffect::apply(
-    juce::OpenGLContext& context,
-    Framebuffer* source,
-    Framebuffer* destination,
-    FramebufferPool& pool,
-    float deltaTime)
+void ScanlineEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
+                           FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
 

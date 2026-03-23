@@ -7,13 +7,15 @@
 #pragma once
 
 #include "core/Oscillator.h"
-#include "core/interfaces/IAudioBuffer.h"
 #include "core/dsp/SignalProcessor.h"
-#include <memory>
-#include <vector>
-#include <optional>
-#include <cstdint>
+#include "core/interfaces/IAudioBuffer.h"
+
 #include <juce_core/juce_core.h>
+
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <vector>
 
 namespace oscil
 {
@@ -78,7 +80,7 @@ public:
     bool isStereo() const { return processedSignal_.isStereo; }
     ProcessingMode getProcessingMode() const { return processingMode_; }
     bool hasData() const { return !displayBuffer1_.empty(); }
-    
+
     // Configuration Accessors
     bool isAutoScaleEnabled() const { return autoScale_; }
     float getGainLinear() const { return gainLinear_; }

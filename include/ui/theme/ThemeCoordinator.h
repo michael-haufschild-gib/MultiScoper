@@ -5,8 +5,9 @@
 
 #pragma once
 
-#include "ui/theme/ThemeManager.h"
 #include "ui/theme/IThemeService.h"
+#include "ui/theme/ThemeManager.h"
+
 #include <functional>
 
 namespace oscil

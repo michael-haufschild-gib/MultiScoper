@@ -3,14 +3,16 @@
     Verifies OscilAccordionSection and OptionsSection behavior
 */
 
-#include <gtest/gtest.h>
+#include "core/dsp/TimingConfig.h"
 #include "ui/components/OscilAccordion.h"
+#include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
-#include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/theme/ThemeManager.h"
-#include "core/dsp/TimingConfig.h"
+
 #include "TestElementRegistry.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -66,10 +68,7 @@ protected:
 };
 
 // Test: OscilAccordionSection initializes in collapsed state by default (unlike CollapsibleSection)
-TEST_F(AccordionSectionTest, InitializesCollapsed)
-{
-    EXPECT_FALSE(section_->isExpanded());
-}
+TEST_F(AccordionSectionTest, InitializesCollapsed) { EXPECT_FALSE(section_->isExpanded()); }
 
 // Test: setExpanded updates state
 TEST_F(AccordionSectionTest, SetExpandedUpdatesState)
@@ -122,9 +121,7 @@ TEST_F(AccordionSectionTest, NoCallbackIfStateUnchanged)
 {
     bool callbackInvoked = false;
 
-    section_->onExpandedChanged = [&](bool) {
-        callbackInvoked = true;
-    };
+    section_->onExpandedChanged = [&](bool) { callbackInvoked = true; };
 
     // Already collapsed, setting to collapsed should not invoke callback
     section_->setExpanded(false, false);
@@ -153,7 +150,7 @@ TEST_F(AccordionSectionTest, PreferredHeightIncludesContentWhenExpanded)
     section_->setExpanded(true, false);
     // OscilAccordionSection::getPreferredHeight uses expandSpring_.position
     // With animate=false, position is set instantly.
-    
+
     int expectedHeight = section_->getHeaderHeight() + content_->getHeight();
     EXPECT_EQ(section_->getPreferredHeight(), expectedHeight);
 }
@@ -162,7 +159,7 @@ TEST_F(AccordionSectionTest, PreferredHeightIncludesContentWhenExpanded)
 TEST_F(AccordionSectionTest, ContentVisibilityFollowsExpandedState)
 {
     section_->setContent(content_.get());
-    
+
     // Expanded: content should be visible
     section_->setExpanded(true, false);
     EXPECT_TRUE(content_->isVisible());
@@ -184,7 +181,7 @@ TEST_F(AccordionContainerTest, RemovingSectionKeepsSingleExpandBehaviorForRemain
     ASSERT_NE(middle, nullptr);
     ASSERT_NE(last, nullptr);
 
-    accordion_->removeSection(1);  // Remove "Middle", "Last" shifts from index 2 -> 1
+    accordion_->removeSection(1); // Remove "Middle", "Last" shifts from index 2 -> 1
     auto* shiftedLast = accordion_->getSection(1);
     ASSERT_NE(shiftedLast, nullptr);
 
@@ -222,16 +219,12 @@ protected:
 // ... (OptionsSection unit tests reused from original file - abbreviated for brevity, assumed passed or unchanged)
 // NOTE: I will include them to ensure coverage.
 
-TEST_F(OptionsSectionTest, DefaultGainIsZero)
-{
-    EXPECT_FLOAT_EQ(section_->getGainDb(), 0.0f);
-}
+TEST_F(OptionsSectionTest, DefaultGainIsZero) { EXPECT_FLOAT_EQ(section_->getGainDb(), 0.0f); }
 
 TEST_F(OptionsSectionTest, QualityPresetDropdownStartsDisabledWhenAutoAdjustEnabled)
 {
-    auto* qualityDropdown =
-        dynamic_cast<OscilDropdown*>(oscil::test::TestElementRegistry::getInstance()
-                                         .findElement("sidebar_options_qualityPresetDropdown"));
+    auto* qualityDropdown = dynamic_cast<OscilDropdown*>(
+        oscil::test::TestElementRegistry::getInstance().findElement("sidebar_options_qualityPresetDropdown"));
 
     ASSERT_NE(qualityDropdown, nullptr);
     EXPECT_FALSE(qualityDropdown->isEnabled());
@@ -350,7 +343,7 @@ TEST_F(AccordionTimingSectionTest, CallbackWiredUpCorrectly)
     // OscilAccordionSection should trigger parent resized() when content height changes.
     // Since we don't have a parent here, we can't verify parent->resized() call easily.
     // However, we can check if the callback is set on the content.
-    
+
     DynamicHeightContent* dynamicContent = dynamic_cast<DynamicHeightContent*>(timing_.get());
     ASSERT_NE(dynamicContent, nullptr);
     EXPECT_TRUE(dynamicContent->onPreferredHeightChanged != nullptr);

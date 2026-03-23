@@ -3,6 +3,7 @@
 */
 
 #include "ui/components/UIAudioFeedback.h"
+
 #include <atomic>
 #include <cmath>
 
@@ -29,8 +30,8 @@ public:
 
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override
     {
-        (void)samplesPerBlockExpected;
-        (void)sampleRate;
+        (void) samplesPerBlockExpected;
+        (void) sampleRate;
     }
 
     void releaseResources() override
@@ -59,8 +60,7 @@ public:
             return;
         }
 
-        int samplesToPlay = std::min(bufferToFill.numSamples,
-                                      playbackBuffer_.getNumSamples() - playbackPosition_);
+        int samplesToPlay = std::min(bufferToFill.numSamples, playbackBuffer_.getNumSamples() - playbackPosition_);
 
         if (samplesToPlay <= 0)
         {
@@ -72,12 +72,8 @@ public:
         {
             int sourceChannel = std::min(channel, playbackBuffer_.getNumChannels() - 1);
 
-            bufferToFill.buffer->copyFrom(channel,
-                                           bufferToFill.startSample,
-                                           playbackBuffer_,
-                                           sourceChannel,
-                                           playbackPosition_,
-                                           samplesToPlay);
+            bufferToFill.buffer->copyFrom(channel, bufferToFill.startSample, playbackBuffer_, sourceChannel,
+                                          playbackPosition_, samplesToPlay);
 
             bufferToFill.buffer->applyGain(channel, bufferToFill.startSample, samplesToPlay, volume_);
         }
@@ -96,8 +92,7 @@ private:
     juce::SpinLock mutex_;
 };
 
-UIAudioFeedback::UIAudioFeedback()
-    : player_(std::make_unique<SoundPlayer>())
+UIAudioFeedback::UIAudioFeedback() : player_(std::make_unique<SoundPlayer>())
 {
     // Initialize all sound types as enabled
     soundEnabled_[SoundType::Click] = true;
@@ -105,17 +100,14 @@ UIAudioFeedback::UIAudioFeedback()
     soundEnabled_[SoundType::SliderSnap] = true;
     soundEnabled_[SoundType::Error] = true;
     soundEnabled_[SoundType::Success] = true;
-    soundEnabled_[SoundType::Focus] = false;  // Disabled by default
-    soundEnabled_[SoundType::Hover] = false;  // Disabled by default
+    soundEnabled_[SoundType::Focus] = false; // Disabled by default
+    soundEnabled_[SoundType::Hover] = false; // Disabled by default
     soundEnabled_[SoundType::Notification] = true;
 
     generateSounds();
 }
 
-UIAudioFeedback::~UIAudioFeedback()
-{
-    shutdown();
-}
+UIAudioFeedback::~UIAudioFeedback() { shutdown(); }
 
 void UIAudioFeedback::setEnabled(bool enabled)
 {
@@ -163,7 +155,7 @@ void UIAudioFeedback::setAudioDevice(juce::AudioDeviceManager* deviceManager)
     if (deviceManager_ && deviceManager_->getCurrentAudioDevice())
     {
         sampleRate_ = static_cast<float>(deviceManager_->getCurrentAudioDevice()->getCurrentSampleRate());
-        generateSounds();  // Regenerate at correct sample rate
+        generateSounds(); // Regenerate at correct sample rate
     }
 }
 
@@ -214,7 +206,7 @@ juce::AudioBuffer<float> UIAudioFeedback::generateToggleSound()
 
     auto* data = buffer.getWritePointer(0);
 
-    float freq = 880.0f;  // A5
+    float freq = 880.0f; // A5
     for (int i = 0; i < numSamples; ++i)
     {
         float t = static_cast<float>(i) / sampleRate_;
@@ -277,8 +269,8 @@ juce::AudioBuffer<float> UIAudioFeedback::generateSuccessSound()
     auto* data = buffer.getWritePointer(0);
 
     int halfSamples = numSamples / 2;
-    float freq1 = 523.0f;  // C5
-    float freq2 = 659.0f;  // E5
+    float freq1 = 523.0f; // C5
+    float freq2 = 659.0f; // E5
 
     for (int i = 0; i < numSamples; ++i)
     {
@@ -338,7 +330,7 @@ juce::AudioBuffer<float> UIAudioFeedback::generateNotificationSound()
     auto* data = buffer.getWritePointer(0);
 
     // C major chord
-    float freqs[] = {523.0f, 659.0f, 784.0f};  // C5, E5, G5
+    float freqs[] = {523.0f, 659.0f, 784.0f}; // C5, E5, G5
 
     for (int i = 0; i < numSamples; ++i)
     {

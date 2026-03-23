@@ -3,8 +3,9 @@
     Tests for applying configurations and checking requirements
 */
 
-#include <gtest/gtest.h>
 #include "rendering/VisualConfiguration.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

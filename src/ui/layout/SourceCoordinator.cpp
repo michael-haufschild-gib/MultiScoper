@@ -3,6 +3,7 @@
 */
 
 #include "ui/layout/SourceCoordinator.h"
+
 #include "core/OscilLog.h"
 
 namespace oscil
@@ -31,11 +32,9 @@ SourceCoordinator::~SourceCoordinator()
 
 void SourceCoordinator::sourceAdded(const SourceId& sourceId)
 {
-    OSCIL_LOG(SOURCE, "sourceAdded: id=" << sourceId.id
-        << " totalSources=" << (availableSources_.size() + 1));
+    OSCIL_LOG(SOURCE, "sourceAdded: id=" << sourceId.id << " totalSources=" << (availableSources_.size() + 1));
     // Capture by value for thread safety
-    postToMessageThread([this, sourceId]()
-    {
+    postToMessageThread([this, sourceId]() {
         availableSources_.push_back(sourceId);
         if (onSourcesChanged_)
             onSourcesChanged_();
@@ -44,13 +43,11 @@ void SourceCoordinator::sourceAdded(const SourceId& sourceId)
 
 void SourceCoordinator::sourceRemoved(const SourceId& sourceId)
 {
-    OSCIL_LOG(SOURCE, "sourceRemoved: id=" << sourceId.id
-        << " remainingSources=" << (availableSources_.size() > 0 ? availableSources_.size() - 1 : 0));
-    postToMessageThread([this, sourceId]()
-    {
-        availableSources_.erase(
-            std::remove(availableSources_.begin(), availableSources_.end(), sourceId),
-            availableSources_.end());
+    OSCIL_LOG(SOURCE, "sourceRemoved: id=" << sourceId.id << " remainingSources="
+                                           << (availableSources_.size() > 0 ? availableSources_.size() - 1 : 0));
+    postToMessageThread([this, sourceId]() {
+        availableSources_.erase(std::remove(availableSources_.begin(), availableSources_.end(), sourceId),
+                                availableSources_.end());
         if (onSourcesChanged_)
             onSourcesChanged_();
     });
@@ -60,8 +57,7 @@ void SourceCoordinator::sourceUpdated(const SourceId& sourceId)
 {
     OSCIL_LOG(SOURCE, "sourceUpdated: id=" << sourceId.id);
     juce::ignoreUnused(sourceId);
-    postToMessageThread([this]()
-    {
+    postToMessageThread([this]() {
         if (onSourcesChanged_)
             onSourcesChanged_();
     });
@@ -84,8 +80,7 @@ void SourceCoordinator::postToMessageThread(std::function<void()> cb)
     // even if SourceCoordinator is destroyed before the callback executes
     auto validFlag = isValid_;
 
-    juce::MessageManager::callAsync([validFlag, callback = std::move(cb)]()
-    {
+    juce::MessageManager::callAsync([validFlag, callback = std::move(cb)]() {
         // Check if coordinator is still valid before executing callback
         if (validFlag->load(std::memory_order_acquire))
         {

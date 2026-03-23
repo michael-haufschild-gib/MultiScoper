@@ -10,19 +10,17 @@
     - Tab badge/enabled state not accessible after set
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilTabs.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
 class OscilTabsTest : public ::testing::Test
 {
 protected:
-    void SetUp() override
-    {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
     void TearDown() override
     {

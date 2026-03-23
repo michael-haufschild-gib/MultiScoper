@@ -3,9 +3,10 @@
     Tests for easing functions, lerp, and animation helpers
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/AnimationSettings.h"
+
 #include <cmath>
+#include <gtest/gtest.h>
 
 using namespace oscil;
 

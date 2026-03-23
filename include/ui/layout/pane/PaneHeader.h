@@ -5,13 +5,15 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "core/Oscillator.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/components/OscilButton.h"
 #include "ui/components/InlineEditLabel.h"
-#include "ui/layout/pane/PaneActionBar.h"
+#include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
+#include "ui/layout/pane/PaneActionBar.h"
+#include "ui/theme/IThemeService.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include <functional>
 #include <memory>
 #include <optional>
@@ -29,8 +31,9 @@ namespace oscil
  * - Action bar (stats toggle, etc.)
  * - Close button
  */
-class PaneHeader : public juce::Component,
-                    public TestIdSupport
+class PaneHeader
+    : public juce::Component
+    , public TestIdSupport
 {
 public:
     explicit PaneHeader(IThemeService& themeService);
@@ -69,8 +72,7 @@ public:
 private:
     void setupComponents();
     void paintDragHandle(juce::Graphics& g, const juce::Rectangle<int>& handleBounds);
-    void paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& bounds,
-                               const ColorTheme& theme);
+    void paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& bounds, const ColorTheme& theme);
 
     IThemeService& themeService_;
 

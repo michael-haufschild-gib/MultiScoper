@@ -8,8 +8,8 @@
 #if JUCE_MAC
 
 #import <Cocoa/Cocoa.h>
-#include <cstdlib>
 #include <unistd.h>
+#include <cstdlib>
 
 namespace oscil::test
 {
@@ -44,15 +44,13 @@ juce::Image captureNativeWindowMac(juce::Component* component, const juce::Strin
     // -l<windowid> captures specific window
     // -o removes shadow
     // -x no sound
-    juce::String tempPath = outputPath.isEmpty()
-        ? juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("oscil_screenshot_temp.png").getFullPathName()
-        : outputPath;
+    juce::String tempPath = outputPath.isEmpty() ? juce::File::getSpecialLocation(juce::File::tempDirectory)
+                                                       .getChildFile("oscil_screenshot_temp.png")
+                                                       .getFullPathName()
+                                                 : outputPath;
 
-    juce::String command = juce::String::formatted(
-        "screencapture -l%u -o -x \"%s\"",
-        (unsigned int)windowID,
-        tempPath.toRawUTF8()
-    );
+    juce::String command =
+        juce::String::formatted("screencapture -l%u -o -x \"%s\"", (unsigned int)windowID, tempPath.toRawUTF8());
 
     int result = std::system(command.toRawUTF8());
 
@@ -63,7 +61,7 @@ juce::Image captureNativeWindowMac(juce::Component* component, const juce::Strin
     }
 
     // Give the system a moment to write the file
-    usleep(100000); // 100ms
+    usleep(100000);  // 100ms
 
     // Load the captured image
     juce::File imageFile(tempPath);
@@ -88,6 +86,6 @@ juce::Image captureNativeWindowMac(juce::Component* component)
     return captureNativeWindowMac(component, juce::String());
 }
 
-} // namespace oscil::test
+}  // namespace oscil::test
 
-#endif // JUCE_MAC
+#endif  // JUCE_MAC

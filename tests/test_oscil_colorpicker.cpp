@@ -3,9 +3,10 @@
     Tests for OscilColorPicker UI component
 */
 
-#include <gtest/gtest.h>
 #include "ui/components/OscilColorPicker.h"
 #include "ui/theme/ThemeManager.h"
+
+#include <gtest/gtest.h>
 
 using namespace oscil;
 
@@ -14,13 +15,9 @@ class OscilColorPickerTest : public ::testing::Test
 protected:
     std::unique_ptr<ThemeManager> themeManager_;
 
-    void SetUp() override {
-        themeManager_ = std::make_unique<ThemeManager>();
-    }
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override {
-        themeManager_.reset();
-    }
+    void TearDown() override { themeManager_.reset(); }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 };
@@ -159,9 +156,7 @@ TEST_F(OscilColorPickerTest, NoCallbackWhenNotifyFalse)
 
     int changeCount = 0;
 
-    picker.onColorChanged = [&changeCount](juce::Colour) {
-        changeCount++;
-    };
+    picker.onColorChanged = [&changeCount](juce::Colour) { changeCount++; };
 
     picker.setColor(juce::Colours::green, false);
     EXPECT_EQ(changeCount, 0);
@@ -172,9 +167,7 @@ TEST_F(OscilColorPickerTest, OnColorChangingCallback)
     OscilColorPicker picker(getThemeManager());
 
     bool changingCalled = false;
-    picker.onColorChanging = [&changingCalled](juce::Colour) {
-        changingCalled = true;
-    };
+    picker.onColorChanging = [&changingCalled](juce::Colour) { changingCalled = true; };
 
     // Callback would be triggered during drag
     // Just verify callback can be set
