@@ -45,6 +45,11 @@ SharedCaptureBuffer::SharedCaptureBuffer(size_t bufferSamples)
 
 void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata, bool tryLock)
 {
+    // Preconditions: buffer must have valid dimensions
+    jassert(buffer.getNumChannels() > 0);
+    jassert(buffer.getNumSamples() > 0);
+    jassert(capacity_ > 0);
+
     const int numChannels = std::min(buffer.getNumChannels(), static_cast<int>(MAX_CHANNELS));
     const int numSamples = buffer.getNumSamples();
 
@@ -61,6 +66,8 @@ void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const Ca
 void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamples, int numChannels,
                                          const CaptureFrameMetadata& metadata)
 {
+    jassert(capacity_ > 0 && (capacity_ & (capacity_ - 1)) == 0); // power-of-2 invariant
+    jassert(numChannels >= 0 && numChannels <= static_cast<int>(MAX_CHANNELS));
     if (numSamples <= 0)
         return;
 

@@ -87,6 +87,11 @@ SourceId InstanceRegistry::registerInstance(
     double sampleRate,
     std::shared_ptr<AnalysisEngine> analysisEngine)
 {
+    // Preconditions: caller must provide a valid buffer and track identifier
+    jassert(captureBuffer != nullptr);
+    jassert(trackIdentifier.isNotEmpty());
+    jassert(channelCount > 0 && channelCount <= 2);
+    jassert(sampleRate > 0.0);
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 

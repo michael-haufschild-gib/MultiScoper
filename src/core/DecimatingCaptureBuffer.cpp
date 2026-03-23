@@ -137,6 +137,13 @@ DecimatingCaptureBuffer::DecimatingCaptureBuffer(const CaptureQualityConfig& con
 
 void DecimatingCaptureBuffer::configure(const CaptureQualityConfig& config, int sourceRate)
 {
+    // Precondition: configure allocates memory — must not be called from audio thread.
+    // Some hosts (Pro Tools) call prepareToPlay from audio thread, which defers to message thread.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+    // Precondition: source rate must be positive for meaningful buffer sizing
+    jassert(sourceRate > 0);
+
     config_ = config;
     sourceRate_ = sourceRate;
     reconfigure();

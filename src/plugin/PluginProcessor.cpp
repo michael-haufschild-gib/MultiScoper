@@ -205,6 +205,9 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     if (numSamples == 0 || numChannels == 0)
         return;
 
+    // Invariant: captureBuffer_ is created in the constructor and never null
+    jassert(captureBuffer_ != nullptr);
+
     // Measure start time for CPU usage calculation
     auto startTime = juce::Time::getHighResolutionTicks();
 

@@ -143,11 +143,15 @@ private:
     // Double-buffered cached state for lock-free real-time safe getStateInformation().
     // Message thread writes to the inactive buffer, then atomically swaps the index.
     // Audio thread reads from the active buffer without locking.
-    // Safety assumption: consecutive updateCachedState() calls are separated by enough
-    // time (user-driven state changes) that any in-flight audio-thread read completes
-    // before the previously-active buffer is reused.
+    //
+    // CONTRACT: consecutive updateCachedState() calls must be separated by enough
+    // time (>= 1ms) that any in-flight audio-thread read completes before the
+    // previously-active buffer is reused. This invariant is enforced by a debug
+    // assertion in updateCachedState(). In practice, calls are driven by user
+    // interactions (state changes), which are orders of magnitude slower.
     std::vector<char> cachedStateBuffers_[2];
     std::atomic<int> cachedStateActiveIndex_{0};
+    int64_t lastCachedStateSwapTimeMs_{0};  // Debug: tracks last swap time for invariant check
 
     // Helper to update cached state (call from message thread only)
     void updateCachedState();

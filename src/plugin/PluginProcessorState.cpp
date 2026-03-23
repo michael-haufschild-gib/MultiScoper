@@ -33,6 +33,19 @@ void OscilPluginProcessor::updateCachedState()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
+    // CONTRACT CHECK: verify double-buffer safety invariant.
+    // Consecutive swaps must be separated by >= 1ms so that any in-flight
+    // audio-thread read from the previously-active buffer completes first.
+    // The first call (lastCachedStateSwapTimeMs_ == 0) is exempt.
+    auto now = juce::Time::currentTimeMillis();
+    if (lastCachedStateSwapTimeMs_ > 0)
+    {
+        auto elapsed = now - lastCachedStateSwapTimeMs_;
+        // Log a warning if swaps happen too rapidly (< 1ms apart).
+        // This would indicate a potential torn-read risk on the audio thread.
+        jassert(elapsed >= 1);  // Double-buffer swap interval too short
+    }
+
     // Sync timing engine state to OscilState before saving
     auto timingState = timingEngine_.toValueTree();
     auto& stateTree = state_.getState();
@@ -57,6 +70,7 @@ void OscilPluginProcessor::updateCachedState()
     int inactive = 1 - active;
     cachedStateBuffers_[inactive].assign(utf8Ptr, utf8Ptr + utf8Size);
     cachedStateActiveIndex_.store(inactive, std::memory_order_release);
+    lastCachedStateSwapTimeMs_ = now;
 }
 
 void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
@@ -75,7 +89,11 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
         // Parse and apply state (now safely on message thread)
         if (!processor->state_.fromXmlString(*xmlString))
         {
+            // Log to both DBG (debug builds) and Logger (all builds) so that
+            // state restoration failures are always diagnosable in production.
             DBG("PluginProcessor::setStateInformation - Failed to parse state XML");
+            juce::Logger::writeToLog("OscilPluginProcessor: setStateInformation failed to parse XML ("
+                                     + juce::String(xmlString->length()) + " chars)");
             return;
         }
 
