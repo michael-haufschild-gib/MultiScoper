@@ -13,6 +13,7 @@
 #include "ui/theme/IThemeService.h"
 #include "core/ServiceContext.h"
 #include "ui/components/TestId.h"
+#include <unordered_map>
 
 namespace oscil
 {
@@ -130,6 +131,8 @@ public:
 
 private:
     std::vector<Oscillator> filterOscillators(const std::vector<Oscillator>& oscillators) const;
+    void rebuildItems(const std::vector<Oscillator>& filtered,
+                      std::unordered_map<juce::String, std::unique_ptr<OscillatorListItemComponent>>& reusedItems);
     void syncContainerChildren();
     void updateOscillatorCounts();
     int getItemIndexAtY(int y) const;

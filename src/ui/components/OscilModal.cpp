@@ -162,30 +162,24 @@ void OscilModal::hide()
 {
     juce::Desktop::getInstance().removeFocusChangeListener(this);
 
-    if (AnimationSettings::shouldUseSpringAnimations())
+    stopTimer();
+    showSpring_.position = 0.0f;
+    showSpring_.target = 0.0f;
+    scaleSpring_.position = 0.8f;
+    scaleSpring_.target = 0.8f;
+    setVisible(false);
+
+    if (content_)
     {
-        showSpring_.setTarget(0.0f);
-        scaleSpring_.setTarget(0.8f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
+        content_->setAlpha(1.0f);
+        content_->setTransform({});
     }
-    else
-    {
-        showSpring_.position = 0.0f;
-        scaleSpring_.position = 0.8f;
-        setVisible(false);
 
-        if (content_)
-        {
-            content_->setAlpha(1.0f);
-            content_->setTransform({});
-        }
+    if (previousFocus_ && previousFocus_->isShowing())
+        previousFocus_->grabKeyboardFocus();
 
-        if (previousFocus_ && previousFocus_->isShowing())
-            previousFocus_->grabKeyboardFocus();
-
-        if (onClose)
-            onClose();
-    }
+    if (onClose)
+        onClose();
 }
 
 bool OscilModal::requestClose()

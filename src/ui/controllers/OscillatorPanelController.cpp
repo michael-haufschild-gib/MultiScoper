@@ -168,9 +168,14 @@ void OscillatorPanelController::reapplyGlobalSettings()
     // IMPORTANT: Use capture rate (decimated), not source rate, since display buffers are decimated
     auto timingConfig = dataProvider_.getTimingEngine().toEntityConfig();
     int captureRate = dataProvider_.getCaptureRate();
+    juce::Logger::writeToLog("[Controller] reapplyGlobalSettings: captureRate=" + juce::String(captureRate)
+        + " actualIntervalMs=" + juce::String(timingConfig.actualIntervalMs)
+        + " hostBPM=" + juce::String(timingConfig.hostBPM)
+        + " timingMode=" + juce::String(static_cast<int>(timingConfig.timingMode)));
     if (captureRate > 0)
     {
         int displaySamples = static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
+        juce::Logger::writeToLog("[Controller] displaySamples=" + juce::String(displaySamples));
         if (displaySettings_)
         {
             displaySettings_->setDisplaySamplesForAll(displaySamples);
@@ -295,14 +300,14 @@ void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
     auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
 
-    // Hide oscillators in this pane
+    // Hide oscillators that were on the closed pane and clear their pane assignment
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
     {
         if (osc.getPaneId() == paneId)
         {
-            osc.setPaneId(PaneId::invalid());
             osc.setVisible(false);
+            osc.setPaneId(PaneId::invalid());
             state.updateOscillator(osc);
         }
     }

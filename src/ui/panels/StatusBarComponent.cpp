@@ -16,17 +16,12 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
     // Detect rendering mode at construction time
     renderingMode_ = detectRenderingMode();
 
-    auto createLabel = [this](std::unique_ptr<juce::Label>& label, const juce::String& testId) {
+    auto createLabel = [this](std::unique_ptr<juce::Label>& label, [[maybe_unused]] const juce::String& testId) {
         label = std::make_unique<juce::Label>();
         label->setFont(juce::FontOptions(11.0f));
         label->setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(*label);
-        
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-        label->setComponentID(testId);
-#else
-        juce::ignoreUnused(testId);
-#endif
+        OSCIL_REGISTER_CHILD_TEST_ID(*label, testId);
     };
 
     createLabel(fpsLabel_, "statusBar_fps");
@@ -34,14 +29,12 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
     createLabel(memoryLabel_, "statusBar_mem");
     createLabel(oscillatorLabel_, "statusBar_osc");
     createLabel(sourceLabel_, "statusBar_src");
-    
+
     renderModeLabel_ = std::make_unique<juce::Label>();
     renderModeLabel_->setFont(juce::FontOptions(11.0f));
     renderModeLabel_->setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(*renderModeLabel_);
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    renderModeLabel_->setComponentID("statusBar_mode");
-#endif
+    OSCIL_REGISTER_CHILD_TEST_ID(*renderModeLabel_, "statusBar_mode");
 
     // Initialize text
     updateFpsLabel();

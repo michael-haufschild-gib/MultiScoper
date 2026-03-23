@@ -209,10 +209,46 @@ void OscillatorListComponent::syncContainerChildren()
     }
 }
 
+void OscillatorListComponent::rebuildItems(
+    const std::vector<Oscillator>& filtered,
+    std::unordered_map<juce::String, std::unique_ptr<OscillatorListItemComponent>>& reusedItems)
+{
+    for (const auto& osc : filtered)
+    {
+        std::unique_ptr<OscillatorListItemComponent> item;
+
+        auto it = reusedItems.find(osc.getId().id);
+        if (it != reusedItems.end())
+        {
+            item = std::move(it->second);
+            reusedItems.erase(it);
+            item->updateFromOscillator(osc);
+            juce::Logger::writeToLog("[OscList] Reused item for " + osc.getName() + " order=" + juce::String(osc.getOrderIndex()));
+        }
+        else
+        {
+            item = std::make_unique<OscillatorListItemComponent>(osc, instanceRegistry_, themeService_);
+            juce::Logger::writeToLog("[OscList] Created new item for " + osc.getName() + " order=" + juce::String(osc.getOrderIndex()));
+        }
+
+        item->setSelected(osc.getId() == selectedOscillatorId_);
+        item->addListener(this);
+
+        if (item->getParentComponent() != container_.get())
+            container_->addAndMakeVisible(*item);
+
+        items_.push_back(std::move(item));
+    }
+}
+
 void OscillatorListComponent::refreshList(const std::vector<Oscillator>& oscillators)
 {
     allOscillators_ = oscillators;
     auto filtered = filterOscillators(oscillators);
+
+    juce::Logger::writeToLog("[OscList] refreshList: " + juce::String(static_cast<int>(oscillators.size()))
+        + " total, " + juce::String(static_cast<int>(filtered.size())) + " filtered, "
+        + juce::String(static_cast<int>(items_.size())) + " existing items");
 
     // Map existing items by ID for reuse
     std::unordered_map<juce::String, std::unique_ptr<OscillatorListItemComponent>> reusedItems;
@@ -226,33 +262,13 @@ void OscillatorListComponent::refreshList(const std::vector<Oscillator>& oscilla
     }
     items_.clear();
 
-    // Rebuild list, reusing where possible
-    for (const auto& osc : filtered)
-    {
-        std::unique_ptr<OscillatorListItemComponent> item;
-
-        auto it = reusedItems.find(osc.getId().id);
-        if (it != reusedItems.end())
-        {
-            item = std::move(it->second);
-            reusedItems.erase(it);
-            item->updateFromOscillator(osc);
-        }
-        else
-        {
-            item = std::make_unique<OscillatorListItemComponent>(osc, instanceRegistry_, themeService_);
-        }
-
-        item->setSelected(osc.getId() == selectedOscillatorId_);
-        item->addListener(this);
-
-        if (item->getParentComponent() != container_.get())
-            container_->addAndMakeVisible(*item);
-
-        items_.push_back(std::move(item));
-    }
-
+    rebuildItems(filtered, reusedItems);
     reusedItems.clear();
+
+    // Assign contiguous test IDs based on position in the displayed (filtered) list
+    for (size_t i = 0; i < items_.size(); ++i)
+        items_[i]->setListIndex(static_cast<int>(i));
+
     syncContainerChildren();
 
     emptyStateLabel_->setVisible(filtered.empty());

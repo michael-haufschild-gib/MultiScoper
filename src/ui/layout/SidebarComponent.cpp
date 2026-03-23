@@ -340,6 +340,14 @@ int SidebarComponent::getEffectiveWidth() const
     return static_cast<int>(widthSpring_.position);
 }
 
+void SidebarComponent::snapWidthToTarget()
+{
+    widthSpring_.position = static_cast<float>(expandedWidth_);
+    widthSpring_.target = static_cast<float>(expandedWidth_);
+    stopTimer();
+    notifySidebarWidthChanged();
+}
+
 void SidebarComponent::refreshOscillatorList(const std::vector<Oscillator>& oscillators)
 {
     if (oscillatorSection_)

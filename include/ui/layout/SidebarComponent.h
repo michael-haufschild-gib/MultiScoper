@@ -194,6 +194,10 @@ public:
     // Get the effective width (collapsed or expanded)
     int getEffectiveWidth() const;
 
+    /** Snap the width spring to the current expandedWidth_ immediately.
+     *  Useful for test automation where animation delay is undesirable. */
+    void snapWidthToTarget();
+
 private:
     ServiceContext& context_;
     IThemeService& themeService_;

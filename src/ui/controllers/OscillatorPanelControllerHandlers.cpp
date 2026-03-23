@@ -76,6 +76,7 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
 void OscillatorPanelController::oscillatorDeleteRequested(const OscillatorId& oscillatorId)
 {
     dataProvider_.getState().removeOscillator(oscillatorId);
+    refreshPanels();
 }
 
 void OscillatorPanelController::oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode)

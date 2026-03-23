@@ -138,10 +138,10 @@ TEST_F(OscillatorListComponentTest, FilteringVisiblity)
     // hiddenOsc (item 1) should be removed/destroyed
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
 
-    // 3. Hidden mode
+    // 3. Hidden mode — only the hidden osc is shown, re-indexed to position 0
     list.filterModeChanged(OscillatorFilterMode::Hidden);
-    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
-    EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
+    EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
+    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
 }
 
 // Mock Listener

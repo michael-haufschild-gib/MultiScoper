@@ -107,6 +107,12 @@ void OscilAccordionSection::setExpanded(bool expanded, bool animate)
         expandSpring_.setTarget(expanded ? 1.0f : 0.0f);
         chevronSpring_.setTarget(expanded ? 1.0f : 0.0f);
         startTimerHz(ComponentLayout::ANIMATION_FPS);
+
+        // Immediately hide content on collapse so visibility state is
+        // consistent before the animation completes.  Expand reveals
+        // content via the timer callback once the spring crosses 0.01.
+        if (!expanded && content_)
+            content_->setVisible(false);
     }
     else
     {

@@ -318,9 +318,42 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
     if (nameLabel_) nameLabel_->setText(displayName_, false);
     if (trackLabel_) trackLabel_->setText(trackName_, juce::dontSendNotification);
 
+    // Re-register test IDs if order index changed (list rebuild after deletion)
+    int newOrder = oscillator.getOrderIndex();
+    juce::String newTestId = "sidebar_oscillators_item_" + juce::String(newOrder);
+    juce::Logger::writeToLog("[ListItem] updateFromOscillator: name=" + displayName_
+        + " oldTestId=" + getTestId() + " newTestId=" + newTestId
+        + " orderIndex=" + juce::String(newOrder));
+    if (newTestId != getTestId())
+    {
+        juce::Logger::writeToLog("[ListItem] Re-registering test IDs: " + getTestId() + " -> " + newTestId);
+        setTestId(newTestId);
+        juce::String suffix = juce::String(newOrder);
+        deleteButton_->setTestId(newTestId + "_delete");
+        juce::Logger::writeToLog("[ListItem] deleteButton testId now: " + deleteButton_->getTestId());
+        settingsButton_->setTestId(newTestId + "_settings");
+        visibilityButton_->setTestId(newTestId + "_vis_btn");
+        OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, newTestId + "_mode");
+        nameLabel_->setTestId(newTestId + "_name");
+    }
+
     updateVisibility();
 }
 
+
+void OscillatorListItemComponent::setListIndex(int index)
+{
+    juce::String newTestId = "sidebar_oscillators_item_" + juce::String(index);
+    if (newTestId != getTestId())
+    {
+        setTestId(newTestId);
+        deleteButton_->setTestId(newTestId + "_delete");
+        settingsButton_->setTestId(newTestId + "_settings");
+        visibilityButton_->setTestId(newTestId + "_vis_btn");
+        OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, newTestId + "_mode");
+        nameLabel_->setTestId(newTestId + "_name");
+    }
+}
 
 void OscillatorListItemComponent::addListener(Listener* listener)
 {

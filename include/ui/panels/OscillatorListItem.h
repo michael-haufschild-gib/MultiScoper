@@ -83,6 +83,9 @@ public:
     /// Refresh all displayed properties (name, colour, mode) from the oscillator model.
     void updateFromOscillator(const Oscillator& oscillator);
 
+    /// Reassign test IDs based on position in the displayed (potentially filtered) list.
+    void setListIndex(int index);
+
     OscillatorId getOscillatorId() const { return oscillatorId_; }
     bool isOscillatorVisible() const { return isVisible_; }
 
