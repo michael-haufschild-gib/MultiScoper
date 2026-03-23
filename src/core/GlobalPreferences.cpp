@@ -3,7 +3,7 @@
     User-wide preferences stored separately from project state
 */
 
-#include "core/OscilState.h"
+#include "core/GlobalPreferences.h"
 
 namespace oscil
 {
@@ -26,7 +26,7 @@ juce::File GlobalPreferences::getPreferencesFile() const
 
 void GlobalPreferences::load()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     auto file = getPreferencesFile();
     if (file.existsAsFile())
     {
@@ -39,7 +39,7 @@ void GlobalPreferences::load()
 
 void GlobalPreferences::save()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     saveUnlocked();
 }
 
@@ -73,91 +73,91 @@ void GlobalPreferences::saveUnlocked()
 
 juce::String GlobalPreferences::getDefaultTheme() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return preferences_.getProperty("defaultTheme", "Dark Professional");
 }
 
 void GlobalPreferences::setDefaultTheme(const juce::String& themeName)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     preferences_.setProperty("defaultTheme", themeName, nullptr);
     saveUnlocked();
 }
 
 int GlobalPreferences::getDefaultColumnLayout() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return preferences_.getProperty("defaultColumns", 1);
 }
 
 void GlobalPreferences::setDefaultColumnLayout(int columns)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     preferences_.setProperty("defaultColumns", columns, nullptr);
     saveUnlocked();
 }
 
 bool GlobalPreferences::getShowStatusBar() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return preferences_.getProperty("showStatusBar", true);
 }
 
 void GlobalPreferences::setShowStatusBar(bool show)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     preferences_.setProperty("showStatusBar", show, nullptr);
     saveUnlocked();
 }
 
 bool GlobalPreferences::getReducedMotion() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return preferences_.getProperty("reducedMotion", false);
 }
 
 void GlobalPreferences::setReducedMotion(bool reduced)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     preferences_.setProperty("reducedMotion", reduced, nullptr);
     saveUnlocked();
 }
 
 bool GlobalPreferences::getUIAudioFeedback() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return preferences_.getProperty("uiAudioFeedback", false);
 }
 
 void GlobalPreferences::setUIAudioFeedback(bool enabled)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     preferences_.setProperty("uiAudioFeedback", enabled, nullptr);
     saveUnlocked();
 }
 
 bool GlobalPreferences::getTooltipsEnabled() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return preferences_.getProperty("tooltipsEnabled", true);
 }
 
 void GlobalPreferences::setTooltipsEnabled(bool enabled)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     preferences_.setProperty("tooltipsEnabled", enabled, nullptr);
     saveUnlocked();
 }
 
 int GlobalPreferences::getDefaultSidebarWidth() const
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return preferences_.getProperty("defaultSidebarWidth", 280);
 }
 
 void GlobalPreferences::setDefaultSidebarWidth(int width)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     preferences_.setProperty("defaultSidebarWidth", width, nullptr);
     saveUnlocked();
 }

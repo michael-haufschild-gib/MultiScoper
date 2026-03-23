@@ -4,7 +4,6 @@
 
 #include "core/OscilState.h"
 #include <algorithm>
-
 namespace oscil
 {
 
@@ -40,7 +39,7 @@ void OscilState::initializeDefaultState()
     state_.appendChild(juce::ValueTree(StateIds::Timing), nullptr);
 }
 
-juce::String OscilState::toXmlString() const
+juce::String OscilState::toXmlString()
 {
     // Sync layoutManager_ back to state_ before serialization
     // This ensures pane changes made at runtime are persisted
@@ -53,15 +52,8 @@ juce::String OscilState::toXmlString() const
     return {};
 }
 
-void OscilState::syncLayoutManagerToState() const
+void OscilState::syncLayoutManagerToState()
 {
-    // Sync layoutManager_ back to state_ before serialization.
-    // Although this method modifies the underlying ValueTree data of state_,
-    // it is conceptually preserving "logical constness" by ensuring the 
-    // serialized representation matches the current runtime state (layoutManager_).
-    // juce::ValueTree is a reference-counted wrapper, so modifying its content
-    // does not require the wrapper itself to be mutable.
-
     // Remove existing Panes node and replace with current layoutManager state
     auto existingPanes = state_.getChildWithName(StateIds::Panes);
     if (existingPanes.isValid())
@@ -76,33 +68,47 @@ void OscilState::syncLayoutManagerToState() const
 bool OscilState::fromXmlString(const juce::String& xmlString)
 {
     if (xmlString.isEmpty())
-        return false;
-
-    if (auto xml = juce::XmlDocument::parse(xmlString))
     {
-        auto loadedState = juce::ValueTree::fromXml(*xml);
-        if (loadedState.isValid() && loadedState.hasType(StateIds::OscilState))
-        {
-            state_ = loadedState;
-
-            // Load layout manager state
-            auto panesNode = getPanesNode();
-            if (panesNode.isValid())
-            {
-                layoutManager_.fromValueTree(panesNode);
-            }
-
-            auto layoutNode = getLayoutNode();
-            if (layoutNode.isValid())
-            {
-                int cols = layoutNode.getProperty(StateIds::Columns, 1);
-                layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
-            }
-
-            return true;
-        }
+        juce::Logger::writeToLog("OscilState::fromXmlString: empty input");
+        return false;
     }
-    return false;
+
+    auto xml = juce::XmlDocument::parse(xmlString);
+    if (!xml)
+    {
+        juce::Logger::writeToLog("OscilState::fromXmlString: XML parse failed ("
+                                 + juce::String(xmlString.length()) + " chars)");
+        return false;
+    }
+
+    auto loadedState = juce::ValueTree::fromXml(*xml);
+    if (!loadedState.isValid() || !loadedState.hasType(StateIds::OscilState))
+    {
+        juce::Logger::writeToLog("OscilState::fromXmlString: invalid root node type '"
+                                 + loadedState.getType().toString() + "' (expected '"
+                                 + StateIds::OscilState.toString() + "')");
+        return false;
+    }
+
+    if (int v = loadedState.getProperty(StateIds::Version, 0); v != CURRENT_SCHEMA_VERSION)
+        juce::Logger::writeToLog("OscilState: loaded schema v" + juce::String(v) + ", current v" + juce::String(CURRENT_SCHEMA_VERSION));
+    state_ = loadedState;
+
+    // Load layout manager state
+    auto panesNode = getPanesNode();
+    if (panesNode.isValid())
+    {
+        layoutManager_.fromValueTree(panesNode);
+    }
+
+    auto layoutNode = getLayoutNode();
+    if (layoutNode.isValid())
+    {
+        int cols = layoutNode.getProperty(StateIds::Columns, 1);
+        layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
+    }
+
+    return true;
 }
 
 std::vector<Oscillator> OscilState::getOscillators() const

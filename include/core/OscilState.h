@@ -10,7 +10,6 @@
 #include "core/Oscillator.h"
 #include "core/dsp/CaptureQualityConfig.h"
 #include "core/Pane.h"
-#include <mutex>
 #include <vector>
 
 namespace oscil
@@ -114,9 +113,10 @@ public:
     [[nodiscard]] const juce::ValueTree& getState() const { return state_; }
 
     /**
-     * Serialize to XML for DAW persistence
+     * Serialize to XML for DAW persistence.
+     * Non-const because it syncs the layout manager to the state tree.
      */
-    [[nodiscard]] juce::String toXmlString() const;
+    [[nodiscard]] juce::String toXmlString();
 
     /**
      * Load from XML string
@@ -233,10 +233,7 @@ public:
     static constexpr int CURRENT_SCHEMA_VERSION = 2;
 
 private:
-    // Mutable because syncLayoutManagerToState() syncs the layoutManager_ runtime
-    // representation back to state_ during serialization (toXmlString). This is
-    // conceptually a cache synchronization, not a state change.
-    mutable juce::ValueTree state_;
+    juce::ValueTree state_;
     PaneLayoutManager layoutManager_;
 
     void initializeDefaultState();
@@ -245,7 +242,7 @@ private:
      * Sync layoutManager_ back to state_ before serialization.
      * This ensures pane changes made at runtime are persisted.
      */
-    void syncLayoutManagerToState() const;
+    void syncLayoutManagerToState();
 
     // Non-const versions for modification - ensure nodes exist
     juce::ValueTree getOrCreateOscillatorsNode();
@@ -258,65 +255,6 @@ private:
     juce::ValueTree getPanesNode() const;
     juce::ValueTree getLayoutNode() const;
     juce::ValueTree getCaptureQualityNode() const;
-};
-
-/**
- * Global user preferences (stored separately from project state)
- */
-class GlobalPreferences
-{
-public:
-    /// Create global preferences, loading from disk if available.
-    GlobalPreferences();
-    ~GlobalPreferences();
-
-    /**
-     * Get the preferences file
-     */
-    [[nodiscard]] juce::File getPreferencesFile() const;
-
-    /**
-     * Load preferences from disk
-     */
-    void load();
-
-    /**
-     * Save preferences to disk
-     */
-    void save();
-
-    // Preference accessors
-    [[nodiscard]] juce::String getDefaultTheme() const;
-    void setDefaultTheme(const juce::String& themeName);
-
-    [[nodiscard]] int getDefaultColumnLayout() const;
-    void setDefaultColumnLayout(int columns);
-
-    [[nodiscard]] bool getShowStatusBar() const;
-    void setShowStatusBar(bool show);
-
-    // UI customization settings
-    [[nodiscard]] bool getReducedMotion() const;
-    void setReducedMotion(bool reduced);
-
-    [[nodiscard]] bool getUIAudioFeedback() const;
-    void setUIAudioFeedback(bool enabled);
-
-    [[nodiscard]] bool getTooltipsEnabled() const;
-    void setTooltipsEnabled(bool enabled);
-
-    [[nodiscard]] int getDefaultSidebarWidth() const;
-    void setDefaultSidebarWidth(int width);
-
-    GlobalPreferences(const GlobalPreferences&) = delete;
-    GlobalPreferences& operator=(const GlobalPreferences&) = delete;
-
-private:
-    /** Persist preferences to disk without acquiring mutex_ (caller must hold it). */
-    void saveUnlocked();
-
-    mutable std::mutex mutex_;  // Thread safety for multi-instance access
-    juce::ValueTree preferences_;
 };
 
 } // namespace oscil

@@ -19,6 +19,7 @@
 #endif
 
 // Core includes
+#include "core/GlobalPreferences.h"
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/OscilState.h"

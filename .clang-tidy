@@ -31,6 +31,7 @@ Checks: >
   -modernize-avoid-c-arrays,
   -modernize-use-equals-default,
   -bugprone-easily-swappable-parameters,
+  -bugprone-throwing-static-initialization,
   -performance-unnecessary-value-param,
   -performance-avoid-endl,
   -concurrency-mt-unsafe,

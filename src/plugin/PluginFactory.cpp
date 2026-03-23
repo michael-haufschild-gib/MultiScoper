@@ -6,7 +6,7 @@
 #include "plugin/PluginFactory.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
-#include "core/OscilState.h"  // for GlobalPreferences
+#include "core/GlobalPreferences.h"
 #include "ui/theme/ThemeManager.h"
 #include "rendering/ShaderRegistry.h"
 #include "rendering/PresetManager.h"
