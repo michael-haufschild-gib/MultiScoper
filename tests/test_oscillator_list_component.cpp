@@ -74,16 +74,11 @@ TEST_F(OscillatorListComponentTest, ToolbarConstruction)
 
 TEST_F(OscillatorListComponentTest, Construction)
 {
-    std::cout << "Constructing registry..." << std::endl;
     DummyRegistry registry;
-    std::cout << "Constructing list..." << std::endl;
     auto list = std::make_unique<OscillatorListComponent>(getThemeService(), registry);
-    std::cout << "Verifying list ID..." << std::endl;
     // OscillatorListComponent inherits TestIdSupport and sets testId="oscillatorList"
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), list.get());
-    std::cout << "Deleting list..." << std::endl;
     list.reset();
-    std::cout << "Construction test done." << std::endl;
 }
 
 TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)

@@ -1,6 +1,11 @@
 /*
     Oscil - Performance Benchmarks
-    Regression detection for render-loop-critical data paths
+    Regression detection for render-loop-critical data paths.
+
+    Threshold policy: each threshold is ~3-5x the typical measured time
+    on an Apple M-series CPU. This catches significant regressions while
+    allowing CI runners (which are slower) to pass without flakes.
+    If a threshold trips on CI, measure the actual time before raising it.
 */
 
 #include <gtest/gtest.h>
@@ -123,7 +128,7 @@ TEST(PerformanceBenchmarks, VisualConfigurationSerializationRoundTrip)
               << (us / static_cast<double>(kIterations)) << " us/iter)" << std::endl;
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-    EXPECT_LT(ms, 100) << "Serialization too slow: " << ms << " ms for " << kIterations << " round-trips";
+    EXPECT_LT(ms, 500) << "Serialization too slow: " << ms << " ms for " << kIterations << " round-trips";
 }
 
 // ============================================================================
@@ -167,7 +172,7 @@ TEST(PerformanceBenchmarks, OscillatorSerializationRoundTrip)
               << (us / static_cast<double>(kIterations)) << " us/iter)" << std::endl;
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-    EXPECT_LT(ms, 50) << "Oscillator serialization too slow: " << ms << " ms for " << kIterations << " round-trips";
+    EXPECT_LT(ms, 20) << "Oscillator serialization too slow: " << ms << " ms for " << kIterations << " round-trips";
 }
 
 // ============================================================================
@@ -217,5 +222,5 @@ TEST(PerformanceBenchmarks, SeqLockWriteReadThroughput)
               << (readUs / static_cast<double>(kIterations) * 1000.0) << " ns/read)" << std::endl;
 
     auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedWrite + elapsedRead).count();
-    EXPECT_LT(totalMs, 5) << "SeqLock throughput too slow: " << totalMs << " ms for " << kIterations << " write+read cycles";
+    EXPECT_LT(totalMs, 10) << "SeqLock throughput too slow: " << totalMs << " ms for " << kIterations << " write+read cycles";
 }

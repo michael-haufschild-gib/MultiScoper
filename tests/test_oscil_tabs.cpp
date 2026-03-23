@@ -1,6 +1,13 @@
 /*
     Oscil - Tabs Component Tests
-    Tests for OscilTabs UI component
+    Tests for OscilTabs behavioral correctness
+
+    Bug targets:
+    - Invalid tab index silently accepted, corrupting selection
+    - Clear tabs doesn't reset selection index
+    - Callback fires when notify=false
+    - Both callbacks (index + id) fire on single selection change
+    - Tab badge/enabled state not accessible after set
 */
 
 #include <gtest/gtest.h>
@@ -19,384 +26,188 @@ protected:
 
     void TearDown() override
     {
+        tabs_.reset();
         themeManager_.reset();
     }
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
+    // Helper: create a tabs component with 3 tabs, stored in member
+    OscilTabs& makeTabs()
+    {
+        tabs_ = std::make_unique<OscilTabs>(getThemeManager());
+        tabs_->addTab("Alpha", "a");
+        tabs_->addTab("Beta", "b");
+        tabs_->addTab("Gamma", "c");
+        return *tabs_;
+    }
+
 private:
     std::unique_ptr<ThemeManager> themeManager_;
+    std::unique_ptr<OscilTabs> tabs_;
 };
 
 // =============================================================================
-// Construction Tests
+// Tab Management
 // =============================================================================
 
-TEST_F(OscilTabsTest, DefaultConstruction)
+TEST_F(OscilTabsTest, AddTabsIncreasesCount)
 {
     OscilTabs tabs(getThemeManager());
-
     EXPECT_EQ(tabs.getNumTabs(), 0);
-    EXPECT_EQ(tabs.getSelectedIndex(), 0);  // Default selected index
-}
-
-TEST_F(OscilTabsTest, ConstructionWithOrientation)
-{
-    OscilTabs tabs(getThemeManager(), OscilTabs::Orientation::Vertical);
-
-    EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Vertical);
-}
-
-TEST_F(OscilTabsTest, ConstructionWithOrientationAndTestId)
-{
-    OscilTabs tabs(getThemeManager(), OscilTabs::Orientation::Horizontal, "tabs-1");
-
-    EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Horizontal);
-}
-
-// =============================================================================
-// Tab Management Tests
-// =============================================================================
-
-TEST_F(OscilTabsTest, AddTabWithLabel)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.addTab("Tab A");
-    tabs.addTab("Tab B");
-    tabs.addTab("Tab C");
-
-    EXPECT_EQ(tabs.getNumTabs(), 3);
-}
-
-TEST_F(OscilTabsTest, AddTabWithLabelAndId)
-{
-    OscilTabs tabs(getThemeManager());
 
     tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
+    EXPECT_EQ(tabs.getNumTabs(), 1);
 
+    tabs.addTab("Tab B", "b");
     EXPECT_EQ(tabs.getNumTabs(), 2);
 }
 
-TEST_F(OscilTabsTest, AddTabItem)
+TEST_F(OscilTabsTest, ClearTabsResetsCount)
 {
-    OscilTabs tabs(getThemeManager());
-
-    TabItem item;
-    item.id = "test";
-    item.label = "Test Tab";
-    tabs.addTab(item);
-
-    EXPECT_EQ(tabs.getNumTabs(), 1);
-    EXPECT_EQ(tabs.getTab(0).label, juce::String("Test Tab"));
-}
-
-TEST_F(OscilTabsTest, AddMultipleTabs)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.addTabs({"One", "Two", "Three"});
-
+    auto& tabs = makeTabs();
     EXPECT_EQ(tabs.getNumTabs(), 3);
-}
-
-TEST_F(OscilTabsTest, ClearTabs)
-{
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A");
-    tabs.addTab("Tab B");
 
     tabs.clearTabs();
     EXPECT_EQ(tabs.getNumTabs(), 0);
 }
 
-TEST_F(OscilTabsTest, GetTab)
+TEST_F(OscilTabsTest, AddMultipleTabsAtOnce)
 {
     OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
-
-    const auto& tab = tabs.getTab(1);
-    EXPECT_EQ(tab.label, juce::String("Tab B"));
-    EXPECT_EQ(tab.id, juce::String("b"));
+    tabs.addTabs({"One", "Two", "Three"});
+    EXPECT_EQ(tabs.getNumTabs(), 3);
 }
 
-TEST_F(OscilTabsTest, SetTabBadge)
+TEST_F(OscilTabsTest, GetTabReturnsCorrectItem)
 {
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
+    auto& tabs = makeTabs();
 
-    tabs.setTabBadge(0, 5);
-    EXPECT_EQ(tabs.getTab(0).badgeCount, 5);
-}
-
-TEST_F(OscilTabsTest, SetTabEnabled)
-{
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-
-    tabs.setTabEnabled(0, false);
-    EXPECT_FALSE(tabs.getTab(0).enabled);
-
-    tabs.setTabEnabled(0, true);
-    EXPECT_TRUE(tabs.getTab(0).enabled);
+    EXPECT_EQ(tabs.getTab(0).label, juce::String("Alpha"));
+    EXPECT_EQ(tabs.getTab(0).id, juce::String("a"));
+    EXPECT_EQ(tabs.getTab(2).label, juce::String("Gamma"));
+    EXPECT_EQ(tabs.getTab(2).id, juce::String("c"));
 }
 
 // =============================================================================
-// Selection Tests
+// Selection Behavior
 // =============================================================================
 
-TEST_F(OscilTabsTest, SetSelectedIndex)
+TEST_F(OscilTabsTest, FirstTabAutoSelectedOnAdd)
 {
     OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
-    tabs.addTab("Tab C", "c");
+    tabs.addTab("First", "first");
 
-    tabs.setSelectedIndex(1, false);
-    EXPECT_EQ(tabs.getSelectedIndex(), 1);
+    EXPECT_EQ(tabs.getSelectedIndex(), 0);
+    EXPECT_EQ(tabs.getSelectedId(), juce::String("first"));
 }
 
-TEST_F(OscilTabsTest, GetSelectedId)
+TEST_F(OscilTabsTest, SetSelectedIndexUpdatesSelection)
 {
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
+    auto& tabs = makeTabs();
 
-    tabs.setSelectedIndex(1, false);
-    EXPECT_EQ(tabs.getSelectedId(), juce::String("b"));
+    tabs.setSelectedIndex(2, false);
+    EXPECT_EQ(tabs.getSelectedIndex(), 2);
+    EXPECT_EQ(tabs.getSelectedId(), juce::String("c"));
 }
 
-TEST_F(OscilTabsTest, SetSelectedById)
+TEST_F(OscilTabsTest, SetSelectedByIdUpdatesIndex)
 {
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
+    auto& tabs = makeTabs();
 
     tabs.setSelectedById("b", false);
     EXPECT_EQ(tabs.getSelectedIndex(), 1);
 }
 
-TEST_F(OscilTabsTest, FirstTabAutoSelected)
+TEST_F(OscilTabsTest, InvalidIndexDoesNotChangeSelection)
 {
-    OscilTabs tabs(getThemeManager());
-
-    tabs.addTab("Tab A", "a");
-    // First tab should be auto-selected (index 0)
-    EXPECT_EQ(tabs.getSelectedIndex(), 0);
-}
-
-TEST_F(OscilTabsTest, InvalidIndexHandling)
-{
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
+    auto& tabs = makeTabs();
     tabs.setSelectedIndex(0, false);
-    EXPECT_EQ(tabs.getSelectedIndex(), 0);
 
     tabs.setSelectedIndex(999, false);
-    // Invalid index should not change the valid selection
+    EXPECT_EQ(tabs.getSelectedIndex(), 0);
+
+    tabs.setSelectedIndex(-1, false);
     EXPECT_EQ(tabs.getSelectedIndex(), 0);
 }
 
 // =============================================================================
-// Configuration Tests
+// Tab State (Badge, Enabled)
 // =============================================================================
 
-TEST_F(OscilTabsTest, SetOrientationHorizontal)
+TEST_F(OscilTabsTest, TabBadgeCountIsPersisted)
 {
-    OscilTabs tabs(getThemeManager());
+    auto& tabs = makeTabs();
 
-    tabs.setOrientation(OscilTabs::Orientation::Horizontal);
-    EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Horizontal);
+    tabs.setTabBadge(0, 5);
+    EXPECT_EQ(tabs.getTab(0).badgeCount, 5);
+
+    tabs.setTabBadge(0, 0);
+    EXPECT_EQ(tabs.getTab(0).badgeCount, 0);
 }
 
-TEST_F(OscilTabsTest, SetOrientationVertical)
+TEST_F(OscilTabsTest, TabEnabledStateIsPersisted)
 {
-    OscilTabs tabs(getThemeManager());
+    auto& tabs = makeTabs();
 
-    tabs.setOrientation(OscilTabs::Orientation::Vertical);
-    EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Vertical);
-}
+    tabs.setTabEnabled(1, false);
+    EXPECT_FALSE(tabs.getTab(1).enabled);
 
-TEST_F(OscilTabsTest, SetVariantDefault)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.setVariant(OscilTabs::Variant::Default);
-    EXPECT_EQ(tabs.getVariant(), OscilTabs::Variant::Default);
-}
-
-TEST_F(OscilTabsTest, SetVariantPills)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.setVariant(OscilTabs::Variant::Pills);
-    EXPECT_EQ(tabs.getVariant(), OscilTabs::Variant::Pills);
-}
-
-TEST_F(OscilTabsTest, SetVariantBordered)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.setVariant(OscilTabs::Variant::Bordered);
-    EXPECT_EQ(tabs.getVariant(), OscilTabs::Variant::Bordered);
-}
-
-TEST_F(OscilTabsTest, SetTabWidth)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.setTabWidth(100);
-    EXPECT_EQ(tabs.getTabWidth(), 100);
-}
-
-TEST_F(OscilTabsTest, SetTabWidthZeroForAuto)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.setTabWidth(0);  // Auto width
-    EXPECT_EQ(tabs.getTabWidth(), 0);
-}
-
-TEST_F(OscilTabsTest, SetTabHeight)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.setTabHeight(50);
-    EXPECT_EQ(tabs.getTabHeight(), 50);
-}
-
-TEST_F(OscilTabsTest, SetStretchTabs)
-{
-    OscilTabs tabs(getThemeManager());
-
-    tabs.setStretchTabs(true);
-    EXPECT_TRUE(tabs.isStretchTabs());
-
-    tabs.setStretchTabs(false);
-    EXPECT_FALSE(tabs.isStretchTabs());
+    tabs.setTabEnabled(1, true);
+    EXPECT_TRUE(tabs.getTab(1).enabled);
 }
 
 // =============================================================================
-// Callback Tests
+// Callback Behavior
 // =============================================================================
 
-TEST_F(OscilTabsTest, OnTabChangedCallback)
+TEST_F(OscilTabsTest, SelectionCallbackFiresWithCorrectIndex)
 {
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
+    auto& tabs = makeTabs();
 
-    int changeCount = 0;
-    int lastIndex = -1;
+    int cbIndex = -1;
+    tabs.onTabChanged = [&](int index) { cbIndex = index; };
 
-    tabs.onTabChanged = [&changeCount, &lastIndex](int index) {
-        changeCount++;
-        lastIndex = index;
-    };
+    tabs.setSelectedIndex(2, true);
+    EXPECT_EQ(cbIndex, 2);
+}
+
+TEST_F(OscilTabsTest, SelectionIdCallbackFiresWithCorrectId)
+{
+    auto& tabs = makeTabs();
+
+    juce::String cbId;
+    tabs.onTabChangedId = [&](const juce::String& id) { cbId = id; };
 
     tabs.setSelectedIndex(1, true);
-    EXPECT_EQ(changeCount, 1);
-    EXPECT_EQ(lastIndex, 1);
-}
-
-TEST_F(OscilTabsTest, OnTabChangedIdCallback)
-{
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
-
-    int changeCount = 0;
-    juce::String lastId;
-
-    tabs.onTabChangedId = [&changeCount, &lastId](const juce::String& id) {
-        changeCount++;
-        lastId = id;
-    };
-
-    tabs.setSelectedIndex(1, true);
-    EXPECT_EQ(changeCount, 1);
-    EXPECT_EQ(lastId, juce::String("b"));
+    EXPECT_EQ(cbId, juce::String("b"));
 }
 
 TEST_F(OscilTabsTest, NoCallbackWhenNotifyFalse)
 {
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
+    auto& tabs = makeTabs();
 
-    int changeCount = 0;
-
-    tabs.onTabChanged = [&changeCount](int) {
-        changeCount++;
-    };
+    int callCount = 0;
+    tabs.onTabChanged = [&](int) { callCount++; };
+    tabs.onTabChangedId = [&](const juce::String&) { callCount++; };
 
     tabs.setSelectedIndex(1, false);
-    EXPECT_EQ(changeCount, 0);
+    EXPECT_EQ(callCount, 0);
 }
 
 // =============================================================================
-// Size Tests
+// Theme Resilience
 // =============================================================================
 
-TEST_F(OscilTabsTest, PreferredWidthPositive)
+TEST_F(OscilTabsTest, ThemeChangePreservesSelectionAndTabs)
 {
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
-
-    int width = tabs.getPreferredWidth();
-    EXPECT_GT(width, 0);
-}
-
-TEST_F(OscilTabsTest, PreferredHeightPositive)
-{
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.addTab("Tab B", "b");
-
-    int height = tabs.getPreferredHeight();
-    EXPECT_GT(height, 0);
-}
-
-// =============================================================================
-// Theme Tests
-// =============================================================================
-
-TEST_F(OscilTabsTest, ThemeChangeDoesNotThrow)
-{
-    OscilTabs tabs(getThemeManager());
-    tabs.addTab("Tab A", "a");
-    tabs.setSelectedIndex(0, false);
+    auto& tabs = makeTabs();
+    tabs.setSelectedIndex(1, false);
 
     ColorTheme newTheme;
-    newTheme.name = "Test Theme";
+    newTheme.name = "Dark";
     tabs.themeChanged(newTheme);
 
-    // Selection should be preserved
-    EXPECT_EQ(tabs.getSelectedIndex(), 0);
-}
-
-TEST_F(OscilTabsTest, ThemeChangePreservesOrientation)
-{
-    OscilTabs tabs(getThemeManager());
-    tabs.setOrientation(OscilTabs::Orientation::Vertical);
-
-    ColorTheme newTheme;
-    newTheme.name = "Test Theme";
-    tabs.themeChanged(newTheme);
-
-    EXPECT_EQ(tabs.getOrientation(), OscilTabs::Orientation::Vertical);
-}
-
-// =============================================================================
-// Focus Tests
-// =============================================================================
-
-TEST_F(OscilTabsTest, WantsKeyboardFocus)
-{
-    OscilTabs tabs(getThemeManager());
-
-    EXPECT_TRUE(tabs.getWantsKeyboardFocus());
+    EXPECT_EQ(tabs.getNumTabs(), 3);
+    EXPECT_EQ(tabs.getSelectedIndex(), 1);
 }

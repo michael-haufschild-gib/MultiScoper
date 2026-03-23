@@ -148,4 +148,4 @@ TEST_F(StatePersistenceLoadTest, SidebarDefaults)
     EXPECT_TRUE(state->isStatusBarVisible());
 }
 
-// Note: GlobalPreferences tests are in test_state_persistence.cpp (GlobalPreferencesTest fixture)
+// Note: GlobalPreferences tests are in test_global_preferences.cpp

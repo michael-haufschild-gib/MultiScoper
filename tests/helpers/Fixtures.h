@@ -210,7 +210,7 @@ protected:
     /**
      * Serialize and deserialize state (round-trip test helper)
      */
-    std::unique_ptr<OscilState> roundTripState(const OscilState& original)
+    std::unique_ptr<OscilState> roundTripState(OscilState& original)
     {
         juce::String xml = original.toXmlString();
         auto restored = std::make_unique<OscilState>();

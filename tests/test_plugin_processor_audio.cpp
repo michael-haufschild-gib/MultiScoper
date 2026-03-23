@@ -1,6 +1,7 @@
 /*
     Oscil - Plugin Processor Audio Tests
-    Tests for processBlock, buffer handling, CPU tracking, and audio edge cases
+    Tests for processBlock correctness, edge cases, capture integrity,
+    and lifecycle robustness of the audio processing path.
 */
 
 #include <gtest/gtest.h>
@@ -14,6 +15,7 @@
 #include <thread>
 #include <atomic>
 #include <cmath>
+#include <limits>
 
 using namespace oscil;
 
@@ -48,353 +50,334 @@ protected:
         registry_.reset();
     }
 
-    // Helper to generate audio buffer with specific values
     juce::AudioBuffer<float> generateTestBuffer(int numChannels, int numSamples, float value = 0.5f)
     {
         juce::AudioBuffer<float> buffer(numChannels, numSamples);
         for (int ch = 0; ch < numChannels; ++ch)
-        {
             for (int i = 0; i < numSamples; ++i)
-            {
                 buffer.setSample(ch, i, value);
-            }
-        }
         return buffer;
     }
 
-    // Helper to generate sine wave
     juce::AudioBuffer<float> generateSineBuffer(int numChannels, int numSamples,
                                                  float frequency = 440.0f, float sampleRate = 44100.0f)
     {
         juce::AudioBuffer<float> buffer(numChannels, numSamples);
         for (int ch = 0; ch < numChannels; ++ch)
-        {
             for (int i = 0; i < numSamples; ++i)
-            {
-                float sample = std::sin(2.0f * juce::MathConstants<float>::pi * frequency * i / sampleRate);
-                buffer.setSample(ch, i, sample);
-            }
-        }
+                buffer.setSample(ch, i,
+                    std::sin(2.0f * juce::MathConstants<float>::pi * frequency * i / sampleRate));
         return buffer;
     }
 };
 
-// === Process Block Tests ===
+// =============================================================================
+// Core contract: audio pass-through and capture
+// =============================================================================
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_PassThroughAudio)
+// Bug caught: processBlock modifies the audio buffer instead of passing it
+// through unaltered, causing downstream plugins to receive corrupted audio.
+TEST_F(PluginProcessorAudioTest, ProcessBlockPassesThroughStereoAudioUnchanged)
 {
     processor->prepareToPlay(44100.0, 512);
 
-    // Generate a test buffer
-    auto buffer = generateTestBuffer(2, 512, 0.75f);
-    juce::MidiBuffer midiBuffer;
-
-    // Store original values
-    std::vector<float> originalLeft(512), originalRight(512);
+    juce::AudioBuffer<float> buffer(2, 512);
     for (int i = 0; i < 512; ++i)
     {
-        originalLeft[i] = buffer.getSample(0, i);
-        originalRight[i] = buffer.getSample(1, i);
+        buffer.setSample(0, i, 0.5f);
+        buffer.setSample(1, i, -0.3f);
     }
 
-    // Process
-    processor->processBlock(buffer, midiBuffer);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
 
-    // Audio should pass through unchanged (visualization plugin)
     for (int i = 0; i < 512; ++i)
     {
-        EXPECT_FLOAT_EQ(buffer.getSample(0, i), originalLeft[i]);
-        EXPECT_FLOAT_EQ(buffer.getSample(1, i), originalRight[i]);
+        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 0.5f) << "Left channel modified at sample " << i;
+        EXPECT_FLOAT_EQ(buffer.getSample(1, i), -0.3f) << "Right channel modified at sample " << i;
     }
 }
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_CapturesAudio)
+// Bug caught: processBlock writes to capture buffer but the data is corrupt
+// (wrong samples, wrong channel order, or wrong count).
+TEST_F(PluginProcessorAudioTest, ProcessBlockCapturesAudioWithCorrectMetadata)
 {
     processor->prepareToPlay(44100.0, 512);
 
-    // Generate a test buffer with known values
     auto buffer = generateTestBuffer(2, 512, 0.5f);
-    juce::MidiBuffer midiBuffer;
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
 
-    processor->processBlock(buffer, midiBuffer);
-
-    // Verify audio was captured
     auto captureBuffer = processor->getCaptureBuffer();
-    EXPECT_NE(captureBuffer, nullptr);
+    ASSERT_NE(captureBuffer, nullptr);
     EXPECT_GT(captureBuffer->getAvailableSamples(), 0u);
-}
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_MetadataCaptured)
-{
-    processor->prepareToPlay(44100.0, 512);
-
-    auto buffer = generateTestBuffer(2, 512, 0.5f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    auto captureBuffer = processor->getCaptureBuffer();
     auto metadata = captureBuffer->getLatestMetadata();
-
-    // DecimatingCaptureBuffer defaults to Standard quality (22050 Hz)
-    // So with 44100 Hz input, we expect decimation
     EXPECT_LE(metadata.sampleRate, 44100.0);
     EXPECT_EQ(metadata.numChannels, 2);
-    
-    // Check that samples were captured (count will be lower due to decimation)
     EXPECT_GT(metadata.numSamples, 0);
     EXPECT_LE(metadata.numSamples, 512);
 }
 
-// === Edge Case Buffer Tests ===
+// =============================================================================
+// Edge case: degenerate buffers
+// =============================================================================
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_EmptyBuffer)
+// Bug caught: empty buffer causes division by zero in CPU measurement code.
+TEST_F(PluginProcessorAudioTest, EmptyBufferDoesNotCrashOrCorruptState)
 {
     processor->prepareToPlay(44100.0, 512);
 
     juce::AudioBuffer<float> emptyBuffer(2, 0);
-    juce::MidiBuffer midiBuffer;
+    juce::MidiBuffer midi;
+    processor->processBlock(emptyBuffer, midi);
 
-    processor->processBlock(emptyBuffer, midiBuffer);
-
-    // Processor should remain functional after empty buffer
     EXPECT_GE(processor->getCpuUsage(), 0.0f);
-    EXPECT_EQ(emptyBuffer.getNumChannels(), 2);
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 44100.0);
 }
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_ZeroChannels)
+// Bug caught: mono input causes out-of-bounds access when code assumes
+// buffer.getNumChannels() >= 2 without checking.
+TEST_F(PluginProcessorAudioTest, MonoBufferProcessedSafely)
+{
+    processor->prepareToPlay(44100.0, 512);
+
+    auto buffer = generateTestBuffer(1, 512, 0.7f);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
+
+    // Mono pass-through: data must survive
+    for (int i = 0; i < 512; ++i)
+        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 0.7f);
+}
+
+// Bug caught: zero-channel buffer dereferences channel pointer array at [0].
+TEST_F(PluginProcessorAudioTest, ZeroChannelBufferHandledGracefully)
 {
     processor->prepareToPlay(44100.0, 512);
 
     juce::AudioBuffer<float> noChannelBuffer(0, 512);
-    juce::MidiBuffer midiBuffer;
+    juce::MidiBuffer midi;
+    processor->processBlock(noChannelBuffer, midi);
 
-    processor->processBlock(noChannelBuffer, midiBuffer);
-
-    // Buffer dimensions should be unchanged — processBlock is non-destructive
     EXPECT_EQ(noChannelBuffer.getNumChannels(), 0);
     EXPECT_EQ(noChannelBuffer.getNumSamples(), 512);
 }
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_MonoBuffer)
+// Bug caught: processBlock called before prepareToPlay uses uninitialized
+// capture buffer pointer, causing null dereference.
+TEST_F(PluginProcessorAudioTest, ProcessBeforePrepareDoesNotCrash)
 {
-    processor->prepareToPlay(44100.0, 512);
+    auto buffer = generateTestBuffer(2, 512, 0.5f);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
 
-    auto buffer = generateTestBuffer(1, 512, 0.5f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    // Mono buffer should retain its dimensions after processing
-    EXPECT_EQ(buffer.getNumChannels(), 1);
-    EXPECT_EQ(buffer.getNumSamples(), 512);
-}
-
-TEST_F(PluginProcessorAudioTest, ProcessBlock_LargeBuffer)
-{
-    processor->prepareToPlay(44100.0, 8192);
-
-    auto buffer = generateTestBuffer(2, 8192, 0.5f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    EXPECT_EQ(buffer.getNumSamples(), 8192);
-    EXPECT_GE(processor->getCpuUsage(), 0.0f);
-}
-
-TEST_F(PluginProcessorAudioTest, ProcessBlock_SmallBuffer)
-{
-    processor->prepareToPlay(44100.0, 32);
-
-    auto buffer = generateTestBuffer(2, 32, 0.5f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    EXPECT_EQ(buffer.getNumSamples(), 32);
-    EXPECT_EQ(buffer.getNumChannels(), 2);
-}
-
-TEST_F(PluginProcessorAudioTest, ProcessBeforePrepare)
-{
-    // Process before prepareToPlay
-    auto buffer = generateTestBuffer(2, 512);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    // Buffer should retain its dimensions; processor should not corrupt it
+    // Buffer data must survive (pass-through even without prepare)
     EXPECT_EQ(buffer.getNumChannels(), 2);
     EXPECT_EQ(buffer.getNumSamples(), 512);
 }
 
-// === CPU Usage Tests ===
+// =============================================================================
+// NaN / Infinity in audio: must not corrupt state or other samples
+// =============================================================================
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_CPUUsageTracked)
+// Bug caught: NaN in input buffer propagates to CPU usage calculation,
+// causing getCpuUsage() to return NaN forever.
+TEST_F(PluginProcessorAudioTest, NaNInAudioDoesNotCorruptProcessorState)
 {
     processor->prepareToPlay(44100.0, 512);
 
-    // Process multiple buffers to allow CPU tracking to settle
-    for (int i = 0; i < 10; ++i)
-    {
-        auto buffer = generateSineBuffer(2, 512);
-        juce::MidiBuffer midiBuffer;
-        processor->processBlock(buffer, midiBuffer);
-    }
+    auto buffer = generateTestBuffer(2, 512, 0.5f);
+    buffer.setSample(0, 100, std::numeric_limits<float>::quiet_NaN());
+    buffer.setSample(1, 200, std::numeric_limits<float>::quiet_NaN());
 
-    float cpuUsage = processor->getCpuUsage();
-    // CPU usage should be a valid percentage (0-100 typically, but can spike higher)
-    EXPECT_GE(cpuUsage, 0.0f);
-    EXPECT_LT(cpuUsage, 1000.0f); // Sanity check - should not be absurdly high
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
+
+    // CPU usage must remain finite
+    float cpu = processor->getCpuUsage();
+    EXPECT_TRUE(std::isfinite(cpu)) << "NaN in audio corrupted CPU usage tracking";
+
+    // Sample rate must remain valid
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 44100.0);
+
+    // Processing subsequent clean buffers must still work
+    auto cleanBuffer = generateTestBuffer(2, 512, 0.3f);
+    processor->processBlock(cleanBuffer, midi);
+
+    for (int i = 0; i < 512; ++i)
+    {
+        EXPECT_FLOAT_EQ(cleanBuffer.getSample(0, i), 0.3f)
+            << "Clean buffer corrupted after NaN buffer at sample " << i;
+    }
 }
 
-// === Stress Tests ===
-
-TEST_F(PluginProcessorAudioTest, ProcessBlock_ManyIterations)
+// Bug caught: Infinity in audio causes infinite loop or hang in peak
+// detection within the capture write path.
+TEST_F(PluginProcessorAudioTest, InfinityInAudioDoesNotHang)
 {
     processor->prepareToPlay(44100.0, 512);
 
-    // Process many buffers in succession
-    for (int i = 0; i < 1000; ++i)
-    {
-        auto buffer = generateTestBuffer(2, 512, static_cast<float>(i % 100) / 100.0f);
-        juce::MidiBuffer midiBuffer;
-        processor->processBlock(buffer, midiBuffer);
-    }
+    auto buffer = generateTestBuffer(2, 512, 0.5f);
+    buffer.setSample(0, 0, std::numeric_limits<float>::infinity());
+    buffer.setSample(1, 0, -std::numeric_limits<float>::infinity());
 
-    // After 1000 iterations, CPU tracking should report a valid value
-    float cpuUsage = processor->getCpuUsage();
-    EXPECT_GE(cpuUsage, 0.0f);
-    EXPECT_LT(cpuUsage, 1000.0f);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
+
+    EXPECT_TRUE(std::isfinite(processor->getCpuUsage()));
 }
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_VaryingBufferSizes)
+// =============================================================================
+// Sample rate changes and lifecycle transitions
+// =============================================================================
+
+// Bug caught: prepareToPlay called twice with different sample rates causes
+// the capture buffer to use stale sample rate for metadata.
+TEST_F(PluginProcessorAudioTest, SampleRateChangeUpdatesMetadata)
+{
+    processor->prepareToPlay(44100.0, 512);
+
+    auto buffer44 = generateTestBuffer(2, 512, 0.5f);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer44, midi);
+
+    // Change sample rate
+    processor->releaseResources();
+    processor->prepareToPlay(96000.0, 512);
+
+    auto buffer96 = generateTestBuffer(2, 512, 0.5f);
+    processor->processBlock(buffer96, midi);
+
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 96000.0);
+}
+
+// Bug caught: releaseResources then prepareToPlay with same rate causes
+// double-free or dangling pointer in capture buffer.
+TEST_F(PluginProcessorAudioTest, ReleaseAndRePrepareIsSafe)
+{
+    processor->prepareToPlay(44100.0, 512);
+
+    auto buffer1 = generateTestBuffer(2, 512, 0.5f);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer1, midi);
+
+    processor->releaseResources();
+    processor->prepareToPlay(44100.0, 512);
+
+    auto buffer2 = generateTestBuffer(2, 512, 0.3f);
+    processor->processBlock(buffer2, midi);
+
+    // After re-prepare, processing must still work and pass-through correctly
+    for (int i = 0; i < 512; ++i)
+        EXPECT_FLOAT_EQ(buffer2.getSample(0, i), 0.3f);
+
+    auto captureBuffer = processor->getCaptureBuffer();
+    ASSERT_NE(captureBuffer, nullptr);
+    EXPECT_GT(captureBuffer->getAvailableSamples(), 0u);
+}
+
+// Bug caught: calling prepareToPlay twice without releaseResources causes
+// resource leak in capture buffer allocation.
+TEST_F(PluginProcessorAudioTest, DoublePrepareWithoutReleaseIsSafe)
+{
+    processor->prepareToPlay(44100.0, 512);
+    processor->prepareToPlay(48000.0, 256);
+
+    auto buffer = generateTestBuffer(2, 256, 0.4f);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
+
+    EXPECT_DOUBLE_EQ(processor->getSampleRate(), 48000.0);
+    for (int i = 0; i < 256; ++i)
+        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 0.4f);
+}
+
+// =============================================================================
+// Varying buffer sizes: DAWs can change block sizes mid-stream
+// =============================================================================
+
+// Bug caught: buffer size larger than prepareToPlay's samplesPerBlock causes
+// out-of-bounds write in capture buffer.
+TEST_F(PluginProcessorAudioTest, BufferLargerThanPreparedSizeIsSafe)
+{
+    processor->prepareToPlay(44100.0, 512);
+
+    // DAW sends a larger block than what was prepared for
+    auto largeBuffer = generateTestBuffer(2, 2048, 0.5f);
+    juce::MidiBuffer midi;
+    processor->processBlock(largeBuffer, midi);
+
+    // Data must pass through unchanged
+    for (int i = 0; i < 2048; ++i)
+        EXPECT_FLOAT_EQ(largeBuffer.getSample(0, i), 0.5f);
+}
+
+// Bug caught: varying buffer sizes cause incorrect available-samples count
+// due to accumulation bug in capture buffer.
+TEST_F(PluginProcessorAudioTest, VaryingBufferSizesMaintainValidState)
 {
     processor->prepareToPlay(44100.0, 2048);
 
     std::vector<int> sizes = {32, 64, 128, 256, 512, 1024, 2048, 512, 256, 128, 64};
 
+    juce::MidiBuffer midi;
     for (int size : sizes)
     {
         auto buffer = generateTestBuffer(2, size);
-        juce::MidiBuffer midiBuffer;
-        processor->processBlock(buffer, midiBuffer);
+        processor->processBlock(buffer, midi);
     }
 
-    // After varying sizes, processor should still report valid sample rate
     EXPECT_DOUBLE_EQ(processor->getSampleRate(), 44100.0);
-    EXPECT_GE(processor->getCpuUsage(), 0.0f);
+    auto captureBuffer = processor->getCaptureBuffer();
+    ASSERT_NE(captureBuffer, nullptr);
+    EXPECT_GT(captureBuffer->getAvailableSamples(), 0u);
 }
 
-// === Signal Pattern Tests ===
+// =============================================================================
+// CPU usage tracking correctness
+// =============================================================================
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_SineWave)
+// Bug caught: CPU usage overflows or returns negative value after many
+// iterations due to integer overflow in timing accumulator.
+TEST_F(PluginProcessorAudioTest, CpuUsageRemainsValidAfterManyBlocks)
 {
     processor->prepareToPlay(44100.0, 512);
 
-    auto buffer = generateSineBuffer(2, 512, 440.0f, 44100.0f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    // Verify audio passes through
-    float firstSample = buffer.getSample(0, 0);
-    EXPECT_TRUE(std::isfinite(firstSample));
-}
-
-TEST_F(PluginProcessorAudioTest, ProcessBlock_Silence)
-{
-    processor->prepareToPlay(44100.0, 512);
-
-    auto buffer = generateTestBuffer(2, 512, 0.0f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    // Verify silence passes through
-    for (int i = 0; i < 512; ++i)
+    juce::MidiBuffer midi;
+    for (int i = 0; i < 1000; ++i)
     {
-        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 0.0f);
-        EXPECT_FLOAT_EQ(buffer.getSample(1, i), 0.0f);
-    }
-}
-
-TEST_F(PluginProcessorAudioTest, ProcessBlock_FullScale)
-{
-    processor->prepareToPlay(44100.0, 512);
-
-    auto buffer = generateTestBuffer(2, 512, 1.0f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    // Verify full scale passes through
-    for (int i = 0; i < 512; ++i)
-    {
-        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 1.0f);
-        EXPECT_FLOAT_EQ(buffer.getSample(1, i), 1.0f);
-    }
-}
-
-TEST_F(PluginProcessorAudioTest, ProcessBlock_NegativeFullScale)
-{
-    processor->prepareToPlay(44100.0, 512);
-
-    auto buffer = generateTestBuffer(2, 512, -1.0f);
-    juce::MidiBuffer midiBuffer;
-
-    processor->processBlock(buffer, midiBuffer);
-
-    // Verify negative full scale passes through
-    for (int i = 0; i < 512; ++i)
-    {
-        EXPECT_FLOAT_EQ(buffer.getSample(0, i), -1.0f);
-        EXPECT_FLOAT_EQ(buffer.getSample(1, i), -1.0f);
-    }
-}
-
-// === Multi-channel Tests ===
-
-TEST_F(PluginProcessorAudioTest, ProcessBlock_DifferentChannelValues)
-{
-    processor->prepareToPlay(44100.0, 512);
-
-    juce::AudioBuffer<float> buffer(2, 512);
-
-    // Left channel = 0.5, Right channel = -0.5
-    for (int i = 0; i < 512; ++i)
-    {
-        buffer.setSample(0, i, 0.5f);
-        buffer.setSample(1, i, -0.5f);
+        auto buffer = generateSineBuffer(2, 512);
+        processor->processBlock(buffer, midi);
     }
 
-    juce::MidiBuffer midiBuffer;
-    processor->processBlock(buffer, midiBuffer);
-
-    // Verify channels pass through independently
-    for (int i = 0; i < 512; ++i)
-    {
-        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 0.5f);
-        EXPECT_FLOAT_EQ(buffer.getSample(1, i), -0.5f);
-    }
+    float cpuUsage = processor->getCpuUsage();
+    EXPECT_GE(cpuUsage, 0.0f);
+    EXPECT_LT(cpuUsage, 100.0f) << "CPU usage should be a reasonable percentage";
+    EXPECT_TRUE(std::isfinite(cpuUsage));
 }
 
-// === Sequential Processing Tests ===
+// =============================================================================
+// Capture integrity across sequential blocks
+// =============================================================================
 
-TEST_F(PluginProcessorAudioTest, ProcessBlock_Sequential)
+// Bug caught: sequential processBlock calls cause capture buffer to lose
+// earlier data prematurely (writePos miscalculation).
+TEST_F(PluginProcessorAudioTest, SequentialBlocksAccumulateInCapture)
 {
     processor->prepareToPlay(44100.0, 256);
 
-    // Process multiple blocks sequentially
+    juce::MidiBuffer midi;
     for (int i = 0; i < 100; ++i)
     {
         auto buffer = generateTestBuffer(2, 256);
-        juce::MidiBuffer midiBuffer;
-        processor->processBlock(buffer, midiBuffer);
+        processor->processBlock(buffer, midi);
     }
 
-    // Verify capture buffer has accumulated samples
     auto captureBuffer = processor->getCaptureBuffer();
+    ASSERT_NE(captureBuffer, nullptr);
+
+    // After 100 blocks of 256 samples, capture should have data
+    // (may be decimated, but must be non-zero)
     EXPECT_GT(captureBuffer->getAvailableSamples(), 0u);
 }

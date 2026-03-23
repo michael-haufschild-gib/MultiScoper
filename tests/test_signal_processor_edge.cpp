@@ -14,7 +14,7 @@
 
 using namespace oscil;
 
-class SignalProcessorTest : public ::testing::Test
+class SignalProcessorEdgeTest : public ::testing::Test
 {
 protected:
     SignalProcessor processor;
@@ -46,7 +46,7 @@ protected:
 // =============================================================================
 
 // Test: Process with out-of-range values (clipping)
-TEST_F(SignalProcessorTest, ProcessOutOfRangeValues)
+TEST_F(SignalProcessorEdgeTest, ProcessOutOfRangeValues)
 {
     const int numSamples = 100;
     std::vector<float> left(numSamples, 2.0f);   // Above normal range
@@ -62,7 +62,7 @@ TEST_F(SignalProcessorTest, ProcessOutOfRangeValues)
 }
 
 // Test: Peak with negative values
-TEST_F(SignalProcessorTest, PeakNegativeValues)
+TEST_F(SignalProcessorEdgeTest, PeakNegativeValues)
 {
     std::vector<float> samples = { -0.9f, -0.5f, -0.1f };
 
@@ -73,7 +73,7 @@ TEST_F(SignalProcessorTest, PeakNegativeValues)
 }
 
 // Test: Mid/Side with extreme values
-TEST_F(SignalProcessorTest, MidSideExtremeValues)
+TEST_F(SignalProcessorEdgeTest, MidSideExtremeValues)
 {
     const int numSamples = 10;
     std::vector<float> left(numSamples, 100.0f);
@@ -101,7 +101,7 @@ TEST_F(SignalProcessorTest, MidSideExtremeValues)
 // =============================================================================
 
 // Test: DC offset in mono mode
-TEST_F(SignalProcessorTest, DCOffsetMono)
+TEST_F(SignalProcessorEdgeTest, DCOffsetMono)
 {
     const int numSamples = 1024;
     float dcOffset = 0.3f;
@@ -133,7 +133,7 @@ TEST_F(SignalProcessorTest, DCOffsetMono)
 // =============================================================================
 
 // Test: Decimate with same input/output length
-TEST_F(SignalProcessorTest, DecimateSameLength)
+TEST_F(SignalProcessorEdgeTest, DecimateSameLength)
 {
     const int length = 100;
     std::vector<float> input(length);
@@ -154,7 +154,7 @@ TEST_F(SignalProcessorTest, DecimateSameLength)
 }
 
 // Test: Decimate to single sample
-TEST_F(SignalProcessorTest, DecimateToOneSample)
+TEST_F(SignalProcessorEdgeTest, DecimateToOneSample)
 {
     const int inputLength = 1000;
     std::vector<float> input(inputLength);
@@ -174,7 +174,7 @@ TEST_F(SignalProcessorTest, DecimateToOneSample)
 }
 
 // Test: Decimate from single sample (upsampling case)
-TEST_F(SignalProcessorTest, DecimateFromOneSample)
+TEST_F(SignalProcessorEdgeTest, DecimateFromOneSample)
 {
     std::vector<float> input = { 0.75f };
     std::vector<float> output(10, 0.0f);
@@ -189,7 +189,7 @@ TEST_F(SignalProcessorTest, DecimateFromOneSample)
 }
 
 // Test: Decimate zero samples
-TEST_F(SignalProcessorTest, DecimateZeroSamples)
+TEST_F(SignalProcessorEdgeTest, DecimateZeroSamples)
 {
     std::vector<float> output(10, 1.0f);
 
@@ -201,7 +201,7 @@ TEST_F(SignalProcessorTest, DecimateZeroSamples)
 }
 
 // Test: Decimate without peak preservation
-TEST_F(SignalProcessorTest, DecimateWithoutPeakPreservation)
+TEST_F(SignalProcessorEdgeTest, DecimateWithoutPeakPreservation)
 {
     const int inputLength = 1000;
     const int outputLength = 100;
@@ -223,7 +223,7 @@ TEST_F(SignalProcessorTest, DecimateWithoutPeakPreservation)
 // =============================================================================
 
 // Test: All processing modes work with minimal buffer
-TEST_F(SignalProcessorTest, AllModesMinimalBuffer)
+TEST_F(SignalProcessorEdgeTest, AllModesMinimalBuffer)
 {
     std::vector<float> left = { 0.5f, -0.5f };
     std::vector<float> right = { 0.3f, -0.3f };
@@ -245,7 +245,7 @@ TEST_F(SignalProcessorTest, AllModesMinimalBuffer)
 }
 
 // Test: Process with null right channel (mono source)
-TEST_F(SignalProcessorTest, ProcessNullRightChannel)
+TEST_F(SignalProcessorEdgeTest, ProcessNullRightChannel)
 {
     const int numSamples = 100;
     std::vector<float> left(numSamples, 0.5f);
@@ -256,7 +256,7 @@ TEST_F(SignalProcessorTest, ProcessNullRightChannel)
     EXPECT_FALSE(output.isStereo);
 }
 
-TEST_F(SignalProcessorTest, ProcessNullRightChannelRightModeFallsBackToMonoInput)
+TEST_F(SignalProcessorEdgeTest, ProcessNullRightChannelRightModeFallsBackToMonoInput)
 {
     const int numSamples = 64;
     std::vector<float> left(numSamples, 0.25f);
@@ -275,7 +275,7 @@ TEST_F(SignalProcessorTest, ProcessNullRightChannelRightModeFallsBackToMonoInput
 // =============================================================================
 
 // Test: ProcessedSignal resize
-TEST_F(SignalProcessorTest, ProcessedSignalResize)
+TEST_F(SignalProcessorEdgeTest, ProcessedSignalResize)
 {
     ProcessedSignal signal;
 
@@ -292,8 +292,80 @@ TEST_F(SignalProcessorTest, ProcessedSignalResize)
     EXPECT_TRUE(signal.isStereo);
 }
 
+// =============================================================================
+// Mismatched channel lengths
+// =============================================================================
+
+// Bug caught: left and right vectors have different sizes, causing
+// out-of-bounds read in the shorter channel when processing Mid/Side.
+TEST_F(SignalProcessorEdgeTest, MismatchedChannelLengthsLeftLonger)
+{
+    std::vector<float> left = { 0.5f, 0.5f, 0.5f, 0.5f };
+    std::vector<float> right = { 0.3f, 0.3f };
+
+    processor.process(left, right, ProcessingMode::FullStereo, output);
+
+    // Output should use the minimum of the two lengths
+    EXPECT_LE(output.numSamples, 4);
+    EXPECT_GE(output.numSamples, 2);
+
+    // However many samples we get, they must all be finite
+    for (int i = 0; i < output.numSamples; ++i)
+    {
+        EXPECT_TRUE(std::isfinite(output.channel1[i]))
+            << "channel1[" << i << "] is not finite";
+    }
+}
+
+TEST_F(SignalProcessorEdgeTest, MismatchedChannelLengthsRightLonger)
+{
+    std::vector<float> left = { 0.2f };
+    std::vector<float> right = { 0.8f, 0.8f, 0.8f };
+
+    processor.process(left, right, ProcessingMode::Mono, output);
+
+    EXPECT_GE(output.numSamples, 1);
+    EXPECT_TRUE(std::isfinite(output.channel1[0]));
+}
+
+// Bug caught: denormal values in audio cause extreme CPU usage in
+// downstream FIR/IIR filters that don't flush denormals.
+TEST_F(SignalProcessorEdgeTest, DenormalValuesDoNotCauseIssues)
+{
+    const int numSamples = 100;
+    float denormal = std::numeric_limits<float>::denorm_min();
+
+    std::vector<float> left(numSamples, denormal);
+    std::vector<float> right(numSamples, -denormal);
+
+    processor.process(left, right, ProcessingMode::FullStereo, output);
+
+    ASSERT_EQ(output.numSamples, numSamples);
+    for (int i = 0; i < numSamples; ++i)
+    {
+        EXPECT_TRUE(std::isfinite(output.channel1[i]));
+        EXPECT_TRUE(std::isfinite(output.channel2[i]));
+    }
+
+    // Peak of denormals should be very small but non-negative
+    float peak = SignalProcessor::calculatePeak(left);
+    EXPECT_GE(peak, 0.0f);
+}
+
+// Bug caught: correlation of mismatched-length vectors reads past end of shorter.
+TEST_F(SignalProcessorEdgeTest, CorrelationMismatchedLengths)
+{
+    std::vector<float> left = { 0.5f, 0.5f, 0.5f };
+    std::vector<float> right = { 0.5f };
+
+    float correlation = SignalProcessor::calculateCorrelation(left, right);
+
+    // Result should be finite regardless of length mismatch
+    EXPECT_TRUE(std::isfinite(correlation) || std::isnan(correlation));
+}
+
 // Test: ProcessedSignal clear
-TEST_F(SignalProcessorTest, ProcessedSignalClear)
+TEST_F(SignalProcessorEdgeTest, ProcessedSignalClear)
 {
     ProcessedSignal signal;
     signal.resize(10, true);

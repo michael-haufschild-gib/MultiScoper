@@ -332,3 +332,142 @@ TEST_F(DecimatingBufferAccuracyTest, LowFrequencySignalPreservedAfterDecimation)
 
     EXPECT_GT(rms, 0.5f) << "Low-frequency attenuated: RMS=" << rms;
 }
+
+//==============================================================================
+// Concurrent Reconfiguration Stress Tests
+//==============================================================================
+
+#include <thread>
+#include <atomic>
+
+namespace
+{
+
+// Helper: run continuous audio writes until signaled to stop
+void runAudioWriter(DecimatingCaptureBuffer& buffer,
+                    std::atomic<bool>& running, std::atomic<int>& writeCount)
+{
+    juce::AudioBuffer<float> audioBuf(2, 512);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            audioBuf.setSample(ch, i, 0.5f);
+
+    CaptureFrameMetadata meta{};
+    meta.sampleRate = 44100.0;
+    meta.numChannels = 2;
+    meta.numSamples = 512;
+
+    while (running.load(std::memory_order_relaxed))
+    {
+        buffer.write(audioBuf, meta);
+        writeCount.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+// Helper: run periodic reconfigures, then signal stop
+void runReconfigurer(DecimatingCaptureBuffer& buffer,
+                     std::atomic<bool>& running, std::atomic<int>& reconfigureCount)
+{
+    CaptureQualityConfig configs[4];
+    configs[0].qualityPreset = QualityPreset::Eco;
+    configs[0].bufferDuration = BufferDuration::Short;
+    configs[1].qualityPreset = QualityPreset::Standard;
+    configs[1].bufferDuration = BufferDuration::Medium;
+    configs[2].qualityPreset = QualityPreset::High;
+    configs[2].bufferDuration = BufferDuration::Long;
+    configs[3].qualityPreset = QualityPreset::Ultra;
+    configs[3].bufferDuration = BufferDuration::VeryLong;
+    int rates[] = {44100, 48000, 88200, 96000, 192000};
+
+    for (int i = 0; running.load(std::memory_order_relaxed) && i < 50; ++i)
+    {
+        buffer.configure(configs[i % 4], rates[i % 5]);
+        reconfigureCount.fetch_add(1, std::memory_order_relaxed);
+    }
+    running.store(false, std::memory_order_relaxed);
+}
+
+// Helper: read buffer continuously, checking for non-finite values
+void runReader(DecimatingCaptureBuffer& buffer,
+               std::atomic<bool>& running, std::atomic<int>& readCount,
+               std::atomic<int>& invalidReads)
+{
+    std::vector<float> output(1024);
+    while (running.load(std::memory_order_relaxed))
+    {
+        int n = buffer.read(output.data(), 1024, 0);
+        for (int i = 0; i < n; ++i)
+        {
+            if (!std::isfinite(output[static_cast<size_t>(i)]))
+            {
+                invalidReads.fetch_add(1, std::memory_order_relaxed);
+                break;
+            }
+        }
+        readCount.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+} // anonymous namespace
+
+TEST(DecimatingBufferConcurrencyTest, AudioWriteDuringReconfigureDoesNotCorruptOrCrash)
+{
+    // Bug caught: audio thread writes to a buffer being swapped out by
+    // concurrent configure(). Graveyard mechanism prevents use-after-free.
+    DecimatingCaptureBuffer buffer;
+    std::atomic<bool> running{true};
+    std::atomic<int> writeCount{0}, reconfigureCount{0}, readCount{0}, invalidReads{0};
+
+    std::thread audioThread([&]() { runAudioWriter(buffer, running, writeCount); });
+    std::thread messageThread([&]() { runReconfigurer(buffer, running, reconfigureCount); });
+    std::thread readerThread([&]() { runReader(buffer, running, readCount, invalidReads); });
+
+    messageThread.join();
+    running.store(false, std::memory_order_relaxed);
+    audioThread.join();
+    readerThread.join();
+
+    EXPECT_GT(writeCount.load(), 100) << "Audio thread didn't run enough";
+    EXPECT_GT(reconfigureCount.load(), 10) << "Message thread didn't reconfigure enough";
+    EXPECT_GT(readCount.load(), 10) << "Reader thread didn't run enough";
+    EXPECT_EQ(invalidReads.load(), 0) << "Non-finite samples read during reconfigure";
+}
+
+TEST(DecimatingBufferConcurrencyTest, CleanUpGarbageDuringActiveWriteDoesNotCrash)
+{
+    // Bug caught: cleanUpGarbage() frees old buffers while audio thread
+    // still holds a reference from a slow write path.
+    auto buffer = std::make_shared<DecimatingCaptureBuffer>();
+
+    std::atomic<bool> running{true};
+    std::atomic<int> writeCount{0};
+
+    std::thread audioThread([&]() {
+        juce::AudioBuffer<float> audioBuf(2, 256);
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 256; ++i)
+                audioBuf.setSample(ch, i, 0.3f);
+
+        CaptureFrameMetadata meta{};
+        while (running.load(std::memory_order_relaxed))
+        {
+            buffer->write(audioBuf, meta);
+            writeCount.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    // Rapidly reconfigure and clean up garbage
+    for (int i = 0; i < 30; ++i)
+    {
+        CaptureQualityConfig cfg;
+        cfg.qualityPreset = (i % 2 == 0) ? QualityPreset::Eco : QualityPreset::Ultra;
+        cfg.bufferDuration = (i % 3 == 0) ? BufferDuration::Short : BufferDuration::Long;
+        buffer->configure(cfg, (i % 2 == 0) ? 44100 : 96000);
+        buffer->cleanUpGarbage();
+    }
+
+    running.store(false, std::memory_order_relaxed);
+    audioThread.join();
+
+    EXPECT_GT(writeCount.load(), 50);
+}
