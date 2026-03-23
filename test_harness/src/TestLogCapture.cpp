@@ -24,6 +24,9 @@ void TestLogCapture::logMessage(const juce::String& message)
     entry.timestampMs = static_cast<int64_t>(juce::Time::getMillisecondCounter()) - startTimeMs_;
     entry.message = message.toStdString();
 
+    // Also print to stderr for debugging
+    fprintf(stderr, "[%lld] %s\n", entry.timestampMs, entry.message.c_str());
+
     std::scoped_lock lock(mutex_);
     entries_.push_back(std::move(entry));
     while (entries_.size() > MAX_ENTRIES)

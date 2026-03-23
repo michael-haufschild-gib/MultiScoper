@@ -4,6 +4,7 @@
 
 #include "TestHttpServer.h"
 #include "TestElementRegistry.h"
+#include "plugin/PluginEditor.h"
 
 namespace oscil::test
 {
@@ -78,6 +79,27 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
         auto body = json::parse(req.body);
         double bpm = body.value("bpm", 120.0);
         daw_.getTransport().setBpm(bpm);
+
+        // Update both host BPM and internal BPM on the timing engine,
+        // then force processBlock + refreshPanels to recalculate displaySamples.
+        auto* track = daw_.getTrack(0);
+        if (track)
+        {
+            juce::WaitableEvent done;
+            juce::MessageManager::callAsync([track, bpm, &done]() {
+                auto& timingEngine = track->getProcessor().getTimingEngine();
+                timingEngine.setInternalBPM(static_cast<float>(bpm));
+                track->processBlock();
+                if (auto* editor = track->getEditor())
+                {
+                    if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
+                        oscilEditor->refreshPanels();
+                }
+                done.signal();
+            });
+            done.wait(3000);
+        }
+
         res.set_content(successResponse().dump(), "application/json");
     }
     catch (const std::exception& e)

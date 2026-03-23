@@ -349,8 +349,13 @@ private:
     void simulateMouseHover(juce::Component* component);
     void simulateKeyPress(juce::Component* component, const juce::KeyPress& key);
 
+    bool tryClickFastPath(juce::Component* component);
+    bool tryDragFastPathListItems(juce::Component* from, juce::Component* to);
+    bool tryDragOffsetFastPathSidebar(juce::Component* component, int deltaX);
+
     json componentToJson(juce::Component* component, const juce::String& testId);
     void appendComponentTypeInfo(json& info, juce::Component* component);
+    bool appendOscilTypeInfo(json& info, juce::Component* component);
     juce::Component* getTargetComponent(const juce::String& elementId);
     juce::Component* getCurrentFocusedComponent();
 

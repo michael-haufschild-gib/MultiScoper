@@ -6,11 +6,37 @@
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilAccordion.h"
+#include "ui/components/OscilToggle.h"
+#include "ui/components/OscilSlider.h"
+#include "ui/components/OscilTextField.h"
+#include "ui/panels/OscillatorListItem.h"
+#include "ui/panels/OscillatorListComponent.h"
+#include "ui/layout/SidebarComponent.h"
 
 namespace oscil::test
 {
 
 // ================== Private Simulation Methods ==================
+
+bool TestUIController::tryClickFastPath(juce::Component* component)
+{
+    if (auto* oscilButton = dynamic_cast<OscilButton*>(component))
+    {
+        oscilButton->triggerClick();
+        return true;
+    }
+    if (auto* toggle = dynamic_cast<oscil::OscilToggle*>(component))
+    {
+        toggle->toggle();
+        return true;
+    }
+    if (auto* accordion = dynamic_cast<oscil::OscilAccordionSection*>(component))
+    {
+        accordion->toggle();
+        return true;
+    }
+    return false;
+}
 
 void TestUIController::simulateMouseClick(juce::Component* component, bool doubleClick,
                                            const juce::ModifierKeys& mods)
@@ -18,32 +44,12 @@ void TestUIController::simulateMouseClick(juce::Component* component, bool doubl
     if (component == nullptr)
         return;
 
-    // Fast path: if the target is an OscilButton, call triggerClick() directly
-    // for reliable test automation. Mouse event simulation can fail due to
-    // coordinate transforms, component hierarchy differences, or JUCE internal
-    // state that isn't properly set up in synthetic events.
-    if (!doubleClick && mods.getRawFlags() == 0)
-    {
-        if (auto* oscilButton = dynamic_cast<OscilButton*>(component))
-        {
-            oscilButton->triggerClick();
-            return;
-        }
+    // Fast path: call widget APIs directly for reliable test automation
+    if (!doubleClick && mods.getRawFlags() == 0 && tryClickFastPath(component))
+        return;
 
-        // Accordion sections: toggle() bypasses mouse position checks
-        if (auto* accordion = dynamic_cast<oscil::OscilAccordionSection*>(component))
-        {
-            accordion->toggle();
-            return;
-        }
-    }
-
-    auto bounds = component->getLocalBounds();
-    auto center = bounds.getCentre();
-    auto& desktop = juce::Desktop::getInstance();
-    auto mouseSource = desktop.getMainMouseSource();
-
-    // Ensure left button modifier is set for a proper left-click simulation
+    auto center = component->getLocalBounds().getCentre();
+    auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
     auto clickMods = mods.getRawFlags() == 0
         ? juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier)
         : mods;
@@ -65,9 +71,7 @@ void TestUIController::simulateMouseClick(juce::Component* component, bool doubl
     component->mouseUp(mouseDown);
 
     if (doubleClick)
-    {
         component->mouseDoubleClick(mouseDown);
-    }
 }
 
 void TestUIController::simulateMouseRightClick(juce::Component* component)
@@ -98,45 +102,78 @@ void TestUIController::simulateMouseRightClick(juce::Component* component)
     component->mouseUp(mouseDown);
 }
 
+bool TestUIController::tryDragFastPathListItems(juce::Component* from, juce::Component* to)
+{
+    auto* fromItem = dynamic_cast<oscil::OscillatorListItemComponent*>(from);
+    auto* toItem = dynamic_cast<oscil::OscillatorListItemComponent*>(to);
+    if (!fromItem || !toItem)
+        return false;
+
+    for (auto* p = from->getParentComponent(); p != nullptr; p = p->getParentComponent())
+    {
+        if (auto* list = dynamic_cast<oscil::OscillatorListComponent*>(p))
+        {
+            int direction = (to->getY() > from->getY()) ? 1 : -1;
+            list->oscillatorMoveRequested(fromItem->getOscillatorId(), direction);
+            return true;
+        }
+    }
+    return false;
+}
+
 void TestUIController::simulateMouseDrag(juce::Component* from, juce::Component* to,
                                           const juce::ModifierKeys& mods)
 {
     if (from == nullptr || to == nullptr)
         return;
 
+    // Fast path: JUCE DragAndDropContainer needs OS-level events — use API directly
+    if (tryDragFastPathListItems(from, to))
+        return;
+
     auto fromCenter = from->getLocalBounds().getCentre();
     auto toCenter = to->getScreenBounds().getCentre() - from->getScreenPosition();
-    auto& desktop = juce::Desktop::getInstance();
-    auto mouseSource = desktop.getMainMouseSource();
+    auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
 
     juce::MouseEvent mouseDown(
-        mouseSource,
-        fromCenter.toFloat(),
-        mods,
+        mouseSource, fromCenter.toFloat(), mods,
         0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        from, from,
-        juce::Time::getCurrentTime(),
-        fromCenter.toFloat(),
-        juce::Time::getCurrentTime(),
-        1, false
+        from, from, juce::Time::getCurrentTime(),
+        fromCenter.toFloat(), juce::Time::getCurrentTime(), 1, false
     );
-
     from->mouseDown(mouseDown);
 
     juce::MouseEvent mouseDrag(
-        mouseSource,
-        toCenter.toFloat(),
-        mods,
+        mouseSource, toCenter.toFloat(), mods,
         0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        from, from,
-        juce::Time::getCurrentTime(),
-        fromCenter.toFloat(),
-        juce::Time::getCurrentTime(),
-        1, true
+        from, from, juce::Time::getCurrentTime(),
+        fromCenter.toFloat(), juce::Time::getCurrentTime(), 1, true
     );
-
     from->mouseDrag(mouseDrag);
     from->mouseUp(mouseDrag);
+}
+
+bool TestUIController::tryDragOffsetFastPathSidebar(juce::Component* component, int deltaX)
+{
+    auto* handle = dynamic_cast<oscil::SidebarResizeHandle*>(component);
+    if (!handle)
+        return false;
+
+    juce::Logger::writeToLog("[DragOffset] SidebarResizeHandle fast path: deltaX=" + juce::String(deltaX));
+    if (handle->onResizeStart) handle->onResizeStart();
+    if (handle->onResizeDrag)  handle->onResizeDrag(deltaX);
+    if (handle->onResizeEnd)   handle->onResizeEnd();
+
+    // Snap the sidebar's width spring so getEffectiveWidth() reflects the new width immediately
+    for (auto* p = component->getParentComponent(); p != nullptr; p = p->getParentComponent())
+    {
+        if (auto* sidebar = dynamic_cast<oscil::SidebarComponent*>(p))
+        {
+            sidebar->snapWidthToTarget();
+            break;
+        }
+    }
+    return true;
 }
 
 void TestUIController::simulateMouseDragOffset(juce::Component* component, int deltaX, int deltaY,
@@ -145,37 +182,27 @@ void TestUIController::simulateMouseDragOffset(juce::Component* component, int d
     if (component == nullptr)
         return;
 
+    if (tryDragOffsetFastPathSidebar(component, deltaX))
+        return;
+
     auto center = component->getLocalBounds().getCentre();
     auto endPoint = center + juce::Point<int>(deltaX, deltaY);
-    auto& desktop = juce::Desktop::getInstance();
-    auto mouseSource = desktop.getMainMouseSource();
+    auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
 
     juce::MouseEvent mouseDown(
-        mouseSource,
-        center.toFloat(),
-        mods,
+        mouseSource, center.toFloat(), mods,
         0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component,
-        juce::Time::getCurrentTime(),
-        center.toFloat(),
-        juce::Time::getCurrentTime(),
-        1, false
+        component, component, juce::Time::getCurrentTime(),
+        center.toFloat(), juce::Time::getCurrentTime(), 1, false
     );
-
     component->mouseDown(mouseDown);
 
     juce::MouseEvent mouseDrag(
-        mouseSource,
-        endPoint.toFloat(),
-        mods,
+        mouseSource, endPoint.toFloat(), mods,
         0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-        component, component,
-        juce::Time::getCurrentTime(),
-        center.toFloat(),
-        juce::Time::getCurrentTime(),
-        1, true
+        component, component, juce::Time::getCurrentTime(),
+        center.toFloat(), juce::Time::getCurrentTime(), 1, true
     );
-
     component->mouseDrag(mouseDrag);
     component->mouseUp(mouseDrag);
 }
@@ -242,7 +269,14 @@ void TestUIController::simulateKeyPress(juce::Component* component, const juce::
     if (component == nullptr)
         return;
 
-    component->keyPressed(key);
+    // Propagate up the parent chain, mirroring JUCE's normal key event
+    // dispatch: if a component doesn't handle the key, its parent gets
+    // a chance.
+    for (auto* c = component; c != nullptr; c = c->getParentComponent())
+    {
+        if (c->keyPressed(key))
+            return;
+    }
 }
 
 // ================== JSON Serialization ==================
@@ -271,14 +305,24 @@ json buildComboBoxItems(juce::ComboBox* comboBox)
 
 } // anonymous namespace
 
-void TestUIController::appendComponentTypeInfo(json& info, juce::Component* component)
+bool TestUIController::appendOscilTypeInfo(json& info, juce::Component* component)
 {
-    if (auto* button = dynamic_cast<juce::Button*>(component))
+    if (auto* toggle = dynamic_cast<oscil::OscilToggle*>(component))
     {
-        info["type"] = "button";
-        info["text"] = button->getButtonText().toStdString();
-        info["toggled"] = button->getToggleState();
-        info["toggleable"] = button->getClickingTogglesState();
+        info["type"] = "toggle";
+        info["toggled"] = toggle->getValue();
+        info["value"] = toggle->getValue();
+    }
+    else if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+    {
+        info["type"] = "oscilSlider";
+        info["value"] = oscilSlider->getValue();
+    }
+    else if (auto* oscilText = dynamic_cast<oscil::OscilTextField*>(component))
+    {
+        info["type"] = "oscilTextField";
+        info["text"] = oscilText->getText().toStdString();
+        info["value"] = oscilText->getText().toStdString();
     }
     else if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
     {
@@ -287,6 +331,30 @@ void TestUIController::appendComponentTypeInfo(json& info, juce::Component* comp
         info["selectedText"] = oscilDropdown->getSelectedLabel().toStdString();
         info["numItems"] = oscilDropdown->getNumItems();
         info["items"] = buildDropdownItems(oscilDropdown);
+    }
+    else if (auto* accordion = dynamic_cast<oscil::OscilAccordionSection*>(component))
+    {
+        info["type"] = "accordion";
+        info["expanded"] = accordion->isExpanded();
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
+
+void TestUIController::appendComponentTypeInfo(json& info, juce::Component* component)
+{
+    if (appendOscilTypeInfo(info, component))
+        return;
+
+    if (auto* button = dynamic_cast<juce::Button*>(component))
+    {
+        info["type"] = "button";
+        info["text"] = button->getButtonText().toStdString();
+        info["toggled"] = button->getToggleState();
+        info["toggleable"] = button->getClickingTogglesState();
     }
     else if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
     {

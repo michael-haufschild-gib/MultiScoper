@@ -297,7 +297,28 @@ void TestHttpServer::handleUIState(const httplib::Request&, httplib::Response& r
 void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Response& res)
 {
     std::string elementId = req.matches[1];
-    auto info = uiController_.getElementInfo(elementId);
+
+    // Run on message thread — component queries (isVisible, isShowing,
+    // getBounds) must only be called there to avoid data races.
+    json info;
+    juce::WaitableEvent done;
+    auto& ctrl = uiController_;
+    juce::MessageManager::callAsync([&info, &done, &ctrl, elementId]()
+    {
+        info = ctrl.getElementInfo(juce::String(elementId));
+        done.signal();
+    });
+    bool waited = done.wait(3000);
+
+    if (!waited)
+    {
+        fprintf(stderr, "[UIElement] TIMEOUT for %s\n", elementId.c_str());
+        res.status = 504;
+        res.set_content(errorResponse("Timeout waiting for message thread: " + elementId).dump(), "application/json");
+        return;
+    }
+    fprintf(stderr, "[UIElement] callAsync completed for %s, info.contains(error)=%d\n",
+            elementId.c_str(), info.contains("error") ? 1 : 0);
 
     if (info.contains("error"))
     {

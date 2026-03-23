@@ -28,7 +28,24 @@ juce::ModifierKeys ModifierKeyState::toJuceModifiers() const
 juce::Component* TestUIController::getTargetComponent(const juce::String& elementId)
 {
     if (elementId.isEmpty())
-        return getCurrentFocusedComponent();
+    {
+        auto* focused = getCurrentFocusedComponent();
+        if (focused)
+            return focused;
+        // No focused component — find the topmost visible modal overlay
+        // so global keys like Escape can reach it.
+        auto& registry = TestElementRegistry::getInstance();
+        for (const auto& id : registry.getAllTestIds())
+        {
+            if (id.contains("Modal") || id.contains("Dialog") || id.contains("modal") || id.contains("dialog"))
+            {
+                auto* comp = registry.findValidElement(id);
+                if (comp && comp->isVisible())
+                    return comp;
+            }
+        }
+        return nullptr;
+    }
     return TestElementRegistry::getInstance().findValidElement(elementId);
 }
 
@@ -46,11 +63,18 @@ bool TestUIController::click(const juce::String& elementId)
         return false;
 
     juce::Component::SafePointer<juce::Component> safeComp(component);
-    juce::MessageManager::callAsync([safeComp, this]()
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([safeComp, this, &done]()
     {
         if (auto* comp = safeComp.getComponent())
             simulateMouseClick(comp);
+        // Post a second callback to drain any pending callAsync items
+        // (e.g., pendingRefresh_ from refreshPanels reentrancy guard)
+        juce::MessageManager::callAsync([&done]() {
+            done.signal();
+        });
     });
+    done.wait(3000);
 
     return true;
 }
@@ -155,10 +179,13 @@ bool TestUIController::drag(const juce::String& fromElementId, const juce::Strin
     if (fromComp == nullptr || toComp == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([fromComp, toComp, this]()
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([fromComp, toComp, this, &done]()
     {
         simulateMouseDrag(fromComp, toComp);
+        done.signal();
     });
+    done.wait(3000);
 
     return true;
 }
@@ -187,10 +214,13 @@ bool TestUIController::dragByOffset(const juce::String& elementId, int deltaX, i
     if (component == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([component, deltaX, deltaY, this]()
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([component, deltaX, deltaY, this, &done]()
     {
         simulateMouseDragOffset(component, deltaX, deltaY);
+        done.signal();
     });
+    done.wait(3000);
 
     return true;
 }
@@ -256,10 +286,13 @@ bool TestUIController::pressKey(int keyCode, const juce::String& elementId)
         return false;
 
     juce::KeyPress key(keyCode);
-    juce::MessageManager::callAsync([component, key, this]()
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([component, key, this, &done]()
     {
         simulateKeyPress(component, key);
+        done.signal();
     });
+    done.wait(3000);
 
     return true;
 }

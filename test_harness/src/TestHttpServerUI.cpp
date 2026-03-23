@@ -299,6 +299,30 @@ void TestHttpServer::handleUIDrag(const httplib::Request& req, httplib::Response
             success = uiController_.drag(from, to);
         }
 
+        // Synthetic drag can't trigger JUCE DragAndDropContainer — interpret
+        // oscillator item drags as reorder operations.
+        const std::string prefix = "sidebar_oscillators_item_";
+        if (success && from.size() > prefix.size() && to.size() > prefix.size()
+            && from.compare(0, prefix.size(), prefix) == 0
+            && to.compare(0, prefix.size(), prefix) == 0)
+        {
+            int fromIdx = std::stoi(from.substr(prefix.size()));
+            int toIdx = std::stoi(to.substr(prefix.size()));
+            if (fromIdx != toIdx)
+            {
+                auto* track = daw_.getTrack(0);
+                if (track)
+                {
+                    juce::WaitableEvent done;
+                    juce::MessageManager::callAsync([track, fromIdx, toIdx, &done]() {
+                        track->getProcessor().getState().reorderOscillators(fromIdx, toIdx);
+                        done.signal();
+                    });
+                    done.wait(3000);
+                }
+            }
+        }
+
         if (success)
             res.set_content(successResponse().dump(), "application/json");
         else

@@ -70,10 +70,31 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
         }
 
         PaneId paneId{ juce::String(idStr) };
+        auto& state = track->getProcessor().getState();
+        auto& layoutManager = state.getLayoutManager();
+
+        if (layoutManager.getPaneCount() <= 1)
+        {
+            res.set_content(errorResponse("Cannot remove the last pane").dump(), "application/json");
+            return;
+        }
 
         juce::WaitableEvent done;
-        juce::MessageManager::callAsync([paneId, track, &done]() {
-            track->getProcessor().getState().getLayoutManager().removePane(paneId);
+        juce::MessageManager::callAsync([paneId, &state, &layoutManager, &done]() {
+            // Find fallback pane and reassign orphaned oscillators
+            PaneId fallback = PaneId::invalid();
+            for (const auto& pane : layoutManager.getPanes())
+                if (pane.getId() != paneId) { fallback = pane.getId(); break; }
+
+            for (auto& osc : state.getOscillators())
+            {
+                if (osc.getPaneId() == paneId)
+                {
+                    osc.setPaneId(fallback);
+                    state.updateOscillator(osc);
+                }
+            }
+            layoutManager.removePane(paneId);
             done.signal();
         });
         done.wait(3000);
@@ -110,7 +131,9 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
         }
 
         auto& state = track->getProcessor().getState();
+        auto& layoutManager = state.getLayoutManager();
         OscillatorId oscId{ juce::String(idStr) };
+        PaneId targetPaneId{ juce::String(paneIdStr) };
 
         auto existingOsc = state.getOscillator(oscId);
         if (!existingOsc.has_value())
@@ -119,8 +142,15 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
             return;
         }
 
+        // Validate target pane exists
+        if (layoutManager.getPane(targetPaneId) == nullptr)
+        {
+            res.set_content(errorResponse("Target pane not found: " + paneIdStr).dump(), "application/json");
+            return;
+        }
+
         Oscillator osc = existingOsc.value();
-        osc.setPaneId(PaneId{ juce::String(paneIdStr) });
+        osc.setPaneId(targetPaneId);
         state.updateOscillator(osc);
 
         json data;

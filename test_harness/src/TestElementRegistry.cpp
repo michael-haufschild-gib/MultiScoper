@@ -60,13 +60,19 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
     std::scoped_lock lock(mutex_);
     auto it = elements_.find(testId);
     if (it == elements_.end())
+    {
+        if (testId.contains("item_0_delete"))
+            juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): NOT FOUND in map (size=" + juce::String(static_cast<int>(elements_.size())) + ")");
         return nullptr;
+    }
 
     auto* comp = it->second.getComponent();
 
     // SafePointer returns nullptr if the component was destroyed
     if (comp == nullptr)
     {
+        if (testId.contains("item_0_delete"))
+            juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): SafePointer null (destroyed)");
         elements_.erase(it);
         return nullptr;
     }
@@ -76,6 +82,8 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
     // not currently on screen, it's likely stale.
     if (comp->getParentComponent() == nullptr && !comp->isOnDesktop())
     {
+        if (testId.contains("item_0_delete"))
+            juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): no parent, erasing as stale");
         elements_.erase(it);
         return nullptr;
     }

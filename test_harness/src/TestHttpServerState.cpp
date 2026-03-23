@@ -4,8 +4,10 @@
 
 #include "TestHttpServer.h"
 #include "TestElementRegistry.h"
+#include "TestAudioGenerator.h"
 #include "core/OscilState.h"
 #include "plugin/PluginFactory.h"
+#include "plugin/PluginEditor.h"
 
 namespace oscil::test
 {
@@ -26,6 +28,8 @@ json oscillatorToJson(const Oscillator& osc)
     j["visible"] = osc.isVisible();
     j["opacity"] = osc.getOpacity();
     j["lineWidth"] = osc.getLineWidth();
+    auto colour = osc.getColour();
+    j["colour"] = juce::String::toHexString(static_cast<int>(colour.getARGB())).toStdString();
     return j;
 }
 
@@ -169,6 +173,18 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
             });
         });
         done.wait(5000);
+    }
+
+    // Reset audio generators to default state so subsequent tests start clean.
+    // Default: sine 440Hz at 0.5 amplitude — matches TestDAW::initialize().
+    for (int i = 0; i < daw_.getNumTracks(); ++i)
+    {
+        if (auto* t = daw_.getTrack(i))
+        {
+            t->getAudioGenerator().setWaveform(Waveform::Sine);
+            t->getAudioGenerator().setFrequency(440.0f);
+            t->getAudioGenerator().setAmplitude(0.5f);
+        }
     }
 
     // Do NOT clear the element registry here — components that are still alive
@@ -336,6 +352,19 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
         Oscillator osc = existingOsc.value();
         applyOscillatorJsonUpdates(osc, body);
         state.updateOscillator(osc);
+
+        // Refresh UI so sidebar list reflects the updated oscillator state
+        auto* editor = track->getEditor();
+        if (editor)
+        {
+            juce::WaitableEvent refreshDone;
+            juce::MessageManager::callAsync([editor, &refreshDone]() {
+                if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
+                    oscilEditor->refreshPanels();
+                refreshDone.signal();
+            });
+            refreshDone.wait(3000);
+        }
 
         json oscJson;
         oscJson["id"] = osc.getId().id.toStdString();

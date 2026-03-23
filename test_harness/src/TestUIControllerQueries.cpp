@@ -18,10 +18,15 @@ bool TestUIController::setFocus(const juce::String& elementId)
     if (component == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([component]()
+    juce::Component::SafePointer<juce::Component> safeComp(component);
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([safeComp, &done]()
     {
-        component->grabKeyboardFocus();
+        if (auto* comp = safeComp.getComponent())
+            comp->grabKeyboardFocus();
+        done.signal();
     });
+    done.wait(3000);
 
     return true;
 }
@@ -57,10 +62,15 @@ bool TestUIController::focusNext()
     if (focused == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([focused]()
+    juce::Component::SafePointer<juce::Component> safeFocused(focused);
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([safeFocused, &done]()
     {
-        focused->moveKeyboardFocusToSibling(true);
+        if (auto* comp = safeFocused.getComponent())
+            comp->moveKeyboardFocusToSibling(true);
+        done.signal();
     });
+    done.wait(3000);
 
     return true;
 }
@@ -71,10 +81,15 @@ bool TestUIController::focusPrevious()
     if (focused == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([focused]()
+    juce::Component::SafePointer<juce::Component> safeFocused(focused);
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([safeFocused, &done]()
     {
-        focused->moveKeyboardFocusToSibling(false);
+        if (auto* comp = safeFocused.getComponent())
+            comp->moveKeyboardFocusToSibling(false);
+        done.signal();
     });
+    done.wait(3000);
 
     return true;
 }
@@ -100,9 +115,12 @@ json TestUIController::getUIState()
 
 json TestUIController::getElementInfo(const juce::String& elementId)
 {
+    // Always log to verify this code path executes
+    fprintf(stderr, "[getElementInfo] queried: %s\n", elementId.toRawUTF8());
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
     {
+        fprintf(stderr, "[getElementInfo] NOT FOUND: %s\n", elementId.toRawUTF8());
         return json{{"error", "Element not found"}};
     }
 
