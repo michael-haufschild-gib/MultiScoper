@@ -18,6 +18,7 @@ FAILED=0
 # Collect staged C/C++ files
 STAGED_CPP=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|h|hpp|cc|cxx|hxx)$' || true)
 STAGED_TESTS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^tests/test_.*\.cpp$' || true)
+STAGED_E2E=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^tests/e2e/.*\.py$' || true)
 
 echo "━━━ Oscil Pre-Commit Checks ━━━"
 
@@ -95,6 +96,26 @@ if [ -n "$STAGED_TESTS" ]; then
     fi
 else
     echo "  test-quality... no test files staged"
+fi
+
+# ─── 3b. E2E test quality lint ───
+if [ -n "$STAGED_E2E" ]; then
+    if command -v python3 &>/dev/null && [ -f "$REPO_ROOT/scripts/e2e_test_lint.py" ]; then
+        echo -n "  e2e-test-lint... "
+        E2E_EXIT=0
+        E2E_OUTPUT=$(python3 "$REPO_ROOT/scripts/e2e_test_lint.py" \
+            --root "$REPO_ROOT" \
+            --files $STAGED_E2E 2>&1) || E2E_EXIT=$?
+        if [ $E2E_EXIT -ne 0 ]; then
+            echo -e "${RED}FAILED${NC}"
+            echo "$E2E_OUTPUT" | grep -E "(FAILED|Violation)" | head -20
+            FAILED=1
+        else
+            echo -e "${GREEN}OK${NC}"
+        fi
+    fi
+else
+    echo "  e2e-test-lint... no E2E test files staged"
 fi
 
 # ─── 4. Source registry lint ───
