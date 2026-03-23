@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 # Enable C and CXX languages explicitly for JUCE
 project(Oscil VERSION 1.0.0 LANGUAGES C CXX OBJCXX)
@@ -355,6 +355,41 @@ if(OSCIL_ENABLE_TEST_QUALITY_LINT)
     )
 endif()
 
+# Repo-wide source registry linting target
+if(OSCIL_ENABLE_SOURCE_REGISTRY_LINT)
+    add_custom_target(source_registry_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_SOURCE_REGISTRY_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running source registry lint checks"
+        VERBATIM
+    )
+endif()
+
+# Repo-wide TODO/placeholder linting target
+if(OSCIL_ENABLE_TODO_LINT)
+    add_custom_target(todo_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_TODO_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths include src
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running TODO/placeholder lint checks"
+        VERBATIM
+    )
+endif()
+
+# Repo-wide architecture boundary linting target
+if(OSCIL_ENABLE_ARCHITECTURE_LINT)
+    add_custom_target(architecture_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_ARCHITECTURE_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths include src
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running architecture boundary lint checks"
+        VERBATIM
+    )
+endif()
+
 # Repo-wide comment quality linting target
 if(OSCIL_ENABLE_COMMENT_LINT)
     add_custom_target(comment_lint
@@ -366,6 +401,31 @@ if(OSCIL_ENABLE_COMMENT_LINT)
         COMMENT "Running comment quality lint checks"
         VERBATIM
     )
+endif()
+
+# Unified lint target — runs all enabled lint checks in one command
+# Usage: cmake --build --preset dev --target lint
+set(OSCIL_LINT_DEPENDENCIES "")
+if(OSCIL_ENABLE_SIZE_LIMIT_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES size_lint)
+endif()
+if(OSCIL_ENABLE_TEST_QUALITY_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES test_quality_lint)
+endif()
+if(OSCIL_ENABLE_SOURCE_REGISTRY_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES source_registry_lint)
+endif()
+if(OSCIL_ENABLE_TODO_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES todo_lint)
+endif()
+if(OSCIL_ENABLE_ARCHITECTURE_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES architecture_lint)
+endif()
+if(OSCIL_ENABLE_COMMENT_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES comment_lint)
+endif()
+if(OSCIL_LINT_DEPENDENCIES)
+    add_custom_target(lint DEPENDS ${OSCIL_LINT_DEPENDENCIES})
 endif()
 
 # Suppress warnings from JUCE third-party dependencies (Harfbuzz, VST3 SDK)
@@ -392,264 +452,7 @@ endif()
 option(OSCIL_BUILD_TESTS "Build unit tests" ON)
 
 if(OSCIL_BUILD_TESTS)
-    enable_testing()
-
-    CPMAddPackage(
-        NAME googletest
-        GITHUB_REPOSITORY google/googletest
-        GIT_TAG v1.17.0
-    )
-
-    add_executable(OscilTests
-        tests/test_main.cpp
-        tests/test_signal_processor.cpp
-        tests/test_signal_processor_edge.cpp
-        tests/test_signal_processor_stereo_mode.cpp
-
-        # Refactored core tests - split for better isolation
-        tests/test_source_id.cpp
-        tests/test_source_state.cpp
-        tests/test_source_ownership.cpp
-        tests/test_source_buffer.cpp
-        tests/test_instance_registry_crud.cpp
-        tests/test_instance_registry_sync.cpp
-        tests/test_instance_registry_lifecycle.cpp
-        tests/test_plugin_processor_lifecycle.cpp
-        tests/test_plugin_processor_state.cpp
-        tests/test_plugin_processor_audio.cpp
-
-        # Refactored capture buffer tests - split for better isolation
-        tests/test_capture_buffer_core.cpp
-        tests/test_capture_buffer_metadata.cpp
-        tests/test_capture_buffer_threading.cpp
-        tests/test_capture_buffer_concurrent.cpp
-        tests/test_capture_buffer_integrity.cpp
-        tests/test_capture_buffer_lifecycle.cpp
-
-        tests/test_oscillator_core.cpp
-        tests/test_oscillator_dsp.cpp
-        tests/test_pane.cpp
-        tests/test_theme_manager_crud.cpp
-        tests/test_theme_manager_apply.cpp
-        tests/test_theme_manager_persistence.cpp
-
-        # Refactored state persistence tests - split for better isolation
-        tests/test_state_persistence_save.cpp
-        tests/test_state_persistence_load.cpp
-        tests/test_state_persistence_migration.cpp
-        tests/test_state_persistence_edge.cpp
-
-        tests/test_timing_config.cpp
-        tests/test_timing_config_edge.cpp
-        tests/test_timing_engine.cpp
-        tests/test_timing_engine_host.cpp
-        tests/test_timing_engine_host_edge.cpp
-        tests/test_timing_engine_serialization.cpp
-        tests/test_timing_engine_serialization_edge.cpp
-        tests/test_timing_engine_listeners.cpp
-        tests/test_analysis_engine.cpp
-        tests/test_transient_detector.cpp
-        tests/test_stats_overlay.cpp
-        tests/test_capture_quality_config.cpp
-        tests/test_capture_quality_config_edge.cpp
-        tests/test_decimating_capture_buffer.cpp
-        tests/test_decimating_capture_buffer_edge.cpp
-        tests/test_memory_budget_manager.cpp
-        tests/test_memory_budget_manager_edge.cpp
-
-        # Refactored UI component tests - split for better isolation
-        tests/test_spring_physics.cpp
-        tests/test_spring_interaction.cpp
-        tests/test_spring_edge.cpp
-        tests/test_animation_settings_validation.cpp
-        tests/test_animation_settings_presets.cpp
-        tests/test_animation_settings_persistence.cpp
-
-        tests/test_ui_audio_feedback.cpp
-        tests/test_timing_calculations.cpp
-        tests/test_add_oscillator_dialog.cpp
-        tests/test_accordion_sections_e2e.cpp
-        tests/test_sidebar_theme_population.cpp
-        tests/test_sidebar_component.cpp
-        tests/test_preset_manager.cpp
-        tests/test_shaders.cpp
-        tests/test_effect_chain.cpp
-        tests/test_framebuffer_pool.cpp
-        tests/test_waveform_presenter.cpp
-        tests/test_timing_presenter.cpp
-        tests/test_pane_layout.cpp
-        tests/test_pane_layout_edge.cpp
-        tests/test_pane_body.cpp
-        tests/test_pane_action_bar.cpp
-        tests/test_pane_header.cpp
-        tests/test_config_structs.cpp
-
-        # New tests - 100% coverage initiative
-        tests/test_window_layout.cpp
-        tests/test_coordinator_lifecycle.cpp
-        tests/test_coordinator_events.cpp
-        tests/test_coordinator_state.cpp
-        tests/test_visual_config_validation.cpp
-        tests/test_visual_config_application.cpp
-        tests/test_visual_config_presets.cpp
-        tests/test_plugin_editor.cpp
-
-        # Updated UI Component tests
-        tests/test_oscil_button.cpp
-        tests/test_oscil_toggle.cpp
-        tests/test_oscil_dropdown.cpp
-        tests/test_oscil_accordion.cpp
-        tests/test_oscil_badge.cpp
-        tests/test_oscil_checkbox.cpp
-        tests/test_oscil_colorpicker.cpp
-        tests/test_oscil_colorswatches.cpp
-        tests/test_oscil_meterbar.cpp
-        tests/test_oscil_modal.cpp
-        tests/test_oscil_radiobutton.cpp
-        tests/test_oscil_slider.cpp
-        tests/test_oscil_tabs.cpp
-        tests/test_oscil_textfield.cpp
-        tests/test_oscillator_list_component.cpp
-        tests/test_oscillator_color_dialog.cpp
-        tests/test_pane_closing_bug.cpp
-        tests/test_pane_selector.cpp
-        tests/test_select_pane_dialog.cpp
-        tests/test_oscillator_panel_controller.cpp
-
-        # Concurrency primitives
-        tests/test_seqlock.cpp
-
-        # Integration tests
-        tests/test_state_integration.cpp
-
-        # Performance benchmarks
-        tests/test_performance_benchmarks.cpp
-
-        # Test Harness Dependencies
-        test_harness/src/TestElementRegistry.cpp
-
-        # Source files (from Sources.cmake)
-        ${OSCIL_SOURCES}
-    )
-
-    target_include_directories(OscilTests
-        PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
-            ${CMAKE_CURRENT_SOURCE_DIR}/src
-            ${CMAKE_CURRENT_SOURCE_DIR}/tests/helpers
-            ${CMAKE_CURRENT_SOURCE_DIR}/test_harness/include
-            ${httplib_SOURCE_DIR}
-    )
-
-    target_link_libraries(OscilTests
-        PRIVATE
-            OscilBinaryData
-            GTest::gtest_main  # gtest_main already includes gtest
-            juce::juce_core
-            juce::juce_data_structures
-            juce::juce_graphics
-            juce::juce_gui_basics
-            juce::juce_gui_extra
-            juce::juce_events
-            juce::juce_audio_basics
-            juce::juce_audio_devices
-            juce::juce_audio_processors
-            juce::juce_audio_utils
-            juce::juce_dsp
-            nlohmann_json::nlohmann_json
-            $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
-            OscilStrictWarnings
-            OscilWarningSuppressions
-    )
-
-    # Apply clang-tidy to test sources
-    if(OSCIL_CLANG_TIDY_CMD)
-        get_target_property(TEST_SOURCES OscilTests SOURCES)
-        foreach(source ${TEST_SOURCES})
-            if(source MATCHES "^src/" OR source MATCHES "^tests/" OR source MATCHES "^${CMAKE_CURRENT_SOURCE_DIR}/src/" OR source MATCHES "^${CMAKE_CURRENT_SOURCE_DIR}/tests/")
-                 set_source_files_properties(${source} PROPERTIES CXX_CLANG_TIDY "${OSCIL_CLANG_TIDY_CMD}")
-            endif()
-        endforeach()
-    endif()
-
-    target_compile_definitions(OscilTests
-        PRIVATE
-            JUCE_STANDALONE_APPLICATION=1
-            JUCE_USE_CURL=0
-            JUCE_WEB_BROWSER=0
-            OSCIL_ENABLE_TEST_IDS=1
-            $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
-    )
-
-    # Apply RTSan to tests (tests are executables, not shared libraries)
-    if(OSCIL_ENABLE_RTSAN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
-        target_compile_options(OscilTests PRIVATE -fsanitize=realtime)
-        target_link_options(OscilTests PRIVATE -fsanitize=realtime)
-    endif()
-
-    include(GoogleTest)
-    gtest_discover_tests(OscilTests
-        DISCOVERY_TIMEOUT 30
-        PROPERTIES TIMEOUT 30
-    )
-
-    if(OSCIL_ENABLE_SIZE_LIMIT_LINT)
-        add_test(NAME SizeLimitsLint
-            COMMAND ${Python3_EXECUTABLE} ${OSCIL_SIZE_LINT_SCRIPT}
-                --root ${CMAKE_CURRENT_SOURCE_DIR}
-                --paths include src tests test_harness
-                --max-file-lines ${OSCIL_MAX_FILE_LINES}
-                --max-function-lines ${OSCIL_MAX_FUNCTION_LINES}
-        )
-        set_tests_properties(SizeLimitsLint PROPERTIES LABELS "lint")
-    endif()
-
-    if(OSCIL_ENABLE_TEST_QUALITY_LINT)
-        add_test(NAME TestQualityLint
-            COMMAND ${Python3_EXECUTABLE} ${OSCIL_TEST_QUALITY_LINT_SCRIPT}
-                --root ${CMAKE_CURRENT_SOURCE_DIR}
-                --paths tests
-                --min-assertions ${OSCIL_MIN_ASSERTIONS_PER_TEST}
-        )
-        set_tests_properties(TestQualityLint PROPERTIES LABELS "lint")
-    endif()
-
-    if(OSCIL_ENABLE_SOURCE_REGISTRY_LINT)
-        add_test(NAME SourceRegistryLint
-            COMMAND ${Python3_EXECUTABLE} ${OSCIL_SOURCE_REGISTRY_LINT_SCRIPT}
-                --root ${CMAKE_CURRENT_SOURCE_DIR}
-        )
-        set_tests_properties(SourceRegistryLint PROPERTIES LABELS "lint")
-    endif()
-
-    if(OSCIL_ENABLE_TODO_LINT)
-        add_test(NAME TodoLint
-            COMMAND ${Python3_EXECUTABLE} ${OSCIL_TODO_LINT_SCRIPT}
-                --root ${CMAKE_CURRENT_SOURCE_DIR}
-                --paths include src
-        )
-        set_tests_properties(TodoLint PROPERTIES LABELS "lint")
-    endif()
-
-    if(OSCIL_ENABLE_ARCHITECTURE_LINT)
-        add_test(NAME ArchitectureLint
-            COMMAND ${Python3_EXECUTABLE} ${OSCIL_ARCHITECTURE_LINT_SCRIPT}
-                --root ${CMAKE_CURRENT_SOURCE_DIR}
-                --paths include src
-        )
-        set_tests_properties(ArchitectureLint PROPERTIES LABELS "lint")
-    endif()
-
-    if(OSCIL_ENABLE_COMMENT_LINT)
-        add_test(NAME CommentLint
-            COMMAND ${Python3_EXECUTABLE} ${OSCIL_COMMENT_LINT_SCRIPT}
-                --root ${CMAKE_CURRENT_SOURCE_DIR}
-                --paths include src tests test_harness
-                --doc-paths include
-                --max-violations 0
-        )
-        set_tests_properties(CommentLint PROPERTIES LABELS "lint")
-    endif()
+    include(cmake/Tests.cmake)
 endif()
 
 # E2E Test Harness (optional)
