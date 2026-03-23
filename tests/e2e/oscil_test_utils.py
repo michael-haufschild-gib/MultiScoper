@@ -616,3 +616,31 @@ class OscilTestClient:
             elements = data.get("elements", [])
             return [e["testId"] for e in elements if "testId" in e]
         return []
+
+    # ── Layout / column management ─────────────────────────────────
+
+    def get_layout_info(self) -> Optional[Dict]:
+        """Get current column layout info (columns, paneCount, editor size)."""
+        resp = self._get_json("/layout")
+        return resp
+
+    def set_column_layout(self, columns: int) -> bool:
+        """Set column layout (1, 2, or 3). Returns True on success."""
+        resp = self._post_json("/layout", {"columns": columns})
+        return resp is not None and resp.get("status") == "ok"
+
+    def get_pane_layout(self) -> Optional[Dict]:
+        """Get per-pane bounds and column indices.
+
+        Returns dict with:
+          columns: int
+          availableArea: {x, y, width, height}
+          panes: [{index, id, name, columnIndex, bounds: {x, y, width, height}}, ...]
+        """
+        resp = self._get_json("/panes")
+        return resp
+
+    def move_pane_position(self, from_index: int, to_index: int) -> bool:
+        """Move a pane from one position to another. Returns True on success."""
+        resp = self._post_json("/pane/move", {"fromIndex": from_index, "toIndex": to_index})
+        return resp is not None and resp.get("status") == "ok"

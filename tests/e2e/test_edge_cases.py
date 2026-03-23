@@ -1023,3 +1023,112 @@ class TestStressOperations:
                 f"Oscillator '{osc['name']}' has orphaned paneId "
                 f"'{osc.get('paneId')}' after simultaneous ops"
             )
+
+
+class TestAPIRobustness:
+    """Verify API endpoints handle invalid inputs without crashing."""
+
+    def test_add_oscillator_with_invalid_source(
+        self, editor: OscilTestClient
+    ):
+        """
+        Bug caught: add_oscillator with a nonexistent sourceId causes
+        null dereference when binding the audio buffer.
+        """
+        result = editor.add_oscillator("nonexistent-source-999", name="Bad Source")
+        # Should either fail gracefully or create with fallback source
+        state = editor.get_transport_state()
+        assert state is not None, "Harness should survive invalid source ID"
+
+    def test_click_nonexistent_element(self, editor: OscilTestClient):
+        """
+        Bug caught: /ui/click with nonexistent elementId crashes the
+        TestUIController's element lookup.
+        """
+        result = editor.click("totally_fake_element_id_999")
+        assert result is False, "Clicking nonexistent element should return False"
+
+        # Verify harness still works
+        state = editor.get_transport_state()
+        assert state is not None
+
+    def test_set_slider_on_non_slider_element(self, editor: OscilTestClient):
+        """
+        Bug caught: /ui/slider called on a non-slider element causes type
+        cast failure or null pointer.
+        """
+        result = editor.set_slider("sidebar_addOscillator", 50.0)
+        # Should fail gracefully
+        state = editor.get_transport_state()
+        assert state is not None
+
+    def test_type_text_in_non_text_element(self, editor: OscilTestClient):
+        """
+        Bug caught: /ui/typeText called on a button causes type mismatch.
+        """
+        result = editor.type_text("sidebar_addOscillator", "hello")
+        # Should fail gracefully
+        state = editor.get_transport_state()
+        assert state is not None
+
+    def test_select_dropdown_on_non_dropdown(self, editor: OscilTestClient):
+        """
+        Bug caught: /ui/select called on a non-dropdown element causes crash.
+        """
+        result = editor.select_dropdown_item("sidebar_addOscillator", "item1")
+        assert result is False
+        state = editor.get_transport_state()
+        assert state is not None
+
+    def test_rapid_state_reset_cycle(
+        self, editor: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: rapid reset cycles causing incomplete cleanup that
+        accumulates stale listeners.
+        """
+        for _ in range(10):
+            editor.add_oscillator(source_id, name="ResetCycle")
+            editor.reset_state()
+
+        editor.wait_for_oscillator_count(0, timeout_s=3.0)
+        state = editor.get_transport_state()
+        assert state is not None, "Harness should survive 10 rapid reset cycles"
+
+    def test_save_to_invalid_path(self, editor: OscilTestClient, source_id: str):
+        """
+        Bug caught: saving state to an invalid/readonly path causes unhandled
+        exception that crashes the plugin.
+        """
+        editor.add_oscillator(source_id, name="BadPath")
+        editor.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        result = editor.save_state("/nonexistent/directory/state.xml")
+        # Should return False, not crash
+        assert result is False, "Save to invalid path should fail gracefully"
+
+        oscs = editor.get_oscillators()
+        assert len(oscs) == 1, "State should be unchanged after failed save"
+
+    def test_get_element_nonexistent(self, editor: OscilTestClient):
+        """
+        Bug caught: querying element info for nonexistent ID causes crash.
+        """
+        el = editor.get_element("completely_nonexistent_element_xyz")
+        assert el is None, "Nonexistent element should return None"
+
+    def test_hover_nonexistent_element(self, editor: OscilTestClient):
+        """
+        Bug caught: hover on nonexistent element causes null pointer.
+        """
+        result = editor.hover("nonexistent_hover_target", duration_ms=100)
+        state = editor.get_transport_state()
+        assert state is not None, "Harness should survive hover on nonexistent element"
+
+    def test_drag_nonexistent_elements(self, editor: OscilTestClient):
+        """
+        Bug caught: drag between nonexistent elements causes crash.
+        """
+        result = editor.drag("fake_from", "fake_to")
+        state = editor.get_transport_state()
+        assert state is not None

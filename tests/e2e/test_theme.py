@@ -174,3 +174,153 @@ class TestThemePersistence:
         assert restored == target, (
             f"Theme should persist: expected '{target}', got '{restored}'"
         )
+
+
+class TestThemeDuringPlayback:
+    """Theme interactions while audio is active."""
+
+    def test_theme_change_during_active_rendering(
+        self, options_section: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: theme change while waveforms are actively rendering
+        causes render pipeline to use stale color references.
+        """
+        c = options_section
+        osc_id = c.add_oscillator(source_id, name="ThemePlayback")
+        assert osc_id is not None
+        c.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        c.transport_play()
+        c.wait_until(lambda: c.is_playing(), timeout_s=2.0, desc="transport playing")
+        c.set_track_audio(0, waveform="sine", frequency=440.0, amplitude=0.8)
+        c.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
+
+        dropdown_id = "sidebar_options_themeDropdown"
+        if not c.element_exists(dropdown_id):
+            c.transport_stop()
+            pytest.fail("Theme dropdown not registered")
+
+        _, _, items = _get_theme_info(c)
+        if len(items) < 2:
+            c.transport_stop()
+            pytest.fail("Need 2+ themes")
+
+        # Change theme during playback
+        tid = _item_id(items[-1])
+        c.select_dropdown_item(dropdown_id, tid)
+
+        # Verify still playing and stable
+        assert c.is_playing(), "Transport should survive theme change"
+        oscs = c.get_oscillators()
+        assert len(oscs) == 1, "Oscillator should survive theme change"
+
+        c.transport_stop()
+
+    def test_rapid_theme_switching_stability(
+        self, options_section: OscilTestClient
+    ):
+        """
+        Bug caught: rapidly cycling themes causes resource leak or crash
+        due to theme resources not being released before new theme loads.
+        """
+        c = options_section
+        dropdown_id = "sidebar_options_themeDropdown"
+        if not c.element_exists(dropdown_id):
+            pytest.fail("Theme dropdown not registered")
+
+        _, _, items = _get_theme_info(c)
+        if len(items) < 2:
+            pytest.fail("Need 2+ themes")
+
+        # Cycle through all themes 3 times
+        for _ in range(3):
+            for item in items:
+                tid = _item_id(item)
+                if tid:
+                    c.select_dropdown_item(dropdown_id, tid)
+
+        # System should be stable
+        state = c.get_transport_state()
+        assert state is not None, "Harness should survive rapid theme cycling"
+
+    def test_theme_survives_state_save_load(
+        self, options_section: OscilTestClient, source_id: str
+    ):
+        """
+        Bug caught: theme selection not included in state XML, reverting
+        to default after save/load roundtrip.
+        """
+        c = options_section
+        dropdown_id = "sidebar_options_themeDropdown"
+        if not c.element_exists(dropdown_id):
+            pytest.fail("Theme dropdown not registered")
+
+        current, _, items = _get_theme_info(c)
+        if len(items) < 2:
+            pytest.fail("Need 2+ themes")
+
+        # Select non-default theme
+        target = None
+        for item in items:
+            tid = _item_id(item)
+            if tid and tid != current:
+                target = tid
+                break
+        if not target:
+            pytest.fail("No alternative theme")
+
+        c.select_dropdown_item(dropdown_id, target)
+        c.wait_until(
+            lambda: _get_theme_info(c)[0] == target,
+            timeout_s=2.0, desc="theme applied",
+        )
+
+        # Need an oscillator for state save
+        osc_id = c.add_oscillator(source_id, name="ThemeSaveLoad")
+        c.wait_for_oscillator_count(1, timeout_s=3.0)
+
+        path = "/tmp/oscil_e2e_theme_save.xml"
+        saved = c.save_state(path)
+        if not saved:
+            pytest.fail("State save not available")
+
+        c.reset_state()
+        c.wait_for_oscillator_count(0, timeout_s=3.0)
+
+        loaded = c.load_state(path)
+        assert loaded, "State load should succeed"
+        c.wait_for_oscillator_count(1, timeout_s=5.0)
+
+        # Re-expand options to check theme
+        options_id = "sidebar_options"
+        if c.element_exists(options_id):
+            c.click(options_id)
+
+        restored, _, _ = _get_theme_info(c)
+        if restored:
+            assert restored == target, (
+                f"Theme should survive save/load: expected '{target}', got '{restored}'"
+            )
+
+    def test_theme_dropdown_item_count_nonzero(
+        self, options_section: OscilTestClient
+    ):
+        """
+        Bug caught: theme dropdown reports numItems=0 even though
+        ThemeManager has themes registered.
+        """
+        c = options_section
+        dropdown_id = "sidebar_options_themeDropdown"
+        if not c.element_exists(dropdown_id):
+            pytest.fail("Theme dropdown not registered")
+
+        el = c.get_element(dropdown_id)
+        assert el is not None
+        num_items = el.extra.get("numItems", 0)
+        items = el.extra.get("items", [])
+        assert num_items > 0, f"numItems should be > 0, got {num_items}"
+        assert len(items) > 0, f"items list should be non-empty"
+        assert len(items) == num_items, (
+            f"items count ({len(items)}) should match numItems ({num_items})"
+        )

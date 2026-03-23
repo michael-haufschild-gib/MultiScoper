@@ -28,7 +28,7 @@ struct LogEntry
 class TestLogCapture : public juce::Logger
 {
 public:
-    static constexpr size_t MAX_ENTRIES = 100;
+    static constexpr size_t MAX_ENTRIES = 2000;
 
     TestLogCapture();
 
