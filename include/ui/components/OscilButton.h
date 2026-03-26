@@ -136,6 +136,7 @@ private:
     void paintButtonBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds, juce::Colour bgColour);
     void paintButtonContent(juce::Graphics& g, const juce::Rectangle<float>& bounds,
                             const juce::Rectangle<float>& contentBounds, juce::Colour textColour);
+    void paintIconWithText(juce::Graphics& g, const juce::Rectangle<float>& bounds, const juce::Font& font);
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
     juce::Colour getBackgroundColour() const;
     juce::Colour getTextColour() const;

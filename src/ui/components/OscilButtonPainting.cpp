@@ -111,34 +111,33 @@ void OscilButton::paintButtonContent(juce::Graphics& g, const juce::Rectangle<fl
     auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
     g.setFont(font);
 
-    // Text + icon
     if (icon_.isValid())
-    {
-        float iconY = (bounds.getHeight() - ICON_SIZE) / 2;
-        juce::GlyphArrangement glyphs;
-        glyphs.addLineOfText(font, label_, 0, 0);
-        float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
-        float startX = (bounds.getWidth() - ICON_SIZE - ICON_PADDING - textWidth) / 2;
+        paintIconWithText(g, bounds, font);
+    else
+        g.drawText(label_, contentBounds, juce::Justification::centred);
+}
 
-        if (iconOnLeft_)
-        {
-            g.drawImage(icon_, juce::Rectangle<float>(startX, iconY, ICON_SIZE, ICON_SIZE),
-                        juce::RectanglePlacement::centred);
-            g.drawText(label_,
-                       juce::Rectangle<float>(startX + ICON_SIZE + ICON_PADDING, 0, textWidth, bounds.getHeight()),
-                       juce::Justification::centredLeft);
-        }
-        else
-        {
-            g.drawText(label_, juce::Rectangle<float>(startX, 0, textWidth, bounds.getHeight()),
-                       juce::Justification::centredLeft);
-            g.drawImage(icon_, juce::Rectangle<float>(startX + textWidth + ICON_PADDING, iconY, ICON_SIZE, ICON_SIZE),
-                        juce::RectanglePlacement::centred);
-        }
+void OscilButton::paintIconWithText(juce::Graphics& g, const juce::Rectangle<float>& bounds, const juce::Font& font)
+{
+    float iconY = (bounds.getHeight() - ICON_SIZE) / 2;
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText(font, label_, 0, 0);
+    float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
+    float startX = (bounds.getWidth() - ICON_SIZE - ICON_PADDING - textWidth) / 2;
+
+    if (iconOnLeft_)
+    {
+        g.drawImage(icon_, juce::Rectangle<float>(startX, iconY, ICON_SIZE, ICON_SIZE),
+                    juce::RectanglePlacement::centred);
+        g.drawText(label_, juce::Rectangle<float>(startX + ICON_SIZE + ICON_PADDING, 0, textWidth, bounds.getHeight()),
+                   juce::Justification::centredLeft);
     }
     else
     {
-        g.drawText(label_, contentBounds, juce::Justification::centred);
+        g.drawText(label_, juce::Rectangle<float>(startX, 0, textWidth, bounds.getHeight()),
+                   juce::Justification::centredLeft);
+        g.drawImage(icon_, juce::Rectangle<float>(startX + textWidth + ICON_PADDING, iconY, ICON_SIZE, ICON_SIZE),
+                    juce::RectanglePlacement::centred);
     }
 }
 

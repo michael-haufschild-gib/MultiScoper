@@ -99,12 +99,11 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
     if (!setup2DProjection(context, ext, gl_->projectionLoc))
         return;
 
+    const float kGeometryScale = 12.0f;
     ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(), params.colour.getFloatGreen(),
                     params.colour.getFloatBlue(), params.colour.getFloatAlpha());
     ext.glUniform1f(gl_->opacityLoc, params.opacity);
     ext.glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
-
-    const float kGeometryScale = 12.0f;
     ext.glUniform1f(gl_->geometryScaleLoc, kGeometryScale);
 
     ext.glBindVertexArray(gl_->vao);
@@ -114,12 +113,9 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
     float centerY1, centerY2, amp1, amp2;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    GLint posLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "position");
-    GLint distLoc = ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-    if (posLoc < 0)
-        posLoc = 0;
-    if (distLoc < 0)
-        distLoc = 1;
+    auto programId = gl_->program->getProgramID();
+    GLint posLoc = std::max(GLint{0}, ext.glGetAttribLocation(programId, "position"));
+    GLint distLoc = std::max(GLint{1}, ext.glGetAttribLocation(programId, "distFromCenter"));
 
     float visualWidth = params.lineWidth * kGeometryScale;
     auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {

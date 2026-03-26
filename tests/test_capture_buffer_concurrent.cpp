@@ -99,16 +99,7 @@ TEST_F(CaptureBufferConcurrentTest, StereoChannelConsistency)
     std::atomic<bool> running{true};
     std::atomic<int> wc{0}, mismatch{0};
 
-    // Seed the buffer with stereo DC data
-    {
-        juce::AudioBuffer<float> seed(2, kBlock);
-        for (int s = 0; s < kBlock; ++s)
-        {
-            seed.setSample(0, s, 0.5f);
-            seed.setSample(1, s, 0.5f);
-        }
-        buffer->write(seed, CaptureFrameMetadata{});
-    }
+    buffer->write(generateDCBuffer(kBlock, 0.5f), CaptureFrameMetadata{});
 
     std::thread writer([&]() {
         int i = 0;

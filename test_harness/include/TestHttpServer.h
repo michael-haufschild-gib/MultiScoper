@@ -161,6 +161,10 @@ private:
     // Route handlers - Diagnostic
     void handleDiagnosticSnapshot(const httplib::Request& req, httplib::Response& res);
 
+    // Reset helpers
+    void resetAudioAndTransport();
+    void resetOptionsControls();
+
     // Health check
     void handleHealth(const httplib::Request& req, httplib::Response& res);
 

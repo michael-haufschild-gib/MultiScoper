@@ -86,6 +86,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdown.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownInteraction.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownPopup.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownPopupEvents.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabs.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabsPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordion.cpp

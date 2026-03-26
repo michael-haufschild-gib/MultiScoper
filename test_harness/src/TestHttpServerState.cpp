@@ -3,6 +3,7 @@
 */
 
 #include "core/OscilState.h"
+#include "core/dsp/TimingEngine.h"
 
 #include "TestAudioGenerator.h"
 #include "TestElementRegistry.h"
@@ -156,14 +157,29 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
             for (const auto& pane : panes)
                 layoutManager.removePane(pane.getId());
 
+            // Reset timing engine to defaults (TIME mode, 500ms, 120 BPM)
+            auto& timingEngine = track->getProcessor().getTimingEngine();
+            EngineTimingConfig defaultTimingConfig;
+            timingEngine.setConfig(defaultTimingConfig);
+
             // Wait for queued refreshPanels to complete before signalling
             juce::MessageManager::callAsync([&done]() { done.signal(); });
         });
         done.wait(5000);
     }
 
-    // Reset audio generators to default state so subsequent tests start clean.
-    // Default: sine 440Hz at 0.5 amplitude — matches TestDAW::initialize().
+    resetAudioAndTransport();
+    resetOptionsControls();
+
+    // Do NOT clear the element registry here — components that are still alive
+    // (sidebar, buttons, timing controls) keep their registrations.  Components
+    // tied to removed oscillators/panes will self-unregister via their RAII
+    // TestRegistration destructors when state listeners destroy them.
+    res.set_content(successResponse().dump(), "application/json");
+}
+
+void TestHttpServer::resetAudioAndTransport()
+{
     for (int i = 0; i < daw_.getNumTracks(); ++i)
     {
         if (auto* t = daw_.getTrack(i))
@@ -173,12 +189,19 @@ void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response
             t->getAudioGenerator().setAmplitude(0.5f);
         }
     }
+    daw_.getTransport().play();
+    daw_.getTransport().setBpm(120.0);
+    daw_.getTransport().setPositionSamples(0);
+}
 
-    // Do NOT clear the element registry here — components that are still alive
-    // (sidebar, buttons, timing controls) keep their registrations.  Components
-    // tied to removed oscillators/panes will self-unregister via their RAII
-    // TestRegistration destructors when state listeners destroy them.
-    res.set_content(successResponse().dump(), "application/json");
+void TestHttpServer::resetOptionsControls()
+{
+    uiController_.setSliderValue("sidebar_options_gainSlider", 0.0);
+    uiController_.toggle("sidebar_options_gridToggle", false);
+    uiController_.toggle("sidebar_options_autoScaleToggle", false);
+    uiController_.toggle("sidebar_options_gpuRenderingToggle", false);
+    uiController_.toggle("sidebar_options_autoAdjustToggle", true);
+    uiController_.selectById("sidebar_options_layoutDropdown", "1");
 }
 
 void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Response& res)

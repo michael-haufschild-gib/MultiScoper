@@ -9,6 +9,32 @@
 namespace oscil::test
 {
 
+namespace
+{
+
+void reassignOrphansAndRemovePane(OscilState& state, PaneLayoutManager& layoutManager, PaneId paneId)
+{
+    PaneId fallback = PaneId::invalid();
+    for (const auto& pane : layoutManager.getPanes())
+        if (pane.getId() != paneId)
+        {
+            fallback = pane.getId();
+            break;
+        }
+
+    for (auto& osc : state.getOscillators())
+    {
+        if (osc.getPaneId() == paneId)
+        {
+            osc.setPaneId(fallback);
+            state.updateOscillator(osc);
+        }
+    }
+    layoutManager.removePane(paneId);
+}
+
+} // namespace
+
 void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Response& res)
 {
     try
@@ -82,24 +108,7 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
 
         juce::WaitableEvent done;
         juce::MessageManager::callAsync([paneId, &state, &layoutManager, &done]() {
-            // Find fallback pane and reassign orphaned oscillators
-            PaneId fallback = PaneId::invalid();
-            for (const auto& pane : layoutManager.getPanes())
-                if (pane.getId() != paneId)
-                {
-                    fallback = pane.getId();
-                    break;
-                }
-
-            for (auto& osc : state.getOscillators())
-            {
-                if (osc.getPaneId() == paneId)
-                {
-                    osc.setPaneId(fallback);
-                    state.updateOscillator(osc);
-                }
-            }
-            layoutManager.removePane(paneId);
+            reassignOrphansAndRemovePane(state, layoutManager, paneId);
             done.signal();
         });
         done.wait(3000);
