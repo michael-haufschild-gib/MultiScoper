@@ -10,6 +10,34 @@
 namespace oscil::test
 {
 
+namespace
+{
+
+/**
+ * DocumentWindow subclass that hides itself (and notifies the owner) when
+ * the close button is pressed, and forwards minimize/maximize to the OS.
+ */
+class EditorWindow : public juce::DocumentWindow
+{
+public:
+    EditorWindow(const juce::String& title, std::function<void()> onClose)
+        : DocumentWindow(title, juce::Colours::darkgrey, DocumentWindow::allButtons)
+        , onClose_(std::move(onClose))
+    {
+    }
+
+    void closeButtonPressed() override
+    {
+        if (onClose_)
+            onClose_();
+    }
+
+private:
+    std::function<void()> onClose_;
+};
+
+} // namespace
+
 TestTrack::TestTrack(int trackIndex, const juce::String& name, TestTransport& transport)
     : trackIndex_(trackIndex)
     , name_(name)
@@ -66,35 +94,32 @@ void TestTrack::processBlock()
 
 void TestTrack::showEditor()
 {
-    if (editor_ != nullptr)
+    if (editorWindow_ != nullptr)
         return;
 
-    // Create editor
-    editor_.reset(processor_->createEditor());
+    auto* rawEditor = processor_->createEditor();
+    if (rawEditor == nullptr)
+        return;
 
-    if (editor_ != nullptr)
-    {
-        // Create window to host the editor
-        editorWindow_ = std::make_unique<juce::DocumentWindow>(name_ + " - Oscil", juce::Colours::darkgrey,
-                                                               juce::DocumentWindow::allButtons);
+    // Window takes ownership of the editor component (setContentOwned with deleteWhenRemoved=true).
+    // We store a non-owning pointer in editor_ for external access; the window manages its lifetime.
+    editor_.release();
+    editor_.reset(rawEditor);
 
-        editorWindow_->setUsingNativeTitleBar(true);
-        editorWindow_->setContentOwned(editor_.release(), true);
-        editorWindow_->setResizable(true, false);
-        editorWindow_->centreWithSize(editorWindow_->getWidth(), editorWindow_->getHeight());
-        editorWindow_->setVisible(true);
+    editorWindow_ = std::make_unique<EditorWindow>(name_ + " - Oscil", [this]() { hideEditor(); });
 
-        // Get editor back from window
-        editor_.reset(static_cast<juce::AudioProcessorEditor*>(editorWindow_->getContentComponent()));
-    }
+    editorWindow_->setUsingNativeTitleBar(true);
+    editorWindow_->setContentNonOwned(editor_.get(), true);
+    editorWindow_->setResizable(true, false);
+    editorWindow_->centreWithSize(editorWindow_->getWidth(), editorWindow_->getHeight());
+    editorWindow_->setVisible(true);
 }
 
 void TestTrack::hideEditor()
 {
     if (editorWindow_ != nullptr)
     {
-        editorWindow_->setVisible(false);
-        editor_.release(); // Window owns it
+        editorWindow_->clearContentComponent(); // Detach without deleting (we own it)
         editorWindow_.reset();
     }
     editor_.reset();

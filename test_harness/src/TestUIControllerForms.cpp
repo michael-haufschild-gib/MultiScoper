@@ -7,6 +7,7 @@
 #include "ui/components/OscilDropdown.h"
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilTextField.h"
+#include "ui/components/OscilToggle.h"
 
 #include "TestUIController.h"
 
@@ -94,6 +95,16 @@ bool TestUIController::toggle(const juce::String& elementId, bool value)
     if (component == nullptr)
         return false;
 
+    if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
+    {
+        juce::Component::SafePointer<oscil::OscilToggle> safe(oscilToggle);
+        juce::MessageManager::callAsync([safe, value]() {
+            if (auto* t = safe.getComponent())
+                t->setValue(value);
+        });
+        return true;
+    }
+
     auto* toggleButton = dynamic_cast<juce::ToggleButton*>(component);
     if (toggleButton != nullptr)
     {
@@ -157,6 +168,21 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
     if (component == nullptr)
         return false;
 
+    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+    {
+        juce::Component::SafePointer<oscil::OscilSlider> safe(oscilSlider);
+        juce::MessageManager::callAsync([safe]() {
+            if (auto* s = safe.getComponent())
+            {
+                double step = s->getStep();
+                if (step == 0.0)
+                    step = (s->getMaximum() - s->getMinimum()) / 100.0;
+                s->setValue(s->getValue() + step);
+            }
+        });
+        return true;
+    }
+
     auto* slider = dynamic_cast<juce::Slider*>(component);
     if (slider == nullptr)
         return false;
@@ -176,6 +202,21 @@ bool TestUIController::decrementSlider(const juce::String& elementId)
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
     if (component == nullptr)
         return false;
+
+    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+    {
+        juce::Component::SafePointer<oscil::OscilSlider> safe(oscilSlider);
+        juce::MessageManager::callAsync([safe]() {
+            if (auto* s = safe.getComponent())
+            {
+                double step = s->getStep();
+                if (step == 0.0)
+                    step = (s->getMaximum() - s->getMinimum()) / 100.0;
+                s->setValue(s->getValue() - step);
+            }
+        });
+        return true;
+    }
 
     auto* slider = dynamic_cast<juce::Slider*>(component);
     if (slider == nullptr)

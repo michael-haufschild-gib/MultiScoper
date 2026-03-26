@@ -2,6 +2,11 @@
     Oscil Test Harness - UI Controller: Focus Management, State Queries & Waits
 */
 
+#include "ui/components/OscilDropdown.h"
+#include "ui/components/OscilSlider.h"
+#include "ui/components/OscilTextField.h"
+#include "ui/components/OscilToggle.h"
+
 #include "TestUIController.h"
 
 #include <chrono>
@@ -155,6 +160,8 @@ bool TestUIController::isElementFocusable(const juce::String& elementId)
 double TestUIController::getSliderValue(const juce::String& elementId)
 {
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+        return oscilSlider->getValue();
     if (auto* slider = dynamic_cast<juce::Slider*>(component))
         return slider->getValue();
     return 0.0;
@@ -163,6 +170,8 @@ double TestUIController::getSliderValue(const juce::String& elementId)
 std::pair<double, double> TestUIController::getSliderRange(const juce::String& elementId)
 {
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+        return {oscilSlider->getMinimum(), oscilSlider->getMaximum()};
     if (auto* slider = dynamic_cast<juce::Slider*>(component))
         return {slider->getMinimum(), slider->getMaximum()};
     return {0.0, 1.0};
@@ -171,6 +180,8 @@ std::pair<double, double> TestUIController::getSliderRange(const juce::String& e
 bool TestUIController::getToggleState(const juce::String& elementId)
 {
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
+        return oscilToggle->getValue();
     if (auto* button = dynamic_cast<juce::Button*>(component))
         return button->getToggleState();
     return false;
@@ -179,6 +190,9 @@ bool TestUIController::getToggleState(const juce::String& elementId)
 juce::String TestUIController::getTextContent(const juce::String& elementId)
 {
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+
+    if (auto* oscilTextField = dynamic_cast<oscil::OscilTextField*>(component))
+        return oscilTextField->getText();
 
     if (auto* textEditor = dynamic_cast<juce::TextEditor*>(component))
         return textEditor->getText();
@@ -195,6 +209,8 @@ juce::String TestUIController::getTextContent(const juce::String& elementId)
 int TestUIController::getSelectedItemId(const juce::String& elementId)
 {
     auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
+        return oscilDropdown->getSelectedIndex();
     if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
         return comboBox->getSelectedId();
     return 0;
