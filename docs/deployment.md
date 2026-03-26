@@ -1,6 +1,6 @@
-# Local Development Guide for LLM Coding Agents
+# Local Development Guide
 
-**Purpose**: Teach agents HOW to build, run, and debug the Oscil audio plugin locally.
+**Purpose**: How to build, run, and debug the Oscil audio plugin locally.
 
 **Tech Stack**: CMake 3.25+, Ninja, ccache, C++20, JUCE 8.0.12
 

@@ -1,6 +1,6 @@
-# Architecture Guide for LLM Coding Agents
+# Architecture Guide
 
-**Purpose**: Instructions for WHERE to put code and WHAT patterns to follow in this JUCE audio plugin.
+**Purpose**: Where to put code and what patterns to follow in this JUCE audio plugin.
 
 **Tech Stack**: C++20, JUCE 8.0.12, OpenGL 3.3, CMake 3.25+, GoogleTest
 

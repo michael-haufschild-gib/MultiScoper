@@ -1,6 +1,6 @@
-# Shader Development Guide for LLM Coding Agents
+# Shader Development Guide
 
-**Purpose**: Instructions for adding GPU-accelerated waveform shaders to Oscil.
+**Purpose**: Adding GPU-accelerated waveform shaders to Oscil.
 **Tech Stack**: C++20, JUCE 8.0.12 OpenGL, GLSL 3.30 Core (no legacy translation)
 
 ## Quick Reference

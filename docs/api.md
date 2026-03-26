@@ -1,6 +1,6 @@
-# API Guide for LLM Coding Agents
+# API Guide
 
-**Purpose**: Teach agents HOW to use the Test Harness HTTP API for E2E testing and HOW to create new API handlers.
+**Purpose**: How to use the Test Harness HTTP API for E2E testing and how to create new API handlers.
 
 **Base URL**: `http://localhost:8765`
 

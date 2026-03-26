@@ -1,6 +1,6 @@
-# Testing Guide for LLM Coding Agents
+# Testing Guide
 
-**Purpose**: Teach agents HOW to write and run tests for this JUCE audio plugin.
+**Purpose**: How to write and run tests for this JUCE audio plugin.
 
 **Tech Stack**: GoogleTest (unit tests), Test Harness HTTP API (E2E tests)
 
