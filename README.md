@@ -89,6 +89,10 @@ Higher layers depend on lower layers, never the reverse. See [docs/architecture.
 | [Shaders](docs/shaders.md) | Adding GPU-accelerated waveform shaders |
 | [API](docs/api.md) | Test harness HTTP API reference |
 
+## Built with AI
+
+This project is fully vibecoded using [Claude Code](https://claude.ai/claude-code) (CLI). Every line of C++, every shader, every test, and every CI workflow was written through human-AI collaboration. The documentation in `docs/` is optimized for both human readers and AI coding agents.
+
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
