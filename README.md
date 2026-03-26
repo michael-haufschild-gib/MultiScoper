@@ -91,7 +91,7 @@ Higher layers depend on lower layers, never the reverse. See [docs/architecture.
 
 ## Built with AI
 
-This project is fully vibecoded using [Claude Code](https://claude.ai/claude-code) (CLI). Every line of C++, every shader, every test, and every CI workflow was written through human-AI collaboration. The documentation in `docs/` is optimized for both human readers and AI coding agents.
+This project is fully vibecoded using [Claude Code](https://claude.ai/claude-code) (CLI).
 
 ## License
 
