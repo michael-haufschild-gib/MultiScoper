@@ -68,5 +68,9 @@ logs/
 godmode*.md
 market-readiness-*.md
 
+# AI agent instruction files (user-specific)
+GEMINI.md
+CLAUDE.md.example
+
 # Unity project build artifacts
 resources/unity/
