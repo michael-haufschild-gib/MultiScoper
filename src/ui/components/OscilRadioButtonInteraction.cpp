@@ -22,16 +22,7 @@ void OscilRadioButton::mouseUp(const juce::MouseEvent& e)
         {
             if (parentGroup_)
             {
-                // Let the group handle selection
-                int myIndex = -1;
-                for (int i = 0; i < parentGroup_->getNumOptions(); ++i)
-                {
-                    if (parentGroup_->getButton(i) == this)
-                    {
-                        myIndex = i;
-                        break;
-                    }
-                }
+                int myIndex = findOwnIndexInGroup();
                 if (myIndex >= 0)
                     parentGroup_->setSelectedIndex(myIndex);
             }
@@ -87,15 +78,7 @@ bool OscilRadioButton::keyPressed(const juce::KeyPress& key)
         {
             if (parentGroup_)
             {
-                int myIndex = -1;
-                for (int i = 0; i < parentGroup_->getNumOptions(); ++i)
-                {
-                    if (parentGroup_->getButton(i) == this)
-                    {
-                        myIndex = i;
-                        break;
-                    }
-                }
+                int myIndex = findOwnIndexInGroup();
                 if (myIndex >= 0)
                     parentGroup_->setSelectedIndex(myIndex);
             }
@@ -107,6 +90,19 @@ bool OscilRadioButton::keyPressed(const juce::KeyPress& key)
         return true;
     }
     return false;
+}
+
+int OscilRadioButton::findOwnIndexInGroup() const
+{
+    if (!parentGroup_)
+        return -1;
+
+    for (int i = 0; i < parentGroup_->getNumOptions(); ++i)
+    {
+        if (parentGroup_->getButton(i) == this)
+            return i;
+    }
+    return -1;
 }
 
 void OscilRadioButton::focusGained(FocusChangeType)

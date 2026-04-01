@@ -311,6 +311,19 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 {
     std::string elementId = req.matches[1];
 
+    // Apply track scope if specified
+    auto trackIt = req.params.find("trackId");
+    if (trackIt != req.params.end())
+    {
+        try
+        {
+            uiController_.setTrackScope(std::stoi(trackIt->second), &daw_);
+        }
+        catch (...)
+        {
+        }
+    }
+
     // Run on message thread — component queries (isVisible, isShowing,
     // getBounds) must only be called there to avoid data races.
     json info;
@@ -321,6 +334,7 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
         done.signal();
     });
     bool waited = done.wait(3000);
+    uiController_.clearTrackScope();
 
     if (!waited)
     {

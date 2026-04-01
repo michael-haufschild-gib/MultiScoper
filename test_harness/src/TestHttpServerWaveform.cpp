@@ -21,7 +21,7 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");
@@ -107,11 +107,11 @@ json buildWaveformJson(const Oscillator& osc, OscilPluginProcessor& processor, i
 
 } // anonymous namespace
 
-void TestHttpServer::handleWaveformState(const httplib::Request&, httplib::Response& res)
+void TestHttpServer::handleWaveformState(const httplib::Request& req, httplib::Response& res)
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");

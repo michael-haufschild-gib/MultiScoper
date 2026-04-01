@@ -21,12 +21,6 @@ LayoutCoordinator::~LayoutCoordinator()
     layout_.removeListener(this);
 }
 
-void LayoutCoordinator::windowSizeChanged(int /*width*/, int /*height*/)
-{
-    // Window size is managed by JUCE, this is primarily for state persistence
-    // No action needed here
-}
-
 void LayoutCoordinator::sidebarWidthChanged(int /*width*/)
 {
     if (onLayoutChanged_)

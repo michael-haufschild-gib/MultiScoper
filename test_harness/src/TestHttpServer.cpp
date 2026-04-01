@@ -108,6 +108,7 @@ void TestHttpServer::setupRoutes()
 
     setupTransportRoutes();
     setupTrackRoutes();
+    setupInstanceRoutes();
     setupUIMouseRoutes();
     setupUIKeyboardRoutes();
     setupVerificationRoutes();
@@ -142,7 +143,119 @@ void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& re
     data["status"] = "ok";
     data["running"] = daw_.isRunning();
     data["tracks"] = daw_.getNumTracks();
+    data["sources"] = static_cast<int>(PluginFactory::getInstance().getInstanceRegistry().getSourceCount());
     res.set_content(successResponse(data).dump(), "application/json");
+}
+
+// ================== Track Resolver ==================
+
+TestTrack* TestHttpServer::resolveTrack(const httplib::Request& req)
+{
+    auto it = req.params.find("trackId");
+    if (it != req.params.end())
+    {
+        try
+        {
+            int id = std::stoi(it->second);
+            if (auto* t = daw_.getTrack(id))
+                return t;
+        }
+        catch (...)
+        {
+        }
+    }
+    return daw_.getTrack(0);
+}
+
+TestTrack* TestHttpServer::resolveTrackFromBody(const json& body)
+{
+    int id = body.value("trackId", 0);
+    if (auto* t = daw_.getTrack(id))
+        return t;
+    return daw_.getTrack(0);
+}
+
+// ================== Instance Routes ==================
+
+void TestHttpServer::setupInstanceRoutes()
+{
+    server_->Post("/daw/track/add",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleDawTrackAdd(req, res); });
+    server_->Post("/daw/track/remove",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleDawTrackRemove(req, res); });
+    server_->Get("/daw/tracks",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleDawTracks(req, res); });
+}
+
+void TestHttpServer::handleDawTrackAdd(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto body = json::parse(req.body);
+        std::string name = body.value("name", "");
+
+        int index = daw_.addTrack(juce::String(name));
+        auto* track = daw_.getTrack(index);
+
+        json data;
+        data["trackIndex"] = index;
+        data["name"] = track ? track->getName().toStdString() : "";
+        data["sourceId"] = track ? track->getSourceId().id.toStdString() : "";
+        res.set_content(successResponse(data).dump(), "application/json");
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleDawTrackRemove(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        auto body = json::parse(req.body);
+        int trackIndex = body.value("trackIndex", -1);
+
+        if (trackIndex < 0)
+        {
+            res.set_content(errorResponse("trackIndex is required").dump(), "application/json");
+            return;
+        }
+
+        if (daw_.removeTrack(trackIndex))
+        {
+            json data;
+            data["trackIndex"] = trackIndex;
+            res.set_content(successResponse(data).dump(), "application/json");
+        }
+        else
+        {
+            res.set_content(errorResponse("Track not found: " + std::to_string(trackIndex)).dump(), "application/json");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+    }
+}
+
+void TestHttpServer::handleDawTracks(const httplib::Request&, httplib::Response& res)
+{
+    json tracks = json::array();
+    for (int i = 0; i < daw_.getNumTracks(); ++i)
+    {
+        auto* track = daw_.getTrack(i);
+        if (track == nullptr)
+            continue;
+
+        json t;
+        t["index"] = track->getTrackIndex();
+        t["name"] = track->getName().toStdString();
+        t["sourceId"] = track->getSourceId().id.toStdString();
+        t["editorVisible"] = track->isEditorVisible();
+        tracks.push_back(t);
+    }
+    res.set_content(successResponse(tracks).dump(), "application/json");
 }
 
 } // namespace oscil::test

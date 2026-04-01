@@ -137,10 +137,10 @@ void TestHttpServer::setupStateRoutes()
                   [this](const httplib::Request& req, httplib::Response& res) { handleOscillatorMove(req, res); });
 }
 
-void TestHttpServer::handleStateReset(const httplib::Request&, httplib::Response& res)
+void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Response& res)
 {
     juce::Logger::writeToLog("[Harness] State reset requested");
-    auto* track = daw_.getTrack(0);
+    auto* track = resolveTrack(req);
     if (track)
     {
         // Block until message thread completes the removal to prevent race
@@ -211,7 +211,7 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
         auto body = json::parse(req.body);
         std::string path = body.value("path", "/tmp/state.xml");
 
-        if (auto* track = daw_.getTrack(0))
+        if (auto* track = resolveTrack(req))
         {
             juce::String xml = track->getProcessor().getState().toXmlString();
             juce::File(path).replaceWithText(xml);
@@ -243,7 +243,7 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         }
 
         juce::String xml = file.loadFileAsString();
-        if (auto* track = daw_.getTrack(0))
+        if (auto* track = resolveTrack(req))
         {
             (void) track->getProcessor().getState().fromXmlString(xml);
             res.set_content(successResponse().dump(), "application/json");
@@ -259,11 +259,11 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
     }
 }
 
-void TestHttpServer::handleStateOscillators(const httplib::Request&, httplib::Response& res)
+void TestHttpServer::handleStateOscillators(const httplib::Request& req, httplib::Response& res)
 {
     json oscillators = json::array();
 
-    if (auto* track = daw_.getTrack(0))
+    if (auto* track = resolveTrack(req))
     {
         auto& state = track->getProcessor().getState();
         auto oscList = state.getOscillators();
@@ -282,7 +282,7 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");
@@ -331,7 +331,7 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");
@@ -391,7 +391,7 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");
@@ -429,11 +429,11 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
     }
 }
 
-void TestHttpServer::handleStatePanes(const httplib::Request&, httplib::Response& res)
+void TestHttpServer::handleStatePanes(const httplib::Request& req, httplib::Response& res)
 {
     json panes = json::array();
 
-    if (auto* track = daw_.getTrack(0))
+    if (auto* track = resolveTrack(req))
     {
         auto& layoutManager = track->getProcessor().getState().getLayoutManager();
 

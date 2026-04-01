@@ -25,9 +25,9 @@ namespace oscil
  */
 struct MemoryBudget
 {
-    size_t totalBudgetBytes = 50 * 1024 * 1024; // 50 MB default total budget
-    size_t perTrackMinBytes = 100 * 1024;       // 100 KB minimum per track
-    size_t perTrackMaxBytes = 2 * 1024 * 1024;  // 2 MB maximum per track
+    size_t totalBudgetBytes = size_t{50} * 1024 * 1024; // 50 MB default total budget
+    size_t perTrackMinBytes = size_t{100} * 1024;       // 100 KB minimum per track
+    size_t perTrackMaxBytes = size_t{2} * 1024 * 1024;  // 2 MB maximum per track
 
     /**
      * Calculate optimal per-track budget based on track count
@@ -52,7 +52,8 @@ struct MemoryBudget
         // Calculate required bytes for each quality level at given duration
         // Formula: captureRate * duration * 2 channels * 4 bytes per sample
         auto bytesRequired = [bufferDurationSec](int captureRate) -> size_t {
-            return static_cast<size_t>(captureRate * bufferDurationSec * 2 * sizeof(float));
+            return static_cast<size_t>(static_cast<float>(captureRate) * bufferDurationSec * 2.0f *
+                                       static_cast<float>(sizeof(float)));
         };
 
         // Find highest quality that fits in budget
@@ -148,7 +149,7 @@ struct CaptureQualityConfig
     [[nodiscard]] size_t calculateBufferSizeSamples(int captureRate) const
     {
         float durationSec = bufferDurationToSeconds(bufferDuration);
-        return static_cast<size_t>(captureRate * durationSec);
+        return static_cast<size_t>(static_cast<float>(captureRate) * durationSec);
     }
 
     /**
@@ -159,7 +160,7 @@ struct CaptureQualityConfig
      */
     [[nodiscard]] static size_t calculateBufferSizeForDuration(int captureRate, float durationMs)
     {
-        return static_cast<size_t>((captureRate * durationMs) / 1000.0f);
+        return static_cast<size_t>((static_cast<float>(captureRate) * durationMs) / 1000.0f);
     }
 
     /**
@@ -201,7 +202,8 @@ struct CaptureQualityConfig
         juce::ValueTree tree("CaptureQuality");
         tree.setProperty("qualityPreset", qualityPresetToString(qualityPreset), nullptr);
         tree.setProperty("bufferDuration", bufferDurationToString(bufferDuration), nullptr);
-        tree.setProperty("totalBudgetMB", static_cast<int>(memoryBudget.totalBudgetBytes / (1024 * 1024)), nullptr);
+        tree.setProperty("totalBudgetMB", static_cast<int>(memoryBudget.totalBudgetBytes / (size_t{1024} * 1024)),
+                         nullptr);
         tree.setProperty("autoAdjustQuality", autoAdjustQuality, nullptr);
         return tree;
     }
@@ -236,6 +238,28 @@ struct CaptureQualityConfig
 
     bool operator!=(const CaptureQualityConfig& other) const { return !(*this == other); }
 };
+
+//==============================================================================
+// Formatting Utilities
+//==============================================================================
+
+/**
+ * Format a byte count as a human-readable string (e.g., "1.2 MB", "512 KB", "64 B").
+ */
+inline juce::String formatBytes(size_t bytes)
+{
+    if (bytes >= size_t{1024} * 1024)
+    {
+        float mb = static_cast<float>(bytes) / (1024.0f * 1024.0f);
+        return juce::String(mb, 1) + " MB";
+    }
+    if (bytes >= 1024)
+    {
+        float kb = static_cast<float>(bytes) / 1024.0f;
+        return juce::String(kb, 0) + " KB";
+    }
+    return juce::String(bytes) + " B";
+}
 
 } // namespace oscil
 

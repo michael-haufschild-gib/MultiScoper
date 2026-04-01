@@ -74,20 +74,6 @@ nlohmann::json runReorderTest(OscilState& state, OscilPluginEditor& editor, cons
     return test;
 }
 
-void countPassedTests(const nlohmann::json& tests, nlohmann::json& response)
-{
-    int passedCount = 0;
-    for (const auto& test : tests)
-        if (test["passed"].get<bool>())
-            passedCount++;
-
-    response["tests"] = tests;
-    response["totalTests"] = static_cast<int>(tests.size());
-    response["passed"] = passedCount;
-    response["failed"] = static_cast<int>(tests.size()) - passedCount;
-    response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-}
-
 nlohmann::json runSequentialIndexTest(OscilState& state)
 {
     nlohmann::json test;
@@ -149,7 +135,7 @@ void OscillatorHandler::handleTestOscillatorReorder(const httplib::Request&, htt
         tests.push_back(runSequentialIndexTest(state));
         tests.push_back(runSameIndexNoOpTest(state, editor_));
 
-        countPassedTests(tests, response);
+        TestServerHandlerBase::countTestResults(tests, response);
         return response;
     });
 

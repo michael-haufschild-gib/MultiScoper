@@ -17,10 +17,10 @@ namespace oscil
 #define RE_LOG_THROTTLED(interval_frames, msg) \
     do                                         \
     {                                          \
-        static int _log_counter = 0;           \
-        if (++_log_counter >= interval_frames) \
+        static int reLogCounter = 0;           \
+        if (++reLogCounter >= interval_frames) \
         {                                      \
-            _log_counter = 0;                  \
+            reLogCounter = 0;                  \
             RE_LOG(msg);                       \
         }                                      \
     }                                          \

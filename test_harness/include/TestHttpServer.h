@@ -161,9 +161,19 @@ private:
     // Route handlers - Diagnostic
     void handleDiagnosticSnapshot(const httplib::Request& req, httplib::Response& res);
 
+    // Route handlers - Instance/Multi-track
+    void setupInstanceRoutes();
+    void handleDawTrackAdd(const httplib::Request& req, httplib::Response& res);
+    void handleDawTrackRemove(const httplib::Request& req, httplib::Response& res);
+    void handleDawTracks(const httplib::Request& req, httplib::Response& res);
+
     // Reset helpers
     void resetAudioAndTransport();
     void resetOptionsControls();
+
+    // Track resolver — extracts trackId from GET query param or POST body, defaults to 0
+    TestTrack* resolveTrack(const httplib::Request& req);
+    TestTrack* resolveTrackFromBody(const json& body);
 
     // Health check
     void handleHealth(const httplib::Request& req, httplib::Response& res);

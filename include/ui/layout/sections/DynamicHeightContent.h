@@ -32,7 +32,9 @@ public:
     virtual int getPreferredHeight() const = 0;
 
     /**
-     * Callback set by parent OscilAccordionSection to receive height change notifications
+     * Callback set by parent OscilAccordionSection to receive height change notifications.
+     * Single-writer contract: only the owning OscilAccordionSection may set/clear this.
+     * Implementations call this when their preferred height changes (e.g., mode switch).
      */
     std::function<void()> onPreferredHeightChanged;
 };

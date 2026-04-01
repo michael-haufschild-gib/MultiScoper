@@ -33,6 +33,4 @@ void OscilDropdownPopup::ensureItemVisible(int index)
         viewport_->setViewPosition(viewport_->getViewPositionX(), itemY + ITEM_HEIGHT - viewH);
 }
 
-int OscilDropdownPopup::getItemAtPosition(juce::Point<int>) const { return -1; }
-
 } // namespace oscil

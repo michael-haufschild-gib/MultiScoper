@@ -45,7 +45,8 @@ Framebuffer* EffectChain::process(juce::OpenGLContext& context, Framebuffer* sou
 
         if (!dest || !dest->isValid())
         {
-            // Should not happen if pool is working
+            jassertfalse; // Pool FBO invalid — indicates FramebufferPool setup failure
+            DBG("EffectChain: dest FBO null/invalid for effect '" << step.effectId << "' — skipping");
             continue;
         }
 

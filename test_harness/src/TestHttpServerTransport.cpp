@@ -73,7 +73,7 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
 
         // Update both host BPM and internal BPM on the timing engine,
         // then force processBlock + refreshPanels to recalculate displaySamples.
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (track)
         {
             juce::WaitableEvent done;

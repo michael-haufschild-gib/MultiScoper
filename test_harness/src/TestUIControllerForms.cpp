@@ -9,6 +9,7 @@
 #include "ui/components/OscilTextField.h"
 #include "ui/components/OscilToggle.h"
 
+#include "TestDAW.h"
 #include "TestUIController.h"
 
 namespace oscil::test
@@ -18,7 +19,7 @@ namespace oscil::test
 
 bool TestUIController::select(const juce::String& elementId, int itemId)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
@@ -33,7 +34,7 @@ bool TestUIController::select(const juce::String& elementId, int itemId)
 
 bool TestUIController::selectByText(const juce::String& elementId, const juce::String& text)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
@@ -48,7 +49,7 @@ bool TestUIController::selectByText(const juce::String& elementId, const juce::S
 
 bool TestUIController::selectById(const juce::String& elementId, const juce::String& itemId)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
@@ -91,7 +92,7 @@ bool TestUIController::selectById(const juce::String& elementId, const juce::Str
 
 bool TestUIController::toggle(const juce::String& elementId, bool value)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
@@ -125,7 +126,7 @@ bool TestUIController::toggle(const juce::String& elementId, bool value)
 
 bool TestUIController::setSliderValue(const juce::String& elementId, double value)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
@@ -164,7 +165,7 @@ bool TestUIController::setSliderValue(const juce::String& elementId, double valu
 
 bool TestUIController::incrementSlider(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
@@ -199,7 +200,7 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
 
 bool TestUIController::decrementSlider(const juce::String& elementId)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 
@@ -240,7 +241,7 @@ bool TestUIController::resetSliderToDefault(const juce::String& elementId)
 
 bool TestUIController::typeText(const juce::String& elementId, const juce::String& text)
 {
-    auto* component = TestElementRegistry::getInstance().findValidElement(elementId);
+    auto* component = getTargetComponent(elementId);
     if (component == nullptr)
         return false;
 

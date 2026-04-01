@@ -1,8 +1,8 @@
 {
-  "version": 6,
+  "version": 8,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 25,
+    "minor": 31,
     "patch": 0
   },
   "configurePresets": [
@@ -141,36 +141,49 @@
   ],
   "buildPresets": [
     {
+      "name": "jobs-cap",
+      "hidden": true,
+      "jobs": 4
+    },
+    {
       "name": "dev",
-      "configurePreset": "dev"
+      "configurePreset": "dev",
+      "inherits": "jobs-cap"
     },
     {
       "name": "dev-release",
-      "configurePreset": "dev-release"
+      "configurePreset": "dev-release",
+      "inherits": "jobs-cap"
     },
     {
       "name": "release",
-      "configurePreset": "release"
+      "configurePreset": "release",
+      "inherits": "jobs-cap"
     },
     {
       "name": "ci",
-      "configurePreset": "ci"
+      "configurePreset": "ci",
+      "inherits": "jobs-cap"
     },
     {
       "name": "ci-macos",
-      "configurePreset": "ci-macos"
+      "configurePreset": "ci-macos",
+      "inherits": "jobs-cap"
     },
     {
       "name": "ci-linux",
-      "configurePreset": "ci-linux"
+      "configurePreset": "ci-linux",
+      "inherits": "jobs-cap"
     },
     {
       "name": "ci-windows",
-      "configurePreset": "ci-windows"
+      "configurePreset": "ci-windows",
+      "inherits": "jobs-cap"
     },
     {
       "name": "coverage",
-      "configurePreset": "coverage"
+      "configurePreset": "coverage",
+      "inherits": "jobs-cap"
     }
   ],
   "testPresets": [

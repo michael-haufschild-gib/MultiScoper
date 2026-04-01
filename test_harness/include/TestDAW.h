@@ -73,6 +73,19 @@ public:
     std::vector<TestTrack*> getTracks();
 
     /**
+     * Add a new track at runtime.
+     * Returns the track index.
+     */
+    int addTrack(const juce::String& name = {});
+
+    /**
+     * Remove a track at runtime.
+     * Hides editor, nulls out the slot (indices remain stable).
+     * Returns true if track existed and was removed.
+     */
+    bool removeTrack(int trackIndex);
+
+    /**
      * Show editor for a specific track (0-based index)
      * Returns the main/first track's editor by default
      */

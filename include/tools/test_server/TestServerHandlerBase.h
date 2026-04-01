@@ -95,6 +95,24 @@ protected:
         res.set_content(json.dump(), "application/json");
     }
 
+    /**
+     * Summarize test results into a response: totalTests, passed, failed, allPassed.
+     */
+    static void countTestResults(const nlohmann::json& tests, nlohmann::json& response)
+    {
+        int passedCount = 0;
+        for (const auto& test : tests)
+        {
+            if (test["passed"].get<bool>())
+                passedCount++;
+        }
+        response["tests"] = tests;
+        response["totalTests"] = static_cast<int>(tests.size());
+        response["passed"] = passedCount;
+        response["failed"] = static_cast<int>(tests.size()) - passedCount;
+        response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
+    }
+
     OscilPluginEditor& editor_;
 };
 

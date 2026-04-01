@@ -17,20 +17,6 @@ namespace oscil
 
 namespace
 {
-void countPassed(const nlohmann::json& tests, nlohmann::json& response)
-{
-    int passedCount = 0;
-    for (const auto& test : tests)
-    {
-        if (test["passed"].get<bool>())
-            passedCount++;
-    }
-    response["tests"] = tests;
-    response["totalTests"] = static_cast<int>(tests.size());
-    response["passed"] = passedCount;
-    response["failed"] = static_cast<int>(tests.size()) - passedCount;
-    response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-}
 nlohmann::json testSingleColumnLayout(OscilState& state, OscilPluginEditor& editor, PaneLayoutManager& layoutManager,
                                       const juce::Rectangle<int>& availableArea)
 {
@@ -166,7 +152,7 @@ void TestRunnerHandler::handleRunLayoutTest(const httplib::Request& /*req*/, htt
         for (const auto& id : addedPaneIds)
             layoutManager.removePane(id);
 
-        countPassed(tests, response);
+        TestServerHandlerBase::countTestResults(tests, response);
         return response;
     });
 
@@ -217,7 +203,7 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
 
         tests.push_back(testScreenshotGeneration(editor_));
 
-        countPassed(tests, response);
+        TestServerHandlerBase::countTestResults(tests, response);
         return response;
     });
 

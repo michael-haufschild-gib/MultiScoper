@@ -39,7 +39,7 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");
@@ -81,7 +81,7 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");
@@ -127,7 +127,7 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");

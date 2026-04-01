@@ -67,21 +67,6 @@ CaptureFrameMetadata testMetadata(int numSamples)
     return m;
 }
 
-void countPassed(const nlohmann::json& tests, nlohmann::json& response)
-{
-    int passedCount = 0;
-    for (const auto& test : tests)
-    {
-        if (test["passed"].get<bool>())
-            passedCount++;
-    }
-    response["tests"] = tests;
-    response["totalTests"] = static_cast<int>(tests.size());
-    response["passed"] = passedCount;
-    response["failed"] = static_cast<int>(tests.size()) - passedCount;
-    response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-}
-
 WaveformComponent* getFirstWaveform(const OscilPluginEditor& editor)
 {
     const auto& panes = editor.getPaneComponents();
@@ -217,7 +202,7 @@ void TestRunnerHandler::handleRunWaveformTest(const httplib::Request& /*req*/, h
         tests.push_back(testSilenceRendering(captureBuffer, editor_));
         tests.push_back(testHighAmplitudeRendering(captureBuffer, editor_));
 
-        countPassed(tests, response);
+        TestServerHandlerBase::countTestResults(tests, response);
         return response;
     });
 
@@ -258,7 +243,7 @@ void TestRunnerHandler::handleRunSettingsTest(const httplib::Request& /*req*/, h
         tests.push_back(testGainAdjustment(pane, waveform, editor_));
         tests.push_back(testColumnLayoutChange(state, editor_));
 
-        countPassed(tests, response);
+        TestServerHandlerBase::countTestResults(tests, response);
         return response;
     });
 

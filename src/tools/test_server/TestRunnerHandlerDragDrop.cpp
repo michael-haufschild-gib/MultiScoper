@@ -34,20 +34,6 @@ PaneId findPaneInColumn(const std::vector<Pane>& panes, int column)
     return PaneId::invalid();
 }
 
-void countPassed(const nlohmann::json& tests, nlohmann::json& response)
-{
-    int passedCount = 0;
-    for (const auto& test : tests)
-    {
-        if (test["passed"].get<bool>())
-            passedCount++;
-    }
-    response["tests"] = tests;
-    response["totalTests"] = static_cast<int>(tests.size());
-    response["passed"] = passedCount;
-    response["failed"] = static_cast<int>(tests.size()) - passedCount;
-    response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
-}
 nlohmann::json testMovePaneForward(PaneLayoutManager& layoutManager, OscilPluginEditor& editor)
 {
     nlohmann::json test;
@@ -197,7 +183,7 @@ void TestRunnerHandler::handleRunDragDropTest(const httplib::Request& /*req*/, h
         tests.push_back(testCrossColumnMove1to0(layoutManager, editor_));
         tests.push_back(testThreeColumnCrossMove(state, layoutManager, editor_));
 
-        countPassed(tests, response);
+        TestServerHandlerBase::countTestResults(tests, response);
         return response;
     });
 

@@ -47,7 +47,7 @@ struct SeqLock
         for (;;)
         {
             uint32_t seq1 = sequence_.load(std::memory_order_acquire);
-            if (seq1 & 1)
+            if ((seq1 & 1) != 0u)
             {
                 std::this_thread::yield();
                 continue;

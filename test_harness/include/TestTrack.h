@@ -87,6 +87,11 @@ public:
      */
     juce::AudioProcessorEditor* getEditor() { return editor_.get(); }
 
+    /**
+     * Get the editor window (may be null)
+     */
+    juce::DocumentWindow* getEditorWindow() { return editorWindow_.get(); }
+
     // AudioPlayHead implementation
     juce::Optional<juce::AudioPlayHead::PositionInfo> getPosition() const override;
 

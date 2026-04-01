@@ -5,6 +5,7 @@
 #include "ui/managers/PerformanceMetricsController.h"
 
 #include "core/OscilState.h"
+#include "core/dsp/CaptureQualityConfig.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 
@@ -49,13 +50,17 @@ void PerformanceMetricsController::update()
     // Update non-FPS metrics every tick to avoid visible lag after state changes.
     statusBar_.setCpuUsage(dataProvider_.getCpuUsage());
 
-    // Memory usage - estimate based on capture buffer and oscillators.
+    // Memory usage — computed from capture quality config and source count.
+    // Each source gets one DecimatingCaptureBuffer sized per the quality config.
+    auto captureConfig = dataProvider_.getState().getCaptureQualityConfig();
+    size_t perBufferBytes = captureConfig.calculateMemoryUsageBytes(static_cast<int>(dataProvider_.getSampleRate()));
     size_t sourceCount = instanceRegistry_.getSourceCount();
-    size_t oscillatorCount = dataProvider_.getState().getOscillators().size();
-    float memoryMB = 0.5f * static_cast<float>(sourceCount) + 0.1f * static_cast<float>(oscillatorCount) + 5.0f;
+    size_t totalBytes = perBufferBytes * sourceCount;
+    float memoryMB = static_cast<float>(totalBytes) / (1024.0f * 1024.0f);
     statusBar_.setMemoryUsage(memoryMB);
 
     // Oscillator and source counts.
+    size_t oscillatorCount = dataProvider_.getState().getOscillators().size();
     statusBar_.setOscillatorCount(static_cast<int>(oscillatorCount));
     statusBar_.setSourceCount(static_cast<int>(sourceCount));
 
