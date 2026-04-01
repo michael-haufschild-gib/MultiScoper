@@ -644,3 +644,113 @@ class OscilTestClient:
         """Move a pane from one position to another. Returns True on success."""
         resp = self._post_json("/pane/move", {"fromIndex": from_index, "toIndex": to_index})
         return resp is not None and resp.get("status") == "ok"
+
+    # ── Multi-instance / Track lifecycle ──────────────────────────
+
+    def get_tracks(self) -> List[Dict]:
+        """Get all tracks with indices, names, sourceIds, and editor state."""
+        resp = self._get_json("/daw/tracks")
+        if resp and resp.get("success"):
+            data = resp.get("data", [])
+            return data if isinstance(data, list) else []
+        return []
+
+    def add_track(self, name: str = "") -> Optional[Dict]:
+        """Add a new track at runtime. Returns {trackIndex, sourceId, name}."""
+        resp = self._post_json("/daw/track/add", {"name": name})
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
+
+    def remove_track(self, track_index: int) -> bool:
+        """Remove a track at runtime."""
+        return self._post_ok("/daw/track/remove", {"trackIndex": track_index})
+
+    # ── Track-scoped state ───────────────────────────────────────
+
+    def get_oscillators_for_track(self, track_id: int) -> List[Dict]:
+        """Get oscillators for a specific track's plugin instance."""
+        resp = self._get_json(f"/state/oscillators?trackId={track_id}")
+        if resp and resp.get("success"):
+            data = resp.get("data", [])
+            return data if isinstance(data, list) else []
+        return []
+
+    def add_oscillator_to_track(
+        self,
+        track_id: int,
+        source_id: str,
+        *,
+        name: str = "Test Oscillator",
+        colour: str = "",
+        mode: str = "FullStereo",
+    ) -> Optional[str]:
+        """Add oscillator to a specific track's plugin instance."""
+        payload: Dict[str, Any] = {
+            "sourceId": source_id, "name": name, "mode": mode, "trackId": track_id,
+        }
+        if colour:
+            payload["colour"] = colour
+        resp = self._post_json("/state/oscillator/add", payload)
+        if resp and resp.get("success"):
+            return resp.get("data", {}).get("id")
+        return None
+
+    def reset_track_state(self, track_id: int) -> bool:
+        """Reset state for a specific track's plugin instance."""
+        return self._post_ok("/state/reset", {"trackId": track_id})
+
+    def get_panes_for_track(self, track_id: int) -> List[Dict]:
+        """Get panes for a specific track's plugin instance."""
+        resp = self._get_json(f"/state/panes?trackId={track_id}")
+        if resp and resp.get("success"):
+            data = resp.get("data", [])
+            return data if isinstance(data, list) else []
+        return []
+
+    def get_waveform_state_for_track(self, track_id: int) -> Optional[Dict]:
+        """Get waveform state for a specific track's plugin instance."""
+        resp = self._get_json(f"/waveform/state?trackId={track_id}")
+        if resp:
+            return resp.get("data", resp)
+        return None
+
+    # ── Track-scoped UI interaction ──────────────────────────────
+
+    def click_on_track(self, element_id: str, track_id: int) -> bool:
+        """Click an element scoped to a specific track's editor."""
+        return self._post_ok("/ui/click", {"elementId": element_id, "trackId": track_id})
+
+    def get_element_for_track(self, element_id: str, track_id: int) -> Optional[ElementInfo]:
+        """Get element info scoped to a specific track's editor."""
+        try:
+            r = self._get(f"/ui/element/{element_id}?trackId={track_id}")
+        except requests.exceptions.ConnectionError:
+            return None
+        if r.status_code == 200:
+            resp = r.json()
+            if resp.get("success"):
+                return ElementInfo.from_response(element_id, resp.get("data", {}))
+        return None
+
+    def element_exists_on_track(self, element_id: str, track_id: int) -> bool:
+        """Check if an element exists in a specific track's editor."""
+        return self.get_element_for_track(element_id, track_id) is not None
+
+    # ── Cross-instance queries ───────────────────────────────────
+
+    def get_source_for_track(self, track_id: int) -> Optional[str]:
+        """Get the source ID registered by a specific track."""
+        info = self.get_track_info(track_id)
+        if info:
+            return info.get("sourceId")
+        return None
+
+    def wait_for_source_count(self, expected: int, timeout_s: float = 5.0) -> List[Dict]:
+        """Wait until the global source count reaches expected."""
+        def check():
+            sources = self.get_sources()
+            return sources if len(sources) == expected else None
+        return self.wait_until(
+            check, timeout_s=timeout_s, desc=f"source count to be {expected}",
+        )

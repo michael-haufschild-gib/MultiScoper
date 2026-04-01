@@ -61,10 +61,4 @@ void OscilAlertModal::show(IThemeService& themeService, const juce::String& titl
     res->modal->show();
 }
 
-void OscilAlertModal::confirm([[maybe_unused]] IThemeService& themeService, [[maybe_unused]] const juce::String& title,
-                              [[maybe_unused]] const juce::String& message,
-                              [[maybe_unused]] std::function<void(bool)> onResult)
-{
-}
-
 } // namespace oscil

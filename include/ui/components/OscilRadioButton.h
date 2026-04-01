@@ -86,6 +86,7 @@ private:
 
     void timerCallback() override;
     void updateAnimations();
+    int findOwnIndexInGroup() const;
 
     // Rendering
     void paintCircle(juce::Graphics& g, const juce::Rectangle<float>& bounds);

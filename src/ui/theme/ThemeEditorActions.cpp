@@ -11,6 +11,7 @@ namespace oscil
 
 void ThemeEditorComponent::handleCreateTheme()
 {
+    // Raw new is intentional — JUCE's enterModalState(deleteWhenDismissed=true) takes ownership.
     auto* nameInput =
         new juce::AlertWindow("New Theme", "Enter a name for the new theme:", juce::MessageBoxIconType::QuestionIcon);
 
@@ -45,6 +46,7 @@ void ThemeEditorComponent::handleCloneTheme()
     if (selectedThemeName_.isEmpty())
         return;
 
+    // Raw new is intentional — JUCE's enterModalState(deleteWhenDismissed=true) takes ownership.
     auto* nameInput = new juce::AlertWindow(
         "Clone Theme", "Enter a name for the cloned theme:", juce::MessageBoxIconType::QuestionIcon);
 

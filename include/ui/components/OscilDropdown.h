@@ -81,7 +81,6 @@ private:
 
     void timerCallback() override;
     void updateFilteredItems();
-    int getItemAtPosition(juce::Point<int> pos) const;
     void ensureItemVisible(int index);
     void focusOnFirstSelected();
 

@@ -77,14 +77,15 @@ void LayoutHandler::handleGetPaneBounds(const httplib::Request& /*req*/, httplib
         nlohmann::json response;
         auto& layoutManager = editor_.getProcessor().getState().getLayoutManager();
 
-        // Get available area (same as updateLayout uses)
+        // Approximate available area for pane layout.
+        // These constants must stay in sync with PluginEditorLayout.
+        // A future improvement would expose getContentArea() from the editor.
         auto editorBounds = editor_.getLocalBounds();
-        int toolbarHeight = 40;
-        int statusBarHeight = 24;
-        int sidebarWidth = 250; // Approximate
+        static constexpr int STATUS_BAR_HEIGHT = 24; // PluginEditorLayout::STATUS_BAR_HEIGHT
+        int sidebarWidth = 250;                      // Approximate (user-adjustable)
 
         int availableWidth = editorBounds.getWidth() - sidebarWidth;
-        int availableHeight = editorBounds.getHeight() - toolbarHeight - statusBarHeight;
+        int availableHeight = editorBounds.getHeight() - STATUS_BAR_HEIGHT;
 
         juce::Rectangle<int> availableArea(0, 0, availableWidth, availableHeight);
 

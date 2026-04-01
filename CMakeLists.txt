@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.31)
 
 # Enable C and CXX languages explicitly for JUCE
 project(Oscil VERSION 1.0.0 LANGUAGES C CXX OBJCXX)

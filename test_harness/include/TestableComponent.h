@@ -30,7 +30,7 @@ public:
         TestElementRegistry::getInstance().registerElement(testId_, &component_);
     }
 
-    ~TestRegistration() { TestElementRegistry::getInstance().unregisterElement(testId_); }
+    ~TestRegistration() { TestElementRegistry::getInstance().unregisterElement(testId_, &component_); }
 
     const juce::String& getTestId() const { return testId_; }
 

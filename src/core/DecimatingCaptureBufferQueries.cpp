@@ -1,6 +1,9 @@
 /*
     Oscil - Decimating Capture Buffer Read/Query Methods
-    All read, query, and utility operations that forward to the internal buffer
+    All read, query, and utility operations that forward to the internal buffer.
+
+    Every read method acquires the swap lock, snapshots the buffer shared_ptr,
+    then delegates. The withBuffer() helper eliminates this repeated pattern.
 */
 
 #include "core/DecimatingCaptureBuffer.h"
@@ -8,100 +11,70 @@
 namespace oscil
 {
 
-int DecimatingCaptureBuffer::read(float* output, int numSamples, int channel) const
+namespace
+{
+
+// Acquire the swap lock, snapshot the buffer, and invoke the callback.
+// Returns defaultValue when the buffer is null.
+template <typename Fn, typename T = std::invoke_result_t<Fn, SharedCaptureBuffer&>>
+T withBuffer(const std::shared_ptr<SharedCaptureBuffer>& buffer, juce::SpinLock& lock, T defaultValue, Fn&& fn)
 {
     std::shared_ptr<SharedCaptureBuffer> buf;
     {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
+        const juce::SpinLock::ScopedLockType sl(lock);
+        buf = buffer;
     }
     if (!buf)
-        return 0;
-    return buf->read(output, numSamples, channel);
+        return defaultValue;
+    return fn(*buf);
+}
+
+} // namespace
+
+int DecimatingCaptureBuffer::read(float* output, int numSamples, int channel) const
+{
+    return withBuffer(buffer_, bufferSwapLock_, 0,
+                      [=](SharedCaptureBuffer& buf) { return buf.read(output, numSamples, channel); });
 }
 
 int DecimatingCaptureBuffer::read(std::span<float> output, int channel) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->read(output, channel);
+    return withBuffer(buffer_, bufferSwapLock_, 0, [=](SharedCaptureBuffer& buf) { return buf.read(output, channel); });
 }
 
 int DecimatingCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->read(output, numSamples);
+    return withBuffer(buffer_, bufferSwapLock_, 0,
+                      [&](SharedCaptureBuffer& buf) { return buf.read(output, numSamples); });
 }
 
 CaptureFrameMetadata DecimatingCaptureBuffer::getLatestMetadata() const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return {};
-    return buf->getLatestMetadata();
+    return withBuffer(buffer_, bufferSwapLock_, CaptureFrameMetadata{},
+                      [](SharedCaptureBuffer& buf) { return buf.getLatestMetadata(); });
 }
 
 size_t DecimatingCaptureBuffer::getCapacity() const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->getCapacity();
+    return withBuffer(buffer_, bufferSwapLock_, size_t{0}, [](SharedCaptureBuffer& buf) { return buf.getCapacity(); });
 }
 
 size_t DecimatingCaptureBuffer::getAvailableSamples() const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0;
-    return buf->getAvailableSamples();
+    return withBuffer(buffer_, bufferSwapLock_, size_t{0},
+                      [](SharedCaptureBuffer& buf) { return buf.getAvailableSamples(); });
 }
 
 float DecimatingCaptureBuffer::getPeakLevel(int channel, int numSamples) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0.0f;
-    return buf->getPeakLevel(channel, numSamples);
+    return withBuffer(buffer_, bufferSwapLock_, 0.0f,
+                      [=](SharedCaptureBuffer& buf) { return buf.getPeakLevel(channel, numSamples); });
 }
 
 float DecimatingCaptureBuffer::getRMSLevel(int channel, int numSamples) const
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-    }
-    if (!buf)
-        return 0.0f;
-    return buf->getRMSLevel(channel, numSamples);
+    return withBuffer(buffer_, bufferSwapLock_, 0.0f,
+                      [=](SharedCaptureBuffer& buf) { return buf.getRMSLevel(channel, numSamples); });
 }
 
 size_t DecimatingCaptureBuffer::getMemoryUsageBytes() const
@@ -128,25 +101,7 @@ size_t DecimatingCaptureBuffer::getMemoryUsageBytes() const
     return total;
 }
 
-juce::String DecimatingCaptureBuffer::getMemoryUsageString() const
-{
-    size_t bytes = getMemoryUsageBytes();
-
-    if (bytes >= 1024 * 1024)
-    {
-        float mb = static_cast<float>(bytes) / (1024.0f * 1024.0f);
-        return juce::String(mb, 1) + " MB";
-    }
-    else if (bytes >= 1024)
-    {
-        float kb = static_cast<float>(bytes) / 1024.0f;
-        return juce::String(kb, 0) + " KB";
-    }
-    else
-    {
-        return juce::String(bytes) + " B";
-    }
-}
+juce::String DecimatingCaptureBuffer::getMemoryUsageString() const { return formatBytes(getMemoryUsageBytes()); }
 
 void DecimatingCaptureBuffer::clear()
 {

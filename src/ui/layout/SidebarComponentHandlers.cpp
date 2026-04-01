@@ -55,7 +55,8 @@ void SidebarComponent::oscillatorPaneSelectionRequested(const OscillatorId& id)
 
 void SidebarComponent::oscillatorNameChanged(const OscillatorId& id, const juce::String& newName)
 {
-    // Name changes are handled internally by OscillatorListComponent
+    // Not forwarded — SidebarComponent::Listener does not expose name changes.
+    // Name persistence is handled by OscillatorListComponent internally.
     juce::ignoreUnused(id, newName);
 }
 

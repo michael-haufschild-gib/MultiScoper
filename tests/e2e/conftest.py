@@ -430,3 +430,60 @@ def transport_ctrl(editor: OscilTestClient) -> TransportControl:
     return TransportControl(editor)
 
 
+# ---------------------------------------------------------------------------
+# Multi-instance fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def multi_editor(client: OscilTestClient):
+    """
+    Open editors for tracks 0 and 1, reset both states.
+    Yields client. Closes both editors on teardown.
+    """
+    client.open_editor(track_id=0)
+    client.open_editor(track_id=1)
+    client.reset_track_state(0)
+    client.reset_track_state(1)
+    client.wait_until(
+        lambda: len(client.get_oscillators_for_track(0)) == 0,
+        timeout_s=3.0,
+        desc="track 0 state reset",
+    )
+    client.wait_until(
+        lambda: len(client.get_oscillators_for_track(1)) == 0,
+        timeout_s=3.0,
+        desc="track 1 state reset",
+    )
+    yield client
+    client.close_editor(track_id=0)
+    client.close_editor(track_id=1)
+
+
+@pytest.fixture()
+def track_sources(multi_editor: OscilTestClient) -> dict:
+    """
+    Return a dict mapping track index to its source ID.
+    Requires multi_editor fixture (both editors open).
+    """
+    sources = {}
+    for track_id in (0, 1):
+        info = multi_editor.get_track_info(track_id)
+        assert info is not None, f"Track {track_id} info should be available"
+        sources[track_id] = info["sourceId"]
+    return sources
+
+
+@pytest.fixture()
+def three_track_sources(client: OscilTestClient) -> dict:
+    """
+    Return source IDs for all 3 default tracks.
+    Does not open editors.
+    """
+    sources = {}
+    for track_id in (0, 1, 2):
+        info = client.get_track_info(track_id)
+        assert info is not None, f"Track {track_id} info should be available"
+        sources[track_id] = info["sourceId"]
+    return sources
+
+

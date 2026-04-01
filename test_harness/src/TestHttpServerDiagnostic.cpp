@@ -256,11 +256,11 @@ json snapshotGUI(TestDAW& daw)
     return result;
 }
 
-void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request&, httplib::Response& res)
+void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httplib::Response& res)
 {
     try
     {
-        auto* track = daw_.getTrack(0);
+        auto* track = resolveTrack(req);
         if (!track)
         {
             res.set_content(errorResponse("No track available").dump(), "application/json");

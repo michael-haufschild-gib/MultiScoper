@@ -52,4 +52,54 @@ cleanup() {
 }
 trap cleanup EXIT
 
-exec "$REAL_NINJA" "$@"
+# Cap parallel jobs at 4 to prevent system overload (clang is memory-hungry).
+# This is enforced here so every build path (cmake --build, direct ninja) respects it.
+# Users can still lower with -j2, but never exceed 4.
+MAX_JOBS=4
+
+# Check if the user already passed -j (with or without space); if so, cap it
+HAS_J=false
+CAPPED_ARGS=()
+SKIP_NEXT=false
+ARGS=("$@")
+for (( i=0; i<${#ARGS[@]}; i++ )); do
+    arg="${ARGS[$i]}"
+
+    if [ "$SKIP_NEXT" = true ]; then
+        SKIP_NEXT=false
+        continue
+    fi
+
+    # -jN (no space)
+    if [[ "$arg" =~ ^-j([0-9]+)$ ]]; then
+        HAS_J=true
+        requested="${BASH_REMATCH[1]}"
+        if (( requested > MAX_JOBS )); then
+            CAPPED_ARGS+=("-j${MAX_JOBS}")
+        else
+            CAPPED_ARGS+=("$arg")
+        fi
+    # -j N (with space) — next arg is the count
+    elif [[ "$arg" == "-j" ]] && (( i+1 < ${#ARGS[@]} )) && [[ "${ARGS[$((i+1))]}" =~ ^[0-9]+$ ]]; then
+        HAS_J=true
+        requested="${ARGS[$((i+1))]}"
+        SKIP_NEXT=true
+        if (( requested > MAX_JOBS )); then
+            CAPPED_ARGS+=("-j${MAX_JOBS}")
+        else
+            CAPPED_ARGS+=("-j${requested}")
+        fi
+    # -t (tool mode) — pass through without adding -j
+    elif [[ "$arg" == "-t" ]]; then
+        # Tool mode: pass all remaining args verbatim, no -j injection
+        exec "$REAL_NINJA" "$@"
+    else
+        CAPPED_ARGS+=("$arg")
+    fi
+done
+
+if [ "$HAS_J" = false ]; then
+    CAPPED_ARGS+=("-j${MAX_JOBS}")
+fi
+
+exec "$REAL_NINJA" "${CAPPED_ARGS[@]}"

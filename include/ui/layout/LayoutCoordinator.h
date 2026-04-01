@@ -33,8 +33,6 @@ public:
      */
     ~LayoutCoordinator() override;
 
-    /// Respond to window resize by re-laying out panes (WindowLayout::Listener).
-    void windowSizeChanged(int width, int height) override;
     /// Respond to sidebar width drag (WindowLayout::Listener).
     void sidebarWidthChanged(int width) override;
     /// Respond to sidebar collapse toggle (WindowLayout::Listener).

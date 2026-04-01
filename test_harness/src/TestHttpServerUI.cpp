@@ -44,13 +44,20 @@ void TestHttpServer::handleUIClick(const httplib::Request& req, httplib::Respons
         auto body = json::parse(req.body);
         std::string elementId = body.value("elementId", "");
 
-        if (uiController_.click(elementId))
+        if (body.contains("trackId"))
+            uiController_.setTrackScope(body["trackId"].get<int>(), &daw_);
+
+        bool ok = uiController_.click(elementId);
+        uiController_.clearTrackScope();
+
+        if (ok)
             res.set_content(successResponse().dump(), "application/json");
         else
             res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
+        uiController_.clearTrackScope();
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
@@ -295,7 +302,7 @@ void TestHttpServer::handleUIDrag(const httplib::Request& req, httplib::Response
             int toIdx = std::stoi(to.substr(prefix.size()));
             if (fromIdx != toIdx)
             {
-                auto* track = daw_.getTrack(0);
+                auto* track = resolveTrack(req);
                 if (track)
                 {
                     juce::WaitableEvent done;

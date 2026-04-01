@@ -9,9 +9,13 @@
 
 #include <map>
 #include <mutex>
+#include <vector>
 
 namespace oscil::test
 {
+
+// Forward declaration for track-scoped element lookup
+class TestDAW;
 
 /**
  * Singleton registry that tracks UI components by test IDs.
@@ -41,7 +45,14 @@ public:
     void unregisterElement(const juce::String& testId);
 
     /**
+     * Unregister a specific component for a given test ID.
+     * Only removes the matching component, not all registrations for that ID.
+     */
+    void unregisterElement(const juce::String& testId, juce::Component* component);
+
+    /**
      * Find a component by test ID.
+     * Returns the first valid (live) component registered under this ID.
      * Returns nullptr if not registered or if the component has been destroyed.
      */
     juce::Component* findElement(const juce::String& testId);
@@ -53,6 +64,24 @@ public:
      * findElement() when the result will be used for rendering/interaction.
      */
     juce::Component* findValidElement(const juce::String& testId);
+
+    /**
+     * Find a component by test ID scoped to a specific track's editor window.
+     * Walks the component hierarchy to find the one whose ancestor is the
+     * editor window for the given track. Returns nullptr if not found.
+     */
+    juce::Component* findElementForTrack(const juce::String& testId, int trackIndex, TestDAW& daw);
+
+    /**
+     * Find a valid component scoped to a specific track's editor window.
+     * Combines findValidElement checks with track ancestry scoping.
+     */
+    juce::Component* findValidElementForTrack(const juce::String& testId, int trackIndex, TestDAW& daw);
+
+    /**
+     * Get all registered elements scoped to a specific track's editor window.
+     */
+    std::map<juce::String, juce::Component*> getAllElementsForTrack(int trackIndex, TestDAW& daw);
 
     /**
      * Get all registered elements (only returns live components)
@@ -88,8 +117,15 @@ private:
     TestElementRegistry() = default;
     ~TestElementRegistry() = default;
 
-    std::map<juce::String, juce::Component::SafePointer<juce::Component>> elements_;
+    // Multiple components can register under the same test ID (e.g., when
+    // two plugin editors are open simultaneously, both register "sidebar").
+    std::map<juce::String, std::vector<juce::Component::SafePointer<juce::Component>>> elements_;
     std::mutex mutex_;
+
+    // Internal helpers
+    void pruneStaleEntries(std::vector<juce::Component::SafePointer<juce::Component>>& entries);
+    juce::Component* findFirstValid(std::vector<juce::Component::SafePointer<juce::Component>>& entries);
+    bool isComponentInWindow(juce::Component* comp, juce::Component* window);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestElementRegistry)
 };

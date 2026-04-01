@@ -234,25 +234,7 @@ MemoryUsageSnapshot MemoryBudgetManager::getMemorySnapshot() const
     return snapshot;
 }
 
-juce::String MemoryBudgetManager::getTotalMemoryUsageString() const
-{
-    size_t bytes = getTotalMemoryUsage();
-
-    if (bytes >= 1024 * 1024)
-    {
-        float mb = static_cast<float>(bytes) / (1024.0f * 1024.0f);
-        return juce::String(mb, 1) + " MB";
-    }
-    else if (bytes >= 1024)
-    {
-        float kb = static_cast<float>(bytes) / 1024.0f;
-        return juce::String(kb, 0) + " KB";
-    }
-    else
-    {
-        return juce::String(bytes) + " B";
-    }
-}
+juce::String MemoryBudgetManager::getTotalMemoryUsageString() const { return formatBytes(getTotalMemoryUsage()); }
 
 bool MemoryBudgetManager::isOverBudget() const
 {

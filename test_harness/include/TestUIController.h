@@ -51,11 +51,26 @@ struct ScrollResult
  * Controls UI elements programmatically for automated testing.
  * All interactions are thread-safe and use the message thread.
  */
+// Forward declaration for track-scoped element lookup
+class TestDAW;
+
 class TestUIController
 {
 public:
     TestUIController() = default;
     ~TestUIController() = default;
+
+    /**
+     * Set track scope for element lookups.
+     * When set, getTargetComponent resolves elements within the specified
+     * track's editor window instead of using the global first-match.
+     */
+    void setTrackScope(int trackIndex, TestDAW* daw);
+
+    /**
+     * Clear track scope — revert to global element lookup.
+     */
+    void clearTrackScope();
 
     // ================== Mouse Interactions ==================
 
@@ -353,6 +368,10 @@ private:
     bool appendOscilTypeInfo(json& info, juce::Component* component);
     juce::Component* getTargetComponent(const juce::String& elementId);
     juce::Component* getCurrentFocusedComponent();
+
+    // Track scope for multi-instance element resolution
+    int trackScopeIndex_ = -1; // -1 = no scope (global)
+    TestDAW* trackScopeDaw_ = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestUIController)
 };

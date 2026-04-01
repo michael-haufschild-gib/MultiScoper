@@ -39,16 +39,25 @@ std::vector<PresetInfo> PresetManager::getAvailablePresets() const
     {
         auto xml = juce::XmlDocument::parse(file);
         if (xml == nullptr)
+        {
+            DBG("PresetManager: failed to parse preset file: " << file.getFullPathName());
             continue;
+        }
 
         auto tree = juce::ValueTree::fromXml(*xml);
         if (!tree.isValid() || tree.getType() != PRESET_WRAPPER_TYPE)
+        {
+            DBG("PresetManager: invalid preset format in: " << file.getFullPathName());
             continue;
+        }
 
         juce::String id = tree.getProperty("presetId", "");
         juce::String name = tree.getProperty("displayName", "");
         if (id.isEmpty())
+        {
+            DBG("PresetManager: preset missing presetId in: " << file.getFullPathName());
             continue;
+        }
 
         presets.push_back({id, name.isEmpty() ? id : name, false});
     }
@@ -73,7 +82,16 @@ VisualConfiguration PresetManager::loadPreset(const juce::String& presetId) cons
                 {
                     return VisualConfiguration::fromValueTree(configTree);
                 }
+                DBG("PresetManager::loadPreset: no VisualConfiguration child in: " << presetId);
             }
+            else
+            {
+                DBG("PresetManager::loadPreset: invalid wrapper in user preset: " << presetId);
+            }
+        }
+        else
+        {
+            DBG("PresetManager::loadPreset: XML parse failed for: " << file.getFullPathName());
         }
     }
 
@@ -97,10 +115,18 @@ bool PresetManager::saveUserPreset(const juce::String& name, const VisualConfigu
 
     auto xml = wrapper.createXml();
     if (xml == nullptr)
+    {
+        DBG("PresetManager::saveUserPreset: failed to create XML for: " << name);
         return false;
+    }
 
     auto file = getUserPresetFile(id);
-    return xml->writeTo(file);
+    if (!xml->writeTo(file))
+    {
+        DBG("PresetManager::saveUserPreset: failed to write: " << file.getFullPathName());
+        return false;
+    }
+    return true;
 }
 
 bool PresetManager::deleteUserPreset(const juce::String& presetId)
@@ -185,15 +211,24 @@ bool PresetManager::importPreset(const juce::File& source)
 
     auto xml = juce::XmlDocument::parse(source);
     if (xml == nullptr)
+    {
+        DBG("PresetManager::importPreset: XML parse failed for: " << source.getFullPathName());
         return false;
+    }
 
     auto wrapper = juce::ValueTree::fromXml(*xml);
     if (!wrapper.isValid() || wrapper.getType() != PRESET_WRAPPER_TYPE)
+    {
+        DBG("PresetManager::importPreset: invalid preset format in: " << source.getFullPathName());
         return false;
+    }
 
     juce::String id = wrapper.getProperty("presetId", "");
     if (id.isEmpty())
+    {
+        DBG("PresetManager::importPreset: missing presetId in: " << source.getFullPathName());
         return false;
+    }
 
     // Copy to user presets directory
     auto destFile = getUserPresetFile(id);

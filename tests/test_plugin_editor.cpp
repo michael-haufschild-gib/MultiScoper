@@ -280,25 +280,25 @@ TEST_F(PluginEditorTest, StatusBarOscillatorCountUpdatesPromptlyAfterAdd)
     EXPECT_EQ(parseCountLabel(countLabel->getText()), expectedCount);
 }
 
-TEST_F(PluginEditorTest, StatusBarMemoryUsageUpdatesPromptlyAfterAdd)
+TEST_F(PluginEditorTest, StatusBarMemoryUsageUpdatesPromptlyAfterQualityChange)
 {
     StatusBarComponent statusBar(processor->getThemeService());
     PerformanceMetricsController metricsController(*processor, processor->getInstanceRegistry(), statusBar);
-
     auto* memoryLabel = findMemoryUsageLabel(&statusBar);
     ASSERT_NE(memoryLabel, nullptr);
 
+    auto config = processor->getState().getCaptureQualityConfig();
+    config.qualityPreset = QualityPreset::Eco;
+    processor->getState().setCaptureQualityConfig(config);
     metricsController.update();
-    const auto initialMemoryText = memoryLabel->getText();
+    const auto ecoMemoryText = memoryLabel->getText();
 
-    Oscillator addedOscillator;
-    addedOscillator.setName("Memory increment");
-    processor->getState().addOscillator(addedOscillator);
-
+    config.qualityPreset = QualityPreset::High;
+    processor->getState().setCaptureQualityConfig(config);
     metricsController.update();
-    const auto updatedMemoryText = memoryLabel->getText();
+    const auto highMemoryText = memoryLabel->getText();
 
-    EXPECT_NE(updatedMemoryText, initialMemoryText);
+    EXPECT_NE(highMemoryText, ecoMemoryText);
 }
 
 TEST_F(PluginEditorTest, DenseSingleColumnLayoutMaintainsMinimumPaneHeight)
