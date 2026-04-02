@@ -391,7 +391,7 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
 
     int durationInt = qualityNode.getProperty(StateIds::BufferDuration, static_cast<int>(BufferDuration::Medium));
     config.bufferDuration =
-        static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
+        static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::VeryLong)));
 
     config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
 

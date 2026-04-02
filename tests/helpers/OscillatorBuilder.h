@@ -209,24 +209,21 @@ public:
     }
 
     /**
-     * Build and return a unique_ptr to the Oscillator
+     * Build and return a unique_ptr to the Oscillator.
+     *
+     * If withId() was called, the ID is applied via a ValueTree round-trip
+     * since Oscillator has no public ID setter (by design — IDs are immutable
+     * after creation in production code).
      */
     std::unique_ptr<Oscillator> buildUnique()
     {
         auto osc = std::make_unique<Oscillator>();
 
-        // Note: We can't directly set the ID after construction in the actual Oscillator class
-        // So we'll use the auto-generated ID. If specific ID is needed, tests should construct differently.
-
         if (name_.has_value())
-        {
             osc->setName(name_.value());
-        }
 
         if (sourceId_.has_value())
-        {
             osc->setSourceId(sourceId_.value());
-        }
 
         osc->setProcessingMode(processingMode_);
         osc->setColour(colour_);
@@ -235,8 +232,16 @@ public:
         osc->setOrderIndex(orderIndex_);
 
         if (paneId_.has_value())
-        {
             osc->setPaneId(paneId_.value());
+
+        // Apply custom ID via ValueTree if caller used withId().
+        // Production Oscillator IDs are immutable after construction, so
+        // we serialize → patch ID → deserialize to honour the test request.
+        if (id_ != osc->getId())
+        {
+            auto tree = osc->toValueTree();
+            tree.setProperty("id", id_.id, nullptr);
+            osc->fromValueTree(tree);
         }
 
         return osc;

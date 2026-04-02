@@ -32,15 +32,21 @@ double MagneticSnapController::applySnapping(double value, double minValue, doub
 {
     didSnap = false;
 
-    // If disabled, return value unchanged
+    // If disabled or range is degenerate, return value unchanged
     if (!enabled_)
     {
         justSnapped_ = false;
         return value;
     }
 
-    // Calculate snap threshold as percentage of range
     double range = maxValue - minValue;
+    if (range <= 0.0)
+    {
+        justSnapped_ = false;
+        return value;
+    }
+
+    // Calculate snap threshold as percentage of range
     double snapThreshold = range * SNAP_THRESHOLD_PERCENT;
 
     // Check each magnetic point

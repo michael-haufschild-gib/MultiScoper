@@ -16,8 +16,12 @@ namespace oscil
 {
 
 /**
- * Quality mode for rendering
- * PRD aligned with performance/quality tradeoff levels
+ * Quality mode for rendering frame rate and resolution.
+ * Controls target FPS and resolution scale factor.
+ *
+ * Related but distinct from:
+ * - QualityLevel (RenderCommon.h): controls which post-processing effects are active
+ * - QualityPreset (QualityPreset.h): controls audio capture sample rate
  */
 enum class QualityMode
 {

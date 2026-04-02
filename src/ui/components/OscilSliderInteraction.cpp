@@ -61,7 +61,8 @@ void OscilSlider::mouseDown(const juce::MouseEvent& e)
 
     if (variant_ == SliderVariant::Range)
     {
-        bool isVertical = variant_ == SliderVariant::Vertical;
+        // Range sliders are always horizontal — SliderVariant::Range and ::Vertical are mutually exclusive.
+        constexpr bool isVertical = false;
         float startThumbPos = getThumbPosition(false);
         float endThumbPos = getThumbPosition(true);
 

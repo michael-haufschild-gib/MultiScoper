@@ -299,6 +299,13 @@ bool BloomEffect::compile(juce::OpenGLContext& context)
     combineBloomLoc_ = combineShader_->getUniformIDFromName("bloomTexture");
     combineIntensityLoc_ = combineShader_->getUniformIDFromName("intensity");
 
+    if (combineOriginalLoc_ < 0 || combineBloomLoc_ < 0 || combineIntensityLoc_ < 0)
+    {
+        DBG("BloomEffect: Missing combine shader uniforms");
+        combineShader_.reset();
+        return false;
+    }
+
     compiled_ = true;
     return true;
 }

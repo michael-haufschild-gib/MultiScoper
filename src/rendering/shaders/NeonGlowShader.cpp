@@ -36,7 +36,16 @@ NeonGlowShader::NeonGlowShader()
 {
 }
 
-NeonGlowShader::~NeonGlowShader() = default;
+NeonGlowShader::~NeonGlowShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (gl_ && gl_->compiled)
+    {
+        jassertfalse;
+        DBG("[NeonGlowShader] LEAK DETECTED: Destructor called without release()");
+    }
+#endif
+}
 
 #if OSCIL_ENABLE_OPENGL
 bool NeonGlowShader::compile(juce::OpenGLContext& context)
@@ -64,6 +73,13 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
     gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
     gl_->geometryScaleLoc = gl_->program->getUniformIDFromName("geometryScale");
+
+    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0 || gl_->glowIntensityLoc < 0)
+    {
+        DBG("NeonGlowShader: Missing required uniforms");
+        gl_->program.reset();
+        return false;
+    }
 
     context.extensions.glGenVertexArrays(1, &gl_->vao);
     context.extensions.glGenBuffers(1, &gl_->vbo);

@@ -21,7 +21,6 @@ namespace oscil
 
 using namespace juce::gl;
 
-static constexpr bool DEBUG_RENDER_MODE = false;
 std::vector<WaveformRenderData> WaveformGLRenderer::collectWaveformsToRender()
 {
     std::vector<WaveformRenderData> result;
@@ -174,8 +173,11 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     setupDebugProjection(ext, projLoc, colorLoc, viewportWidth, viewportHeight, colour);
 
     glDisable(GL_DEPTH_TEST);
-    while (glGetError() != GL_NO_ERROR)
+    // Drain any pre-existing GL errors before debug draw
+    for (GLenum err = glGetError(); err != GL_NO_ERROR; err = glGetError())
     {
+        DBG("WaveformGLRenderer: pre-existing GL error before debug draw: 0x"
+            << juce::String::toHexString(static_cast<int>(err)));
     }
 
     ext.glBindVertexArray(debugVAO_);

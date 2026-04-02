@@ -119,14 +119,15 @@ struct ColorTheme
     void fromValueTree(const juce::ValueTree& state);
 
     /**
-     * Export to JSON string
+     * Export to XML string for theme import/export.
      */
-    juce::String toJson() const;
+    juce::String toXmlString() const;
 
     /**
-     * Import from JSON string
+     * Import from XML string (as produced by toXmlString).
+     * @return true if parsing succeeded.
      */
-    bool fromJson(const juce::String& json);
+    bool fromXmlString(const juce::String& xmlString);
 
     //==========================================================================
     // Accessibility - Contrast Validation

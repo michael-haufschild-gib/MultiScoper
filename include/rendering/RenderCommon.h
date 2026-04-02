@@ -9,7 +9,12 @@ namespace oscil
 {
 
 /**
- * Quality level presets for performance/quality trade-offs.
+ * Quality level for post-processing effects.
+ * Controls which GPU effects (bloom, blur, etc.) are active.
+ *
+ * Related but distinct from:
+ * - QualityMode (PerformanceConfig.h): controls rendering FPS and resolution scaling
+ * - QualityPreset (QualityPreset.h): controls audio capture sample rate
  */
 enum class QualityLevel
 {

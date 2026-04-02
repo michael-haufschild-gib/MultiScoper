@@ -92,22 +92,25 @@ TEST_F(SpringEdgeTest, VerySmallDeltaTime)
     EXPECT_NEAR(spring.position, initialPosition, 1e-6f);
 }
 
-// Test: Very large delta time
-TEST_F(SpringEdgeTest, VeryLargeDeltaTime)
+// Test: Very large delta time is clamped to MAX_DELTA_TIME
+TEST_F(SpringEdgeTest, VeryLargeDeltaTimeIsClamped)
 {
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
+    // Two identical springs: one with huge dt, one with MAX_DELTA_TIME.
+    // They should produce the same result because update() clamps dt.
+    SpringAnimation springHuge = SpringPresets::snappy();
+    springHuge.position = 0.0f;
+    springHuge.setTarget(1.0f);
+    springHuge.update(10.0f); // 10 seconds — will be clamped
 
-    // Very large delta time (10 seconds)
-    spring.update(10.0f);
+    SpringAnimation springClamped = SpringPresets::snappy();
+    springClamped.position = 0.0f;
+    springClamped.setTarget(1.0f);
+    springClamped.update(SpringAnimation::MAX_DELTA_TIME);
 
-    // Should still produce finite values
-    EXPECT_TRUE(std::isfinite(spring.position));
-    EXPECT_TRUE(std::isfinite(spring.velocity));
-
-    // Note: Large delta times can cause numerical instability
-    // but the result should at least be finite
+    EXPECT_TRUE(std::isfinite(springHuge.position));
+    EXPECT_TRUE(std::isfinite(springHuge.velocity));
+    EXPECT_FLOAT_EQ(springHuge.position, springClamped.position);
+    EXPECT_FLOAT_EQ(springHuge.velocity, springClamped.velocity);
 }
 
 // Test: Extreme mass (very heavy)

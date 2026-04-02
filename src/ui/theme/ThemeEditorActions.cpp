@@ -108,15 +108,15 @@ void ThemeEditorComponent::handleDeleteTheme()
 void ThemeEditorComponent::handleImportTheme()
 {
     auto chooser = std::make_shared<juce::FileChooser>(
-        "Import Theme", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
+        "Import Theme", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.xml");
 
     chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
                          [this, chooser](const juce::FileChooser& fc) {
                              auto file = fc.getResult();
                              if (file.existsAsFile())
                              {
-                                 auto json = file.loadFileAsString();
-                                 if (themeService_.importTheme(json))
+                                 auto xmlContent = file.loadFileAsString();
+                                 if (themeService_.importTheme(xmlContent))
                                  {
                                      refreshThemeList();
                                      juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
@@ -127,7 +127,7 @@ void ThemeEditorComponent::handleImportTheme()
                                  {
                                      juce::AlertWindow::showMessageBoxAsync(
                                          juce::MessageBoxIconType::WarningIcon, "Import Failed",
-                                         "Failed to import theme. Check that the file is valid JSON.");
+                                         "Failed to import theme. Check that the file is a valid Oscil theme.");
                                  }
                              }
                          });
@@ -144,8 +144,8 @@ void ThemeEditorComponent::handleExportTheme()
 
     auto chooser = std::make_shared<juce::FileChooser>(
         "Export Theme",
-        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(selectedThemeName_ + ".json"),
-        "*.json");
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(selectedThemeName_ + ".xml"),
+        "*.xml");
 
     chooser->launchAsync(
         juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting,

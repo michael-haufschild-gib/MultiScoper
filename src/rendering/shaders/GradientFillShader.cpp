@@ -34,7 +34,16 @@ GradientFillShader::GradientFillShader()
 {
 }
 
-GradientFillShader::~GradientFillShader() = default;
+GradientFillShader::~GradientFillShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (gl_ && gl_->compiled)
+    {
+        jassertfalse;
+        DBG("[GradientFillShader] LEAK DETECTED: Destructor called without release()");
+    }
+#endif
+}
 
 #if OSCIL_ENABLE_OPENGL
 bool GradientFillShader::compile(juce::OpenGLContext& context)
@@ -60,6 +69,13 @@ bool GradientFillShader::compile(juce::OpenGLContext& context)
     gl_->projectionLoc = gl_->program->getUniformIDFromName("projection");
     gl_->baseColorLoc = gl_->program->getUniformIDFromName("baseColor");
     gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
+
+    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0)
+    {
+        DBG("GradientFillShader: Missing required uniforms");
+        gl_->program.reset();
+        return false;
+    }
 
     context.extensions.glGenVertexArrays(1, &gl_->vao);
     context.extensions.glGenBuffers(1, &gl_->vbo);

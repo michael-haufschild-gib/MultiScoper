@@ -251,10 +251,10 @@ private:
 
     // Trigger detection
     bool detectTrigger(const float* samples, int numSamples);
-    bool detectRisingEdge(float sample);
-    bool detectFallingEdge(float sample);
-    bool detectBothEdges(float sample);
-    bool detectLevel(float sample);
+    bool detectRisingEdge(float sample, const TimingConfigData& cfg);
+    bool detectFallingEdge(float sample, const TimingConfigData& cfg);
+    bool detectBothEdges(float sample, const TimingConfigData& cfg);
+    bool detectLevel(float sample, const TimingConfigData& cfg);
 
     // Notification helpers
     void notifyTimingModeChanged();

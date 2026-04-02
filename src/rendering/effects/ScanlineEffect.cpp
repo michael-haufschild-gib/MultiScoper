@@ -113,6 +113,14 @@ bool ScanlineEffect::compile(juce::OpenGLContext& context)
     heightLoc_ = shader_->getUniformIDFromName("height");
     phosphorGlowLoc_ = shader_->getUniformIDFromName("phosphorGlow");
 
+    if (textureLoc_ < 0 || intensityLoc_ < 0 || densityLoc_ < 0 || widthLoc_ < 0 || heightLoc_ < 0 ||
+        phosphorGlowLoc_ < 0)
+    {
+        DBG("ScanlineEffect: Missing uniforms");
+        shader_.reset();
+        return false;
+    }
+
     compiled_ = true;
     DBG("ScanlineEffect: Compiled successfully");
     return true;

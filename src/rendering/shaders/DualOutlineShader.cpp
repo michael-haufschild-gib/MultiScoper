@@ -34,7 +34,16 @@ DualOutlineShader::DualOutlineShader()
 {
 }
 
-DualOutlineShader::~DualOutlineShader() = default;
+DualOutlineShader::~DualOutlineShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (gl_ && gl_->compiled)
+    {
+        jassertfalse;
+        DBG("[DualOutlineShader] LEAK DETECTED: Destructor called without release()");
+    }
+#endif
+}
 
 #if OSCIL_ENABLE_OPENGL
 bool DualOutlineShader::compile(juce::OpenGLContext& context)
@@ -60,6 +69,13 @@ bool DualOutlineShader::compile(juce::OpenGLContext& context)
     gl_->projectionLoc = gl_->program->getUniformIDFromName("projection");
     gl_->baseColorLoc = gl_->program->getUniformIDFromName("baseColor");
     gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
+
+    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0)
+    {
+        DBG("DualOutlineShader: Missing required uniforms");
+        gl_->program.reset();
+        return false;
+    }
 
     context.extensions.glGenVertexArrays(1, &gl_->vao);
     context.extensions.glGenBuffers(1, &gl_->vbo);

@@ -30,6 +30,9 @@ struct SpringAnimation
     float damping = 20.0f;    // Higher = less oscillation
     float mass = 1.0f;        // Higher = more momentum
 
+    // Maximum delta time to prevent integration instability after stalls/freezes
+    static constexpr float MAX_DELTA_TIME = 1.0f / 15.0f; // ~67ms floor
+
     /**
      * Create a spring animation with default parameters
      */
@@ -63,9 +66,11 @@ struct SpringAnimation
      */
     void update(float deltaTime)
     {
-        // Guard against invalid delta time
+        // Guard against invalid or excessive delta time.
+        // Large deltas (e.g. after app freeze) would destabilize the integrator.
         if (deltaTime <= 0.0f)
             return;
+        deltaTime = std::min(deltaTime, MAX_DELTA_TIME);
 
         // Spring force: F = -k * x (Hooke's law)
         float displacement = position - target;

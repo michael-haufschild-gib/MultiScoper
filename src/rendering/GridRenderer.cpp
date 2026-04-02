@@ -127,6 +127,11 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
     }
 
     colorUniformLoc_ = colorShader_->getUniformIDFromName("color");
+    if (colorUniformLoc_ < 0)
+    {
+        DBG("GridRenderer: Missing 'color' uniform");
+        colorShader_.reset();
+    }
 }
 
 void GridRenderer::drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col)

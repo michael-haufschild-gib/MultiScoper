@@ -249,7 +249,7 @@ bool ThemeManager::isSystemTheme(const juce::String& name) const
 bool ThemeManager::importTheme(const juce::String& json)
 {
     ColorTheme theme;
-    if (!theme.fromJson(json))
+    if (!theme.fromXmlString(json))
         return false;
 
     if (theme.name.isEmpty())
@@ -268,7 +268,7 @@ juce::String ThemeManager::exportTheme(const juce::String& name) const
     if (it == themes_.end())
         return {};
 
-    return it->second.toJson();
+    return it->second.toXmlString();
 }
 
 void ThemeManager::addListener(ThemeManagerListener* listener) { listeners_.add(listener); }

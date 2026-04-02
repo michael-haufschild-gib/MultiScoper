@@ -30,7 +30,11 @@ static constexpr int MAX_SOURCE_RATE = 192000;
 //==============================================================================
 
 /**
- * Quality presets for waveform capture resolution
+ * Quality presets for waveform capture resolution (audio capture sample rate).
+ *
+ * Related but distinct from:
+ * - QualityMode (PerformanceConfig.h): controls rendering FPS and resolution scaling
+ * - QualityLevel (RenderCommon.h): controls which post-processing effects are active
  *
  * Eco:      11kHz capture - Minimal memory (~180KB/track for 4s)
  *           Best for: Laptop users, 20+ tracks, limited RAM

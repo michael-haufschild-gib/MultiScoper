@@ -21,10 +21,6 @@ using namespace juce::gl;
     // Debug-only logging macro — no output in release builds
     #define GL_LOG(msg) DBG("[GL] " << msg)
 
-// Debug mode: set to true to draw colored rectangles instead of waveforms
-// This bypasses shaders and tests basic GL rendering pipeline
-static constexpr bool DEBUG_RENDER_MODE = false;
-
 // Simple solid color shader for debug rendering
 static const char* debugVertexShader = R"(
     #version 330 core

@@ -264,7 +264,8 @@ void TimingEngine::setSampleRate(double sampleRate)
 
 bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 {
-    auto cfg = configLock_.read();
+    // Read config once per block — avoid per-sample SeqLock reads in the inner loop
+    const auto cfg = configLock_.read();
 
     for (int i = 0; i < numSamples; ++i)
     {
@@ -274,19 +275,19 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
         switch (cfg.triggerMode)
         {
             case WaveformTriggerMode::RisingEdge:
-                trig = detectRisingEdge(sample);
+                trig = detectRisingEdge(sample, cfg);
                 break;
 
             case WaveformTriggerMode::FallingEdge:
-                trig = detectFallingEdge(sample);
+                trig = detectFallingEdge(sample, cfg);
                 break;
 
             case WaveformTriggerMode::BothEdges:
-                trig = detectBothEdges(sample);
+                trig = detectBothEdges(sample, cfg);
                 break;
 
             case WaveformTriggerMode::Level:
-                trig = detectLevel(sample);
+                trig = detectLevel(sample, cfg);
                 break;
 
             case WaveformTriggerMode::None:
@@ -304,25 +305,22 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
     return false;
 }
 
-bool TimingEngine::detectRisingEdge(float sample)
+bool TimingEngine::detectRisingEdge(float sample, const TimingConfigData& cfg)
 {
-    auto cfg = configLock_.read();
     bool wasBelow = previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis);
     bool isAbove = sample >= cfg.triggerThreshold;
     return wasBelow && isAbove;
 }
 
-bool TimingEngine::detectFallingEdge(float sample)
+bool TimingEngine::detectFallingEdge(float sample, const TimingConfigData& cfg)
 {
-    auto cfg = configLock_.read();
     bool wasAbove = previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis);
     bool isBelow = sample <= cfg.triggerThreshold;
     return wasAbove && isBelow;
 }
 
-bool TimingEngine::detectBothEdges(float sample)
+bool TimingEngine::detectBothEdges(float sample, const TimingConfigData& cfg)
 {
-    auto cfg = configLock_.read();
     bool risingEdge =
         previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis) && sample >= cfg.triggerThreshold;
     bool fallingEdge =
@@ -330,9 +328,8 @@ bool TimingEngine::detectBothEdges(float sample)
     return risingEdge || fallingEdge;
 }
 
-bool TimingEngine::detectLevel(float sample)
+bool TimingEngine::detectLevel(float sample, const TimingConfigData& cfg)
 {
-    auto cfg = configLock_.read();
     float absLevel = std::abs(sample);
     bool wasBelow = !previousTriggerState_;
     bool isAbove = absLevel > cfg.triggerThreshold;

@@ -68,18 +68,7 @@ public:
     {
         float sr = (sampleRate > 0.0f) ? sampleRate : sampleRate_;
         buffer_ = generateSineWave(numSamples_, frequency, amplitude, sr);
-
-        // Adjust channels if needed
-        if (buffer_.getNumChannels() != numChannels_)
-        {
-            juce::AudioBuffer<float> temp(numChannels_, numSamples_);
-            for (int ch = 0; ch < numChannels_; ++ch)
-            {
-                temp.copyFrom(ch, 0, buffer_, ch % buffer_.getNumChannels(), 0, numSamples_);
-            }
-            buffer_ = std::move(temp);
-        }
-
+        ensureChannelCount(buffer_.getNumChannels());
         return *this;
     }
 
@@ -92,17 +81,7 @@ public:
     AudioBufferBuilder& withStereoSineWave(float leftFreq, float rightFreq, float amplitude = 1.0f)
     {
         buffer_ = generateStereoSineWave(numSamples_, leftFreq, rightFreq, amplitude, sampleRate_);
-
-        if (numChannels_ != 2)
-        {
-            juce::AudioBuffer<float> temp(numChannels_, numSamples_);
-            for (int ch = 0; ch < numChannels_; ++ch)
-            {
-                temp.copyFrom(ch, 0, buffer_, ch % 2, 0, numSamples_);
-            }
-            buffer_ = std::move(temp);
-        }
-
+        ensureChannelCount(2);
         return *this;
     }
 
@@ -112,17 +91,7 @@ public:
     AudioBufferBuilder& withRamp(float startValue, float endValue)
     {
         buffer_ = generateRamp(numSamples_, startValue, endValue);
-
-        if (buffer_.getNumChannels() != numChannels_)
-        {
-            juce::AudioBuffer<float> temp(numChannels_, numSamples_);
-            for (int ch = 0; ch < numChannels_; ++ch)
-            {
-                temp.copyFrom(ch, 0, buffer_, 0, 0, numSamples_);
-            }
-            buffer_ = std::move(temp);
-        }
-
+        ensureChannelCount(buffer_.getNumChannels());
         return *this;
     }
 
@@ -132,17 +101,7 @@ public:
     AudioBufferBuilder& withStep(float lowValue, float highValue, int stepPosition)
     {
         buffer_ = generateStep(numSamples_, lowValue, highValue, stepPosition);
-
-        if (buffer_.getNumChannels() != numChannels_)
-        {
-            juce::AudioBuffer<float> temp(numChannels_, numSamples_);
-            for (int ch = 0; ch < numChannels_; ++ch)
-            {
-                temp.copyFrom(ch, 0, buffer_, 0, 0, numSamples_);
-            }
-            buffer_ = std::move(temp);
-        }
-
+        ensureChannelCount(buffer_.getNumChannels());
         return *this;
     }
 
@@ -152,17 +111,7 @@ public:
     AudioBufferBuilder& withSquare(float frequency, float amplitude = 1.0f)
     {
         buffer_ = generateSquare(numSamples_, frequency, amplitude, sampleRate_);
-
-        if (buffer_.getNumChannels() != numChannels_)
-        {
-            juce::AudioBuffer<float> temp(numChannels_, numSamples_);
-            for (int ch = 0; ch < numChannels_; ++ch)
-            {
-                temp.copyFrom(ch, 0, buffer_, 0, 0, numSamples_);
-            }
-            buffer_ = std::move(temp);
-        }
-
+        ensureChannelCount(buffer_.getNumChannels());
         return *this;
     }
 
@@ -190,17 +139,7 @@ public:
     AudioBufferBuilder& withRandom(float min = -1.0f, float max = 1.0f, int seed = 12345)
     {
         buffer_ = generateRandom(numSamples_, min, max, seed);
-
-        if (buffer_.getNumChannels() != numChannels_)
-        {
-            juce::AudioBuffer<float> temp(numChannels_, numSamples_);
-            for (int ch = 0; ch < numChannels_; ++ch)
-            {
-                temp.copyFrom(ch, 0, buffer_, ch % buffer_.getNumChannels(), 0, numSamples_);
-            }
-            buffer_ = std::move(temp);
-        }
-
+        ensureChannelCount(buffer_.getNumChannels());
         return *this;
     }
 
@@ -210,17 +149,7 @@ public:
     AudioBufferBuilder& withStereoRandom(float min = -1.0f, float max = 1.0f, int seed = 12345)
     {
         buffer_ = generateStereoRandom(numSamples_, min, max, seed);
-
-        if (numChannels_ != 2)
-        {
-            juce::AudioBuffer<float> temp(numChannels_, numSamples_);
-            for (int ch = 0; ch < numChannels_; ++ch)
-            {
-                temp.copyFrom(ch, 0, buffer_, ch % 2, 0, numSamples_);
-            }
-            buffer_ = std::move(temp);
-        }
-
+        ensureChannelCount(2);
         return *this;
     }
 
@@ -305,6 +234,22 @@ public:
     }
 
 private:
+    /**
+     * Expand or reduce buffer_ to match numChannels_ by copying channels cyclically.
+     * @param sourceChannels Number of channels in the source signal (e.g. 2 for stereo generators).
+     */
+    void ensureChannelCount(int sourceChannels)
+    {
+        if (buffer_.getNumChannels() == numChannels_)
+            return;
+
+        juce::AudioBuffer<float> temp(numChannels_, numSamples_);
+        for (int ch = 0; ch < numChannels_; ++ch)
+            temp.copyFrom(ch, 0, buffer_, ch % sourceChannels, 0, numSamples_);
+
+        buffer_ = std::move(temp);
+    }
+
     int numChannels_;
     int numSamples_;
     float sampleRate_;

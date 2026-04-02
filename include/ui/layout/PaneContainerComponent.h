@@ -41,6 +41,8 @@ public:
     void itemDropped(const SourceDetails& dragSourceDetails) override;
 
 private:
+    void paint(juce::Graphics& g) override;
+
     PaneComponent* findPaneAt(juce::Point<int> position);
     void updateDropTarget(const SourceDetails& dragSourceDetails);
     void clearDropHighlight();
@@ -48,6 +50,10 @@ private:
     PaneDropCallback paneDropCallback_;
     EmptyColumnDropCallback emptyColumnDropCallback_;
     int columnCount_ = 1;
+
+    // Drop highlight state
+    PaneId highlightedPaneId_;
+    int highlightedColumn_ = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneContainerComponent)
 };

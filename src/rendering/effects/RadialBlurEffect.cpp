@@ -88,6 +88,13 @@ bool RadialBlurEffect::compile(juce::OpenGLContext& context)
     glowLoc_ = shader_->getUniformIDFromName("glow");
     samplesLoc_ = shader_->getUniformIDFromName("samples");
 
+    if (textureLoc_ < 0 || amountLoc_ < 0 || glowLoc_ < 0 || samplesLoc_ < 0)
+    {
+        DBG("RadialBlurEffect: Missing uniforms");
+        shader_.reset();
+        return false;
+    }
+
     compiled_ = true;
     DBG("RadialBlurEffect: Compiled successfully");
     return true;

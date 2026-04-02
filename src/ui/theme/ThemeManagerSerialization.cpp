@@ -154,7 +154,7 @@ void ColorTheme::fromValueTree(const juce::ValueTree& state)
     loadWaveformColors(*this, state);
 }
 
-juce::String ColorTheme::toJson() const
+juce::String ColorTheme::toXmlString() const
 {
     auto state = toValueTree();
     if (auto xml = state.createXml())
@@ -164,9 +164,9 @@ juce::String ColorTheme::toJson() const
     return {};
 }
 
-bool ColorTheme::fromJson(const juce::String& json)
+bool ColorTheme::fromXmlString(const juce::String& xmlString)
 {
-    if (auto xml = juce::XmlDocument::parse(json))
+    if (auto xml = juce::XmlDocument::parse(xmlString))
     {
         auto state = juce::ValueTree::fromXml(*xml);
         if (state.isValid())
