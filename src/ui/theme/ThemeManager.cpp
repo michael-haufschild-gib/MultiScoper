@@ -258,6 +258,10 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
     if (theme.name.isEmpty())
         return false;
 
+    // Prevent imported themes from overwriting protected system themes
+    if (isSystemTheme(theme.name))
+        return false;
+
     theme.isSystemTheme = false;
     themes_[theme.name] = theme;
 

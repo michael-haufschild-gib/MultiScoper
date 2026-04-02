@@ -62,19 +62,21 @@ TEST_F(ThemeManagerPersistenceTest, ExportNonexistentTheme)
     EXPECT_TRUE(exported.isEmpty());
 }
 
-// Test: Import then export roundtrip
+// Test: Export then import roundtrip verifies data survives serialization
 TEST_F(ThemeManagerPersistenceTest, ExportImportRoundtrip)
 {
-    // Export an existing theme
-    juce::String exported = getThemeManager().exportTheme("Dark Professional");
+    getThemeManager().createTheme("RoundtripTest");
+    juce::String exported = getThemeManager().exportTheme("RoundtripTest");
     EXPECT_FALSE(exported.isEmpty());
 
-    // Create a theme for testing
-    getThemeManager().createTheme("RoundtripTest");
+    // Import the exported theme — should succeed and theme should exist
+    bool imported = getThemeManager().importTheme(exported);
+    EXPECT_TRUE(imported);
 
-    // The imported theme would overwrite...
-    // Just verify export worked
-    EXPECT_TRUE(exported.contains("Dark Professional") || exported.contains("backgroundPrimary"));
+    // Verify the theme is accessible after import
+    juce::String exportedAgain = getThemeManager().exportTheme("RoundtripTest");
+    EXPECT_FALSE(exportedAgain.isEmpty());
+    EXPECT_TRUE(exportedAgain.contains("RoundtripTest"));
 
     getThemeManager().deleteTheme("RoundtripTest");
 }
