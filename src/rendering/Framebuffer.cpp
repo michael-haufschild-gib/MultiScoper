@@ -299,7 +299,7 @@ void Framebuffer::destroy(juce::OpenGLContext& context)
     width = 0;
     height = 0;
     numSamples = 0;
-    format = 0;
+    format = juce::gl::GL_RGBA8;
     hasDepth = false;
     hasDepthTexture = false;
 }

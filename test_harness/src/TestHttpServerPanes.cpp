@@ -74,7 +74,11 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
                 editor->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done->wait(5000);
+        if (!done->wait(5000))
+        {
+            res.set_content(errorResponse("Timeout adding pane").dump(), "application/json");
+            return;
+        }
 
         json data;
         data["id"] = pane.getId().id.toStdString();
@@ -121,7 +125,11 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
             reassignOrphansAndRemovePane(state, layoutManager, paneId);
             done->signal();
         });
-        done->wait(3000);
+        if (!done->wait(3000))
+        {
+            res.set_content(errorResponse("Timeout removing pane").dump(), "application/json");
+            return;
+        }
 
         json data;
         data["id"] = idStr;
@@ -330,7 +338,11 @@ void TestHttpServer::handlePaneLayout(const httplib::Request& req, httplib::Resp
         (*data)["panes"] = panesJson;
         done->signal();
     });
-    done->wait(5000);
+    if (!done->wait(5000))
+    {
+        res.set_content(errorResponse("Timeout building pane layout").dump(), "application/json");
+        return;
+    }
 
     res.set_content(successResponse(*data).dump(), "application/json");
 }

@@ -215,9 +215,7 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
         if (track)
         {
             auto& processor = track->getProcessor();
-
-            // Sync TimingEngine and serialize on the message thread to avoid
-            // racing with ValueTree listeners.
+            // Serialize on the message thread to avoid racing with ValueTree listeners.
             auto xml = std::make_shared<juce::String>();
             auto done = std::make_shared<juce::WaitableEvent>();
             juce::MessageManager::callAsync([&processor, xml, done]() {
@@ -261,15 +259,12 @@ bool TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPl
     if (!state.fromXmlString(xml))
         return false;
 
-    // Restore TimingEngine from loaded Timing node
-    // (mirrors PluginProcessorState::setStateInformation)
     auto timingTree = state.getState().getChildWithName(StateIds::Timing);
     if (timingTree.isValid())
         processor.getTimingEngine().fromValueTree(timingTree);
     else
         processor.getTimingEngine().fromValueTree(processor.getTimingEngine().toValueTree());
 
-    // Sync sidebar UI controls to loaded state values
     uiController_.toggle("sidebar_options_gridToggle", state.isShowGridEnabled());
     uiController_.setSliderValue("sidebar_options_gainSlider", static_cast<double>(state.getGainDb()));
     uiController_.selectById("sidebar_options_layoutDropdown", juce::String(static_cast<int>(state.getColumnLayout())));
@@ -311,7 +306,11 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
             *success = restoreLoadedState(processor, editor, xml);
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done->wait(5000);
+        if (!done->wait(5000))
+        {
+            res.set_content(errorResponse("Timeout restoring state").dump(), "application/json");
+            return;
+        }
 
         if (*success)
             res.set_content(successResponse().dump(), "application/json");
