@@ -272,11 +272,11 @@ bool PaneBody::isStatsVisible() const { return statsOverlay_ && statsOverlay_->i
 
 void PaneBody::timerCallback()
 {
-    if (isStatsVisible())
+    if (isStatsVisible() && isShowing())
     {
         updateStats();
     }
-    else
+    else if (!isStatsVisible())
     {
         stopTimer();
     }

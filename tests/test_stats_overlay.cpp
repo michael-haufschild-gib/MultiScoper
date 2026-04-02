@@ -106,6 +106,22 @@ TEST_F(StatsOverlayTest, MouseInteractionEnabledForResetAndSelection)
     EXPECT_TRUE(overlay.hitTest(10, 10));
 }
 
+TEST_F(StatsOverlayTest, MaxPeakDbDisplayed)
+{
+    std::vector<OscillatorStats> stats;
+    OscillatorStats os;
+    os.name = "Osc1";
+    os.left.maxPeakDb = -0.5f;
+    os.right.maxPeakDb = -1.0f;
+    stats.push_back(os);
+
+    overlay.updateStats(stats);
+
+    juce::String text = overlay.getDisplayedText();
+    EXPECT_TRUE(text.contains("Max Pk"));
+    EXPECT_TRUE(text.contains("-0.5 dB")); // max of L/R
+}
+
 TEST_F(StatsOverlayTest, FormattingChecks)
 {
     std::vector<OscillatorStats> stats;

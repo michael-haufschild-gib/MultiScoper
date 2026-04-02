@@ -96,6 +96,7 @@ void PaneOverlay::startFadeAnimation(bool fadeIn)
 void PaneOverlay::updateFadeAnimation()
 {
     const float fadeStep = static_cast<float>(FADE_TIMER_INTERVAL_MS) / FADE_DURATION_MS;
+    bool wasEffectivelyVisible = currentOpacity_ > 0.0f;
 
     if (fadeDirection_)
     {
@@ -118,6 +119,10 @@ void PaneOverlay::updateFadeAnimation()
             setVisible(false);
         }
     }
+
+    bool isEffectivelyVisible = currentOpacity_ > 0.0f;
+    if (isEffectivelyVisible != wasEffectivelyVisible)
+        onAnimationVisibilityChanged(isEffectivelyVisible);
 
     repaint();
 }

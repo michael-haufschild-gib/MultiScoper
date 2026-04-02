@@ -93,8 +93,8 @@ void PaneLayoutManager::addPane(const Pane& pane)
 
     OSCIL_LOG(LAYOUT, "addPane: id=" << pane.getId().id << " name=" << pane.getName() << " col=" << targetColumn
                                      << " total=" << panes_.size());
-    notifyPaneAdded(pane.getId());
     sortPanesByOrder();
+    notifyPaneAdded(pane.getId());
 }
 
 void PaneLayoutManager::removePane(const PaneId& paneId)
@@ -238,6 +238,7 @@ void PaneLayoutManager::movePaneToColumn(const PaneId& paneId, int targetColumn,
         }
     }
 
+    sortPanesByOrder();
     notifyPaneOrderChanged();
 }
 

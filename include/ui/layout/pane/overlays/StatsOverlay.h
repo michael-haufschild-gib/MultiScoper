@@ -69,6 +69,7 @@ public:
 
 protected:
     juce::Rectangle<int> getPreferredContentSize() const override;
+    void onAnimationVisibilityChanged(bool becameVisible) override;
 
 private:
     void setupComponents();
