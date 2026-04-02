@@ -141,18 +141,18 @@ private:
     // Pre-calculated conversion factor for CPU timing (real-time safe)
     double ticksToSecondsScale_{0.0};
 
-    // Double-buffered cached state for lock-free real-time safe getStateInformation().
-    // Message thread writes to the inactive buffer, then atomically swaps the index.
-    // Audio thread reads from the active buffer without locking.
+    // Immutable-snapshot state serialization for real-time safe getStateInformation().
     //
-    // CONTRACT: consecutive updateCachedState() calls must be separated by enough
-    // time (>= 1ms) that any in-flight audio-thread read completes before the
-    // previously-active buffer is reused. This invariant is enforced by a debug
-    // assertion in updateCachedState(). In practice, calls are driven by user
-    // interactions (state changes), which are orders of magnitude slower.
-    std::vector<char> cachedStateBuffers_[2];
-    std::atomic<int> cachedStateActiveIndex_{0};
-    int64_t lastCachedStateSwapTimeMs_{0}; // Debug: tracks last swap time for invariant check
+    // Message thread publishes new state as a shared_ptr<const vector<char>> under
+    // stateLock_. Audio thread copies the shared_ptr via tryLock into its local
+    // cache (audioThreadState_), then reads from it without holding the lock.
+    // The pointed-to data is immutable (const vector) — no concurrent modification
+    // is possible once published.
+    //
+    // Pattern matches DecimatingCaptureBuffer (SpinLock + shared_ptr swap).
+    std::shared_ptr<const std::vector<char>> publishedState_;   // Protected by stateLock_
+    std::shared_ptr<const std::vector<char>> audioThreadState_; // Audio thread's cached copy
+    mutable juce::SpinLock stateLock_;
 
     // Helper to update cached state (call from message thread only)
     void updateCachedState();
