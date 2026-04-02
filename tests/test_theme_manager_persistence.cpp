@@ -31,77 +31,114 @@ private:
 };
 
 // =============================================================================
-// JSON Serialization Tests
+// XML Import/Export Tests (format is XML despite historical "json" naming)
 // =============================================================================
 
-// Test: Import invalid JSON
-TEST_F(ThemeManagerPersistenceTest, ImportInvalidJson)
+// Test: Import invalid XML
+TEST_F(ThemeManagerPersistenceTest, ImportInvalidXml)
 {
-    bool result = getThemeManager().importTheme("not valid json");
+    bool result = getThemeManager().importTheme("not valid xml");
     EXPECT_FALSE(result);
 }
 
-// Test: Import empty JSON
-TEST_F(ThemeManagerPersistenceTest, ImportEmptyJson)
+// Test: Import empty string
+TEST_F(ThemeManagerPersistenceTest, ImportEmptyString)
 {
     bool result = getThemeManager().importTheme("");
     EXPECT_FALSE(result);
 }
 
-// Test: Import JSON with missing required fields
-TEST_F(ThemeManagerPersistenceTest, ImportIncompleteJson)
+// Test: Import non-XML content is rejected
+TEST_F(ThemeManagerPersistenceTest, ImportNonXmlContent)
 {
     bool result = getThemeManager().importTheme("{}");
     EXPECT_FALSE(result);
 }
 
+// Test: Import cannot overwrite a protected system theme
+TEST_F(ThemeManagerPersistenceTest, ImportSystemThemeNameRejected)
+{
+    ColorTheme t;
+    t.name = "Dark Professional"; // built-in system theme
+    t.backgroundPrimary = juce::Colour(0xFF123456);
+    auto xml = t.toXmlString();
+
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+}
+
+// Test: Import trims whitespace before checking system theme names
+TEST_F(ThemeManagerPersistenceTest, ImportTrimmedSystemThemeNameRejected)
+{
+    ColorTheme t;
+    t.name = "  Dark Professional  "; // whitespace-padded system theme name
+    t.backgroundPrimary = juce::Colour(0xFF123456);
+    auto xml = t.toXmlString();
+
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+}
+
+// Test: Import rejects unsafe filenames
+TEST_F(ThemeManagerPersistenceTest, ImportUnsafeNameRejected)
+{
+    ColorTheme t;
+    t.name = "../../../etc/evil";
+    auto xml = t.toXmlString();
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+
+    t.name = "theme:with*bad|chars";
+    xml = t.toXmlString();
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+}
+
 // Test: Export non-existent theme
 TEST_F(ThemeManagerPersistenceTest, ExportNonexistentTheme)
 {
-    juce::String json = getThemeManager().exportTheme("NonExistentTheme");
-    EXPECT_TRUE(json.isEmpty());
+    juce::String exported = getThemeManager().exportTheme("NonExistentTheme");
+    EXPECT_TRUE(exported.isEmpty());
 }
 
-// Test: Import then export roundtrip
-TEST_F(ThemeManagerPersistenceTest, JsonRoundtrip)
+// Test: Export then import roundtrip verifies data survives serialization
+TEST_F(ThemeManagerPersistenceTest, ExportImportRoundtrip)
 {
-    // Export an existing theme
-    juce::String exported = getThemeManager().exportTheme("Dark Professional");
+    EXPECT_TRUE(getThemeManager().createTheme("RoundtripTest"));
+    juce::String exported = getThemeManager().exportTheme("RoundtripTest");
     EXPECT_FALSE(exported.isEmpty());
 
-    // Create a theme for testing
-    getThemeManager().createTheme("RoundtripTest");
+    // Import the exported theme — should succeed and theme should exist
+    bool imported = getThemeManager().importTheme(exported);
+    EXPECT_TRUE(imported);
 
-    // The imported theme would overwrite...
-    // Just verify export worked
-    EXPECT_TRUE(exported.contains("Dark Professional") || exported.contains("backgroundPrimary"));
+    // Verify the theme is accessible after import
+    juce::String exportedAgain = getThemeManager().exportTheme("RoundtripTest");
+    EXPECT_FALSE(exportedAgain.isEmpty());
+    EXPECT_TRUE(exportedAgain.contains("RoundtripTest"));
 
     getThemeManager().deleteTheme("RoundtripTest");
 }
 
-// Test: ColorTheme JSON fromJson with valid JSON
-TEST_F(ThemeManagerPersistenceTest, ColorThemeFromJsonValid)
+// Test: ColorTheme XML export/import with valid data
+TEST_F(ThemeManagerPersistenceTest, ColorThemeFromXmlStringValid)
 {
     ColorTheme original;
-    original.name = "JsonTest";
+    original.name = "XmlTest";
     original.backgroundPrimary = juce::Colour(0xFF123456);
     original.textPrimary = juce::Colour(0xFFABCDEF);
 
-    juce::String json = original.toJson();
+    juce::String xmlStr = original.toXmlString();
 
     ColorTheme restored;
-    bool result = restored.fromJson(json);
+    bool result = restored.fromXmlString(xmlStr);
 
     EXPECT_TRUE(result);
-    EXPECT_EQ(restored.name, "JsonTest");
+    EXPECT_EQ(restored.name, "XmlTest");
     EXPECT_EQ(restored.backgroundPrimary.getARGB(), 0xFF123456u);
 }
 
-// Test: ColorTheme JSON fromJson with invalid JSON
-TEST_F(ThemeManagerPersistenceTest, ColorThemeFromJsonInvalid)
+// Test: ColorTheme XML import with invalid data
+TEST_F(ThemeManagerPersistenceTest, ColorThemeFromXmlStringInvalid)
 {
     ColorTheme theme;
-    bool result = theme.fromJson("invalid json data");
+    bool result = theme.fromXmlString("invalid xml data");
 
     EXPECT_FALSE(result);
 }

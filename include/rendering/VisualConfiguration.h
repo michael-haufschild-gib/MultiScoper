@@ -9,6 +9,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
 
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -22,7 +23,7 @@ namespace oscil
 /**
  * Available shader types for waveform rendering.
  */
-enum class ShaderType
+enum class ShaderType : std::uint8_t
 {
     Basic2D,
     NeonGlow,
@@ -33,7 +34,7 @@ enum class ShaderType
 /**
  * Blend modes for compositing.
  */
-enum class BlendMode
+enum class BlendMode : std::uint8_t
 {
     Alpha,    // Standard alpha blending
     Additive, // Add colors (glow effect)

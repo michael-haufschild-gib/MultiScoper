@@ -7,6 +7,7 @@
 #include "core/OscilLog.h"
 
 #include <algorithm>
+#include <utility>
 namespace oscil
 {
 
@@ -216,15 +217,15 @@ void OscilState::reorderOscillators(int oldIndex, int newIndex)
     OSCIL_LOG(STATE, "reorderOscillators: oldIndex=" << oldIndex << " newIndex=" << newIndex);
 
     auto oscillators = getOscillators();
-    if (oldIndex < 0 || oldIndex >= static_cast<int>(oscillators.size()) || newIndex < 0 ||
-        newIndex >= static_cast<int>(oscillators.size()))
+    if (oldIndex < 0 || !std::cmp_less(oldIndex, oscillators.size()) || newIndex < 0 ||
+        !std::cmp_less(newIndex, oscillators.size()))
     {
         return;
     }
 
     // Sort oscillators by current orderIndex
-    std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
+    std::ranges::sort(oscillators,
+                      [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
     // Move the item from oldIndex to newIndex
     auto movedOsc = oscillators[static_cast<size_t>(oldIndex)];
@@ -381,7 +382,7 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
     auto qualityNode = getCaptureQualityNode();
     if (!qualityNode.isValid())
     {
-        return CaptureQualityConfig(); // Return defaults
+        return {}; // Return defaults
     }
 
     CaptureQualityConfig config;
@@ -391,7 +392,7 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
 
     int durationInt = qualityNode.getProperty(StateIds::BufferDuration, static_cast<int>(BufferDuration::Medium));
     config.bufferDuration =
-        static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::Long)));
+        static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::VeryLong)));
 
     config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
 

@@ -9,6 +9,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -16,7 +18,7 @@ namespace oscil
  * Quality override for individual oscillators
  * Allows specific tracks to use different quality than global setting
  */
-enum class QualityOverride
+enum class QualityOverride : std::uint8_t
 {
     UseGlobal, // Use the global CaptureQualityConfig setting
     Eco,

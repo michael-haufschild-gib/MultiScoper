@@ -10,6 +10,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_events/juce_events.h>
 
+#include <algorithm>
 #include <span>
 #include <vector>
 
@@ -67,9 +68,9 @@ struct ProcessedSignal
 
     void clear()
     {
-        std::fill(channel1.begin(), channel1.end(), 0.0f);
+        std::ranges::fill(channel1, 0.0f);
         if (isStereo)
-            std::fill(channel2.begin(), channel2.end(), 0.0f);
+            std::ranges::fill(channel2, 0.0f);
     }
 };
 

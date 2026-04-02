@@ -9,6 +9,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -16,7 +18,7 @@ namespace oscil
  * Note interval options for MELODIC mode (engine-internal representation)
  * Use conversion functions to map to/from entity NoteInterval
  */
-enum class EngineNoteInterval
+enum class EngineNoteInterval : std::uint8_t
 {
     NOTE_1_32ND,
     NOTE_1_16TH,
@@ -40,7 +42,7 @@ enum class EngineNoteInterval
 /**
  * Waveform trigger modes (distinct from entity TriggerMode which is for sync)
  */
-enum class WaveformTriggerMode
+enum class WaveformTriggerMode : std::uint8_t
 {
     None,
     RisingEdge,
@@ -268,7 +270,7 @@ struct HostTimingInfo
     int timeSigNumerator = 4;
     int timeSigDenominator = 4;
 
-    enum class TransportState
+    enum class TransportState : std::uint8_t
     {
         STOPPED,
         PLAYING,

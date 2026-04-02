@@ -61,7 +61,8 @@ void OscilSlider::mouseDown(const juce::MouseEvent& e)
 
     if (variant_ == SliderVariant::Range)
     {
-        bool isVertical = variant_ == SliderVariant::Vertical;
+        // Range sliders are always horizontal — SliderVariant::Range and ::Vertical are mutually exclusive.
+        constexpr bool isVertical = false;
         float startThumbPos = getThumbPosition(false);
         float endThumbPos = getThumbPosition(true);
 
@@ -103,13 +104,13 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     if (isVertical)
     {
         float trackHeight = std::max(1.0f, static_cast<float>(bounds.getHeight()) - THUMB_SIZE);
-        float relY = static_cast<float>(bounds.getBottom()) - THUMB_SIZE / 2 - static_cast<float>(e.getPosition().y);
+        float relY = static_cast<float>(bounds.getBottom()) - THUMB_SIZE / 2.0f - static_cast<float>(e.getPosition().y);
         proportion = relY / trackHeight;
     }
     else
     {
         float trackWidth = std::max(1.0f, static_cast<float>(bounds.getWidth()) - THUMB_SIZE);
-        float relX = static_cast<float>(e.getPosition().x) - THUMB_SIZE / 2;
+        float relX = static_cast<float>(e.getPosition().x) - THUMB_SIZE / 2.0f;
         proportion = relX / trackWidth;
     }
 

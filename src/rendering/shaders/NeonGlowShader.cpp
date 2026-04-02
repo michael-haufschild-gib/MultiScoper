@@ -36,7 +36,16 @@ NeonGlowShader::NeonGlowShader()
 {
 }
 
-NeonGlowShader::~NeonGlowShader() = default;
+NeonGlowShader::~NeonGlowShader()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (gl_ && gl_->compiled)
+    {
+        jassertfalse;
+        DBG("[NeonGlowShader] LEAK DETECTED: Destructor called without release()");
+    }
+#endif
+}
 
 #if OSCIL_ENABLE_OPENGL
 bool NeonGlowShader::compile(juce::OpenGLContext& context)
@@ -64,6 +73,14 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
     gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
     gl_->geometryScaleLoc = gl_->program->getUniformIDFromName("geometryScale");
+
+    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0 || gl_->glowIntensityLoc < 0 ||
+        gl_->geometryScaleLoc < 0)
+    {
+        DBG("NeonGlowShader: Missing required uniforms");
+        gl_->program.reset();
+        return false;
+    }
 
     context.extensions.glGenVertexArrays(1, &gl_->vao);
     context.extensions.glGenBuffers(1, &gl_->vbo);
@@ -127,7 +144,7 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
         ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
         ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
         ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                                  (void*) (2 * sizeof(float)));
+                                  reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
         glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
         ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
         ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));

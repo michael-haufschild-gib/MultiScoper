@@ -8,13 +8,15 @@
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <cstdint>
 #include <functional>
+#include <utility>
 
 namespace oscil
 {
 
 // Button variants
-enum class ButtonVariant
+enum class ButtonVariant : std::uint8_t
 {
     Primary,   // Blue filled button for primary actions
     Secondary, // Dark filled button (formerly with border, now borderless)
@@ -25,7 +27,7 @@ enum class ButtonVariant
 };
 
 // Button states (for internal use)
-enum class ButtonState
+enum class ButtonState : std::uint8_t
 {
     Default,
     Hovered,
@@ -35,7 +37,7 @@ enum class ButtonState
 };
 
 // Text field variants
-enum class TextFieldVariant
+enum class TextFieldVariant : std::uint8_t
 {
     Text,   // Standard text input
     Search, // With search icon prefix
@@ -43,7 +45,7 @@ enum class TextFieldVariant
 };
 
 // Text field states
-enum class TextFieldState
+enum class TextFieldState : std::uint8_t
 {
     Empty,
     Focused,
@@ -53,7 +55,7 @@ enum class TextFieldState
 };
 
 // Slider variants
-enum class SliderVariant
+enum class SliderVariant : std::uint8_t
 {
     Single,  // Standard single-value slider
     Range,   // Dual-handle range slider
@@ -61,7 +63,7 @@ enum class SliderVariant
 };
 
 // Checkbox state (tri-state support)
-enum class CheckState
+enum class CheckState : std::uint8_t
 {
     Unchecked,
     Checked,
@@ -69,14 +71,14 @@ enum class CheckState
 };
 
 // Badge visual style
-enum class BadgeVariant
+enum class BadgeVariant : std::uint8_t
 {
     Filled, // Solid background
     Outline // Border only
 };
 
 // Badge colors
-enum class BadgeColor
+enum class BadgeColor : std::uint8_t
 {
     Default, // Blue
     Success, // Green
@@ -86,14 +88,14 @@ enum class BadgeColor
 };
 
 // Tab orientation
-enum class TabOrientation
+enum class TabOrientation : std::uint8_t
 {
     Horizontal,
     Vertical
 };
 
 // Dropdown variants
-enum class DropdownVariant
+enum class DropdownVariant : std::uint8_t
 {
     Single,    // Single selection
     Multi,     // Multiple selection
@@ -101,7 +103,7 @@ enum class DropdownVariant
 };
 
 // Tooltip position preference
-enum class TooltipPosition
+enum class TooltipPosition : std::uint8_t
 {
     Above,
     Below,
@@ -111,7 +113,7 @@ enum class TooltipPosition
 };
 
 // Modal size presets
-enum class ModalSize
+enum class ModalSize : std::uint8_t
 {
     Small,     // 280px / 320px
     Medium,    // 400px / 480px
@@ -121,7 +123,7 @@ enum class ModalSize
 };
 
 // Animation easing types
-enum class EasingType
+enum class EasingType : std::uint8_t
 {
     Linear,
     EaseOut,
@@ -131,7 +133,7 @@ enum class EasingType
 };
 
 // Segment position for segmented controls
-enum class SegmentPosition
+enum class SegmentPosition : std::uint8_t
 {
     None,   // Standalone button (all corners rounded)
     First,  // First segment (left corners rounded)
@@ -141,14 +143,14 @@ enum class SegmentPosition
 };
 
 // Meter bar orientation
-enum class MeterOrientation
+enum class MeterOrientation : std::uint8_t
 {
     Horizontal,
     Vertical
 };
 
 // Transport state for sync component
-enum class TransportState
+enum class TransportState : std::uint8_t
 {
     Stopped,
     Playing,
@@ -183,7 +185,7 @@ struct RichTooltipContent
     bool showColourPreview = false;
 
     RichTooltipContent() = default;
-    RichTooltipContent(const juce::String& t, const juce::String& v = {}) : title(t), value(v) {}
+    RichTooltipContent(juce::String t, juce::String v = {}) : title(std::move(t)), value(std::move(v)) {}
 };
 
 // Validation result
@@ -192,8 +194,8 @@ struct ValidationResult
     bool isValid = true;
     juce::String errorMessage;
 
-    static ValidationResult valid() { return {true, {}}; }
-    static ValidationResult invalid(const juce::String& message) { return {false, message}; }
+    static ValidationResult valid() { return {.isValid = true, .errorMessage = {}}; }
+    static ValidationResult invalid(const juce::String& message) { return {.isValid = false, .errorMessage = message}; }
 };
 
 } // namespace oscil

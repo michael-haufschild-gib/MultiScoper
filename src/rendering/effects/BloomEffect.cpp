@@ -299,6 +299,13 @@ bool BloomEffect::compile(juce::OpenGLContext& context)
     combineBloomLoc_ = combineShader_->getUniformIDFromName("bloomTexture");
     combineIntensityLoc_ = combineShader_->getUniformIDFromName("intensity");
 
+    if (combineOriginalLoc_ < 0 || combineBloomLoc_ < 0 || combineIntensityLoc_ < 0)
+    {
+        DBG("BloomEffect: Missing combine shader uniforms");
+        combineShader_.reset();
+        return false;
+    }
+
     compiled_ = true;
     return true;
 }
@@ -343,7 +350,7 @@ void BloomEffect::passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer
     source->bindTexture(0);
     ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
     ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
-    ext.glUniform2f(prefilterResLoc_, (float) source->width, (float) source->height);
+    ext.glUniform2f(prefilterResLoc_, static_cast<float>(source->width), static_cast<float>(source->height));
     pool.renderFullscreenQuad();
     mipChain_[0]->unbind();
 }
@@ -357,7 +364,7 @@ void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, Framebuffe
         Framebuffer* dst = mipChain_[static_cast<size_t>(i) + 1].get();
         dst->bind();
         src->bindTexture(0);
-        ext.glUniform2f(downsampleResLoc_, (float) src->width, (float) src->height);
+        ext.glUniform2f(downsampleResLoc_, static_cast<float>(src->width), static_cast<float>(src->height));
         pool.renderFullscreenQuad();
         dst->unbind();
     }
@@ -377,7 +384,8 @@ void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferP
         Framebuffer* dst = mipChain_[static_cast<size_t>(i) - 1].get();
         dst->bind();
         src->bindTexture(0);
-        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / (float) src->width, 1.0f / (float) src->height);
+        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / static_cast<float>(src->width),
+                        1.0f / static_cast<float>(src->height));
         pool.renderFullscreenQuad();
         dst->unbind();
     }

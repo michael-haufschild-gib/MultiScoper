@@ -14,6 +14,7 @@
     #include <unordered_set>
 
     // Debug-only logging macro — no output in release builds
+    // NOLINTNEXTLINE(bugprone-macro-parentheses)
     #define GL_LOG(msg) DBG("[GL] " << msg)
 
 namespace oscil
@@ -21,7 +22,6 @@ namespace oscil
 
 using namespace juce::gl;
 
-static constexpr bool DEBUG_RENDER_MODE = false;
 std::vector<WaveformRenderData> WaveformGLRenderer::collectWaveformsToRender()
 {
     std::vector<WaveformRenderData> result;
@@ -86,7 +86,7 @@ void WaveformGLRenderer::renderOpenGL()
     float deltaTime = std::min(std::chrono::duration<float>(now - lastFrameTime_).count(), 0.1f);
     lastFrameTime_ = now;
 
-    const float desktopScale = static_cast<float>(context_->getRenderingScale());
+    const auto desktopScale = static_cast<float>(context_->getRenderingScale());
     auto* targetComponent = context_->getTargetComponent();
     if (!targetComponent)
         return;
@@ -174,16 +174,19 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     setupDebugProjection(ext, projLoc, colorLoc, viewportWidth, viewportHeight, colour);
 
     glDisable(GL_DEPTH_TEST);
-    while (glGetError() != GL_NO_ERROR)
+    // Drain any pre-existing GL errors before debug draw
+    for (GLenum err = glGetError(); err != GL_NO_ERROR; err = glGetError())
     {
+        DBG("WaveformGLRenderer: pre-existing GL error before debug draw: 0x"
+            << juce::String::toHexString(static_cast<int>(err)));
     }
 
     ext.glBindVertexArray(debugVAO_);
     ext.glBindBuffer(GL_ARRAY_BUFFER, debugVBO_);
     ext.glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
-    GLint positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
-    GLuint posAttrib = static_cast<GLuint>(positionLoc >= 0 ? positionLoc : 0);
+    auto positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
+    auto posAttrib = static_cast<GLuint>(positionLoc >= 0 ? positionLoc : 0);
     ext.glEnableVertexAttribArray(posAttrib);
     ext.glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
 

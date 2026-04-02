@@ -5,6 +5,8 @@
 
 #include "ui/theme/ThemeManager.h"
 
+#include <algorithm>
+
 namespace oscil
 {
 
@@ -96,7 +98,7 @@ void ThemeManager::flushPendingSaves()
         {
             if (auto xml = it->second.toValueTree().createXml())
             {
-                filesToWrite.push_back({themesDir.getChildFile(name + ".xml").getFullPathName(), xml->toString()});
+                filesToWrite.emplace_back(themesDir.getChildFile(name + ".xml").getFullPathName(), xml->toString());
             }
         }
     }
@@ -139,11 +141,12 @@ bool ThemeManager::setCurrentTheme(const juce::String& themeName)
 std::vector<juce::String> ThemeManager::getAvailableThemes() const
 {
     std::vector<juce::String> result;
+    result.reserve(themes_.size());
     for (const auto& [name, theme] : themes_)
     {
         result.push_back(name);
     }
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     return result;
 }
 
@@ -153,9 +156,18 @@ const ColorTheme* ThemeManager::getTheme(const juce::String& themeName) const
     return it != themes_.end() ? &it->second : nullptr;
 }
 
+bool ThemeManager::isValidThemeName(const juce::String& name)
+{
+    if (name.isEmpty())
+        return false;
+    if (name.contains("..") || name.containsAnyOf("/\\:*?\"<>|"))
+        return false;
+    return true;
+}
+
 bool ThemeManager::createTheme(const juce::String& name, const juce::String& sourceTheme)
 {
-    if (themes_.find(name) != themes_.end())
+    if (name.isEmpty() || themes_.find(name) != themes_.end())
         return false;
 
     ColorTheme newTheme;
@@ -224,6 +236,9 @@ bool ThemeManager::deleteTheme(const juce::String& name)
 
 bool ThemeManager::cloneTheme(const juce::String& sourceName, const juce::String& newName)
 {
+    if (newName.isEmpty())
+        return false;
+
     auto it = themes_.find(sourceName);
     if (it == themes_.end())
         return false;
@@ -246,19 +261,33 @@ bool ThemeManager::isSystemTheme(const juce::String& name) const
     return it != themes_.end() && it->second.isSystemTheme;
 }
 
-bool ThemeManager::importTheme(const juce::String& json)
+bool ThemeManager::importTheme(const juce::String& xmlString)
 {
     ColorTheme theme;
-    if (!theme.fromJson(json))
+    if (!theme.fromXmlString(xmlString))
         return false;
 
-    if (theme.name.isEmpty())
+    auto importedName = theme.name.trim();
+    if (!isValidThemeName(importedName))
         return false;
 
+    // Prevent imported themes from overwriting protected system themes
+    if (isSystemTheme(importedName))
+        return false;
+
+    theme.name = importedName;
     theme.isSystemTheme = false;
     themes_[theme.name] = theme;
 
     saveTheme(theme.name);
+
+    // Refresh active theme if the import overwrites the currently selected theme
+    if (currentTheme_.name == theme.name)
+    {
+        currentTheme_ = theme;
+        notifyListeners();
+    }
+
     return true;
 }
 
@@ -268,7 +297,7 @@ juce::String ThemeManager::exportTheme(const juce::String& name) const
     if (it == themes_.end())
         return {};
 
-    return it->second.toJson();
+    return it->second.toXmlString();
 }
 
 void ThemeManager::addListener(ThemeManagerListener* listener) { listeners_.add(listener); }

@@ -11,6 +11,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -20,7 +21,7 @@ namespace oscil
 /**
  * Action identifiers for pane header actions
  */
-enum class PaneAction
+enum class PaneAction : std::uint8_t
 {
     ToggleStats,     // Toggle statistics overlay
     ToggleHold,      // Toggle hold/pause display

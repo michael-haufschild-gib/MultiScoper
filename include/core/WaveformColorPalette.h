@@ -57,13 +57,13 @@ struct WaveformColorPalette
     }
 
     /**
-     * Get a random color from the palette
+     * Get a random color from the palette.
+     * Thread-safe: uses thread_local PRNG to avoid data races.
      */
     static juce::Colour getRandomColor()
     {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        static std::uniform_int_distribution<size_t> dist(0, NUM_COLORS - 1);
+        thread_local std::mt19937 gen(std::random_device{}());
+        thread_local std::uniform_int_distribution<size_t> dist(0, NUM_COLORS - 1);
         return getColor(dist(gen));
     }
 

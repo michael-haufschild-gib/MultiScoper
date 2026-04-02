@@ -7,6 +7,8 @@
 
 #include "TestElementRegistry.h"
 
+#include <utility>
+
 namespace oscil::test
 {
 
@@ -25,7 +27,9 @@ namespace oscil::test
 class TestRegistration
 {
 public:
-    TestRegistration(juce::Component& component, const juce::String& testId) : component_(component), testId_(testId)
+    TestRegistration(juce::Component& component, juce::String testId)
+        : component_(component)
+        , testId_(std::move(testId))
     {
         TestElementRegistry::getInstance().registerElement(testId_, &component_);
     }
@@ -88,7 +92,7 @@ private:
  * @param testId The unique identifier for this element
  */
 #define REGISTER_TESTABLE_CHILD(component, testId) \
-    oscil::test::TestElementRegistry::getInstance().registerElement(testId, &component)
+    oscil::test::TestElementRegistry::getInstance().registerElement((testId), &(component))
 
 /**
  * Unregister a child component.

@@ -10,6 +10,7 @@
 #include <juce_core/juce_core.h>
 
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
 namespace oscil
@@ -146,7 +147,7 @@ struct PaneDragState
 /**
  * Layout column configuration
  */
-enum class ColumnLayout
+enum class ColumnLayout : std::uint8_t
 {
     Single = 1,
     Double = 2,

@@ -7,6 +7,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -30,7 +32,11 @@ static constexpr int MAX_SOURCE_RATE = 192000;
 //==============================================================================
 
 /**
- * Quality presets for waveform capture resolution
+ * Quality presets for waveform capture resolution (audio capture sample rate).
+ *
+ * Related but distinct from:
+ * - QualityMode (PerformanceConfig.h): controls rendering FPS and resolution scaling
+ * - QualityLevel (RenderCommon.h): controls which post-processing effects are active
  *
  * Eco:      11kHz capture - Minimal memory (~180KB/track for 4s)
  *           Best for: Laptop users, 20+ tracks, limited RAM
@@ -44,7 +50,7 @@ static constexpr int MAX_SOURCE_RATE = 192000;
  * Ultra:    Source rate capture - Maximum quality (variable memory)
  *           Best for: Forensic analysis, professional studios
  */
-enum class QualityPreset
+enum class QualityPreset : std::uint8_t
 {
     Eco,
     Standard,
@@ -103,7 +109,7 @@ inline juce::String qualityPresetToDisplayName(QualityPreset preset)
  * Maximum buffer duration options
  * Determines how much history is stored for visualization
  */
-enum class BufferDuration
+enum class BufferDuration : std::uint8_t
 {
     Short,   // 1 second - minimal memory
     Medium,  // 4 seconds - covers most timing intervals (default)

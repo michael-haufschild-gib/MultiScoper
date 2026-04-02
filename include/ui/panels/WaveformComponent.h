@@ -32,7 +32,7 @@ class ShaderRegistry;
 /**
  * Display mode for stereo waveforms
  */
-enum class StereoDisplayMode
+enum class StereoDisplayMode : std::uint8_t
 {
     Stacked // L channel on top, R channel on bottom
 };

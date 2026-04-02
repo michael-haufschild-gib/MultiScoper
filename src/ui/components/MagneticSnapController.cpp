@@ -4,6 +4,7 @@
 
 #include "ui/components/MagneticSnapController.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace oscil
@@ -18,7 +19,7 @@ void MagneticSnapController::setMagneticPoints(const std::vector<double>& points
 void MagneticSnapController::addMagneticPoint(double point)
 {
     // Only add if not already present
-    if (std::find(magneticPoints_.begin(), magneticPoints_.end(), point) == magneticPoints_.end())
+    if (std::ranges::find(magneticPoints_, point) == magneticPoints_.end())
     {
         magneticPoints_.push_back(point);
     }
@@ -32,15 +33,21 @@ double MagneticSnapController::applySnapping(double value, double minValue, doub
 {
     didSnap = false;
 
-    // If disabled, return value unchanged
+    // If disabled or range is degenerate, return value unchanged
     if (!enabled_)
     {
         justSnapped_ = false;
         return value;
     }
 
-    // Calculate snap threshold as percentage of range
     double range = maxValue - minValue;
+    if (range <= 0.0)
+    {
+        justSnapped_ = false;
+        return value;
+    }
+
+    // Calculate snap threshold as percentage of range
     double snapThreshold = range * SNAP_THRESHOLD_PERCENT;
 
     // Check each magnetic point

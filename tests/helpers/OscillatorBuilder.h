@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "core/OscilState.h"
 #include "core/Oscillator.h"
 
 #include <memory>
@@ -28,8 +29,7 @@ class OscillatorBuilder
 {
 public:
     OscillatorBuilder()
-        : id_(OscillatorId::generate())
-        , processingMode_(ProcessingMode::FullStereo)
+        : processingMode_(ProcessingMode::FullStereo)
         , colour_(juce::Colours::white)
         , lineWidth_(Oscillator::DEFAULT_LINE_WIDTH)
         , isVisible_(true)
@@ -42,7 +42,7 @@ public:
      */
     OscillatorBuilder& withId(const juce::String& id)
     {
-        id_ = OscillatorId{id};
+        customId_ = OscillatorId{id};
         return *this;
     }
 
@@ -51,7 +51,7 @@ public:
      */
     OscillatorBuilder& withId(const OscillatorId& id)
     {
-        id_ = id;
+        customId_ = id;
         return *this;
     }
 
@@ -209,24 +209,21 @@ public:
     }
 
     /**
-     * Build and return a unique_ptr to the Oscillator
+     * Build and return a unique_ptr to the Oscillator.
+     *
+     * If withId() was called, the ID is applied via a ValueTree round-trip
+     * since Oscillator has no public ID setter (by design — IDs are immutable
+     * after creation in production code).
      */
     std::unique_ptr<Oscillator> buildUnique()
     {
         auto osc = std::make_unique<Oscillator>();
 
-        // Note: We can't directly set the ID after construction in the actual Oscillator class
-        // So we'll use the auto-generated ID. If specific ID is needed, tests should construct differently.
-
         if (name_.has_value())
-        {
             osc->setName(name_.value());
-        }
 
         if (sourceId_.has_value())
-        {
             osc->setSourceId(sourceId_.value());
-        }
 
         osc->setProcessingMode(processingMode_);
         osc->setColour(colour_);
@@ -235,8 +232,16 @@ public:
         osc->setOrderIndex(orderIndex_);
 
         if (paneId_.has_value())
-        {
             osc->setPaneId(paneId_.value());
+
+        // Apply custom ID via ValueTree round-trip only when withId() was called.
+        // Production Oscillator IDs are immutable after construction, so
+        // we serialize → patch ID → deserialize to honour the test request.
+        if (customId_.has_value())
+        {
+            auto tree = osc->toValueTree();
+            tree.setProperty(StateIds::Id, customId_->id, nullptr);
+            osc->fromValueTree(tree);
         }
 
         return osc;
@@ -257,7 +262,7 @@ public:
     std::shared_ptr<Oscillator> buildShared() { return std::shared_ptr<Oscillator>(buildUnique().release()); }
 
 private:
-    OscillatorId id_;
+    std::optional<OscillatorId> customId_;
     std::optional<juce::String> name_;
     std::optional<SourceId> sourceId_;
     ProcessingMode processingMode_;

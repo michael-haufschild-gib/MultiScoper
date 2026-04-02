@@ -127,6 +127,11 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
     }
 
     colorUniformLoc_ = colorShader_->getUniformIDFromName("color");
+    if (colorUniformLoc_ < 0)
+    {
+        DBG("GridRenderer: Missing 'color' uniform");
+        colorShader_.reset();
+    }
 }
 
 void GridRenderer::drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col)
@@ -158,7 +163,7 @@ void GridRenderer::generateHorizontalGrid(float yTop, float yBottom)
     // Minor (8 divisions)
     for (int i = 1; i < 8; ++i)
     {
-        float y = yTop - (i / 8.0f) * height;
+        float y = yTop - (static_cast<float>(i) / 8.0f) * height;
         if (std::abs(y - yCenter) > 0.01f)
             addLine(minorLines_, -1.0f, y, 1.0f, y);
     }
@@ -194,8 +199,9 @@ void GridRenderer::generateTimeGrid(const GridConfiguration& config, float yTop,
     else
         stepSize = 5.0f * magnitude;
 
-    for (float t = stepSize; t < durationMs; t += stepSize)
+    for (int gridIdx = 1; static_cast<float>(gridIdx) * stepSize < durationMs; ++gridIdx)
     {
+        float t = static_cast<float>(gridIdx) * stepSize;
         float x = -1.0f + (t / durationMs) * 2.0f;
         addLine(timeMajorLines_, x, yTop, x, yBottom);
     }
@@ -240,7 +246,7 @@ void GridRenderer::generateMusicalGrid(const GridConfiguration& config, float yT
 
     for (int i = 1; i < numDivisions; ++i)
     {
-        float x = -1.0f + i * widthPerDiv;
+        float x = -1.0f + static_cast<float>(i) * widthPerDiv;
         if (isBarBased)
             addLine(majorLines_, x, yTop, x, yBottom);
         else
@@ -253,9 +259,10 @@ void GridRenderer::generateMusicalGrid(const GridConfiguration& config, float yT
         float subBeatWidth = widthPerDiv / static_cast<float>(subBeatsPerDiv);
         for (int i = 0; i < numDivisions; ++i)
         {
-            float baseX = -1.0f + i * widthPerDiv;
+            float baseX = -1.0f + static_cast<float>(i) * widthPerDiv;
             for (int j = 1; j < subBeatsPerDiv; ++j)
-                addLine(timeMinorLines_, baseX + j * subBeatWidth, yTop, baseX + j * subBeatWidth, yBottom);
+                addLine(timeMinorLines_, baseX + static_cast<float>(j) * subBeatWidth, yTop,
+                        baseX + static_cast<float>(j) * subBeatWidth, yBottom);
         }
     }
 }

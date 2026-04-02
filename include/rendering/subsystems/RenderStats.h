@@ -11,19 +11,21 @@ namespace oscil
 {
 
 // Release-mode logging macro for render engine debugging
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define RE_LOG(msg) DBG("[RenderEngine] " << msg)
 
 // Rate-limited logging macro (logs every N frames)
-#define RE_LOG_THROTTLED(interval_frames, msg) \
-    do                                         \
-    {                                          \
-        static int reLogCounter = 0;           \
-        if (++reLogCounter >= interval_frames) \
-        {                                      \
-            reLogCounter = 0;                  \
-            RE_LOG(msg);                       \
-        }                                      \
-    }                                          \
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
+#define RE_LOG_THROTTLED(interval_frames, msg)   \
+    do                                           \
+    {                                            \
+        static int reLogCounter = 0;             \
+        if (++reLogCounter >= (interval_frames)) \
+        {                                        \
+            reLogCounter = 0;                    \
+            RE_LOG(msg);                         \
+        }                                        \
+    }                                            \
     while (0)
 
 class RenderStats

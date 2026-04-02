@@ -7,13 +7,15 @@
 
 #include <juce_core/juce_core.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
 /**
  * Trigger mode for timing synchronization
  */
-enum class TriggerMode
+enum class TriggerMode : std::uint8_t
 {
     FREE_RUNNING, // Continuous display without sync
     HOST_SYNC,    // Sync to host transport (play/stop)
@@ -51,7 +53,7 @@ inline TriggerMode stringToTriggerMode(const juce::String& str)
 /**
  * Edge detection mode for triggered timing
  */
-enum class TriggerEdge
+enum class TriggerEdge : std::uint8_t
 {
     Rising,
     Falling,
@@ -84,7 +86,7 @@ inline TriggerEdge stringToTriggerEdge(const juce::String& str)
 /**
  * Waveform trigger/restart mode
  */
-enum class WaveformMode
+enum class WaveformMode : std::uint8_t
 {
     FreeRunning,   // Waveforms keep running continuously
     RestartOnPlay, // Waveforms reset when playback starts

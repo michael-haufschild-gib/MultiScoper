@@ -57,7 +57,10 @@ public:
     /**
      * Get shader info for UI display
      */
-    [[nodiscard]] ShaderInfo getInfo() const { return {getId(), getDisplayName(), getDescription()}; }
+    [[nodiscard]] ShaderInfo getInfo() const
+    {
+        return {.id = getId(), .displayName = getDisplayName(), .description = getDescription()};
+    }
 
 #if OSCIL_ENABLE_OPENGL
     /**

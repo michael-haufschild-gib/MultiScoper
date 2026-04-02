@@ -11,6 +11,7 @@ namespace oscil
 
 using namespace juce::gl;
 
+// NOLINTNEXTLINE(readability-function-size)
 bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples, GLenum fmt, bool withDepth,
                          bool useDepthTexture)
 {
@@ -38,8 +39,12 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
 
     if (numSamples > 0)
     {
-        // MSAA temporarily disabled due to missing extension bindings in current JUCE setup
-        DBG("Framebuffer: MSAA requested but not implemented in this build. Falling back to standard FBO.");
+        // MSAA is not supported in this build. Log and fail explicitly rather than
+        // silently creating a non-MSAA FBO that callers might mistakenly rely on.
+        DBG("Framebuffer: MSAA requested (numSamples=" << numSamples << ") but not implemented. Use numSamples=0.");
+        jassertfalse;
+        destroy(context);
+        return false;
     }
 
     // Standard Path: Use Textures (or Renderbuffer for depth if not sampling)

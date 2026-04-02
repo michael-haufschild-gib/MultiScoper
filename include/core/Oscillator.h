@@ -12,6 +12,7 @@
 #include <juce_graphics/juce_graphics.h>
 
 #include <cmath>
+#include <cstdint>
 #include <optional>
 
 namespace oscil
@@ -20,7 +21,7 @@ namespace oscil
 /**
  * Processing modes available per oscillator
  */
-enum class ProcessingMode
+enum class ProcessingMode : std::uint8_t
 {
     FullStereo, // Pass-through L/R visualization (two traces)
     Mono,       // (L+R)/2 summed mono representation
@@ -121,7 +122,7 @@ struct PaneIdHash
 /**
  * Oscillator state for source assignment tracking
  */
-enum class OscillatorState
+enum class OscillatorState : std::uint8_t
 {
     ACTIVE,   // Source is assigned and providing data
     NO_SOURCE // Source disconnected, preserving config for reconnection

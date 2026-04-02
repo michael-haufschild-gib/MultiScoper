@@ -12,6 +12,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 
 #include <atomic>
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -25,7 +26,7 @@ class SharedCaptureBuffer;
  * Source state machine states per PRD
  * Tracks lifecycle of an audio source from discovery to removal
  */
-enum class SourceState
+enum class SourceState : std::uint8_t
 {
     DISCOVERED, // New source detected, awaiting audio data
     ACTIVE,     // Receiving audio samples, owning instance operational
@@ -77,7 +78,7 @@ inline SourceState stringToSourceState(const juce::String& str)
 /**
  * Channel configuration for a source
  */
-enum class ChannelConfig
+enum class ChannelConfig : std::uint8_t
 {
     MONO,
     STEREO

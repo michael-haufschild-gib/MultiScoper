@@ -30,6 +30,9 @@ struct SpringAnimation
     float damping = 20.0f;    // Higher = less oscillation
     float mass = 1.0f;        // Higher = more momentum
 
+    // Maximum delta time to prevent integration instability after stalls/freezes
+    static constexpr float MAX_DELTA_TIME = 1.0f / 15.0f; // ~67ms floor
+
     /**
      * Create a spring animation with default parameters
      */
@@ -63,9 +66,11 @@ struct SpringAnimation
      */
     void update(float deltaTime)
     {
-        // Guard against invalid delta time
+        // Guard against invalid or excessive delta time.
+        // Large deltas (e.g. after app freeze) would destabilize the integrator.
         if (deltaTime <= 0.0f)
             return;
+        deltaTime = std::min(deltaTime, MAX_DELTA_TIME);
 
         // Spring force: F = -k * x (Hooke's law)
         float displacement = position - target;
@@ -147,37 +152,37 @@ namespace SpringPresets
  * Snappy - Quick response, minimal overshoot
  * Use for: Button presses, quick state changes
  */
-inline SpringAnimation snappy() { return SpringAnimation(400.0f, 30.0f, 1.0f); }
+inline SpringAnimation snappy() { return {400.0f, 30.0f, 1.0f}; }
 
 /**
  * Bouncy - Playful with noticeable overshoot
  * Use for: Toggle celebrations, success states
  */
-inline SpringAnimation bouncy() { return SpringAnimation(300.0f, 15.0f, 1.0f); }
+inline SpringAnimation bouncy() { return {300.0f, 15.0f, 1.0f}; }
 
 /**
  * Smooth - Gentle, no overshoot
  * Use for: Panel transitions, layout animations
  */
-inline SpringAnimation smooth() { return SpringAnimation(200.0f, 25.0f, 1.0f); }
+inline SpringAnimation smooth() { return {200.0f, 25.0f, 1.0f}; }
 
 /**
  * Gentle - Slow, dreamy motion
  * Use for: Background effects, ambient animations
  */
-inline SpringAnimation gentle() { return SpringAnimation(150.0f, 20.0f, 1.0f); }
+inline SpringAnimation gentle() { return {150.0f, 20.0f, 1.0f}; }
 
 /**
  * Stiff - Very fast, almost instant
  * Use for: Hover states, micro-interactions
  */
-inline SpringAnimation stiff() { return SpringAnimation(500.0f, 40.0f, 1.0f); }
+inline SpringAnimation stiff() { return {500.0f, 40.0f, 1.0f}; }
 
 /**
  * Wobbly - Fun, exaggerated motion
  * Use for: Playful UI, game-like interfaces
  */
-inline SpringAnimation wobbly() { return SpringAnimation(250.0f, 10.0f, 1.0f); }
+inline SpringAnimation wobbly() { return {250.0f, 10.0f, 1.0f}; }
 } // namespace SpringPresets
 
 /**

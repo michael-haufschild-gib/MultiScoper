@@ -149,6 +149,10 @@ public:
             func(*renderEngine_);
     }
 
+    /// Debug mode: draw colored rectangles instead of waveforms.
+    /// Bypasses shaders — use to test basic GL pipeline.
+    static constexpr bool DEBUG_RENDER_MODE = false;
+
 private:
     void compileDebugShader();
     void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);

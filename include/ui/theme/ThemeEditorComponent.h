@@ -64,6 +64,7 @@ public:
     void addColorSwatch(const juce::String& label, juce::Colour* colorRef);
     /// Refresh all swatch displays from the given theme's current colour values.
     void updateFromTheme(ColorTheme& theme);
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     void setEnabled(bool enabled);
 
     int getPreferredHeight() const;
