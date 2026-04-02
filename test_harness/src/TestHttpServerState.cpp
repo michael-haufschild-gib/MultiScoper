@@ -145,27 +145,18 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
     {
         // Block until message thread completes the removal to prevent race
         // conditions where the next operation starts before reset finishes.
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([track, &done]() {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([track, done]() {
             auto& state = track->getProcessor().getState();
-            auto oscillators = state.getOscillators();
-            for (const auto& osc : oscillators)
+            for (const auto& osc : state.getOscillators())
                 state.removeOscillator(osc.getId());
-
-            auto& layoutManager = state.getLayoutManager();
-            auto panes = layoutManager.getPanes();
-            for (const auto& pane : panes)
-                layoutManager.removePane(pane.getId());
-
-            // Reset timing engine to defaults (TIME mode, 500ms, 120 BPM)
-            auto& timingEngine = track->getProcessor().getTimingEngine();
-            EngineTimingConfig defaultTimingConfig;
-            timingEngine.setConfig(defaultTimingConfig);
-
-            // Wait for queued refreshPanels to complete before signalling
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
+            auto& lm = state.getLayoutManager();
+            for (const auto& pane : lm.getPanes())
+                lm.removePane(pane.getId());
+            track->getProcessor().getTimingEngine().setConfig(EngineTimingConfig{});
+            juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done.wait(5000);
+        done->wait(5000);
     }
 
     resetAudioAndTransport();
@@ -262,8 +253,6 @@ bool TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPl
     auto timingTree = state.getState().getChildWithName(StateIds::Timing);
     if (timingTree.isValid())
         processor.getTimingEngine().fromValueTree(timingTree);
-    else
-        processor.getTimingEngine().fromValueTree(processor.getTimingEngine().toValueTree());
 
     uiController_.toggle("sidebar_options_gridToggle", state.isShowGridEnabled());
     uiController_.setSliderValue("sidebar_options_gainSlider", static_cast<double>(state.getGainDb()));
@@ -374,15 +363,12 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
         juce::Logger::writeToLog("[Harness] Adding oscillator: " + osc.getName() + " source=" + osc.getSourceId().id +
                                  " pane=" + osc.getPaneId().id);
         Oscillator oscCopy = osc;
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([oscCopy, track, &done]() mutable {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([oscCopy, track, done]() mutable {
             track->getProcessor().getState().addOscillator(oscCopy);
-            // The addOscillator triggers valueTreeChildAdded which queues
-            // refreshPanels via callAsync.  Queue another callback AFTER
-            // refreshPanels so we only signal done once the UI is updated.
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
+            juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done.wait(5000);
+        done->wait(5000);
 
         res.set_content(successResponse(oscJson).dump(), "application/json");
     }
@@ -425,17 +411,17 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
         applyOscillatorJsonUpdates(osc, body);
         state.updateOscillator(osc);
 
-        // Refresh UI so sidebar list reflects the updated oscillator state
-        auto* editor = track->getEditor();
-        if (editor)
+        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
+            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
+        if (safeEditor.getComponent())
         {
-            juce::WaitableEvent refreshDone;
-            juce::MessageManager::callAsync([editor, &refreshDone]() {
-                if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
-                    oscilEditor->refreshPanels();
-                refreshDone.signal();
+            auto refreshDone = std::make_shared<juce::WaitableEvent>();
+            juce::MessageManager::callAsync([safeEditor, refreshDone]() {
+                if (auto* ed = safeEditor.getComponent())
+                    ed->refreshPanels();
+                refreshDone->signal();
             });
-            refreshDone.wait(3000);
+            refreshDone->wait(3000);
         }
 
         json oscJson;
