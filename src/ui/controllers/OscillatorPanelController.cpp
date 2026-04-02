@@ -64,8 +64,13 @@ void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& os
     sidebar_->refreshOscillatorList(sortedOscs);
 }
 
+void OscillatorPanelController::handleAsyncUpdate() { refreshPanels(); }
+
 void OscillatorPanelController::refreshPanels()
 {
+    // A synchronous refresh supersedes any pending async one.
+    cancelPendingUpdate();
+
     if (isUpdating_)
     {
         OSCIL_LOG(CONTROLLER, "refreshPanels: DEFERRED (already updating)");

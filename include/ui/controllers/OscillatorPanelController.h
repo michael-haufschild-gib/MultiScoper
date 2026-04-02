@@ -31,6 +31,7 @@ class GpuRenderCoordinator;
 class OscillatorPanelController
     : public juce::ValueTree::Listener
     , public SidebarComponent::Listener
+    , private juce::AsyncUpdater
 {
 public:
     OscillatorPanelController(IAudioDataProvider& dataProvider, ServiceContext& serviceContext,
@@ -121,6 +122,9 @@ public:
     void updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId);
 
 private:
+    // AsyncUpdater — coalesces multiple refresh requests into one callback
+    void handleAsyncUpdate() override;
+
     void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
     void applyOscillatorPropertyChange(const OscillatorId& oscId, const juce::Identifier& property);
 

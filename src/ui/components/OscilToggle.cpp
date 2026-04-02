@@ -55,8 +55,10 @@ void OscilToggle::setValue(bool value, bool animate)
     bool wasOff = !value_;
     value_ = value;
 
-    // Update internal button for APVTS sync
-    internalButton_.setToggleState(value, juce::dontSendNotification);
+    // Update internal button for APVTS sync — sendNotificationSync ensures
+    // ButtonAttachment propagates the change to the APVTS parameter.
+    // Recursion is prevented by the value_ == value early return above.
+    internalButton_.setToggleState(value, juce::sendNotificationSync);
 
     if (animate && AnimationSettings::shouldUseSpringAnimations())
     {
@@ -70,7 +72,6 @@ void OscilToggle::setValue(bool value, bool animate)
     }
     else
     {
-        positionSpring_.snapToTarget();
         positionSpring_.target = value ? 1.0f : 0.0f;
         positionSpring_.position = positionSpring_.target;
         repaint();
