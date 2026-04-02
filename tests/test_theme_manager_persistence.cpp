@@ -66,6 +66,17 @@ TEST_F(ThemeManagerPersistenceTest, ImportSystemThemeNameRejected)
     EXPECT_FALSE(getThemeManager().importTheme(xml));
 }
 
+// Test: Import trims whitespace before checking system theme names
+TEST_F(ThemeManagerPersistenceTest, ImportTrimmedSystemThemeNameRejected)
+{
+    ColorTheme t;
+    t.name = "  Dark Professional  "; // whitespace-padded system theme name
+    t.backgroundPrimary = juce::Colour(0xFF123456);
+    auto xml = t.toXmlString();
+
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+}
+
 // Test: Import rejects unsafe filenames
 TEST_F(ThemeManagerPersistenceTest, ImportUnsafeNameRejected)
 {

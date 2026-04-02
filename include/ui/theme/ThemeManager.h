@@ -328,6 +328,12 @@ public:
     ThemeManager(const ThemeManager&) = delete;
     ThemeManager& operator=(const ThemeManager&) = delete;
 
+    /**
+     * Validate a theme name for filesystem safety.
+     * Rejects empty, path-traversal, and OS-reserved-character names.
+     */
+    static bool isValidThemeName(const juce::String& name);
+
 private:
     void initializeSystemThemes();
     void notifyListeners();

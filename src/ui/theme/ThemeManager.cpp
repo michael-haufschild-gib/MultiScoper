@@ -156,9 +156,18 @@ const ColorTheme* ThemeManager::getTheme(const juce::String& themeName) const
     return it != themes_.end() ? &it->second : nullptr;
 }
 
+bool ThemeManager::isValidThemeName(const juce::String& name)
+{
+    if (name.isEmpty())
+        return false;
+    if (name.contains("..") || name.containsAnyOf("/\\:*?\"<>|"))
+        return false;
+    return true;
+}
+
 bool ThemeManager::createTheme(const juce::String& name, const juce::String& sourceTheme)
 {
-    if (themes_.find(name) != themes_.end())
+    if (name.isEmpty() || themes_.find(name) != themes_.end())
         return false;
 
     ColorTheme newTheme;
@@ -227,6 +236,9 @@ bool ThemeManager::deleteTheme(const juce::String& name)
 
 bool ThemeManager::cloneTheme(const juce::String& sourceName, const juce::String& newName)
 {
+    if (newName.isEmpty())
+        return false;
+
     auto it = themes_.find(sourceName);
     if (it == themes_.end())
         return false;
@@ -256,11 +268,7 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
         return false;
 
     auto importedName = theme.name.trim();
-    if (importedName.isEmpty())
-        return false;
-
-    // Reject unsafe names that could cause path traversal or invalid filenames
-    if (importedName.contains("..") || importedName.containsAnyOf("/\\:*?\"<>|"))
+    if (!isValidThemeName(importedName))
         return false;
 
     // Prevent imported themes from overwriting protected system themes
@@ -272,6 +280,14 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
     themes_[theme.name] = theme;
 
     saveTheme(theme.name);
+
+    // Refresh active theme if the import overwrites the currently selected theme
+    if (currentTheme_.name == theme.name)
+    {
+        currentTheme_ = theme;
+        notifyListeners();
+    }
+
     return true;
 }
 
