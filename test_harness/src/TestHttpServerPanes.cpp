@@ -62,16 +62,14 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
             pane.setName("Pane " + juce::String(layoutManager.getPaneCount() + 1));
         pane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
 
-        auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
+        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
+            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
 
         auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([pane, track, editor, done]() mutable {
+        juce::MessageManager::callAsync([pane, track, safeEditor, done]() mutable {
             track->getProcessor().getState().getLayoutManager().addPane(pane);
-            // Refresh panels so the new pane gets a UI component.
-            // Without this, the pane exists in the data model but has no
-            // PaneComponent, causing zero bounds and layout mismatches.
-            if (editor)
-                editor->refreshPanels();
+            if (auto* ed = safeEditor.getComponent())
+                ed->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
         if (!done->wait(5000))
@@ -233,17 +231,14 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
 
         auto& state = track->getProcessor().getState();
         auto layout = static_cast<ColumnLayout>(columns);
-        auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
+        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
+            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
 
         auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([&state, layout, editor, done]() {
-            // Use OscilState::setColumnLayout — NOT PaneLayoutManager directly.
-            // OscilState updates both the Layout ValueTree node AND the
-            // layout manager, keeping them in sync for serialization.
+        juce::MessageManager::callAsync([&state, layout, safeEditor, done]() {
             state.setColumnLayout(layout);
-            // Trigger a full UI relayout so pane components get repositioned
-            if (editor)
-                editor->refreshPanels();
+            if (auto* ed = safeEditor.getComponent())
+                ed->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
         if (!done->wait(3000))
@@ -319,9 +314,10 @@ void TestHttpServer::handlePaneLayout(const httplib::Request& req, httplib::Resp
     auto data = std::make_shared<json>();
     auto done = std::make_shared<juce::WaitableEvent>();
     auto& layoutManager = track->getProcessor().getState().getLayoutManager();
-    auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
+    juce::Component::SafePointer<OscilPluginEditor> safeEditor(dynamic_cast<OscilPluginEditor*>(track->getEditor()));
 
-    juce::MessageManager::callAsync([data, &layoutManager, editor, done]() {
+    juce::MessageManager::callAsync([data, &layoutManager, safeEditor, done]() {
+        auto* editor = safeEditor.getComponent();
         (*data)["columns"] = layoutManager.getColumnCount();
         (*data)["availableArea"] = buildAvailableArea(editor);
 

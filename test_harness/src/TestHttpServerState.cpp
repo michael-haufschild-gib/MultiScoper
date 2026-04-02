@@ -298,12 +298,13 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         }
 
         auto& processor = track->getProcessor();
-        auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
+        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
+            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
 
         auto done = std::make_shared<juce::WaitableEvent>();
         auto success = std::make_shared<bool>(false);
-        juce::MessageManager::callAsync([&processor, editor, xml, this, done, success]() {
-            *success = restoreLoadedState(processor, editor, xml);
+        juce::MessageManager::callAsync([&processor, safeEditor, xml, this, done, success]() {
+            *success = restoreLoadedState(processor, safeEditor.getComponent(), xml);
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
         if (!done->wait(5000))
