@@ -48,7 +48,8 @@ class TestAccordion:
     ):
         """
         Bug caught: accordion not collapsing on second click.
-        Known failure: timing content remains visible after collapse click.
+        PRODUCTION BUG: accordion child elements remain visible/registered
+        after collapse click — setVisible(false) not called on children.
         """
         # Ensure expanded
         sidebar_page.expand_timing()

@@ -51,7 +51,7 @@ void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& os
 
     sidebar_->refreshSourceList(serviceContext_.instanceRegistry.getAllSources());
 
-    auto panes = layoutManager.getPanes();
+    const auto& panes = layoutManager.getPanes();
     juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this), panes]() {
         if (auto* controller = weakThis.get())
             if (controller->sidebar_)
@@ -59,8 +59,8 @@ void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& os
     });
 
     std::vector<Oscillator> sortedOscs = oscillators;
-    std::sort(sortedOscs.begin(), sortedOscs.end(),
-              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
+    std::ranges::sort(sortedOscs,
+                      [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
     sidebar_->refreshOscillatorList(sortedOscs);
 }
 
@@ -118,6 +118,7 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
     for (const auto& pane : layoutManager.getPanes())
     {
         auto paneComponent = std::make_unique<PaneComponent>(dataProvider_, serviceContext_, pane.getId());
+        paneComponent->setTestId("pane_" + pane.getId().id);
         paneComponent->setPaneIndex(paneIndex++);
 
         // Set up drag-and-drop reorder callback - managed by Container now, but component initiates drag

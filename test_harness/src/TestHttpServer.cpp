@@ -115,6 +115,15 @@ void TestHttpServer::setupRoutes()
     setupStateRoutes();
     setupMetricsRoutes();
 
+    // Layout / per-pane bounds
+    server_->Get("/layout",
+                 [this](const httplib::Request& req, httplib::Response& res) { handleLayoutInfo(req, res); });
+    server_->Post("/layout",
+                  [this](const httplib::Request& req, httplib::Response& res) { handleSetLayout(req, res); });
+    server_->Get("/panes", [this](const httplib::Request& req, httplib::Response& res) { handlePaneLayout(req, res); });
+    server_->Post("/pane/move",
+                  [this](const httplib::Request& req, httplib::Response& res) { handlePaneMove(req, res); });
+
     // Waveform state (data-level verification, no screenshots)
     server_->Get("/waveform/state",
                  [this](const httplib::Request& req, httplib::Response& res) { handleWaveformState(req, res); });
@@ -151,6 +160,7 @@ void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& re
 
 TestTrack* TestHttpServer::resolveTrack(const httplib::Request& req)
 {
+    // 1. Check URL query parameter (?trackId=N)
     auto it = req.params.find("trackId");
     if (it != req.params.end())
     {
@@ -164,6 +174,25 @@ TestTrack* TestHttpServer::resolveTrack(const httplib::Request& req)
         {
         }
     }
+
+    // 2. For POST requests, also check the JSON body for "trackId"
+    if (req.method == "POST" && !req.body.empty())
+    {
+        try
+        {
+            auto body = json::parse(req.body);
+            if (body.contains("trackId"))
+            {
+                int id = body["trackId"].get<int>();
+                if (auto* t = daw_.getTrack(id))
+                    return t;
+            }
+        }
+        catch (...)
+        {
+        }
+    }
+
     return daw_.getTrack(0);
 }
 
@@ -197,10 +226,25 @@ void TestHttpServer::handleDawTrackAdd(const httplib::Request& req, httplib::Res
         int index = daw_.addTrack(juce::String(name));
         auto* track = daw_.getTrack(index);
 
+        // prepareToPlay defers source registration to the message thread.
+        // Wait for the registration to complete so sourceId is available
+        // in the response (callers need it immediately).
+        juce::String resolvedSourceId;
+        if (track)
+        {
+            juce::WaitableEvent done;
+            auto* processor = &track->getProcessor();
+            juce::MessageManager::callAsync([processor, &resolvedSourceId, &done]() {
+                resolvedSourceId = processor->getSourceId().id;
+                done.signal();
+            });
+            done.wait(3000);
+        }
+
         json data;
         data["trackIndex"] = index;
         data["name"] = track ? track->getName().toStdString() : "";
-        data["sourceId"] = track ? track->getSourceId().id.toStdString() : "";
+        data["sourceId"] = resolvedSourceId.toStdString();
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)

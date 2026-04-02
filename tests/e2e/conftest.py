@@ -439,22 +439,31 @@ def multi_editor(client: OscilTestClient):
     """
     Open editors for tracks 0 and 1, reset both states.
     Yields client. Closes both editors on teardown.
+
+    Reset sequence: open editors first (so the editor's
+    auto-created default state exists), then reset each track,
+    then verify both oscillators AND panes are cleared.
     """
     client.open_editor(track_id=0)
     client.open_editor(track_id=1)
     client.reset_track_state(0)
     client.reset_track_state(1)
-    client.wait_until(
-        lambda: len(client.get_oscillators_for_track(0)) == 0,
-        timeout_s=3.0,
-        desc="track 0 state reset",
-    )
-    client.wait_until(
-        lambda: len(client.get_oscillators_for_track(1)) == 0,
-        timeout_s=3.0,
-        desc="track 1 state reset",
-    )
+    for tid in (0, 1):
+        client.wait_until(
+            lambda t=tid: (
+                len(client.get_oscillators_for_track(t)) == 0
+                and len(client.get_panes_for_track(t)) == 0
+            ),
+            timeout_s=5.0,
+            desc=f"track {tid} fully reset (oscillators + panes)",
+        )
     yield client
+    # Teardown: stop transport, remove any dynamic tracks, close editors
+    client.transport_stop()
+    tracks = client.get_tracks()
+    for t in tracks:
+        if t.get("index", 0) >= 3:
+            client.remove_track(t["index"])
     client.close_editor(track_id=0)
     client.close_editor(track_id=1)
 

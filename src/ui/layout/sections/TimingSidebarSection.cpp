@@ -12,7 +12,10 @@ TimingSidebarSection::TimingSidebarSection(ServiceContext& context)
     : presenter_(std::make_unique<TimingPresenter>())
     , themeService_(context.themeService)
 {
-    OSCIL_REGISTER_TEST_ID("sidebar_timing");
+    // NOTE: Do NOT register "sidebar_timing" here — that ID belongs to the
+    // wrapping OscilAccordionSection (set in SidebarComponent::setupSections).
+    // Duplicate registration causes TestElementRegistry::findElement to return
+    // this content component instead of the accordion, breaking expand/collapse.
     setupComponents();
     setupPresenterCallbacks();
     themeService_.addListener(this);
@@ -23,7 +26,7 @@ TimingSidebarSection::TimingSidebarSection(IThemeService& themeService)
     : presenter_(std::make_unique<TimingPresenter>())
     , themeService_(themeService)
 {
-    OSCIL_REGISTER_TEST_ID("sidebar_timing");
+    // See note in ServiceContext constructor above — no duplicate test ID.
     setupComponents();
     setupPresenterCallbacks();
     themeService_.addListener(this);

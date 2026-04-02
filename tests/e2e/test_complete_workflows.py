@@ -500,8 +500,8 @@ class TestConfigPopupAllPropertiesWorkflow:
             changes["opacity"] = 0.4
 
         if popup.has_element(ConfigPopup.LINE_WIDTH_SLIDER):
-            popup.set_line_width(6.0)
-            changes["lineWidth"] = 6.0
+            popup.set_line_width(4.0)
+            changes["lineWidth"] = 4.0
 
         if popup.has_element(f"{ConfigPopup.MODE_SELECTOR}_mid"):
             popup.set_mode("mid")

@@ -2,6 +2,7 @@
     Oscil Test Harness - UI Controller: Simulation Methods & JSON Serialization
 */
 
+#include "ui/components/InlineEditLabel.h"
 #include "ui/components/OscilAccordion.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilDropdown.h"
@@ -288,6 +289,12 @@ bool TestUIController::appendOscilTypeInfo(json& info, juce::Component* componen
     {
         info["type"] = "accordion";
         info["expanded"] = accordion->isExpanded();
+    }
+    else if (auto* inlineLabel = dynamic_cast<oscil::InlineEditLabel*>(component))
+    {
+        info["type"] = "inlineEditLabel";
+        info["text"] = inlineLabel->getText().toStdString();
+        info["editable"] = true;
     }
     else
     {

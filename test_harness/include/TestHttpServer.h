@@ -26,6 +26,12 @@
 #include <nlohmann/json.hpp>
 #include <thread>
 
+namespace oscil
+{
+class OscilPluginProcessor;
+class OscilPluginEditor;
+} // namespace oscil
+
 namespace oscil::test
 {
 
@@ -155,6 +161,12 @@ private:
     void handlePaneRemove(const httplib::Request& req, httplib::Response& res);
     void handleOscillatorMove(const httplib::Request& req, httplib::Response& res);
 
+    // Route handlers - Layout / Per-pane bounds
+    void handleLayoutInfo(const httplib::Request& req, httplib::Response& res);
+    void handleSetLayout(const httplib::Request& req, httplib::Response& res);
+    void handlePaneLayout(const httplib::Request& req, httplib::Response& res);
+    void handlePaneMove(const httplib::Request& req, httplib::Response& res);
+
     // Route handlers - Waveform State
     void handleWaveformState(const httplib::Request& req, httplib::Response& res);
 
@@ -170,6 +182,9 @@ private:
     // Reset helpers
     void resetAudioAndTransport();
     void resetOptionsControls();
+
+    // State restore — applies loaded XML, restores TimingEngine, syncs sidebar UI
+    void restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor, const juce::String& xml);
 
     // Track resolver — extracts trackId from GET query param or POST body, defaults to 0
     TestTrack* resolveTrack(const httplib::Request& req);

@@ -213,9 +213,23 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
 
         if (auto* track = resolveTrack(req))
         {
-            juce::String xml = track->getProcessor().getState().toXmlString();
-            juce::File(path).replaceWithText(xml);
-            res.set_content(successResponse().dump(), "application/json");
+            // Sync TimingEngine to state tree before serialization,
+            // mirroring PluginProcessorState::updateCachedState.
+            auto& processor = track->getProcessor();
+            auto& stateTree = processor.getState().getState();
+            auto timingState = processor.getTimingEngine().toValueTree();
+            auto existingTiming = stateTree.getChildWithName(StateIds::Timing);
+            if (existingTiming.isValid())
+                stateTree.removeChild(existingTiming, nullptr);
+            stateTree.appendChild(timingState, nullptr);
+
+            juce::String xml = processor.getState().toXmlString();
+            juce::File file(path);
+            bool written = file.replaceWithText(xml);
+            if (written && file.existsAsFile())
+                res.set_content(successResponse().dump(), "application/json");
+            else
+                res.set_content(errorResponse("Failed to write state to: " + path).dump(), "application/json");
         }
         else
         {
@@ -226,6 +240,30 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
     {
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
+}
+
+void TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor,
+                                        const juce::String& xml)
+{
+    auto& state = processor.getState();
+    if (!state.fromXmlString(xml))
+        return;
+
+    // Restore TimingEngine from loaded Timing node
+    // (mirrors PluginProcessorState::setStateInformation)
+    auto timingTree = state.getState().getChildWithName(StateIds::Timing);
+    if (timingTree.isValid())
+        processor.getTimingEngine().fromValueTree(timingTree);
+    else
+        processor.getTimingEngine().fromValueTree(processor.getTimingEngine().toValueTree());
+
+    // Sync sidebar UI controls to loaded state values
+    uiController_.toggle("sidebar_options_gridToggle", state.isShowGridEnabled());
+    uiController_.setSliderValue("sidebar_options_gainSlider", static_cast<double>(state.getGainDb()));
+    uiController_.selectById("sidebar_options_layoutDropdown", juce::String(static_cast<int>(state.getColumnLayout())));
+
+    if (editor)
+        editor->refreshPanels();
 }
 
 void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Response& res)
@@ -243,15 +281,24 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         }
 
         juce::String xml = file.loadFileAsString();
-        if (auto* track = resolveTrack(req))
-        {
-            (void) track->getProcessor().getState().fromXmlString(xml);
-            res.set_content(successResponse().dump(), "application/json");
-        }
-        else
+        auto* track = resolveTrack(req);
+        if (!track)
         {
             res.set_content(errorResponse("No tracks available").dump(), "application/json");
+            return;
         }
+
+        auto& processor = track->getProcessor();
+        auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
+
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([&processor, editor, xml, this, &done]() {
+            restoreLoadedState(processor, editor, xml);
+            juce::MessageManager::callAsync([&done]() { done.signal(); });
+        });
+        done.wait(5000);
+
+        res.set_content(successResponse().dump(), "application/json");
     }
     catch (const std::exception& e)
     {
@@ -429,47 +476,7 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
     }
 }
 
-void TestHttpServer::handleStatePanes(const httplib::Request& req, httplib::Response& res)
-{
-    json panes = json::array();
-
-    if (auto* track = resolveTrack(req))
-    {
-        auto& layoutManager = track->getProcessor().getState().getLayoutManager();
-
-        for (const auto& pane : layoutManager.getPanes())
-        {
-            json paneJson;
-            paneJson["id"] = pane.getId().id.toStdString();
-            paneJson["name"] = pane.getName().toStdString();
-            paneJson["column"] = pane.getColumnIndex();
-            paneJson["order"] = pane.getOrderIndex();
-            paneJson["collapsed"] = pane.isCollapsed();
-            panes.push_back(paneJson);
-        }
-    }
-
-    res.set_content(successResponse(panes).dump(), "application/json");
-}
-
-void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Response& res)
-{
-    json sources = json::array();
-
-    auto allSources = PluginFactory::getInstance().getInstanceRegistry().getAllSources();
-    for (const auto& source : allSources)
-    {
-        json sourceJson;
-        sourceJson["id"] = source.sourceId.id.toStdString();
-        sourceJson["name"] = source.name.toStdString();
-        sourceJson["channels"] = source.channelCount;
-        sourceJson["sampleRate"] = source.sampleRate;
-        sources.push_back(sourceJson);
-    }
-
-    res.set_content(successResponse(sources).dump(), "application/json");
-}
-
+// handleStatePanes and handleStateSources are in TestHttpServerPanes.cpp
 // handleStateDeleteOscillator and handleWaveformState are in TestHttpServerWaveform.cpp
 
 } // namespace oscil::test
