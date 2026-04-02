@@ -27,7 +27,11 @@ bool TestUIController::select(const juce::String& elementId, int itemId)
     if (comboBox == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([comboBox, itemId]() { comboBox->setSelectedId(itemId, juce::sendNotification); });
+    juce::Component::SafePointer<juce::ComboBox> safe(comboBox);
+    juce::MessageManager::callAsync([safe, itemId]() {
+        if (auto* cb = safe.getComponent())
+            cb->setSelectedId(itemId, juce::sendNotification);
+    });
 
     return true;
 }
@@ -42,7 +46,11 @@ bool TestUIController::selectByText(const juce::String& elementId, const juce::S
     if (comboBox == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([comboBox, text]() { comboBox->setText(text, juce::sendNotification); });
+    juce::Component::SafePointer<juce::ComboBox> safe(comboBox);
+    juce::MessageManager::callAsync([safe, text]() {
+        if (auto* cb = safe.getComponent())
+            cb->setText(text, juce::sendNotification);
+    });
 
     return true;
 }
@@ -69,8 +77,11 @@ bool TestUIController::selectById(const juce::String& elementId, const juce::Str
         if (targetIndex < 0)
             return false;
 
-        juce::MessageManager::callAsync(
-            [oscilDropdown, targetIndex]() { oscilDropdown->setSelectedIndex(targetIndex, true); });
+        juce::Component::SafePointer<oscil::OscilDropdown> safe(oscilDropdown);
+        juce::MessageManager::callAsync([safe, targetIndex]() {
+            if (auto* dd = safe.getComponent())
+                dd->setSelectedIndex(targetIndex, true);
+        });
 
         return true;
     }
@@ -81,8 +92,11 @@ bool TestUIController::selectById(const juce::String& elementId, const juce::Str
         int intId = itemId.getIntValue();
         if (intId > 0)
         {
-            juce::MessageManager::callAsync(
-                [comboBox, intId]() { comboBox->setSelectedId(intId, juce::sendNotification); });
+            juce::Component::SafePointer<juce::ComboBox> safe(comboBox);
+            juce::MessageManager::callAsync([safe, intId]() {
+                if (auto* cb = safe.getComponent())
+                    cb->setSelectedId(intId, juce::sendNotification);
+            });
             return true;
         }
     }
@@ -109,15 +123,22 @@ bool TestUIController::toggle(const juce::String& elementId, bool value)
     auto* toggleButton = dynamic_cast<juce::ToggleButton*>(component);
     if (toggleButton != nullptr)
     {
-        juce::MessageManager::callAsync(
-            [toggleButton, value]() { toggleButton->setToggleState(value, juce::sendNotification); });
+        juce::Component::SafePointer<juce::ToggleButton> safe(toggleButton);
+        juce::MessageManager::callAsync([safe, value]() {
+            if (auto* tb = safe.getComponent())
+                tb->setToggleState(value, juce::sendNotification);
+        });
         return true;
     }
 
     auto* button = dynamic_cast<juce::Button*>(component);
     if (button != nullptr)
     {
-        juce::MessageManager::callAsync([button, value]() { button->setToggleState(value, juce::sendNotification); });
+        juce::Component::SafePointer<juce::Button> safe(button);
+        juce::MessageManager::callAsync([safe, value]() {
+            if (auto* b = safe.getComponent())
+                b->setToggleState(value, juce::sendNotification);
+        });
         return true;
     }
 
@@ -188,11 +209,15 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
     if (slider == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([slider]() {
-        double interval = slider->getInterval();
-        if (interval == 0.0)
-            interval = (slider->getMaximum() - slider->getMinimum()) / 100.0;
-        slider->setValue(slider->getValue() + interval, juce::sendNotification);
+    juce::Component::SafePointer<juce::Slider> safeSlider(slider);
+    juce::MessageManager::callAsync([safeSlider]() {
+        if (auto* s = safeSlider.getComponent())
+        {
+            double interval = s->getInterval();
+            if (interval == 0.0)
+                interval = (s->getMaximum() - s->getMinimum()) / 100.0;
+            s->setValue(s->getValue() + interval, juce::sendNotification);
+        }
     });
 
     return true;
@@ -223,11 +248,15 @@ bool TestUIController::decrementSlider(const juce::String& elementId)
     if (slider == nullptr)
         return false;
 
-    juce::MessageManager::callAsync([slider]() {
-        double interval = slider->getInterval();
-        if (interval == 0.0)
-            interval = (slider->getMaximum() - slider->getMinimum()) / 100.0;
-        slider->setValue(slider->getValue() - interval, juce::sendNotification);
+    juce::Component::SafePointer<juce::Slider> safeSlider(slider);
+    juce::MessageManager::callAsync([safeSlider]() {
+        if (auto* s = safeSlider.getComponent())
+        {
+            double interval = s->getInterval();
+            if (interval == 0.0)
+                interval = (s->getMaximum() - s->getMinimum()) / 100.0;
+            s->setValue(s->getValue() - interval, juce::sendNotification);
+        }
     });
 
     return true;
