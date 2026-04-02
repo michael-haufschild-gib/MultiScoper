@@ -249,10 +249,10 @@ bool ThemeManager::isSystemTheme(const juce::String& name) const
     return it != themes_.end() && it->second.isSystemTheme;
 }
 
-bool ThemeManager::importTheme(const juce::String& json)
+bool ThemeManager::importTheme(const juce::String& xmlString)
 {
     ColorTheme theme;
-    if (!theme.fromXmlString(json))
+    if (!theme.fromXmlString(xmlString))
         return false;
 
     if (theme.name.isEmpty())

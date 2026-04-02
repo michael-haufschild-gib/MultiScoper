@@ -48,8 +48,8 @@ TEST_F(ThemeManagerPersistenceTest, ImportEmptyString)
     EXPECT_FALSE(result);
 }
 
-// Test: Import XML with missing required fields
-TEST_F(ThemeManagerPersistenceTest, ImportIncompleteXml)
+// Test: Import non-XML content is rejected
+TEST_F(ThemeManagerPersistenceTest, ImportNonXmlContent)
 {
     bool result = getThemeManager().importTheme("{}");
     EXPECT_FALSE(result);

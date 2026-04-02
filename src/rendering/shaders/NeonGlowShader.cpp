@@ -74,7 +74,8 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
     gl_->geometryScaleLoc = gl_->program->getUniformIDFromName("geometryScale");
 
-    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0 || gl_->glowIntensityLoc < 0)
+    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0 || gl_->glowIntensityLoc < 0 ||
+        gl_->geometryScaleLoc < 0)
     {
         DBG("NeonGlowShader: Missing required uniforms");
         gl_->program.reset();

@@ -43,6 +43,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
         // silently creating a non-MSAA FBO that callers might mistakenly rely on.
         DBG("Framebuffer: MSAA requested (numSamples=" << numSamples << ") but not implemented. Use numSamples=0.");
         jassertfalse;
+        destroy(context);
         return false;
     }
 

@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "core/OscilState.h"
 #include "core/Oscillator.h"
 
 #include <memory>
@@ -28,8 +29,7 @@ class OscillatorBuilder
 {
 public:
     OscillatorBuilder()
-        : id_(OscillatorId::generate())
-        , processingMode_(ProcessingMode::FullStereo)
+        : processingMode_(ProcessingMode::FullStereo)
         , colour_(juce::Colours::white)
         , lineWidth_(Oscillator::DEFAULT_LINE_WIDTH)
         , isVisible_(true)
@@ -42,7 +42,7 @@ public:
      */
     OscillatorBuilder& withId(const juce::String& id)
     {
-        id_ = OscillatorId{id};
+        customId_ = OscillatorId{id};
         return *this;
     }
 
@@ -51,7 +51,7 @@ public:
      */
     OscillatorBuilder& withId(const OscillatorId& id)
     {
-        id_ = id;
+        customId_ = id;
         return *this;
     }
 
@@ -234,13 +234,13 @@ public:
         if (paneId_.has_value())
             osc->setPaneId(paneId_.value());
 
-        // Apply custom ID via ValueTree if caller used withId().
+        // Apply custom ID via ValueTree round-trip only when withId() was called.
         // Production Oscillator IDs are immutable after construction, so
         // we serialize → patch ID → deserialize to honour the test request.
-        if (id_ != osc->getId())
+        if (customId_.has_value())
         {
             auto tree = osc->toValueTree();
-            tree.setProperty("id", id_.id, nullptr);
+            tree.setProperty(StateIds::Id, customId_->id, nullptr);
             osc->fromValueTree(tree);
         }
 
@@ -262,7 +262,7 @@ public:
     std::shared_ptr<Oscillator> buildShared() { return std::shared_ptr<Oscillator>(buildUnique().release()); }
 
 private:
-    OscillatorId id_;
+    std::optional<OscillatorId> customId_;
     std::optional<juce::String> name_;
     std::optional<SourceId> sourceId_;
     ProcessingMode processingMode_;
