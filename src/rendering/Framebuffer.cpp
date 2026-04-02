@@ -11,7 +11,47 @@ namespace oscil
 
 using namespace juce::gl;
 
-// NOLINTNEXTLINE(readability-function-size)
+bool Framebuffer::initFbo(juce::OpenGLContext& context)
+{
+    auto& ext = context.extensions;
+
+    ext.glGenFramebuffers(1, &fbo);
+    if (fbo == 0)
+    {
+        DBG("Framebuffer: Failed to generate FBO");
+        return false;
+    }
+
+    ext.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    auto unbindAndFail = [&ext]() {
+        ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return false;
+    };
+
+    if (numSamples > 0)
+    {
+        DBG("Framebuffer: MSAA requested (numSamples=" << numSamples << ") but not implemented. Use numSamples=0.");
+        jassertfalse;
+        return unbindAndFail();
+    }
+
+    if (!createColorTexture(context))
+        return unbindAndFail();
+
+    if (hasDepth && !createDepthBuffer(context))
+        return unbindAndFail();
+
+    if (!checkFramebufferComplete())
+    {
+        DBG("Framebuffer: Framebuffer is not complete");
+        return unbindAndFail();
+    }
+
+    ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return true;
+}
+
 bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples, GLenum fmt, bool withDepth,
                          bool useDepthTexture)
 {
@@ -25,51 +65,11 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
     hasDepth = withDepth;
     hasDepthTexture = useDepthTexture && withDepth;
 
-    auto& ext = context.extensions;
-
-    // Create framebuffer object
-    ext.glGenFramebuffers(1, &fbo);
-    if (fbo == 0)
-    {
-        DBG("Framebuffer: Failed to generate FBO");
-        return false;
-    }
-
-    ext.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    if (numSamples > 0)
-    {
-        // MSAA is not supported in this build. Log and fail explicitly rather than
-        // silently creating a non-MSAA FBO that callers might mistakenly rely on.
-        DBG("Framebuffer: MSAA requested (numSamples=" << numSamples << ") but not implemented. Use numSamples=0.");
-        jassertfalse;
-        destroy(context);
-        return false;
-    }
-
-    // Standard Path: Use Textures (or Renderbuffer for depth if not sampling)
-    if (!createColorTexture(context))
+    if (!initFbo(context))
     {
         destroy(context);
         return false;
     }
-
-    if (withDepth && !createDepthBuffer(context))
-    {
-        destroy(context);
-        return false;
-    }
-
-    // Check completeness
-    if (!checkFramebufferComplete())
-    {
-        DBG("Framebuffer: Framebuffer is not complete");
-        destroy(context);
-        return false;
-    }
-
-    // Unbind
-    ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     return true;
 }
@@ -298,6 +298,10 @@ void Framebuffer::destroy(juce::OpenGLContext& context)
 
     width = 0;
     height = 0;
+    numSamples = 0;
+    format = juce::gl::GL_RGBA8;
+    hasDepth = false;
+    hasDepthTexture = false;
 }
 
 } // namespace oscil

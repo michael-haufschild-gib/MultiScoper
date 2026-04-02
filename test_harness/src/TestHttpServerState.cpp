@@ -145,27 +145,18 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
     {
         // Block until message thread completes the removal to prevent race
         // conditions where the next operation starts before reset finishes.
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([track, &done]() {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([track, done]() {
             auto& state = track->getProcessor().getState();
-            auto oscillators = state.getOscillators();
-            for (const auto& osc : oscillators)
+            for (const auto& osc : state.getOscillators())
                 state.removeOscillator(osc.getId());
-
-            auto& layoutManager = state.getLayoutManager();
-            auto panes = layoutManager.getPanes();
-            for (const auto& pane : panes)
-                layoutManager.removePane(pane.getId());
-
-            // Reset timing engine to defaults (TIME mode, 500ms, 120 BPM)
-            auto& timingEngine = track->getProcessor().getTimingEngine();
-            EngineTimingConfig defaultTimingConfig;
-            timingEngine.setConfig(defaultTimingConfig);
-
-            // Wait for queued refreshPanels to complete before signalling
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
+            auto& lm = state.getLayoutManager();
+            for (const auto& pane : lm.getPanes())
+                lm.removePane(pane.getId());
+            track->getProcessor().getTimingEngine().setConfig(EngineTimingConfig{});
+            juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done.wait(5000);
+        done->wait(5000);
     }
 
     resetAudioAndTransport();
@@ -211,11 +202,35 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
         auto body = json::parse(req.body);
         std::string path = body.value("path", "/tmp/state.xml");
 
-        if (auto* track = resolveTrack(req))
+        auto* track = resolveTrack(req);
+        if (track)
         {
-            juce::String xml = track->getProcessor().getState().toXmlString();
-            juce::File(path).replaceWithText(xml);
-            res.set_content(successResponse().dump(), "application/json");
+            auto& processor = track->getProcessor();
+            // Serialize on the message thread to avoid racing with ValueTree listeners.
+            auto xml = std::make_shared<juce::String>();
+            auto done = std::make_shared<juce::WaitableEvent>();
+            juce::MessageManager::callAsync([&processor, xml, done]() {
+                auto& stateTree = processor.getState().getState();
+                auto timingState = processor.getTimingEngine().toValueTree();
+                auto existingTiming = stateTree.getChildWithName(StateIds::Timing);
+                if (existingTiming.isValid())
+                    stateTree.removeChild(existingTiming, nullptr);
+                stateTree.appendChild(timingState, nullptr);
+                *xml = processor.getState().toXmlString();
+                done->signal();
+            });
+            if (!done->wait(5000))
+            {
+                res.set_content(errorResponse("Timeout serializing state").dump(), "application/json");
+                return;
+            }
+
+            juce::File file(path);
+            bool written = file.replaceWithText(*xml);
+            if (written && file.existsAsFile())
+                res.set_content(successResponse().dump(), "application/json");
+            else
+                res.set_content(errorResponse("Failed to write state to: " + path).dump(), "application/json");
         }
         else
         {
@@ -226,6 +241,27 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
     {
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
+}
+
+bool TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor,
+                                        const juce::String& xml)
+{
+    auto& state = processor.getState();
+    if (!state.fromXmlString(xml))
+        return false;
+
+    auto timingTree = state.getState().getChildWithName(StateIds::Timing);
+    if (timingTree.isValid())
+        processor.getTimingEngine().fromValueTree(timingTree);
+
+    uiController_.toggle("sidebar_options_gridToggle", state.isShowGridEnabled());
+    uiController_.setSliderValue("sidebar_options_gainSlider", static_cast<double>(state.getGainDb()));
+    uiController_.selectById("sidebar_options_layoutDropdown", juce::String(static_cast<int>(state.getColumnLayout())));
+
+    if (editor)
+        editor->refreshPanels();
+
+    return true;
 }
 
 void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Response& res)
@@ -243,15 +279,33 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         }
 
         juce::String xml = file.loadFileAsString();
-        if (auto* track = resolveTrack(req))
-        {
-            (void) track->getProcessor().getState().fromXmlString(xml);
-            res.set_content(successResponse().dump(), "application/json");
-        }
-        else
+        auto* track = resolveTrack(req);
+        if (!track)
         {
             res.set_content(errorResponse("No tracks available").dump(), "application/json");
+            return;
         }
+
+        auto& processor = track->getProcessor();
+        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
+            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
+
+        auto done = std::make_shared<juce::WaitableEvent>();
+        auto success = std::make_shared<bool>(false);
+        juce::MessageManager::callAsync([&processor, safeEditor, xml, this, done, success]() {
+            *success = restoreLoadedState(processor, safeEditor.getComponent(), xml);
+            juce::MessageManager::callAsync([done]() { done->signal(); });
+        });
+        if (!done->wait(5000))
+        {
+            res.set_content(errorResponse("Timeout restoring state").dump(), "application/json");
+            return;
+        }
+
+        if (*success)
+            res.set_content(successResponse().dump(), "application/json");
+        else
+            res.set_content(errorResponse("Failed to restore state from XML").dump(), "application/json");
     }
     catch (const std::exception& e)
     {
@@ -309,15 +363,12 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
         juce::Logger::writeToLog("[Harness] Adding oscillator: " + osc.getName() + " source=" + osc.getSourceId().id +
                                  " pane=" + osc.getPaneId().id);
         Oscillator oscCopy = osc;
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([oscCopy, track, &done]() mutable {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([oscCopy, track, done]() mutable {
             track->getProcessor().getState().addOscillator(oscCopy);
-            // The addOscillator triggers valueTreeChildAdded which queues
-            // refreshPanels via callAsync.  Queue another callback AFTER
-            // refreshPanels so we only signal done once the UI is updated.
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
+            juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done.wait(5000);
+        done->wait(5000);
 
         res.set_content(successResponse(oscJson).dump(), "application/json");
     }
@@ -360,17 +411,17 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
         applyOscillatorJsonUpdates(osc, body);
         state.updateOscillator(osc);
 
-        // Refresh UI so sidebar list reflects the updated oscillator state
-        auto* editor = track->getEditor();
-        if (editor)
+        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
+            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
+        if (safeEditor.getComponent())
         {
-            juce::WaitableEvent refreshDone;
-            juce::MessageManager::callAsync([editor, &refreshDone]() {
-                if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
-                    oscilEditor->refreshPanels();
-                refreshDone.signal();
+            auto refreshDone = std::make_shared<juce::WaitableEvent>();
+            juce::MessageManager::callAsync([safeEditor, refreshDone]() {
+                if (auto* ed = safeEditor.getComponent())
+                    ed->refreshPanels();
+                refreshDone->signal();
             });
-            refreshDone.wait(3000);
+            refreshDone->wait(3000);
         }
 
         json oscJson;
@@ -429,47 +480,7 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
     }
 }
 
-void TestHttpServer::handleStatePanes(const httplib::Request& req, httplib::Response& res)
-{
-    json panes = json::array();
-
-    if (auto* track = resolveTrack(req))
-    {
-        auto& layoutManager = track->getProcessor().getState().getLayoutManager();
-
-        for (const auto& pane : layoutManager.getPanes())
-        {
-            json paneJson;
-            paneJson["id"] = pane.getId().id.toStdString();
-            paneJson["name"] = pane.getName().toStdString();
-            paneJson["column"] = pane.getColumnIndex();
-            paneJson["order"] = pane.getOrderIndex();
-            paneJson["collapsed"] = pane.isCollapsed();
-            panes.push_back(paneJson);
-        }
-    }
-
-    res.set_content(successResponse(panes).dump(), "application/json");
-}
-
-void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Response& res)
-{
-    json sources = json::array();
-
-    auto allSources = PluginFactory::getInstance().getInstanceRegistry().getAllSources();
-    for (const auto& source : allSources)
-    {
-        json sourceJson;
-        sourceJson["id"] = source.sourceId.id.toStdString();
-        sourceJson["name"] = source.name.toStdString();
-        sourceJson["channels"] = source.channelCount;
-        sourceJson["sampleRate"] = source.sampleRate;
-        sources.push_back(sourceJson);
-    }
-
-    res.set_content(successResponse(sources).dump(), "application/json");
-}
-
+// handleStatePanes and handleStateSources are in TestHttpServerPanes.cpp
 // handleStateDeleteOscillator and handleWaveformState are in TestHttpServerWaveform.cpp
 
 } // namespace oscil::test

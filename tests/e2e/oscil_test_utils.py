@@ -380,6 +380,13 @@ class OscilTestClient:
         """Delete an oscillator by ID via state API."""
         return self._post_ok("/state/oscillator/delete", {"id": osc_id})
 
+    def delete_oscillator_on_track(self, osc_id: str, track_id: int) -> bool:
+        """Delete an oscillator by ID on a specific track."""
+        return self._post_ok(
+            f"/state/oscillator/delete?trackId={track_id}",
+            {"id": osc_id, "trackId": track_id},
+        )
+
     def reorder_oscillators(self, from_index: int, to_index: int) -> bool:
         return self._post_ok("/state/oscillator/reorder", {"fromIndex": from_index, "toIndex": to_index})
 
@@ -622,12 +629,16 @@ class OscilTestClient:
     def get_layout_info(self) -> Optional[Dict]:
         """Get current column layout info (columns, paneCount, editor size)."""
         resp = self._get_json("/layout")
-        return resp
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
 
     def set_column_layout(self, columns: int) -> bool:
         """Set column layout (1, 2, or 3). Returns True on success."""
         resp = self._post_json("/layout", {"columns": columns})
-        return resp is not None and resp.get("status") == "ok"
+        if resp and resp.get("success"):
+            return resp.get("data", {}).get("status") == "ok"
+        return False
 
     def get_pane_layout(self) -> Optional[Dict]:
         """Get per-pane bounds and column indices.
@@ -638,12 +649,16 @@ class OscilTestClient:
           panes: [{index, id, name, columnIndex, bounds: {x, y, width, height}}, ...]
         """
         resp = self._get_json("/panes")
-        return resp
+        if resp and resp.get("success"):
+            return resp.get("data", {})
+        return None
 
     def move_pane_position(self, from_index: int, to_index: int) -> bool:
         """Move a pane from one position to another. Returns True on success."""
         resp = self._post_json("/pane/move", {"fromIndex": from_index, "toIndex": to_index})
-        return resp is not None and resp.get("status") == "ok"
+        if resp and resp.get("success"):
+            return resp.get("data", {}).get("status") == "ok"
+        return False
 
     # ── Multi-instance / Track lifecycle ──────────────────────────
 
@@ -691,14 +706,14 @@ class OscilTestClient:
         }
         if colour:
             payload["colour"] = colour
-        resp = self._post_json("/state/oscillator/add", payload)
+        resp = self._post_json(f"/state/oscillator/add?trackId={track_id}", payload)
         if resp and resp.get("success"):
             return resp.get("data", {}).get("id")
         return None
 
     def reset_track_state(self, track_id: int) -> bool:
         """Reset state for a specific track's plugin instance."""
-        return self._post_ok("/state/reset", {"trackId": track_id})
+        return self._post_ok(f"/state/reset?trackId={track_id}", {"trackId": track_id})
 
     def get_panes_for_track(self, track_id: int) -> List[Dict]:
         """Get panes for a specific track's plugin instance."""
@@ -719,7 +734,10 @@ class OscilTestClient:
 
     def click_on_track(self, element_id: str, track_id: int) -> bool:
         """Click an element scoped to a specific track's editor."""
-        return self._post_ok("/ui/click", {"elementId": element_id, "trackId": track_id})
+        return self._post_ok(
+            f"/ui/click?trackId={track_id}",
+            {"elementId": element_id, "trackId": track_id},
+        )
 
     def get_element_for_track(self, element_id: str, track_id: int) -> Optional[ElementInfo]:
         """Get element info scoped to a specific track's editor."""

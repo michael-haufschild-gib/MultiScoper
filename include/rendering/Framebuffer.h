@@ -116,6 +116,7 @@ struct Framebuffer
     virtual void clear(juce::Colour colour, bool clearDepth = true);
 
 private:
+    bool initFbo(juce::OpenGLContext& context);
     bool createColorTexture(juce::OpenGLContext& context);
     bool createDepthBuffer(juce::OpenGLContext& context);
     bool checkFramebufferComplete();
