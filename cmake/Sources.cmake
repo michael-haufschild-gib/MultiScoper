@@ -15,6 +15,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBufferQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManagerQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
     ${CMAKE_SOURCE_DIR}/src/core/GlobalPreferences.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
