@@ -141,7 +141,7 @@ void FilmGrainEffect::apply(juce::OpenGLContext& context, Framebuffer* source, F
     ext.glUniform1i(textureLoc_, 0);
 
     // Set uniforms
-    ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
+    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
     ext.glUniform1f(timeLoc_, accumulatedTime_);
     ext.glUniform2f(resolutionLoc_, static_cast<float>(source->width), static_cast<float>(source->height));
 

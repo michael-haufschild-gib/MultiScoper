@@ -195,12 +195,13 @@ TEST_F(EffectChainTest, MissingEffectSkipped)
     EXPECT_FALSE(config.scanlines.enabled);
 }
 
-TEST_F(EffectChainTest, BindsDestinationFramebuffer)
+TEST_F(EffectChainTest, EffectReceivesCorrectDestination)
 {
     config.bloom.enabled = true;
 
     chain.process(context, &sourceFBO, pool, 0.01f, config, provider);
 
-    ASSERT_EQ(chain.boundFBOs.size(), 1);
-    EXPECT_EQ(chain.boundFBOs[0], pool.getPingFBO());
+    // Effects own FBO bind/unbind — verify they receive the correct destination
+    EXPECT_TRUE(effect1.applyCalled);
+    EXPECT_EQ(effect1.lastDest, pool.getPingFBO());
 }

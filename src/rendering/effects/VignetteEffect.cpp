@@ -117,7 +117,7 @@ void VignetteEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Fr
     ext.glUniform1i(textureLoc_, 0);
 
     // Set uniforms
-    ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
+    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
     ext.glUniform1f(softnessLoc_, settings_.softness);
     ext.glUniform4f(colorLoc_, settings_.colour.getFloatRed(), settings_.colour.getFloatGreen(),
                     settings_.colour.getFloatBlue(), settings_.colour.getFloatAlpha());

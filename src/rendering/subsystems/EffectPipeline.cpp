@@ -216,16 +216,6 @@ void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* 
     destination->unbind();
 }
 
-void EffectPipeline::applyGlobalEffects(Framebuffer* /*sceneFBO*/, juce::OpenGLContext& /*context*/)
-{
-    // Currently no global effects in the original code other than what's in endFrame?
-    // Original endFrame just called applyGlobalEffects() which was empty/placeholder or
-    // just blit.
-    // RenderEngine.cpp:613 calls applyGlobalEffects().
-    // Let's check RenderEngine.cpp content for applyGlobalEffects implementation.
-    // It wasn't shown in the first view_file.
-}
-
 void EffectPipeline::setQualityLevel(QualityLevel level)
 {
     switch (level)

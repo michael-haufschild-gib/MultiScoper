@@ -143,7 +143,7 @@ void TrailsEffect::applyWithHistory(juce::OpenGLContext& context, Framebuffer* s
     glBindTexture(GL_TEXTURE_2D, history->colorTexture);
     ext.glUniform1i(historyTextureLoc_, 1);
 
-    ext.glUniform1f(decayLoc_, settings_.decay * intensity_);
+    ext.glUniform1f(decayLoc_, settings_.decay * getIntensity());
     ext.glUniform1f(opacityLoc_, settings_.opacity);
 
     pool.renderFullscreenQuad();

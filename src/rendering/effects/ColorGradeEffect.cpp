@@ -117,9 +117,10 @@ bool ColorGradeEffect::compile(juce::OpenGLContext& context)
     shadowsLoc_ = shader_->getUniformIDFromName("shadows");
     highlightsLoc_ = shader_->getUniformIDFromName("highlights");
 
-    if (textureLoc_ < 0)
+    if (textureLoc_ < 0 || brightnessLoc_ < 0 || contrastLoc_ < 0 || saturationLoc_ < 0 || temperatureLoc_ < 0 ||
+        tintLoc_ < 0 || shadowsLoc_ < 0 || highlightsLoc_ < 0)
     {
-        DBG("ColorGradeEffect: Missing texture uniform");
+        DBG("ColorGradeEffect: Missing uniforms");
         shader_.reset();
         return false;
     }
@@ -158,7 +159,7 @@ void ColorGradeEffect::apply(juce::OpenGLContext& context, Framebuffer* source, 
     ext.glUniform1i(textureLoc_, 0);
 
     // Apply intensity scaling
-    float scale = intensity_;
+    float scale = getIntensity();
     ext.glUniform1f(brightnessLoc_, settings_.brightness * scale);
     ext.glUniform1f(contrastLoc_, 1.0f + (settings_.contrast - 1.0f) * scale);
     ext.glUniform1f(saturationLoc_, 1.0f + (settings_.saturation - 1.0f) * scale);

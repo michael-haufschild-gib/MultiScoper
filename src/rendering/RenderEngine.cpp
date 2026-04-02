@@ -246,13 +246,6 @@ void RenderEngine::endFrame()
     if (!initialized_)
         return;
 
-    // Apply global effects to scene FBO
-    if (isGlobalPostProcessingEnabled())
-    {
-        if (auto* sceneFBO = effectPipeline_->getSceneFBO())
-            effectPipeline_->applyGlobalEffects(sceneFBO, *context_);
-    }
-
     // Blit scene to screen
     blitToScreen();
 }

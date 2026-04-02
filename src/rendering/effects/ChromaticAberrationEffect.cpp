@@ -103,7 +103,7 @@ void ChromaticAberrationEffect::apply(juce::OpenGLContext& context, Framebuffer*
 
     source->bindTexture(0);
     ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
+    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
 
     pool.renderFullscreenQuad();
     destination->unbind();
