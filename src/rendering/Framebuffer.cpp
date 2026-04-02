@@ -24,23 +24,28 @@ bool Framebuffer::initFbo(juce::OpenGLContext& context)
 
     ext.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+    auto unbindAndFail = [&ext]() {
+        ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return false;
+    };
+
     if (numSamples > 0)
     {
         DBG("Framebuffer: MSAA requested (numSamples=" << numSamples << ") but not implemented. Use numSamples=0.");
         jassertfalse;
-        return false;
+        return unbindAndFail();
     }
 
     if (!createColorTexture(context))
-        return false;
+        return unbindAndFail();
 
     if (hasDepth && !createDepthBuffer(context))
-        return false;
+        return unbindAndFail();
 
     if (!checkFramebufferComplete())
     {
         DBG("Framebuffer: Framebuffer is not complete");
-        return false;
+        return unbindAndFail();
     }
 
     ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);

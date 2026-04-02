@@ -116,12 +116,12 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
             return;
         }
 
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([paneId, &state, &layoutManager, &done]() {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([paneId, &state, &layoutManager, done]() {
             reassignOrphansAndRemovePane(state, layoutManager, paneId);
-            done.signal();
+            done->signal();
         });
-        done.wait(3000);
+        done->wait(3000);
 
         json data;
         data["id"] = idStr;
@@ -238,7 +238,11 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
                 editor->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done->wait(3000);
+        if (!done->wait(3000))
+        {
+            res.set_content(errorResponse("Timeout setting layout").dump(), "application/json");
+            return;
+        }
 
         json data;
         data["status"] = "ok";
@@ -373,7 +377,11 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
             layoutManager.movePane(paneId, toIndex);
             done->signal();
         });
-        done->wait(3000);
+        if (!done->wait(3000))
+        {
+            res.set_content(errorResponse("Timeout moving pane").dump(), "application/json");
+            return;
+        }
 
         json data;
         data["status"] = "ok";

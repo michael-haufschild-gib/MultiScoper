@@ -292,7 +292,7 @@ class TestMultiEditorUI:
         # Delete oscillator on track 0 via state API (not UI — UI click
         # scoping is a separate concern, state API is the reliable path)
         oscs0 = multi_editor.get_oscillators_for_track(0)
-        multi_editor.delete_oscillator_on_track(oscs0[0]["id"], track_id=0)
+        assert multi_editor.delete_oscillator_on_track(oscs0[0]["id"], track_id=0)
         multi_editor.wait_until(
             lambda: len(multi_editor.get_oscillators_for_track(0)) == 0,
             timeout_s=3.0,
@@ -1001,7 +1001,7 @@ class TestStatePersistenceCrossInstance:
         # Save state for track 0
         path = str(tmp_path / "cross_instance_state.xml")
         assert multi_editor._post_ok(
-            f"/state/save?trackId=0", {"path": path, "trackId": 0}
+            "/state/save?trackId=0", {"path": path, "trackId": 0}
         )
 
         # Reset track 0
@@ -1013,7 +1013,7 @@ class TestStatePersistenceCrossInstance:
 
         # Load state back
         assert multi_editor._post_ok(
-            f"/state/load?trackId=0", {"path": path, "trackId": 0}
+            "/state/load?trackId=0", {"path": path, "trackId": 0}
         )
         multi_editor.wait_until(
             lambda: len(multi_editor.get_oscillators_for_track(0)) == 2,
@@ -1063,7 +1063,7 @@ class TestStatePersistenceCrossInstance:
 class TestThreeInstanceInteraction:
     """Tests using all 3 default tracks for complex multi-instance scenarios."""
 
-    @pytest.fixture()
+    @pytest.fixture
     def three_editors(self, client: OscilTestClient):
         """Open all 3 editors and reset state. Yields client."""
         for tid in range(3):
@@ -1084,7 +1084,7 @@ class TestThreeInstanceInteraction:
         for tid in range(3):
             client.close_editor(track_id=tid)
 
-    @pytest.fixture()
+    @pytest.fixture
     def three_sources(self, three_editors: OscilTestClient) -> dict:
         """Return source IDs for all 3 tracks."""
         sources = {}
@@ -1125,9 +1125,9 @@ class TestThreeInstanceInteraction:
         s0, s1, s2 = three_sources[0], three_sources[1], three_sources[2]
 
         # Each instance displays the next track's source
-        three_editors.add_oscillator_to_track(0, s1, name="T0→T1")
-        three_editors.add_oscillator_to_track(1, s2, name="T1��T2")
-        three_editors.add_oscillator_to_track(2, s0, name="T2→T0")
+        three_editors.add_oscillator_to_track(0, s1, name="T0->T1")
+        three_editors.add_oscillator_to_track(1, s2, name="T1->T2")
+        three_editors.add_oscillator_to_track(2, s0, name="T2->T0")
 
         for tid in range(3):
             oscs = three_editors.get_oscillators_for_track(tid)
@@ -1154,10 +1154,10 @@ class TestThreeInstanceInteraction:
             for other_tid in range(3):
                 if other_tid != tid:
                     osc_id = three_editors.add_oscillator_to_track(
-                        tid, s[other_tid], name=f"T{tid}→T{other_tid}"
+                        tid, s[other_tid], name=f"T{tid}->T{other_tid}"
                     )
                     assert osc_id is not None, (
-                        f"Failed to add T{tid}→T{other_tid} oscillator"
+                        f"Failed to add T{tid}->T{other_tid} oscillator"
                     )
 
         # Each instance should have 2 oscillators
@@ -1828,13 +1828,13 @@ class TestCrossInstanceStatePersistenceEdgeCases:
 
         # Save and load
         path = str(tmp_path / "order_roundtrip.xml")
-        assert multi_editor._post_ok(f"/state/save?trackId=0", {"path": path, "trackId": 0})
+        assert multi_editor._post_ok("/state/save?trackId=0", {"path": path, "trackId": 0})
         multi_editor.reset_track_state(0)
         multi_editor.wait_until(
             lambda: len(multi_editor.get_oscillators_for_track(0)) == 0,
             timeout_s=3.0,
         )
-        assert multi_editor._post_ok(f"/state/load?trackId=0", {"path": path, "trackId": 0})
+        assert multi_editor._post_ok("/state/load?trackId=0", {"path": path, "trackId": 0})
         multi_editor.wait_until(
             lambda: len(multi_editor.get_oscillators_for_track(0)) == 4,
             timeout_s=5.0,
@@ -1866,13 +1866,13 @@ class TestCrossInstanceStatePersistenceEdgeCases:
         path = str(tmp_path / "cycle_stable.xml")
 
         for cycle in range(3):
-            assert multi_editor._post_ok(f"/state/save?trackId=0", {"path": path, "trackId": 0})
+            assert multi_editor._post_ok("/state/save?trackId=0", {"path": path, "trackId": 0})
             multi_editor.reset_track_state(0)
             multi_editor.wait_until(
                 lambda: len(multi_editor.get_oscillators_for_track(0)) == 0,
                 timeout_s=3.0,
             )
-            assert multi_editor._post_ok(f"/state/load?trackId=0", {"path": path, "trackId": 0})
+            assert multi_editor._post_ok("/state/load?trackId=0", {"path": path, "trackId": 0})
             multi_editor.wait_until(
                 lambda: len(multi_editor.get_oscillators_for_track(0)) == 2,
                 timeout_s=5.0,

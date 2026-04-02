@@ -230,7 +230,11 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
                 *xml = processor.getState().toXmlString();
                 done->signal();
             });
-            done->wait(5000);
+            if (!done->wait(5000))
+            {
+                res.set_content(errorResponse("Timeout serializing state").dump(), "application/json");
+                return;
+            }
 
             juce::File file(path);
             bool written = file.replaceWithText(*xml);
