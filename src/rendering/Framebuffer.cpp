@@ -11,6 +11,7 @@ namespace oscil
 
 using namespace juce::gl;
 
+// NOLINTNEXTLINE(readability-function-size)
 bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples, GLenum fmt, bool withDepth,
                          bool useDepthTexture)
 {

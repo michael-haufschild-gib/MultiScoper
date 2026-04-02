@@ -4,6 +4,7 @@
 
 #include "ui/components/MagneticSnapController.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace oscil
@@ -18,7 +19,7 @@ void MagneticSnapController::setMagneticPoints(const std::vector<double>& points
 void MagneticSnapController::addMagneticPoint(double point)
 {
     // Only add if not already present
-    if (std::find(magneticPoints_.begin(), magneticPoints_.end(), point) == magneticPoints_.end())
+    if (std::ranges::find(magneticPoints_, point) == magneticPoints_.end())
     {
         magneticPoints_.push_back(point);
     }

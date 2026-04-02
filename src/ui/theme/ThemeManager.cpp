@@ -5,6 +5,8 @@
 
 #include "ui/theme/ThemeManager.h"
 
+#include <algorithm>
+
 namespace oscil
 {
 
@@ -96,7 +98,7 @@ void ThemeManager::flushPendingSaves()
         {
             if (auto xml = it->second.toValueTree().createXml())
             {
-                filesToWrite.push_back({themesDir.getChildFile(name + ".xml").getFullPathName(), xml->toString()});
+                filesToWrite.emplace_back(themesDir.getChildFile(name + ".xml").getFullPathName(), xml->toString());
             }
         }
     }
@@ -139,11 +141,12 @@ bool ThemeManager::setCurrentTheme(const juce::String& themeName)
 std::vector<juce::String> ThemeManager::getAvailableThemes() const
 {
     std::vector<juce::String> result;
+    result.reserve(themes_.size());
     for (const auto& [name, theme] : themes_)
     {
         result.push_back(name);
     }
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     return result;
 }
 

@@ -7,6 +7,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -15,7 +17,7 @@ namespace oscil
  * PRD aligned with complete note interval options
  * Includes standard notes, dotted, triplets, and multi-bar options
  */
-enum class NoteInterval
+enum class NoteInterval : std::uint8_t
 {
     // Standard notes
     THIRTY_SECOND, // 1/32 - Thirty-second note
@@ -129,6 +131,7 @@ inline juce::String noteIntervalToDisplayName(NoteInterval interval)
     return "Quarter Note";
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 inline NoteInterval stringToNoteInterval(const juce::String& str)
 {
     // Standard notes

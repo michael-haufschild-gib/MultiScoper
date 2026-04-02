@@ -57,7 +57,9 @@ public:
     void setVariant(ButtonVariant variant);
     ButtonVariant getVariant() const { return variant_; }
 
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     void setEnabled(bool enabled);
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     bool isEnabled() const { return enabled_; }
 
     /// Set a raster icon image, optionally positioned to the left of the label.

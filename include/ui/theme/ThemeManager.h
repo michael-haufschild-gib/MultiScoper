@@ -194,25 +194,25 @@ struct ColorTheme
 
         // Check primary text on backgrounds
         if (!meetsContrastAA(textPrimary, backgroundPrimary))
-            issues.push_back("textPrimary on backgroundPrimary fails AA contrast");
+            issues.emplace_back("textPrimary on backgroundPrimary fails AA contrast");
         if (!meetsContrastAA(textPrimary, backgroundSecondary))
-            issues.push_back("textPrimary on backgroundSecondary fails AA contrast");
+            issues.emplace_back("textPrimary on backgroundSecondary fails AA contrast");
         if (!meetsContrastAA(textSecondary, backgroundPrimary))
-            issues.push_back("textSecondary on backgroundPrimary fails AA contrast");
+            issues.emplace_back("textSecondary on backgroundPrimary fails AA contrast");
 
         // Check button text contrast
         if (!meetsContrastAA(btnPrimaryText, btnPrimaryBg))
-            issues.push_back("Primary button text fails AA contrast");
+            issues.emplace_back("Primary button text fails AA contrast");
         if (!meetsContrastAA(btnSecondaryText, btnSecondaryBg))
-            issues.push_back("Secondary button text fails AA contrast");
+            issues.emplace_back("Secondary button text fails AA contrast");
 
         // Check status colors on background
         if (!meetsLargeTextContrastAA(statusActive, backgroundPrimary))
-            issues.push_back("statusActive on background fails large text AA contrast");
+            issues.emplace_back("statusActive on background fails large text AA contrast");
         if (!meetsLargeTextContrastAA(statusWarning, backgroundPrimary))
-            issues.push_back("statusWarning on background fails large text AA contrast");
+            issues.emplace_back("statusWarning on background fails large text AA contrast");
         if (!meetsLargeTextContrastAA(statusError, backgroundPrimary))
-            issues.push_back("statusError on background fails large text AA contrast");
+            issues.emplace_back("statusError on background fails large text AA contrast");
 
         return issues;
     }

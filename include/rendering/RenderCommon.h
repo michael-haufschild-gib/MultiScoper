@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -16,7 +18,7 @@ namespace oscil
  * - QualityMode (PerformanceConfig.h): controls rendering FPS and resolution scaling
  * - QualityPreset (QualityPreset.h): controls audio capture sample rate
  */
-enum class QualityLevel
+enum class QualityLevel : std::uint8_t
 {
     Eco,    // Performance priority - minimal effects
     Normal, // Balanced - most 2D effects, limited particles

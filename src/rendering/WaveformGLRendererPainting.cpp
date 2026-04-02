@@ -14,6 +14,7 @@
     #include <unordered_set>
 
     // Debug-only logging macro — no output in release builds
+    // NOLINTNEXTLINE(bugprone-macro-parentheses)
     #define GL_LOG(msg) DBG("[GL] " << msg)
 
 namespace oscil
@@ -85,7 +86,7 @@ void WaveformGLRenderer::renderOpenGL()
     float deltaTime = std::min(std::chrono::duration<float>(now - lastFrameTime_).count(), 0.1f);
     lastFrameTime_ = now;
 
-    const float desktopScale = static_cast<float>(context_->getRenderingScale());
+    const auto desktopScale = static_cast<float>(context_->getRenderingScale());
     auto* targetComponent = context_->getTargetComponent();
     if (!targetComponent)
         return;
@@ -184,8 +185,8 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     ext.glBindBuffer(GL_ARRAY_BUFFER, debugVBO_);
     ext.glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
-    GLint positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
-    GLuint posAttrib = static_cast<GLuint>(positionLoc >= 0 ? positionLoc : 0);
+    auto positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
+    auto posAttrib = static_cast<GLuint>(positionLoc >= 0 ? positionLoc : 0);
     ext.glEnableVertexAttribArray(posAttrib);
     ext.glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
 

@@ -20,7 +20,7 @@ void TimingEngine::updateHostBPM(const juce::AudioPlayHead::PositionInfo& positi
     if (!bpm)
         return;
 
-    double newBPM = juce::jlimit<double>(EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM, *bpm);
+    auto newBPM = juce::jlimit<double>(EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM, *bpm);
     if (std::abs(audioThreadHostInfo_.bpm - newBPM) <= 0.01)
         return;
 
@@ -47,7 +47,7 @@ void TimingEngine::updateSyncState(bool wasPlaying, bool isPlaying, const juce::
 
     if ((cfg.hostSyncEnabled || cfg.syncToPlayhead) && playStateChanged)
     {
-        double syncTimestamp = static_cast<double>(audioThreadHostInfo_.timeInSamples);
+        auto syncTimestamp = static_cast<double>(audioThreadHostInfo_.timeInSamples);
         if (timeInSamples)
             syncTimestamp = static_cast<double>(*timeInSamples);
         atomicLastSyncTimestamp_.store(syncTimestamp, std::memory_order_relaxed);
@@ -192,7 +192,7 @@ void TimingEngine::recalculateInterval()
             if (!std::isfinite(effectiveBPM))
                 effectiveBPM = EngineTimingConfig::MIN_BPM;
 
-            double bpm = static_cast<double>(juce::jmax(effectiveBPM, EngineTimingConfig::MIN_BPM));
+            auto bpm = static_cast<double>(juce::jmax(effectiveBPM, EngineTimingConfig::MIN_BPM));
             newInterval = static_cast<float>((beats * 60000.0) / bpm);
             break;
         }
@@ -369,32 +369,32 @@ void TimingEngine::dispatchPendingUpdates()
     if (flags == 0)
         return;
 
-    if (flags & kPendingTimingMode)
+    if ((flags & kPendingTimingMode) != 0)
     {
         auto cfg = configLock_.read();
         listeners_.call([mode = cfg.timingMode](Listener& l) { l.timingModeChanged(mode); });
     }
 
-    if (flags & kPendingInterval)
+    if ((flags & kPendingInterval) != 0)
     {
         float interval = atomicActualIntervalMs_.load(std::memory_order_relaxed);
         listeners_.call([interval](Listener& l) { l.intervalChanged(interval); });
     }
 
-    if (flags & kPendingHostBPM)
+    if ((flags & kPendingHostBPM) != 0)
     {
         auto hostInfo = hostInfoLock_.read();
-        float bpm = static_cast<float>(hostInfo.bpm);
+        auto bpm = static_cast<float>(hostInfo.bpm);
         listeners_.call([bpm](Listener& l) { l.hostBPMChanged(bpm); });
     }
 
-    if (flags & kPendingHostSync)
+    if ((flags & kPendingHostSync) != 0)
     {
         auto cfg = configLock_.read();
         listeners_.call([enabled = cfg.hostSyncEnabled](Listener& l) { l.hostSyncStateChanged(enabled); });
     }
 
-    if (flags & kPendingTimeSignature)
+    if ((flags & kPendingTimeSignature) != 0)
     {
         auto hostInfo = hostInfoLock_.read();
         listeners_.call([num = hostInfo.timeSigNumerator, den = hostInfo.timeSigDenominator](Listener& l) {

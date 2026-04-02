@@ -13,6 +13,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 
 #include <cmath>
+#include <cstdint>
 
 namespace oscil
 {
@@ -22,7 +23,7 @@ namespace oscil
  * TIME: User specifies interval in milliseconds
  * MELODIC: User selects musical note interval, calculated from host BPM
  */
-enum class TimingMode
+enum class TimingMode : std::uint8_t
 {
     TIME,   // Millisecond-based timing
     MELODIC // Musical note-based timing (requires BPM)

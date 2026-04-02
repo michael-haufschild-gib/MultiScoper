@@ -10,6 +10,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 
 #include <cmath>
+#include <cstdint>
 #include <string>
 
 namespace oscil
@@ -23,7 +24,7 @@ namespace oscil
  * - QualityLevel (RenderCommon.h): controls which post-processing effects are active
  * - QualityPreset (QualityPreset.h): controls audio capture sample rate
  */
-enum class QualityMode
+enum class QualityMode : std::uint8_t
 {
     HIGHEST,     // 60fps, full resolution, all effects
     HIGH,        // 60fps, 75% resolution
@@ -69,7 +70,7 @@ inline QualityMode stringToQualityMode(const juce::String& str)
 /**
  * Rendering mode (OpenGL or Software)
  */
-enum class RenderingMode
+enum class RenderingMode : std::uint8_t
 {
     OPENGL,  // GPU-accelerated rendering
     SOFTWARE // CPU-based fallback rendering
@@ -88,7 +89,7 @@ inline RenderingMode stringToRenderingMode(const juce::String& str)
 /**
  * Status bar position preference
  */
-enum class StatusBarPosition
+enum class StatusBarPosition : std::uint8_t
 {
     BOTTOM,
     TOP

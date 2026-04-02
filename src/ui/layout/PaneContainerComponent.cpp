@@ -53,7 +53,7 @@ void PaneContainerComponent::itemDropped(const SourceDetails& dragSourceDetails)
 
     // Find which PaneComponent we dropped on
     PaneComponent* targetPane = findPaneAt(dragSourceDetails.localPosition);
-    if (targetPane && targetPane->getPaneId().id != movedPaneId.id)
+    if (targetPane != nullptr && targetPane->getPaneId().id != movedPaneId.id)
     {
         if (paneDropCallback_)
         {

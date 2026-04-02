@@ -45,7 +45,7 @@ public:
     /**
      * Layout mode for waveforms
      */
-    enum class LayoutMode
+    enum class LayoutMode : std::uint8_t
     {
         Stacked,   // Waveforms stacked vertically (default)
         Overlapped // Waveforms overlaid on same area (future)

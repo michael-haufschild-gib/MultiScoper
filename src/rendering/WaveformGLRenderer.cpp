@@ -19,6 +19,7 @@ namespace oscil
 using namespace juce::gl;
 
     // Debug-only logging macro — no output in release builds
+    // NOLINTNEXTLINE(bugprone-macro-parentheses)
     #define GL_LOG(msg) DBG("[GL] " << msg)
 
 // Simple solid color shader for debug rendering
@@ -62,6 +63,7 @@ void WaveformGLRenderer::setContext(juce::OpenGLContext* context)
     context_ = context;
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 void WaveformGLRenderer::newOpenGLContextCreated()
 {
     GL_LOG("=== newOpenGLContextCreated CALLED ===");
@@ -99,6 +101,7 @@ void WaveformGLRenderer::newOpenGLContextCreated()
     GL_LOG("contextReady_ set to TRUE");
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 void WaveformGLRenderer::compileDebugShader()
 {
     GL_LOG("compileDebugShader called, context_=" << (context_ ? "valid" : "nullptr")

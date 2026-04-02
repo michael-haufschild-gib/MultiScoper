@@ -8,6 +8,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 
 #include <atomic>
+#include <cstdint>
 
 namespace oscil
 {
@@ -37,7 +38,7 @@ public:
     float getDecayTimeMs() const { return decayTimeMs_.load(std::memory_order_relaxed); }
 
 private:
-    enum class State
+    enum class State : std::uint8_t
     {
         Idle,            // Waiting for transient onset
         MeasuringAttack, // Transient detected, measuring rise to peak

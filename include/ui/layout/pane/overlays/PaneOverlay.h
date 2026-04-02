@@ -11,6 +11,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -33,7 +35,7 @@ public:
     /**
      * Position within the parent body
      */
-    enum class Position
+    enum class Position : std::uint8_t
     {
         TopLeft,
         TopRight,
@@ -47,6 +49,7 @@ public:
 
     // Position
     void setPosition(Position pos);
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     Position getPosition() const { return position_; }
 
     // Visibility with animation

@@ -104,13 +104,13 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     if (isVertical)
     {
         float trackHeight = std::max(1.0f, static_cast<float>(bounds.getHeight()) - THUMB_SIZE);
-        float relY = static_cast<float>(bounds.getBottom()) - THUMB_SIZE / 2 - static_cast<float>(e.getPosition().y);
+        float relY = static_cast<float>(bounds.getBottom()) - THUMB_SIZE / 2.0f - static_cast<float>(e.getPosition().y);
         proportion = relY / trackHeight;
     }
     else
     {
         float trackWidth = std::max(1.0f, static_cast<float>(bounds.getWidth()) - THUMB_SIZE);
-        float relX = static_cast<float>(e.getPosition().x) - THUMB_SIZE / 2;
+        float relX = static_cast<float>(e.getPosition().x) - THUMB_SIZE / 2.0f;
         proportion = relX / trackWidth;
     }
 

@@ -100,7 +100,9 @@ public:
     void setValueFormatter(Callbacks::FormatCallback formatter);
 
     // State
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     void setEnabled(bool enabled);
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     bool isEnabled() const { return enabled_; }
 
     /// Bind this slider to an APVTS parameter for two-way synchronization.

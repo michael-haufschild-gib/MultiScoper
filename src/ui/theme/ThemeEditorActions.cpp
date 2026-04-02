@@ -9,6 +9,7 @@
 namespace oscil
 {
 
+// NOLINTNEXTLINE(readability-function-size)
 void ThemeEditorComponent::handleCreateTheme()
 {
     // Raw new is intentional — JUCE's enterModalState(deleteWhenDismissed=true) takes ownership.
@@ -41,6 +42,7 @@ void ThemeEditorComponent::handleCreateTheme()
                                true);
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 void ThemeEditorComponent::handleCloneTheme()
 {
     if (selectedThemeName_.isEmpty())

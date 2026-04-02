@@ -114,7 +114,7 @@ void loadWaveformColors(ColorTheme& t, const juce::ValueTree& state)
         juce::StringArray colors;
         colors.addTokens(colorStr, ",", "");
         for (const auto& c : colors)
-            t.waveformColors.push_back(juce::Colour(static_cast<juce::uint32>(c.getHexValue32())));
+            t.waveformColors.emplace_back(static_cast<juce::uint32>(c.getHexValue32()));
     }
 }
 

@@ -96,6 +96,7 @@ void DualOutlineShader::release(juce::OpenGLContext& context)
 
 bool DualOutlineShader::isCompiled() const { return gl_->compiled; }
 
+// NOLINTNEXTLINE(readability-function-size)
 void DualOutlineShader::drawChannel(juce::OpenGLExtensionFunctions& ext, const std::vector<float>& samples,
                                     float centerY, float amplitude, float boundsX, float boundsWidth, float lineWidth,
                                     GLint posLoc, GLint distLoc)
@@ -111,7 +112,7 @@ void DualOutlineShader::drawChannel(juce::OpenGLExtensionFunctions& ext, const s
     ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
     ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
     ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                              (void*) (2 * sizeof(float)));
+                              reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
 
