@@ -255,13 +255,19 @@ bool ThemeManager::importTheme(const juce::String& xmlString)
     if (!theme.fromXmlString(xmlString))
         return false;
 
-    if (theme.name.isEmpty())
+    auto importedName = theme.name.trim();
+    if (importedName.isEmpty())
+        return false;
+
+    // Reject unsafe names that could cause path traversal or invalid filenames
+    if (importedName.contains("..") || importedName.containsAnyOf("/\\:*?\"<>|"))
         return false;
 
     // Prevent imported themes from overwriting protected system themes
-    if (isSystemTheme(theme.name))
+    if (isSystemTheme(importedName))
         return false;
 
+    theme.name = importedName;
     theme.isSystemTheme = false;
     themes_[theme.name] = theme;
 

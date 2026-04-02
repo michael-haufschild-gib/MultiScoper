@@ -55,6 +55,30 @@ TEST_F(ThemeManagerPersistenceTest, ImportNonXmlContent)
     EXPECT_FALSE(result);
 }
 
+// Test: Import cannot overwrite a protected system theme
+TEST_F(ThemeManagerPersistenceTest, ImportSystemThemeNameRejected)
+{
+    ColorTheme t;
+    t.name = "Dark Professional"; // built-in system theme
+    t.backgroundPrimary = juce::Colour(0xFF123456);
+    auto xml = t.toXmlString();
+
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+}
+
+// Test: Import rejects unsafe filenames
+TEST_F(ThemeManagerPersistenceTest, ImportUnsafeNameRejected)
+{
+    ColorTheme t;
+    t.name = "../../../etc/evil";
+    auto xml = t.toXmlString();
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+
+    t.name = "theme:with*bad|chars";
+    xml = t.toXmlString();
+    EXPECT_FALSE(getThemeManager().importTheme(xml));
+}
+
 // Test: Export non-existent theme
 TEST_F(ThemeManagerPersistenceTest, ExportNonexistentTheme)
 {
@@ -65,7 +89,7 @@ TEST_F(ThemeManagerPersistenceTest, ExportNonexistentTheme)
 // Test: Export then import roundtrip verifies data survives serialization
 TEST_F(ThemeManagerPersistenceTest, ExportImportRoundtrip)
 {
-    getThemeManager().createTheme("RoundtripTest");
+    EXPECT_TRUE(getThemeManager().createTheme("RoundtripTest"));
     juce::String exported = getThemeManager().exportTheme("RoundtripTest");
     EXPECT_FALSE(exported.isEmpty());
 
