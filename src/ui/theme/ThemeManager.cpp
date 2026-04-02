@@ -167,7 +167,7 @@ bool ThemeManager::isValidThemeName(const juce::String& name)
 
 bool ThemeManager::createTheme(const juce::String& name, const juce::String& sourceTheme)
 {
-    if (name.isEmpty() || themes_.find(name) != themes_.end())
+    if (!isValidThemeName(name) || themes_.find(name) != themes_.end())
         return false;
 
     ColorTheme newTheme;
@@ -215,14 +215,24 @@ bool ThemeManager::deleteTheme(const juce::String& name)
 
     if (currentTheme_.name == name)
     {
-        for (const auto& [themeName, theme] : themes_)
+        // Fall back to Dark Professional, or any system theme if that's missing.
+        auto fallback = themes_.find("Dark Professional");
+        if (fallback == themes_.end() || fallback->first == name)
         {
-            if (theme.isSystemTheme)
+            for (auto& [themeName, theme] : themes_)
             {
-                currentTheme_ = theme;
-                notifyListeners();
-                break;
+                if (theme.isSystemTheme && themeName != name)
+                {
+                    fallback = themes_.find(themeName);
+                    break;
+                }
             }
+        }
+
+        if (fallback != themes_.end())
+        {
+            currentTheme_ = fallback->second;
+            notifyListeners();
         }
     }
 
@@ -236,7 +246,7 @@ bool ThemeManager::deleteTheme(const juce::String& name)
 
 bool ThemeManager::cloneTheme(const juce::String& sourceName, const juce::String& newName)
 {
-    if (newName.isEmpty())
+    if (!isValidThemeName(newName))
         return false;
 
     auto it = themes_.find(sourceName);
@@ -313,8 +323,10 @@ void ThemeManager::notifyListeners()
     else
     {
         auto themeCopy = currentTheme_;
-        juce::MessageManager::callAsync([this, themeCopy]() {
-            listeners_.call([&themeCopy](ThemeManagerListener& listener) { listener.themeChanged(themeCopy); });
+        juce::MessageManager::callAsync([weakThis = juce::WeakReference<ThemeManager>(this), themeCopy]() {
+            if (auto* self = weakThis.get())
+                self->listeners_.call(
+                    [&themeCopy](ThemeManagerListener& listener) { listener.themeChanged(themeCopy); });
         });
     }
 }

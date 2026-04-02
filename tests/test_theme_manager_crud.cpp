@@ -166,17 +166,17 @@ TEST_F(ThemeManagerCRUDTest, CreateThemeUnicodeName)
     getThemeManager().deleteTheme(u8"日本語テーマ");
 }
 
-// Test: Create theme with special characters
+// Test: Create theme with filesystem-unsafe characters is rejected
 TEST_F(ThemeManagerCRUDTest, CreateThemeSpecialChars)
 {
-    bool result = getThemeManager().createTheme("Theme <with> special/chars!");
+    // Path-unsafe characters (<, >, /, \, etc.) are rejected to prevent filesystem traversal
+    EXPECT_FALSE(getThemeManager().createTheme("Theme <with> special/chars!"));
+    EXPECT_EQ(getThemeManager().getTheme("Theme <with> special/chars!"), nullptr);
 
-    EXPECT_TRUE(result);
-
-    auto* theme = getThemeManager().getTheme("Theme <with> special/chars!");
-    ASSERT_NE(theme, nullptr);
-
-    getThemeManager().deleteTheme("Theme <with> special/chars!");
+    // Safe special characters (spaces, parentheses, hyphens) are allowed
+    EXPECT_TRUE(getThemeManager().createTheme("Theme (with) safe-chars!"));
+    EXPECT_NE(getThemeManager().getTheme("Theme (with) safe-chars!"), nullptr);
+    getThemeManager().deleteTheme("Theme (with) safe-chars!");
 }
 
 // Test: Create theme with very long name
