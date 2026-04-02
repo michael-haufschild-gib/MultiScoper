@@ -211,21 +211,29 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
         auto body = json::parse(req.body);
         std::string path = body.value("path", "/tmp/state.xml");
 
-        if (auto* track = resolveTrack(req))
+        auto* track = resolveTrack(req);
+        if (track)
         {
-            // Sync TimingEngine to state tree before serialization,
-            // mirroring PluginProcessorState::updateCachedState.
             auto& processor = track->getProcessor();
-            auto& stateTree = processor.getState().getState();
-            auto timingState = processor.getTimingEngine().toValueTree();
-            auto existingTiming = stateTree.getChildWithName(StateIds::Timing);
-            if (existingTiming.isValid())
-                stateTree.removeChild(existingTiming, nullptr);
-            stateTree.appendChild(timingState, nullptr);
 
-            juce::String xml = processor.getState().toXmlString();
+            // Sync TimingEngine and serialize on the message thread to avoid
+            // racing with ValueTree listeners.
+            auto xml = std::make_shared<juce::String>();
+            auto done = std::make_shared<juce::WaitableEvent>();
+            juce::MessageManager::callAsync([&processor, xml, done]() {
+                auto& stateTree = processor.getState().getState();
+                auto timingState = processor.getTimingEngine().toValueTree();
+                auto existingTiming = stateTree.getChildWithName(StateIds::Timing);
+                if (existingTiming.isValid())
+                    stateTree.removeChild(existingTiming, nullptr);
+                stateTree.appendChild(timingState, nullptr);
+                *xml = processor.getState().toXmlString();
+                done->signal();
+            });
+            done->wait(5000);
+
             juce::File file(path);
-            bool written = file.replaceWithText(xml);
+            bool written = file.replaceWithText(*xml);
             if (written && file.existsAsFile())
                 res.set_content(successResponse().dump(), "application/json");
             else
@@ -242,12 +250,12 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
     }
 }
 
-void TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor,
+bool TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor,
                                         const juce::String& xml)
 {
     auto& state = processor.getState();
     if (!state.fromXmlString(xml))
-        return;
+        return false;
 
     // Restore TimingEngine from loaded Timing node
     // (mirrors PluginProcessorState::setStateInformation)
@@ -264,6 +272,8 @@ void TestHttpServer::restoreLoadedState(OscilPluginProcessor& processor, OscilPl
 
     if (editor)
         editor->refreshPanels();
+
+    return true;
 }
 
 void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Response& res)
@@ -291,14 +301,18 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         auto& processor = track->getProcessor();
         auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
 
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([&processor, editor, xml, this, &done]() {
-            restoreLoadedState(processor, editor, xml);
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
+        auto done = std::make_shared<juce::WaitableEvent>();
+        auto success = std::make_shared<bool>(false);
+        juce::MessageManager::callAsync([&processor, editor, xml, this, done, success]() {
+            *success = restoreLoadedState(processor, editor, xml);
+            juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done.wait(5000);
+        done->wait(5000);
 
-        res.set_content(successResponse().dump(), "application/json");
+        if (*success)
+            res.set_content(successResponse().dump(), "application/json");
+        else
+            res.set_content(errorResponse("Failed to restore state from XML").dump(), "application/json");
     }
     catch (const std::exception& e)
     {

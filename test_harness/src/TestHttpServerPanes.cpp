@@ -64,17 +64,17 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
 
         auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
 
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([pane, track, editor, &done]() mutable {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([pane, track, editor, done]() mutable {
             track->getProcessor().getState().getLayoutManager().addPane(pane);
             // Refresh panels so the new pane gets a UI component.
             // Without this, the pane exists in the data model but has no
             // PaneComponent, causing zero bounds and layout mismatches.
             if (editor)
                 editor->refreshPanels();
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
+            juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done.wait(5000);
+        done->wait(5000);
 
         json data;
         data["id"] = pane.getId().id.toStdString();
@@ -227,8 +227,8 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
         auto layout = static_cast<ColumnLayout>(columns);
         auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
 
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([&state, layout, editor, &done]() {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([&state, layout, editor, done]() {
             // Use OscilState::setColumnLayout — NOT PaneLayoutManager directly.
             // OscilState updates both the Layout ValueTree node AND the
             // layout manager, keeping them in sync for serialization.
@@ -236,9 +236,9 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
             // Trigger a full UI relayout so pane components get repositioned
             if (editor)
                 editor->refreshPanels();
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
+            juce::MessageManager::callAsync([done]() { done->signal(); });
         });
-        done.wait(3000);
+        done->wait(3000);
 
         json data;
         data["status"] = "ok";
@@ -263,7 +263,7 @@ json buildAvailableArea(OscilPluginEditor* editor)
         h = editor->getHeight();
 
         auto& paneComps = editor->getPaneComponents();
-        if (!paneComps.empty())
+        if (!paneComps.empty() && paneComps[0] != nullptr)
         {
             if (auto* parent = paneComps[0]->getParentComponent())
             {
@@ -304,14 +304,14 @@ void TestHttpServer::handlePaneLayout(const httplib::Request& req, httplib::Resp
         return;
     }
 
-    json data;
-    juce::WaitableEvent done;
+    auto data = std::make_shared<json>();
+    auto done = std::make_shared<juce::WaitableEvent>();
     auto& layoutManager = track->getProcessor().getState().getLayoutManager();
     auto* editor = dynamic_cast<OscilPluginEditor*>(track->getEditor());
 
-    juce::MessageManager::callAsync([&data, &layoutManager, editor, &done]() {
-        data["columns"] = layoutManager.getColumnCount();
-        data["availableArea"] = buildAvailableArea(editor);
+    juce::MessageManager::callAsync([data, &layoutManager, editor, done]() {
+        (*data)["columns"] = layoutManager.getColumnCount();
+        (*data)["availableArea"] = buildAvailableArea(editor);
 
         json panesJson = json::array();
         for (int i = 0; i < static_cast<int>(layoutManager.getPanes().size()); ++i)
@@ -323,12 +323,12 @@ void TestHttpServer::handlePaneLayout(const httplib::Request& req, httplib::Resp
                                  {"columnIndex", pane.getColumnIndex()},
                                  {"bounds", buildPaneBounds(pane.getId(), editor)}});
         }
-        data["panes"] = panesJson;
-        done.signal();
+        (*data)["panes"] = panesJson;
+        done->signal();
     });
-    done.wait(5000);
+    done->wait(5000);
 
-    res.set_content(successResponse(data).dump(), "application/json");
+    res.set_content(successResponse(*data).dump(), "application/json");
 }
 
 void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Response& res)
@@ -355,19 +355,25 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
         auto& layoutManager = track->getProcessor().getState().getLayoutManager();
         auto& panes = layoutManager.getPanes();
 
-        if (fromIndex >= static_cast<int>(panes.size()))
+        auto paneCount = static_cast<int>(panes.size());
+        if (fromIndex >= paneCount)
         {
             res.set_content(errorResponse("fromIndex out of range").dump(), "application/json");
             return;
         }
+        if (toIndex >= paneCount)
+        {
+            res.set_content(errorResponse("toIndex out of range").dump(), "application/json");
+            return;
+        }
 
         auto paneId = panes[static_cast<size_t>(fromIndex)].getId();
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([&layoutManager, paneId, toIndex, &done]() {
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([&layoutManager, paneId, toIndex, done]() {
             layoutManager.movePane(paneId, toIndex);
-            done.signal();
+            done->signal();
         });
-        done.wait(3000);
+        done->wait(3000);
 
         json data;
         data["status"] = "ok";

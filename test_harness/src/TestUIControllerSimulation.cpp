@@ -294,7 +294,7 @@ bool TestUIController::appendOscilTypeInfo(json& info, juce::Component* componen
     {
         info["type"] = "inlineEditLabel";
         info["text"] = inlineLabel->getText().toStdString();
-        info["editable"] = true;
+        info["editable"] = !inlineLabel->isReadOnly();
     }
     else
     {

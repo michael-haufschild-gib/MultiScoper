@@ -183,8 +183,9 @@ private:
     void resetAudioAndTransport();
     void resetOptionsControls();
 
-    // State restore — applies loaded XML, restores TimingEngine, syncs sidebar UI
-    void restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor, const juce::String& xml);
+    // State restore — applies loaded XML, restores TimingEngine, syncs sidebar UI.
+    // Returns false if XML parsing fails.
+    bool restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor, const juce::String& xml);
 
     // Track resolver — extracts trackId from GET query param or POST body, defaults to 0
     TestTrack* resolveTrack(const httplib::Request& req);

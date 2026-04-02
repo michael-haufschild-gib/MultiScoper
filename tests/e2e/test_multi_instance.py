@@ -975,7 +975,7 @@ class TestStatePersistenceCrossInstance:
     """Verify state save/load works with cross-instance oscillators."""
 
     def test_save_load_preserves_cross_instance_bindings(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: OscilTestClient, track_sources: dict, tmp_path
     ):
         """
         Bug caught: state XML serialization doesn't include sourceId for
@@ -999,8 +999,8 @@ class TestStatePersistenceCrossInstance:
         )
 
         # Save state for track 0
-        path = "/tmp/oscil_e2e_cross_instance_state.xml"
-        multi_editor._post_ok(
+        path = str(tmp_path / "cross_instance_state.xml")
+        assert multi_editor._post_ok(
             f"/state/save?trackId=0", {"path": path, "trackId": 0}
         )
 
@@ -1012,7 +1012,7 @@ class TestStatePersistenceCrossInstance:
         )
 
         # Load state back
-        multi_editor._post_ok(
+        assert multi_editor._post_ok(
             f"/state/load?trackId=0", {"path": path, "trackId": 0}
         )
         multi_editor.wait_until(
@@ -1188,8 +1188,21 @@ class TestThreeInstanceInteraction:
         assert len(three_editors.get_oscillators_for_track(0)) == 1
         assert len(three_editors.get_oscillators_for_track(2)) == 1
 
-        # Now remove track 1 (the source)
+        # Close editor first so remove_track doesn't try to destroy
+        # a visible editor window.
         three_editors.close_editor(track_id=1)
+        # Actually remove the track — this deregisters its source, which
+        # is what we're testing (orphaned oscillators on other instances).
+        three_editors.remove_track(1)
+
+        # Wait for source deregistration
+        three_editors.wait_until(
+            lambda: all(
+                s["id"] != s1 for s in three_editors.get_sources()
+            ),
+            timeout_s=3.0,
+            desc="track 1 source to be deregistered",
+        )
 
         # System should still be alive
         health = three_editors.health_check()
@@ -1740,7 +1753,7 @@ class TestCrossInstanceStatePersistenceEdgeCases:
     """Edge cases in state persistence with cross-instance bindings."""
 
     def test_save_load_roundtrip_with_all_three_instances(
-        self, client: OscilTestClient
+        self, client: OscilTestClient, tmp_path
     ):
         """
         Bug caught: state save/load with cross-instance oscillators from
@@ -1772,7 +1785,7 @@ class TestCrossInstanceStatePersistenceEdgeCases:
         bindings_before = {o["name"]: o["sourceId"] for o in oscs_before}
 
         # Save
-        path = "/tmp/oscil_e2e_3track_roundtrip.xml"
+        path = str(tmp_path / "3track_roundtrip.xml")
         assert client.save_state(path)
 
         # Reset and load
@@ -1794,7 +1807,7 @@ class TestCrossInstanceStatePersistenceEdgeCases:
         client.close_editor()
 
     def test_load_state_preserves_oscillator_order(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: OscilTestClient, track_sources: dict, tmp_path
     ):
         """
         Bug caught: oscillator order changes after save/load because the
@@ -1814,14 +1827,14 @@ class TestCrossInstanceStatePersistenceEdgeCases:
         )
 
         # Save and load
-        path = "/tmp/oscil_e2e_order_roundtrip.xml"
-        multi_editor._post_ok(f"/state/save?trackId=0", {"path": path, "trackId": 0})
+        path = str(tmp_path / "order_roundtrip.xml")
+        assert multi_editor._post_ok(f"/state/save?trackId=0", {"path": path, "trackId": 0})
         multi_editor.reset_track_state(0)
         multi_editor.wait_until(
             lambda: len(multi_editor.get_oscillators_for_track(0)) == 0,
             timeout_s=3.0,
         )
-        multi_editor._post_ok(f"/state/load?trackId=0", {"path": path, "trackId": 0})
+        assert multi_editor._post_ok(f"/state/load?trackId=0", {"path": path, "trackId": 0})
         multi_editor.wait_until(
             lambda: len(multi_editor.get_oscillators_for_track(0)) == 4,
             timeout_s=5.0,
@@ -1835,7 +1848,7 @@ class TestCrossInstanceStatePersistenceEdgeCases:
         )
 
     def test_multiple_save_load_cycles_stable(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: OscilTestClient, track_sources: dict, tmp_path
     ):
         """
         Bug caught: repeated save/load cycles accumulate state corruption
@@ -1850,16 +1863,16 @@ class TestCrossInstanceStatePersistenceEdgeCases:
             timeout_s=3.0,
         )
 
-        path = "/tmp/oscil_e2e_cycle_stable.xml"
+        path = str(tmp_path / "cycle_stable.xml")
 
         for cycle in range(3):
-            multi_editor._post_ok(f"/state/save?trackId=0", {"path": path, "trackId": 0})
+            assert multi_editor._post_ok(f"/state/save?trackId=0", {"path": path, "trackId": 0})
             multi_editor.reset_track_state(0)
             multi_editor.wait_until(
                 lambda: len(multi_editor.get_oscillators_for_track(0)) == 0,
                 timeout_s=3.0,
             )
-            multi_editor._post_ok(f"/state/load?trackId=0", {"path": path, "trackId": 0})
+            assert multi_editor._post_ok(f"/state/load?trackId=0", {"path": path, "trackId": 0})
             multi_editor.wait_until(
                 lambda: len(multi_editor.get_oscillators_for_track(0)) == 2,
                 timeout_s=5.0,

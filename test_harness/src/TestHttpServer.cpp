@@ -229,22 +229,22 @@ void TestHttpServer::handleDawTrackAdd(const httplib::Request& req, httplib::Res
         // prepareToPlay defers source registration to the message thread.
         // Wait for the registration to complete so sourceId is available
         // in the response (callers need it immediately).
-        juce::String resolvedSourceId;
+        auto resolvedSourceId = std::make_shared<juce::String>();
         if (track)
         {
-            juce::WaitableEvent done;
+            auto done = std::make_shared<juce::WaitableEvent>();
             auto* processor = &track->getProcessor();
-            juce::MessageManager::callAsync([processor, &resolvedSourceId, &done]() {
-                resolvedSourceId = processor->getSourceId().id;
-                done.signal();
+            juce::MessageManager::callAsync([processor, resolvedSourceId, done]() {
+                *resolvedSourceId = processor->getSourceId().id;
+                done->signal();
             });
-            done.wait(3000);
+            done->wait(3000);
         }
 
         json data;
         data["trackIndex"] = index;
         data["name"] = track ? track->getName().toStdString() : "";
-        data["sourceId"] = resolvedSourceId.toStdString();
+        data["sourceId"] = resolvedSourceId->toStdString();
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)

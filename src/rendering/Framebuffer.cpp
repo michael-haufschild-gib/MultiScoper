@@ -11,7 +11,7 @@ namespace oscil
 
 using namespace juce::gl;
 
-bool Framebuffer::initFBO(juce::OpenGLContext& context)
+bool Framebuffer::initFbo(juce::OpenGLContext& context)
 {
     auto& ext = context.extensions;
 
@@ -60,7 +60,7 @@ bool Framebuffer::create(juce::OpenGLContext& context, int w, int h, int samples
     hasDepth = withDepth;
     hasDepthTexture = useDepthTexture && withDepth;
 
-    if (!initFBO(context))
+    if (!initFbo(context))
     {
         destroy(context);
         return false;
@@ -293,6 +293,10 @@ void Framebuffer::destroy(juce::OpenGLContext& context)
 
     width = 0;
     height = 0;
+    numSamples = 0;
+    format = 0;
+    hasDepth = false;
+    hasDepthTexture = false;
 }
 
 } // namespace oscil
