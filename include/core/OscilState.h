@@ -202,11 +202,6 @@ public:
     void setGainDb(float dB);
 
     /**
-     * Performance settings
-     */
-    [[nodiscard]] float getCpuWarningThreshold() const;
-
-    /**
      * Get/set GPU rendering mode
      * When enabled, OpenGL context is attached for hardware acceleration
      */

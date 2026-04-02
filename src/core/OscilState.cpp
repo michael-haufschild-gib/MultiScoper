@@ -193,13 +193,12 @@ void OscilState::updateOscillator(const Oscillator& oscillator)
                                                      << " src=" << oscillator.getSourceId().id
                                                      << " pane=" << oscillator.getPaneId().id
                                                      << " vis=" << (int) oscillator.isVisible());
-            // Update properties
-            child.copyPropertiesFrom(oscillator.toValueTree(), nullptr);
+            // Update properties and children from the oscillator's ValueTree
+            auto srcTree = oscillator.toValueTree();
+            child.copyPropertiesFrom(srcTree, nullptr);
 
-            // Update children (e.g. VisualOverrides)
             // copyPropertiesFrom does NOT copy children, so we must do it manually
             child.removeAllChildren(nullptr);
-            auto srcTree = oscillator.toValueTree();
             for (int j = 0; j < srcTree.getNumChildren(); ++j)
             {
                 child.appendChild(srcTree.getChild(j).createCopy(), nullptr);
