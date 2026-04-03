@@ -315,6 +315,10 @@ void DecimatingCaptureBuffer::processAndWriteDecimated(const std::shared_ptr<Sha
     if (!buf || !ctx)
         return;
 
+    jassert(rates.decimationRatio >= 1);
+    if (rates.decimationRatio < 1)
+        return;
+
     const size_t maxPerCh = ctx->scratchBuffer.size() / SharedCaptureBuffer::MAX_CHANNELS;
     const int safeSamples =
         std::min(numSamples, static_cast<int>(maxPerCh * static_cast<size_t>(rates.decimationRatio)));
