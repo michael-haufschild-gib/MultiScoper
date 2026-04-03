@@ -276,10 +276,18 @@ void PaneBody::timerCallback()
     {
         updateStats();
     }
-    else if (!isStatsVisible())
+    else
     {
+        // Stop when stats are hidden OR when the component is not showing.
+        // visibilityChanged() restarts the timer when we become visible again.
         stopTimer();
     }
+}
+
+void PaneBody::visibilityChanged()
+{
+    if (isShowing() && isStatsVisible())
+        startTimerHz(STATS_UPDATE_HZ);
 }
 
 void PaneBody::updateStats()

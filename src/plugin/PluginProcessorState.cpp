@@ -17,16 +17,18 @@ void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
     // during save operations. We must not allocate memory in that case.
     if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
     {
-        // Audio thread path: try to grab latest published state (non-blocking).
-        // If the lock is contended, fall back to previously cached copy.
+        // Non-message-thread path: try to grab latest published state (non-blocking).
+        // If the lock is contended, fall back to this thread's previously cached copy.
+        // thread_local avoids a data race if multiple non-message threads call concurrently.
         // NOTE: Cannot log here — audio thread.
+        static thread_local std::shared_ptr<const std::vector<char>> threadLocalState;
         {
             const juce::SpinLock::ScopedTryLockType tryLock(stateLock_);
             if (tryLock.isLocked())
-                audioThreadState_ = publishedState_;
+                threadLocalState = publishedState_;
         }
-        // Read from audio thread's cached copy — no lock held, data is immutable.
-        auto state = audioThreadState_;
+        // Read from this thread's cached copy — no lock held, data is immutable.
+        auto state = threadLocalState;
         if (state && !state->empty())
             destData.replaceAll(state->data(), state->size());
         return;

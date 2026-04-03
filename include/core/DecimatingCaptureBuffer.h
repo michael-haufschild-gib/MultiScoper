@@ -284,11 +284,21 @@ private:
         size_t filterMemoryBytes = 0;
     };
 
+    // Snapshot of rate atomics taken under lock in write(), passed to processing methods
+    struct RateSnapshot
+    {
+        int decimationRatio;
+        int captureRate;
+        int sourceRate;
+    };
+
     void reconfigure();
     void processAndWriteDecimated(const std::shared_ptr<SharedCaptureBuffer>& buf,
                                   const std::shared_ptr<ProcessingContext>& ctx, const float* const* samples,
-                                  int numSamples, int numChannels, const CaptureFrameMetadata& metadata);
-    int decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter, int numSamples) const;
+                                  int numSamples, int numChannels, const CaptureFrameMetadata& metadata,
+                                  const RateSnapshot& rates);
+    static int decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter, int numSamples,
+                               int decRatio);
     std::shared_ptr<ProcessingContext> createProcessingContext();
 
     // Configuration — config_ is message-thread-only (protected by jassert).

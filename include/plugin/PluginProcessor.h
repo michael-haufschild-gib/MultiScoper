@@ -144,14 +144,13 @@ private:
     // Immutable-snapshot state serialization for real-time safe getStateInformation().
     //
     // Message thread publishes new state as a shared_ptr<const vector<char>> under
-    // stateLock_. Audio thread copies the shared_ptr via tryLock into its local
-    // cache (audioThreadState_), then reads from it without holding the lock.
+    // stateLock_. Non-message threads copy the shared_ptr via tryLock into a
+    // thread_local cache, then read from it without holding the lock.
     // The pointed-to data is immutable (const vector) — no concurrent modification
     // is possible once published.
     //
     // Pattern matches DecimatingCaptureBuffer (SpinLock + shared_ptr swap).
-    std::shared_ptr<const std::vector<char>> publishedState_;   // Protected by stateLock_
-    std::shared_ptr<const std::vector<char>> audioThreadState_; // Audio thread's cached copy
+    std::shared_ptr<const std::vector<char>> publishedState_; // Protected by stateLock_
     mutable juce::SpinLock stateLock_;
 
     // Helper to update cached state (call from message thread only)
