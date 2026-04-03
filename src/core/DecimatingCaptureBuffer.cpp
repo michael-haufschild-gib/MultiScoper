@@ -252,6 +252,9 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
 {
     std::shared_ptr<SharedCaptureBuffer> buf;
     std::shared_ptr<ProcessingContext> ctx;
+    int decRatio;
+    int capRate;
+    int srcRate;
 
     {
         // CRITICAL: Use tryLock for real-time safety - audio thread must never block
@@ -261,18 +264,16 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
             return; // Drop frame rather than block audio thread
         buf = buffer_;
         ctx = context_;
+        // Snapshot rates under lock for consistency with buf/ctx
+        decRatio = decimationRatio_.load(std::memory_order_relaxed);
+        capRate = captureRate_.load(std::memory_order_relaxed);
+        srcRate = sourceRate_.load(std::memory_order_relaxed);
     }
 
     if (numSamples <= 0 || numChannels <= 0 || !buf || !ctx)
         return;
 
     const int actualChannels = juce::jmin(numChannels, static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
-
-    // Snapshot atomics once — the SpinLock acquire above established happens-before
-    // with the reconfigure() that wrote these values, so relaxed loads are sufficient.
-    const int decRatio = decimationRatio_.load(std::memory_order_relaxed);
-    const int capRate = captureRate_.load(std::memory_order_relaxed);
-    const int srcRate = sourceRate_.load(std::memory_order_relaxed);
 
     if (decRatio <= 1)
     {
