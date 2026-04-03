@@ -103,6 +103,40 @@ public:
 
     void removeListener(InstanceRegistryListener* listener) override { listeners_.erase(listener); }
 
+    // Test helpers
+
+    void addSource(const SourceId& id, const juce::String& sourceName)
+    {
+        SourceInfo info;
+        info.sourceId = id;
+        info.name = sourceName;
+        sources_[id.id] = info;
+        for (auto* listener : listeners_)
+            listener->sourceAdded(id);
+    }
+
+    void removeSource(const SourceId& id)
+    {
+        sources_.erase(id.id);
+        buffers_.erase(id.id);
+        for (auto* listener : listeners_)
+            listener->sourceRemoved(id);
+    }
+
+    void updateSourceNotify(const SourceId& id)
+    {
+        for (auto* listener : listeners_)
+            listener->sourceUpdated(id);
+    }
+
+    void clear()
+    {
+        sources_.clear();
+        buffers_.clear();
+    }
+
+    int getListenerCount() const { return static_cast<int>(listeners_.size()); }
+
 private:
     std::map<juce::String, SourceInfo> sources_;
     std::map<juce::String, std::shared_ptr<IAudioBuffer>> buffers_;
@@ -156,6 +190,7 @@ public:
 
     bool updateTheme(const juce::String&, const ColorTheme&) override { return true; }
     bool deleteTheme(const juce::String&) override { return true; }
+    bool renameTheme(const juce::String&, const juce::String&) override { return true; }
     bool cloneTheme(const juce::String&, const juce::String&) override { return true; }
     bool importTheme(const juce::String&) override { return true; }
     juce::String exportTheme(const juce::String&) const override { return "{}"; }
@@ -164,12 +199,21 @@ public:
 
     void removeListener(ThemeManagerListener* listener) override { listeners_.erase(listener); }
 
-    // Test helper: trigger theme change notifications
+    // Test helpers
+
+    void setTheme(const ColorTheme& theme)
+    {
+        currentTheme_ = theme;
+        notifyListeners();
+    }
+
     void notifyListeners()
     {
         for (auto* listener : listeners_)
             listener->themeChanged(currentTheme_);
     }
+
+    int getListenerCount() const { return static_cast<int>(listeners_.size()); }
 
 private:
     ColorTheme currentTheme_;

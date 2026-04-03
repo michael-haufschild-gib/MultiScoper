@@ -191,3 +191,71 @@ TEST_F(ThemeManagerPersistenceTest, ValueTreeMissingProperties)
     // Color properties should have default values (not crash)
     EXPECT_NE(theme.backgroundPrimary.getARGB(), 0u);
 }
+
+// Test: crosshairLine survives serialization roundtrip
+TEST_F(ThemeManagerPersistenceTest, CrosshairLineRoundtrip)
+{
+    ColorTheme original;
+    original.name = "CrosshairTest";
+    original.crosshairLine = juce::Colour(0xAABBCCDD);
+
+    auto valueTree = original.toValueTree();
+
+    ColorTheme restored;
+    restored.fromValueTree(valueTree);
+
+    EXPECT_EQ(restored.crosshairLine.getARGB(), 0xAABBCCDDu);
+}
+
+// Test: all color fields survive serialization roundtrip
+TEST_F(ThemeManagerPersistenceTest, AllColorFieldsRoundtrip)
+{
+    ColorTheme original;
+    original.name = "FullRoundtrip";
+    original.backgroundPrimary = juce::Colour(0xFF111111);
+    original.backgroundSecondary = juce::Colour(0xFF222222);
+    original.backgroundPane = juce::Colour(0xFF333333);
+    original.gridMajor = juce::Colour(0xFF444444);
+    original.gridMinor = juce::Colour(0xFF555555);
+    original.gridZeroLine = juce::Colour(0xFF666666);
+    original.crosshairLine = juce::Colour(0xFF777777);
+    original.textPrimary = juce::Colour(0xFF888888);
+    original.textSecondary = juce::Colour(0xFF999999);
+    original.textHighlight = juce::Colour(0xFFAAAAAA);
+    original.controlBackground = juce::Colour(0xFFBBBBBB);
+    original.controlBorder = juce::Colour(0xFFCCCCCC);
+    original.controlHighlight = juce::Colour(0xFFDDDDDD);
+    original.controlActive = juce::Colour(0xFFEEEEEE);
+    original.statusActive = juce::Colour(0xFF101010);
+    original.statusWarning = juce::Colour(0xFF202020);
+    original.statusError = juce::Colour(0xFF303030);
+    original.btnPrimaryBg = juce::Colour(0xFF404040);
+    original.btnSecondaryBg = juce::Colour(0xFF505050);
+    original.btnTertiaryBg = juce::Colour(0xFF606060);
+
+    auto valueTree = original.toValueTree();
+
+    ColorTheme restored;
+    restored.fromValueTree(valueTree);
+
+    EXPECT_EQ(restored.backgroundPrimary.getARGB(), original.backgroundPrimary.getARGB());
+    EXPECT_EQ(restored.backgroundSecondary.getARGB(), original.backgroundSecondary.getARGB());
+    EXPECT_EQ(restored.backgroundPane.getARGB(), original.backgroundPane.getARGB());
+    EXPECT_EQ(restored.gridMajor.getARGB(), original.gridMajor.getARGB());
+    EXPECT_EQ(restored.gridMinor.getARGB(), original.gridMinor.getARGB());
+    EXPECT_EQ(restored.gridZeroLine.getARGB(), original.gridZeroLine.getARGB());
+    EXPECT_EQ(restored.crosshairLine.getARGB(), original.crosshairLine.getARGB());
+    EXPECT_EQ(restored.textPrimary.getARGB(), original.textPrimary.getARGB());
+    EXPECT_EQ(restored.textSecondary.getARGB(), original.textSecondary.getARGB());
+    EXPECT_EQ(restored.textHighlight.getARGB(), original.textHighlight.getARGB());
+    EXPECT_EQ(restored.controlBackground.getARGB(), original.controlBackground.getARGB());
+    EXPECT_EQ(restored.controlBorder.getARGB(), original.controlBorder.getARGB());
+    EXPECT_EQ(restored.controlHighlight.getARGB(), original.controlHighlight.getARGB());
+    EXPECT_EQ(restored.controlActive.getARGB(), original.controlActive.getARGB());
+    EXPECT_EQ(restored.statusActive.getARGB(), original.statusActive.getARGB());
+    EXPECT_EQ(restored.statusWarning.getARGB(), original.statusWarning.getARGB());
+    EXPECT_EQ(restored.statusError.getARGB(), original.statusError.getARGB());
+    EXPECT_EQ(restored.btnPrimaryBg.getARGB(), original.btnPrimaryBg.getARGB());
+    EXPECT_EQ(restored.btnSecondaryBg.getARGB(), original.btnSecondaryBg.getARGB());
+    EXPECT_EQ(restored.btnTertiaryBg.getARGB(), original.btnTertiaryBg.getARGB());
+}

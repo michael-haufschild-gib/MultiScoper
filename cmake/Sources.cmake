@@ -162,6 +162,7 @@ set(OSCIL_SOURCES
     # UI (theme)
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManager.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManagerSerialization.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/theme/SystemThemes.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorActions.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ColorPickerComponent.cpp

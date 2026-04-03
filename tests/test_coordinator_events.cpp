@@ -5,63 +5,14 @@
 
 #include "ui/layout/LayoutCoordinator.h"
 #include "ui/theme/ThemeCoordinator.h"
-#include "ui/theme/ThemeManager.h"
+
+#include "OscilTestFixtures.h"
 
 #include <atomic>
 #include <gtest/gtest.h>
 
 using namespace oscil;
-
-// =============================================================================
-// Mock IThemeService for Testing
-// =============================================================================
-
-class MockThemeService : public IThemeService
-{
-public:
-    void addListener(ThemeManagerListener* listener) override { listeners_.add(listener); }
-
-    void removeListener(ThemeManagerListener* listener) override { listeners_.remove(listener); }
-
-    const ColorTheme& getCurrentTheme() const override { return currentTheme_; }
-
-    bool setCurrentTheme(const juce::String& /*themeName*/) override { return true; }
-
-    std::vector<juce::String> getAvailableThemes() const override { return {"default"}; }
-
-    const ColorTheme* getTheme(const juce::String& /*themeName*/) const override { return &currentTheme_; }
-
-    bool isSystemTheme(const juce::String& /*name*/) const override { return true; }
-
-    bool createTheme(const juce::String& /*name*/, const juce::String& /*sourceTheme*/) override { return true; }
-
-    bool updateTheme(const juce::String& /*name*/, const ColorTheme& /*theme*/) override { return true; }
-
-    bool deleteTheme(const juce::String& /*name*/) override { return true; }
-
-    bool cloneTheme(const juce::String& /*sourceName*/, const juce::String& /*newName*/) override { return true; }
-
-    bool importTheme(const juce::String& /*json*/) override { return true; }
-    juce::String exportTheme(const juce::String& /*name*/) const override { return "{}"; }
-
-    void setTheme(const ColorTheme& theme)
-    {
-        currentTheme_ = theme;
-        notifyThemeChanged();
-    }
-
-    int getListenerCount() const { return listeners_.size(); }
-
-    // Test helper to directly notify
-    void notifyThemeChanged()
-    {
-        listeners_.call([this](ThemeManagerListener& l) { l.themeChanged(currentTheme_); });
-    }
-
-private:
-    ColorTheme currentTheme_;
-    juce::ListenerList<ThemeManagerListener> listeners_;
-};
+using namespace oscil::test;
 
 // =============================================================================
 // ThemeCoordinator Event Tests

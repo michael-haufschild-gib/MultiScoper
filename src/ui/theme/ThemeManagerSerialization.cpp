@@ -22,6 +22,7 @@ juce::ValueTree ColorTheme::toValueTree() const
     state.setProperty("gridMajor", static_cast<int>(gridMajor.getARGB()), nullptr);
     state.setProperty("gridMinor", static_cast<int>(gridMinor.getARGB()), nullptr);
     state.setProperty("gridZero", static_cast<int>(gridZeroLine.getARGB()), nullptr);
+    state.setProperty("crosshairLine", static_cast<int>(crosshairLine.getARGB()), nullptr);
     state.setProperty("textPrimary", static_cast<int>(textPrimary.getARGB()), nullptr);
     state.setProperty("textSecondary", static_cast<int>(textSecondary.getARGB()), nullptr);
     state.setProperty("textHighlight", static_cast<int>(textHighlight.getARGB()), nullptr);
@@ -139,6 +140,7 @@ void ColorTheme::fromValueTree(const juce::ValueTree& state)
     gridMajor = getColour("gridMajor", gridMajor);
     gridMinor = getColour("gridMinor", gridMinor);
     gridZeroLine = getColour("gridZero", gridZeroLine);
+    crosshairLine = getColour("crosshairLine", crosshairLine);
     textPrimary = getColour("textPrimary", textPrimary);
     textSecondary = getColour("textSecondary", textSecondary);
     textHighlight = getColour("textHighlight", textHighlight);

@@ -179,21 +179,32 @@ TEST_F(ThemeManagerCRUDTest, CreateThemeSpecialChars)
     getThemeManager().deleteTheme("Theme (with) safe-chars!");
 }
 
-// Test: Create theme with very long name
-TEST_F(ThemeManagerCRUDTest, CreateThemeLongName)
+// Test: Create theme with very long name is rejected
+TEST_F(ThemeManagerCRUDTest, CreateThemeLongNameRejected)
 {
     juce::String longName;
     for (int i = 0; i < 1000; ++i)
         longName += "a";
 
-    bool result = getThemeManager().createTheme(longName);
+    EXPECT_FALSE(getThemeManager().createTheme(longName));
+    EXPECT_EQ(getThemeManager().getTheme(longName), nullptr);
+}
 
-    EXPECT_TRUE(result);
+// Test: Create theme at the 255-char boundary
+TEST_F(ThemeManagerCRUDTest, CreateThemeMaxLengthName)
+{
+    juce::String maxName;
+    for (int i = 0; i < 255; ++i)
+        maxName += "a";
 
-    auto* theme = getThemeManager().getTheme(longName);
-    ASSERT_NE(theme, nullptr);
+    EXPECT_TRUE(getThemeManager().createTheme(maxName));
+    EXPECT_NE(getThemeManager().getTheme(maxName), nullptr);
 
-    getThemeManager().deleteTheme(longName);
+    getThemeManager().deleteTheme(maxName);
+
+    // 256 chars should be rejected
+    juce::String tooLong = maxName + "a";
+    EXPECT_FALSE(getThemeManager().createTheme(tooLong));
 }
 
 // Test: Create duplicate theme
@@ -382,4 +393,68 @@ TEST_F(ThemeManagerCRUDTest, DeleteCurrentThemeSwitchesTheme)
     // Current should now be a different (system) theme
     EXPECT_NE(getThemeManager().getCurrentTheme().name, "TempCurrent");
     EXPECT_TRUE(getThemeManager().isSystemTheme(getThemeManager().getCurrentTheme().name));
+}
+
+// =============================================================================
+// Rename Tests
+// =============================================================================
+
+TEST_F(ThemeManagerCRUDTest, RenameCustomTheme)
+{
+    getThemeManager().createTheme("OriginalName");
+
+    EXPECT_TRUE(getThemeManager().renameTheme("OriginalName", "NewName"));
+
+    EXPECT_EQ(getThemeManager().getTheme("OriginalName"), nullptr);
+    EXPECT_NE(getThemeManager().getTheme("NewName"), nullptr);
+    EXPECT_EQ(getThemeManager().getTheme("NewName")->name, "NewName");
+
+    getThemeManager().deleteTheme("NewName");
+}
+
+TEST_F(ThemeManagerCRUDTest, RenameSystemThemeFails)
+{
+    EXPECT_FALSE(getThemeManager().renameTheme("Dark Professional", "My Dark Theme"));
+    EXPECT_NE(getThemeManager().getTheme("Dark Professional"), nullptr);
+}
+
+TEST_F(ThemeManagerCRUDTest, RenameToExistingNameFails)
+{
+    getThemeManager().createTheme("ThemeA");
+    getThemeManager().createTheme("ThemeB");
+
+    EXPECT_FALSE(getThemeManager().renameTheme("ThemeA", "ThemeB"));
+
+    // Both should still exist unchanged
+    EXPECT_NE(getThemeManager().getTheme("ThemeA"), nullptr);
+    EXPECT_NE(getThemeManager().getTheme("ThemeB"), nullptr);
+
+    getThemeManager().deleteTheme("ThemeA");
+    getThemeManager().deleteTheme("ThemeB");
+}
+
+TEST_F(ThemeManagerCRUDTest, RenameToSameNameSucceeds)
+{
+    getThemeManager().createTheme("SameName");
+
+    EXPECT_TRUE(getThemeManager().renameTheme("SameName", "SameName"));
+    EXPECT_NE(getThemeManager().getTheme("SameName"), nullptr);
+
+    getThemeManager().deleteTheme("SameName");
+}
+
+TEST_F(ThemeManagerCRUDTest, RenameNonexistentThemeFails)
+{
+    EXPECT_FALSE(getThemeManager().renameTheme("DoesNotExist", "NewName"));
+}
+
+TEST_F(ThemeManagerCRUDTest, RenameCurrentThemeUpdatesCurrentName)
+{
+    getThemeManager().createTheme("ActiveTheme");
+    getThemeManager().setCurrentTheme("ActiveTheme");
+
+    EXPECT_TRUE(getThemeManager().renameTheme("ActiveTheme", "RenamedActive"));
+    EXPECT_EQ(getThemeManager().getCurrentTheme().name, "RenamedActive");
+
+    getThemeManager().deleteTheme("RenamedActive");
 }

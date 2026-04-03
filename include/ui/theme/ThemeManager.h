@@ -283,6 +283,11 @@ public:
     bool cloneTheme(const juce::String& sourceName, const juce::String& newName) override;
 
     /**
+     * Rename a custom theme
+     */
+    bool renameTheme(const juce::String& oldName, const juce::String& newName) override;
+
+    /**
      * Check if a theme is a system theme (immutable)
      */
     bool isSystemTheme(const juce::String& name) const override;
