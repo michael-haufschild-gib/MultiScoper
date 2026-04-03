@@ -50,13 +50,7 @@ void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& os
         return;
 
     sidebar_->refreshSourceList(serviceContext_.instanceRegistry.getAllSources());
-
-    const auto& panes = layoutManager.getPanes();
-    juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this), panes]() {
-        if (auto* controller = weakThis.get())
-            if (controller->sidebar_)
-                controller->sidebar_->refreshPaneList(panes);
-    });
+    sidebar_->refreshPaneList(layoutManager.getPanes());
 
     std::vector<Oscillator> sortedOscs = oscillators;
     std::ranges::sort(sortedOscs,
@@ -78,33 +72,40 @@ void OscillatorPanelController::refreshPanels()
         return;
     }
 
-    isUpdating_ = true;
-    pendingRefresh_ = false;
+    static constexpr int kMaxRefreshIterations = 10;
 
-    gpuCoordinator_.clearWaveforms();
-    paneComponents_.clear();
-
-    auto oscillators = dataProvider_.getState().getOscillators();
-    auto& layoutManager = dataProvider_.getState().getLayoutManager();
-
-    OSCIL_LOG(CONTROLLER,
-              "refreshPanels: " << oscillators.size() << " oscillators, " << layoutManager.getPaneCount() << " panes");
-
-    createPaneComponents(oscillators, layoutManager);
-    refreshSidebar(oscillators, layoutManager);
-    reapplyGlobalSettings();
-    gpuCoordinator_.propagateGpuStateToPanes(paneComponents_);
-
-    if (layoutNeededCallback_)
-        layoutNeededCallback_();
-
-    isUpdating_ = false;
-
-    if (pendingRefresh_)
+    for (int iteration = 0; iteration < kMaxRefreshIterations; ++iteration)
     {
+        isUpdating_ = true;
         pendingRefresh_ = false;
-        refreshPanels();
+
+        gpuCoordinator_.clearWaveforms();
+        paneComponents_.clear();
+
+        auto oscillators = dataProvider_.getState().getOscillators();
+        auto& layoutManager = dataProvider_.getState().getLayoutManager();
+
+        OSCIL_LOG(CONTROLLER, "refreshPanels: "
+                                  << oscillators.size() << " oscillators, " << layoutManager.getPaneCount() << " panes"
+                                  << (iteration > 0 ? " (iteration " + juce::String(iteration) + ")" : ""));
+
+        createPaneComponents(oscillators, layoutManager);
+        refreshSidebar(oscillators, layoutManager);
+        reapplyGlobalSettings();
+        gpuCoordinator_.propagateGpuStateToPanes(paneComponents_);
+
+        if (layoutNeededCallback_)
+            layoutNeededCallback_();
+
+        isUpdating_ = false;
+
+        if (!pendingRefresh_)
+            return;
+
+        OSCIL_LOG(CONTROLLER, "refreshPanels: processing queued refresh");
     }
+
+    OSCIL_LOG(CONTROLLER, "refreshPanels: WARNING — hit max iteration limit (" << kMaxRefreshIterations << ")");
 }
 
 void OscillatorPanelController::createPaneComponents(const std::vector<Oscillator>& oscillators,
@@ -152,15 +153,8 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
             }
         }
 
-        // Set initial GPU state
-        bool gpuEnabled = gpuCoordinator_.isGpuRenderingEnabled();
-        for (size_t i = 0; i < paneComponent->getOscillatorCount(); ++i)
-        {
-            if (auto* waveform = paneComponent->getWaveformAt(i))
-            {
-                waveform->setGpuRenderingEnabled(gpuEnabled);
-            }
-        }
+        // GPU state is propagated after all panes are created via
+        // gpuCoordinator_.propagateGpuStateToPanes() in refreshPanels()
 
         container_.addAndMakeVisible(*paneComponent);
         paneComponents_.push_back(std::move(paneComponent));

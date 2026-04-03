@@ -41,8 +41,11 @@ protected:
         container_ = std::make_unique<PaneContainerComponent>();
         displaySettings_ = std::make_unique<DisplaySettingsManager>([this]() {
             std::vector<PaneComponent*> snapshot;
-            for (auto& pane : paneComponents_)
-                snapshot.push_back(pane.get());
+            if (controller_)
+            {
+                for (auto& pane : controller_->getPaneComponents())
+                    snapshot.push_back(pane.get());
+            }
             return snapshot;
         });
         gpuCoordinator_ = std::make_unique<GpuRenderCoordinator>(*editor_, statusBar_);
@@ -79,7 +82,6 @@ protected:
     std::unique_ptr<TestEditor> editor_;
     std::unique_ptr<PaneContainerComponent> container_;
 
-    std::vector<std::unique_ptr<PaneComponent>> paneComponents_; // Dummy for displaySettings
     std::unique_ptr<DisplaySettingsManager> displaySettings_;
     std::unique_ptr<GpuRenderCoordinator> gpuCoordinator_;
 
