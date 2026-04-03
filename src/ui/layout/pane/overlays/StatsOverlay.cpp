@@ -90,7 +90,7 @@ void StatsOverlay::onAnimationVisibilityChanged(bool becameVisible)
 juce::Rectangle<int> StatsOverlay::getPreferredContentSize() const
 {
     int width = LABEL_COLUMN_WIDTH + (numOscillators_ * DATA_COLUMN_WIDTH) + PADDING * 2;
-    int height = HEADER_HEIGHT + (ROW_HEIGHT * 8) + PADDING; // 7 metrics + header row
+    int height = HEADER_HEIGHT + (ROW_HEIGHT * 8) + PADDING; // 1 column header + 7 metric rows
     return {0, 0, width, height};
 }
 

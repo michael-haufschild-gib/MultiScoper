@@ -5,6 +5,8 @@
 
 #include "ui/theme/ThemeManager.h"
 
+#include <cmath>
+
 namespace oscil
 {
 namespace SystemThemes
@@ -150,6 +152,7 @@ ColorTheme createLightMode()
     theme.controlBorder = juce::Colour(0xFFCCCCCC);
     theme.controlHighlight = juce::Colour(0xFFE0E0E0);
     theme.controlActive = juce::Colour(0xFF0066CC);
+    theme.crosshairLine = juce::Colour(0xCC202020);
 
     theme.waveformColors.clear();
     theme.waveformColors = {

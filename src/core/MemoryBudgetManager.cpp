@@ -19,15 +19,18 @@ void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, in
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    bool configChanged = (globalConfig_ != config) || (sourceRate_ != sourceRate);
-
-    globalConfig_ = config;
-    sourceRate_ = sourceRate;
+    bool configChanged;
+    {
+        std::scoped_lock lock(buffersMutex_);
+        configChanged = (globalConfig_ != config) || (sourceRate_ != sourceRate);
+        globalConfig_ = config;
+        sourceRate_ = sourceRate;
+    }
 
     if (configChanged)
     {
         reconfigureAllBuffers();
-        usageCacheDirty_ = true;
+        // reconfigureAllBuffers() already sets usageCacheDirty_ under lock.
         notifyMemoryUsageChanged();
     }
 }
@@ -142,6 +145,8 @@ void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, Quali
             it->second.lastKnownMemoryBytes = bufferToReconfigure->getMemoryUsageBytes();
         usageCacheDirty_ = true;
     }
+
+    notifyMemoryUsageChanged();
 }
 
 QualityOverride MemoryBudgetManager::getBufferQualityOverride(const juce::String& id) const

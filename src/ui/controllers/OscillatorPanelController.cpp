@@ -105,6 +105,7 @@ void OscillatorPanelController::refreshPanels()
         OSCIL_LOG(CONTROLLER, "refreshPanels: processing queued refresh");
     }
 
+    jassertfalse; // unexpected refresh reentrancy loop
     OSCIL_LOG(CONTROLLER, "refreshPanels: WARNING — hit max iteration limit (" << kMaxRefreshIterations << ")");
 }
 

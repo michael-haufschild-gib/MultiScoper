@@ -117,14 +117,22 @@ public:
     void setGlobalConfig(const CaptureQualityConfig& config, int sourceRate);
 
     /**
-     * Get current global configuration
+     * Get current global configuration (thread-safe copy)
      */
-    [[nodiscard]] const CaptureQualityConfig& getGlobalConfig() const { return globalConfig_; }
+    [[nodiscard]] CaptureQualityConfig getGlobalConfig() const
+    {
+        std::scoped_lock lock(buffersMutex_);
+        return globalConfig_;
+    }
 
     /**
-     * Get current source sample rate
+     * Get current source sample rate (thread-safe)
      */
-    [[nodiscard]] int getSourceRate() const { return sourceRate_; }
+    [[nodiscard]] int getSourceRate() const
+    {
+        std::scoped_lock lock(buffersMutex_);
+        return sourceRate_;
+    }
 
     //==========================================================================
     // Buffer Registration

@@ -190,7 +190,14 @@ public:
 
     bool updateTheme(const juce::String&, const ColorTheme&) override { return true; }
     bool deleteTheme(const juce::String&) override { return true; }
-    bool renameTheme(const juce::String&, const juce::String&) override { return true; }
+    bool renameTheme(const juce::String& oldName, const juce::String& newName) override
+    {
+        if (oldName != currentTheme_.name || newName.isEmpty())
+            return false;
+        currentTheme_.name = newName;
+        notifyListeners();
+        return true;
+    }
     bool cloneTheme(const juce::String&, const juce::String&) override { return true; }
     bool importTheme(const juce::String&) override { return true; }
     juce::String exportTheme(const juce::String&) const override { return "{}"; }

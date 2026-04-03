@@ -115,16 +115,23 @@ juce::String MemoryBudgetManager::getTotalMemoryUsageString() const { return for
 
 bool MemoryBudgetManager::isOverBudget() const
 {
-    return getTotalMemoryUsage() > globalConfig_.memoryBudget.totalBudgetBytes;
+    std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
+    if (usageCacheDirty_)
+        updateCachedUsage();
+    return cachedTotalUsage_ > globalConfig_.memoryBudget.totalBudgetBytes;
 }
 
 float MemoryBudgetManager::getUsagePercent() const
 {
+    std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
+    if (usageCacheDirty_)
+        updateCachedUsage();
     size_t budget = globalConfig_.memoryBudget.totalBudgetBytes;
     if (budget == 0)
         return 0.0f;
-
-    return (static_cast<float>(getTotalMemoryUsage()) / static_cast<float>(budget)) * 100.0f;
+    return (static_cast<float>(cachedTotalUsage_) / static_cast<float>(budget)) * 100.0f;
 }
 
 //==============================================================================
@@ -133,8 +140,9 @@ float MemoryBudgetManager::getUsagePercent() const
 
 QualityPreset MemoryBudgetManager::getRecommendedQuality() const
 {
-    int numBuffers = getBufferCount();
-    return getRecommendedQualityForCount(numBuffers);
+    std::scoped_lock lock(buffersMutex_);
+    pruneExpiredBuffersLocked();
+    return getRecommendedQualityForCount(static_cast<int>(buffers_.size()));
 }
 
 QualityPreset MemoryBudgetManager::getRecommendedQualityForCount(int numBuffers) const

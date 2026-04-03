@@ -49,7 +49,16 @@ bool TestUIController::selectByText(const juce::String& elementId, const juce::S
     juce::Component::SafePointer<juce::ComboBox> safe(comboBox);
     juce::MessageManager::callAsync([safe, text]() {
         if (auto* cb = safe.getComponent())
-            cb->setText(text, juce::sendNotification);
+        {
+            for (int i = 0; i < cb->getNumItems(); ++i)
+            {
+                if (cb->getItemText(i) == text)
+                {
+                    cb->setSelectedItemIndex(i, juce::sendNotification);
+                    return;
+                }
+            }
+        }
     });
 
     return true;

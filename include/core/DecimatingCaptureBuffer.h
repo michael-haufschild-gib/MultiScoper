@@ -99,9 +99,9 @@ private:
  * - Dynamic buffer resizing based on quality settings
  * - Memory usage tracking for dashboard display
  *
- * Thread safety: Same guarantees as SharedCaptureBuffer
- * - write() safe from audio thread
- * - read() safe from any thread
+ * Thread safety:
+ * - write() safe from audio thread (non-blocking tryLock)
+ * - read() safe from UI/render threads (brief blocking lock — NOT audio thread)
  */
 class DecimatingCaptureBuffer : public IAudioBuffer
 {
@@ -190,7 +190,9 @@ public:
     void write(const float* const* samples, int numSamples, int numChannels, const CaptureFrameMetadata& metadata);
 
     //==========================================================================
-    // Read Interface (Any Thread)
+    // Read Interface (UI/Render Thread — NOT audio thread)
+    // Uses a brief blocking SpinLock to snapshot the buffer pointer.
+    // Safe for render and message threads; do NOT call from audio thread.
     //==========================================================================
 
     /**

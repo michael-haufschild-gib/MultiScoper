@@ -53,10 +53,15 @@ protected:
                 f();
                 done->signal();
             });
-            done->wait(MESSAGE_THREAD_TIMEOUT_MS);
+            if (!done->wait(MESSAGE_THREAD_TIMEOUT_MS))
+            {
+                DBG("TestServerHandlerBase: message thread operation timed out");
+            }
         }
         else
         {
+            static_assert(std::is_same_v<ReturnType, nlohmann::json>,
+                          "runOnMessageThread with non-void return only supports nlohmann::json");
             auto result = std::make_shared<ReturnType>();
             auto done = std::make_shared<juce::WaitableEvent>();
             juce::MessageManager::callAsync([f = std::forward<Func>(func), result, done]() mutable {
