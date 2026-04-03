@@ -1,6 +1,6 @@
 /*
     Oscil - Toggle Component
-    Animated toggle switch with spring physics and celebration effects
+    Animated toggle switch with smooth ease transitions
 */
 
 #pragma once
@@ -85,7 +85,6 @@ public:
 private:
     void timerCallback() override;
     void updateAnimations();
-    void triggerCelebration();
     void notifyValueChanged();
 
     // Rendering
@@ -101,8 +100,7 @@ private:
     bool labelOnRight_ = true;
 
     // Animation
-    SpringAnimation positionSpring_;    // Knob position (0 = off, 1 = on)
-    SpringAnimation celebrationSpring_; // Scale pulse on activation
+    SpringAnimation positionSpring_; // Knob position (0 = off, 1 = on)
 
     // APVTS
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> attachment_;

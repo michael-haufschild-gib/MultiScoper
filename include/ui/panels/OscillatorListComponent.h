@@ -130,7 +130,7 @@ public:
     // Layout constants
     static constexpr int MIN_LIST_HEIGHT = 100;
     static constexpr int MAX_LIST_HEIGHT = 400;
-    static constexpr int OSCILLATOR_TOOLBAR_HEIGHT = 32;
+    static constexpr int OSCILLATOR_TOOLBAR_HEIGHT = OscillatorListToolbar::PREFERRED_HEIGHT;
 
 private:
     std::vector<Oscillator> filterOscillators(const std::vector<Oscillator>& oscillators) const;

@@ -31,9 +31,9 @@ class OscilAccordionSection
 {
 public:
     /// Create accordion section with optional title.
-    explicit OscilAccordionSection(IThemeService& themeService, const juce::String& title = "");
+    explicit OscilAccordionSection(IThemeService& themeService, juce::String title = "");
     /// Create accordion section with title and test ID.
-    OscilAccordionSection(IThemeService& themeService, const juce::String& title, const juce::String& testId);
+    OscilAccordionSection(IThemeService& themeService, juce::String title, const juce::String& testId);
     ~OscilAccordionSection() override;
 
     void setTitle(const juce::String& title);

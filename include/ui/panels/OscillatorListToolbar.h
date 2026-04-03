@@ -5,11 +5,7 @@
 
 #pragma once
 
-#include "core/Oscillator.h"
 #include "core/ServiceContext.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilTextField.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/IThemeService.h"
@@ -17,7 +13,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include <functional>
+#include <cstdint>
 
 namespace oscil
 {
@@ -25,7 +21,7 @@ namespace oscil
 /**
  * Filter options for oscillator list
  */
-enum class OscillatorFilterMode
+enum class OscillatorFilterMode : std::uint8_t
 {
     All,
     Visible,
@@ -74,11 +70,17 @@ public:
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
-    static constexpr int PREFERRED_HEIGHT = 36; // Reduced since we removed a row
+    static constexpr int PREFERRED_HEIGHT = 36;
 
 private:
     void setupComponents();
     void updateCountLabel();
+
+    // Layout constants
+    static constexpr int COUNT_BADGE_WIDTH = 90;
+    static constexpr int COUNT_BADGE_SPACING = 4;
+    static constexpr float BADGE_CORNER_RADIUS = 10.0f;
+    static constexpr float BADGE_FONT_SIZE = 10.0f;
 
     // Filter tabs
     std::unique_ptr<SegmentedButtonBar> filterTabs_;

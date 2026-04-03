@@ -119,12 +119,12 @@ TEST_F(AnimationSettingsValidationTest, SpringAnimationIntegration)
     AnimationSettings::setAppPreference(false);
     EXPECT_TRUE(AnimationSettings::shouldUseSpringAnimations());
 
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.setTarget(1.0f);
-    spring.update(1.0f / 60.0f);
+    SpringAnimation anim = SpringPresets::medium();
+    anim.setTarget(1.0f);
+    anim.update(1.0f / 60.0f);
 
-    // With animations enabled, spring should make progress
-    EXPECT_GT(spring.position, 0.0f);
+    // With animations enabled, animation should make progress
+    EXPECT_GT(anim.position, 0.0f);
 }
 
 // Test: Zero duration input

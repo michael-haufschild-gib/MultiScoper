@@ -5,14 +5,16 @@
 
 #include "ui/components/OscilButton.h"
 
+#include <utility>
+
 namespace oscil
 {
 
-OscilButton::OscilButton(IThemeService& themeService, const juce::String& text)
+OscilButton::OscilButton(IThemeService& themeService, juce::String text)
     : ThemedComponent(themeService)
-    , label_(text)
-    , scaleSpring_(SpringPresets::snappy())
-    , brightnessSpring_(SpringPresets::stiff())
+    , label_(std::move(text))
+    , scaleSpring_(SpringPresets::medium())
+    , brightnessSpring_(SpringPresets::fast())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -23,8 +25,8 @@ OscilButton::OscilButton(IThemeService& themeService, const juce::String& text)
     brightnessSpring_.target = 0.0f;
 }
 
-OscilButton::OscilButton(IThemeService& themeService, const juce::String& text, const juce::String& testId)
-    : OscilButton(themeService, text)
+OscilButton::OscilButton(IThemeService& themeService, juce::String text, const juce::String& testId)
+    : OscilButton(themeService, std::move(text))
 {
     setTestId(testId);
 }

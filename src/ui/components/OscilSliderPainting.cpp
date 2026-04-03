@@ -87,13 +87,13 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
     g.fillRoundedRectangle(bounds, TRACK_HEIGHT / 2.0f);
 
-    float fillProportion = static_cast<float>(valueToProportionOfLength(value_));
+    auto fillProportion = static_cast<float>(valueToProportionOfLength(value_));
 
     juce::Rectangle<float> filledBounds;
     if (variant_ == SliderVariant::Range)
     {
-        float startProp = static_cast<float>(valueToProportionOfLength(rangeStart_));
-        float endProp = static_cast<float>(valueToProportionOfLength(rangeEnd_));
+        auto startProp = static_cast<float>(valueToProportionOfLength(rangeStart_));
+        auto endProp = static_cast<float>(valueToProportionOfLength(rangeEnd_));
 
         if (isVertical)
         {
@@ -130,8 +130,6 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
     auto bounds = getLocalBounds().toFloat();
 
     float scale = currentThumbScale_;
-    if (justSnapped_)
-        scale *= snapPulse_.position;
 
     float size = THUMB_SIZE * scale;
     float cx, cy;
@@ -223,17 +221,17 @@ float OscilSlider::getThumbPosition(bool isRangeEnd) const
 
     double value = (variant_ == SliderVariant::Range) ? (isRangeEnd ? rangeEnd_ : rangeStart_) : value_;
 
-    float proportion = static_cast<float>(valueToProportionOfLength(value));
+    auto proportion = static_cast<float>(valueToProportionOfLength(value));
 
     if (isVertical)
     {
         float trackHeight = std::max(1.0f, bounds.getHeight() - THUMB_SIZE);
-        return bounds.getBottom() - THUMB_SIZE / 2 - trackHeight * proportion;
+        return bounds.getBottom() - THUMB_SIZE / 2.0f - trackHeight * proportion;
     }
     else
     {
         float trackWidth = std::max(1.0f, bounds.getWidth() - THUMB_SIZE);
-        return THUMB_SIZE / 2 + trackWidth * proportion;
+        return THUMB_SIZE / 2.0f + trackWidth * proportion;
     }
 }
 

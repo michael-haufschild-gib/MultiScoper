@@ -206,13 +206,11 @@ TEST_F(OscillatorListComponentTest, DeletionPropagatesToListener)
     oscillators.push_back(osc1);
     list.refreshList(oscillators);
 
-    // Simulate deletion request (async — may not immediately propagate)
     auto oscId = osc1.getId();
     list.oscillatorDeleteRequested(oscId);
 
-    // Verify the list is still functional after deletion request
-    EXPECT_TRUE(list.isEnabled());
-    EXPECT_GE(list.getNumChildComponents(), 0);
+    EXPECT_EQ(listener.deleteCount, 1);
+    EXPECT_EQ(listener.lastDeletedId, oscId);
 
     list.removeListener(&listener);
 }

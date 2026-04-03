@@ -129,7 +129,7 @@ void OscillatorSidebarSection::oscillatorPaneSelectionRequested(const Oscillator
 
 void OscillatorSidebarSection::oscillatorNameChanged(const OscillatorId& id, const juce::String& newName)
 {
-    listeners_.call([id, &newName](Listener& l) { l.oscillatorNameChanged(id, newName); });
+    listeners_.call([id, newName](Listener& l) { l.oscillatorNameChanged(id, newName); });
 }
 
 } // namespace oscil

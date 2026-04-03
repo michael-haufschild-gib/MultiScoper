@@ -12,14 +12,12 @@ namespace oscil
 
 OscilModal::OscilModal(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , showSpring_(SpringPresets::snappy())
-    , scaleSpring_(SpringPresets::bouncy())
+    , showSpring_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
     setVisible(false);
     showSpring_.position = 0.0f;
-    scaleSpring_.position = 0.8f;
 }
 
 OscilModal::OscilModal(IThemeService& themeService, const juce::String& title) : OscilModal(themeService)
@@ -120,29 +118,17 @@ void OscilModal::show(juce::Component* parent)
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         if (content_)
-        {
             content_->setAlpha(showSpring_.position);
 
-            float scale = scaleSpring_.position;
-            auto modalBounds = getModalBounds();
-            auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
-            content_->setTransform(juce::AffineTransform::scale(scale, scale, pivot.x, pivot.y));
-        }
-
         showSpring_.setTarget(1.0f);
-        scaleSpring_.setTarget(1.0f);
         startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
     else
     {
         showSpring_.position = 1.0f;
-        scaleSpring_.position = 1.0f;
 
         if (content_)
-        {
             content_->setAlpha(1.0f);
-            content_->setTransform({});
-        }
 
         repaint();
     }
@@ -155,15 +141,10 @@ void OscilModal::hide()
     stopTimer();
     showSpring_.position = 0.0f;
     showSpring_.target = 0.0f;
-    scaleSpring_.position = 0.8f;
-    scaleSpring_.target = 0.8f;
     setVisible(false);
 
     if (content_)
-    {
         content_->setAlpha(1.0f);
-        content_->setTransform({});
-    }
 
     if (previousFocus_ && previousFocus_->isShowing())
         previousFocus_->grabKeyboardFocus();
@@ -329,7 +310,7 @@ void OscilModal::timerCallback()
 {
     updateAnimations();
 
-    bool isSettled = showSpring_.isSettled() && scaleSpring_.isSettled();
+    bool isSettled = showSpring_.isSettled();
 
     if (isSettled)
     {
@@ -340,10 +321,7 @@ void OscilModal::timerCallback()
             setVisible(false);
 
             if (content_)
-            {
                 content_->setAlpha(1.0f);
-                content_->setTransform({});
-            }
 
             if (previousFocus_ && previousFocus_->isShowing())
                 previousFocus_->grabKeyboardFocus();
@@ -361,19 +339,10 @@ void OscilModal::updateAnimations()
 {
     float dt = AnimationTiming::FRAME_DURATION_60FPS;
     showSpring_.update(dt);
-    scaleSpring_.update(dt);
     closeHoverSpring_.update(dt);
 
     if (content_)
-    {
         content_->setAlpha(showSpring_.position);
-
-        float scale = scaleSpring_.position;
-        auto modalBounds = getModalBounds();
-        auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
-
-        content_->setTransform(juce::AffineTransform::scale(scale, scale, pivot.x, pivot.y));
-    }
 }
 
 void OscilModal::updateFocusTrap()

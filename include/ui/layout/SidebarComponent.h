@@ -228,7 +228,7 @@ private:
     std::vector<Pane> currentPanes_; // Cached for source dropdown updates
 
     // Collapse animation
-    SpringAnimation widthSpring_ = SpringPresets::smooth();
+    SpringAnimation widthSpring_ = SpringPresets::slow();
 
     juce::ListenerList<Listener> listeners_;
 

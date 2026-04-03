@@ -8,13 +8,7 @@
 namespace oscil
 {
 
-OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context) : themeService_(context.themeService)
-{
-    setTestId("sidebar_oscillators_toolbar");
-
-    setupComponents();
-    themeService_.addListener(this);
-}
+OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context) : OscillatorListToolbar(context.themeService) {}
 
 OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService) : themeService_(themeService)
 {
@@ -59,7 +53,7 @@ void OscillatorListToolbar::paint(juce::Graphics& g)
 
     // Draw cyan badge for oscillator count
     auto bounds = getLocalBounds().reduced(4);
-    auto countBounds = bounds.removeFromRight(90);
+    auto countBounds = bounds.removeFromRight(COUNT_BADGE_WIDTH);
 
     juce::String countText;
     if (currentFilterMode_ == OscillatorFilterMode::All)
@@ -78,11 +72,11 @@ void OscillatorListToolbar::paint(juce::Graphics& g)
     // Cyan pill badge background
     auto pillBounds = countBounds.toFloat().reduced(2, 4);
     g.setColour(theme.controlActive.withAlpha(0.2f));
-    g.fillRoundedRectangle(pillBounds, 10.0f);
+    g.fillRoundedRectangle(pillBounds, BADGE_CORNER_RADIUS);
 
     // Cyan text
     g.setColour(theme.controlActive);
-    g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+    g.setFont(juce::FontOptions(BADGE_FONT_SIZE).withStyle("Bold"));
     g.drawText(countText, countBounds, juce::Justification::centred);
 }
 
@@ -92,8 +86,8 @@ void OscillatorListToolbar::resized()
 
     // Single row: Filter tabs and count badge
     // Count badge is drawn in paint(), so just reserve space
-    bounds.removeFromRight(90);
-    bounds.removeFromRight(4);
+    bounds.removeFromRight(COUNT_BADGE_WIDTH);
+    bounds.removeFromRight(COUNT_BADGE_SPACING);
 
     // Filter tabs take remaining space
     filterTabs_->setBounds(bounds);

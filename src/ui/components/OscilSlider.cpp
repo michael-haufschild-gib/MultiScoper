@@ -13,16 +13,13 @@ namespace oscil
 
 OscilSlider::OscilSlider(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , thumbScale_(SpringPresets::snappy())
-    , snapPulse_(SpringPresets::bouncy())
+    , thumbScale_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
     thumbScale_.position = 1.0f;
     thumbScale_.target = 1.0f;
-    snapPulse_.position = 1.0f;
-    snapPulse_.target = 1.0f;
 
     // Setup internal slider for APVTS
     internalSlider_.setRange(minValue_, maxValue_, step_);

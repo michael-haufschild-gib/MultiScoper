@@ -36,12 +36,12 @@ public:
     /**
      * Create a button with a text label (DI)
      */
-    explicit OscilButton(IThemeService& themeService, const juce::String& text = {});
+    explicit OscilButton(IThemeService& themeService, juce::String text = {});
 
     /**
      * Create a button with a text label and testId (DI)
      */
-    OscilButton(IThemeService& themeService, const juce::String& text, const juce::String& testId);
+    OscilButton(IThemeService& themeService, juce::String text, const juce::String& testId);
 
     /**
      * Create an icon-only button (DI)

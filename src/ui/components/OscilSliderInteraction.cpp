@@ -260,7 +260,7 @@ void OscilSlider::timerCallback()
 {
     updateAnimations();
 
-    if (thumbScale_.isSettled() && (!justSnapped_ || snapPulse_.isSettled()))
+    if (thumbScale_.isSettled())
     {
         stopTimer();
         justSnapped_ = false;
@@ -272,34 +272,14 @@ void OscilSlider::timerCallback()
 void OscilSlider::updateAnimations()
 {
     float dt = AnimationTiming::FRAME_DURATION_60FPS;
-
     thumbScale_.update(dt);
     currentThumbScale_ = thumbScale_.position;
-
-    if (justSnapped_)
-        snapPulse_.update(dt);
 }
 
 void OscilSlider::triggerSnapFeedback()
 {
     justSnapped_ = true;
-
-    if (AnimationSettings::shouldUseSpringAnimations())
-    {
-        snapPulse_.setTarget(1.15f, 1.0f);
-
-        juce::Component::SafePointer<OscilSlider> safeThis(this);
-        juce::Timer::callAfterDelay(100, [safeThis] {
-            if (auto* slider = safeThis.getComponent())
-            {
-                slider->snapPulse_.setTarget(1.0f);
-                if (!slider->isTimerRunning())
-                    slider->startTimerHz(ComponentLayout::ANIMATION_FPS);
-            }
-        });
-
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
-    }
+    repaint();
 }
 
 bool OscilSlider::hitTestThumb(const juce::Point<int>& point, float thumbPosition, bool isVertical) const

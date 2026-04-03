@@ -14,6 +14,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -45,13 +47,13 @@ class OscilTabs
     , private juce::Timer
 {
 public:
-    enum class Orientation
+    enum class Orientation : std::uint8_t
     {
         Horizontal,
         Vertical
     };
 
-    enum class Variant
+    enum class Variant : std::uint8_t
     {
         Default, // Underline indicator
         Pills,   // Filled background indicator

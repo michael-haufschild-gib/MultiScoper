@@ -5,16 +5,18 @@
 
 #include "ui/components/OscilAccordion.h"
 
+#include <utility>
+
 namespace oscil
 {
 //==============================================================================
 
-OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title)
+OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, juce::String title)
     : ThemedComponent(themeService)
-    , title_(title)
-    , expandSpring_(SpringPresets::snappy())
-    , hoverSpring_(SpringPresets::stiff())
-    , chevronSpring_(SpringPresets::bouncy())
+    , title_(std::move(title))
+    , expandSpring_(SpringPresets::medium())
+    , hoverSpring_(SpringPresets::fast())
+    , chevronSpring_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
 
@@ -23,9 +25,9 @@ OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const 
     chevronSpring_.position = 0.0f;
 }
 
-OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, const juce::String& title,
+OscilAccordionSection::OscilAccordionSection(IThemeService& themeService, juce::String title,
                                              const juce::String& testId)
-    : OscilAccordionSection(themeService, title)
+    : OscilAccordionSection(themeService, std::move(title))
 {
     setTestId(testId);
 }

@@ -6,6 +6,8 @@
 
 #include "ui/components/OscilDropdown.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -31,7 +33,7 @@ public:
         int end = (g.getClipBounds().getBottom() + ITEM_HEIGHT) / ITEM_HEIGHT;
 
         start = std::max(0, start);
-        end = std::min(end, (int) owner_.filteredIndices_.size());
+        end = std::min(end, static_cast<int>(owner_.filteredIndices_.size()));
 
         for (int i = start; i < end; ++i)
         {
@@ -146,7 +148,7 @@ public:
     void mouseMove(const juce::MouseEvent& e) override
     {
         int index = e.y / ITEM_HEIGHT;
-        if (index >= 0 && index < static_cast<int>(owner_.filteredIndices_.size()))
+        if (index >= 0 && std::cmp_less(index, owner_.filteredIndices_.size()))
         {
             int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
             if (owner_.hoveredIndex_ != itemIndex)
@@ -169,7 +171,7 @@ public:
     void mouseDown(const juce::MouseEvent& e) override
     {
         int index = e.y / ITEM_HEIGHT;
-        if (index >= 0 && index < static_cast<int>(owner_.filteredIndices_.size()))
+        if (index >= 0 && std::cmp_less(index, owner_.filteredIndices_.size()))
         {
             int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
             const auto& item = owner_.items_[static_cast<size_t>(itemIndex)];
@@ -224,7 +226,7 @@ private:
 
 OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , showSpring_(SpringPresets::snappy())
+    , showSpring_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
@@ -339,7 +341,7 @@ void OscilDropdownPopup::focusOnFirstSelected()
 {
     for (size_t i = 0; i < filteredIndices_.size(); ++i)
     {
-        if (selectedIndices_.count(filteredIndices_[i]))
+        if (selectedIndices_.count(filteredIndices_[i]) != 0u)
         {
             focusedIndex_ = static_cast<int>(i);
             ensureItemVisible(focusedIndex_);
@@ -439,8 +441,7 @@ bool OscilDropdownPopup::keyPressed(const juce::KeyPress& key)
         return true;
     }
 
-    if (key == juce::KeyPress::returnKey && focusedIndex_ >= 0 &&
-        focusedIndex_ < static_cast<int>(filteredIndices_.size()))
+    if (key == juce::KeyPress::returnKey && focusedIndex_ >= 0 && std::cmp_less(focusedIndex_, filteredIndices_.size()))
     {
         int itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
         const auto& item = items_[static_cast<size_t>(itemIndex)];

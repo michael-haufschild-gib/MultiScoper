@@ -5,6 +5,8 @@
 
 #include "ui/components/OscilTabs.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -12,9 +14,9 @@ static constexpr float kTabFontSize = 13.0f;
 
 OscilTabs::OscilTabs(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , indicatorXSpring_(SpringPresets::snappy())
-    , indicatorWidthSpring_(SpringPresets::snappy())
-    , hoverSpring_(SpringPresets::stiff())
+    , indicatorXSpring_(SpringPresets::medium())
+    , indicatorWidthSpring_(SpringPresets::medium())
+    , hoverSpring_(SpringPresets::fast())
 {
     setWantsKeyboardFocus(true);
 
@@ -142,7 +144,7 @@ void OscilTabs::clearTabs()
 
 void OscilTabs::setTabBadge(int index, int count)
 {
-    if (index >= 0 && index < static_cast<int>(tabs_.size()))
+    if (index >= 0 && std::cmp_less(index, tabs_.size()))
     {
         tabs_[static_cast<size_t>(index)].badgeCount = count;
         repaint();
@@ -151,7 +153,7 @@ void OscilTabs::setTabBadge(int index, int count)
 
 void OscilTabs::setTabEnabled(int index, bool enabled)
 {
-    if (index >= 0 && index < static_cast<int>(tabs_.size()))
+    if (index >= 0 && std::cmp_less(index, tabs_.size()))
     {
         tabs_[static_cast<size_t>(index)].enabled = enabled;
         repaint();
@@ -160,7 +162,7 @@ void OscilTabs::setTabEnabled(int index, bool enabled)
 
 void OscilTabs::setSelectedIndex(int index, bool notify)
 {
-    if (index < 0 || index >= static_cast<int>(tabs_.size()))
+    if (index < 0 || std::cmp_greater_equal(index, tabs_.size()))
         return;
 
     if (!tabs_[static_cast<size_t>(index)].enabled)
@@ -200,7 +202,7 @@ void OscilTabs::setSelectedIndex(int index, bool notify)
 
 juce::String OscilTabs::getSelectedId() const
 {
-    if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(tabs_.size()))
+    if (selectedIndex_ >= 0 && std::cmp_less(selectedIndex_, tabs_.size()))
         return tabs_[static_cast<size_t>(selectedIndex_)].id;
     return {};
 }
@@ -271,42 +273,32 @@ int OscilTabs::getPreferredWidth() const
     if (tabs_.empty())
         return 100;
 
+    auto computeTabContentWidth = [](const TabItem& tab) -> int {
+        auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, tab.label, 0, 0);
+        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
+        int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
+        return labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
+    };
+
     if (orientation_ == Orientation::Horizontal)
     {
         int totalWidth = 0;
         for (const auto& tab : tabs_)
-        {
-            if (tabWidth_ > 0)
-            {
-                totalWidth += tabWidth_;
-            }
-            else
-            {
-                auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
-                juce::GlyphArrangement glyphs;
-                glyphs.addLineOfText(font, tab.label, 0, 0);
-                int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-                int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
-                int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
-                totalWidth += labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
-            }
-        }
+            totalWidth += tabWidth_ > 0 ? tabWidth_ : computeTabContentWidth(tab);
         return totalWidth;
     }
     else
     {
+        if (tabWidth_ > 0)
+            return tabWidth_;
+
         int maxWidth = 0;
         for (const auto& tab : tabs_)
-        {
-            auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
-            juce::GlyphArrangement glyphs;
-            glyphs.addLineOfText(font, tab.label, 0, 0);
-            int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-            int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
-            int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
-            maxWidth = std::max(maxWidth, labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2);
-        }
-        return tabWidth_ > 0 ? tabWidth_ : maxWidth;
+            maxWidth = std::max(maxWidth, computeTabContentWidth(tab));
+        return maxWidth;
     }
 }
 
@@ -346,7 +338,7 @@ void OscilTabs::resized()
 
 int OscilTabs::getTabAtPosition(juce::Point<int> pos) const
 {
-    for (int i = 0; i < static_cast<int>(tabs_.size()); ++i)
+    for (int i = 0; std::cmp_less(i, tabs_.size()); ++i)
     {
         if (getTabBounds(i).contains(pos))
             return i;
@@ -403,12 +395,12 @@ bool OscilTabs::keyPressed(const juce::KeyPress& key)
     }
 
     int direction = (newIndex > selectedIndex_) ? 1 : -1;
-    while (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) && !tabs_[static_cast<size_t>(newIndex)].enabled)
+    while (newIndex >= 0 && std::cmp_less(newIndex, tabs_.size()) && !tabs_[static_cast<size_t>(newIndex)].enabled)
     {
         newIndex += direction;
     }
 
-    if (newIndex >= 0 && newIndex < static_cast<int>(tabs_.size()) && newIndex != selectedIndex_)
+    if (newIndex >= 0 && std::cmp_less(newIndex, tabs_.size()) && newIndex != selectedIndex_)
     {
         setSelectedIndex(newIndex);
         return true;

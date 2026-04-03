@@ -11,7 +11,7 @@ namespace oscil
 
 OscilTextField::OscilTextField(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , focusSpring_(SpringPresets::stiff())
+    , focusSpring_(SpringPresets::fast())
     , cachedErrorFont_(juce::FontOptions{})
 {
     setupComponents();
@@ -118,10 +118,7 @@ void OscilTextField::setVariant(TextFieldVariant variant)
     repaint();
 }
 
-void OscilTextField::setText(const juce::String& text, bool notify)
-{
-    editor_->setText(text, notify ? juce::sendNotification : juce::dontSendNotification);
-}
+void OscilTextField::setText(const juce::String& text, bool notify) { editor_->setText(text, notify); }
 
 juce::String OscilTextField::getText() const { return editor_->getText(); }
 
@@ -167,7 +164,7 @@ void OscilTextField::setSuffix(const juce::String& suffix)
         juce::String valueText = juce::String(numValue_, decimalPlaces_);
         if (suffix_.isNotEmpty())
             valueText += " " + suffix_;
-        editor_->setText(valueText, juce::dontSendNotification);
+        editor_->setText(valueText, false);
     }
 }
 
@@ -192,7 +189,7 @@ void OscilTextField::updateFromNumericValue()
     if (suffix_.isNotEmpty())
         valueText += " " + suffix_;
 
-    editor_->setText(valueText, juce::dontSendNotification);
+    editor_->setText(valueText, false);
 }
 
 void OscilTextField::setValidator(Callbacks::ValidationCallback validator) { validator_ = validator; }

@@ -11,9 +11,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil
-{
-namespace ListItemIcons
+namespace oscil::ListItemIcons
 {
 
 /**
@@ -169,5 +167,4 @@ inline juce::Path createRedoIcon(float size)
     return getPathFromDrawable(drawable.get(), size);
 }
 
-} // namespace ListItemIcons
-} // namespace oscil
+} // namespace oscil::ListItemIcons

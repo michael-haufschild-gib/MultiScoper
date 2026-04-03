@@ -7,9 +7,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace oscil
-{
-namespace ProcessingModeIcons
+namespace oscil::ProcessingModeIcons
 {
 
 /**
@@ -192,5 +190,4 @@ inline juce::Path createRightIcon(float size, float strokeWidth = 1.5f)
     return stroked;
 }
 
-} // namespace ProcessingModeIcons
-} // namespace oscil
+} // namespace oscil::ProcessingModeIcons

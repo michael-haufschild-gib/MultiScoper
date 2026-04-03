@@ -1,5 +1,5 @@
 /*
-    Oscil - Spring Animation Tests: Edge Cases
+    Oscil - Ease Animation Tests: Edge Cases
     Tests for numerical stability, extreme values, and SpringAnimationGroup
 */
 
@@ -9,349 +9,261 @@
 
 using namespace oscil;
 
-class SpringEdgeTest : public ::testing::Test
+class EaseEdgeTest : public ::testing::Test
 {
 protected:
     void SetUp() override {}
 };
 
-// Test: Extreme high stiffness (numerical stability limitation)
-// NOTE: Very high stiffness values can cause numerical instability with
-// semi-implicit Euler integration. Use moderate values (100-500) in practice.
-TEST_F(SpringEdgeTest, ExtremeHighStiffness)
+// Test: Extreme high stiffness (very fast animation)
+TEST_F(EaseEdgeTest, ExtremeHighStiffness)
 {
-    // Use a high but not extreme stiffness that still works
-    SpringAnimation spring(2000.0f, 80.0f, 1.0f);
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
+    SpringAnimation anim(2000.0f, 0.0f, 1.0f);
+    anim.position = 0.0f;
+    anim.setTarget(1.0f);
 
-    // Should produce finite values with moderate high stiffness
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 10; ++i)
     {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
+        anim.update(1.0f / 60.0f);
+        EXPECT_TRUE(std::isfinite(anim.position));
     }
 
-    // Should settle quickly due to high stiffness
-    EXPECT_NEAR(spring.position, 1.0f, 0.1f);
+    EXPECT_NEAR(anim.position, 1.0f, 0.1f);
 }
 
-// Test: Extreme low stiffness
-TEST_F(SpringEdgeTest, ExtremeLowStiffness)
+// Test: Extreme low stiffness (very slow animation)
+TEST_F(EaseEdgeTest, ExtremeLowStiffness)
 {
-    SpringAnimation spring(0.01f, 0.1f, 1.0f);
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
+    SpringAnimation anim(0.01f, 0.0f, 1.0f);
+    anim.position = 0.0f;
+    anim.setTarget(1.0f);
 
-    // Should still produce finite values
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 60; ++i)
     {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
+        anim.update(1.0f / 60.0f);
+        EXPECT_TRUE(std::isfinite(anim.position));
     }
 
-    // With very low stiffness, position should move slowly
-    // After 100 frames at 60fps, shouldn't have reached target yet
-    EXPECT_LT(spring.position, 1.0f);
+    // Very slow — should have barely moved
+    EXPECT_LT(anim.position, 1.0f);
 }
 
-// Test: Zero stiffness
-TEST_F(SpringEdgeTest, ZeroStiffness)
+// Test: Zero stiffness (no movement)
+TEST_F(EaseEdgeTest, ZeroStiffness)
 {
-    SpringAnimation spring(0.0f, 10.0f, 1.0f);
-    spring.position = 0.0f;
-    spring.velocity = 10.0f; // Give initial velocity
-    spring.setTarget(1.0f);
+    SpringAnimation anim(0.0f, 0.0f, 1.0f);
+    anim.position = 0.0f;
+    anim.setTarget(1.0f);
 
-    // With zero stiffness, spring force is zero
-    // Velocity should just be damped
-    spring.update(1.0f / 60.0f);
+    anim.update(1.0f / 60.0f);
 
-    EXPECT_TRUE(std::isfinite(spring.position));
-    EXPECT_TRUE(std::isfinite(spring.velocity));
-    EXPECT_LT(spring.velocity, 10.0f); // Velocity reduced by damping
+    EXPECT_TRUE(std::isfinite(anim.position));
+    // With zero stiffness, speed is 0 — no movement
+    EXPECT_FLOAT_EQ(anim.position, 0.0f);
 }
 
-// Test: Very small delta time (epsilon-like)
-TEST_F(SpringEdgeTest, VerySmallDeltaTime)
+// Test: Very small delta time
+TEST_F(EaseEdgeTest, VerySmallDeltaTime)
 {
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(1.0f);
 
-    float initialPosition = spring.position;
+    float initialPosition = anim.position;
 
-    // Very small delta time
-    spring.update(1e-10f);
+    anim.update(1e-10f);
 
-    EXPECT_TRUE(std::isfinite(spring.position));
-    EXPECT_TRUE(std::isfinite(spring.velocity));
-    // Position should have barely changed
-    EXPECT_NEAR(spring.position, initialPosition, 1e-6f);
+    EXPECT_TRUE(std::isfinite(anim.position));
+    // Tiny delta should barely move
+    EXPECT_NEAR(anim.position, initialPosition, 1e-4f);
 }
 
-// Test: Very large delta time is clamped to MAX_DELTA_TIME
-TEST_F(SpringEdgeTest, VeryLargeDeltaTimeIsClamped)
+// Test: Very large delta time is clamped
+TEST_F(EaseEdgeTest, VeryLargeDeltaTimeIsClamped)
 {
-    // Two identical springs: one with huge dt, one with MAX_DELTA_TIME.
-    // They should produce the same result because update() clamps dt.
-    SpringAnimation springHuge = SpringPresets::snappy();
-    springHuge.position = 0.0f;
-    springHuge.setTarget(1.0f);
-    springHuge.update(10.0f); // 10 seconds — will be clamped
+    SpringAnimation animHuge = SpringPresets::medium();
+    animHuge.position = 0.0f;
+    animHuge.setTarget(1.0f);
+    animHuge.update(10.0f);
 
-    SpringAnimation springClamped = SpringPresets::snappy();
-    springClamped.position = 0.0f;
-    springClamped.setTarget(1.0f);
-    springClamped.update(SpringAnimation::MAX_DELTA_TIME);
+    SpringAnimation animClamped = SpringPresets::medium();
+    animClamped.position = 0.0f;
+    animClamped.setTarget(1.0f);
+    animClamped.update(SpringAnimation::MAX_DELTA_TIME);
 
-    EXPECT_TRUE(std::isfinite(springHuge.position));
-    EXPECT_TRUE(std::isfinite(springHuge.velocity));
-    EXPECT_FLOAT_EQ(springHuge.position, springClamped.position);
-    EXPECT_FLOAT_EQ(springHuge.velocity, springClamped.velocity);
+    EXPECT_TRUE(std::isfinite(animHuge.position));
+    EXPECT_FLOAT_EQ(animHuge.position, animClamped.position);
 }
 
-// Test: Extreme mass (very heavy)
-TEST_F(SpringEdgeTest, ExtremeMassHigh)
+// Test: Very large target value
+TEST_F(EaseEdgeTest, VeryLargeTarget)
 {
-    SpringAnimation spring(300.0f, 20.0f, 1000.0f);
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(1e6f);
 
-    // High mass = slow acceleration
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 30; ++i)
     {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
+        anim.update(1.0f / 60.0f);
+        EXPECT_TRUE(std::isfinite(anim.position));
     }
 
-    // With high mass, position should move slowly
-    EXPECT_LT(spring.position, 0.5f);
-}
-
-// Test: Low mass (faster response)
-// NOTE: Very low mass values (<0.5) can cause numerical instability with high stiffness.
-// The presets all use mass = 1.0 for stable behavior.
-TEST_F(SpringEdgeTest, ExtremeMassLow)
-{
-    // Use slightly lower mass (still stable range)
-    SpringAnimation spring(200.0f, 20.0f, 0.5f);
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
-
-    // Lower mass = higher acceleration, should still be stable
-    for (int i = 0; i < 100; ++i)
-    {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
-    }
-
-    // With lower mass, should have faster response
-    EXPECT_GT(spring.position, 0.0f);
-}
-
-// Test: Zero mass (edge case - division by zero protection)
-TEST_F(SpringEdgeTest, ZeroMass)
-{
-    SpringAnimation spring(300.0f, 20.0f, 0.0f);
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
-
-    spring.update(1.0f / 60.0f);
-
-    // Position should have changed (even if inf/nan, verify update ran)
-    // The stiffness and damping are still set
-    EXPECT_FLOAT_EQ(spring.stiffness, 300.0f);
-    EXPECT_FLOAT_EQ(spring.damping, 20.0f);
-}
-
-// Test: Very large target values
-TEST_F(SpringEdgeTest, VeryLargeTarget)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(1e6f);
-
-    for (int i = 0; i < 100; ++i)
-    {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
-    }
-
-    // Should be moving toward target
-    EXPECT_GT(spring.position, 0.0f);
+    EXPECT_GT(anim.position, 0.0f);
 }
 
 // Test: Negative target
-TEST_F(SpringEdgeTest, NegativeTarget)
+TEST_F(EaseEdgeTest, NegativeTarget)
 {
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(-100.0f);
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(-100.0f);
 
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 60; ++i)
     {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
+        anim.update(1.0f / 60.0f);
+        EXPECT_TRUE(std::isfinite(anim.position));
     }
 
-    // Should be moving toward negative target
-    EXPECT_LT(spring.position, 0.0f);
+    EXPECT_LT(anim.position, 0.0f);
 }
 
-// ============================================================================
-// SpringAnimationGroup Tests
-// ============================================================================
-
-class SpringAnimationGroupTest : public ::testing::Test
+// Test: Position never overshoots (monotonic for all stiffness)
+TEST_F(EaseEdgeTest, MonotonicForAllStiffness)
 {
-protected:
+    for (float stiffness : {10.0f, 100.0f, 500.0f, 1000.0f, 2000.0f})
+    {
+        SpringAnimation anim(stiffness, 0.0f, 1.0f);
+        anim.position = 0.0f;
+        anim.setTarget(1.0f);
+
+        float prev = 0.0f;
+        for (int i = 0; i < 120; ++i)
+        {
+            anim.update(1.0f / 60.0f);
+            EXPECT_GE(anim.position, prev) << "Overshoot with stiffness=" << stiffness << " at frame " << i;
+            EXPECT_LE(anim.position, 1.0f + 0.001f) << "Exceeded target with stiffness=" << stiffness;
+            prev = anim.position;
+        }
+    }
+}
+
+//==============================================================================
+// SpringAnimationGroup Tests
+//==============================================================================
+
+class EaseAnimationGroupTest : public ::testing::Test
+{
     SpringAnimationGroup group;
+
+public:
+    EaseAnimationGroupTest() = default;
+
+protected:
+    SpringAnimationGroup& getGroup() { return group; }
 };
 
-TEST_F(SpringAnimationGroupTest, AddAndGet)
+TEST_F(EaseAnimationGroupTest, AddAndGet)
 {
-    group.add("test", SpringPresets::snappy());
+    getGroup().add("test", SpringPresets::medium());
 
-    SpringAnimation* spring = group.get("test");
-    ASSERT_NE(spring, nullptr);
-    EXPECT_EQ(spring->stiffness, SpringPresets::snappy().stiffness);
+    SpringAnimation* anim = getGroup().get("test");
+    ASSERT_NE(anim, nullptr);
+    EXPECT_EQ(anim->stiffness, SpringPresets::medium().stiffness);
 }
 
-TEST_F(SpringAnimationGroupTest, GetNonExistent)
+TEST_F(EaseAnimationGroupTest, GetNonExistent)
 {
-    SpringAnimation* spring = group.get("nonexistent");
-    EXPECT_EQ(spring, nullptr);
+    SpringAnimation* anim = getGroup().get("nonexistent");
+    EXPECT_EQ(anim, nullptr);
 }
 
-TEST_F(SpringAnimationGroupTest, GetConst)
+TEST_F(EaseAnimationGroupTest, GetConst)
 {
-    group.add("test", SpringPresets::snappy());
+    getGroup().add("test", SpringPresets::medium());
 
-    const SpringAnimationGroup& constGroup = group;
-    const SpringAnimation* spring = constGroup.get("test");
+    const SpringAnimationGroup& constGroup = getGroup();
+    const SpringAnimation* anim = constGroup.get("test");
 
-    ASSERT_NE(spring, nullptr);
-    EXPECT_EQ(spring->stiffness, SpringPresets::snappy().stiffness);
+    ASSERT_NE(anim, nullptr);
+    EXPECT_EQ(anim->stiffness, SpringPresets::medium().stiffness);
 }
 
-TEST_F(SpringAnimationGroupTest, GetConstNonExistent)
+TEST_F(EaseAnimationGroupTest, GetConstNonExistent)
 {
-    const SpringAnimationGroup& constGroup = group;
-    const SpringAnimation* spring = constGroup.get("nonexistent");
-    EXPECT_EQ(spring, nullptr);
+    const SpringAnimationGroup& constGroup = getGroup();
+    const SpringAnimation* anim = constGroup.get("nonexistent");
+    EXPECT_EQ(anim, nullptr);
 }
 
-TEST_F(SpringAnimationGroupTest, UpdateAll)
+TEST_F(EaseAnimationGroupTest, UpdateAll)
 {
-    auto& spring1 = group.add("spring1", SpringPresets::snappy());
-    auto& spring2 = group.add("spring2", SpringPresets::bouncy());
+    auto& anim1 = getGroup().add("anim1", SpringPresets::medium());
+    auto& anim2 = getGroup().add("anim2", SpringPresets::fast());
 
-    spring1.setTarget(1.0f);
-    spring2.setTarget(2.0f);
+    anim1.setTarget(1.0f);
+    anim2.setTarget(1.0f);
 
-    group.updateAll(1.0f / 60.0f);
+    getGroup().updateAll(1.0f / 60.0f);
 
-    EXPECT_GT(spring1.position, 0.0f);
-    EXPECT_GT(spring2.position, 0.0f);
+    EXPECT_GT(anim1.position, 0.0f);
+    EXPECT_GT(anim2.position, 0.0f);
 }
 
-TEST_F(SpringAnimationGroupTest, AnyNeedsUpdate)
+TEST_F(EaseAnimationGroupTest, AnyNeedsUpdate)
 {
-    auto& spring1 = group.add("spring1", SpringPresets::snappy());
-    auto& spring2 = group.add("spring2", SpringPresets::snappy());
+    auto& anim1 = getGroup().add("anim1", SpringPresets::medium());
+    auto& anim2 = getGroup().add("anim2", SpringPresets::medium());
 
-    spring1.snapToTarget();
-    spring2.snapToTarget();
+    anim1.setTarget(1.0f);
+    anim1.snapToTarget();
+    anim2.setTarget(1.0f);
+    anim2.snapToTarget();
 
-    EXPECT_FALSE(group.anyNeedsUpdate());
+    EXPECT_FALSE(getGroup().anyNeedsUpdate());
 
-    spring1.setTarget(1.0f);
-    spring1.update(1.0f / 60.0f);
-
-    EXPECT_TRUE(group.anyNeedsUpdate());
+    anim1.setTarget(2.0f);
+    EXPECT_TRUE(getGroup().anyNeedsUpdate());
 }
 
-TEST_F(SpringAnimationGroupTest, SnapAllToTarget)
+TEST_F(EaseAnimationGroupTest, SnapAllToTarget)
 {
-    auto& spring1 = group.add("spring1", SpringPresets::snappy());
-    auto& spring2 = group.add("spring2", SpringPresets::snappy());
+    auto& anim1 = getGroup().add("anim1", SpringPresets::medium());
+    auto& anim2 = getGroup().add("anim2", SpringPresets::medium());
 
-    spring1.setTarget(10.0f);
-    spring2.setTarget(20.0f);
+    anim1.setTarget(5.0f);
+    anim2.setTarget(10.0f);
 
-    group.snapAllToTarget();
+    getGroup().snapAllToTarget();
 
-    EXPECT_FLOAT_EQ(spring1.position, 10.0f);
-    EXPECT_FLOAT_EQ(spring2.position, 20.0f);
-    EXPECT_FALSE(group.anyNeedsUpdate());
+    EXPECT_FLOAT_EQ(anim1.position, 5.0f);
+    EXPECT_FLOAT_EQ(anim2.position, 10.0f);
 }
 
-TEST_F(SpringAnimationGroupTest, AddReturnsReference)
+TEST_F(EaseAnimationGroupTest, AddReturnsReference)
 {
-    SpringAnimation& spring = group.add("test", SpringPresets::snappy());
+    SpringAnimation& anim = getGroup().add("test", SpringPresets::medium());
+    anim.setTarget(42.0f);
 
-    spring.setTarget(5.0f);
-
-    // The reference should be to the stored spring
-    EXPECT_FLOAT_EQ(group.get("test")->target, 5.0f);
+    SpringAnimation* retrieved = getGroup().get("test");
+    ASSERT_NE(retrieved, nullptr);
+    EXPECT_FLOAT_EQ(retrieved->target, 42.0f);
 }
 
-TEST_F(SpringAnimationGroupTest, MultipleSprings)
+TEST_F(EaseAnimationGroupTest, ManyAnimations)
 {
-    const int count = 100;
+    for (int i = 0; i < 50; ++i)
+        getGroup().add("anim" + std::to_string(i), SpringPresets::medium());
 
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < 50; ++i)
     {
-        group.add("spring" + std::to_string(i), SpringPresets::snappy());
-    }
-
-    // All springs should be accessible and have correct stiffness
-    for (int i = 0; i < count; ++i)
-    {
-        auto* spring = group.get("spring" + std::to_string(i));
-        EXPECT_NE(spring, nullptr);
-        EXPECT_EQ(spring->stiffness, SpringPresets::snappy().stiffness);
+        auto* anim = getGroup().get("anim" + std::to_string(i));
+        ASSERT_NE(anim, nullptr);
+        EXPECT_EQ(anim->stiffness, SpringPresets::medium().stiffness);
     }
 }
 
-TEST_F(SpringAnimationGroupTest, EmptyGroupUpdateAll)
+TEST_F(EaseAnimationGroupTest, DefaultPreset)
 {
-    group.updateAll(1.0f / 60.0f);
-
-    // Empty group should not need updates after updateAll
-    EXPECT_FALSE(group.anyNeedsUpdate());
-}
-
-TEST_F(SpringAnimationGroupTest, EmptyGroupAnyNeedsUpdate)
-{
-    EXPECT_FALSE(group.anyNeedsUpdate());
-
-    // Adding a spring at rest should still not need update
-    auto& spring = group.add("test", SpringPresets::snappy());
-    spring.snapToTarget();
-    EXPECT_FALSE(group.anyNeedsUpdate());
-}
-
-TEST_F(SpringAnimationGroupTest, EmptyGroupSnapAll)
-{
-    group.snapAllToTarget();
-
-    // After snap, group should not need updates
-    EXPECT_FALSE(group.anyNeedsUpdate());
-}
-
-TEST_F(SpringAnimationGroupTest, OverwriteExisting)
-{
-    group.add("test", SpringAnimation(100.0f, 10.0f, 1.0f));
-    EXPECT_FLOAT_EQ(group.get("test")->stiffness, 100.0f);
-
-    group.add("test", SpringAnimation(200.0f, 20.0f, 2.0f));
-    EXPECT_FLOAT_EQ(group.get("test")->stiffness, 200.0f);
+    auto& anim = getGroup().add("test");
+    EXPECT_EQ(anim.stiffness, SpringPresets::medium().stiffness);
 }

@@ -13,6 +13,8 @@
 #   modernize-avoid-c-arrays — JUCE APIs use C arrays for audio buffers
 #   readability-magic-numbers — audio code legitimately uses numeric constants
 #   bugprone-narrowing-conversions — re-enabled; suppressed per-file where JUCE APIs force int/float mixing
+#   bugprone-derived-method-shadowing-base-method — JUCE Component has non-virtual setEnabled/isEnabled/setTitle/getTitle/isShowing
+#     that subclasses intentionally shadow for custom state tracking. Pervasive JUCE pattern, not a bug.
 #   performance-avoid-endl — not relevant for audio plugin (no iostream)
 #   modernize-use-equals-default — JUCE constructors often need explicit empty bodies
 #   readability-convert-member-functions-to-static — conflicts with JUCE override patterns
@@ -31,6 +33,7 @@ Checks: >
   -modernize-avoid-c-arrays,
   -modernize-use-equals-default,
   -bugprone-easily-swappable-parameters,
+  -bugprone-derived-method-shadowing-base-method,
   -bugprone-throwing-static-initialization,
   -performance-unnecessary-value-param,
   -performance-avoid-endl,

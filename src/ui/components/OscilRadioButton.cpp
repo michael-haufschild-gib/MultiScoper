@@ -4,6 +4,8 @@
 
 #include "ui/components/OscilRadioButton.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -13,8 +15,8 @@ namespace oscil
 
 OscilRadioButton::OscilRadioButton(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , selectionSpring_(SpringPresets::bouncy())
-    , hoverSpring_(SpringPresets::stiff())
+    , selectionSpring_(SpringPresets::medium())
+    , hoverSpring_(SpringPresets::fast())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -353,7 +355,7 @@ void OscilRadioGroup::handleButtonSelected(int index) { setSelectedIndex(index);
 void OscilRadioGroup::updateButtonStates()
 {
     for (size_t i = 0; i < buttons_.size(); ++i)
-        buttons_[i]->setSelected(static_cast<int>(i) == selectedIndex_, false);
+        buttons_[i]->setSelected(std::cmp_equal(i, selectedIndex_), false);
 }
 
 std::unique_ptr<juce::AccessibilityHandler> OscilRadioGroup::createAccessibilityHandler()

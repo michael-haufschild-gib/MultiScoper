@@ -5,6 +5,8 @@
 
 #include "ui/components/OscilDropdown.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -14,8 +16,8 @@ namespace oscil
 
 OscilDropdown::OscilDropdown(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , hoverSpring_(SpringPresets::stiff())
-    , chevronSpring_(SpringPresets::bouncy())
+    , hoverSpring_(SpringPresets::fast())
+    , chevronSpring_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -75,7 +77,7 @@ void OscilDropdown::clearItems()
 void OscilDropdown::setSelectedIndex(int index, bool notify)
 {
     std::set<int> newSelection;
-    if (index >= 0 && index < static_cast<int>(items_.size()))
+    if (index >= 0 && std::cmp_less(index, items_.size()))
         newSelection.insert(index);
 
     setSelectedIndices(newSelection, notify);
@@ -86,15 +88,14 @@ int OscilDropdown::getSelectedIndex() const { return selectedIndices_.empty() ? 
 juce::String OscilDropdown::getSelectedId() const
 {
     int index = getSelectedIndex();
-    return (index >= 0 && index < static_cast<int>(items_.size())) ? items_[static_cast<size_t>(index)].id
-                                                                   : juce::String();
+    return (index >= 0 && std::cmp_less(index, items_.size())) ? items_[static_cast<size_t>(index)].id : juce::String();
 }
 
 juce::String OscilDropdown::getSelectedLabel() const
 {
     int index = getSelectedIndex();
-    return (index >= 0 && index < static_cast<int>(items_.size())) ? items_[static_cast<size_t>(index)].label
-                                                                   : juce::String();
+    return (index >= 0 && std::cmp_less(index, items_.size())) ? items_[static_cast<size_t>(index)].label
+                                                               : juce::String();
 }
 
 void OscilDropdown::setSelectedIndices(const std::set<int>& indices, bool notify)
@@ -123,7 +124,7 @@ std::vector<juce::String> OscilDropdown::getSelectedIds() const
 {
     std::vector<juce::String> result;
     for (int index : selectedIndices_)
-        if (index >= 0 && index < static_cast<int>(items_.size()))
+        if (index >= 0 && std::cmp_less(index, items_.size()))
             result.push_back(items_[static_cast<size_t>(index)].id);
     return result;
 }
@@ -132,7 +133,7 @@ std::vector<juce::String> OscilDropdown::getSelectedLabels() const
 {
     std::vector<juce::String> result;
     for (int index : selectedIndices_)
-        if (index >= 0 && index < static_cast<int>(items_.size()))
+        if (index >= 0 && std::cmp_less(index, items_.size()))
             result.push_back(items_[static_cast<size_t>(index)].label);
     return result;
 }
@@ -220,7 +221,7 @@ void OscilDropdown::handleItemClicked(int index)
 {
     if (multiSelect_)
     {
-        if (selectedIndices_.count(index))
+        if (selectedIndices_.count(index) != 0u)
             selectedIndices_.erase(index);
         else
             selectedIndices_.insert(index);
@@ -250,7 +251,7 @@ void OscilDropdown::updateDisplayText()
     else if (selectedIndices_.size() == 1)
     {
         int index = *selectedIndices_.begin();
-        if (index >= 0 && index < static_cast<int>(items_.size()))
+        if (index >= 0 && std::cmp_less(index, items_.size()))
             displayText_ = items_[static_cast<size_t>(index)].label;
         else
             displayText_ = placeholder_;

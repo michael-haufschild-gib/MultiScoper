@@ -9,8 +9,8 @@ namespace oscil
 
 OscilCheckbox::OscilCheckbox(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , checkSpring_(SpringPresets::bouncy())
-    , hoverSpring_(SpringPresets::stiff())
+    , checkSpring_(SpringPresets::medium())
+    , hoverSpring_(SpringPresets::fast())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);

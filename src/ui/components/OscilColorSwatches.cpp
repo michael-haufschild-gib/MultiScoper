@@ -4,12 +4,14 @@
 
 #include "ui/components/OscilColorSwatches.h"
 
+#include <utility>
+
 namespace oscil
 {
 
 OscilColorSwatches::OscilColorSwatches(IThemeService& themeService, const juce::String& testId)
     : ThemedComponent(themeService)
-    , hoverSpring_(SpringPresets::stiff())
+    , hoverSpring_(SpringPresets::fast())
 {
     if (testId.isNotEmpty())
         setTestId(testId);
@@ -26,7 +28,7 @@ void OscilColorSwatches::setColors(const std::vector<juce::Colour>& colors)
 {
     colors_ = colors;
 
-    if (selectedIndex_ >= static_cast<int>(colors_.size()))
+    if (std::cmp_greater_equal(selectedIndex_, colors_.size()))
         selectedIndex_ = -1;
 
     repaint();
@@ -48,7 +50,7 @@ void OscilColorSwatches::clearColors()
 
 void OscilColorSwatches::setSelectedIndex(int index, bool notify)
 {
-    if (index < -1 || index >= static_cast<int>(colors_.size()))
+    if (index < -1 || std::cmp_greater_equal(index, colors_.size()))
         return;
 
     if (selectedIndex_ == index)
@@ -63,15 +65,15 @@ void OscilColorSwatches::setSelectedIndex(int index, bool notify)
 
 juce::Colour OscilColorSwatches::getSelectedColor() const
 {
-    if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(colors_.size()))
+    if (selectedIndex_ >= 0 && std::cmp_less(selectedIndex_, colors_.size()))
         return colors_[static_cast<size_t>(selectedIndex_)];
 
-    return juce::Colour();
+    return {};
 }
 
 void OscilColorSwatches::setSelectedColor(juce::Colour color, bool notify)
 {
-    for (int i = 0; i < static_cast<int>(colors_.size()); ++i)
+    for (int i = 0; std::cmp_less(i, colors_.size()); ++i)
     {
         if (colors_[static_cast<size_t>(i)] == color)
         {
@@ -154,14 +156,14 @@ int OscilColorSwatches::getPreferredHeight() const
 
 void OscilColorSwatches::paint(juce::Graphics& g)
 {
-    for (int i = 0; i < static_cast<int>(colors_.size()); ++i)
+    for (int i = 0; std::cmp_less(i, colors_.size()); ++i)
     {
         auto bounds = getSwatchBounds(i);
         paintSwatch(g, i, bounds);
     }
 
     // Focus ring around focused swatch
-    if (hasFocus_ && focusedIndex_ >= 0 && focusedIndex_ < static_cast<int>(colors_.size()))
+    if (hasFocus_ && focusedIndex_ >= 0 && std::cmp_less(focusedIndex_, colors_.size()))
     {
         auto bounds = getSwatchBounds(focusedIndex_).toFloat();
         g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
@@ -224,8 +226,8 @@ void OscilColorSwatches::paintCheckmark(juce::Graphics& g, juce::Rectangle<int> 
 
     g.setColour(checkColor);
 
-    float cx = static_cast<float>(bounds.getCentreX());
-    float cy = static_cast<float>(bounds.getCentreY());
+    auto cx = static_cast<float>(bounds.getCentreX());
+    auto cy = static_cast<float>(bounds.getCentreY());
     float size = static_cast<float>(bounds.getWidth()) * 0.25f;
 
     juce::Path checkPath;
@@ -253,7 +255,7 @@ int OscilColorSwatches::getSwatchAtPosition(juce::Point<int> pos) const
 
     int index = row * cols + col;
 
-    if (index < 0 || index >= static_cast<int>(colors_.size()))
+    if (index < 0 || std::cmp_greater_equal(index, colors_.size()))
         return -1;
 
     // Check if actually within the swatch bounds
@@ -274,7 +276,7 @@ juce::Rectangle<int> OscilColorSwatches::getSwatchBounds(int index) const
     int x = col * (swatchSize_ + spacing_);
     int y = row * (swatchSize_ + spacing_);
 
-    return juce::Rectangle<int>(x, y, swatchSize_, swatchSize_);
+    return {x, y, swatchSize_, swatchSize_};
 }
 
 void OscilColorSwatches::mouseDown(const juce::MouseEvent& e)

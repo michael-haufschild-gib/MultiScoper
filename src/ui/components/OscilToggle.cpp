@@ -9,16 +9,13 @@ namespace oscil
 
 OscilToggle::OscilToggle(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , positionSpring_(SpringPresets::bouncy())
-    , celebrationSpring_(SpringPresets::snappy())
+    , positionSpring_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
     positionSpring_.position = 0.0f;
     positionSpring_.target = 0.0f;
-    celebrationSpring_.position = 1.0f;
-    celebrationSpring_.target = 1.0f;
 
     // Setup internal toggle button for APVTS (hidden)
     internalButton_.setToggleState(false, juce::dontSendNotification);
@@ -52,7 +49,6 @@ void OscilToggle::setValue(bool value, bool animate)
     if (value_ == value)
         return;
 
-    bool wasOff = !value_;
     value_ = value;
 
     // Update internal button for APVTS sync — sendNotificationSync ensures
@@ -63,11 +59,6 @@ void OscilToggle::setValue(bool value, bool animate)
     if (animate && AnimationSettings::shouldUseSpringAnimations())
     {
         positionSpring_.setTarget(value ? 1.0f : 0.0f);
-
-        // Trigger celebration on activation
-        if (value && wasOff)
-            triggerCelebration();
-
         startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
     else
@@ -225,12 +216,7 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
     float knobX = minX + (maxX - minX) * progress;
     float knobY = trackBounds.getY() + padding;
 
-    // Apply celebration scale
-    float scale = celebrationSpring_.position;
-    float scaledSize = knobSize * scale;
-    float offset = (scaledSize - knobSize) / 2.0f;
-
-    auto knobBounds = juce::Rectangle<float>(knobX - offset, knobY - offset, scaledSize, scaledSize);
+    auto knobBounds = juce::Rectangle<float>(knobX, knobY, knobSize, knobSize);
 
     // Draw knob shadow
     g.setColour(juce::Colours::black.withAlpha(0.2f * opacity));
@@ -289,27 +275,6 @@ void OscilToggle::focusLost(FocusChangeType)
     repaint();
 }
 
-void OscilToggle::triggerCelebration()
-{
-    // Respect reduced motion preference
-    if (!AnimationSettings::shouldUseSpringAnimations())
-        return;
-
-    celebrationSpring_.setTarget(ComponentLayout::CELEBRATION_SCALE, 1.0f);
-
-    // Schedule return to normal scale
-    // Use SafePointer to prevent use-after-free if component is destroyed before callback
-    juce::Component::SafePointer<OscilToggle> safeThis(this);
-    juce::Timer::callAfterDelay(100, [safeThis] {
-        if (auto* toggle = safeThis.getComponent())
-        {
-            toggle->celebrationSpring_.setTarget(1.0f);
-            if (!toggle->isTimerRunning())
-                toggle->startTimerHz(ComponentLayout::ANIMATION_FPS);
-        }
-    });
-}
-
 void OscilToggle::notifyValueChanged()
 {
     if (onValueChanged)
@@ -320,7 +285,7 @@ void OscilToggle::timerCallback()
 {
     updateAnimations();
 
-    if (positionSpring_.isSettled() && celebrationSpring_.isSettled())
+    if (positionSpring_.isSettled())
         stopTimer();
 
     repaint();
@@ -329,9 +294,7 @@ void OscilToggle::timerCallback()
 void OscilToggle::updateAnimations()
 {
     float dt = AnimationTiming::FRAME_DURATION_60FPS;
-
     positionSpring_.update(dt);
-    celebrationSpring_.update(dt);
 }
 
 //==============================================================================

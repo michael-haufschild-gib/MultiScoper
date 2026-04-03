@@ -5,6 +5,7 @@
 
 #include "ui/panels/OscillatorListItem.h"
 
+#include "core/OscilLog.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/InlineEditLabel.h"
@@ -68,7 +69,7 @@ void OscillatorListItemComponent::setupLabels()
     nameLabel_->setTextJustification(juce::Justification::bottomLeft);
     nameLabel_->onTextChanged = [this](const juce::String& newName) {
         displayName_ = newName;
-        listeners_.call([this, &newName](Listener& l) { l.oscillatorNameChanged(oscillatorId_, newName); });
+        listeners_.call([this, newName](Listener& l) { l.oscillatorNameChanged(oscillatorId_, newName); });
     };
     nameLabel_->onMouseDown = [this](const juce::MouseEvent&) {
         listeners_.call([this](Listener& l) { l.oscillatorSelected(oscillatorId_); });
@@ -235,10 +236,10 @@ void OscillatorListItemComponent::resized()
     // Bounds start from 0, but we have drag handle (24) + margin (4) + indicator (14) + margin (10)
     int textX = DRAG_HANDLE_WIDTH + 4 + COLOR_INDICATOR_SIZE + 10;
     int textW = bounds.getWidth() - textX; // remaining width after buttons removed from right
-    float topH = selected_ ? COMPACT_HEIGHT : getHeight();
+    auto topH = selected_ ? static_cast<float>(COMPACT_HEIGHT) : static_cast<float>(getHeight());
 
     // nameLabel_ takes top 55%
-    nameLabel_->setBounds(textX, selected_ ? 0 : 0, textW, static_cast<int>(topH * 0.55f));
+    nameLabel_->setBounds(textX, 0, textW, static_cast<int>(topH * 0.55f));
 
     // trackLabel_ takes bottom 45%
     trackLabel_->setBounds(textX, nameLabel_->getBottom(), textW, static_cast<int>(topH * 0.45f));
@@ -323,15 +324,13 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
     // Re-register test IDs if order index changed (list rebuild after deletion)
     int newOrder = oscillator.getOrderIndex();
     juce::String newTestId = "sidebar_oscillators_item_" + juce::String(newOrder);
-    juce::Logger::writeToLog("[ListItem] updateFromOscillator: name=" + displayName_ + " oldTestId=" + getTestId() +
-                             " newTestId=" + newTestId + " orderIndex=" + juce::String(newOrder));
+    OSCIL_LOG(UI, "ListItem: updateFromOscillator name=" << displayName_ << " oldTestId=" << getTestId()
+                                                         << " newTestId=" << newTestId << " orderIndex=" << newOrder);
     if (newTestId != getTestId())
     {
-        juce::Logger::writeToLog("[ListItem] Re-registering test IDs: " + getTestId() + " -> " + newTestId);
+        OSCIL_LOG(UI, "ListItem: re-registering test IDs: " << getTestId() << " -> " << newTestId);
         setTestId(newTestId);
-        juce::String suffix = juce::String(newOrder);
         deleteButton_->setTestId(newTestId + "_delete");
-        juce::Logger::writeToLog("[ListItem] deleteButton testId now: " + deleteButton_->getTestId());
         settingsButton_->setTestId(newTestId + "_settings");
         visibilityButton_->setTestId(newTestId + "_vis_btn");
         OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, newTestId + "_mode");

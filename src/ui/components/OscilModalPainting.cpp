@@ -16,20 +16,7 @@ void OscilModal::paint(juce::Graphics& g)
         return;
 
     paintBackdrop(g);
-
-    auto modalBounds = getModalBounds();
-
-    float scale = scaleSpring_.position;
-    auto centreX = modalBounds.getCentreX();
-    auto centreY = modalBounds.getCentreY();
-
-    auto scaledWidth = static_cast<int>(static_cast<float>(modalBounds.getWidth()) * scale);
-    auto scaledHeight = static_cast<int>(static_cast<float>(modalBounds.getHeight()) * scale);
-
-    auto scaledBounds =
-        juce::Rectangle<int>(centreX - scaledWidth / 2, centreY - scaledHeight / 2, scaledWidth, scaledHeight);
-
-    paintModal(g, scaledBounds);
+    paintModal(g, getModalBounds());
 }
 
 void OscilModal::paintBackdrop(juce::Graphics& g)
@@ -163,8 +150,8 @@ juce::Rectangle<int> OscilModal::getContentBounds() const
 juce::Rectangle<int> OscilModal::getCloseButtonBounds() const
 {
     auto titleBounds = getTitleBarBounds();
-    return juce::Rectangle<int>(titleBounds.getRight() - MODAL_PADDING - CLOSE_BUTTON_SIZE,
-                                titleBounds.getCentreY() - CLOSE_BUTTON_SIZE / 2, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE);
+    return {titleBounds.getRight() - MODAL_PADDING - CLOSE_BUTTON_SIZE,
+            titleBounds.getCentreY() - CLOSE_BUTTON_SIZE / 2, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE};
 }
 
 } // namespace oscil
