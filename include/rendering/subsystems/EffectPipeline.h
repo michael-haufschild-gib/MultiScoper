@@ -43,11 +43,6 @@ public:
                                      float deltaTime, juce::OpenGLShaderProgram* compositeShader, GLint compositeLoc);
 
     /**
-     * Apply global effects to the scene FBO.
-     */
-    void applyGlobalEffects(Framebuffer* sceneFBO, juce::OpenGLContext& context);
-
-    /**
      * Get a post-process effect by ID.
      */
     PostProcessEffect* getEffect(const juce::String& effectId) override;

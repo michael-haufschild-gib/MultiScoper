@@ -27,13 +27,20 @@ void ThemeEditorComponent::handleCreateTheme()
                                            juce::Component::getCurrentlyModalComponent());
                                        if (aw)
                                        {
-                                           auto name = aw->getTextEditorContents("name");
+                                           auto name = aw->getTextEditorContents("name").trim();
                                            if (name.isNotEmpty())
                                            {
                                                if (themeService_.createTheme(name))
                                                {
                                                    refreshThemeList();
                                                    selectTheme(name);
+                                               }
+                                               else
+                                               {
+                                                   juce::AlertWindow::showMessageBoxAsync(
+                                                       juce::MessageBoxIconType::WarningIcon, "Create Failed",
+                                                       "Could not create theme. The name may already exist or "
+                                                       "contain invalid characters.");
                                                }
                                            }
                                        }
@@ -64,13 +71,20 @@ void ThemeEditorComponent::handleCloneTheme()
                                            juce::Component::getCurrentlyModalComponent());
                                        if (aw)
                                        {
-                                           auto name = aw->getTextEditorContents("name");
+                                           auto name = aw->getTextEditorContents("name").trim();
                                            if (name.isNotEmpty())
                                            {
                                                if (themeService_.cloneTheme(sourceTheme, name))
                                                {
                                                    refreshThemeList();
                                                    selectTheme(name);
+                                               }
+                                               else
+                                               {
+                                                   juce::AlertWindow::showMessageBoxAsync(
+                                                       juce::MessageBoxIconType::WarningIcon, "Clone Failed",
+                                                       "Could not clone theme. The name may already exist or "
+                                                       "contain invalid characters.");
                                                }
                                            }
                                        }
@@ -178,14 +192,22 @@ void ThemeEditorComponent::handleApplyTheme()
 
     if (!isSystem)
     {
-        editingTheme_.name = nameEditor_->getText();
-        themeService_.updateTheme(selectedThemeName_, editingTheme_);
-
-        if (editingTheme_.name != selectedThemeName_)
+        auto newName = nameEditor_->getText().trim();
+        if (newName.isNotEmpty() && newName != selectedThemeName_)
         {
+            if (!themeService_.renameTheme(selectedThemeName_, newName))
+            {
+                juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Rename Failed",
+                                                       "Could not rename theme. The name may already be in use or "
+                                                       "contain invalid characters.");
+                return;
+            }
+            selectedThemeName_ = newName;
             refreshThemeList();
-            selectedThemeName_ = editingTheme_.name;
         }
+
+        editingTheme_.name = selectedThemeName_;
+        themeService_.updateTheme(selectedThemeName_, editingTheme_);
     }
 
     themeService_.setCurrentTheme(selectedThemeName_);

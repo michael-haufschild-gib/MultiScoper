@@ -283,6 +283,11 @@ public:
     bool cloneTheme(const juce::String& sourceName, const juce::String& newName) override;
 
     /**
+     * Rename a custom theme
+     */
+    bool renameTheme(const juce::String& oldName, const juce::String& newName) override;
+
+    /**
      * Check if a theme is a system theme (immutable)
      */
     bool isSystemTheme(const juce::String& name) const override;
@@ -353,6 +358,8 @@ private:
     std::unordered_map<juce::String, ColorTheme> themes_;
     std::set<juce::String> pendingSaves_;
     juce::ListenerList<ThemeManagerListener> listeners_;
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE(ThemeManager)
 };
 
 // Pre-defined system themes

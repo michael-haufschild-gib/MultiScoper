@@ -13,13 +13,14 @@ namespace oscil
 
 namespace
 {
-void ensureMinPanes(PaneLayoutManager& layoutManager, int minCount)
+void ensureMinPanes(PaneLayoutManager& layoutManager, int minCount, std::vector<PaneId>& addedPaneIds)
 {
     while (layoutManager.getPaneCount() < static_cast<size_t>(minCount))
     {
         Pane pane;
         pane.setName("Test Pane " + juce::String(layoutManager.getPaneCount() + 1));
         pane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
+        addedPaneIds.push_back(pane.getId());
         layoutManager.addPane(pane);
     }
 }
@@ -75,6 +76,8 @@ nlohmann::json testMovePaneAdjacent(PaneLayoutManager& layoutManager, OscilPlugi
     auto panesAfter = layoutManager.getPanes();
     test["passed"] = (panesAfter[0].getId().id == middlePaneId);
     test["details"] = "Middle pane should move to first position";
+    // Restore original order
+    layoutManager.movePane(panesAfter[0].getId(), 1);
     return test;
 }
 
@@ -148,11 +151,14 @@ nlohmann::json testThreeColumnCrossMove(OscilState& state, PaneLayoutManager& la
     if (panesBefore.size() >= 3)
     {
         PaneId paneToMove = panesBefore[0].getId();
+        int originalColumn = panesBefore[0].getColumnIndex();
         layoutManager.movePaneToColumn(paneToMove, 2, 0);
         editor.resized();
         const Pane* movedPane = layoutManager.getPane(paneToMove);
         test["passed"] = movedPane && movedPane->getColumnIndex() == 2;
         test["details"] = "Pane should move to column 2 in 3-column layout";
+        // Restore pane to original column and reset layout
+        layoutManager.movePaneToColumn(paneToMove, originalColumn, 0);
         state.setColumnLayout(ColumnLayout::Single);
         editor.resized();
     }
@@ -174,7 +180,8 @@ void TestRunnerHandler::handleRunDragDropTest(const httplib::Request& /*req*/, h
 
         auto& state = editor_.getProcessor().getState();
         auto& layoutManager = state.getLayoutManager();
-        ensureMinPanes(layoutManager, 3);
+        std::vector<PaneId> addedPaneIds;
+        ensureMinPanes(layoutManager, 3, addedPaneIds);
 
         tests.push_back(testMovePaneForward(layoutManager, editor_));
         tests.push_back(testMovePaneBackward(layoutManager, editor_));
@@ -182,6 +189,10 @@ void TestRunnerHandler::handleRunDragDropTest(const httplib::Request& /*req*/, h
         tests.push_back(testCrossColumnMove0to1(state, layoutManager, editor_));
         tests.push_back(testCrossColumnMove1to0(layoutManager, editor_));
         tests.push_back(testThreeColumnCrossMove(state, layoutManager, editor_));
+
+        // Clean up panes added by this test
+        for (const auto& id : addedPaneIds)
+            layoutManager.removePane(id);
 
         TestServerHandlerBase::countTestResults(tests, response);
         return response;

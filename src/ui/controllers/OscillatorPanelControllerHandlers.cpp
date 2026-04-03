@@ -282,7 +282,7 @@ void OscillatorPanelController::applyOscillatorPropertyChange(const OscillatorId
     }
 
     if (!handled)
-        refreshPanels();
+        triggerAsyncUpdate();
 }
 
 void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
@@ -304,19 +304,13 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
         }
         else
         {
-            juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
-                if (auto* controller = weakThis.get())
-                    controller->refreshPanels();
-            });
+            triggerAsyncUpdate();
         }
     }
     else if (tree.hasType(StateIds::Pane))
     {
         OSCIL_LOG(CONTROLLER, "valueTreePropertyChanged: Pane property=" << property.toString());
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
-            if (auto* controller = weakThis.get())
-                controller->refreshPanels();
-        });
+        triggerAsyncUpdate();
     }
 }
 
@@ -326,10 +320,7 @@ void OscillatorPanelController::valueTreeChildAdded(juce::ValueTree&, juce::Valu
     {
         OSCIL_LOG(CONTROLLER, "valueTreeChildAdded: type=" << child.getType().toString()
                                                            << " id=" << child.getProperty(StateIds::Id).toString());
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
-            if (auto* controller = weakThis.get())
-                controller->refreshPanels();
-        });
+        triggerAsyncUpdate();
     }
 }
 
@@ -349,10 +340,7 @@ void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree&, juce::Va
             }
         }
 
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
-            if (auto* controller = weakThis.get())
-                controller->refreshPanels();
-        });
+        triggerAsyncUpdate();
     }
 }
 
@@ -360,10 +348,7 @@ void OscillatorPanelController::valueTreeChildOrderChanged(juce::ValueTree& pare
 {
     if (parent.hasType(StateIds::Oscillators) || parent.hasType(StateIds::Panes))
     {
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscillatorPanelController>(this)]() {
-            if (auto* controller = weakThis.get())
-                controller->refreshPanels();
-        });
+        triggerAsyncUpdate();
     }
 }
 

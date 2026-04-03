@@ -78,9 +78,9 @@ bool TiltShiftEffect::compile(juce::OpenGLContext& context)
     positionLoc_ = shader_->getUniformIDFromName("position");
     rangeLoc_ = shader_->getUniformIDFromName("range");
 
-    if (textureLoc_ < 0)
+    if (textureLoc_ < 0 || positionLoc_ < 0 || rangeLoc_ < 0 || blurRadiusLoc_ < 0)
     {
-        DBG("TiltShiftEffect: Missing texture uniform");
+        DBG("TiltShiftEffect: Missing uniforms");
         shader_.reset();
         return false;
     }

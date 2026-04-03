@@ -10,6 +10,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include <atomic>
+
 #if OSCIL_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 
@@ -75,14 +77,17 @@ public:
      * Set effect intensity/strength (0.0 = disabled, 1.0 = full effect).
      * Not all effects use this.
      */
-    void setIntensity(float intensity) { intensity_ = juce::jlimit(0.0f, 1.0f, intensity); }
-    [[nodiscard]] float getIntensity() const { return intensity_; }
+    void setIntensity(float intensity)
+    {
+        intensity_.store(juce::jlimit(0.0f, 1.0f, intensity), std::memory_order_relaxed);
+    }
+    [[nodiscard]] float getIntensity() const { return intensity_.load(std::memory_order_relaxed); }
 
     /**
      * Enable or disable the effect.
      */
-    void setEnabled(bool enabled) { enabled_ = enabled; }
-    [[nodiscard]] bool isEnabled() const { return enabled_; }
+    void setEnabled(bool enabled) { enabled_.store(enabled, std::memory_order_relaxed); }
+    [[nodiscard]] bool isEnabled() const { return enabled_.load(std::memory_order_relaxed); }
 
     /**
      * Configure the effect from a VisualConfiguration.
@@ -110,8 +115,8 @@ protected:
      */
     static const char* getFullscreenVertexShader();
 
-    float intensity_ = 1.0f;
-    bool enabled_ = true;
+    std::atomic<float> intensity_{1.0f};
+    std::atomic<bool> enabled_{true};
 };
 
 } // namespace oscil

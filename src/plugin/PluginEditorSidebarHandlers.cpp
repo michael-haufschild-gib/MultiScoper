@@ -306,6 +306,9 @@ void OscilPluginEditor::setGpuRenderingEnabled(bool enabled)
 
 const std::vector<std::unique_ptr<PaneComponent>>& OscilPluginEditor::getPaneComponents() const
 {
+    static const std::vector<std::unique_ptr<PaneComponent>> empty;
+    if (oscillatorPanelController_ == nullptr)
+        return empty;
     return oscillatorPanelController_->getPaneComponents();
 }
 

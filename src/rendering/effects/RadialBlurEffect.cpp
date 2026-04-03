@@ -134,7 +134,7 @@ void RadialBlurEffect::apply(juce::OpenGLContext& context, Framebuffer* source, 
     ext.glUniform1i(textureLoc_, 0);
 
     // Set uniforms
-    ext.glUniform1f(amountLoc_, settings_.amount * intensity_);
+    ext.glUniform1f(amountLoc_, settings_.amount * getIntensity());
     ext.glUniform1f(glowLoc_, settings_.glow);
     ext.glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
 

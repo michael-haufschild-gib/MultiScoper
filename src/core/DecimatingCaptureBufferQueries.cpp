@@ -105,24 +105,11 @@ juce::String DecimatingCaptureBuffer::getMemoryUsageString() const { return form
 
 void DecimatingCaptureBuffer::clear()
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    std::shared_ptr<ProcessingContext> ctx;
-    {
-        const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-        buf = buffer_;
-        ctx = context_;
-    }
-
-    if (buf)
-        buf->clear();
-
-    if (ctx)
-    {
-        for (auto& filter : ctx->filters)
-            filter.reset();
-
-        std::fill(ctx->decimationCounters.begin(), ctx->decimationCounters.end(), 0);
-    }
+    // Delegate to reconfigure() which safely swaps in fresh buffer + context
+    // via the graveyard pattern. The old approach mutated the existing
+    // ProcessingContext (filters, counters) while the audio thread could be
+    // using the same object through its shared_ptr copy — a data race.
+    reconfigure();
 }
 
 std::shared_ptr<SharedCaptureBuffer> DecimatingCaptureBuffer::getInternalBuffer() const

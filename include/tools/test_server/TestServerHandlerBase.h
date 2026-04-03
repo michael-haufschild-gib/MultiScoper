@@ -10,6 +10,7 @@
 
 #include <functional>
 #include <httplib.h>
+#include <memory>
 #include <nlohmann/json.hpp>
 
 namespace oscil
@@ -33,6 +34,7 @@ protected:
     /**
      * Execute a function on the JUCE message thread and wait for completion.
      * Handles both void and non-void return types.
+     * Uses shared_ptr for signal/result so a timeout doesn't cause use-after-free.
      */
     template <typename Func>
     auto runOnMessageThread(Func&& func) -> decltype(func())
@@ -46,23 +48,33 @@ protected:
 
         if constexpr (std::is_void_v<ReturnType>)
         {
-            juce::WaitableEvent done;
-            juce::MessageManager::callAsync([f = std::forward<Func>(func), &done]() mutable {
+            auto done = std::make_shared<juce::WaitableEvent>();
+            juce::MessageManager::callAsync([f = std::forward<Func>(func), done]() mutable {
                 f();
-                done.signal();
+                done->signal();
             });
-            done.wait();
+            if (!done->wait(MESSAGE_THREAD_TIMEOUT_MS))
+            {
+                DBG("TestServerHandlerBase: message thread operation timed out");
+            }
         }
         else
         {
-            ReturnType result{};
-            juce::WaitableEvent done;
-            juce::MessageManager::callAsync([f = std::forward<Func>(func), &result, &done]() mutable {
-                result = f();
-                done.signal();
+            static_assert(std::is_same_v<ReturnType, nlohmann::json>,
+                          "runOnMessageThread with non-void return only supports nlohmann::json");
+            auto result = std::make_shared<ReturnType>();
+            auto done = std::make_shared<juce::WaitableEvent>();
+            juce::MessageManager::callAsync([f = std::forward<Func>(func), result, done]() mutable {
+                *result = f();
+                done->signal();
             });
-            done.wait();
-            return result;
+            if (!done->wait(MESSAGE_THREAD_TIMEOUT_MS))
+            {
+                ReturnType error;
+                error["error"] = "Message thread timeout";
+                return error;
+            }
+            return *result;
         }
     }
 
@@ -114,6 +126,8 @@ protected:
     }
 
     OscilPluginEditor& editor_;
+
+    static constexpr int MESSAGE_THREAD_TIMEOUT_MS = 10000;
 };
 
 } // namespace oscil

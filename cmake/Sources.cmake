@@ -15,6 +15,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBufferQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManagerQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
     ${CMAKE_SOURCE_DIR}/src/core/GlobalPreferences.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
@@ -161,6 +162,7 @@ set(OSCIL_SOURCES
     # UI (theme)
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManager.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManagerSerialization.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/theme/SystemThemes.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorActions.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ColorPickerComponent.cpp

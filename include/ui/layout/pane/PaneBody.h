@@ -88,6 +88,7 @@ private:
     void updateCrosshairPosition(juce::Point<int> pos);
     void calculateCrosshairValues(juce::Point<int> pos, float& timeMs, float& ampDb);
     void timerCallback() override;
+    void visibilityChanged() override;
     void updateStats();
     void resetStats();
 

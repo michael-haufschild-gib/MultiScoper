@@ -272,14 +272,22 @@ bool PaneBody::isStatsVisible() const { return statsOverlay_ && statsOverlay_->i
 
 void PaneBody::timerCallback()
 {
-    if (isStatsVisible())
+    if (isStatsVisible() && isShowing())
     {
         updateStats();
     }
     else
     {
+        // Stop when stats are hidden OR when the component is not showing.
+        // visibilityChanged() restarts the timer when we become visible again.
         stopTimer();
     }
+}
+
+void PaneBody::visibilityChanged()
+{
+    if (isShowing() && isStatsVisible())
+        startTimerHz(STATS_UPDATE_HZ);
 }
 
 void PaneBody::updateStats()

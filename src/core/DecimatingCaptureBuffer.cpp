@@ -135,24 +135,28 @@ void DecimatingCaptureBuffer::configure(const CaptureQualityConfig& config, int 
     jassert(sourceRate > 0);
 
     config_ = config;
-    sourceRate_ = sourceRate;
+    sourceRate_.store(sourceRate, std::memory_order_relaxed);
     reconfigure();
 }
 
 void DecimatingCaptureBuffer::setQualityPreset(QualityPreset preset, int sourceRate)
 {
     config_.qualityPreset = preset;
-    sourceRate_ = sourceRate;
+    sourceRate_.store(sourceRate, std::memory_order_relaxed);
     reconfigure();
 }
 
 std::shared_ptr<DecimatingCaptureBuffer::ProcessingContext> DecimatingCaptureBuffer::createProcessingContext()
 {
+    // Read atomics once on message thread — these are the authoritative values.
+    const int srcRate = sourceRate_.load(std::memory_order_relaxed);
+    const int decRatio = decimationRatio_.load(std::memory_order_relaxed);
+
     auto newContext = std::make_shared<ProcessingContext>();
 
     for (auto& filter : newContext->filters)
     {
-        filter.configure(decimationRatio_, static_cast<double>(sourceRate_));
+        filter.configure(decRatio, static_cast<double>(srcRate));
     }
 
     std::fill(newContext->decimationCounters.begin(), newContext->decimationCounters.end(), 0);
@@ -178,11 +182,17 @@ void DecimatingCaptureBuffer::reconfigure()
     if (graveyard_.capacity() < kGraveyardCapacity)
         graveyard_.reserve(kGraveyardCapacity);
 
-    decimationRatio_ = config_.getDecimationRatio(sourceRate_);
-    captureRate_ = (sourceRate_ > 0 && decimationRatio_ > 0) ? juce::jmax(1, sourceRate_ / decimationRatio_)
-                                                             : juce::jmax(1, config_.getCaptureRate(sourceRate_));
+    const int srcRate = sourceRate_.load(std::memory_order_relaxed);
+    const int newDecRatio = config_.getDecimationRatio(srcRate);
+    const int newCapRate = (srcRate > 0 && newDecRatio > 0) ? juce::jmax(1, srcRate / newDecRatio)
+                                                            : juce::jmax(1, config_.getCaptureRate(srcRate));
 
-    size_t bufferSamples = config_.calculateBufferSizeSamples(captureRate_);
+    // Store atomics before the lock — the SpinLock release provides the
+    // happens-before edge that makes these visible to the audio thread.
+    decimationRatio_.store(newDecRatio, std::memory_order_relaxed);
+    captureRate_.store(newCapRate, std::memory_order_relaxed);
+
+    size_t bufferSamples = config_.calculateBufferSizeSamples(newCapRate);
     size_t powerOf2Size = 1;
     while (powerOf2Size < bufferSamples && powerOf2Size <= (SIZE_MAX / 2))
         powerOf2Size *= 2;
@@ -242,6 +252,9 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
 {
     std::shared_ptr<SharedCaptureBuffer> buf;
     std::shared_ptr<ProcessingContext> ctx;
+    int decRatio;
+    int capRate;
+    int srcRate;
 
     {
         // CRITICAL: Use tryLock for real-time safety - audio thread must never block
@@ -251,6 +264,10 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
             return; // Drop frame rather than block audio thread
         buf = buffer_;
         ctx = context_;
+        // Snapshot rates under lock for consistency with buf/ctx
+        decRatio = decimationRatio_.load(std::memory_order_relaxed);
+        capRate = captureRate_.load(std::memory_order_relaxed);
+        srcRate = sourceRate_.load(std::memory_order_relaxed);
     }
 
     if (numSamples <= 0 || numChannels <= 0 || !buf || !ctx)
@@ -258,29 +275,30 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
 
     const int actualChannels = juce::jmin(numChannels, static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
 
-    if (decimationRatio_ <= 1)
+    if (decRatio <= 1)
     {
         // No decimation - still normalize metadata into capture domain for consistency.
         CaptureFrameMetadata passthroughMeta = metadata;
         passthroughMeta.numSamples = numSamples;
-        passthroughMeta.sampleRate = static_cast<double>(captureRate_);
-        passthroughMeta.timestamp = scaleTimelineTimestamp(metadata.timestamp, sourceRate_, captureRate_);
+        passthroughMeta.sampleRate = static_cast<double>(capRate);
+        passthroughMeta.timestamp = scaleTimelineTimestamp(metadata.timestamp, srcRate, capRate);
         buf->write(samples, numSamples, actualChannels, passthroughMeta, true);
         return;
     }
 
-    // Process with decimation
-    processAndWriteDecimated(samples, numSamples, actualChannels, metadata);
+    // Process with decimation — pass buf/ctx and snapshotted rates to avoid re-reading atomics
+    processAndWriteDecimated(buf, ctx, samples, numSamples, actualChannels, metadata,
+                             {.decimationRatio = decRatio, .captureRate = capRate, .sourceRate = srcRate});
 }
 
 int DecimatingCaptureBuffer::decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter,
-                                             int numSamples) const
+                                             int numSamples, int decRatio)
 {
     int writeIdx = 0;
     for (int i = 0; i < numSamples; ++i)
     {
         float filtered = filter.processSample(src ? src[i] : 0.0f);
-        if (++counter >= decimationRatio_)
+        if (++counter >= decRatio)
         {
             dest[writeIdx++] = filtered;
             counter = 0;
@@ -289,24 +307,21 @@ int DecimatingCaptureBuffer::decimateChannel(const float* src, float* dest, Deci
     return writeIdx;
 }
 
-void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* samples, int numSamples, int numChannels,
-                                                       const CaptureFrameMetadata& metadata)
+void DecimatingCaptureBuffer::processAndWriteDecimated(const std::shared_ptr<SharedCaptureBuffer>& buf,
+                                                       const std::shared_ptr<ProcessingContext>& ctx,
+                                                       const float* const* samples, int numSamples, int numChannels,
+                                                       const CaptureFrameMetadata& metadata, const RateSnapshot& rates)
 {
-    std::shared_ptr<SharedCaptureBuffer> buf;
-    std::shared_ptr<ProcessingContext> ctx;
-    {
-        const juce::SpinLock::ScopedTryLockType sl(bufferSwapLock_);
-        if (!sl.isLocked())
-            return;
-        buf = buffer_;
-        ctx = context_;
-    }
-
     if (!buf || !ctx)
         return;
 
+    jassert(rates.decimationRatio >= 1);
+    if (rates.decimationRatio < 1)
+        return;
+
     const size_t maxPerCh = ctx->scratchBuffer.size() / SharedCaptureBuffer::MAX_CHANNELS;
-    const int safeSamples = std::min(numSamples, static_cast<int>(maxPerCh * static_cast<size_t>(decimationRatio_)));
+    const int safeSamples =
+        std::min(numSamples, static_cast<int>(maxPerCh * static_cast<size_t>(rates.decimationRatio)));
 
     float* scratchPtrs[SharedCaptureBuffer::MAX_CHANNELS];
     int decimatedCount = 0;
@@ -314,8 +329,9 @@ void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* sampl
     for (int ch = 0; ch < numChannels; ++ch)
     {
         scratchPtrs[ch] = ctx->scratchBuffer.data() + (static_cast<size_t>(ch) * maxPerCh);
-        int count = decimateChannel(samples[ch], scratchPtrs[ch], ctx->filters[static_cast<size_t>(ch)],
-                                    ctx->decimationCounters[static_cast<size_t>(ch)], safeSamples);
+        int count =
+            decimateChannel(samples[ch], scratchPtrs[ch], ctx->filters[static_cast<size_t>(ch)],
+                            ctx->decimationCounters[static_cast<size_t>(ch)], safeSamples, rates.decimationRatio);
         if (ch == 0)
             decimatedCount = count;
     }
@@ -324,8 +340,8 @@ void DecimatingCaptureBuffer::processAndWriteDecimated(const float* const* sampl
     {
         CaptureFrameMetadata meta = metadata;
         meta.numSamples = decimatedCount;
-        meta.sampleRate = static_cast<double>(captureRate_);
-        meta.timestamp = scaleTimelineTimestamp(metadata.timestamp, sourceRate_, captureRate_);
+        meta.sampleRate = static_cast<double>(rates.captureRate);
+        meta.timestamp = scaleTimelineTimestamp(metadata.timestamp, rates.sourceRate, rates.captureRate);
         buf->write(const_cast<const float**>(scratchPtrs), decimatedCount, numChannels, meta, true);
     }
 }

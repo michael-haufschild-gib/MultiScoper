@@ -55,7 +55,8 @@ public:
         sources_.erase(sourceId.id);
         buffers_.erase(sourceId.id);
 
-        for (auto* listener : listeners_)
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
             listener->sourceRemoved(sourceId);
     }
 
@@ -92,7 +93,8 @@ public:
             it->second.channelCount = numChannels;
             it->second.sampleRate = sampleRate;
 
-            for (auto* listener : listeners_)
+            const auto snapshot = listeners_;
+            for (auto* listener : snapshot)
                 listener->sourceUpdated(sourceId);
         }
     }
@@ -102,6 +104,44 @@ public:
     void addListener(InstanceRegistryListener* listener) override { listeners_.insert(listener); }
 
     void removeListener(InstanceRegistryListener* listener) override { listeners_.erase(listener); }
+
+    // Test helpers
+
+    void addSource(const SourceId& id, const juce::String& sourceName)
+    {
+        SourceInfo info;
+        info.sourceId = id;
+        info.name = sourceName;
+        sources_[id.id] = info;
+        // Snapshot to handle re-entrant removal during callback
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
+            listener->sourceAdded(id);
+    }
+
+    void removeSource(const SourceId& id)
+    {
+        sources_.erase(id.id);
+        buffers_.erase(id.id);
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
+            listener->sourceRemoved(id);
+    }
+
+    void updateSourceNotify(const SourceId& id)
+    {
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
+            listener->sourceUpdated(id);
+    }
+
+    void clear()
+    {
+        sources_.clear();
+        buffers_.clear();
+    }
+
+    int getListenerCount() const { return static_cast<int>(listeners_.size()); }
 
 private:
     std::map<juce::String, SourceInfo> sources_;
@@ -156,6 +196,14 @@ public:
 
     bool updateTheme(const juce::String&, const ColorTheme&) override { return true; }
     bool deleteTheme(const juce::String&) override { return true; }
+    bool renameTheme(const juce::String& oldName, const juce::String& newName) override
+    {
+        if (oldName != currentTheme_.name || newName.isEmpty())
+            return false;
+        currentTheme_.name = newName;
+        notifyListeners();
+        return true;
+    }
     bool cloneTheme(const juce::String&, const juce::String&) override { return true; }
     bool importTheme(const juce::String&) override { return true; }
     juce::String exportTheme(const juce::String&) const override { return "{}"; }
@@ -164,12 +212,22 @@ public:
 
     void removeListener(ThemeManagerListener* listener) override { listeners_.erase(listener); }
 
-    // Test helper: trigger theme change notifications
+    // Test helpers
+
+    void setTheme(const ColorTheme& theme)
+    {
+        currentTheme_ = theme;
+        notifyListeners();
+    }
+
     void notifyListeners()
     {
-        for (auto* listener : listeners_)
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
             listener->themeChanged(currentTheme_);
     }
+
+    int getListenerCount() const { return static_cast<int>(listeners_.size()); }
 
 private:
     ColorTheme currentTheme_;

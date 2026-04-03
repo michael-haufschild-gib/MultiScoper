@@ -17,38 +17,35 @@ void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
     // during save operations. We must not allocate memory in that case.
     if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
     {
-        // Audio thread path: read from active buffer (lock-free, no allocation)
-        // NOTE: Cannot log here — audio thread
-        const auto& buf = cachedStateBuffers_[cachedStateActiveIndex_.load(std::memory_order_acquire)];
-        if (!buf.empty())
-            destData.replaceAll(buf.data(), buf.size());
+        // Non-message-thread path: grab latest published state via non-blocking tryLock.
+        // If the lock is contended (updateCachedState running), skip — DAW will retry.
+        // NOTE: Cannot log here — audio thread.
+        const juce::SpinLock::ScopedTryLockType tryLock(stateLock_);
+        if (tryLock.isLocked())
+        {
+            auto state = publishedState_;
+            if (state && !state->empty())
+                destData.replaceAll(state->data(), state->size());
+        }
         return;
     }
 
     OSCIL_LOG(PLUGIN, "getStateInformation: serializing on message thread");
-    // Message thread path: perform full serialization (allocates memory)
+    // Message thread path: perform full serialization then read the result.
     updateCachedState();
 
-    const auto& buf = cachedStateBuffers_[cachedStateActiveIndex_.load(std::memory_order_acquire)];
-    destData.replaceAll(buf.data(), buf.size());
+    std::shared_ptr<const std::vector<char>> state;
+    {
+        const juce::SpinLock::ScopedLockType lock(stateLock_);
+        state = publishedState_;
+    }
+    if (state && !state->empty())
+        destData.replaceAll(state->data(), state->size());
 }
 
 void OscilPluginProcessor::updateCachedState()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    // CONTRACT CHECK: verify double-buffer safety invariant.
-    // Consecutive swaps must be separated by >= 1ms so that any in-flight
-    // audio-thread read from the previously-active buffer completes first.
-    // The first call (lastCachedStateSwapTimeMs_ == 0) is exempt.
-    auto now = juce::Time::currentTimeMillis();
-    if (lastCachedStateSwapTimeMs_ > 0)
-    {
-        [[maybe_unused]] auto elapsed = now - lastCachedStateSwapTimeMs_;
-        // Log a warning if swaps happen too rapidly (< 1ms apart).
-        // This would indicate a potential torn-read risk on the audio thread.
-        jassert(elapsed >= 1); // Double-buffer swap interval too short
-    }
 
     // Sync timing engine state to OscilState before saving
     auto timingState = timingEngine_.toValueTree();
@@ -64,17 +61,16 @@ void OscilPluginProcessor::updateCachedState()
 
     auto xmlString = state_.toXmlString();
 
-    // Convert to UTF-8 bytes now (on message thread) to avoid any
-    // potential allocation when audio thread reads the cached state.
+    // Convert to UTF-8 bytes on message thread. The resulting vector is
+    // wrapped in a const shared_ptr so the data is immutable once published.
     const char* utf8Ptr = xmlString.toRawUTF8();
-    size_t utf8Size = xmlString.getNumBytesAsUTF8();
+    auto utf8Size = xmlString.getNumBytesAsUTF8();
 
-    // Write to the inactive buffer, then swap atomically
-    int active = cachedStateActiveIndex_.load(std::memory_order_relaxed);
-    int inactive = 1 - active;
-    cachedStateBuffers_[inactive].assign(utf8Ptr, utf8Ptr + utf8Size);
-    cachedStateActiveIndex_.store(inactive, std::memory_order_release);
-    lastCachedStateSwapTimeMs_ = now;
+    auto newState = std::make_shared<const std::vector<char>>(utf8Ptr, utf8Ptr + utf8Size);
+    {
+        const juce::SpinLock::ScopedLockType lock(stateLock_);
+        publishedState_ = std::move(newState);
+    }
 }
 
 void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes)

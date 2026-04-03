@@ -38,6 +38,7 @@ void StatsOverlay::setupComponents()
     statsDisplay_->setBorder(juce::BorderSize<int>(0));
     statsDisplay_->setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
     statsDisplay_->setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
+    statsDisplay_->setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
     addChildComponent(*statsDisplay_); // Hidden until visible
 
     // Reset Button
@@ -66,40 +67,30 @@ void StatsOverlay::resized()
 
 void StatsOverlay::paint(juce::Graphics& g)
 {
-    // Call base to paint background
     PaneOverlay::paint(g);
 
     float opacity = getCurrentOpacity();
     if (opacity <= 0.0f)
         return;
 
-    // Update child visibility outside of paint to avoid layout thrashing
-    // Only update when visibility state actually changes
-    bool shouldBeVisible = opacity > 0.0f;
-    if (statsDisplay_ && statsDisplay_->isVisible() != shouldBeVisible)
-    {
-        statsDisplay_->setVisible(shouldBeVisible);
-    }
-    if (resetButton_ && resetButton_->isVisible() != shouldBeVisible)
-    {
-        resetButton_->setVisible(shouldBeVisible);
-    }
-
     const auto& theme = themeService_.getCurrentTheme();
 
-    // Update text colors with opacity (this doesn't trigger layout)
     if (statsDisplay_)
-    {
         statsDisplay_->setColour(juce::TextEditor::textColourId, theme.textPrimary.withAlpha(opacity));
-        // Font: Monospace for aligned table display
-        statsDisplay_->setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
-    }
+}
+
+void StatsOverlay::onAnimationVisibilityChanged(bool becameVisible)
+{
+    if (statsDisplay_)
+        statsDisplay_->setVisible(becameVisible);
+    if (resetButton_)
+        resetButton_->setVisible(becameVisible);
 }
 
 juce::Rectangle<int> StatsOverlay::getPreferredContentSize() const
 {
     int width = LABEL_COLUMN_WIDTH + (numOscillators_ * DATA_COLUMN_WIDTH) + PADDING * 2;
-    int height = HEADER_HEIGHT + (ROW_HEIGHT * 7) + PADDING; // 6 metrics + header row
+    int height = HEADER_HEIGHT + (ROW_HEIGHT * 8) + PADDING; // 1 column header + 7 metric rows
     return {0, 0, width, height};
 }
 
@@ -143,6 +134,7 @@ juce::String StatsOverlay::formatTable(const std::vector<OscillatorStats>& stats
     auto maxLR = [](const OscillatorStats& o, float MetricSnapshot::* f) { return std::max(o.left.*f, o.right.*f); };
 
     appendRow("Peak", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::peakDb)); });
+    appendRow("Max Pk", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::maxPeakDb)); });
     appendRow("RMS", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::rmsDb)); });
     appendRow("Crest", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::crestFactorDb)); });
     appendRow("DC", [&](const OscillatorStats& o) {
@@ -171,6 +163,9 @@ juce::String StatsOverlay::formatMs(float ms)
     return juce::String(ms, 0) + " ms";
 }
 
-juce::String StatsOverlay::getDisplayedText() const { return statsDisplay_->getText(); }
+juce::String StatsOverlay::getDisplayedText() const
+{
+    return statsDisplay_ ? statsDisplay_->getText() : juce::String();
+}
 
 } // namespace oscil

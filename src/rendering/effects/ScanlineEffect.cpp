@@ -153,7 +153,7 @@ void ScanlineEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Fr
 
     source->bindTexture(0);
     ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(intensityLoc_, settings_.intensity * intensity_);
+    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
     ext.glUniform1f(densityLoc_, settings_.density);
     ext.glUniform1f(widthLoc_, static_cast<float>(source->width));
     ext.glUniform1f(heightLoc_, static_cast<float>(source->height));

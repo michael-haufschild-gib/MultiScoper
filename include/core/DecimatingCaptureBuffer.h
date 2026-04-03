@@ -13,6 +13,7 @@
 #include <juce_dsp/juce_dsp.h>
 
 #include <array>
+#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -98,9 +99,9 @@ private:
  * - Dynamic buffer resizing based on quality settings
  * - Memory usage tracking for dashboard display
  *
- * Thread safety: Same guarantees as SharedCaptureBuffer
- * - write() safe from audio thread
- * - read() safe from any thread
+ * Thread safety:
+ * - write() safe from audio thread (non-blocking tryLock)
+ * - read() safe from UI/render threads (brief blocking lock — NOT audio thread)
  */
 class DecimatingCaptureBuffer : public IAudioBuffer
 {
@@ -152,17 +153,17 @@ public:
     /**
      * Get current source sample rate
      */
-    [[nodiscard]] int getSourceRate() const { return sourceRate_; }
+    [[nodiscard]] int getSourceRate() const { return sourceRate_.load(std::memory_order_relaxed); }
 
     /**
      * Get effective capture rate (after decimation)
      */
-    [[nodiscard]] int getCaptureRate() const { return captureRate_; }
+    [[nodiscard]] int getCaptureRate() const { return captureRate_.load(std::memory_order_relaxed); }
 
     /**
      * Get current decimation ratio
      */
-    [[nodiscard]] int getDecimationRatio() const { return decimationRatio_; }
+    [[nodiscard]] int getDecimationRatio() const { return decimationRatio_.load(std::memory_order_relaxed); }
 
     //==========================================================================
     // Write Interface (Audio Thread)
@@ -189,7 +190,9 @@ public:
     void write(const float* const* samples, int numSamples, int numChannels, const CaptureFrameMetadata& metadata);
 
     //==========================================================================
-    // Read Interface (Any Thread)
+    // Read Interface (UI/Render Thread — NOT audio thread)
+    // Uses a brief blocking SpinLock to snapshot the buffer pointer.
+    // Safe for render and message threads; do NOT call from audio thread.
     //==========================================================================
 
     /**
@@ -273,22 +276,6 @@ public:
     void cleanUpGarbage();
 
 private:
-    void reconfigure();
-    void processAndWriteDecimated(const float* const* samples, int numSamples, int numChannels,
-                                  const CaptureFrameMetadata& metadata);
-    int decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter, int numSamples) const;
-
-    // Configuration
-    CaptureQualityConfig config_;
-    int sourceRate_ = 44100;
-    int captureRate_ = CaptureRate::STANDARD;
-    int decimationRatio_ = 1;
-
-    // Internal storage protected by spin lock for reconfiguration safety
-    // SpinLock is used because std::atomic<shared_ptr> is not yet portable
-    std::shared_ptr<SharedCaptureBuffer> buffer_;
-    mutable juce::SpinLock bufferSwapLock_;
-
     // Thread-safe processing context
     // Encapsulates all state required for the audio thread write operation
     struct ProcessingContext
@@ -299,7 +286,35 @@ private:
         size_t filterMemoryBytes = 0;
     };
 
+    // Snapshot of rate atomics taken under lock in write(), passed to processing methods
+    struct RateSnapshot
+    {
+        int decimationRatio;
+        int captureRate;
+        int sourceRate;
+    };
+
+    void reconfigure();
+    void processAndWriteDecimated(const std::shared_ptr<SharedCaptureBuffer>& buf,
+                                  const std::shared_ptr<ProcessingContext>& ctx, const float* const* samples,
+                                  int numSamples, int numChannels, const CaptureFrameMetadata& metadata,
+                                  const RateSnapshot& rates);
+    static int decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter, int numSamples,
+                               int decRatio);
     std::shared_ptr<ProcessingContext> createProcessingContext();
+
+    // Configuration — config_ is message-thread-only (protected by jassert).
+    // sourceRate_, captureRate_, decimationRatio_ are written on message thread
+    // and read on audio thread, so they use relaxed atomics for data-race freedom.
+    CaptureQualityConfig config_;
+    std::atomic<int> sourceRate_{44100};
+    std::atomic<int> captureRate_{CaptureRate::STANDARD};
+    std::atomic<int> decimationRatio_{1};
+
+    // Internal storage protected by spin lock for reconfiguration safety
+    // SpinLock is used because std::atomic<shared_ptr> is not yet portable
+    std::shared_ptr<SharedCaptureBuffer> buffer_;
+    mutable juce::SpinLock bufferSwapLock_;
     std::shared_ptr<ProcessingContext> context_;
 
     // Safety mechanism to prevent audio thread from deleting shared resources

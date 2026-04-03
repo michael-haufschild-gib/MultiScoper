@@ -97,6 +97,7 @@ void WaveformStack::clearOscillators()
             removeChildComponent(entry.waveform.get());
     }
     entries_.clear();
+    repaint();
 }
 
 void WaveformStack::updateOscillatorSource(const OscillatorId& oscillatorId, const SourceId& newSourceId)
@@ -161,6 +162,13 @@ void WaveformStack::updateOscillatorFull(const Oscillator& oscillator)
     {
         if (entry.oscillator.getId() == oscillator.getId())
         {
+            // Sync capture buffer if the source binding changed
+            if (entry.oscillator.getSourceId() != oscillator.getSourceId())
+            {
+                auto newBuffer = resolveCaptureBufferForSource(dataProvider_, oscillator.getSourceId());
+                entry.waveform->setCaptureBuffer(newBuffer);
+            }
+
             entry.oscillator = oscillator;
             entry.waveform->setProcessingMode(oscillator.getProcessingMode());
             entry.waveform->setColour(oscillator.getColour());

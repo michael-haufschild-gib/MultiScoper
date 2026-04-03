@@ -104,6 +104,12 @@ protected:
      */
     float getCurrentOpacity() const { return currentOpacity_; }
 
+    /**
+     * Called when animation makes the overlay effectively visible or hidden.
+     * Override to show/hide child components without doing it in paint().
+     */
+    virtual void onAnimationVisibilityChanged(bool becameVisible) { juce::ignoreUnused(becameVisible); }
+
     IThemeService& themeService_;
 
 private:

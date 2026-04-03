@@ -67,6 +67,12 @@ public:
     virtual bool deleteTheme(const juce::String& name) = 0;
 
     /**
+     * Rename a custom theme. Fails if oldName is a system theme,
+     * newName is invalid, or newName already exists.
+     */
+    virtual bool renameTheme(const juce::String& oldName, const juce::String& newName) = 0;
+
+    /**
      * Clone a theme with a new name
      */
     virtual bool cloneTheme(const juce::String& sourceName, const juce::String& newName) = 0;

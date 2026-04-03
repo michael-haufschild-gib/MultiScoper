@@ -27,7 +27,7 @@ public:
     RadialBlurEffect();
     ~RadialBlurEffect() override;
 
-    [[nodiscard]] juce::String getId() const override { return "radialBlur"; }
+    [[nodiscard]] juce::String getId() const override { return "radial_blur"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Radial Blur"; }
 
     /// Compile the radial blur shader program.

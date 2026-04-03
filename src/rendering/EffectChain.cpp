@@ -50,10 +50,9 @@ Framebuffer* EffectChain::process(juce::OpenGLContext& context, Framebuffer* sou
             continue;
         }
 
-        // Apply effect
-        bindFramebuffer(dest);
+        // Apply effect — effects own their FBO bind/unbind lifecycle
+        // (multi-pass effects like Bloom need fine-grained FBO control)
         effect->apply(context, current, dest, pool, deltaTime);
-        unbindFramebuffer(dest);
 
         // Swap
         current = dest;

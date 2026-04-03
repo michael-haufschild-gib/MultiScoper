@@ -149,9 +149,9 @@ void ThemeColorSection::updateFromTheme(ColorTheme& /*theme*/)
     }
 }
 
-void ThemeColorSection::setEnabled(bool enabled)
+void ThemeColorSection::setSectionEnabled(bool enabled)
 {
-    enabled_ = enabled;
+    Component::setEnabled(enabled);
     for (auto& swatch : swatches_)
     {
         swatch->setEnabled(enabled);
@@ -426,15 +426,16 @@ void ThemeEditorComponent::updateColorSections()
     backgroundSection_->addColorSwatch("Secondary:", &editingTheme_.backgroundSecondary);
     backgroundSection_->addColorSwatch("Pane:", &editingTheme_.backgroundPane);
     backgroundSection_->onColorChanged([this]() { handleColorChanged(); });
-    backgroundSection_->setEnabled(isEditable);
+    backgroundSection_->setSectionEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*backgroundSection_);
 
     gridSection_ = std::make_unique<ThemeColorSection>(themeService_, "Grid Colors");
     gridSection_->addColorSwatch("Major:", &editingTheme_.gridMajor);
     gridSection_->addColorSwatch("Minor:", &editingTheme_.gridMinor);
     gridSection_->addColorSwatch("Zero Line:", &editingTheme_.gridZeroLine);
+    gridSection_->addColorSwatch("Crosshair:", &editingTheme_.crosshairLine);
     gridSection_->onColorChanged([this]() { handleColorChanged(); });
-    gridSection_->setEnabled(isEditable);
+    gridSection_->setSectionEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*gridSection_);
 
     textSection_ = std::make_unique<ThemeColorSection>(themeService_, "Text Colors");
@@ -442,7 +443,7 @@ void ThemeEditorComponent::updateColorSections()
     textSection_->addColorSwatch("Secondary:", &editingTheme_.textSecondary);
     textSection_->addColorSwatch("Highlight:", &editingTheme_.textHighlight);
     textSection_->onColorChanged([this]() { handleColorChanged(); });
-    textSection_->setEnabled(isEditable);
+    textSection_->setSectionEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*textSection_);
 
     controlSection_ = std::make_unique<ThemeColorSection>(themeService_, "Control Colors");
@@ -451,7 +452,7 @@ void ThemeEditorComponent::updateColorSections()
     controlSection_->addColorSwatch("Highlight:", &editingTheme_.controlHighlight);
     controlSection_->addColorSwatch("Active:", &editingTheme_.controlActive);
     controlSection_->onColorChanged([this]() { handleColorChanged(); });
-    controlSection_->setEnabled(isEditable);
+    controlSection_->setSectionEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*controlSection_);
 
     statusSection_ = std::make_unique<ThemeColorSection>(themeService_, "Status Colors");
@@ -459,7 +460,7 @@ void ThemeEditorComponent::updateColorSections()
     statusSection_->addColorSwatch("Warning:", &editingTheme_.statusWarning);
     statusSection_->addColorSwatch("Error:", &editingTheme_.statusError);
     statusSection_->onColorChanged([this]() { handleColorChanged(); });
-    statusSection_->setEnabled(isEditable);
+    statusSection_->setSectionEnabled(isEditable);
     colorContainer_->addAndMakeVisible(*statusSection_);
 
     resized();
