@@ -94,14 +94,14 @@ struct TimingConfig
 
         if (timingMode == TimingMode::TIME)
         {
-            float safeTimeIntervalMs = sanitizeNaN(timeIntervalMs, DEFAULT_TIME_INTERVAL_MS);
+            float const safeTimeIntervalMs = sanitizeNaN(timeIntervalMs, DEFAULT_TIME_INTERVAL_MS);
             actualIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS, safeTimeIntervalMs);
         }
         else // MELODIC mode
         {
-            float safeHostBpm = sanitizeNaN(hostBPM, DEFAULT_BPM);
-            float effectiveBpm = juce::jlimit(MIN_BPM, MAX_BPM, safeHostBpm);
-            float msPerBeat = 60000.0f / effectiveBpm; // ms per quarter note
+            float const safeHostBpm = sanitizeNaN(hostBPM, DEFAULT_BPM);
+            float const effectiveBpm = juce::jlimit(MIN_BPM, MAX_BPM, safeHostBpm);
+            float const msPerBeat = 60000.0f / effectiveBpm; // ms per quarter note
 
             float multiplier = getNoteIntervalMultiplier(noteInterval);
             if (!std::isfinite(multiplier) || multiplier <= 0.0f)
@@ -130,7 +130,7 @@ struct TimingConfig
      */
     void setHostBPM(float bpm)
     {
-        float safeBpm = std::isnan(bpm) ? DEFAULT_BPM : bpm;
+        float const safeBpm = std::isnan(bpm) ? DEFAULT_BPM : bpm;
         hostBPM = juce::jlimit(MIN_BPM, MAX_BPM, safeBpm);
         if (timingMode == TimingMode::MELODIC)
         {
@@ -152,7 +152,7 @@ struct TimingConfig
      */
     void setTimeInterval(float ms)
     {
-        float safeMs = std::isnan(ms) ? DEFAULT_TIME_INTERVAL_MS : ms;
+        float const safeMs = std::isnan(ms) ? DEFAULT_TIME_INTERVAL_MS : ms;
         timeIntervalMs = juce::jlimit(MIN_TIME_INTERVAL_MS, MAX_TIME_INTERVAL_MS, safeMs);
         if (timingMode == TimingMode::TIME)
         {

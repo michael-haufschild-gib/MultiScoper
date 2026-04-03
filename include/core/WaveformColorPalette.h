@@ -72,7 +72,7 @@ struct WaveformColorPalette
      */
     static int getColorIndex(juce::Colour colour)
     {
-        juce::uint32 argb = colour.getARGB();
+        juce::uint32 const argb = colour.getARGB();
         for (size_t i = 0; i < NUM_COLORS; ++i)
         {
             if (colors[i] == argb)

@@ -24,7 +24,7 @@ SourceSelectorComponent::~SourceSelectorComponent() { instanceRegistry_.removeLi
 
 void SourceSelectorComponent::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background
@@ -41,8 +41,8 @@ void SourceSelectorComponent::paint(juce::Graphics& g)
     auto arrowBounds = bounds.removeFromRight(16);
     g.setColour(theme.textSecondary);
     juce::Path arrow;
-    float arrowX = arrowBounds.getCentreX();
-    float arrowY = arrowBounds.getCentreY();
+    float const arrowX = arrowBounds.getCentreX();
+    float const arrowY = arrowBounds.getCentreY();
     arrow.addTriangle(arrowX - 4, arrowY - 2, arrowX + 4, arrowY - 2, arrowX, arrowY + 3);
     g.fillPath(arrow);
 
@@ -52,8 +52,8 @@ void SourceSelectorComponent::paint(juce::Graphics& g)
     if (selectedSourceId_.isValid() && channelCount_ > 0)
     {
         auto badgeBounds = bounds.removeFromRight(50);
-        juce::String badgeText = channelCount_ == 2 ? "Stereo" : "Mono";
-        juce::Colour badgeColor = channelCount_ == 2 ? theme.controlActive : theme.textSecondary;
+        juce::String const badgeText = channelCount_ == 2 ? "Stereo" : "Mono";
+        juce::Colour const badgeColor = channelCount_ == 2 ? theme.controlActive : theme.textSecondary;
 
         g.setColour(badgeColor.withAlpha(0.2f));
         g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 8.0f);
@@ -91,7 +91,7 @@ void SourceSelectorComponent::showPopup()
     popup->setSize(280, popup->getPreferredHeight());
 
     // Set up callbacks
-    juce::Component::SafePointer<SourceSelectorComponent> safeThis(this);
+    juce::Component::SafePointer<SourceSelectorComponent> const safeThis(this);
 
     popup->onSourceSelected = [safeThis](const SourceId& id) {
         if (safeThis != nullptr)
@@ -152,27 +152,27 @@ void SourceSelectorComponent::refreshSources()
     repaint();
 }
 
-void SourceSelectorComponent::sourceAdded(const SourceId&)
+void SourceSelectorComponent::sourceAdded(const SourceId& /*sourceId*/)
 {
-    juce::Component::SafePointer<SourceSelectorComponent> safeThis(this);
+    juce::Component::SafePointer<SourceSelectorComponent> const safeThis(this);
     juce::MessageManager::callAsync([safeThis]() {
         if (safeThis != nullptr)
             safeThis->refreshSources();
     });
 }
 
-void SourceSelectorComponent::sourceRemoved(const SourceId&)
+void SourceSelectorComponent::sourceRemoved(const SourceId& /*sourceId*/)
 {
-    juce::Component::SafePointer<SourceSelectorComponent> safeThis(this);
+    juce::Component::SafePointer<SourceSelectorComponent> const safeThis(this);
     juce::MessageManager::callAsync([safeThis]() {
         if (safeThis != nullptr)
             safeThis->refreshSources();
     });
 }
 
-void SourceSelectorComponent::sourceUpdated(const SourceId&)
+void SourceSelectorComponent::sourceUpdated(const SourceId& /*sourceId*/)
 {
-    juce::Component::SafePointer<SourceSelectorComponent> safeThis(this);
+    juce::Component::SafePointer<SourceSelectorComponent> const safeThis(this);
     juce::MessageManager::callAsync([safeThis]() {
         if (safeThis != nullptr)
             safeThis->refreshSources();

@@ -147,9 +147,9 @@ int OscilButton::getPreferredWidth() const
     auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, label_, 0, 0);
-    float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
+    float const textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
 
-    return static_cast<int>(textWidth) + TEXT_PADDING * 2;
+    return static_cast<int>(textWidth) + (TEXT_PADDING * 2);
 }
 
 int OscilButton::getPreferredHeight() const
@@ -162,7 +162,7 @@ int OscilButton::getPreferredHeight() const
 
 void OscilButton::resized() {}
 
-void OscilButton::mouseEnter(const juce::MouseEvent&)
+void OscilButton::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -183,7 +183,7 @@ void OscilButton::mouseEnter(const juce::MouseEvent&)
     }
 }
 
-void OscilButton::mouseExit(const juce::MouseEvent&)
+void OscilButton::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
     isPressed_ = false;
@@ -233,7 +233,7 @@ void OscilButton::mouseUp(const juce::MouseEvent& e)
     if (!enabled_)
         return;
 
-    bool wasPressed = isPressed_;
+    bool const wasPressed = isPressed_;
     isPressed_ = false;
 
     if (AnimationSettings::shouldUseSpringAnimations())
@@ -272,13 +272,13 @@ bool OscilButton::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilButton::focusGained(FocusChangeType)
+void OscilButton::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilButton::focusLost(FocusChangeType)
+void OscilButton::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -307,7 +307,7 @@ void OscilButton::timerCallback()
 
 void OscilButton::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
 
     scaleSpring_.update(dt);
     brightnessSpring_.update(dt);

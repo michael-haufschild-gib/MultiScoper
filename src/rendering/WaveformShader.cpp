@@ -18,13 +18,13 @@ void strokeChannelPath(juce::Graphics& g, const std::vector<float>& samples, flo
         return;
 
     juce::Path path;
-    float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
+    float const xScale = boundsWidth / static_cast<float>(samples.size() - 1);
 
-    path.startNewSubPath(boundsX, centerY - samples[0] * amplitude);
+    path.startNewSubPath(boundsX, centerY - (samples[0] * amplitude));
     for (size_t i = 1; i < samples.size(); ++i)
     {
-        float x = boundsX + static_cast<float>(i) * xScale;
-        float y = centerY - samples[i] * amplitude;
+        float const x = boundsX + (static_cast<float>(i) * xScale);
+        float const y = centerY - (samples[i] * amplitude);
         path.lineTo(x, y);
     }
 
@@ -39,17 +39,19 @@ void WaveformShader::renderSoftware(juce::Graphics& g, const std::vector<float>&
         return;
 
     auto bounds = params.bounds;
-    float width = bounds.getWidth();
-    float height = bounds.getHeight();
+    float const width = bounds.getWidth();
+    float const height = bounds.getHeight();
 
-    float centerY1, centerY2;
-    float amplitude1, amplitude2;
+    float centerY1 = NAN;
+    float centerY2 = NAN;
+    float amplitude1 = NAN;
+    float amplitude2 = NAN;
 
     if (params.isStereo && channel2 != nullptr)
     {
-        float halfHeight = height * 0.5f;
-        centerY1 = bounds.getY() + halfHeight * 0.5f;
-        centerY2 = bounds.getY() + halfHeight * 1.5f;
+        float const halfHeight = height * 0.5f;
+        centerY1 = bounds.getY() + (halfHeight * 0.5f);
+        centerY2 = bounds.getY() + (halfHeight * 1.5f);
         amplitude1 = amplitude2 = halfHeight * 0.45f * params.verticalScale;
     }
     else
@@ -98,9 +100,9 @@ void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params, con
 {
     if (params.isStereo && channel2 != nullptr)
     {
-        float halfHeight = height * 0.5f;
-        centerY1 = params.bounds.getY() + halfHeight * 0.5f;
-        centerY2 = params.bounds.getY() + halfHeight * 1.5f;
+        float const halfHeight = height * 0.5f;
+        centerY1 = params.bounds.getY() + (halfHeight * 0.5f);
+        centerY2 = params.bounds.getY() + (halfHeight * 1.5f);
         amp1 = amp2 = halfHeight * 0.45f * params.verticalScale;
     }
     else
@@ -120,13 +122,13 @@ void computeLineNormal(const std::vector<float>& samples, size_t i, float bounds
 
     if (i > 0 && i < samples.size() - 1)
     {
-        float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
-        float prevY = centerY - samples[i - 1] * amplitude;
-        float nextX = boundsX + (static_cast<float>(i) + 1.0f) * xScale;
-        float nextY = centerY - samples[i + 1] * amplitude;
-        float dx = nextX - prevX;
-        float dy = nextY - prevY;
-        float len = std::sqrt(dx * dx + dy * dy);
+        float const prevX = boundsX + ((static_cast<float>(i) - 1.0f) * xScale);
+        float const prevY = centerY - (samples[i - 1] * amplitude);
+        float const nextX = boundsX + ((static_cast<float>(i) + 1.0f) * xScale);
+        float const nextY = centerY - (samples[i + 1] * amplitude);
+        float const dx = nextX - prevX;
+        float const dy = nextY - prevY;
+        float const len = std::sqrt((dx * dx) + (dy * dy));
         if (len > 0.001f)
         {
             nx = -dy / len;
@@ -135,9 +137,9 @@ void computeLineNormal(const std::vector<float>& samples, size_t i, float bounds
     }
     else if (i == 0 && samples.size() > 1)
     {
-        float dx = (boundsX + xScale) - x;
-        float dy = (centerY - samples[1] * amplitude) - y;
-        float len = std::sqrt(dx * dx + dy * dy);
+        float const dx = (boundsX + xScale) - x;
+        float const dy = (centerY - (samples[1] * amplitude)) - y;
+        float const len = std::sqrt((dx * dx) + (dy * dy));
         if (len > 0.001f)
         {
             nx = -dy / len;
@@ -146,11 +148,11 @@ void computeLineNormal(const std::vector<float>& samples, size_t i, float bounds
     }
     else if (i == samples.size() - 1 && samples.size() > 1)
     {
-        float prevX = boundsX + (static_cast<float>(i) - 1.0f) * xScale;
-        float prevY = centerY - samples[i - 1] * amplitude;
-        float dx = x - prevX;
-        float dy = y - prevY;
-        float len = std::sqrt(dx * dx + dy * dy);
+        float const prevX = boundsX + ((static_cast<float>(i) - 1.0f) * xScale);
+        float const prevY = centerY - (samples[i - 1] * amplitude);
+        float const dx = x - prevX;
+        float const dy = y - prevY;
+        float const len = std::sqrt((dx * dx) + (dy * dy));
         if (len > 0.001f)
         {
             nx = -dy / len;
@@ -167,25 +169,26 @@ void WaveformShader::buildLineGeometry(std::vector<float>& vertices, const std::
         return;
 
     vertices.reserve(samples.size() * 2 * 4);
-    float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
-    float halfWidth = lineWidth * 0.5f;
+    float const xScale = boundsWidth / static_cast<float>(samples.size() - 1);
+    float const halfWidth = lineWidth * 0.5f;
 
     for (size_t i = 0; i < samples.size(); ++i)
     {
-        float x = boundsX + static_cast<float>(i) * xScale;
-        float y = centerY - samples[i] * amplitude;
-        float nx, ny;
+        float const x = boundsX + (static_cast<float>(i) * xScale);
+        float const y = centerY - (samples[i] * amplitude);
+        float nx = NAN;
+        float ny = NAN;
         computeLineNormal(samples, i, boundsX, xScale, centerY, amplitude, x, y, nx, ny);
 
-        float t = static_cast<float>(i) / static_cast<float>(samples.size() - 1);
+        float const t = static_cast<float>(i) / static_cast<float>(samples.size() - 1);
 
-        vertices.push_back(x + nx * halfWidth);
-        vertices.push_back(y + ny * halfWidth);
+        vertices.push_back(x + (nx * halfWidth));
+        vertices.push_back(y + (ny * halfWidth));
         vertices.push_back(1.0f);
         vertices.push_back(t);
 
-        vertices.push_back(x - nx * halfWidth);
-        vertices.push_back(y - ny * halfWidth);
+        vertices.push_back(x - (nx * halfWidth));
+        vertices.push_back(y - (ny * halfWidth));
         vertices.push_back(-1.0f);
         vertices.push_back(t);
     }
@@ -199,13 +202,13 @@ void WaveformShader::buildFillGeometry(std::vector<float>& vertices, const std::
 
     vertices.reserve(samples.size() * 2 * 4);
 
-    float xScale = boundsWidth / static_cast<float>(samples.size() - 1);
+    float const xScale = boundsWidth / static_cast<float>(samples.size() - 1);
 
     for (size_t i = 0; i < samples.size(); ++i)
     {
-        float t = static_cast<float>(i) / static_cast<float>(samples.size() - 1);
-        float x = boundsX + static_cast<float>(i) * xScale;
-        float yWave = centerY - samples[i] * amplitude;
+        float const t = static_cast<float>(i) / static_cast<float>(samples.size() - 1);
+        float const x = boundsX + (static_cast<float>(i) * xScale);
+        float const yWave = centerY - (samples[i] * amplitude);
 
         // Top vertex (at waveform)
         vertices.push_back(x);
@@ -224,18 +227,19 @@ void WaveformShader::buildFillGeometry(std::vector<float>& vertices, const std::
 bool WaveformShader::setup2DProjection(juce::OpenGLContext& context, juce::OpenGLExtensionFunctions& ext,
                                        GLint projectionLoc)
 {
+    juce::ignoreUnused(ext);
     auto* target = context.getTargetComponent();
     if (!target)
         return false;
 
-    float w = static_cast<float>(target->getWidth());
-    float h = static_cast<float>(target->getHeight());
+    auto const w = static_cast<float>(target->getWidth());
+    auto const h = static_cast<float>(target->getHeight());
     if (w <= 0.0f || h <= 0.0f)
         return false;
 
     float projection[16] = {2.0f / w, 0.0f, 0.0f,  0.0f, 0.0f,  -2.0f / h, 0.0f, 0.0f,
                             0.0f,     0.0f, -1.0f, 0.0f, -1.0f, 1.0f,      0.0f, 1.0f};
-    ext.glUniformMatrix4fv(projectionLoc, 1, juce::gl::GL_FALSE, projection);
+    juce::OpenGLExtensionFunctions::glUniformMatrix4fv(projectionLoc, 1, juce::gl::GL_FALSE, projection);
     return true;
 }
 
@@ -243,7 +247,7 @@ bool WaveformShader::checkGLError([[maybe_unused]] const char* location)
 {
     using namespace juce::gl;
 
-    GLenum error = glGetError();
+    GLenum const error = glGetError();
     if (error == GL_NO_ERROR)
         return true;
 

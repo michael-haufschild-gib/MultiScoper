@@ -6,6 +6,8 @@
 
 #include "core/OscilLog.h"
 
+#include <algorithm>
+
 namespace oscil
 {
 
@@ -44,10 +46,9 @@ void SourceCoordinator::sourceAdded(const SourceId& sourceId)
 void SourceCoordinator::sourceRemoved(const SourceId& sourceId)
 {
     OSCIL_LOG(SOURCE, "sourceRemoved: id=" << sourceId.id << " remainingSources="
-                                           << (availableSources_.size() > 0 ? availableSources_.size() - 1 : 0));
+                                           << (!availableSources_.empty() ? availableSources_.size() - 1 : 0));
     postToMessageThread([this, sourceId]() {
-        availableSources_.erase(std::remove(availableSources_.begin(), availableSources_.end(), sourceId),
-                                availableSources_.end());
+        std::erase(availableSources_, sourceId);
         if (onSourcesChanged_)
             onSourcesChanged_();
     });

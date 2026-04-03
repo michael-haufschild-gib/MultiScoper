@@ -21,11 +21,11 @@ inline juce::Path createStereoIcon(float size, float strokeWidth = 1.5f)
     juce::Path path;
 
     // Two overlapping circle outlines representing stereo channels
-    float circleRadius = size * 0.32f;
-    float overlap = size * 0.12f;
-    float centerY = size * 0.5f;
-    float leftCenterX = size * 0.5f - overlap;
-    float rightCenterX = size * 0.5f + overlap;
+    float const circleRadius = size * 0.32f;
+    float const overlap = size * 0.12f;
+    float const centerY = size * 0.5f;
+    float const leftCenterX = (size * 0.5f) - overlap;
+    float const rightCenterX = (size * 0.5f) + overlap;
 
     // Create left circle outline
     juce::Path leftCircle;
@@ -36,7 +36,7 @@ inline juce::Path createStereoIcon(float size, float strokeWidth = 1.5f)
     rightCircle.addEllipse(rightCenterX - circleRadius, centerY - circleRadius, circleRadius * 2, circleRadius * 2);
 
     // Convert to stroked paths (outlines)
-    juce::PathStrokeType stroke(strokeWidth);
+    const juce::PathStrokeType stroke(strokeWidth);
     stroke.createStrokedPath(path, leftCircle);
 
     juce::Path rightStroked;
@@ -57,15 +57,15 @@ inline juce::Path createMonoIcon(float size, float strokeWidth = 1.5f)
     juce::Path path;
 
     // Single centered circle outline representing mono signal
-    float circleRadius = size * 0.32f;
-    float centerX = size * 0.5f;
-    float centerY = size * 0.5f;
+    float const circleRadius = size * 0.32f;
+    float const centerX = size * 0.5f;
+    float const centerY = size * 0.5f;
 
     juce::Path circle;
     circle.addEllipse(centerX - circleRadius, centerY - circleRadius, circleRadius * 2, circleRadius * 2);
 
     // Convert to stroked path (outline)
-    juce::PathStrokeType stroke(strokeWidth);
+    const juce::PathStrokeType stroke(strokeWidth);
     stroke.createStrokedPath(path, circle);
 
     return path;
@@ -79,15 +79,15 @@ inline juce::Path createMidIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
 
-    float pad = size * 0.25f;
-    float w = size - 2 * pad;
-    float h = size - 2 * pad;
-    float x = pad;
-    float y = pad;
+    float const pad = size * 0.25f;
+    float const w = size - (2 * pad);
+    float const h = size - (2 * pad);
+    float const x = pad;
+    float const y = pad;
 
     path.startNewSubPath(x, y + h);
     path.lineTo(x, y);
-    path.lineTo(x + w * 0.5f, y + h * 0.8f);
+    path.lineTo(x + (w * 0.5f), y + (h * 0.8f));
     path.lineTo(x + w, y);
     path.lineTo(x + w, y + h);
 
@@ -107,17 +107,17 @@ inline juce::Path createSideIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
 
-    float pad = size * 0.25f;
-    float w = size - 2 * pad;
-    float h = size - 2 * pad;
-    float x = pad;
-    float y = pad;
+    float const pad = size * 0.25f;
+    float const w = size - (2 * pad);
+    float const h = size - (2 * pad);
+    float const x = pad;
+    float const y = pad;
 
     // Simplified S shape (3 segments)
     path.startNewSubPath(x + w, y);
     path.lineTo(x, y);
-    path.lineTo(x, y + h * 0.5f);
-    path.lineTo(x + w, y + h * 0.5f);
+    path.lineTo(x, y + (h * 0.5f));
+    path.lineTo(x + w, y + (h * 0.5f));
     path.lineTo(x + w, y + h);
     path.lineTo(x, y + h);
 
@@ -137,11 +137,11 @@ inline juce::Path createLeftIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
 
-    float pad = size * 0.25f;
-    float w = size - 2 * pad;
-    float h = size - 2 * pad;
-    float x = pad;
-    float y = pad;
+    float const pad = size * 0.25f;
+    float const w = size - (2 * pad);
+    float const h = size - (2 * pad);
+    float const x = pad;
+    float const y = pad;
 
     path.startNewSubPath(x, y);
     path.lineTo(x, y + h);
@@ -163,23 +163,23 @@ inline juce::Path createRightIcon(float size, float strokeWidth = 1.5f)
 {
     juce::Path path;
 
-    float pad = size * 0.25f;
-    float w = size - 2 * pad;
-    float h = size - 2 * pad;
-    float x = pad;
-    float y = pad;
+    float const pad = size * 0.25f;
+    float const w = size - (2 * pad);
+    float const h = size - (2 * pad);
+    float const x = pad;
+    float const y = pad;
 
     // Vertical line
     path.startNewSubPath(x, y + h);
     path.lineTo(x, y);
 
     // Loop (P shape)
-    path.lineTo(x + w * 0.8f, y);
-    path.lineTo(x + w * 0.8f, y + h * 0.5f);
-    path.lineTo(x, y + h * 0.5f);
+    path.lineTo(x + (w * 0.8f), y);
+    path.lineTo(x + (w * 0.8f), y + (h * 0.5f));
+    path.lineTo(x, y + (h * 0.5f));
 
     // Leg
-    path.startNewSubPath(x + w * 0.2f, y + h * 0.5f);
+    path.startNewSubPath(x + (w * 0.2f), y + (h * 0.5f));
     path.lineTo(x + w, y + h);
 
     juce::Path stroked;

@@ -8,11 +8,11 @@
 namespace oscil
 {
 
-void OscilDropdownPopup::mouseDown(const juce::MouseEvent&) { dismiss(); }
-void OscilDropdownPopup::mouseMove(const juce::MouseEvent&) {}
-void OscilDropdownPopup::mouseExit(const juce::MouseEvent&) {}
+void OscilDropdownPopup::mouseDown(const juce::MouseEvent& /*event*/) { dismiss(); }
+void OscilDropdownPopup::mouseMove(const juce::MouseEvent& /*event*/) {}
+void OscilDropdownPopup::mouseExit(const juce::MouseEvent& /*event*/) {}
 
-void OscilDropdownPopup::focusLost(FocusChangeType)
+void OscilDropdownPopup::focusLost(FocusChangeType /*cause*/)
 {
     auto* focusedComp = juce::Component::getCurrentlyFocusedComponent();
     if (focusedComp != this && !isParentOf(focusedComp))
@@ -23,9 +23,9 @@ void OscilDropdownPopup::ensureItemVisible(int index)
 {
     if (!viewport_ || index < 0)
         return;
-    int itemY = index * ITEM_HEIGHT;
-    int viewY = viewport_->getViewPositionY();
-    int viewH = viewport_->getViewHeight();
+    int const itemY = index * ITEM_HEIGHT;
+    int const viewY = viewport_->getViewPositionY();
+    int const viewH = viewport_->getViewHeight();
 
     if (itemY < viewY)
         viewport_->setViewPosition(viewport_->getViewPositionX(), itemY);

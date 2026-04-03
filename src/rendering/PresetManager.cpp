@@ -28,9 +28,10 @@ std::vector<PresetInfo> PresetManager::getAvailablePresets() const
 
     // Built-in presets first
     auto builtIn = VisualConfiguration::getAvailablePresets();
+    presets.reserve(builtIn.size());
     for (const auto& [id, name] : builtIn)
     {
-        presets.push_back({id, name, true});
+        presets.push_back({.id = id, .displayName = name, .isBuiltIn = true});
     }
 
     // User presets from disk
@@ -51,15 +52,15 @@ std::vector<PresetInfo> PresetManager::getAvailablePresets() const
             continue;
         }
 
-        juce::String id = tree.getProperty("presetId", "");
-        juce::String name = tree.getProperty("displayName", "");
+        juce::String const id = tree.getProperty("presetId", "");
+        juce::String const name = tree.getProperty("displayName", "");
         if (id.isEmpty())
         {
             DBG("PresetManager: preset missing presetId in: " << file.getFullPathName());
             continue;
         }
 
-        presets.push_back({id, name.isEmpty() ? id : name, false});
+        presets.push_back({.id = id, .displayName = name.isEmpty() ? id : name, .isBuiltIn = false});
     }
 
     return presets;
@@ -104,7 +105,7 @@ bool PresetManager::saveUserPreset(const juce::String& name, const VisualConfigu
     if (name.isEmpty())
         return false;
 
-    juce::String id = generatePresetId(name);
+    juce::String const id = generatePresetId(name);
 
     // Build wrapper tree: { presetId, displayName, VisualConfiguration }
     juce::ValueTree wrapper(PRESET_WRAPPER_TYPE);
@@ -152,7 +153,7 @@ bool PresetManager::renameUserPreset(const juce::String& presetId, const juce::S
     if (!wrapper.isValid())
         return false;
 
-    juce::String newId = generatePresetId(newName);
+    juce::String const newId = generatePresetId(newName);
     wrapper.setProperty("presetId", newId, nullptr);
     wrapper.setProperty("displayName", newName, nullptr);
 
@@ -223,7 +224,7 @@ bool PresetManager::importPreset(const juce::File& source)
         return false;
     }
 
-    juce::String id = wrapper.getProperty("presetId", "");
+    juce::String const id = wrapper.getProperty("presetId", "");
     if (id.isEmpty())
     {
         DBG("PresetManager::importPreset: missing presetId in: " << source.getFullPathName());

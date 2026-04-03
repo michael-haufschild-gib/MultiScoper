@@ -125,7 +125,7 @@ int OscilColorSwatches::getColumnCount() const
         return columns_;
 
     // Auto-calculate based on width
-    int width = getWidth();
+    int const width = getWidth();
     if (width <= 0)
         return 8; // Default
 
@@ -134,14 +134,14 @@ int OscilColorSwatches::getColumnCount() const
 
 int OscilColorSwatches::getRowCount() const
 {
-    int cols = getColumnCount();
+    int const cols = getColumnCount();
     return static_cast<int>((colors_.size() + static_cast<size_t>(cols) - 1) / static_cast<size_t>(cols));
 }
 
 int OscilColorSwatches::getPreferredWidth() const
 {
-    int cols = columns_ > 0 ? columns_ : 8;
-    return cols * swatchSize_ + (cols - 1) * spacing_;
+    int const cols = columns_ > 0 ? columns_ : 8;
+    return (cols * swatchSize_) + ((cols - 1) * spacing_);
 }
 
 int OscilColorSwatches::getPreferredHeight() const
@@ -149,9 +149,9 @@ int OscilColorSwatches::getPreferredHeight() const
     if (colors_.empty())
         return 0;
 
-    int cols = getColumnCount();
-    int rows = static_cast<int>((colors_.size() + static_cast<size_t>(cols) - 1) / static_cast<size_t>(cols));
-    return rows * swatchSize_ + (rows - 1) * spacing_;
+    int const cols = getColumnCount();
+    int const rows = static_cast<int>((colors_.size() + static_cast<size_t>(cols) - 1) / static_cast<size_t>(cols));
+    return (rows * swatchSize_) + ((rows - 1) * spacing_);
 }
 
 void OscilColorSwatches::paint(juce::Graphics& g)
@@ -175,8 +175,8 @@ void OscilColorSwatches::paint(juce::Graphics& g)
 void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectangle<int> bounds)
 {
     auto color = colors_[static_cast<size_t>(index)];
-    bool isSelected = (index == selectedIndex_);
-    bool isHovered = (index == hoveredIndex_);
+    bool const isSelected = (index == selectedIndex_);
+    bool const isHovered = (index == hoveredIndex_);
 
     // Expand slightly on hover
     if (isHovered)
@@ -187,12 +187,13 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
     // Draw checker pattern for transparent colors
     if (color.getAlpha() < 255)
     {
-        int checkerSize = 4;
+        int const checkerSize = 4;
         for (int y = bounds.getY(); y < bounds.getBottom(); y += checkerSize)
         {
             for (int x = bounds.getX(); x < bounds.getRight(); x += checkerSize)
             {
-                bool isWhite = ((x - bounds.getX()) / checkerSize + (y - bounds.getY()) / checkerSize) % 2 == 0;
+                bool const isWhite =
+                    (((x - bounds.getX()) / checkerSize) + ((y - bounds.getY()) / checkerSize)) % 2 == 0;
                 g.setColour(isWhite ? juce::Colours::white : juce::Colours::lightgrey);
                 g.fillRect(x, y, std::min(checkerSize, bounds.getRight() - x),
                            std::min(checkerSize, bounds.getBottom() - y));
@@ -228,12 +229,12 @@ void OscilColorSwatches::paintCheckmark(juce::Graphics& g, juce::Rectangle<int> 
 
     auto cx = static_cast<float>(bounds.getCentreX());
     auto cy = static_cast<float>(bounds.getCentreY());
-    float size = static_cast<float>(bounds.getWidth()) * 0.25f;
+    float const size = static_cast<float>(bounds.getWidth()) * 0.25f;
 
     juce::Path checkPath;
     checkPath.startNewSubPath(cx - size, cy);
-    checkPath.lineTo(cx - size * 0.3f, cy + size * 0.7f);
-    checkPath.lineTo(cx + size, cy - size * 0.5f);
+    checkPath.lineTo(cx - (size * 0.3f), cy + (size * 0.7f));
+    checkPath.lineTo(cx + size, cy - (size * 0.5f));
 
     g.strokePath(checkPath, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
@@ -245,15 +246,15 @@ void OscilColorSwatches::resized()
 
 int OscilColorSwatches::getSwatchAtPosition(juce::Point<int> pos) const
 {
-    int cols = getColumnCount();
+    int const cols = getColumnCount();
 
-    int col = pos.x / (swatchSize_ + spacing_);
-    int row = pos.y / (swatchSize_ + spacing_);
+    int const col = pos.x / (swatchSize_ + spacing_);
+    int const row = pos.y / (swatchSize_ + spacing_);
 
     if (col < 0 || col >= cols)
         return -1;
 
-    int index = row * cols + col;
+    int const index = (row * cols) + col;
 
     if (index < 0 || std::cmp_greater_equal(index, colors_.size()))
         return -1;
@@ -268,20 +269,20 @@ int OscilColorSwatches::getSwatchAtPosition(juce::Point<int> pos) const
 
 juce::Rectangle<int> OscilColorSwatches::getSwatchBounds(int index) const
 {
-    int cols = getColumnCount();
+    int const cols = getColumnCount();
 
-    int col = index % cols;
-    int row = index / cols;
+    int const col = index % cols;
+    int const row = index / cols;
 
-    int x = col * (swatchSize_ + spacing_);
-    int y = row * (swatchSize_ + spacing_);
+    int const x = col * (swatchSize_ + spacing_);
+    int const y = row * (swatchSize_ + spacing_);
 
     return {x, y, swatchSize_, swatchSize_};
 }
 
 void OscilColorSwatches::mouseDown(const juce::MouseEvent& e)
 {
-    int index = getSwatchAtPosition(e.getPosition());
+    int const index = getSwatchAtPosition(e.getPosition());
 
     if (index >= 0)
     {
@@ -292,7 +293,7 @@ void OscilColorSwatches::mouseDown(const juce::MouseEvent& e)
 
 void OscilColorSwatches::mouseMove(const juce::MouseEvent& e)
 {
-    int newHovered = getSwatchAtPosition(e.getPosition());
+    int const newHovered = getSwatchAtPosition(e.getPosition());
 
     if (newHovered != hoveredIndex_)
     {
@@ -305,7 +306,7 @@ void OscilColorSwatches::mouseMove(const juce::MouseEvent& e)
     }
 }
 
-void OscilColorSwatches::mouseExit(const juce::MouseEvent&)
+void OscilColorSwatches::mouseExit(const juce::MouseEvent& /*event*/)
 {
     if (hoveredIndex_ != -1)
     {
@@ -323,17 +324,25 @@ bool OscilColorSwatches::keyPressed(const juce::KeyPress& key)
     if (colors_.empty())
         return false;
 
-    int cols = getColumnCount();
+    int const cols = getColumnCount();
     int newFocus = focusedIndex_;
 
     if (key == juce::KeyPress::leftKey)
+    {
         newFocus = std::max(0, focusedIndex_ - 1);
+    }
     else if (key == juce::KeyPress::rightKey)
+    {
         newFocus = std::min(static_cast<int>(colors_.size()) - 1, focusedIndex_ + 1);
+    }
     else if (key == juce::KeyPress::upKey)
+    {
         newFocus = std::max(0, focusedIndex_ - cols);
+    }
     else if (key == juce::KeyPress::downKey)
+    {
         newFocus = std::min(static_cast<int>(colors_.size()) - 1, focusedIndex_ + cols);
+    }
     else if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey)
     {
         setSelectedIndex(focusedIndex_);
@@ -355,7 +364,7 @@ bool OscilColorSwatches::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilColorSwatches::focusGained(FocusChangeType)
+void OscilColorSwatches::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
 
@@ -367,7 +376,7 @@ void OscilColorSwatches::focusGained(FocusChangeType)
     repaint();
 }
 
-void OscilColorSwatches::focusLost(FocusChangeType)
+void OscilColorSwatches::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();

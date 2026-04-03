@@ -12,6 +12,7 @@
 #include <httplib.h>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <utility>
 
 namespace oscil
 {
@@ -122,7 +123,7 @@ protected:
         response["totalTests"] = static_cast<int>(tests.size());
         response["passed"] = passedCount;
         response["failed"] = static_cast<int>(tests.size()) - passedCount;
-        response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
+        response["allPassed"] = (std::cmp_equal(passedCount, tests.size()));
     }
 
     OscilPluginEditor& editor_;

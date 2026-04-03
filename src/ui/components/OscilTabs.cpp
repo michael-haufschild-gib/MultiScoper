@@ -102,7 +102,7 @@ void OscilTabs::addTabs(const std::vector<juce::String>& labels)
 
     updateLayoutCache();
 
-    if (tabs_.size() > 0 && selectedIndex_ == 0)
+    if (!tabs_.empty() && selectedIndex_ == 0)
     {
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
@@ -121,7 +121,7 @@ void OscilTabs::addTabs(const std::vector<TabItem>& tabs)
 
     updateLayoutCache();
 
-    if (tabs_.size() > 0 && selectedIndex_ == 0)
+    if (!tabs_.empty() && selectedIndex_ == 0)
     {
         auto bounds = getTabBounds(0);
         targetIndicatorX_ = static_cast<float>(bounds.getX());
@@ -277,10 +277,10 @@ int OscilTabs::getPreferredWidth() const
         auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, tab.label, 0, 0);
-        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-        int iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
-        int badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
-        return labelWidth + iconWidth + badgeWidth + TAB_PADDING_H * 2;
+        int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int const iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
+        int const badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
+        return labelWidth + iconWidth + badgeWidth + (TAB_PADDING_H * 2);
     };
 
     if (orientation_ == Orientation::Horizontal)
@@ -290,16 +290,14 @@ int OscilTabs::getPreferredWidth() const
             totalWidth += tabWidth_ > 0 ? tabWidth_ : computeTabContentWidth(tab);
         return totalWidth;
     }
-    else
-    {
-        if (tabWidth_ > 0)
-            return tabWidth_;
 
-        int maxWidth = 0;
-        for (const auto& tab : tabs_)
-            maxWidth = std::max(maxWidth, computeTabContentWidth(tab));
-        return maxWidth;
-    }
+    if (tabWidth_ > 0)
+        return tabWidth_;
+
+    int maxWidth = 0;
+    for (const auto& tab : tabs_)
+        maxWidth = std::max(maxWidth, computeTabContentWidth(tab));
+    return maxWidth;
 }
 
 int OscilTabs::getPreferredHeight() const
@@ -309,13 +307,11 @@ int OscilTabs::getPreferredHeight() const
 
     if (orientation_ == Orientation::Vertical)
     {
-        int height = tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
+        int const height = tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
         return height * static_cast<int>(tabs_.size());
     }
-    else
-    {
-        return tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
-    }
+
+    return tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
 }
 
 void OscilTabs::resized()
@@ -348,14 +344,14 @@ int OscilTabs::getTabAtPosition(juce::Point<int> pos) const
 
 void OscilTabs::mouseDown(const juce::MouseEvent& e)
 {
-    int index = getTabAtPosition(e.getPosition());
+    int const index = getTabAtPosition(e.getPosition());
     if (index >= 0 && tabs_[static_cast<size_t>(index)].enabled)
         setSelectedIndex(index);
 }
 
 void OscilTabs::mouseMove(const juce::MouseEvent& e)
 {
-    int newHovered = getTabAtPosition(e.getPosition());
+    int const newHovered = getTabAtPosition(e.getPosition());
     if (newHovered != hoveredIndex_)
     {
         hoveredIndex_ = newHovered;
@@ -363,7 +359,7 @@ void OscilTabs::mouseMove(const juce::MouseEvent& e)
     }
 }
 
-void OscilTabs::mouseExit(const juce::MouseEvent&)
+void OscilTabs::mouseExit(const juce::MouseEvent& /*event*/)
 {
     if (hoveredIndex_ != -1)
     {
@@ -394,7 +390,7 @@ bool OscilTabs::keyPressed(const juce::KeyPress& key)
             newIndex = std::min(static_cast<int>(tabs_.size()) - 1, selectedIndex_ + 1);
     }
 
-    int direction = (newIndex > selectedIndex_) ? 1 : -1;
+    int const direction = (newIndex > selectedIndex_) ? 1 : -1;
     while (newIndex >= 0 && std::cmp_less(newIndex, tabs_.size()) && !tabs_[static_cast<size_t>(newIndex)].enabled)
     {
         newIndex += direction;
@@ -409,13 +405,13 @@ bool OscilTabs::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilTabs::focusGained(FocusChangeType)
+void OscilTabs::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilTabs::focusLost(FocusChangeType)
+void OscilTabs::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -435,7 +431,7 @@ void OscilTabs::timerCallback()
 
 void OscilTabs::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     indicatorXSpring_.update(dt);
     indicatorWidthSpring_.update(dt);
     hoverSpring_.update(dt);

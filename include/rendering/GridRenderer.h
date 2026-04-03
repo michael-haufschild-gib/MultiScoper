@@ -30,7 +30,7 @@ private:
     void createBuffers(juce::OpenGLContext& context);
     void compileShaders(juce::OpenGLContext& context);
 
-    void drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col);
+    void drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col) const;
     void generateChannelGrid(const GridConfiguration& config, float yTop, float yBottom);
     void generateHorizontalGrid(float yTop, float yBottom);
     void generateTimeGrid(const GridConfiguration& config, float yTop, float yBottom);

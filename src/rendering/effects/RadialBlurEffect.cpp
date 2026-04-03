@@ -112,12 +112,11 @@ bool RadialBlurEffect::isCompiled() const { return compiled_; }
 void RadialBlurEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                              FramebufferPool& pool, float deltaTime)
 {
+    juce::ignoreUnused(context);
     juce::ignoreUnused(deltaTime);
 
     if (!compiled_ || !source || !destination)
         return;
-
-    auto& ext = context.extensions;
 
     // Bind destination
     destination->bind();
@@ -131,12 +130,12 @@ void RadialBlurEffect::apply(juce::OpenGLContext& context, Framebuffer* source, 
 
     // Bind source texture
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(textureLoc_, 0);
 
     // Set uniforms
-    ext.glUniform1f(amountLoc_, settings_.amount * getIntensity());
-    ext.glUniform1f(glowLoc_, settings_.glow);
-    ext.glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
+    juce::OpenGLExtensionFunctions::glUniform1f(amountLoc_, settings_.amount * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(glowLoc_, settings_.glow);
+    juce::OpenGLExtensionFunctions::glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
 
     // Render fullscreen quad
     pool.renderFullscreenQuad();

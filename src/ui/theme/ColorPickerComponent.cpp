@@ -66,8 +66,8 @@ void ColorPickerComponent::paint(juce::Graphics& g)
         {
             for (int x = previewBounds_.getX(); x < previewBounds_.getRight(); x += checkSize)
             {
-                bool isLight =
-                    ((x - previewBounds_.getX()) / checkSize + (y - previewBounds_.getY()) / checkSize) % 2 == 0;
+                bool const isLight =
+                    (((x - previewBounds_.getX()) / checkSize) + ((y - previewBounds_.getY()) / checkSize)) % 2 == 0;
                 g.setColour(isLight ? juce::Colours::white : juce::Colours::lightgrey);
                 g.fillRect(x, y, checkSize, checkSize);
             }
@@ -151,16 +151,16 @@ bool ColorPickerComponent::parseHexColour(const juce::String& hex, juce::Colour&
     for (int i = 0; i < cleaned.length(); ++i)
     {
         auto c = cleaned[i];
-        bool isHex = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+        bool const isHex = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
         if (!isHex)
             return false;
     }
 
     // Parse values
-    int r = cleaned.substring(0, 2).getHexValue32();
-    int g = cleaned.substring(2, 4).getHexValue32();
-    int b = cleaned.substring(4, 6).getHexValue32();
-    int a = (cleaned.length() == 8) ? cleaned.substring(6, 8).getHexValue32() : 255;
+    int const r = cleaned.substring(0, 2).getHexValue32();
+    int const g = cleaned.substring(2, 4).getHexValue32();
+    int const b = cleaned.substring(4, 6).getHexValue32();
+    int const a = (cleaned.length() == 8) ? cleaned.substring(6, 8).getHexValue32() : 255;
 
     outColour = juce::Colour(static_cast<juce::uint8>(r), static_cast<juce::uint8>(g), static_cast<juce::uint8>(b),
                              static_cast<juce::uint8>(a));

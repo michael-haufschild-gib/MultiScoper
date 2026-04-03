@@ -56,7 +56,7 @@ void SelectPaneDialog::setupComponents()
     setSize(getPreferredWidth(), getPreferredHeight());
 }
 
-void SelectPaneDialog::paint(juce::Graphics&)
+void SelectPaneDialog::paint(juce::Graphics& /*g*/)
 {
     // No custom painting - OscilModal handles backdrop/frame
     // Child components handle their own painting
@@ -80,7 +80,7 @@ void SelectPaneDialog::resized()
 
     // Footer buttons at bottom
     auto footerRow = bounds.removeFromBottom(BUTTON_HEIGHT);
-    int buttonWidth = (footerRow.getWidth() - 8) / 2;
+    int const buttonWidth = (footerRow.getWidth() - 8) / 2;
     cancelButton_->setBounds(footerRow.removeFromLeft(buttonWidth));
     footerRow.removeFromLeft(8);
     okButton_->setBounds(footerRow);
@@ -146,7 +146,7 @@ void SelectPaneDialog::handleCancelClick()
     }
 }
 
-void SelectPaneDialog::handlePaneSelectionChange(const PaneId&, bool) { clearError(); }
+void SelectPaneDialog::handlePaneSelectionChange(const PaneId& /*unused*/, bool /*unused*/) { clearError(); }
 
 void SelectPaneDialog::showError(const juce::String& message)
 {

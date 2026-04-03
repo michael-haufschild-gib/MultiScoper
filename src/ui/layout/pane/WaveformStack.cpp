@@ -7,6 +7,8 @@
 #include "core/interfaces/IAudioBuffer.h"
 #include "core/interfaces/IAudioDataProvider.h"
 
+#include <algorithm>
+
 namespace oscil
 {
 
@@ -72,9 +74,8 @@ void WaveformStack::addOscillator(const Oscillator& oscillator)
 
 void WaveformStack::removeOscillator(const OscillatorId& oscillatorId)
 {
-    auto it = std::find_if(entries_.begin(), entries_.end(), [&oscillatorId](const OscillatorEntry& entry) {
-        return entry.oscillator.getId() == oscillatorId;
-    });
+    auto it = std::ranges::find_if(
+        entries_, [&oscillatorId](const OscillatorEntry& entry) { return entry.oscillator.getId() == oscillatorId; });
 
     if (it != entries_.end())
     {
@@ -261,7 +262,7 @@ void WaveformStack::highlightOscillator(const OscillatorId& oscillatorId)
     {
         if (entry.waveform)
         {
-            bool shouldHighlight = entry.oscillator.getId() == oscillatorId;
+            bool const shouldHighlight = entry.oscillator.getId() == oscillatorId;
             entry.waveform->setHighlighted(shouldHighlight);
         }
     }
@@ -276,14 +277,14 @@ void WaveformStack::updateLayout()
 
     if (layoutMode_ == LayoutMode::Stacked)
     {
-        int numWaveforms = static_cast<int>(entries_.size());
+        int const numWaveforms = static_cast<int>(entries_.size());
         // Divide available height equally among waveforms
-        int waveformHeight = bounds.getHeight() / std::max(1, numWaveforms);
+        int const waveformHeight = bounds.getHeight() / std::max(1, numWaveforms);
 
         for (size_t i = 0; i < entries_.size(); ++i)
         {
             // For the last item, take the remaining space to handle rounding errors
-            int height = (i == entries_.size() - 1) ? bounds.getHeight() : waveformHeight;
+            int const height = (i == entries_.size() - 1) ? bounds.getHeight() : waveformHeight;
 
             auto waveformBounds = bounds.removeFromTop(height);
             entries_[i].waveform->setBounds(waveformBounds);

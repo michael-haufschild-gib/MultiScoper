@@ -19,9 +19,9 @@ void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, in
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    bool configChanged;
+    bool configChanged = false;
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         configChanged = (globalConfig_ != config) || (sourceRate_ != sourceRate);
         globalConfig_ = config;
         sourceRate_ = sourceRate;
@@ -45,7 +45,7 @@ void MemoryBudgetManager::registerBuffer(const juce::String& id, std::shared_ptr
         return;
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         pruneExpiredBuffersLocked();
 
         BufferInfo info;
@@ -62,7 +62,7 @@ void MemoryBudgetManager::registerBuffer(const juce::String& id, std::shared_ptr
     notifyMemoryUsageChanged();
 
     // Check if quality needs adjustment
-    QualityPreset recommended = getRecommendedQuality();
+    QualityPreset const recommended = getRecommendedQuality();
     if (recommended != lastEffectiveQuality_ && globalConfig_.autoAdjustQuality)
     {
         lastEffectiveQuality_ = recommended;
@@ -79,7 +79,7 @@ void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
     bool removed = false;
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         removed = buffers_.erase(id) > 0;
         if (removed)
             usageCacheDirty_ = true;
@@ -103,7 +103,7 @@ void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, Quali
     int srcRate = 0;
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         pruneExpiredBuffersLocked();
 
         auto it = buffers_.find(id);
@@ -139,7 +139,7 @@ void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, Quali
     bufferToReconfigure->configure(bufferConfig, srcRate);
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         auto it = buffers_.find(id);
         if (it != buffers_.end())
             it->second.lastKnownMemoryBytes = bufferToReconfigure->getMemoryUsageBytes();
@@ -151,7 +151,7 @@ void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, Quali
 
 QualityOverride MemoryBudgetManager::getBufferQualityOverride(const juce::String& id) const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
 
     auto it = buffers_.find(id);
     if (it != buffers_.end())
@@ -174,7 +174,7 @@ void MemoryBudgetManager::applyRecommendedQuality()
     QualityPreset recommended;
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         pruneExpiredBuffersLocked();
         recommended = getRecommendedQualityForCount(static_cast<int>(buffers_.size()));
         bufferConfig = globalConfig_;
@@ -187,7 +187,7 @@ void MemoryBudgetManager::applyRecommendedQuality()
                 continue;
 
             if (auto buffer = info.buffer.lock())
-                jobs.push_back({id, std::move(buffer)});
+                jobs.push_back({.id = id, .buffer = std::move(buffer)});
         }
     }
 
@@ -196,7 +196,7 @@ void MemoryBudgetManager::applyRecommendedQuality()
         job.buffer->configure(bufferConfig, srcRate);
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         for (auto& job : jobs)
         {
             auto it = buffers_.find(job.id);
@@ -226,7 +226,7 @@ void MemoryBudgetManager::reconfigureAllBuffers()
     int srcRate = 0;
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         pruneExpiredBuffersLocked();
         srcRate = sourceRate_;
 
@@ -253,7 +253,7 @@ void MemoryBudgetManager::reconfigureAllBuffers()
 
             CaptureQualityConfig bufferConfig = globalConfig_;
             bufferConfig.qualityPreset = effectivePreset;
-            jobs.push_back({id, std::move(buffer), bufferConfig});
+            jobs.push_back({.id = id, .buffer = std::move(buffer), .config = bufferConfig});
         }
     }
 
@@ -262,7 +262,7 @@ void MemoryBudgetManager::reconfigureAllBuffers()
         job.buffer->configure(job.config, srcRate);
 
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         for (auto& job : jobs)
         {
             auto it = buffers_.find(job.id);

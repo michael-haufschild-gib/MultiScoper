@@ -110,10 +110,10 @@ private:
     void validateAndUpdate();
     void incrementValue();
     void decrementValue();
-    void applyNumericConstraints(double& value);
+    void applyNumericConstraints(double& value) const;
     void updateFromNumericValue();
     void notifyTextChanged();
-    void notifyValueChanged();
+    void notifyValueChanged() const;
 
     // Rendering
     void paintBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds);

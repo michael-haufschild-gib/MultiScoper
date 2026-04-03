@@ -206,16 +206,16 @@ void TimingSidebarSection::paint(juce::Graphics& g)
     // Draw styled SYNCED pill badge if synced (MELODIC mode + Host Sync)
     if (presenter_->shouldShowSyncedBadge())
     {
-        int y = getPreferredHeight() - SectionLayout::SECTION_PADDING - SectionLayout::LABEL_HEIGHT;
+        int const y = getPreferredHeight() - SectionLayout::SECTION_PADDING - SectionLayout::LABEL_HEIGHT;
         auto badgeBounds =
             juce::Rectangle<float>(static_cast<float>(SectionLayout::SECTION_PADDING), static_cast<float>(y),
-                                   static_cast<float>(getWidth() - SectionLayout::SECTION_PADDING * 2),
+                                   static_cast<float>(getWidth() - (SectionLayout::SECTION_PADDING * 2)),
                                    static_cast<float>(SectionLayout::LABEL_HEIGHT));
 
         // Center the pill badge
-        float pillWidth = 70.0f;
-        float pillX = badgeBounds.getCentreX() - pillWidth / 2;
-        juce::Rectangle<float> pillRect(pillX, badgeBounds.getY() + 2, pillWidth, badgeBounds.getHeight() - 4);
+        float const pillWidth = 70.0f;
+        float const pillX = badgeBounds.getCentreX() - (pillWidth / 2);
+        juce::Rectangle<float> const pillRect(pillX, badgeBounds.getY() + 2, pillWidth, badgeBounds.getHeight() - 4);
 
         // Green pill background
         g.setColour(theme.statusActive.withAlpha(0.2f));
@@ -240,9 +240,9 @@ void TimingSidebarSection::resized()
     y += ROW_HEIGHT + SPACING_LARGE;
 
     // Waveform mode dropdown (both modes)
-    int labelWidth = 40;
+    int const labelWidth = 40;
     waveformModeLabel_->setBounds(bounds.getX(), y, labelWidth, ROW_HEIGHT);
-    int selectorWidth = std::max(0, bounds.getWidth() - labelWidth - SPACING_MEDIUM);
+    int const selectorWidth = std::max(0, bounds.getWidth() - labelWidth - SPACING_MEDIUM);
     waveformModeSelector_->setBounds(bounds.getX() + labelWidth + SPACING_MEDIUM, y, selectorWidth, ROW_HEIGHT);
     y += ROW_HEIGHT + SPACING_LARGE;
 
@@ -250,7 +250,7 @@ void TimingSidebarSection::resized()
     if (presenter_->isTimeMode())
     {
         // Input field spans full width
-        int fieldHeight = 32;
+        int const fieldHeight = 32;
         timeIntervalField_->setBounds(bounds.getX(), y, bounds.getWidth(), fieldHeight);
         y += fieldHeight + SPACING_LARGE;
     }
@@ -261,9 +261,10 @@ void TimingSidebarSection::resized()
         y += ROW_HEIGHT + SPACING_LARGE;
 
         // BPM row: BPM label + field/value + sync toggle
-        int bpmLabelWidth = 30;
-        int syncToggleWidth = 70;
-        int bpmFieldWidth = std::max(0, bounds.getWidth() - bpmLabelWidth - syncToggleWidth - SPACING_MEDIUM * 2);
+        int const bpmLabelWidth = 30;
+        int const syncToggleWidth = 70;
+        int const bpmFieldWidth =
+            std::max(0, bounds.getWidth() - bpmLabelWidth - syncToggleWidth - (SPACING_MEDIUM * 2));
 
         bpmLabel_->setBounds(bounds.getX(), y, bpmLabelWidth, ROW_HEIGHT);
 

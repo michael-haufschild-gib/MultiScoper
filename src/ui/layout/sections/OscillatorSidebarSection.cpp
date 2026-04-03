@@ -61,7 +61,7 @@ void OscillatorSidebarSection::resized()
     }
 }
 
-void OscillatorSidebarSection::themeChanged(const ColorTheme&) { repaint(); }
+void OscillatorSidebarSection::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 int OscillatorSidebarSection::getPreferredHeight() const
 {

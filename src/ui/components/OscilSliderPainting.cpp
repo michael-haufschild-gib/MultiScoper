@@ -24,7 +24,7 @@ void OscilSlider::paint(juce::Graphics& g)
 void OscilSlider::paintHorizontal(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     float labelHeight = 0.0f;
     if (label_.isNotEmpty())
@@ -35,7 +35,7 @@ void OscilSlider::paintHorizontal(juce::Graphics& g)
         g.drawText(label_, bounds.withHeight(labelHeight), juce::Justification::centredLeft);
     }
 
-    float trackY = bounds.getCentreY() - TRACK_HEIGHT / 2.0f + labelHeight / 2.0f;
+    float const trackY = bounds.getCentreY() - (TRACK_HEIGHT / 2.0f) + (labelHeight / 2.0f);
     auto trackBounds = juce::Rectangle<float>(THUMB_SIZE / 2.0f, trackY, bounds.getWidth() - THUMB_SIZE,
                                               static_cast<float>(TRACK_HEIGHT));
 
@@ -58,7 +58,7 @@ void OscilSlider::paintHorizontal(juce::Graphics& g)
 void OscilSlider::paintVertical(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     float labelHeight = 0.0f;
     if (label_.isNotEmpty())
@@ -69,7 +69,7 @@ void OscilSlider::paintVertical(juce::Graphics& g)
         g.drawText(label_, bounds.removeFromBottom(labelHeight), juce::Justification::centred);
     }
 
-    float trackX = bounds.getCentreX() - TRACK_HEIGHT / 2.0f;
+    float const trackX = bounds.getCentreX() - (TRACK_HEIGHT / 2.0f);
     auto trackBounds = juce::Rectangle<float>(trackX, THUMB_SIZE / 2.0f, static_cast<float>(TRACK_HEIGHT),
                                               bounds.getHeight() - THUMB_SIZE);
 
@@ -82,7 +82,7 @@ void OscilSlider::paintVertical(juce::Graphics& g)
 
 void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds, bool isVertical)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
     g.fillRoundedRectangle(bounds, TRACK_HEIGHT / 2.0f);
@@ -97,14 +97,14 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
 
         if (isVertical)
         {
-            float startY = bounds.getBottom() - bounds.getHeight() * startProp;
-            float endY = bounds.getBottom() - bounds.getHeight() * endProp;
+            float const startY = bounds.getBottom() - (bounds.getHeight() * startProp);
+            float const endY = bounds.getBottom() - (bounds.getHeight() * endProp);
             filledBounds = juce::Rectangle<float>(bounds.getX(), endY, bounds.getWidth(), startY - endY);
         }
         else
         {
-            float startX = bounds.getX() + bounds.getWidth() * startProp;
-            float endX = bounds.getX() + bounds.getWidth() * endProp;
+            float const startX = bounds.getX() + (bounds.getWidth() * startProp);
+            float const endX = bounds.getX() + (bounds.getWidth() * endProp);
             filledBounds = juce::Rectangle<float>(startX, bounds.getY(), endX - startX, bounds.getHeight());
         }
     }
@@ -112,7 +112,7 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     {
         if (isVertical)
         {
-            filledBounds = bounds.withTop(bounds.getBottom() - bounds.getHeight() * fillProportion);
+            filledBounds = bounds.withTop(bounds.getBottom() - (bounds.getHeight() * fillProportion));
         }
         else
         {
@@ -126,13 +126,14 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
 
 void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical, bool /*isRangeEnd*/, float labelOffset)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     auto bounds = getLocalBounds().toFloat();
 
-    float scale = currentThumbScale_;
+    float const scale = currentThumbScale_;
 
-    float size = THUMB_SIZE * scale;
-    float cx, cy;
+    float const size = THUMB_SIZE * scale;
+    float cx;
+    float cy;
 
     if (isVertical)
     {
@@ -142,10 +143,10 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
     else
     {
         cx = position;
-        cy = bounds.getCentreY() + labelOffset / 2.0f;
+        cy = bounds.getCentreY() + (labelOffset / 2.0f);
     }
 
-    auto thumbBounds = juce::Rectangle<float>(cx - size / 2, cy - size / 2, size, size);
+    auto thumbBounds = juce::Rectangle<float>(cx - (size / 2), cy - (size / 2), size, size);
 
     g.setColour(juce::Colours::black.withAlpha(0.2f * opacity));
     g.fillEllipse(thumbBounds.translated(0, 1));
@@ -160,24 +161,24 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
 
 void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool isVertical)
 {
-    juce::String valueText = formatValue(value_);
+    juce::String const valueText = formatValue(value_);
 
     auto font = juce::Font(juce::FontOptions().withHeight(12.0f));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, valueText, 0, 0);
-    float textWidthF = glyphs.getBoundingBox(0, -1, false).getWidth() + TOOLTIP_PADDING * 2;
+    float const textWidthF = glyphs.getBoundingBox(0, -1, false).getWidth() + (TOOLTIP_PADDING * 2);
 
     juce::Rectangle<float> tooltipBounds;
 
     if (isVertical)
     {
         tooltipBounds =
-            juce::Rectangle<float>(static_cast<float>(getWidth()) + 4.0f, thumbPosition - TOOLTIP_HEIGHT / 2.0f,
+            juce::Rectangle<float>(static_cast<float>(getWidth()) + 4.0f, thumbPosition - (TOOLTIP_HEIGHT / 2.0f),
                                    textWidthF, static_cast<float>(TOOLTIP_HEIGHT));
     }
     else
     {
-        tooltipBounds = juce::Rectangle<float>(thumbPosition - textWidthF / 2.0f, -TOOLTIP_HEIGHT - 4.0f, textWidthF,
+        tooltipBounds = juce::Rectangle<float>(thumbPosition - (textWidthF / 2.0f), -TOOLTIP_HEIGHT - 4.0f, textWidthF,
                                                static_cast<float>(TOOLTIP_HEIGHT));
     }
 
@@ -217,22 +218,20 @@ juce::String OscilSlider::formatValue(double value) const
 float OscilSlider::getThumbPosition(bool isRangeEnd) const
 {
     auto bounds = getLocalBounds().toFloat();
-    bool isVertical = variant_ == SliderVariant::Vertical;
+    bool const isVertical = variant_ == SliderVariant::Vertical;
 
-    double value = (variant_ == SliderVariant::Range) ? (isRangeEnd ? rangeEnd_ : rangeStart_) : value_;
+    double const value = (variant_ == SliderVariant::Range) ? (isRangeEnd ? rangeEnd_ : rangeStart_) : value_;
 
     auto proportion = static_cast<float>(valueToProportionOfLength(value));
 
     if (isVertical)
     {
-        float trackHeight = std::max(1.0f, bounds.getHeight() - THUMB_SIZE);
-        return bounds.getBottom() - THUMB_SIZE / 2.0f - trackHeight * proportion;
+        float const trackHeight = std::max(1.0f, bounds.getHeight() - THUMB_SIZE);
+        return bounds.getBottom() - (THUMB_SIZE / 2.0f) - (trackHeight * proportion);
     }
-    else
-    {
-        float trackWidth = std::max(1.0f, bounds.getWidth() - THUMB_SIZE);
-        return THUMB_SIZE / 2.0f + trackWidth * proportion;
-    }
+
+    float trackWidth = std::max(1.0f, bounds.getWidth() - THUMB_SIZE);
+    return THUMB_SIZE / 2.0f + trackWidth * proportion;
 }
 
 } // namespace oscil

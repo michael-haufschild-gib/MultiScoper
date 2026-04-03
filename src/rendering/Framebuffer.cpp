@@ -13,19 +13,17 @@ using namespace juce::gl;
 
 bool Framebuffer::initFbo(juce::OpenGLContext& context)
 {
-    auto& ext = context.extensions;
-
-    ext.glGenFramebuffers(1, &fbo);
+    juce::OpenGLExtensionFunctions::glGenFramebuffers(1, &fbo);
     if (fbo == 0)
     {
         DBG("Framebuffer: Failed to generate FBO");
         return false;
     }
 
-    ext.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    juce::OpenGLExtensionFunctions::glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-    auto unbindAndFail = [&ext]() {
-        ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    auto unbindAndFail = []() {
+        juce::OpenGLExtensionFunctions::glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return false;
     };
 
@@ -48,7 +46,7 @@ bool Framebuffer::initFbo(juce::OpenGLContext& context)
         return unbindAndFail();
     }
 
-    ext.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    juce::OpenGLExtensionFunctions::glBindFramebuffer(GL_FRAMEBUFFER, 0);
     return true;
 }
 
@@ -79,10 +77,10 @@ void Framebuffer::resize(juce::OpenGLContext& context, int w, int h)
     if (w == width && h == height)
         return;
 
-    GLenum savedFormat = format;
-    bool savedHasDepth = hasDepth;
-    bool savedHasDepthTexture = hasDepthTexture;
-    int savedSamples = numSamples;
+    GLenum const savedFormat = format;
+    bool const savedHasDepth = hasDepth;
+    bool const savedHasDepthTexture = hasDepthTexture;
+    int const savedSamples = numSamples;
 
     destroy(context);
     if (!create(context, w, h, savedSamples, savedFormat, savedHasDepth, savedHasDepthTexture))
@@ -99,7 +97,7 @@ void Framebuffer::bind()
         auto* context = juce::OpenGLContext::getCurrentContext();
         if (context != nullptr)
         {
-            context->extensions.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+            juce::OpenGLExtensionFunctions::glBindFramebuffer(GL_FRAMEBUFFER, fbo);
             glViewport(0, 0, width, height);
         }
     }
@@ -110,7 +108,7 @@ void Framebuffer::unbind()
     auto* context = juce::OpenGLContext::getCurrentContext();
     if (context != nullptr)
     {
-        context->extensions.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        juce::OpenGLExtensionFunctions::glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
 
@@ -149,8 +147,7 @@ void Framebuffer::clear(juce::Colour colour, bool clearDepth)
 
 bool Framebuffer::createColorTexture(juce::OpenGLContext& context)
 {
-    auto& ext = context.extensions;
-
+    juce::ignoreUnused(context);
     glGenTextures(1, &colorTexture);
     if (colorTexture == 0)
     {
@@ -184,7 +181,8 @@ bool Framebuffer::createColorTexture(juce::OpenGLContext& context)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     // Attach to framebuffer
-    ext.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
+    juce::OpenGLExtensionFunctions::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                                                           colorTexture, 0);
 
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
@@ -192,8 +190,7 @@ bool Framebuffer::createColorTexture(juce::OpenGLContext& context)
 
 bool Framebuffer::createDepthBuffer(juce::OpenGLContext& context)
 {
-    auto& ext = context.extensions;
-
+    juce::ignoreUnused(context);
     if (hasDepthTexture)
     {
         // Create sampleable depth texture
@@ -212,26 +209,26 @@ bool Framebuffer::createDepthBuffer(juce::OpenGLContext& context)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        ext.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+        juce::OpenGLExtensionFunctions::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                                                               depthTexture, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
         return true;
     }
-    else
-    {
-        // Create renderbuffer (faster if sampling not needed)
-        ext.glGenRenderbuffers(1, &depthBuffer);
-        if (depthBuffer == 0)
-        {
-            DBG("Framebuffer: Failed to generate depth renderbuffer");
-            return false;
-        }
 
-        ext.glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
-        ext.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
-        ext.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
-        ext.glBindRenderbuffer(GL_RENDERBUFFER, 0);
-        return true;
+    // Create renderbuffer (faster if sampling not needed)
+    juce::OpenGLExtensionFunctions::glGenRenderbuffers(1, &depthBuffer);
+    if (depthBuffer == 0)
+    {
+        DBG("Framebuffer: Failed to generate depth renderbuffer");
+        return false;
     }
+
+    juce::OpenGLExtensionFunctions::glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+    juce::OpenGLExtensionFunctions::glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+    juce::OpenGLExtensionFunctions::glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
+                                                              depthBuffer);
+    juce::OpenGLExtensionFunctions::glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    return true;
 }
 
 bool Framebuffer::checkFramebufferComplete()
@@ -240,7 +237,7 @@ bool Framebuffer::checkFramebufferComplete()
     if (ctx == nullptr)
         return false;
 
-    GLenum status = ctx->extensions.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    GLenum const status = juce::OpenGLExtensionFunctions::glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
     switch (status)
     {
@@ -264,11 +261,11 @@ bool Framebuffer::checkFramebufferComplete()
 
 void Framebuffer::destroy(juce::OpenGLContext& context)
 {
-    auto& ext = context.extensions;
+    juce::ignoreUnused(context);
 
     if (depthBuffer != 0)
     {
-        ext.glDeleteRenderbuffers(1, &depthBuffer);
+        juce::OpenGLExtensionFunctions::glDeleteRenderbuffers(1, &depthBuffer);
         depthBuffer = 0;
     }
 
@@ -286,13 +283,13 @@ void Framebuffer::destroy(juce::OpenGLContext& context)
 
     if (fbo != 0)
     {
-        ext.glDeleteFramebuffers(1, &fbo);
+        juce::OpenGLExtensionFunctions::glDeleteFramebuffers(1, &fbo);
         fbo = 0;
     }
 
     if (colorRenderbuffer != 0)
     {
-        ext.glDeleteRenderbuffers(1, &colorRenderbuffer);
+        juce::OpenGLExtensionFunctions::glDeleteRenderbuffers(1, &colorRenderbuffer);
         colorRenderbuffer = 0;
     }
 

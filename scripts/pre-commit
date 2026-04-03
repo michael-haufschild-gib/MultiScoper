@@ -45,24 +45,26 @@ require_script() {
     return 0
 }
 
-# ─── 1. clang-format ───
+# ─── 1. clang-format (auto-fix) ───
 if [ -n "$STAGED_CPP" ]; then
     echo -n "  clang-format... "
     if require_tool "clang-format" "install it"; then
-        FORMAT_ERRORS=""
+        FORMATTED_FILES=""
         for file in $STAGED_CPP; do
             if [ -f "$file" ]; then
+                # Check if file needs formatting
                 DIFF=$(clang-format --dry-run --Werror "$file" 2>&1 || true)
                 if [ -n "$DIFF" ]; then
-                    FORMAT_ERRORS="${FORMAT_ERRORS}\n    ${file}"
+                    # Auto-fix and re-stage
+                    clang-format -i "$file"
+                    git add "$file"
+                    FORMATTED_FILES="${FORMATTED_FILES}\n    ${file}"
                 fi
             fi
         done
-        if [ -n "$FORMAT_ERRORS" ]; then
-            echo -e "${RED}FAILED${NC}"
-            echo -e "  Files with formatting issues:${FORMAT_ERRORS}"
-            echo "  Run: clang-format -i <file> to fix"
-            FAILED=1
+        if [ -n "$FORMATTED_FILES" ]; then
+            echo -e "${GREEN}OK${NC} (auto-formatted and re-staged)"
+            echo -e "  Formatted files:${FORMATTED_FILES}"
         else
             echo -e "${GREEN}OK${NC}"
         fi

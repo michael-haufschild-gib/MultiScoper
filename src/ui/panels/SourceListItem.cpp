@@ -23,7 +23,7 @@ void SourceListItem::paint(juce::Graphics& g)
     if (!matchesFilter_)
         return;
 
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background
@@ -51,8 +51,8 @@ void SourceListItem::paint(juce::Graphics& g)
     if (isActive_)
     {
         g.setColour(theme.statusActive);
-        float dotSize = 8.0f;
-        g.fillEllipse(activityBounds.getCentreX() - dotSize / 2, activityBounds.getCentreY() - dotSize / 2, dotSize,
+        float const dotSize = 8.0f;
+        g.fillEllipse(activityBounds.getCentreX() - (dotSize / 2), activityBounds.getCentreY() - (dotSize / 2), dotSize,
                       dotSize);
     }
 
@@ -60,8 +60,8 @@ void SourceListItem::paint(juce::Graphics& g)
 
     // Channel badge (right)
     auto badgeBounds = bounds.removeFromRight(50);
-    juce::String badgeText = channelCount_ == 2 ? "Stereo" : "Mono";
-    juce::Colour badgeColor = channelCount_ == 2 ? theme.controlActive : theme.textSecondary;
+    juce::String const badgeText = channelCount_ == 2 ? "Stereo" : "Mono";
+    juce::Colour const badgeColor = channelCount_ == 2 ? theme.controlActive : theme.textSecondary;
 
     g.setColour(badgeColor.withAlpha(0.2f));
     g.fillRoundedRectangle(badgeBounds.reduced(2, 6), 8.0f);
@@ -79,12 +79,12 @@ void SourceListItem::paint(juce::Graphics& g)
 
 void SourceListItem::drawSourceIcon(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     g.setColour(theme.textSecondary);
     g.setFont(juce::FontOptions(16.0f));
 
     // Use emoji/unicode icons based on source type detection
-    juce::String icon = getIconForSource();
+    juce::String const icon = getIconForSource();
     g.drawText(icon, bounds.toNearestInt(), juce::Justification::centred);
 }
 
@@ -110,13 +110,13 @@ juce::String SourceListItem::getIconForSource() const
     return juce::String::charToString(0x1F3B5); // Musical note
 }
 
-void SourceListItem::mouseEnter(const juce::MouseEvent&)
+void SourceListItem::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     hovered_ = true;
     repaint();
 }
 
-void SourceListItem::mouseExit(const juce::MouseEvent&)
+void SourceListItem::mouseExit(const juce::MouseEvent& /*event*/)
 {
     hovered_ = false;
     repaint();
@@ -167,7 +167,7 @@ NoSourceItem::NoSourceItem(IThemeService& themeService) : themeService_(themeSer
 
 void NoSourceItem::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background on hover
@@ -188,13 +188,13 @@ void NoSourceItem::paint(juce::Graphics& g)
                juce::Justification::centredLeft);
 }
 
-void NoSourceItem::mouseEnter(const juce::MouseEvent&)
+void NoSourceItem::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     hovered_ = true;
     repaint();
 }
 
-void NoSourceItem::mouseExit(const juce::MouseEvent&)
+void NoSourceItem::mouseExit(const juce::MouseEvent& /*event*/)
 {
     hovered_ = false;
     repaint();
@@ -259,7 +259,7 @@ SourceSelectorPopup::~SourceSelectorPopup()
 
 void SourceSelectorPopup::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     g.fillAll(theme.backgroundPrimary);
 
     // Border
@@ -290,7 +290,7 @@ void SourceSelectorPopup::layoutContent()
 
     // Layout list items in container
     int listHeight = 0;
-    int itemWidth = bounds.getWidth() - 16; // Account for scrollbar
+    int const itemWidth = bounds.getWidth() - 16; // Account for scrollbar
 
     for (auto& item : sourceItems_)
     {
@@ -350,27 +350,27 @@ void SourceSelectorPopup::applyFilter()
     layoutContent();
 }
 
-void SourceSelectorPopup::sourceAdded(const SourceId&)
+void SourceSelectorPopup::sourceAdded(const SourceId& /*sourceId*/)
 {
-    juce::Component::SafePointer<SourceSelectorPopup> safeThis(this);
+    juce::Component::SafePointer<SourceSelectorPopup> const safeThis(this);
     juce::MessageManager::callAsync([safeThis]() {
         if (safeThis != nullptr)
             safeThis->refreshSources();
     });
 }
 
-void SourceSelectorPopup::sourceRemoved(const SourceId&)
+void SourceSelectorPopup::sourceRemoved(const SourceId& /*sourceId*/)
 {
-    juce::Component::SafePointer<SourceSelectorPopup> safeThis(this);
+    juce::Component::SafePointer<SourceSelectorPopup> const safeThis(this);
     juce::MessageManager::callAsync([safeThis]() {
         if (safeThis != nullptr)
             safeThis->refreshSources();
     });
 }
 
-void SourceSelectorPopup::sourceUpdated(const SourceId&)
+void SourceSelectorPopup::sourceUpdated(const SourceId& /*sourceId*/)
 {
-    juce::Component::SafePointer<SourceSelectorPopup> safeThis(this);
+    juce::Component::SafePointer<SourceSelectorPopup> const safeThis(this);
     juce::MessageManager::callAsync([safeThis]() {
         if (safeThis != nullptr)
             safeThis->refreshSources();
@@ -391,10 +391,10 @@ void SourceSelectorPopup::updateThemeColors(const ColorTheme& newTheme)
 
 int SourceSelectorPopup::getPreferredHeight() const
 {
-    int numItems = static_cast<int>(sourceItems_.size());
+    int const numItems = static_cast<int>(sourceItems_.size());
     int listHeight = numItems * SourceListItem::ITEM_HEIGHT;
-    int minListHeight = 100;
-    int maxListHeight = 300;
+    int const minListHeight = 100;
+    int const maxListHeight = 300;
 
     listHeight = std::max(minListHeight, std::min(listHeight, maxListHeight));
 

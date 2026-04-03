@@ -138,8 +138,8 @@ void CrosshairOverlay::paintTooltip(juce::Graphics& g)
 
 juce::Rectangle<int> CrosshairOverlay::calculateTooltipBounds() const
 {
-    int tooltipWidth = TOOLTIP_LABEL_WIDTH + TOOLTIP_VALUE_WIDTH + 2 * TOOLTIP_PADDING;
-    int tooltipHeight = 2 * TOOLTIP_ROW_HEIGHT + 2 * TOOLTIP_PADDING;
+    int const tooltipWidth = TOOLTIP_LABEL_WIDTH + TOOLTIP_VALUE_WIDTH + (2 * TOOLTIP_PADDING);
+    int const tooltipHeight = (2 * TOOLTIP_ROW_HEIGHT) + (2 * TOOLTIP_PADDING);
 
     auto bounds = getLocalBounds();
 

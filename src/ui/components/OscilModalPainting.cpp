@@ -11,7 +11,7 @@ namespace oscil
 
 void OscilModal::paint(juce::Graphics& g)
 {
-    float alpha = showSpring_.position;
+    float const alpha = showSpring_.position;
     if (alpha < 0.01f)
         return;
 
@@ -21,16 +21,16 @@ void OscilModal::paint(juce::Graphics& g)
 
 void OscilModal::paintBackdrop(juce::Graphics& g)
 {
-    float alpha = showSpring_.position * 0.5f;
+    float const alpha = showSpring_.position * 0.5f;
     g.setColour(juce::Colours::black.withAlpha(alpha));
     g.fillRect(getLocalBounds());
 }
 
 void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    float alpha = showSpring_.position;
+    float const alpha = showSpring_.position;
 
-    juce::DropShadow shadow(juce::Colours::black.withAlpha(0.3f * alpha), 20, {0, 4});
+    juce::DropShadow const shadow(juce::Colours::black.withAlpha(0.3f * alpha), 20, {0, 4});
     shadow.drawForRectangle(g, bounds);
 
     g.setColour(getTheme().backgroundPrimary.withAlpha(alpha));
@@ -48,7 +48,7 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
 
 void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    float alpha = showSpring_.position;
+    float const alpha = showSpring_.position;
 
     auto textBounds = bounds.reduced(MODAL_PADDING, 0);
     if (showCloseButton_)
@@ -62,7 +62,7 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
     {
         auto closeBounds = getCloseButtonBounds().toFloat();
 
-        float hoverAlpha = closeHoverSpring_.position;
+        float const hoverAlpha = closeHoverSpring_.position;
         if (hoverAlpha > 0.01f)
         {
             g.setColour(getTheme().backgroundSecondary.withAlpha(alpha * hoverAlpha));
@@ -71,12 +71,12 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
 
         auto iconColor = getTheme().textSecondary.interpolatedWith(getTheme().textPrimary, hoverAlpha);
         g.setColour(iconColor.withAlpha(alpha));
-        float iconSize = 14.0f;
+        float const iconSize = 14.0f;
         auto iconPath = ListItemIcons::createCloseIcon(iconSize);
 
         auto iconBounds = iconPath.getBounds();
-        float offsetX = closeBounds.getCentreX() - iconBounds.getCentreX();
-        float offsetY = closeBounds.getCentreY() - iconBounds.getCentreY();
+        float const offsetX = closeBounds.getCentreX() - iconBounds.getCentreX();
+        float const offsetY = closeBounds.getCentreY() - iconBounds.getCentreY();
         iconPath.applyTransform(juce::AffineTransform::translation(offsetX, offsetY));
 
         g.fillPath(iconPath);
@@ -90,7 +90,8 @@ juce::Rectangle<int> OscilModal::getModalBounds() const
 {
     auto parentBounds = getLocalBounds();
 
-    int width = 0, height = 0;
+    int width = 0;
+    int height = 0;
 
     if (customWidth_ > 0 && customHeight_ > 0)
     {
@@ -117,11 +118,11 @@ juce::Rectangle<int> OscilModal::getModalBounds() const
                 break;
         }
 
-        int titleHeight = title_.isNotEmpty() ? TITLE_BAR_HEIGHT : 0;
-        int contentHeight = content_ ? contentPreferredHeight_ : 200;
-        height = titleHeight + contentHeight + MODAL_PADDING * 2;
+        int const titleHeight = title_.isNotEmpty() ? TITLE_BAR_HEIGHT : 0;
+        int const contentHeight = content_ ? contentPreferredHeight_ : 200;
+        height = titleHeight + contentHeight + (MODAL_PADDING * 2);
 
-        int maxHeight = parentBounds.getHeight() - MODAL_MARGIN * 2;
+        int const maxHeight = parentBounds.getHeight() - (MODAL_MARGIN * 2);
         height = std::min(height, maxHeight);
     }
 
@@ -151,7 +152,7 @@ juce::Rectangle<int> OscilModal::getCloseButtonBounds() const
 {
     auto titleBounds = getTitleBarBounds();
     return {titleBounds.getRight() - MODAL_PADDING - CLOSE_BUTTON_SIZE,
-            titleBounds.getCentreY() - CLOSE_BUTTON_SIZE / 2, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE};
+            titleBounds.getCentreY() - (CLOSE_BUTTON_SIZE / 2), CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE};
 }
 
 } // namespace oscil

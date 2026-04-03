@@ -80,16 +80,16 @@ void WaveformPass::prepareRender(const WaveformRenderData& /*data*/, WaveformRen
 
 WaveformPass::ViewportRect WaveformPass::computePaneViewport(const juce::Rectangle<float>& bounds) const
 {
-    float scale = static_cast<float>(context_->getRenderingScale());
+    auto const scale = static_cast<float>(context_->getRenderingScale());
     auto* target = context_->getTargetComponent();
     if (!target)
-        return {0, 0, 1, 1};
-    float logicalHeight = static_cast<float>(target->getHeight());
+        return {.x = 0, .y = 0, .w = 1, .h = 1};
+    auto const logicalHeight = static_cast<float>(target->getHeight());
 
-    return {std::max(0, static_cast<int>(bounds.getX() * scale)),
-            std::max(0, static_cast<int>((logicalHeight - (bounds.getY() + bounds.getHeight())) * scale)),
-            std::max(1, static_cast<int>(bounds.getWidth() * scale)),
-            std::max(1, static_cast<int>(bounds.getHeight() * scale))};
+    return {.x = std::max(0, static_cast<int>(bounds.getX() * scale)),
+            .y = std::max(0, static_cast<int>((logicalHeight - (bounds.getY() + bounds.getHeight())) * scale)),
+            .w = std::max(1, static_cast<int>(bounds.getWidth() * scale)),
+            .h = std::max(1, static_cast<int>(bounds.getHeight() * scale))};
 }
 
 WaveformShader* WaveformPass::resolveShader(const juce::String& shaderId)

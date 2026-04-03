@@ -15,18 +15,9 @@ OscillatorId OscillatorId::generate() { return OscillatorId{juce::Uuid().toStrin
 
 PaneId PaneId::generate() { return PaneId{juce::Uuid().toString()}; }
 
-Oscillator::Oscillator()
-    : id_(OscillatorId::generate())
-    , state_(OscillatorState::NO_SOURCE)
-    , shaderId_("basic")
-    , visualPresetId_("default")
-{
-}
+Oscillator::Oscillator() : id_(OscillatorId::generate()), shaderId_("basic"), visualPresetId_("default") {}
 
-Oscillator::Oscillator(const juce::ValueTree& state) : id_(OscillatorId::generate()), state_(OscillatorState::NO_SOURCE)
-{
-    fromValueTree(state);
-}
+Oscillator::Oscillator(const juce::ValueTree& state) : id_(OscillatorId::generate()) { fromValueTree(state); }
 
 juce::ValueTree Oscillator::toValueTree() const
 {
@@ -94,7 +85,7 @@ void Oscillator::fromValueTree(const juce::ValueTree& state)
     if (!state.hasType(StateIds::Oscillator))
         return;
 
-    int loadedSchemaVersion = state.getProperty(StateIds::SchemaVersion, 1);
+    int const loadedSchemaVersion = state.getProperty(StateIds::SchemaVersion, 1);
     id_.id = state.getProperty(StateIds::Id, id_.id);
     sourceId_.id = state.getProperty(StateIds::SourceId, "");
     state_ = migrateOscillatorState(state, loadedSchemaVersion, sourceId_);

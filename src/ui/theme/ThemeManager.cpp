@@ -35,7 +35,7 @@ void ColorTheme::initializeDefaultWaveformColors()
 
     while (waveformColors.size() < 64)
     {
-        float hue = static_cast<float>(waveformColors.size()) / 64.0f;
+        float const hue = static_cast<float>(waveformColors.size()) / 64.0f;
         waveformColors.push_back(juce::Colour::fromHSV(hue, 0.8f, 1.0f, 1.0f));
     }
 }
@@ -47,7 +47,7 @@ ThemeManager::ThemeManager()
     initializeSystemThemes();
     loadThemes();
 
-    if (themes_.find("Dark Professional") != themes_.end())
+    if (themes_.contains("Dark Professional"))
     {
         currentTheme_ = themes_["Dark Professional"];
     }
@@ -111,7 +111,7 @@ void ThemeManager::flushPendingSaves()
     juce::Thread::launch([filesToWrite]() {
         for (const auto& [path, content] : filesToWrite)
         {
-            juce::File file(path);
+            juce::File const file(path);
             file.getParentDirectory().createDirectory();
             file.replaceWithText(content);
         }
@@ -169,7 +169,7 @@ bool ThemeManager::isValidThemeName(const juce::String& name)
 
 bool ThemeManager::createTheme(const juce::String& name, const juce::String& sourceTheme)
 {
-    if (!isValidThemeName(name) || themes_.find(name) != themes_.end())
+    if (!isValidThemeName(name) || themes_.contains(name))
         return false;
 
     ColorTheme newTheme;
@@ -255,7 +255,7 @@ bool ThemeManager::cloneTheme(const juce::String& sourceName, const juce::String
     if (it == themes_.end())
         return false;
 
-    if (themes_.find(newName) != themes_.end())
+    if (themes_.contains(newName))
         return false;
 
     ColorTheme clone = it->second;
@@ -279,7 +279,7 @@ bool ThemeManager::renameTheme(const juce::String& oldName, const juce::String& 
     if (it == themes_.end() || it->second.isSystemTheme)
         return false;
 
-    if (themes_.find(newName) != themes_.end())
+    if (themes_.contains(newName))
         return false;
 
     auto theme = std::move(it->second);

@@ -12,8 +12,8 @@ namespace oscil
 
 void RenderEngine::registerWaveform(int waveformId)
 {
-    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
-    if (waveformStates_.find(waveformId) == waveformStates_.end())
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
+    if (!waveformStates_.contains(waveformId))
     {
         WaveformRenderState state;
         state.waveformId = waveformId;
@@ -24,7 +24,7 @@ void RenderEngine::registerWaveform(int waveformId)
 
 void RenderEngine::unregisterWaveform(int waveformId)
 {
-    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
     if (it != waveformStates_.end())
     {
@@ -37,7 +37,7 @@ void RenderEngine::unregisterWaveform(int waveformId)
 
 std::optional<VisualConfiguration> RenderEngine::getWaveformConfig(int waveformId)
 {
-    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
     if (it != waveformStates_.end())
         return it->second.visualConfig;
@@ -46,13 +46,13 @@ std::optional<VisualConfiguration> RenderEngine::getWaveformConfig(int waveformI
 
 bool RenderEngine::hasWaveform(int waveformId)
 {
-    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
-    return waveformStates_.find(waveformId) != waveformStates_.end();
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
+    return waveformStates_.contains(waveformId);
 }
 
 void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& config)
 {
-    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
     if (it != waveformStates_.end())
     {
@@ -75,7 +75,7 @@ void RenderEngine::setWaveformConfig(int waveformId, const VisualConfiguration& 
 
 void RenderEngine::clearAllWaveforms()
 {
-    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
     if (context_)
     {
         for (auto& pair : waveformStates_)
@@ -91,18 +91,18 @@ void RenderEngine::syncWaveforms(const std::unordered_set<int>& activeIds)
     if (!context_)
         return;
 
-    juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
 
     std::vector<int> toRemove;
     for (const auto& pair : waveformStates_)
     {
-        if (activeIds.find(pair.first) == activeIds.end())
+        if (!activeIds.contains(pair.first))
         {
             toRemove.push_back(pair.first);
         }
     }
 
-    for (int id : toRemove)
+    for (int const id : toRemove)
     {
         // Inline unregisterWaveform to avoid recursive lock
         auto it = waveformStates_.find(id);

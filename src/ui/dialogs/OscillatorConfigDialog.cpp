@@ -134,7 +134,7 @@ void OscillatorConfigDialog::setupComponents()
     themeChanged(themeService_.getCurrentTheme());
 }
 
-void OscillatorConfigDialog::paint(juce::Graphics&)
+void OscillatorConfigDialog::paint(juce::Graphics& /*g*/)
 {
     // No custom painting - OscilModal handles the window frame
 }
@@ -222,7 +222,7 @@ void OscillatorConfigDialog::updateFromOscillator(const Oscillator& oscillator)
     visualOverrides_ = oscillator.getVisualOverrides().createCopy();
 
     // Load base config from preset
-    VisualConfiguration config = VisualConfiguration::getPreset(visualPresetId_);
+    VisualConfiguration const config = VisualConfiguration::getPreset(visualPresetId_);
 
     // Update controls
     nameEditor_->setText(name_, false);
@@ -332,7 +332,7 @@ void OscillatorConfigDialog::handleOpacityChange()
 
 void OscillatorConfigDialog::handlePaneChange()
 {
-    PaneId selectedPaneId = paneSelectorComponent_->getSelectedPaneId();
+    PaneId const selectedPaneId = paneSelectorComponent_->getSelectedPaneId();
     if (selectedPaneId.isValid() && selectedPaneId != paneId_)
     {
         paneId_ = selectedPaneId;
@@ -342,7 +342,7 @@ void OscillatorConfigDialog::handlePaneChange()
 
 void OscillatorConfigDialog::handleVisualPresetChange()
 {
-    int index = visualPresetDropdown_->getSelectedIndex();
+    int const index = visualPresetDropdown_->getSelectedIndex();
     auto availablePresets = VisualConfiguration::getAvailablePresets();
     if (index >= 0 && static_cast<size_t>(index) < availablePresets.size())
     {

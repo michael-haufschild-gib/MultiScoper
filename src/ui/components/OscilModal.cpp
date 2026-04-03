@@ -192,7 +192,7 @@ void OscilModal::mouseMove(const juce::MouseEvent& e)
     if (!showCloseButton_)
         return;
 
-    bool wasHovering = isHoveringClose_;
+    bool const wasHovering = isHoveringClose_;
     isHoveringClose_ = getCloseButtonBounds().contains(e.getPosition());
 
     if (isHoveringClose_ != wasHovering)
@@ -202,7 +202,7 @@ void OscilModal::mouseMove(const juce::MouseEvent& e)
     }
 }
 
-void OscilModal::mouseExit(const juce::MouseEvent&)
+void OscilModal::mouseExit(const juce::MouseEvent& /*event*/)
 {
     if (isHoveringClose_)
     {
@@ -246,9 +246,9 @@ bool OscilModal::keyPressed(const juce::KeyPress& key)
             return false;
 
         auto* currentFocus = juce::Component::getCurrentlyFocusedComponent();
-        int currentIndex = focusableChildren.indexOf(currentFocus);
+        int const currentIndex = focusableChildren.indexOf(currentFocus);
 
-        int nextIndex;
+        int nextIndex = 0;
         if (key.getModifiers().isShiftDown())
             nextIndex = (currentIndex <= 0) ? focusableChildren.size() - 1 : currentIndex - 1;
         else
@@ -290,7 +290,7 @@ void OscilModal::globalFocusChanged(juce::Component* focusedComponent)
     }
 }
 
-void OscilModal::focusGained(FocusChangeType)
+void OscilModal::focusGained(FocusChangeType /*cause*/)
 {
     if (content_)
     {
@@ -310,7 +310,7 @@ void OscilModal::timerCallback()
 {
     updateAnimations();
 
-    bool isSettled = showSpring_.isSettled();
+    bool const isSettled = showSpring_.isSettled();
 
     if (isSettled)
     {
@@ -337,7 +337,7 @@ void OscilModal::timerCallback()
 
 void OscilModal::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     showSpring_.update(dt);
     closeHoverSpring_.update(dt);
 

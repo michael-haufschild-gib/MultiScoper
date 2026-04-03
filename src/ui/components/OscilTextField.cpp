@@ -81,7 +81,7 @@ void OscilTextField::setupComponents()
     internalSlider_.setRange(minValue_, maxValue_, step_);
     internalSlider_.setValue(numValue_);
     internalSlider_.onValueChange = [this] {
-        double newValue = internalSlider_.getValue();
+        double const newValue = internalSlider_.getValue();
         if (std::abs(newValue - numValue_) > 0.0001)
         {
             setNumericValue(newValue, true);
@@ -99,7 +99,7 @@ void OscilTextField::setVariant(TextFieldVariant variant)
     variant_ = variant;
 
     // Show/hide stepper buttons
-    bool showSteppers = variant == TextFieldVariant::Number;
+    bool const showSteppers = variant == TextFieldVariant::Number;
     decrementButton_->setVisible(showSteppers);
     incrementButton_->setVisible(showSteppers);
 
@@ -255,7 +255,7 @@ void OscilTextField::resized()
 
 void OscilTextField::validateAndUpdate()
 {
-    juce::String text = editor_->getText();
+    juce::String const text = editor_->getText();
 
     // Run validation if configured
     if (validator_)
@@ -265,10 +265,8 @@ void OscilTextField::validateAndUpdate()
             // Validator returned false - keep previous error or set generic one
             return;
         }
-        else
-        {
-            clearError();
-        }
+
+        clearError();
     }
 
     // For number variant, parse and validate
@@ -279,7 +277,7 @@ void OscilTextField::validateAndUpdate()
         if (suffix_.isNotEmpty() && text.endsWith(suffix_))
             numericText = text.dropLastCharacters(suffix_.length()).trim();
 
-        double parsed = numericText.getDoubleValue();
+        double const parsed = numericText.getDoubleValue();
         if (std::abs(parsed - numValue_) > 0.0001)
         {
             numValue_ = parsed;
@@ -298,15 +296,15 @@ void OscilTextField::incrementValue() { setNumericValue(numValue_ + step_, true)
 
 void OscilTextField::decrementValue() { setNumericValue(numValue_ - step_, true); }
 
-void OscilTextField::applyNumericConstraints(double& value)
+void OscilTextField::applyNumericConstraints(double& value) const
 {
     value = juce::jlimit(minValue_, maxValue_, value);
 
     // Round to step
     if (step_ > 0)
     {
-        double steps = std::round((value - minValue_) / step_);
-        value = minValue_ + steps * step_;
+        double const steps = std::round((value - minValue_) / step_);
+        value = minValue_ + (steps * step_);
     }
 }
 
@@ -316,7 +314,7 @@ void OscilTextField::notifyTextChanged()
         onTextChanged(editor_->getText());
 }
 
-void OscilTextField::notifyValueChanged()
+void OscilTextField::notifyValueChanged() const
 {
     if (onValueChanged)
         onValueChanged(numValue_);

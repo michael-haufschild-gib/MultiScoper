@@ -49,7 +49,7 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
     }
 
     // Use physical (scaled) dimensions for internal state and FBOs
-    double scale = context.getRenderingScale();
+    double const scale = context.getRenderingScale();
     currentWidth_ = static_cast<int>(targetComponent->getWidth() * scale);
     currentHeight_ = static_cast<int>(targetComponent->getHeight() * scale);
 
@@ -93,7 +93,7 @@ void RenderEngine::shutdown()
 
     // Release all waveform states
     {
-        juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+        juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
         for (auto& pair : waveformStates_)
         {
             pair.second.release(*context_);
@@ -131,7 +131,7 @@ void RenderEngine::resize(int width, int height)
 
     // Resize history FBOs for waveforms with trails
     {
-        juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+        juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
         for (auto& [key, state] : waveformStates_)
         {
             if (state.trailsEnabled)
@@ -274,7 +274,7 @@ void RenderEngine::executeComposite(Framebuffer* source, const VisualConfigurati
     if (shader)
     {
         shader->use();
-        context_->extensions.glUniform1i(bootstrapper_->getCompositeTextureLoc(), 0);
+        juce::OpenGLExtensionFunctions::glUniform1i(bootstrapper_->getCompositeTextureLoc(), 0);
 
         // Set blend mode based on config
         switch (config.compositeBlendMode)
@@ -311,13 +311,13 @@ void RenderEngine::blitToScreen()
         return;
 
     // Bind default framebuffer
-    context_->extensions.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    juce::OpenGLExtensionFunctions::glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     auto* targetComponent = context_->getTargetComponent();
     if (!targetComponent)
         return;
 
-    float desktopScale = static_cast<float>(context_->getRenderingScale());
+    auto const desktopScale = static_cast<float>(context_->getRenderingScale());
     auto width = static_cast<GLsizei>(static_cast<float>(targetComponent->getWidth()) * desktopScale);
     auto height = static_cast<GLsizei>(static_cast<float>(targetComponent->getHeight()) * desktopScale);
     glViewport(0, 0, width, height);
@@ -333,7 +333,7 @@ void RenderEngine::blitToScreen()
     {
         shader->use();
         sceneFBO->bindTexture(0);
-        context_->extensions.glUniform1i(bootstrapper_->getBlitTextureLoc(), 0);
+        juce::OpenGLExtensionFunctions::glUniform1i(bootstrapper_->getBlitTextureLoc(), 0);
 
         effectPipeline_->getFramebufferPool()->renderFullscreenQuad();
     }

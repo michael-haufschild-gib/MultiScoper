@@ -77,7 +77,7 @@ void AddOscillatorDialog::setupComponents()
     setSize(getPreferredWidth(), getPreferredHeight());
 }
 
-void AddOscillatorDialog::paint(juce::Graphics&)
+void AddOscillatorDialog::paint(juce::Graphics& /*g*/)
 {
     // No custom painting - OscilModal handles backdrop/frame
     // Child components handle their own painting
@@ -123,7 +123,7 @@ void AddOscillatorDialog::resized()
 
     // Footer buttons at bottom
     auto footerRow = bounds.removeFromBottom(BUTTON_HEIGHT);
-    int buttonWidth = (footerRow.getWidth() - 8) / 2;
+    int const buttonWidth = (footerRow.getWidth() - 8) / 2;
     cancelButton_->setBounds(footerRow.removeFromLeft(buttonWidth));
     footerRow.removeFromLeft(8);
     okButton_->setBounds(footerRow);
@@ -180,7 +180,7 @@ void AddOscillatorDialog::populateSourceDropdown()
 
     for (const auto& source : sources_)
     {
-        juce::String label = source.name.isEmpty() ? source.sourceId.id : source.name;
+        juce::String const label = source.name.isEmpty() ? source.sourceId.id : source.name;
         sourceDropdown_->addItem(label, source.sourceId.id);
     }
 
@@ -206,13 +206,13 @@ void AddOscillatorDialog::populateVisualPresetDropdown()
 void AddOscillatorDialog::selectRandomColor()
 {
     auto& random = juce::Random::getSystemRandom();
-    int colorIndex = random.nextInt(NUM_COLOR_SWATCHES);
+    int const colorIndex = random.nextInt(NUM_COLOR_SWATCHES);
     colorSwatches_->setSelectedIndex(colorIndex, false);
 }
 
 void AddOscillatorDialog::updateNameFromSource()
 {
-    int selectedIndex = sourceDropdown_->getSelectedIndex();
+    int const selectedIndex = sourceDropdown_->getSelectedIndex();
     if (selectedIndex >= 0 && static_cast<size_t>(selectedIndex) < sources_.size())
     {
         const auto& source = sources_[static_cast<size_t>(selectedIndex)];
@@ -233,7 +233,7 @@ AddOscillatorDialog::Result AddOscillatorDialog::buildResult() const
 {
     Result result;
 
-    int sourceIndex = sourceDropdown_->getSelectedIndex();
+    int const sourceIndex = sourceDropdown_->getSelectedIndex();
     result.sourceId = sources_[static_cast<size_t>(sourceIndex)].sourceId;
 
     result.createNewPane = paneSelector_->isNewPaneSelected();
@@ -254,7 +254,7 @@ AddOscillatorDialog::Result AddOscillatorDialog::buildResult() const
     else
         result.color = WaveformColorPalette::getColor(0);
 
-    int presetIndex = visualPresetDropdown_->getSelectedIndex();
+    int const presetIndex = visualPresetDropdown_->getSelectedIndex();
     auto availablePresets = VisualConfiguration::getAvailablePresets();
     if (presetIndex >= 0 && static_cast<size_t>(presetIndex) < availablePresets.size())
         result.visualPresetId = availablePresets[static_cast<size_t>(presetIndex)].first;
@@ -302,7 +302,7 @@ void AddOscillatorDialog::clearError()
 bool AddOscillatorDialog::validateInput()
 {
     // Check source selection
-    int sourceIndex = sourceDropdown_->getSelectedIndex();
+    int const sourceIndex = sourceDropdown_->getSelectedIndex();
     if (sourceIndex < 0 || static_cast<size_t>(sourceIndex) >= sources_.size())
     {
         showError("Please select a source.");

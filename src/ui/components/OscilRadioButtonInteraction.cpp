@@ -8,7 +8,7 @@
 namespace oscil
 {
 
-void OscilRadioButton::mouseDown(const juce::MouseEvent&)
+void OscilRadioButton::mouseDown(const juce::MouseEvent& /*event*/)
 {
     if (enabled_)
         isPressed_ = true;
@@ -22,7 +22,7 @@ void OscilRadioButton::mouseUp(const juce::MouseEvent& e)
         {
             if (parentGroup_)
             {
-                int myIndex = findOwnIndexInGroup();
+                int const myIndex = findOwnIndexInGroup();
                 if (myIndex >= 0)
                     parentGroup_->setSelectedIndex(myIndex);
             }
@@ -35,7 +35,7 @@ void OscilRadioButton::mouseUp(const juce::MouseEvent& e)
     isPressed_ = false;
 }
 
-void OscilRadioButton::mouseEnter(const juce::MouseEvent&)
+void OscilRadioButton::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -54,7 +54,7 @@ void OscilRadioButton::mouseEnter(const juce::MouseEvent&)
     }
 }
 
-void OscilRadioButton::mouseExit(const juce::MouseEvent&)
+void OscilRadioButton::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
 
@@ -78,7 +78,7 @@ bool OscilRadioButton::keyPressed(const juce::KeyPress& key)
         {
             if (parentGroup_)
             {
-                int myIndex = findOwnIndexInGroup();
+                int const myIndex = findOwnIndexInGroup();
                 if (myIndex >= 0)
                     parentGroup_->setSelectedIndex(myIndex);
             }
@@ -105,13 +105,13 @@ int OscilRadioButton::findOwnIndexInGroup() const
     return -1;
 }
 
-void OscilRadioButton::focusGained(FocusChangeType)
+void OscilRadioButton::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilRadioButton::focusLost(FocusChangeType)
+void OscilRadioButton::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -129,7 +129,7 @@ void OscilRadioButton::timerCallback()
 
 void OscilRadioButton::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     selectionSpring_.update(dt);
     hoverSpring_.update(dt);
 }

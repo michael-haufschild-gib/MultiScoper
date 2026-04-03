@@ -188,7 +188,7 @@ void ThemeEditorComponent::handleApplyTheme()
     if (selectedThemeName_.isEmpty())
         return;
 
-    bool isSystem = themeService_.isSystemTheme(selectedThemeName_);
+    bool const isSystem = themeService_.isSystemTheme(selectedThemeName_);
 
     if (!isSystem)
     {

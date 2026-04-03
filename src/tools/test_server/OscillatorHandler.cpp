@@ -12,6 +12,7 @@
 #include "plugin/PluginProcessor.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace oscil
 {
@@ -24,15 +25,15 @@ OscillatorId resolveOscillatorId(const std::string& idStr, int index, const std:
     OscillatorId targetId;
     if (!idStr.empty())
         targetId.id = juce::String(idStr);
-    else if (index >= 0 && index < static_cast<int>(oscillators.size()))
+    else if (index >= 0 && std::cmp_less(index, oscillators.size()))
         targetId = oscillators[static_cast<size_t>(index)].getId();
     return targetId;
 }
 
 nlohmann::json serializeOscillatorList(std::vector<Oscillator>& oscillators)
 {
-    std::sort(oscillators.begin(), oscillators.end(),
-              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
+    std::ranges::sort(oscillators,
+                      [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
     nlohmann::json oscList = nlohmann::json::array();
     for (const auto& osc : oscillators)
@@ -71,7 +72,7 @@ nlohmann::json OscillatorHandler::updateOscillatorOnMessageThread(const std::str
         }
         if (visible >= 0)
         {
-            bool isVisible = visible != 0;
+            bool const isVisible = visible != 0;
             osc.setVisible(isVisible);
             if (auto* ctrl = editor_.getOscillatorPanelController())
                 ctrl->oscillatorVisibilityChanged(targetId, isVisible);
@@ -101,7 +102,7 @@ void OscillatorHandler::handleAddOscillator(const httplib::Request& /*req*/, htt
         nlohmann::json response;
 
         auto& state = editor_.getProcessor().getState();
-        int countBefore = static_cast<int>(state.getOscillators().size());
+        int const countBefore = static_cast<int>(state.getOscillators().size());
 
         // Simulate clicking the Add button
         // We need to call the same method the button would call
@@ -120,7 +121,7 @@ void OscillatorHandler::handleAddOscillator(const httplib::Request& /*req*/, htt
         }
 
         // Get the first pane
-        PaneId targetPaneId = layoutManager.getPanes()[0].getId();
+        PaneId const targetPaneId = layoutManager.getPanes()[0].getId();
 
         // Create oscillator
         Oscillator osc;
@@ -130,7 +131,7 @@ void OscillatorHandler::handleAddOscillator(const httplib::Request& /*req*/, htt
 
         state.addOscillator(osc);
 
-        int countAfter = static_cast<int>(state.getOscillators().size());
+        int const countAfter = static_cast<int>(state.getOscillators().size());
 
         response["status"] = "ok";
         response["oscillatorCount"] = countAfter;
@@ -151,8 +152,8 @@ void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, http
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        std::string oscillatorId = body.value("id", "");
-        int index = body.value("index", -1);
+        std::string const oscillatorId = body.value("id", "");
+        int const index = body.value("index", -1);
 
         auto result = runOnMessageThread([this, oscillatorId, index]() -> nlohmann::json {
             nlohmann::json response;
@@ -165,7 +166,7 @@ void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, http
             {
                 targetId.id = juce::String(oscillatorId);
             }
-            else if (index >= 0 && index < static_cast<int>(oscillators.size()))
+            else if (index >= 0 && std::cmp_less(index, oscillators.size()))
             {
                 targetId = oscillators[static_cast<size_t>(index)].getId();
             }
@@ -175,9 +176,9 @@ void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, http
                 return response;
             }
 
-            int countBefore = static_cast<int>(oscillators.size());
+            int const countBefore = static_cast<int>(oscillators.size());
             state.removeOscillator(targetId);
-            int countAfter = static_cast<int>(state.getOscillators().size());
+            int const countAfter = static_cast<int>(state.getOscillators().size());
 
             response["status"] = "ok";
             response["oscillatorCount"] = countAfter;
@@ -205,10 +206,10 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        int oscillatorIndex = body.value("index", -1);
-        std::string oscillatorIdStr = body.value("id", "");
-        int processingMode = body.value("processingMode", -1);
-        int visible = body.value("visible", -1);
+        int const oscillatorIndex = body.value("index", -1);
+        std::string const oscillatorIdStr = body.value("id", "");
+        int const processingMode = body.value("processingMode", -1);
+        int const visible = body.value("visible", -1);
 
         if (oscillatorIndex < 0 && oscillatorIdStr.empty())
         {
@@ -265,8 +266,8 @@ void OscillatorHandler::handleReorderOscillator(const httplib::Request& req, htt
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        int fromIndex = body.value("fromIndex", -1);
-        int toIndex = body.value("toIndex", -1);
+        int const fromIndex = body.value("fromIndex", -1);
+        int const toIndex = body.value("toIndex", -1);
 
         if (fromIndex < 0 || toIndex < 0)
         {
@@ -282,8 +283,8 @@ void OscillatorHandler::handleReorderOscillator(const httplib::Request& req, htt
             auto& state = editor_.getProcessor().getState();
             auto oscillatorsBefore = state.getOscillators();
 
-            if (fromIndex >= static_cast<int>(oscillatorsBefore.size()) ||
-                toIndex >= static_cast<int>(oscillatorsBefore.size()))
+            if (std::cmp_greater_equal(fromIndex, oscillatorsBefore.size()) ||
+                std::cmp_greater_equal(toIndex, oscillatorsBefore.size()))
             {
                 response["error"] = "Index out of range";
                 return response;

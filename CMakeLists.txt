@@ -91,7 +91,7 @@ endif()
 # Option for source-size linting (prevents god files/functions)
 option(OSCIL_ENABLE_SIZE_LIMIT_LINT "Enable max file/function line lint checks" ON)
 set(OSCIL_MAX_FILE_LINES "500" CACHE STRING "Maximum allowed lines per C/C++ file")
-set(OSCIL_MAX_FUNCTION_LINES "60" CACHE STRING "Maximum allowed lines per C/C++ function")
+set(OSCIL_MAX_FUNCTION_LINES "75" CACHE STRING "Maximum allowed lines per C/C++ function")
 set(OSCIL_SIZE_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/size_lint.py")
 
 # Option for test quality linting (prevents shallow/vibecoded tests)

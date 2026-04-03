@@ -52,7 +52,7 @@ void PaneContainerComponent::itemDropped(const SourceDetails& dragSourceDetails)
     movedPaneId.id = dragSourceDetails.description.toString();
 
     // Find which PaneComponent we dropped on
-    PaneComponent* targetPane = findPaneAt(dragSourceDetails.localPosition);
+    PaneComponent const* targetPane = findPaneAt(dragSourceDetails.localPosition);
     if (targetPane != nullptr && targetPane->getPaneId().id != movedPaneId.id)
     {
         if (paneDropCallback_)
@@ -63,7 +63,7 @@ void PaneContainerComponent::itemDropped(const SourceDetails& dragSourceDetails)
     else if (!targetPane && columnCount_ > 1 && emptyColumnDropCallback_)
     {
         // Dropped on empty column area - calculate target column from X position
-        int componentWidth = getWidth();
+        int const componentWidth = getWidth();
         if (componentWidth > 0)
         {
             int targetColumn = (dragSourceDetails.localPosition.x * columnCount_) / componentWidth;
@@ -111,7 +111,7 @@ void PaneContainerComponent::paint(juce::Graphics& g)
     }
     else if (highlightedColumn_ >= 0 && columnCount_ > 1)
     {
-        int colWidth = getWidth() / columnCount_;
+        int const colWidth = getWidth() / columnCount_;
         auto colBounds = juce::Rectangle<float>(static_cast<float>(highlightedColumn_ * colWidth), 0.0f,
                                                 static_cast<float>(colWidth), static_cast<float>(getHeight()));
         g.setColour(juce::Colour(0x1100AAFF));
@@ -121,8 +121,8 @@ void PaneContainerComponent::paint(juce::Graphics& g)
 
 void PaneContainerComponent::updateDropTarget(const SourceDetails& dragSourceDetails)
 {
-    PaneId previousHighlight = highlightedPaneId_;
-    int previousColumn = highlightedColumn_;
+    PaneId const previousHighlight = highlightedPaneId_;
+    int const previousColumn = highlightedColumn_;
 
     highlightedPaneId_ = PaneId::invalid();
     highlightedColumn_ = -1;
@@ -139,7 +139,7 @@ void PaneContainerComponent::updateDropTarget(const SourceDetails& dragSourceDet
     }
     else if (columnCount_ > 1)
     {
-        int componentWidth = getWidth();
+        int const componentWidth = getWidth();
         if (componentWidth > 0)
         {
             highlightedColumn_ = (dragSourceDetails.localPosition.x * columnCount_) / componentWidth;

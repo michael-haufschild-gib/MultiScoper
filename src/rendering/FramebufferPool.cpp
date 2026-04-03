@@ -118,8 +118,7 @@ void FramebufferPool::resize(juce::OpenGLContext& context, int width, int height
 
 bool FramebufferPool::createFullscreenQuad(juce::OpenGLContext& context)
 {
-    auto& ext = context.extensions;
-
+    juce::ignoreUnused(context);
     // Fullscreen quad vertices: position (x,y) and texcoord (u,v)
     // Covers NDC space [-1, 1] for position, [0, 1] for texcoords
     static const float quadVertices[] = {
@@ -134,7 +133,7 @@ bool FramebufferPool::createFullscreenQuad(juce::OpenGLContext& context)
     };
 
     // Create VAO
-    ext.glGenVertexArrays(1, &quadVAO_);
+    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &quadVAO_);
     if (quadVAO_ == 0)
     {
         DBG("FramebufferPool: Failed to create quad VAO");
@@ -142,49 +141,50 @@ bool FramebufferPool::createFullscreenQuad(juce::OpenGLContext& context)
     }
 
     // Create VBO
-    ext.glGenBuffers(1, &quadVBO_);
+    juce::OpenGLExtensionFunctions::glGenBuffers(1, &quadVBO_);
     if (quadVBO_ == 0)
     {
-        ext.glDeleteVertexArrays(1, &quadVAO_);
+        juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &quadVAO_);
         quadVAO_ = 0;
         DBG("FramebufferPool: Failed to create quad VBO");
         return false;
     }
 
     // Bind and upload data
-    ext.glBindVertexArray(quadVAO_);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, quadVBO_);
-    ext.glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(quadVAO_);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, quadVBO_);
+    juce::OpenGLExtensionFunctions::glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
 
     // Set up vertex attributes
     // Attribute 0: position (vec2)
-    ext.glEnableVertexAttribArray(0);
-    ext.glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+    juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(0);
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
 
     // Attribute 1: texcoord (vec2)
-    ext.glEnableVertexAttribArray(1);
-    ext.glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
+    juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(1);
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                                                          reinterpret_cast<void*>(2 * sizeof(float)));
 
     // Unbind
-    ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
-    ext.glBindVertexArray(0);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(0);
 
     return true;
 }
 
 void FramebufferPool::destroyFullscreenQuad(juce::OpenGLContext& context)
 {
-    auto& ext = context.extensions;
+    juce::ignoreUnused(context);
 
     if (quadVBO_ != 0)
     {
-        ext.glDeleteBuffers(1, &quadVBO_);
+        juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &quadVBO_);
         quadVBO_ = 0;
     }
 
     if (quadVAO_ != 0)
     {
-        ext.glDeleteVertexArrays(1, &quadVAO_);
+        juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &quadVAO_);
         quadVAO_ = 0;
     }
 }
@@ -194,11 +194,9 @@ void FramebufferPool::renderFullscreenQuad()
     if (quadVAO_ == 0 || context_ == nullptr)
         return;
 
-    auto& ext = context_->extensions;
-
-    ext.glBindVertexArray(quadVAO_);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(quadVAO_);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    ext.glBindVertexArray(0);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(0);
 }
 
 } // namespace oscil

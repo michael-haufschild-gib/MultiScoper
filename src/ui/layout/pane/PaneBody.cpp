@@ -117,8 +117,8 @@ void PaneBody::calculateCrosshairValues(juce::Point<int> localPos, float& timeMs
     auto bounds = crosshairOverlay_->getLocalBounds();
 
     // Guard against zero or invalid dimensions to prevent division by zero and NaN
-    int width = bounds.getWidth();
-    int height = bounds.getHeight();
+    int const width = bounds.getWidth();
+    int const height = bounds.getHeight();
     if (width <= 0 || height <= 0)
         return;
 
@@ -130,7 +130,7 @@ void PaneBody::calculateCrosshairValues(juce::Point<int> localPos, float& timeMs
     float normalizedX = static_cast<float>(localPos.x) / static_cast<float>(width);
     normalizedX = juce::jlimit(0.0f, 1.0f, normalizedX);
 
-    float totalTimeMs = (static_cast<float>(displaySamples_) / static_cast<float>(sampleRate_)) * 1000.0f;
+    float const totalTimeMs = (static_cast<float>(displaySamples_) / static_cast<float>(sampleRate_)) * 1000.0f;
     timeMs = normalizedX * totalTimeMs;
 
     // Calculate amplitude based on Y position
@@ -296,7 +296,7 @@ void PaneBody::updateStats()
         return;
 
     std::vector<OscillatorStats> stats;
-    size_t count = waveformStack_->getOscillatorCount();
+    size_t const count = waveformStack_->getOscillatorCount();
 
     for (size_t i = 0; i < count; ++i)
     {
@@ -342,7 +342,7 @@ void PaneBody::resetStats()
 {
     if (!waveformStack_)
         return;
-    size_t count = waveformStack_->getOscillatorCount();
+    size_t const count = waveformStack_->getOscillatorCount();
 
     for (size_t i = 0; i < count; ++i)
     {

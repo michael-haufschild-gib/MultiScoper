@@ -160,7 +160,7 @@ void InlineEditLabel::saveChanges()
     if (!editMode_)
         return;
 
-    juce::String newText = editor_ ? editor_->getText().trim() : text_;
+    juce::String const newText = editor_ ? editor_->getText().trim() : text_;
 
     // Validate if validator is set
     if (validator_ && !validator_(newText))
@@ -186,7 +186,7 @@ void InlineEditLabel::saveChanges()
     if (cancelButton_)
         cancelButton_->setVisible(false);
 
-    bool changed = (text_ != newText);
+    bool const changed = (text_ != newText);
     text_ = newText;
 
     updateLayout();
@@ -253,7 +253,7 @@ void InlineEditLabel::updateEditorStyle()
     editor_->setFont(font_);
     editor_->setJustification(justification_);
 
-    juce::Colour textCol = useCustomTextColour_ ? textColour_ : theme.textPrimary;
+    juce::Colour const textCol = useCustomTextColour_ ? textColour_ : theme.textPrimary;
     editor_->setColour(juce::TextEditor::textColourId, textCol);
     editor_->setColour(juce::TextEditor::backgroundColourId, theme.backgroundSecondary);
     editor_->setColour(juce::TextEditor::outlineColourId, theme.controlBorder);
@@ -274,7 +274,7 @@ void InlineEditLabel::paint(juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat();
 
     // Get text color
-    juce::Colour textCol = useCustomTextColour_ ? textColour_ : theme.textPrimary;
+    juce::Colour const textCol = useCustomTextColour_ ? textColour_ : theme.textPrimary;
 
     // Draw text with ellipsis if needed
     g.setColour(textCol);
@@ -287,21 +287,21 @@ void InlineEditLabel::paint(juce::Graphics& g)
     // Draw text with ellipsis if needed - uses GlyphArrangement for proper text layout
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font_, displayText, 0.0f, 0.0f);
-    float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
+    float const textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
 
     if (textWidth > bounds.getWidth())
     {
         // Truncate with ellipsis
-        juce::String ellipsis = "...";
+        juce::String const ellipsis = "...";
         juce::GlyphArrangement ellipsisGlyphs;
         ellipsisGlyphs.addLineOfText(font_, ellipsis, 0.0f, 0.0f);
-        float ellipsisWidth = ellipsisGlyphs.getBoundingBox(0, -1, false).getWidth();
-        float availableWidth = bounds.getWidth() - ellipsisWidth;
+        float const ellipsisWidth = ellipsisGlyphs.getBoundingBox(0, -1, false).getWidth();
+        float const availableWidth = bounds.getWidth() - ellipsisWidth;
 
         juce::String truncated;
         for (int i = 0; i < displayText.length(); ++i)
         {
-            juce::String test = displayText.substring(0, i + 1);
+            juce::String const test = displayText.substring(0, i + 1);
             juce::GlyphArrangement testGlyphs;
             testGlyphs.addLineOfText(font_, test, 0.0f, 0.0f);
             if (testGlyphs.getBoundingBox(0, -1, false).getWidth() > availableWidth)
@@ -323,7 +323,7 @@ void InlineEditLabel::updateLayout()
     if (editMode_)
     {
         // Buttons on the right
-        int buttonsWidth = (BUTTON_SIZE * 2) + BUTTON_SPACING;
+        int const buttonsWidth = (BUTTON_SIZE * 2) + BUTTON_SPACING;
         auto buttonArea = bounds.removeFromRight(buttonsWidth);
 
         if (cancelButton_)

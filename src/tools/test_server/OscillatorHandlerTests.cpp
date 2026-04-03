@@ -10,6 +10,7 @@
 #include "plugin/PluginProcessor.h"
 #include "tools/test_server/OscillatorHandler.h"
 
+#include <algorithm>
 #include <nlohmann/json.hpp>
 
 namespace oscil
@@ -28,7 +29,7 @@ void setupReorderTestOscillators(OscilState& state, PaneLayoutManager& layoutMan
         layoutManager.addPane(defaultPane);
     }
 
-    PaneId targetPaneId = layoutManager.getPanes()[0].getId();
+    PaneId const targetPaneId = layoutManager.getPanes()[0].getId();
 
     auto existingOscs = state.getOscillators();
     for (const auto& osc : existingOscs)
@@ -50,8 +51,8 @@ void setupReorderTestOscillators(OscilState& state, PaneLayoutManager& layoutMan
 std::vector<Oscillator> getOrderedOscillators(OscilState& state)
 {
     auto oscs = state.getOscillators();
-    std::sort(oscs.begin(), oscs.end(),
-              [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
+    std::ranges::sort(oscs,
+                      [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
     return oscs;
 }
 
@@ -61,11 +62,11 @@ nlohmann::json runReorderTest(OscilState& state, OscilPluginEditor& editor, cons
     nlohmann::json test;
     test["name"] = testName;
     auto before = getOrderedOscillators(state);
-    juce::String movedName = before[static_cast<size_t>(from)].getName();
+    juce::String const movedName = before[static_cast<size_t>(from)].getName();
     state.reorderOscillators(from, to);
     editor.refreshPanels();
     auto after = getOrderedOscillators(state);
-    bool passed = (after[static_cast<size_t>(expectedIdx)].getName() == movedName);
+    bool const passed = (after[static_cast<size_t>(expectedIdx)].getName() == movedName);
     test["passed"] = passed;
     test["details"] = details;
     test["movedOsc"] = movedName.toStdString();
@@ -109,7 +110,7 @@ nlohmann::json runSameIndexNoOpTest(OscilState& state, OscilPluginEditor& editor
 
 } // namespace
 
-void OscillatorHandler::handleTestOscillatorReorder(const httplib::Request&, httplib::Response& res)
+void OscillatorHandler::handleTestOscillatorReorder(const httplib::Request& /*unused*/, httplib::Response& res)
 {
     auto result = runOnMessageThread([this]() -> nlohmann::json {
         nlohmann::json response;

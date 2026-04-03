@@ -53,14 +53,15 @@ void PerformanceMetricsController::update()
     // Memory usage — computed from capture quality config and source count.
     // Each source gets one DecimatingCaptureBuffer sized per the quality config.
     auto captureConfig = dataProvider_.getState().getCaptureQualityConfig();
-    size_t perBufferBytes = captureConfig.calculateMemoryUsageBytes(static_cast<int>(dataProvider_.getSampleRate()));
-    size_t sourceCount = instanceRegistry_.getSourceCount();
-    size_t totalBytes = perBufferBytes * sourceCount;
-    float memoryMB = static_cast<float>(totalBytes) / (1024.0f * 1024.0f);
+    size_t const perBufferBytes =
+        captureConfig.calculateMemoryUsageBytes(static_cast<int>(dataProvider_.getSampleRate()));
+    size_t const sourceCount = instanceRegistry_.getSourceCount();
+    size_t const totalBytes = perBufferBytes * sourceCount;
+    float const memoryMB = static_cast<float>(totalBytes) / (1024.0f * 1024.0f);
     statusBar_.setMemoryUsage(memoryMB);
 
     // Oscillator and source counts.
-    size_t oscillatorCount = dataProvider_.getState().getOscillators().size();
+    size_t const oscillatorCount = dataProvider_.getState().getOscillators().size();
     statusBar_.setOscillatorCount(static_cast<int>(oscillatorCount));
     statusBar_.setSourceCount(static_cast<int>(sourceCount));
 

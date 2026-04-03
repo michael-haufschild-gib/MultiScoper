@@ -46,10 +46,10 @@ juce::AudioBuffer<float> generateSineBuffer(int numSamples, float amplitude)
 {
     juce::AudioBuffer<float> buffer(2, numSamples);
     float phase = 0.0f;
-    float phaseInc = (2.0f * juce::MathConstants<float>::pi * 440.0f) / 44100.0f;
+    float const phaseInc = (2.0f * juce::MathConstants<float>::pi * 440.0f) / 44100.0f;
     for (int i = 0; i < numSamples; ++i)
     {
-        float sample = std::sin(phase) * amplitude;
+        float const sample = std::sin(phase) * amplitude;
         buffer.setSample(0, i, sample);
         buffer.setSample(1, i, sample);
         phase += phaseInc;
@@ -141,10 +141,10 @@ nlohmann::json testToggleSetting(OscilPluginEditor& editor, const char* name, co
     test["name"] = name;
     setter(false);
     editor.repaint();
-    bool off = !getter();
+    bool const off = !getter();
     setter(true);
     editor.repaint();
-    bool on = getter();
+    bool const on = getter();
     test["passed"] = off && on;
     test["details"] = details;
     return test;
@@ -156,10 +156,10 @@ nlohmann::json testGainAdjustment(PaneComponent* pane, WaveformComponent* wavefo
     test["name"] = "GainAdjustment";
     pane->setGainDb(6.0f);
     editor.repaint();
-    bool gain6ok = std::abs(waveform->getGainLinear() - 1.995f) < 0.1f;
+    bool const gain6ok = std::abs(waveform->getGainLinear() - 1.995f) < 0.1f;
     pane->setGainDb(-6.0f);
     editor.repaint();
-    bool gainM6ok = std::abs(waveform->getGainLinear() - 0.501f) < 0.1f;
+    bool const gainM6ok = std::abs(waveform->getGainLinear() - 0.501f) < 0.1f;
     pane->setGainDb(0.0f);
     test["passed"] = gain6ok && gainM6ok;
     test["details"] = "Gain dB conversion should be accurate";
@@ -172,13 +172,13 @@ nlohmann::json testColumnLayoutChange(OscilState& state, OscilPluginEditor& edit
     test["name"] = "ColumnLayoutChange";
     state.setColumnLayout(ColumnLayout::Single);
     editor.resized();
-    bool s = state.getLayoutManager().getColumnCount() == 1;
+    bool const s = state.getLayoutManager().getColumnCount() == 1;
     state.setColumnLayout(ColumnLayout::Double);
     editor.resized();
-    bool d = state.getLayoutManager().getColumnCount() == 2;
+    bool const d = state.getLayoutManager().getColumnCount() == 2;
     state.setColumnLayout(ColumnLayout::Triple);
     editor.resized();
-    bool t = state.getLayoutManager().getColumnCount() == 3;
+    bool const t = state.getLayoutManager().getColumnCount() == 3;
     state.setColumnLayout(ColumnLayout::Single);
     editor.resized();
     test["passed"] = s && d && t;

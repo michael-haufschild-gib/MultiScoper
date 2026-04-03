@@ -95,12 +95,11 @@ bool VignetteEffect::isCompiled() const { return compiled_; }
 void VignetteEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                            FramebufferPool& pool, float deltaTime)
 {
+    juce::ignoreUnused(context);
     juce::ignoreUnused(deltaTime);
 
     if (!compiled_ || !source || !destination)
         return;
-
-    auto& ext = context.extensions;
 
     // Bind destination and clear
     destination->bind();
@@ -114,13 +113,14 @@ void VignetteEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Fr
 
     // Bind source texture
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(textureLoc_, 0);
 
     // Set uniforms
-    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
-    ext.glUniform1f(softnessLoc_, settings_.softness);
-    ext.glUniform4f(colorLoc_, settings_.colour.getFloatRed(), settings_.colour.getFloatGreen(),
-                    settings_.colour.getFloatBlue(), settings_.colour.getFloatAlpha());
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(softnessLoc_, settings_.softness);
+    juce::OpenGLExtensionFunctions::glUniform4f(colorLoc_, settings_.colour.getFloatRed(),
+                                                settings_.colour.getFloatGreen(), settings_.colour.getFloatBlue(),
+                                                settings_.colour.getFloatAlpha());
 
     // Render fullscreen quad
     pool.renderFullscreenQuad();

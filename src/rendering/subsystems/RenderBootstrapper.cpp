@@ -93,9 +93,9 @@ bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
     }
 
     // Bind attribute locations BEFORE linking
-    GLuint programID = blitShader_->getProgramID();
-    context.extensions.glBindAttribLocation(programID, 0, "position");
-    context.extensions.glBindAttribLocation(programID, 1, "texCoord");
+    GLuint const programID = blitShader_->getProgramID();
+    juce::OpenGLExtensionFunctions::glBindAttribLocation(programID, 0, "position");
+    juce::OpenGLExtensionFunctions::glBindAttribLocation(programID, 1, "texCoord");
 
     if (!blitShader_->link())
     {
@@ -117,9 +117,9 @@ bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
         return false;
     }
 
-    GLuint compositeProgramId = compositeShader_->getProgramID();
-    context.extensions.glBindAttribLocation(compositeProgramId, 0, "position");
-    context.extensions.glBindAttribLocation(compositeProgramId, 1, "texCoord");
+    GLuint const compositeProgramId = compositeShader_->getProgramID();
+    juce::OpenGLExtensionFunctions::glBindAttribLocation(compositeProgramId, 0, "position");
+    juce::OpenGLExtensionFunctions::glBindAttribLocation(compositeProgramId, 1, "texCoord");
 
     if (!compositeShader_->link())
     {

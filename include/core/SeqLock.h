@@ -46,7 +46,7 @@ struct SeqLock
         T snapshot;
         for (;;)
         {
-            uint32_t seq1 = sequence_.load(std::memory_order_acquire);
+            uint32_t const seq1 = sequence_.load(std::memory_order_acquire);
             if ((seq1 & 1) != 0u)
             {
                 std::this_thread::yield();
@@ -55,7 +55,7 @@ struct SeqLock
             std::atomic_thread_fence(std::memory_order_acquire); // ensure data_ loads happen after seq1
             std::memcpy(&snapshot, &data_, sizeof(T));
             std::atomic_thread_fence(std::memory_order_acquire); // ensure data_ loads complete before seq2
-            uint32_t seq2 = sequence_.load(std::memory_order_acquire);
+            uint32_t const seq2 = sequence_.load(std::memory_order_acquire);
             if (seq1 == seq2)
                 return snapshot;
         }

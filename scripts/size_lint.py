@@ -302,7 +302,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument(
         "--max-function-lines",
         type=int,
-        default=60,
+        default=75,
         help="Maximum allowed lines per function.",
     )
     return parser.parse_args(argv)

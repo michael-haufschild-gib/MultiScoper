@@ -31,7 +31,7 @@ void PluginEditorLayout::resized()
     statusBar_.setBounds(statusBarBounds);
 
     // Sidebar on right
-    int sidebarWidth = sidebar_.getEffectiveWidth();
+    int const sidebarWidth = sidebar_.getEffectiveWidth();
     auto sidebarBounds = bounds.removeFromRight(sidebarWidth);
     sidebar_.setBounds(sidebarBounds);
 
@@ -48,19 +48,19 @@ void PluginEditorLayout::updateLayout(const std::vector<std::unique_ptr<PaneComp
     auto availableArea = viewport_.getLocalBounds();
 
     // Ensure minimum dimensions to prevent zero-size components
-    int availableWidth = std::max(MIN_CONTENT_WIDTH, availableArea.getWidth());
-    int availableHeight = std::max(MIN_CONTENT_HEIGHT, availableArea.getHeight());
+    int const availableWidth = std::max(MIN_CONTENT_WIDTH, availableArea.getWidth());
+    int const availableHeight = std::max(MIN_CONTENT_HEIGHT, availableArea.getHeight());
     availableArea = juce::Rectangle<int>(0, 0, availableWidth, availableHeight);
 
     // Calculate content size based on number of panes
-    int numPanes = static_cast<int>(paneComponents.size());
+    int const numPanes = static_cast<int>(paneComponents.size());
     if (numPanes == 0)
     {
         content_.setSize(availableArea.getWidth(), availableArea.getHeight());
         return;
     }
 
-    int numCols = layoutManager.getColumnCount();
+    int const numCols = layoutManager.getColumnCount();
     content_.setColumnCount(numCols);
 
     // Use the densest column to size content height so panes don't collapse when
@@ -71,7 +71,7 @@ void PluginEditorLayout::updateLayout(const std::vector<std::unique_ptr<PaneComp
         maxRowsInColumn = std::max(maxRowsInColumn, layoutManager.getPaneCountInColumn(col));
     }
 
-    int paneHeight = std::max(MIN_PANE_HEIGHT, availableArea.getHeight() / maxRowsInColumn);
+    int const paneHeight = std::max(MIN_PANE_HEIGHT, availableArea.getHeight() / maxRowsInColumn);
     content_.setSize(availableArea.getWidth(), paneHeight * maxRowsInColumn);
 
     // Position panes

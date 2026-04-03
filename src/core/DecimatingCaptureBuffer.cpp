@@ -29,7 +29,7 @@ int64_t scaleTimelineTimestamp(int64_t timestamp, int sourceRate, int targetRate
     if (scaled <= 0.0L)
         return 0;
 
-    constexpr long double maxValue = static_cast<long double>(std::numeric_limits<int64_t>::max());
+    constexpr auto maxValue = static_cast<long double>(std::numeric_limits<int64_t>::max());
     if (scaled >= maxValue)
         return std::numeric_limits<int64_t>::max();
 
@@ -42,10 +42,10 @@ int64_t scaleTimelineTimestamp(int64_t timestamp, int sourceRate, int targetRate
 // Uses JUCE's FIR::Filter with Kaiser window for optimal anti-aliasing
 //==============================================================================
 
-DecimationFilter::DecimationFilter()
+DecimationFilter::DecimationFilter() : coefficients_(new juce::dsp::FIR::Coefficients<float>(1))
 {
     // Create a passthrough filter by default
-    coefficients_ = new juce::dsp::FIR::Coefficients<float>(1);
+
     coefficients_->getRawCoefficients()[0] = 1.0f;
     filter_.coefficients = coefficients_;
 }
@@ -65,14 +65,14 @@ void DecimationFilter::configure(int decimationRatio, double sourceRate)
     }
 
     // Calculate cutoff frequency for anti-aliasing
-    double targetRate = sourceRate / static_cast<double>(decimationRatio_);
-    double targetNyquist = targetRate / 2.0;
-    double cutoffFrequency = targetNyquist * 0.9;
+    double const targetRate = sourceRate / static_cast<double>(decimationRatio_);
+    double const targetNyquist = targetRate / 2.0;
+    double const cutoffFrequency = targetNyquist * 0.9;
 
-    double sourceNyquist = sourceRate / 2.0;
-    double transitionBand = targetNyquist - cutoffFrequency;
+    double const sourceNyquist = sourceRate / 2.0;
+    double const transitionBand = targetNyquist - cutoffFrequency;
 
-    float normalisedTransitionWidth = static_cast<float>(juce::jlimit(0.01, 0.49, transitionBand / sourceNyquist));
+    auto const normalisedTransitionWidth = static_cast<float>(juce::jlimit(0.01, 0.49, transitionBand / sourceNyquist));
 
     coefficients_ = juce::dsp::FilterDesign<float>::designFIRLowpassKaiserMethod(
         static_cast<float>(cutoffFrequency), sourceRate, normalisedTransitionWidth, STOPBAND_ATTENUATION_DB);
@@ -192,7 +192,7 @@ void DecimatingCaptureBuffer::reconfigure()
     decimationRatio_.store(newDecRatio, std::memory_order_relaxed);
     captureRate_.store(newCapRate, std::memory_order_relaxed);
 
-    size_t bufferSamples = config_.calculateBufferSizeSamples(newCapRate);
+    size_t const bufferSamples = config_.calculateBufferSizeSamples(newCapRate);
     size_t powerOf2Size = 1;
     while (powerOf2Size < bufferSamples && powerOf2Size <= (SIZE_MAX / 2))
         powerOf2Size *= 2;
@@ -200,14 +200,14 @@ void DecimatingCaptureBuffer::reconfigure()
     auto newBuffer = std::make_shared<SharedCaptureBuffer>(powerOf2Size);
     auto newContext = createProcessingContext();
 
-    double timestamp = juce::Time::getMillisecondCounterHiRes();
+    double const timestamp = juce::Time::getMillisecondCounterHiRes();
 
     {
         const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
 
         if (buffer_ || context_)
         {
-            graveyard_.push_back({buffer_, context_, timestamp});
+            graveyard_.push_back({.buffer = buffer_, .context = context_, .timestampMs = timestamp});
         }
 
         buffer_ = newBuffer;
@@ -219,7 +219,7 @@ void DecimatingCaptureBuffer::reconfigure()
 
 void DecimatingCaptureBuffer::cleanUpGarbage()
 {
-    double now = juce::Time::getMillisecondCounterHiRes();
+    double const now = juce::Time::getMillisecondCounterHiRes();
     // Keep items for at least 2 seconds to be safe
     // This ensures that even if the audio thread held a reference just before the swap,
     // it will have finished its block long before we delete the object.
@@ -227,10 +227,7 @@ void DecimatingCaptureBuffer::cleanUpGarbage()
 
     // Remove old items
     const juce::SpinLock::ScopedLockType sl(bufferSwapLock_);
-    graveyard_.erase(
-        std::remove_if(graveyard_.begin(), graveyard_.end(),
-                       [now](const GraveyardItem& item) { return (now - item.timestampMs) > RETENTION_MS; }),
-        graveyard_.end());
+    std::erase_if(graveyard_, [now](const GraveyardItem& item) { return (now - item.timestampMs) > RETENTION_MS; });
 }
 
 void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const CaptureFrameMetadata& metadata)
@@ -238,7 +235,7 @@ void DecimatingCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, cons
     const int numChannels = juce::jmin(buffer.getNumChannels(), static_cast<int>(SharedCaptureBuffer::MAX_CHANNELS));
     const int numSamples = buffer.getNumSamples();
 
-    const float* channels[SharedCaptureBuffer::MAX_CHANNELS] = {nullptr};
+    const float* channels[SharedCaptureBuffer::MAX_CHANNELS] = {nullptr}; // NOLINT(misc-const-correctness)
     for (int ch = 0; ch < numChannels; ++ch)
     {
         channels[ch] = buffer.getReadPointer(ch);
@@ -252,9 +249,9 @@ void DecimatingCaptureBuffer::write(const float* const* samples, int numSamples,
 {
     std::shared_ptr<SharedCaptureBuffer> buf;
     std::shared_ptr<ProcessingContext> ctx;
-    int decRatio;
-    int capRate;
-    int srcRate;
+    int decRatio = 0;
+    int capRate = 0;
+    int srcRate = 0;
 
     {
         // CRITICAL: Use tryLock for real-time safety - audio thread must never block
@@ -297,7 +294,7 @@ int DecimatingCaptureBuffer::decimateChannel(const float* src, float* dest, Deci
     int writeIdx = 0;
     for (int i = 0; i < numSamples; ++i)
     {
-        float filtered = filter.processSample(src ? src[i] : 0.0f);
+        float const filtered = filter.processSample(src ? src[i] : 0.0f);
         if (++counter >= decRatio)
         {
             dest[writeIdx++] = filtered;
@@ -329,7 +326,7 @@ void DecimatingCaptureBuffer::processAndWriteDecimated(const std::shared_ptr<Sha
     for (int ch = 0; ch < numChannels; ++ch)
     {
         scratchPtrs[ch] = ctx->scratchBuffer.data() + (static_cast<size_t>(ch) * maxPerCh);
-        int count =
+        int const count =
             decimateChannel(samples[ch], scratchPtrs[ch], ctx->filters[static_cast<size_t>(ch)],
                             ctx->decimationCounters[static_cast<size_t>(ch)], safeSamples, rates.decimationRatio);
         if (ch == 0)

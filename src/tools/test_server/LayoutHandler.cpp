@@ -10,6 +10,8 @@
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -19,7 +21,7 @@ void LayoutHandler::handleGetLayout(const httplib::Request& /*req*/, httplib::Re
         nlohmann::json response;
         auto& layoutManager = editor_.getProcessor().getState().getLayoutManager();
 
-        int columns = layoutManager.getColumnCount();
+        int const columns = layoutManager.getColumnCount();
         response["columns"] = columns;
         response["paneCount"] = layoutManager.getPaneCount();
 
@@ -39,7 +41,7 @@ void LayoutHandler::handleSetColumnLayout(const httplib::Request& req, httplib::
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        int columns = body.value("columns", 1);
+        int const columns = body.value("columns", 1);
 
         if (columns < 1 || columns > 3)
         {
@@ -82,12 +84,12 @@ void LayoutHandler::handleGetPaneBounds(const httplib::Request& /*req*/, httplib
         // A future improvement would expose getContentArea() from the editor.
         auto editorBounds = editor_.getLocalBounds();
         static constexpr int STATUS_BAR_HEIGHT = 24; // PluginEditorLayout::STATUS_BAR_HEIGHT
-        int sidebarWidth = 250;                      // Approximate (user-adjustable)
+        int const sidebarWidth = 250;                // Approximate (user-adjustable)
 
         int availableWidth = editorBounds.getWidth() - sidebarWidth;
         int availableHeight = editorBounds.getHeight() - STATUS_BAR_HEIGHT;
 
-        juce::Rectangle<int> availableArea(0, 0, availableWidth, availableHeight);
+        juce::Rectangle<int> const availableArea(0, 0, availableWidth, availableHeight);
 
         response["availableArea"] = {{"x", 0}, {"y", 0}, {"width", availableWidth}, {"height", availableHeight}};
 
@@ -123,8 +125,8 @@ void LayoutHandler::handleMovePane(const httplib::Request& req, httplib::Respons
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        int fromIndex = body.value("fromIndex", -1);
-        int toIndex = body.value("toIndex", -1);
+        int const fromIndex = body.value("fromIndex", -1);
+        int const toIndex = body.value("toIndex", -1);
 
         if (fromIndex < 0 || toIndex < 0)
         {
@@ -140,13 +142,13 @@ void LayoutHandler::handleMovePane(const httplib::Request& req, httplib::Respons
             auto& layoutManager = editor_.getProcessor().getState().getLayoutManager();
 
             const auto& panes = layoutManager.getPanes();
-            if (fromIndex >= static_cast<int>(panes.size()) || toIndex >= static_cast<int>(panes.size()))
+            if (std::cmp_greater_equal(fromIndex, panes.size()) || std::cmp_greater_equal(toIndex, panes.size()))
             {
                 response["error"] = "Index out of range";
                 return response;
             }
 
-            PaneId movedPaneId = panes[static_cast<size_t>(fromIndex)].getId();
+            PaneId const movedPaneId = panes[static_cast<size_t>(fromIndex)].getId();
             layoutManager.movePane(movedPaneId, toIndex);
 
             response["status"] = "ok";

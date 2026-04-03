@@ -92,14 +92,13 @@ bool TrailsEffect::isCompiled() const { return compiled_; }
 void TrailsEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                          FramebufferPool& pool, float deltaTime)
 {
+    juce::ignoreUnused(context);
     // This version doesn't have access to history - requires applyWithHistory
     // Just copy source to destination as fallback
     juce::ignoreUnused(deltaTime);
 
     if (!compiled_ || !source || !destination)
         return;
-
-    auto& ext = context.extensions;
 
     destination->bind();
     glDisable(GL_DEPTH_TEST);
@@ -108,11 +107,11 @@ void TrailsEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Fram
     // Simple passthrough since we don't have history
     shader_->use();
     source->bindTexture(0);
-    ext.glUniform1i(currentTextureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(currentTextureLoc_, 0);
     source->bindTexture(1); // Use source as history too (no effect)
-    ext.glUniform1i(historyTextureLoc_, 1);
-    ext.glUniform1f(decayLoc_, 1.0f); // Full decay = no trails
-    ext.glUniform1f(opacityLoc_, 1.0f);
+    juce::OpenGLExtensionFunctions::glUniform1i(historyTextureLoc_, 1);
+    juce::OpenGLExtensionFunctions::glUniform1f(decayLoc_, 1.0f); // Full decay = no trails
+    juce::OpenGLExtensionFunctions::glUniform1f(opacityLoc_, 1.0f);
 
     pool.renderFullscreenQuad();
     destination->unbind();
@@ -121,12 +120,10 @@ void TrailsEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Fram
 void TrailsEffect::applyWithHistory(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* history,
                                     Framebuffer* destination, FramebufferPool& pool, float deltaTime)
 {
-    juce::ignoreUnused(deltaTime);
+    juce::ignoreUnused(context, deltaTime);
 
     if (!compiled_ || !source || !history || !destination)
         return;
-
-    auto& ext = context.extensions;
 
     destination->bind();
     glDisable(GL_DEPTH_TEST);
@@ -136,15 +133,15 @@ void TrailsEffect::applyWithHistory(juce::OpenGLContext& context, Framebuffer* s
 
     // Bind current frame
     source->bindTexture(0);
-    ext.glUniform1i(currentTextureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(currentTextureLoc_, 0);
 
     // Bind history
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, history->colorTexture);
-    ext.glUniform1i(historyTextureLoc_, 1);
+    juce::OpenGLExtensionFunctions::glUniform1i(historyTextureLoc_, 1);
 
-    ext.glUniform1f(decayLoc_, settings_.decay * getIntensity());
-    ext.glUniform1f(opacityLoc_, settings_.opacity);
+    juce::OpenGLExtensionFunctions::glUniform1f(decayLoc_, settings_.decay * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(opacityLoc_, settings_.opacity);
 
     pool.renderFullscreenQuad();
 

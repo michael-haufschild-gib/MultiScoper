@@ -23,31 +23,39 @@ namespace
 void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType, float frequency,
                           float amplitude, float sampleRate)
 {
-    int numSamples = buffer.getNumSamples();
+    int const numSamples = buffer.getNumSamples();
     float phase = 0.0f;
-    float phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / sampleRate;
+    float const phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / sampleRate;
 
     for (int i = 0; i < numSamples; ++i)
     {
         float sample = 0.0f;
         if (waveformType == "sine")
+        {
             sample = std::sin(phase) * amplitude;
+        }
         else if (waveformType == "square")
+        {
             sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
+        }
         else if (waveformType == "triangle")
         {
-            float t = phase / (2.0f * juce::MathConstants<float>::pi);
-            sample = (2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f))) - 1.0f) * amplitude;
+            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
+            sample = ((2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f)))) - 1.0f) * amplitude;
         }
         else if (waveformType == "sawtooth")
         {
-            float t = phase / (2.0f * juce::MathConstants<float>::pi);
+            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
             sample = (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
         }
         else if (waveformType == "noise")
-            sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
+        {
+            sample = (((static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * 2.0f) - 1.0f) * amplitude;
+        }
         else if (waveformType == "dc")
+        {
             sample = amplitude;
+        }
         // "silence" or unknown → sample remains 0.0f
 
         buffer.setSample(0, i, sample);
@@ -89,10 +97,10 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
     try
     {
         auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
-        std::string waveformType = body.value("type", "sine");
-        float frequency = body.value("frequency", 440.0f);
-        float amplitude = body.value("amplitude", 0.8f);
-        int numSamples = body.value("samples", 4096);
+        std::string const waveformType = body.value("type", "sine");
+        float const frequency = body.value("frequency", 440.0f);
+        float const amplitude = body.value("amplitude", 0.8f);
+        int const numSamples = body.value("samples", 4096);
         float sampleRate = body.value("sampleRate", 44100.0f);
         if (sampleRate <= 0.0f)
             sampleRate = 44100.0f;
@@ -164,7 +172,7 @@ void WaveformHandler::handleGetWaveformState(const httplib::Request& /*req*/, ht
             for (size_t wfIdx = 0; wfIdx < pane->getOscillatorCount(); ++wfIdx)
             {
                 auto* waveform = pane->getWaveformAt(wfIdx);
-                auto* osc = pane->getOscillatorAt(wfIdx);
+                const auto* osc = pane->getOscillatorAt(wfIdx);
                 if (waveform && osc)
                     waveforms.push_back(serializeWaveformInfo(waveform, osc));
             }

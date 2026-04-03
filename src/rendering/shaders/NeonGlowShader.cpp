@@ -55,9 +55,9 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    juce::String vertexCode =
+    juce::String const vertexCode =
         juce::String::createStringFromData(BinaryData::neon_glow_vert, BinaryData::neon_glow_vertSize);
-    juce::String fragmentCode =
+    juce::String const fragmentCode =
         juce::String::createStringFromData(BinaryData::neon_glow_frag, BinaryData::neon_glow_fragSize);
 
     if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) ||
@@ -82,8 +82,8 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
         return false;
     }
 
-    context.extensions.glGenVertexArrays(1, &gl_->vao);
-    context.extensions.glGenBuffers(1, &gl_->vbo);
+    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &gl_->vao);
+    juce::OpenGLExtensionFunctions::glGenBuffers(1, &gl_->vbo);
 
     gl_->compiled = true;
     return true;
@@ -91,10 +91,11 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
 
 void NeonGlowShader::release(juce::OpenGLContext& context)
 {
+    juce::ignoreUnused(context);
     if (!gl_->compiled)
         return;
-    context.extensions.glDeleteBuffers(1, &gl_->vbo);
-    context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+    juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &gl_->vbo);
+    juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &gl_->vao);
     gl_->program.reset();
     gl_->compiled = false;
 }
@@ -117,45 +118,53 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
         return;
 
     const float kGeometryScale = 12.0f;
-    ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(), params.colour.getFloatGreen(),
-                    params.colour.getFloatBlue(), params.colour.getFloatAlpha());
-    ext.glUniform1f(gl_->opacityLoc, params.opacity);
-    ext.glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
-    ext.glUniform1f(gl_->geometryScaleLoc, kGeometryScale);
+    juce::OpenGLExtensionFunctions::glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
+                                                params.colour.getFloatGreen(), params.colour.getFloatBlue(),
+                                                params.colour.getFloatAlpha());
+    juce::OpenGLExtensionFunctions::glUniform1f(gl_->opacityLoc, params.opacity);
+    juce::OpenGLExtensionFunctions::glUniform1f(gl_->glowIntensityLoc, params.shaderIntensity);
+    juce::OpenGLExtensionFunctions::glUniform1f(gl_->geometryScaleLoc, kGeometryScale);
 
-    ext.glBindVertexArray(gl_->vao);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(gl_->vao);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
-    float height = params.bounds.getHeight();
-    float centerY1, centerY2, amp1, amp2;
+    float const height = params.bounds.getHeight();
+    float centerY1;
+    float centerY2;
+    float amp1;
+    float amp2;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     auto programId = gl_->program->getProgramID();
-    GLint posLoc = std::max(GLint{0}, ext.glGetAttribLocation(programId, "position"));
-    GLint distLoc = std::max(GLint{1}, ext.glGetAttribLocation(programId, "distFromCenter"));
+    GLint posLoc = std::max(GLint{0}, juce::OpenGLExtensionFunctions::glGetAttribLocation(programId, "position"));
+    GLint distLoc =
+        std::max(GLint{1}, juce::OpenGLExtensionFunctions::glGetAttribLocation(programId, "distFromCenter"));
 
     float visualWidth = params.lineWidth * kGeometryScale;
     auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {
         std::vector<float> vertices;
         buildLineGeometry(vertices, data, cy, amp, visualWidth, params.bounds.getX(), params.bounds.getWidth());
-        ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(),
-                         GL_DYNAMIC_DRAW);
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-        ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
-        ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                                  reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
+        juce::OpenGLExtensionFunctions::glBufferData(GL_ARRAY_BUFFER,
+                                                     static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+                                                     vertices.data(), GL_DYNAMIC_DRAW);
+        juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
+        juce::OpenGLExtensionFunctions::glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE,
+                                                              4 * sizeof(float), nullptr);
+        juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
+        juce::OpenGLExtensionFunctions::glVertexAttribPointer(
+            static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+            reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
         glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
-        ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
+        juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
+        juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
     };
 
     renderChannel(channel1, centerY1, amp1);
     if (params.isStereo && channel2 && channel2->size() >= 2)
         renderChannel(*channel2, centerY2, amp2);
 
-    ext.glBindVertexArray(0);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(0);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
     glDisable(GL_BLEND);
 }
 #endif

@@ -9,6 +9,8 @@
 #include "ui/components/TestId.h"
 #include "ui/theme/ThemeManager.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -19,9 +21,9 @@ static constexpr int kSeparatorPadding = 10;
 // ColorSwatchButton
 //==============================================================================
 
-ColorSwatchButton::ColorSwatchButton(IThemeService& themeService, const juce::String& label, juce::Colour initialColor)
+ColorSwatchButton::ColorSwatchButton(IThemeService& themeService, juce::String label, juce::Colour initialColor)
     : themeService_(themeService)
-    , label_(label)
+    , label_(std::move(label))
     , colour_(initialColor)
 {
 }
@@ -46,7 +48,8 @@ void ColorSwatchButton::paint(juce::Graphics& g)
     {
         for (int x = swatchRect.getX(); x < swatchRect.getRight(); x += checkSize)
         {
-            bool isLight = ((x - swatchRect.getX()) / checkSize + (y - swatchRect.getY()) / checkSize) % 2 == 0;
+            bool const isLight =
+                (((x - swatchRect.getX()) / checkSize) + ((y - swatchRect.getY()) / checkSize)) % 2 == 0;
             g.setColour(isLight ? juce::Colours::white : juce::Colours::lightgrey);
             g.fillRect(x, y, checkSize, checkSize);
         }
@@ -69,7 +72,7 @@ void ColorSwatchButton::mouseUp(const juce::MouseEvent& e)
         colorPicker->setColour(colour_);
         colorPicker->setSize(280, ColorPickerComponent::PREFERRED_HEIGHT);
 
-        juce::Component::SafePointer<ColorSwatchButton> safeThis(this);
+        juce::Component::SafePointer<ColorSwatchButton> const safeThis(this);
         colorPicker->onColourChanged([safeThis](juce::Colour newColour) {
             if (safeThis != nullptr)
             {
@@ -97,9 +100,9 @@ void ColorSwatchButton::setColour(juce::Colour colour)
 // ThemeColorSection
 //==============================================================================
 
-ThemeColorSection::ThemeColorSection(IThemeService& themeService, const juce::String& title)
+ThemeColorSection::ThemeColorSection(IThemeService& themeService, juce::String title)
     : themeService_(themeService)
-    , title_(title)
+    , title_(std::move(title))
 {
 }
 
@@ -161,7 +164,7 @@ void ThemeColorSection::setSectionEnabled(bool enabled)
 
 int ThemeColorSection::getPreferredHeight() const
 {
-    return 28 + static_cast<int>(swatches_.size()) * (ColorSwatchButton::PREFERRED_HEIGHT + 2);
+    return 28 + (static_cast<int>(swatches_.size()) * (ColorSwatchButton::PREFERRED_HEIGHT + 2));
 }
 
 //==============================================================================
@@ -318,7 +321,7 @@ void ThemeEditorComponent::layoutColorSections(int sectionWidth)
     auto layoutSection = [&](ThemeColorSection* section) {
         if (!section)
             return;
-        int h = section->getPreferredHeight();
+        int const h = section->getPreferredHeight();
         section->setBounds(0, y, sectionWidth, h);
         y += h + 10;
     };
@@ -330,7 +333,7 @@ void ThemeEditorComponent::layoutColorSections(int sectionWidth)
 
     if (statusSection_)
     {
-        int h = statusSection_->getPreferredHeight();
+        int const h = statusSection_->getPreferredHeight();
         statusSection_->setBounds(0, y, sectionWidth, h);
         y += h;
     }
@@ -350,13 +353,13 @@ void ThemeEditorComponent::paintListBoxItem(int rowNumber, juce::Graphics& g, in
         g.fillRect(0, 0, width, height);
     }
 
-    if (rowNumber >= 0 && rowNumber < static_cast<int>(themeNames_.size()))
+    if (rowNumber >= 0 && std::cmp_less(rowNumber, themeNames_.size()))
     {
         g.setColour(rowIsSelected ? theme.textHighlight : theme.textPrimary);
         g.setFont(12.0f);
 
         auto name = themeNames_[static_cast<size_t>(rowNumber)];
-        bool isSystem = themeService_.isSystemTheme(name);
+        bool const isSystem = themeService_.isSystemTheme(name);
 
         juce::String displayName = name;
         if (isSystem)
@@ -368,7 +371,7 @@ void ThemeEditorComponent::paintListBoxItem(int rowNumber, juce::Graphics& g, in
 
 void ThemeEditorComponent::selectedRowsChanged(int lastRowSelected)
 {
-    if (lastRowSelected >= 0 && lastRowSelected < static_cast<int>(themeNames_.size()))
+    if (lastRowSelected >= 0 && std::cmp_less(lastRowSelected, themeNames_.size()))
     {
         selectTheme(themeNames_[static_cast<size_t>(lastRowSelected)]);
     }
@@ -395,7 +398,7 @@ void ThemeEditorComponent::selectTheme(const juce::String& name)
         }
     }
 
-    auto* sourceTheme = themeService_.getTheme(name);
+    const auto* sourceTheme = themeService_.getTheme(name);
     if (sourceTheme)
     {
         editingTheme_ = *sourceTheme;
@@ -403,7 +406,7 @@ void ThemeEditorComponent::selectTheme(const juce::String& name)
 
     nameEditor_->setText(name, false);
 
-    bool isSystem = themeService_.isSystemTheme(name);
+    bool const isSystem = themeService_.isSystemTheme(name);
     systemThemeLabel_->setVisible(isSystem);
     nameEditor_->setEnabled(!isSystem);
     deleteButton_->setEnabled(!isSystem);
@@ -419,7 +422,7 @@ void ThemeEditorComponent::updateColorSections()
     controlSection_.reset();
     statusSection_.reset();
 
-    bool isEditable = !themeService_.isSystemTheme(selectedThemeName_);
+    bool const isEditable = !themeService_.isSystemTheme(selectedThemeName_);
 
     backgroundSection_ = std::make_unique<ThemeColorSection>(themeService_, "Background Colors");
     backgroundSection_->addColorSwatch("Primary:", &editingTheme_.backgroundPrimary);

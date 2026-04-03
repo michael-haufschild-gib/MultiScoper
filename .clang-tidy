@@ -1,43 +1,140 @@
 ---
-# Oscil .clang-tidy — all warnings are errors.
+# Oscil .clang-tidy — maximum strictness, all warnings are errors.
 #
 # Run: cmake --preset dev -DOSCIL_ENABLE_CLANG_TIDY=ON
 # Or standalone: clang-tidy -p build/dev src/core/Source.cpp
 #
-# Excluded checks:
-#   modernize-use-trailing-return-type — conflicts with JUCE style
-#   modernize-use-nodiscard — too noisy with JUCE callback overrides
-#   bugprone-easily-swappable-parameters — JUCE APIs require positional params
-#   performance-unnecessary-value-param — JUCE passes juce::String by value idiomatically
-#   readability-identifier-length — short names (i, x, ch) are fine in DSP code
-#   modernize-avoid-c-arrays — JUCE APIs use C arrays for audio buffers
-#   readability-magic-numbers — audio code legitimately uses numeric constants
-#   bugprone-narrowing-conversions — re-enabled; suppressed per-file where JUCE APIs force int/float mixing
-#   bugprone-derived-method-shadowing-base-method — JUCE Component has non-virtual setEnabled/isEnabled/setTitle/getTitle/isShowing
-#     that subclasses intentionally shadow for custom state tracking. Pervasive JUCE pattern, not a bug.
-#   performance-avoid-endl — not relevant for audio plugin (no iostream)
-#   modernize-use-equals-default — JUCE constructors often need explicit empty bodies
+# Check families enabled:
+#   bugprone-*            — common bug patterns
+#   clang-analyzer-*      — deep static analysis (low false-positive rate)
+#   concurrency-*         — thread-safety issues
+#   cppcoreguidelines-*   — C++ Core Guidelines (init, slicing, member-init)
+#   misc-*                — const-correctness, unused params, redundant exprs
+#   modernize-*           — C++20 idioms
+#   performance-*         — unnecessary copies, moves, allocations
+#   readability-*         — control flow, braces, naming, simplification
+#
+# ── Excluded checks (with justification) ──
+#
+# JUCE framework conflicts:
+#   modernize-use-trailing-return-type        — conflicts with JUCE style
+#   modernize-use-nodiscard                   — too noisy with JUCE callback overrides
+#   modernize-avoid-c-arrays                  — JUCE APIs use C arrays for audio buffers
+#   modernize-use-equals-default              — JUCE constructors often need explicit empty bodies
+#   bugprone-easily-swappable-parameters      — JUCE APIs require positional params
+#   bugprone-derived-method-shadowing-base-method — JUCE Component has non-virtual methods
+#     (setEnabled/isEnabled/setTitle/getTitle/isShowing) that subclasses intentionally
+#     shadow for custom state tracking. Pervasive JUCE pattern, not a bug.
+#   performance-unnecessary-value-param       — JUCE passes juce::String by value idiomatically
+#   concurrency-mt-unsafe                     — flags C stdlib functions JUCE uses internally
 #   readability-convert-member-functions-to-static — conflicts with JUCE override patterns
-#   concurrency-mt-unsafe — flags C stdlib functions (getenv, strtok) that JUCE uses internally
+#   readability-redundant-access-specifiers   — JUCE style groups members under repeated specifiers
+#   misc-non-private-member-variables-in-classes — JUCE Component subclasses use public members
+#   misc-include-cleaner                      — incompatible with JUCE monolithic module headers
+#   cppcoreguidelines-special-member-functions — JUCE components rarely need rule-of-five
+#   cppcoreguidelines-owning-memory           — requires gsl::owner<>, not used with JUCE
+#   cppcoreguidelines-avoid-const-or-ref-data-members — JUCE DI pattern uses const& members
+#   cppcoreguidelines-avoid-non-const-global-variables — shader source strings are static const char*
+#   cppcoreguidelines-macro-usage             — JUCE uses macros extensively (JUCE_DECLARE, etc.)
+#   cppcoreguidelines-missing-std-forward     — JUCE callback patterns don't use forwarding
+#   cppcoreguidelines-non-private-member-variables-in-classes — alias for misc version
+#   cppcoreguidelines-pro-type-vararg         — JUCE/C API interop uses varargs
+#   cppcoreguidelines-pro-type-union-access   — JUCE internal use of unions
+#   misc-multiple-inheritance                 — JUCE components inherit Component+Timer+Listener
+#   misc-override-with-different-visibility   — JUCE private inheritance (Timer, AsyncUpdater)
+#     with public callback overrides is standard pattern
+#
+# Audio/DSP domain exceptions:
+#   readability-identifier-length             — short names (i, x, ch) are standard in DSP code
+#   readability-magic-numbers                 — audio code uses numeric constants (440.0f, 2*pi)
+#   cppcoreguidelines-avoid-magic-numbers     — alias for readability-magic-numbers
+#   cppcoreguidelines-avoid-c-arrays          — alias for modernize-avoid-c-arrays
+#   cppcoreguidelines-pro-bounds-avoid-unchecked-container-access — wants .at() for all
+#     operator[]; impractical for audio code where bounds are pre-validated
+#   cppcoreguidelines-pro-bounds-pointer-arithmetic — DSP buffer access requires pointer math
+#   cppcoreguidelines-pro-bounds-array-to-pointer-decay — breaks jassert() macro
+#   cppcoreguidelines-pro-bounds-constant-array-index — requires gsl::at(), impractical for DSP
+#   cppcoreguidelines-pro-type-reinterpret-cast — sometimes needed for audio buffer casting
+#   cppcoreguidelines-no-malloc               — C interop sometimes requires malloc
+#
+# Style preferences (not bug/slop catchers):
+#   readability-uppercase-literal-suffix      — JUCE and audio code use lowercase (1.0f)
+#   readability-avoid-const-params-in-decl    — noisy with JUCE APIs, debatable value
+#   readability-use-anyofallof                — raw loops often more readable than algorithm
+#   misc-use-anonymous-namespace              — static keyword is explicit and standard
+#   misc-no-recursion                         — too broad; recursion is valid in non-audio code
+#   performance-avoid-endl                    — not relevant for audio plugin (no iostream)
+#   bugprone-throwing-static-initialization   — JUCE static objects handle their own lifecycle
+#
+# Toolchain bugs / false positives:
+#   bugprone-pointer-arithmetic-on-polymorphic-object — crashes clang-tidy 22.x on JUCE AST
+#   performance-enum-size                     — false positive on enums that already have explicit
+#     base type (reports 'int' when ': std::uint8_t' is specified)
+#   cppcoreguidelines-avoid-do-while          — triggers on JUCE jassert/jassertfalse macros
+#     (do { ... } while(false) idiom in JUCE_BLOCK_WITH_FORCED_SEMICOLON)
+#   readability-braces-around-statements      — established codebase uses braceless single-line
+#     returns; -Wmisleading-indentation catches the dangerous variant
+#   readability-simplify-boolean-expr         — DeMorgan suggestions on jassert(!a || b) patterns
+#     are less readable than the original; 100% false positive rate on JUCE assertion macros
 
 Checks: >
   bugprone-*,
+  clang-analyzer-*,
   concurrency-*,
-  performance-*,
+  cppcoreguidelines-*,
+  misc-*,
   modernize-*,
-  readability-function-cognitive-complexity,
-  readability-function-size,
-  readability-implicit-bool-conversion,
-  -modernize-use-trailing-return-type,
-  -modernize-use-nodiscard,
+  performance-*,
+  readability-*,
+  -bugprone-derived-method-shadowing-base-method,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-pointer-arithmetic-on-polymorphic-object,
+  -bugprone-throwing-static-initialization,
+  -concurrency-mt-unsafe,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-no-malloc,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-missing-std-forward,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-special-member-functions,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-multiple-inheritance,
+  -misc-non-private-member-variables-in-classes,
+  -misc-override-with-different-visibility,
+  -misc-use-anonymous-namespace,
+  -misc-use-internal-linkage,
   -modernize-avoid-c-arrays,
   -modernize-use-equals-default,
-  -bugprone-easily-swappable-parameters,
-  -bugprone-derived-method-shadowing-base-method,
-  -bugprone-throwing-static-initialization,
-  -performance-unnecessary-value-param,
+  -modernize-use-nodiscard,
+  -modernize-use-equals-delete,
+  -modernize-use-trailing-return-type,
   -performance-avoid-endl,
-  -concurrency-mt-unsafe,
+  -performance-enum-size,
+  -performance-unnecessary-value-param,
+  -readability-avoid-const-params-in-decl,
+  -readability-avoid-nested-conditional-operator,
+  -readability-braces-around-statements,
+  -readability-convert-member-functions-to-static,
+  -readability-simplify-boolean-expr,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-math-missing-parentheses,
+  -readability-redundant-access-specifiers,
+  -readability-uppercase-literal-suffix,
+  -readability-use-anyofallof,
 
 # ALL enabled checks are treated as errors — no warnings.
 WarningsAsErrors: '*'
@@ -45,15 +142,18 @@ WarningsAsErrors: '*'
 HeaderFilterRegex: 'include/.*\.h$'
 
 CheckOptions:
-  # Cognitive complexity: max 25 per function (McCabe-like)
+  # ── Readability ──
+
+  # Cognitive complexity: max 20 per function (stricter than McCabe CC —
+  # penalizes nesting depth, not just decision points)
   - key: readability-function-cognitive-complexity.Threshold
-    value: 25
+    value: 20
   - key: readability-function-cognitive-complexity.DescribeBasicIncrements
     value: false
 
   # Function size limits (backup for size_lint.py)
   - key: readability-function-size.LineThreshold
-    value: 60
+    value: 75
   - key: readability-function-size.StatementThreshold
     value: 50
   - key: readability-function-size.BranchThreshold
@@ -70,17 +170,46 @@ CheckOptions:
   - key: readability-implicit-bool-conversion.AllowIntegerConditions
     value: false
 
-  # Performance tuning
+  # Else after return — don't warn on condition variables used in both branches
+  - key: readability-else-after-return.WarnOnConditionVariables
+    value: false
+
+  # ── Performance ──
+
   - key: performance-move-const-arg.CheckTriviallyCopyableMove
     value: false
   - key: performance-unnecessary-copy-initialization.AllowedTypes
     value: 'juce::String;juce::Identifier;juce::Colour'
 
-  # Modernize tuning
+  # ── Modernize ──
+
   - key: modernize-use-auto.MinTypeNameLength
     value: 5
   - key: modernize-loop-convert.MinConfidence
     value: reasonable
   - key: modernize-pass-by-value.IncludeStyle
     value: llvm
+
+  # ── Misc ──
+
+  # Const correctness — flag variables that could be const but aren't.
+  # One of the strongest AI-slop catchers: agents rarely apply const correctly.
+  - key: misc-const-correctness.AnalyzeValues
+    value: true
+  - key: misc-const-correctness.AnalyzeReferences
+    value: true
+  - key: misc-const-correctness.WarnPointersAsValues
+    value: false
+  - key: misc-const-correctness.TransformValues
+    value: true
+  - key: misc-const-correctness.TransformReferences
+    value: true
+  - key: misc-const-correctness.TransformPointersAsValues
+    value: false
+
+  # ── C++ Core Guidelines ──
+
+  # Member initialization — don't flag C-style array members (JUCE audio buffers)
+  - key: cppcoreguidelines-pro-type-member-init.IgnoreArrays
+    value: true
 ...

@@ -8,7 +8,7 @@
 namespace oscil
 {
 
-void OscilDropdown::mouseDown(const juce::MouseEvent&)
+void OscilDropdown::mouseDown(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -19,7 +19,7 @@ void OscilDropdown::mouseDown(const juce::MouseEvent&)
         showPopup();
 }
 
-void OscilDropdown::mouseEnter(const juce::MouseEvent&)
+void OscilDropdown::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -38,7 +38,7 @@ void OscilDropdown::mouseEnter(const juce::MouseEvent&)
     }
 }
 
-void OscilDropdown::mouseExit(const juce::MouseEvent&)
+void OscilDropdown::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
 
@@ -76,7 +76,7 @@ bool OscilDropdown::keyPressed(const juce::KeyPress& key)
 
     if (!popupVisible_ && !items_.empty())
     {
-        int current = getSelectedIndex();
+        int const current = getSelectedIndex();
 
         if (key == juce::KeyPress::upKey)
         {
@@ -94,13 +94,13 @@ bool OscilDropdown::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilDropdown::focusGained(FocusChangeType)
+void OscilDropdown::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilDropdown::focusLost(FocusChangeType)
+void OscilDropdown::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -108,7 +108,7 @@ void OscilDropdown::focusLost(FocusChangeType)
 
 void OscilDropdown::timerCallback()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     hoverSpring_.update(dt);
     chevronSpring_.update(dt);
 
@@ -143,11 +143,11 @@ public:
 
     juce::String getDescription() const override
     {
-        juce::String selection = dropdown_.getSelectedLabel();
+        juce::String const selection = dropdown_.getSelectedLabel();
         if (selection.isEmpty())
             return "No selection";
 
-        int numItems = dropdown_.getNumItems();
+        int const numItems = dropdown_.getNumItems();
         return "Selected: " + selection + " (" + juce::String(numItems) + " options available)";
     }
 

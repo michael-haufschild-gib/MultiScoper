@@ -159,8 +159,8 @@ int OscilAccordionSection::getContentHeight() const
 
 int OscilAccordionSection::getPreferredHeight() const
 {
-    int contentHeight = getContentHeight();
-    float expandAmount = expandSpring_.position;
+    int const contentHeight = getContentHeight();
+    float const expandAmount = expandSpring_.position;
 
     return HEADER_HEIGHT + static_cast<int>(static_cast<float>(contentHeight) * expandAmount);
 }
@@ -199,8 +199,8 @@ void OscilAccordionSection::paint(juce::Graphics& g)
 
 void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float hoverAmount = hoverSpring_.position;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const hoverAmount = hoverSpring_.position;
 
     // Background
     auto bgColour = getTheme().backgroundSecondary;
@@ -246,20 +246,20 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 
 void OscilAccordionSection::paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float rotation = chevronSpring_.position * juce::MathConstants<float>::halfPi;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const rotation = chevronSpring_.position * juce::MathConstants<float>::halfPi;
 
     g.setColour(getTheme().textSecondary.withAlpha(opacity));
 
     juce::Path chevron;
-    float size = bounds.getWidth() * 0.35f;
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
+    float const size = bounds.getWidth() * 0.35f;
+    float const cx = bounds.getCentreX();
+    float const cy = bounds.getCentreY();
 
     // Right-pointing chevron that rotates to down
-    chevron.startNewSubPath(cx - size * 0.3f, cy - size);
-    chevron.lineTo(cx + size * 0.3f, cy);
-    chevron.lineTo(cx - size * 0.3f, cy + size);
+    chevron.startNewSubPath(cx - (size * 0.3f), cy - size);
+    chevron.lineTo(cx + (size * 0.3f), cy);
+    chevron.lineTo(cx - (size * 0.3f), cy + size);
 
     chevron.applyTransform(juce::AffineTransform::rotation(rotation, cx, cy));
 
@@ -297,7 +297,7 @@ void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
     mouseDownInHeader_ = false;
 }
 
-void OscilAccordionSection::mouseEnter(const juce::MouseEvent&)
+void OscilAccordionSection::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -316,7 +316,7 @@ void OscilAccordionSection::mouseEnter(const juce::MouseEvent&)
     }
 }
 
-void OscilAccordionSection::mouseExit(const juce::MouseEvent&)
+void OscilAccordionSection::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
 
@@ -342,13 +342,13 @@ bool OscilAccordionSection::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilAccordionSection::focusGained(FocusChangeType)
+void OscilAccordionSection::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilAccordionSection::focusLost(FocusChangeType)
+void OscilAccordionSection::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -361,13 +361,13 @@ void OscilAccordionSection::timerCallback()
     // Show/hide content based on animation state
     if (content_)
     {
-        bool shouldBeVisible = expandSpring_.position > 0.01f;
+        bool const shouldBeVisible = expandSpring_.position > 0.01f;
         if (content_->isVisible() != shouldBeVisible)
             content_->setVisible(shouldBeVisible);
     }
 
     // Only notify parent when height actually changed to avoid expensive layout recalculations
-    int currentHeight = getPreferredHeight();
+    int const currentHeight = getPreferredHeight();
     if (currentHeight != lastReportedHeight_)
     {
         lastReportedHeight_ = currentHeight;
@@ -385,7 +385,7 @@ void OscilAccordionSection::timerCallback()
 
 void OscilAccordionSection::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     expandSpring_.update(dt);
     hoverSpring_.update(dt);
     chevronSpring_.update(dt);

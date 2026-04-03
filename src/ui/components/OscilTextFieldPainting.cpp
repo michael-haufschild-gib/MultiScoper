@@ -24,7 +24,7 @@ void OscilTextField::paint(juce::Graphics& g)
 
 void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Background
     g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
@@ -50,17 +50,17 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
 
 void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Draw magnifying glass icon
     auto iconBounds = bounds.withWidth(ICON_WIDTH).reduced(8);
-    float cx = iconBounds.getCentreX();
-    float cy = iconBounds.getCentreY();
-    float radius = 5.0f;
+    float const cx = iconBounds.getCentreX();
+    float const cy = iconBounds.getCentreY();
+    float const radius = 5.0f;
 
     g.setColour(getTheme().textSecondary.withAlpha(opacity));
     g.drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2, ComponentLayout::BORDER_MEDIUM);
-    g.drawLine(cx + radius * 0.7f, cy + radius * 0.7f, cx + radius * 1.5f, cy + radius * 1.5f,
+    g.drawLine(cx + (radius * 0.7f), cy + (radius * 0.7f), cx + (radius * 1.5f), cy + (radius * 1.5f),
                ComponentLayout::BORDER_MEDIUM);
 }
 
@@ -78,7 +78,7 @@ void OscilTextField::mouseDown(const juce::MouseEvent& /*e*/)
     editor_->grabKeyboardFocus();
 }
 
-void OscilTextField::mouseDoubleClick(const juce::MouseEvent&)
+void OscilTextField::mouseDoubleClick(const juce::MouseEvent& /*event*/)
 {
     if (variant_ == TextFieldVariant::Number && enabled_)
     {

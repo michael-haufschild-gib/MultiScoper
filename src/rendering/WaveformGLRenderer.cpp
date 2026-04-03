@@ -141,13 +141,12 @@ void WaveformGLRenderer::compileDebugShader()
     debugProjectionLoc_ = debugShader_->getUniformIDFromName("projection");
     debugColorLoc_ = debugShader_->getUniformIDFromName("color");
 
-    auto& ext = context_->extensions;
     while (glGetError() != GL_NO_ERROR)
     {
     }
 
-    ext.glGenVertexArrays(1, &debugVAO_);
-    ext.glGenBuffers(1, &debugVBO_);
+    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &debugVAO_);
+    juce::OpenGLExtensionFunctions::glGenBuffers(1, &debugVBO_);
 
     debugShaderCompiled_ = true;
     GL_LOG("DEBUG SHADER: Compiled, VAO=" << static_cast<int>(debugVAO_) << ", VBO=" << static_cast<int>(debugVBO_));
@@ -182,17 +181,15 @@ void WaveformGLRenderer::openGLContextClosing()
     // Release debug shader resources
     if (context_ != nullptr)
     {
-        auto& ext = context_->extensions;
-
         if (debugVBO_ != 0)
         {
-            ext.glDeleteBuffers(1, &debugVBO_);
+            juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &debugVBO_);
             debugVBO_ = 0;
         }
 
         if (debugVAO_ != 0)
         {
-            ext.glDeleteVertexArrays(1, &debugVAO_);
+            juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &debugVAO_);
             debugVAO_ = 0;
         }
     }
@@ -207,7 +204,7 @@ void WaveformGLRenderer::openGLContextClosing()
 void WaveformGLRenderer::registerWaveform(int id)
 {
     const juce::SpinLock::ScopedLockType lock(dataLock_);
-    if (waveforms_.find(id) == waveforms_.end())
+    if (!waveforms_.contains(id))
     {
         WaveformRenderData data;
         data.id = id;

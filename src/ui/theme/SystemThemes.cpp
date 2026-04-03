@@ -7,9 +7,7 @@
 
 #include <cmath>
 
-namespace oscil
-{
-namespace SystemThemes
+namespace oscil::SystemThemes
 {
 
 ColorTheme createDarkProfessional()
@@ -79,7 +77,7 @@ ColorTheme createClassicGreen()
     theme.waveformColors.clear();
     for (int i = 0; i < 64; ++i)
     {
-        float brightness = 0.5f + 0.5f * (static_cast<float>(i) / 64.0f);
+        float const brightness = 0.5f + (0.5f * (static_cast<float>(i) / 64.0f));
         theme.waveformColors.push_back(juce::Colour::fromHSV(0.33f, 1.0f, brightness, 1.0f));
     }
     return theme;
@@ -107,7 +105,7 @@ ColorTheme createClassicAmber()
     theme.waveformColors.clear();
     for (int i = 0; i < 64; ++i)
     {
-        float hue = 0.08f + 0.04f * std::sin(static_cast<float>(i) * 0.2f);
+        float const hue = 0.08f + (0.04f * std::sin(static_cast<float>(i) * 0.2f));
         theme.waveformColors.push_back(juce::Colour::fromHSV(hue, 1.0f, 1.0f, 1.0f));
     }
     return theme;
@@ -170,11 +168,10 @@ ColorTheme createLightMode()
     };
     while (theme.waveformColors.size() < 64)
     {
-        float hue = static_cast<float>(theme.waveformColors.size()) / 64.0f;
+        float const hue = static_cast<float>(theme.waveformColors.size()) / 64.0f;
         theme.waveformColors.push_back(juce::Colour::fromHSV(hue, 0.9f, 0.6f, 1.0f));
     }
     return theme;
 }
 
-} // namespace SystemThemes
-} // namespace oscil
+} // namespace oscil::SystemThemes

@@ -63,7 +63,7 @@ void OscillatorListComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_)
 
 void OscillatorListComponent::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     g.fillAll(theme.backgroundSecondary);
 
     // Draw drag indicator line
@@ -72,7 +72,7 @@ void OscillatorListComponent::paint(juce::Graphics& g)
         // Calculate Y position for indicator relative to this component
         // We need to account for viewport scroll position
         int yPos = 0;
-        int viewY = viewport_->getViewPositionY();
+        int const viewY = viewport_->getViewPositionY();
 
         // Sum heights up to target index
         for (int i = 0; i < dragTargetIndex_; ++i)
@@ -84,7 +84,7 @@ void OscillatorListComponent::paint(juce::Graphics& g)
         // Adjust for scroll and relative positioning
         // container_ is inside viewport_, so yPos is relative to container
         // viewport_ is child of OscillatorListComponent
-        int relativeY = yPos - viewY + viewport_->getY();
+        int const relativeY = yPos - viewY + viewport_->getY();
 
         g.setColour(theme.controlActive);
         g.drawHorizontalLine(relativeY, 0.0f, static_cast<float>(getWidth()));
@@ -119,7 +119,7 @@ void OscillatorListComponent::resized()
         int y = 0;
         for (auto& item : items_)
         {
-            int itemHeight = item->getPreferredHeight();
+            int const itemHeight = item->getPreferredHeight();
             item->setBounds(0, y, container_->getWidth(), itemHeight);
             y += itemHeight;
         }
@@ -130,7 +130,7 @@ void OscillatorListComponent::updateOscillatorCounts()
 {
     if (toolbar_)
     {
-        int totalCount = static_cast<int>(allOscillators_.size());
+        int const totalCount = static_cast<int>(allOscillators_.size());
         int visibleCount = 0;
         for (const auto& osc : allOscillators_)
         {
@@ -323,10 +323,10 @@ void OscillatorListComponent::oscillatorDragStarted(const OscillatorId& id)
         dragObj->setProperty("type", "oscillator");
         dragObj->setProperty("id", id.id);
         dragObj->setProperty("index", sourceIndex);
-        juce::var dragDescription(dragObj);
+        juce::var const dragDescription(dragObj);
 
         // Create snapshot for drag image
-        juce::Image dragImage = sourceComponent->createComponentSnapshot(sourceComponent->getLocalBounds());
+        juce::Image const dragImage = sourceComponent->createComponentSnapshot(sourceComponent->getLocalBounds());
 
         // Start JUCE drag operation (1.0f = scale factor for the drag image)
         startDragging(dragDescription, sourceComponent, juce::ScaledImage(dragImage), true);
@@ -335,12 +335,8 @@ void OscillatorListComponent::oscillatorDragStarted(const OscillatorId& id)
 
 bool OscillatorListComponent::isInterestedInDragSource(const SourceDetails& dragSourceDetails)
 {
-    if (dragSourceDetails.description.isObject() && dragSourceDetails.description.hasProperty("type") &&
-        dragSourceDetails.description.getProperty("type", "").toString() == "oscillator")
-    {
-        return true;
-    }
-    return false;
+    return dragSourceDetails.description.isObject() && dragSourceDetails.description.hasProperty("type") &&
+           dragSourceDetails.description.getProperty("type", "").toString() == "oscillator";
 }
 
 void OscillatorListComponent::itemDragEnter(const SourceDetails& dragSourceDetails) { itemDragMove(dragSourceDetails); }
@@ -350,9 +346,9 @@ void OscillatorListComponent::itemDragMove(const SourceDetails& dragSourceDetail
     auto mousePos = dragSourceDetails.localPosition;
 
     // Convert mouse Y to container coordinates to check against items
-    int containerY = mousePos.y - viewport_->getY() + viewport_->getViewPositionY();
+    int const containerY = mousePos.y - viewport_->getY() + viewport_->getViewPositionY();
 
-    int newTarget = getItemIndexAtY(containerY);
+    int const newTarget = getItemIndexAtY(containerY);
     if (newTarget != dragTargetIndex_)
     {
         updateDragIndicator(newTarget);
@@ -363,7 +359,7 @@ void OscillatorListComponent::itemDragExit(const SourceDetails& /*dragSourceDeta
 
 void OscillatorListComponent::itemDropped(const SourceDetails& dragSourceDetails)
 {
-    int sourceIndex = static_cast<int>(dragSourceDetails.description.getProperty("index", -1));
+    int const sourceIndex = static_cast<int>(dragSourceDetails.description.getProperty("index", -1));
     int targetIndex = dragTargetIndex_;
 
     updateDragIndicator(-1);
@@ -395,7 +391,7 @@ void OscillatorListComponent::oscillatorMoveRequested(const OscillatorId& id, in
     if (currentIndex == -1)
         return;
 
-    int newIndex = currentIndex + direction;
+    int const newIndex = currentIndex + direction;
     if (newIndex >= 0 && std::cmp_less(newIndex, items_.size()))
     {
         listeners_.call([currentIndex, newIndex](Listener& l) { l.oscillatorsReordered(currentIndex, newIndex); });
@@ -420,8 +416,8 @@ int OscillatorListComponent::getItemIndexAtY(int y) const
     int currentY = 0;
     for (size_t i = 0; i < items_.size(); ++i)
     {
-        int height = items_[i]->getHeight();
-        if (y < currentY + height / 2)
+        int const height = items_[i]->getHeight();
+        if (y < currentY + (height / 2))
         {
             return static_cast<int>(i);
         }
@@ -440,7 +436,7 @@ void OscillatorListComponent::updateDragIndicator(int targetIndex)
     }
 }
 
-void OscillatorListComponent::themeChanged(const ColorTheme&) { repaint(); }
+void OscillatorListComponent::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 void OscillatorListComponent::filterModeChanged(OscillatorFilterMode mode)
 {

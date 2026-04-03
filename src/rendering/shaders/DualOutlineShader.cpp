@@ -53,9 +53,9 @@ bool DualOutlineShader::compile(juce::OpenGLContext& context)
 
     gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
 
-    juce::String vertexCode =
+    juce::String const vertexCode =
         juce::String::createStringFromData(BinaryData::dual_outline_vert, BinaryData::dual_outline_vertSize);
-    juce::String fragmentCode =
+    juce::String const fragmentCode =
         juce::String::createStringFromData(BinaryData::dual_outline_frag, BinaryData::dual_outline_fragSize);
 
     if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) ||
@@ -77,8 +77,8 @@ bool DualOutlineShader::compile(juce::OpenGLContext& context)
         return false;
     }
 
-    context.extensions.glGenVertexArrays(1, &gl_->vao);
-    context.extensions.glGenBuffers(1, &gl_->vbo);
+    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &gl_->vao);
+    juce::OpenGLExtensionFunctions::glGenBuffers(1, &gl_->vbo);
 
     gl_->compiled = true;
     return true;
@@ -86,10 +86,11 @@ bool DualOutlineShader::compile(juce::OpenGLContext& context)
 
 void DualOutlineShader::release(juce::OpenGLContext& context)
 {
+    juce::ignoreUnused(context);
     if (!gl_->compiled)
         return;
-    context.extensions.glDeleteBuffers(1, &gl_->vbo);
-    context.extensions.glDeleteVertexArrays(1, &gl_->vao);
+    juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &gl_->vbo);
+    juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &gl_->vao);
     gl_->program.reset();
     gl_->compiled = false;
 }
@@ -101,23 +102,26 @@ void DualOutlineShader::drawChannel(juce::OpenGLExtensionFunctions& ext, const s
                                     float centerY, float amplitude, float boundsX, float boundsWidth, float lineWidth,
                                     GLint posLoc, GLint distLoc)
 {
+    juce::ignoreUnused(ext);
     std::vector<float> vertices;
-    float lineGeomWidth = lineWidth * 6.0f;
+    float const lineGeomWidth = lineWidth * 6.0f;
     buildLineGeometry(vertices, samples, centerY, amplitude, lineGeomWidth, boundsX, boundsWidth);
 
-    ext.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(),
-                     GL_DYNAMIC_DRAW);
+    juce::OpenGLExtensionFunctions::glBufferData(
+        GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
 
-    ext.glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
-    ext.glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
-    ext.glVertexAttribPointer(static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                              reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
+    juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE,
+                                                          4 * sizeof(float), nullptr);
+    juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(static_cast<GLuint>(distLoc));
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(
+        static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+        reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
 
-    ext.glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
-    ext.glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
+    juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
+    juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
 }
 
 void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<float>& channel1,
@@ -134,20 +138,25 @@ void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<f
     if (!setup2DProjection(context, ext, gl_->projectionLoc))
         return;
 
-    ext.glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(), params.colour.getFloatGreen(),
-                    params.colour.getFloatBlue(), params.colour.getFloatAlpha());
-    ext.glUniform1f(gl_->opacityLoc, params.opacity);
+    juce::OpenGLExtensionFunctions::glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
+                                                params.colour.getFloatGreen(), params.colour.getFloatBlue(),
+                                                params.colour.getFloatAlpha());
+    juce::OpenGLExtensionFunctions::glUniform1f(gl_->opacityLoc, params.opacity);
 
-    ext.glBindVertexArray(gl_->vao);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(gl_->vao);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
-    float height = params.bounds.getHeight();
-    float centerY1, centerY2, amp1, amp2;
+    float const height = params.bounds.getHeight();
+    float centerY1;
+    float centerY2;
+    float amp1;
+    float amp2;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    GLint posLoc = std::max(0, static_cast<int>(ext.glGetAttribLocation(gl_->program->getProgramID(), "position")));
-    GLint distLoc =
-        std::max(1, static_cast<int>(ext.glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter")));
+    GLint const posLoc = std::max(0, static_cast<int>(juce::OpenGLExtensionFunctions::glGetAttribLocation(
+                                         gl_->program->getProgramID(), "position")));
+    GLint const distLoc = std::max(1, static_cast<int>(juce::OpenGLExtensionFunctions::glGetAttribLocation(
+                                          gl_->program->getProgramID(), "distFromCenter")));
 
     drawChannel(ext, channel1, centerY1, amp1, params.bounds.getX(), params.bounds.getWidth(), params.lineWidth, posLoc,
                 distLoc);
@@ -158,8 +167,8 @@ void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<f
                     posLoc, distLoc);
     }
 
-    ext.glBindVertexArray(0);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(0);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
     glDisable(GL_BLEND);
 }
 #endif

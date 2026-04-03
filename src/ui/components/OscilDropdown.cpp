@@ -87,13 +87,13 @@ int OscilDropdown::getSelectedIndex() const { return selectedIndices_.empty() ? 
 
 juce::String OscilDropdown::getSelectedId() const
 {
-    int index = getSelectedIndex();
+    int const index = getSelectedIndex();
     return (index >= 0 && std::cmp_less(index, items_.size())) ? items_[static_cast<size_t>(index)].id : juce::String();
 }
 
 juce::String OscilDropdown::getSelectedLabel() const
 {
-    int index = getSelectedIndex();
+    int const index = getSelectedIndex();
     return (index >= 0 && std::cmp_less(index, items_.size())) ? items_[static_cast<size_t>(index)].label
                                                                : juce::String();
 }
@@ -123,7 +123,7 @@ void OscilDropdown::setSelectedIndices(const std::set<int>& indices, bool notify
 std::vector<juce::String> OscilDropdown::getSelectedIds() const
 {
     std::vector<juce::String> result;
-    for (int index : selectedIndices_)
+    for (int const index : selectedIndices_)
         if (index >= 0 && std::cmp_less(index, items_.size()))
             result.push_back(items_[static_cast<size_t>(index)].id);
     return result;
@@ -132,7 +132,7 @@ std::vector<juce::String> OscilDropdown::getSelectedIds() const
 std::vector<juce::String> OscilDropdown::getSelectedLabels() const
 {
     std::vector<juce::String> result;
-    for (int index : selectedIndices_)
+    for (int const index : selectedIndices_)
         if (index >= 0 && std::cmp_less(index, items_.size()))
             result.push_back(items_[static_cast<size_t>(index)].label);
     return result;
@@ -152,7 +152,7 @@ void OscilDropdown::setMultiSelect(bool multiSelect)
         multiSelect_ = multiSelect;
         if (!multiSelect && selectedIndices_.size() > 1)
         {
-            int first = *selectedIndices_.begin();
+            int const first = *selectedIndices_.begin();
             selectedIndices_.clear();
             selectedIndices_.insert(first);
             updateDisplayText();
@@ -221,7 +221,7 @@ void OscilDropdown::handleItemClicked(int index)
 {
     if (multiSelect_)
     {
-        if (selectedIndices_.count(index) != 0u)
+        if (selectedIndices_.contains(index))
             selectedIndices_.erase(index);
         else
             selectedIndices_.insert(index);
@@ -250,7 +250,7 @@ void OscilDropdown::updateDisplayText()
     }
     else if (selectedIndices_.size() == 1)
     {
-        int index = *selectedIndices_.begin();
+        int const index = *selectedIndices_.begin();
         if (index >= 0 && std::cmp_less(index, items_.size()))
             displayText_ = items_[static_cast<size_t>(index)].label;
         else
@@ -271,11 +271,11 @@ int OscilDropdown::getPreferredWidth() const
         auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, item.label, 0, 0);
-        int width = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int const width = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
         maxWidth = std::max(maxWidth, width);
     }
 
-    return maxWidth + PADDING_H * 2 + CHEVRON_SIZE + 8;
+    return maxWidth + (PADDING_H * 2) + CHEVRON_SIZE + 8;
 }
 
 int OscilDropdown::getPreferredHeight() const { return ComponentLayout::INPUT_HEIGHT; }
@@ -283,8 +283,8 @@ int OscilDropdown::getPreferredHeight() const { return ComponentLayout::INPUT_HE
 void OscilDropdown::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float hoverAmount = hoverSpring_.position;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const hoverAmount = hoverSpring_.position;
 
     auto bgColour = getTheme().backgroundSecondary;
     if (hoverAmount > 0.01f)
@@ -311,7 +311,7 @@ void OscilDropdown::paint(juce::Graphics& g)
     auto textBounds = bounds.reduced(PADDING_H, 0);
     textBounds.removeFromRight(CHEVRON_SIZE + 8);
 
-    bool isPlaceholder = selectedIndices_.empty();
+    bool const isPlaceholder = selectedIndices_.empty();
     g.setColour((isPlaceholder ? getTheme().textSecondary : getTheme().textPrimary).withAlpha(opacity));
     g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
     g.drawText(displayText_, textBounds, juce::Justification::centredLeft);
@@ -324,19 +324,19 @@ void OscilDropdown::paint(juce::Graphics& g)
 
 void OscilDropdown::paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float rotation = chevronSpring_.position * juce::MathConstants<float>::pi;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const rotation = chevronSpring_.position * juce::MathConstants<float>::pi;
 
     g.setColour(getTheme().textSecondary.withAlpha(opacity));
 
     juce::Path chevron;
-    float size = bounds.getWidth() * 0.4f;
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
+    float const size = bounds.getWidth() * 0.4f;
+    float const cx = bounds.getCentreX();
+    float const cy = bounds.getCentreY();
 
-    chevron.startNewSubPath(cx - size, cy - size * 0.3f);
-    chevron.lineTo(cx, cy + size * 0.3f);
-    chevron.lineTo(cx + size, cy - size * 0.3f);
+    chevron.startNewSubPath(cx - size, cy - (size * 0.3f));
+    chevron.lineTo(cx, cy + (size * 0.3f));
+    chevron.lineTo(cx + size, cy - (size * 0.3f));
 
     chevron.applyTransform(juce::AffineTransform::rotation(rotation, cx, cy));
 

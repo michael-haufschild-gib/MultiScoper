@@ -331,8 +331,8 @@ void BloomEffect::resizeMipChain(juce::OpenGLContext& context, int w, int h)
 {
     for (int i = 0; i < kMaxMipLevels; ++i)
     {
-        int mipW = std::max(1, w >> (i + 1));
-        int mipH = std::max(1, h >> (i + 1));
+        int const mipW = std::max(1, w >> (i + 1));
+        int const mipH = std::max(1, h >> (i + 1));
 
         if (mipChain_[static_cast<size_t>(i)]->isValid())
             mipChain_[static_cast<size_t>(i)]->destroy(context);
@@ -345,18 +345,21 @@ void BloomEffect::resizeMipChain(juce::OpenGLContext& context, int w, int h)
 
 void BloomEffect::passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, FramebufferPool& pool)
 {
+    juce::ignoreUnused(ext);
     mipChain_[0]->bind();
     prefilterShader_->use();
     source->bindTexture(0);
-    ext.glUniform1f(prefilterThreshLoc_, settings_.threshold);
-    ext.glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
-    ext.glUniform2f(prefilterResLoc_, static_cast<float>(source->width), static_cast<float>(source->height));
+    juce::OpenGLExtensionFunctions::glUniform1f(prefilterThreshLoc_, settings_.threshold);
+    juce::OpenGLExtensionFunctions::glUniform1f(prefilterSoftKneeLoc_, settings_.softKnee);
+    juce::OpenGLExtensionFunctions::glUniform2f(prefilterResLoc_, static_cast<float>(source->width),
+                                                static_cast<float>(source->height));
     pool.renderFullscreenQuad();
     mipChain_[0]->unbind();
 }
 
 void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool)
 {
+    juce::ignoreUnused(ext);
     downsampleShader_->use();
     for (int i = 0; i < kMaxMipLevels - 1; ++i)
     {
@@ -364,7 +367,8 @@ void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, Framebuffe
         Framebuffer* dst = mipChain_[static_cast<size_t>(i) + 1].get();
         dst->bind();
         src->bindTexture(0);
-        ext.glUniform2f(downsampleResLoc_, static_cast<float>(src->width), static_cast<float>(src->height));
+        juce::OpenGLExtensionFunctions::glUniform2f(downsampleResLoc_, static_cast<float>(src->width),
+                                                    static_cast<float>(src->height));
         pool.renderFullscreenQuad();
         dst->unbind();
     }
@@ -372,11 +376,12 @@ void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, Framebuffe
 
 void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool)
 {
+    juce::ignoreUnused(ext);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
 
     upsampleShader_->use();
-    ext.glUniform1f(upsampleFilterRadiusLoc_, settings_.spread);
+    juce::OpenGLExtensionFunctions::glUniform1f(upsampleFilterRadiusLoc_, settings_.spread);
 
     for (int i = kMaxMipLevels - 1; i > 0; --i)
     {
@@ -384,8 +389,8 @@ void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferP
         Framebuffer* dst = mipChain_[static_cast<size_t>(i) - 1].get();
         dst->bind();
         src->bindTexture(0);
-        ext.glUniform2f(upsampleTexelSizeLoc_, 1.0f / static_cast<float>(src->width),
-                        1.0f / static_cast<float>(src->height));
+        juce::OpenGLExtensionFunctions::glUniform2f(upsampleTexelSizeLoc_, 1.0f / static_cast<float>(src->width),
+                                                    1.0f / static_cast<float>(src->height));
         pool.renderFullscreenQuad();
         dst->unbind();
     }
@@ -394,18 +399,19 @@ void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferP
 void BloomEffect::passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination,
                               FramebufferPool& pool)
 {
+    juce::ignoreUnused(ext);
     glDisable(GL_BLEND);
 
     destination->bind();
     combineShader_->use();
 
     source->bindTexture(0);
-    ext.glUniform1i(combineOriginalLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(combineOriginalLoc_, 0);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, mipChain_[0]->colorTexture);
-    ext.glUniform1i(combineBloomLoc_, 1);
-    ext.glUniform1f(combineIntensityLoc_, settings_.intensity);
+    juce::OpenGLExtensionFunctions::glUniform1i(combineBloomLoc_, 1);
+    juce::OpenGLExtensionFunctions::glUniform1f(combineIntensityLoc_, settings_.intensity);
 
     pool.renderFullscreenQuad();
 
@@ -420,13 +426,13 @@ void BloomEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Frame
                         FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
+    auto& ext = context.extensions;
     if (!compiled_ || !source || !destination)
         return;
 
     if (source->width != lastWidth_ || source->height != lastHeight_)
         resizeMipChain(context, source->width, source->height);
 
-    auto& ext = context.extensions;
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 

@@ -16,19 +16,19 @@ void ScreenshotHandler::handleTakeScreenshot(const httplib::Request& req, httpli
     try
     {
         auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
-        std::string filename = body.value("filename", "test_screenshot.png");
+        std::string const filename = body.value("filename", "test_screenshot.png");
 
         auto result = runOnMessageThread([this, filename]() -> nlohmann::json {
             nlohmann::json response;
 
             // Create a snapshot of the editor
             auto bounds = editor_.getLocalBounds();
-            juce::Image image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+            juce::Image const image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
             juce::Graphics g(image);
             editor_.paintEntireComponent(g, true);
 
             // Save to file
-            juce::File outputFile(
+            juce::File const outputFile(
                 juce::File::getCurrentWorkingDirectory().getChildFile("screenshots").getChildFile(filename));
             outputFile.getParentDirectory().createDirectory();
 

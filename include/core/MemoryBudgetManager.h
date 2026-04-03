@@ -121,7 +121,7 @@ public:
      */
     [[nodiscard]] CaptureQualityConfig getGlobalConfig() const
     {
-        std::scoped_lock lock(buffersMutex_);
+        const std::scoped_lock lock(buffersMutex_);
         return globalConfig_;
     }
 
@@ -130,7 +130,7 @@ public:
      */
     [[nodiscard]] int getSourceRate() const
     {
-        std::scoped_lock lock(buffersMutex_);
+        const std::scoped_lock lock(buffersMutex_);
         return sourceRate_;
     }
 

@@ -39,7 +39,7 @@ void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangl
     shader->renderSoftware(g, presenter_->getDisplayBuffer1(), channel2Ptr, params);
 }
 
-void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int>)
+void WaveformComponent::drawWaveform(juce::Graphics& g, juce::Rectangle<int> /*unused*/)
 {
     if (!presenter_ || !presenter_->hasData())
         return;
@@ -63,14 +63,14 @@ static void buildChannelPath(juce::Path& path, const std::vector<float>& buffer,
     if (buffer.size() < 2)
         return;
 
-    float xScale = static_cast<float>(width) / static_cast<float>(buffer.size() - 1);
-    float yStart = juce::jlimit(yMin, yMax, centerY - buffer[0] * amplitude * scale);
+    float const xScale = static_cast<float>(width) / static_cast<float>(buffer.size() - 1);
+    float const yStart = juce::jlimit(yMin, yMax, centerY - (buffer[0] * amplitude * scale));
     path.startNewSubPath(0, yStart);
 
     for (size_t i = 1; i < buffer.size(); ++i)
     {
-        float x = static_cast<float>(i) * xScale;
-        float y = juce::jlimit(yMin, yMax, centerY - buffer[i] * amplitude * scale);
+        float const x = static_cast<float>(i) * xScale;
+        float const y = juce::jlimit(yMin, yMax, centerY - (buffer[i] * amplitude * scale));
         path.lineTo(x, y);
     }
 }
@@ -91,18 +91,18 @@ void WaveformComponent::updateWaveformPath()
     if (displayBuffer1.empty())
         return;
 
-    int width = getWidth();
-    int height = getHeight();
+    int const width = getWidth();
+    int const height = getHeight();
     if (width <= 0 || height <= 0)
         return;
 
-    bool isStereo = presenter_->isStereo();
-    float effectiveScale = presenter_->getEffectiveScale();
-    float h = static_cast<float>(height);
+    bool const isStereo = presenter_->isStereo();
+    float const effectiveScale = presenter_->getEffectiveScale();
+    auto const h = static_cast<float>(height);
 
     if (isStereo)
     {
-        float halfH = h * 0.5f;
+        float const halfH = h * 0.5f;
         buildChannelPath(waveformPath1_, displayBuffer1, width, halfH * 0.5f, halfH * 0.5f, effectiveScale, 0.0f,
                          halfH);
         buildChannelPath(waveformPath2_, displayBuffer2, width, halfH * 1.5f, halfH * 0.5f, effectiveScale, halfH, h);

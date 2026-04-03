@@ -42,7 +42,7 @@ int64_t convertTimelineTimestampToCaptureDomain(int64_t timestamp, int sourceRat
     if (scaled <= 0.0L)
         return 0;
 
-    constexpr long double maxValue = static_cast<long double>(std::numeric_limits<int64_t>::max());
+    constexpr auto maxValue = static_cast<long double>(std::numeric_limits<int64_t>::max());
     if (scaled >= maxValue)
         return std::numeric_limits<int64_t>::max();
 
@@ -56,8 +56,10 @@ namespace oscil
 OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processor_(p)
-    , serviceContext_{processor_.getInstanceRegistry(), processor_.getThemeService(), processor_.getShaderRegistry(),
-                      processor_.getPresetManager()}
+    , serviceContext_{.instanceRegistry = processor_.getInstanceRegistry(),
+                      .themeService = processor_.getThemeService(),
+                      .shaderRegistry = processor_.getShaderRegistry(),
+                      .presetManager = processor_.getPresetManager()}
 {
     // Create coordinators
     sourceCoordinator_ =
@@ -97,7 +99,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     renderCoordinator_ = std::make_unique<GpuRenderCoordinator>(*this, *statusBar_);
 
     // Initialize GPU Rendering
-    bool gpuRenderingEnabled = processor_.getState().isGpuRenderingEnabled();
+    bool const gpuRenderingEnabled = processor_.getState().isGpuRenderingEnabled();
     renderCoordinator_->setGpuRenderingEnabled(gpuRenderingEnabled);
     if (auto* optionsSection = sidebar_->getOptionsSection())
     {
@@ -157,7 +159,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
             waveformMode = WaveformMode::RestartOnPlay;
 
         timingSection->setTimingMode(timingConfig.timingMode);
-        timingSection->setTimeIntervalMs(static_cast<int>(timingConfig.timeIntervalMs));
+        timingSection->setTimeIntervalMs(timingConfig.timeIntervalMs);
         timingSection->setNoteInterval(timingConfig.noteInterval);
         timingSection->setHostSyncEnabled(timingConfig.hostSyncEnabled);
         timingSection->setHostBPM(timingConfig.hostBPM);
@@ -260,7 +262,7 @@ void OscilPluginEditor::timerCallback()
 
         if (restartModeActive && timingEngine.checkAndClearTrigger())
         {
-            int64_t triggerTimestamp = static_cast<int64_t>(std::llround(timingConfig.lastSyncTimestamp));
+            auto triggerTimestamp = static_cast<int64_t>(std::llround(timingConfig.lastSyncTimestamp));
             if (triggerTimestamp <= 0)
             {
                 auto hostTimestamp = timingEngine.getHostInfo().timeInSamples;

@@ -116,6 +116,7 @@ bool FilmGrainEffect::isCompiled() const { return compiled_; }
 void FilmGrainEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                             FramebufferPool& pool, float deltaTime)
 {
+    juce::ignoreUnused(context);
     if (!compiled_ || !source || !destination)
         return;
 
@@ -123,8 +124,6 @@ void FilmGrainEffect::apply(juce::OpenGLContext& context, Framebuffer* source, F
     accumulatedTime_ += deltaTime * settings_.speed;
     if (accumulatedTime_ > 1000.0f)
         accumulatedTime_ = std::fmod(accumulatedTime_, 1000.0f);
-
-    auto& ext = context.extensions;
 
     // Bind destination
     destination->bind();
@@ -138,12 +137,13 @@ void FilmGrainEffect::apply(juce::OpenGLContext& context, Framebuffer* source, F
 
     // Bind source texture
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(textureLoc_, 0);
 
     // Set uniforms
-    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
-    ext.glUniform1f(timeLoc_, accumulatedTime_);
-    ext.glUniform2f(resolutionLoc_, static_cast<float>(source->width), static_cast<float>(source->height));
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(timeLoc_, accumulatedTime_);
+    juce::OpenGLExtensionFunctions::glUniform2f(resolutionLoc_, static_cast<float>(source->width),
+                                                static_cast<float>(source->height));
 
     // Render fullscreen quad
     pool.renderFullscreenQuad();

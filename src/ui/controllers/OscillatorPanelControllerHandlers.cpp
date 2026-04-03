@@ -36,6 +36,7 @@ void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& os
             auto& layoutManager = state.getLayoutManager();
             auto panes = layoutManager.getPanes();
             std::vector<std::pair<PaneId, juce::String>> paneList;
+            paneList.reserve(panes.size());
             for (const auto& pane : panes)
             {
                 paneList.emplace_back(pane.getId(), pane.getName());
@@ -291,7 +292,7 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
     {
         OSCIL_LOG(CONTROLLER, "valueTreePropertyChanged: Oscillator property="
                                   << property.toString() << " oscId=" << tree.getProperty(StateIds::Id).toString());
-        OscillatorId oscId{tree.getProperty(StateIds::Id).toString()};
+        OscillatorId const oscId{tree.getProperty(StateIds::Id).toString()};
 
         if (property == StateIds::Name || property == StateIds::Colour || property == StateIds::ProcessingMode ||
             property == StateIds::Visible || property == StateIds::SourceId)
@@ -314,7 +315,7 @@ void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, 
     }
 }
 
-void OscillatorPanelController::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree& child)
+void OscillatorPanelController::valueTreeChildAdded(juce::ValueTree& /*parentTree*/, juce::ValueTree& child)
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
@@ -324,7 +325,8 @@ void OscillatorPanelController::valueTreeChildAdded(juce::ValueTree&, juce::Valu
     }
 }
 
-void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree& child, int)
+void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree& /*parentTree*/, juce::ValueTree& child,
+                                                      int /*indexFromWhichChildWasRemoved*/)
 {
     if (child.hasType(StateIds::Oscillator) || child.hasType(StateIds::Pane))
     {
@@ -333,7 +335,7 @@ void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree&, juce::Va
         // Close dialog if open
         if (dialogManager_ && child.hasType(StateIds::Oscillator))
         {
-            OscillatorId oid{child.getProperty(StateIds::Id).toString()};
+            OscillatorId const oid{child.getProperty(StateIds::Id).toString()};
             if (dialogManager_->isConfigPopupVisibleFor(oid))
             {
                 dialogManager_->closeConfigPopup();
@@ -344,7 +346,7 @@ void OscillatorPanelController::valueTreeChildRemoved(juce::ValueTree&, juce::Va
     }
 }
 
-void OscillatorPanelController::valueTreeChildOrderChanged(juce::ValueTree& parent, int, int)
+void OscillatorPanelController::valueTreeChildOrderChanged(juce::ValueTree& parent, int /*oldIndex*/, int /*newIndex*/)
 {
     if (parent.hasType(StateIds::Oscillators) || parent.hasType(StateIds::Panes))
     {
@@ -352,6 +354,6 @@ void OscillatorPanelController::valueTreeChildOrderChanged(juce::ValueTree& pare
     }
 }
 
-void OscillatorPanelController::valueTreeParentChanged(juce::ValueTree&) {}
+void OscillatorPanelController::valueTreeParentChanged(juce::ValueTree& /*treeWhoseParentHasChanged*/) {}
 
 } // namespace oscil

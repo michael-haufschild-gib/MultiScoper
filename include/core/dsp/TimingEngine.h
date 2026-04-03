@@ -251,9 +251,9 @@ private:
 
     // Trigger detection
     bool detectTrigger(const float* samples, int numSamples);
-    bool detectRisingEdge(float sample, const TimingConfigData& cfg);
-    bool detectFallingEdge(float sample, const TimingConfigData& cfg);
-    bool detectBothEdges(float sample, const TimingConfigData& cfg);
+    bool detectRisingEdge(float sample, const TimingConfigData& cfg) const;
+    bool detectFallingEdge(float sample, const TimingConfigData& cfg) const;
+    bool detectBothEdges(float sample, const TimingConfigData& cfg) const;
     bool detectLevel(float sample, const TimingConfigData& cfg);
 
     // Notification helpers

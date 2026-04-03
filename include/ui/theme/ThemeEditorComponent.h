@@ -27,7 +27,7 @@ namespace oscil
 class ColorSwatchButton : public juce::Component
 {
 public:
-    ColorSwatchButton(IThemeService& themeService, const juce::String& label, juce::Colour initialColor);
+    ColorSwatchButton(IThemeService& themeService, juce::String label, juce::Colour initialColor);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -55,7 +55,7 @@ private:
 class ThemeColorSection : public juce::Component
 {
 public:
-    ThemeColorSection(IThemeService& themeService, const juce::String& title);
+    ThemeColorSection(IThemeService& themeService, juce::String title);
 
     void paint(juce::Graphics& g) override;
     void resized() override;

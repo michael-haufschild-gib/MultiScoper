@@ -20,7 +20,7 @@ OscilToggle::OscilToggle(IThemeService& themeService)
     // Setup internal toggle button for APVTS (hidden)
     internalButton_.setToggleState(false, juce::dontSendNotification);
     internalButton_.onClick = [this] {
-        bool newValue = internalButton_.getToggleState();
+        bool const newValue = internalButton_.getToggleState();
         if (newValue != value_)
         {
             setValue(newValue, true);
@@ -115,14 +115,14 @@ void OscilToggle::detachFromParameter() { attachment_.reset(); }
 
 int OscilToggle::getPreferredWidth() const
 {
-    int toggleWidth = ComponentLayout::TOGGLE_WIDTH;
+    int const toggleWidth = ComponentLayout::TOGGLE_WIDTH;
 
     if (label_.isNotEmpty())
     {
         auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
-        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
         return toggleWidth + ComponentLayout::SPACING_SM + labelWidth;
     }
 
@@ -139,7 +139,7 @@ int OscilToggle::getPreferredHeight() const
 void OscilToggle::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Calculate toggle track bounds
     juce::Rectangle<float> trackBounds;
@@ -166,7 +166,7 @@ void OscilToggle::paint(juce::Graphics& g)
         auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
-        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
 
         // Draw label on left
         auto labelBounds =
@@ -191,10 +191,10 @@ void OscilToggle::paint(juce::Graphics& g)
 
 void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Interpolate track color based on position
-    float progress = positionSpring_.position;
+    float const progress = positionSpring_.position;
     auto offColor = getTheme().controlBorder;
     auto onColor = getTheme().statusActive;
     auto trackColor = offColor.interpolatedWith(onColor, progress);
@@ -203,18 +203,18 @@ void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     g.fillRoundedRectangle(bounds, bounds.getHeight() / 2.0f);
 }
 
-void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds)
+void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds) const
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float progress = positionSpring_.position;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const progress = positionSpring_.position;
 
     // Calculate knob position
-    float knobSize = ComponentLayout::TOGGLE_KNOB_SIZE;
-    float padding = (trackBounds.getHeight() - knobSize) / 2.0f;
-    float minX = trackBounds.getX() + padding;
-    float maxX = trackBounds.getRight() - knobSize - padding;
-    float knobX = minX + (maxX - minX) * progress;
-    float knobY = trackBounds.getY() + padding;
+    float const knobSize = ComponentLayout::TOGGLE_KNOB_SIZE;
+    float const padding = (trackBounds.getHeight() - knobSize) / 2.0f;
+    float const minX = trackBounds.getX() + padding;
+    float const maxX = trackBounds.getRight() - knobSize - padding;
+    float const knobX = minX + ((maxX - minX) * progress);
+    float const knobY = trackBounds.getY() + padding;
 
     auto knobBounds = juce::Rectangle<float>(knobX, knobY, knobSize, knobSize);
 
@@ -231,7 +231,7 @@ void OscilToggle::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>
 {
     g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-                           bounds.getHeight() / 2.0f + ComponentLayout::FOCUS_RING_OFFSET,
+                           (bounds.getHeight() / 2.0f) + ComponentLayout::FOCUS_RING_OFFSET,
                            ComponentLayout::FOCUS_RING_WIDTH);
 }
 
@@ -240,7 +240,7 @@ void OscilToggle::resized()
     // No child components to layout
 }
 
-void OscilToggle::mouseDown(const juce::MouseEvent&)
+void OscilToggle::mouseDown(const juce::MouseEvent& /*event*/)
 {
     if (enabled_)
     {
@@ -248,7 +248,7 @@ void OscilToggle::mouseDown(const juce::MouseEvent&)
     }
 }
 
-void OscilToggle::mouseUp(const juce::MouseEvent&)
+void OscilToggle::mouseUp(const juce::MouseEvent& /*event*/)
 {
     // Click handled in mouseDown for immediate response
 }
@@ -263,19 +263,19 @@ bool OscilToggle::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilToggle::focusGained(FocusChangeType)
+void OscilToggle::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilToggle::focusLost(FocusChangeType)
+void OscilToggle::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
 }
 
-void OscilToggle::notifyValueChanged()
+void OscilToggle::notifyValueChanged() const
 {
     if (onValueChanged)
         onValueChanged(value_);
@@ -293,7 +293,7 @@ void OscilToggle::timerCallback()
 
 void OscilToggle::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     positionSpring_.update(dt);
 }
 

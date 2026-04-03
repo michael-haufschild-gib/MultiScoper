@@ -172,15 +172,15 @@ void OscillatorPanelController::reapplyGlobalSettings()
     // Re-apply timing settings (display samples)
     // IMPORTANT: Use capture rate (decimated), not source rate, since display buffers are decimated
     auto timingConfig = dataProvider_.getTimingEngine().toEntityConfig();
-    int captureRate = dataProvider_.getCaptureRate();
+    int const captureRate = dataProvider_.getCaptureRate();
     juce::Logger::writeToLog("[Controller] reapplyGlobalSettings: captureRate=" + juce::String(captureRate) +
                              " actualIntervalMs=" + juce::String(timingConfig.actualIntervalMs) +
                              " hostBPM=" + juce::String(timingConfig.hostBPM) +
                              " timingMode=" + juce::String(static_cast<int>(timingConfig.timingMode)));
     if (captureRate > 0)
     {
-        int displaySamples = static_cast<int>(static_cast<double>(captureRate) *
-                                              (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
+        int const displaySamples = static_cast<int>(static_cast<double>(captureRate) *
+                                                    (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
         juce::Logger::writeToLog("[Controller] displaySamples=" + juce::String(displaySamples));
         if (displaySettings_)
         {
@@ -258,8 +258,8 @@ void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, c
     if (!sourcePanePtr || !targetPanePtr)
         return;
 
-    int sourceColumn = sourcePanePtr->getColumnIndex();
-    int targetColumn = targetPanePtr->getColumnIndex();
+    int const sourceColumn = sourcePanePtr->getColumnIndex();
+    int const targetColumn = targetPanePtr->getColumnIndex();
 
     if (sourceColumn != targetColumn)
     {

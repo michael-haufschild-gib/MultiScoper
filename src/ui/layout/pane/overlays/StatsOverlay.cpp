@@ -7,6 +7,8 @@
 #include "ui/components/ListItemIcons.h"
 #include "ui/theme/ThemeManager.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -69,7 +71,7 @@ void StatsOverlay::paint(juce::Graphics& g)
 {
     PaneOverlay::paint(g);
 
-    float opacity = getCurrentOpacity();
+    float const opacity = getCurrentOpacity();
     if (opacity <= 0.0f)
         return;
 
@@ -89,15 +91,15 @@ void StatsOverlay::onAnimationVisibilityChanged(bool becameVisible)
 
 juce::Rectangle<int> StatsOverlay::getPreferredContentSize() const
 {
-    int width = LABEL_COLUMN_WIDTH + (numOscillators_ * DATA_COLUMN_WIDTH) + PADDING * 2;
-    int height = HEADER_HEIGHT + (ROW_HEIGHT * 8) + PADDING; // 1 column header + 7 metric rows
+    int const width = LABEL_COLUMN_WIDTH + (numOscillators_ * DATA_COLUMN_WIDTH) + (PADDING * 2);
+    int const height = HEADER_HEIGHT + (ROW_HEIGHT * 8) + PADDING; // 1 column header + 7 metric rows
     return {0, 0, width, height};
 }
 
 void StatsOverlay::updateStats(const std::vector<OscillatorStats>& stats)
 {
     // Check if layout needs update
-    if (static_cast<int>(stats.size()) != numOscillators_)
+    if (std::cmp_not_equal(stats.size(), numOscillators_))
     {
         numOscillators_ = static_cast<int>(stats.size());
         if (getParentComponent())
@@ -105,7 +107,7 @@ void StatsOverlay::updateStats(const std::vector<OscillatorStats>& stats)
     }
 
     // Rebuild table content
-    juce::String tableText = formatTable(stats);
+    juce::String const tableText = formatTable(stats);
 
     // Only update if changed to avoid caret/selection reset flicker
     if (statsDisplay_ && statsDisplay_->getText() != tableText)
@@ -138,7 +140,7 @@ juce::String StatsOverlay::formatTable(const std::vector<OscillatorStats>& stats
     appendRow("RMS", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::rmsDb)); });
     appendRow("Crest", [&](const OscillatorStats& o) { return formatDb(maxLR(o, &MetricSnapshot::crestFactorDb)); });
     appendRow("DC", [&](const OscillatorStats& o) {
-        float dc = std::max(std::abs(o.left.dcOffset), std::abs(o.right.dcOffset));
+        float const dc = std::max(std::abs(o.left.dcOffset), std::abs(o.right.dcOffset));
         return dc > 0.001f ? formatPercent(dc) : juce::String("-");
     });
     appendRow("Attack", [&](const OscillatorStats& o) { return formatMs(maxLR(o, &MetricSnapshot::attackTimeMs)); });

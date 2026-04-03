@@ -142,12 +142,11 @@ bool ColorGradeEffect::isCompiled() const { return compiled_; }
 void ColorGradeEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                              FramebufferPool& pool, float deltaTime)
 {
+    juce::ignoreUnused(context);
     juce::ignoreUnused(deltaTime);
 
     if (!compiled_ || !source || !destination)
         return;
-
-    auto& ext = context.extensions;
 
     destination->bind();
     glDisable(GL_DEPTH_TEST);
@@ -156,21 +155,22 @@ void ColorGradeEffect::apply(juce::OpenGLContext& context, Framebuffer* source, 
     shader_->use();
 
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(textureLoc_, 0);
 
     // Apply intensity scaling
-    float scale = getIntensity();
-    ext.glUniform1f(brightnessLoc_, settings_.brightness * scale);
-    ext.glUniform1f(contrastLoc_, 1.0f + (settings_.contrast - 1.0f) * scale);
-    ext.glUniform1f(saturationLoc_, 1.0f + (settings_.saturation - 1.0f) * scale);
-    ext.glUniform1f(temperatureLoc_, settings_.temperature * scale);
-    ext.glUniform1f(tintLoc_, settings_.tint * scale);
+    float const scale = getIntensity();
+    juce::OpenGLExtensionFunctions::glUniform1f(brightnessLoc_, settings_.brightness * scale);
+    juce::OpenGLExtensionFunctions::glUniform1f(contrastLoc_, 1.0f + ((settings_.contrast - 1.0f) * scale));
+    juce::OpenGLExtensionFunctions::glUniform1f(saturationLoc_, 1.0f + ((settings_.saturation - 1.0f) * scale));
+    juce::OpenGLExtensionFunctions::glUniform1f(temperatureLoc_, settings_.temperature * scale);
+    juce::OpenGLExtensionFunctions::glUniform1f(tintLoc_, settings_.tint * scale);
 
     // Shadow and highlight colors
-    ext.glUniform3f(shadowsLoc_, settings_.shadows.getFloatRed(), settings_.shadows.getFloatGreen(),
-                    settings_.shadows.getFloatBlue());
-    ext.glUniform3f(highlightsLoc_, settings_.highlights.getFloatRed(), settings_.highlights.getFloatGreen(),
-                    settings_.highlights.getFloatBlue());
+    juce::OpenGLExtensionFunctions::glUniform3f(shadowsLoc_, settings_.shadows.getFloatRed(),
+                                                settings_.shadows.getFloatGreen(), settings_.shadows.getFloatBlue());
+    juce::OpenGLExtensionFunctions::glUniform3f(highlightsLoc_, settings_.highlights.getFloatRed(),
+                                                settings_.highlights.getFloatGreen(),
+                                                settings_.highlights.getFloatBlue());
 
     pool.renderFullscreenQuad();
     destination->unbind();

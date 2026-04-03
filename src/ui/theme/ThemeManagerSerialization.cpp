@@ -108,7 +108,7 @@ void loadButtonColors(ColorTheme& t, const ColourReader& getColour)
 
 void loadWaveformColors(ColorTheme& t, const juce::ValueTree& state)
 {
-    juce::String colorStr = state.getProperty("waveformColors", "");
+    juce::String const colorStr = state.getProperty("waveformColors", "");
     if (colorStr.isNotEmpty())
     {
         t.waveformColors.clear();
@@ -234,7 +234,7 @@ void ThemeManager::saveTheme(const juce::String& themeName)
     startTimer(500);
 }
 
-void ThemeManager::deleteThemeFile(const juce::String& themeName)
+void ThemeManager::deleteThemeFile(const juce::String& themeName) const
 {
     auto themesDir = getThemesDirectory();
     auto file = themesDir.getChildFile(themeName + ".xml");

@@ -60,7 +60,8 @@ public:
             return;
         }
 
-        int samplesToPlay = std::min(bufferToFill.numSamples, playbackBuffer_.getNumSamples() - playbackPosition_);
+        int const samplesToPlay =
+            std::min(bufferToFill.numSamples, playbackBuffer_.getNumSamples() - playbackPosition_);
 
         if (samplesToPlay <= 0)
         {
@@ -70,7 +71,7 @@ public:
 
         for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel)
         {
-            int sourceChannel = std::min(channel, playbackBuffer_.getNumChannels() - 1);
+            int const sourceChannel = std::min(channel, playbackBuffer_.getNumChannels() - 1);
 
             bufferToFill.buffer->copyFrom(channel, bufferToFill.startSample, playbackBuffer_, sourceChannel,
                                           playbackPosition_, samplesToPlay);
@@ -111,19 +112,19 @@ UIAudioFeedback::~UIAudioFeedback() { shutdown(); }
 
 void UIAudioFeedback::setEnabled(bool enabled)
 {
-    std::scoped_lock lock(mutex_);
+    std::scoped_lock const lock(mutex_);
     enabled_ = enabled;
 }
 
 void UIAudioFeedback::setVolume(float volume)
 {
-    std::scoped_lock lock(mutex_);
+    std::scoped_lock const lock(mutex_);
     volume_ = std::clamp(volume, 0.0f, 1.0f);
 }
 
 void UIAudioFeedback::playSound(SoundType type)
 {
-    std::scoped_lock lock(mutex_);
+    std::scoped_lock const lock(mutex_);
 
     if (!enabled_ || !soundEnabled_[type])
         return;
@@ -137,7 +138,7 @@ void UIAudioFeedback::playSound(SoundType type)
 
 void UIAudioFeedback::setSoundEnabled(SoundType type, bool enabled)
 {
-    std::scoped_lock lock(mutex_);
+    std::scoped_lock const lock(mutex_);
     soundEnabled_[type] = enabled;
 }
 
@@ -149,7 +150,7 @@ bool UIAudioFeedback::isSoundEnabled(SoundType type) const
 
 void UIAudioFeedback::setAudioDevice(juce::AudioDeviceManager* deviceManager)
 {
-    std::scoped_lock lock(mutex_);
+    std::scoped_lock const lock(mutex_);
     deviceManager_ = deviceManager;
 
     if (deviceManager_ && deviceManager_->getCurrentAudioDevice())
@@ -161,7 +162,7 @@ void UIAudioFeedback::setAudioDevice(juce::AudioDeviceManager* deviceManager)
 
 void UIAudioFeedback::shutdown()
 {
-    std::scoped_lock lock(mutex_);
+    std::scoped_lock const lock(mutex_);
     player_.reset();
     sounds_.clear();
 }
@@ -178,10 +179,10 @@ void UIAudioFeedback::generateSounds()
     sounds_[SoundType::Notification] = generateNotificationSound();
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateClickSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateClickSound() const
 {
     // Short percussive click - 20ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.02f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.02f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
@@ -190,155 +191,155 @@ juce::AudioBuffer<float> UIAudioFeedback::generateClickSound()
     juce::Random random;
     for (int i = 0; i < numSamples; ++i)
     {
-        float noise = random.nextFloat() * 2.0f - 1.0f;
-        float envelope = std::exp(-static_cast<float>(i) / (numSamples * 0.1f));
+        float const noise = (random.nextFloat() * 2.0f) - 1.0f;
+        float const envelope = std::exp(-static_cast<float>(i) / (static_cast<float>(numSamples) * 0.1f));
         data[i] = noise * envelope * 0.3f;
     }
 
     return buffer;
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateToggleSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateToggleSound() const
 {
     // Soft "pop" sound - 50ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.05f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.05f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
 
-    float freq = 880.0f; // A5
+    float const freq = 880.0f; // A5
     for (int i = 0; i < numSamples; ++i)
     {
-        float t = static_cast<float>(i) / sampleRate_;
-        float envelope = std::exp(-t * 60.0f);
+        float const t = static_cast<float>(i) / sampleRate_;
+        float const envelope = std::exp(-t * 60.0f);
         data[i] = std::sin(2.0f * juce::MathConstants<float>::pi * freq * t) * envelope * 0.2f;
     }
 
     return buffer;
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateSliderSnapSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateSliderSnapSound() const
 {
     // Short tick - 10ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.01f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.01f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
 
-    float freq = 1200.0f;
+    float const freq = 1200.0f;
     for (int i = 0; i < numSamples; ++i)
     {
-        float t = static_cast<float>(i) / sampleRate_;
-        float envelope = std::exp(-t * 200.0f);
+        float const t = static_cast<float>(i) / sampleRate_;
+        float const envelope = std::exp(-t * 200.0f);
         data[i] = std::sin(2.0f * juce::MathConstants<float>::pi * freq * t) * envelope * 0.15f;
     }
 
     return buffer;
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateErrorSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateErrorSound() const
 {
     // Two-tone descending - 150ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.15f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.15f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
 
-    int halfSamples = numSamples / 2;
-    float freq1 = 400.0f;
-    float freq2 = 300.0f;
+    int const halfSamples = numSamples / 2;
+    float const freq1 = 400.0f;
+    float const freq2 = 300.0f;
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float t = static_cast<float>(i) / sampleRate_;
-        float freq = (i < halfSamples) ? freq1 : freq2;
-        float localT = (i < halfSamples) ? t : (t - halfSamples / sampleRate_);
-        float envelope = std::exp(-localT * 15.0f);
+        float const t = static_cast<float>(i) / sampleRate_;
+        float const freq = (i < halfSamples) ? freq1 : freq2;
+        float const localT = (i < halfSamples) ? t : (t - (static_cast<float>(halfSamples) / sampleRate_));
+        float const envelope = std::exp(-localT * 15.0f);
         data[i] = std::sin(2.0f * juce::MathConstants<float>::pi * freq * t) * envelope * 0.25f;
     }
 
     return buffer;
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateSuccessSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateSuccessSound() const
 {
     // Two-tone ascending - 150ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.15f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.15f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
 
-    int halfSamples = numSamples / 2;
-    float freq1 = 523.0f; // C5
-    float freq2 = 659.0f; // E5
+    int const halfSamples = numSamples / 2;
+    float const freq1 = 523.0f; // C5
+    float const freq2 = 659.0f; // E5
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float t = static_cast<float>(i) / sampleRate_;
-        float freq = (i < halfSamples) ? freq1 : freq2;
-        float envelope = std::exp(-(static_cast<float>(i % halfSamples) / sampleRate_) * 15.0f);
+        float const t = static_cast<float>(i) / sampleRate_;
+        float const freq = (i < halfSamples) ? freq1 : freq2;
+        float const envelope = std::exp(-(static_cast<float>(i % halfSamples) / sampleRate_) * 15.0f);
         data[i] = std::sin(2.0f * juce::MathConstants<float>::pi * freq * t) * envelope * 0.2f;
     }
 
     return buffer;
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateFocusSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateFocusSound() const
 {
     // Very soft tick - 5ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.005f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.005f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
 
-    float freq = 2000.0f;
+    float const freq = 2000.0f;
     for (int i = 0; i < numSamples; ++i)
     {
-        float t = static_cast<float>(i) / sampleRate_;
-        float envelope = std::exp(-t * 400.0f);
+        float const t = static_cast<float>(i) / sampleRate_;
+        float const envelope = std::exp(-t * 400.0f);
         data[i] = std::sin(2.0f * juce::MathConstants<float>::pi * freq * t) * envelope * 0.1f;
     }
 
     return buffer;
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateHoverSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateHoverSound() const
 {
     // Barely audible - 3ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.003f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.003f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
 
-    float freq = 3000.0f;
+    float const freq = 3000.0f;
     for (int i = 0; i < numSamples; ++i)
     {
-        float t = static_cast<float>(i) / sampleRate_;
-        float envelope = std::exp(-t * 500.0f);
+        float const t = static_cast<float>(i) / sampleRate_;
+        float const envelope = std::exp(-t * 500.0f);
         data[i] = std::sin(2.0f * juce::MathConstants<float>::pi * freq * t) * envelope * 0.05f;
     }
 
     return buffer;
 }
 
-juce::AudioBuffer<float> UIAudioFeedback::generateNotificationSound()
+juce::AudioBuffer<float> UIAudioFeedback::generateNotificationSound() const
 {
     // Gentle chime - 300ms
-    int numSamples = static_cast<int>(sampleRate_ * 0.3f);
+    int const numSamples = static_cast<int>(sampleRate_ * 0.3f);
     juce::AudioBuffer<float> buffer(1, numSamples);
 
     auto* data = buffer.getWritePointer(0);
 
     // C major chord
-    float freqs[] = {523.0f, 659.0f, 784.0f}; // C5, E5, G5
+    float const freqs[] = {523.0f, 659.0f, 784.0f}; // C5, E5, G5
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float t = static_cast<float>(i) / sampleRate_;
-        float envelope = std::exp(-t * 5.0f);
+        float const t = static_cast<float>(i) / sampleRate_;
+        float const envelope = std::exp(-t * 5.0f);
 
         float sample = 0.0f;
-        for (float freq : freqs)
+        for (float const freq : freqs)
         {
             sample += std::sin(2.0f * juce::MathConstants<float>::pi * freq * t);
         }
@@ -349,11 +350,11 @@ juce::AudioBuffer<float> UIAudioFeedback::generateNotificationSound()
     return buffer;
 }
 
-void UIAudioFeedback::applyEnvelope(juce::AudioBuffer<float>& buffer, float attackMs, float releaseMs)
+void UIAudioFeedback::applyEnvelope(juce::AudioBuffer<float>& buffer, float attackMs, float releaseMs) const
 {
-    int numSamples = buffer.getNumSamples();
-    int attackSamples = static_cast<int>((attackMs / 1000.0f) * sampleRate_);
-    int releaseSamples = static_cast<int>((releaseMs / 1000.0f) * sampleRate_);
+    int const numSamples = buffer.getNumSamples();
+    int const attackSamples = static_cast<int>((attackMs / 1000.0f) * sampleRate_);
+    int const releaseSamples = static_cast<int>((releaseMs / 1000.0f) * sampleRate_);
 
     for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
     {
@@ -364,9 +365,9 @@ void UIAudioFeedback::applyEnvelope(juce::AudioBuffer<float>& buffer, float atta
             float envelope = 1.0f;
 
             if (i < attackSamples)
-                envelope = static_cast<float>(i) / attackSamples;
+                envelope = static_cast<float>(i) / static_cast<float>(attackSamples);
             else if (i > numSamples - releaseSamples)
-                envelope = static_cast<float>(numSamples - i) / releaseSamples;
+                envelope = static_cast<float>(numSamples - i) / static_cast<float>(releaseSamples);
 
             data[i] *= envelope;
         }

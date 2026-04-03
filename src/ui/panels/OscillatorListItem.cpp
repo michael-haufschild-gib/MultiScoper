@@ -28,7 +28,7 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
     , paneId_(oscillator.getPaneId())
 {
     // Register test ID with oscillator index
-    juce::String testId = "sidebar_oscillators_item_" + juce::String(oscillator.getOrderIndex());
+    juce::String const testId = "sidebar_oscillators_item_" + juce::String(oscillator.getOrderIndex());
     setTestId(testId);
 
     // Get track name from source registry
@@ -153,7 +153,7 @@ void OscillatorListItemComponent::setupModeButtons(const juce::String& suffix)
 
 void OscillatorListItemComponent::setupComponents(int orderIndex)
 {
-    juce::String suffix = juce::String(orderIndex);
+    juce::String const suffix = juce::String(orderIndex);
     setupLabels();
     setupActionButtons(suffix);
     setupModeButtons(suffix);
@@ -172,13 +172,13 @@ void OscillatorListItemComponent::updateVisibility()
     settingsButton_->setVisible(true);
 
     // Use alpha to indicate interactivity without hiding
-    float buttonAlpha = (selected_ || isHovered_) ? 1.0f : 0.4f;
+    float const buttonAlpha = (selected_ || isHovered_) ? 1.0f : 0.4f;
     deleteButton_->setAlpha(buttonAlpha);
     settingsButton_->setAlpha(buttonAlpha);
 
     // Update label alpha based on visibility
     const auto& theme = themeService_.getCurrentTheme();
-    float alpha = isVisible_ ? 1.0f : 0.5f;
+    float const alpha = isVisible_ ? 1.0f : 0.5f;
 
     if (nameLabel_)
     {
@@ -219,8 +219,8 @@ void OscillatorListItemComponent::resized()
     auto bounds = getLocalBounds();
 
     // Right side buttons
-    int topRowY = 0;
-    int buttonY = topRowY + (COMPACT_HEIGHT - ICON_BUTTON_SIZE) / 2;
+    int const topRowY = 0;
+    int const buttonY = topRowY + ((COMPACT_HEIGHT - ICON_BUTTON_SIZE) / 2);
 
     bounds.removeFromRight(4); // Margin
 
@@ -234,8 +234,8 @@ void OscillatorListItemComponent::resized()
 
     // Text Area (Left side)
     // Bounds start from 0, but we have drag handle (24) + margin (4) + indicator (14) + margin (10)
-    int textX = DRAG_HANDLE_WIDTH + 4 + COLOR_INDICATOR_SIZE + 10;
-    int textW = bounds.getWidth() - textX; // remaining width after buttons removed from right
+    int const textX = DRAG_HANDLE_WIDTH + 4 + COLOR_INDICATOR_SIZE + 10;
+    int const textW = bounds.getWidth() - textX; // remaining width after buttons removed from right
     auto topH = selected_ ? static_cast<float>(COMPACT_HEIGHT) : static_cast<float>(getHeight());
 
     // nameLabel_ takes top 55%
@@ -262,10 +262,10 @@ void OscillatorListItemComponent::resized()
 
 bool OscillatorListItemComponent::isInDragZone(const juce::Point<int>& pos) const { return pos.x < DRAG_HANDLE_WIDTH; }
 
-void OscillatorListItemComponent::themeChanged(const ColorTheme&)
+void OscillatorListItemComponent::themeChanged(const ColorTheme& /*newTheme*/)
 {
     const auto& theme = themeService_.getCurrentTheme();
-    float alpha = isVisible_ ? 1.0f : 0.5f;
+    float const alpha = isVisible_ ? 1.0f : 0.5f;
 
     if (nameLabel_)
     {
@@ -288,7 +288,7 @@ void OscillatorListItemComponent::setSelected(bool selected)
 
         // Update label colors for selection state
         const auto& theme = themeService_.getCurrentTheme();
-        float alpha = isVisible_ ? 1.0f : 0.5f;
+        float const alpha = isVisible_ ? 1.0f : 0.5f;
         if (nameLabel_)
         {
             nameLabel_->setTextColour((selected_ ? theme.textHighlight : theme.textPrimary).withAlpha(alpha));
@@ -322,8 +322,8 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
         trackLabel_->setText(trackName_, juce::dontSendNotification);
 
     // Re-register test IDs if order index changed (list rebuild after deletion)
-    int newOrder = oscillator.getOrderIndex();
-    juce::String newTestId = "sidebar_oscillators_item_" + juce::String(newOrder);
+    int const newOrder = oscillator.getOrderIndex();
+    juce::String const newTestId = "sidebar_oscillators_item_" + juce::String(newOrder);
     OSCIL_LOG(UI, "ListItem: updateFromOscillator name=" << displayName_ << " oldTestId=" << getTestId()
                                                          << " newTestId=" << newTestId << " orderIndex=" << newOrder);
     if (newTestId != getTestId())
@@ -342,7 +342,7 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
 
 void OscillatorListItemComponent::setListIndex(int index)
 {
-    juce::String newTestId = "sidebar_oscillators_item_" + juce::String(index);
+    juce::String const newTestId = "sidebar_oscillators_item_" + juce::String(index);
     if (newTestId != getTestId())
     {
         setTestId(newTestId);

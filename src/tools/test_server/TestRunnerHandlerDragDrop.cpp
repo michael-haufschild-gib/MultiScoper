@@ -40,7 +40,7 @@ nlohmann::json testMovePaneForward(PaneLayoutManager& layoutManager, OscilPlugin
     nlohmann::json test;
     test["name"] = "MovePaneForward";
     auto panesBefore = layoutManager.getPanes();
-    juce::String firstPaneId = panesBefore[0].getId().id;
+    juce::String const firstPaneId = panesBefore[0].getId().id;
     layoutManager.movePane(panesBefore[0].getId(), 2);
     editor.resized();
     auto panesAfter = layoutManager.getPanes();
@@ -55,7 +55,7 @@ nlohmann::json testMovePaneBackward(PaneLayoutManager& layoutManager, OscilPlugi
     nlohmann::json test;
     test["name"] = "MovePaneBackward";
     auto panesBefore = layoutManager.getPanes();
-    juce::String lastPaneId = panesBefore[2].getId().id;
+    juce::String const lastPaneId = panesBefore[2].getId().id;
     layoutManager.movePane(panesBefore[2].getId(), 0);
     editor.resized();
     auto panesAfter = layoutManager.getPanes();
@@ -70,7 +70,7 @@ nlohmann::json testMovePaneAdjacent(PaneLayoutManager& layoutManager, OscilPlugi
     nlohmann::json test;
     test["name"] = "MovePaneAdjacent";
     auto panesBefore = layoutManager.getPanes();
-    juce::String middlePaneId = panesBefore[1].getId().id;
+    juce::String const middlePaneId = panesBefore[1].getId().id;
     layoutManager.movePane(panesBefore[1].getId(), 0);
     editor.resized();
     auto panesAfter = layoutManager.getPanes();
@@ -88,13 +88,13 @@ nlohmann::json testCrossColumnMove0to1(OscilState& state, PaneLayoutManager& lay
     state.setColumnLayout(ColumnLayout::Double);
     editor.resized();
     auto panesBefore = layoutManager.getPanes();
-    PaneId paneToMove = findPaneInColumn(panesBefore, 0);
+    PaneId const paneToMove = findPaneInColumn(panesBefore, 0);
     if (paneToMove.isValid())
     {
         layoutManager.movePaneToColumn(paneToMove, 1, 0);
         editor.resized();
         const Pane* movedPane = layoutManager.getPane(paneToMove);
-        test["passed"] = movedPane && movedPane->getColumnIndex() == 1;
+        test["passed"] = (movedPane != nullptr) && movedPane->getColumnIndex() == 1;
         test["details"] = "Pane should move from column 0 to column 1";
         layoutManager.movePaneToColumn(paneToMove, 0, 0);
     }
@@ -111,25 +111,25 @@ nlohmann::json testCrossColumnMove1to0(PaneLayoutManager& layoutManager, OscilPl
     nlohmann::json test;
     test["name"] = "CrossColumnMove_1to0";
     auto panesBefore = layoutManager.getPanes();
-    PaneId paneToMove = findPaneInColumn(panesBefore, 1);
+    PaneId const paneToMove = findPaneInColumn(panesBefore, 1);
     if (paneToMove.isValid())
     {
         layoutManager.movePaneToColumn(paneToMove, 0, 0);
         editor.resized();
         const Pane* movedPane = layoutManager.getPane(paneToMove);
-        test["passed"] = movedPane && movedPane->getColumnIndex() == 0;
+        test["passed"] = (movedPane != nullptr) && movedPane->getColumnIndex() == 0;
         test["details"] = "Pane should move from column 1 to column 0";
     }
     else
     {
-        PaneId col0Pane = findPaneInColumn(panesBefore, 0);
+        PaneId const col0Pane = findPaneInColumn(panesBefore, 0);
         if (col0Pane.isValid())
         {
             layoutManager.movePaneToColumn(col0Pane, 1, 0);
             layoutManager.movePaneToColumn(col0Pane, 0, 0);
             editor.resized();
             const Pane* movedPane = layoutManager.getPane(col0Pane);
-            test["passed"] = movedPane && movedPane->getColumnIndex() == 0;
+            test["passed"] = (movedPane != nullptr) && movedPane->getColumnIndex() == 0;
             test["details"] = "Pane should move back to column 0";
         }
         else
@@ -150,12 +150,12 @@ nlohmann::json testThreeColumnCrossMove(OscilState& state, PaneLayoutManager& la
     auto panesBefore = layoutManager.getPanes();
     if (panesBefore.size() >= 3)
     {
-        PaneId paneToMove = panesBefore[0].getId();
-        int originalColumn = panesBefore[0].getColumnIndex();
+        PaneId const paneToMove = panesBefore[0].getId();
+        int const originalColumn = panesBefore[0].getColumnIndex();
         layoutManager.movePaneToColumn(paneToMove, 2, 0);
         editor.resized();
         const Pane* movedPane = layoutManager.getPane(paneToMove);
-        test["passed"] = movedPane && movedPane->getColumnIndex() == 2;
+        test["passed"] = (movedPane != nullptr) && movedPane->getColumnIndex() == 2;
         test["details"] = "Pane should move to column 2 in 3-column layout";
         // Restore pane to original column and reset layout
         layoutManager.movePaneToColumn(paneToMove, originalColumn, 0);

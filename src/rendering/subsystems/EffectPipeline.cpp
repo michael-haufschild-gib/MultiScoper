@@ -95,18 +95,19 @@ void EffectPipeline::buildEffectChain()
         bool (*isEnabled)(const VisualConfiguration&);
     };
     static constexpr auto entries = std::to_array<ChainEntry>({
-        {"bloom", [](const VisualConfiguration& c) { return c.bloom.enabled; }},
-        {"radial_blur", [](const VisualConfiguration& c) { return c.radialBlur.enabled; }},
-        {"tilt_shift", [](const VisualConfiguration& c) { return c.tiltShift.enabled; }},
-        {"color_grade", [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
-        {"chromatic_aberration", [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; }},
-        {"scanlines", [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
-        {"vignette", [](const VisualConfiguration& c) { return c.vignette.enabled; }},
-        {"film_grain", [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
+        {.id = "bloom", .isEnabled = [](const VisualConfiguration& c) { return c.bloom.enabled; }},
+        {.id = "radial_blur", .isEnabled = [](const VisualConfiguration& c) { return c.radialBlur.enabled; }},
+        {.id = "tilt_shift", .isEnabled = [](const VisualConfiguration& c) { return c.tiltShift.enabled; }},
+        {.id = "color_grade", .isEnabled = [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
+        {.id = "chromatic_aberration",
+         .isEnabled = [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; }},
+        {.id = "scanlines", .isEnabled = [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
+        {.id = "vignette", .isEnabled = [](const VisualConfiguration& c) { return c.vignette.enabled; }},
+        {.id = "film_grain", .isEnabled = [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
     });
 
     for (const auto& entry : entries)
-        effectChain_.addStep({entry.id, entry.isEnabled, configureVirtual});
+        effectChain_.addStep({.effectId = entry.id, .isEnabled = entry.isEnabled, .configure = configureVirtual});
 }
 
 void EffectPipeline::initializeEffects()
@@ -199,6 +200,7 @@ Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRe
 void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                                      juce::OpenGLShaderProgram* compositeShader, GLint compositeTextureLoc)
 {
+    juce::ignoreUnused(context);
     if (!source || !destination || !source->isValid() || !destination->isValid() || !compositeShader)
         return;
 
@@ -209,7 +211,7 @@ void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* 
 
     compositeShader->use();
     source->bindTexture(0);
-    context.extensions.glUniform1i(compositeTextureLoc, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(compositeTextureLoc, 0);
 
     fbPool_->renderFullscreenQuad();
 

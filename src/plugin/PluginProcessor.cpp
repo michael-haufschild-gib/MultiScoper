@@ -36,8 +36,11 @@ juce::String normaliseSourceDisplayName(const juce::AudioProcessor::TrackPropert
 OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
                                            ShaderRegistry& shaderRegistry, PresetManager& presetManager,
                                            MemoryBudgetManager& memoryBudgetManager)
-    : OscilPluginProcessor(
-          PluginProcessorConfig{instanceRegistry, themeService, shaderRegistry, presetManager, memoryBudgetManager})
+    : OscilPluginProcessor(PluginProcessorConfig{.instanceRegistry = instanceRegistry,
+                                                 .themeService = themeService,
+                                                 .shaderRegistry = shaderRegistry,
+                                                 .presetManager = presetManager,
+                                                 .memoryBudgetManager = memoryBudgetManager})
 {
 }
 
@@ -98,9 +101,9 @@ double OscilPluginProcessor::getTailLengthSeconds() const { return 0.0; }
 
 int OscilPluginProcessor::getNumPrograms() { return 1; }
 int OscilPluginProcessor::getCurrentProgram() { return 0; }
-void OscilPluginProcessor::setCurrentProgram(int) {}
-const juce::String OscilPluginProcessor::getProgramName(int) { return {}; }
-void OscilPluginProcessor::changeProgramName(int, const juce::String&) {}
+void OscilPluginProcessor::setCurrentProgram(int /*index*/) {}
+const juce::String OscilPluginProcessor::getProgramName(int /*index*/) { return {}; }
+void OscilPluginProcessor::changeProgramName(int /*index*/, const juce::String& /*newName*/) {}
 
 void OscilPluginProcessor::deferRegistration(double sampleRate)
 {
@@ -196,7 +199,7 @@ bool OscilPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
 
 void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    juce::ScopedNoDenormals noDenormals;
+    juce::ScopedNoDenormals const noDenormals;
 
     const auto numSamples = buffer.getNumSamples();
     const auto numChannels = buffer.getNumChannels();
@@ -252,17 +255,17 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 
 void OscilPluginProcessor::updateCpuUsage(int64_t startTicks, int numSamples)
 {
-    double sampleRate = currentSampleRate_.load(std::memory_order_relaxed);
+    double const sampleRate = currentSampleRate_.load(std::memory_order_relaxed);
     if (sampleRate <= 0.0)
         return;
 
     auto endTime = juce::Time::getHighResolutionTicks();
-    double elapsed = static_cast<double>(endTime - startTicks) * ticksToSecondsScale_;
-    double available = static_cast<double>(numSamples) / sampleRate;
-    float usage = static_cast<float>(elapsed / available * 100.0);
+    double const elapsed = static_cast<double>(endTime - startTicks) * ticksToSecondsScale_;
+    double const available = static_cast<double>(numSamples) / sampleRate;
+    auto const usage = static_cast<float>(elapsed / available * 100.0);
 
-    float current = cpuUsage_.load(std::memory_order_relaxed);
-    cpuUsage_.store(current * 0.9f + usage * 0.1f, std::memory_order_relaxed);
+    float const current = cpuUsage_.load(std::memory_order_relaxed);
+    cpuUsage_.store((current * 0.9f) + (usage * 0.1f), std::memory_order_relaxed);
 }
 
 bool OscilPluginProcessor::hasEditor() const { return true; }

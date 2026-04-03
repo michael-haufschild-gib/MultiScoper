@@ -59,9 +59,6 @@ std::vector<ShaderInfo> ShaderRegistry::getAvailableShaders() const
     return result;
 }
 
-bool ShaderRegistry::hasShader(const juce::String& shaderId) const
-{
-    return shaders_.find(shaderId.toStdString()) != shaders_.end();
-}
+bool ShaderRegistry::hasShader(const juce::String& shaderId) const { return shaders_.contains(shaderId.toStdString()); }
 
 } // namespace oscil

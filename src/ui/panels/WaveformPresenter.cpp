@@ -106,12 +106,12 @@ WaveformPresenter::ReadResult WaveformPresenter::readAndPadSamples(int requested
         }
     }
 
-    return {samplesRead, samplesReadRight};
+    return {.samplesRead = samplesRead, .rightChannelRead = samplesReadRight};
 }
 
 void WaveformPresenter::processAndDecimate(int samplesRead, int samplesReadRight)
 {
-    std::span<const float> leftSpan(scratchBufferLeft_.data(), static_cast<size_t>(samplesRead));
+    std::span<const float> const leftSpan(scratchBufferLeft_.data(), static_cast<size_t>(samplesRead));
     std::span<const float> rightSpan;
     if (samplesReadRight > 0)
         rightSpan = std::span<const float>(scratchBufferRight_.data(), static_cast<size_t>(samplesRead));
@@ -119,12 +119,12 @@ void WaveformPresenter::processAndDecimate(int samplesRead, int samplesReadRight
     signalProcessor_.process(leftSpan, rightSpan, processingMode_, processedSignal_);
 
     // Decimate for display
-    std::span<const float> processedLeft(processedSignal_.channel1.data(), processedSignal_.channel1.size());
+    std::span<const float> const processedLeft(processedSignal_.channel1.data(), processedSignal_.channel1.size());
     decimator_.process(processedLeft, displayBuffer1_);
 
     if (processedSignal_.isStereo)
     {
-        std::span<const float> processedRight(processedSignal_.channel2.data(), processedSignal_.channel2.size());
+        std::span<const float> const processedRight(processedSignal_.channel2.data(), processedSignal_.channel2.size());
         decimator_.process(processedRight, displayBuffer2_);
     }
     else
@@ -133,8 +133,8 @@ void WaveformPresenter::processAndDecimate(int samplesRead, int samplesReadRight
     }
 
     // Calculate levels
-    std::span<const float> outputSpan(processedSignal_.channel1.data(),
-                                      static_cast<size_t>(processedSignal_.numSamples));
+    std::span<const float> const outputSpan(processedSignal_.channel1.data(),
+                                            static_cast<size_t>(processedSignal_.numSamples));
     currentPeak_ = SignalProcessor::calculatePeak(outputSpan);
     currentRMS_ = SignalProcessor::calculateRMS(outputSpan);
 }
@@ -146,7 +146,7 @@ void WaveformPresenter::updateAutoScale()
     if (autoScale_ && currentPeak_ > 0.001f)
     {
         constexpr float targetFill = 0.9f;
-        float autoScaleFactor = targetFill / currentPeak_;
+        float const autoScaleFactor = targetFill / currentPeak_;
         targetScale = juce::jlimit(0.5f, 10.0f, autoScaleFactor);
     }
 

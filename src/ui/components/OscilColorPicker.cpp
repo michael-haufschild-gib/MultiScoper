@@ -116,20 +116,17 @@ int OscilColorPicker::getPreferredHeight() const
 // paint, paintSquareMode, paintWheelMode, updateGradientCache, paintHueSlider,
 // paintAlphaSlider, paintPreview are in OscilColorPickerCalc.cpp
 
-juce::Rectangle<int> OscilColorPicker::getGradientBounds() const
-{
-    return juce::Rectangle<int>(0, 0, getWidth(), GRADIENT_SIZE);
-}
+juce::Rectangle<int> OscilColorPicker::getGradientBounds() const { return {0, 0, getWidth(), GRADIENT_SIZE}; }
 
 juce::Rectangle<int> OscilColorPicker::getHueSliderBounds() const
 {
-    return juce::Rectangle<int>(0, GRADIENT_SIZE + SLIDER_SPACING, getWidth(), SLIDER_HEIGHT);
+    return {0, GRADIENT_SIZE + SLIDER_SPACING, getWidth(), SLIDER_HEIGHT};
 }
 
 juce::Rectangle<int> OscilColorPicker::getAlphaSliderBounds() const
 {
-    int y = GRADIENT_SIZE + SLIDER_SPACING + SLIDER_HEIGHT + SLIDER_SPACING;
-    return juce::Rectangle<int>(0, y, getWidth(), SLIDER_HEIGHT);
+    int const y = GRADIENT_SIZE + SLIDER_SPACING + SLIDER_HEIGHT + SLIDER_SPACING;
+    return {0, y, getWidth(), SLIDER_HEIGHT};
 }
 
 juce::Rectangle<int> OscilColorPicker::getPreviewBounds() const
@@ -139,15 +136,15 @@ juce::Rectangle<int> OscilColorPicker::getPreviewBounds() const
         y += SLIDER_SPACING + SLIDER_HEIGHT;
     y += SLIDER_SPACING;
 
-    int width = showHexInput_ ? getWidth() / 2 - 4 : getWidth();
-    return juce::Rectangle<int>(0, y, width, PREVIEW_HEIGHT);
+    int const width = showHexInput_ ? (getWidth() / 2) - 4 : getWidth();
+    return {0, y, width, PREVIEW_HEIGHT};
 }
 
 juce::Rectangle<int> OscilColorPicker::getHexInputBounds() const
 {
     auto previewBounds = getPreviewBounds();
-    return juce::Rectangle<int>(previewBounds.getRight() + 8, previewBounds.getY(),
-                                getWidth() - previewBounds.getRight() - 8, PREVIEW_HEIGHT);
+    return {previewBounds.getRight() + 8, previewBounds.getY(), getWidth() - previewBounds.getRight() - 8,
+            PREVIEW_HEIGHT};
 }
 
 void OscilColorPicker::resized()
@@ -208,7 +205,7 @@ void OscilColorPicker::mouseDrag(const juce::MouseEvent& e)
     }
 }
 
-void OscilColorPicker::mouseUp(const juce::MouseEvent&)
+void OscilColorPicker::mouseUp(const juce::MouseEvent& /*event*/)
 {
     if (currentDragTarget_ != DragTarget::None && onColorChanged)
         onColorChanged(currentColor_);
@@ -226,8 +223,8 @@ void OscilColorPicker::handleGradientDrag(juce::Point<int> pos)
 
     saturation_ =
         std::clamp(static_cast<float>(pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth()), 0.0f, 1.0f);
-    brightness_ = std::clamp(1.0f - static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight()),
-                             0.0f, 1.0f);
+    brightness_ = std::clamp(
+        1.0f - (static_cast<float>(pos.y - bounds.getY()) / static_cast<float>(bounds.getHeight())), 0.0f, 1.0f);
 
     updateFromHSV();
 }
@@ -268,8 +265,8 @@ void OscilColorPicker::updateFromHSV()
 
 void OscilColorPicker::updateHexField()
 {
-    juce::String hex = "#" + currentColor_.toDisplayString(showAlpha_);
-    hexInput_->setText(hex, juce::dontSendNotification);
+    juce::String const hex = "#" + currentColor_.toDisplayString(showAlpha_);
+    hexInput_->setText(hex, juce::dontSendNotification != 0u);
 }
 
 void OscilColorPicker::timerCallback() { stopTimer(); }

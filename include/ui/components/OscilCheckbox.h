@@ -90,8 +90,8 @@ private:
 
     // Rendering
     void paintBox(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-    void paintCheckMark(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-    void paintIndeterminate(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+    void paintCheckMark(juce::Graphics& g, const juce::Rectangle<float>& bounds) const;
+    void paintIndeterminate(juce::Graphics& g, const juce::Rectangle<float>& bounds) const;
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
 
     // State

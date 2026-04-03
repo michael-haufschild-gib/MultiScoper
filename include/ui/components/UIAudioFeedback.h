@@ -71,17 +71,17 @@ public:
 private:
     // Generate synthesized sounds
     void generateSounds();
-    juce::AudioBuffer<float> generateClickSound();
-    juce::AudioBuffer<float> generateToggleSound();
-    juce::AudioBuffer<float> generateSliderSnapSound();
-    juce::AudioBuffer<float> generateErrorSound();
-    juce::AudioBuffer<float> generateSuccessSound();
-    juce::AudioBuffer<float> generateFocusSound();
-    juce::AudioBuffer<float> generateHoverSound();
-    juce::AudioBuffer<float> generateNotificationSound();
+    juce::AudioBuffer<float> generateClickSound() const;
+    juce::AudioBuffer<float> generateToggleSound() const;
+    juce::AudioBuffer<float> generateSliderSnapSound() const;
+    juce::AudioBuffer<float> generateErrorSound() const;
+    juce::AudioBuffer<float> generateSuccessSound() const;
+    juce::AudioBuffer<float> generateFocusSound() const;
+    juce::AudioBuffer<float> generateHoverSound() const;
+    juce::AudioBuffer<float> generateNotificationSound() const;
 
     // Apply envelope
-    void applyEnvelope(juce::AudioBuffer<float>& buffer, float attackMs, float releaseMs);
+    void applyEnvelope(juce::AudioBuffer<float>& buffer, float attackMs, float releaseMs) const;
 
     // Internal playback
     class SoundPlayer;

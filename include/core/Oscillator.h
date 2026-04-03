@@ -187,7 +187,7 @@ public:
     void setColour(juce::Colour colour) noexcept { colour_ = colour; }
     void setOpacity(float opacity) noexcept
     {
-        float safeOpacity = std::isnan(opacity) ? 1.0f : opacity;
+        float const safeOpacity = std::isnan(opacity) ? 1.0f : opacity;
         opacity_ = juce::jlimit(0.0f, 1.0f, safeOpacity);
     }
     void setPaneId(const PaneId& paneId) noexcept { paneId_ = paneId; }
@@ -196,7 +196,7 @@ public:
     void setName(const juce::String& name);
     void setLineWidth(float width) noexcept
     {
-        float safeWidth = std::isnan(width) ? DEFAULT_LINE_WIDTH : width;
+        float const safeWidth = std::isnan(width) ? DEFAULT_LINE_WIDTH : width;
         lineWidth_ = juce::jlimit(MIN_LINE_WIDTH, MAX_LINE_WIDTH, safeWidth);
     }
     void setTimeWindow(std::optional<float> window) noexcept { timeWindow_ = window; }

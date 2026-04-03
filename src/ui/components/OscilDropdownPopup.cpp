@@ -25,7 +25,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        float alpha = owner_.showSpring_.position;
+        float const alpha = owner_.showSpring_.position;
         if (alpha < 0.01f)
             return;
 
@@ -37,13 +37,13 @@ public:
 
         for (int i = start; i < end; ++i)
         {
-            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(i)];
+            int const itemIndex = owner_.filteredIndices_[static_cast<size_t>(i)];
             const auto& item = owner_.items_[static_cast<size_t>(itemIndex)];
             auto itemBounds = juce::Rectangle<int>(0, i * ITEM_HEIGHT, getWidth(), ITEM_HEIGHT);
 
-            bool isHovered = (itemIndex == owner_.hoveredIndex_);
-            bool isSelected = owner_.selectedIndices_.count(itemIndex) > 0;
-            bool isFocused = (i == owner_.focusedIndex_);
+            bool const isHovered = (itemIndex == owner_.hoveredIndex_);
+            bool const isSelected = owner_.selectedIndices_.contains(itemIndex);
+            bool const isFocused = (i == owner_.focusedIndex_);
 
             paintItem(g, item, itemBounds, isHovered, isSelected, isFocused, alpha);
         }
@@ -84,8 +84,8 @@ public:
         if (isSelected)
         {
             g.setColour(theme.controlActive.withAlpha(alpha * opacity));
-            float cx = checkBounds.getCentreX();
-            float cy = checkBounds.getCentreY();
+            float const cx = checkBounds.getCentreX();
+            float const cy = checkBounds.getCentreY();
             juce::Path checkPath;
             checkPath.startNewSubPath(cx - 4, cy);
             checkPath.lineTo(cx - 1, cy + 3);
@@ -104,11 +104,11 @@ public:
         if (item.isSeparator)
         {
             g.setColour(theme.controlBorder.withAlpha(alpha * 0.5f));
-            g.fillRect(bounds.reduced(8, ITEM_HEIGHT / 2 - 1).withHeight(1));
+            g.fillRect(bounds.reduced(8, (ITEM_HEIGHT / 2) - 1).withHeight(1));
             return;
         }
 
-        float opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+        float const opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
         paintItemBackground(g, bounds, isHovered, isSelected, isFocused, item.enabled, alpha, theme);
 
         auto contentBounds = bounds.reduced(8, 0);
@@ -131,7 +131,7 @@ public:
 
         if (item.description.isNotEmpty())
         {
-            auto labelBounds = contentBounds.removeFromTop(ITEM_HEIGHT / 2 + 2);
+            auto labelBounds = contentBounds.removeFromTop((ITEM_HEIGHT / 2) + 2);
             g.drawText(item.label, labelBounds, juce::Justification::centredLeft);
 
             g.setColour(theme.textSecondary.withAlpha(alpha * opacity * 0.8f));
@@ -147,10 +147,10 @@ public:
 
     void mouseMove(const juce::MouseEvent& e) override
     {
-        int index = e.y / ITEM_HEIGHT;
+        int const index = e.y / ITEM_HEIGHT;
         if (index >= 0 && std::cmp_less(index, owner_.filteredIndices_.size()))
         {
-            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
+            int const itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
             if (owner_.hoveredIndex_ != itemIndex)
             {
                 owner_.hoveredIndex_ = itemIndex;
@@ -159,7 +159,7 @@ public:
         }
     }
 
-    void mouseExit(const juce::MouseEvent&) override
+    void mouseExit(const juce::MouseEvent& /*event*/) override
     {
         if (owner_.hoveredIndex_ != -1)
         {
@@ -170,10 +170,10 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override
     {
-        int index = e.y / ITEM_HEIGHT;
+        int const index = e.y / ITEM_HEIGHT;
         if (index >= 0 && std::cmp_less(index, owner_.filteredIndices_.size()))
         {
-            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
+            int const itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
             const auto& item = owner_.items_[static_cast<size_t>(itemIndex)];
 
             if (!item.isSeparator && item.enabled)
@@ -294,20 +294,20 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
         return;
     updateFilteredItems();
 
-    int contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
-    int viewportHeight = std::min(contentHeight, MAX_VISIBLE_ITEMS * ITEM_HEIGHT);
-    int searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
-    int totalHeight = viewportHeight + searchHeight + POPUP_PADDING * 2;
-    int width = buttonBounds.getWidth();
+    int const contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
+    int const viewportHeight = std::min(contentHeight, MAX_VISIBLE_ITEMS * ITEM_HEIGHT);
+    int const searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
+    int const totalHeight = viewportHeight + searchHeight + (POPUP_PADDING * 2);
+    int const width = buttonBounds.getWidth();
 
     auto screenBounds = parent->getScreenBounds();
-    auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForPoint(screenBounds.getCentre());
+    const auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForPoint(screenBounds.getCentre());
     if (!display)
         display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
     if (!display)
         return;
 
-    int x = screenBounds.getX() + buttonBounds.getX();
+    int const x = screenBounds.getX() + buttonBounds.getX();
     int y = screenBounds.getY() + buttonBounds.getBottom();
     if (y + totalHeight > display->userArea.getBottom())
         y = screenBounds.getY() + buttonBounds.getY() - totalHeight;
@@ -317,7 +317,7 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
     setVisible(true);
 
     if (listComponent_)
-        listComponent_->setSize(juce::jmax(1, width - POPUP_PADDING * 2), contentHeight);
+        listComponent_->setSize(juce::jmax(1, width - (POPUP_PADDING * 2)), contentHeight);
 
     resized();
     grabKeyboardFocus();
@@ -341,7 +341,7 @@ void OscilDropdownPopup::focusOnFirstSelected()
 {
     for (size_t i = 0; i < filteredIndices_.size(); ++i)
     {
-        if (selectedIndices_.count(filteredIndices_[i]) != 0u)
+        if (selectedIndices_.contains(filteredIndices_[i]))
         {
             focusedIndex_ = static_cast<int>(i);
             ensureItemVisible(focusedIndex_);
@@ -381,7 +381,7 @@ void OscilDropdownPopup::updateFilteredItems()
 
     if (listComponent_)
     {
-        int contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
+        int const contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
         listComponent_->setSize(listComponent_->getWidth(), contentHeight);
     }
 
@@ -392,7 +392,7 @@ void OscilDropdownPopup::updateFilteredItems()
 
 void OscilDropdownPopup::paint(juce::Graphics& g)
 {
-    float alpha = showSpring_.position;
+    float const alpha = showSpring_.position;
     if (alpha < 0.01f)
         return;
 
@@ -443,7 +443,7 @@ bool OscilDropdownPopup::keyPressed(const juce::KeyPress& key)
 
     if (key == juce::KeyPress::returnKey && focusedIndex_ >= 0 && std::cmp_less(focusedIndex_, filteredIndices_.size()))
     {
-        int itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
+        int const itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
         const auto& item = items_[static_cast<size_t>(itemIndex)];
         if (!item.isSeparator && item.enabled && onItemClicked)
         {

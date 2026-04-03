@@ -10,11 +10,12 @@
 namespace oscil
 {
 
-StatusBarComponent::StatusBarComponent(IThemeService& themeService) : themeService_(themeService)
+StatusBarComponent::StatusBarComponent(IThemeService& themeService)
+    : themeService_(themeService)
+    , renderingMode_(detectRenderingMode())
 {
     setOpaque(true);
     // Detect rendering mode at construction time
-    renderingMode_ = detectRenderingMode();
 
     auto createLabel = [this](std::unique_ptr<juce::Label>& label, [[maybe_unused]] const juce::String& testId) {
         label = std::make_unique<juce::Label>();
@@ -89,11 +90,12 @@ void StatusBarComponent::resized()
     flex.alignItems = juce::FlexBox::AlignItems::center;
 
     // Add left-aligned items
-    flex.items.add(juce::FlexItem(*fpsLabel_).withWidth(70).withHeight(bounds.getHeight()));
-    flex.items.add(juce::FlexItem(*cpuLabel_).withWidth(80).withHeight(bounds.getHeight()));
-    flex.items.add(juce::FlexItem(*memoryLabel_).withWidth(90).withHeight(bounds.getHeight()));
-    flex.items.add(juce::FlexItem(*oscillatorLabel_).withWidth(60).withHeight(bounds.getHeight()));
-    flex.items.add(juce::FlexItem(*sourceLabel_).withWidth(60).withHeight(bounds.getHeight()));
+    float const h = static_cast<float>(bounds.getHeight());
+    flex.items.add(juce::FlexItem(*fpsLabel_).withWidth(70).withHeight(h));
+    flex.items.add(juce::FlexItem(*cpuLabel_).withWidth(80).withHeight(h));
+    flex.items.add(juce::FlexItem(*memoryLabel_).withWidth(90).withHeight(h));
+    flex.items.add(juce::FlexItem(*oscillatorLabel_).withWidth(60).withHeight(h));
+    flex.items.add(juce::FlexItem(*sourceLabel_).withWidth(60).withHeight(h));
 
     // Perform layout for left items
     flex.performLayout(bounds);
@@ -218,7 +220,7 @@ void StatusBarComponent::updateRenderModeLabel()
         return;
 
     const auto& theme = themeService_.getCurrentTheme();
-    juce::String renderModeText = (renderingMode_ == RenderingMode::OpenGL) ? "OpenGL" : "Software";
+    juce::String const renderModeText = (renderingMode_ == RenderingMode::OpenGL) ? "OpenGL" : "Software";
     renderModeLabel_->setText(renderModeText, juce::dontSendNotification);
     renderModeLabel_->setColour(juce::Label::textColourId, theme.textSecondary);
 }

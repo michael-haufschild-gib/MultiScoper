@@ -59,7 +59,7 @@ void OscillatorColorDialog::setOnColorSelected(ColorSelectedCallback callback)
 
 void OscillatorColorDialog::setOnCancel(std::function<void()> callback) { onCancel_ = std::move(callback); }
 
-void OscillatorColorDialog::paint(juce::Graphics&)
+void OscillatorColorDialog::paint(juce::Graphics& /*g*/)
 {
     // Background handled by Modal
 }
@@ -71,7 +71,7 @@ void OscillatorColorDialog::resized()
     // Bottom buttons
     auto buttonRow = bounds.removeFromBottom(BUTTON_HEIGHT);
 
-    int buttonWidth = 80;
+    int const buttonWidth = 80;
     okButton_->setBounds(buttonRow.removeFromRight(buttonWidth));
     buttonRow.removeFromRight(10); // Spacing
     cancelButton_->setBounds(buttonRow.removeFromRight(buttonWidth));
@@ -82,7 +82,7 @@ void OscillatorColorDialog::resized()
     colorSwatches_->setBounds(bounds);
 }
 
-void OscillatorColorDialog::themeChanged(const ColorTheme&) { repaint(); }
+void OscillatorColorDialog::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 int OscillatorColorDialog::getPreferredWidth() const { return 300; }
 int OscillatorColorDialog::getPreferredHeight() const { return 220; }

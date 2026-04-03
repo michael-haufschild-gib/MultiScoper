@@ -30,7 +30,7 @@ public:
     /// Push latest waveform data to the GPU renderer for all visible panes.
     void updateRendering(const std::vector<std::unique_ptr<PaneComponent>>& panes);
     /// Propagate GPU rendering state (enabled/disabled, context) to each pane.
-    void propagateGpuStateToPanes(const std::vector<std::unique_ptr<PaneComponent>>& panes);
+    void propagateGpuStateToPanes(const std::vector<std::unique_ptr<PaneComponent>>& panes) const;
     /// Clear all registered waveforms from the GPU renderer.
     void clearWaveforms();
     /// Detach the OpenGL context from the editor.

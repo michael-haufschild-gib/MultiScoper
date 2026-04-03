@@ -41,7 +41,7 @@ void InstanceRegistry::shutdown()
 
     // Clear all sources and listeners
     {
-        std::unique_lock<std::shared_mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> const lock(mutex_);
         sources_.clear();
         trackToSourceMap_.clear();
     }
@@ -77,6 +77,7 @@ SourceId InstanceRegistry::tryReuseExistingSource(const juce::String& trackIdent
     return existingIt->second;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity,readability-function-size)
 SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
                                             std::shared_ptr<IAudioBuffer> captureBuffer, const juce::String& name,
                                             int channelCount, double sampleRate,
@@ -95,7 +96,7 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
     bool shouldNotifyUpdated = false;
 
     {
-        std::unique_lock<std::shared_mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> const lock(mutex_);
 
         sourceId =
             tryReuseExistingSource(trackIdentifier, captureBuffer, name, channelCount, sampleRate, analysisEngine);
@@ -146,7 +147,7 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
     bool shouldNotify = false;
 
     {
-        std::unique_lock<std::shared_mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> const lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
@@ -174,7 +175,7 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
 
 std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> const lock(mutex_);
 
     std::vector<SourceInfo> result;
     result.reserve(sources_.size());
@@ -189,7 +190,7 @@ std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 
 std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) const
 {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> const lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -200,7 +201,7 @@ std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) 
 
 std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId& sourceId) const
 {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> const lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -219,7 +220,7 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
     bool shouldNotify = false;
 
     {
-        std::unique_lock<std::shared_mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> const lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
@@ -245,7 +246,7 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
 
 size_t InstanceRegistry::getSourceCount() const
 {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> const lock(mutex_);
     return sources_.size();
 }
 

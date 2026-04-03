@@ -195,7 +195,7 @@ public:
     /**
      * Create a source with specified ID
      */
-    explicit Source(const SourceId& sourceId);
+    explicit Source(SourceId sourceId);
 
     /**
      * Create a source from serialized ValueTree

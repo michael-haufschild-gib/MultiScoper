@@ -65,7 +65,7 @@ void PaneActionBar::resized()
     auto bounds = getLocalBounds();
     int x = 0;
 
-    int yPos = juce::jmax(0, (bounds.getHeight() - BUTTON_SIZE) / 2);
+    int const yPos = juce::jmax(0, (bounds.getHeight() - BUTTON_SIZE) / 2);
 
     if (holdButton_)
     {

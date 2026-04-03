@@ -20,7 +20,7 @@ SourceIdSet collectAvailableSourceIds(const std::vector<SourceInfo>& sources)
     return ids;
 }
 
-bool sourceIdExists(const SourceIdSet& ids, const SourceId& sourceId) { return ids.find(sourceId.id) != ids.end(); }
+bool sourceIdExists(const SourceIdSet& ids, const SourceId& sourceId) { return ids.contains(sourceId.id); }
 } // namespace
 
 void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators)

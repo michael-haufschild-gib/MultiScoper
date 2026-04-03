@@ -64,7 +64,7 @@ public:
     void setName(const juce::String& name) noexcept { name_ = name; }
     void setHeightRatio(float ratio) noexcept
     {
-        float safeRatio = std::isnan(ratio) ? DEFAULT_HEIGHT_RATIO : ratio;
+        float const safeRatio = std::isnan(ratio) ? DEFAULT_HEIGHT_RATIO : ratio;
         heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, safeRatio);
     }
     void setColumnIndex(int column) noexcept { columnIndex_ = column; }

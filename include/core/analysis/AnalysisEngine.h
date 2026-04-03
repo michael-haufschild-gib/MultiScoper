@@ -68,7 +68,7 @@ public:
 
 private:
     void processChannel(const float* samples, int numSamples, ChannelMetrics& metrics,
-                        TransientDetector& transientDetector, AnalysisChannelState& state, double sampleRate);
+                        TransientDetector& transientDetector, AnalysisChannelState& state, double sampleRate) const;
     void processMidSide(const float* left, const float* right, int numSamples, double sampleRate);
 
     AnalysisMetrics metrics_;

@@ -85,11 +85,11 @@ public:
 private:
     void timerCallback() override;
     void updateAnimations();
-    void notifyValueChanged();
+    void notifyValueChanged() const;
 
     // Rendering
     void paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-    void paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds);
+    void paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds) const;
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
 
     // State

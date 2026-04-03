@@ -39,10 +39,10 @@ nlohmann::json testDoubleColumnLayout(OscilState& state, OscilPluginEditor& edit
     editor.resized();
     auto bounds0 = layoutManager.getPaneBounds(0, availableArea);
     auto bounds1 = layoutManager.getPaneBounds(1, availableArea);
-    int columnWidth = availableArea.getWidth() / 2;
-    int expectedPaneWidth = columnWidth - 4;
-    bool widthsCorrect = (bounds0.getWidth() == expectedPaneWidth) && (bounds1.getWidth() == expectedPaneWidth);
-    bool columnsCorrect = (bounds0.getX() == 2) && (bounds1.getX() == columnWidth + 2);
+    int const columnWidth = availableArea.getWidth() / 2;
+    int const expectedPaneWidth = columnWidth - 4;
+    bool const widthsCorrect = (bounds0.getWidth() == expectedPaneWidth) && (bounds1.getWidth() == expectedPaneWidth);
+    bool const columnsCorrect = (bounds0.getX() == 2) && (bounds1.getX() == columnWidth + 2);
     test["passed"] = widthsCorrect && columnsCorrect;
     test["details"] = "Each pane should be half width, in separate columns";
     return test;
@@ -58,12 +58,12 @@ nlohmann::json testTripleColumnLayout(OscilState& state, OscilPluginEditor& edit
     auto bounds0 = layoutManager.getPaneBounds(0, availableArea);
     auto bounds1 = layoutManager.getPaneBounds(1, availableArea);
     auto bounds2 = layoutManager.getPaneBounds(2, availableArea);
-    int columnWidth = availableArea.getWidth() / 3;
-    int expectedPaneWidth = columnWidth - 4;
-    bool widthsCorrect = (bounds0.getWidth() == expectedPaneWidth) && (bounds1.getWidth() == expectedPaneWidth) &&
-                         (bounds2.getWidth() == expectedPaneWidth);
-    bool columnsCorrect =
-        (bounds0.getX() == 2) && (bounds1.getX() == columnWidth + 2) && (bounds2.getX() == 2 * columnWidth + 2);
+    int const columnWidth = availableArea.getWidth() / 3;
+    int const expectedPaneWidth = columnWidth - 4;
+    bool const widthsCorrect = (bounds0.getWidth() == expectedPaneWidth) && (bounds1.getWidth() == expectedPaneWidth) &&
+                               (bounds2.getWidth() == expectedPaneWidth);
+    bool const columnsCorrect =
+        (bounds0.getX() == 2) && (bounds1.getX() == columnWidth + 2) && (bounds2.getX() == (2 * columnWidth) + 2);
     test["passed"] = widthsCorrect && columnsCorrect;
     test["details"] = "Each pane should be one-third width, in separate columns";
     return test;
@@ -78,7 +78,7 @@ nlohmann::json testUIResponsiveness(OscilPluginEditor& editor)
     // This tests real paint performance, not artificial sleep.
     constexpr int iterations = 10;
     auto bounds = editor.getLocalBounds();
-    juce::Image image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+    juce::Image const image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
 
     auto startTime = juce::Time::getMillisecondCounterHiRes();
     for (int i = 0; i < iterations; ++i)
@@ -86,8 +86,8 @@ nlohmann::json testUIResponsiveness(OscilPluginEditor& editor)
         juce::Graphics g(image);
         editor.paintEntireComponent(g, true);
     }
-    double elapsedMs = juce::Time::getMillisecondCounterHiRes() - startTime;
-    double avgMs = elapsedMs / iterations;
+    double const elapsedMs = juce::Time::getMillisecondCounterHiRes() - startTime;
+    double const avgMs = elapsedMs / iterations;
 
     test["passed"] = avgMs < 50.0;
     test["details"] = "Average paint time should be under 50ms per frame";
@@ -102,7 +102,7 @@ nlohmann::json testScreenshotGeneration(OscilPluginEditor& editor)
     nlohmann::json test;
     test["name"] = "ScreenshotGeneration";
     auto bounds = editor.getLocalBounds();
-    juce::Image image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+    juce::Image const image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics g(image);
     editor.paintEntireComponent(g, true);
 
@@ -129,9 +129,9 @@ void TestRunnerHandler::handleRunLayoutTest(const httplib::Request& /*req*/, htt
         auto& layoutManager = state.getLayoutManager();
 
         auto editorBounds = editor_.getLocalBounds();
-        int availableWidth = std::max(100, editorBounds.getWidth() - 250);
-        int availableHeight = std::max(100, editorBounds.getHeight() - 40 - 24);
-        juce::Rectangle<int> availableArea(0, 0, availableWidth, availableHeight);
+        int const availableWidth = std::max(100, editorBounds.getWidth() - 250);
+        int const availableHeight = std::max(100, editorBounds.getHeight() - 40 - 24);
+        juce::Rectangle<int> const availableArea(0, 0, availableWidth, availableHeight);
 
         // Track panes added by this test so we can remove them afterward
         std::vector<PaneId> addedPaneIds;
@@ -189,8 +189,8 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
             test["name"] = "ComponentHierarchy";
             const auto& paneComponents = editor_.getPaneComponents();
             bool allPanesValid = true;
-            for (size_t i = 0; i < paneComponents.size(); ++i)
-                if (!paneComponents[i].get())
+            for (const auto& paneComponent : paneComponents)
+                if (!paneComponent.get())
                 {
                     allPanesValid = false;
                     break;

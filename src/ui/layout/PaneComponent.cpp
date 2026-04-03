@@ -8,14 +8,16 @@
 #include "core/interfaces/IAudioDataProvider.h"
 #include "ui/theme/ThemeManager.h"
 
+#include <utility>
+
 namespace oscil
 {
 
-PaneComponent::PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, const PaneId& paneId)
+PaneComponent::PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, PaneId paneId)
     : dataProvider_(dataProvider)
     , themeService_(context.themeService)
     , shaderRegistry_(context.shaderRegistry)
-    , paneId_(paneId)
+    , paneId_(std::move(paneId))
     , paneName_("Pane")
 {
     setOpaque(true);
@@ -60,7 +62,7 @@ void PaneComponent::paint(juce::Graphics& g)
     // FIX: In GPU mode, the OpenGL renderer handles the background.
     // Only fill the pane background in software rendering mode.
 #if OSCIL_ENABLE_OPENGL
-    bool gpuEnabled = dataProvider_.getState().isGpuRenderingEnabled();
+    bool const gpuEnabled = dataProvider_.getState().isGpuRenderingEnabled();
     if (!gpuEnabled)
 #endif
     {
@@ -130,7 +132,7 @@ void PaneComponent::handleDragStarted(const juce::MouseEvent& event)
         auto snapshot = createComponentSnapshot(getLocalBounds(), true, 1.0f);
 
         // Make semi-transparent
-        juce::Image dragImage(juce::Image::ARGB, snapshot.getWidth(), snapshot.getHeight(), true);
+        juce::Image const dragImage(juce::Image::ARGB, snapshot.getWidth(), snapshot.getHeight(), true);
         juce::Graphics dragG(dragImage);
         dragG.setOpacity(0.7f);
         dragG.drawImageAt(snapshot, 0, 0);
@@ -139,7 +141,7 @@ void PaneComponent::handleDragStarted(const juce::MouseEvent& event)
         auto mouseDownInPane = eventRelativeToPane.getMouseDownPosition();
         mouseDownInPane.x = juce::jlimit(0, juce::jmax(0, dragImage.getWidth() - 1), mouseDownInPane.x);
         mouseDownInPane.y = juce::jlimit(0, juce::jmax(0, dragImage.getHeight() - 1), mouseDownInPane.y);
-        juce::Point<int> dragImageOffset(-mouseDownInPane.x, -mouseDownInPane.y);
+        juce::Point<int> const dragImageOffset(-mouseDownInPane.x, -mouseDownInPane.y);
 
         container->startDragging(dragDescription, this, juce::ScaledImage(dragImage), true, &dragImageOffset,
                                  &event.source);

@@ -80,8 +80,8 @@ struct SpringAnimation
 
         // Exponential ease-out: position moves toward target by a fraction each frame.
         // speed factor derived from stiffness (higher stiffness = faster approach)
-        float speed = std::clamp(stiffness / 1200.0f, 0.0f, 0.99f);
-        float factor = 1.0f - std::pow(1.0f - speed, deltaTime * 60.0f);
+        float const speed = std::clamp(stiffness / 1200.0f, 0.0f, 0.99f);
+        float const factor = 1.0f - std::pow(1.0f - speed, deltaTime * 60.0f);
         position += (target - position) * factor;
         velocity = 0.0f;
 
@@ -136,7 +136,7 @@ struct SpringAnimation
     T interpolate(const T& from, const T& to) const
     {
         float t = std::clamp(position, 0.0f, 1.0f);
-        return from + (to - from) * t;
+        return from + ((to - from) * t);
     }
 };
 

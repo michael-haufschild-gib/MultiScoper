@@ -15,6 +15,7 @@
 #include "plugin/PluginProcessor.h"
 
 #include <cmath>
+#include <utility>
 
 namespace oscil
 {
@@ -27,7 +28,7 @@ OscillatorId resolveOscId(const std::string& idStr, int index, const std::vector
     OscillatorId targetId;
     if (!idStr.empty())
         targetId.id = juce::String(idStr);
-    else if (index >= 0 && index < static_cast<int>(oscillators.size()))
+    else if (index >= 0 && std::cmp_less(index, oscillators.size()))
         targetId = oscillators[static_cast<size_t>(index)].getId();
     return targetId;
 }
@@ -35,31 +36,37 @@ OscillatorId resolveOscId(const std::string& idStr, int index, const std::vector
 void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType, float frequency,
                           float amplitude, float sampleRate)
 {
-    int numSamples = buffer.getNumSamples();
+    int const numSamples = buffer.getNumSamples();
     float phase = 0.0f;
-    float safeSampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
-    float phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / safeSampleRate;
+    float const safeSampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
+    float const phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / safeSampleRate;
 
     for (int i = 0; i < numSamples; ++i)
     {
         float sample = 0.0f;
 
         if (waveformType == "sine")
+        {
             sample = std::sin(phase) * amplitude;
+        }
         else if (waveformType == "square")
+        {
             sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
+        }
         else if (waveformType == "triangle")
         {
-            float t = phase / (2.0f * juce::MathConstants<float>::pi);
-            sample = (2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f))) - 1.0f) * amplitude;
+            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
+            sample = ((2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f)))) - 1.0f) * amplitude;
         }
         else if (waveformType == "sawtooth")
         {
-            float t = phase / (2.0f * juce::MathConstants<float>::pi);
+            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
             sample = (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
         }
         else if (waveformType == "noise")
-            sample = ((std::rand() / static_cast<float>(RAND_MAX)) * 2.0f - 1.0f) * amplitude;
+        {
+            sample = (((static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * 2.0f) - 1.0f) * amplitude;
+        }
 
         buffer.setSample(0, i, sample);
         buffer.setSample(1, i, sample * 0.8f);
@@ -118,10 +125,10 @@ void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Respon
     try
     {
         auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
-        std::string name = body.value("name", "Test Track");
-        int channelCount = body.value("channelCount", 2);
-        double sampleRate = body.value("sampleRate", 44100.0);
-        std::string trackId = body.value("trackId", juce::Uuid().toString().toStdString());
+        std::string const name = body.value("name", "Test Track");
+        int const channelCount = body.value("channelCount", 2);
+        double const sampleRate = body.value("sampleRate", 44100.0);
+        std::string const trackId = body.value("trackId", juce::Uuid().toString().toStdString());
 
         auto result = runOnMessageThread([this, name, channelCount, sampleRate, trackId]() -> nlohmann::json {
             nlohmann::json response;
@@ -131,8 +138,8 @@ void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Respon
             auto captureBuffer = std::make_shared<SharedCaptureBuffer>();
 
             // Register the source
-            SourceId sourceId = registry.registerInstance(juce::String(trackId), captureBuffer, juce::String(name),
-                                                          channelCount, sampleRate);
+            SourceId const sourceId = registry.registerInstance(juce::String(trackId), captureBuffer,
+                                                                juce::String(name), channelCount, sampleRate);
 
             // Store the buffer reference so it doesn't get destroyed
             testSourceBuffers_[sourceId.id.toStdString()] = captureBuffer;
@@ -163,7 +170,7 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        std::string sourceIdStr = body.value("sourceId", "");
+        std::string const sourceIdStr = body.value("sourceId", "");
 
         if (sourceIdStr.empty())
         {
@@ -249,9 +256,9 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        std::string oscillatorId = body.value("oscillatorId", "");
-        std::string sourceId = body.value("sourceId", "");
-        int oscillatorIndex = body.value("oscillatorIndex", -1);
+        std::string const oscillatorId = body.value("oscillatorId", "");
+        std::string const sourceId = body.value("sourceId", "");
+        int const oscillatorIndex = body.value("oscillatorIndex", -1);
 
         if (oscillatorId.empty() && oscillatorIndex < 0)
         {
@@ -306,9 +313,13 @@ nlohmann::json SourceHandler::injectSourceDataOnMessageThread(const std::string&
     auto metadata = makeTestMetadata(sampleRate, numSamples);
 
     if (auto decBuffer = std::dynamic_pointer_cast<DecimatingCaptureBuffer>(captureBuffer))
+    {
         decBuffer->write(testBuffer, metadata);
+    }
     else if (auto sharedBuffer = std::dynamic_pointer_cast<SharedCaptureBuffer>(captureBuffer))
+    {
         sharedBuffer->write(testBuffer, metadata, false);
+    }
     else
     {
         response["error"] = "Buffer is not writable (unknown type)";
@@ -331,12 +342,12 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
     try
     {
         auto body = nlohmann::json::parse(req.body);
-        std::string sourceId = body.value("sourceId", "");
-        std::string waveformType = body.value("type", "sine");
-        float frequency = body.value("frequency", 440.0f);
-        float amplitude = body.value("amplitude", 0.8f);
-        int numSamples = body.value("samples", 4096);
-        float sampleRate = body.value("sampleRate", 44100.0f);
+        std::string const sourceId = body.value("sourceId", "");
+        std::string const waveformType = body.value("type", "sine");
+        float const frequency = body.value("frequency", 440.0f);
+        float const amplitude = body.value("amplitude", 0.8f);
+        int const numSamples = body.value("samples", 4096);
+        float const sampleRate = body.value("sampleRate", 44100.0f);
 
         if (sourceId.empty())
         {

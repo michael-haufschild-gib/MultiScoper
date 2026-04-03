@@ -38,7 +38,7 @@ struct MemoryBudget
         if (numTracks <= 0)
             return perTrackMaxBytes;
 
-        size_t perTrack = totalBudgetBytes / static_cast<size_t>(numTracks);
+        size_t const perTrack = totalBudgetBytes / static_cast<size_t>(numTracks);
         return juce::jlimit(perTrackMinBytes, perTrackMaxBytes, perTrack);
     }
 
@@ -47,7 +47,7 @@ struct MemoryBudget
      */
     [[nodiscard]] QualityPreset calculateRecommendedPreset(int numTracks, float bufferDurationSec) const
     {
-        size_t perTrack = calculatePerTrackBudget(numTracks);
+        size_t const perTrack = calculatePerTrackBudget(numTracks);
 
         // Calculate required bytes for each quality level at given duration
         // Formula: captureRate * duration * 2 channels * 4 bytes per sample
@@ -133,11 +133,11 @@ struct CaptureQualityConfig
      */
     [[nodiscard]] int getDecimationRatio(int sourceRate) const
     {
-        int captureRate = getCaptureRate(sourceRate);
+        int const captureRate = getCaptureRate(sourceRate);
         if (captureRate <= 0 || sourceRate <= 0)
             return 1;
 
-        int ratio = sourceRate / captureRate;
+        int const ratio = sourceRate / captureRate;
         return juce::jmax(1, ratio);
     }
 
@@ -148,7 +148,7 @@ struct CaptureQualityConfig
      */
     [[nodiscard]] size_t calculateBufferSizeSamples(int captureRate) const
     {
-        float durationSec = bufferDurationToSeconds(bufferDuration);
+        float const durationSec = bufferDurationToSeconds(bufferDuration);
         return static_cast<size_t>(static_cast<float>(captureRate) * durationSec);
     }
 
@@ -170,8 +170,8 @@ struct CaptureQualityConfig
      */
     [[nodiscard]] size_t calculateMemoryUsageBytes(int sourceRate) const
     {
-        int captureRate = getCaptureRate(sourceRate);
-        size_t samples = calculateBufferSizeSamples(captureRate);
+        int const captureRate = getCaptureRate(sourceRate);
+        size_t const samples = calculateBufferSizeSamples(captureRate);
         return samples * 2 * sizeof(float); // 2 channels, 4 bytes per sample
     }
 
@@ -186,8 +186,8 @@ struct CaptureQualityConfig
         if (!autoAdjustQuality)
             return qualityPreset;
 
-        float durationSec = bufferDurationToSeconds(bufferDuration);
-        QualityPreset recommended = memoryBudget.calculateRecommendedPreset(numTracks, durationSec);
+        float const durationSec = bufferDurationToSeconds(bufferDuration);
+        QualityPreset const recommended = memoryBudget.calculateRecommendedPreset(numTracks, durationSec);
 
         // Return the lower of configured and recommended
         return static_cast<QualityPreset>(juce::jmin(static_cast<int>(qualityPreset), static_cast<int>(recommended)));
@@ -250,12 +250,12 @@ inline juce::String formatBytes(size_t bytes)
 {
     if (bytes >= size_t{1024} * 1024)
     {
-        float mb = static_cast<float>(bytes) / (1024.0f * 1024.0f);
+        float const mb = static_cast<float>(bytes) / (1024.0f * 1024.0f);
         return juce::String(mb, 1) + " MB";
     }
     if (bytes >= 1024)
     {
-        float kb = static_cast<float>(bytes) / 1024.0f;
+        float const kb = static_cast<float>(bytes) / 1024.0f;
         return juce::String(kb, 0) + " KB";
     }
     return juce::String(bytes) + " B";

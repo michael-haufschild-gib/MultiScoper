@@ -5,6 +5,9 @@
 
 #include "ui/components/SegmentedButtonBar.h"
 
+#include <algorithm>
+#include <utility>
+
 namespace oscil
 {
 
@@ -27,20 +30,19 @@ void SegmentedButtonBar::resized()
         return;
 
     auto bounds = getLocalBounds();
-    int numButtons = static_cast<int>(buttons_.size());
+    int const numButtons = static_cast<int>(buttons_.size());
 
     // Calculate button width - either equal distribution or minimum width
-    int buttonWidth = std::max(minButtonWidth_, bounds.getWidth() / numButtons);
-    int totalWidth = buttonWidth * numButtons;
+    int const buttonWidth = std::max(minButtonWidth_, bounds.getWidth() / numButtons);
+    int const totalWidth = buttonWidth * numButtons;
 
     // Center the buttons if they don't fill the width
     int startX = (bounds.getWidth() - totalWidth) / 2;
-    if (startX < 0)
-        startX = 0;
+    startX = std::max(startX, 0);
 
-    for (size_t i = 0; i < static_cast<size_t>(numButtons); ++i)
+    for (size_t i = 0; std::cmp_less(i, numButtons); ++i)
     {
-        buttons_[i]->setBounds(startX + static_cast<int>(i) * buttonWidth, 0, buttonWidth, bounds.getHeight());
+        buttons_[i]->setBounds(startX + (static_cast<int>(i) * buttonWidth), 0, buttonWidth, bounds.getHeight());
     }
 }
 
@@ -170,7 +172,7 @@ void SegmentedButtonBar::handleButtonClick(int id)
 
 void SegmentedButtonBar::updateButtonStates()
 {
-    size_t numButtons = buttons_.size();
+    size_t const numButtons = buttons_.size();
 
     for (size_t i = 0; i < numButtons; ++i)
     {
@@ -212,17 +214,17 @@ bool SegmentedButtonBar::keyPressed(const juce::KeyPress& key)
     if (!enabled_ || buttons_.empty())
         return false;
 
-    int currentIndex = getSelectedIndex();
-    int numButtons = static_cast<int>(buttons_.size());
+    int const currentIndex = getSelectedIndex();
+    int const numButtons = static_cast<int>(buttons_.size());
 
     if (key == juce::KeyPress::leftKey)
     {
         // Move to previous segment (wrap around)
-        int newIndex = (currentIndex <= 0) ? numButtons - 1 : currentIndex - 1;
+        int const newIndex = (currentIndex <= 0) ? numButtons - 1 : currentIndex - 1;
         setSelectedId(buttons_[static_cast<size_t>(newIndex)]->getButtonId());
         return true;
     }
-    else if (key == juce::KeyPress::rightKey)
+    if (key == juce::KeyPress::rightKey)
     {
         // Move to next segment (wrap around)
         int newIndex = (currentIndex >= numButtons - 1) ? 0 : currentIndex + 1;

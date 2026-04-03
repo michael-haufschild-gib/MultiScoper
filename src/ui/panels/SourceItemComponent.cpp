@@ -14,11 +14,11 @@ SourceItemComponent::SourceItemComponent(IThemeService& themeService, const Sour
     , trackName_("") // SourceInfo doesn't have separate track name
 {
     // Register test ID with source ID
-    juce::String testId = "sidebar_sources_item_" + sourceId_.id;
+    juce::String const testId = "sidebar_sources_item_" + sourceId_.id;
     OSCIL_REGISTER_TEST_ID(testId);
 
     // Create add-to-pane dropdown with test ID
-    juce::String dropdownTestId = "sidebar_sources_item_" + sourceId_.id + "_paneDropdown";
+    juce::String const dropdownTestId = "sidebar_sources_item_" + sourceId_.id + "_paneDropdown";
     addToPaneDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Add...", dropdownTestId);
     addToPaneDropdown_->onSelectionChanged = [this](int /*index*/) { handleAddToPaneSelection(); };
     addAndMakeVisible(addToPaneDropdown_.get());
@@ -26,7 +26,7 @@ SourceItemComponent::SourceItemComponent(IThemeService& themeService, const Sour
 
 void SourceItemComponent::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background
@@ -44,7 +44,7 @@ void SourceItemComponent::paint(juce::Graphics& g)
     // Activity indicator (green dot)
     auto leftArea = bounds.reduced(8, 0);
     auto dotBounds = leftArea.removeFromLeft(ACTIVITY_DOT_SIZE + 4);
-    float dotY = dotBounds.getCentreY() - ACTIVITY_DOT_SIZE / 2.0f;
+    float const dotY = dotBounds.getCentreY() - (ACTIVITY_DOT_SIZE / 2.0f);
 
     if (isActive_)
     {
@@ -83,13 +83,13 @@ void SourceItemComponent::resized()
     addToPaneDropdown_->setBounds(dropdownBounds);
 }
 
-void SourceItemComponent::mouseEnter(const juce::MouseEvent&)
+void SourceItemComponent::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = true;
     repaint();
 }
 
-void SourceItemComponent::mouseExit(const juce::MouseEvent&)
+void SourceItemComponent::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
     repaint();
@@ -120,11 +120,11 @@ void SourceItemComponent::updateAvailablePanes(const std::vector<Pane>& panes)
 
     // Add "New Pane" option (index 0)
     addToPaneDropdown_->addItem("New Pane");
-    paneIds_.push_back(PaneId{}); // Empty ID means create new
+    paneIds_.emplace_back(); // Empty ID means create new
 
     // Add separator (index 1)
     addToPaneDropdown_->addItem(DropdownItem::separator());
-    paneIds_.push_back(PaneId{}); // Placeholder for separator
+    paneIds_.emplace_back(); // Placeholder for separator
 
     // Add existing panes (indices 2+)
     int paneNum = 1;
@@ -152,7 +152,7 @@ void SourceItemComponent::setActive(bool isActive)
 
 void SourceItemComponent::handleAddToPaneSelection()
 {
-    int selectedIndex = addToPaneDropdown_->getSelectedIndex();
+    int const selectedIndex = addToPaneDropdown_->getSelectedIndex();
     // Skip if nothing selected, separator selected, or out of range
     if (selectedIndex < 0 || static_cast<size_t>(selectedIndex) >= paneIds_.size())
     {
@@ -165,11 +165,11 @@ void SourceItemComponent::handleAddToPaneSelection()
         return;
     }
 
-    PaneId targetPaneId = paneIds_[static_cast<size_t>(selectedIndex)];
+    PaneId const targetPaneId = paneIds_[static_cast<size_t>(selectedIndex)];
 
     // Capture values by copy before deferring - the component may be destroyed
     // during the callback when refreshOscillatorPanels() rebuilds the UI
-    SourceId srcId = sourceId_;
+    SourceId const srcId = sourceId_;
     auto callback = onAddToPane;
 
     // Reset dropdown immediately before deferred execution

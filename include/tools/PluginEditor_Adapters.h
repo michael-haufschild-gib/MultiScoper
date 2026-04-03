@@ -114,12 +114,12 @@ private:
         auto& processor = editor_.getProcessor();
         auto& timingEngine = processor.getTimingEngine();
         // IMPORTANT: Use capture rate (decimated) for display calculations
-        int captureRate = processor.getCaptureRate();
+        int const captureRate = processor.getCaptureRate();
 
         if (captureRate > 0)
         {
-            float actualIntervalMs = timingEngine.getActualIntervalMs();
-            int displaySamples =
+            float const actualIntervalMs = timingEngine.getActualIntervalMs();
+            int const displaySamples =
                 static_cast<int>(static_cast<double>(captureRate) * (static_cast<double>(actualIntervalMs) / 1000.0));
             editor_.setDisplaySamplesForAllPanes(displaySamples);
             editor_.setSampleRateForAllPanes(captureRate);

@@ -142,7 +142,7 @@ struct SidebarResizeState
             return;
 
         // Sidebar is on the right, so moving left increases width
-        int delta = dragStartX - mouseX;
+        int const delta = dragStartX - mouseX;
         previewWidth = originalSidebarWidth + delta;
 
         // Clamp to valid range

@@ -143,11 +143,11 @@ struct ColorTheme
             return channel <= 0.03928f ? channel / 12.92f : std::pow((channel + 0.055f) / 1.055f, 2.4f);
         };
 
-        float r = linearize(colour.getFloatRed());
-        float g = linearize(colour.getFloatGreen());
-        float b = linearize(colour.getFloatBlue());
+        float const r = linearize(colour.getFloatRed());
+        float const g = linearize(colour.getFloatGreen());
+        float const b = linearize(colour.getFloatBlue());
 
-        return 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        return (0.2126f * r) + (0.7152f * g) + (0.0722f * b);
     }
 
     /**
@@ -323,9 +323,6 @@ public:
     void addListener(ThemeManagerListener* listener) override;
     void removeListener(ThemeManagerListener* listener) override;
 
-    // Timer callback for async saving
-    void timerCallback() override;
-
     /// Write any pending theme changes to disk immediately (call on shutdown).
     void flushPendingSaves();
 
@@ -340,6 +337,7 @@ public:
     static bool isValidThemeName(const juce::String& name);
 
 private:
+    void timerCallback() override;
     void initializeSystemThemes();
     void notifyListeners();
 
@@ -352,7 +350,7 @@ private:
     /**
      * Delete a theme file from disk
      */
-    void deleteThemeFile(const juce::String& themeName);
+    void deleteThemeFile(const juce::String& themeName) const;
 
     ColorTheme currentTheme_;
     std::unordered_map<juce::String, ColorTheme> themes_;

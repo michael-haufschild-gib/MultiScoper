@@ -48,13 +48,13 @@ void PaneHeader::setupComponents()
 
 void PaneHeader::paintDragHandle(juce::Graphics& g, const juce::Rectangle<int>& handleBounds)
 {
-    int totalIconHeight = (3 * DRAG_HANDLE_LINE_HEIGHT) + (2 * DRAG_HANDLE_LINE_SPACING);
-    int startY = handleBounds.getCentreY() - (totalIconHeight / 2);
+    int const totalIconHeight = (3 * DRAG_HANDLE_LINE_HEIGHT) + (2 * DRAG_HANDLE_LINE_SPACING);
+    int const startY = handleBounds.getCentreY() - (totalIconHeight / 2);
 
     for (int i = 0; i < 3; ++i)
     {
         g.fillRect(handleBounds.getX() + DRAG_HANDLE_LEFT_MARGIN,
-                   startY + i * (DRAG_HANDLE_LINE_HEIGHT + DRAG_HANDLE_LINE_SPACING), DRAG_HANDLE_LINE_WIDTH,
+                   startY + (i * (DRAG_HANDLE_LINE_HEIGHT + DRAG_HANDLE_LINE_SPACING)), DRAG_HANDLE_LINE_WIDTH,
                    DRAG_HANDLE_LINE_HEIGHT);
     }
 }
@@ -65,7 +65,7 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
         return;
 
     auto mode = primaryOscillator_->getProcessingMode();
-    juce::Colour modeColor = primaryOscillator_->getColour();
+    juce::Colour const modeColor = primaryOscillator_->getColour();
 
     g.setColour(theme.textSecondary);
     g.setFont(juce::FontOptions(11.0f));
@@ -114,13 +114,13 @@ void PaneHeader::resized()
                             CLOSE_BUTTON_SIZE);
 
     // Action bar (before close button)
-    int actionBarWidth = actionBar_->getPreferredWidth();
+    int const actionBarWidth = actionBar_->getPreferredWidth();
     actionBar_->setBounds(getWidth() - CLOSE_BUTTON_SIZE - 2 - PADDING - actionBarWidth, 0, actionBarWidth, HEIGHT);
 
     // Name label (after drag handle)
-    int labelX = DRAG_HANDLE_WIDTH + PADDING;
+    int const labelX = DRAG_HANDLE_WIDTH + PADDING;
     int labelWidth =
-        juce::jmin(NAME_LABEL_WIDTH, getWidth() - labelX - actionBarWidth - CLOSE_BUTTON_SIZE - PADDING * 3);
+        juce::jmin(NAME_LABEL_WIDTH, getWidth() - labelX - actionBarWidth - CLOSE_BUTTON_SIZE - (PADDING * 3));
     labelWidth = juce::jmax(0, labelWidth); // Ensure non-negative
     nameLabel_->setBounds(labelX, (HEIGHT - nameLabel_->getPreferredHeight()) / 2, labelWidth,
                           nameLabel_->getPreferredHeight());

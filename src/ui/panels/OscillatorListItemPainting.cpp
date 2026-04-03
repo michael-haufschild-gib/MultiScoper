@@ -17,7 +17,7 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
 {
     const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
-    float alpha = isVisible_ ? 1.0f : 0.5f;
+    float const alpha = isVisible_ ? 1.0f : 0.5f;
 
     // Background
     if (selected_)
@@ -45,33 +45,33 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
 
     // Drag handle
     auto dragArea = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
-    float dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
+    float const dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
     g.setColour(theme.textSecondary.withAlpha(dotAlpha * alpha));
-    float dotSize = 3.0f;
-    float dotSpacing = 5.0f;
-    float startX = dragArea.getCentreX() - dotSpacing / 2;
-    float startY = dragArea.getCentreY() - dotSpacing;
+    float const dotSize = 3.0f;
+    float const dotSpacing = 5.0f;
+    float const startX = dragArea.getCentreX() - (dotSpacing / 2);
+    float const startY = dragArea.getCentreY() - dotSpacing;
     for (int row = 0; row < 3; ++row)
         for (int col = 0; col < 2; ++col)
-            g.fillEllipse(startX + col * dotSpacing - dotSize / 2, startY + row * dotSpacing - dotSize / 2, dotSize,
-                          dotSize);
+            g.fillEllipse(startX + (static_cast<float>(col) * dotSpacing) - (dotSize / 2),
+                          startY + (static_cast<float>(row) * dotSpacing) - (dotSize / 2), dotSize, dotSize);
 
     // Color indicator
     bounds.removeFromLeft(4);
-    float colorY = selected_ ? (COMPACT_HEIGHT / 2.0f - COLOR_INDICATOR_SIZE / 2.0f)
-                             : (bounds.getCentreY() - COLOR_INDICATOR_SIZE / 2.0f);
+    float const colorY = selected_ ? ((COMPACT_HEIGHT / 2.0f) - (COLOR_INDICATOR_SIZE / 2.0f))
+                                   : (bounds.getCentreY() - (COLOR_INDICATOR_SIZE / 2.0f));
     g.setColour(colour_.withAlpha(alpha));
     g.fillEllipse(bounds.getX(), colorY, static_cast<float>(COLOR_INDICATOR_SIZE),
                   static_cast<float>(COLOR_INDICATOR_SIZE));
 }
 
-void OscillatorListItemComponent::mouseEnter(const juce::MouseEvent&)
+void OscillatorListItemComponent::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = true;
     updateVisibility();
 }
 
-void OscillatorListItemComponent::mouseExit(const juce::MouseEvent&)
+void OscillatorListItemComponent::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
     dragHandleHovered_ = false;
@@ -80,7 +80,7 @@ void OscillatorListItemComponent::mouseExit(const juce::MouseEvent&)
 
 void OscillatorListItemComponent::mouseMove(const juce::MouseEvent& e)
 {
-    bool newDragHandleHovered = isInDragZone(e.getPosition());
+    bool const newDragHandleHovered = isInDragZone(e.getPosition());
     if (newDragHandleHovered != dragHandleHovered_)
     {
         dragHandleHovered_ = newDragHandleHovered;
@@ -113,8 +113,9 @@ void OscillatorListItemComponent::mouseDoubleClick(const juce::MouseEvent& e)
     // Then 4px margin
     // Then color indicator (size 14)
 
-    int indicatorX = DRAG_HANDLE_WIDTH + 4;
-    int indicatorY = selected_ ? (COMPACT_HEIGHT - COLOR_INDICATOR_SIZE) / 2 : (getHeight() - COLOR_INDICATOR_SIZE) / 2;
+    int const indicatorX = DRAG_HANDLE_WIDTH + 4;
+    int const indicatorY =
+        selected_ ? (COMPACT_HEIGHT - COLOR_INDICATOR_SIZE) / 2 : (getHeight() - COLOR_INDICATOR_SIZE) / 2;
 
     auto indicatorBounds = juce::Rectangle<int>(indicatorX, indicatorY, COLOR_INDICATOR_SIZE, COLOR_INDICATOR_SIZE);
 
@@ -195,13 +196,13 @@ bool OscillatorListItemComponent::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscillatorListItemComponent::focusGained(FocusChangeType)
+void OscillatorListItemComponent::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscillatorListItemComponent::focusLost(FocusChangeType)
+void OscillatorListItemComponent::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();

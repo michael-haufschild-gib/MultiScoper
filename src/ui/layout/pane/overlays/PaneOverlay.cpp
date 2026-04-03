@@ -96,7 +96,7 @@ void PaneOverlay::startFadeAnimation(bool fadeIn)
 void PaneOverlay::updateFadeAnimation()
 {
     const float fadeStep = static_cast<float>(FADE_TIMER_INTERVAL_MS) / FADE_DURATION_MS;
-    bool wasEffectivelyVisible = currentOpacity_ > 0.0f;
+    bool const wasEffectivelyVisible = currentOpacity_ > 0.0f;
 
     if (fadeDirection_)
     {
@@ -120,7 +120,7 @@ void PaneOverlay::updateFadeAnimation()
         }
     }
 
-    bool isEffectivelyVisible = currentOpacity_ > 0.0f;
+    bool const isEffectivelyVisible = currentOpacity_ > 0.0f;
     if (isEffectivelyVisible != wasEffectivelyVisible)
         onAnimationVisibilityChanged(isEffectivelyVisible);
 
@@ -166,17 +166,18 @@ juce::Rectangle<int> PaneOverlay::getContentBounds() const { return getLocalBoun
 juce::Rectangle<int> PaneOverlay::getPreferredBounds() const
 {
     auto contentSize = getPreferredContentSize();
-    return contentSize.withSizeKeepingCentre(contentSize.getWidth() + 2 * CONTENT_PADDING,
-                                             contentSize.getHeight() + 2 * CONTENT_PADDING);
+    return contentSize.withSizeKeepingCentre(contentSize.getWidth() + (2 * CONTENT_PADDING),
+                                             contentSize.getHeight() + (2 * CONTENT_PADDING));
 }
 
 void PaneOverlay::updatePositionInParent(juce::Rectangle<int> parentBounds)
 {
     auto preferredBounds = getPreferredBounds();
-    int width = preferredBounds.getWidth();
-    int height = preferredBounds.getHeight();
+    int const width = preferredBounds.getWidth();
+    int const height = preferredBounds.getHeight();
 
-    int x = 0, y = 0;
+    int x = 0;
+    int y = 0;
 
     switch (position_)
     {

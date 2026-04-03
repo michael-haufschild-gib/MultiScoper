@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace oscil
 {
@@ -29,7 +30,7 @@ Source::Source() : id_(SourceId::generate()), createdAt_(juce::Time::getCurrentT
     lastAudioTimeMs_.store(now, std::memory_order_relaxed);
 }
 
-Source::Source(const SourceId& sourceId) : id_(sourceId), createdAt_(juce::Time::getCurrentTime())
+Source::Source(SourceId sourceId) : id_(std::move(sourceId)), createdAt_(juce::Time::getCurrentTime())
 {
     auto now = juce::Time::currentTimeMillis();
     lastHeartbeatMs_.store(now, std::memory_order_relaxed);
@@ -104,7 +105,7 @@ void Source::fromValueTree(const juce::ValueTree& state)
             if (backupId == owningInstanceId_)
                 continue;
 
-            if (std::find(backupInstanceIds_.begin(), backupInstanceIds_.end(), backupId) == backupInstanceIds_.end())
+            if (std::ranges::find(backupInstanceIds_, backupId) == backupInstanceIds_.end())
             {
                 backupInstanceIds_.push_back(backupId);
             }
@@ -141,9 +142,7 @@ void Source::addBackupInstance(const InstanceId& instanceId)
 
 void Source::removeBackupInstance(const InstanceId& instanceId)
 {
-    backupInstanceIds_.erase(std::remove_if(backupInstanceIds_.begin(), backupInstanceIds_.end(),
-                                            [&instanceId](const InstanceId& id) { return id == instanceId; }),
-                             backupInstanceIds_.end());
+    std::erase_if(backupInstanceIds_, [&instanceId](const InstanceId& id) { return id == instanceId; });
 }
 
 std::optional<InstanceId> Source::getNextBackupInstance() const
@@ -243,14 +242,14 @@ void Source::updateLastAudioTime()
 int64_t Source::getTimeSinceLastAudio() const
 {
     // Guard against system clock adjustments that could produce negative values
-    int64_t delta = juce::Time::currentTimeMillis() - lastAudioTimeMs_.load(std::memory_order_relaxed);
+    int64_t const delta = juce::Time::currentTimeMillis() - lastAudioTimeMs_.load(std::memory_order_relaxed);
     return delta >= 0 ? delta : 0;
 }
 
 void Source::updateActivityState()
 {
     auto timeSinceAudio = getTimeSinceLastAudio();
-    SourceState currentState = state_.load(std::memory_order_relaxed);
+    SourceState const currentState = state_.load(std::memory_order_relaxed);
 
     // Check for transition TO Active
     // If we have received audio recently and are not ACTIVE, become ACTIVE
@@ -287,7 +286,7 @@ void Source::updateActivityState()
 
 void Source::updateCorrelationMetrics(float correlation) noexcept
 {
-    float safeCorrelation = std::isnan(correlation) ? 0.0f : correlation;
+    float const safeCorrelation = std::isnan(correlation) ? 0.0f : correlation;
     correlationMetrics_.correlationCoefficient = juce::jlimit(-1.0f, 1.0f, safeCorrelation);
     correlationMetrics_.isValid = true;
 }

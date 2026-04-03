@@ -138,12 +138,11 @@ bool ScanlineEffect::isCompiled() const { return compiled_; }
 void ScanlineEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                            FramebufferPool& pool, float deltaTime)
 {
+    juce::ignoreUnused(context);
     juce::ignoreUnused(deltaTime);
 
     if (!compiled_ || !source || !destination)
         return;
-
-    auto& ext = context.extensions;
 
     destination->bind();
     glDisable(GL_DEPTH_TEST);
@@ -152,12 +151,12 @@ void ScanlineEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Fr
     shader_->use();
 
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
-    ext.glUniform1f(densityLoc_, settings_.density);
-    ext.glUniform1f(widthLoc_, static_cast<float>(source->width));
-    ext.glUniform1f(heightLoc_, static_cast<float>(source->height));
-    ext.glUniform1i(phosphorGlowLoc_, settings_.phosphorGlow ? 1 : 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(textureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(densityLoc_, settings_.density);
+    juce::OpenGLExtensionFunctions::glUniform1f(widthLoc_, static_cast<float>(source->width));
+    juce::OpenGLExtensionFunctions::glUniform1f(heightLoc_, static_cast<float>(source->height));
+    juce::OpenGLExtensionFunctions::glUniform1i(phosphorGlowLoc_, settings_.phosphorGlow ? 1 : 0);
 
     pool.renderFullscreenQuad();
     destination->unbind();

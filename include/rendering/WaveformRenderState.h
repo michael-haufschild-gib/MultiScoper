@@ -39,7 +39,7 @@ struct WaveformRenderState
     /// Release the history framebuffer and disable trails.
     void disableTrails(juce::OpenGLContext& context);
     /// Resize the history framebuffer to match new dimensions.
-    void resizeHistoryFBO(juce::OpenGLContext& context, int width, int height);
+    void resizeHistoryFBO(juce::OpenGLContext& context, int width, int height) const;
 
     /// Advance accumulated time by the given delta.
     void updateTiming(float deltaTime);

@@ -101,12 +101,11 @@ bool TiltShiftEffect::isCompiled() const { return compiled_; }
 void TiltShiftEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                             FramebufferPool& pool, float deltaTime)
 {
+    juce::ignoreUnused(context);
     juce::ignoreUnused(deltaTime);
 
     if (!compiled_ || !source || !destination)
         return;
-
-    auto& ext = context.extensions;
 
     destination->bind();
     glDisable(GL_DEPTH_TEST);
@@ -115,10 +114,10 @@ void TiltShiftEffect::apply(juce::OpenGLContext& context, Framebuffer* source, F
     shader_->use();
 
     source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(blurRadiusLoc_, settings_.blurRadius);
-    ext.glUniform1f(positionLoc_, settings_.position);
-    ext.glUniform1f(rangeLoc_, settings_.range);
+    juce::OpenGLExtensionFunctions::glUniform1i(textureLoc_, 0);
+    juce::OpenGLExtensionFunctions::glUniform1f(blurRadiusLoc_, settings_.blurRadius);
+    juce::OpenGLExtensionFunctions::glUniform1f(positionLoc_, settings_.position);
+    juce::OpenGLExtensionFunctions::glUniform1f(rangeLoc_, settings_.range);
 
     pool.renderFullscreenQuad();
     destination->unbind();

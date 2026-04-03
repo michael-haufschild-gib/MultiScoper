@@ -263,7 +263,7 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
         return config;
 
     config.shaderType = idToShaderType(tree.getProperty("shaderType", "basic"));
-    int blendModeInt = static_cast<int>(tree.getProperty("compositeBlendMode", 0));
+    int const blendModeInt = static_cast<int>(tree.getProperty("compositeBlendMode", 0));
     config.compositeBlendMode = (blendModeInt >= 0 && blendModeInt <= static_cast<int>(BlendMode::Screen))
                                     ? static_cast<BlendMode>(blendModeInt)
                                     : BlendMode::Alpha;

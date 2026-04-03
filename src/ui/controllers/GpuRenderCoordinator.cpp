@@ -37,7 +37,7 @@ void GpuRenderCoordinator::updateRendering(const std::vector<std::unique_ptr<Pan
     else
     {
         // Trigger repaint of waveform components (only needed for software rendering)
-        for (auto& pane : panes)
+        for (const auto& pane : panes)
         {
             if (pane)
                 pane->repaint();
@@ -45,10 +45,10 @@ void GpuRenderCoordinator::updateRendering(const std::vector<std::unique_ptr<Pan
     }
 }
 
-void GpuRenderCoordinator::propagateGpuStateToPanes(const std::vector<std::unique_ptr<PaneComponent>>& panes)
+void GpuRenderCoordinator::propagateGpuStateToPanes(const std::vector<std::unique_ptr<PaneComponent>>& panes) const
 {
-    bool enabled = isGpuRenderingEnabled();
-    for (auto& pane : panes)
+    bool const enabled = isGpuRenderingEnabled();
+    for (const auto& pane : panes)
     {
         if (pane)
         {
