@@ -62,6 +62,8 @@ void OscillatorPanelController::handleAsyncUpdate() { refreshPanels(); }
 
 void OscillatorPanelController::refreshPanels()
 {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     // A synchronous refresh supersedes any pending async one.
     cancelPendingUpdate();
 
@@ -107,6 +109,7 @@ void OscillatorPanelController::refreshPanels()
 
     jassertfalse; // unexpected refresh reentrancy loop
     OSCIL_LOG(CONTROLLER, "refreshPanels: WARNING — hit max iteration limit (" << kMaxRefreshIterations << ")");
+    triggerAsyncUpdate(); // preserve the final queued refresh for the next async cycle
 }
 
 void OscillatorPanelController::createPaneComponents(const std::vector<Oscillator>& oscillators,

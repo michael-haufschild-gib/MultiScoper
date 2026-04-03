@@ -147,6 +147,7 @@ QualityPreset MemoryBudgetManager::getRecommendedQuality() const
 
 QualityPreset MemoryBudgetManager::getRecommendedQualityForCount(int numBuffers) const
 {
+    // REQUIRES: buffersMutex_ must already be held by caller
     float durationSec = bufferDurationToSeconds(globalConfig_.bufferDuration);
     return globalConfig_.memoryBudget.calculateRecommendedPreset(numBuffers, durationSec);
 }

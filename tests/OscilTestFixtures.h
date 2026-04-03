@@ -55,7 +55,8 @@ public:
         sources_.erase(sourceId.id);
         buffers_.erase(sourceId.id);
 
-        for (auto* listener : listeners_)
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
             listener->sourceRemoved(sourceId);
     }
 
@@ -92,7 +93,8 @@ public:
             it->second.channelCount = numChannels;
             it->second.sampleRate = sampleRate;
 
-            for (auto* listener : listeners_)
+            const auto snapshot = listeners_;
+            for (auto* listener : snapshot)
                 listener->sourceUpdated(sourceId);
         }
     }
@@ -111,7 +113,9 @@ public:
         info.sourceId = id;
         info.name = sourceName;
         sources_[id.id] = info;
-        for (auto* listener : listeners_)
+        // Snapshot to handle re-entrant removal during callback
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
             listener->sourceAdded(id);
     }
 
@@ -119,13 +123,15 @@ public:
     {
         sources_.erase(id.id);
         buffers_.erase(id.id);
-        for (auto* listener : listeners_)
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
             listener->sourceRemoved(id);
     }
 
     void updateSourceNotify(const SourceId& id)
     {
-        for (auto* listener : listeners_)
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
             listener->sourceUpdated(id);
     }
 
@@ -216,7 +222,8 @@ public:
 
     void notifyListeners()
     {
-        for (auto* listener : listeners_)
+        const auto snapshot = listeners_;
+        for (auto* listener : snapshot)
             listener->themeChanged(currentTheme_);
     }
 

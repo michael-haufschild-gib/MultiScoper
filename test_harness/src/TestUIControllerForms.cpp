@@ -28,12 +28,10 @@ bool TestUIController::select(const juce::String& elementId, int itemId)
         return false;
 
     juce::Component::SafePointer<juce::ComboBox> safe(comboBox);
-    juce::MessageManager::callAsync([safe, itemId]() {
+    return juce::MessageManager::callAsync([safe, itemId]() {
         if (auto* cb = safe.getComponent())
             cb->setSelectedId(itemId, juce::sendNotification);
     });
-
-    return true;
 }
 
 bool TestUIController::selectByText(const juce::String& elementId, const juce::String& text)
@@ -47,7 +45,7 @@ bool TestUIController::selectByText(const juce::String& elementId, const juce::S
         return false;
 
     juce::Component::SafePointer<juce::ComboBox> safe(comboBox);
-    juce::MessageManager::callAsync([safe, text]() {
+    return juce::MessageManager::callAsync([safe, text]() {
         if (auto* cb = safe.getComponent())
         {
             for (int i = 0; i < cb->getNumItems(); ++i)
@@ -60,8 +58,6 @@ bool TestUIController::selectByText(const juce::String& elementId, const juce::S
             }
         }
     });
-
-    return true;
 }
 
 bool TestUIController::selectById(const juce::String& elementId, const juce::String& itemId)
@@ -70,29 +66,23 @@ bool TestUIController::selectById(const juce::String& elementId, const juce::Str
     if (component == nullptr)
         return false;
 
-    // Handle OscilDropdown
+    // Handle OscilDropdown — resolve inside async callback in case items change
     if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
     {
-        int targetIndex = -1;
-        for (int i = 0; i < oscilDropdown->getNumItems(); ++i)
-        {
-            if (oscilDropdown->getItem(i).id == itemId)
-            {
-                targetIndex = i;
-                break;
-            }
-        }
-
-        if (targetIndex < 0)
-            return false;
-
         juce::Component::SafePointer<oscil::OscilDropdown> safe(oscilDropdown);
-        juce::MessageManager::callAsync([safe, targetIndex]() {
+        return juce::MessageManager::callAsync([safe, itemId]() {
             if (auto* dd = safe.getComponent())
-                dd->setSelectedIndex(targetIndex, true);
+            {
+                for (int i = 0; i < dd->getNumItems(); ++i)
+                {
+                    if (dd->getItem(i).id == itemId)
+                    {
+                        dd->setSelectedIndex(i, true);
+                        return;
+                    }
+                }
+            }
         });
-
-        return true;
     }
 
     // Fallback: try as juce::ComboBox with integer ID
@@ -102,11 +92,10 @@ bool TestUIController::selectById(const juce::String& elementId, const juce::Str
         if (intId > 0)
         {
             juce::Component::SafePointer<juce::ComboBox> safe(comboBox);
-            juce::MessageManager::callAsync([safe, intId]() {
+            return juce::MessageManager::callAsync([safe, intId]() {
                 if (auto* cb = safe.getComponent())
                     cb->setSelectedId(intId, juce::sendNotification);
             });
-            return true;
         }
     }
 
@@ -122,33 +111,30 @@ bool TestUIController::toggle(const juce::String& elementId, bool value)
     if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
     {
         juce::Component::SafePointer<oscil::OscilToggle> safe(oscilToggle);
-        juce::MessageManager::callAsync([safe, value]() {
+        return juce::MessageManager::callAsync([safe, value]() {
             if (auto* t = safe.getComponent())
                 t->setValue(value);
         });
-        return true;
     }
 
     auto* toggleButton = dynamic_cast<juce::ToggleButton*>(component);
     if (toggleButton != nullptr)
     {
         juce::Component::SafePointer<juce::ToggleButton> safe(toggleButton);
-        juce::MessageManager::callAsync([safe, value]() {
+        return juce::MessageManager::callAsync([safe, value]() {
             if (auto* tb = safe.getComponent())
                 tb->setToggleState(value, juce::sendNotification);
         });
-        return true;
     }
 
     auto* button = dynamic_cast<juce::Button*>(component);
     if (button != nullptr)
     {
         juce::Component::SafePointer<juce::Button> safe(button);
-        juce::MessageManager::callAsync([safe, value]() {
+        return juce::MessageManager::callAsync([safe, value]() {
             if (auto* b = safe.getComponent())
                 b->setToggleState(value, juce::sendNotification);
         });
-        return true;
     }
 
     return false;
@@ -163,31 +149,28 @@ bool TestUIController::setSliderValue(const juce::String& elementId, double valu
     if (auto* slider = dynamic_cast<juce::Slider*>(component))
     {
         juce::Component::SafePointer<juce::Slider> safe(slider);
-        juce::MessageManager::callAsync([safe, value]() {
+        return juce::MessageManager::callAsync([safe, value]() {
             if (auto* s = safe.getComponent())
                 s->setValue(value, juce::sendNotification);
         });
-        return true;
     }
 
     if (auto* textField = dynamic_cast<oscil::OscilTextField*>(component))
     {
         juce::Component::SafePointer<oscil::OscilTextField> safe(textField);
-        juce::MessageManager::callAsync([safe, value]() {
+        return juce::MessageManager::callAsync([safe, value]() {
             if (auto* tf = safe.getComponent())
                 tf->setNumericValue(value, true);
         });
-        return true;
     }
 
     if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
     {
         juce::Component::SafePointer<oscil::OscilSlider> safe(oscilSlider);
-        juce::MessageManager::callAsync([safe, value]() {
+        return juce::MessageManager::callAsync([safe, value]() {
             if (auto* s = safe.getComponent())
                 s->setValue(value);
         });
-        return true;
     }
 
     return false;
@@ -202,7 +185,7 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
     if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
     {
         juce::Component::SafePointer<oscil::OscilSlider> safe(oscilSlider);
-        juce::MessageManager::callAsync([safe]() {
+        return juce::MessageManager::callAsync([safe]() {
             if (auto* s = safe.getComponent())
             {
                 double step = s->getStep();
@@ -211,7 +194,6 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
                 s->setValue(s->getValue() + step);
             }
         });
-        return true;
     }
 
     auto* slider = dynamic_cast<juce::Slider*>(component);
@@ -219,7 +201,7 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
         return false;
 
     juce::Component::SafePointer<juce::Slider> safeSlider(slider);
-    juce::MessageManager::callAsync([safeSlider]() {
+    return juce::MessageManager::callAsync([safeSlider]() {
         if (auto* s = safeSlider.getComponent())
         {
             double interval = s->getInterval();
@@ -228,8 +210,6 @@ bool TestUIController::incrementSlider(const juce::String& elementId)
             s->setValue(s->getValue() + interval, juce::sendNotification);
         }
     });
-
-    return true;
 }
 
 bool TestUIController::decrementSlider(const juce::String& elementId)
@@ -241,7 +221,7 @@ bool TestUIController::decrementSlider(const juce::String& elementId)
     if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
     {
         juce::Component::SafePointer<oscil::OscilSlider> safe(oscilSlider);
-        juce::MessageManager::callAsync([safe]() {
+        return juce::MessageManager::callAsync([safe]() {
             if (auto* s = safe.getComponent())
             {
                 double step = s->getStep();
@@ -250,7 +230,6 @@ bool TestUIController::decrementSlider(const juce::String& elementId)
                 s->setValue(s->getValue() - step);
             }
         });
-        return true;
     }
 
     auto* slider = dynamic_cast<juce::Slider*>(component);
@@ -258,7 +237,7 @@ bool TestUIController::decrementSlider(const juce::String& elementId)
         return false;
 
     juce::Component::SafePointer<juce::Slider> safeSlider(slider);
-    juce::MessageManager::callAsync([safeSlider]() {
+    return juce::MessageManager::callAsync([safeSlider]() {
         if (auto* s = safeSlider.getComponent())
         {
             double interval = s->getInterval();
@@ -267,8 +246,6 @@ bool TestUIController::decrementSlider(const juce::String& elementId)
             s->setValue(s->getValue() - interval, juce::sendNotification);
         }
     });
-
-    return true;
 }
 
 bool TestUIController::resetSliderToDefault(const juce::String& elementId)
@@ -286,31 +263,28 @@ bool TestUIController::typeText(const juce::String& elementId, const juce::Strin
     if (auto* textEditor = dynamic_cast<juce::TextEditor*>(component))
     {
         juce::Component::SafePointer<juce::TextEditor> safe(textEditor);
-        juce::MessageManager::callAsync([safe, text]() {
+        return juce::MessageManager::callAsync([safe, text]() {
             if (auto* te = safe.getComponent())
                 te->setText(text, juce::sendNotification);
         });
-        return true;
     }
 
     if (auto* oscilField = dynamic_cast<oscil::OscilTextField*>(component))
     {
         juce::Component::SafePointer<oscil::OscilTextField> safe(oscilField);
-        juce::MessageManager::callAsync([safe, text]() {
+        return juce::MessageManager::callAsync([safe, text]() {
             if (auto* tf = safe.getComponent())
                 tf->setText(text, true);
         });
-        return true;
     }
 
     if (auto* inlineLabel = dynamic_cast<oscil::InlineEditLabel*>(component))
     {
         juce::Component::SafePointer<oscil::InlineEditLabel> safe(inlineLabel);
-        juce::MessageManager::callAsync([safe, text]() {
+        return juce::MessageManager::callAsync([safe, text]() {
             if (auto* il = safe.getComponent())
                 il->setText(text, true);
         });
-        return true;
     }
 
     if (auto* label = dynamic_cast<juce::Label*>(component))
@@ -318,11 +292,10 @@ bool TestUIController::typeText(const juce::String& elementId, const juce::Strin
         if (label->isEditable())
         {
             juce::Component::SafePointer<juce::Label> safe(label);
-            juce::MessageManager::callAsync([safe, text]() {
+            return juce::MessageManager::callAsync([safe, text]() {
                 if (auto* l = safe.getComponent())
                     l->setText(text, juce::sendNotification);
             });
-            return true;
         }
     }
 

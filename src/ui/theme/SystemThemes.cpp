@@ -131,6 +131,15 @@ ColorTheme createHighContrast()
     theme.controlBorder = juce::Colour(0xFFFFFFFF);
     theme.controlHighlight = juce::Colour(0xFF404040);
     theme.controlActive = juce::Colour(0xFFFFFF00);
+    theme.crosshairLine = juce::Colour(0xCCFFFFFF);
+
+    theme.waveformColors.clear();
+    theme.waveformColors = {
+        juce::Colour(0xFFFFFF00), juce::Colour(0xFF00FFFF), juce::Colour(0xFFFF00FF), juce::Colour(0xFFFFFFFF),
+        juce::Colour(0xFF00FF00), juce::Colour(0xFFFF0000), juce::Colour(0xFF0080FF), juce::Colour(0xFFFF8000),
+    };
+    while (theme.waveformColors.size() < 64)
+        theme.waveformColors.emplace_back(0xFFFFFFFF);
     return theme;
 }
 
