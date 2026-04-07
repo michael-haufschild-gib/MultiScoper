@@ -79,7 +79,7 @@ bool VisualConfiguration::hasPostProcessing() const
            vignette.enabled || filmGrain.enabled || chromaticAberration.enabled || scanlines.enabled;
 }
 
-VisualConfiguration VisualConfiguration::getDefault() { return VisualConfiguration(); }
+VisualConfiguration VisualConfiguration::getDefault() { return {}; }
 
 void VisualConfiguration::setupVectorScopePreset(VisualConfiguration& c)
 {

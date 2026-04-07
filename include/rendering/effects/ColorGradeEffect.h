@@ -5,10 +5,8 @@
 
 #pragma once
 
-#include "PostProcessEffect.h"
+#include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
-
-#include <memory>
 
 #if OSCIL_ENABLE_OPENGL
 
@@ -23,7 +21,7 @@ namespace oscil
  * - Tint (green to magenta)
  * - Shadow/highlight color tinting
  */
-class ColorGradeEffect : public PostProcessEffect
+class ColorGradeEffect : public SingleShaderEffect
 {
 public:
     /// Create a color grade effect with default settings.
@@ -32,15 +30,6 @@ public:
 
     [[nodiscard]] juce::String getId() const override { return "color_grade"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Color Grade"; }
-
-    /// Compile the color grading shader program.
-    bool compile(juce::OpenGLContext& context) override;
-    /// Release the shader program.
-    void release(juce::OpenGLContext& context) override;
-    [[nodiscard]] bool isCompiled() const override;
-
-    void apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool,
-               float deltaTime) override;
 
     /**
      * Configure from VisualConfiguration.
@@ -53,11 +42,14 @@ public:
     void setSettings(const ColorGradeSettings& settings) { settings_ = settings; }
     [[nodiscard]] const ColorGradeSettings& getSettings() const { return settings_; }
 
+protected:
+    [[nodiscard]] const char* getFragmentSource() const override;
+    bool resolveUniforms() override;
+    void setUniforms(const Framebuffer& source, float deltaTime) override;
+
 private:
     ColorGradeSettings settings_;
-    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
 
-    GLint textureLoc_ = -1;
     GLint brightnessLoc_ = -1;
     GLint contrastLoc_ = -1;
     GLint saturationLoc_ = -1;
@@ -65,8 +57,6 @@ private:
     GLint tintLoc_ = -1;
     GLint shadowsLoc_ = -1;
     GLint highlightsLoc_ = -1;
-
-    bool compiled_ = false;
 };
 
 } // namespace oscil

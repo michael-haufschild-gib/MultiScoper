@@ -16,29 +16,40 @@ void ScreenshotHandler::handleTakeScreenshot(const httplib::Request& req, httpli
     try
     {
         auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
-        std::string filename = body.value("filename", "test_screenshot.png");
+        std::string const requestedFilename = body.value("filename", "test_screenshot.png");
 
-        auto result = runOnMessageThread([this, filename]() -> nlohmann::json {
+        // Sanitize filename to prevent path traversal (strip directory components)
+        juce::String const safeFilename = juce::File::createLegalFileName(juce::String(requestedFilename)).trim();
+        if (safeFilename.isEmpty())
+            throw std::runtime_error("Invalid filename");
+
+        auto result = runOnMessageThread([this, safeFilename]() -> nlohmann::json {
             nlohmann::json response;
 
             // Create a snapshot of the editor
             auto bounds = editor_.getLocalBounds();
-            juce::Image image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+            juce::Image const image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
             juce::Graphics g(image);
             editor_.paintEntireComponent(g, true);
 
             // Save to file
-            juce::File outputFile(
-                juce::File::getCurrentWorkingDirectory().getChildFile("screenshots").getChildFile(filename));
+            juce::File const screenshotsDir = juce::File::getCurrentWorkingDirectory().getChildFile("screenshots");
+            juce::File const outputFile(screenshotsDir.getChildFile(safeFilename));
             outputFile.getParentDirectory().createDirectory();
 
             juce::FileOutputStream stream(outputFile);
             if (stream.openedOk())
             {
                 juce::PNGImageFormat pngFormat;
-                pngFormat.writeImageToStream(image, stream);
-                response["status"] = "ok";
-                response["path"] = outputFile.getFullPathName().toStdString();
+                if (pngFormat.writeImageToStream(image, stream))
+                {
+                    response["status"] = "ok";
+                    response["path"] = outputFile.getFullPathName().toStdString();
+                }
+                else
+                {
+                    response["error"] = "Failed to encode PNG image";
+                }
             }
             else
             {

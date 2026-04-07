@@ -2,6 +2,12 @@
     Oscil - Plugin Editor Sidebar and Settings Handlers
 */
 
+#include "ui/controllers/GpuRenderCoordinator.h"
+#include "ui/controllers/OscillatorPanelController.h"
+#include "ui/managers/DialogManager.h"
+#include "ui/managers/DisplaySettingsManager.h"
+#include "ui/panels/StatusBarComponent.h"
+
 #include "plugin/PluginEditor.h"
 
 #include <set>
@@ -20,7 +26,7 @@ SourceIdSet collectAvailableSourceIds(const std::vector<SourceInfo>& sources)
     return ids;
 }
 
-bool sourceIdExists(const SourceIdSet& ids, const SourceId& sourceId) { return ids.find(sourceId.id) != ids.end(); }
+bool sourceIdExists(const SourceIdSet& ids, const SourceId& sourceId) { return ids.contains(sourceId.id); }
 } // namespace
 
 void OscilPluginEditor::refreshSidebarOscillatorList(const std::vector<Oscillator>& oscillators)

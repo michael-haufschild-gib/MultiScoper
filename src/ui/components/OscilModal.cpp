@@ -12,14 +12,12 @@ namespace oscil
 
 OscilModal::OscilModal(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , showSpring_(SpringPresets::snappy())
-    , scaleSpring_(SpringPresets::bouncy())
+    , showSpring_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
     setVisible(false);
     showSpring_.position = 0.0f;
-    scaleSpring_.position = 0.8f;
 }
 
 OscilModal::OscilModal(IThemeService& themeService, const juce::String& title) : OscilModal(themeService)
@@ -120,29 +118,20 @@ void OscilModal::show(juce::Component* parent)
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         if (content_)
-        {
             content_->setAlpha(showSpring_.position);
 
-            float scale = scaleSpring_.position;
-            auto modalBounds = getModalBounds();
-            auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
-            content_->setTransform(juce::AffineTransform::scale(scale, scale, pivot.x, pivot.y));
-        }
-
         showSpring_.setTarget(1.0f);
-        scaleSpring_.setTarget(1.0f);
+        scaleSpring_.setTarget(1.0f, 0.95f); // scale from 0.95 → 1.0
         startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
     else
     {
         showSpring_.position = 1.0f;
         scaleSpring_.position = 1.0f;
+        scaleSpring_.target = 1.0f;
 
         if (content_)
-        {
             content_->setAlpha(1.0f);
-            content_->setTransform({});
-        }
 
         repaint();
     }
@@ -155,15 +144,12 @@ void OscilModal::hide()
     stopTimer();
     showSpring_.position = 0.0f;
     showSpring_.target = 0.0f;
-    scaleSpring_.position = 0.8f;
-    scaleSpring_.target = 0.8f;
+    scaleSpring_.position = 0.95f;
+    scaleSpring_.target = 0.95f;
     setVisible(false);
 
     if (content_)
-    {
         content_->setAlpha(1.0f);
-        content_->setTransform({});
-    }
 
     if (previousFocus_ && previousFocus_->isShowing())
         previousFocus_->grabKeyboardFocus();
@@ -211,7 +197,7 @@ void OscilModal::mouseMove(const juce::MouseEvent& e)
     if (!showCloseButton_)
         return;
 
-    bool wasHovering = isHoveringClose_;
+    bool const wasHovering = isHoveringClose_;
     isHoveringClose_ = getCloseButtonBounds().contains(e.getPosition());
 
     if (isHoveringClose_ != wasHovering)
@@ -221,7 +207,7 @@ void OscilModal::mouseMove(const juce::MouseEvent& e)
     }
 }
 
-void OscilModal::mouseExit(const juce::MouseEvent&)
+void OscilModal::mouseExit(const juce::MouseEvent& /*event*/)
 {
     if (isHoveringClose_)
     {
@@ -265,9 +251,9 @@ bool OscilModal::keyPressed(const juce::KeyPress& key)
             return false;
 
         auto* currentFocus = juce::Component::getCurrentlyFocusedComponent();
-        int currentIndex = focusableChildren.indexOf(currentFocus);
+        int const currentIndex = focusableChildren.indexOf(currentFocus);
 
-        int nextIndex;
+        int nextIndex = 0;
         if (key.getModifiers().isShiftDown())
             nextIndex = (currentIndex <= 0) ? focusableChildren.size() - 1 : currentIndex - 1;
         else
@@ -309,7 +295,7 @@ void OscilModal::globalFocusChanged(juce::Component* focusedComponent)
     }
 }
 
-void OscilModal::focusGained(FocusChangeType)
+void OscilModal::focusGained(FocusChangeType /*cause*/)
 {
     if (content_)
     {
@@ -329,7 +315,7 @@ void OscilModal::timerCallback()
 {
     updateAnimations();
 
-    bool isSettled = showSpring_.isSettled() && scaleSpring_.isSettled();
+    bool const isSettled = showSpring_.isSettled() && scaleSpring_.isSettled();
 
     if (isSettled)
     {
@@ -340,10 +326,7 @@ void OscilModal::timerCallback()
             setVisible(false);
 
             if (content_)
-            {
                 content_->setAlpha(1.0f);
-                content_->setTransform({});
-            }
 
             if (previousFocus_ && previousFocus_->isShowing())
                 previousFocus_->grabKeyboardFocus();
@@ -359,21 +342,13 @@ void OscilModal::timerCallback()
 
 void OscilModal::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     showSpring_.update(dt);
     scaleSpring_.update(dt);
     closeHoverSpring_.update(dt);
 
     if (content_)
-    {
         content_->setAlpha(showSpring_.position);
-
-        float scale = scaleSpring_.position;
-        auto modalBounds = getModalBounds();
-        auto pivot = modalBounds.getCentre().toFloat() - content_->getPosition().toFloat();
-
-        content_->setTransform(juce::AffineTransform::scale(scale, scale, pivot.x, pivot.y));
-    }
 }
 
 void OscilModal::updateFocusTrap()

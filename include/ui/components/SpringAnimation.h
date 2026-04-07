@@ -1,23 +1,48 @@
 /*
-    Oscil - Spring Animation
-    Physics-based spring animation system for natural, responsive UI motion
+    Oscil - Animation System
+    Dual-mode animation: exponential ease-out (default) and real spring physics.
+
+    EaseOut mode: smooth monotonic transitions with no overshoot.
+    Spring mode: semi-implicit Euler integration with configurable stiffness/damping/mass,
+    producing natural overshoot for underdamped parameters.
+
+    Retained as SpringAnimation for API compatibility across the codebase.
 */
 
 #pragma once
 
+#include <juce_core/juce_core.h>
+
 #include <algorithm>
 #include <cmath>
 #include <map>
-#include <string>
 
 namespace oscil
 {
 
 /**
- * Physics-based spring animation
+ * Animation mode selector
  *
- * Uses a critically damped spring model for smooth, natural motion.
- * Supports various presets from snappy to bouncy.
+ * EaseOut — exponential decay, no overshoot (default)
+ * Spring  — semi-implicit Euler spring physics, supports overshoot
+ */
+enum class SpringMode
+{
+    EaseOut,
+    Spring
+};
+
+/**
+ * Dual-mode animation: ease-out or spring physics
+ *
+ * EaseOut mode (default): smooth monotonic transitions with no overshoot.
+ * Position approaches target via exponential decay each frame.
+ *
+ * Spring mode: real spring physics using semi-implicit Euler integration.
+ * Stiffness, damping, and mass control the motion. Underdamped parameters
+ * produce natural overshoot.
+ *
+ * Retained as "SpringAnimation" for API compatibility.
  */
 struct SpringAnimation
 {
@@ -25,23 +50,33 @@ struct SpringAnimation
     float velocity = 0.0f;
     float target = 0.0f;
 
-    // Spring parameters
-    float stiffness = 300.0f; // Higher = faster/snappier
-    float damping = 20.0f;    // Higher = less oscillation
-    float mass = 1.0f;        // Higher = more momentum
+    // EaseOut: speed derived from stiffness (speed = stiffness / 1200)
+    // Spring: stiffness controls spring constant, damping controls friction, mass controls inertia
+    float stiffness = 300.0f;
+    float damping = 20.0f;
+    float mass = 1.0f;
 
-    // Maximum delta time to prevent integration instability after stalls/freezes
+    SpringMode mode = SpringMode::EaseOut;
+
+    // Maximum delta time to prevent jumps after stalls/freezes
     static constexpr float MAX_DELTA_TIME = 1.0f / 15.0f; // ~67ms floor
 
     /**
-     * Create a spring animation with default parameters
+     * Create an animation with default parameters
      */
     SpringAnimation() = default;
 
     /**
-     * Create a spring animation with custom parameters
+     * Create an animation with custom parameters
+     * EaseOut mode: stiff controls speed (higher = faster settling); damp and m are unused.
+     * Spring mode: stiff = spring constant, damp = friction, m = inertia.
      */
     SpringAnimation(float stiff, float damp, float m = 1.0f) : stiffness(stiff), damping(damp), mass(m) {}
+
+    /**
+     * Set the animation mode (EaseOut or Spring)
+     */
+    void setMode(SpringMode m) { mode = m; }
 
     /**
      * Set the target value (animation destination)
@@ -59,43 +94,30 @@ struct SpringAnimation
     }
 
     /**
-     * Update the spring physics
+     * Update the animation — dispatches to ease-out or spring based on mode
      * Call this once per frame with the time delta
      *
      * @param deltaTime Time since last update in seconds (e.g., 1/60 for 60fps)
      */
     void update(float deltaTime)
     {
-        // Guard against invalid or excessive delta time.
-        // Large deltas (e.g. after app freeze) would destabilize the integrator.
-        if (deltaTime <= 0.0f)
-            return;
-        deltaTime = std::min(deltaTime, MAX_DELTA_TIME);
-
-        // Spring force: F = -k * x (Hooke's law)
-        float displacement = position - target;
-        float springForce = -stiffness * displacement;
-
-        // Damping force: F = -c * v
-        float dampingForce = -damping * velocity;
-
-        // Total acceleration: a = F / m
-        float acceleration = (springForce + dampingForce) / mass;
-
-        // Update velocity and position (semi-implicit Euler)
-        velocity += acceleration * deltaTime;
-        position += velocity * deltaTime;
+        if (mode == SpringMode::Spring)
+            updateSpring(deltaTime);
+        else
+            updateEaseOut(deltaTime);
     }
 
     /**
      * Check if the animation has essentially settled
      *
      * @param threshold How close to target counts as "settled"
-     * @return true if position is close to target and velocity is near zero
+     * @return true if position is close to target
      */
     bool isSettled(float threshold = 0.001f) const
     {
-        return std::abs(position - target) < threshold && std::abs(velocity) < threshold;
+        if (mode == SpringMode::Spring)
+            return std::abs(position - target) < threshold && std::abs(velocity) < 0.01f;
+        return std::abs(position - target) < threshold;
     }
 
     /**
@@ -134,77 +156,134 @@ struct SpringAnimation
     T interpolate(const T& from, const T& to) const
     {
         float t = std::clamp(position, 0.0f, 1.0f);
-        return from + (to - from) * t;
+        return from + ((to - from) * t);
+    }
+
+private:
+    /**
+     * Exponential ease-out update — smooth monotonic approach to target
+     */
+    void updateEaseOut(float deltaTime)
+    {
+        if (deltaTime <= 0.0f)
+            return;
+        deltaTime = std::min(deltaTime, MAX_DELTA_TIME);
+
+        // Exponential ease-out: position moves toward target by a fraction each frame.
+        // speed factor derived from stiffness (higher stiffness = faster approach)
+        float const speed = std::clamp(stiffness / 1200.0f, 0.0f, 0.99f);
+        float const factor = 1.0f - std::pow(1.0f - speed, deltaTime * 60.0f);
+        position += (target - position) * factor;
+        velocity = 0.0f;
+
+        // Snap to target when very close to avoid asymptotic tail
+        if (std::abs(position - target) < 0.0005f)
+        {
+            position = target;
+        }
     }
 
     /**
-     * Apply a brief impulse (for celebration effects, etc.)
+     * Spring physics update — semi-implicit Euler integration
+     * Produces natural overshoot for underdamped parameters (stiffness >> damping)
      */
-    void impulse(float amount) { velocity += amount; }
+    void updateSpring(float deltaTime)
+    {
+        if (deltaTime <= 0.0f)
+            return;
+        deltaTime = std::min(deltaTime, MAX_DELTA_TIME);
+
+        const float displacement = position - target;
+        const float springForce = -stiffness * displacement;
+        const float dampingForce = -damping * velocity;
+        const float acceleration = (springForce + dampingForce) / mass;
+
+        velocity += acceleration * deltaTime;
+        position += velocity * deltaTime;
+
+        // Settle when both position and velocity are negligible
+        if (std::abs(position - target) < 0.0005f && std::abs(velocity) < 0.01f)
+        {
+            position = target;
+            velocity = 0.0f;
+        }
+    }
 };
 
 /**
- * Preset spring configurations for common use cases
+ * Preset animation configurations
  */
 namespace SpringPresets
 {
 /**
- * Snappy - Quick response, minimal overshoot
- * Use for: Button presses, quick state changes
+ * Fast — Quick response for hover states and micro-interactions
  */
-inline SpringAnimation snappy() { return {400.0f, 30.0f, 1.0f}; }
+inline SpringAnimation fast() { return {500.0f, 0.0f, 1.0f}; }
 
 /**
- * Bouncy - Playful with noticeable overshoot
- * Use for: Toggle celebrations, success states
+ * Medium — Standard speed for state changes and transitions
  */
-inline SpringAnimation bouncy() { return {300.0f, 15.0f, 1.0f}; }
+inline SpringAnimation medium() { return {350.0f, 0.0f, 1.0f}; }
 
 /**
- * Smooth - Gentle, no overshoot
- * Use for: Panel transitions, layout animations
+ * Slow — Gentle motion for layout and panel transitions
  */
-inline SpringAnimation smooth() { return {200.0f, 25.0f, 1.0f}; }
+inline SpringAnimation slow() { return {200.0f, 0.0f, 1.0f}; }
 
-/**
- * Gentle - Slow, dreamy motion
- * Use for: Background effects, ambient animations
- */
-inline SpringAnimation gentle() { return {150.0f, 20.0f, 1.0f}; }
+/// Switch/toggle thumb — fast with slight overshoot (matches web motion/react stiffness:700 damping:30)
+inline SpringAnimation springSwitch()
+{
+    SpringAnimation s{700.0f, 30.0f, 1.0f};
+    s.setMode(SpringMode::Spring);
+    return s;
+}
 
-/**
- * Stiff - Very fast, almost instant
- * Use for: Hover states, micro-interactions
- */
-inline SpringAnimation stiff() { return {500.0f, 40.0f, 1.0f}; }
+/// Sliding indicator — medium spring for segmented controls and tab underlines
+inline SpringAnimation springIndicator()
+{
+    SpringAnimation s{500.0f, 30.0f, 1.0f};
+    s.setMode(SpringMode::Spring);
+    return s;
+}
 
-/**
- * Wobbly - Fun, exaggerated motion
- * Use for: Playful UI, game-like interfaces
- */
-inline SpringAnimation wobbly() { return {250.0f, 10.0f, 1.0f}; }
+/// Popup/dropdown entrance — softer spring for modal/dropdown open animations
+inline SpringAnimation springPopup()
+{
+    SpringAnimation s{400.0f, 25.0f, 1.0f};
+    s.setMode(SpringMode::Spring);
+    return s;
+}
+
+/// Gentle spring — for subtle hover effects and micro-interactions
+inline SpringAnimation springGentle()
+{
+    SpringAnimation s{300.0f, 20.0f, 1.0f};
+    s.setMode(SpringMode::Spring);
+    return s;
+}
+
 } // namespace SpringPresets
 
 /**
- * Helper class for managing multiple spring animations
+ * Helper class for managing multiple animations
  * Useful for components with several animated properties
  */
 class SpringAnimationGroup
 {
 public:
-    SpringAnimation& add(const std::string& name, const SpringAnimation& spring = SpringPresets::snappy())
+    SpringAnimation& add(const juce::String& name, const SpringAnimation& spring = SpringPresets::medium())
     {
         springs_[name] = spring;
         return springs_[name];
     }
 
-    SpringAnimation* get(const std::string& name)
+    SpringAnimation* get(const juce::String& name)
     {
         auto it = springs_.find(name);
         return it != springs_.end() ? &it->second : nullptr;
     }
 
-    const SpringAnimation* get(const std::string& name) const
+    const SpringAnimation* get(const juce::String& name) const
     {
         auto it = springs_.find(name);
         return it != springs_.end() ? &it->second : nullptr;
@@ -231,7 +310,7 @@ public:
     }
 
 private:
-    std::map<std::string, SpringAnimation> springs_;
+    std::map<juce::String, SpringAnimation> springs_;
 };
 
 } // namespace oscil

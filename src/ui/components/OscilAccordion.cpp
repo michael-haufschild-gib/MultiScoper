@@ -5,6 +5,8 @@
 
 #include "ui/components/OscilAccordion.h"
 
+#include <utility>
+
 namespace oscil
 {
 OscilAccordion::OscilAccordion(IThemeService& themeService) : ThemedComponent(themeService) {}
@@ -145,7 +147,7 @@ int OscilAccordion::getPreferredHeight() const
 
 void OscilAccordion::updateContentHeight()
 {
-    int preferredHeight = getPreferredHeight();
+    int const preferredHeight = getPreferredHeight();
     if (getHeight() != preferredHeight)
         setSize(getWidth(), preferredHeight);
 
@@ -162,7 +164,7 @@ void OscilAccordion::handleSectionExpanded(int index, bool expanded)
     {
         for (size_t i = 0; i < sections_.size(); ++i)
         {
-            if (static_cast<int>(i) != index && sections_[i]->isExpanded())
+            if (std::cmp_not_equal(i, index) && sections_[i]->isExpanded())
                 sections_[i]->setExpanded(false);
         }
     }
@@ -173,10 +175,10 @@ void OscilAccordion::layoutSections()
     auto bounds = getLocalBounds();
     int y = 0;
 
-    for (size_t i = 0; i < sections_.size(); ++i)
+    for (const auto& section : sections_)
     {
-        int height = sections_[i]->getPreferredHeight();
-        sections_[i]->setBounds(0, y, bounds.getWidth(), height);
+        int const height = section->getPreferredHeight();
+        section->setBounds(0, y, bounds.getWidth(), height);
 
         y += height + spacing_;
     }

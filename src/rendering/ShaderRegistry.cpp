@@ -26,19 +26,19 @@ void ShaderRegistry::registerBuiltInShaders()
 
 WaveformShader* ShaderRegistry::getShader(const juce::String& shaderId)
 {
-    auto it = shaders_.find(shaderId.toStdString());
+    auto it = shaders_.find(shaderId);
     return (it != shaders_.end()) ? it->second.get() : nullptr;
 }
 
 const WaveformShader* ShaderRegistry::getShader(const juce::String& shaderId) const
 {
-    auto it = shaders_.find(shaderId.toStdString());
+    auto it = shaders_.find(shaderId);
     return (it != shaders_.end()) ? it->second.get() : nullptr;
 }
 
 std::unique_ptr<WaveformShader> ShaderRegistry::createShader(const juce::String& shaderId) const
 {
-    auto it = factories_.find(shaderId.toStdString());
+    auto it = factories_.find(shaderId);
     if (it != factories_.end())
     {
         return it->second();
@@ -59,9 +59,6 @@ std::vector<ShaderInfo> ShaderRegistry::getAvailableShaders() const
     return result;
 }
 
-bool ShaderRegistry::hasShader(const juce::String& shaderId) const
-{
-    return shaders_.find(shaderId.toStdString()) != shaders_.end();
-}
+bool ShaderRegistry::hasShader(const juce::String& shaderId) const { return shaders_.contains(shaderId); }
 
 } // namespace oscil

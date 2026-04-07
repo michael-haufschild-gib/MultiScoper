@@ -122,6 +122,8 @@ private:
     void notifySourceAdded(const SourceId& sourceId);
     void notifySourceRemoved(const SourceId& sourceId);
     void notifySourceUpdated(const SourceId& sourceId);
+    void dispatchNotification(const char* eventName, const SourceId& sourceId,
+                              void (InstanceRegistryListener::*callback)(const SourceId&));
 
     mutable std::shared_mutex mutex_;
     std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_;

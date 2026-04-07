@@ -21,7 +21,7 @@ protected:
     {
         OscilPluginTestFixture::SetUp();
 
-        container = std::make_unique<PaneContainerComponent>();
+        container = std::make_unique<PaneContainerComponent>(getThemeManager());
         // Hacky but we need a coordinator.
         // Actually GpuRenderCoordinator needs a real editor.
         // Let's create the editor properly.

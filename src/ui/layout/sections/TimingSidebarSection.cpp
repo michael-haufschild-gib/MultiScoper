@@ -8,32 +8,20 @@
 namespace oscil
 {
 
-TimingSidebarSection::TimingSidebarSection(ServiceContext& context)
-    : presenter_(std::make_unique<TimingPresenter>())
-    , themeService_(context.themeService)
-{
-    // NOTE: Do NOT register "sidebar_timing" here — that ID belongs to the
-    // wrapping OscilAccordionSection (set in SidebarComponent::setupSections).
-    // Duplicate registration causes TestElementRegistry::findElement to return
-    // this content component instead of the accordion, breaking expand/collapse.
-    setupComponents();
-    setupPresenterCallbacks();
-    themeService_.addListener(this);
-    updateModeVisibility();
-}
+TimingSidebarSection::TimingSidebarSection(ServiceContext& context) : TimingSidebarSection(context.themeService) {}
 
 TimingSidebarSection::TimingSidebarSection(IThemeService& themeService)
-    : presenter_(std::make_unique<TimingPresenter>())
-    , themeService_(themeService)
+    : ThemedComponent(themeService)
+    , presenter_(std::make_unique<TimingPresenter>())
 {
     // See note in ServiceContext constructor above — no duplicate test ID.
     setupComponents();
     setupPresenterCallbacks();
-    themeService_.addListener(this);
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
     updateModeVisibility();
 }
 
-TimingSidebarSection::~TimingSidebarSection() { themeService_.removeListener(this); }
+TimingSidebarSection::~TimingSidebarSection() = default;
 
 void TimingSidebarSection::setupPresenterCallbacks()
 {
@@ -63,7 +51,7 @@ void TimingSidebarSection::setupPresenterCallbacks()
 
 void TimingSidebarSection::setupModeToggle()
 {
-    modeToggle_ = std::make_unique<SegmentedButtonBar>(themeService_);
+    modeToggle_ = std::make_unique<SegmentedButtonBar>(getThemeService());
     modeToggle_->addButton("TIME", static_cast<int>(TimingMode::TIME), "sidebar_timing_modeToggle_time",
                            "Time Mode: Display fixed time intervals (milliseconds)");
     modeToggle_->addButton("MELODIC", static_cast<int>(TimingMode::MELODIC), "sidebar_timing_modeToggle_melodic",
@@ -82,7 +70,7 @@ void TimingSidebarSection::setupModeToggle()
     addAndMakeVisible(*waveformModeLabel_);
 
     waveformModeSelector_ =
-        std::make_unique<OscilDropdown>(themeService_, "Select mode...", "sidebar_timing_waveformModeDropdown");
+        std::make_unique<OscilDropdown>(getThemeService(), "Select mode...", "sidebar_timing_waveformModeDropdown");
     populateWaveformModeSelector();
     waveformModeSelector_->onSelectionChanged = [this](int index) {
         if (index >= 0 && index <= static_cast<int>(WaveformMode::RestartOnNote))
@@ -94,7 +82,7 @@ void TimingSidebarSection::setupModeToggle()
 void TimingSidebarSection::setupTimeControls()
 {
     timeIntervalField_ =
-        std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Number, "sidebar_timing_intervalField");
+        std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Number, "sidebar_timing_intervalField");
     timeIntervalField_->setRange(0.1, 4000.0);
     timeIntervalField_->setStep(0.1);
     timeIntervalField_->setDecimalPlaces(1);
@@ -109,7 +97,7 @@ void TimingSidebarSection::setupTimeControls()
 void TimingSidebarSection::setupMelodicControls()
 {
     noteIntervalSelector_ =
-        std::make_unique<OscilDropdown>(themeService_, "Select note...", "sidebar_timing_noteDropdown");
+        std::make_unique<OscilDropdown>(getThemeService(), "Select note...", "sidebar_timing_noteDropdown");
     populateNoteIntervalSelector();
     noteIntervalSelector_->onSelectionChanged = [this](int index) {
         if (index >= 0 && index <= 16)
@@ -117,7 +105,7 @@ void TimingSidebarSection::setupMelodicControls()
     };
     addAndMakeVisible(*noteIntervalSelector_);
 
-    syncToggle_ = std::make_unique<OscilToggle>(themeService_, "Sync", "sidebar_timing_syncToggle");
+    syncToggle_ = std::make_unique<OscilToggle>(getThemeService(), "Sync", "sidebar_timing_syncToggle");
     syncToggle_->setValue(presenter_->isHostSyncEnabled(), false);
     syncToggle_->onValueChanged = [this](bool value) { presenter_->setHostSyncEnabled(value); };
     addAndMakeVisible(*syncToggle_);
@@ -127,7 +115,8 @@ void TimingSidebarSection::setupMelodicControls()
     bpmLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*bpmLabel_);
 
-    bpmField_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Number, "sidebar_timing_bpmField");
+    bpmField_ =
+        std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Number, "sidebar_timing_bpmField");
     bpmField_->setRange(20.0, 300.0);
     bpmField_->setStep(0.1);
     bpmField_->setDecimalPlaces(1);
@@ -151,7 +140,8 @@ void TimingSidebarSection::setupComponents()
     setupModeToggle();
     setupTimeControls();
     setupMelodicControls();
-    themeChanged(themeService_.getCurrentTheme());
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
+    onThemeChanged(getThemeService().getCurrentTheme());
 }
 
 void TimingSidebarSection::populateWaveformModeSelector()
@@ -192,7 +182,7 @@ void TimingSidebarSection::populateNoteIntervalSelector()
 
 void TimingSidebarSection::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
     auto bounds = getLocalBounds();
 
     // Background
@@ -206,16 +196,16 @@ void TimingSidebarSection::paint(juce::Graphics& g)
     // Draw styled SYNCED pill badge if synced (MELODIC mode + Host Sync)
     if (presenter_->shouldShowSyncedBadge())
     {
-        int y = getPreferredHeight() - SectionLayout::SECTION_PADDING - SectionLayout::LABEL_HEIGHT;
+        int const y = getPreferredHeight() - SectionLayout::SECTION_PADDING - SectionLayout::LABEL_HEIGHT;
         auto badgeBounds =
             juce::Rectangle<float>(static_cast<float>(SectionLayout::SECTION_PADDING), static_cast<float>(y),
-                                   static_cast<float>(getWidth() - SectionLayout::SECTION_PADDING * 2),
+                                   static_cast<float>(getWidth() - (SectionLayout::SECTION_PADDING * 2)),
                                    static_cast<float>(SectionLayout::LABEL_HEIGHT));
 
         // Center the pill badge
-        float pillWidth = 70.0f;
-        float pillX = badgeBounds.getCentreX() - pillWidth / 2;
-        juce::Rectangle<float> pillRect(pillX, badgeBounds.getY() + 2, pillWidth, badgeBounds.getHeight() - 4);
+        float const pillWidth = 70.0f;
+        float const pillX = badgeBounds.getCentreX() - (pillWidth / 2);
+        juce::Rectangle<float> const pillRect(pillX, badgeBounds.getY() + 2, pillWidth, badgeBounds.getHeight() - 4);
 
         // Green pill background
         g.setColour(theme.statusActive.withAlpha(0.2f));
@@ -240,9 +230,9 @@ void TimingSidebarSection::resized()
     y += ROW_HEIGHT + SPACING_LARGE;
 
     // Waveform mode dropdown (both modes)
-    int labelWidth = 40;
+    int const labelWidth = 40;
     waveformModeLabel_->setBounds(bounds.getX(), y, labelWidth, ROW_HEIGHT);
-    int selectorWidth = std::max(0, bounds.getWidth() - labelWidth - SPACING_MEDIUM);
+    int const selectorWidth = std::max(0, bounds.getWidth() - labelWidth - SPACING_MEDIUM);
     waveformModeSelector_->setBounds(bounds.getX() + labelWidth + SPACING_MEDIUM, y, selectorWidth, ROW_HEIGHT);
     y += ROW_HEIGHT + SPACING_LARGE;
 
@@ -250,9 +240,8 @@ void TimingSidebarSection::resized()
     if (presenter_->isTimeMode())
     {
         // Input field spans full width
-        int fieldHeight = 32;
+        int const fieldHeight = 32;
         timeIntervalField_->setBounds(bounds.getX(), y, bounds.getWidth(), fieldHeight);
-        y += fieldHeight + SPACING_LARGE;
     }
     else // MELODIC mode
     {
@@ -261,9 +250,10 @@ void TimingSidebarSection::resized()
         y += ROW_HEIGHT + SPACING_LARGE;
 
         // BPM row: BPM label + field/value + sync toggle
-        int bpmLabelWidth = 30;
-        int syncToggleWidth = 70;
-        int bpmFieldWidth = std::max(0, bounds.getWidth() - bpmLabelWidth - syncToggleWidth - SPACING_MEDIUM * 2);
+        int const bpmLabelWidth = 30;
+        int const syncToggleWidth = 70;
+        int const bpmFieldWidth =
+            std::max(0, bounds.getWidth() - bpmLabelWidth - syncToggleWidth - (SPACING_MEDIUM * 2));
 
         bpmLabel_->setBounds(bounds.getX(), y, bpmLabelWidth, ROW_HEIGHT);
 
@@ -280,14 +270,13 @@ void TimingSidebarSection::resized()
 
         syncToggle_->setBounds(bounds.getX() + bpmLabelWidth + SPACING_MEDIUM + bpmFieldWidth + SPACING_MEDIUM, y,
                                syncToggleWidth, ROW_HEIGHT);
-        y += ROW_HEIGHT + SPACING_LARGE;
     }
 
     // Sync status - hide the label since we draw a styled pill badge in paint()
     syncStatusLabel_->setVisible(false);
 }
 
-void TimingSidebarSection::themeChanged(const ColorTheme& newTheme)
+void TimingSidebarSection::onThemeChanged(const ColorTheme& newTheme)
 {
     // Oscil components handle their own theming
     // Style the remaining JUCE Labels
@@ -302,8 +291,6 @@ void TimingSidebarSection::themeChanged(const ColorTheme& newTheme)
     // Sync status
     syncStatusLabel_->setColour(juce::Label::textColourId,
                                 presenter_->isSynced() ? newTheme.statusActive : newTheme.textSecondary);
-
-    repaint();
 }
 
 void TimingSidebarSection::updateModeVisibility()
@@ -319,6 +306,7 @@ void TimingSidebarSection::updateModeVisibility()
     bpmField_->setVisible(presenter_->shouldShowBPMField());
     bpmValueLabel_->setVisible(presenter_->shouldShowBPMValue());
 
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
     resized();
     repaint();
 
@@ -341,7 +329,7 @@ void TimingSidebarSection::updateUi()
 
     bpmValueLabel_->setText(juce::String(presenter_->getHostBPM(), 1), juce::dontSendNotification);
 
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
     syncStatusLabel_->setColour(juce::Label::textColourId,
                                 presenter_->isSynced() ? theme.statusActive : theme.textSecondary);
     syncStatusLabel_->setText(presenter_->isSynced() ? "Synced" : "Not synced", juce::dontSendNotification);

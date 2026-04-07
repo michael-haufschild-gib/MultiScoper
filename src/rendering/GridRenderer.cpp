@@ -4,6 +4,7 @@
 
 #include "rendering/GridRenderer.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace oscil
@@ -64,17 +65,18 @@ void GridRenderer::initialize(juce::OpenGLContext& context)
 
 void GridRenderer::release(juce::OpenGLContext& context)
 {
+    juce::ignoreUnused(context);
     colorShader_.reset();
 
     if (gridVAO_ != 0)
     {
-        context.extensions.glDeleteVertexArrays(1, &gridVAO_);
+        juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &gridVAO_);
         gridVAO_ = 0;
     }
 
     if (gridVBO_ != 0)
     {
-        context.extensions.glDeleteBuffers(1, &gridVBO_);
+        juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &gridVBO_);
         gridVBO_ = 0;
     }
 
@@ -83,19 +85,20 @@ void GridRenderer::release(juce::OpenGLContext& context)
 
 void GridRenderer::createBuffers(juce::OpenGLContext& context)
 {
+    juce::ignoreUnused(context);
     // Create persistent grid buffers (avoid per-frame allocation)
-    context.extensions.glGenBuffers(1, &gridVBO_);
-    context.extensions.glGenVertexArrays(1, &gridVAO_);
+    juce::OpenGLExtensionFunctions::glGenBuffers(1, &gridVBO_);
+    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &gridVAO_);
 
     // Set up VAO once - attribute layout won't change
-    context.extensions.glBindVertexArray(gridVAO_);
-    context.extensions.glBindBuffer(GL_ARRAY_BUFFER, gridVBO_);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(gridVAO_);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, gridVBO_);
     // Pre-allocate buffer with GL_STREAM_DRAW for frequent updates
-    context.extensions.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(gridBufferCapacity_ * 2 * sizeof(float)),
-                                    nullptr, GL_STREAM_DRAW);
-    context.extensions.glEnableVertexAttribArray(0);
-    context.extensions.glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-    context.extensions.glBindVertexArray(0);
+    juce::OpenGLExtensionFunctions::glBufferData(
+        GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(gridBufferCapacity_ * 2 * sizeof(float)), nullptr, GL_STREAM_DRAW);
+    juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(0);
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(0);
 }
 
 void GridRenderer::compileShaders(juce::OpenGLContext& context)
@@ -116,8 +119,8 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
         return;
     }
 
-    GLuint colorProgramID = colorShader_->getProgramID();
-    context.extensions.glBindAttribLocation(colorProgramID, 0, "position");
+    GLuint const colorProgramID = colorShader_->getProgramID();
+    juce::OpenGLExtensionFunctions::glBindAttribLocation(colorProgramID, 0, "position");
 
     if (!colorShader_->link())
     {
@@ -134,43 +137,43 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
     }
 }
 
-void GridRenderer::drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col)
+void GridRenderer::drawLines(juce::OpenGLContext& context, const std::vector<float>& verts, juce::Colour col) const
 {
+    juce::ignoreUnused(context);
     if (verts.empty())
         return;
 
     size_t vertexCount = verts.size() / 2;
-    if (vertexCount > gridBufferCapacity_)
-        vertexCount = gridBufferCapacity_;
+    vertexCount = std::min(vertexCount, gridBufferCapacity_);
 
-    context.extensions.glBindVertexArray(gridVAO_);
-    context.extensions.glBindBuffer(GL_ARRAY_BUFFER, gridVBO_);
-    context.extensions.glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexCount * 2 * sizeof(float)),
-                                    verts.data(), GL_STREAM_DRAW);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(gridVAO_);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, gridVBO_);
+    juce::OpenGLExtensionFunctions::glBufferData(
+        GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertexCount * 2 * sizeof(float)), verts.data(), GL_STREAM_DRAW);
 
-    context.extensions.glUniform4f(colorUniformLoc_, col.getFloatRed(), col.getFloatGreen(), col.getFloatBlue(),
-                                   col.getFloatAlpha());
+    juce::OpenGLExtensionFunctions::glUniform4f(colorUniformLoc_, col.getFloatRed(), col.getFloatGreen(),
+                                                col.getFloatBlue(), col.getFloatAlpha());
 
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertexCount));
-    context.extensions.glBindVertexArray(0);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(0);
 }
 
 void GridRenderer::generateHorizontalGrid(float yTop, float yBottom)
 {
-    float height = yTop - yBottom;
-    float yCenter = yBottom + height * 0.5f;
+    float const height = yTop - yBottom;
+    float const yCenter = yBottom + (height * 0.5f);
 
     // Minor (8 divisions)
     for (int i = 1; i < 8; ++i)
     {
-        float y = yTop - (static_cast<float>(i) / 8.0f) * height;
+        float const y = yTop - ((static_cast<float>(i) / 8.0f) * height);
         if (std::abs(y - yCenter) > 0.01f)
             addLine(minorLines_, -1.0f, y, 1.0f, y);
     }
 
     // Major (quarters)
-    addLine(majorLines_, -1.0f, yTop - 0.25f * height, 1.0f, yTop - 0.25f * height);
-    addLine(majorLines_, -1.0f, yTop - 0.75f * height, 1.0f, yTop - 0.75f * height);
+    addLine(majorLines_, -1.0f, yTop - (0.25f * height), 1.0f, yTop - (0.25f * height));
+    addLine(majorLines_, -1.0f, yTop - (0.75f * height), 1.0f, yTop - (0.75f * height));
 
     // Zero line
     addLine(zeroLines_, -1.0f, yCenter, 1.0f, yCenter);
@@ -178,11 +181,11 @@ void GridRenderer::generateHorizontalGrid(float yTop, float yBottom)
 
 void GridRenderer::generateTimeGrid(const GridConfiguration& config, float yTop, float yBottom)
 {
-    float durationMs = config.visibleDurationMs;
+    float const durationMs = config.visibleDurationMs;
     if (durationMs <= 0.0001f || !std::isfinite(durationMs))
         return;
 
-    float targetStep = durationMs / 8.0f;
+    float const targetStep = durationMs / 8.0f;
     if (targetStep <= 0.0f || !std::isfinite(targetStep))
         return;
 
@@ -190,8 +193,8 @@ void GridRenderer::generateTimeGrid(const GridConfiguration& config, float yTop,
     if (magnitude <= 0.0f || !std::isfinite(magnitude))
         magnitude = 1.0f;
 
-    float normalizedStep = targetStep / magnitude;
-    float stepSize;
+    float const normalizedStep = targetStep / magnitude;
+    float stepSize = NAN;
     if (normalizedStep < 2.0f)
         stepSize = magnitude;
     else if (normalizedStep < 5.0f)
@@ -201,8 +204,8 @@ void GridRenderer::generateTimeGrid(const GridConfiguration& config, float yTop,
 
     for (int gridIdx = 1; static_cast<float>(gridIdx) * stepSize < durationMs; ++gridIdx)
     {
-        float t = static_cast<float>(gridIdx) * stepSize;
-        float x = -1.0f + (t / durationMs) * 2.0f;
+        float const t = static_cast<float>(gridIdx) * stepSize;
+        float const x = -1.0f + ((t / durationMs) * 2.0f);
         addLine(timeMajorLines_, x, yTop, x, yBottom);
     }
 }
@@ -211,7 +214,7 @@ void GridRenderer::generateMusicalGrid(const GridConfiguration& config, float yT
 {
     int numDivisions = 4;
     bool isBarBased = false;
-    int beatsPerBar = config.timeSigNumerator;
+    int const beatsPerBar = config.timeSigNumerator;
 
     switch (config.noteInterval)
     {
@@ -242,11 +245,11 @@ void GridRenderer::generateMusicalGrid(const GridConfiguration& config, float yT
 
     if (numDivisions <= 0)
         numDivisions = 1;
-    float widthPerDiv = 2.0f / static_cast<float>(numDivisions);
+    float const widthPerDiv = 2.0f / static_cast<float>(numDivisions);
 
     for (int i = 1; i < numDivisions; ++i)
     {
-        float x = -1.0f + static_cast<float>(i) * widthPerDiv;
+        float const x = -1.0f + (static_cast<float>(i) * widthPerDiv);
         if (isBarBased)
             addLine(majorLines_, x, yTop, x, yBottom);
         else
@@ -255,14 +258,14 @@ void GridRenderer::generateMusicalGrid(const GridConfiguration& config, float yT
 
     if (isBarBased && config.noteInterval >= NoteInterval::TWO_BARS)
     {
-        int subBeatsPerDiv = std::max(1, beatsPerBar);
-        float subBeatWidth = widthPerDiv / static_cast<float>(subBeatsPerDiv);
+        int const subBeatsPerDiv = std::max(1, beatsPerBar);
+        float const subBeatWidth = widthPerDiv / static_cast<float>(subBeatsPerDiv);
         for (int i = 0; i < numDivisions; ++i)
         {
-            float baseX = -1.0f + static_cast<float>(i) * widthPerDiv;
+            float const baseX = -1.0f + (static_cast<float>(i) * widthPerDiv);
             for (int j = 1; j < subBeatsPerDiv; ++j)
-                addLine(timeMinorLines_, baseX + static_cast<float>(j) * subBeatWidth, yTop,
-                        baseX + static_cast<float>(j) * subBeatWidth, yBottom);
+                addLine(timeMinorLines_, baseX + (static_cast<float>(j) * subBeatWidth), yTop,
+                        baseX + (static_cast<float>(j) * subBeatWidth), yBottom);
         }
     }
 }

@@ -92,6 +92,16 @@ public:
     void highlightOscillator(const OscillatorId& id);
 
 private:
+    template <typename Func>
+    void forEachPane(Func&& f)
+    {
+        for (auto* pane : paneGetter_())
+        {
+            if (pane)
+                f(*pane);
+        }
+    }
+
     PaneGetter paneGetter_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DisplaySettingsManager)

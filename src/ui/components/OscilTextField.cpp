@@ -11,13 +11,18 @@ namespace oscil
 
 OscilTextField::OscilTextField(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , focusSpring_(SpringPresets::stiff())
+    , focusSpring_(SpringPresets::fast())
+    , shakeSpring_(600.0f, 12.0f, 1.0f)
     , cachedErrorFont_(juce::FontOptions{})
 {
     setupComponents();
 
     focusSpring_.position = 0.0f;
     focusSpring_.target = 0.0f;
+
+    shakeSpring_.setMode(SpringMode::Spring);
+    shakeSpring_.position = 0.0f;
+    shakeSpring_.target = 0.0f;
 }
 
 OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant) : OscilTextField(themeService)
@@ -81,7 +86,7 @@ void OscilTextField::setupComponents()
     internalSlider_.setRange(minValue_, maxValue_, step_);
     internalSlider_.setValue(numValue_);
     internalSlider_.onValueChange = [this] {
-        double newValue = internalSlider_.getValue();
+        double const newValue = internalSlider_.getValue();
         if (std::abs(newValue - numValue_) > 0.0001)
         {
             setNumericValue(newValue, true);
@@ -99,7 +104,7 @@ void OscilTextField::setVariant(TextFieldVariant variant)
     variant_ = variant;
 
     // Show/hide stepper buttons
-    bool showSteppers = variant == TextFieldVariant::Number;
+    bool const showSteppers = variant == TextFieldVariant::Number;
     decrementButton_->setVisible(showSteppers);
     incrementButton_->setVisible(showSteppers);
 
@@ -118,10 +123,7 @@ void OscilTextField::setVariant(TextFieldVariant variant)
     repaint();
 }
 
-void OscilTextField::setText(const juce::String& text, bool notify)
-{
-    editor_->setText(text, notify ? juce::sendNotification : juce::dontSendNotification);
-}
+void OscilTextField::setText(const juce::String& text, bool notify) { editor_->setText(text, notify); }
 
 juce::String OscilTextField::getText() const { return editor_->getText(); }
 
@@ -167,7 +169,7 @@ void OscilTextField::setSuffix(const juce::String& suffix)
         juce::String valueText = juce::String(numValue_, decimalPlaces_);
         if (suffix_.isNotEmpty())
             valueText += " " + suffix_;
-        editor_->setText(valueText, juce::dontSendNotification);
+        editor_->setText(valueText, false);
     }
 }
 
@@ -192,7 +194,7 @@ void OscilTextField::updateFromNumericValue()
     if (suffix_.isNotEmpty())
         valueText += " " + suffix_;
 
-    editor_->setText(valueText, juce::dontSendNotification);
+    editor_->setText(valueText, false);
 }
 
 void OscilTextField::setValidator(Callbacks::ValidationCallback validator) { validator_ = validator; }
@@ -202,6 +204,14 @@ void OscilTextField::setError(const juce::String& errorMessage)
     if (errorMessage_ != errorMessage)
     {
         errorMessage_ = errorMessage;
+
+        // Trigger shake animation on new error
+        if (errorMessage.isNotEmpty() && AnimationSettings::shouldUseSpringAnimations())
+        {
+            shakeSpring_.setTarget(0.0f, 3.0f);
+            startTimerHz(ComponentLayout::ANIMATION_FPS);
+        }
+
         repaint();
     }
 }
@@ -213,6 +223,7 @@ void OscilTextField::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         editor_->setEnabled(enabled);
         decrementButton_->setEnabled(enabled);
         incrementButton_->setEnabled(enabled);
@@ -258,7 +269,7 @@ void OscilTextField::resized()
 
 void OscilTextField::validateAndUpdate()
 {
-    juce::String text = editor_->getText();
+    juce::String const text = editor_->getText();
 
     // Run validation if configured
     if (validator_)
@@ -268,10 +279,8 @@ void OscilTextField::validateAndUpdate()
             // Validator returned false - keep previous error or set generic one
             return;
         }
-        else
-        {
-            clearError();
-        }
+
+        clearError();
     }
 
     // For number variant, parse and validate
@@ -282,7 +291,7 @@ void OscilTextField::validateAndUpdate()
         if (suffix_.isNotEmpty() && text.endsWith(suffix_))
             numericText = text.dropLastCharacters(suffix_.length()).trim();
 
-        double parsed = numericText.getDoubleValue();
+        double const parsed = numericText.getDoubleValue();
         if (std::abs(parsed - numValue_) > 0.0001)
         {
             numValue_ = parsed;
@@ -301,15 +310,15 @@ void OscilTextField::incrementValue() { setNumericValue(numValue_ + step_, true)
 
 void OscilTextField::decrementValue() { setNumericValue(numValue_ - step_, true); }
 
-void OscilTextField::applyNumericConstraints(double& value)
+void OscilTextField::applyNumericConstraints(double& value) const
 {
     value = juce::jlimit(minValue_, maxValue_, value);
 
     // Round to step
     if (step_ > 0)
     {
-        double steps = std::round((value - minValue_) / step_);
-        value = minValue_ + steps * step_;
+        double const steps = std::round((value - minValue_) / step_);
+        value = minValue_ + (steps * step_);
     }
 }
 
@@ -319,7 +328,7 @@ void OscilTextField::notifyTextChanged()
         onTextChanged(editor_->getText());
 }
 
-void OscilTextField::notifyValueChanged()
+void OscilTextField::notifyValueChanged() const
 {
     if (onValueChanged)
         onValueChanged(numValue_);

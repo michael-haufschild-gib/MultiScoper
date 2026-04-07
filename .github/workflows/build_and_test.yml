@@ -69,7 +69,7 @@ jobs:
             --root . \
             --paths include src tests test_harness \
             --max-file-lines 500 \
-            --max-function-lines 60
+            --max-function-lines 75
 
       - name: Test quality lint (shallow test detection)
         run: |

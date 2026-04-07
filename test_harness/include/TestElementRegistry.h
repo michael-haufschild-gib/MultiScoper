@@ -125,7 +125,6 @@ private:
     // Internal helpers
     void pruneStaleEntries(std::vector<juce::Component::SafePointer<juce::Component>>& entries);
     juce::Component* findFirstValid(std::vector<juce::Component::SafePointer<juce::Component>>& entries);
-    bool isComponentInWindow(juce::Component* comp, juce::Component* window);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestElementRegistry)
 };

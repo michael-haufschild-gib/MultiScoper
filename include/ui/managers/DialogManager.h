@@ -13,11 +13,9 @@
 #include "ui/dialogs/SelectPaneDialog.h"
 
 namespace oscil
-
 {
 
 class DialogManager : public juce::ComponentListener
-
 {
 public:
     /// Construct with parent component and service dependencies.
@@ -25,16 +23,10 @@ public:
     ~DialogManager() override;
 
     // Dialog methods
-
-    void showAddOscillatorDialog(const std::vector<SourceInfo>& sources,
-
-                                 const std::vector<Pane>& panes,
-
+    void showAddOscillatorDialog(const std::vector<SourceInfo>& sources, const std::vector<Pane>& panes,
                                  std::function<void(const AddOscillatorDialog::Result&)> onComplete);
 
-    void showColorDialog(juce::Colour initialColor,
-
-                         std::function<void(juce::Colour)> onColorSelected);
+    void showColorDialog(juce::Colour initialColor, std::function<void(juce::Colour)> onColorSelected);
 
     void showSelectPaneDialog(const std::vector<Pane>& availablePanes,
                               std::function<void(const SelectPaneDialog::Result&)> onComplete,
@@ -59,27 +51,17 @@ public:
 
 private:
     juce::Component& parent_;
-
     IThemeService& themeService_;
-
     IInstanceRegistry& instanceRegistry_;
 
     // Dialogs
-
     std::unique_ptr<OscilModal> addOscillatorModal_;
-
     std::unique_ptr<AddOscillatorDialog> addOscillatorDialogContent_;
-
     std::unique_ptr<OscilModal> colorModal_;
-
     std::unique_ptr<OscillatorColorDialog> colorDialogContent_;
-
     std::unique_ptr<OscilModal> selectPaneModal_;
-
     std::unique_ptr<SelectPaneDialog> selectPaneDialogContent_;
-
     std::unique_ptr<OscilModal> configModal_;
-
     std::unique_ptr<OscillatorConfigDialog> configPopup_;
 };
 

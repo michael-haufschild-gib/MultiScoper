@@ -1,7 +1,7 @@
 # Development Guide
 
 **Purpose**: Building, running, and developing the Oscil plugin.
-**Build System**: CMake 3.25+ with CMakePresets.json
+**Build System**: CMake 3.31+ with CMakePresets.json
 **Compiler Requirements**: C++20 compatible (Clang 14+, GCC 11+, MSVC 2019+)
 
 ## Quick Start (Recommended)

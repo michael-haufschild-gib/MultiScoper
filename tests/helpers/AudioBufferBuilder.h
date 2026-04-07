@@ -211,23 +211,21 @@ public:
      */
     juce::AudioBuffer<float> buildMono()
     {
-        build();
+        auto buf = build();
 
-        if (buffer_.getNumChannels() == 1)
-        {
-            return std::move(buffer_);
-        }
+        if (buf.getNumChannels() == 1)
+            return buf;
 
-        juce::AudioBuffer<float> mono(1, numSamples_);
+        int const samples = buf.getNumSamples();
+        int const channels = buf.getNumChannels();
+        juce::AudioBuffer<float> mono(1, samples);
 
-        for (int i = 0; i < numSamples_; ++i)
+        for (int i = 0; i < samples; ++i)
         {
             float sum = 0.0f;
-            for (int ch = 0; ch < buffer_.getNumChannels(); ++ch)
-            {
-                sum += buffer_.getSample(ch, i);
-            }
-            mono.setSample(0, i, sum / static_cast<float>(buffer_.getNumChannels()));
+            for (int ch = 0; ch < channels; ++ch)
+                sum += buf.getSample(ch, i);
+            mono.setSample(0, i, sum / static_cast<float>(channels));
         }
 
         return mono;

@@ -15,6 +15,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -86,6 +87,7 @@ private:
 
     void timerCallback() override;
     void updateAnimations();
+    void triggerSelection();
     int findOwnIndexInGroup() const;
 
     // Rendering
@@ -108,6 +110,7 @@ private:
     // Animation
     SpringAnimation selectionSpring_;
     SpringAnimation hoverSpring_;
+    SpringAnimation scaleSpring_;
 
     // Theme
 
@@ -134,7 +137,7 @@ class OscilRadioGroup : public ThemedComponent
 
 {
 public:
-    enum class Orientation
+    enum class Orientation : std::uint8_t
     {
         Horizontal,
         Vertical

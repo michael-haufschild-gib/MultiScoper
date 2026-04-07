@@ -35,7 +35,7 @@ void ColorTheme::initializeDefaultWaveformColors()
 
     while (waveformColors.size() < 64)
     {
-        float hue = static_cast<float>(waveformColors.size()) / 64.0f;
+        float const hue = static_cast<float>(waveformColors.size()) / 64.0f;
         waveformColors.push_back(juce::Colour::fromHSV(hue, 0.8f, 1.0f, 1.0f));
     }
 }
@@ -47,33 +47,31 @@ ThemeManager::ThemeManager()
     initializeSystemThemes();
     loadThemes();
 
-    if (themes_.find("Dark Professional") != themes_.end())
+    if (themes_.contains("Dark Professional"))
     {
         currentTheme_ = themes_["Dark Professional"];
     }
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 ThemeManager::~ThemeManager()
 {
     stopTimer();
 
-    if (!pendingSaves_.empty())
+    // Synchronous flush — must complete before destruction
+    try
     {
-        auto themesDir = getThemesDirectory();
-        themesDir.createDirectory();
-
-        for (const auto& name : pendingSaves_)
+        auto filesToWrite = gatherPendingWrites();
+        for (const auto& [path, content] : filesToWrite)
         {
-            auto it = themes_.find(name);
-            if (it != themes_.end() && !it->second.isSystemTheme)
-            {
-                auto file = themesDir.getChildFile(name + ".xml");
-                if (auto xml = it->second.toValueTree().createXml())
-                {
-                    xml->writeTo(file);
-                }
-            }
+            juce::File const file(path);
+            file.getParentDirectory().createDirectory();
+            file.replaceWithText(content);
         }
+    }
+    catch (...) // NOLINT(bugprone-empty-catch)
+    {
+        // Destructor must not throw — best-effort save
     }
 }
 
@@ -85,12 +83,28 @@ void ThemeManager::timerCallback()
 
 void ThemeManager::flushPendingSaves()
 {
-    if (pendingSaves_.empty())
+    auto filesToWrite = gatherPendingWrites();
+    if (filesToWrite.empty())
         return;
 
-    std::vector<std::pair<juce::String, juce::String>> filesToWrite;
-    auto themesDir = getThemesDirectory();
+    juce::Thread::launch([filesToWrite]() {
+        for (const auto& [path, content] : filesToWrite)
+        {
+            juce::File const file(path);
+            file.getParentDirectory().createDirectory();
+            file.replaceWithText(content);
+        }
+    });
+}
 
+std::vector<std::pair<juce::String, juce::String>> ThemeManager::gatherPendingWrites()
+{
+    std::vector<std::pair<juce::String, juce::String>> filesToWrite;
+
+    if (pendingSaves_.empty())
+        return filesToWrite;
+
+    auto themesDir = getThemesDirectory();
     for (const auto& name : pendingSaves_)
     {
         auto it = themes_.find(name);
@@ -104,18 +118,7 @@ void ThemeManager::flushPendingSaves()
     }
 
     pendingSaves_.clear();
-
-    if (filesToWrite.empty())
-        return;
-
-    juce::Thread::launch([filesToWrite]() {
-        for (const auto& [path, content] : filesToWrite)
-        {
-            juce::File file(path);
-            file.getParentDirectory().createDirectory();
-            file.replaceWithText(content);
-        }
-    });
+    return filesToWrite;
 }
 
 void ThemeManager::initializeSystemThemes()
@@ -125,6 +128,10 @@ void ThemeManager::initializeSystemThemes()
     themes_["Classic Amber"] = SystemThemes::createClassicAmber();
     themes_["High Contrast"] = SystemThemes::createHighContrast();
     themes_["Light Mode"] = SystemThemes::createLightMode();
+    themes_["Glass Dark Blue"] = SystemThemes::createGlassDarkBlue();
+    themes_["Glass Dark Purple"] = SystemThemes::createGlassDarkPurple();
+    themes_["Glass Dark Brown"] = SystemThemes::createGlassDarkBrown();
+    themes_["Glass Dark Black"] = SystemThemes::createGlassDarkBlack();
 }
 
 bool ThemeManager::setCurrentTheme(const juce::String& themeName)
@@ -169,7 +176,7 @@ bool ThemeManager::isValidThemeName(const juce::String& name)
 
 bool ThemeManager::createTheme(const juce::String& name, const juce::String& sourceTheme)
 {
-    if (!isValidThemeName(name) || themes_.find(name) != themes_.end())
+    if (!isValidThemeName(name) || themes_.contains(name))
         return false;
 
     ColorTheme newTheme;
@@ -255,7 +262,7 @@ bool ThemeManager::cloneTheme(const juce::String& sourceName, const juce::String
     if (it == themes_.end())
         return false;
 
-    if (themes_.find(newName) != themes_.end())
+    if (themes_.contains(newName))
         return false;
 
     ColorTheme clone = it->second;
@@ -279,7 +286,7 @@ bool ThemeManager::renameTheme(const juce::String& oldName, const juce::String& 
     if (it == themes_.end() || it->second.isSystemTheme)
         return false;
 
-    if (themes_.find(newName) != themes_.end())
+    if (themes_.contains(newName))
         return false;
 
     auto theme = std::move(it->second);

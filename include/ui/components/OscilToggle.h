@@ -1,6 +1,6 @@
 /*
     Oscil - Toggle Component
-    Animated toggle switch with spring physics and celebration effects
+    Animated toggle switch with smooth ease transitions
 */
 
 #pragma once
@@ -72,6 +72,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
 
@@ -85,24 +87,23 @@ public:
 private:
     void timerCallback() override;
     void updateAnimations();
-    void triggerCelebration();
-    void notifyValueChanged();
+    void notifyValueChanged() const;
 
     // Rendering
     void paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-    void paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds);
+    void paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds) const;
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
 
     // State
     bool value_ = false;
     bool enabled_ = true;
+    bool isHovered_ = false;
     bool hasFocus_ = false;
     juce::String label_;
     bool labelOnRight_ = true;
 
     // Animation
-    SpringAnimation positionSpring_;    // Knob position (0 = off, 1 = on)
-    SpringAnimation celebrationSpring_; // Scale pulse on activation
+    SpringAnimation positionSpring_; // Knob position (0 = off, 1 = on)
 
     // APVTS
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> attachment_;

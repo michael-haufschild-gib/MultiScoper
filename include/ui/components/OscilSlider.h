@@ -194,7 +194,6 @@ private:
 
     // Animation
     SpringAnimation thumbScale_;
-    SpringAnimation snapPulse_;
     float currentThumbScale_ = 1.0f;
 
     // APVTS

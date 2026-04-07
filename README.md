@@ -31,7 +31,7 @@ Oscil is a real-time audio visualization platform that lets you analyze multiple
 
 ## Building
 
-**Prerequisites:** CMake 3.25+, C++20 compiler (Clang 14+, GCC 11+, MSVC 2019+), Ninja (recommended)
+**Prerequisites:** CMake 3.31+, C++20 compiler (Clang 14+, GCC 11+, MSVC 2019+), Ninja (recommended)
 
 ```bash
 # Configure and build (Debug)
@@ -74,7 +74,7 @@ Higher layers depend on lower layers, never the reverse. See [docs/architecture.
 - **Language:** C++20
 - **Framework:** [JUCE 8.0.12](https://juce.com)
 - **Graphics:** OpenGL 3.3 / GLSL 3.30
-- **Build:** CMake 3.25+ with presets, CPM for dependencies
+- **Build:** CMake 3.31+ with presets, CPM for dependencies
 - **Testing:** GoogleTest (unit), custom HTTP test harness (E2E)
 - **CI:** GitHub Actions (macOS, Windows, Linux) with pluginval, code coverage, and RealtimeSanitizer
 

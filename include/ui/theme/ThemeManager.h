@@ -55,10 +55,10 @@ struct ColorTheme
     juce::Colour controlHighlight{0xFF505050};
     juce::Colour controlActive{0xFF007ACC};
 
-    // Status colors
-    juce::Colour statusActive{0xFF00CC00};
-    juce::Colour statusWarning{0xFFCCAA00};
-    juce::Colour statusError{0xFFCC0000};
+    // Status colors (bright enough for WCAG large text AA 3:1 on dark backgrounds)
+    juce::Colour statusActive{0xFF00DD00};
+    juce::Colour statusWarning{0xFFDDBB00};
+    juce::Colour statusError{0xFFEE4444};
 
     // Button Colors - Primary
     juce::Colour btnPrimaryBg{0xFF007ACC};
@@ -89,6 +89,34 @@ struct ColorTheme
     juce::Colour btnTertiaryTextHover{0xFFFFFFFF};
     juce::Colour btnTertiaryTextActive{0xFFFFFFFF};
     juce::Colour btnTertiaryTextDisabled{0xFF606060};
+
+    // === Glass / Accent System ===
+
+    // Accent color (HSV-based, since JUCE doesn't support OKLCH)
+    float accentHue = 220.0f;      // 0-360 hue
+    float accentSaturation = 0.7f; // 0-1
+    float accentLightness = 0.6f;  // 0-1
+
+    // Glass parameters
+    float glassAlpha = 0.55f; // bg alpha for glass panels
+    float panelAlpha = 0.82f; // bg alpha for panel containers
+    float blurRadius = 20.0f; // conceptual blur (drives shadow spread)
+
+    // Border alpha levels (white * alpha for dark themes)
+    float borderSubtleAlpha = 0.08f;
+    float borderDefaultAlpha = 0.12f;
+    float borderStrongAlpha = 0.20f;
+
+    // Shadow
+    float shadowIntensity = 0.4f; // overall shadow darkness
+    float shadowSpread = 12.0f;   // shadow blur radius px
+
+    // Inset light edge
+    float lightEdgeAlpha = 0.06f; // top highlight on glass panels
+
+    // Accent glow
+    float accentGlowRadius = 12.0f; // glow spread px
+    float accentGlowAlpha = 0.3f;   // glow opacity
 
     // Default waveform colors (up to 64)
     std::vector<juce::Colour> waveformColors;
@@ -143,11 +171,11 @@ struct ColorTheme
             return channel <= 0.03928f ? channel / 12.92f : std::pow((channel + 0.055f) / 1.055f, 2.4f);
         };
 
-        float r = linearize(colour.getFloatRed());
-        float g = linearize(colour.getFloatGreen());
-        float b = linearize(colour.getFloatBlue());
+        float const r = linearize(colour.getFloatRed());
+        float const g = linearize(colour.getFloatGreen());
+        float const b = linearize(colour.getFloatBlue());
 
-        return 0.2126f * r + 0.7152f * g + 0.0722f * b;
+        return (0.2126f * r) + (0.7152f * g) + (0.0722f * b);
     }
 
     /**
@@ -156,12 +184,12 @@ struct ColorTheme
      */
     static float calculateContrastRatio(juce::Colour fg, juce::Colour bg)
     {
-        float l1 = calculateLuminance(fg);
-        float l2 = calculateLuminance(bg);
+        float const fgLum = calculateLuminance(fg);
+        float const bgLum = calculateLuminance(bg);
 
-        // Ensure l1 is the lighter color
-        if (l1 < l2)
-            std::swap(l1, l2);
+        // Ensure lighter is numerator
+        float const l1 = std::max(fgLum, bgLum);
+        float const l2 = std::min(fgLum, bgLum);
 
         return (l1 + 0.05f) / (l2 + 0.05f);
     }
@@ -185,6 +213,18 @@ struct ColorTheme
     }
 
     /**
+     * Composite a semi-transparent foreground color onto an opaque background.
+     * Returns the effective opaque color as it would appear when rendered.
+     */
+    static juce::Colour compositeOnBackground(juce::Colour fg, juce::Colour bg)
+    {
+        float const a = fg.getFloatAlpha();
+        if (a >= 1.0f)
+            return fg;
+        return bg.interpolatedWith(fg.withAlpha(1.0f), a);
+    }
+
+    /**
      * Validate all critical text/background pairs in this theme
      * Returns a list of accessibility issues (empty if all pass)
      */
@@ -192,19 +232,32 @@ struct ColorTheme
     {
         std::vector<juce::String> issues;
 
+        // Composite semi-transparent text colors for accurate measurement
+        auto textPriOnPrimary = compositeOnBackground(textPrimary, backgroundPrimary);
+        auto textSecOnPrimary = compositeOnBackground(textSecondary, backgroundPrimary);
+        auto textPriOnSecondary = compositeOnBackground(textPrimary, backgroundSecondary);
+        auto textSecOnSecondary = compositeOnBackground(textSecondary, backgroundSecondary);
+
         // Check primary text on backgrounds
-        if (!meetsContrastAA(textPrimary, backgroundPrimary))
+        if (!meetsContrastAA(textPriOnPrimary, backgroundPrimary))
             issues.emplace_back("textPrimary on backgroundPrimary fails AA contrast");
-        if (!meetsContrastAA(textPrimary, backgroundSecondary))
+        if (!meetsContrastAA(textPriOnSecondary, backgroundSecondary))
             issues.emplace_back("textPrimary on backgroundSecondary fails AA contrast");
-        if (!meetsContrastAA(textSecondary, backgroundPrimary))
+        if (!meetsContrastAA(textSecOnPrimary, backgroundPrimary))
             issues.emplace_back("textSecondary on backgroundPrimary fails AA contrast");
+        if (!meetsContrastAA(textSecOnSecondary, backgroundSecondary))
+            issues.emplace_back("textSecondary on backgroundSecondary fails AA contrast");
 
         // Check button text contrast
         if (!meetsContrastAA(btnPrimaryText, btnPrimaryBg))
             issues.emplace_back("Primary button text fails AA contrast");
         if (!meetsContrastAA(btnSecondaryText, btnSecondaryBg))
             issues.emplace_back("Secondary button text fails AA contrast");
+
+        // Tertiary buttons render on the page background
+        auto tertiaryTextComposited = compositeOnBackground(btnTertiaryText, backgroundPrimary);
+        if (!meetsContrastAA(tertiaryTextComposited, backgroundPrimary))
+            issues.emplace_back("Tertiary button text on background fails AA contrast");
 
         // Check status colors on background
         if (!meetsLargeTextContrastAA(statusActive, backgroundPrimary))
@@ -213,6 +266,12 @@ struct ColorTheme
             issues.emplace_back("statusWarning on background fails large text AA contrast");
         if (!meetsLargeTextContrastAA(statusError, backgroundPrimary))
             issues.emplace_back("statusError on background fails large text AA contrast");
+
+        // Glass background checks: effective bg behind glass panels
+        auto effectiveGlassBg = backgroundPrimary.interpolatedWith(backgroundPane, glassAlpha);
+        auto textPriOnGlass = compositeOnBackground(textPrimary, effectiveGlassBg);
+        if (!meetsContrastAA(textPriOnGlass, effectiveGlassBg))
+            issues.emplace_back("textPrimary on glass background fails AA contrast");
 
         return issues;
     }
@@ -293,12 +352,12 @@ public:
     bool isSystemTheme(const juce::String& name) const override;
 
     /**
-     * Import theme from JSON
+     * Import theme from XML string (JUCE ValueTree format).
      */
-    bool importTheme(const juce::String& json) override;
+    bool importTheme(const juce::String& xmlString) override;
 
     /**
-     * Export theme to JSON
+     * Export theme to XML string (JUCE ValueTree format).
      */
     juce::String exportTheme(const juce::String& name) const override;
 
@@ -323,9 +382,6 @@ public:
     void addListener(ThemeManagerListener* listener) override;
     void removeListener(ThemeManagerListener* listener) override;
 
-    // Timer callback for async saving
-    void timerCallback() override;
-
     /// Write any pending theme changes to disk immediately (call on shutdown).
     void flushPendingSaves();
 
@@ -340,8 +396,16 @@ public:
     static bool isValidThemeName(const juce::String& name);
 
 private:
+    void timerCallback() override;
     void initializeSystemThemes();
     void notifyListeners();
+
+    /**
+     * Gather all pending theme writes as (filePath, xmlContent) pairs.
+     * Clears pendingSaves_ after gathering. Used by both destructor (sync)
+     * and flushPendingSaves (async).
+     */
+    std::vector<std::pair<juce::String, juce::String>> gatherPendingWrites();
 
     /**
      * Save a single theme to disk immediately
@@ -352,7 +416,7 @@ private:
     /**
      * Delete a theme file from disk
      */
-    void deleteThemeFile(const juce::String& themeName);
+    void deleteThemeFile(const juce::String& themeName) const;
 
     ColorTheme currentTheme_;
     std::unordered_map<juce::String, ColorTheme> themes_;
@@ -370,6 +434,10 @@ ColorTheme createClassicGreen();
 ColorTheme createClassicAmber();
 ColorTheme createHighContrast();
 ColorTheme createLightMode();
+ColorTheme createGlassDarkBlue();
+ColorTheme createGlassDarkPurple();
+ColorTheme createGlassDarkBrown();
+ColorTheme createGlassDarkBlack();
 } // namespace SystemThemes
 
 } // namespace oscil

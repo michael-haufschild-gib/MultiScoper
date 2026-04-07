@@ -1,16 +1,20 @@
 /*
     Oscil - Checkbox Component Implementation
+    Glassmorphism rendering with spring scale animation
 */
 
 #include "ui/components/OscilCheckbox.h"
+
+#include "ui/components/GlassPainter.h"
 
 namespace oscil
 {
 
 OscilCheckbox::OscilCheckbox(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , checkSpring_(SpringPresets::bouncy())
-    , hoverSpring_(SpringPresets::stiff())
+    , checkSpring_(SpringPresets::medium())
+    , hoverSpring_(SpringPresets::fast())
+    , scaleSpring_(SpringPresets::springSwitch())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -19,6 +23,8 @@ OscilCheckbox::OscilCheckbox(IThemeService& themeService)
     checkSpring_.target = 0.0f;
     hoverSpring_.position = 0.0f;
     hoverSpring_.target = 0.0f;
+    scaleSpring_.position = 1.0f;
+    scaleSpring_.target = 1.0f;
 }
 
 OscilCheckbox::OscilCheckbox(IThemeService& themeService, const juce::String& label) : OscilCheckbox(themeService)
@@ -49,11 +55,15 @@ void OscilCheckbox::setState(CheckState state, bool notify)
 
     state_ = state;
 
-    float target = (state == CheckState::Checked) ? 1.0f : (state == CheckState::Indeterminate) ? 0.5f : 0.0f;
+    float const target = (state == CheckState::Checked) ? 1.0f : (state == CheckState::Indeterminate) ? 0.5f : 0.0f;
 
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         checkSpring_.setTarget(target);
+        // Trigger scale pop: briefly shrink to 0.85 then spring back to 1.0
+        scaleSpring_.position = 0.85f;
+        scaleSpring_.velocity = 0.0f;
+        scaleSpring_.setTarget(1.0f);
         startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
     else
@@ -99,6 +109,7 @@ void OscilCheckbox::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
@@ -106,14 +117,14 @@ void OscilCheckbox::setEnabled(bool enabled)
 
 int OscilCheckbox::getPreferredWidth() const
 {
-    int boxWidth = ComponentLayout::CHECKBOX_SIZE;
+    int const boxWidth = ComponentLayout::CHECKBOX_SIZE;
 
     if (label_.isNotEmpty())
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+        auto font = ComponentLayout::defaultFont();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
-        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
         return boxWidth + ComponentLayout::SPACING_SM + labelWidth;
     }
 
@@ -122,15 +133,13 @@ int OscilCheckbox::getPreferredWidth() const
 
 int OscilCheckbox::getPreferredHeight() const
 {
-    return std::max(
-        ComponentLayout::CHECKBOX_SIZE,
-        static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
+    return std::max(ComponentLayout::CHECKBOX_SIZE, static_cast<int>(ComponentLayout::defaultFont().getHeight()));
 }
 
 void OscilCheckbox::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Calculate box bounds
     juce::Rectangle<float> boxBounds;
@@ -150,15 +159,15 @@ void OscilCheckbox::paint(juce::Graphics& g)
         auto labelBounds = bounds.toFloat().withLeft(ComponentLayout::CHECKBOX_SIZE + ComponentLayout::SPACING_SM);
 
         g.setColour(getTheme().textPrimary.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
+        g.setFont(ComponentLayout::defaultFont());
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+        auto font = ComponentLayout::defaultFont();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
-        float labelWidthF = glyphs.getBoundingBox(0, -1, false).getWidth();
+        float const labelWidthF = glyphs.getBoundingBox(0, -1, false).getWidth();
 
         // Draw label on left
         auto labelBounds = juce::Rectangle<float>(0, 0, labelWidthF, static_cast<float>(bounds.getHeight()));
@@ -171,6 +180,13 @@ void OscilCheckbox::paint(juce::Graphics& g)
             juce::Rectangle<float>(labelWidthF + ComponentLayout::SPACING_SM,
                                    (static_cast<float>(bounds.getHeight()) - ComponentLayout::CHECKBOX_SIZE) / 2.0f,
                                    ComponentLayout::CHECKBOX_SIZE, ComponentLayout::CHECKBOX_SIZE);
+    }
+
+    // Apply scale animation around box center
+    float const scale = scaleSpring_.position;
+    if (std::abs(scale - 1.0f) > 0.001f)
+    {
+        boxBounds = boxBounds.withSizeKeepingCentre(boxBounds.getWidth() * scale, boxBounds.getHeight() * scale);
     }
 
     paintBox(g, boxBounds);
@@ -186,77 +202,88 @@ void OscilCheckbox::paint(juce::Graphics& g)
 
 void OscilCheckbox::paintBox(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float hoverAmount = hoverSpring_.position;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const hoverAmount = hoverSpring_.position;
+    const auto& glass = getGlass();
 
-    // Background
-    auto bgColour = getTheme().backgroundSecondary;
-    if (state_ != CheckState::Unchecked || checkSpring_.position > 0.01f)
+    bool const isCheckedOrTransitioning = (state_ != CheckState::Unchecked || checkSpring_.position > 0.01f);
+
+    if (isCheckedOrTransitioning)
     {
-        float fillAmount = std::min(1.0f, checkSpring_.position * 2.0f);
-        bgColour = bgColour.interpolatedWith(getTheme().controlActive, fillAmount);
+        // Checked state: accent fill
+        float const fillAmount = std::min(1.0f, checkSpring_.position * 2.0f);
+        auto bgColour = glass.bgGlass.interpolatedWith(glass.accent, fillAmount);
+
+        // Hover on checked: slightly brighter accent
+        if (hoverAmount > 0.01f && fillAmount > 0.5f)
+            bgColour = bgColour.brighter(0.1f * hoverAmount);
+
+        g.setColour(bgColour.withAlpha(bgColour.getFloatAlpha() * opacity));
+        g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
+
+        // Border: accent when checked
+        auto borderColour = glass.borderDefault.interpolatedWith(glass.accent, fillAmount);
+        g.setColour(borderColour.withAlpha(borderColour.getFloatAlpha() * opacity));
+        g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
     }
+    else
+    {
+        // Unchecked state: bgGlass fill + borderDefault border
+        g.setColour(glass.bgGlass.withAlpha(glass.bgGlass.getFloatAlpha() * opacity));
+        g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
 
-    if (hoverAmount > 0.01f)
-        bgColour = bgColour.brighter(0.1f * hoverAmount);
-
-    g.setColour(bgColour.withAlpha(opacity));
-    g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
-
-    // Border
-    auto borderColour = state_ != CheckState::Unchecked ? getTheme().controlActive : getTheme().controlBorder;
-
-    g.setColour(borderColour.withAlpha(opacity));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
+        // Hover: borderStrong instead of borderDefault
+        auto borderColour = (hoverAmount > 0.5f) ? glass.borderStrong : glass.borderDefault;
+        g.setColour(borderColour.withAlpha(borderColour.getFloatAlpha() * opacity));
+        g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
+    }
 }
 
-void OscilCheckbox::paintCheckMark(juce::Graphics& g, const juce::Rectangle<float>& bounds)
+void OscilCheckbox::paintCheckMark(juce::Graphics& g, const juce::Rectangle<float>& bounds) const
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float progress = std::clamp((checkSpring_.position - 0.5f) * 2.0f, 0.0f, 1.0f);
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const progress = std::clamp((checkSpring_.position - 0.5f) * 2.0f, 0.0f, 1.0f);
 
     if (progress < 0.01f)
         return;
 
+    // White checkmark on accent background
     g.setColour(juce::Colours::white.withAlpha(opacity * progress));
 
     // Draw animated checkmark
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
-    float size = bounds.getWidth() * 0.5f;
+    float const cx = bounds.getCentreX();
+    float const cy = bounds.getCentreY();
+    float const size = bounds.getWidth() * 0.5f;
 
     juce::Path checkPath;
-    checkPath.startNewSubPath(cx - size * 0.35f, cy);
-    checkPath.lineTo(cx - size * 0.05f, cy + size * 0.3f);
-    checkPath.lineTo(cx + size * 0.35f, cy - size * 0.25f);
+    checkPath.startNewSubPath(cx - (size * 0.35f), cy);
+    checkPath.lineTo(cx - (size * 0.05f), cy + (size * 0.3f));
+    checkPath.lineTo(cx + (size * 0.35f), cy - (size * 0.25f));
 
     // Animate drawing the path
-    juce::PathStrokeType stroke(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
+    juce::PathStrokeType const stroke(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
 
     g.strokePath(checkPath, stroke);
 }
 
-void OscilCheckbox::paintIndeterminate(juce::Graphics& g, const juce::Rectangle<float>& bounds)
+void OscilCheckbox::paintIndeterminate(juce::Graphics& g, const juce::Rectangle<float>& bounds) const
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     g.setColour(juce::Colours::white.withAlpha(opacity));
 
-    float lineWidth = bounds.getWidth() * 0.5f;
-    float lineHeight = 2.0f;
+    float const lineWidth = bounds.getWidth() * 0.5f;
+    float const lineHeight = 2.0f;
 
-    auto lineBounds = juce::Rectangle<float>(bounds.getCentreX() - lineWidth / 2, bounds.getCentreY() - lineHeight / 2,
-                                             lineWidth, lineHeight);
+    auto lineBounds = juce::Rectangle<float>(bounds.getCentreX() - (lineWidth / 2),
+                                             bounds.getCentreY() - (lineHeight / 2), lineWidth, lineHeight);
 
     g.fillRoundedRectangle(lineBounds, 1.0f);
 }
 
 void OscilCheckbox::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-                           ComponentLayout::RADIUS_SM + ComponentLayout::FOCUS_RING_OFFSET,
-                           ComponentLayout::FOCUS_RING_WIDTH);
+    GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_MD, getGlass().accent);
 }
 
 void OscilCheckbox::resized()
@@ -264,7 +291,7 @@ void OscilCheckbox::resized()
     // No child components
 }
 
-void OscilCheckbox::mouseDown(const juce::MouseEvent&)
+void OscilCheckbox::mouseDown(const juce::MouseEvent& /*event*/)
 {
     if (enabled_)
         isPressed_ = true;
@@ -279,7 +306,7 @@ void OscilCheckbox::mouseUp(const juce::MouseEvent& e)
     isPressed_ = false;
 }
 
-void OscilCheckbox::mouseEnter(const juce::MouseEvent&)
+void OscilCheckbox::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -298,7 +325,7 @@ void OscilCheckbox::mouseEnter(const juce::MouseEvent&)
     }
 }
 
-void OscilCheckbox::mouseExit(const juce::MouseEvent&)
+void OscilCheckbox::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
 
@@ -324,13 +351,13 @@ bool OscilCheckbox::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilCheckbox::focusGained(FocusChangeType)
+void OscilCheckbox::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilCheckbox::focusLost(FocusChangeType)
+void OscilCheckbox::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -340,7 +367,7 @@ void OscilCheckbox::timerCallback()
 {
     updateAnimations();
 
-    if (checkSpring_.isSettled() && hoverSpring_.isSettled())
+    if (checkSpring_.isSettled() && hoverSpring_.isSettled() && scaleSpring_.isSettled())
         stopTimer();
 
     repaint();
@@ -348,9 +375,10 @@ void OscilCheckbox::timerCallback()
 
 void OscilCheckbox::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     checkSpring_.update(dt);
     hoverSpring_.update(dt);
+    scaleSpring_.update(dt);
 }
 
 void OscilCheckbox::notifyStateChanged()

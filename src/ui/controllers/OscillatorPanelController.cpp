@@ -60,6 +60,7 @@ void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& os
 
 void OscillatorPanelController::handleAsyncUpdate() { refreshPanels(); }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity,readability-function-size)
 void OscillatorPanelController::refreshPanels()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -172,16 +173,15 @@ void OscillatorPanelController::reapplyGlobalSettings()
     // Re-apply timing settings (display samples)
     // IMPORTANT: Use capture rate (decimated), not source rate, since display buffers are decimated
     auto timingConfig = dataProvider_.getTimingEngine().toEntityConfig();
-    int captureRate = dataProvider_.getCaptureRate();
-    juce::Logger::writeToLog("[Controller] reapplyGlobalSettings: captureRate=" + juce::String(captureRate) +
-                             " actualIntervalMs=" + juce::String(timingConfig.actualIntervalMs) +
-                             " hostBPM=" + juce::String(timingConfig.hostBPM) +
-                             " timingMode=" + juce::String(static_cast<int>(timingConfig.timingMode)));
+    int const captureRate = dataProvider_.getCaptureRate();
+    OSCIL_LOG(CONTROLLER, "reapplyGlobalSettings: captureRate="
+                              << captureRate << " actualIntervalMs=" << timingConfig.actualIntervalMs << " hostBPM="
+                              << timingConfig.hostBPM << " timingMode=" << static_cast<int>(timingConfig.timingMode));
     if (captureRate > 0)
     {
-        int displaySamples = static_cast<int>(static_cast<double>(captureRate) *
-                                              (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
-        juce::Logger::writeToLog("[Controller] displaySamples=" + juce::String(displaySamples));
+        int const displaySamples = static_cast<int>(static_cast<double>(captureRate) *
+                                                    (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
+        OSCIL_LOG(CONTROLLER, "displaySamples=" << displaySamples);
         if (displaySettings_)
         {
             displaySettings_->setDisplaySamplesForAll(displaySamples);
@@ -217,7 +217,7 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
     auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
 
-    if (layoutManager.getPaneCount() == 0 && state.getOscillators().empty())
+    if (layoutManager.getPaneCount() == 0 && state.getOscillatorCount() == 0)
     {
         OSCIL_LOG(CONTROLLER, "createDefaultOscillatorIfNeeded: creating default pane + oscillator"
                                   << " sourceId=" << dataProvider_.getSourceId().id);
@@ -258,8 +258,8 @@ void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, c
     if (!sourcePanePtr || !targetPanePtr)
         return;
 
-    int sourceColumn = sourcePanePtr->getColumnIndex();
-    int targetColumn = targetPanePtr->getColumnIndex();
+    int const sourceColumn = sourcePanePtr->getColumnIndex();
+    int const targetColumn = targetPanePtr->getColumnIndex();
 
     if (sourceColumn != targetColumn)
     {

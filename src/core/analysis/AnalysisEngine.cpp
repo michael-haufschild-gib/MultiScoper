@@ -88,7 +88,7 @@ void AnalysisEngine::prepare(double /*sampleRate*/, int samplesPerBlock)
 
 void AnalysisEngine::processMidSide(const float* left, const float* right, int numSamples, double sampleRate)
 {
-    size_t requiredSize = static_cast<size_t>(numSamples);
+    auto const requiredSize = static_cast<size_t>(numSamples);
     if (midBuffer_.size() < requiredSize || sideBuffer_.size() < requiredSize)
     {
         jassertfalse;
@@ -112,7 +112,7 @@ void AnalysisEngine::processMidSide(const float* left, const float* right, int n
 
 void AnalysisEngine::process(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
-    int numSamples = buffer.getNumSamples();
+    int const numSamples = buffer.getNumSamples();
     if (numSamples == 0)
         return;
     const int numChannels = buffer.getNumChannels();
@@ -153,21 +153,23 @@ struct SampleStats
 
 SampleStats computeSampleStats(const float* samples, int numSamples)
 {
-    float sumSq = 0.0f, sum = 0.0f, peak = 0.0f;
+    float sumSq = 0.0f;
+    float sum = 0.0f;
+    float peak = 0.0f;
     for (int i = 0; i < numSamples; ++i)
     {
-        float s = std::isfinite(samples[i]) ? samples[i] : 0.0f;
+        float const s = std::isfinite(samples[i]) ? samples[i] : 0.0f;
         peak = juce::jmax(peak, std::abs(s));
         sumSq += s * s;
         sum += s;
     }
-    float n = static_cast<float>(numSamples);
-    return {peak, std::sqrt(sumSq / n), sum / n};
+    auto const n = static_cast<float>(numSamples);
+    return {.peak = peak, .rms = std::sqrt(sumSq / n), .dc = sum / n};
 }
 
 float safeToDb(float linear, float floor = -100.0f)
 {
-    float db = (linear > 0.00001f) ? 20.0f * std::log10(linear) : floor;
+    float const db = (linear > 0.00001f) ? 20.0f * std::log10(linear) : floor;
     return std::isfinite(db) ? db : floor;
 }
 
@@ -175,7 +177,7 @@ float safeToDb(float linear, float floor = -100.0f)
 
 void AnalysisEngine::processChannel(const float* samples, int numSamples, ChannelMetrics& metrics,
                                     TransientDetector& transientDetector, AnalysisChannelState& state,
-                                    double sampleRate)
+                                    double sampleRate) const
 {
     if (numSamples <= 0)
         return;
@@ -187,14 +189,14 @@ void AnalysisEngine::processChannel(const float* samples, int numSamples, Channe
 
     auto stats = computeSampleStats(samples, numSamples);
 
-    state.rmsSmooth = state.rmsSmooth * (1.0f - config_.rmsSmoothing) + stats.rms * config_.rmsSmoothing;
-    state.dcSmooth = state.dcSmooth * (1.0f - config_.dcSmoothing) + stats.dc * config_.dcSmoothing;
-    float smoothedRms = std::isfinite(state.rmsSmooth) ? state.rmsSmooth : 0.0f;
-    float smoothedDc = std::isfinite(state.dcSmooth) ? state.dcSmooth : 0.0f;
+    state.rmsSmooth = (state.rmsSmooth * (1.0f - config_.rmsSmoothing)) + (stats.rms * config_.rmsSmoothing);
+    state.dcSmooth = (state.dcSmooth * (1.0f - config_.dcSmoothing)) + (stats.dc * config_.dcSmoothing);
+    float const smoothedRms = std::isfinite(state.rmsSmooth) ? state.rmsSmooth : 0.0f;
+    float const smoothedDc = std::isfinite(state.dcSmooth) ? state.dcSmooth : 0.0f;
 
-    float rmsDb = safeToDb(smoothedRms);
-    float peakDb = safeToDb(stats.peak);
-    float crestDb = (smoothedRms > 0.0001f) ? safeToDb(stats.peak / smoothedRms, 0.0f) : 0.0f;
+    float const rmsDb = safeToDb(smoothedRms);
+    float const peakDb = safeToDb(stats.peak);
+    float const crestDb = (smoothedRms > 0.0001f) ? safeToDb(stats.peak / smoothedRms, 0.0f) : 0.0f;
 
     metrics.rmsDb.store(rmsDb, std::memory_order_relaxed);
     metrics.peakDb.store(peakDb, std::memory_order_relaxed);

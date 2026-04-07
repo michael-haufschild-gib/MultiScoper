@@ -8,30 +8,23 @@
 namespace oscil
 {
 
-OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context) : themeService_(context.themeService)
+OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context) : OscillatorListToolbar(context.themeService) {}
+
+OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setTestId("sidebar_oscillators_toolbar");
 
     setupComponents();
-    themeService_.addListener(this);
 }
 
-OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService) : themeService_(themeService)
-{
-    setTestId("sidebar_oscillators_toolbar");
-
-    setupComponents();
-    themeService_.addListener(this);
-}
-
-OscillatorListToolbar::~OscillatorListToolbar() { themeService_.removeListener(this); }
+OscillatorListToolbar::~OscillatorListToolbar() = default;
 
 void OscillatorListToolbar::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 void OscillatorListToolbar::setupComponents()
 {
     // Filter tabs
-    filterTabs_ = std::make_unique<SegmentedButtonBar>(themeService_);
+    filterTabs_ = std::make_unique<SegmentedButtonBar>(getThemeService());
     filterTabs_->addButton("All", static_cast<int>(OscillatorFilterMode::All), "sidebar_oscillators_toolbar_allTab");
     filterTabs_->addButton("Visible", static_cast<int>(OscillatorFilterMode::Visible),
                            "sidebar_oscillators_toolbar_visibleTab");
@@ -47,7 +40,7 @@ void OscillatorListToolbar::setupComponents()
 
 void OscillatorListToolbar::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
 
     // Background
     g.setColour(theme.backgroundSecondary);
@@ -59,7 +52,7 @@ void OscillatorListToolbar::paint(juce::Graphics& g)
 
     // Draw cyan badge for oscillator count
     auto bounds = getLocalBounds().reduced(4);
-    auto countBounds = bounds.removeFromRight(90);
+    auto countBounds = bounds.removeFromRight(COUNT_BADGE_WIDTH);
 
     juce::String countText;
     if (currentFilterMode_ == OscillatorFilterMode::All)
@@ -78,11 +71,11 @@ void OscillatorListToolbar::paint(juce::Graphics& g)
     // Cyan pill badge background
     auto pillBounds = countBounds.toFloat().reduced(2, 4);
     g.setColour(theme.controlActive.withAlpha(0.2f));
-    g.fillRoundedRectangle(pillBounds, 10.0f);
+    g.fillRoundedRectangle(pillBounds, BADGE_CORNER_RADIUS);
 
     // Cyan text
     g.setColour(theme.controlActive);
-    g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+    g.setFont(juce::FontOptions(BADGE_FONT_SIZE).withStyle("Bold"));
     g.drawText(countText, countBounds, juce::Justification::centred);
 }
 
@@ -92,14 +85,12 @@ void OscillatorListToolbar::resized()
 
     // Single row: Filter tabs and count badge
     // Count badge is drawn in paint(), so just reserve space
-    bounds.removeFromRight(90);
-    bounds.removeFromRight(4);
+    bounds.removeFromRight(COUNT_BADGE_WIDTH);
+    bounds.removeFromRight(COUNT_BADGE_SPACING);
 
     // Filter tabs take remaining space
     filterTabs_->setBounds(bounds);
 }
-
-void OscillatorListToolbar::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 void OscillatorListToolbar::updateCountLabel()
 {

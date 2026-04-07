@@ -8,9 +8,8 @@
 namespace oscil
 {
 
-OscillatorSidebarSection::OscillatorSidebarSection(ServiceContext& context) : themeService_(context.themeService)
+OscillatorSidebarSection::OscillatorSidebarSection(ServiceContext& context) : ThemedComponent(context.themeService)
 {
-    themeService_.addListener(this);
     setupComponents();
 
     // Create oscillator list
@@ -21,7 +20,6 @@ OscillatorSidebarSection::OscillatorSidebarSection(ServiceContext& context) : th
 
 OscillatorSidebarSection::~OscillatorSidebarSection()
 {
-    themeService_.removeListener(this);
     if (oscillatorList_)
         oscillatorList_->removeListener(this);
 }
@@ -29,7 +27,8 @@ OscillatorSidebarSection::~OscillatorSidebarSection()
 void OscillatorSidebarSection::setupComponents()
 {
     // Add Oscillator button
-    addOscillatorButton_ = std::make_unique<OscilButton>(themeService_, "+ Add Oscillator", "sidebar_addOscillator");
+    addOscillatorButton_ =
+        std::make_unique<OscilButton>(getThemeService(), "+ Add Oscillator", "sidebar_addOscillator");
     addOscillatorButton_->setVariant(ButtonVariant::Primary);
     addOscillatorButton_->onClick = [this]() {
         listeners_.call([](Listener& l) { l.addOscillatorDialogRequested(); });
@@ -60,8 +59,6 @@ void OscillatorSidebarSection::resized()
         oscillatorList_->setBounds(bounds);
     }
 }
-
-void OscillatorSidebarSection::themeChanged(const ColorTheme&) { repaint(); }
 
 int OscillatorSidebarSection::getPreferredHeight() const
 {
@@ -129,7 +126,7 @@ void OscillatorSidebarSection::oscillatorPaneSelectionRequested(const Oscillator
 
 void OscillatorSidebarSection::oscillatorNameChanged(const OscillatorId& id, const juce::String& newName)
 {
-    listeners_.call([id, &newName](Listener& l) { l.oscillatorNameChanged(id, newName); });
+    listeners_.call([id, newName](Listener& l) { l.oscillatorNameChanged(id, newName); });
 }
 
 } // namespace oscil

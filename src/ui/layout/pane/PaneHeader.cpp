@@ -18,7 +18,7 @@ void PaneHeader::setupComponents()
     nameLabel_ = std::make_unique<InlineEditLabel>(themeService_, "pane_nameLabel");
     nameLabel_->setText("Pane", false);
     nameLabel_->setPlaceholder("Pane name...");
-    nameLabel_->setFont(juce::FontOptions(12.0f).withStyle("Bold"));
+    nameLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
     nameLabel_->setTextJustification(juce::Justification::centredLeft);
     nameLabel_->onTextChanged = [this](const juce::String& newName) {
         if (onNameChanged)
@@ -48,13 +48,13 @@ void PaneHeader::setupComponents()
 
 void PaneHeader::paintDragHandle(juce::Graphics& g, const juce::Rectangle<int>& handleBounds)
 {
-    int totalIconHeight = (3 * DRAG_HANDLE_LINE_HEIGHT) + (2 * DRAG_HANDLE_LINE_SPACING);
-    int startY = handleBounds.getCentreY() - (totalIconHeight / 2);
+    int const totalIconHeight = (3 * DRAG_HANDLE_LINE_HEIGHT) + (2 * DRAG_HANDLE_LINE_SPACING);
+    int const startY = handleBounds.getCentreY() - (totalIconHeight / 2);
 
     for (int i = 0; i < 3; ++i)
     {
         g.fillRect(handleBounds.getX() + DRAG_HANDLE_LEFT_MARGIN,
-                   startY + i * (DRAG_HANDLE_LINE_HEIGHT + DRAG_HANDLE_LINE_SPACING), DRAG_HANDLE_LINE_WIDTH,
+                   startY + (i * (DRAG_HANDLE_LINE_HEIGHT + DRAG_HANDLE_LINE_SPACING)), DRAG_HANDLE_LINE_WIDTH,
                    DRAG_HANDLE_LINE_HEIGHT);
     }
 }
@@ -65,10 +65,10 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
         return;
 
     auto mode = primaryOscillator_->getProcessingMode();
-    juce::Colour modeColor = primaryOscillator_->getColour();
+    juce::Colour const modeColor = primaryOscillator_->getColour();
 
     g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(11.0f));
+    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION));
     g.drawText("Processing:", bounds.removeFromLeft(70), juce::Justification::centredLeft);
 
     auto badgeBounds = bounds.removeFromLeft(BADGE_WIDTH).toFloat();
@@ -76,7 +76,7 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
 
     g.setColour(modeColor);
-    g.setFont(juce::FontOptions(12.0f).withStyle("Bold"));
+    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
     g.drawText(processingModeToString(mode), badgeBounds.toNearestInt(), juce::Justification::centred);
 
     if (oscillatorCount_ > 1)
@@ -93,7 +93,8 @@ void PaneHeader::paint(juce::Graphics& g)
     const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds();
 
-    g.setColour(theme.backgroundSecondary);
+    // Tinted header background (bgHover equivalent)
+    g.setColour(theme.textPrimary.withAlpha(0.08f));
     g.fillRect(bounds);
 
     auto handleBounds = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
@@ -103,7 +104,8 @@ void PaneHeader::paint(juce::Graphics& g)
     bounds.removeFromLeft(NAME_LABEL_WIDTH + PADDING);
     paintOscillatorBadge(g, bounds, theme);
 
-    g.setColour(theme.controlBorder);
+    // Bottom border (borderDefault equivalent)
+    g.setColour(theme.textPrimary.withAlpha(0.12f));
     g.drawHorizontalLine(getHeight() - 1, 0.0f, static_cast<float>(getWidth()));
 }
 
@@ -114,13 +116,13 @@ void PaneHeader::resized()
                             CLOSE_BUTTON_SIZE);
 
     // Action bar (before close button)
-    int actionBarWidth = actionBar_->getPreferredWidth();
+    int const actionBarWidth = actionBar_->getPreferredWidth();
     actionBar_->setBounds(getWidth() - CLOSE_BUTTON_SIZE - 2 - PADDING - actionBarWidth, 0, actionBarWidth, HEIGHT);
 
     // Name label (after drag handle)
-    int labelX = DRAG_HANDLE_WIDTH + PADDING;
+    int const labelX = DRAG_HANDLE_WIDTH + PADDING;
     int labelWidth =
-        juce::jmin(NAME_LABEL_WIDTH, getWidth() - labelX - actionBarWidth - CLOSE_BUTTON_SIZE - PADDING * 3);
+        juce::jmin(NAME_LABEL_WIDTH, getWidth() - labelX - actionBarWidth - CLOSE_BUTTON_SIZE - (PADDING * 3));
     labelWidth = juce::jmax(0, labelWidth); // Ensure non-negative
     nameLabel_->setBounds(labelX, (HEIGHT - nameLabel_->getPreferredHeight()) / 2, labelWidth,
                           nameLabel_->getPreferredHeight());

@@ -43,10 +43,10 @@ bool PostProcessEffect::compileEffectShader(juce::OpenGLShaderProgram& program, 
 
     // CRITICAL: Bind attributes to match FramebufferPool's fixed layout
     // FramebufferPool::renderFullscreenQuad() assumes location 0 is position and 1 is texCoord
-    if (auto* context = juce::OpenGLContext::getCurrentContext())
+    if (juce::OpenGLContext::getCurrentContext() != nullptr)
     {
-        context->extensions.glBindAttribLocation(program.getProgramID(), 0, "position");
-        context->extensions.glBindAttribLocation(program.getProgramID(), 1, "texCoord");
+        juce::OpenGLExtensionFunctions::glBindAttribLocation(program.getProgramID(), 0, "position");
+        juce::OpenGLExtensionFunctions::glBindAttribLocation(program.getProgramID(), 1, "texCoord");
     }
 
     if (!program.link())

@@ -63,13 +63,14 @@ public:
         }
 
         // Convert peak and RMS to dB for screen reader
-        float peakLevel = waveform_.getPeakLevel();
-        float rmsLevel = waveform_.getRMSLevel();
+        float const peakLevel = waveform_.getPeakLevel();
+        float const rmsLevel = waveform_.getRMSLevel();
 
-        juce::String peakDb, rmsDb;
+        juce::String peakDb;
+        juce::String rmsDb;
         if (peakLevel > 0.0001f)
         {
-            float peakDbValue = 20.0f * std::log10(peakLevel);
+            float const peakDbValue = 20.0f * std::log10(peakLevel);
             peakDb = juce::String(peakDbValue, 1) + " dB";
         }
         else
@@ -79,7 +80,7 @@ public:
 
         if (rmsLevel > 0.0001f)
         {
-            float rmsDbValue = 20.0f * std::log10(rmsLevel);
+            float const rmsDbValue = 20.0f * std::log10(rmsLevel);
             rmsDb = juce::String(rmsDbValue, 1) + " dB";
         }
         else
@@ -109,10 +110,10 @@ WaveformComponent::WaveformComponent(IThemeService& themeService, ShaderRegistry
     , presenter_(std::make_unique<WaveformPresenter>())
     , gridRenderer_(std::make_unique<SoftwareGridRenderer>(themeService))
     , visualPresetId_("default")
+    , waveformId_(nextWaveformId_.fetch_add(1))
 {
     setOpaque(false);
     // Auto-assign a unique ID
-    waveformId_ = nextWaveformId_.fetch_add(1);
 
     // Use VBlank attachment to drive updates decoupled from paint()
     vBlankAttachment_ = std::make_unique<juce::VBlankAttachment>(this, [this]() {
@@ -147,7 +148,7 @@ void WaveformComponent::paint(juce::Graphics& g)
     // Draw grid only in software mode (GPU mode renders grid via GridRenderer)
     if (gridRenderer_ && gridRenderer_->isGridVisible() && !gpuRenderingEnabled_)
     {
-        ProcessingMode mode = presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
+        ProcessingMode const mode = presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
         gridRenderer_->render(g, bounds, mode);
     }
 
@@ -163,7 +164,7 @@ void WaveformComponent::paint(juce::Graphics& g)
     // Labels are drawn using JUCE Graphics which renders on top of OpenGL content
     if (gridRenderer_ && gridRenderer_->isGridVisible() && bounds.getWidth() > 100 && bounds.getHeight() > 60)
     {
-        ProcessingMode mode = presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
+        ProcessingMode const mode = presenter_ ? presenter_->getProcessingMode() : ProcessingMode::FullStereo;
         gridRenderer_->renderLabels(g, bounds, mode);
     }
 

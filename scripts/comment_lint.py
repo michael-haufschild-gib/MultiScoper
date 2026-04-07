@@ -140,8 +140,8 @@ EXEMPT_PATTERNS = [
     re.compile(r"\w+\s*\(\s*[A-Z_]{3,}"),
     # Static variable declarations (not static member functions — those have void/type before name)
     re.compile(r"^\s*static\s+(?![\w:]+\s+\w+\s*\()"),
-    # const RAII local variable declarations: const Type varName(memberArg_);
-    re.compile(r"^\s*const\s+[\w:]+\s+\w+\s*\(\w+_\)"),
+    # const RAII local variable declarations: const Type varName(arg);
+    re.compile(r"^\s*const\s+[\w:]+\s+\w+\s*\(\w+\)"),
     # Local variable construction: Type name(arg); — looks like a declaration but isn't
     re.compile(r"^\s*[\w:]+\s+\w+\s*\(\w+\)\s*;\s*$"),
     # UI component constructors: ClassName(IThemeService& ...) — boilerplate DI wiring

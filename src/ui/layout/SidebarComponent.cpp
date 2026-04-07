@@ -5,6 +5,8 @@
 
 #include "ui/layout/SidebarComponent.h"
 
+#include "ui/components/GlassPainter.h"
+#include "ui/components/GlassStyle.h"
 #include "ui/components/TestId.h"
 
 namespace oscil
@@ -23,34 +25,34 @@ SidebarResizeHandle::SidebarResizeHandle(IThemeService& themeService) : themeSer
 
 void SidebarResizeHandle::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
 
     if (isDragging_ || isHovered_)
     {
-        g.setColour(theme.controlActive);
+        g.setColour(theme.textPrimary.withAlpha(0.20f));
     }
     else
     {
-        g.setColour(theme.controlBorder);
+        g.setColour(theme.textPrimary.withAlpha(0.08f));
     }
 
     // Draw resize grip lines
     auto bounds = getLocalBounds();
-    int centerX = bounds.getCentreX();
-    int topY = bounds.getHeight() / 3;
-    int bottomY = bounds.getHeight() * 2 / 3;
+    int const centerX = bounds.getCentreX();
+    int const topY = bounds.getHeight() / 3;
+    int const bottomY = bounds.getHeight() * 2 / 3;
 
     g.drawVerticalLine(centerX - 1, static_cast<float>(topY), static_cast<float>(bottomY));
     g.drawVerticalLine(centerX + 1, static_cast<float>(topY), static_cast<float>(bottomY));
 }
 
-void SidebarResizeHandle::mouseEnter(const juce::MouseEvent&)
+void SidebarResizeHandle::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = true;
     repaint();
 }
 
-void SidebarResizeHandle::mouseExit(const juce::MouseEvent&)
+void SidebarResizeHandle::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
     repaint();
@@ -69,12 +71,12 @@ void SidebarResizeHandle::mouseDrag(const juce::MouseEvent& e)
 {
     if (isDragging_ && onResizeDrag)
     {
-        int deltaX = e.getScreenX() - dragStartX_;
+        int const deltaX = e.getScreenX() - dragStartX_;
         onResizeDrag(deltaX);
     }
 }
 
-void SidebarResizeHandle::mouseUp(const juce::MouseEvent&)
+void SidebarResizeHandle::mouseUp(const juce::MouseEvent& /*event*/)
 {
     isDragging_ = false;
     if (onResizeEnd)
@@ -91,13 +93,13 @@ SidebarCollapseButton::SidebarCollapseButton(IThemeService& themeService) : them
 
 void SidebarCollapseButton::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = themeService_.getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Background
     if (isHovered_)
     {
-        g.setColour(theme.controlHighlight);
+        g.setColour(theme.textPrimary.withAlpha(0.08f));
         g.fillRoundedRectangle(bounds, 4.0f);
     }
 
@@ -105,35 +107,35 @@ void SidebarCollapseButton::paint(juce::Graphics& g)
     g.setColour(theme.textPrimary);
     juce::Path chevron;
 
-    float centerX = bounds.getCentreX();
-    float centerY = bounds.getCentreY();
-    float size = 6.0f;
+    float const centerX = bounds.getCentreX();
+    float const centerY = bounds.getCentreY();
+    float const size = 6.0f;
 
     if (collapsed_)
     {
         // Chevron pointing right (expand)
-        chevron.startNewSubPath(centerX - size / 2, centerY - size);
-        chevron.lineTo(centerX + size / 2, centerY);
-        chevron.lineTo(centerX - size / 2, centerY + size);
+        chevron.startNewSubPath(centerX - (size / 2), centerY - size);
+        chevron.lineTo(centerX + (size / 2), centerY);
+        chevron.lineTo(centerX - (size / 2), centerY + size);
     }
     else
     {
         // Chevron pointing left (collapse)
-        chevron.startNewSubPath(centerX + size / 2, centerY - size);
-        chevron.lineTo(centerX - size / 2, centerY);
-        chevron.lineTo(centerX + size / 2, centerY + size);
+        chevron.startNewSubPath(centerX + (size / 2), centerY - size);
+        chevron.lineTo(centerX - (size / 2), centerY);
+        chevron.lineTo(centerX + (size / 2), centerY + size);
     }
 
     g.strokePath(chevron, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
-void SidebarCollapseButton::mouseEnter(const juce::MouseEvent&)
+void SidebarCollapseButton::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = true;
     repaint();
 }
 
-void SidebarCollapseButton::mouseExit(const juce::MouseEvent&)
+void SidebarCollapseButton::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
     repaint();
@@ -154,12 +156,10 @@ void SidebarCollapseButton::setCollapsed(bool collapsed)
 // SidebarComponent implementation
 
 SidebarComponent::SidebarComponent(ServiceContext& context)
-    : context_(context)
-    , themeService_(context.themeService)
+    : ThemedComponent(context.themeService)
+    , context_(context)
     , instanceRegistry_(context.instanceRegistry)
 {
-    themeService_.addListener(this);
-
     // Initialize width spring to expanded width
     widthSpring_.position = static_cast<float>(expandedWidth_);
     widthSpring_.target = static_cast<float>(expandedWidth_);
@@ -169,7 +169,7 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
 #endif
 
     // Create resize handle
-    resizeHandle_ = std::make_unique<SidebarResizeHandle>(themeService_);
+    resizeHandle_ = std::make_unique<SidebarResizeHandle>(getThemeService());
     resizeHandle_->onResizeStart = [this]() { dragStartWidth_ = expandedWidth_; };
     resizeHandle_->onResizeDrag = [this](int deltaX) {
         int newWidth = dragStartWidth_ - deltaX;
@@ -185,13 +185,13 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
     addAndMakeVisible(resizeHandle_.get());
 
     // Create collapse button
-    collapseButton_ = std::make_unique<SidebarCollapseButton>(themeService_);
+    collapseButton_ = std::make_unique<SidebarCollapseButton>(getThemeService());
     collapseButton_->onClick = [this]() { toggleCollapsed(); };
     addAndMakeVisible(collapseButton_.get());
 
     // All sections in scrollable viewport
     accordionViewport_ = std::make_unique<juce::Viewport>();
-    accordion_ = std::make_unique<OscilAccordion>(themeService_);
+    accordion_ = std::make_unique<OscilAccordion>(getThemeService());
 
     accordionViewport_->setViewedComponent(accordion_.get(), false);
     accordionViewport_->setScrollBarsShown(true, false);
@@ -201,13 +201,13 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
     setupSections();
 
     // Force initial layout to size accordion after sections are added
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
     resized();
 }
 
 SidebarComponent::~SidebarComponent()
 {
     stopTimer();
-    themeService_.removeListener(this);
     if (oscillatorSection_)
         oscillatorSection_->removeListener(this);
     if (timingSection_)
@@ -218,13 +218,13 @@ SidebarComponent::~SidebarComponent()
 
 void SidebarComponent::paint(juce::Graphics& g)
 {
-    auto& theme = themeService_.getCurrentTheme();
+    const auto& glass = getGlass();
 
-    // Background
-    g.fillAll(theme.backgroundSecondary);
+    // Glass panel background (no corner radius — sidebar is edge-to-edge)
+    GlassPainter::paintGlassPanel(g, getLocalBounds().toFloat(), glass, 0.0f, BorderLevel::None);
 
     // Left border
-    g.setColour(theme.controlBorder);
+    g.setColour(glass.borderSubtle);
     g.drawVerticalLine(0, 0.0f, static_cast<float>(getHeight()));
 }
 
@@ -256,14 +256,12 @@ void SidebarComponent::resized()
         // Update accordion width to match viewport
         if (accordion_)
         {
-            int width = juce::jmax(1, accordionViewport_->getWidth() -
-                                          (accordionViewport_->getScrollBarThickness() + PADDING_SMALL));
+            int const width = juce::jmax(1, accordionViewport_->getWidth() -
+                                                (accordionViewport_->getScrollBarThickness() + PADDING_SMALL));
             accordion_->setSize(width, accordion_->getPreferredHeight());
         }
     }
 }
-
-void SidebarComponent::themeChanged(const ColorTheme&) { repaint(); }
 
 void SidebarComponent::timerCallback()
 {
@@ -289,7 +287,7 @@ void SidebarComponent::setCollapsed(bool collapsed)
         collapseButton_->setCollapsed(collapsed);
 
         // Animate width transition
-        float targetWidth =
+        float const targetWidth =
             collapsed ? static_cast<float>(WindowLayout::COLLAPSED_SIDEBAR_WIDTH) : static_cast<float>(expandedWidth_);
         widthSpring_.setTarget(targetWidth);
         startTimerHz(ComponentLayout::ANIMATION_FPS);
@@ -303,7 +301,7 @@ void SidebarComponent::toggleCollapsed() { setCollapsed(!collapsed_); }
 
 void SidebarComponent::setSidebarWidth(int width)
 {
-    int newWidth = juce::jlimit(WindowLayout::MIN_SIDEBAR_WIDTH, WindowLayout::MAX_SIDEBAR_WIDTH, width);
+    int const newWidth = juce::jlimit(WindowLayout::MIN_SIDEBAR_WIDTH, WindowLayout::MAX_SIDEBAR_WIDTH, width);
     if (expandedWidth_ != newWidth)
     {
         expandedWidth_ = newWidth;
@@ -387,7 +385,7 @@ void SidebarComponent::setupSections()
     }
 
     // Create timing section
-    timingSection_ = std::make_unique<TimingSidebarSection>(themeService_);
+    timingSection_ = std::make_unique<TimingSidebarSection>(getThemeService());
     timingSection_->addListener(this);
 
     auto* timing = accordion_->addSection("TIMING", timingSection_.get());
@@ -398,11 +396,11 @@ void SidebarComponent::setupSections()
     }
 
     // Create options section
-    optionsSection_ = std::make_unique<OptionsSection>(themeService_);
+    optionsSection_ = std::make_unique<OptionsSection>(getThemeService());
     optionsSection_->addListener(this);
 
-    optionsSection_->setAvailableThemes(themeService_.getAvailableThemes());
-    optionsSection_->setCurrentTheme(themeService_.getCurrentTheme().name);
+    optionsSection_->setAvailableThemes(getThemeService().getAvailableThemes());
+    optionsSection_->setCurrentTheme(getThemeService().getCurrentTheme().name);
 
     auto* options = accordion_->addSection("OPTIONS", optionsSection_.get());
     if (options)

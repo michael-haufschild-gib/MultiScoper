@@ -10,8 +10,6 @@
 namespace oscil
 {
 
-using namespace juce::gl;
-
 // Radial blur fragment shader
 // Samples at multiple zoom levels from center to create glow effect
 static const char* radialBlurFragmentShader = R"(
@@ -64,84 +62,27 @@ static const char* radialBlurFragmentShader = R"(
     }
 )";
 
-RadialBlurEffect::RadialBlurEffect() {}
+RadialBlurEffect::RadialBlurEffect() = default;
 
 RadialBlurEffect::~RadialBlurEffect() = default;
 
-bool RadialBlurEffect::compile(juce::OpenGLContext& context)
+const char* RadialBlurEffect::getFragmentSource() const { return radialBlurFragmentShader; }
+
+bool RadialBlurEffect::resolveUniforms()
 {
-    if (compiled_)
-        return true;
-
-    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!compileEffectShader(*shader_, radialBlurFragmentShader))
-    {
-        DBG("RadialBlurEffect: Failed to compile shader");
-        shader_.reset();
-        return false;
-    }
-
-    // Get uniform locations
-    textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     amountLoc_ = shader_->getUniformIDFromName("amount");
     glowLoc_ = shader_->getUniformIDFromName("glow");
     samplesLoc_ = shader_->getUniformIDFromName("samples");
 
-    if (textureLoc_ < 0 || amountLoc_ < 0 || glowLoc_ < 0 || samplesLoc_ < 0)
-    {
-        DBG("RadialBlurEffect: Missing uniforms");
-        shader_.reset();
-        return false;
-    }
-
-    compiled_ = true;
-    DBG("RadialBlurEffect: Compiled successfully");
-    return true;
+    return amountLoc_ >= 0 && glowLoc_ >= 0 && samplesLoc_ >= 0;
 }
 
-void RadialBlurEffect::release(juce::OpenGLContext& context)
+void RadialBlurEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
-    juce::ignoreUnused(context);
-    shader_.reset();
-    compiled_ = false;
-}
-
-bool RadialBlurEffect::isCompiled() const { return compiled_; }
-
-void RadialBlurEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
-                             FramebufferPool& pool, float deltaTime)
-{
-    juce::ignoreUnused(deltaTime);
-
-    if (!compiled_ || !source || !destination)
-        return;
-
-    auto& ext = context.extensions;
-
-    // Bind destination
-    destination->bind();
-
-    // Disable depth test for fullscreen pass
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-
-    // Use shader
-    shader_->use();
-
-    // Bind source texture
-    source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-
-    // Set uniforms
-    ext.glUniform1f(amountLoc_, settings_.amount * getIntensity());
-    ext.glUniform1f(glowLoc_, settings_.glow);
-    ext.glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
-
-    // Render fullscreen quad
-    pool.renderFullscreenQuad();
-
-    destination->unbind();
+    juce::ignoreUnused(source, deltaTime);
+    juce::OpenGLExtensionFunctions::glUniform1f(amountLoc_, settings_.amount * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(glowLoc_, settings_.glow);
+    juce::OpenGLExtensionFunctions::glUniform1i(samplesLoc_, juce::jlimit(2, 8, settings_.samples));
 }
 
 } // namespace oscil

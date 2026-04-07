@@ -80,11 +80,10 @@ private:
     int lastHeight_ = 0;
 
     void resizeMipChain(juce::OpenGLContext& context, int w, int h);
-    void passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, FramebufferPool& pool);
-    void passDownsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool);
-    void passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool);
-    void passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination,
-                     FramebufferPool& pool);
+    void passPrefilter(Framebuffer* source, FramebufferPool& pool);
+    void passDownsample(FramebufferPool& pool);
+    void passUpsample(FramebufferPool& pool);
+    void passCombine(Framebuffer* source, Framebuffer* destination, FramebufferPool& pool);
 };
 
 } // namespace oscil

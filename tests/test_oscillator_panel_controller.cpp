@@ -38,7 +38,7 @@ protected:
         // Initialize minimal editor
         editor_ = std::make_unique<TestEditor>(processor_);
 
-        container_ = std::make_unique<PaneContainerComponent>();
+        container_ = std::make_unique<PaneContainerComponent>(themeService_);
         displaySettings_ = std::make_unique<DisplaySettingsManager>([this]() {
             std::vector<PaneComponent*> snapshot;
             if (controller_)

@@ -24,7 +24,7 @@ void PaneSelectorComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); 
 
 void PaneSelectorComponent::setupDropdown()
 {
-    juce::String dropdownTestId = testId_.isNotEmpty() ? testId_ + "_dropdown" : "";
+    juce::String const dropdownTestId = testId_.isNotEmpty() ? testId_ + "_dropdown" : "";
     dropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select pane...", dropdownTestId);
     dropdown_->onSelectionChanged = [this](int index) { handleSelectionChange(index); };
     addAndMakeVisible(*dropdown_);
@@ -79,12 +79,12 @@ PaneId PaneSelectorComponent::getSelectedPaneId() const
     if (isNewPaneSelected())
         return PaneId::invalid();
 
-    int index = dropdown_->getSelectedIndex();
+    int const index = dropdown_->getSelectedIndex();
     if (index < 0)
         return PaneId::invalid();
 
     // Adjust for "New pane" option
-    int paneIndex = allowNewPane_ ? index - 1 : index;
+    int const paneIndex = allowNewPane_ ? index - 1 : index;
     if (paneIndex >= 0 && static_cast<size_t>(paneIndex) < panes_.size())
     {
         return panes_[static_cast<size_t>(paneIndex)].first;
@@ -103,7 +103,7 @@ bool PaneSelectorComponent::isNewPaneSelected() const
 
 bool PaneSelectorComponent::hasValidSelection() const
 {
-    int index = dropdown_->getSelectedIndex();
+    int const index = dropdown_->getSelectedIndex();
     if (index < 0)
         return false;
 
@@ -112,7 +112,7 @@ bool PaneSelectorComponent::hasValidSelection() const
         return true;
 
     // Check if an existing pane is selected
-    int paneIndex = allowNewPane_ ? index - 1 : index;
+    int const paneIndex = allowNewPane_ ? index - 1 : index;
     return paneIndex >= 0 && static_cast<size_t>(paneIndex) < panes_.size();
 }
 
@@ -136,7 +136,7 @@ void PaneSelectorComponent::setSelectedPaneId(const PaneId& paneId, bool notify)
     {
         if (panes_[i].first == paneId)
         {
-            int dropdownIndex = allowNewPane_ ? static_cast<int>(i) + 1 : static_cast<int>(i);
+            int const dropdownIndex = allowNewPane_ ? static_cast<int>(i) + 1 : static_cast<int>(i);
             dropdown_->setSelectedIndex(dropdownIndex, notify);
             return;
         }
@@ -172,7 +172,7 @@ void PaneSelectorComponent::handleSelectionChange(int index)
     }
     else
     {
-        int paneIndex = allowNewPane_ ? index - 1 : index;
+        int const paneIndex = allowNewPane_ ? index - 1 : index;
         if (paneIndex >= 0 && static_cast<size_t>(paneIndex) < panes_.size())
         {
             onSelectionChanged(panes_[static_cast<size_t>(paneIndex)].first, false);

@@ -5,14 +5,16 @@
 
 #include "ui/components/OscilButton.h"
 
+#include <utility>
+
 namespace oscil
 {
 
-OscilButton::OscilButton(IThemeService& themeService, const juce::String& text)
+OscilButton::OscilButton(IThemeService& themeService, juce::String text)
     : ThemedComponent(themeService)
-    , label_(text)
-    , scaleSpring_(SpringPresets::snappy())
-    , brightnessSpring_(SpringPresets::stiff())
+    , label_(std::move(text))
+    , scaleSpring_(SpringPresets::medium())
+    , brightnessSpring_(SpringPresets::fast())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -23,8 +25,8 @@ OscilButton::OscilButton(IThemeService& themeService, const juce::String& text)
     brightnessSpring_.target = 0.0f;
 }
 
-OscilButton::OscilButton(IThemeService& themeService, const juce::String& text, const juce::String& testId)
-    : OscilButton(themeService, text)
+OscilButton::OscilButton(IThemeService& themeService, juce::String text, const juce::String& testId)
+    : OscilButton(themeService, std::move(text))
 {
     setTestId(testId);
 }
@@ -63,6 +65,7 @@ void OscilButton::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
@@ -142,12 +145,12 @@ int OscilButton::getPreferredWidth() const
     if (variant_ == ButtonVariant::Icon)
         return ComponentLayout::BUTTON_HEIGHT;
 
-    auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+    auto font = ComponentLayout::defaultFont();
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, label_, 0, 0);
-    float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
+    float const textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
 
-    return static_cast<int>(textWidth) + TEXT_PADDING * 2;
+    return static_cast<int>(textWidth) + (TEXT_PADDING * 2);
 }
 
 int OscilButton::getPreferredHeight() const
@@ -160,7 +163,7 @@ int OscilButton::getPreferredHeight() const
 
 void OscilButton::resized() {}
 
-void OscilButton::mouseEnter(const juce::MouseEvent&)
+void OscilButton::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -181,7 +184,7 @@ void OscilButton::mouseEnter(const juce::MouseEvent&)
     }
 }
 
-void OscilButton::mouseExit(const juce::MouseEvent&)
+void OscilButton::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
     isPressed_ = false;
@@ -207,6 +210,10 @@ void OscilButton::mouseDown(const juce::MouseEvent& e)
 
     isPressed_ = true;
 
+    // Spawn ripple at click position
+    rippleManager_.spawn(static_cast<float>(e.x), static_cast<float>(e.y), static_cast<float>(getWidth()),
+                         static_cast<float>(getHeight()));
+
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         scaleSpring_.setTarget(ComponentLayout::PRESS_SCALE);
@@ -231,7 +238,7 @@ void OscilButton::mouseUp(const juce::MouseEvent& e)
     if (!enabled_)
         return;
 
-    bool wasPressed = isPressed_;
+    bool const wasPressed = isPressed_;
     isPressed_ = false;
 
     if (AnimationSettings::shouldUseSpringAnimations())
@@ -270,13 +277,13 @@ bool OscilButton::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilButton::focusGained(FocusChangeType)
+void OscilButton::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilButton::focusLost(FocusChangeType)
+void OscilButton::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -296,8 +303,9 @@ void OscilButton::triggerClick()
 void OscilButton::timerCallback()
 {
     updateAnimations();
+    rippleManager_.removeExpired();
 
-    if (scaleSpring_.isSettled() && brightnessSpring_.isSettled())
+    if (scaleSpring_.isSettled() && brightnessSpring_.isSettled() && !rippleManager_.hasActiveRipples())
         stopTimer();
 
     repaint();
@@ -305,7 +313,7 @@ void OscilButton::timerCallback()
 
 void OscilButton::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
 
     scaleSpring_.update(dt);
     brightnessSpring_.update(dt);

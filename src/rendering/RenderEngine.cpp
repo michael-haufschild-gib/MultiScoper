@@ -33,6 +33,7 @@ RenderEngine::~RenderEngine()
     }
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 bool RenderEngine::initialize(juce::OpenGLContext& context)
 {
     if (initialized_)
@@ -49,7 +50,7 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
     }
 
     // Use physical (scaled) dimensions for internal state and FBOs
-    double scale = context.getRenderingScale();
+    double const scale = context.getRenderingScale();
     currentWidth_ = static_cast<int>(targetComponent->getWidth() * scale);
     currentHeight_ = static_cast<int>(targetComponent->getHeight() * scale);
 
@@ -73,7 +74,7 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
         return false;
     }
 
-    if (!waveformPass_->initialize(context, currentWidth_, currentHeight_))
+    if (!waveformPass_->initialize(context))
     {
         RE_LOG("RenderEngine: Failed to initialize waveform pass");
         effectPipeline_->shutdown(context);
@@ -93,7 +94,7 @@ void RenderEngine::shutdown()
 
     // Release all waveform states
     {
-        juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+        juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
         for (auto& pair : waveformStates_)
         {
             pair.second.release(*context_);
@@ -125,13 +126,10 @@ void RenderEngine::resize(int width, int height)
 
     // Resize subsystems
     effectPipeline_->resize(*context_, width, height);
-    // WaveformPass doesn't have resize, but it might need it if it caches size
-    // Actually WaveformPass stores currentWidth_ in initialize, so we should add resize to it or just update it.
-    // For now, we'll assume it doesn't strictly need it unless it recreates resources.
 
     // Resize history FBOs for waveforms with trails
     {
-        juce::SpinLock::ScopedLockType lock(waveformStatesMutex_);
+        juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
         for (auto& [key, state] : waveformStates_)
         {
             if (state.trailsEnabled)
@@ -169,17 +167,14 @@ WaveformRenderState* RenderEngine::resolveWaveformState(int waveformId)
     // of waveformStates_ is possible, so the SpinLock is not needed here
     // and returning a raw pointer is safe for the duration of the render pass.
 
-    auto it = waveformStates_.find(waveformId);
-    if (it == waveformStates_.end())
+    auto [it, inserted] = waveformStates_.try_emplace(waveformId);
+    if (inserted)
     {
-        WaveformRenderState newState;
-        newState.waveformId = waveformId;
-        waveformStates_[waveformId] = std::move(newState);
+        it->second.waveformId = waveformId;
         RE_LOG("RenderEngine: Registered waveform " << waveformId);
-        it = waveformStates_.find(waveformId);
     }
 
-    return (it != waveformStates_.end()) ? &it->second : nullptr;
+    return &it->second;
 }
 
 void RenderEngine::renderWaveformLayer(const WaveformRenderData& data, WaveformRenderState& state)
@@ -218,11 +213,7 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
     if (!initialized_ || !data.visible || data.bounds.isEmpty())
         return;
 
-    auto* statePtr = resolveWaveformState(data.id);
-    if (statePtr == nullptr)
-        return;
-
-    WaveformRenderState& state = *statePtr;
+    WaveformRenderState& state = *resolveWaveformState(data.id);
 
     waveformPass_->prepareRender(data, state, stats_.getDeltaTime());
 
@@ -274,7 +265,7 @@ void RenderEngine::executeComposite(Framebuffer* source, const VisualConfigurati
     if (shader)
     {
         shader->use();
-        context_->extensions.glUniform1i(bootstrapper_->getCompositeTextureLoc(), 0);
+        juce::OpenGLExtensionFunctions::glUniform1i(bootstrapper_->getCompositeTextureLoc(), 0);
 
         // Set blend mode based on config
         switch (config.compositeBlendMode)
@@ -311,13 +302,13 @@ void RenderEngine::blitToScreen()
         return;
 
     // Bind default framebuffer
-    context_->extensions.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    juce::OpenGLExtensionFunctions::glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     auto* targetComponent = context_->getTargetComponent();
     if (!targetComponent)
         return;
 
-    float desktopScale = static_cast<float>(context_->getRenderingScale());
+    auto const desktopScale = static_cast<float>(context_->getRenderingScale());
     auto width = static_cast<GLsizei>(static_cast<float>(targetComponent->getWidth()) * desktopScale);
     auto height = static_cast<GLsizei>(static_cast<float>(targetComponent->getHeight()) * desktopScale);
     glViewport(0, 0, width, height);
@@ -333,7 +324,7 @@ void RenderEngine::blitToScreen()
     {
         shader->use();
         sceneFBO->bindTexture(0);
-        context_->extensions.glUniform1i(bootstrapper_->getBlitTextureLoc(), 0);
+        juce::OpenGLExtensionFunctions::glUniform1i(bootstrapper_->getBlitTextureLoc(), 0);
 
         effectPipeline_->getFramebufferPool()->renderFullscreenQuad();
     }

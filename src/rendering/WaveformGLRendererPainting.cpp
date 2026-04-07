@@ -83,7 +83,7 @@ void WaveformGLRenderer::renderOpenGL()
     juce::OpenGLHelpers::clear(juce::Colours::transparentBlack);
 
     auto now = std::chrono::steady_clock::now();
-    float deltaTime = std::min(std::chrono::duration<float>(now - lastFrameTime_).count(), 0.1f);
+    float const deltaTime = std::min(std::chrono::duration<float>(now - lastFrameTime_).count(), 0.1f);
     lastFrameTime_ = now;
 
     const auto desktopScale = static_cast<float>(context_->getRenderingScale());
@@ -124,6 +124,7 @@ void WaveformGLRenderer::renderOpenGL()
 void WaveformGLRenderer::setupDebugProjection(juce::OpenGLExtensionFunctions& ext, GLint projLoc, GLint colorLoc,
                                               float viewportWidth, float viewportHeight, juce::Colour colour)
 {
+    juce::ignoreUnused(ext);
     float projection[16] = {2.0f / viewportWidth,
                             0.0f,
                             0.0f,
@@ -141,8 +142,9 @@ void WaveformGLRenderer::setupDebugProjection(juce::OpenGLExtensionFunctions& ex
                             0.0f,
                             1.0f};
 
-    ext.glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
-    ext.glUniform4f(colorLoc, colour.getFloatRed(), colour.getFloatGreen(), colour.getFloatBlue(), 1.0f);
+    juce::OpenGLExtensionFunctions::glUniformMatrix4fv(projLoc, 1, GL_FALSE, projection);
+    juce::OpenGLExtensionFunctions::glUniform4f(colorLoc, colour.getFloatRed(), colour.getFloatGreen(),
+                                                colour.getFloatBlue(), 1.0f);
 }
 
 void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour)
@@ -156,11 +158,13 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
 
     auto& ext = context_->extensions;
 
-    float viewportWidth = std::max(1.0f, static_cast<float>(targetComponent->getWidth()));
-    float viewportHeight = std::max(1.0f, static_cast<float>(targetComponent->getHeight()));
+    float const viewportWidth = std::max(1.0f, static_cast<float>(targetComponent->getWidth()));
+    float const viewportHeight = std::max(1.0f, static_cast<float>(targetComponent->getHeight()));
 
-    float x1 = bounds.getX(), y1 = bounds.getY();
-    float x2 = bounds.getRight(), y2 = bounds.getBottom();
+    float const x1 = bounds.getX();
+    float const y1 = bounds.getY();
+    float const x2 = bounds.getRight();
+    float const y2 = bounds.getBottom();
     float vertices[] = {x1, y1, x2, y1, x1, y2, x2, y1, x2, y2, x1, y2};
 
     debugShader_->use();
@@ -168,8 +172,10 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     GLint programID = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &programID);
 
-    GLint projLoc = ext.glGetUniformLocation(static_cast<GLuint>(programID), "projection");
-    GLint colorLoc = ext.glGetUniformLocation(static_cast<GLuint>(programID), "color");
+    GLint const projLoc =
+        juce::OpenGLExtensionFunctions::glGetUniformLocation(static_cast<GLuint>(programID), "projection");
+    GLint const colorLoc =
+        juce::OpenGLExtensionFunctions::glGetUniformLocation(static_cast<GLuint>(programID), "color");
 
     setupDebugProjection(ext, projLoc, colorLoc, viewportWidth, viewportHeight, colour);
 
@@ -181,22 +187,22 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
             << juce::String::toHexString(static_cast<int>(err)));
     }
 
-    ext.glBindVertexArray(debugVAO_);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, debugVBO_);
-    ext.glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(debugVAO_);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, debugVBO_);
+    juce::OpenGLExtensionFunctions::glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
-    auto positionLoc = ext.glGetAttribLocation(static_cast<GLuint>(programID), "position");
+    auto positionLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(static_cast<GLuint>(programID), "position");
     auto posAttrib = static_cast<GLuint>(positionLoc >= 0 ? positionLoc : 0);
-    ext.glEnableVertexAttribArray(posAttrib);
-    ext.glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+    juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(posAttrib);
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    ext.glDisableVertexAttribArray(posAttrib);
-    ext.glBindBuffer(GL_ARRAY_BUFFER, 0);
-    ext.glBindVertexArray(0);
+    juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(posAttrib);
+    juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
+    juce::OpenGLExtensionFunctions::glBindVertexArray(0);
     glDisable(GL_BLEND);
 }
 

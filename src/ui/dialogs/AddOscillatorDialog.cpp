@@ -10,47 +10,47 @@
 namespace oscil
 {
 
-AddOscillatorDialog::AddOscillatorDialog(IThemeService& themeService) : themeService_(themeService)
+AddOscillatorDialog::AddOscillatorDialog(IThemeService& themeService) : ThemedComponent(themeService)
 {
     OSCIL_REGISTER_TEST_ID("addOscillatorDialog");
     setupComponents();
-    themeService_.addListener(this);
 }
 
-AddOscillatorDialog::~AddOscillatorDialog() { themeService_.removeListener(this); }
+AddOscillatorDialog::~AddOscillatorDialog() = default;
 
 void AddOscillatorDialog::createFormFields()
 {
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
     addAndMakeVisible(*sourceLabel_);
     sourceDropdown_ =
-        std::make_unique<OscilDropdown>(themeService_, "Select source...", "addOscillatorDialog_sourceDropdown");
+        std::make_unique<OscilDropdown>(getThemeService(), "Select source...", "addOscillatorDialog_sourceDropdown");
     sourceDropdown_->onSelectionChanged = [this](int) { handleSourceChange(); };
     addAndMakeVisible(*sourceDropdown_);
 
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
     addAndMakeVisible(*paneLabel_);
-    paneSelector_ = std::make_unique<PaneSelectorComponent>(themeService_, true, "addOscillatorDialog_paneSelector");
+    paneSelector_ =
+        std::make_unique<PaneSelectorComponent>(getThemeService(), true, "addOscillatorDialog_paneSelector");
     paneSelector_->onSelectionChanged = [this](const PaneId&, bool) { clearError(); };
     addAndMakeVisible(*paneSelector_);
 
     nameLabel_ = std::make_unique<juce::Label>("", "Name");
     addAndMakeVisible(*nameLabel_);
     nameField_ =
-        std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "addOscillatorDialog_nameField");
+        std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Text, "addOscillatorDialog_nameField");
     nameField_->setPlaceholder("Oscillator name");
     addAndMakeVisible(*nameField_);
 
     colorLabel_ = std::make_unique<juce::Label>("", "Color");
     addAndMakeVisible(*colorLabel_);
-    colorSwatches_ = std::make_unique<OscilColorSwatches>(themeService_, "addOscillatorDialog_colorPicker");
+    colorSwatches_ = std::make_unique<OscilColorSwatches>(getThemeService(), "addOscillatorDialog_colorPicker");
     colorSwatches_->setColors(getDefaultColors());
     addAndMakeVisible(*colorSwatches_);
 
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
     visualPresetDropdown_ =
-        std::make_unique<OscilDropdown>(themeService_, "", "addOscillatorDialog_visualPresetDropdown");
+        std::make_unique<OscilDropdown>(getThemeService(), "", "addOscillatorDialog_visualPresetDropdown");
     populateVisualPresetDropdown();
     addAndMakeVisible(*visualPresetDropdown_);
 
@@ -63,21 +63,21 @@ void AddOscillatorDialog::setupComponents()
 {
     createFormFields();
 
-    okButton_ = std::make_unique<OscilButton>(themeService_, "OK", "addOscillatorDialog_okBtn");
+    okButton_ = std::make_unique<OscilButton>(getThemeService(), "OK", "addOscillatorDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() { handleOkClick(); };
     addAndMakeVisible(*okButton_);
 
-    cancelButton_ = std::make_unique<OscilButton>(themeService_, "Cancel", "addOscillatorDialog_cancelBtn");
+    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "Cancel", "addOscillatorDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() { handleCancelClick(); };
     addAndMakeVisible(*cancelButton_);
 
-    themeChanged(themeService_.getCurrentTheme());
+    themeChanged(getThemeService().getCurrentTheme());
     setSize(getPreferredWidth(), getPreferredHeight());
 }
 
-void AddOscillatorDialog::paint(juce::Graphics&)
+void AddOscillatorDialog::paint(juce::Graphics& /*g*/)
 {
     // No custom painting - OscilModal handles backdrop/frame
     // Child components handle their own painting
@@ -123,19 +123,17 @@ void AddOscillatorDialog::resized()
 
     // Footer buttons at bottom
     auto footerRow = bounds.removeFromBottom(BUTTON_HEIGHT);
-    int buttonWidth = (footerRow.getWidth() - 8) / 2;
+    int const buttonWidth = (footerRow.getWidth() - 8) / 2;
     cancelButton_->setBounds(footerRow.removeFromLeft(buttonWidth));
     footerRow.removeFromLeft(8);
     okButton_->setBounds(footerRow);
 }
 
-void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
+void AddOscillatorDialog::onThemeChanged(const ColorTheme& newTheme)
 {
-    theme_ = newTheme;
-
     auto styleLabel = [&newTheme](juce::Label* label) {
         label->setColour(juce::Label::textColourId, newTheme.textSecondary);
-        label->setFont(juce::FontOptions(12.0f));
+        label->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
     };
 
     styleLabel(sourceLabel_.get());
@@ -146,9 +144,7 @@ void AddOscillatorDialog::themeChanged(const ColorTheme& newTheme)
 
     // Error label uses error color
     errorLabel_->setColour(juce::Label::textColourId, newTheme.statusError);
-    errorLabel_->setFont(juce::FontOptions(12.0f));
-
-    repaint();
+    errorLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
 }
 
 void AddOscillatorDialog::setData(const std::vector<SourceInfo>& sources, const std::vector<Pane>& panes)
@@ -180,7 +176,7 @@ void AddOscillatorDialog::populateSourceDropdown()
 
     for (const auto& source : sources_)
     {
-        juce::String label = source.name.isEmpty() ? source.sourceId.id : source.name;
+        juce::String const label = source.name.isEmpty() ? source.sourceId.id : source.name;
         sourceDropdown_->addItem(label, source.sourceId.id);
     }
 
@@ -206,13 +202,13 @@ void AddOscillatorDialog::populateVisualPresetDropdown()
 void AddOscillatorDialog::selectRandomColor()
 {
     auto& random = juce::Random::getSystemRandom();
-    int colorIndex = random.nextInt(NUM_COLOR_SWATCHES);
+    int const colorIndex = random.nextInt(NUM_COLOR_SWATCHES);
     colorSwatches_->setSelectedIndex(colorIndex, false);
 }
 
 void AddOscillatorDialog::updateNameFromSource()
 {
-    int selectedIndex = sourceDropdown_->getSelectedIndex();
+    int const selectedIndex = sourceDropdown_->getSelectedIndex();
     if (selectedIndex >= 0 && static_cast<size_t>(selectedIndex) < sources_.size())
     {
         const auto& source = sources_[static_cast<size_t>(selectedIndex)];
@@ -233,7 +229,7 @@ AddOscillatorDialog::Result AddOscillatorDialog::buildResult() const
 {
     Result result;
 
-    int sourceIndex = sourceDropdown_->getSelectedIndex();
+    int const sourceIndex = sourceDropdown_->getSelectedIndex();
     result.sourceId = sources_[static_cast<size_t>(sourceIndex)].sourceId;
 
     result.createNewPane = paneSelector_->isNewPaneSelected();
@@ -254,7 +250,7 @@ AddOscillatorDialog::Result AddOscillatorDialog::buildResult() const
     else
         result.color = WaveformColorPalette::getColor(0);
 
-    int presetIndex = visualPresetDropdown_->getSelectedIndex();
+    int const presetIndex = visualPresetDropdown_->getSelectedIndex();
     auto availablePresets = VisualConfiguration::getAvailablePresets();
     if (presetIndex >= 0 && static_cast<size_t>(presetIndex) < availablePresets.size())
         result.visualPresetId = availablePresets[static_cast<size_t>(presetIndex)].first;
@@ -302,7 +298,7 @@ void AddOscillatorDialog::clearError()
 bool AddOscillatorDialog::validateInput()
 {
     // Check source selection
-    int sourceIndex = sourceDropdown_->getSelectedIndex();
+    int const sourceIndex = sourceDropdown_->getSelectedIndex();
     if (sourceIndex < 0 || static_cast<size_t>(sourceIndex) >= sources_.size())
     {
         showError("Please select a source.");

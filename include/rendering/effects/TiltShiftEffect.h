@@ -5,10 +5,8 @@
 
 #pragma once
 
-#include "PostProcessEffect.h"
+#include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
-
-#include <memory>
 
 #if OSCIL_ENABLE_OPENGL
 
@@ -19,7 +17,7 @@ namespace oscil
  * Tilt Shift post-processing effect.
  * Applies a variable blur based on Y-position to simulate macro photography depth of field.
  */
-class TiltShiftEffect : public PostProcessEffect
+class TiltShiftEffect : public SingleShaderEffect
 {
 public:
     /// Create a tilt shift effect with default settings.
@@ -29,24 +27,17 @@ public:
     [[nodiscard]] juce::String getId() const override { return "tilt_shift"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Tilt Shift"; }
 
-    /// Compile the tilt shift shader program.
-    bool compile(juce::OpenGLContext& context) override;
-    /// Release the shader program.
-    void release(juce::OpenGLContext& context) override;
-    [[nodiscard]] bool isCompiled() const override;
-
-    void apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool,
-               float deltaTime) override;
-
     void configure(const VisualConfiguration& config) override { settings_ = config.tiltShift; }
     void setSettings(const TiltShiftSettings& settings) { settings_ = settings; }
     [[nodiscard]] const TiltShiftSettings& getSettings() const { return settings_; }
 
+protected:
+    [[nodiscard]] const char* getFragmentSource() const override;
+    bool resolveUniforms() override;
+    void setUniforms(const Framebuffer& source, float deltaTime) override;
+
 private:
     TiltShiftSettings settings_;
-    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
-    bool compiled_ = false;
-    GLint textureLoc_ = -1;
 
     GLint positionLoc_ = -1;
     GLint rangeLoc_ = -1;

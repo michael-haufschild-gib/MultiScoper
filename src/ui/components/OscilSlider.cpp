@@ -13,22 +13,19 @@ namespace oscil
 
 OscilSlider::OscilSlider(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , thumbScale_(SpringPresets::snappy())
-    , snapPulse_(SpringPresets::bouncy())
+    , thumbScale_(SpringPresets::medium())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 
     thumbScale_.position = 1.0f;
     thumbScale_.target = 1.0f;
-    snapPulse_.position = 1.0f;
-    snapPulse_.target = 1.0f;
 
     // Setup internal slider for APVTS
     internalSlider_.setRange(minValue_, maxValue_, step_);
     internalSlider_.setValue(value_);
     internalSlider_.onValueChange = [this] {
-        double newValue = internalSlider_.getValue();
+        double const newValue = internalSlider_.getValue();
         if (std::abs(newValue - value_) > 0.0001)
         {
             setValue(newValue, true);
@@ -171,6 +168,7 @@ void OscilSlider::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
@@ -196,8 +194,8 @@ double OscilSlider::constrainValue(double value) const
 
     if (step_ > 0)
     {
-        double steps = std::round((value - minValue_) / step_);
-        value = minValue_ + steps * step_;
+        double const steps = std::round((value - minValue_) / step_);
+        value = minValue_ + (steps * step_);
     }
 
     return value;
@@ -205,7 +203,7 @@ double OscilSlider::constrainValue(double value) const
 
 double OscilSlider::valueToProportionOfLength(double value) const
 {
-    double range = maxValue_ - minValue_;
+    double const range = maxValue_ - minValue_;
     if (std::abs(range) < 1e-10)
         return 0.0;
 
@@ -222,7 +220,7 @@ double OscilSlider::proportionOfLengthToValue(double proportion) const
     if (std::abs(skewFactor_ - 1.0) > 1e-9)
         proportion = std::pow(proportion, skewFactor_);
 
-    return minValue_ + proportion * (maxValue_ - minValue_);
+    return minValue_ + (proportion * (maxValue_ - minValue_));
 }
 
 } // namespace oscil

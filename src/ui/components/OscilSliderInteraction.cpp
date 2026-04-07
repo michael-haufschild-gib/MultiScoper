@@ -11,7 +11,7 @@
 namespace oscil
 {
 
-void OscilSlider::mouseEnter(const juce::MouseEvent&)
+void OscilSlider::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -31,7 +31,7 @@ void OscilSlider::mouseEnter(const juce::MouseEvent&)
     repaint();
 }
 
-void OscilSlider::mouseExit(const juce::MouseEvent&)
+void OscilSlider::mouseExit(const juce::MouseEvent& /*event*/)
 {
     isHovered_ = false;
 
@@ -63,19 +63,24 @@ void OscilSlider::mouseDown(const juce::MouseEvent& e)
     {
         // Range sliders are always horizontal — SliderVariant::Range and ::Vertical are mutually exclusive.
         constexpr bool isVertical = false;
-        float startThumbPos = getThumbPosition(false);
-        float endThumbPos = getThumbPosition(true);
+        float const startThumbPos = getThumbPosition(false);
+        float const endThumbPos = getThumbPosition(true);
 
-        bool hitStart = hitTestThumb(e.getPosition(), startThumbPos, isVertical);
-        bool hitEnd = hitTestThumb(e.getPosition(), endThumbPos, isVertical);
+        bool const hitStart = hitTestThumb(e.getPosition(), startThumbPos, isVertical);
+        bool const hitEnd = hitTestThumb(e.getPosition(), endThumbPos, isVertical);
 
         if (hitEnd && !hitStart)
+        {
             draggingRangeEnd_ = true;
+        }
         else if (hitStart && !hitEnd)
+        {
             draggingRangeEnd_ = false;
+        }
         else
         {
-            float mousePos = isVertical ? static_cast<float>(e.getPosition().y) : static_cast<float>(e.getPosition().x);
+            float const mousePos =
+                isVertical ? static_cast<float>(e.getPosition().y) : static_cast<float>(e.getPosition().x);
             draggingRangeEnd_ = std::abs(mousePos - endThumbPos) < std::abs(mousePos - startThumbPos);
         }
 
@@ -98,19 +103,20 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
         return;
 
     auto bounds = getLocalBounds();
-    bool isVertical = variant_ == SliderVariant::Vertical;
+    bool const isVertical = variant_ == SliderVariant::Vertical;
 
-    float proportion;
+    float proportion = 0.0f;
     if (isVertical)
     {
-        float trackHeight = std::max(1.0f, static_cast<float>(bounds.getHeight()) - THUMB_SIZE);
-        float relY = static_cast<float>(bounds.getBottom()) - THUMB_SIZE / 2.0f - static_cast<float>(e.getPosition().y);
+        float const trackHeight = std::max(1.0f, static_cast<float>(bounds.getHeight()) - THUMB_SIZE);
+        float const relY =
+            static_cast<float>(bounds.getBottom()) - (THUMB_SIZE / 2.0f) - static_cast<float>(e.getPosition().y);
         proportion = relY / trackHeight;
     }
     else
     {
-        float trackWidth = std::max(1.0f, static_cast<float>(bounds.getWidth()) - THUMB_SIZE);
-        float relX = static_cast<float>(e.getPosition().x) - THUMB_SIZE / 2.0f;
+        float const trackWidth = std::max(1.0f, static_cast<float>(bounds.getWidth()) - THUMB_SIZE);
+        float const relX = static_cast<float>(e.getPosition().x) - (THUMB_SIZE / 2.0f);
         proportion = relX / trackWidth;
     }
 
@@ -145,7 +151,7 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     }
 }
 
-void OscilSlider::mouseUp(const juce::MouseEvent&)
+void OscilSlider::mouseUp(const juce::MouseEvent& /*event*/)
 {
     if (!isDragging_)
         return;
@@ -171,7 +177,7 @@ void OscilSlider::mouseUp(const juce::MouseEvent&)
     repaint();
 }
 
-void OscilSlider::mouseDoubleClick(const juce::MouseEvent&)
+void OscilSlider::mouseDoubleClick(const juce::MouseEvent& /*event*/)
 {
     if (!enabled_)
         return;
@@ -202,9 +208,13 @@ bool OscilSlider::keyPressed(const juce::KeyPress& key)
     double delta = 0.0;
 
     if (key == juce::KeyPress::leftKey || key == juce::KeyPress::downKey)
+    {
         delta = -step_;
+    }
     else if (key == juce::KeyPress::rightKey || key == juce::KeyPress::upKey)
+    {
         delta = step_;
+    }
     else if (key == juce::KeyPress::homeKey)
     {
         setValue(minValue_, true);
@@ -228,13 +238,13 @@ bool OscilSlider::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void OscilSlider::focusGained(FocusChangeType)
+void OscilSlider::focusGained(FocusChangeType /*cause*/)
 {
     hasFocus_ = true;
     repaint();
 }
 
-void OscilSlider::focusLost(FocusChangeType)
+void OscilSlider::focusLost(FocusChangeType /*cause*/)
 {
     hasFocus_ = false;
     repaint();
@@ -243,9 +253,9 @@ void OscilSlider::focusLost(FocusChangeType)
 bool OscilSlider::hitTest(int x, int y)
 {
     auto bounds = getLocalBounds().toFloat();
-    bool isVertical = variant_ == SliderVariant::Vertical;
+    bool const isVertical = variant_ == SliderVariant::Vertical;
 
-    float expansion = THUMB_HIT_EXTRA;
+    float const expansion = THUMB_HIT_EXTRA;
     juce::Rectangle<float> hitArea;
 
     if (isVertical)
@@ -260,7 +270,7 @@ void OscilSlider::timerCallback()
 {
     updateAnimations();
 
-    if (thumbScale_.isSettled() && (!justSnapped_ || snapPulse_.isSettled()))
+    if (thumbScale_.isSettled())
     {
         stopTimer();
         justSnapped_ = false;
@@ -271,51 +281,30 @@ void OscilSlider::timerCallback()
 
 void OscilSlider::updateAnimations()
 {
-    float dt = AnimationTiming::FRAME_DURATION_60FPS;
-
+    float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     thumbScale_.update(dt);
     currentThumbScale_ = thumbScale_.position;
-
-    if (justSnapped_)
-        snapPulse_.update(dt);
 }
 
 void OscilSlider::triggerSnapFeedback()
 {
     justSnapped_ = true;
-
-    if (AnimationSettings::shouldUseSpringAnimations())
-    {
-        snapPulse_.setTarget(1.15f, 1.0f);
-
-        juce::Component::SafePointer<OscilSlider> safeThis(this);
-        juce::Timer::callAfterDelay(100, [safeThis] {
-            if (auto* slider = safeThis.getComponent())
-            {
-                slider->snapPulse_.setTarget(1.0f);
-                if (!slider->isTimerRunning())
-                    slider->startTimerHz(ComponentLayout::ANIMATION_FPS);
-            }
-        });
-
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
-    }
+    repaint();
 }
 
 bool OscilSlider::hitTestThumb(const juce::Point<int>& point, float thumbPosition, bool isVertical) const
 {
-    float size = THUMB_SIZE + THUMB_HIT_EXTRA * 2;
+    float const size = THUMB_SIZE + (THUMB_HIT_EXTRA * 2);
 
     if (isVertical)
     {
-        float cx = static_cast<float>(getWidth()) / 2.0f;
-        return juce::Rectangle<float>(cx - size / 2, thumbPosition - size / 2, size, size).contains(point.toFloat());
+        float const cx = static_cast<float>(getWidth()) / 2.0f;
+        return juce::Rectangle<float>(cx - (size / 2), thumbPosition - (size / 2), size, size)
+            .contains(point.toFloat());
     }
-    else
-    {
-        float cy = static_cast<float>(getHeight()) / 2.0f;
-        return juce::Rectangle<float>(thumbPosition - size / 2, cy - size / 2, size, size).contains(point.toFloat());
-    }
+
+    float const cy = static_cast<float>(getHeight()) / 2.0f;
+    return juce::Rectangle<float>(thumbPosition - size / 2, cy - size / 2, size, size).contains(point.toFloat());
 }
 
 // Accessibility handler
@@ -344,8 +333,8 @@ public:
         if (slider_.getSuffix().isNotEmpty())
             text += " " + slider_.getSuffix();
 
-        juce::String range = " (Range: " + juce::String(slider_.getMinimum(), slider_.getDecimalPlaces()) + " to " +
-                             juce::String(slider_.getMaximum(), slider_.getDecimalPlaces()) + ")";
+        juce::String const range = " (Range: " + juce::String(slider_.getMinimum(), slider_.getDecimalPlaces()) +
+                                   " to " + juce::String(slider_.getMaximum(), slider_.getDecimalPlaces()) + ")";
 
         return "Value: " + text + range;
     }

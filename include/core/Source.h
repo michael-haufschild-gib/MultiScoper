@@ -118,7 +118,10 @@ struct SourceId
  */
 struct SourceIdHash
 {
-    std::size_t operator()(const SourceId& sid) const { return static_cast<std::size_t>(sid.id.hashCode()); }
+    std::size_t operator()(const SourceId& sid) const
+    {
+        return static_cast<std::size_t>(static_cast<uint32_t>(sid.id.hashCode()));
+    }
 };
 
 /**
@@ -142,7 +145,10 @@ struct InstanceId
  */
 struct InstanceIdHash
 {
-    std::size_t operator()(const InstanceId& iid) const { return static_cast<std::size_t>(iid.id.hashCode()); }
+    std::size_t operator()(const InstanceId& iid) const
+    {
+        return static_cast<std::size_t>(static_cast<uint32_t>(iid.id.hashCode()));
+    }
 };
 
 /**
@@ -195,7 +201,7 @@ public:
     /**
      * Create a source with specified ID
      */
-    explicit Source(const SourceId& sourceId);
+    explicit Source(SourceId sourceId);
 
     /**
      * Create a source from serialized ValueTree

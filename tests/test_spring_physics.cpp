@@ -1,6 +1,6 @@
 /*
-    Oscil - Spring Animation Tests: Physics
-    Tests for spring calculations, damping, stiffness, and settling behavior
+    Oscil - Ease Animation Tests: Core Behavior
+    Tests for exponential decay, settling, and preset configurations
 */
 
 #include "ui/components/SpringAnimation.h"
@@ -9,269 +9,274 @@
 
 using namespace oscil;
 
-class SpringPhysicsTest : public ::testing::Test
+class EaseAnimationTest : public ::testing::Test
 {
 protected:
     void SetUp() override {}
 };
 
-// Test: Default construction
-TEST_F(SpringPhysicsTest, DefaultConstruction)
+TEST_F(EaseAnimationTest, DefaultConstruction)
 {
-    SpringAnimation spring;
+    SpringAnimation anim;
 
-    EXPECT_FLOAT_EQ(spring.position, 0.0f);
-    EXPECT_FLOAT_EQ(spring.velocity, 0.0f);
-    EXPECT_FLOAT_EQ(spring.target, 0.0f);
+    EXPECT_FLOAT_EQ(anim.position, 0.0f);
+    EXPECT_FLOAT_EQ(anim.velocity, 0.0f);
+    EXPECT_FLOAT_EQ(anim.target, 0.0f);
 }
 
-// Test: Parameterized construction
-TEST_F(SpringPhysicsTest, ParameterizedConstruction)
+TEST_F(EaseAnimationTest, ParameterizedConstruction)
 {
-    SpringAnimation spring(100.0f, 10.0f, 1.0f);
+    SpringAnimation anim(100.0f, 10.0f, 1.0f);
 
-    EXPECT_FLOAT_EQ(spring.stiffness, 100.0f);
-    EXPECT_FLOAT_EQ(spring.damping, 10.0f);
-    EXPECT_FLOAT_EQ(spring.mass, 1.0f);
+    EXPECT_FLOAT_EQ(anim.stiffness, 100.0f);
+    EXPECT_FLOAT_EQ(anim.damping, 10.0f);
+    EXPECT_FLOAT_EQ(anim.mass, 1.0f);
 }
 
-// Test: Preset configurations
-TEST_F(SpringPhysicsTest, SpringPresets)
+TEST_F(EaseAnimationTest, Presets)
 {
-    auto snappy = SpringPresets::snappy();
-    EXPECT_GT(snappy.stiffness, 0.0f);
-    EXPECT_GT(snappy.damping, 0.0f);
+    auto fast = SpringPresets::fast();
+    EXPECT_GT(fast.stiffness, 0.0f);
 
-    auto bouncy = SpringPresets::bouncy();
-    EXPECT_GT(bouncy.stiffness, 0.0f);
+    auto medium = SpringPresets::medium();
+    EXPECT_GT(medium.stiffness, 0.0f);
+    EXPECT_LT(medium.stiffness, fast.stiffness);
 
-    auto smooth = SpringPresets::smooth();
-    EXPECT_GT(smooth.stiffness, 0.0f);
-
-    auto gentle = SpringPresets::gentle();
-    EXPECT_LT(gentle.stiffness, snappy.stiffness);
-
-    auto stiff = SpringPresets::stiff();
-    EXPECT_GT(stiff.stiffness, 0.0f);
-
-    auto wobbly = SpringPresets::wobbly();
-    EXPECT_GT(wobbly.stiffness, 0.0f);
-    EXPECT_GT(wobbly.damping, 0.0f);
-    // Wobbly should have low damping for more oscillation
-    EXPECT_LT(wobbly.damping, snappy.damping);
+    auto slow = SpringPresets::slow();
+    EXPECT_GT(slow.stiffness, 0.0f);
+    EXPECT_LT(slow.stiffness, medium.stiffness);
 }
 
-// Test: Setting target
-TEST_F(SpringPhysicsTest, SetTarget)
+// Test: Fast preset settles quicker than slow
+TEST_F(EaseAnimationTest, FastSettlesBeforeSlow)
 {
-    SpringAnimation spring;
-    spring.setTarget(100.0f);
+    SpringAnimation fast = SpringPresets::fast();
+    SpringAnimation slow = SpringPresets::slow();
 
-    EXPECT_FLOAT_EQ(spring.target, 100.0f);
+    fast.setTarget(1.0f);
+    slow.setTarget(1.0f);
+
+    for (int i = 0; i < 5; ++i)
+    {
+        fast.update(1.0f / 60.0f);
+        slow.update(1.0f / 60.0f);
+    }
+
+    EXPECT_GT(fast.position, slow.position);
 }
 
-// Test: Snap to target
-TEST_F(SpringPhysicsTest, SnapToTarget)
+TEST_F(EaseAnimationTest, SetTarget)
 {
-    SpringAnimation spring;
-    spring.setTarget(50.0f);
-    spring.snapToTarget();
+    SpringAnimation anim;
+    anim.setTarget(100.0f);
 
-    EXPECT_FLOAT_EQ(spring.position, 50.0f);
-    EXPECT_FLOAT_EQ(spring.target, 50.0f);
-    EXPECT_FLOAT_EQ(spring.velocity, 0.0f);
+    EXPECT_FLOAT_EQ(anim.target, 100.0f);
 }
 
-// Test: Update moves toward target
-TEST_F(SpringPhysicsTest, UpdateMovesTowardTarget)
+TEST_F(EaseAnimationTest, SnapToTarget)
 {
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(100.0f);
+    SpringAnimation anim;
+    anim.setTarget(50.0f);
+    anim.snapToTarget();
 
-    float initialPosition = spring.position;
-    spring.update(1.0f / 60.0f);
-
-    EXPECT_GT(spring.position, initialPosition);
-    EXPECT_LT(spring.position, 100.0f);
+    EXPECT_FLOAT_EQ(anim.position, 50.0f);
+    EXPECT_FLOAT_EQ(anim.target, 50.0f);
+    EXPECT_FLOAT_EQ(anim.velocity, 0.0f);
 }
 
-// Test: Spring eventually settles at target
-TEST_F(SpringPhysicsTest, SettlesAtTarget)
+TEST_F(EaseAnimationTest, UpdateMovesTowardTarget)
 {
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(100.0f);
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(100.0f);
 
-    // Simulate many updates
+    float initialPosition = anim.position;
+    anim.update(1.0f / 60.0f);
+
+    EXPECT_GT(anim.position, initialPosition);
+    EXPECT_LT(anim.position, 100.0f);
+}
+
+// Test: Animation approaches target monotonically (no overshoot)
+TEST_F(EaseAnimationTest, NoOvershoot)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(1.0f);
+
+    float prevPosition = 0.0f;
+    for (int i = 0; i < 120; ++i)
+    {
+        anim.update(1.0f / 60.0f);
+        EXPECT_GE(anim.position, prevPosition) << "Overshoot at frame " << i;
+        EXPECT_LE(anim.position, 1.0f) << "Exceeded target at frame " << i;
+        prevPosition = anim.position;
+    }
+}
+
+// Test: No overshoot when approaching from above
+TEST_F(EaseAnimationTest, NoOvershootFromAbove)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 1.0f;
+    anim.setTarget(0.0f);
+
+    float prevPosition = 1.0f;
+    for (int i = 0; i < 120; ++i)
+    {
+        anim.update(1.0f / 60.0f);
+        EXPECT_LE(anim.position, prevPosition) << "Overshoot at frame " << i;
+        EXPECT_GE(anim.position, 0.0f) << "Below target at frame " << i;
+        prevPosition = anim.position;
+    }
+}
+
+// Test: Animation eventually settles at target
+TEST_F(EaseAnimationTest, SettlesAtTarget)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(100.0f);
+
+    for (int i = 0; i < 120; ++i)
+        anim.update(1.0f / 60.0f);
+
+    EXPECT_NEAR(anim.position, 100.0f, 0.01f);
+    EXPECT_TRUE(anim.isSettled());
+}
+
+TEST_F(EaseAnimationTest, IsSettled)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.setTarget(50.0f);
+    anim.snapToTarget();
+
+    EXPECT_TRUE(anim.isSettled());
+
+    anim.setTarget(100.0f);
+    anim.update(1.0f / 60.0f);
+
+    EXPECT_FALSE(anim.isSettled());
+}
+
+TEST_F(EaseAnimationTest, ZeroDeltaTime)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(100.0f);
+
+    float initialPosition = anim.position;
+    anim.update(0.0f);
+
+    EXPECT_FLOAT_EQ(anim.position, initialPosition);
+}
+
+TEST_F(EaseAnimationTest, NegativeDeltaTime)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(100.0f);
+
+    float initialPosition = anim.position;
+    anim.update(-1.0f);
+
+    EXPECT_FLOAT_EQ(anim.position, initialPosition);
+}
+
+TEST_F(EaseAnimationTest, Reset)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 50.0f;
+    anim.velocity = 100.0f;
+    anim.target = 100.0f;
+
+    anim.reset();
+
+    EXPECT_FLOAT_EQ(anim.position, 0.0f);
+    EXPECT_FLOAT_EQ(anim.velocity, 0.0f);
+    EXPECT_FLOAT_EQ(anim.target, 0.0f);
+}
+
+TEST_F(EaseAnimationTest, NeedsUpdateConsistency)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.setTarget(1.0f);
+    anim.snapToTarget();
+
+    EXPECT_TRUE(anim.isSettled());
+    EXPECT_FALSE(anim.needsUpdate());
+
+    anim.setTarget(2.0f);
+    anim.update(1.0f / 60.0f);
+
+    EXPECT_FALSE(anim.isSettled());
+    EXPECT_TRUE(anim.needsUpdate());
+}
+
+TEST_F(EaseAnimationTest, IsSettledCustomThreshold)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.9f;
+    anim.target = 1.0f;
+
+    EXPECT_FALSE(anim.isSettled(0.001f));
+    EXPECT_TRUE(anim.isSettled(0.2f));
+}
+
+TEST_F(EaseAnimationTest, VeryLargeDeltaTimeIsClamped)
+{
+    SpringAnimation animHuge = SpringPresets::medium();
+    animHuge.position = 0.0f;
+    animHuge.setTarget(1.0f);
+    animHuge.update(10.0f);
+
+    SpringAnimation animClamped = SpringPresets::medium();
+    animClamped.position = 0.0f;
+    animClamped.setTarget(1.0f);
+    animClamped.update(SpringAnimation::MAX_DELTA_TIME);
+
+    EXPECT_TRUE(std::isfinite(animHuge.position));
+    EXPECT_FLOAT_EQ(animHuge.position, animClamped.position);
+}
+
+TEST_F(EaseAnimationTest, NegativeTarget)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(-100.0f);
+
+    for (int i = 0; i < 120; ++i)
+    {
+        anim.update(1.0f / 60.0f);
+        EXPECT_TRUE(std::isfinite(anim.position));
+    }
+
+    EXPECT_LT(anim.position, 0.0f);
+}
+
+TEST_F(EaseAnimationTest, VeryLargeTarget)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(1e6f);
+
+    for (int i = 0; i < 30; ++i)
+    {
+        anim.update(1.0f / 60.0f);
+        EXPECT_TRUE(std::isfinite(anim.position));
+    }
+
+    EXPECT_GT(anim.position, 0.0f);
+}
+
+TEST_F(EaseAnimationTest, RapidUpdates)
+{
+    SpringAnimation anim = SpringPresets::medium();
+    anim.position = 0.0f;
+    anim.setTarget(1.0f);
+
     for (int i = 0; i < 1000; ++i)
-    {
-        spring.update(1.0f / 60.0f);
-    }
+        anim.update(0.0001f);
 
-    EXPECT_NEAR(spring.position, 100.0f, 0.01f);
-    EXPECT_TRUE(spring.isSettled());
-}
-
-// Test: isSettled returns correct value
-TEST_F(SpringPhysicsTest, IsSettled)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.setTarget(50.0f);
-    spring.snapToTarget();
-
-    EXPECT_TRUE(spring.isSettled());
-
-    spring.setTarget(100.0f);
-    spring.update(1.0f / 60.0f);
-
-    EXPECT_FALSE(spring.isSettled());
-}
-
-// Test: Zero delta time doesn't change position
-TEST_F(SpringPhysicsTest, ZeroDeltaTime)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(100.0f);
-
-    float initialPosition = spring.position;
-    spring.update(0.0f);
-
-    EXPECT_FLOAT_EQ(spring.position, initialPosition);
-}
-
-// Test: Negative delta time is handled
-TEST_F(SpringPhysicsTest, NegativeDeltaTime)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(100.0f);
-
-    float initialPosition = spring.position;
-    spring.update(-1.0f);
-
-    EXPECT_FLOAT_EQ(spring.position, initialPosition);
-}
-
-// Test: Bouncy preset has overshoot
-TEST_F(SpringPhysicsTest, BouncyHasOvershoot)
-{
-    SpringAnimation spring = SpringPresets::bouncy();
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
-
-    float maxPosition = 0.0f;
-    for (int i = 0; i < 200; ++i)
-    {
-        spring.update(1.0f / 60.0f);
-        maxPosition = std::max(maxPosition, spring.position);
-    }
-
-    // Bouncy should overshoot the target
-    EXPECT_GT(maxPosition, 1.0f);
-}
-
-// Test: Reset clears state
-TEST_F(SpringPhysicsTest, Reset)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 50.0f;
-    spring.velocity = 100.0f;
-    spring.target = 100.0f;
-
-    spring.reset();
-
-    EXPECT_FLOAT_EQ(spring.position, 0.0f);
-    EXPECT_FLOAT_EQ(spring.velocity, 0.0f);
-    EXPECT_FLOAT_EQ(spring.target, 0.0f);
-}
-
-// Test: High damping (overdamped spring)
-TEST_F(SpringPhysicsTest, ExtremeHighDamping)
-{
-    // Use high but stable damping (similar to stiff preset)
-    SpringAnimation spring(300.0f, 50.0f, 1.0f);
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
-
-    // High damping should prevent oscillation and produce finite values
-    for (int i = 0; i < 100; ++i)
-    {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
-    }
-
-    // With high damping, motion should be overdamped (smooth approach, minimal oscillation)
-    // Position should have moved toward target
-    EXPECT_GT(spring.position, 0.0f);
-}
-
-// Test: Zero damping (undamped oscillation)
-TEST_F(SpringPhysicsTest, ZeroDamping)
-{
-    SpringAnimation spring(300.0f, 0.0f, 1.0f);
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
-
-    // With zero damping, should oscillate forever (theoretically)
-    for (int i = 0; i < 100; ++i)
-    {
-        spring.update(1.0f / 60.0f);
-        EXPECT_TRUE(std::isfinite(spring.position));
-        EXPECT_TRUE(std::isfinite(spring.velocity));
-    }
-
-    // With zero damping, isSettled should still be false
-    // (unless very close to target with zero velocity by chance)
-}
-
-// Test: needsUpdate is inverse of isSettled
-TEST_F(SpringPhysicsTest, NeedsUpdateConsistency)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.setTarget(1.0f);
-    spring.snapToTarget();
-
-    EXPECT_TRUE(spring.isSettled());
-    EXPECT_FALSE(spring.needsUpdate());
-
-    spring.setTarget(2.0f);
-    spring.update(1.0f / 60.0f);
-
-    EXPECT_FALSE(spring.isSettled());
-    EXPECT_TRUE(spring.needsUpdate());
-}
-
-// Test: isSettled with custom threshold
-TEST_F(SpringPhysicsTest, IsSettledCustomThreshold)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.9f;
-    spring.velocity = 0.05f;
-    spring.target = 1.0f;
-
-    // Default threshold (0.001) - not settled
-    EXPECT_FALSE(spring.isSettled(0.001f));
-
-    // Large threshold (0.2) - settled
-    EXPECT_TRUE(spring.isSettled(0.2f));
-}
-
-// Test: Multiple rapid updates
-TEST_F(SpringPhysicsTest, RapidUpdates)
-{
-    SpringAnimation spring = SpringPresets::snappy();
-    spring.position = 0.0f;
-    spring.setTarget(1.0f);
-
-    // Many very small updates
-    for (int i = 0; i < 10000; ++i)
-    {
-        spring.update(0.0001f);
-    }
-
-    EXPECT_TRUE(std::isfinite(spring.position));
-    EXPECT_TRUE(std::isfinite(spring.velocity));
+    EXPECT_TRUE(std::isfinite(anim.position));
 }

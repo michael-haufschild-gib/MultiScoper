@@ -1,13 +1,115 @@
 /*
     Oscil - Theme Editor Actions
     Dialog-based action handlers for ThemeEditorComponent
+    Also contains AccentPresetRow implementation (split from ThemeEditorComponent.cpp)
 */
 
 #include "ui/theme/ThemeEditorComponent.h"
 #include "ui/theme/ThemeManager.h"
 
+#include <cmath>
+
 namespace oscil
 {
+
+//==============================================================================
+// AccentPresetRow
+//==============================================================================
+
+AccentPresetRow::AccentPresetRow(IThemeService& themeService) : themeService_(themeService)
+{
+    presets_ = {
+        {.hue = 190.0f, .saturation = 0.7f, .lightness = 0.65f, .name = "Cyan"},
+        {.hue = 145.0f, .saturation = 0.8f, .lightness = 0.65f, .name = "Green"},
+        {.hue = 330.0f, .saturation = 0.8f, .lightness = 0.60f, .name = "Magenta"},
+        {.hue = 35.0f, .saturation = 0.8f, .lightness = 0.65f, .name = "Orange"},
+        {.hue = 220.0f, .saturation = 0.7f, .lightness = 0.60f, .name = "Blue"},
+        {.hue = 270.0f, .saturation = 0.8f, .lightness = 0.60f, .name = "Violet"},
+        {.hue = 5.0f, .saturation = 0.8f, .lightness = 0.55f, .name = "Red"},
+    };
+
+    setInterceptsMouseClicks(true, false);
+}
+
+void AccentPresetRow::paint(juce::Graphics& g)
+{
+    const auto& theme = themeService_.getCurrentTheme();
+    g.setColour(theme.textPrimary);
+    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
+    g.drawText("Accent Color", getLocalBounds().removeFromTop(20), juce::Justification::centredLeft);
+
+    // Draw colour circles
+    auto bounds = getLocalBounds();
+    bounds.removeFromTop(22);
+
+    int const numButtons = static_cast<int>(presets_.size());
+    int const spacing = 6;
+    int const btnSize = juce::jmin(28, (bounds.getWidth() - (spacing * (numButtons - 1))) / numButtons);
+    int x = bounds.getX();
+    int const y = bounds.getY() + (bounds.getHeight() - btnSize) / 2;
+
+    for (const auto& preset : presets_)
+    {
+        auto colour = juce::Colour::fromHSL(preset.hue / 360.0f, preset.saturation, preset.lightness, 1.0f);
+        auto btnBounds = juce::Rectangle<float>(static_cast<float>(x), static_cast<float>(y),
+                                                static_cast<float>(btnSize), static_cast<float>(btnSize))
+                             .reduced(2.0f);
+        g.setColour(colour);
+        g.fillEllipse(btnBounds);
+
+        g.setColour(theme.textPrimary.withAlpha(0.12f));
+        g.drawEllipse(btnBounds, 1.0f);
+
+        // Highlight ring if this is the current accent hue
+        if (std::abs(theme.accentHue - preset.hue) < 5.0f)
+        {
+            g.setColour(theme.textPrimary.withAlpha(0.5f));
+            g.drawEllipse(btnBounds.expanded(2.0f), 1.5f);
+        }
+
+        x += btnSize + spacing;
+    }
+}
+
+void AccentPresetRow::resized() {}
+
+void AccentPresetRow::setRowEnabled(bool enabled)
+{
+    setEnabled(enabled);
+    setAlpha(enabled ? 1.0f : 0.5f);
+}
+
+void AccentPresetRow::mouseUp(const juce::MouseEvent& e)
+{
+    if (!isEnabled())
+        return;
+
+    auto pos = e.getPosition();
+    auto bounds = getLocalBounds();
+    bounds.removeFromTop(22);
+
+    int const numButtons = static_cast<int>(presets_.size());
+    int const spacing = 6;
+    int const btnSize = juce::jmin(28, (bounds.getWidth() - (spacing * (numButtons - 1))) / numButtons);
+    int x = bounds.getX();
+    int const y = bounds.getY() + (bounds.getHeight() - btnSize) / 2;
+
+    for (const auto& preset : presets_)
+    {
+        auto btnBounds = juce::Rectangle<int>(x, y, btnSize, btnSize);
+        if (btnBounds.contains(pos))
+        {
+            if (onAccentSelected)
+                onAccentSelected(preset.hue, preset.saturation, preset.lightness);
+            return;
+        }
+        x += btnSize + spacing;
+    }
+}
+
+//==============================================================================
+// ThemeEditorComponent action handlers
+//==============================================================================
 
 // NOLINTNEXTLINE(readability-function-size)
 void ThemeEditorComponent::handleCreateTheme()
@@ -30,7 +132,7 @@ void ThemeEditorComponent::handleCreateTheme()
                                            auto name = aw->getTextEditorContents("name").trim();
                                            if (name.isNotEmpty())
                                            {
-                                               if (themeService_.createTheme(name))
+                                               if (getThemeService().createTheme(name))
                                                {
                                                    refreshThemeList();
                                                    selectTheme(name);
@@ -74,7 +176,7 @@ void ThemeEditorComponent::handleCloneTheme()
                                            auto name = aw->getTextEditorContents("name").trim();
                                            if (name.isNotEmpty())
                                            {
-                                               if (themeService_.cloneTheme(sourceTheme, name))
+                                               if (getThemeService().cloneTheme(sourceTheme, name))
                                                {
                                                    refreshThemeList();
                                                    selectTheme(name);
@@ -98,7 +200,7 @@ void ThemeEditorComponent::handleDeleteTheme()
     if (selectedThemeName_.isEmpty())
         return;
 
-    if (themeService_.isSystemTheme(selectedThemeName_))
+    if (getThemeService().isSystemTheme(selectedThemeName_))
     {
         juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Cannot Delete",
                                                "System themes cannot be deleted.");
@@ -111,7 +213,7 @@ void ThemeEditorComponent::handleDeleteTheme()
                                        nullptr, juce::ModalCallbackFunction::create([this, themeName](int result) {
                                            if (result == 1)
                                            {
-                                               themeService_.deleteTheme(themeName);
+                                               getThemeService().deleteTheme(themeName);
                                                refreshThemeList();
                                                if (!themeNames_.empty())
                                                {
@@ -132,7 +234,7 @@ void ThemeEditorComponent::handleImportTheme()
                              if (file.existsAsFile())
                              {
                                  auto xmlContent = file.loadFileAsString();
-                                 if (themeService_.importTheme(xmlContent))
+                                 if (getThemeService().importTheme(xmlContent))
                                  {
                                      refreshThemeList();
                                      juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
@@ -154,7 +256,7 @@ void ThemeEditorComponent::handleExportTheme()
     if (selectedThemeName_.isEmpty())
         return;
 
-    auto json = themeService_.exportTheme(selectedThemeName_);
+    auto json = getThemeService().exportTheme(selectedThemeName_);
     if (json.isEmpty())
         return;
 
@@ -188,14 +290,14 @@ void ThemeEditorComponent::handleApplyTheme()
     if (selectedThemeName_.isEmpty())
         return;
 
-    bool isSystem = themeService_.isSystemTheme(selectedThemeName_);
+    bool const isSystem = getThemeService().isSystemTheme(selectedThemeName_);
 
     if (!isSystem)
     {
         auto newName = nameEditor_->getText().trim();
         if (newName.isNotEmpty() && newName != selectedThemeName_)
         {
-            if (!themeService_.renameTheme(selectedThemeName_, newName))
+            if (!getThemeService().renameTheme(selectedThemeName_, newName))
             {
                 juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Rename Failed",
                                                        "Could not rename theme. The name may already be in use or "
@@ -207,10 +309,10 @@ void ThemeEditorComponent::handleApplyTheme()
         }
 
         editingTheme_.name = selectedThemeName_;
-        themeService_.updateTheme(selectedThemeName_, editingTheme_);
+        getThemeService().updateTheme(selectedThemeName_, editingTheme_);
     }
 
-    themeService_.setCurrentTheme(selectedThemeName_);
+    getThemeService().setCurrentTheme(selectedThemeName_);
 }
 
 void ThemeEditorComponent::handleColorChanged() { repaint(); }

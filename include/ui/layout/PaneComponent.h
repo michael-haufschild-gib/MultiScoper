@@ -39,7 +39,7 @@ class PaneComponent
 {
 public:
     /// Construct a pane bound to the given data provider and assigned the given pane ID.
-    PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, const PaneId& paneId);
+    PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, PaneId paneId);
     ~PaneComponent() override = default;
 
     void paint(juce::Graphics& g) override;

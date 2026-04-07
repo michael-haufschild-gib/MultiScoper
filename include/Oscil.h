@@ -50,7 +50,7 @@ constexpr int MIN_BUFFER_SIZE = 32;
 constexpr int MAX_BUFFER_SIZE = 2048;
 constexpr int TARGET_FPS = 60;
 constexpr int MAX_FPS = 120;
-constexpr size_t MAX_MEMORY_PER_TRACK_BYTES = 10 * 1024 * 1024; // 10MB
-constexpr size_t CAPTURE_BUFFER_SIZE_BYTES = 1024 * 1024;       // 1MB per instance
+constexpr size_t MAX_MEMORY_PER_TRACK_BYTES = static_cast<size_t>(10) * 1024 * 1024; // 10MB
+constexpr size_t CAPTURE_BUFFER_SIZE_BYTES = static_cast<size_t>(1024) * 1024;       // 1MB per instance
 
 } // namespace oscil

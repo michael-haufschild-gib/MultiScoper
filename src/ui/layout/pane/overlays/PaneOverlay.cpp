@@ -4,8 +4,6 @@
 
 #include "ui/layout/pane/overlays/PaneOverlay.h"
 
-#include "ui/theme/ThemeManager.h"
-
 namespace oscil
 {
 
@@ -25,12 +23,10 @@ private:
     std::function<void()> callback_;
 };
 
-PaneOverlay::PaneOverlay(IThemeService& themeService) : themeService_(themeService)
+PaneOverlay::PaneOverlay(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setOpaque(false);
     setInterceptsMouseClicks(false, false); // Default click-through
-
-    themeService_.addListener(this);
 }
 
 PaneOverlay::PaneOverlay(IThemeService& themeService, const juce::String& testId) : PaneOverlay(themeService)
@@ -46,8 +42,6 @@ PaneOverlay::~PaneOverlay()
 {
     if (fadeTimer_)
         fadeTimer_->stopTimer();
-
-    themeService_.removeListener(this);
 }
 
 void PaneOverlay::setPosition(Position pos)
@@ -96,7 +90,7 @@ void PaneOverlay::startFadeAnimation(bool fadeIn)
 void PaneOverlay::updateFadeAnimation()
 {
     const float fadeStep = static_cast<float>(FADE_TIMER_INTERVAL_MS) / FADE_DURATION_MS;
-    bool wasEffectivelyVisible = currentOpacity_ > 0.0f;
+    bool const wasEffectivelyVisible = currentOpacity_ > 0.0f;
 
     if (fadeDirection_)
     {
@@ -120,7 +114,7 @@ void PaneOverlay::updateFadeAnimation()
         }
     }
 
-    bool isEffectivelyVisible = currentOpacity_ > 0.0f;
+    bool const isEffectivelyVisible = currentOpacity_ > 0.0f;
     if (isEffectivelyVisible != wasEffectivelyVisible)
         onAnimationVisibilityChanged(isEffectivelyVisible);
 
@@ -139,7 +133,7 @@ void PaneOverlay::paint(juce::Graphics& g)
 
 void PaneOverlay::paintOverlayBackground(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getThemeService().getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Semi-transparent background
@@ -159,24 +153,23 @@ bool PaneOverlay::hitTest(int x, int y)
     return getLocalBounds().contains(x, y);
 }
 
-void PaneOverlay::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
-
 juce::Rectangle<int> PaneOverlay::getContentBounds() const { return getLocalBounds().reduced(CONTENT_PADDING); }
 
 juce::Rectangle<int> PaneOverlay::getPreferredBounds() const
 {
     auto contentSize = getPreferredContentSize();
-    return contentSize.withSizeKeepingCentre(contentSize.getWidth() + 2 * CONTENT_PADDING,
-                                             contentSize.getHeight() + 2 * CONTENT_PADDING);
+    return contentSize.withSizeKeepingCentre(contentSize.getWidth() + (2 * CONTENT_PADDING),
+                                             contentSize.getHeight() + (2 * CONTENT_PADDING));
 }
 
 void PaneOverlay::updatePositionInParent(juce::Rectangle<int> parentBounds)
 {
     auto preferredBounds = getPreferredBounds();
-    int width = preferredBounds.getWidth();
-    int height = preferredBounds.getHeight();
+    int const width = preferredBounds.getWidth();
+    int const height = preferredBounds.getHeight();
 
-    int x = 0, y = 0;
+    int x = 0;
+    int y = 0;
 
     switch (position_)
     {

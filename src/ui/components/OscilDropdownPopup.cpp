@@ -4,7 +4,10 @@
     Event handling is in OscilDropdownPopupEvents.cpp
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilDropdown.h"
+
+#include <utility>
 
 namespace oscil
 {
@@ -23,7 +26,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        float alpha = owner_.showSpring_.position;
+        float const alpha = owner_.showSpring_.position;
         if (alpha < 0.01f)
             return;
 
@@ -31,59 +34,61 @@ public:
         int end = (g.getClipBounds().getBottom() + ITEM_HEIGHT) / ITEM_HEIGHT;
 
         start = std::max(0, start);
-        end = std::min(end, (int) owner_.filteredIndices_.size());
+        end = std::min(end, static_cast<int>(owner_.filteredIndices_.size()));
 
         for (int i = start; i < end; ++i)
         {
-            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(i)];
+            int const itemIndex = owner_.filteredIndices_[static_cast<size_t>(i)];
             const auto& item = owner_.items_[static_cast<size_t>(itemIndex)];
             auto itemBounds = juce::Rectangle<int>(0, i * ITEM_HEIGHT, getWidth(), ITEM_HEIGHT);
 
-            bool isHovered = (itemIndex == owner_.hoveredIndex_);
-            bool isSelected = owner_.selectedIndices_.count(itemIndex) > 0;
-            bool isFocused = (i == owner_.focusedIndex_);
+            bool const isHovered = (itemIndex == owner_.hoveredIndex_);
+            bool const isSelected = owner_.selectedIndices_.contains(itemIndex);
+            bool const isFocused = (i == owner_.focusedIndex_);
 
             paintItem(g, item, itemBounds, isHovered, isSelected, isFocused, alpha);
         }
     }
 
     void paintItemBackground(juce::Graphics& g, const juce::Rectangle<int>& bounds, bool isHovered, bool isSelected,
-                             bool isFocused, bool enabled, float alpha, const ColorTheme& theme)
+                             bool isFocused, bool enabled, float alpha, const GlassStyle& glass)
     {
         if (isSelected)
         {
-            g.setColour(theme.controlActive.withAlpha(alpha * 0.15f));
+            // Selected: accentSubtle fill
+            g.setColour(glass.accentSubtle.withAlpha(alpha));
             g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
         }
         else if (isFocused)
         {
-            g.setColour(theme.controlActive.withAlpha(alpha * 0.1f));
+            g.setColour(glass.accent.withAlpha(alpha * 0.1f));
             g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
         }
 
         if (isHovered && enabled && !isSelected)
         {
-            g.setColour(theme.backgroundSecondary.withAlpha(alpha * 0.8f));
+            // Hover: bgHover fill
+            g.setColour(glass.bgHover.withAlpha(alpha));
             g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
         }
     }
 
     void paintCheckbox(juce::Graphics& g, juce::Rectangle<int>& contentBounds, bool isSelected, float alpha,
-                       float opacity, const ColorTheme& theme)
+                       float opacity, const GlassStyle& glass)
     {
         auto checkBounds = contentBounds.removeFromLeft(20).toFloat().withSizeKeepingCentre(16, 16);
 
-        g.setColour(theme.backgroundSecondary.withAlpha(alpha * opacity));
+        g.setColour(glass.bgGlass.withAlpha(alpha * opacity));
         g.fillRoundedRectangle(checkBounds, 3.0f);
 
-        g.setColour((isSelected ? theme.controlActive : theme.controlBorder).withAlpha(alpha * opacity));
+        g.setColour((isSelected ? glass.accent : glass.borderDefault).withAlpha(alpha * opacity));
         g.drawRoundedRectangle(checkBounds.reduced(0.5f), 3.0f, 1.0f);
 
         if (isSelected)
         {
-            g.setColour(theme.controlActive.withAlpha(alpha * opacity));
-            float cx = checkBounds.getCentreX();
-            float cy = checkBounds.getCentreY();
+            g.setColour(glass.accent.withAlpha(alpha * opacity));
+            float const cx = checkBounds.getCentreX();
+            float const cy = checkBounds.getCentreY();
             juce::Path checkPath;
             checkPath.startNewSubPath(cx - 4, cy);
             checkPath.lineTo(cx - 1, cy + 3);
@@ -97,17 +102,19 @@ public:
     void paintItem(juce::Graphics& g, const DropdownItem& item, juce::Rectangle<int> bounds, bool isHovered,
                    bool isSelected, bool isFocused, float alpha)
     {
+        const auto& glass = owner_.getGlass();
         const auto& theme = owner_.getTheme();
 
         if (item.isSeparator)
         {
-            g.setColour(theme.controlBorder.withAlpha(alpha * 0.5f));
-            g.fillRect(bounds.reduced(8, ITEM_HEIGHT / 2 - 1).withHeight(1));
+            // Separator: borderSubtle 1px line
+            g.setColour(glass.borderSubtle.withAlpha(alpha));
+            g.fillRect(bounds.reduced(8, (ITEM_HEIGHT / 2) - 1).withHeight(1));
             return;
         }
 
-        float opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-        paintItemBackground(g, bounds, isHovered, isSelected, isFocused, item.enabled, alpha, theme);
+        float const opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+        paintItemBackground(g, bounds, isHovered, isSelected, isFocused, item.enabled, alpha, glass);
 
         auto contentBounds = bounds.reduced(8, 0);
 
@@ -120,16 +127,17 @@ public:
         }
 
         if (owner_.multiSelect_)
-            paintCheckbox(g, contentBounds, isSelected, alpha, opacity, theme);
+            paintCheckbox(g, contentBounds, isSelected, alpha, opacity, glass);
 
-        g.setColour((isSelected ? theme.controlActive : theme.textPrimary).withAlpha(alpha * opacity));
+        // Selected: accent text; default: textPrimary
+        g.setColour((isSelected ? glass.accent : theme.textPrimary).withAlpha(alpha * opacity));
 
         static const juce::Font itemFont(juce::FontOptions().withHeight(13.0f));
         g.setFont(itemFont);
 
         if (item.description.isNotEmpty())
         {
-            auto labelBounds = contentBounds.removeFromTop(ITEM_HEIGHT / 2 + 2);
+            auto labelBounds = contentBounds.removeFromTop((ITEM_HEIGHT / 2) + 2);
             g.drawText(item.label, labelBounds, juce::Justification::centredLeft);
 
             g.setColour(theme.textSecondary.withAlpha(alpha * opacity * 0.8f));
@@ -145,10 +153,10 @@ public:
 
     void mouseMove(const juce::MouseEvent& e) override
     {
-        int index = e.y / ITEM_HEIGHT;
-        if (index >= 0 && index < static_cast<int>(owner_.filteredIndices_.size()))
+        int const index = e.y / ITEM_HEIGHT;
+        if (index >= 0 && std::cmp_less(index, owner_.filteredIndices_.size()))
         {
-            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
+            int const itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
             if (owner_.hoveredIndex_ != itemIndex)
             {
                 owner_.hoveredIndex_ = itemIndex;
@@ -157,7 +165,7 @@ public:
         }
     }
 
-    void mouseExit(const juce::MouseEvent&) override
+    void mouseExit(const juce::MouseEvent& /*event*/) override
     {
         if (owner_.hoveredIndex_ != -1)
         {
@@ -168,10 +176,10 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override
     {
-        int index = e.y / ITEM_HEIGHT;
-        if (index >= 0 && index < static_cast<int>(owner_.filteredIndices_.size()))
+        int const index = e.y / ITEM_HEIGHT;
+        if (index >= 0 && std::cmp_less(index, owner_.filteredIndices_.size()))
         {
-            int itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
+            int const itemIndex = owner_.filteredIndices_[static_cast<size_t>(index)];
             const auto& item = owner_.items_[static_cast<size_t>(itemIndex)];
 
             if (!item.isSeparator && item.enabled)
@@ -224,7 +232,7 @@ private:
 
 OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , showSpring_(SpringPresets::snappy())
+    , showSpring_(SpringPresets::springPopup())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
@@ -292,20 +300,20 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
         return;
     updateFilteredItems();
 
-    int contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
-    int viewportHeight = std::min(contentHeight, MAX_VISIBLE_ITEMS * ITEM_HEIGHT);
-    int searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
-    int totalHeight = viewportHeight + searchHeight + POPUP_PADDING * 2;
-    int width = buttonBounds.getWidth();
+    int const contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
+    int const viewportHeight = std::min(contentHeight, MAX_VISIBLE_ITEMS * ITEM_HEIGHT);
+    int const searchHeight = searchable_ ? SEARCH_HEIGHT : 0;
+    int const totalHeight = viewportHeight + searchHeight + (POPUP_PADDING * 2);
+    int const width = buttonBounds.getWidth();
 
     auto screenBounds = parent->getScreenBounds();
-    auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForPoint(screenBounds.getCentre());
+    const auto* display = juce::Desktop::getInstance().getDisplays().getDisplayForPoint(screenBounds.getCentre());
     if (!display)
         display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
     if (!display)
         return;
 
-    int x = screenBounds.getX() + buttonBounds.getX();
+    int const x = screenBounds.getX() + buttonBounds.getX();
     int y = screenBounds.getY() + buttonBounds.getBottom();
     if (y + totalHeight > display->userArea.getBottom())
         y = screenBounds.getY() + buttonBounds.getY() - totalHeight;
@@ -315,7 +323,7 @@ void OscilDropdownPopup::show(juce::Component* parent, juce::Rectangle<int> butt
     setVisible(true);
 
     if (listComponent_)
-        listComponent_->setSize(juce::jmax(1, width - POPUP_PADDING * 2), contentHeight);
+        listComponent_->setSize(juce::jmax(1, width - (POPUP_PADDING * 2)), contentHeight);
 
     resized();
     grabKeyboardFocus();
@@ -339,7 +347,7 @@ void OscilDropdownPopup::focusOnFirstSelected()
 {
     for (size_t i = 0; i < filteredIndices_.size(); ++i)
     {
-        if (selectedIndices_.count(filteredIndices_[i]))
+        if (selectedIndices_.contains(filteredIndices_[i]))
         {
             focusedIndex_ = static_cast<int>(i);
             ensureItemVisible(focusedIndex_);
@@ -379,7 +387,7 @@ void OscilDropdownPopup::updateFilteredItems()
 
     if (listComponent_)
     {
-        int contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
+        int const contentHeight = std::max(ITEM_HEIGHT, static_cast<int>(filteredIndices_.size() * ITEM_HEIGHT));
         listComponent_->setSize(listComponent_->getWidth(), contentHeight);
     }
 
@@ -390,15 +398,22 @@ void OscilDropdownPopup::updateFilteredItems()
 
 void OscilDropdownPopup::paint(juce::Graphics& g)
 {
-    float alpha = showSpring_.position;
+    float const alpha = showSpring_.getNormalized();
     if (alpha < 0.01f)
         return;
 
     auto bounds = getLocalBounds().toFloat();
-    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha * 0.95f));
-    g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
-    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.5f));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
+
+    // Apply scale animation: scale from 0.95 to 1.0 as spring opens
+    float const scale = 0.95f + 0.05f * alpha;
+    auto scaledBounds = bounds.withSizeKeepingCentre(bounds.getWidth() * scale, bounds.getHeight() * scale);
+
+    g.setOpacity(alpha);
+
+    // Use GlassPainter::paintGlassPanel for popup background
+    GlassPainter::paintGlassPanel(g, scaledBounds, getGlass(), ComponentLayout::RADIUS_XL, BorderLevel::Default);
+
+    g.setOpacity(1.0f);
 }
 
 void OscilDropdownPopup::resized()
@@ -439,10 +454,9 @@ bool OscilDropdownPopup::keyPressed(const juce::KeyPress& key)
         return true;
     }
 
-    if (key == juce::KeyPress::returnKey && focusedIndex_ >= 0 &&
-        focusedIndex_ < static_cast<int>(filteredIndices_.size()))
+    if (key == juce::KeyPress::returnKey && focusedIndex_ >= 0 && std::cmp_less(focusedIndex_, filteredIndices_.size()))
     {
-        int itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
+        int const itemIndex = filteredIndices_[static_cast<size_t>(focusedIndex_)];
         const auto& item = items_[static_cast<size_t>(itemIndex)];
         if (!item.isSeparator && item.enabled && onItemClicked)
         {

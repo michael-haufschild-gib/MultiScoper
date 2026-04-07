@@ -9,8 +9,6 @@
 namespace oscil
 {
 
-using namespace juce::gl;
-
 // Color grading fragment shader
 static const char* colorGradeFragmentShader = R"(
     #version 330 core
@@ -27,18 +25,6 @@ static const char* colorGradeFragmentShader = R"(
 
     in vec2 vTexCoord;
     out vec4 fragColor;
-
-    // Narkowicz ACES Tone Mapping
-    // Standard for "filmic" look in games
-    vec3 ACESFilm(vec3 x)
-    {
-        float a = 2.51;
-        float b = 0.03;
-        float c = 2.43;
-        float d = 0.59;
-        float e = 0.14;
-        return clamp((x*(a*x+b))/(x*(c*x+d)+e), 0.0, 1.0);
-    }
 
     vec3 adjustContrast(vec3 color, float contrast)
     {
@@ -90,25 +76,14 @@ static const char* colorGradeFragmentShader = R"(
     }
 )";
 
-ColorGradeEffect::ColorGradeEffect() {}
+ColorGradeEffect::ColorGradeEffect() = default;
 
 ColorGradeEffect::~ColorGradeEffect() = default;
 
-bool ColorGradeEffect::compile(juce::OpenGLContext& context)
+const char* ColorGradeEffect::getFragmentSource() const { return colorGradeFragmentShader; }
+
+bool ColorGradeEffect::resolveUniforms()
 {
-    if (compiled_)
-        return true;
-
-    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!compileEffectShader(*shader_, colorGradeFragmentShader))
-    {
-        DBG("ColorGradeEffect: Failed to compile shader");
-        shader_.reset();
-        return false;
-    }
-
-    textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     brightnessLoc_ = shader_->getUniformIDFromName("brightness");
     contrastLoc_ = shader_->getUniformIDFromName("contrast");
     saturationLoc_ = shader_->getUniformIDFromName("saturation");
@@ -117,63 +92,28 @@ bool ColorGradeEffect::compile(juce::OpenGLContext& context)
     shadowsLoc_ = shader_->getUniformIDFromName("shadows");
     highlightsLoc_ = shader_->getUniformIDFromName("highlights");
 
-    if (textureLoc_ < 0 || brightnessLoc_ < 0 || contrastLoc_ < 0 || saturationLoc_ < 0 || temperatureLoc_ < 0 ||
-        tintLoc_ < 0 || shadowsLoc_ < 0 || highlightsLoc_ < 0)
-    {
-        DBG("ColorGradeEffect: Missing uniforms");
-        shader_.reset();
-        return false;
-    }
-
-    compiled_ = true;
-    DBG("ColorGradeEffect: Compiled successfully");
-    return true;
+    return brightnessLoc_ >= 0 && contrastLoc_ >= 0 && saturationLoc_ >= 0 && temperatureLoc_ >= 0 && tintLoc_ >= 0 &&
+           shadowsLoc_ >= 0 && highlightsLoc_ >= 0;
 }
 
-void ColorGradeEffect::release(juce::OpenGLContext& context)
+void ColorGradeEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
-    juce::ignoreUnused(context);
-    shader_.reset();
-    compiled_ = false;
-}
-
-bool ColorGradeEffect::isCompiled() const { return compiled_; }
-
-void ColorGradeEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
-                             FramebufferPool& pool, float deltaTime)
-{
-    juce::ignoreUnused(deltaTime);
-
-    if (!compiled_ || !source || !destination)
-        return;
-
-    auto& ext = context.extensions;
-
-    destination->bind();
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-
-    shader_->use();
-
-    source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
+    juce::ignoreUnused(source, deltaTime);
 
     // Apply intensity scaling
-    float scale = getIntensity();
-    ext.glUniform1f(brightnessLoc_, settings_.brightness * scale);
-    ext.glUniform1f(contrastLoc_, 1.0f + (settings_.contrast - 1.0f) * scale);
-    ext.glUniform1f(saturationLoc_, 1.0f + (settings_.saturation - 1.0f) * scale);
-    ext.glUniform1f(temperatureLoc_, settings_.temperature * scale);
-    ext.glUniform1f(tintLoc_, settings_.tint * scale);
+    float const scale = getIntensity();
+    juce::OpenGLExtensionFunctions::glUniform1f(brightnessLoc_, settings_.brightness * scale);
+    juce::OpenGLExtensionFunctions::glUniform1f(contrastLoc_, 1.0f + ((settings_.contrast - 1.0f) * scale));
+    juce::OpenGLExtensionFunctions::glUniform1f(saturationLoc_, 1.0f + ((settings_.saturation - 1.0f) * scale));
+    juce::OpenGLExtensionFunctions::glUniform1f(temperatureLoc_, settings_.temperature * scale);
+    juce::OpenGLExtensionFunctions::glUniform1f(tintLoc_, settings_.tint * scale);
 
     // Shadow and highlight colors
-    ext.glUniform3f(shadowsLoc_, settings_.shadows.getFloatRed(), settings_.shadows.getFloatGreen(),
-                    settings_.shadows.getFloatBlue());
-    ext.glUniform3f(highlightsLoc_, settings_.highlights.getFloatRed(), settings_.highlights.getFloatGreen(),
-                    settings_.highlights.getFloatBlue());
-
-    pool.renderFullscreenQuad();
-    destination->unbind();
+    juce::OpenGLExtensionFunctions::glUniform3f(shadowsLoc_, settings_.shadows.getFloatRed(),
+                                                settings_.shadows.getFloatGreen(), settings_.shadows.getFloatBlue());
+    juce::OpenGLExtensionFunctions::glUniform3f(highlightsLoc_, settings_.highlights.getFloatRed(),
+                                                settings_.highlights.getFloatGreen(),
+                                                settings_.highlights.getFloatBlue());
 }
 
 } // namespace oscil

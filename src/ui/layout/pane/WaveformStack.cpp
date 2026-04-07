@@ -7,6 +7,8 @@
 #include "core/interfaces/IAudioBuffer.h"
 #include "core/interfaces/IAudioDataProvider.h"
 
+#include <algorithm>
+
 namespace oscil
 {
 
@@ -31,6 +33,17 @@ std::shared_ptr<IAudioBuffer> resolveCaptureBufferForSource(IAudioDataProvider& 
 }
 } // namespace
 
+void WaveformStack::configureWaveformFromOscillator(WaveformComponent& waveform, const Oscillator& oscillator)
+{
+    waveform.setProcessingMode(oscillator.getProcessingMode());
+    waveform.setColour(oscillator.getColour());
+    waveform.setOpacity(oscillator.getOpacity());
+    waveform.setLineWidth(oscillator.getLineWidth());
+    waveform.setShaderId(oscillator.getShaderId());
+    waveform.setVisualPresetId(oscillator.getVisualPresetId());
+    waveform.setVisualOverrides(oscillator.getVisualOverrides());
+}
+
 WaveformStack::WaveformStack(IAudioDataProvider& dataProvider, IThemeService& themeService,
                              ShaderRegistry& shaderRegistry)
     : dataProvider_(dataProvider)
@@ -50,14 +63,7 @@ void WaveformStack::addOscillator(const Oscillator& oscillator)
     entry.oscillator = oscillator;
     entry.waveform = std::make_unique<WaveformComponent>(themeService_, shaderRegistry_);
 
-    // Configure waveform with all oscillator properties
-    entry.waveform->setProcessingMode(oscillator.getProcessingMode());
-    entry.waveform->setColour(oscillator.getColour());
-    entry.waveform->setOpacity(oscillator.getOpacity());
-    entry.waveform->setLineWidth(oscillator.getLineWidth());
-    entry.waveform->setShaderId(oscillator.getShaderId());
-    entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
-    entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
+    configureWaveformFromOscillator(*entry.waveform, oscillator);
 
     auto buffer = resolveCaptureBufferForSource(dataProvider_, oscillator.getSourceId());
     entry.waveform->setCaptureBuffer(buffer);
@@ -72,9 +78,8 @@ void WaveformStack::addOscillator(const Oscillator& oscillator)
 
 void WaveformStack::removeOscillator(const OscillatorId& oscillatorId)
 {
-    auto it = std::find_if(entries_.begin(), entries_.end(), [&oscillatorId](const OscillatorEntry& entry) {
-        return entry.oscillator.getId() == oscillatorId;
-    });
+    auto it = std::ranges::find_if(
+        entries_, [&oscillatorId](const OscillatorEntry& entry) { return entry.oscillator.getId() == oscillatorId; });
 
     if (it != entries_.end())
     {
@@ -170,14 +175,8 @@ void WaveformStack::updateOscillatorFull(const Oscillator& oscillator)
             }
 
             entry.oscillator = oscillator;
-            entry.waveform->setProcessingMode(oscillator.getProcessingMode());
-            entry.waveform->setColour(oscillator.getColour());
-            entry.waveform->setOpacity(oscillator.getOpacity());
-            entry.waveform->setLineWidth(oscillator.getLineWidth());
+            configureWaveformFromOscillator(*entry.waveform, oscillator);
             entry.waveform->setVisible(oscillator.isVisible());
-            entry.waveform->setShaderId(oscillator.getShaderId());
-            entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
-            entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
             break;
         }
     }
@@ -261,7 +260,7 @@ void WaveformStack::highlightOscillator(const OscillatorId& oscillatorId)
     {
         if (entry.waveform)
         {
-            bool shouldHighlight = entry.oscillator.getId() == oscillatorId;
+            bool const shouldHighlight = entry.oscillator.getId() == oscillatorId;
             entry.waveform->setHighlighted(shouldHighlight);
         }
     }
@@ -276,14 +275,14 @@ void WaveformStack::updateLayout()
 
     if (layoutMode_ == LayoutMode::Stacked)
     {
-        int numWaveforms = static_cast<int>(entries_.size());
+        int const numWaveforms = static_cast<int>(entries_.size());
         // Divide available height equally among waveforms
-        int waveformHeight = bounds.getHeight() / std::max(1, numWaveforms);
+        int const waveformHeight = bounds.getHeight() / std::max(1, numWaveforms);
 
         for (size_t i = 0; i < entries_.size(); ++i)
         {
             // For the last item, take the remaining space to handle rounding errors
-            int height = (i == entries_.size() - 1) ? bounds.getHeight() : waveformHeight;
+            int const height = (i == entries_.size() - 1) ? bounds.getHeight() : waveformHeight;
 
             auto waveformBounds = bounds.removeFromTop(height);
             entries_[i].waveform->setBounds(waveformBounds);

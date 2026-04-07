@@ -9,8 +9,6 @@
 namespace oscil
 {
 
-using namespace juce::gl;
-
 static const char* scanlineFragmentShader = R"(
     #version 330 core
     uniform sampler2D sourceTexture;
@@ -88,79 +86,31 @@ static const char* scanlineFragmentShader = R"(
     }
 )";
 
-ScanlineEffect::ScanlineEffect() {}
+ScanlineEffect::ScanlineEffect() = default;
 
 ScanlineEffect::~ScanlineEffect() = default;
 
-bool ScanlineEffect::compile(juce::OpenGLContext& context)
+const char* ScanlineEffect::getFragmentSource() const { return scanlineFragmentShader; }
+
+bool ScanlineEffect::resolveUniforms()
 {
-    if (compiled_)
-        return true;
-
-    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!compileEffectShader(*shader_, scanlineFragmentShader))
-    {
-        DBG("ScanlineEffect: Failed to compile shader");
-        shader_.reset();
-        return false;
-    }
-
-    textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     intensityLoc_ = shader_->getUniformIDFromName("intensity");
     densityLoc_ = shader_->getUniformIDFromName("density");
     widthLoc_ = shader_->getUniformIDFromName("width");
     heightLoc_ = shader_->getUniformIDFromName("height");
     phosphorGlowLoc_ = shader_->getUniformIDFromName("phosphorGlow");
 
-    if (textureLoc_ < 0 || intensityLoc_ < 0 || densityLoc_ < 0 || widthLoc_ < 0 || heightLoc_ < 0 ||
-        phosphorGlowLoc_ < 0)
-    {
-        DBG("ScanlineEffect: Missing uniforms");
-        shader_.reset();
-        return false;
-    }
-
-    compiled_ = true;
-    DBG("ScanlineEffect: Compiled successfully");
-    return true;
+    return intensityLoc_ >= 0 && densityLoc_ >= 0 && widthLoc_ >= 0 && heightLoc_ >= 0 && phosphorGlowLoc_ >= 0;
 }
 
-void ScanlineEffect::release(juce::OpenGLContext& context)
-{
-    juce::ignoreUnused(context);
-    shader_.reset();
-    compiled_ = false;
-}
-
-bool ScanlineEffect::isCompiled() const { return compiled_; }
-
-void ScanlineEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
-                           FramebufferPool& pool, float deltaTime)
+void ScanlineEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
-
-    if (!compiled_ || !source || !destination)
-        return;
-
-    auto& ext = context.extensions;
-
-    destination->bind();
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-
-    shader_->use();
-
-    source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
-    ext.glUniform1f(densityLoc_, settings_.density);
-    ext.glUniform1f(widthLoc_, static_cast<float>(source->width));
-    ext.glUniform1f(heightLoc_, static_cast<float>(source->height));
-    ext.glUniform1i(phosphorGlowLoc_, settings_.phosphorGlow ? 1 : 0);
-
-    pool.renderFullscreenQuad();
-    destination->unbind();
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(densityLoc_, settings_.density);
+    juce::OpenGLExtensionFunctions::glUniform1f(widthLoc_, static_cast<float>(source.width));
+    juce::OpenGLExtensionFunctions::glUniform1f(heightLoc_, static_cast<float>(source.height));
+    juce::OpenGLExtensionFunctions::glUniform1i(phosphorGlowLoc_, settings_.phosphorGlow ? 1 : 0);
 }
 
 } // namespace oscil

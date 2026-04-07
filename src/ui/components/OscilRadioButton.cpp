@@ -4,6 +4,8 @@
 
 #include "ui/components/OscilRadioButton.h"
 
+#include <utility>
+
 namespace oscil
 {
 
@@ -13,8 +15,9 @@ namespace oscil
 
 OscilRadioButton::OscilRadioButton(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , selectionSpring_(SpringPresets::bouncy())
-    , hoverSpring_(SpringPresets::stiff())
+    , selectionSpring_(SpringPresets::medium())
+    , hoverSpring_(SpringPresets::fast())
+    , scaleSpring_(SpringPresets::springGentle())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -23,6 +26,8 @@ OscilRadioButton::OscilRadioButton(IThemeService& themeService)
     selectionSpring_.target = 0.0f;
     hoverSpring_.position = 0.0f;
     hoverSpring_.target = 0.0f;
+    scaleSpring_.position = 1.0f;
+    scaleSpring_.target = 1.0f;
 }
 
 OscilRadioButton::OscilRadioButton(IThemeService& themeService, const juce::String& label)
@@ -52,6 +57,11 @@ void OscilRadioButton::setSelected(bool selected, bool notify)
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         selectionSpring_.setTarget(selected ? 1.0f : 0.0f);
+
+        // Brief scale pulse on selection change
+        if (selected)
+            scaleSpring_.setTarget(1.0f, 1.15f);
+
         startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
     else
@@ -87,6 +97,7 @@ void OscilRadioButton::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
@@ -94,14 +105,14 @@ void OscilRadioButton::setEnabled(bool enabled)
 
 int OscilRadioButton::getPreferredWidth() const
 {
-    int radioWidth = RADIO_SIZE;
+    int const radioWidth = RADIO_SIZE;
 
     if (label_.isNotEmpty())
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+        auto font = ComponentLayout::defaultFont();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
-        int labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
         return radioWidth + ComponentLayout::SPACING_SM + labelWidth;
     }
 
@@ -110,9 +121,7 @@ int OscilRadioButton::getPreferredWidth() const
 
 int OscilRadioButton::getPreferredHeight() const
 {
-    return std::max(
-        RADIO_SIZE,
-        static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
+    return std::max(RADIO_SIZE, static_cast<int>(ComponentLayout::defaultFont().getHeight()));
 }
 
 // paint, paintCircle, paintDot, paintFocusRing are in OscilRadioButtonPainting.cpp
@@ -146,7 +155,7 @@ void OscilRadioGroup::addOption(const juce::String& label)
     auto button = std::make_unique<OscilRadioButton>(getThemeService(), label);
     button->parentGroup_ = this;
 
-    int index = static_cast<int>(buttons_.size());
+    int const index = static_cast<int>(buttons_.size());
     button->onSelected = [this, index]() { handleButtonSelected(index); };
 
     addAndMakeVisible(*button);
@@ -230,6 +239,7 @@ void OscilRadioGroup::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         for (auto& button : buttons_)
             button->setEnabled(enabled);
     }
@@ -251,13 +261,11 @@ int OscilRadioGroup::getPreferredWidth() const
         }
         return totalWidth;
     }
-    else
-    {
-        int maxWidth = 0;
-        for (const auto& button : buttons_)
-            maxWidth = std::max(maxWidth, button->getPreferredWidth());
-        return maxWidth;
-    }
+
+    int maxWidth = 0;
+    for (const auto& button : buttons_)
+        maxWidth = std::max(maxWidth, button->getPreferredWidth());
+    return maxWidth;
 }
 
 int OscilRadioGroup::getPreferredHeight() const
@@ -276,13 +284,11 @@ int OscilRadioGroup::getPreferredHeight() const
         }
         return totalHeight;
     }
-    else
-    {
-        int maxHeight = 0;
-        for (const auto& button : buttons_)
-            maxHeight = std::max(maxHeight, button->getPreferredHeight());
-        return maxHeight;
-    }
+
+    int maxHeight = 0;
+    for (const auto& button : buttons_)
+        maxHeight = std::max(maxHeight, button->getPreferredHeight());
+    return maxHeight;
 }
 
 void OscilRadioGroup::resized() { layoutButtons(); }
@@ -299,7 +305,7 @@ void OscilRadioGroup::layoutButtons()
         int x = 0;
         for (auto& button : buttons_)
         {
-            int width = button->getPreferredWidth();
+            int const width = button->getPreferredWidth();
             button->setBounds(x, 0, width, bounds.getHeight());
             x += width + spacing_;
         }
@@ -309,7 +315,7 @@ void OscilRadioGroup::layoutButtons()
         int y = 0;
         for (auto& button : buttons_)
         {
-            int height = button->getPreferredHeight();
+            int const height = button->getPreferredHeight();
             button->setBounds(0, y, bounds.getWidth(), height);
             y += height + spacing_;
         }
@@ -353,7 +359,7 @@ void OscilRadioGroup::handleButtonSelected(int index) { setSelectedIndex(index);
 void OscilRadioGroup::updateButtonStates()
 {
     for (size_t i = 0; i < buttons_.size(); ++i)
-        buttons_[i]->setSelected(static_cast<int>(i) == selectedIndex_, false);
+        buttons_[i]->setSelected(std::cmp_equal(i, selectedIndex_), false);
 }
 
 std::unique_ptr<juce::AccessibilityHandler> OscilRadioGroup::createAccessibilityHandler()

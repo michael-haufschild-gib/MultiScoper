@@ -5,19 +5,14 @@
 
 #pragma once
 
-#include "core/Oscillator.h"
 #include "core/ServiceContext.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilTextField.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include <functional>
+#include <cstdint>
 
 namespace oscil
 {
@@ -25,7 +20,7 @@ namespace oscil
 /**
  * Filter options for oscillator list
  */
-enum class OscillatorFilterMode
+enum class OscillatorFilterMode : std::uint8_t
 {
     All,
     Visible,
@@ -37,8 +32,7 @@ enum class OscillatorFilterMode
  * Provides filter and count display
  */
 class OscillatorListToolbar
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public TestIdSupport
 {
 public:
@@ -60,9 +54,6 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
     // State setters
     void setFilterMode(OscillatorFilterMode mode);
     /// Update the displayed oscillator count badge (e.g. "3/5 visible").
@@ -74,11 +65,17 @@ public:
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
-    static constexpr int PREFERRED_HEIGHT = 36; // Reduced since we removed a row
+    static constexpr int PREFERRED_HEIGHT = 36;
 
 private:
     void setupComponents();
     void updateCountLabel();
+
+    // Layout constants
+    static constexpr int COUNT_BADGE_WIDTH = 90;
+    static constexpr int COUNT_BADGE_SPACING = 4;
+    static constexpr float BADGE_CORNER_RADIUS = 10.0f;
+    static constexpr float BADGE_FONT_SIZE = 10.0f;
 
     // Filter tabs
     std::unique_ptr<SegmentedButtonBar> filterTabs_;
@@ -89,8 +86,6 @@ private:
     int visibleCount_ = 0;
 
     juce::ListenerList<Listener> listeners_;
-
-    IThemeService& themeService_;
 
     // TestIdSupport
     void registerTestId() override;

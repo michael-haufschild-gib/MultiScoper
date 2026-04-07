@@ -90,8 +90,8 @@ private:
 
     // Rendering
     void paintBox(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-    void paintCheckMark(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-    void paintIndeterminate(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+    void paintCheckMark(juce::Graphics& g, const juce::Rectangle<float>& bounds) const;
+    void paintIndeterminate(juce::Graphics& g, const juce::Rectangle<float>& bounds) const;
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
 
     // State
@@ -106,6 +106,7 @@ private:
     // Animation
     SpringAnimation checkSpring_; // 0 = unchecked, 1 = checked
     SpringAnimation hoverSpring_;
+    SpringAnimation scaleSpring_; // Pop scale on check/uncheck
 
     // Theme
 

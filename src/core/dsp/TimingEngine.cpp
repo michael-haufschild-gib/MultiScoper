@@ -42,7 +42,7 @@ void TimingEngine::updateHostBPM(const juce::AudioPlayHead::PositionInfo& positi
 void TimingEngine::updateSyncState(bool wasPlaying, bool isPlaying, const juce::Optional<int64_t>& timeInSamples,
                                    int64_t previousTimeInSamples)
 {
-    bool playStateChanged = (wasPlaying != isPlaying);
+    bool const playStateChanged = (wasPlaying != isPlaying);
     auto cfg = configLock_.read();
 
     if ((cfg.hostSyncEnabled || cfg.syncToPlayhead) && playStateChanged)
@@ -98,8 +98,8 @@ void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& posit
     if (auto ppq = positionInfo.getPpqPosition())
         audioThreadHostInfo_.ppqPosition = *ppq;
 
-    bool wasPlaying = audioThreadHostInfo_.isPlaying;
-    bool isPlaying = positionInfo.getIsPlaying();
+    bool const wasPlaying = audioThreadHostInfo_.isPlaying;
+    bool const isPlaying = positionInfo.getIsPlaying();
     audioThreadHostInfo_.isPlaying = isPlaying;
 
     HostTimingInfo::TransportState transportState = HostTimingInfo::TransportState::STOPPED;
@@ -121,7 +121,7 @@ void TimingEngine::updateHostInfo(const juce::AudioPlayHead::PositionInfo& posit
 
 bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
 {
-    juce::ScopedNoDenormals noDenormals;
+    juce::ScopedNoDenormals const noDenormals;
 
     if (resetTriggerHistoryPending_.exchange(false, std::memory_order_relaxed))
     {
@@ -140,7 +140,7 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
     if (cfg.triggerMode == WaveformTriggerMode::Midi)
         return triggered_.load(std::memory_order_relaxed);
 
-    int channel = std::min(cfg.triggerChannel, buffer.getNumChannels() - 1);
+    int const channel = std::min(cfg.triggerChannel, buffer.getNumChannels() - 1);
     if (channel < 0)
         return false;
 
@@ -158,7 +158,7 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
 
 int TimingEngine::getDisplaySampleCount(double sampleRate) const
 {
-    double windowSeconds = getWindowSizeSeconds();
+    double const windowSeconds = getWindowSizeSeconds();
     return static_cast<int>(windowSeconds * sampleRate);
 }
 
@@ -184,8 +184,8 @@ void TimingEngine::recalculateInterval()
 
         case TimingMode::MELODIC:
         {
-            int timeSigNumerator = hostInfo.timeSigNumerator;
-            double beats = engineNoteIntervalToBeats(cfg.noteInterval, timeSigNumerator);
+            int const timeSigNumerator = hostInfo.timeSigNumerator;
+            double const beats = engineNoteIntervalToBeats(cfg.noteInterval, timeSigNumerator);
 
             float effectiveBPM = cfg.hostSyncEnabled ? static_cast<float>(hostInfo.bpm) : cfg.internalBPM;
 
@@ -201,7 +201,7 @@ void TimingEngine::recalculateInterval()
     newInterval = juce::jlimit(static_cast<float>(EngineTimingConfig::MIN_TIME_INTERVAL_MS),
                                static_cast<float>(EngineTimingConfig::MAX_TIME_INTERVAL_MS), newInterval);
 
-    float oldInterval = atomicActualIntervalMs_.exchange(newInterval, std::memory_order_relaxed);
+    float const oldInterval = atomicActualIntervalMs_.exchange(newInterval, std::memory_order_relaxed);
 
     if (std::abs(oldInterval - newInterval) > 0.1f)
         notifyIntervalChanged();
@@ -269,7 +269,7 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float sample = samples[i];
+        float const sample = samples[i];
         bool trig = false;
 
         switch (cfg.triggerMode)
@@ -305,41 +305,41 @@ bool TimingEngine::detectTrigger(const float* samples, int numSamples)
     return false;
 }
 
-bool TimingEngine::detectRisingEdge(float sample, const TimingConfigData& cfg)
+bool TimingEngine::detectRisingEdge(float sample, const TimingConfigData& cfg) const
 {
-    bool wasBelow = previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis);
-    bool isAbove = sample >= cfg.triggerThreshold;
+    bool const wasBelow = previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis);
+    bool const isAbove = sample >= cfg.triggerThreshold;
     return wasBelow && isAbove;
 }
 
-bool TimingEngine::detectFallingEdge(float sample, const TimingConfigData& cfg)
+bool TimingEngine::detectFallingEdge(float sample, const TimingConfigData& cfg) const
 {
-    bool wasAbove = previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis);
-    bool isBelow = sample <= cfg.triggerThreshold;
+    bool const wasAbove = previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis);
+    bool const isBelow = sample <= cfg.triggerThreshold;
     return wasAbove && isBelow;
 }
 
-bool TimingEngine::detectBothEdges(float sample, const TimingConfigData& cfg)
+bool TimingEngine::detectBothEdges(float sample, const TimingConfigData& cfg) const
 {
-    bool risingEdge =
+    bool const risingEdge =
         previousSample_ < (cfg.triggerThreshold - cfg.triggerHysteresis) && sample >= cfg.triggerThreshold;
-    bool fallingEdge =
+    bool const fallingEdge =
         previousSample_ > (cfg.triggerThreshold + cfg.triggerHysteresis) && sample <= cfg.triggerThreshold;
     return risingEdge || fallingEdge;
 }
 
 bool TimingEngine::detectLevel(float sample, const TimingConfigData& cfg)
 {
-    float absLevel = std::abs(sample);
-    bool wasBelow = !previousTriggerState_;
-    bool isAbove = absLevel > cfg.triggerThreshold;
+    float const absLevel = std::abs(sample);
+    bool const wasBelow = !previousTriggerState_;
+    bool const isAbove = absLevel > cfg.triggerThreshold;
 
     if (wasBelow && isAbove)
     {
         previousTriggerState_ = true;
         return true;
     }
-    else if (!isAbove && absLevel < (cfg.triggerThreshold - cfg.triggerHysteresis))
+    if (!isAbove && absLevel < (cfg.triggerThreshold - cfg.triggerHysteresis))
     {
         previousTriggerState_ = false;
     }
@@ -364,7 +364,7 @@ void TimingEngine::dispatchPendingUpdates()
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     // Atomically snapshot and clear all pending flags in one operation
-    uint8_t flags = pendingFlags_.exchange(0, std::memory_order_relaxed);
+    uint8_t const flags = pendingFlags_.exchange(0, std::memory_order_relaxed);
 
     if (flags == 0)
         return;
@@ -377,7 +377,7 @@ void TimingEngine::dispatchPendingUpdates()
 
     if ((flags & kPendingInterval) != 0)
     {
-        float interval = atomicActualIntervalMs_.load(std::memory_order_relaxed);
+        float const interval = atomicActualIntervalMs_.load(std::memory_order_relaxed);
         listeners_.call([interval](Listener& l) { l.intervalChanged(interval); });
     }
 

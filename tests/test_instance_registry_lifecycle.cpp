@@ -55,13 +55,17 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterNullBuffer)
 
     auto sourceId = getRegistry().registerInstance("track_null", nullBuffer, "Null Buffer Track");
 
-    // Should still register (buffer might be set later)
-    // But getCaptureBuffer should return nullptr
-    if (sourceId.isValid())
-    {
-        auto retrievedBuffer = getRegistry().getCaptureBuffer(sourceId);
-        EXPECT_EQ(retrievedBuffer, nullptr);
-    }
+    // Registration succeeds — buffer can be set later via dedup re-registration.
+    // getCaptureBuffer returns nullptr since weak_ptr to null shared_ptr is expired.
+    ASSERT_TRUE(sourceId.isValid());
+
+    auto retrievedBuffer = getRegistry().getCaptureBuffer(sourceId);
+    EXPECT_EQ(retrievedBuffer, nullptr);
+
+    // Source metadata should still be accessible
+    auto info = getRegistry().getSource(sourceId);
+    ASSERT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Null Buffer Track");
 }
 
 TEST_F(InstanceRegistryLifecycleTest, EmptyTrackIdentifier)
@@ -72,8 +76,30 @@ TEST_F(InstanceRegistryLifecycleTest, EmptyTrackIdentifier)
 
     EXPECT_TRUE(sourceId.isValid());
     auto info = getRegistry().getSource(sourceId);
-    EXPECT_TRUE(info.has_value());
+    ASSERT_TRUE(info.has_value());
     EXPECT_EQ(info->name, "Empty ID Track");
+    // Empty track ID gets a unique auto-generated identifier to prevent dedup collisions
+    EXPECT_TRUE(info->trackIdentifier.startsWith("__auto_"));
+}
+
+TEST_F(InstanceRegistryLifecycleTest, TwoEmptyTrackIdentifiersDontCollide)
+{
+    auto buffer1 = std::make_shared<SharedCaptureBuffer>();
+    auto buffer2 = std::make_shared<SharedCaptureBuffer>();
+
+    auto sourceId1 = getRegistry().registerInstance("", buffer1, "Track A");
+    auto sourceId2 = getRegistry().registerInstance("", buffer2, "Track B");
+
+    // Two empty track IDs must not deduplicate — they are unrelated sources
+    EXPECT_NE(sourceId1, sourceId2);
+    EXPECT_EQ(getRegistry().getSourceCount(), 2);
+
+    auto info1 = getRegistry().getSource(sourceId1);
+    auto info2 = getRegistry().getSource(sourceId2);
+    ASSERT_TRUE(info1.has_value());
+    ASSERT_TRUE(info2.has_value());
+    EXPECT_EQ(info1->name, "Track A");
+    EXPECT_EQ(info2->name, "Track B");
 }
 
 TEST_F(InstanceRegistryLifecycleTest, UnicodeTrackIdentifier)
@@ -118,7 +144,7 @@ TEST_F(InstanceRegistryLifecycleTest, VeryLongTrackIdentifier)
 
 // === Boundary Value Tests ===
 
-TEST_F(InstanceRegistryLifecycleTest, ZeroChannelCount)
+TEST_F(InstanceRegistryLifecycleTest, ZeroChannelCountClampedToOne)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
     auto sourceId = getRegistry().registerInstance("track_zero_ch", buffer, "Zero Channels", 0, 44100.0);
@@ -127,21 +153,23 @@ TEST_F(InstanceRegistryLifecycleTest, ZeroChannelCount)
 
     auto info = getRegistry().getSource(sourceId);
     ASSERT_TRUE(info.has_value());
-    EXPECT_EQ(info->channelCount, 0);
+    // Zero channels is nonsensical — clamped to minimum of 1
+    EXPECT_EQ(info->channelCount, 1);
 }
 
-TEST_F(InstanceRegistryLifecycleTest, NegativeSampleRate)
+TEST_F(InstanceRegistryLifecycleTest, NegativeSampleRateClampedToMinimum)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
     auto sourceId = getRegistry().registerInstance("track_neg_sr", buffer, "Negative SR", 2, -44100.0);
 
     EXPECT_TRUE(sourceId.isValid());
     auto info = getRegistry().getSource(sourceId);
-    EXPECT_TRUE(info.has_value());
-    EXPECT_DOUBLE_EQ(info->sampleRate, -44100.0);
+    ASSERT_TRUE(info.has_value());
+    // Negative sample rate is nonsensical — clamped to minimum of 1.0
+    EXPECT_DOUBLE_EQ(info->sampleRate, 1.0);
 }
 
-TEST_F(InstanceRegistryLifecycleTest, HighChannelCount)
+TEST_F(InstanceRegistryLifecycleTest, HighChannelCountClampedToTwo)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
     auto sourceId = getRegistry().registerInstance("track_many_ch", buffer, "Many Channels", 1000, 44100.0);
@@ -150,18 +178,20 @@ TEST_F(InstanceRegistryLifecycleTest, HighChannelCount)
 
     auto info = getRegistry().getSource(sourceId);
     ASSERT_TRUE(info.has_value());
-    EXPECT_EQ(info->channelCount, 1000);
+    // Channel count clamped to maximum of 2 (stereo)
+    EXPECT_EQ(info->channelCount, 2);
 }
 
-TEST_F(InstanceRegistryLifecycleTest, ZeroSampleRate)
+TEST_F(InstanceRegistryLifecycleTest, ZeroSampleRateClampedToMinimum)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();
     auto sourceId = getRegistry().registerInstance("track_zero_sr", buffer, "Zero SR", 2, 0.0);
 
     EXPECT_TRUE(sourceId.isValid());
     auto info = getRegistry().getSource(sourceId);
-    EXPECT_TRUE(info.has_value());
-    EXPECT_DOUBLE_EQ(info->sampleRate, 0.0);
+    ASSERT_TRUE(info.has_value());
+    // Zero sample rate is nonsensical — clamped to minimum of 1.0
+    EXPECT_DOUBLE_EQ(info->sampleRate, 1.0);
 }
 
 TEST_F(InstanceRegistryLifecycleTest, ExtremeSampleRate)
@@ -342,15 +372,15 @@ TEST_F(InstanceRegistryLifecycleTest, MultipleUpdatesToSameSource)
     auto buffer = std::make_shared<SharedCaptureBuffer>();
     auto sourceId = getRegistry().registerInstance("track_updates", buffer, "Original Name");
 
-    // Update multiple times
+    // Update multiple times with valid channel counts (1 or 2)
     for (int i = 0; i < 100; ++i)
     {
-        getRegistry().updateSource(sourceId, "Name " + juce::String(i), i % 8 + 1, 44100.0 + i * 1000.0);
+        getRegistry().updateSource(sourceId, "Name " + juce::String(i), i % 2 + 1, 44100.0 + i * 1000.0);
     }
 
     auto info = getRegistry().getSource(sourceId);
     ASSERT_TRUE(info.has_value());
     EXPECT_EQ(info->name, "Name 99");
-    EXPECT_EQ(info->channelCount, 4); // 99 % 8 + 1 = 4
+    EXPECT_EQ(info->channelCount, 2); // 99 % 2 + 1 = 2
     EXPECT_EQ(info->sampleRate, 44100.0 + 99 * 1000.0);
 }

@@ -185,7 +185,7 @@ T lerp(const T& from, const T& to, float progress)
 {
     if (AnimationSettings::prefersReducedMotion())
         return to;
-    return from + (to - from) * progress;
+    return from + ((to - from) * progress);
 }
 
 /**
@@ -197,7 +197,7 @@ T easeOut(const T& from, const T& to, float progress)
     if (AnimationSettings::prefersReducedMotion())
         return to;
     float eased = 1.0f - std::pow(1.0f - progress, 3.0f);
-    return from + (to - from) * eased;
+    return from + ((to - from) * eased);
 }
 
 /**
@@ -208,9 +208,9 @@ T easeInOut(const T& from, const T& to, float progress)
 {
     if (AnimationSettings::prefersReducedMotion())
         return to;
-    float eased =
-        progress < 0.5f ? 4.0f * progress * progress * progress : 1.0f - std::pow(-2.0f * progress + 2.0f, 3.0f) / 2.0f;
-    return from + (to - from) * eased;
+    float eased = progress < 0.5f ? 4.0f * progress * progress * progress
+                                  : 1.0f - (std::pow((-2.0f * progress) + 2.0f, 3.0f) / 2.0f);
+    return from + ((to - from) * eased);
 }
 } // namespace AnimationHelper
 

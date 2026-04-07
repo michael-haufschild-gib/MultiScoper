@@ -14,6 +14,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <cstdint>
+
 namespace oscil
 {
 
@@ -125,8 +127,8 @@ private:
     juce::Component::SafePointer<juce::Component> previousFocus_;
 
     SpringAnimation showSpring_;
-    SpringAnimation scaleSpring_;
-    SpringAnimation closeHoverSpring_ = SpringPresets::stiff();
+    SpringAnimation scaleSpring_ = SpringPresets::springPopup(); // Scale 0.95→1.0 entrance
+    SpringAnimation closeHoverSpring_ = SpringPresets::fast();
 
     static constexpr int TITLE_BAR_HEIGHT = 48;
     static constexpr int CLOSE_BUTTON_SIZE = 28;
@@ -150,18 +152,17 @@ private:
 class OscilAlertModal
 {
 public:
-    enum class Type
+    enum class Type : std::uint8_t
     {
         Info,
         Warning,
         Error
     };
 
+    OscilAlertModal() = delete;
+
     static void show(IThemeService& themeService, const juce::String& title, const juce::String& message,
                      Type type = Type::Info, std::function<void()> onOk = nullptr);
-
-private:
-    OscilAlertModal() = delete;
 };
 
 } // namespace oscil

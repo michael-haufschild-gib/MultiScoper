@@ -26,14 +26,9 @@ WaveformPass::~WaveformPass()
     }
 }
 
-bool WaveformPass::initialize(juce::OpenGLContext& context, int width, int height)
+bool WaveformPass::initialize(juce::OpenGLContext& context)
 {
-    if (width <= 0 || height <= 0)
-        return false;
-
     context_ = &context;
-    currentWidth_ = width;
-    currentHeight_ = height;
 
     // Only compile the essential "basic" shader at startup; others are lazy-loaded.
     {
@@ -45,7 +40,8 @@ bool WaveformPass::initialize(juce::OpenGLContext& context, int width, int heigh
         }
         else
         {
-            RE_LOG("WaveformPass: WARNING - Failed to compile basic shader!");
+            RE_LOG("WaveformPass: FATAL - Failed to compile basic shader, initialization aborted");
+            return false;
         }
     }
 
@@ -80,21 +76,21 @@ void WaveformPass::prepareRender(const WaveformRenderData& /*data*/, WaveformRen
 
 WaveformPass::ViewportRect WaveformPass::computePaneViewport(const juce::Rectangle<float>& bounds) const
 {
-    float scale = static_cast<float>(context_->getRenderingScale());
+    auto const scale = static_cast<float>(context_->getRenderingScale());
     auto* target = context_->getTargetComponent();
     if (!target)
-        return {0, 0, 1, 1};
-    float logicalHeight = static_cast<float>(target->getHeight());
+        return {.x = 0, .y = 0, .w = 1, .h = 1};
+    auto const logicalHeight = static_cast<float>(target->getHeight());
 
-    return {std::max(0, static_cast<int>(bounds.getX() * scale)),
-            std::max(0, static_cast<int>((logicalHeight - (bounds.getY() + bounds.getHeight())) * scale)),
-            std::max(1, static_cast<int>(bounds.getWidth() * scale)),
-            std::max(1, static_cast<int>(bounds.getHeight() * scale))};
+    return {.x = std::max(0, static_cast<int>(bounds.getX() * scale)),
+            .y = std::max(0, static_cast<int>((logicalHeight - (bounds.getY() + bounds.getHeight())) * scale)),
+            .w = std::max(1, static_cast<int>(bounds.getWidth() * scale)),
+            .h = std::max(1, static_cast<int>(bounds.getHeight() * scale))};
 }
 
 WaveformShader* WaveformPass::resolveShader(const juce::String& shaderId)
 {
-    auto it = compiledShaders_.find(shaderId.toStdString());
+    auto it = compiledShaders_.find(shaderId);
     if (it != compiledShaders_.end())
         return it->second.get();
 
@@ -103,9 +99,10 @@ WaveformShader* WaveformPass::resolveShader(const juce::String& shaderId)
         auto newShader = registry_->createShader(shaderId);
         if (newShader && newShader->compile(*context_))
         {
-            compiledShaders_[shaderId.toStdString()] = std::move(newShader);
-            return compiledShaders_[shaderId.toStdString()].get();
+            auto [insertIt, inserted] = compiledShaders_.emplace(shaderId, std::move(newShader));
+            return insertIt->second.get();
         }
+        RE_LOG("WaveformPass: Failed to compile shader '" << shaderId << "', falling back to basic");
     }
 
     auto basicIt = compiledShaders_.find("basic");

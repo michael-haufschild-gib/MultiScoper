@@ -3,6 +3,7 @@
     (Core setup and logic are in OscilTextField.cpp)
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilTextField.h"
 
@@ -13,34 +14,41 @@ void OscilTextField::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
+    // Apply shake offset for error animation
+    if (shakeSpring_.needsUpdate() || std::abs(shakeSpring_.position) > 0.01f)
+        bounds = bounds.translated(shakeSpring_.position, 0.0f);
+
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+
+    if (!enabled_)
+        g.setOpacity(opacity);
+
     paintBackground(g, bounds);
 
     if (variant_ == TextFieldVariant::Search)
         paintSearchIcon(g, bounds);
 
-    if (editor_->hasKeyboardFocus(true) && enabled_)
-        paintFocusRing(g, bounds);
+    // Focus ring via GlassPainter when focused
+    if (hasFocus_ && enabled_ && !hasError())
+        GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_MD, getGlass().accent);
+
+    if (!enabled_)
+        g.setOpacity(1.0f);
 }
 
 void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-
-    // Background
-    g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
-    g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
-
-    // Border
-    auto borderColour = hasError() ? getTheme().statusError
-                                   : (focusAmount_ > 0.01f ? getTheme().controlActive : getTheme().controlBorder);
-    borderColour = borderColour.interpolatedWith(getTheme().controlActive, focusAmount_);
-
-    g.setColour(borderColour.withAlpha(opacity));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
+    // Use GlassPainter::paintGlassInput for all states
+    GlassPainter::paintGlassInput(g, bounds, getGlass(), ComponentLayout::RADIUS_MD, hasFocus_, isHovered_, hasError(),
+                                  getTheme().statusError);
 
     // Error message below
     if (hasError())
     {
+        // Restore full graphics opacity so error text isn't double-dimmed
+        // when the parent paint() already applied DISABLED_OPACITY
+        g.setOpacity(1.0f);
+        float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
         g.setColour(getTheme().statusError.withAlpha(opacity));
         g.setFont(cachedErrorFont_);
         g.drawText(errorMessage_, bounds.translated(0, bounds.getHeight() + 2).withHeight(14),
@@ -50,26 +58,23 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
 
 void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     // Draw magnifying glass icon
     auto iconBounds = bounds.withWidth(ICON_WIDTH).reduced(8);
-    float cx = iconBounds.getCentreX();
-    float cy = iconBounds.getCentreY();
-    float radius = 5.0f;
+    float const cx = iconBounds.getCentreX();
+    float const cy = iconBounds.getCentreY();
+    float const radius = 5.0f;
 
     g.setColour(getTheme().textSecondary.withAlpha(opacity));
     g.drawEllipse(cx - radius, cy - radius, radius * 2, radius * 2, ComponentLayout::BORDER_MEDIUM);
-    g.drawLine(cx + radius * 0.7f, cy + radius * 0.7f, cx + radius * 1.5f, cy + radius * 1.5f,
+    g.drawLine(cx + (radius * 0.7f), cy + (radius * 0.7f), cx + (radius * 1.5f), cy + (radius * 1.5f),
                ComponentLayout::BORDER_MEDIUM);
 }
 
 void OscilTextField::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA * focusAmount_));
-    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-                           ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET,
-                           ComponentLayout::FOCUS_RING_WIDTH);
+    GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_MD, getGlass().accent);
 }
 
 void OscilTextField::mouseDown(const juce::MouseEvent& /*e*/)
@@ -78,7 +83,19 @@ void OscilTextField::mouseDown(const juce::MouseEvent& /*e*/)
     editor_->grabKeyboardFocus();
 }
 
-void OscilTextField::mouseDoubleClick(const juce::MouseEvent&)
+void OscilTextField::mouseEnter(const juce::MouseEvent& /*event*/)
+{
+    isHovered_ = true;
+    repaint();
+}
+
+void OscilTextField::mouseExit(const juce::MouseEvent& /*event*/)
+{
+    isHovered_ = false;
+    repaint();
+}
+
+void OscilTextField::mouseDoubleClick(const juce::MouseEvent& /*event*/)
 {
     if (variant_ == TextFieldVariant::Number && enabled_)
     {
@@ -107,6 +124,8 @@ void OscilTextField::mouseWheelMove(const juce::MouseEvent& e, const juce::Mouse
 
 void OscilTextField::focusGained(FocusChangeType /*cause*/)
 {
+    hasFocus_ = true;
+
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         focusSpring_.setTarget(1.0f);
@@ -121,6 +140,8 @@ void OscilTextField::focusGained(FocusChangeType /*cause*/)
 
 void OscilTextField::focusLost(FocusChangeType /*cause*/)
 {
+    hasFocus_ = false;
+
     if (AnimationSettings::shouldUseSpringAnimations())
     {
         focusSpring_.setTarget(0.0f);
@@ -136,9 +157,10 @@ void OscilTextField::focusLost(FocusChangeType /*cause*/)
 void OscilTextField::timerCallback()
 {
     focusSpring_.update(AnimationTiming::FRAME_DURATION_60FPS);
+    shakeSpring_.update(AnimationTiming::FRAME_DURATION_60FPS);
     focusAmount_ = focusSpring_.position;
 
-    if (focusSpring_.isSettled())
+    if (focusSpring_.isSettled() && shakeSpring_.isSettled())
         stopTimer();
 
     repaint();
@@ -150,13 +172,13 @@ void OscilTextField::updateEditorStyle()
     editor_->setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
     editor_->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
     editor_->setColour(juce::TextEditor::textColourId, getTheme().textPrimary);
-    editor_->setColour(juce::TextEditor::highlightColourId, getTheme().controlActive.withAlpha(0.3f));
-    editor_->setColour(juce::CaretComponent::caretColourId, getTheme().controlActive);
+    editor_->setColour(juce::TextEditor::highlightColourId, getGlass().accent.withAlpha(0.3f));
+    editor_->setColour(juce::CaretComponent::caretColourId, getGlass().accent);
 
-    editor_->setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
+    editor_->setFont(ComponentLayout::defaultFont());
     editor_->setTextToShowWhenEmpty(placeholder_, getTheme().textSecondary);
 
-    cachedErrorFont_ = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_CAPTION));
+    cachedErrorFont_ = ComponentLayout::captionFont();
 }
 
 std::unique_ptr<juce::AccessibilityHandler> OscilTextField::createAccessibilityHandler()

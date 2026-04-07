@@ -190,7 +190,8 @@ struct HostInfo
     {
         if (timeSignature.numerator <= 0 || !std::isfinite(ppqPosition))
             return 0.0;
-        return std::fmod(ppqPosition, static_cast<double>(timeSignature.numerator));
+        double const result = std::fmod(ppqPosition, static_cast<double>(timeSignature.numerator));
+        return result < 0.0 ? result + timeSignature.numerator : result;
     }
 
     /**
@@ -209,7 +210,7 @@ struct HostInfo
     double getMsPerBar() const
     {
         if (timeSignature.numerator <= 0)
-            return 0.0;
+            return getMsPerBeat() * 4; // Default to 4/4
         return getMsPerBeat() * timeSignature.numerator;
     }
 };

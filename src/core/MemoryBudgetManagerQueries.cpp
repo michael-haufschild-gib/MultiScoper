@@ -16,16 +16,16 @@ namespace oscil
 
 int MemoryBudgetManager::getBufferCount() const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
     return static_cast<int>(buffers_.size());
 }
 
 bool MemoryBudgetManager::isBufferRegistered(const juce::String& id) const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
-    return buffers_.find(id) != buffers_.end();
+    return buffers_.contains(id);
 }
 
 //==============================================================================
@@ -34,7 +34,7 @@ bool MemoryBudgetManager::isBufferRegistered(const juce::String& id) const
 
 size_t MemoryBudgetManager::getTotalMemoryUsage() const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
 
     if (usageCacheDirty_)
@@ -46,7 +46,7 @@ size_t MemoryBudgetManager::getTotalMemoryUsage() const
 
 size_t MemoryBudgetManager::getBufferMemoryUsage(const juce::String& id) const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
 
     auto it = buffers_.find(id);
@@ -64,7 +64,7 @@ MemoryUsageSnapshot MemoryBudgetManager::getMemorySnapshot() const
 {
     MemoryUsageSnapshot snapshot;
 
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
 
     snapshot.budgetBytes = globalConfig_.memoryBudget.totalBudgetBytes;
@@ -115,7 +115,7 @@ juce::String MemoryBudgetManager::getTotalMemoryUsageString() const { return for
 
 bool MemoryBudgetManager::isOverBudget() const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
     if (usageCacheDirty_)
         updateCachedUsage();
@@ -124,11 +124,11 @@ bool MemoryBudgetManager::isOverBudget() const
 
 float MemoryBudgetManager::getUsagePercent() const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
     if (usageCacheDirty_)
         updateCachedUsage();
-    size_t budget = globalConfig_.memoryBudget.totalBudgetBytes;
+    size_t const budget = globalConfig_.memoryBudget.totalBudgetBytes;
     if (budget == 0)
         return 0.0f;
     return (static_cast<float>(cachedTotalUsage_) / static_cast<float>(budget)) * 100.0f;
@@ -140,7 +140,7 @@ float MemoryBudgetManager::getUsagePercent() const
 
 QualityPreset MemoryBudgetManager::getRecommendedQuality() const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
     return getRecommendedQualityForCount(static_cast<int>(buffers_.size()));
 }
@@ -148,13 +148,13 @@ QualityPreset MemoryBudgetManager::getRecommendedQuality() const
 QualityPreset MemoryBudgetManager::getRecommendedQualityForCount(int numBuffers) const
 {
     // REQUIRES: buffersMutex_ must already be held by caller
-    float durationSec = bufferDurationToSeconds(globalConfig_.bufferDuration);
+    float const durationSec = bufferDurationToSeconds(globalConfig_.bufferDuration);
     return globalConfig_.memoryBudget.calculateRecommendedPreset(numBuffers, durationSec);
 }
 
 QualityPreset MemoryBudgetManager::getEffectiveQuality(const juce::String& id) const
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
 
     auto it = buffers_.find(id);
@@ -199,14 +199,14 @@ void MemoryBudgetManager::removeListener(Listener* listener)
 
 void MemoryBudgetManager::pruneExpiredBuffers()
 {
-    std::scoped_lock lock(buffersMutex_);
+    std::scoped_lock const lock(buffersMutex_);
     pruneExpiredBuffersLocked();
 }
 
 void MemoryBudgetManager::refreshMemoryUsage()
 {
     {
-        std::scoped_lock lock(buffersMutex_);
+        std::scoped_lock const lock(buffersMutex_);
         usageCacheDirty_ = true;
         updateCachedUsage();
     }
@@ -293,7 +293,7 @@ void MemoryBudgetManager::notifyMemoryUsageChanged()
 void MemoryBudgetManager::notifyBufferCountChanged()
 {
     postNotification([](MemoryBudgetManager& self) {
-        int count = self.getBufferCount();
+        int const count = self.getBufferCount();
         self.listeners_.call([count](Listener& listener) { listener.bufferCountChanged(count); });
     });
 }

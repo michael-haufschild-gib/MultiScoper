@@ -17,7 +17,7 @@ void AnimationSettings::updateFromSystem()
     // Available since macOS 10.12 Sierra
     if (@available(macOS 10.12, *))
     {
-        bool systemPrefersReducedMotion = [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion];
+        bool const systemPrefersReducedMotion = [[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion];
         appPrefersReducedMotion_.store(systemPrefersReducedMotion);
     }
 }

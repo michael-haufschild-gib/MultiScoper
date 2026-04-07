@@ -260,9 +260,12 @@ TEST_F(PluginProcessorEdgeTest, UpdateTrackPropertiesSameNameIsNoOp)
     // Second call with same name should be a no-op
     processor->updateTrackProperties(props);
 
-    // No crash, no duplicate updates
+    // Name should still be "Bass" after duplicate update
     auto sourceId = processor->getSourceId();
-    EXPECT_TRUE(sourceId.isValid() || !sourceId.isValid());
+    ASSERT_TRUE(sourceId.isValid());
+    auto info = registry_->getSource(sourceId);
+    ASSERT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, juce::String("Bass"));
 }
 
 // ============================================================================
@@ -299,6 +302,22 @@ TEST_F(PluginProcessorEdgeTest, ProcessBlockAfterSampleRateChangeProducesValidDa
 
     // CPU usage should be valid
     EXPECT_GE(processor->getCpuUsage(), 0.0f);
+}
+
+// ============================================================================
+// processBlock with zero samples
+// ============================================================================
+
+TEST_F(PluginProcessorEdgeTest, ProcessBlockWithZeroSamplesDoesNotCrash)
+{
+    // Bug target: some DAWs call processBlock with 0 samples during
+    // transport state changes or buffer size reconfiguration
+    juce::AudioBuffer<float> buffer(2, 0);
+    juce::MidiBuffer midi;
+    processor->processBlock(buffer, midi);
+
+    EXPECT_EQ(buffer.getNumChannels(), 2);
+    EXPECT_EQ(buffer.getNumSamples(), 0);
 }
 
 // ============================================================================

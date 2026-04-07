@@ -11,8 +11,7 @@
 #include "ui/components/OscilToggle.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -28,8 +27,7 @@ class IInstanceRegistry;
  * Shows compact view for non-selected items, expands when selected to show mode/visibility controls
  */
 class OscillatorListItemComponent
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public TestIdSupport
 {
 public:
@@ -77,8 +75,8 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
+    /// Apply updated theme colors to labels and child components.
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
     // State management
     void setSelected(bool selected);
@@ -115,7 +113,6 @@ private:
     // Data
     OscillatorId oscillatorId_;
     IInstanceRegistry& instanceRegistry_;
-    IThemeService& themeService_;
     juce::String displayName_;
     juce::String trackName_;
     juce::Colour colour_;

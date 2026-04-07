@@ -45,6 +45,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_theme_manager_crud.cpp
     tests/test_theme_manager_apply.cpp
     tests/test_theme_manager_persistence.cpp
+    tests/test_theme_accessibility.cpp
 
     # State persistence tests - split for better isolation
     tests/test_state_persistence_save.cpp
@@ -85,6 +86,9 @@ set(OSCIL_TEST_SOURCES
     tests/test_animation_settings_validation.cpp
     tests/test_animation_settings_presets.cpp
     tests/test_animation_settings_persistence.cpp
+    tests/test_glass_style.cpp
+    tests/test_spring_animation.cpp
+    tests/test_ripple_manager.cpp
 
     # UI behavior tests
     tests/test_ui_audio_feedback.cpp

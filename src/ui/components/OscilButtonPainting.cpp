@@ -1,9 +1,11 @@
 /*
     Oscil - Button Component Painting
-    Rendering, colour resolution, and path caching for OscilButton
+    Glassmorphism rendering, colour resolution, and path caching for OscilButton
 */
 
 #include "ui/components/OscilButton.h"
+
+#include <algorithm>
 
 namespace oscil
 {
@@ -12,23 +14,31 @@ void OscilButton::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
+    // Scale animation
     if (std::abs(currentScale_ - 1.0f) > 0.001f)
     {
-        auto scaledBounds =
-            bounds.withSizeKeepingCentre(bounds.getWidth() * currentScale_, bounds.getHeight() * currentScale_);
-        bounds = scaledBounds;
+        bounds = bounds.withSizeKeepingCentre(bounds.getWidth() * currentScale_, bounds.getHeight() * currentScale_);
     }
+
+    // Hover: slight upward shift (0.5px)
+    if (isHovered_ && !isPressed_ && enabled_)
+        bounds = bounds.translated(0.0f, -0.5f);
+
+    // Active: slight downward shift (1px)
+    if (isPressed_ && enabled_)
+        bounds = bounds.translated(0.0f, 1.0f);
 
     paintButton(g, bounds);
 
     if (hasFocus_ && enabled_)
-        paintFocusRing(g, getLocalBounds().toFloat());
+        paintFocusRing(g, bounds);
 }
 
 void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 {
     cachedButtonPath_.clear();
-    float cornerRadius = variant_ == ButtonVariant::Icon ? ComponentLayout::RADIUS_MD : ComponentLayout::RADIUS_LG;
+    float const cornerRadius =
+        variant_ == ButtonVariant::Icon ? ComponentLayout::RADIUS_MD : ComponentLayout::RADIUS_LG;
 
     if (segmentPosition_ == SegmentPosition::None || segmentPosition_ == SegmentPosition::Only)
     {
@@ -53,24 +63,41 @@ void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 void OscilButton::paintButtonBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds, juce::Colour bgColour)
 {
     juce::ignoreUnused(bounds);
+    const auto& glass = getGlass();
 
-    if (variant_ != ButtonVariant::Ghost && variant_ != ButtonVariant::Tertiary && variant_ != ButtonVariant::Icon)
+    bool const isGhostType =
+        (variant_ == ButtonVariant::Ghost || variant_ == ButtonVariant::Tertiary || variant_ == ButtonVariant::Icon);
+
+    // Fill background
+    if (!isGhostType || isHovered_ || isPressed_ || isToggled_)
     {
         g.setColour(bgColour);
         g.fillPath(cachedButtonPath_);
     }
-    else if (isHovered_ || isPressed_ || isToggled_)
+
+    // Ripples (after background, before border/content)
+    if (!rippleManager_.empty())
     {
-        g.setColour(bgColour);
-        g.fillPath(cachedButtonPath_);
+        auto rippleColour = getTheme().textPrimary.withAlpha(0.1f);
+        GlassPainter::paintRipples(g, bounds, rippleManager_.getRipples(), rippleColour);
     }
 
-    if (segmentPosition_ != SegmentPosition::None || variant_ == ButtonVariant::Secondary)
+    // Primary hover: accent glow behind the button
+    if (variant_ == ButtonVariant::Primary && isHovered_ && enabled_)
     {
-        g.setColour(getBorderColour());
+        GlassPainter::paintAccentGlow(g, bounds, glass.accentGlow, glass.accentGlowRadius,
+                                      glass.accentGlowAlpha * 0.5f);
+    }
+
+    // Border
+    auto borderCol = getBorderColour();
+    if (borderCol.getAlpha() > 0)
+    {
+        g.setColour(borderCol);
         g.strokePath(cachedButtonPath_, juce::PathStrokeType(1.0f));
     }
 
+    // Custom border override
     if (borderWidth_ > 0.0f && borderColor_.getAlpha() > 0)
     {
         g.setColour(borderColor_);
@@ -87,12 +114,12 @@ void OscilButton::paintButtonContent(juce::Graphics& g, const juce::Rectangle<fl
     if (!iconPath_.isEmpty())
     {
         auto pathBounds = iconPath_.getBounds();
-        float padding = static_cast<float>(ComponentLayout::SPACING_XS);
-        float availableSize = std::max(1.0f, std::min(bounds.getWidth(), bounds.getHeight()) - padding * 2);
-        float pathDim = std::max(0.001f, std::max(pathBounds.getWidth(), pathBounds.getHeight()));
-        float scale = availableSize / pathDim;
-        float offsetX = bounds.getCentreX() - (pathBounds.getCentreX() * scale);
-        float offsetY = bounds.getCentreY() - (pathBounds.getCentreY() * scale);
+        auto const padding = static_cast<float>(ComponentLayout::SPACING_XS);
+        float const availableSize = std::max(1.0f, std::min(bounds.getWidth(), bounds.getHeight()) - (padding * 2));
+        float const pathDim = std::max({0.001f, pathBounds.getWidth(), pathBounds.getHeight()});
+        float const scale = availableSize / pathDim;
+        float const offsetX = bounds.getCentreX() - (pathBounds.getCentreX() * scale);
+        float const offsetY = bounds.getCentreY() - (pathBounds.getCentreY() * scale);
 
         juce::Path scaledPath = iconPath_;
         scaledPath.applyTransform(juce::AffineTransform::scale(scale).translated(offsetX, offsetY));
@@ -103,12 +130,12 @@ void OscilButton::paintButtonContent(juce::Graphics& g, const juce::Rectangle<fl
     // Icon-only variant
     if (variant_ == ButtonVariant::Icon && icon_.isValid())
     {
-        float reduction = std::max(0.0f, (bounds.getWidth() - ICON_SIZE) / 2);
+        float const reduction = std::max(0.0f, (bounds.getWidth() - ICON_SIZE) / 2);
         g.drawImage(icon_, bounds.reduced(reduction), juce::RectanglePlacement::centred);
         return;
     }
 
-    auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+    auto font = ComponentLayout::defaultFont();
     g.setFont(font);
 
     if (icon_.isValid())
@@ -119,11 +146,11 @@ void OscilButton::paintButtonContent(juce::Graphics& g, const juce::Rectangle<fl
 
 void OscilButton::paintIconWithText(juce::Graphics& g, const juce::Rectangle<float>& bounds, const juce::Font& font)
 {
-    float iconY = (bounds.getHeight() - ICON_SIZE) / 2;
+    float const iconY = (bounds.getHeight() - ICON_SIZE) / 2;
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, label_, 0, 0);
-    float textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
-    float startX = (bounds.getWidth() - ICON_SIZE - ICON_PADDING - textWidth) / 2;
+    float const textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
+    float const startX = (bounds.getWidth() - ICON_SIZE - ICON_PADDING - textWidth) / 2;
 
     if (iconOnLeft_)
     {
@@ -153,7 +180,7 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
 
     paintButtonBackground(g, bounds, bgColour);
 
-    int horizontalPadding;
+    int horizontalPadding = 0;
     if (segmentPosition_ != SegmentPosition::None)
         horizontalPadding = ComponentLayout::BUTTON_SEGMENT_PADDING;
     else if (bounds.getWidth() < TEXT_PADDING * 2.5f)
@@ -172,94 +199,138 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
 
 void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float cornerRadius = variant_ == ButtonVariant::Icon
-                             ? ComponentLayout::RADIUS_MD + ComponentLayout::FOCUS_RING_OFFSET
-                             : ComponentLayout::RADIUS_LG + ComponentLayout::FOCUS_RING_OFFSET;
+    float const cornerRadius =
+        variant_ == ButtonVariant::Icon ? ComponentLayout::RADIUS_MD : ComponentLayout::RADIUS_LG;
 
-    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET), cornerRadius,
-                           ComponentLayout::FOCUS_RING_WIDTH);
+    GlassPainter::paintFocusRing(g, bounds, cornerRadius, getGlass().accent);
 }
 
-namespace
-{
-
-struct VariantColours
-{
-    juce::Colour primary, secondary, tertiary, ghost, danger, icon;
-};
-
-juce::Colour resolveVariant(ButtonVariant v, const VariantColours& c)
-{
-    switch (v)
-    {
-        case ButtonVariant::Primary:
-            return c.primary;
-        case ButtonVariant::Secondary:
-            return c.secondary;
-        case ButtonVariant::Tertiary:
-            return c.tertiary;
-        case ButtonVariant::Ghost:
-            return c.ghost;
-        case ButtonVariant::Danger:
-            return c.danger;
-        case ButtonVariant::Icon:
-            return c.icon;
-    }
-    jassertfalse;
-    return c.primary;
-}
-
-} // namespace
+// ---------------------------------------------------------------------------
+// Colour resolution — glass-based
+// ---------------------------------------------------------------------------
 
 juce::Colour OscilButton::getBackgroundColour() const
 {
-    const auto& t = getTheme();
+    const auto& glass = getGlass();
+    const auto& theme = getTheme();
 
+    // Toggled state (segmented button bars)
     if (toggleable_ && isToggled_)
-        return t.btnPrimaryBgActive;
+        return glass.accentSubtle;
 
+    // Disabled — same base color at reduced opacity (handled by caller)
     if (!enabled_)
-        return resolveVariant(variant_, {t.btnPrimaryBgDisabled, t.btnSecondaryBgDisabled, t.btnTertiaryBgDisabled,
-                                         t.btnTertiaryBgDisabled, t.statusError.withAlpha(0.5f),
-                                         t.backgroundSecondary.withAlpha(0.5f)});
+    {
+        if (variant_ == ButtonVariant::Primary)
+            return glass.accentSubtle;
+        if (variant_ == ButtonVariant::Danger)
+            return theme.statusError.withAlpha(0.15f);
+        return juce::Colours::transparentBlack;
+    }
 
+    // Active / pressed
     if (isPressed_)
-        return resolveVariant(variant_, {t.btnPrimaryBgActive, t.btnSecondaryBgActive, t.btnTertiaryBgActive,
-                                         t.btnTertiaryBgActive, t.statusError.darker(0.2f), t.controlHighlight});
+    {
+        if (variant_ == ButtonVariant::Primary)
+            return glass.accent.withAlpha(0.25f);
+        if (variant_ == ButtonVariant::Danger)
+            return theme.statusError.withAlpha(0.20f);
+        return glass.bgActive;
+    }
 
+    // Hovered
     if (isHovered_)
-        return resolveVariant(variant_, {t.btnPrimaryBgHover, t.btnSecondaryBgHover, t.btnTertiaryBgHover,
-                                         t.btnTertiaryBgHover, t.statusError.brighter(0.1f), t.controlHighlight});
+    {
+        if (variant_ == ButtonVariant::Primary)
+            return glass.accentMuted;
+        if (variant_ == ButtonVariant::Danger)
+            return theme.statusError.withAlpha(0.15f);
+        return glass.bgHover;
+    }
 
-    return resolveVariant(variant_, {t.btnPrimaryBg, t.btnSecondaryBg, t.btnTertiaryBg, t.btnTertiaryBg, t.statusError,
-                                     t.backgroundSecondary});
+    // Default — only Primary has a visible background
+    if (variant_ == ButtonVariant::Primary)
+        return glass.accentSubtle;
+    return juce::Colours::transparentBlack;
 }
 
 juce::Colour OscilButton::getTextColour() const
 {
-    const auto& t = getTheme();
+    const auto& glass = getGlass();
+    const auto& theme = getTheme();
 
+    // Toggled state
     if (toggleable_ && isToggled_)
-        return t.btnPrimaryTextActive;
+        return glass.accent;
 
+    // Disabled
     if (!enabled_)
-        return resolveVariant(variant_,
-                              {t.btnPrimaryTextDisabled, t.btnSecondaryTextDisabled, t.btnTertiaryTextDisabled,
-                               t.btnTertiaryTextDisabled, t.textSecondary, t.textSecondary});
+    {
+        switch (variant_)
+        {
+            case ButtonVariant::Primary:
+                return glass.accent;
+            case ButtonVariant::Danger:
+                return theme.statusError;
+            case ButtonVariant::Secondary:
+            case ButtonVariant::Ghost:
+            case ButtonVariant::Tertiary:
+            case ButtonVariant::Icon:
+                return theme.textSecondary;
+        }
+    }
 
-    if (isPressed_)
-        return resolveVariant(variant_, {t.btnPrimaryTextActive, t.btnSecondaryTextActive, t.btnTertiaryTextActive,
-                                         t.btnTertiaryTextActive, juce::Colours::white, t.textHighlight});
+    // Pressed / Hovered — same logic, just potentially different brightness
+    // For Primary: accent text color throughout all states
+    // For Secondary: textPrimary on hover/press, textSecondary default
+    // For Ghost/Tertiary/Icon: same as Secondary
+    // For Danger: statusError throughout
 
-    if (isHovered_)
-        return resolveVariant(variant_, {t.btnPrimaryTextHover, t.btnSecondaryTextHover, t.btnTertiaryTextHover,
-                                         t.btnTertiaryTextHover, juce::Colours::white, t.textHighlight});
+    switch (variant_)
+    {
+        case ButtonVariant::Primary:
+            return glass.accent;
+        case ButtonVariant::Danger:
+            return theme.statusError;
+        case ButtonVariant::Secondary:
+        case ButtonVariant::Ghost:
+        case ButtonVariant::Tertiary:
+        case ButtonVariant::Icon:
+            return (isHovered_ || isPressed_) ? theme.textPrimary : theme.textSecondary;
+    }
 
-    return resolveVariant(variant_, {t.btnPrimaryText, t.btnSecondaryText, t.btnTertiaryText, t.btnTertiaryText,
-                                     juce::Colours::white, t.textPrimary});
+    jassertfalse;
+    return theme.textPrimary;
 }
 
-juce::Colour OscilButton::getBorderColour() const { return getTheme().controlBorder; }
+juce::Colour OscilButton::getBorderColour() const
+{
+    const auto& glass = getGlass();
+    const auto& theme = getTheme();
+
+    // Toggled state
+    if (toggleable_ && isToggled_)
+        return glass.accent;
+
+    switch (variant_)
+    {
+        case ButtonVariant::Primary:
+            return glass.accent;
+        case ButtonVariant::Secondary:
+            return isHovered_ ? glass.borderStrong : glass.borderDefault;
+        case ButtonVariant::Danger:
+            return theme.statusError.withAlpha(0.3f);
+        case ButtonVariant::Ghost:
+        case ButtonVariant::Tertiary:
+        case ButtonVariant::Icon:
+            return juce::Colours::transparentBlack; // No border for ghost variants
+    }
+
+    // Segmented buttons always need a border
+    if (segmentPosition_ != SegmentPosition::None)
+        return glass.borderDefault;
+
+    return juce::Colours::transparentBlack;
+}
 
 } // namespace oscil

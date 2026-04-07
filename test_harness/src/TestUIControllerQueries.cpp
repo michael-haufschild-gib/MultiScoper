@@ -21,24 +21,48 @@ namespace oscil::test
 
 bool TestUIController::setFocus(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (component == nullptr)
-        return false;
-
-    juce::Component::SafePointer<juce::Component> safeComp(component);
+    bool result = false;
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([safeComp, &done]() {
-        if (auto* comp = safeComp.getComponent())
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        if (auto* comp = getTargetComponent(elementId))
+        {
             comp->grabKeyboardFocus();
+            result = true;
+        }
         done.signal();
     });
     done.wait(3000);
 
-    return true;
+    return result;
 }
 
 juce::String TestUIController::getFocusedElementId()
 {
+    juce::String result;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([&result, &done]() {
+        auto* focused = juce::Component::getCurrentlyFocusedComponent();
+        if (focused != nullptr)
+        {
+            auto elements = TestElementRegistry::getInstance().getAllElements();
+            for (const auto& [testId, component] : elements)
+            {
+                if (component == focused)
+                {
+                    result = testId;
+                    break;
+                }
+            }
+        }
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
+}
+
+juce::String TestUIController::getFocusedElementIdOnMessageThread()
+{
+    // Must be called from the message thread — no dispatch needed
     auto* focused = juce::Component::getCurrentlyFocusedComponent();
     if (focused == nullptr)
         return {};
@@ -49,53 +73,54 @@ juce::String TestUIController::getFocusedElementId()
         if (component == focused)
             return testId;
     }
-
     return {};
 }
 
 bool TestUIController::hasFocus(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (component == nullptr)
-        return false;
-
-    return component->hasKeyboardFocus(true);
+    bool result = false;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        if (auto* comp = getTargetComponent(elementId))
+            result = comp->hasKeyboardFocus(true);
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 bool TestUIController::focusNext()
 {
-    auto* focused = juce::Component::getCurrentlyFocusedComponent();
-    if (focused == nullptr)
-        return false;
-
-    juce::Component::SafePointer<juce::Component> safeFocused(focused);
+    bool result = false;
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([safeFocused, &done]() {
-        if (auto* comp = safeFocused.getComponent())
-            comp->moveKeyboardFocusToSibling(true);
+    juce::MessageManager::callAsync([&result, &done]() {
+        if (auto* focused = juce::Component::getCurrentlyFocusedComponent())
+        {
+            focused->moveKeyboardFocusToSibling(true);
+            result = true;
+        }
         done.signal();
     });
     done.wait(3000);
 
-    return true;
+    return result;
 }
 
 bool TestUIController::focusPrevious()
 {
-    auto* focused = juce::Component::getCurrentlyFocusedComponent();
-    if (focused == nullptr)
-        return false;
-
-    juce::Component::SafePointer<juce::Component> safeFocused(focused);
+    bool result = false;
     juce::WaitableEvent done;
-    juce::MessageManager::callAsync([safeFocused, &done]() {
-        if (auto* comp = safeFocused.getComponent())
-            comp->moveKeyboardFocusToSibling(false);
+    juce::MessageManager::callAsync([&result, &done]() {
+        if (auto* focused = juce::Component::getCurrentlyFocusedComponent())
+        {
+            focused->moveKeyboardFocusToSibling(false);
+            result = true;
+        }
         done.signal();
     });
     done.wait(3000);
 
-    return true;
+    return result;
 }
 
 // ================== State Queries ==================
@@ -103,118 +128,156 @@ bool TestUIController::focusPrevious()
 json TestUIController::getUIState()
 {
     json state;
-    state["elements"] = json::object();
-
-    auto elements = TestElementRegistry::getInstance().getAllElements();
-    for (const auto& [testId, component] : elements)
-    {
-        state["elements"][testId.toStdString()] = componentToJson(component, testId);
-    }
-
-    auto focusedId = getFocusedElementId();
-    state["focusedElement"] = focusedId.toStdString();
-
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, &state, &done]() {
+        state["elements"] = json::object();
+        auto elements = TestElementRegistry::getInstance().getAllElements();
+        for (const auto& [testId, component] : elements)
+            state["elements"][testId.toStdString()] = componentToJson(component, testId);
+        state["focusedElement"] = getFocusedElementIdOnMessageThread().toStdString();
+        done.signal();
+    });
+    done.wait(3000);
     return state;
 }
 
 json TestUIController::getElementInfo(const juce::String& elementId)
 {
-    // Always log to verify this code path executes
-    fprintf(stderr, "[getElementInfo] queried: %s\n", elementId.toRawUTF8());
-    auto* component = getTargetComponent(elementId);
-    if (component == nullptr)
-    {
-        fprintf(stderr, "[getElementInfo] NOT FOUND: %s\n", elementId.toRawUTF8());
-        return json{{"error", "Element not found"}};
-    }
-
-    return componentToJson(component, elementId);
+    json result;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        auto* component = getTargetComponent(elementId);
+        if (component == nullptr)
+            result = json{{"error", "Element not found"}};
+        else
+            result = componentToJson(component, elementId);
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 bool TestUIController::isElementVisible(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (component == nullptr)
-        return false;
-
-    return component->isVisible() && component->isShowing();
+    bool result = false;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        if (auto* comp = getTargetComponent(elementId))
+            result = comp->isVisible() && comp->isShowing();
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 bool TestUIController::isElementEnabled(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (component == nullptr)
-        return false;
-
-    return component->isEnabled();
+    bool result = false;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        if (auto* comp = getTargetComponent(elementId))
+            result = comp->isEnabled();
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 bool TestUIController::isElementFocusable(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (component == nullptr)
-        return false;
-
-    return component->getWantsKeyboardFocus();
+    bool result = false;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        if (auto* comp = getTargetComponent(elementId))
+            result = comp->getWantsKeyboardFocus();
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 double TestUIController::getSliderValue(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
-        return oscilSlider->getValue();
-    if (auto* slider = dynamic_cast<juce::Slider*>(component))
-        return slider->getValue();
-    return 0.0;
+    double result = 0.0;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        auto* component = getTargetComponent(elementId);
+        if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+            result = oscilSlider->getValue();
+        else if (auto* slider = dynamic_cast<juce::Slider*>(component))
+            result = slider->getValue();
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 std::pair<double, double> TestUIController::getSliderRange(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
-        return {oscilSlider->getMinimum(), oscilSlider->getMaximum()};
-    if (auto* slider = dynamic_cast<juce::Slider*>(component))
-        return {slider->getMinimum(), slider->getMaximum()};
-    return {0.0, 1.0};
+    std::pair<double, double> result{0.0, 1.0};
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        auto* component = getTargetComponent(elementId);
+        if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+            result = {oscilSlider->getMinimum(), oscilSlider->getMaximum()};
+        else if (auto* slider = dynamic_cast<juce::Slider*>(component))
+            result = {slider->getMinimum(), slider->getMaximum()};
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 bool TestUIController::getToggleState(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
-        return oscilToggle->getValue();
-    if (auto* button = dynamic_cast<juce::Button*>(component))
-        return button->getToggleState();
-    return false;
+    bool result = false;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        auto* component = getTargetComponent(elementId);
+        if (auto* oscilToggle = dynamic_cast<oscil::OscilToggle*>(component))
+            result = oscilToggle->getValue();
+        else if (auto* button = dynamic_cast<juce::Button*>(component))
+            result = button->getToggleState();
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 juce::String TestUIController::getTextContent(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-
-    if (auto* oscilTextField = dynamic_cast<oscil::OscilTextField*>(component))
-        return oscilTextField->getText();
-
-    if (auto* textEditor = dynamic_cast<juce::TextEditor*>(component))
-        return textEditor->getText();
-
-    if (auto* label = dynamic_cast<juce::Label*>(component))
-        return label->getText();
-
-    if (auto* button = dynamic_cast<juce::Button*>(component))
-        return button->getButtonText();
-
-    return {};
+    juce::String result;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        auto* component = getTargetComponent(elementId);
+        if (auto* oscilTextField = dynamic_cast<oscil::OscilTextField*>(component))
+            result = oscilTextField->getText();
+        else if (auto* textEditor = dynamic_cast<juce::TextEditor*>(component))
+            result = textEditor->getText();
+        else if (auto* label = dynamic_cast<juce::Label*>(component))
+            result = label->getText();
+        else if (auto* button = dynamic_cast<juce::Button*>(component))
+            result = button->getButtonText();
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 int TestUIController::getSelectedItemId(const juce::String& elementId)
 {
-    auto* component = getTargetComponent(elementId);
-    if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
-        return oscilDropdown->getSelectedIndex();
-    if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
-        return comboBox->getSelectedId();
-    return 0;
+    int result = 0;
+    juce::WaitableEvent done;
+    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
+        auto* component = getTargetComponent(elementId);
+        if (auto* oscilDropdown = dynamic_cast<oscil::OscilDropdown*>(component))
+            result = oscilDropdown->getSelectedIndex();
+        else if (auto* comboBox = dynamic_cast<juce::ComboBox*>(component))
+            result = comboBox->getSelectedId();
+        done.signal();
+    });
+    done.wait(3000);
+    return result;
 }
 
 // ================== Waits ==================

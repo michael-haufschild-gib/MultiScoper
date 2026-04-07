@@ -9,8 +9,6 @@
 namespace oscil
 {
 
-using namespace juce::gl;
-
 // Film grain fragment shader using procedural noise
 static const char* filmGrainFragmentShader = R"(
     #version 330 core
@@ -68,87 +66,34 @@ static const char* filmGrainFragmentShader = R"(
     }
 )";
 
-FilmGrainEffect::FilmGrainEffect() {}
+FilmGrainEffect::FilmGrainEffect() = default;
 
 FilmGrainEffect::~FilmGrainEffect() = default;
 
-bool FilmGrainEffect::compile(juce::OpenGLContext& context)
+const char* FilmGrainEffect::getFragmentSource() const { return filmGrainFragmentShader; }
+
+bool FilmGrainEffect::resolveUniforms()
 {
-    if (compiled_)
-        return true;
-
-    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!compileEffectShader(*shader_, filmGrainFragmentShader))
-    {
-        DBG("FilmGrainEffect: Failed to compile shader");
-        shader_.reset();
-        return false;
-    }
-
-    // Get uniform locations
-    textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     intensityLoc_ = shader_->getUniformIDFromName("intensity");
     timeLoc_ = shader_->getUniformIDFromName("time");
     resolutionLoc_ = shader_->getUniformIDFromName("resolution");
 
-    if (textureLoc_ < 0 || intensityLoc_ < 0 || timeLoc_ < 0 || resolutionLoc_ < 0)
-    {
-        DBG("FilmGrainEffect: Missing uniforms");
-        shader_.reset();
-        return false;
-    }
-
-    compiled_ = true;
-    DBG("FilmGrainEffect: Compiled successfully");
-    return true;
+    return intensityLoc_ >= 0 && timeLoc_ >= 0 && resolutionLoc_ >= 0;
 }
 
-void FilmGrainEffect::release(juce::OpenGLContext& context)
+void FilmGrainEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
-    juce::ignoreUnused(context);
-    shader_.reset();
-    compiled_ = false;
-}
-
-bool FilmGrainEffect::isCompiled() const { return compiled_; }
-
-void FilmGrainEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
-                            FramebufferPool& pool, float deltaTime)
-{
-    if (!compiled_ || !source || !destination)
-        return;
-
-    // Update time based on configured speed
+    // Update time based on configured speed.
+    // Wrap at 10.0 to keep float precision high — the shader's hash(fract(...))
+    // makes the wrap boundary invisible.
     accumulatedTime_ += deltaTime * settings_.speed;
-    if (accumulatedTime_ > 1000.0f)
-        accumulatedTime_ = std::fmod(accumulatedTime_, 1000.0f);
+    if (accumulatedTime_ > 10.0f)
+        accumulatedTime_ = std::fmod(accumulatedTime_, 10.0f);
 
-    auto& ext = context.extensions;
-
-    // Bind destination
-    destination->bind();
-
-    // Disable depth test for fullscreen pass
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-
-    // Use shader
-    shader_->use();
-
-    // Bind source texture
-    source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-
-    // Set uniforms
-    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
-    ext.glUniform1f(timeLoc_, accumulatedTime_);
-    ext.glUniform2f(resolutionLoc_, static_cast<float>(source->width), static_cast<float>(source->height));
-
-    // Render fullscreen quad
-    pool.renderFullscreenQuad();
-
-    destination->unbind();
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(timeLoc_, accumulatedTime_);
+    juce::OpenGLExtensionFunctions::glUniform2f(resolutionLoc_, static_cast<float>(source.width),
+                                                static_cast<float>(source.height));
 }
 
 } // namespace oscil

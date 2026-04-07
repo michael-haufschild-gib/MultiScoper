@@ -4,6 +4,7 @@
 
 #include <juce_core/juce_core.h>
 
+#include <optional>
 #include <vector>
 
 namespace oscil
@@ -50,6 +51,7 @@ public:
     bool isUserPreset(const juce::String& presetId) const;
 
 private:
+    static std::optional<juce::ValueTree> parsePresetFile(const juce::File& file);
     static juce::String sanitizeFilename(const juce::String& name);
     static juce::String generatePresetId(const juce::String& name);
     juce::File getUserPresetFile(const juce::String& presetId) const;

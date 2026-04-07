@@ -3,36 +3,23 @@
     AdaptiveDecimator, fuzz testing, AudioBuffer input edge cases
 */
 
-#ifndef _USE_MATH_DEFINES
-    #define _USE_MATH_DEFINES
-#endif
 #include "core/dsp/SignalProcessor.h"
+
+#include "TestSignals.h"
 
 #include <cmath>
 #include <gtest/gtest.h>
 #include <limits>
-#include <random>
 #include <span>
 
 using namespace oscil;
+using oscil::test::generateRandomVector;
 
 class SignalProcessorStereoTest : public ::testing::Test
 {
 protected:
     SignalProcessor processor;
     ProcessedSignal output;
-
-    std::vector<float> generateRandom(int numSamples, float min, float max, int seed = 12345)
-    {
-        std::vector<float> samples(numSamples);
-        std::mt19937 gen(seed);
-        std::uniform_real_distribution<float> dist(min, max);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            samples[i] = dist(gen);
-        }
-        return samples;
-    }
 };
 
 // =============================================================================
@@ -117,8 +104,8 @@ TEST_F(SignalProcessorStereoTest, FuzzTest_RandomBuffers)
         int numSamples = 10 + (i * 10); // Variable size
 
         // Generate very loud noise, possibly outside [-1, 1]
-        auto left = generateRandom(numSamples, -2.0f, 2.0f, 1000 + i);
-        auto right = generateRandom(numSamples, -2.0f, 2.0f, 2000 + i);
+        auto left = generateRandomVector(numSamples, -2.0f, 2.0f, 1000 + i);
+        auto right = generateRandomVector(numSamples, -2.0f, 2.0f, 2000 + i);
 
         // Random mode
         ProcessingMode mode = static_cast<ProcessingMode>(i % 6);

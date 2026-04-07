@@ -49,7 +49,7 @@ juce::String OscilState::toXmlString()
     if (auto xml = state_.createXml())
     {
         auto xmlStr = xml->toString();
-        OSCIL_LOG(STATE, "toXmlString: " << xmlStr.length() << "ch " << getOscillators().size() << "osc "
+        OSCIL_LOG(STATE, "toXmlString: " << xmlStr.length() << "ch " << getOscillatorsNode().getNumChildren() << "osc "
                                          << layoutManager_.getPaneCount() << "panes");
         return xmlStr;
     }
@@ -95,7 +95,7 @@ bool OscilState::fromXmlString(const juce::String& xmlString)
         return false;
     }
 
-    if (int v = loadedState.getProperty(StateIds::Version, 0); v != CURRENT_SCHEMA_VERSION)
+    if (int const v = loadedState.getProperty(StateIds::Version, 0); v != CURRENT_SCHEMA_VERSION)
         juce::Logger::writeToLog("OscilState: loaded schema v" + juce::String(v) + ", current v" +
                                  juce::String(CURRENT_SCHEMA_VERSION));
     state_ = loadedState;
@@ -110,12 +110,12 @@ bool OscilState::fromXmlString(const juce::String& xmlString)
     auto layoutNode = getLayoutNode();
     if (layoutNode.isValid())
     {
-        int cols = layoutNode.getProperty(StateIds::Columns, 1);
+        int const cols = layoutNode.getProperty(StateIds::Columns, 1);
         layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
     }
 
-    OSCIL_LOG(STATE, "fromXmlString: " << getOscillators().size() << "osc " << layoutManager_.getPaneCount()
-                                       << "panes v" << getSchemaVersion());
+    OSCIL_LOG(STATE, "fromXmlString: " << getOscillatorCount() << "osc " << layoutManager_.getPaneCount() << "panes v"
+                                       << getSchemaVersion());
     return true;
 }
 
@@ -135,6 +135,8 @@ std::vector<Oscillator> OscilState::getOscillators() const
 
     return result;
 }
+
+int OscilState::getOscillatorCount() const { return getOscillatorsNode().getNumChildren(); }
 
 void OscilState::addOscillator(const Oscillator& oscillator)
 {
@@ -171,7 +173,7 @@ void OscilState::removeOscillator(const OscillatorId& oscillatorId)
         for (int i = 0; i < oscillatorsNode.getNumChildren(); ++i)
         {
             auto child = oscillatorsNode.getChild(i);
-            int currentIndex = child.getProperty(StateIds::Order, i);
+            int const currentIndex = child.getProperty(StateIds::Order, i);
             if (currentIndex > removedIndex)
             {
                 child.setProperty(StateIds::Order, currentIndex - 1, nullptr);
@@ -275,7 +277,7 @@ void OscilState::setThemeName(const juce::String& themeName)
 ColumnLayout OscilState::getColumnLayout() const
 {
     auto layoutNode = getLayoutNode();
-    int cols = layoutNode.getProperty(StateIds::Columns, 1);
+    int const cols = layoutNode.getProperty(StateIds::Columns, 1);
     return static_cast<ColumnLayout>(std::clamp(cols, 1, 3));
 }
 
@@ -386,16 +388,16 @@ CaptureQualityConfig OscilState::getCaptureQualityConfig() const
 
     CaptureQualityConfig config;
 
-    int presetInt = qualityNode.getProperty(StateIds::QualityPreset, static_cast<int>(QualityPreset::Standard));
+    int const presetInt = qualityNode.getProperty(StateIds::QualityPreset, static_cast<int>(QualityPreset::Standard));
     config.qualityPreset = static_cast<QualityPreset>(std::clamp(presetInt, 0, static_cast<int>(QualityPreset::Ultra)));
 
-    int durationInt = qualityNode.getProperty(StateIds::BufferDuration, static_cast<int>(BufferDuration::Medium));
+    int const durationInt = qualityNode.getProperty(StateIds::BufferDuration, static_cast<int>(BufferDuration::Medium));
     config.bufferDuration =
         static_cast<BufferDuration>(std::clamp(durationInt, 0, static_cast<int>(BufferDuration::VeryLong)));
 
     config.autoAdjustQuality = qualityNode.getProperty(StateIds::AutoAdjustQuality, true);
 
-    juce::int64 budgetBytes = qualityNode.getProperty(StateIds::MemoryBudgetBytes, static_cast<juce::int64>(0));
+    juce::int64 const budgetBytes = qualityNode.getProperty(StateIds::MemoryBudgetBytes, static_cast<juce::int64>(0));
     if (budgetBytes > 0)
     {
         config.memoryBudget.totalBudgetBytes = static_cast<size_t>(budgetBytes);

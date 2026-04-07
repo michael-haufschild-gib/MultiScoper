@@ -12,6 +12,7 @@
 #include <httplib.h>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <utility>
 
 namespace oscil
 {
@@ -37,6 +38,7 @@ protected:
      * Uses shared_ptr for signal/result so a timeout doesn't cause use-after-free.
      */
     template <typename Func>
+    // NOLINTNEXTLINE(readability-function-cognitive-complexity)
     auto runOnMessageThread(Func&& func) -> decltype(func())
     {
         if (juce::MessageManager::getInstance()->isThisTheMessageThread())
@@ -49,8 +51,20 @@ protected:
         if constexpr (std::is_void_v<ReturnType>)
         {
             auto done = std::make_shared<juce::WaitableEvent>();
+            // NOLINTNEXTLINE(bugprone-exception-escape)
             juce::MessageManager::callAsync([f = std::forward<Func>(func), done]() mutable {
-                f();
+                try
+                {
+                    f();
+                }
+                catch (const std::exception& e)
+                {
+                    DBG("TestServerHandlerBase: exception in message thread: " << e.what());
+                }
+                catch (...)
+                {
+                    DBG("TestServerHandlerBase: unknown exception in message thread");
+                }
                 done->signal();
             });
             if (!done->wait(MESSAGE_THREAD_TIMEOUT_MS))
@@ -64,8 +78,20 @@ protected:
                           "runOnMessageThread with non-void return only supports nlohmann::json");
             auto result = std::make_shared<ReturnType>();
             auto done = std::make_shared<juce::WaitableEvent>();
+            // NOLINTNEXTLINE(bugprone-exception-escape)
             juce::MessageManager::callAsync([f = std::forward<Func>(func), result, done]() mutable {
-                *result = f();
+                try
+                {
+                    *result = f();
+                }
+                catch (const std::exception& e)
+                {
+                    (*result)["error"] = e.what();
+                }
+                catch (...)
+                {
+                    (*result)["error"] = "Unknown exception in message thread";
+                }
                 done->signal();
             });
             if (!done->wait(MESSAGE_THREAD_TIMEOUT_MS))
@@ -122,7 +148,7 @@ protected:
         response["totalTests"] = static_cast<int>(tests.size());
         response["passed"] = passedCount;
         response["failed"] = static_cast<int>(tests.size()) - passedCount;
-        response["allPassed"] = (passedCount == static_cast<int>(tests.size()));
+        response["allPassed"] = (std::cmp_equal(passedCount, tests.size()));
     }
 
     OscilPluginEditor& editor_;

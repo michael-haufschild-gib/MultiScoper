@@ -4,6 +4,8 @@
 
 #include "ui/components/OscilBadge.h"
 
+#include "ui/components/GlassPainter.h"
+
 namespace oscil
 {
 
@@ -84,11 +86,11 @@ int OscilBadge::getPreferredWidth() const
     auto font = juce::Font(juce::FontOptions().withHeight(compact_ ? 11.0f : 12.0f));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, text_, 0, 0);
-    int textWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-    int iconWidth = icon_.isValid() ? ICON_SIZE + 4 : 0;
-    int padding = compact_ ? COMPACT_PADDING_H : PADDING_H;
+    int const textWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+    int const iconWidth = icon_.isValid() ? ICON_SIZE + 4 : 0;
+    int const padding = compact_ ? COMPACT_PADDING_H : PADDING_H;
 
-    return textWidth + iconWidth + padding * 2;
+    return textWidth + iconWidth + (padding * 2);
 }
 
 int OscilBadge::getPreferredHeight() const
@@ -99,34 +101,52 @@ int OscilBadge::getPreferredHeight() const
 void OscilBadge::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
+    const auto& glass = getGlass();
 
     auto bgColour = getBackgroundColour();
     auto textColour = getTextColour();
     auto borderColour = getBorderColour();
+    float const radius = bounds.getHeight() / 2.0f;
 
-    // Background
-    if (variant_ == BadgeVariant::Filled)
+    // Background + border
+    if (color_ == BadgeColor::Default)
     {
+        // Default variant: glass bg + borderSubtle
+        g.setColour(glass.bgGlass);
+        g.fillRoundedRectangle(bounds, radius);
+        g.setColour(glass.borderSubtle);
+        g.drawRoundedRectangle(bounds.reduced(0.5f), radius, 1.0f);
+    }
+    else if (color_ == BadgeColor::Info)
+    {
+        // Accent variant: accentSubtle fill + accentMuted border
+        g.setColour(glass.accentSubtle);
+        g.fillRoundedRectangle(bounds, radius);
+        g.setColour(glass.accentMuted);
+        g.drawRoundedRectangle(bounds.reduced(0.5f), radius, 1.0f);
+    }
+    else if (variant_ == BadgeVariant::Filled)
+    {
+        // Status filled: status color bg
         g.setColour(bgColour);
-        g.fillRoundedRectangle(bounds, bounds.getHeight() / 2.0f);
+        g.fillRoundedRectangle(bounds, radius);
     }
     else
     {
-        // Outline variant: Use higher alpha for better contrast (WCAG AA)
+        // Status outline: subtle bg + colored border
         g.setColour(bgColour.withAlpha(0.2f));
-        g.fillRoundedRectangle(bounds, bounds.getHeight() / 2.0f);
-
+        g.fillRoundedRectangle(bounds, radius);
         g.setColour(borderColour);
-        g.drawRoundedRectangle(bounds.reduced(0.5f), bounds.getHeight() / 2.0f, 1.0f);
+        g.drawRoundedRectangle(bounds.reduced(0.5f), radius, 1.0f);
     }
 
     // Content
-    int padding = compact_ ? COMPACT_PADDING_H : PADDING_H;
+    int const padding = compact_ ? COMPACT_PADDING_H : PADDING_H;
     auto contentBounds = bounds.reduced(static_cast<float>(padding), 0);
 
     if (icon_.isValid())
     {
-        float iconY = (bounds.getHeight() - ICON_SIZE) / 2.0f;
+        float const iconY = (bounds.getHeight() - ICON_SIZE) / 2.0f;
         g.drawImage(icon_, juce::Rectangle<float>(contentBounds.getX(), iconY, ICON_SIZE, ICON_SIZE),
                     juce::RectanglePlacement::centred);
 
@@ -140,36 +160,54 @@ void OscilBadge::paint(juce::Graphics& g)
 
 juce::Colour OscilBadge::getBackgroundColour() const
 {
+    const auto& glass = getGlass();
+
     switch (color_)
     {
         case BadgeColor::Success:
-            return getTheme().statusActive; // Green
+            return getTheme().statusActive;
         case BadgeColor::Warning:
-            return getTheme().statusWarning; // Yellow
+            return getTheme().statusWarning;
         case BadgeColor::Error:
-            return getTheme().statusError; // Red
+            return getTheme().statusError;
         case BadgeColor::Info:
-            return juce::Colour(0xFF06B6D4); // Cyan
+            return glass.accent;
         case BadgeColor::Default:
         default:
-            return getTheme().controlActive; // Blue
+            return glass.bgGlass;
     }
 }
 
 juce::Colour OscilBadge::getTextColour() const
 {
+    const auto& glass = getGlass();
+
+    if (color_ == BadgeColor::Default)
+        return getTheme().textPrimary;
+
+    if (color_ == BadgeColor::Info)
+        return glass.accent;
+
     if (variant_ == BadgeVariant::Filled)
-    {
-        // White text on filled badges
         return juce::Colours::white;
-    }
-    else
-    {
-        // Colored text on outline badges
-        return getBackgroundColour();
-    }
+
+    // Colored text on outline badges for status variants
+    return getBackgroundColour();
 }
 
-juce::Colour OscilBadge::getBorderColour() const { return getBackgroundColour(); }
+juce::Colour OscilBadge::getBorderColour() const
+{
+    const auto& glass = getGlass();
+
+    switch (color_)
+    {
+        case BadgeColor::Default:
+            return glass.borderSubtle;
+        case BadgeColor::Info:
+            return glass.accentMuted;
+        default:
+            return getBackgroundColour();
+    }
+}
 
 } // namespace oscil

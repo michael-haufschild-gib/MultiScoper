@@ -87,27 +87,6 @@ TestElementRegistry::findFirstValid(std::vector<juce::Component::SafePointer<juc
     return nullptr;
 }
 
-bool TestElementRegistry::isComponentInWindow(juce::Component* comp, juce::Component* window)
-{
-    if (comp == nullptr || window == nullptr)
-        return false;
-
-    auto* current = comp;
-    while (current != nullptr)
-    {
-        if (current == window)
-            return true;
-        // Check if current's top-level component is the window's content
-        if (current->getParentComponent() == nullptr)
-        {
-            // Reached a root — check if it's inside the window
-            return current == window;
-        }
-        current = current->getParentComponent();
-    }
-    return false;
-}
-
 juce::Component* TestElementRegistry::findElement(const juce::String& testId)
 {
     std::scoped_lock lock(mutex_);
@@ -123,12 +102,7 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
     std::scoped_lock lock(mutex_);
     auto it = elements_.find(testId);
     if (it == elements_.end())
-    {
-        if (testId.contains("item_0_delete"))
-            juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): NOT FOUND in map (size=" +
-                                     juce::String(static_cast<int>(elements_.size())) + ")");
         return nullptr;
-    }
 
     auto& entries = it->second;
     pruneStaleEntries(entries);
@@ -143,17 +117,10 @@ juce::Component* TestElementRegistry::findValidElement(const juce::String& testI
         // windows always have a parent. If a component has no parent and is
         // not currently on screen, it's likely stale.
         if (comp->getParentComponent() == nullptr && !comp->isOnDesktop())
-        {
-            if (testId.contains("item_0_delete"))
-                juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): no parent, skipping stale");
             continue;
-        }
 
         return comp;
     }
-
-    if (testId.contains("item_0_delete"))
-        juce::Logger::writeToLog("[Registry] findValidElement(" + testId + "): all entries stale");
 
     // All entries were stale — clean up
     if (entries.empty())

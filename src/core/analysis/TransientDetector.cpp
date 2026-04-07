@@ -50,14 +50,14 @@ void TransientDetector::updateCoefficients(double sampleRate)
 void TransientDetector::updateEnvelopes(float absSample)
 {
     if (absSample > fastEnvelope_)
-        fastEnvelope_ = fastEnvelope_ * fastAttackCoef_ + absSample * (1.0f - fastAttackCoef_);
+        fastEnvelope_ = (fastEnvelope_ * fastAttackCoef_) + (absSample * (1.0f - fastAttackCoef_));
     else
-        fastEnvelope_ = fastEnvelope_ * fastReleaseCoef_ + absSample * (1.0f - fastReleaseCoef_);
+        fastEnvelope_ = (fastEnvelope_ * fastReleaseCoef_) + (absSample * (1.0f - fastReleaseCoef_));
 
     if (absSample > slowEnvelope_)
-        slowEnvelope_ = slowEnvelope_ * slowAttackCoef_ + absSample * (1.0f - slowAttackCoef_);
+        slowEnvelope_ = (slowEnvelope_ * slowAttackCoef_) + (absSample * (1.0f - slowAttackCoef_));
     else
-        slowEnvelope_ = slowEnvelope_ * slowReleaseCoef_ + absSample * (1.0f - slowReleaseCoef_);
+        slowEnvelope_ = (slowEnvelope_ * slowReleaseCoef_) + (absSample * (1.0f - slowReleaseCoef_));
 }
 
 void TransientDetector::processIdleState()
@@ -86,13 +86,13 @@ float TransientDetector::processAttackState(double sampleRate, float currentAtta
         samplesSincePeakIncrease_++;
     }
 
-    bool envelopeDropped = fastEnvelope_ < transientPeak_ * PEAK_THRESHOLD;
-    double plateauSamples = (PLATEAU_TIME_MS / 1000.0) * sampleRate;
-    bool plateauReached = samplesSincePeakIncrease_ >= plateauSamples;
+    bool const envelopeDropped = fastEnvelope_ < transientPeak_ * PEAK_THRESHOLD;
+    double const plateauSamples = (PLATEAU_TIME_MS / 1000.0) * sampleRate;
+    bool const plateauReached = samplesSincePeakIncrease_ >= plateauSamples;
 
     if (envelopeDropped || plateauReached)
     {
-        double attackMs = (samplesInState_ / sampleRate) * 1000.0;
+        double const attackMs = (samplesInState_ / sampleRate) * 1000.0;
         currentAttack = static_cast<float>(attackMs);
         state_ = State::MeasuringDecay;
         samplesInState_ = 0;
@@ -112,10 +112,10 @@ float TransientDetector::processDecayState(double sampleRate, float currentDecay
 {
     samplesInState_++;
 
-    float decayLevel = onsetLevel_ + (transientPeak_ - onsetLevel_) * DECAY_THRESHOLD;
+    float const decayLevel = onsetLevel_ + ((transientPeak_ - onsetLevel_) * DECAY_THRESHOLD);
     if (fastEnvelope_ < decayLevel || fastEnvelope_ < NOISE_FLOOR * 10.0f)
     {
-        double decayMs = (samplesInState_ / sampleRate) * 1000.0;
+        double const decayMs = (samplesInState_ / sampleRate) * 1000.0;
         currentDecay = static_cast<float>(decayMs);
         state_ = State::Idle;
     }
@@ -158,8 +158,8 @@ void TransientDetector::process(const float* samples, int numSamples, double sam
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float rawSample = samples[i];
-        float absSample = std::isfinite(rawSample) ? std::abs(rawSample) : 0.0f;
+        float const rawSample = samples[i];
+        float const absSample = std::isfinite(rawSample) ? std::abs(rawSample) : 0.0f;
 
         updateEnvelopes(absSample);
 

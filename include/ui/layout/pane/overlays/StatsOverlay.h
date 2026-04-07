@@ -73,7 +73,6 @@ protected:
 
 private:
     void setupComponents();
-    void rebuildTable(const std::vector<OscillatorStats>& stats);
     juce::String formatTable(const std::vector<OscillatorStats>& stats);
 
     // Formatting helpers
@@ -92,6 +91,8 @@ private:
     static constexpr int DATA_COLUMN_WIDTH = 70;
     static constexpr int PADDING = 8;
     static constexpr int RESET_BUTTON_SIZE = 16;
+    static constexpr int METRIC_ROW_COUNT = 7;                    // Peak, Max Pk, RMS, Crest, DC, Attack, Decay
+    static constexpr int TOTAL_TABLE_ROWS = 1 + METRIC_ROW_COUNT; // column header + metric rows
 
     // State for sizing
     int numOscillators_ = 0;

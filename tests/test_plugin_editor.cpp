@@ -5,6 +5,8 @@
 
 #include "core/SharedCaptureBuffer.h"
 #include "ui/components/OscilToggle.h"
+#include "ui/controllers/OscillatorPanelController.h"
+#include "ui/layout/PaneComponent.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
 #include "ui/managers/PerformanceMetricsController.h"

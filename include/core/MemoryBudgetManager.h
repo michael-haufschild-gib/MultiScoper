@@ -121,7 +121,7 @@ public:
      */
     [[nodiscard]] CaptureQualityConfig getGlobalConfig() const
     {
-        std::scoped_lock lock(buffersMutex_);
+        const std::scoped_lock lock(buffersMutex_);
         return globalConfig_;
     }
 
@@ -130,7 +130,7 @@ public:
      */
     [[nodiscard]] int getSourceRate() const
     {
-        std::scoped_lock lock(buffersMutex_);
+        const std::scoped_lock lock(buffersMutex_);
         return sourceRate_;
     }
 
@@ -279,6 +279,13 @@ private:
     // Internal helper to calculate recommended quality without locking
     // Use this when you already hold buffersMutex_
     [[nodiscard]] QualityPreset getRecommendedQualityForCount(int numBuffers) const;
+
+    // Shared implementation for applyRecommendedQuality() and reconfigureAllBuffers().
+    // Handles the thread-safety-critical lock→collect→unlock→configure→lock→update sequence.
+    // filter: returns true if the buffer should be reconfigured.
+    // configFor: returns the CaptureQualityConfig for a given buffer. Called under lock.
+    void reconfigureBuffersImpl(const std::function<bool(const BufferInfo&)>& filter,
+                                const std::function<CaptureQualityConfig(const BufferInfo&)>& configFor);
 
     CaptureQualityConfig globalConfig_;
     int sourceRate_ = 44100;

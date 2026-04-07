@@ -27,7 +27,7 @@ public:
     ~WaveformPass();
 
     /// Initialize grid renderer, shader registry, and compile shaders.
-    bool initialize(juce::OpenGLContext& context, int width, int height);
+    bool initialize(juce::OpenGLContext& context);
     /// Release all GPU resources.
     void shutdown(juce::OpenGLContext& context);
 
@@ -52,11 +52,9 @@ private:
     std::unique_ptr<ShaderRegistry> registry_;
 
     // Compiled per-instance shaders
-    std::unordered_map<std::string, std::unique_ptr<WaveformShader>> compiledShaders_;
+    std::unordered_map<juce::String, std::unique_ptr<WaveformShader>, JuceStringHash> compiledShaders_;
 
     juce::OpenGLContext* context_ = nullptr;
-    int currentWidth_ = 0;
-    int currentHeight_ = 0;
     bool initialized_ = false;
 };
 

@@ -6,12 +6,17 @@
 #include "plugin/PluginEditor.h"
 
 #include "core/InstanceRegistry.h"
+#include "ui/components/GlassStyle.h"
+#include "ui/controllers/GpuRenderCoordinator.h"
+#include "ui/controllers/OscillatorPanelController.h"
 #include "ui/layout/LayoutCoordinator.h"
 #include "ui/layout/PaneComponent.h"
-#include "ui/layout/SidebarComponent.h"
+#include "ui/layout/PaneContainerComponent.h"
+#include "ui/layout/PluginEditorLayout.h"
 #include "ui/layout/SourceCoordinator.h"
 #include "ui/managers/DialogManager.h"
 #include "ui/managers/DisplaySettingsManager.h"
+#include "ui/managers/PerformanceMetricsController.h"
 #include "ui/panels/StatusBarComponent.h"
 #include "ui/panels/WaveformComponent.h"
 #include "ui/theme/ThemeCoordinator.h"
@@ -42,7 +47,7 @@ int64_t convertTimelineTimestampToCaptureDomain(int64_t timestamp, int sourceRat
     if (scaled <= 0.0L)
         return 0;
 
-    constexpr long double maxValue = static_cast<long double>(std::numeric_limits<int64_t>::max());
+    constexpr auto maxValue = static_cast<long double>(std::numeric_limits<int64_t>::max());
     if (scaled >= maxValue)
         return std::numeric_limits<int64_t>::max();
 
@@ -56,24 +61,47 @@ namespace oscil
 OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processor_(p)
-    , serviceContext_{processor_.getInstanceRegistry(), processor_.getThemeService(), processor_.getShaderRegistry(),
-                      processor_.getPresetManager()}
+    , serviceContext_{.instanceRegistry = processor_.getInstanceRegistry(),
+                      .themeService = processor_.getThemeService(),
+                      .shaderRegistry = processor_.getShaderRegistry(),
+                      .presetManager = processor_.getPresetManager()}
 {
     // Create coordinators
     sourceCoordinator_ =
         std::make_unique<SourceCoordinator>(processor_.getInstanceRegistry(), [this]() { onSourcesChanged(); });
-
     themeCoordinator_ = std::make_unique<ThemeCoordinator>(processor_.getThemeService(),
                                                            [this](const ColorTheme& theme) { onThemeChanged(theme); });
-
     layoutCoordinator_ = std::make_unique<LayoutCoordinator>(windowLayout_, [this]() { onLayoutChanged(); });
 
-    // Apply theme
     processor_.getThemeService().setCurrentTheme(processor_.getState().getThemeName());
 
-    // Create basic UI components
+    initUIComponents();
+    initManagers();
+    initControllerAndSettings();
+    initTimingEngine();
+
+    oscillatorPanelController_->createDefaultOscillatorIfNeeded();
+    onSourcesChanged();
+    oscillatorPanelController_->refreshPanels();
+
+    setResizable(true, true);
+    setResizeLimits(WindowLayout::MIN_WINDOW_WIDTH, WindowLayout::MIN_WINDOW_HEIGHT, WindowLayout::MAX_WINDOW_WIDTH,
+                    WindowLayout::MAX_WINDOW_HEIGHT);
+    setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    startTimerHz(TIMER_REFRESH_RATE_HZ);
+
+    if (juce::PluginHostType::getPluginLoadedAs() == juce::AudioProcessor::wrapperType_Standalone)
+    {
+        testServer_ = std::make_unique<PluginTestServer>(*this);
+        testServer_->start(TEST_SERVER_PORT);
+        DBG("Test server started on port " << TEST_SERVER_PORT);
+    }
+}
+
+void OscilPluginEditor::initUIComponents()
+{
     viewport_ = std::make_unique<juce::Viewport>();
-    contentComponent_ = std::make_unique<PaneContainerComponent>();
+    contentComponent_ = std::make_unique<PaneContainerComponent>(processor_.getThemeService());
     viewport_->setViewedComponent(contentComponent_.get(), false);
     viewport_->setScrollBarsShown(true, false);
     addAndMakeVisible(*viewport_);
@@ -83,8 +111,10 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 
     statusBar_ = std::make_unique<StatusBarComponent>(processor_.getThemeService());
     addAndMakeVisible(*statusBar_);
+}
 
-    // Create managers and coordinators
+void OscilPluginEditor::initManagers()
+{
     dialogManager_ =
         std::make_unique<DialogManager>(*this, processor_.getThemeService(), processor_.getInstanceRegistry());
     configPopupAdapter_ = std::make_unique<ConfigPopupListenerAdapter>(*this);
@@ -96,8 +126,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         std::make_unique<PluginEditorLayout>(*this, *viewport_, *contentComponent_, *sidebar_, *statusBar_, processor_);
     renderCoordinator_ = std::make_unique<GpuRenderCoordinator>(*this, *statusBar_);
 
-    // Initialize GPU Rendering
-    bool gpuRenderingEnabled = processor_.getState().isGpuRenderingEnabled();
+    bool const gpuRenderingEnabled = processor_.getState().isGpuRenderingEnabled();
     renderCoordinator_->setGpuRenderingEnabled(gpuRenderingEnabled);
     if (auto* optionsSection = sidebar_->getOptionsSection())
     {
@@ -107,16 +136,17 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
         optionsSection->setBufferDuration(qualityConfig.bufferDuration);
         optionsSection->setAutoAdjustQuality(qualityConfig.autoAdjustQuality);
     }
+}
 
-    // Initialize Controller and DisplaySettingsManager with two-phase initialization to resolve
-    // circular dependency: Controller owns the pane vector, Manager needs to reference it,
-    // but Controller needs Manager for applying settings. Solution: Controller constructed first,
-    // Manager constructed with Controller's vector reference, then Manager passed to initialize().
+void OscilPluginEditor::initControllerAndSettings()
+{
+    // Two-phase initialization to resolve circular dependency:
+    // Controller owns the pane vector, Manager needs to reference it,
+    // but Controller needs Manager for applying settings.
     oscillatorPanelController_ = std::make_unique<OscillatorPanelController>(processor_, serviceContext_,
                                                                              *contentComponent_, *renderCoordinator_);
 
-    // Create DisplaySettingsManager with a callback that returns snapshot of current panes.
-    // This prevents iterator invalidation if pane vector changes during settings updates.
+    // Snapshot callback prevents iterator invalidation if pane vector changes during settings updates
     displaySettingsManager_ = std::make_unique<DisplaySettingsManager>([this]() {
         std::vector<PaneComponent*> snapshot;
         for (auto& pane : oscillatorPanelController_->getPaneComponents())
@@ -128,24 +158,20 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     });
 
     oscillatorPanelController_->initialize(sidebar_.get(), dialogManager_.get(), displaySettingsManager_.get());
-
-    // Register Controller as Sidebar Listener (Handles Oscillator Events)
     sidebar_->addListener(oscillatorPanelController_.get());
     sidebar_->addListener(this);
 
-    // CRITICAL: Wire layout callback so panes get positioned after async refreshPanels()
     oscillatorPanelController_->setLayoutNeededCallback([this]() {
         if (editorLayout_)
             editorLayout_->updateLayout(oscillatorPanelController_->getPaneComponents());
     });
+}
 
-    // ... Rest of initialization ...
-
-    // Timing Engine
+void OscilPluginEditor::initTimingEngine()
+{
     timingEngineAdapter_ = std::make_unique<TimingEngineListenerAdapter>(*this);
     processor_.getTimingEngine().addListener(timingEngineAdapter_.get());
 
-    // Sync timing UI
     auto timingConfig = processor_.getTimingEngine().toEntityConfig();
     auto engineTimingConfig = processor_.getTimingEngine().getConfig();
     if (auto* timingSection = sidebar_->getTimingSection())
@@ -157,36 +183,11 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
             waveformMode = WaveformMode::RestartOnPlay;
 
         timingSection->setTimingMode(timingConfig.timingMode);
-        timingSection->setTimeIntervalMs(static_cast<int>(timingConfig.timeIntervalMs));
+        timingSection->setTimeIntervalMs(timingConfig.timeIntervalMs);
         timingSection->setNoteInterval(timingConfig.noteInterval);
         timingSection->setHostSyncEnabled(timingConfig.hostSyncEnabled);
         timingSection->setHostBPM(timingConfig.hostBPM);
         timingSection->setWaveformMode(waveformMode);
-    }
-
-    // Create default oscillator if needed
-    oscillatorPanelController_->createDefaultOscillatorIfNeeded();
-
-    // Perform initial source reconciliation now that UI/controller are ready.
-    // This catches stale source IDs and legacy uninitialized IDs on editor open.
-    onSourcesChanged();
-
-    // Refresh panels
-    oscillatorPanelController_->refreshPanels();
-
-    // Window setup
-    setResizable(true, true);
-    setResizeLimits(WindowLayout::MIN_WINDOW_WIDTH, WindowLayout::MIN_WINDOW_HEIGHT, WindowLayout::MAX_WINDOW_WIDTH,
-                    WindowLayout::MAX_WINDOW_HEIGHT);
-    setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-
-    startTimerHz(TIMER_REFRESH_RATE_HZ);
-
-    if (juce::PluginHostType::getPluginLoadedAs() == juce::AudioProcessor::wrapperType_Standalone)
-    {
-        testServer_ = std::make_unique<PluginTestServer>(*this);
-        testServer_->start(TEST_SERVER_PORT);
-        DBG("Test server started on port " << TEST_SERVER_PORT);
     }
 }
 
@@ -229,7 +230,29 @@ void OscilPluginEditor::paint(juce::Graphics& g)
     if (!renderCoordinator_ || !renderCoordinator_->isGpuRenderingEnabled())
     {
         const auto& theme = themeCoordinator_->getCurrentTheme();
+
+        // Solid base
         g.fillAll(theme.backgroundPrimary);
+
+        // Subtle accent-tinted radial gradient overlay
+        auto glass = GlassStyle::fromTheme(theme);
+
+        auto bounds = getLocalBounds().toFloat();
+        auto accentLow = glass.accent.withAlpha(0.08f);
+        auto transparent = glass.accent.withAlpha(0.0f);
+
+        // Top-left radial accent wash
+        const juce::ColourGradient topLeft(accentLow, bounds.getWidth() * 0.2f, bounds.getHeight() * 0.1f, transparent,
+                                           bounds.getWidth() * 0.7f, bounds.getHeight() * 0.6f, true);
+        g.setGradientFill(topLeft);
+        g.fillRect(bounds);
+
+        // Bottom-right radial accent wash (dimmer)
+        const juce::ColourGradient bottomRight(glass.accent.withAlpha(0.05f), bounds.getWidth() * 0.8f,
+                                               bounds.getHeight() * 0.9f, transparent, bounds.getWidth() * 0.3f,
+                                               bounds.getHeight() * 0.4f, true);
+        g.setGradientFill(bottomRight);
+        g.fillRect(bounds);
     }
 }
 
@@ -260,7 +283,7 @@ void OscilPluginEditor::timerCallback()
 
         if (restartModeActive && timingEngine.checkAndClearTrigger())
         {
-            int64_t triggerTimestamp = static_cast<int64_t>(std::llround(timingConfig.lastSyncTimestamp));
+            auto triggerTimestamp = static_cast<int64_t>(std::llround(timingConfig.lastSyncTimestamp));
             if (triggerTimestamp <= 0)
             {
                 auto hostTimestamp = timingEngine.getHostInfo().timeInSamples;

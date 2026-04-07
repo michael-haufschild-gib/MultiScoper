@@ -9,8 +9,6 @@
 namespace oscil
 {
 
-using namespace juce::gl;
-
 // Chromatic aberration fragment shader
 static const char* chromaticFragmentShader = R"(
     #version 330 core
@@ -43,70 +41,23 @@ static const char* chromaticFragmentShader = R"(
     }
 )";
 
-ChromaticAberrationEffect::ChromaticAberrationEffect() {}
+ChromaticAberrationEffect::ChromaticAberrationEffect() = default;
 
 ChromaticAberrationEffect::~ChromaticAberrationEffect() = default;
 
-bool ChromaticAberrationEffect::compile(juce::OpenGLContext& context)
+const char* ChromaticAberrationEffect::getFragmentSource() const { return chromaticFragmentShader; }
+
+bool ChromaticAberrationEffect::resolveUniforms()
 {
-    if (compiled_)
-        return true;
-
-    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!compileEffectShader(*shader_, chromaticFragmentShader))
-    {
-        DBG("ChromaticAberrationEffect: Failed to compile shader");
-        shader_.reset();
-        return false;
-    }
-
-    textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     intensityLoc_ = shader_->getUniformIDFromName("intensity");
 
-    if (textureLoc_ < 0 || intensityLoc_ < 0)
-    {
-        DBG("ChromaticAberrationEffect: Missing uniforms");
-        shader_.reset();
-        return false;
-    }
-
-    compiled_ = true;
-    DBG("ChromaticAberrationEffect: Compiled successfully");
-    return true;
+    return intensityLoc_ >= 0;
 }
 
-void ChromaticAberrationEffect::release(juce::OpenGLContext& context)
+void ChromaticAberrationEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
-    juce::ignoreUnused(context);
-    shader_.reset();
-    compiled_ = false;
-}
-
-bool ChromaticAberrationEffect::isCompiled() const { return compiled_; }
-
-void ChromaticAberrationEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
-                                      FramebufferPool& pool, float deltaTime)
-{
-    juce::ignoreUnused(deltaTime);
-
-    if (!compiled_ || !source || !destination)
-        return;
-
-    auto& ext = context.extensions;
-
-    destination->bind();
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-
-    shader_->use();
-
-    source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
-
-    pool.renderFullscreenQuad();
-    destination->unbind();
+    juce::ignoreUnused(source, deltaTime);
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
 }
 
 } // namespace oscil

@@ -82,6 +82,8 @@ public:
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
     void focusLost(FocusChangeType cause) override;
 
     // Size hints
@@ -105,6 +107,7 @@ private:
     juce::String placeholder_ = "Enter text...";
     bool editMode_ = false;
     bool readOnly_ = false;
+    bool isHovered_ = false;
     int maxLength_ = 256;
 
     // Styling

@@ -72,15 +72,20 @@ void EffectPipeline::resize(juce::OpenGLContext& context, int width, int height)
 
 void EffectPipeline::createEffectInstances()
 {
-    effects_["vignette"] = std::make_unique<VignetteEffect>();
-    effects_["film_grain"] = std::make_unique<FilmGrainEffect>();
-    effects_["bloom"] = std::make_unique<BloomEffect>();
-    effects_["trails"] = std::make_unique<TrailsEffect>();
-    effects_["tilt_shift"] = std::make_unique<TiltShiftEffect>();
-    effects_["color_grade"] = std::make_unique<ColorGradeEffect>();
-    effects_["chromatic_aberration"] = std::make_unique<ChromaticAberrationEffect>();
-    effects_["scanlines"] = std::make_unique<ScanlineEffect>();
-    effects_["radial_blur"] = std::make_unique<RadialBlurEffect>();
+    auto add = [this](std::unique_ptr<PostProcessEffect> effect) {
+        auto id = effect->getId();
+        effects_[id] = std::move(effect);
+    };
+
+    add(std::make_unique<VignetteEffect>());
+    add(std::make_unique<FilmGrainEffect>());
+    add(std::make_unique<BloomEffect>());
+    add(std::make_unique<TrailsEffect>());
+    add(std::make_unique<TiltShiftEffect>());
+    add(std::make_unique<ColorGradeEffect>());
+    add(std::make_unique<ChromaticAberrationEffect>());
+    add(std::make_unique<ScanlineEffect>());
+    add(std::make_unique<RadialBlurEffect>());
 }
 
 void EffectPipeline::buildEffectChain()
@@ -95,18 +100,19 @@ void EffectPipeline::buildEffectChain()
         bool (*isEnabled)(const VisualConfiguration&);
     };
     static constexpr auto entries = std::to_array<ChainEntry>({
-        {"bloom", [](const VisualConfiguration& c) { return c.bloom.enabled; }},
-        {"radial_blur", [](const VisualConfiguration& c) { return c.radialBlur.enabled; }},
-        {"tilt_shift", [](const VisualConfiguration& c) { return c.tiltShift.enabled; }},
-        {"color_grade", [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
-        {"chromatic_aberration", [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; }},
-        {"scanlines", [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
-        {"vignette", [](const VisualConfiguration& c) { return c.vignette.enabled; }},
-        {"film_grain", [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
+        {.id = "bloom", .isEnabled = [](const VisualConfiguration& c) { return c.bloom.enabled; }},
+        {.id = "radial_blur", .isEnabled = [](const VisualConfiguration& c) { return c.radialBlur.enabled; }},
+        {.id = "tilt_shift", .isEnabled = [](const VisualConfiguration& c) { return c.tiltShift.enabled; }},
+        {.id = "color_grade", .isEnabled = [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
+        {.id = "chromatic_aberration",
+         .isEnabled = [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; }},
+        {.id = "scanlines", .isEnabled = [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
+        {.id = "vignette", .isEnabled = [](const VisualConfiguration& c) { return c.vignette.enabled; }},
+        {.id = "film_grain", .isEnabled = [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
     });
 
     for (const auto& entry : entries)
-        effectChain_.addStep({entry.id, entry.isEnabled, configureVirtual});
+        effectChain_.addStep({.effectId = entry.id, .isEnabled = entry.isEnabled, .configure = configureVirtual});
 }
 
 void EffectPipeline::initializeEffects()
@@ -199,6 +205,7 @@ Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRe
 void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
                                      juce::OpenGLShaderProgram* compositeShader, GLint compositeTextureLoc)
 {
+    juce::ignoreUnused(context);
     if (!source || !destination || !source->isValid() || !destination->isValid() || !compositeShader)
         return;
 
@@ -209,7 +216,7 @@ void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* 
 
     compositeShader->use();
     source->bindTexture(0);
-    context.extensions.glUniform1i(compositeTextureLoc, 0);
+    juce::OpenGLExtensionFunctions::glUniform1i(compositeTextureLoc, 0);
 
     fbPool_->renderFullscreenQuad();
 
@@ -218,32 +225,20 @@ void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* 
 
 void EffectPipeline::setQualityLevel(QualityLevel level)
 {
-    switch (level)
+    static constexpr std::array<const char*, 3> heavyEffects = {"bloom", "trails", "chromatic_aberration"};
+
+    if (level == QualityLevel::Ultra)
     {
-        case QualityLevel::Eco:
-            if (auto* bloom = getEffect("bloom"))
-                bloom->setEnabled(false);
-            if (auto* trails = getEffect("trails"))
-                trails->setEnabled(false);
-            if (auto* ca = getEffect("chromatic_aberration"))
-                ca->setEnabled(false);
-            break;
+        for (auto& [id, effect] : effects_)
+            effect->setEnabled(true);
+        return;
+    }
 
-        case QualityLevel::Normal:
-            if (auto* bloom = getEffect("bloom"))
-                bloom->setEnabled(true);
-            if (auto* trails = getEffect("trails"))
-                trails->setEnabled(true);
-            if (auto* ca = getEffect("chromatic_aberration"))
-                ca->setEnabled(true);
-            break;
-
-        case QualityLevel::Ultra:
-            for (auto& [id, effect] : effects_)
-            {
-                effect->setEnabled(true);
-            }
-            break;
+    bool const enableHeavy = (level != QualityLevel::Eco);
+    for (const auto* id : heavyEffects)
+    {
+        if (auto it = effects_.find(id); it != effects_.end() && it->second)
+            it->second->setEnabled(enableHeavy);
     }
 }
 

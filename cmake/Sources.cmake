@@ -59,6 +59,7 @@ set(OSCIL_SOURCES
 
     # Rendering (effects)
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/PostProcessEffect.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/effects/SingleShaderEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/VignetteEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/FilmGrainEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/BloomEffect.cpp
@@ -70,6 +71,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/TiltShiftEffect.cpp
 
     # UI (components)
+    ${CMAKE_SOURCE_DIR}/src/ui/components/GlassStyle.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/GlassPainter.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/ThemedComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButton.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButtonPainting.cpp
@@ -180,6 +183,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/TestRunnerHandlerWaveformSettings.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/WaveformHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/StateHandler.cpp
+    ${CMAKE_SOURCE_DIR}/src/tools/test_server/TestWaveformGenerator.cpp
 )
 
 # Add platform-specific sources

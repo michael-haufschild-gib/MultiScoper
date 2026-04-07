@@ -40,7 +40,7 @@ double MagneticSnapController::applySnapping(double value, double minValue, doub
         return value;
     }
 
-    double range = maxValue - minValue;
+    double const range = maxValue - minValue;
     if (range <= 0.0)
     {
         justSnapped_ = false;
@@ -48,10 +48,10 @@ double MagneticSnapController::applySnapping(double value, double minValue, doub
     }
 
     // Calculate snap threshold as percentage of range
-    double snapThreshold = range * SNAP_THRESHOLD_PERCENT;
+    double const snapThreshold = range * SNAP_THRESHOLD_PERCENT;
 
     // Check each magnetic point
-    for (double point : magneticPoints_)
+    for (double const point : magneticPoints_)
     {
         if (std::abs(value - point) < snapThreshold)
         {

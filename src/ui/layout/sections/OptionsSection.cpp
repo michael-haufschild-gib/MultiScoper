@@ -8,21 +8,15 @@
 namespace oscil
 {
 
-OptionsSection::OptionsSection(ServiceContext& context) : themeService_(context.themeService)
+OptionsSection::OptionsSection(ServiceContext& context) : OptionsSection(context.themeService) {}
+
+OptionsSection::OptionsSection(IThemeService& themeService) : ThemedComponent(themeService)
 {
     OSCIL_REGISTER_TEST_ID("sidebar_options");
     setupComponents();
-    themeService_.addListener(this);
 }
 
-OptionsSection::OptionsSection(IThemeService& themeService) : themeService_(themeService)
-{
-    OSCIL_REGISTER_TEST_ID("sidebar_options");
-    setupComponents();
-    themeService_.addListener(this);
-}
-
-OptionsSection::~OptionsSection() { themeService_.removeListener(this); }
+OptionsSection::~OptionsSection() = default;
 
 void OptionsSection::setupComponents()
 {
@@ -35,12 +29,13 @@ void OptionsSection::setupComponents()
     // Keep quality preset interactability consistent with default auto-adjust state.
     qualityPresetDropdown_->setEnabled(!autoAdjustQualityEnabled_);
 
-    themeChanged(themeService_.getCurrentTheme());
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
+    onThemeChanged(getThemeService().getCurrentTheme());
 }
 
 void OptionsSection::setupGainControls()
 {
-    gainSlider_ = std::make_unique<OscilSlider>(themeService_, "sidebar_options_gainSlider");
+    gainSlider_ = std::make_unique<OscilSlider>(getThemeService(), "sidebar_options_gainSlider");
     gainSlider_->setLabel("Gain");
     gainSlider_->setRange(MIN_GAIN_DB, MAX_GAIN_DB);
     gainSlider_->setStep(0.1);
@@ -60,7 +55,7 @@ void OptionsSection::setupDisplayToggles()
     displayLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*displayLabel_);
 
-    showGridToggle_ = std::make_unique<OscilToggle>(themeService_, "Show Grid", "sidebar_options_gridToggle");
+    showGridToggle_ = std::make_unique<OscilToggle>(getThemeService(), "Show Grid", "sidebar_options_gridToggle");
     showGridToggle_->setValue(showGridEnabled_, false);
     showGridToggle_->onValueChanged = [this](bool value) {
         showGridEnabled_ = value;
@@ -68,7 +63,8 @@ void OptionsSection::setupDisplayToggles()
     };
     addAndMakeVisible(*showGridToggle_);
 
-    autoScaleToggle_ = std::make_unique<OscilToggle>(themeService_, "Auto-Scale", "sidebar_options_autoScaleToggle");
+    autoScaleToggle_ =
+        std::make_unique<OscilToggle>(getThemeService(), "Auto-Scale", "sidebar_options_autoScaleToggle");
     autoScaleToggle_->setValue(autoScaleEnabled_, false);
     autoScaleToggle_->onValueChanged = [this](bool value) {
         autoScaleEnabled_ = value;
@@ -85,7 +81,8 @@ void OptionsSection::setupLayoutAndTheme()
     layoutLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*layoutLabel_);
 
-    layoutDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select layout", "sidebar_options_layoutDropdown");
+    layoutDropdown_ =
+        std::make_unique<OscilDropdown>(getThemeService(), "Select layout", "sidebar_options_layoutDropdown");
     layoutDropdown_->addItem("1 Column", "1");
     layoutDropdown_->addItem("2 Columns", "2");
     layoutDropdown_->addItem("3 Columns", "3");
@@ -101,7 +98,8 @@ void OptionsSection::setupLayoutAndTheme()
     themeLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*themeLabel_);
 
-    themeDropdown_ = std::make_unique<OscilDropdown>(themeService_, "Select theme", "sidebar_options_themeDropdown");
+    themeDropdown_ =
+        std::make_unique<OscilDropdown>(getThemeService(), "Select theme", "sidebar_options_themeDropdown");
     themeDropdown_->onSelectionChangedId = [this](const juce::String& themeId) {
         currentThemeName_ = themeId;
         notifyThemeChanged();
@@ -117,7 +115,7 @@ void OptionsSection::setupRenderingControls()
     addAndMakeVisible(*renderingLabel_);
 
     gpuRenderingToggle_ =
-        std::make_unique<OscilToggle>(themeService_, "GPU Acceleration", "sidebar_options_gpuRenderingToggle");
+        std::make_unique<OscilToggle>(getThemeService(), "GPU Acceleration", "sidebar_options_gpuRenderingToggle");
     gpuRenderingToggle_->setValue(gpuRenderingEnabled_, false);
     gpuRenderingToggle_->onValueChanged = [this](bool value) {
         gpuRenderingEnabled_ = value;
@@ -134,7 +132,7 @@ void OptionsSection::setupCaptureQualityControls()
     addAndMakeVisible(*qualityLabel_);
 
     qualityPresetDropdown_ =
-        std::make_unique<OscilDropdown>(themeService_, "Quality", "sidebar_options_qualityPresetDropdown");
+        std::make_unique<OscilDropdown>(getThemeService(), "Quality", "sidebar_options_qualityPresetDropdown");
     qualityPresetDropdown_->addItem("Eco (11 kHz)", "eco");
     qualityPresetDropdown_->addItem("Standard (22 kHz)", "standard");
     qualityPresetDropdown_->addItem("High (44 kHz)", "high");
@@ -147,7 +145,7 @@ void OptionsSection::setupCaptureQualityControls()
     addAndMakeVisible(*qualityPresetDropdown_);
 
     bufferDurationDropdown_ =
-        std::make_unique<OscilDropdown>(themeService_, "Buffer", "sidebar_options_bufferDurationDropdown");
+        std::make_unique<OscilDropdown>(getThemeService(), "Buffer", "sidebar_options_bufferDurationDropdown");
     bufferDurationDropdown_->addItem("Short (1s)", "short");
     bufferDurationDropdown_->addItem("Medium (5s)", "medium");
     bufferDurationDropdown_->addItem("Long (10s)", "long");
@@ -159,7 +157,7 @@ void OptionsSection::setupCaptureQualityControls()
     addAndMakeVisible(*bufferDurationDropdown_);
 
     autoAdjustQualityToggle_ =
-        std::make_unique<OscilToggle>(themeService_, "Auto-Adjust", "sidebar_options_autoAdjustToggle");
+        std::make_unique<OscilToggle>(getThemeService(), "Auto-Adjust", "sidebar_options_autoAdjustToggle");
     autoAdjustQualityToggle_->setValue(autoAdjustQualityEnabled_, false);
     autoAdjustQualityToggle_->onValueChanged = [this](bool value) {
         autoAdjustQualityEnabled_ = value;
@@ -171,7 +169,7 @@ void OptionsSection::setupCaptureQualityControls()
 
 void OptionsSection::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
     auto bounds = getLocalBounds();
 
     // Background
@@ -235,32 +233,16 @@ void OptionsSection::resized()
     autoAdjustQualityToggle_->setBounds(bounds.getX(), y, bounds.getWidth(), ROW_HEIGHT);
 }
 
-void OptionsSection::themeChanged(const ColorTheme& newTheme)
+void OptionsSection::onThemeChanged(const ColorTheme& newTheme)
 {
-    // OscilSlider and OscilToggle components handle their own theming automatically
-    // via ThemeManagerListener. We only need to style the remaining JUCE Labels.
+    auto const sectionFont = juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION).withStyle("Bold");
 
-    // Display section label
-    displayLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    displayLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
-
-    // Layout section label
-    layoutLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    layoutLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
-
-    // Theme section label
-    themeLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    themeLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
-
-    // Rendering section label
-    renderingLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    renderingLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
-
-    // Capture quality section label
-    qualityLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    qualityLabel_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
-
-    repaint();
+    for (auto* label :
+         {displayLabel_.get(), layoutLabel_.get(), themeLabel_.get(), renderingLabel_.get(), qualityLabel_.get()})
+    {
+        label->setColour(juce::Label::textColourId, newTheme.textSecondary);
+        label->setFont(sectionFont);
+    }
 }
 
 void OptionsSection::setGainDb(float dB)

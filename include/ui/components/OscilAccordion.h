@@ -31,9 +31,9 @@ class OscilAccordionSection
 {
 public:
     /// Create accordion section with optional title.
-    explicit OscilAccordionSection(IThemeService& themeService, const juce::String& title = "");
+    explicit OscilAccordionSection(IThemeService& themeService, juce::String title = "");
     /// Create accordion section with title and test ID.
-    OscilAccordionSection(IThemeService& themeService, const juce::String& title, const juce::String& testId);
+    OscilAccordionSection(IThemeService& themeService, juce::String title, const juce::String& testId);
     ~OscilAccordionSection() override;
 
     void setTitle(const juce::String& title);
@@ -58,8 +58,7 @@ public:
     /// Toggle between expanded and collapsed.
     void toggle();
 
-    void setEnabled(bool enabled);
-    bool isEnabled() const { return enabled_; }
+    void enablementChanged() override;
 
     // Callbacks
     std::function<void(bool)> onExpandedChanged;
@@ -96,7 +95,6 @@ private:
     juce::Component* content_ = nullptr;
     DynamicHeightContent* dynamicContent_ = nullptr;
     bool expanded_ = false;
-    bool enabled_ = true;
     bool isHovered_ = false;
     bool hasFocus_ = false;
     bool mouseDownInHeader_ = false; // Track if mouseDown occurred in header for proper click detection

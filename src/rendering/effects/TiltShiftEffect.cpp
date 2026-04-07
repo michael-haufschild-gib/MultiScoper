@@ -9,8 +9,6 @@
 namespace oscil
 {
 
-using namespace juce::gl;
-
 // Simple single-pass tilt shift blur
 // Not a perfect Gaussian, but sufficient for the effect
 static const char* tiltShiftFragmentShader = R"(
@@ -55,73 +53,27 @@ static const char* tiltShiftFragmentShader = R"(
     }
 )";
 
-TiltShiftEffect::TiltShiftEffect() {}
+TiltShiftEffect::TiltShiftEffect() = default;
 
 TiltShiftEffect::~TiltShiftEffect() = default;
 
-bool TiltShiftEffect::compile(juce::OpenGLContext& context)
+const char* TiltShiftEffect::getFragmentSource() const { return tiltShiftFragmentShader; }
+
+bool TiltShiftEffect::resolveUniforms()
 {
-    if (compiled_)
-        return true;
-
-    shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!compileEffectShader(*shader_, tiltShiftFragmentShader))
-    {
-        DBG("TiltShiftEffect: Failed to compile shader");
-        shader_.reset();
-        return false;
-    }
-
-    textureLoc_ = shader_->getUniformIDFromName("sourceTexture");
     blurRadiusLoc_ = shader_->getUniformIDFromName("blurRadius");
     positionLoc_ = shader_->getUniformIDFromName("position");
     rangeLoc_ = shader_->getUniformIDFromName("range");
 
-    if (textureLoc_ < 0 || positionLoc_ < 0 || rangeLoc_ < 0 || blurRadiusLoc_ < 0)
-    {
-        DBG("TiltShiftEffect: Missing uniforms");
-        shader_.reset();
-        return false;
-    }
-
-    compiled_ = true;
-    return true;
+    return positionLoc_ >= 0 && rangeLoc_ >= 0 && blurRadiusLoc_ >= 0;
 }
 
-void TiltShiftEffect::release(juce::OpenGLContext& context)
+void TiltShiftEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
-    juce::ignoreUnused(context);
-    shader_.reset();
-    compiled_ = false;
-}
-
-bool TiltShiftEffect::isCompiled() const { return compiled_; }
-
-void TiltShiftEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination,
-                            FramebufferPool& pool, float deltaTime)
-{
-    juce::ignoreUnused(deltaTime);
-
-    if (!compiled_ || !source || !destination)
-        return;
-
-    auto& ext = context.extensions;
-
-    destination->bind();
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-
-    shader_->use();
-
-    source->bindTexture(0);
-    ext.glUniform1i(textureLoc_, 0);
-    ext.glUniform1f(blurRadiusLoc_, settings_.blurRadius);
-    ext.glUniform1f(positionLoc_, settings_.position);
-    ext.glUniform1f(rangeLoc_, settings_.range);
-
-    pool.renderFullscreenQuad();
-    destination->unbind();
+    juce::ignoreUnused(source, deltaTime);
+    juce::OpenGLExtensionFunctions::glUniform1f(blurRadiusLoc_, settings_.blurRadius * getIntensity());
+    juce::OpenGLExtensionFunctions::glUniform1f(positionLoc_, settings_.position);
+    juce::OpenGLExtensionFunctions::glUniform1f(rangeLoc_, settings_.range);
 }
 
 } // namespace oscil

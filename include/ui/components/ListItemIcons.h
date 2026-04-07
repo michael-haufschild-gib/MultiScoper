@@ -11,9 +11,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil
-{
-namespace ListItemIcons
+namespace oscil::ListItemIcons
 {
 
 /**
@@ -47,9 +45,9 @@ inline juce::Path getPathFromDrawable(juce::Drawable* drawable, float targetSize
         return {};
 
     // Calculate scale to fit target size with padding
-    float padding = targetSize * 0.15f;
-    float availableSize = targetSize - (padding * 2);
-    float scale = availableSize / juce::jmax(bounds.getWidth(), bounds.getHeight());
+    float const padding = targetSize * 0.15f;
+    float const availableSize = targetSize - (padding * 2);
+    float const scale = availableSize / juce::jmax(bounds.getWidth(), bounds.getHeight());
 
     // Get path from drawable and transform it
     if (auto* drawablePath = dynamic_cast<juce::DrawablePath*>(drawable))
@@ -72,8 +70,8 @@ inline juce::Path getPathFromDrawable(juce::Drawable* drawable, float targetSize
     }
 
     // Transform: scale and center
-    auto transform = juce::AffineTransform::scale(scale).translated(padding - bounds.getX() * scale,
-                                                                    padding - bounds.getY() * scale);
+    auto transform = juce::AffineTransform::scale(scale).translated(padding - (bounds.getX() * scale),
+                                                                    padding - (bounds.getY() * scale));
     path.applyTransform(transform);
 
     return path;
@@ -169,5 +167,4 @@ inline juce::Path createRedoIcon(float size)
     return getPathFromDrawable(drawable.get(), size);
 }
 
-} // namespace ListItemIcons
-} // namespace oscil
+} // namespace oscil::ListItemIcons

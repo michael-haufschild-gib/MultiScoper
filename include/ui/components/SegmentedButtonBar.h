@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/components/OscilButton.h"
+#include "ui/components/SpringAnimation.h"
 #include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -23,7 +24,9 @@ namespace oscil
  * Now uses OscilButton internally with toggleable and segment position support
  * for consistent styling, animations, and accessibility across the UI.
  */
-class SegmentedButtonBar : public ThemedComponent
+class SegmentedButtonBar
+    : public ThemedComponent
+    , private juce::Timer
 {
 public:
     explicit SegmentedButtonBar(IThemeService& themeService);
@@ -100,12 +103,19 @@ public:
 private:
     void handleButtonClick(int id);
     void updateButtonStates();
+    void updateIndicatorTarget(bool animate = true);
     int getSelectedIndex() const;
+    void timerCallback() override;
 
     std::vector<std::unique_ptr<OscilButton>> buttons_;
     int selectedId_ = -1;
     bool enabled_ = true;
     int minButtonWidth_ = 60;
+
+    // Sliding indicator spring for active button position
+    SpringAnimation indicatorSpring_ = SpringPresets::springIndicator();
+    float indicatorWidth_ = 0.0f;
+    bool indicatorInitialized_ = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SegmentedButtonBar)
 };

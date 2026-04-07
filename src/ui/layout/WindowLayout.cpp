@@ -10,13 +10,7 @@
 namespace oscil
 {
 
-WindowLayout::WindowLayout()
-    : windowWidth_(DEFAULT_WINDOW_WIDTH)
-    , windowHeight_(DEFAULT_WINDOW_HEIGHT)
-    , sidebarWidth_(DEFAULT_SIDEBAR_WIDTH)
-    , sidebarCollapsed_(false)
-{
-}
+WindowLayout::WindowLayout() {}
 
 WindowLayout::WindowLayout(const juce::ValueTree& state) : WindowLayout() { fromValueTree(state); }
 
@@ -74,12 +68,12 @@ void WindowLayout::setWindowSize(int width, int height)
     width = juce::jlimit(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH, width);
     height = juce::jlimit(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT, height);
 
-    bool changed = (windowWidth_ != width || windowHeight_ != height);
+    bool const changed = (windowWidth_ != width || windowHeight_ != height);
     windowWidth_ = width;
     windowHeight_ = height;
 
     // Ensure sidebar width is still valid for new window width
-    int clampedSidebar = clampSidebarWidth(sidebarWidth_);
+    int const clampedSidebar = clampSidebarWidth(sidebarWidth_);
     if (clampedSidebar != sidebarWidth_)
     {
         sidebarWidth_ = clampedSidebar;
@@ -123,10 +117,10 @@ int WindowLayout::getOscilloscopeAreaWidth() const { return windowWidth_ - getEf
 int WindowLayout::clampSidebarWidth(int proposedWidth) const
 {
     // Ensure minimum sidebar width
-    int minWidth = MIN_SIDEBAR_WIDTH;
+    int const minWidth = MIN_SIDEBAR_WIDTH;
 
     // Ensure maximum sidebar width doesn't make oscilloscope too small
-    int maxWidth = juce::jmin(MAX_SIDEBAR_WIDTH, windowWidth_ - MIN_OSCILLOSCOPE_WIDTH);
+    int const maxWidth = juce::jmin(MAX_SIDEBAR_WIDTH, windowWidth_ - MIN_OSCILLOSCOPE_WIDTH);
 
     return juce::jlimit(minWidth, maxWidth, proposedWidth);
 }

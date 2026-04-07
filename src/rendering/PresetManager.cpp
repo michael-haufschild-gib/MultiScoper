@@ -4,10 +4,25 @@
 
 #include "rendering/PresetManager.h"
 
+#include <optional>
+
 namespace oscil
 {
 
 static const juce::Identifier PRESET_WRAPPER_TYPE("OscilPreset");
+
+std::optional<juce::ValueTree> PresetManager::parsePresetFile(const juce::File& file)
+{
+    auto xml = juce::XmlDocument::parse(file);
+    if (xml == nullptr)
+        return std::nullopt;
+
+    auto tree = juce::ValueTree::fromXml(*xml);
+    if (!tree.isValid() || tree.getType() != PRESET_WRAPPER_TYPE)
+        return std::nullopt;
+
+    return tree;
+}
 
 PresetManager::PresetManager()
 {
@@ -28,38 +43,26 @@ std::vector<PresetInfo> PresetManager::getAvailablePresets() const
 
     // Built-in presets first
     auto builtIn = VisualConfiguration::getAvailablePresets();
+    auto files = getUserPresetFiles();
+    presets.reserve(builtIn.size() + files.size());
     for (const auto& [id, name] : builtIn)
     {
-        presets.push_back({id, name, true});
+        presets.push_back({.id = id, .displayName = name, .isBuiltIn = true});
     }
 
     // User presets from disk
-    auto files = getUserPresetFiles();
     for (const auto& file : files)
     {
-        auto xml = juce::XmlDocument::parse(file);
-        if (xml == nullptr)
-        {
-            DBG("PresetManager: failed to parse preset file: " << file.getFullPathName());
+        auto tree = parsePresetFile(file);
+        if (!tree.has_value())
             continue;
-        }
 
-        auto tree = juce::ValueTree::fromXml(*xml);
-        if (!tree.isValid() || tree.getType() != PRESET_WRAPPER_TYPE)
-        {
-            DBG("PresetManager: invalid preset format in: " << file.getFullPathName());
-            continue;
-        }
-
-        juce::String id = tree.getProperty("presetId", "");
-        juce::String name = tree.getProperty("displayName", "");
+        juce::String const id = tree->getProperty("presetId", "");
         if (id.isEmpty())
-        {
-            DBG("PresetManager: preset missing presetId in: " << file.getFullPathName());
             continue;
-        }
 
-        presets.push_back({id, name.isEmpty() ? id : name, false});
+        juce::String const name = tree->getProperty("displayName", "");
+        presets.push_back({.id = id, .displayName = name.isEmpty() ? id : name, .isBuiltIn = false});
     }
 
     return presets;
@@ -71,27 +74,12 @@ VisualConfiguration PresetManager::loadPreset(const juce::String& presetId) cons
     auto file = getUserPresetFile(presetId);
     if (file.existsAsFile())
     {
-        auto xml = juce::XmlDocument::parse(file);
-        if (xml != nullptr)
+        auto wrapper = parsePresetFile(file);
+        if (wrapper.has_value())
         {
-            auto wrapper = juce::ValueTree::fromXml(*xml);
-            if (wrapper.isValid() && wrapper.getType() == PRESET_WRAPPER_TYPE)
-            {
-                auto configTree = wrapper.getChildWithName("VisualConfiguration");
-                if (configTree.isValid())
-                {
-                    return VisualConfiguration::fromValueTree(configTree);
-                }
-                DBG("PresetManager::loadPreset: no VisualConfiguration child in: " << presetId);
-            }
-            else
-            {
-                DBG("PresetManager::loadPreset: invalid wrapper in user preset: " << presetId);
-            }
-        }
-        else
-        {
-            DBG("PresetManager::loadPreset: XML parse failed for: " << file.getFullPathName());
+            auto configTree = wrapper->getChildWithName("VisualConfiguration");
+            if (configTree.isValid())
+                return VisualConfiguration::fromValueTree(configTree);
         }
     }
 
@@ -104,7 +92,7 @@ bool PresetManager::saveUserPreset(const juce::String& name, const VisualConfigu
     if (name.isEmpty())
         return false;
 
-    juce::String id = generatePresetId(name);
+    juce::String const id = generatePresetId(name);
 
     // Build wrapper tree: { presetId, displayName, VisualConfiguration }
     juce::ValueTree wrapper(PRESET_WRAPPER_TYPE);
@@ -141,26 +129,18 @@ bool PresetManager::deleteUserPreset(const juce::String& presetId)
 bool PresetManager::renameUserPreset(const juce::String& presetId, const juce::String& newName)
 {
     auto file = getUserPresetFile(presetId);
-    if (!file.existsAsFile())
+    auto wrapper = parsePresetFile(file);
+    if (!wrapper.has_value())
         return false;
 
-    auto xml = juce::XmlDocument::parse(file);
-    if (xml == nullptr)
-        return false;
+    juce::String const newId = generatePresetId(newName);
+    wrapper->setProperty("presetId", newId, nullptr);
+    wrapper->setProperty("displayName", newName, nullptr);
 
-    auto wrapper = juce::ValueTree::fromXml(*xml);
-    if (!wrapper.isValid())
-        return false;
-
-    juce::String newId = generatePresetId(newName);
-    wrapper.setProperty("presetId", newId, nullptr);
-    wrapper.setProperty("displayName", newName, nullptr);
-
-    auto newXml = wrapper.createXml();
+    auto newXml = wrapper->createXml();
     if (newXml == nullptr)
         return false;
 
-    // Write to new file, delete old
     auto newFile = getUserPresetFile(newId);
     if (!newXml->writeTo(newFile))
         return false;
@@ -209,30 +189,20 @@ bool PresetManager::importPreset(const juce::File& source)
     if (!source.existsAsFile())
         return false;
 
-    auto xml = juce::XmlDocument::parse(source);
-    if (xml == nullptr)
-    {
-        DBG("PresetManager::importPreset: XML parse failed for: " << source.getFullPathName());
+    auto wrapper = parsePresetFile(source);
+    if (!wrapper.has_value())
         return false;
-    }
 
-    auto wrapper = juce::ValueTree::fromXml(*xml);
-    if (!wrapper.isValid() || wrapper.getType() != PRESET_WRAPPER_TYPE)
-    {
-        DBG("PresetManager::importPreset: invalid preset format in: " << source.getFullPathName());
-        return false;
-    }
-
-    juce::String id = wrapper.getProperty("presetId", "");
+    juce::String const id = wrapper->getProperty("presetId", "");
     if (id.isEmpty())
-    {
-        DBG("PresetManager::importPreset: missing presetId in: " << source.getFullPathName());
         return false;
-    }
 
-    // Copy to user presets directory
-    auto destFile = getUserPresetFile(id);
-    return xml->writeTo(destFile);
+    // Re-serialize the validated tree to the user presets directory
+    auto xml = wrapper->createXml();
+    if (xml == nullptr)
+        return false;
+
+    return xml->writeTo(getUserPresetFile(id));
 }
 
 juce::File PresetManager::getPresetsDirectory() const { return presetsDir_; }
