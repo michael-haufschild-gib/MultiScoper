@@ -4,19 +4,15 @@
 
 #include "ui/layout/pane/overlays/CrosshairOverlay.h"
 
-#include "ui/theme/ThemeManager.h"
-
 #include <cmath>
 
 namespace oscil
 {
 
-CrosshairOverlay::CrosshairOverlay(IThemeService& themeService) : themeService_(themeService)
+CrosshairOverlay::CrosshairOverlay(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setOpaque(false);
     setInterceptsMouseClicks(false, false); // Always click-through
-
-    themeService_.addListener(this);
 }
 
 CrosshairOverlay::CrosshairOverlay(IThemeService& themeService, const juce::String& testId)
@@ -29,7 +25,7 @@ CrosshairOverlay::CrosshairOverlay(IThemeService& themeService, const juce::Stri
 #endif
 }
 
-CrosshairOverlay::~CrosshairOverlay() { themeService_.removeListener(this); }
+CrosshairOverlay::~CrosshairOverlay() = default;
 
 void CrosshairOverlay::setMousePosition(juce::Point<int> pos)
 {
@@ -81,7 +77,7 @@ void CrosshairOverlay::paint(juce::Graphics& g)
 
 void CrosshairOverlay::paintCrosshairLines(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getThemeService().getCurrentTheme();
     auto bounds = getLocalBounds();
 
     g.setColour(theme.crosshairLine.withAlpha(LINE_OPACITY));
@@ -95,7 +91,7 @@ void CrosshairOverlay::paintCrosshairLines(juce::Graphics& g)
 
 void CrosshairOverlay::paintTooltip(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getThemeService().getCurrentTheme();
     auto tooltipBounds = calculateTooltipBounds();
 
     // Background
@@ -171,7 +167,5 @@ bool CrosshairOverlay::hitTest(int /*x*/, int /*y*/)
     // Always click-through
     return false;
 }
-
-void CrosshairOverlay::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 } // namespace oscil

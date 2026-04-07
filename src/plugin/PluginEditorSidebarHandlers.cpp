@@ -2,6 +2,12 @@
     Oscil - Plugin Editor Sidebar and Settings Handlers
 */
 
+#include "ui/controllers/GpuRenderCoordinator.h"
+#include "ui/controllers/OscillatorPanelController.h"
+#include "ui/managers/DialogManager.h"
+#include "ui/managers/DisplaySettingsManager.h"
+#include "ui/panels/StatusBarComponent.h"
+
 #include "plugin/PluginEditor.h"
 
 #include <set>

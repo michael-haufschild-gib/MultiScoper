@@ -97,9 +97,11 @@ private:
 /**
  * Unregister a child component.
  *
+ * @param component The component to unregister
  * @param testId The identifier used during registration
  */
-#define UNREGISTER_TESTABLE_CHILD(testId) oscil::test::TestElementRegistry::getInstance().unregisterElement(testId)
+#define UNREGISTER_TESTABLE_CHILD(component, testId) \
+    oscil::test::TestElementRegistry::getInstance().unregisterElement((testId), &(component))
 
 /**
  * Generate a unique testId for indexed elements.

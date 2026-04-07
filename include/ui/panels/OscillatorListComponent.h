@@ -8,10 +8,10 @@
 #include "core/Oscillator.h"
 #include "core/ServiceContext.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/panels/OscillatorListItem.h"
 #include "ui/panels/OscillatorListToolbar.h"
 #include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -27,8 +27,7 @@ class IInstanceRegistry;
  * Handles drag-and-drop reordering, filtering, and selection.
  */
 class OscillatorListComponent
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public OscillatorListItemComponent::Listener
     , public OscillatorListToolbar::Listener
     , public TestIdSupport
@@ -74,8 +73,6 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    /// React to theme changes.
-    void themeChanged(const ColorTheme& newTheme) override;
     /// React to filter mode changes from toolbar.
     void filterModeChanged(OscillatorFilterMode mode) override;
 
@@ -146,7 +143,6 @@ private:
     OSCIL_TESTABLE();
 
     IInstanceRegistry& instanceRegistry_;
-    IThemeService& themeService_;
     juce::ListenerList<Listener> listeners_;
 
     std::unique_ptr<OscillatorListToolbar> toolbar_;

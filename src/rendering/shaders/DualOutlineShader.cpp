@@ -14,16 +14,8 @@ namespace oscil
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
 
-struct DualOutlineShader::GLResources
+struct DualOutlineShader::GLResources : WaveformShader::WaveformGLResources
 {
-    std::unique_ptr<juce::OpenGLShaderProgram> program;
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    bool compiled = false;
-
-    GLint projectionLoc = -1;
-    GLint baseColorLoc = -1;
-    GLint opacityLoc = -1;
 };
 #endif
 
@@ -46,53 +38,19 @@ DualOutlineShader::~DualOutlineShader()
 }
 
 #if OSCIL_ENABLE_OPENGL
+// NOLINTNEXTLINE(readability-function-size)
 bool DualOutlineShader::compile(juce::OpenGLContext& context)
 {
-    if (gl_->compiled)
-        return true;
-
-    gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    juce::String const vertexCode =
-        juce::String::createStringFromData(BinaryData::dual_outline_vert, BinaryData::dual_outline_vertSize);
-    juce::String const fragmentCode =
-        juce::String::createStringFromData(BinaryData::dual_outline_frag, BinaryData::dual_outline_fragSize);
-
-    if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) ||
-        !gl_->program->link())
-    {
-        DBG("DualOutlineShader: Shader compilation failed: " << gl_->program->getLastError());
-        gl_->program.reset();
+    if (!compileFromBinaryData(*gl_, context, BinaryData::dual_outline_vert, BinaryData::dual_outline_vertSize,
+                               BinaryData::dual_outline_frag, BinaryData::dual_outline_fragSize, "DualOutlineShader"))
         return false;
-    }
-
-    gl_->projectionLoc = gl_->program->getUniformIDFromName("projection");
-    gl_->baseColorLoc = gl_->program->getUniformIDFromName("baseColor");
-    gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
-
-    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0)
-    {
-        DBG("DualOutlineShader: Missing required uniforms");
-        gl_->program.reset();
-        return false;
-    }
-
-    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &gl_->vao);
-    juce::OpenGLExtensionFunctions::glGenBuffers(1, &gl_->vbo);
-
-    gl_->compiled = true;
     return true;
 }
 
 void DualOutlineShader::release(juce::OpenGLContext& context)
 {
     juce::ignoreUnused(context);
-    if (!gl_->compiled)
-        return;
-    juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &gl_->vbo);
-    juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &gl_->vao);
-    gl_->program.reset();
-    gl_->compiled = false;
+    releaseGLResources(*gl_);
 }
 
 bool DualOutlineShader::isCompiled() const { return gl_->compiled; }
@@ -147,10 +105,10 @@ void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<f
     juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
     float const height = params.bounds.getHeight();
-    float centerY1;
-    float centerY2;
-    float amp1;
-    float amp2;
+    float centerY1 = 0.0f;
+    float centerY2 = 0.0f;
+    float amp1 = 0.0f;
+    float amp2 = 0.0f;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     GLint const posLoc = std::max(0, static_cast<int>(juce::OpenGLExtensionFunctions::glGetAttribLocation(

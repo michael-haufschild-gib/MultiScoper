@@ -148,7 +148,7 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     if (analysisEngine_)
     {
         analysisEngine_->prepare(sampleRate, samplesPerBlock);
-        analysisEngine_->reset();
+        (*analysisEngine_).reset();
     }
 
     OSCIL_LOG(PLUGIN, "prepareToPlay: sampleRate=" << sampleRate << " blockSize=" << samplesPerBlock
@@ -233,8 +233,8 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     metadata.timestamp = timingEngine_.getHostInfo().timeInSamples;
 
     // Capture audio for visualization BEFORE any modifications (read-only operation)
-    // Use tryLock=true to prevent audio thread blocking if test server is injecting data
-    // DecimatingCaptureBuffer handles downsampling internally
+    // DecimatingCaptureBuffer handles downsampling and real-time safety internally
+    // (uses tryLock on its buffer swap lock — drops frames rather than blocking audio thread)
     captureBuffer_->write(buffer, metadata);
 
     // Run analysis (Real-time stats)

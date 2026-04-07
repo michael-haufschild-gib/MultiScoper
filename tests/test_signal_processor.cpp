@@ -2,58 +2,31 @@
     Oscil - Signal Processor Tests
 */
 
-#ifndef _USE_MATH_DEFINES
-    #define _USE_MATH_DEFINES
-#endif
 #include "core/dsp/SignalProcessor.h"
 
-#include <cmath>
+#include "TestSignals.h"
+
 #include <gtest/gtest.h>
 #include <limits>
-#include <random>
 #include <span>
 
 using namespace oscil;
+using oscil::test::generateDCVector;
+using oscil::test::generateSineVector;
 
 class SignalProcessorTest : public ::testing::Test
 {
 protected:
     SignalProcessor processor;
     ProcessedSignal output;
-
-    // Generate test signals
-    std::vector<float> generateSineWave(int numSamples, float frequency, float sampleRate)
-    {
-        std::vector<float> samples(numSamples);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            samples[i] = std::sin(2.0f * M_PI * frequency * i / sampleRate);
-        }
-        return samples;
-    }
-
-    std::vector<float> generateDC(int numSamples, float level) { return std::vector<float>(numSamples, level); }
-
-    // Generate random signal
-    std::vector<float> generateRandom(int numSamples, float min, float max, int seed = 12345)
-    {
-        std::vector<float> samples(numSamples);
-        std::mt19937 gen(seed);
-        std::uniform_real_distribution<float> dist(min, max);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            samples[i] = dist(gen);
-        }
-        return samples;
-    }
 };
 
 // Test: Full Stereo mode passes through L/R correctly
 TEST_F(SignalProcessorTest, FullStereoPassthrough)
 {
     const int numSamples = 1024;
-    auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
-    auto right = generateSineWave(numSamples, 880.0f, 44100.0f);
+    auto left = generateSineVector(numSamples, 440.0f, 44100.0f);
+    auto right = generateSineVector(numSamples, 880.0f, 44100.0f);
 
     processor.process(left, right, ProcessingMode::FullStereo, output);
 
@@ -77,8 +50,8 @@ TEST_F(SignalProcessorTest, FullStereoPassthrough)
 TEST_F(SignalProcessorTest, MonoSumming)
 {
     const int numSamples = 1024;
-    auto left = generateDC(numSamples, 0.5f);
-    auto right = generateDC(numSamples, 0.3f);
+    auto left = generateDCVector(numSamples, 0.5f);
+    auto right = generateDCVector(numSamples, 0.3f);
 
     processor.process(left, right, ProcessingMode::Mono, output);
 
@@ -95,8 +68,8 @@ TEST_F(SignalProcessorTest, MonoSumming)
 TEST_F(SignalProcessorTest, MidComponent)
 {
     const int numSamples = 1024;
-    auto left = generateDC(numSamples, 1.0f);
-    auto right = generateDC(numSamples, 1.0f);
+    auto left = generateDCVector(numSamples, 1.0f);
+    auto right = generateDCVector(numSamples, 1.0f);
 
     processor.process(left, right, ProcessingMode::Mid, output);
 
@@ -113,8 +86,8 @@ TEST_F(SignalProcessorTest, MidComponent)
 TEST_F(SignalProcessorTest, SideComponent)
 {
     const int numSamples = 1024;
-    auto left = generateDC(numSamples, 1.0f);
-    auto right = generateDC(numSamples, -1.0f); // Inverted
+    auto left = generateDCVector(numSamples, 1.0f);
+    auto right = generateDCVector(numSamples, -1.0f); // Inverted
 
     processor.process(left, right, ProcessingMode::Side, output);
 
@@ -131,7 +104,7 @@ TEST_F(SignalProcessorTest, SideComponent)
 TEST_F(SignalProcessorTest, SideZeroForMono)
 {
     const int numSamples = 1024;
-    auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
+    auto left = generateSineVector(numSamples, 440.0f, 44100.0f);
     auto right = left; // Same as left
 
     processor.process(left, right, ProcessingMode::Side, output);
@@ -147,8 +120,8 @@ TEST_F(SignalProcessorTest, SideZeroForMono)
 TEST_F(SignalProcessorTest, LeftChannelOnly)
 {
     const int numSamples = 1024;
-    auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
-    auto right = generateSineWave(numSamples, 880.0f, 44100.0f);
+    auto left = generateSineVector(numSamples, 440.0f, 44100.0f);
+    auto right = generateSineVector(numSamples, 880.0f, 44100.0f);
 
     processor.process(left, right, ProcessingMode::Left, output);
 
@@ -164,8 +137,8 @@ TEST_F(SignalProcessorTest, LeftChannelOnly)
 TEST_F(SignalProcessorTest, RightChannelOnly)
 {
     const int numSamples = 1024;
-    auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
-    auto right = generateSineWave(numSamples, 880.0f, 44100.0f);
+    auto left = generateSineVector(numSamples, 440.0f, 44100.0f);
+    auto right = generateSineVector(numSamples, 880.0f, 44100.0f);
 
     processor.process(left, right, ProcessingMode::Right, output);
 
@@ -181,7 +154,7 @@ TEST_F(SignalProcessorTest, RightChannelOnly)
 TEST_F(SignalProcessorTest, CorrelationIdenticalSignals)
 {
     const int numSamples = 1024;
-    auto signal = generateSineWave(numSamples, 440.0f, 44100.0f);
+    auto signal = generateSineVector(numSamples, 440.0f, 44100.0f);
 
     float correlation = SignalProcessor::calculateCorrelation(signal, signal);
 
@@ -192,7 +165,7 @@ TEST_F(SignalProcessorTest, CorrelationIdenticalSignals)
 TEST_F(SignalProcessorTest, CorrelationInvertedSignals)
 {
     const int numSamples = 1024;
-    auto left = generateSineWave(numSamples, 440.0f, 44100.0f);
+    auto left = generateSineVector(numSamples, 440.0f, 44100.0f);
     std::vector<float> right(numSamples);
 
     // Invert the signal

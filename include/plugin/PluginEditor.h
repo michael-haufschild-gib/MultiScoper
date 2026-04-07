@@ -14,23 +14,9 @@
     #include <melatonin_inspector/melatonin_inspector.h>
 #endif
 #include "core/ServiceContext.h"
-#include "ui/components/OscilModal.h"
 #include "ui/components/TestId.h"
-#include "ui/controllers/GpuRenderCoordinator.h"
-#include "ui/controllers/OscillatorPanelController.h"
-#include "ui/dialogs/AddOscillatorDialog.h"
-#include "ui/dialogs/OscillatorColorDialog.h"
-#include "ui/dialogs/OscillatorConfigDialog.h"
-#include "ui/dialogs/SelectPaneDialog.h"
-#include "ui/layout/PaneContainerComponent.h"
-#include "ui/layout/PluginEditorLayout.h"
+#include "ui/layout/SidebarComponent.h"
 #include "ui/layout/WindowLayout.h"
-#include "ui/managers/DialogManager.h"
-#include "ui/managers/DisplaySettingsManager.h"
-#include "ui/managers/PerformanceMetricsController.h"
-#include "ui/panels/StatusBarComponent.h"
-#include "ui/panels/WaveformComponent.h"
-#include "ui/theme/ThemeManager.h"
 
 #include "plugin/PluginProcessor.h"
 
@@ -38,20 +24,22 @@ namespace oscil
 {
 
 // Forward declarations
+struct ColorTheme;
+struct GridConfiguration;
 class PaneComponent;
+class PaneContainerComponent;
 class StatusBarComponent;
-class SidebarComponent;
 class SourceCoordinator;
 class ThemeCoordinator;
 class LayoutCoordinator;
 class PluginTestServer;
-
-// Forward declaration for OpenGLLifecycleManager
 class OpenGLLifecycleManager;
-
 class PluginEditorLayout;
 class PerformanceMetricsController;
 class GpuRenderCoordinator;
+class OscillatorPanelController;
+class DialogManager;
+class DisplaySettingsManager;
 
 /**
  * Adapter class to bridge SidebarComponent::Listener to OscilPluginEditor
@@ -140,6 +128,12 @@ public:
 
 private:
     void timerCallback() override;
+
+    // Construction helpers (split to keep constructor under readability-function-size)
+    void initUIComponents();
+    void initManagers();
+    void initControllerAndSettings();
+    void initTimingEngine();
 
     // Coordinator callbacks
     void onSourcesChanged();

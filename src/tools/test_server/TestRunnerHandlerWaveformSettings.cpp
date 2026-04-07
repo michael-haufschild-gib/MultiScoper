@@ -22,7 +22,7 @@ namespace
 {
 void ensureTestOscillator(OscilState& state, OscilPluginEditor& editor)
 {
-    if (!state.getOscillators().empty())
+    if (state.getOscillatorCount() > 0)
         return;
 
     auto& layoutManager = state.getLayoutManager();

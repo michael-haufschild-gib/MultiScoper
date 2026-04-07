@@ -127,6 +127,7 @@ private:
     juce::Component::SafePointer<juce::Component> previousFocus_;
 
     SpringAnimation showSpring_;
+    SpringAnimation scaleSpring_ = SpringPresets::springPopup(); // Scale 0.95→1.0 entrance
     SpringAnimation closeHoverSpring_ = SpringPresets::fast();
 
     static constexpr int TITLE_BAR_HEIGHT = 48;

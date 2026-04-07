@@ -48,7 +48,7 @@ void SourceItemComponent::paint(juce::Graphics& g)
 
     if (isActive_)
     {
-        g.setColour(juce::Colours::limegreen);
+        g.setColour(theme.statusActive);
     }
     else
     {

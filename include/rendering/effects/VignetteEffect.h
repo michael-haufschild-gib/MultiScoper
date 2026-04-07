@@ -5,10 +5,8 @@
 
 #pragma once
 
-#include "PostProcessEffect.h"
+#include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
-
-#include <memory>
 
 #if OSCIL_ENABLE_OPENGL
 
@@ -19,7 +17,7 @@ namespace oscil
  * Vignette post-processing effect.
  * Darkens the edges of the image to draw focus to the center.
  */
-class VignetteEffect : public PostProcessEffect
+class VignetteEffect : public SingleShaderEffect
 {
 public:
     /// Create a vignette effect with default settings.
@@ -28,15 +26,6 @@ public:
 
     [[nodiscard]] juce::String getId() const override { return "vignette"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Vignette"; }
-
-    /// Compile the vignette shader program.
-    bool compile(juce::OpenGLContext& context) override;
-    /// Release the shader program.
-    void release(juce::OpenGLContext& context) override;
-    [[nodiscard]] bool isCompiled() const override;
-
-    void apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool,
-               float deltaTime) override;
 
     /**
      * Configure from VisualConfiguration.
@@ -49,16 +38,17 @@ public:
     void setSettings(const VignetteSettings& settings) { settings_ = settings; }
     [[nodiscard]] const VignetteSettings& getSettings() const { return settings_; }
 
+protected:
+    [[nodiscard]] const char* getFragmentSource() const override;
+    bool resolveUniforms() override;
+    void setUniforms(const Framebuffer& source, float deltaTime) override;
+
 private:
     VignetteSettings settings_;
-    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
 
-    GLint textureLoc_ = -1;
     GLint intensityLoc_ = -1;
     GLint softnessLoc_ = -1;
     GLint colorLoc_ = -1;
-
-    bool compiled_ = false;
 };
 
 } // namespace oscil

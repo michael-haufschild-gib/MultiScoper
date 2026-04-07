@@ -73,6 +73,23 @@ private:
     /** Persist preferences to disk without acquiring mutex_ (caller must hold it). */
     void saveUnlocked();
 
+    /** Thread-safe preference getter. */
+    template <typename T>
+    T getPref(const juce::Identifier& key, const juce::var& defaultValue) const
+    {
+        std::scoped_lock const lock(mutex_);
+        return static_cast<T>(preferences_.getProperty(key, defaultValue));
+    }
+
+    /** Thread-safe preference setter with auto-save. */
+    template <typename T>
+    void setPref(const juce::Identifier& key, const T& value)
+    {
+        std::scoped_lock const lock(mutex_);
+        preferences_.setProperty(key, value, nullptr);
+        saveUnlocked();
+    }
+
     mutable std::mutex mutex_; // Thread safety for multi-instance access
     juce::ValueTree preferences_;
 };

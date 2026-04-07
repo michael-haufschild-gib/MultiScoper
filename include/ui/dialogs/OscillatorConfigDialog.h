@@ -9,6 +9,7 @@
 #include "core/Pane.h"
 #include "core/WaveformColorPalette.h"
 #include "core/interfaces/IInstanceRegistry.h"
+#include "ui/components/ComponentConstants.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilColorSwatches.h"
 #include "ui/components/OscilDropdown.h"
@@ -17,7 +18,7 @@
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -35,9 +36,7 @@ class IThemeService;
  * Modal dialog for configuring an oscillator's settings
  * Provides comprehensive controls as per PRD requirements
  */
-class OscillatorConfigDialog
-    : public juce::Component
-    , public ThemeManagerListener
+class OscillatorConfigDialog : public ThemedComponent
 {
 public:
     /**
@@ -58,8 +57,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
+    /// Apply updated theme colors to labels and child components.
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
     /**
      * Show the dialog for an oscillator
@@ -88,24 +87,19 @@ public:
     int getPreferredWidth() const { return DIALOG_WIDTH; }
     int getPreferredHeight() const { return DIALOG_HEIGHT; }
 
-    // Layout constants
-    static constexpr int PADDING = 16;
+    // Layout constants (spacing uses shared ComponentLayout values)
+    static constexpr int PADDING = ComponentLayout::SPACING_LG;
     static constexpr int HEADER_HEIGHT = 0; // Removed custom header
     static constexpr int LABEL_HEIGHT = 20;
     static constexpr int CONTROL_HEIGHT = 28;
     static constexpr int COLOR_PICKER_HEIGHT = 32;
     static constexpr int SLIDER_ROW_HEIGHT = 40;
     static constexpr int FOOTER_HEIGHT = 36;
-    static constexpr int SPACING_SMALL = 4;
-    static constexpr int SPACING_MEDIUM = 8;
-    static constexpr int SPACING_LARGE = 12;
-    static constexpr int SPACING_SECTION = 16;
 
     // Number of default color swatches (from centralized palette)
     static constexpr size_t NUM_COLOR_SWATCHES = WaveformColorPalette::NUM_COLORS;
 
 private:
-    IThemeService& themeService_;
     IInstanceRegistry& instanceRegistry_;
 
     void setupComponents();

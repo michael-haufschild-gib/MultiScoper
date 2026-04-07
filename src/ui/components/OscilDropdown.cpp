@@ -5,6 +5,8 @@
 
 #include "ui/components/OscilDropdown.h"
 
+#include "ui/components/GlassPainter.h"
+
 #include <utility>
 
 namespace oscil
@@ -168,6 +170,7 @@ void OscilDropdown::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
@@ -284,30 +287,19 @@ void OscilDropdown::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float const hoverAmount = hoverSpring_.position;
 
-    auto bgColour = getTheme().backgroundSecondary;
-    if (hoverAmount > 0.01f)
-        bgColour = bgColour.brighter(0.05f * hoverAmount);
+    if (!enabled_)
+        g.setOpacity(opacity);
 
-    g.setColour(bgColour.withAlpha(opacity));
-    g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
+    // Use GlassPainter::paintGlassInput for the trigger area
+    bool const isFocused = hasFocus_ || popupVisible_;
+    GlassPainter::paintGlassInput(g, bounds, getGlass(), ComponentLayout::RADIUS_SM, isFocused, isHovered_);
 
-    auto borderColour = popupVisible_ ? getTheme().controlActive
-                        : hasFocus_   ? getTheme().controlActive
-                                      : getTheme().controlBorder;
-
-    g.setColour(borderColour.withAlpha(opacity));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
-
+    // Focus ring when focused
     if (hasFocus_ && enabled_)
-    {
-        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-                               ComponentLayout::RADIUS_SM + ComponentLayout::FOCUS_RING_OFFSET,
-                               ComponentLayout::FOCUS_RING_WIDTH);
-    }
+        GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_SM, getGlass().accent);
 
+    // Text
     auto textBounds = bounds.reduced(PADDING_H, 0);
     textBounds.removeFromRight(CHEVRON_SIZE + 8);
 
@@ -316,10 +308,14 @@ void OscilDropdown::paint(juce::Graphics& g)
     g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
     g.drawText(displayText_, textBounds, juce::Justification::centredLeft);
 
+    // Chevron
     auto chevronBounds =
         bounds.removeFromRight(CHEVRON_SIZE + PADDING_H).withSizeKeepingCentre(CHEVRON_SIZE, CHEVRON_SIZE);
 
     paintChevron(g, chevronBounds);
+
+    if (!enabled_)
+        g.setOpacity(1.0f);
 }
 
 void OscilDropdown::paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds)
@@ -327,7 +323,9 @@ void OscilDropdown::paintChevron(juce::Graphics& g, juce::Rectangle<float> bound
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const rotation = chevronSpring_.position * juce::MathConstants<float>::pi;
 
-    g.setColour(getTheme().textSecondary.withAlpha(opacity));
+    // Chevron: textSecondary default (tertiary feel), textPrimary on hover
+    auto chevronColour = isHovered_ ? getTheme().textPrimary : getTheme().textSecondary;
+    g.setColour(chevronColour.withAlpha(opacity * 0.7f));
 
     juce::Path chevron;
     float const size = bounds.getWidth() * 0.4f;

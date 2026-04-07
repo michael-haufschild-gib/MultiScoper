@@ -49,7 +49,7 @@ juce::String OscilState::toXmlString()
     if (auto xml = state_.createXml())
     {
         auto xmlStr = xml->toString();
-        OSCIL_LOG(STATE, "toXmlString: " << xmlStr.length() << "ch " << getOscillators().size() << "osc "
+        OSCIL_LOG(STATE, "toXmlString: " << xmlStr.length() << "ch " << getOscillatorsNode().getNumChildren() << "osc "
                                          << layoutManager_.getPaneCount() << "panes");
         return xmlStr;
     }
@@ -114,8 +114,8 @@ bool OscilState::fromXmlString(const juce::String& xmlString)
         layoutManager_.setColumnLayout(static_cast<ColumnLayout>(cols));
     }
 
-    OSCIL_LOG(STATE, "fromXmlString: " << getOscillators().size() << "osc " << layoutManager_.getPaneCount()
-                                       << "panes v" << getSchemaVersion());
+    OSCIL_LOG(STATE, "fromXmlString: " << getOscillatorCount() << "osc " << layoutManager_.getPaneCount() << "panes v"
+                                       << getSchemaVersion());
     return true;
 }
 
@@ -135,6 +135,8 @@ std::vector<Oscillator> OscilState::getOscillators() const
 
     return result;
 }
+
+int OscilState::getOscillatorCount() const { return getOscillatorsNode().getNumChildren(); }
 
 void OscilState::addOscillator(const Oscillator& oscillator)
 {

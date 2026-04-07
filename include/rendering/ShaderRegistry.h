@@ -9,6 +9,7 @@
 
 #include <juce_core/juce_core.h>
 
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -75,10 +76,18 @@ private:
      */
     void registerBuiltInShaders();
 
+    struct JuceStringHash
+    {
+        std::size_t operator()(const juce::String& s) const
+        {
+            return static_cast<std::size_t>(static_cast<uint32_t>(s.hashCode()));
+        }
+    };
+
     // Prototype storage
-    std::unordered_map<std::string, std::unique_ptr<WaveformShader>> shaders_;
+    std::unordered_map<juce::String, std::unique_ptr<WaveformShader>, JuceStringHash> shaders_;
     // Factory storage
-    std::unordered_map<std::string, std::function<std::unique_ptr<WaveformShader>()>> factories_;
+    std::unordered_map<juce::String, std::function<std::unique_ptr<WaveformShader>()>, JuceStringHash> factories_;
 
     juce::String defaultShaderId_ = "basic";
 
@@ -87,7 +96,7 @@ private:
     void registerShaderType()
     {
         auto prototype = std::make_unique<T>();
-        auto id = prototype->getId().toStdString();
+        auto id = prototype->getId();
         shaders_[id] = std::move(prototype);
         factories_[id] = []() { return std::make_unique<T>(); };
     }

@@ -131,6 +131,11 @@ public:
     [[nodiscard]] std::vector<Oscillator> getOscillators() const;
 
     /**
+     * Get oscillator count without constructing Oscillator objects
+     */
+    [[nodiscard]] int getOscillatorCount() const;
+
+    /**
      * Add an oscillator
      */
     void addOscillator(const Oscillator& oscillator);

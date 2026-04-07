@@ -12,11 +12,10 @@
 #include "ui/components/OscilToggle.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/layout/sections/SectionConstants.h"
 #include "ui/panels/TimingPresenter.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -30,8 +29,7 @@ namespace oscil
  * Provides TIME/MELODIC mode toggle, interval controls, and host sync options
  */
 class TimingSidebarSection
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public DynamicHeightContent
 {
 public:
@@ -58,8 +56,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
+    /// Apply updated theme colors to labels and child components.
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
     // State setters (for external updates)
     void setTimingMode(TimingMode mode);
@@ -125,8 +123,6 @@ private:
     std::unique_ptr<TimingPresenter> presenter_;
 
     juce::ListenerList<Listener> listeners_;
-
-    IThemeService& themeService_;
 
     OSCIL_TESTABLE();
 

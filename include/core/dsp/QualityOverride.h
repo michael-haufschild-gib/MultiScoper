@@ -58,24 +58,6 @@ inline QualityOverride stringToQualityOverride(const juce::String& str)
     return QualityOverride::UseGlobal;
 }
 
-inline juce::String qualityOverrideToDisplayName(QualityOverride override)
-{
-    switch (override)
-    {
-        case QualityOverride::UseGlobal:
-            return "Use Global";
-        case QualityOverride::Eco:
-            return "Eco (11 kHz)";
-        case QualityOverride::Standard:
-            return "Standard (22 kHz)";
-        case QualityOverride::High:
-            return "High (44 kHz)";
-        case QualityOverride::Ultra:
-            return "Ultra (Source Rate)";
-    }
-    return "Use Global";
-}
-
 /**
  * Resolve override to actual quality preset
  * @param override The per-oscillator override setting
@@ -98,6 +80,14 @@ inline QualityPreset resolveQualityOverride(QualityOverride override, QualityPre
             return QualityPreset::Ultra;
     }
     return globalPreset;
+}
+
+inline juce::String qualityOverrideToDisplayName(QualityOverride override)
+{
+    if (override == QualityOverride::UseGlobal)
+        return "Use Global";
+
+    return qualityPresetToDisplayName(resolveQualityOverride(override, QualityPreset::Standard));
 }
 
 } // namespace oscil

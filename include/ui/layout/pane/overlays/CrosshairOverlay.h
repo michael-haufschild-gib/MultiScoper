@@ -7,7 +7,7 @@
 
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -29,8 +29,7 @@ namespace oscil
  * - Has no fade animation (instant show/hide based on mouse hover)
  */
 class CrosshairOverlay
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public TestIdSupport
 {
 public:
@@ -58,15 +57,10 @@ public:
     void paint(juce::Graphics& g) override;
     bool hitTest(int x, int y) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
 private:
     void paintCrosshairLines(juce::Graphics& g);
     void paintTooltip(juce::Graphics& g);
     juce::Rectangle<int> calculateTooltipBounds() const;
-
-    IThemeService& themeService_;
 
     // Mouse position
     juce::Point<int> mousePos_{-100, -100}; // Start off-screen

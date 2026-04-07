@@ -32,41 +32,45 @@ void strokeChannelPath(juce::Graphics& g, const std::vector<float>& samples, flo
 }
 } // namespace
 
+void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params, const std::vector<float>* channel2,
+                                           float height, float& centerY1, float& centerY2, float& amp1, float& amp2)
+{
+    if (params.isStereo && channel2 != nullptr)
+    {
+        float const halfHeight = height * 0.5f;
+        centerY1 = params.bounds.getY() + (halfHeight * 0.5f);
+        centerY2 = params.bounds.getY() + (halfHeight * 1.5f);
+        amp1 = amp2 = halfHeight * 0.45f * params.verticalScale;
+    }
+    else
+    {
+        centerY1 = centerY2 = params.bounds.getCentreY();
+        amp1 = amp2 = height * 0.45f * params.verticalScale;
+    }
+}
+
 void WaveformShader::renderSoftware(juce::Graphics& g, const std::vector<float>& channel1,
                                     const std::vector<float>* channel2, const ShaderRenderParams& params)
 {
     if (channel1.size() < 2)
         return;
 
-    auto bounds = params.bounds;
-    float const width = bounds.getWidth();
-    float const height = bounds.getHeight();
+    float const width = params.bounds.getWidth();
+    float const height = params.bounds.getHeight();
 
-    float centerY1 = NAN;
-    float centerY2 = NAN;
-    float amplitude1 = NAN;
-    float amplitude2 = NAN;
-
-    if (params.isStereo && channel2 != nullptr)
-    {
-        float const halfHeight = height * 0.5f;
-        centerY1 = bounds.getY() + (halfHeight * 0.5f);
-        centerY2 = bounds.getY() + (halfHeight * 1.5f);
-        amplitude1 = amplitude2 = halfHeight * 0.45f * params.verticalScale;
-    }
-    else
-    {
-        centerY1 = centerY2 = bounds.getCentreY();
-        amplitude1 = amplitude2 = height * 0.45f * params.verticalScale;
-    }
+    float centerY1 = 0.0f;
+    float centerY2 = 0.0f;
+    float amplitude1 = 0.0f;
+    float amplitude2 = 0.0f;
+    calculateStereoLayout(params, channel2, height, centerY1, centerY2, amplitude1, amplitude2);
 
     g.setColour(params.colour.withAlpha(params.opacity));
 
-    strokeChannelPath(g, channel1, centerY1, amplitude1, bounds.getX(), width, params.lineWidth);
+    strokeChannelPath(g, channel1, centerY1, amplitude1, params.bounds.getX(), width, params.lineWidth);
 
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
-        strokeChannelPath(g, *channel2, centerY2, amplitude2, bounds.getX(), width, params.lineWidth);
+        strokeChannelPath(g, *channel2, centerY2, amplitude2, params.bounds.getX(), width, params.lineWidth);
     }
 }
 
@@ -95,25 +99,65 @@ bool WaveformShader::compileShaderProgram(juce::OpenGLShaderProgram& program, co
     return true;
 }
 
-void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params, const std::vector<float>* channel2,
-                                           float height, float& centerY1, float& centerY2, float& amp1, float& amp2)
+bool WaveformShader::compileFromBinaryData(WaveformGLResources& gl, juce::OpenGLContext& context, const char* vertData,
+                                           int vertSize, const char* fragData, int fragSize,
+                                           const juce::String& shaderName)
 {
-    if (params.isStereo && channel2 != nullptr)
+    if (gl.compiled)
+        return true;
+
+    gl.program = std::make_unique<juce::OpenGLShaderProgram>(context);
+
+    juce::String const vertexCode = juce::String::createStringFromData(vertData, vertSize);
+    juce::String const fragmentCode = juce::String::createStringFromData(fragData, fragSize);
+
+    if (!compileShaderProgram(*gl.program, vertexCode.toRawUTF8(), fragmentCode.toRawUTF8()))
     {
-        float const halfHeight = height * 0.5f;
-        centerY1 = params.bounds.getY() + (halfHeight * 0.5f);
-        centerY2 = params.bounds.getY() + (halfHeight * 1.5f);
-        amp1 = amp2 = halfHeight * 0.45f * params.verticalScale;
+        DBG(shaderName << ": Shader compilation failed: " << gl.program->getLastError());
+        gl.program.reset();
+        return false;
     }
-    else
+
+    gl.projectionLoc = gl.program->getUniformIDFromName("projection");
+    gl.baseColorLoc = gl.program->getUniformIDFromName("baseColor");
+    gl.opacityLoc = gl.program->getUniformIDFromName("opacity");
+
+    if (gl.projectionLoc < 0 || gl.baseColorLoc < 0 || gl.opacityLoc < 0)
     {
-        centerY1 = centerY2 = params.bounds.getCentreY();
-        amp1 = amp2 = height * 0.45f * params.verticalScale;
+        DBG(shaderName << ": Missing required base uniforms");
+        gl.program.reset();
+        return false;
     }
+
+    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &gl.vao);
+    juce::OpenGLExtensionFunctions::glGenBuffers(1, &gl.vbo);
+
+    gl.compiled = true;
+    return true;
+}
+
+void WaveformShader::releaseGLResources(WaveformGLResources& gl)
+{
+    if (!gl.compiled)
+        return;
+
+    if (gl.vbo != 0)
+    {
+        juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &gl.vbo);
+        gl.vbo = 0;
+    }
+    if (gl.vao != 0)
+    {
+        juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &gl.vao);
+        gl.vao = 0;
+    }
+    gl.program.reset();
+    gl.compiled = false;
 }
 
 namespace
 {
+// NOLINTNEXTLINE(readability-function-size)
 void computeLineNormal(const std::vector<float>& samples, size_t i, float boundsX, float xScale, float centerY,
                        float amplitude, float x, float y, float& nx, float& ny)
 {

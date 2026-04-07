@@ -201,7 +201,8 @@ void OscilMeterBar::paintMeterVertical(juce::Graphics& g, const juce::Rectangle<
 }
 
 void OscilMeterBar::paintMeterHorizontal(juce::Graphics& g, const juce::Rectangle<int>& bounds,
-                                         juce::ColourGradient& gradient, float levelPos, float peakPos, bool clip)
+                                         juce::ColourGradient& gradient, float levelPos, float rmsPos, float peakPos,
+                                         bool clip)
 {
     gradient.point1 = {static_cast<float>(bounds.getX()), static_cast<float>(bounds.getY())};
     gradient.point2 = {static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY())};
@@ -212,6 +213,14 @@ void OscilMeterBar::paintMeterHorizontal(juce::Graphics& g, const juce::Rectangl
     {
         g.setGradientFill(gradient);
         g.fillRect(bounds.withWidth(levelWidth));
+    }
+
+    // RMS indicator (vertical line)
+    if (meterType_ == MeterType::PeakWithRMS)
+    {
+        int const rmsX = bounds.getX() + static_cast<int>(rmsPos * static_cast<float>(bounds.getWidth()));
+        g.setColour(juce::Colours::white.withAlpha(0.3f));
+        g.fillRect(rmsX, bounds.getY(), 2, bounds.getHeight());
     }
 
     int const peakX = bounds.getX() + static_cast<int>(peakPos * static_cast<float>(bounds.getWidth()));
@@ -240,7 +249,7 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds, f
     if (orientation_ == Orientation::Vertical)
         paintMeterVertical(g, bounds, gradient, levelPos, rmsPos, peakPos, clip);
     else
-        paintMeterHorizontal(g, bounds, gradient, levelPos, peakPos, clip);
+        paintMeterHorizontal(g, bounds, gradient, levelPos, rmsPos, peakPos, clip);
 }
 
 void OscilMeterBar::paintScale(juce::Graphics& g, juce::Rectangle<int> bounds)
@@ -286,17 +295,6 @@ float OscilMeterBar::levelToPosition(float level) const
 }
 
 float OscilMeterBar::dbToLevel(float db) const { return std::pow(10.0f, db / 20.0f); }
-
-juce::Colour OscilMeterBar::getLevelColour(float normalizedLevel) const
-{
-    // Green -> Yellow -> Red gradient
-    if (normalizedLevel < 0.7f)
-        return getTheme().statusActive; // Green
-    if (normalizedLevel < 0.9f)
-        return getTheme().statusWarning; // Yellow
-    else
-        return getTheme().statusError; // Red
-}
 
 void OscilMeterBar::resized()
 {

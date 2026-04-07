@@ -18,7 +18,6 @@ class SelectPaneDialogTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Initialize JUCE message manager for tests
         juce::MessageManager::getInstance();
         themeManager_ = std::make_unique<ThemeManager>();
     }
@@ -66,47 +65,109 @@ TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPaneVector)
 {
     SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanes(3);
+    dialog.setAvailablePanes(panes);
 
-    EXPECT_NO_THROW({ dialog.setAvailablePanes(panes); });
+    // Verify dialog is in a valid state after setting panes
+    EXPECT_GT(dialog.getPreferredWidth(), 0);
 }
 
 TEST_F(SelectPaneDialogTest, SetAvailablePanesFromPairVector)
 {
     SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanePairs(3);
+    dialog.setAvailablePanes(panes);
 
-    EXPECT_NO_THROW({ dialog.setAvailablePanes(panes); });
+    EXPECT_GT(dialog.getPreferredWidth(), 0);
 }
 
-TEST_F(SelectPaneDialogTest, Reset)
+TEST_F(SelectPaneDialogTest, OkClickWithNewPaneFiresCallbackWithCreateNewPaneTrue)
 {
     SelectPaneDialog dialog(getThemeManager());
     auto panes = createTestPanes(2);
     dialog.setAvailablePanes(panes);
 
-    EXPECT_NO_THROW({ dialog.reset(); });
+    // Default selection is "New pane" after setAvailablePanes calls reset()
+    bool callbackFired = false;
+    bool createNewPane = false;
+
+    dialog.setOnComplete([&](const SelectPaneDialog::Result& result) {
+        callbackFired = true;
+        createNewPane = result.createNewPane;
+    });
+
+    // Simulate OK click via the public onClick callback
+    // The OK button's onClick is wired to handleOkClick in setupComponents
+    // We need to trigger it — use the child component directly
+    for (int i = 0; i < dialog.getNumChildComponents(); ++i)
+    {
+        auto* child = dialog.getChildComponent(i);
+        if (auto* btn = dynamic_cast<OscilButton*>(child))
+        {
+            // Find the OK button (Primary variant)
+            if (btn->getVariant() == ButtonVariant::Primary && btn->onClick)
+            {
+                btn->onClick();
+                break;
+            }
+        }
+    }
+
+    EXPECT_TRUE(callbackFired);
+    EXPECT_TRUE(createNewPane);
 }
 
-TEST_F(SelectPaneDialogTest, SetOnCompleteCallback)
+TEST_F(SelectPaneDialogTest, CancelClickFiresCancelCallback)
 {
     SelectPaneDialog dialog(getThemeManager());
-    bool callbackSet = false;
+    auto panes = createTestPanes(2);
+    dialog.setAvailablePanes(panes);
 
-    dialog.setOnComplete([&callbackSet](const SelectPaneDialog::Result&) { callbackSet = true; });
+    bool cancelFired = false;
+    dialog.setOnCancel([&]() { cancelFired = true; });
 
-    // Just verify callback can be set without error
-    EXPECT_FALSE(callbackSet); // Not called yet
+    // Find and click the Cancel button (Secondary variant)
+    for (int i = 0; i < dialog.getNumChildComponents(); ++i)
+    {
+        auto* child = dialog.getChildComponent(i);
+        if (auto* btn = dynamic_cast<OscilButton*>(child))
+        {
+            if (btn->getVariant() == ButtonVariant::Secondary && btn->onClick)
+            {
+                btn->onClick();
+                break;
+            }
+        }
+    }
+
+    EXPECT_TRUE(cancelFired);
 }
 
-TEST_F(SelectPaneDialogTest, SetOnCancelCallback)
+TEST_F(SelectPaneDialogTest, ResetClearsState)
 {
     SelectPaneDialog dialog(getThemeManager());
-    bool callbackSet = false;
+    auto panes = createTestPanes(2);
+    dialog.setAvailablePanes(panes);
 
-    dialog.setOnCancel([&callbackSet]() { callbackSet = true; });
+    dialog.reset();
 
-    // Just verify callback can be set without error
-    EXPECT_FALSE(callbackSet); // Not called yet
+    // After reset, default is "New pane" selected — OK should fire with createNewPane=true
+    bool createNewPane = false;
+    dialog.setOnComplete([&](const SelectPaneDialog::Result& result) { createNewPane = result.createNewPane; });
+
+    for (int i = 0; i < dialog.getNumChildComponents(); ++i)
+    {
+        auto* child = dialog.getChildComponent(i);
+        if (auto* btn = dynamic_cast<OscilButton*>(child))
+        {
+            if (btn->getVariant() == ButtonVariant::Primary && btn->onClick)
+            {
+                btn->onClick();
+                break;
+            }
+        }
+    }
+
+    EXPECT_TRUE(createNewPane);
 }
 
 TEST_F(SelectPaneDialogTest, PreferredDimensionsPositive)
@@ -116,21 +177,10 @@ TEST_F(SelectPaneDialogTest, PreferredDimensionsPositive)
     EXPECT_GT(dialog.getPreferredHeight(), 0);
 }
 
-TEST_F(SelectPaneDialogTest, ThemeChangeDoesNotThrow)
-{
-    SelectPaneDialog dialog(getThemeManager());
-
-    // Theme changes should not throw
-    EXPECT_NO_THROW({
-        // Components handle theme changes via ThemeManager listener
-    });
-}
-
 TEST_F(SelectPaneDialogTest, ResizeDoesNotThrow)
 {
     SelectPaneDialog dialog(getThemeManager());
     dialog.setSize(dialog.getPreferredWidth(), dialog.getPreferredHeight());
-
     EXPECT_NO_THROW({ dialog.resized(); });
 }
 

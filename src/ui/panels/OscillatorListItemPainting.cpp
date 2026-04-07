@@ -15,7 +15,7 @@ namespace oscil
 
 void OscillatorListItemComponent::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
     auto bounds = getLocalBounds().toFloat();
     float const alpha = isVisible_ ? 1.0f : 0.5f;
 

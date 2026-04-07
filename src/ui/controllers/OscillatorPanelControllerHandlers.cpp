@@ -49,6 +49,7 @@ void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& os
     }
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorId& oscillatorId)
 {
     if (!dialogManager_)
@@ -204,7 +205,7 @@ void OscillatorPanelController::addOscillatorRequested(const AddOscillatorDialog
     if (result.name.isNotEmpty())
         osc.setName(result.name);
     else
-        osc.setName("Oscillator " + juce::String(state.getOscillators().size() + 1));
+        osc.setName("Oscillator " + juce::String(state.getOscillatorCount() + 1));
 
     // Ensure shader matches preset
     auto preset = VisualConfiguration::getPreset(result.visualPresetId);
@@ -247,6 +248,7 @@ void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscil
 
 // ValueTree Listeners
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void OscillatorPanelController::applyOscillatorPropertyChange(const OscillatorId& oscId,
                                                               const juce::Identifier& property)
 {

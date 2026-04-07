@@ -7,7 +7,6 @@
 #include "ui/components/OscilSlider.h"
 
 #include <cmath>
-#include <math.h>
 
 namespace oscil
 {
@@ -106,7 +105,7 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     auto bounds = getLocalBounds();
     bool const isVertical = variant_ == SliderVariant::Vertical;
 
-    float proportion = NAN;
+    float proportion = 0.0f;
     if (isVertical)
     {
         float const trackHeight = std::max(1.0f, static_cast<float>(bounds.getHeight()) - THUMB_SIZE);
@@ -304,7 +303,7 @@ bool OscilSlider::hitTestThumb(const juce::Point<int>& point, float thumbPositio
             .contains(point.toFloat());
     }
 
-    float cy = static_cast<float>(getHeight()) / 2.0f;
+    float const cy = static_cast<float>(getHeight()) / 2.0f;
     return juce::Rectangle<float>(thumbPosition - size / 2, cy - size / 2, size, size).contains(point.toFloat());
 }
 

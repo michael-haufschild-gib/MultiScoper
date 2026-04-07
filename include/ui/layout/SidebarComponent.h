@@ -15,12 +15,12 @@
 #include "ui/components/OscilButton.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/layout/WindowLayout.h"
 #include "ui/layout/sections/OptionsSection.h"
 #include "ui/layout/sections/OscillatorSidebarSection.h"
 #include "ui/layout/sections/TimingSidebarSection.h"
-#include "ui/theme/ThemeManager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -95,9 +95,8 @@ private:
  * Collapsible sidebar component with oscillator list
  */
 class SidebarComponent
-    : public juce::Component
+    : public ThemedComponent
     , public juce::Timer
-    , public ThemeManagerListener
     , public OscillatorSidebarSection::Listener
     , public TimingSidebarSection::Listener
     , public OptionsSection::Listener
@@ -163,9 +162,6 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
     // Timer
     void timerCallback() override;
 
@@ -204,7 +200,6 @@ public:
 
 private:
     ServiceContext& context_;
-    IThemeService& themeService_;
     IInstanceRegistry& instanceRegistry_;
 
     // Child components
@@ -262,6 +257,7 @@ private:
     void showGridChanged(bool enabled) override;
     void autoScaleChanged(bool enabled) override;
     void layoutChanged(int columnCount) override;
+    using ThemedComponent::themeChanged;
     void themeChanged(const juce::String& themeName) override;
     void gpuRenderingChanged(bool enabled) override;
     void qualityPresetChanged(QualityPreset preset) override;

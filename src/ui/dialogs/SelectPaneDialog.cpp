@@ -8,14 +8,13 @@
 namespace oscil
 {
 
-SelectPaneDialog::SelectPaneDialog(IThemeService& themeService) : themeService_(themeService)
+SelectPaneDialog::SelectPaneDialog(IThemeService& themeService) : ThemedComponent(themeService)
 {
     OSCIL_REGISTER_TEST_ID("selectPaneDialog");
     setupComponents();
-    themeService_.addListener(this);
 }
 
-SelectPaneDialog::~SelectPaneDialog() { themeService_.removeListener(this); }
+SelectPaneDialog::~SelectPaneDialog() = default;
 
 void SelectPaneDialog::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
@@ -26,7 +25,7 @@ void SelectPaneDialog::setupComponents()
     addAndMakeVisible(*instructionLabel_);
 
     // Pane selector (with "New pane" option)
-    paneSelector_ = std::make_unique<PaneSelectorComponent>(themeService_, true, "selectPaneDialog_paneSelector");
+    paneSelector_ = std::make_unique<PaneSelectorComponent>(getThemeService(), true, "selectPaneDialog_paneSelector");
     paneSelector_->onSelectionChanged = [this](const PaneId& paneId, bool isNewPane) {
         handlePaneSelectionChange(paneId, isNewPane);
     };
@@ -38,19 +37,19 @@ void SelectPaneDialog::setupComponents()
     addAndMakeVisible(*errorLabel_);
 
     // OK button (Primary)
-    okButton_ = std::make_unique<OscilButton>(themeService_, "OK", "selectPaneDialog_okBtn");
+    okButton_ = std::make_unique<OscilButton>(getThemeService(), "OK", "selectPaneDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() { handleOkClick(); };
     addAndMakeVisible(*okButton_);
 
     // Cancel button (Secondary)
-    cancelButton_ = std::make_unique<OscilButton>(themeService_, "Cancel", "selectPaneDialog_cancelBtn");
+    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "Cancel", "selectPaneDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() { handleCancelClick(); };
     addAndMakeVisible(*cancelButton_);
 
     // Apply initial theme
-    themeChanged(themeService_.getCurrentTheme());
+    themeChanged(getThemeService().getCurrentTheme());
 
     // Set size for OscilModal
     setSize(getPreferredWidth(), getPreferredHeight());
@@ -86,19 +85,15 @@ void SelectPaneDialog::resized()
     okButton_->setBounds(footerRow);
 }
 
-void SelectPaneDialog::themeChanged(const ColorTheme& newTheme)
+void SelectPaneDialog::onThemeChanged(const ColorTheme& newTheme)
 {
-    theme_ = newTheme;
-
     // Style instruction label
     instructionLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    instructionLabel_->setFont(juce::FontOptions(12.0f));
+    instructionLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
 
     // Error label uses error color
     errorLabel_->setColour(juce::Label::textColourId, newTheme.statusError);
-    errorLabel_->setFont(juce::FontOptions(12.0f));
-
-    repaint();
+    errorLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
 }
 
 void SelectPaneDialog::setAvailablePanes(const std::vector<Pane>& panes)

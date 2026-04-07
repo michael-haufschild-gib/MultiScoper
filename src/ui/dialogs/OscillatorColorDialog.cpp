@@ -7,20 +7,19 @@
 namespace oscil
 {
 
-OscillatorColorDialog::OscillatorColorDialog(IThemeService& themeService) : themeService_(themeService)
+OscillatorColorDialog::OscillatorColorDialog(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setupComponents();
-    themeService_.addListener(this);
 }
 
-OscillatorColorDialog::~OscillatorColorDialog() { themeService_.removeListener(this); }
+OscillatorColorDialog::~OscillatorColorDialog() = default;
 
 void OscillatorColorDialog::setupComponents()
 {
-    colorSwatches_ = std::make_unique<OscilColorSwatches>(themeService_, "colorDialog_swatches");
+    colorSwatches_ = std::make_unique<OscilColorSwatches>(getThemeService(), "colorDialog_swatches");
     addAndMakeVisible(*colorSwatches_);
 
-    okButton_ = std::make_unique<OscilButton>(themeService_, "OK", "colorDialog_okBtn");
+    okButton_ = std::make_unique<OscilButton>(getThemeService(), "OK", "colorDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() {
         if (onColorSelected_)
@@ -28,7 +27,7 @@ void OscillatorColorDialog::setupComponents()
     };
     addAndMakeVisible(*okButton_);
 
-    cancelButton_ = std::make_unique<OscilButton>(themeService_, "Cancel", "colorDialog_cancelBtn");
+    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "Cancel", "colorDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() {
         if (onCancel_)
@@ -81,8 +80,6 @@ void OscillatorColorDialog::resized()
     // Swatches take remaining space
     colorSwatches_->setBounds(bounds);
 }
-
-void OscillatorColorDialog::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 int OscillatorColorDialog::getPreferredWidth() const { return 300; }
 int OscillatorColorDialog::getPreferredHeight() const { return 220; }

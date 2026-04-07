@@ -7,6 +7,7 @@
 
 #include "core/InstanceRegistry.h"
 #include "ui/components/OscilTextField.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/theme/ThemeManager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -86,9 +87,8 @@ private:
  * Popup content for source selection with search and rich list
  */
 class SourceSelectorPopup
-    : public juce::Component
+    : public ThemedComponent
     , public InstanceRegistryListener
-    , public ThemeManagerListener
 {
 public:
     SourceSelectorPopup(IThemeService& themeService, IInstanceRegistry& instanceRegistry);
@@ -109,13 +109,12 @@ public:
     void sourceRemoved(const SourceId& sourceId) override;
     void sourceUpdated(const SourceId& sourceId) override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
+    /// Update label colors when the active theme changes.
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
     int getPreferredHeight() const;
 
 private:
-    IThemeService& themeService_;         // Dependency
     IInstanceRegistry& instanceRegistry_; // Dependency
 
     void handleFilterChange();

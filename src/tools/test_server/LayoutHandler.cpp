@@ -52,17 +52,18 @@ void LayoutHandler::handleSetColumnLayout(const httplib::Request& req, httplib::
             return;
         }
 
-        runOnMessageThread([this, columns]() {
+        auto result = runOnMessageThread([this, columns]() -> nlohmann::json {
             auto& state = editor_.getProcessor().getState();
             state.setColumnLayout(static_cast<ColumnLayout>(columns));
-            // Trigger UI refresh
             editor_.resized();
+
+            nlohmann::json response;
+            response["status"] = "ok";
+            response["columns"] = columns;
+            return response;
         });
 
-        nlohmann::json response;
-        response["status"] = "ok";
-        response["columns"] = columns;
-        res.set_content(response.dump(), "application/json");
+        res.set_content(result.dump(), "application/json");
     }
     catch (const std::exception& e)
     {

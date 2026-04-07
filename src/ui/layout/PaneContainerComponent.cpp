@@ -4,10 +4,12 @@
 
 #include "ui/layout/PaneContainerComponent.h"
 
+#include "ui/theme/ThemeManager.h"
+
 namespace oscil
 {
 
-PaneContainerComponent::PaneContainerComponent() {}
+PaneContainerComponent::PaneContainerComponent(IThemeService& themeService) : themeService_(themeService) {}
 
 void PaneContainerComponent::setPaneDropCallback(PaneDropCallback callback) { paneDropCallback_ = std::move(callback); }
 
@@ -90,6 +92,8 @@ PaneComponent* PaneContainerComponent::findPaneAt(juce::Point<int> position)
 
 void PaneContainerComponent::paint(juce::Graphics& g)
 {
+    auto const highlightColour = themeService_.getCurrentTheme().controlActive;
+
     // Draw drop highlight overlay when dragging over a target
     if (highlightedPaneId_.isValid())
     {
@@ -100,9 +104,9 @@ void PaneContainerComponent::paint(juce::Graphics& g)
                 if (pane->getPaneId() == highlightedPaneId_)
                 {
                     auto bounds = pane->getBounds().toFloat();
-                    g.setColour(juce::Colour(0x2200AAFF)); // semi-transparent blue
+                    g.setColour(highlightColour.withAlpha(0.13f));
                     g.fillRoundedRectangle(bounds, 4.0f);
-                    g.setColour(juce::Colour(0x6600AAFF));
+                    g.setColour(highlightColour.withAlpha(0.40f));
                     g.drawRoundedRectangle(bounds.reduced(1.0f), 4.0f, 2.0f);
                     break;
                 }
@@ -114,7 +118,7 @@ void PaneContainerComponent::paint(juce::Graphics& g)
         int const colWidth = getWidth() / columnCount_;
         auto colBounds = juce::Rectangle<float>(static_cast<float>(highlightedColumn_ * colWidth), 0.0f,
                                                 static_cast<float>(colWidth), static_cast<float>(getHeight()));
-        g.setColour(juce::Colour(0x1100AAFF));
+        g.setColour(highlightColour.withAlpha(0.07f));
         g.fillRoundedRectangle(colBounds.reduced(2.0f), 4.0f);
     }
 }

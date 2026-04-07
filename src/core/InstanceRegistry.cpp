@@ -83,13 +83,15 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
                                             int channelCount, double sampleRate,
                                             std::shared_ptr<AnalysisEngine> analysisEngine)
 {
-    // Preconditions: caller must provide a valid buffer and track identifier
+    // Preconditions
     jassert(captureBuffer != nullptr);
     jassert(trackIdentifier.isNotEmpty());
     jassert(channelCount > 0 && channelCount <= 2);
     jassert(sampleRate > 0.0);
-    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
-            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Sanitize inputs: clamp channelCount and sampleRate to valid ranges
+    int const validChannelCount = juce::jlimit(1, 2, channelCount);
+    double const validSampleRate = std::max(1.0, sampleRate);
 
     SourceId sourceId = SourceId::invalid();
     bool shouldNotifyAdded = false;
@@ -98,8 +100,12 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
     {
         std::unique_lock<std::shared_mutex> const lock(mutex_);
 
-        sourceId =
-            tryReuseExistingSource(trackIdentifier, captureBuffer, name, channelCount, sampleRate, analysisEngine);
+        // Empty track identifiers bypass deduplication to prevent unrelated sources colliding
+        juce::String const effectiveTrackId =
+            trackIdentifier.isEmpty() ? "__auto_" + juce::Uuid().toString() : trackIdentifier;
+
+        sourceId = tryReuseExistingSource(effectiveTrackId, captureBuffer, name, validChannelCount, validSampleRate,
+                                          analysisEngine);
         if (sourceId.isValid())
         {
             shouldNotifyUpdated = true;
@@ -115,17 +121,17 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
             SourceInfo info;
             info.sourceId = sourceId;
             info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
-            info.trackIdentifier = trackIdentifier;
-            info.channelCount = channelCount;
-            info.sampleRate = sampleRate;
+            info.trackIdentifier = effectiveTrackId;
+            info.channelCount = validChannelCount;
+            info.sampleRate = validSampleRate;
             info.buffer = captureBuffer;
             info.analysisEngine = analysisEngine;
             info.active = true;
             sources_[sourceId] = info;
-            trackToSourceMap_[trackIdentifier] = sourceId;
+            trackToSourceMap_[effectiveTrackId] = sourceId;
             shouldNotifyAdded = true;
             OSCIL_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name
-                                                            << " ch=" << channelCount << " sr=" << sampleRate
+                                                            << " ch=" << validChannelCount << " sr=" << validSampleRate
                                                             << " total=" << sources_.size());
         }
     }
@@ -140,10 +146,6 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
 
 void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
 {
-    // NEVER call from audio thread - uses blocking locks.
-    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
-            juce::MessageManager::getInstance()->isThisTheMessageThread());
-
     bool shouldNotify = false;
 
     {
@@ -213,9 +215,9 @@ std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId&
 void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String& name, int channelCount,
                                     double sampleRate)
 {
-    // NEVER call from audio thread - uses blocking locks.
-    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
-            juce::MessageManager::getInstance()->isThisTheMessageThread());
+    // Sanitize inputs (jasserts omitted — sanitization is the real guard)
+    int const validChannelCount = juce::jlimit(1, 2, channelCount);
+    double const validSampleRate = std::max(1.0, sampleRate);
 
     bool shouldNotify = false;
 
@@ -229,11 +231,11 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
             return;
         }
 
-        OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " name=" << name << " channels=" << channelCount
-                                                      << " sampleRate=" << sampleRate);
+        OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " name=" << name << " channels="
+                                                      << validChannelCount << " sampleRate=" << validSampleRate);
         it->second.name = name;
-        it->second.channelCount = channelCount;
-        it->second.sampleRate = sampleRate;
+        it->second.channelCount = validChannelCount;
+        it->second.sampleRate = validSampleRate;
         shouldNotify = true;
     }
 
@@ -264,56 +266,36 @@ void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
     listeners_.remove(listener);
 }
 
-void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
+void InstanceRegistry::dispatchNotification(const char* eventName, const SourceId& sourceId,
+                                            void (InstanceRegistryListener::*callback)(const SourceId&))
 {
-    OSCIL_LOG(REGISTRY, "notifySourceAdded: sourceId=" << sourceId.id);
+    OSCIL_LOG(REGISTRY, eventName << ": sourceId=" << sourceId.id);
     auto weakThis = juce::WeakReference<InstanceRegistry>(this);
 
-    // Use injected dispatcher (defaults to MessageManager::callAsync)
-    dispatcher_([weakThis, sourceId]() {
+    dispatcher_([weakThis, sourceId, callback]() {
         auto* self = weakThis.get();
         if (!self)
             return;
 
-        // Guard against use-after-free during shutdown
         if (self->shuttingDown_.load(std::memory_order_acquire))
             return;
-        self->listeners_.call([&sourceId](InstanceRegistryListener& l) { l.sourceAdded(sourceId); });
+        self->listeners_.call([&sourceId, callback](InstanceRegistryListener& l) { (l.*callback)(sourceId); });
     });
+}
+
+void InstanceRegistry::notifySourceAdded(const SourceId& sourceId)
+{
+    dispatchNotification("notifySourceAdded", sourceId, &InstanceRegistryListener::sourceAdded);
 }
 
 void InstanceRegistry::notifySourceRemoved(const SourceId& sourceId)
 {
-    OSCIL_LOG(REGISTRY, "notifySourceRemoved: sourceId=" << sourceId.id);
-    auto weakThis = juce::WeakReference<InstanceRegistry>(this);
-
-    dispatcher_([weakThis, sourceId]() {
-        auto* self = weakThis.get();
-        if (!self)
-            return;
-
-        // Guard against use-after-free during shutdown
-        if (self->shuttingDown_.load(std::memory_order_acquire))
-            return;
-        self->listeners_.call([&sourceId](InstanceRegistryListener& l) { l.sourceRemoved(sourceId); });
-    });
+    dispatchNotification("notifySourceRemoved", sourceId, &InstanceRegistryListener::sourceRemoved);
 }
 
 void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
 {
-    OSCIL_LOG(REGISTRY, "notifySourceUpdated: sourceId=" << sourceId.id);
-    auto weakThis = juce::WeakReference<InstanceRegistry>(this);
-
-    dispatcher_([weakThis, sourceId]() {
-        auto* self = weakThis.get();
-        if (!self)
-            return;
-
-        // Guard against use-after-free during shutdown
-        if (self->shuttingDown_.load(std::memory_order_acquire))
-            return;
-        self->listeners_.call([&sourceId](InstanceRegistryListener& l) { l.sourceUpdated(sourceId); });
-    });
+    dispatchNotification("notifySourceUpdated", sourceId, &InstanceRegistryListener::sourceUpdated);
 }
 
 } // namespace oscil

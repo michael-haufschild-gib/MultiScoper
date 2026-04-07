@@ -15,8 +15,7 @@
 #include "ui/components/OscilTextField.h"
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/TestId.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -31,8 +30,7 @@ namespace oscil
  * Designed to be hosted inside an OscilModal
  */
 class AddOscillatorDialog
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public TestIdSupport
 {
 public:
@@ -62,8 +60,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
+    /// Apply updated theme colors to labels and child components.
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
     /**
      * Set up the dialog with available sources and panes
@@ -142,10 +140,6 @@ private:
     // Footer buttons
     std::unique_ptr<OscilButton> okButton_;
     std::unique_ptr<OscilButton> cancelButton_;
-
-    // Theme cache
-    ColorTheme theme_;
-    IThemeService& themeService_;
 
     // Get default colors from centralized palette
     std::vector<juce::Colour> getDefaultColors() const { return WaveformColorPalette::getAllColors(); }

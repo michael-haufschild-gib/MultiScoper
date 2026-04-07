@@ -3,6 +3,7 @@
     Rendering, backdrop, title bar, and layout bounds for OscilModal
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/ListItemIcons.h"
 #include "ui/components/OscilModal.h"
 
@@ -22,26 +23,34 @@ void OscilModal::paint(juce::Graphics& g)
 void OscilModal::paintBackdrop(juce::Graphics& g)
 {
     float const alpha = showSpring_.position * 0.5f;
-    g.setColour(juce::Colours::black.withAlpha(alpha));
+    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha));
     g.fillRect(getLocalBounds());
 }
 
 void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     float const alpha = showSpring_.position;
+    float const scale = scaleSpring_.position;
+    const auto& glass = getGlass();
 
-    juce::DropShadow const shadow(juce::Colours::black.withAlpha(0.3f * alpha), 20, {0, 4});
-    shadow.drawForRectangle(g, bounds);
+    // Apply scale transform around the center of the modal bounds
+    auto scaledBounds = bounds.toFloat().withSizeKeepingCentre(static_cast<float>(bounds.getWidth()) * scale,
+                                                               static_cast<float>(bounds.getHeight()) * scale);
 
-    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha));
-    g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_LG);
+    // Save graphics state for transform
+    juce::Graphics::ScopedSaveState const saveState(g);
+    g.setOpacity(alpha);
 
-    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.3f));
-    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_LG, 1.0f);
+    // Glass panel background with full shadow treatment
+    GlassPainter::paintGlassPanel(g, scaledBounds, glass, ComponentLayout::RADIUS_XL, BorderLevel::Default);
+
+    g.setOpacity(1.0f);
 
     if (title_.isNotEmpty())
     {
-        auto titleBounds = bounds.removeFromTop(TITLE_BAR_HEIGHT);
+        // Calculate title bounds relative to scaled modal
+        auto titleBounds = scaledBounds.toNearestInt();
+        titleBounds = titleBounds.removeFromTop(TITLE_BAR_HEIGHT);
         paintTitleBar(g, titleBounds);
     }
 }
@@ -49,11 +58,18 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
 void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     float const alpha = showSpring_.position;
+    const auto& glass = getGlass();
+
+    // Header background — bgHover tinted
+    g.setColour(glass.bgHover.withAlpha(alpha));
+    // Only fill top portion with rounded top corners (within the parent's rounded rect)
+    g.fillRect(bounds.reduced(1, 0).withBottom(bounds.getBottom()));
 
     auto textBounds = bounds.reduced(MODAL_PADDING, 0);
     if (showCloseButton_)
         textBounds.removeFromRight(CLOSE_BUTTON_SIZE + 8);
 
+    // Title text — textPrimary
     g.setColour(getTheme().textPrimary.withAlpha(alpha));
     g.setFont(juce::Font(juce::FontOptions().withHeight(15.0f)).boldened());
     g.drawText(title_, textBounds, juce::Justification::centredLeft);
@@ -65,8 +81,15 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
         float const hoverAlpha = closeHoverSpring_.position;
         if (hoverAlpha > 0.01f)
         {
-            g.setColour(getTheme().backgroundSecondary.withAlpha(alpha * hoverAlpha));
+            // Close button hover — bgHover
+            g.setColour(glass.bgHover.withAlpha(alpha * hoverAlpha));
             g.fillRoundedRectangle(closeBounds, ComponentLayout::RADIUS_SM);
+        }
+
+        // Focus ring on close button when hovered
+        if (hoverAlpha > 0.5f)
+        {
+            GlassPainter::paintFocusRing(g, closeBounds, ComponentLayout::RADIUS_SM, glass.accent, 1.5f, 2.0f);
         }
 
         auto iconColor = getTheme().textSecondary.interpolatedWith(getTheme().textPrimary, hoverAlpha);
@@ -82,7 +105,8 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
         g.fillPath(iconPath);
     }
 
-    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.3f));
+    // Bottom border — borderDefault
+    g.setColour(glass.borderDefault.withAlpha(alpha));
     g.fillRect(bounds.getX() + 1, bounds.getBottom() - 1, bounds.getWidth() - 2, 1);
 }
 

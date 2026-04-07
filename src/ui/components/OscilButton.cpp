@@ -65,6 +65,7 @@ void OscilButton::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
@@ -144,7 +145,7 @@ int OscilButton::getPreferredWidth() const
     if (variant_ == ButtonVariant::Icon)
         return ComponentLayout::BUTTON_HEIGHT;
 
-    auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+    auto font = ComponentLayout::defaultFont();
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, label_, 0, 0);
     float const textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
@@ -208,6 +209,10 @@ void OscilButton::mouseDown(const juce::MouseEvent& e)
         return;
 
     isPressed_ = true;
+
+    // Spawn ripple at click position
+    rippleManager_.spawn(static_cast<float>(e.x), static_cast<float>(e.y), static_cast<float>(getWidth()),
+                         static_cast<float>(getHeight()));
 
     if (AnimationSettings::shouldUseSpringAnimations())
     {
@@ -298,8 +303,9 @@ void OscilButton::triggerClick()
 void OscilButton::timerCallback()
 {
     updateAnimations();
+    rippleManager_.removeExpired();
 
-    if (scaleSpring_.isSettled() && brightnessSpring_.isSettled())
+    if (scaleSpring_.isSettled() && brightnessSpring_.isSettled() && !rippleManager_.hasActiveRipples())
         stopTimer();
 
     repaint();

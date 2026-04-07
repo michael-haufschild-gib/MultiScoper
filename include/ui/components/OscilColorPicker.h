@@ -31,7 +31,6 @@ namespace oscil
 class OscilColorPicker
     : public ThemedComponent
     , public TestIdSupport
-    , private juce::Timer
 {
 public:
     enum class Mode
@@ -80,8 +79,6 @@ public:
     void mouseUp(const juce::MouseEvent& e) override;
 
 private:
-    void timerCallback() override;
-
     void updateFromHSV();
     void updateHexField();
 

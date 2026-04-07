@@ -1,5 +1,6 @@
 /*
     Oscil - Toggle Component Implementation
+    Glassmorphism rendering with spring physics toggle animation
 */
 
 #include "ui/components/OscilToggle.h"
@@ -9,7 +10,7 @@ namespace oscil
 
 OscilToggle::OscilToggle(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , positionSpring_(SpringPresets::medium())
+    , positionSpring_(SpringPresets::springSwitch())
 {
     setWantsKeyboardFocus(true);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -100,6 +101,7 @@ void OscilToggle::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
@@ -119,7 +121,7 @@ int OscilToggle::getPreferredWidth() const
 
     if (label_.isNotEmpty())
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+        auto font = ComponentLayout::defaultFont();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -131,9 +133,7 @@ int OscilToggle::getPreferredWidth() const
 
 int OscilToggle::getPreferredHeight() const
 {
-    return std::max(
-        ComponentLayout::TOGGLE_HEIGHT,
-        static_cast<int>(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).getHeight()));
+    return std::max(ComponentLayout::TOGGLE_HEIGHT, static_cast<int>(ComponentLayout::defaultFont().getHeight()));
 }
 
 void OscilToggle::paint(juce::Graphics& g)
@@ -158,12 +158,12 @@ void OscilToggle::paint(juce::Graphics& g)
         auto labelBounds = bounds.toFloat().withLeft(ComponentLayout::TOGGLE_WIDTH + ComponentLayout::SPACING_SM);
 
         g.setColour(getTheme().textPrimary.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)));
+        g.setFont(ComponentLayout::defaultFont());
         g.drawText(label_, labelBounds, juce::Justification::centredLeft);
     }
     else
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT));
+        auto font = ComponentLayout::defaultFont();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, label_, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -192,21 +192,44 @@ void OscilToggle::paint(juce::Graphics& g)
 void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    const auto& glass = getGlass();
+    float const progress = std::clamp(positionSpring_.position, 0.0f, 1.0f);
 
-    // Interpolate track color based on position
-    float const progress = positionSpring_.position;
-    auto offColor = getTheme().controlBorder;
-    auto onColor = getTheme().statusActive;
+    float const cornerRadius = bounds.getHeight() / 2.0f;
+
+    // Track ON: accent glow behind
+    if (progress > 0.01f)
+    {
+        GlassPainter::paintAccentGlow(g, bounds, glass.accentGlow, glass.accentGlowRadius * progress,
+                                      glass.accentGlowAlpha * progress * 0.5f);
+    }
+
+    // Track background: interpolate between OFF (bgGlass) and ON (accent)
+    auto offColor = glass.bgGlass;
+    auto onColor = glass.accent;
     auto trackColor = offColor.interpolatedWith(onColor, progress);
 
-    g.setColour(trackColor.withAlpha(opacity));
-    g.fillRoundedRectangle(bounds, bounds.getHeight() / 2.0f);
+    // Hover: brighten the OFF track to bgHover
+    if (isHovered_ && progress < 0.5f)
+        trackColor = trackColor.interpolatedWith(glass.bgHover, (1.0f - progress * 2.0f) * 0.5f);
+
+    g.setColour(trackColor.withAlpha(trackColor.getFloatAlpha() * opacity));
+    g.fillRoundedRectangle(bounds, cornerRadius);
+
+    // Border: interpolate between borderDefault (OFF) and accent (ON)
+    auto offBorder = glass.borderDefault;
+    auto onBorder = glass.accent;
+    auto borderColor = offBorder.interpolatedWith(onBorder, progress);
+
+    g.setColour(borderColor.withAlpha(borderColor.getFloatAlpha() * opacity));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), cornerRadius, 1.0f);
 }
 
 void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& trackBounds) const
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    float const progress = positionSpring_.position;
+    float const progress = std::clamp(positionSpring_.position, 0.0f, 1.0f);
+    const auto& theme = getTheme();
 
     // Calculate knob position
     float const knobSize = ComponentLayout::TOGGLE_KNOB_SIZE;
@@ -218,26 +241,53 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
 
     auto knobBounds = juce::Rectangle<float>(knobX, knobY, knobSize, knobSize);
 
-    // Draw knob shadow
-    g.setColour(juce::Colours::black.withAlpha(0.2f * opacity));
-    g.fillEllipse(knobBounds.translated(0, 1));
+    // Knob shadow (subtle for ON state)
+    if (progress > 0.5f)
+    {
+        g.setColour(juce::Colours::black.withAlpha(0.15f * opacity));
+        g.fillEllipse(knobBounds.translated(0, 1));
+    }
 
-    // Draw knob
-    g.setColour(juce::Colours::white.withAlpha(opacity));
+    // Knob color: textSecondary (OFF) -> white (ON)
+    // Hover OFF: textPrimary
+    juce::Colour knobColour;
+    if (progress > 0.5f)
+    {
+        knobColour = juce::Colours::white;
+    }
+    else
+    {
+        knobColour = isHovered_ ? theme.textPrimary : theme.textSecondary;
+    }
+
+    g.setColour(knobColour.withAlpha(opacity));
     g.fillEllipse(knobBounds);
 }
 
 void OscilToggle::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-                           (bounds.getHeight() / 2.0f) + ComponentLayout::FOCUS_RING_OFFSET,
-                           ComponentLayout::FOCUS_RING_WIDTH);
+    float const cornerRadius = bounds.getHeight() / 2.0f;
+    GlassPainter::paintFocusRing(g, bounds, cornerRadius, getGlass().accent);
 }
 
 void OscilToggle::resized()
 {
     // No child components to layout
+}
+
+void OscilToggle::mouseEnter(const juce::MouseEvent& /*event*/)
+{
+    if (!enabled_)
+        return;
+
+    isHovered_ = true;
+    repaint();
+}
+
+void OscilToggle::mouseExit(const juce::MouseEvent& /*event*/)
+{
+    isHovered_ = false;
+    repaint();
 }
 
 void OscilToggle::mouseDown(const juce::MouseEvent& /*event*/)

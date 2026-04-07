@@ -127,6 +127,7 @@ public:
 private:
     void timerCallback() override;
     void updateAnimations();
+    void updateIndicatorTarget(juce::Rectangle<int> bounds, bool snap);
 
     int getTabAtPosition(juce::Point<int> pos) const;
     juce::Rectangle<int> getTabBounds(int index) const;
@@ -161,6 +162,8 @@ private:
     static constexpr int TAB_PADDING_H = 16;
     static constexpr int ICON_SIZE = 16;
     static constexpr int BADGE_SIZE = 18;
+    static constexpr float TAB_FONT_SIZE = 13.0f;
+    static constexpr float BADGE_FONT_SIZE = 10.0f;
 
     // Cached layout
     std::vector<juce::Rectangle<int>> cachedTabBounds_;

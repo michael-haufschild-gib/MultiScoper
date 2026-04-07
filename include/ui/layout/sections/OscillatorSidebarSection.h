@@ -9,11 +9,11 @@
 #include "core/ServiceContext.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/layout/sections/SectionConstants.h"
 #include "ui/panels/OscillatorListComponent.h"
 #include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -28,8 +28,7 @@ namespace oscil
  * Designed to be used inside an OscilAccordion for collapsibility
  */
 class OscillatorSidebarSection
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public DynamicHeightContent
     , public OscillatorListComponent::Listener
 {
@@ -60,9 +59,6 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
-
     // OscillatorListComponent::Listener overrides
     void oscillatorSelected(const OscillatorId& id) override;
     void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) override;
@@ -90,8 +86,6 @@ public:
 
 private:
     void setupComponents();
-
-    IThemeService& themeService_;
 
     std::unique_ptr<OscilButton> addOscillatorButton_;
     std::unique_ptr<OscillatorListComponent> oscillatorList_;

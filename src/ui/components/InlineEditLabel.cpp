@@ -4,6 +4,7 @@
 
 #include "ui/components/InlineEditLabel.h"
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/ListItemIcons.h"
 #include "ui/components/OscilButton.h"
 
@@ -249,16 +250,19 @@ void InlineEditLabel::updateEditorStyle()
         return;
 
     const auto& theme = getTheme();
+    const auto& glass = getGlass();
 
     editor_->setFont(font_);
     editor_->setJustification(justification_);
 
     juce::Colour const textCol = useCustomTextColour_ ? textColour_ : theme.textPrimary;
     editor_->setColour(juce::TextEditor::textColourId, textCol);
-    editor_->setColour(juce::TextEditor::backgroundColourId, theme.backgroundSecondary);
-    editor_->setColour(juce::TextEditor::outlineColourId, theme.controlBorder);
-    editor_->setColour(juce::TextEditor::focusedOutlineColourId, theme.controlActive);
-    editor_->setColour(juce::TextEditor::highlightColourId, theme.controlActive.withAlpha(0.3f));
+    // Glass input background
+    editor_->setColour(juce::TextEditor::backgroundColourId, glass.bgGlass);
+    editor_->setColour(juce::TextEditor::outlineColourId, glass.borderDefault);
+    // Accent border on focus
+    editor_->setColour(juce::TextEditor::focusedOutlineColourId, glass.accent);
+    editor_->setColour(juce::TextEditor::highlightColourId, glass.accentSubtle);
     editor_->setColour(juce::TextEditor::highlightedTextColourId, textCol);
 
     editor_->setTextToShowWhenEmpty(placeholder_, theme.textSecondary);
@@ -271,9 +275,17 @@ void InlineEditLabel::paint(juce::Graphics& g)
         return; // Editor and buttons handle rendering
 
     const auto& theme = getTheme();
+    const auto& glass = getGlass();
     auto bounds = getLocalBounds().toFloat();
 
-    // Get text color
+    // Hover indication — subtle bgHover background to signal editability
+    if (isHovered_ && !readOnly_)
+    {
+        g.setColour(glass.bgHover);
+        g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
+    }
+
+    // Get text color — display mode: textPrimary
     juce::Colour const textCol = useCustomTextColour_ ? textColour_ : theme.textPrimary;
 
     // Draw text with ellipsis if needed
@@ -285,16 +297,22 @@ void InlineEditLabel::paint(juce::Graphics& g)
         g.setColour(theme.textSecondary);
 
     // Draw text with ellipsis if needed - uses GlyphArrangement for proper text layout
-    juce::GlyphArrangement glyphs;
-    glyphs.addLineOfText(font_, displayText, 0.0f, 0.0f);
+    juce::GlyphArrangement const glyphs = [&]() {
+        juce::GlyphArrangement g2;
+        g2.addLineOfText(font_, displayText, 0.0f, 0.0f);
+        return g2;
+    }();
     float const textWidth = glyphs.getBoundingBox(0, -1, false).getWidth();
 
     if (textWidth > bounds.getWidth())
     {
         // Truncate with ellipsis
         juce::String const ellipsis = "...";
-        juce::GlyphArrangement ellipsisGlyphs;
-        ellipsisGlyphs.addLineOfText(font_, ellipsis, 0.0f, 0.0f);
+        juce::GlyphArrangement const ellipsisGlyphs = [&]() {
+            juce::GlyphArrangement eg;
+            eg.addLineOfText(font_, ellipsis, 0.0f, 0.0f);
+            return eg;
+        }();
         float const ellipsisWidth = ellipsisGlyphs.getBoundingBox(0, -1, false).getWidth();
         float const availableWidth = bounds.getWidth() - ellipsisWidth;
 
@@ -302,8 +320,11 @@ void InlineEditLabel::paint(juce::Graphics& g)
         for (int i = 0; i < displayText.length(); ++i)
         {
             juce::String const test = displayText.substring(0, i + 1);
-            juce::GlyphArrangement testGlyphs;
-            testGlyphs.addLineOfText(font_, test, 0.0f, 0.0f);
+            juce::GlyphArrangement const testGlyphs = [&]() {
+                juce::GlyphArrangement tg;
+                tg.addLineOfText(font_, test, 0.0f, 0.0f);
+                return tg;
+            }();
             if (testGlyphs.getBoundingBox(0, -1, false).getWidth() > availableWidth)
                 break;
             truncated = test;
@@ -359,6 +380,24 @@ void InlineEditLabel::mouseDoubleClick(const juce::MouseEvent& /*e*/)
 {
     if (!readOnly_)
         enterEditMode();
+}
+
+void InlineEditLabel::mouseEnter(const juce::MouseEvent& /*e*/)
+{
+    if (!readOnly_ && !editMode_)
+    {
+        isHovered_ = true;
+        repaint();
+    }
+}
+
+void InlineEditLabel::mouseExit(const juce::MouseEvent& /*e*/)
+{
+    if (isHovered_)
+    {
+        isHovered_ = false;
+        repaint();
+    }
 }
 
 void InlineEditLabel::focusLost(FocusChangeType /*cause*/)

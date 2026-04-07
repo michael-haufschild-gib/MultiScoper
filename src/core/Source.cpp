@@ -23,12 +23,7 @@ InstanceId InstanceId::generate() { return InstanceId{juce::Uuid().toString()}; 
 
 // === Source Implementation ===
 
-Source::Source() : id_(SourceId::generate()), createdAt_(juce::Time::getCurrentTime())
-{
-    auto now = juce::Time::currentTimeMillis();
-    lastHeartbeatMs_.store(now, std::memory_order_relaxed);
-    lastAudioTimeMs_.store(now, std::memory_order_relaxed);
-}
+Source::Source() : Source(SourceId::generate()) {}
 
 Source::Source(SourceId sourceId) : id_(std::move(sourceId)), createdAt_(juce::Time::getCurrentTime())
 {
@@ -37,13 +32,7 @@ Source::Source(SourceId sourceId) : id_(std::move(sourceId)), createdAt_(juce::T
     lastAudioTimeMs_.store(now, std::memory_order_relaxed);
 }
 
-Source::Source(const juce::ValueTree& state) : createdAt_(juce::Time::getCurrentTime())
-{
-    auto now = juce::Time::currentTimeMillis();
-    lastHeartbeatMs_.store(now, std::memory_order_relaxed);
-    lastAudioTimeMs_.store(now, std::memory_order_relaxed);
-    fromValueTree(state);
-}
+Source::Source(const juce::ValueTree& state) : Source(SourceId{}) { fromValueTree(state); }
 
 juce::ValueTree Source::toValueTree() const
 {

@@ -1,8 +1,9 @@
 /*
     Oscil - Slider Component Painting
-    Rendering methods for OscilSlider (track, thumb, tooltip, focus ring)
+    Glassmorphism rendering for OscilSlider (track, thumb, tooltip, focus ring)
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilSlider.h"
 
 #include <cmath>
@@ -83,10 +84,18 @@ void OscilSlider::paintVertical(juce::Graphics& g)
 void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds, bool isVertical)
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    const auto& glass = getGlass();
 
-    g.setColour(getTheme().backgroundSecondary.withAlpha(opacity));
-    g.fillRoundedRectangle(bounds, TRACK_HEIGHT / 2.0f);
+    // Track background: bgGlass fill + borderSubtle border, fully rounded
+    float const cornerRadius = bounds.getHeight() / 2.0f;
 
+    g.setColour(glass.bgGlass.withAlpha(glass.bgGlass.getFloatAlpha() * opacity));
+    g.fillRoundedRectangle(bounds, cornerRadius);
+
+    g.setColour(glass.borderSubtle.withAlpha(glass.borderSubtle.getFloatAlpha() * opacity));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), cornerRadius, 1.0f);
+
+    // Fill portion: accentMuted
     auto fillProportion = static_cast<float>(valueToProportionOfLength(value_));
 
     juce::Rectangle<float> filledBounds;
@@ -120,20 +129,20 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
         }
     }
 
-    g.setColour(getTheme().controlActive.withAlpha(opacity));
-    g.fillRoundedRectangle(filledBounds, TRACK_HEIGHT / 2.0f);
+    g.setColour(glass.accentMuted.withAlpha(glass.accentMuted.getFloatAlpha() * opacity));
+    g.fillRoundedRectangle(filledBounds, cornerRadius);
 }
 
 void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical, bool /*isRangeEnd*/, float labelOffset)
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    const auto& glass = getGlass();
     auto bounds = getLocalBounds().toFloat();
 
     float const scale = currentThumbScale_;
-
     float const size = THUMB_SIZE * scale;
-    float cx;
-    float cy;
+    float cx = 0.0f;
+    float cy = 0.0f;
 
     if (isVertical)
     {
@@ -148,19 +157,22 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
 
     auto thumbBounds = juce::Rectangle<float>(cx - (size / 2), cy - (size / 2), size, size);
 
-    g.setColour(juce::Colours::black.withAlpha(0.2f * opacity));
-    g.fillEllipse(thumbBounds.translated(0, 1));
+    // Shadow behind thumb
+    g.setColour(juce::Colours::black.withAlpha(0.15f * opacity));
+    g.fillEllipse(thumbBounds.translated(0, 1).expanded(1.0f));
 
-    auto thumbColour = isDragging_ ? getTheme().controlActive : juce::Colours::white;
-    g.setColour(thumbColour.withAlpha(opacity));
+    // White thumb fill
+    g.setColour(juce::Colours::white.withAlpha(opacity));
     g.fillEllipse(thumbBounds);
 
-    g.setColour(getTheme().controlBorder.withAlpha(opacity * 0.5f));
-    g.drawEllipse(thumbBounds.reduced(0.5f), 1.0f);
+    // Accent border (2px)
+    g.setColour(glass.accent.withAlpha(opacity));
+    g.drawEllipse(thumbBounds.reduced(1.0f), 2.0f);
 }
 
 void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool isVertical)
 {
+    const auto& glass = getGlass();
     juce::String const valueText = formatValue(value_);
 
     auto font = juce::Font(juce::FontOptions().withHeight(12.0f));
@@ -184,11 +196,8 @@ void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool
 
     tooltipBounds = tooltipBounds.constrainedWithin(getLocalBounds().toFloat().expanded(50, 30));
 
-    g.setColour(getTheme().backgroundPane);
-    g.fillRoundedRectangle(tooltipBounds, ComponentLayout::RADIUS_SM);
-
-    g.setColour(getTheme().controlBorder.withAlpha(0.5f));
-    g.drawRoundedRectangle(tooltipBounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
+    // Glass panel tooltip
+    GlassPainter::paintGlassPanel(g, tooltipBounds, glass, ComponentLayout::RADIUS_SM, BorderLevel::Subtle);
 
     g.setColour(getTheme().textPrimary);
     g.setFont(font);
@@ -197,10 +206,7 @@ void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool
 
 void OscilSlider::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-    g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET),
-                           ComponentLayout::RADIUS_SM + ComponentLayout::FOCUS_RING_OFFSET,
-                           ComponentLayout::FOCUS_RING_WIDTH);
+    GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_SM, getGlass().accent);
 }
 
 juce::String OscilSlider::formatValue(double value) const
@@ -230,7 +236,7 @@ float OscilSlider::getThumbPosition(bool isRangeEnd) const
         return bounds.getBottom() - (THUMB_SIZE / 2.0f) - (trackHeight * proportion);
     }
 
-    float trackWidth = std::max(1.0f, bounds.getWidth() - THUMB_SIZE);
+    float const trackWidth = std::max(1.0f, bounds.getWidth() - THUMB_SIZE);
     return THUMB_SIZE / 2.0f + trackWidth * proportion;
 }
 

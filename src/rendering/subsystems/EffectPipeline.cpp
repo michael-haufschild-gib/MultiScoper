@@ -72,15 +72,20 @@ void EffectPipeline::resize(juce::OpenGLContext& context, int width, int height)
 
 void EffectPipeline::createEffectInstances()
 {
-    effects_["vignette"] = std::make_unique<VignetteEffect>();
-    effects_["film_grain"] = std::make_unique<FilmGrainEffect>();
-    effects_["bloom"] = std::make_unique<BloomEffect>();
-    effects_["trails"] = std::make_unique<TrailsEffect>();
-    effects_["tilt_shift"] = std::make_unique<TiltShiftEffect>();
-    effects_["color_grade"] = std::make_unique<ColorGradeEffect>();
-    effects_["chromatic_aberration"] = std::make_unique<ChromaticAberrationEffect>();
-    effects_["scanlines"] = std::make_unique<ScanlineEffect>();
-    effects_["radial_blur"] = std::make_unique<RadialBlurEffect>();
+    auto add = [this](std::unique_ptr<PostProcessEffect> effect) {
+        auto id = effect->getId();
+        effects_[id] = std::move(effect);
+    };
+
+    add(std::make_unique<VignetteEffect>());
+    add(std::make_unique<FilmGrainEffect>());
+    add(std::make_unique<BloomEffect>());
+    add(std::make_unique<TrailsEffect>());
+    add(std::make_unique<TiltShiftEffect>());
+    add(std::make_unique<ColorGradeEffect>());
+    add(std::make_unique<ChromaticAberrationEffect>());
+    add(std::make_unique<ScanlineEffect>());
+    add(std::make_unique<RadialBlurEffect>());
 }
 
 void EffectPipeline::buildEffectChain()
@@ -220,32 +225,20 @@ void EffectPipeline::copyFramebuffer(juce::OpenGLContext& context, Framebuffer* 
 
 void EffectPipeline::setQualityLevel(QualityLevel level)
 {
-    switch (level)
+    static constexpr std::array<const char*, 3> heavyEffects = {"bloom", "trails", "chromatic_aberration"};
+
+    if (level == QualityLevel::Ultra)
     {
-        case QualityLevel::Eco:
-            if (auto* bloom = getEffect("bloom"))
-                bloom->setEnabled(false);
-            if (auto* trails = getEffect("trails"))
-                trails->setEnabled(false);
-            if (auto* ca = getEffect("chromatic_aberration"))
-                ca->setEnabled(false);
-            break;
+        for (auto& [id, effect] : effects_)
+            effect->setEnabled(true);
+        return;
+    }
 
-        case QualityLevel::Normal:
-            if (auto* bloom = getEffect("bloom"))
-                bloom->setEnabled(true);
-            if (auto* trails = getEffect("trails"))
-                trails->setEnabled(true);
-            if (auto* ca = getEffect("chromatic_aberration"))
-                ca->setEnabled(true);
-            break;
-
-        case QualityLevel::Ultra:
-            for (auto& [id, effect] : effects_)
-            {
-                effect->setEnabled(true);
-            }
-            break;
+    bool const enableHeavy = (level != QualityLevel::Eco);
+    for (const auto* id : heavyEffects)
+    {
+        if (auto* effect = getEffect(id))
+            effect->setEnabled(enableHeavy);
     }
 }
 

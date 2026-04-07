@@ -53,27 +53,25 @@ ThemeManager::ThemeManager()
     }
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 ThemeManager::~ThemeManager()
 {
     stopTimer();
 
-    if (!pendingSaves_.empty())
+    // Synchronous flush — must complete before destruction
+    try
     {
-        auto themesDir = getThemesDirectory();
-        themesDir.createDirectory();
-
-        for (const auto& name : pendingSaves_)
+        auto filesToWrite = gatherPendingWrites();
+        for (const auto& [path, content] : filesToWrite)
         {
-            auto it = themes_.find(name);
-            if (it != themes_.end() && !it->second.isSystemTheme)
-            {
-                auto file = themesDir.getChildFile(name + ".xml");
-                if (auto xml = it->second.toValueTree().createXml())
-                {
-                    xml->writeTo(file);
-                }
-            }
+            juce::File const file(path);
+            file.getParentDirectory().createDirectory();
+            file.replaceWithText(content);
         }
+    }
+    catch (...) // NOLINT(bugprone-empty-catch)
+    {
+        // Destructor must not throw — best-effort save
     }
 }
 
@@ -85,26 +83,7 @@ void ThemeManager::timerCallback()
 
 void ThemeManager::flushPendingSaves()
 {
-    if (pendingSaves_.empty())
-        return;
-
-    std::vector<std::pair<juce::String, juce::String>> filesToWrite;
-    auto themesDir = getThemesDirectory();
-
-    for (const auto& name : pendingSaves_)
-    {
-        auto it = themes_.find(name);
-        if (it != themes_.end() && !it->second.isSystemTheme)
-        {
-            if (auto xml = it->second.toValueTree().createXml())
-            {
-                filesToWrite.emplace_back(themesDir.getChildFile(name + ".xml").getFullPathName(), xml->toString());
-            }
-        }
-    }
-
-    pendingSaves_.clear();
-
+    auto filesToWrite = gatherPendingWrites();
     if (filesToWrite.empty())
         return;
 
@@ -118,6 +97,30 @@ void ThemeManager::flushPendingSaves()
     });
 }
 
+std::vector<std::pair<juce::String, juce::String>> ThemeManager::gatherPendingWrites()
+{
+    std::vector<std::pair<juce::String, juce::String>> filesToWrite;
+
+    if (pendingSaves_.empty())
+        return filesToWrite;
+
+    auto themesDir = getThemesDirectory();
+    for (const auto& name : pendingSaves_)
+    {
+        auto it = themes_.find(name);
+        if (it != themes_.end() && !it->second.isSystemTheme)
+        {
+            if (auto xml = it->second.toValueTree().createXml())
+            {
+                filesToWrite.emplace_back(themesDir.getChildFile(name + ".xml").getFullPathName(), xml->toString());
+            }
+        }
+    }
+
+    pendingSaves_.clear();
+    return filesToWrite;
+}
+
 void ThemeManager::initializeSystemThemes()
 {
     themes_["Dark Professional"] = SystemThemes::createDarkProfessional();
@@ -125,6 +128,10 @@ void ThemeManager::initializeSystemThemes()
     themes_["Classic Amber"] = SystemThemes::createClassicAmber();
     themes_["High Contrast"] = SystemThemes::createHighContrast();
     themes_["Light Mode"] = SystemThemes::createLightMode();
+    themes_["Glass Dark Blue"] = SystemThemes::createGlassDarkBlue();
+    themes_["Glass Dark Purple"] = SystemThemes::createGlassDarkPurple();
+    themes_["Glass Dark Brown"] = SystemThemes::createGlassDarkBrown();
+    themes_["Glass Dark Black"] = SystemThemes::createGlassDarkBlack();
 }
 
 bool ThemeManager::setCurrentTheme(const juce::String& themeName)

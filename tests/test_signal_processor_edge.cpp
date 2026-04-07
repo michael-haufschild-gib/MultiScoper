@@ -2,15 +2,11 @@
     Oscil - Signal Processor Tests (Edge Cases & Precision)
 */
 
-#ifndef _USE_MATH_DEFINES
-    #define _USE_MATH_DEFINES
-#endif
 #include "core/dsp/SignalProcessor.h"
 
 #include <cmath>
 #include <gtest/gtest.h>
 #include <limits>
-#include <random>
 #include <span>
 
 using namespace oscil;
@@ -20,28 +16,6 @@ class SignalProcessorEdgeTest : public ::testing::Test
 protected:
     SignalProcessor processor;
     ProcessedSignal output;
-
-    std::vector<float> generateSine(int numSamples, float frequency, float amplitude, float sampleRate)
-    {
-        std::vector<float> samples(numSamples);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            samples[i] = amplitude * std::sin(2.0f * static_cast<float>(M_PI) * frequency * i / sampleRate);
-        }
-        return samples;
-    }
-
-    std::vector<float> generateRandom(int numSamples, float min, float max, int seed = 12345)
-    {
-        std::vector<float> samples(numSamples);
-        std::mt19937 gen(seed);
-        std::uniform_real_distribution<float> dist(min, max);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            samples[i] = dist(gen);
-        }
-        return samples;
-    }
 };
 
 // =============================================================================

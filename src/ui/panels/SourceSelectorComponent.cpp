@@ -93,22 +93,29 @@ void SourceSelectorComponent::showPopup()
     // Set up callbacks
     juce::Component::SafePointer<SourceSelectorComponent> const safeThis(this);
 
-    popup->onSourceSelected = [safeThis](const SourceId& id) {
+    // Capture raw popup pointer for CallOutBox dismissal (safe: popup lives inside the CallOutBox)
+    auto* popupPtr = popup.get();
+
+    popup->onSourceSelected = [safeThis, popupPtr](const SourceId& id) {
         if (safeThis != nullptr)
         {
             safeThis->setSelectedSourceId(id);
             if (safeThis->selectionChangedCallback_)
                 safeThis->selectionChangedCallback_(id);
         }
+        if (auto* callout = popupPtr->findParentComponentOfClass<juce::CallOutBox>())
+            callout->dismiss();
     };
 
-    popup->onDisconnect = [safeThis]() {
+    popup->onDisconnect = [safeThis, popupPtr]() {
         if (safeThis != nullptr)
         {
             safeThis->setSelectedSourceId(SourceId::noSource());
             if (safeThis->selectionChangedCallback_)
                 safeThis->selectionChangedCallback_(SourceId::noSource());
         }
+        if (auto* callout = popupPtr->findParentComponentOfClass<juce::CallOutBox>())
+            callout->dismiss();
     };
 
     juce::CallOutBox::launchAsynchronously(std::move(popup), getScreenBounds(), nullptr);

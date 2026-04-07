@@ -368,6 +368,7 @@ private:
     bool appendOscilTypeInfo(json& info, juce::Component* component);
     juce::Component* getTargetComponent(const juce::String& elementId);
     juce::Component* getCurrentFocusedComponent();
+    juce::String getFocusedElementIdOnMessageThread();
 
     // Track scope for multi-instance element resolution
     int trackScopeIndex_ = -1; // -1 = no scope (global)

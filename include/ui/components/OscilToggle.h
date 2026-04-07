@@ -8,6 +8,7 @@
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
+#include "ui/components/GlassPainter.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -72,6 +73,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
 
@@ -95,6 +98,7 @@ private:
     // State
     bool value_ = false;
     bool enabled_ = true;
+    bool isHovered_ = false;
     bool hasFocus_ = false;
     juce::String label_;
     bool labelOnRight_ = true;

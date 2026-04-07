@@ -10,12 +10,10 @@
 namespace oscil
 {
 
-static constexpr float kTabFontSize = 13.0f;
-
 OscilTabs::OscilTabs(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , indicatorXSpring_(SpringPresets::medium())
-    , indicatorWidthSpring_(SpringPresets::medium())
+    , indicatorXSpring_(SpringPresets::springIndicator())
+    , indicatorWidthSpring_(SpringPresets::springIndicator())
     , hoverSpring_(SpringPresets::fast())
 {
     setWantsKeyboardFocus(true);
@@ -46,25 +44,7 @@ void OscilTabs::addTab(const juce::String& label, const juce::String& id)
     TabItem tab;
     tab.id = id.isEmpty() ? label : id;
     tab.label = label;
-    tabs_.push_back(tab);
-
-    if (tabs_.size() == 1)
-    {
-        selectedIndex_ = 0;
-        updateLayoutCache();
-
-        auto bounds = getTabBounds(0);
-        targetIndicatorX_ = static_cast<float>(bounds.getX());
-        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
-    }
-    else
-    {
-        updateLayoutCache();
-    }
-
-    resized();
+    addTab(tab);
 }
 
 void OscilTabs::addTab(const TabItem& tab)
@@ -75,12 +55,7 @@ void OscilTabs::addTab(const TabItem& tab)
     {
         selectedIndex_ = 0;
         updateLayoutCache();
-
-        auto bounds = getTabBounds(0);
-        targetIndicatorX_ = static_cast<float>(bounds.getX());
-        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
+        updateIndicatorTarget(getTabBounds(0), true);
     }
     else
     {
@@ -103,13 +78,7 @@ void OscilTabs::addTabs(const std::vector<juce::String>& labels)
     updateLayoutCache();
 
     if (!tabs_.empty() && selectedIndex_ == 0)
-    {
-        auto bounds = getTabBounds(0);
-        targetIndicatorX_ = static_cast<float>(bounds.getX());
-        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
-    }
+        updateIndicatorTarget(getTabBounds(0), true);
 
     resized();
 }
@@ -122,22 +91,21 @@ void OscilTabs::addTabs(const std::vector<TabItem>& tabs)
     updateLayoutCache();
 
     if (!tabs_.empty() && selectedIndex_ == 0)
-    {
-        auto bounds = getTabBounds(0);
-        targetIndicatorX_ = static_cast<float>(bounds.getX());
-        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-        indicatorXSpring_.position = targetIndicatorX_;
-        indicatorWidthSpring_.position = targetIndicatorWidth_;
-    }
+        updateIndicatorTarget(getTabBounds(0), true);
 
     resized();
 }
 
 void OscilTabs::clearTabs()
 {
+    stopTimer();
     tabs_.clear();
     selectedIndex_ = 0;
     hoveredIndex_ = -1;
+    targetIndicatorX_ = 0;
+    targetIndicatorWidth_ = 0;
+    indicatorXSpring_.position = 0;
+    indicatorWidthSpring_.position = 0;
     updateLayoutCache();
     resized();
 }
@@ -173,9 +141,7 @@ void OscilTabs::setSelectedIndex(int index, bool notify)
 
     selectedIndex_ = index;
 
-    auto bounds = getTabBounds(index);
-    targetIndicatorX_ = static_cast<float>(bounds.getX());
-    targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
+    updateIndicatorTarget(getTabBounds(index), false);
 
     if (AnimationSettings::shouldUseSpringAnimations())
     {
@@ -274,7 +240,7 @@ int OscilTabs::getPreferredWidth() const
         return 100;
 
     auto computeTabContentWidth = [](const TabItem& tab) -> int {
-        auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+        auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, tab.label, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -320,15 +286,7 @@ void OscilTabs::resized()
 
     if (!tabs_.empty() && selectedIndex_ >= 0)
     {
-        auto bounds = getTabBounds(selectedIndex_);
-        targetIndicatorX_ = static_cast<float>(bounds.getX());
-        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
-
-        if (!isTimerRunning())
-        {
-            indicatorXSpring_.position = targetIndicatorX_;
-            indicatorWidthSpring_.position = targetIndicatorWidth_;
-        }
+        updateIndicatorTarget(getTabBounds(selectedIndex_), !isTimerRunning());
     }
 }
 
@@ -435,6 +393,26 @@ void OscilTabs::updateAnimations()
     indicatorXSpring_.update(dt);
     indicatorWidthSpring_.update(dt);
     hoverSpring_.update(dt);
+}
+
+void OscilTabs::updateIndicatorTarget(juce::Rectangle<int> bounds, bool snap)
+{
+    if (orientation_ == Orientation::Vertical)
+    {
+        targetIndicatorX_ = static_cast<float>(bounds.getY());
+        targetIndicatorWidth_ = static_cast<float>(bounds.getHeight());
+    }
+    else
+    {
+        targetIndicatorX_ = static_cast<float>(bounds.getX());
+        targetIndicatorWidth_ = static_cast<float>(bounds.getWidth());
+    }
+
+    if (snap)
+    {
+        indicatorXSpring_.position = targetIndicatorX_;
+        indicatorWidthSpring_.position = targetIndicatorWidth_;
+    }
 }
 
 std::unique_ptr<juce::AccessibilityHandler> OscilTabs::createAccessibilityHandler()

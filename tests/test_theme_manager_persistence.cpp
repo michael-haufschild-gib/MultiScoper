@@ -259,3 +259,119 @@ TEST_F(ThemeManagerPersistenceTest, AllColorFieldsRoundtrip)
     EXPECT_EQ(restored.btnSecondaryBg.getARGB(), original.btnSecondaryBg.getARGB());
     EXPECT_EQ(restored.btnTertiaryBg.getARGB(), original.btnTertiaryBg.getARGB());
 }
+
+// =============================================================================
+// Glass Field Serialization Tests
+// =============================================================================
+
+// Test: glass fields survive round-trip through ValueTree
+TEST_F(ThemeManagerPersistenceTest, GlassFieldsRoundtrip)
+{
+    ColorTheme original;
+    original.name = "GlassRoundtrip";
+    original.accentHue = 270.0f;
+    original.accentSaturation = 0.85f;
+    original.accentLightness = 0.55f;
+    original.glassAlpha = 0.65f;
+    original.panelAlpha = 0.88f;
+    original.blurRadius = 24.0f;
+    original.borderSubtleAlpha = 0.10f;
+    original.borderDefaultAlpha = 0.15f;
+    original.borderStrongAlpha = 0.25f;
+    original.shadowIntensity = 0.5f;
+    original.shadowSpread = 16.0f;
+    original.lightEdgeAlpha = 0.08f;
+    original.accentGlowRadius = 18.0f;
+    original.accentGlowAlpha = 0.4f;
+
+    auto valueTree = original.toValueTree();
+    ColorTheme restored;
+    restored.fromValueTree(valueTree);
+
+    EXPECT_NEAR(restored.accentHue, 270.0f, 0.01f);
+    EXPECT_NEAR(restored.accentSaturation, 0.85f, 0.001f);
+    EXPECT_NEAR(restored.accentLightness, 0.55f, 0.001f);
+    EXPECT_NEAR(restored.glassAlpha, 0.65f, 0.001f);
+    EXPECT_NEAR(restored.panelAlpha, 0.88f, 0.001f);
+    EXPECT_NEAR(restored.blurRadius, 24.0f, 0.01f);
+    EXPECT_NEAR(restored.borderSubtleAlpha, 0.10f, 0.001f);
+    EXPECT_NEAR(restored.borderDefaultAlpha, 0.15f, 0.001f);
+    EXPECT_NEAR(restored.borderStrongAlpha, 0.25f, 0.001f);
+    EXPECT_NEAR(restored.shadowIntensity, 0.5f, 0.001f);
+    EXPECT_NEAR(restored.shadowSpread, 16.0f, 0.01f);
+    EXPECT_NEAR(restored.lightEdgeAlpha, 0.08f, 0.001f);
+    EXPECT_NEAR(restored.accentGlowRadius, 18.0f, 0.01f);
+    EXPECT_NEAR(restored.accentGlowAlpha, 0.4f, 0.001f);
+}
+
+// Test: glass fields survive round-trip through XML (export/import)
+TEST_F(ThemeManagerPersistenceTest, GlassFieldsXmlRoundtrip)
+{
+    ColorTheme original;
+    original.name = "GlassXmlRoundtrip";
+    original.accentHue = 40.0f;
+    original.accentSaturation = 0.8f;
+    original.accentLightness = 0.6f;
+    original.glassAlpha = 0.70f;
+    original.shadowIntensity = 0.6f;
+
+    juce::String xml = original.toXmlString();
+    ASSERT_FALSE(xml.isEmpty());
+
+    ColorTheme restored;
+    EXPECT_TRUE(restored.fromXmlString(xml));
+
+    EXPECT_NEAR(restored.accentHue, 40.0f, 0.01f);
+    EXPECT_NEAR(restored.accentSaturation, 0.8f, 0.001f);
+    EXPECT_NEAR(restored.accentLightness, 0.6f, 0.001f);
+    EXPECT_NEAR(restored.glassAlpha, 0.70f, 0.001f);
+    EXPECT_NEAR(restored.shadowIntensity, 0.6f, 0.001f);
+}
+
+// Test: deserializing an old theme (no glass fields) produces struct defaults
+TEST_F(ThemeManagerPersistenceTest, OldThemeWithoutGlassFieldsGetsDefaults)
+{
+    // Build a ValueTree that only has classic color fields, no glass params
+    juce::ValueTree state("Theme");
+    state.setProperty("name", "LegacyTheme", nullptr);
+    state.setProperty("bgPrimary", static_cast<int>(juce::Colour(0xFF1E1E1E).getARGB()), nullptr);
+    state.setProperty("textPrimary", static_cast<int>(juce::Colour(0xFFE0E0E0).getARGB()), nullptr);
+    // Intentionally omit all glass properties
+
+    ColorTheme theme;
+    theme.fromValueTree(state);
+
+    // Glass fields should have their struct defaults
+    ColorTheme defaults;
+    EXPECT_NEAR(theme.accentHue, defaults.accentHue, 0.01f);
+    EXPECT_NEAR(theme.accentSaturation, defaults.accentSaturation, 0.001f);
+    EXPECT_NEAR(theme.accentLightness, defaults.accentLightness, 0.001f);
+    EXPECT_NEAR(theme.glassAlpha, defaults.glassAlpha, 0.001f);
+    EXPECT_NEAR(theme.panelAlpha, defaults.panelAlpha, 0.001f);
+    EXPECT_NEAR(theme.borderSubtleAlpha, defaults.borderSubtleAlpha, 0.001f);
+    EXPECT_NEAR(theme.borderDefaultAlpha, defaults.borderDefaultAlpha, 0.001f);
+    EXPECT_NEAR(theme.borderStrongAlpha, defaults.borderStrongAlpha, 0.001f);
+    EXPECT_NEAR(theme.shadowIntensity, defaults.shadowIntensity, 0.001f);
+    EXPECT_NEAR(theme.shadowSpread, defaults.shadowSpread, 0.01f);
+    EXPECT_NEAR(theme.lightEdgeAlpha, defaults.lightEdgeAlpha, 0.001f);
+    EXPECT_NEAR(theme.accentGlowRadius, defaults.accentGlowRadius, 0.01f);
+    EXPECT_NEAR(theme.accentGlowAlpha, defaults.accentGlowAlpha, 0.001f);
+}
+
+// Test: all four new glass system themes are listed in getAvailableThemes()
+TEST_F(ThemeManagerPersistenceTest, GlassSystemThemesAvailable)
+{
+    auto themes = getThemeManager().getAvailableThemes();
+
+    auto contains = [&](const juce::String& name) {
+        for (const auto& t : themes)
+            if (t == name)
+                return true;
+        return false;
+    };
+
+    EXPECT_TRUE(contains("Glass Dark Blue")) << "Glass Dark Blue missing from available themes";
+    EXPECT_TRUE(contains("Glass Dark Purple")) << "Glass Dark Purple missing from available themes";
+    EXPECT_TRUE(contains("Glass Dark Brown")) << "Glass Dark Brown missing from available themes";
+    EXPECT_TRUE(contains("Glass Dark Black")) << "Glass Dark Black missing from available themes";
+}

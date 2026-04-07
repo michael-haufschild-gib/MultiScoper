@@ -111,12 +111,18 @@ struct PaneId
  */
 struct OscillatorIdHash
 {
-    std::size_t operator()(const OscillatorId& oid) const { return static_cast<std::size_t>(oid.id.hashCode()); }
+    std::size_t operator()(const OscillatorId& oid) const
+    {
+        return static_cast<std::size_t>(static_cast<uint32_t>(oid.id.hashCode()));
+    }
 };
 
 struct PaneIdHash
 {
-    std::size_t operator()(const PaneId& pid) const { return static_cast<std::size_t>(pid.id.hashCode()); }
+    std::size_t operator()(const PaneId& pid) const
+    {
+        return static_cast<std::size_t>(static_cast<uint32_t>(pid.id.hashCode()));
+    }
 };
 
 /**

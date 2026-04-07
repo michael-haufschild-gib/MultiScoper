@@ -104,6 +104,37 @@ protected:
 
 #if OSCIL_ENABLE_OPENGL
     /**
+     * Common OpenGL resources shared by all waveform shaders.
+     * Shader-specific subclasses extend this with extra uniform locations.
+     */
+    struct WaveformGLResources
+    {
+        std::unique_ptr<juce::OpenGLShaderProgram> program;
+        GLuint vao = 0;
+        GLuint vbo = 0;
+        bool compiled = false;
+
+        GLint projectionLoc = -1;
+        GLint baseColorLoc = -1;
+        GLint opacityLoc = -1;
+    };
+
+    /**
+     * Compile a waveform shader from BinaryData resources.
+     * Loads vertex/fragment source from BinaryData, compiles, links,
+     * resolves common uniforms (projection, baseColor, opacity), and generates VAO/VBO.
+     * @return true if successful; on failure, gl is left in uncompiled state.
+     */
+    static bool compileFromBinaryData(WaveformGLResources& gl, juce::OpenGLContext& context, const char* vertData,
+                                      int vertSize, const char* fragData, int fragSize, const juce::String& shaderName);
+
+    /**
+     * Release common GL resources (VAO, VBO, program).
+     * Safe to call even if not compiled.
+     */
+    static void releaseGLResources(WaveformGLResources& gl);
+
+    /**
      * Helper to compile vertex and fragment shaders
      * @return true if successful
      */
@@ -140,12 +171,13 @@ protected:
     static bool setup2DProjection(juce::OpenGLContext& context, juce::OpenGLExtensionFunctions& ext,
                                   GLint projectionLoc);
 
+#endif
+
     /**
      * Calculate stereo/mono layout positions for channel rendering.
      */
     static void calculateStereoLayout(const ShaderRenderParams& params, const std::vector<float>* channel2,
                                       float height, float& centerY1, float& centerY2, float& amp1, float& amp2);
-#endif
 };
 
 } // namespace oscil

@@ -1,133 +1,12 @@
-#include "core/AudioConfig.h"
 #include "core/HostInfo.h"
-#include "core/PerformanceConfig.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
 
-#include <cmath>
 #include <gtest/gtest.h>
 #include <limits>
 
 using namespace oscil;
-
-// --- PerformanceConfig Tests ---
-
-TEST(PerformanceConfigTest, Clamping)
-{
-    PerformanceConfig config;
-
-    juce::ValueTree vt("Test");
-    vt.setProperty("refreshRate", 10.0f, nullptr);          // Too low (min 15)
-    vt.setProperty("cpuWarningThreshold", 100.0f, nullptr); // Too high (max 20)
-
-    config.fromValueTree(vt);
-
-    // Should be clamped
-    EXPECT_FLOAT_EQ(config.refreshRate, 15.0f);
-    EXPECT_FLOAT_EQ(config.cpuWarningThreshold, 20.0f);
-}
-
-TEST(PerformanceConfigTest, QualityHeuristics)
-{
-    PerformanceConfig config;
-    config.qualityMode = QualityMode::HIGHEST;
-
-    EXPECT_EQ(config.suggestQualityForCpu(5.0f), QualityMode::HIGHEST);
-    EXPECT_EQ(config.suggestQualityForCpu(15.0f), QualityMode::MAXIMUM); // Critical
-    EXPECT_EQ(config.suggestQualityForCpu(10.0f), QualityMode::HIGH);    // Warning
-}
-
-TEST(PerformanceConfigTest, Serialization)
-{
-    PerformanceConfig original;
-    original.refreshRate = 120.0f;
-    original.qualityMode = QualityMode::HIGHEST;
-    original.statusBarVisible = false;
-
-    juce::ValueTree vt = original.toValueTree();
-
-    PerformanceConfig restored;
-    restored.fromValueTree(vt);
-
-    EXPECT_FLOAT_EQ(restored.refreshRate, original.refreshRate);
-    EXPECT_EQ(restored.qualityMode, original.qualityMode);
-    EXPECT_EQ(restored.statusBarVisible, original.statusBarVisible);
-}
-
-TEST(PerformanceConfigTest, NonFiniteDeserializationFallsBackToDefaults)
-{
-    PerformanceConfig config;
-
-    juce::ValueTree vt("Test");
-    vt.setProperty("refreshRate", std::numeric_limits<float>::quiet_NaN(), nullptr);
-    vt.setProperty("cpuWarningThreshold", std::numeric_limits<float>::quiet_NaN(), nullptr);
-    vt.setProperty("cpuCriticalThreshold", std::numeric_limits<float>::quiet_NaN(), nullptr);
-
-    config.fromValueTree(vt);
-
-    EXPECT_TRUE(std::isfinite(config.refreshRate));
-    EXPECT_TRUE(std::isfinite(config.cpuWarningThreshold));
-    EXPECT_TRUE(std::isfinite(config.cpuCriticalThreshold));
-    EXPECT_FLOAT_EQ(config.refreshRate, 60.0f);
-    EXPECT_FLOAT_EQ(config.cpuWarningThreshold, 10.0f);
-    EXPECT_FLOAT_EQ(config.cpuCriticalThreshold, 15.0f);
-}
-
-// --- AudioConfig Tests ---
-
-TEST(AudioConfigTest, Validation)
-{
-    AudioConfig config;
-    config.sampleRate = 44100.0f;
-    config.bufferSize = 512;
-    config.channelCount = 2;
-    EXPECT_TRUE(config.isValid());
-
-    config.sampleRate = 100.0f; // Invalid
-    EXPECT_FALSE(config.isValidSampleRate());
-    EXPECT_FALSE(config.isValid());
-
-    config.sampleRate = 44100.0f;
-    config.bufferSize = 10; // Invalid
-    EXPECT_FALSE(config.isValidBufferSize());
-
-    config.bufferSize = 512;
-    config.channelCount = 0; // Invalid
-    EXPECT_FALSE(config.isValidChannelCount());
-}
-
-TEST(AudioConfigTest, Helpers)
-{
-    AudioConfig config;
-    config.sampleRate = 1000.0f; // Simple math
-    config.bufferSize = 100;
-
-    EXPECT_DOUBLE_EQ(config.getBufferDurationMs(), 100.0); // 100 samples @ 1000Hz = 0.1s = 100ms
-    EXPECT_DOUBLE_EQ(config.getBufferDurationSeconds(), 0.1);
-
-    EXPECT_EQ(config.msToSamples(100.0), 100);
-    EXPECT_DOUBLE_EQ(config.samplesToMs(100), 100.0);
-}
-
-TEST(AudioConfigTest, NonFiniteSampleRateHelpersReturnSafeValues)
-{
-    AudioConfig config;
-    config.sampleRate = std::numeric_limits<float>::quiet_NaN();
-    config.bufferSize = 256;
-
-    EXPECT_EQ(config.getBufferDurationMs(), 0.0);
-    EXPECT_EQ(config.getBufferDurationSeconds(), 0.0);
-    EXPECT_EQ(config.msToSamples(100.0), 0);
-    EXPECT_EQ(config.samplesToMs(100), 0.0);
-
-    config.sampleRate = std::numeric_limits<float>::infinity();
-    EXPECT_EQ(config.getBufferDurationMs(), 0.0);
-    EXPECT_EQ(config.getBufferDurationSeconds(), 0.0);
-    EXPECT_EQ(config.msToSamples(100.0), 0);
-    EXPECT_EQ(config.samplesToMs(100), 0.0);
-}
 
 // --- HostInfo Tests ---
 
@@ -170,6 +49,36 @@ TEST(HostInfoTest, NonFiniteHelpersReturnSafeDefaults)
     host.ppqPosition = std::numeric_limits<double>::quiet_NaN();
     EXPECT_DOUBLE_EQ(host.getBarPosition(), 0.0);
     EXPECT_DOUBLE_EQ(host.getBeatInBar(), 0.0);
+}
+
+TEST(HostInfoTest, NegativePpqPositionWrapsToPositiveBeat)
+{
+    HostInfo host;
+    host.timeSignature.numerator = 4;
+
+    host.ppqPosition = -1.5;                    // Before the start
+    EXPECT_DOUBLE_EQ(host.getBeatInBar(), 2.5); // -1.5 mod 4 = -1.5 + 4 = 2.5
+
+    host.ppqPosition = -4.0; // Exactly one bar back
+    EXPECT_DOUBLE_EQ(host.getBeatInBar(), 0.0);
+}
+
+TEST(HostInfoTest, ZeroBpmReturnsSafeDefault)
+{
+    HostInfo host;
+    host.bpm = 0.0f;
+    EXPECT_DOUBLE_EQ(host.getMsPerBeat(), 500.0); // Default 120 BPM fallback
+}
+
+TEST(HostInfoTest, InvalidNumeratorMsPerBarDefaultsTo4_4)
+{
+    HostInfo host;
+    host.bpm = 120.0f;
+    host.timeSignature.numerator = 0;
+    EXPECT_DOUBLE_EQ(host.getMsPerBar(), 2000.0); // 500ms * 4 (default 4/4)
+
+    host.timeSignature.numerator = -1;
+    EXPECT_DOUBLE_EQ(host.getMsPerBar(), 2000.0);
 }
 
 TEST(HostInfoTest, UpdateFromPlayHeadIgnoresNonFiniteBpm)

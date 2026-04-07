@@ -168,9 +168,8 @@ void PaneLayoutManager::movePane(const PaneId& paneId, int newIndex)
 
     OSCIL_LOG(LAYOUT, "movePane: id=" << paneId.id << " from=" << it->getOrderIndex() << " to=" << newIndex);
 
-    // Get the pane
-    const Pane pane =
-        *it; // NOLINT(performance-unnecessary-copy-initialization) — must copy; erase invalidates iterator
+    // Must copy — erase below invalidates the iterator
+    const Pane pane = *it; // NOLINT(performance-unnecessary-copy-initialization)
     panes_.erase(it);
 
     // Insert at new position
@@ -243,7 +242,7 @@ void PaneLayoutManager::movePaneToColumn(const PaneId& paneId, int targetColumn,
 int PaneLayoutManager::getPaneCountInColumn(int column) const
 {
     return static_cast<int>(
-        std::count_if(panes_.begin(), panes_.end(), [column](const Pane& p) { return p.getColumnIndex() == column; }));
+        std::ranges::count_if(panes_, [column](const Pane& p) { return p.getColumnIndex() == column; }));
 }
 
 int PaneLayoutManager::getColumnForPane(int paneIndex) const
@@ -261,6 +260,41 @@ int PaneLayoutManager::getColumnForPane(int paneIndex) const
     return paneIndex % numColumns;
 }
 
+juce::Rectangle<int> PaneLayoutManager::calculatePaneBoundsInColumn(const std::vector<const Pane*>& columnPanes,
+                                                                    const PaneId& paneId,
+                                                                    juce::Rectangle<int> columnArea) const
+{
+    float totalRatio = 0.0f;
+    int panePosition = -1;
+    for (size_t i = 0; i < columnPanes.size(); ++i)
+    {
+        totalRatio += columnPanes[i]->getHeightRatio();
+        if (columnPanes[i]->getId() == paneId)
+            panePosition = static_cast<int>(i);
+    }
+
+    if (panePosition < 0 || totalRatio <= 0.0f)
+        return {};
+
+    float yRatio = 0.0f;
+    for (int i = 0; i < panePosition; ++i)
+        yRatio += columnPanes[static_cast<size_t>(i)]->getHeightRatio();
+
+    int const paneY =
+        columnArea.getY() + static_cast<int>((yRatio / totalRatio) * static_cast<float>(columnArea.getHeight()));
+
+    // Last pane fills remaining height to avoid float accumulation gaps
+    bool const isLastPane = (panePosition == static_cast<int>(columnPanes.size()) - 1);
+    int const paneHeight =
+        isLastPane ? (columnArea.getBottom() - paneY)
+                   : static_cast<int>((columnPanes[static_cast<size_t>(panePosition)]->getHeightRatio() / totalRatio) *
+                                      static_cast<float>(columnArea.getHeight()));
+
+    constexpr int margin = 2;
+    return {columnArea.getX() + margin, paneY + margin, columnArea.getWidth() - (2 * margin),
+            paneHeight - (2 * margin)};
+}
+
 juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Rectangle<int> availableArea) const
 {
     if (panes_.empty() || paneIndex < 0 || static_cast<size_t>(paneIndex) >= panes_.size())
@@ -269,52 +303,15 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Recta
     const Pane& pane = panes_[static_cast<size_t>(paneIndex)];
     int const numColumns = getColumnCount();
 
-    // Guard against division by zero
     if (numColumns <= 0)
         return {};
 
-    // Calculate column width
     int const colWidth = availableArea.getWidth() / numColumns;
     int const column = pane.getColumnIndex();
-
-    // Get panes in this column
-    auto columnPanes = getPanesInColumn(column);
-
-    // Calculate total height ratio for this column
-    float totalRatio = 0.0f;
-    int panePositionInColumn = -1;
-    for (size_t i = 0; i < columnPanes.size(); ++i)
-    {
-        totalRatio += columnPanes[i]->getHeightRatio();
-        if (columnPanes[i]->getId() == pane.getId())
-        {
-            panePositionInColumn = static_cast<int>(i);
-        }
-    }
-
-    if (panePositionInColumn < 0)
-        return {};
-
-    // Guard against division by zero
-    if (totalRatio <= 0.0f)
-        return {};
-
-    // Calculate Y position and height
-    float yRatio = 0.0f;
-    for (int i = 0; i < panePositionInColumn; ++i)
-    {
-        yRatio += columnPanes[static_cast<size_t>(i)]->getHeightRatio();
-    }
-
     int const colX = availableArea.getX() + (column * colWidth);
-    int const paneY =
-        availableArea.getY() + static_cast<int>((yRatio / totalRatio) * static_cast<float>(availableArea.getHeight()));
-    int const paneHeight =
-        static_cast<int>((pane.getHeightRatio() / totalRatio) * static_cast<float>(availableArea.getHeight()));
+    auto columnArea = juce::Rectangle<int>(colX, availableArea.getY(), colWidth, availableArea.getHeight());
 
-    // Add small margin
-    const int margin = 2;
-    return {colX + margin, paneY + margin, colWidth - (2 * margin), paneHeight - (2 * margin)};
+    return calculatePaneBoundsInColumn(getPanesInColumn(column), pane.getId(), columnArea);
 }
 
 juce::Rectangle<int> PaneLayoutManager::getPaneBoundsInColumn(const PaneId& paneId,
@@ -324,42 +321,7 @@ juce::Rectangle<int> PaneLayoutManager::getPaneBoundsInColumn(const PaneId& pane
     if (!pane)
         return {};
 
-    auto columnPanes = getPanesInColumn(pane->getColumnIndex());
-
-    // Calculate total height ratio
-    float totalRatio = 0.0f;
-    int panePosition = -1;
-    for (size_t i = 0; i < columnPanes.size(); ++i)
-    {
-        totalRatio += columnPanes[i]->getHeightRatio();
-        if (columnPanes[i]->getId() == paneId)
-        {
-            panePosition = static_cast<int>(i);
-        }
-    }
-
-    if (panePosition < 0)
-        return {};
-
-    // Guard against division by zero
-    if (totalRatio <= 0.0f)
-        return {};
-
-    // Calculate Y position
-    float yRatio = 0.0f;
-    for (int i = 0; i < panePosition; ++i)
-    {
-        yRatio += columnPanes[static_cast<size_t>(i)]->getHeightRatio();
-    }
-
-    int const paneY =
-        columnArea.getY() + static_cast<int>((yRatio / totalRatio) * static_cast<float>(columnArea.getHeight()));
-    int const paneHeight =
-        static_cast<int>((pane->getHeightRatio() / totalRatio) * static_cast<float>(columnArea.getHeight()));
-
-    const int margin = 2;
-    return {columnArea.getX() + margin, paneY + margin, columnArea.getWidth() - (2 * margin),
-            paneHeight - (2 * margin)};
+    return calculatePaneBoundsInColumn(getPanesInColumn(pane->getColumnIndex()), paneId, columnArea);
 }
 
 void PaneLayoutManager::redistributePanes()

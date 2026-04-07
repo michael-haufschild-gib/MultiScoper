@@ -33,6 +33,7 @@ RenderEngine::~RenderEngine()
     }
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 bool RenderEngine::initialize(juce::OpenGLContext& context)
 {
     if (initialized_)
@@ -73,7 +74,7 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
         return false;
     }
 
-    if (!waveformPass_->initialize(context, currentWidth_, currentHeight_))
+    if (!waveformPass_->initialize(context))
     {
         RE_LOG("RenderEngine: Failed to initialize waveform pass");
         effectPipeline_->shutdown(context);
@@ -125,9 +126,6 @@ void RenderEngine::resize(int width, int height)
 
     // Resize subsystems
     effectPipeline_->resize(*context_, width, height);
-    // WaveformPass doesn't have resize, but it might need it if it caches size
-    // Actually WaveformPass stores currentWidth_ in initialize, so we should add resize to it or just update it.
-    // For now, we'll assume it doesn't strictly need it unless it recreates resources.
 
     // Resize history FBOs for waveforms with trails
     {
@@ -169,17 +167,14 @@ WaveformRenderState* RenderEngine::resolveWaveformState(int waveformId)
     // of waveformStates_ is possible, so the SpinLock is not needed here
     // and returning a raw pointer is safe for the duration of the render pass.
 
-    auto it = waveformStates_.find(waveformId);
-    if (it == waveformStates_.end())
+    auto [it, inserted] = waveformStates_.try_emplace(waveformId);
+    if (inserted)
     {
-        WaveformRenderState newState;
-        newState.waveformId = waveformId;
-        waveformStates_[waveformId] = std::move(newState);
+        it->second.waveformId = waveformId;
         RE_LOG("RenderEngine: Registered waveform " << waveformId);
-        it = waveformStates_.find(waveformId);
     }
 
-    return (it != waveformStates_.end()) ? &it->second : nullptr;
+    return &it->second;
 }
 
 void RenderEngine::renderWaveformLayer(const WaveformRenderData& data, WaveformRenderState& state)

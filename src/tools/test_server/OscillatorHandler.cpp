@@ -7,6 +7,7 @@
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
+#include "ui/controllers/OscillatorPanelController.h"
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
@@ -102,7 +103,7 @@ void OscillatorHandler::handleAddOscillator(const httplib::Request& /*req*/, htt
         nlohmann::json response;
 
         auto& state = editor_.getProcessor().getState();
-        int const countBefore = static_cast<int>(state.getOscillators().size());
+        int const countBefore = state.getOscillatorCount();
 
         // Simulate clicking the Add button
         // We need to call the same method the button would call
@@ -127,11 +128,11 @@ void OscillatorHandler::handleAddOscillator(const httplib::Request& /*req*/, htt
         Oscillator osc;
         osc.setPaneId(targetPaneId);
         osc.setProcessingMode(ProcessingMode::FullStereo);
-        osc.setName("Oscillator " + juce::String(state.getOscillators().size() + 1));
+        osc.setName("Oscillator " + juce::String(state.getOscillatorCount() + 1));
 
         state.addOscillator(osc);
 
-        int const countAfter = static_cast<int>(state.getOscillators().size());
+        int const countAfter = state.getOscillatorCount();
 
         response["status"] = "ok";
         response["oscillatorCount"] = countAfter;
@@ -155,6 +156,7 @@ void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, http
         std::string const oscillatorId = body.value("id", "");
         int const index = body.value("index", -1);
 
+        // NOLINTNEXTLINE(bugprone-exception-escape)
         auto result = runOnMessageThread([this, oscillatorId, index]() -> nlohmann::json {
             nlohmann::json response;
             auto& state = editor_.getProcessor().getState();
@@ -178,7 +180,7 @@ void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, http
 
             int const countBefore = static_cast<int>(oscillators.size());
             state.removeOscillator(targetId);
-            int const countAfter = static_cast<int>(state.getOscillators().size());
+            int const countAfter = state.getOscillatorCount();
 
             response["status"] = "ok";
             response["oscillatorCount"] = countAfter;
@@ -220,6 +222,7 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
             return;
         }
 
+        // NOLINTNEXTLINE(bugprone-exception-escape)
         auto result = runOnMessageThread([this, oscillatorIndex, oscillatorIdStr, processingMode, visible]() {
             return updateOscillatorOnMessageThread(oscillatorIdStr, oscillatorIndex, processingMode, visible);
         });

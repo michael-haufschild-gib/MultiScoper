@@ -247,3 +247,93 @@ TEST_F(ThemeManagerApplyTest, ClonePreservesAllProperties)
 
     getThemeManager().deleteTheme("PropertyTest");
 }
+
+// =============================================================================
+// Glass Theme Application Tests
+// =============================================================================
+
+// Test: Setting a glass theme updates getCurrentTheme with correct glass fields
+TEST_F(ThemeManagerApplyTest, SetGlassThemeUpdatesCurrentTheme)
+{
+    EXPECT_TRUE(getThemeManager().setCurrentTheme("Glass Dark Blue"));
+
+    const auto& current = getThemeManager().getCurrentTheme();
+    EXPECT_EQ(current.name, "Glass Dark Blue");
+    EXPECT_NEAR(current.accentHue, 220.0f, 0.01f);
+    EXPECT_NEAR(current.accentSaturation, 0.7f, 0.001f);
+    EXPECT_NEAR(current.accentLightness, 0.6f, 0.001f);
+}
+
+// Test: Glass fields are accessible after switching between glass themes
+TEST_F(ThemeManagerApplyTest, SwitchBetweenGlassThemesUpdatesFields)
+{
+    getThemeManager().setCurrentTheme("Glass Dark Blue");
+    float blueHue = getThemeManager().getCurrentTheme().accentHue;
+
+    getThemeManager().setCurrentTheme("Glass Dark Purple");
+    float purpleHue = getThemeManager().getCurrentTheme().accentHue;
+
+    getThemeManager().setCurrentTheme("Glass Dark Brown");
+    float brownHue = getThemeManager().getCurrentTheme().accentHue;
+
+    // Each glass theme has a distinct accent hue
+    EXPECT_NE(blueHue, purpleHue);
+    EXPECT_NE(purpleHue, brownHue);
+    EXPECT_NE(blueHue, brownHue);
+}
+
+// Test: High Contrast theme has full opacity glass (accessibility)
+TEST_F(ThemeManagerApplyTest, HighContrastThemeHasFullOpacityGlass)
+{
+    getThemeManager().setCurrentTheme("High Contrast");
+    const auto& theme = getThemeManager().getCurrentTheme();
+
+    EXPECT_NEAR(theme.glassAlpha, 1.0f, 0.001f);
+    EXPECT_NEAR(theme.panelAlpha, 1.0f, 0.001f);
+}
+
+// Test: Glass theme clone preserves glass fields
+TEST_F(ThemeManagerApplyTest, ClonePreservesGlassFields)
+{
+    getThemeManager().cloneTheme("Glass Dark Purple", "GlassCloneTest");
+
+    auto* original = getThemeManager().getTheme("Glass Dark Purple");
+    auto* cloned = getThemeManager().getTheme("GlassCloneTest");
+
+    ASSERT_NE(original, nullptr);
+    ASSERT_NE(cloned, nullptr);
+
+    EXPECT_NEAR(cloned->accentHue, original->accentHue, 0.01f);
+    EXPECT_NEAR(cloned->accentSaturation, original->accentSaturation, 0.001f);
+    EXPECT_NEAR(cloned->glassAlpha, original->glassAlpha, 0.001f);
+    EXPECT_NEAR(cloned->borderSubtleAlpha, original->borderSubtleAlpha, 0.001f);
+    EXPECT_NEAR(cloned->shadowIntensity, original->shadowIntensity, 0.001f);
+
+    getThemeManager().deleteTheme("GlassCloneTest");
+}
+
+// Test: Listener is notified with correct glass fields on glass theme change
+TEST_F(ThemeManagerApplyTest, ListenerReceivesGlassFieldsOnChange)
+{
+    struct GlassCapturingListener : ThemeManagerListener
+    {
+        float capturedHue = -1.0f;
+        float capturedGlassAlpha = -1.0f;
+
+        void themeChanged(const ColorTheme& newTheme) override
+        {
+            capturedHue = newTheme.accentHue;
+            capturedGlassAlpha = newTheme.glassAlpha;
+        }
+    };
+
+    GlassCapturingListener listener;
+    getThemeManager().addListener(&listener);
+
+    getThemeManager().setCurrentTheme("Glass Dark Brown");
+
+    EXPECT_NEAR(listener.capturedHue, 40.0f, 0.01f);
+    EXPECT_NEAR(listener.capturedGlassAlpha, 0.55f, 0.001f);
+
+    getThemeManager().removeListener(&listener);
+}

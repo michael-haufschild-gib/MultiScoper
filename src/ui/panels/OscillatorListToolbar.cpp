@@ -10,22 +10,21 @@ namespace oscil
 
 OscillatorListToolbar::OscillatorListToolbar(ServiceContext& context) : OscillatorListToolbar(context.themeService) {}
 
-OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService) : themeService_(themeService)
+OscillatorListToolbar::OscillatorListToolbar(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setTestId("sidebar_oscillators_toolbar");
 
     setupComponents();
-    themeService_.addListener(this);
 }
 
-OscillatorListToolbar::~OscillatorListToolbar() { themeService_.removeListener(this); }
+OscillatorListToolbar::~OscillatorListToolbar() = default;
 
 void OscillatorListToolbar::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
 void OscillatorListToolbar::setupComponents()
 {
     // Filter tabs
-    filterTabs_ = std::make_unique<SegmentedButtonBar>(themeService_);
+    filterTabs_ = std::make_unique<SegmentedButtonBar>(getThemeService());
     filterTabs_->addButton("All", static_cast<int>(OscillatorFilterMode::All), "sidebar_oscillators_toolbar_allTab");
     filterTabs_->addButton("Visible", static_cast<int>(OscillatorFilterMode::Visible),
                            "sidebar_oscillators_toolbar_visibleTab");
@@ -41,7 +40,7 @@ void OscillatorListToolbar::setupComponents()
 
 void OscillatorListToolbar::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
 
     // Background
     g.setColour(theme.backgroundSecondary);
@@ -92,8 +91,6 @@ void OscillatorListToolbar::resized()
     // Filter tabs take remaining space
     filterTabs_->setBounds(bounds);
 }
-
-void OscillatorListToolbar::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 void OscillatorListToolbar::updateCountLabel()
 {

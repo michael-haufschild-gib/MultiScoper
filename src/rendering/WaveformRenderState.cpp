@@ -59,15 +59,7 @@ void WaveformRenderState::updateTiming(float deltaTime)
         accumulatedTime = std::fmod(accumulatedTime, 1000.0f);
 }
 
-void WaveformRenderState::release(juce::OpenGLContext& context)
-{
-    if (historyFBO)
-    {
-        historyFBO->destroy(context);
-        historyFBO.reset();
-    }
-    trailsEnabled = false;
-}
+void WaveformRenderState::release(juce::OpenGLContext& context) { disableTrails(context); }
 
 } // namespace oscil
 

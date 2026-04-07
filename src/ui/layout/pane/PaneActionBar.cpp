@@ -4,6 +4,7 @@
 
 #include "ui/layout/pane/PaneActionBar.h"
 
+#include "ui/components/GlassStyle.h"
 #include "ui/components/ListItemIcons.h"
 
 namespace oscil
@@ -17,8 +18,9 @@ void applyHoldButtonVisuals(OscilButton& button, IThemeService& themeService, bo
 {
     if (toggled)
     {
+        auto glass = GlassStyle::fromTheme(themeService.getCurrentTheme());
         button.setIconPath(ListItemIcons::createPlayIcon(kHoldIconSize));
-        button.setBorder(themeService.getCurrentTheme().controlActive, 1.0f);
+        button.setBorder(glass.accent, 1.0f);
     }
     else
     {
@@ -76,10 +78,7 @@ void PaneActionBar::resized()
     if (statsButton_)
     {
         statsButton_->setBounds(x, yPos, BUTTON_SIZE, BUTTON_SIZE);
-        x += BUTTON_SIZE + BUTTON_SPACING;
     }
-
-    // Future buttons would be positioned here
 }
 
 bool PaneActionBar::isActionToggled(PaneAction action) const

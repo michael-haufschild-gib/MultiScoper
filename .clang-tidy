@@ -21,6 +21,10 @@
 #   modernize-use-nodiscard                   — too noisy with JUCE callback overrides
 #   modernize-avoid-c-arrays                  — JUCE APIs use C arrays for audio buffers
 #   modernize-use-equals-default              — JUCE constructors often need explicit empty bodies
+#   bugprone-exception-escape                  — overly aggressive on lambdas capturing
+#     std::string by value (std::string copy ctor can throw bad_alloc). Flags every
+#     lambda in the HTTP test server as potentially throwing. NOLINT suppression is
+#     ineffective because clang-format moves the comment to a continuation line.
 #   bugprone-easily-swappable-parameters      — JUCE APIs require positional params
 #   bugprone-derived-method-shadowing-base-method — JUCE Component has non-virtual methods
 #     (setEnabled/isEnabled/setTitle/getTitle/isShowing) that subclasses intentionally
@@ -87,6 +91,7 @@ Checks: >
   performance-*,
   readability-*,
   -bugprone-derived-method-shadowing-base-method,
+  -bugprone-exception-escape,
   -bugprone-easily-swappable-parameters,
   -bugprone-pointer-arithmetic-on-polymorphic-object,
   -bugprone-throwing-static-initialization,

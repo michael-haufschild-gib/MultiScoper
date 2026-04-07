@@ -87,6 +87,7 @@ private:
 
     void timerCallback() override;
     void updateAnimations();
+    void triggerSelection();
     int findOwnIndexInGroup() const;
 
     // Rendering
@@ -109,6 +110,7 @@ private:
     // Animation
     SpringAnimation selectionSpring_;
     SpringAnimation hoverSpring_;
+    SpringAnimation scaleSpring_;
 
     // Theme
 

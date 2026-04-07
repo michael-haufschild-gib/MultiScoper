@@ -12,12 +12,17 @@ namespace oscil
 OscilTextField::OscilTextField(IThemeService& themeService)
     : ThemedComponent(themeService)
     , focusSpring_(SpringPresets::fast())
+    , shakeSpring_(600.0f, 12.0f, 1.0f)
     , cachedErrorFont_(juce::FontOptions{})
 {
     setupComponents();
 
     focusSpring_.position = 0.0f;
     focusSpring_.target = 0.0f;
+
+    shakeSpring_.setMode(SpringMode::Spring);
+    shakeSpring_.position = 0.0f;
+    shakeSpring_.target = 0.0f;
 }
 
 OscilTextField::OscilTextField(IThemeService& themeService, TextFieldVariant variant) : OscilTextField(themeService)
@@ -199,6 +204,14 @@ void OscilTextField::setError(const juce::String& errorMessage)
     if (errorMessage_ != errorMessage)
     {
         errorMessage_ = errorMessage;
+
+        // Trigger shake animation on new error
+        if (errorMessage.isNotEmpty() && AnimationSettings::shouldUseSpringAnimations())
+        {
+            shakeSpring_.setTarget(0.0f, 3.0f);
+            startTimerHz(ComponentLayout::ANIMATION_FPS);
+        }
+
         repaint();
     }
 }
@@ -210,6 +223,7 @@ void OscilTextField::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         editor_->setEnabled(enabled);
         decrementButton_->setEnabled(enabled);
         incrementButton_->setEnabled(enabled);

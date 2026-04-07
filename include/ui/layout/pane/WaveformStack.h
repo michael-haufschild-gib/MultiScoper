@@ -102,6 +102,7 @@ public:
 
 private:
     void updateLayout();
+    static void configureWaveformFromOscillator(WaveformComponent& waveform, const Oscillator& oscillator);
 
     IAudioDataProvider& dataProvider_;
     IThemeService& themeService_;

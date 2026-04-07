@@ -44,7 +44,7 @@ void StatsOverlay::setupComponents()
     addChildComponent(*statsDisplay_); // Hidden until visible
 
     // Reset Button
-    resetButton_ = std::make_unique<OscilButton>(themeService_, "", "statsOverlay_resetBtn");
+    resetButton_ = std::make_unique<OscilButton>(getThemeService(), "", "statsOverlay_resetBtn");
     resetButton_->setVariant(ButtonVariant::Icon);
     resetButton_->setIconPath(ListItemIcons::createRedoIcon(static_cast<float>(RESET_BUTTON_SIZE)));
     resetButton_->setTooltip("Reset Accumulated Stats");
@@ -75,7 +75,7 @@ void StatsOverlay::paint(juce::Graphics& g)
     if (opacity <= 0.0f)
         return;
 
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getThemeService().getCurrentTheme();
 
     if (statsDisplay_)
         statsDisplay_->setColour(juce::TextEditor::textColourId, theme.textPrimary.withAlpha(opacity));
@@ -92,18 +92,18 @@ void StatsOverlay::onAnimationVisibilityChanged(bool becameVisible)
 juce::Rectangle<int> StatsOverlay::getPreferredContentSize() const
 {
     int const width = LABEL_COLUMN_WIDTH + (numOscillators_ * DATA_COLUMN_WIDTH) + (PADDING * 2);
-    int const height = HEADER_HEIGHT + (ROW_HEIGHT * 8) + PADDING; // 1 column header + 7 metric rows
+    int const height = HEADER_HEIGHT + (ROW_HEIGHT * TOTAL_TABLE_ROWS) + PADDING;
     return {0, 0, width, height};
 }
 
 void StatsOverlay::updateStats(const std::vector<OscillatorStats>& stats)
 {
-    // Check if layout needs update
+    // Check if layout needs update (oscillator count changed → overlay size changed)
     if (std::cmp_not_equal(stats.size(), numOscillators_))
     {
         numOscillators_ = static_cast<int>(stats.size());
         if (getParentComponent())
-            updatePositionInParent(getParentComponent()->getLocalBounds().reduced(4)); // Re-layout
+            getParentComponent()->resized();
     }
 
     // Rebuild table content

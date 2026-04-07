@@ -5,6 +5,8 @@
 
 #include "ui/theme/ColorPickerComponent.h"
 
+#include "ui/components/GlassPainter.h"
+
 namespace oscil
 {
 
@@ -60,18 +62,7 @@ void ColorPickerComponent::paint(juce::Graphics& g)
     // Draw color preview with checkerboard for transparency
     if (!previewBounds_.isEmpty())
     {
-        // Draw checkerboard pattern for transparency visualization
-        const int checkSize = 8;
-        for (int y = previewBounds_.getY(); y < previewBounds_.getBottom(); y += checkSize)
-        {
-            for (int x = previewBounds_.getX(); x < previewBounds_.getRight(); x += checkSize)
-            {
-                bool const isLight =
-                    (((x - previewBounds_.getX()) / checkSize) + ((y - previewBounds_.getY()) / checkSize)) % 2 == 0;
-                g.setColour(isLight ? juce::Colours::white : juce::Colours::lightgrey);
-                g.fillRect(x, y, checkSize, checkSize);
-            }
-        }
+        GlassPainter::paintCheckerboard(g, previewBounds_, 8);
 
         // Draw the actual color on top
         g.setColour(currentColour_);

@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "ui/components/GlassStyle.h"
 #include "ui/theme/IThemeService.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -83,6 +84,12 @@ protected:
     const ColorTheme& getTheme() const { return theme_; }
 
     /**
+     * Get the computed glass style derived from the current theme
+     * @return Reference to the cached glass style
+     */
+    const GlassStyle& getGlass() const { return glass_; }
+
+    /**
      * Get the theme service
      * @return Reference to the theme service
      */
@@ -90,6 +97,7 @@ protected:
 
 private:
     ColorTheme theme_;
+    GlassStyle glass_;
     IThemeService& themeService_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ThemedComponent)

@@ -4,6 +4,7 @@
     Event handling is in OscilDropdownPopupEvents.cpp
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilDropdown.h"
 
 #include <utility>
@@ -50,40 +51,42 @@ public:
     }
 
     void paintItemBackground(juce::Graphics& g, const juce::Rectangle<int>& bounds, bool isHovered, bool isSelected,
-                             bool isFocused, bool enabled, float alpha, const ColorTheme& theme)
+                             bool isFocused, bool enabled, float alpha, const GlassStyle& glass)
     {
         if (isSelected)
         {
-            g.setColour(theme.controlActive.withAlpha(alpha * 0.15f));
+            // Selected: accentSubtle fill
+            g.setColour(glass.accentSubtle.withAlpha(alpha));
             g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
         }
         else if (isFocused)
         {
-            g.setColour(theme.controlActive.withAlpha(alpha * 0.1f));
+            g.setColour(glass.accent.withAlpha(alpha * 0.1f));
             g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
         }
 
         if (isHovered && enabled && !isSelected)
         {
-            g.setColour(theme.backgroundSecondary.withAlpha(alpha * 0.8f));
+            // Hover: bgHover fill
+            g.setColour(glass.bgHover.withAlpha(alpha));
             g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
         }
     }
 
     void paintCheckbox(juce::Graphics& g, juce::Rectangle<int>& contentBounds, bool isSelected, float alpha,
-                       float opacity, const ColorTheme& theme)
+                       float opacity, const GlassStyle& glass)
     {
         auto checkBounds = contentBounds.removeFromLeft(20).toFloat().withSizeKeepingCentre(16, 16);
 
-        g.setColour(theme.backgroundSecondary.withAlpha(alpha * opacity));
+        g.setColour(glass.bgGlass.withAlpha(alpha * opacity));
         g.fillRoundedRectangle(checkBounds, 3.0f);
 
-        g.setColour((isSelected ? theme.controlActive : theme.controlBorder).withAlpha(alpha * opacity));
+        g.setColour((isSelected ? glass.accent : glass.borderDefault).withAlpha(alpha * opacity));
         g.drawRoundedRectangle(checkBounds.reduced(0.5f), 3.0f, 1.0f);
 
         if (isSelected)
         {
-            g.setColour(theme.controlActive.withAlpha(alpha * opacity));
+            g.setColour(glass.accent.withAlpha(alpha * opacity));
             float const cx = checkBounds.getCentreX();
             float const cy = checkBounds.getCentreY();
             juce::Path checkPath;
@@ -99,17 +102,19 @@ public:
     void paintItem(juce::Graphics& g, const DropdownItem& item, juce::Rectangle<int> bounds, bool isHovered,
                    bool isSelected, bool isFocused, float alpha)
     {
+        const auto& glass = owner_.getGlass();
         const auto& theme = owner_.getTheme();
 
         if (item.isSeparator)
         {
-            g.setColour(theme.controlBorder.withAlpha(alpha * 0.5f));
+            // Separator: borderSubtle 1px line
+            g.setColour(glass.borderSubtle.withAlpha(alpha));
             g.fillRect(bounds.reduced(8, (ITEM_HEIGHT / 2) - 1).withHeight(1));
             return;
         }
 
         float const opacity = item.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-        paintItemBackground(g, bounds, isHovered, isSelected, isFocused, item.enabled, alpha, theme);
+        paintItemBackground(g, bounds, isHovered, isSelected, isFocused, item.enabled, alpha, glass);
 
         auto contentBounds = bounds.reduced(8, 0);
 
@@ -122,9 +127,10 @@ public:
         }
 
         if (owner_.multiSelect_)
-            paintCheckbox(g, contentBounds, isSelected, alpha, opacity, theme);
+            paintCheckbox(g, contentBounds, isSelected, alpha, opacity, glass);
 
-        g.setColour((isSelected ? theme.controlActive : theme.textPrimary).withAlpha(alpha * opacity));
+        // Selected: accent text; default: textPrimary
+        g.setColour((isSelected ? glass.accent : theme.textPrimary).withAlpha(alpha * opacity));
 
         static const juce::Font itemFont(juce::FontOptions().withHeight(13.0f));
         g.setFont(itemFont);
@@ -226,7 +232,7 @@ private:
 
 OscilDropdownPopup::OscilDropdownPopup(IThemeService& themeService)
     : ThemedComponent(themeService)
-    , showSpring_(SpringPresets::medium())
+    , showSpring_(SpringPresets::springPopup())
 {
     setWantsKeyboardFocus(true);
     setAlwaysOnTop(true);
@@ -392,15 +398,22 @@ void OscilDropdownPopup::updateFilteredItems()
 
 void OscilDropdownPopup::paint(juce::Graphics& g)
 {
-    float const alpha = showSpring_.position;
+    float const alpha = showSpring_.getNormalized();
     if (alpha < 0.01f)
         return;
 
     auto bounds = getLocalBounds().toFloat();
-    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha * 0.95f));
-    g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
-    g.setColour(getTheme().controlBorder.withAlpha(alpha * 0.5f));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
+
+    // Apply scale animation: scale from 0.95 to 1.0 as spring opens
+    float const scale = 0.95f + 0.05f * alpha;
+    auto scaledBounds = bounds.withSizeKeepingCentre(bounds.getWidth() * scale, bounds.getHeight() * scale);
+
+    g.setOpacity(alpha);
+
+    // Use GlassPainter::paintGlassPanel for popup background
+    GlassPainter::paintGlassPanel(g, scaledBounds, getGlass(), ComponentLayout::RADIUS_XL, BorderLevel::Default);
+
+    g.setOpacity(1.0f);
 }
 
 void OscilDropdownPopup::resized()

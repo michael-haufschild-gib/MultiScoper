@@ -229,11 +229,6 @@ static const char* combineFragmentShader = R"(
     in vec2 vTexCoord;
     out vec4 fragColor;
 
-    // Simple hash for dithering
-    float random(vec2 p) {
-        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-    }
-
     void main()
     {
         vec4 original = texture(originalTexture, vTexCoord);
@@ -265,45 +260,64 @@ BloomEffect::BloomEffect()
 
 BloomEffect::~BloomEffect() = default;
 
+// NOLINTNEXTLINE(readability-function-size)
 bool BloomEffect::compile(juce::OpenGLContext& context)
 {
     if (compiled_)
         return true;
 
+    auto fail = [&]() {
+        release(context);
+        return false;
+    };
+
     // 1. Prefilter
     prefilterShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     if (!compileEffectShader(*prefilterShader_, prefilterFragmentShader))
-        return false;
+        return fail();
     prefilterThreshLoc_ = prefilterShader_->getUniformIDFromName("threshold");
     prefilterSoftKneeLoc_ = prefilterShader_->getUniformIDFromName("softKnee");
     prefilterResLoc_ = prefilterShader_->getUniformIDFromName("srcResolution");
+    if (prefilterThreshLoc_ < 0 || prefilterSoftKneeLoc_ < 0 || prefilterResLoc_ < 0)
+    {
+        DBG("BloomEffect: Missing prefilter shader uniforms");
+        return fail();
+    }
 
     // 2. Downsample
     downsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     if (!compileEffectShader(*downsampleShader_, downsampleFragmentShader))
-        return false;
+        return fail();
     downsampleResLoc_ = downsampleShader_->getUniformIDFromName("srcResolution");
+    if (downsampleResLoc_ < 0)
+    {
+        DBG("BloomEffect: Missing downsample shader uniforms");
+        return fail();
+    }
 
     // 3. Upsample
     upsampleShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     if (!compileEffectShader(*upsampleShader_, upsampleFragmentShader))
-        return false;
+        return fail();
     upsampleFilterRadiusLoc_ = upsampleShader_->getUniformIDFromName("filterRadius");
     upsampleTexelSizeLoc_ = upsampleShader_->getUniformIDFromName("texelSize");
+    if (upsampleFilterRadiusLoc_ < 0 || upsampleTexelSizeLoc_ < 0)
+    {
+        DBG("BloomEffect: Missing upsample shader uniforms");
+        return fail();
+    }
 
     // 4. Combine
     combineShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
     if (!compileEffectShader(*combineShader_, combineFragmentShader))
-        return false;
+        return fail();
     combineOriginalLoc_ = combineShader_->getUniformIDFromName("originalTexture");
     combineBloomLoc_ = combineShader_->getUniformIDFromName("bloomTexture");
     combineIntensityLoc_ = combineShader_->getUniformIDFromName("intensity");
-
     if (combineOriginalLoc_ < 0 || combineBloomLoc_ < 0 || combineIntensityLoc_ < 0)
     {
         DBG("BloomEffect: Missing combine shader uniforms");
-        combineShader_.reset();
-        return false;
+        return fail();
     }
 
     compiled_ = true;
@@ -337,15 +351,23 @@ void BloomEffect::resizeMipChain(juce::OpenGLContext& context, int w, int h)
         if (mipChain_[static_cast<size_t>(i)]->isValid())
             mipChain_[static_cast<size_t>(i)]->destroy(context);
 
-        mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false);
+        if (!mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false))
+        {
+            DBG("BloomEffect: Failed to create mip level " << i << " (" << mipW << "x" << mipH << ")");
+            // Destroy any successfully created mips and mark as failed
+            for (int j = 0; j < i; ++j)
+                mipChain_[static_cast<size_t>(j)]->destroy(context);
+            lastWidth_ = 0;
+            lastHeight_ = 0;
+            return;
+        }
     }
     lastWidth_ = w;
     lastHeight_ = h;
 }
 
-void BloomEffect::passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, FramebufferPool& pool)
+void BloomEffect::passPrefilter(Framebuffer* source, FramebufferPool& pool)
 {
-    juce::ignoreUnused(ext);
     mipChain_[0]->bind();
     prefilterShader_->use();
     source->bindTexture(0);
@@ -357,9 +379,8 @@ void BloomEffect::passPrefilter(juce::OpenGLExtensionFunctions& ext, Framebuffer
     mipChain_[0]->unbind();
 }
 
-void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool)
+void BloomEffect::passDownsample(FramebufferPool& pool)
 {
-    juce::ignoreUnused(ext);
     downsampleShader_->use();
     for (int i = 0; i < kMaxMipLevels - 1; ++i)
     {
@@ -374,9 +395,8 @@ void BloomEffect::passDownsample(juce::OpenGLExtensionFunctions& ext, Framebuffe
     }
 }
 
-void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferPool& pool)
+void BloomEffect::passUpsample(FramebufferPool& pool)
 {
-    juce::ignoreUnused(ext);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
 
@@ -394,14 +414,12 @@ void BloomEffect::passUpsample(juce::OpenGLExtensionFunctions& ext, FramebufferP
         pool.renderFullscreenQuad();
         dst->unbind();
     }
+
+    glDisable(GL_BLEND);
 }
 
-void BloomEffect::passCombine(juce::OpenGLExtensionFunctions& ext, Framebuffer* source, Framebuffer* destination,
-                              FramebufferPool& pool)
+void BloomEffect::passCombine(Framebuffer* source, Framebuffer* destination, FramebufferPool& pool)
 {
-    juce::ignoreUnused(ext);
-    glDisable(GL_BLEND);
-
     destination->bind();
     combineShader_->use();
 
@@ -426,20 +444,23 @@ void BloomEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Frame
                         FramebufferPool& pool, float deltaTime)
 {
     juce::ignoreUnused(deltaTime);
-    auto& ext = context.extensions;
     if (!compiled_ || !source || !destination)
         return;
 
     if (source->width != lastWidth_ || source->height != lastHeight_)
         resizeMipChain(context, source->width, source->height);
 
+    // If mip chain allocation failed, skip rendering
+    if (lastWidth_ == 0 || lastHeight_ == 0)
+        return;
+
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
-    passPrefilter(ext, source, pool);
-    passDownsample(ext, pool);
-    passUpsample(ext, pool);
-    passCombine(ext, source, destination, pool);
+    passPrefilter(source, pool);
+    passDownsample(pool);
+    passUpsample(pool);
+    passCombine(source, destination, pool);
 }
 
 } // namespace oscil

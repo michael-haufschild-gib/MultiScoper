@@ -4,6 +4,7 @@
 
 #include "ui/panels/StatusBarComponent.h"
 
+#include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -19,7 +20,7 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
 
     auto createLabel = [this](std::unique_ptr<juce::Label>& label, [[maybe_unused]] const juce::String& testId) {
         label = std::make_unique<juce::Label>();
-        label->setFont(juce::FontOptions(11.0f));
+        label->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION));
         label->setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(*label);
         OSCIL_REGISTER_CHILD_TEST_ID(*label, testId);
@@ -32,7 +33,7 @@ StatusBarComponent::StatusBarComponent(IThemeService& themeService)
     createLabel(sourceLabel_, "statusBar_src");
 
     renderModeLabel_ = std::make_unique<juce::Label>();
-    renderModeLabel_->setFont(juce::FontOptions(11.0f));
+    renderModeLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION));
     renderModeLabel_->setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(*renderModeLabel_);
     OSCIL_REGISTER_CHILD_TEST_ID(*renderModeLabel_, "statusBar_mode");
@@ -90,7 +91,7 @@ void StatusBarComponent::resized()
     flex.alignItems = juce::FlexBox::AlignItems::center;
 
     // Add left-aligned items
-    float const h = static_cast<float>(bounds.getHeight());
+    auto const h = static_cast<float>(bounds.getHeight());
     flex.items.add(juce::FlexItem(*fpsLabel_).withWidth(70).withHeight(h));
     flex.items.add(juce::FlexItem(*cpuLabel_).withWidth(80).withHeight(h));
     flex.items.add(juce::FlexItem(*memoryLabel_).withWidth(90).withHeight(h));

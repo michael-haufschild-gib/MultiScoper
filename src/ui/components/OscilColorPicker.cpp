@@ -39,7 +39,7 @@ OscilColorPicker::OscilColorPicker(IThemeService& themeService, const juce::Stri
 
 void OscilColorPicker::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscilColorPicker::~OscilColorPicker() { stopTimer(); }
+OscilColorPicker::~OscilColorPicker() = default;
 
 void OscilColorPicker::setColor(juce::Colour color, bool notify)
 {
@@ -266,9 +266,7 @@ void OscilColorPicker::updateFromHSV()
 void OscilColorPicker::updateHexField()
 {
     juce::String const hex = "#" + currentColor_.toDisplayString(showAlpha_);
-    hexInput_->setText(hex, juce::dontSendNotification != 0u);
+    hexInput_->setText(hex, false);
 }
-
-void OscilColorPicker::timerCallback() { stopTimer(); }
 
 } // namespace oscil

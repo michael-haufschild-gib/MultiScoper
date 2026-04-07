@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <juce_graphics/juce_graphics.h>
+
 namespace oscil
 {
 namespace ComponentLayout
@@ -34,6 +36,12 @@ static constexpr float FONT_SIZE_CAPTION = 11.0f;
 static constexpr float FONT_SIZE_SMALL = 12.0f;
 static constexpr float FONT_SIZE_DEFAULT = 14.0f;
 static constexpr float FONT_SIZE_HEADER = 16.0f;
+
+// Font factories — eliminates verbose juce::Font(juce::FontOptions().withHeight(...)) boilerplate
+inline juce::Font captionFont() { return {juce::FontOptions().withHeight(FONT_SIZE_CAPTION)}; }
+inline juce::Font smallFont() { return {juce::FontOptions().withHeight(FONT_SIZE_SMALL)}; }
+inline juce::Font defaultFont() { return {juce::FontOptions().withHeight(FONT_SIZE_DEFAULT)}; }
+inline juce::Font headerFont() { return {juce::FontOptions().withHeight(FONT_SIZE_HEADER)}; }
 
 // Button Internal Layout
 static constexpr int BUTTON_SEGMENT_PADDING = 6;

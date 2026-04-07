@@ -22,9 +22,8 @@ void RenderEngine::registerWaveform(int waveformId)
     }
 }
 
-void RenderEngine::unregisterWaveform(int waveformId)
+void RenderEngine::unregisterWaveformLocked(int waveformId)
 {
-    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
     if (it != waveformStates_.end())
     {
@@ -35,7 +34,13 @@ void RenderEngine::unregisterWaveform(int waveformId)
     }
 }
 
-std::optional<VisualConfiguration> RenderEngine::getWaveformConfig(int waveformId)
+void RenderEngine::unregisterWaveform(int waveformId)
+{
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
+    unregisterWaveformLocked(waveformId);
+}
+
+std::optional<VisualConfiguration> RenderEngine::getWaveformConfig(int waveformId) const
 {
     juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
     auto it = waveformStates_.find(waveformId);
@@ -44,7 +49,7 @@ std::optional<VisualConfiguration> RenderEngine::getWaveformConfig(int waveformI
     return std::nullopt;
 }
 
-bool RenderEngine::hasWaveform(int waveformId)
+bool RenderEngine::hasWaveform(int waveformId) const
 {
     juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
     return waveformStates_.contains(waveformId);
@@ -103,16 +108,7 @@ void RenderEngine::syncWaveforms(const std::unordered_set<int>& activeIds)
     }
 
     for (int const id : toRemove)
-    {
-        // Inline unregisterWaveform to avoid recursive lock
-        auto it = waveformStates_.find(id);
-        if (it != waveformStates_.end())
-        {
-            it->second.release(*context_);
-            waveformStates_.erase(it);
-            RE_LOG("RenderEngine: Synced out stale waveform " << id);
-        }
-    }
+        unregisterWaveformLocked(id);
 }
 
 void RenderEngine::setQualityLevel(QualityLevel level)

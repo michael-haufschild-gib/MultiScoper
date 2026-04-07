@@ -5,10 +5,8 @@
 
 #pragma once
 
-#include "PostProcessEffect.h"
+#include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
-
-#include <memory>
 
 #if OSCIL_ENABLE_OPENGL
 
@@ -19,7 +17,7 @@ namespace oscil
  * Film grain post-processing effect.
  * Adds animated noise for a vintage/analog look.
  */
-class FilmGrainEffect : public PostProcessEffect
+class FilmGrainEffect : public SingleShaderEffect
 {
 public:
     /// Create a film grain effect with default settings.
@@ -28,15 +26,6 @@ public:
 
     [[nodiscard]] juce::String getId() const override { return "film_grain"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "Film Grain"; }
-
-    /// Compile the film grain shader program.
-    bool compile(juce::OpenGLContext& context) override;
-    /// Release the shader program.
-    void release(juce::OpenGLContext& context) override;
-    [[nodiscard]] bool isCompiled() const override;
-
-    void apply(juce::OpenGLContext& context, Framebuffer* source, Framebuffer* destination, FramebufferPool& pool,
-               float deltaTime) override;
 
     /**
      * Configure from VisualConfiguration.
@@ -49,17 +38,19 @@ public:
     void setSettings(const FilmGrainSettings& settings) { settings_ = settings; }
     [[nodiscard]] const FilmGrainSettings& getSettings() const { return settings_; }
 
+protected:
+    [[nodiscard]] const char* getFragmentSource() const override;
+    bool resolveUniforms() override;
+    void setUniforms(const Framebuffer& source, float deltaTime) override;
+
 private:
     FilmGrainSettings settings_;
-    std::unique_ptr<juce::OpenGLShaderProgram> shader_;
 
-    GLint textureLoc_ = -1;
     GLint intensityLoc_ = -1;
     GLint timeLoc_ = -1;
     GLint resolutionLoc_ = -1;
 
     float accumulatedTime_ = 0.0f;
-    bool compiled_ = false;
 };
 
 } // namespace oscil

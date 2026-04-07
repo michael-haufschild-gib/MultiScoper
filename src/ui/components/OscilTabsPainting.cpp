@@ -3,6 +3,7 @@
     Rendering, layout calculation, and indicator animation for OscilTabs
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilTabs.h"
 
 #include <utility>
@@ -10,16 +11,14 @@
 namespace oscil
 {
 
-static constexpr float kTabFontSize = 13.0f;
-static constexpr float kBadgeFontSize = 10.0f;
-
 void OscilTabs::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
+    // Default variant: borderSubtle bottom line under tab list
     if (variant_ == Variant::Default && orientation_ == Orientation::Horizontal)
     {
-        g.setColour(getTheme().controlBorder.withAlpha(0.3f));
+        g.setColour(getGlass().borderSubtle);
         g.fillRect(0, bounds.getHeight() - 1, bounds.getWidth(), 1);
     }
 
@@ -31,12 +30,11 @@ void OscilTabs::paint(juce::Graphics& g)
 
     paintIndicator(g);
 
+    // Focus ring around active tab
     if (hasFocus_)
     {
         auto selectedBounds = getTabBounds(selectedIndex_).toFloat();
-        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRoundedRectangle(selectedBounds.reduced(-ComponentLayout::FOCUS_RING_OFFSET), ComponentLayout::RADIUS_SM,
-                               ComponentLayout::FOCUS_RING_WIDTH);
+        GlassPainter::paintFocusRing(g, selectedBounds, ComponentLayout::RADIUS_SM, getGlass().accent);
     }
 }
 
@@ -47,16 +45,17 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     bool const isHovered = (index == hoveredIndex_);
     float const opacity = tab.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
-    if (variant_ == Variant::Pills && isHovered && !isSelected && tab.enabled)
+    // Tab hover: bgHover background
+    if (isHovered && !isSelected && tab.enabled)
     {
-        g.setColour(getTheme().backgroundSecondary.withAlpha(0.5f));
+        g.setColour(getGlass().bgHover);
         g.fillRoundedRectangle(bounds.reduced(2).toFloat(), ComponentLayout::RADIUS_SM);
     }
 
     auto contentBounds = bounds.reduced(TAB_PADDING_H, 0);
     int contentWidth = 0;
 
-    auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+    auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, tab.label, 0, 0);
     int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -75,13 +74,15 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     {
         g.setOpacity(opacity);
         g.drawImage(tab.icon,
-                    juce::Rectangle<float>(static_cast<float>(startX), static_cast<float>(centerY - (ICON_SIZE / 2)),
+                    juce::Rectangle<float>(static_cast<float>(startX),
+                                           static_cast<float>(centerY) - (static_cast<float>(ICON_SIZE) / 2.0f),
                                            ICON_SIZE, ICON_SIZE),
                     juce::RectanglePlacement::centred);
         startX += ICON_SIZE + 8;
     }
 
-    auto textColour = isSelected                 ? getTheme().controlActive
+    // Text color: accent when active, textSecondary default
+    auto textColour = isSelected                 ? getGlass().accent
                       : isHovered && tab.enabled ? getTheme().textPrimary
                                                  : getTheme().textSecondary;
 
@@ -109,7 +110,8 @@ void OscilTabs::paintIndicator(juce::Graphics& g)
     switch (variant_)
     {
         case Variant::Default:
-            g.setColour(getTheme().controlActive);
+            // Animated accent underline that slides between tabs
+            g.setColour(getGlass().accent);
             if (orientation_ == Orientation::Horizontal)
             {
                 g.fillRoundedRectangle(indicatorBounds.getX(), static_cast<float>(getHeight() - INDICATOR_HEIGHT),
@@ -123,14 +125,15 @@ void OscilTabs::paintIndicator(juce::Graphics& g)
             break;
 
         case Variant::Pills:
-            g.setColour(getTheme().controlActive.withAlpha(0.15f));
+            // accentSubtle bg + accentMuted border
+            g.setColour(getGlass().accentSubtle);
             g.fillRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM);
-            g.setColour(getTheme().controlActive);
+            g.setColour(getGlass().accentMuted);
             g.drawRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM, 1.0f);
             break;
 
         case Variant::Bordered:
-            g.setColour(getTheme().controlBorder);
+            g.setColour(getGlass().borderDefault);
             g.drawRoundedRectangle(indicatorBounds.reduced(1), ComponentLayout::RADIUS_SM, 1.0f);
             break;
     }
@@ -142,7 +145,7 @@ void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int c
     g.fillEllipse(bounds.toFloat());
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(kBadgeFontSize)).boldened());
+    g.setFont(juce::Font(juce::FontOptions().withHeight(BADGE_FONT_SIZE)).boldened());
 
     juce::String const text = count > 99 ? "99+" : juce::String(count);
     g.drawText(text, bounds, juce::Justification::centred);
@@ -156,6 +159,7 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
     return cachedTabBounds_[static_cast<size_t>(index)];
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void OscilTabs::updateLayoutCache()
 {
     cachedTabBounds_.clear();
@@ -172,10 +176,13 @@ void OscilTabs::updateLayoutCache()
 
         if (stretchTabs_)
         {
-            int const tabWidth = bounds.getWidth() / static_cast<int>(tabs_.size());
-            for (int i = 0; std::cmp_less(i, tabs_.size()); ++i)
+            int const numTabs = static_cast<int>(tabs_.size());
+            int const tabWidth = bounds.getWidth() / numTabs;
+            for (int i = 0; i < numTabs; ++i)
             {
-                cachedTabBounds_.emplace_back(i * tabWidth, 0, tabWidth, height);
+                // Last tab gets remaining width to avoid rounding gap
+                int const w = (i == numTabs - 1) ? (bounds.getWidth() - i * tabWidth) : tabWidth;
+                cachedTabBounds_.emplace_back(i * tabWidth, 0, w, height);
             }
         }
         else if (tabWidth_ > 0)
@@ -188,7 +195,7 @@ void OscilTabs::updateLayoutCache()
         else
         {
             int x = 0;
-            auto font = juce::Font(juce::FontOptions().withHeight(kTabFontSize));
+            auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
 
             for (const auto& tab : tabs_)
             {
@@ -224,9 +231,8 @@ juce::Rectangle<float> OscilTabs::getIndicatorBounds() const
         return {indicatorXSpring_.position, 0, indicatorWidthSpring_.position, static_cast<float>(height)};
     }
 
-    int width = tabWidth_ > 0 ? tabWidth_ : getWidth();
-    return juce::Rectangle<float>(0, indicatorXSpring_.position, static_cast<float>(width),
-                                  indicatorWidthSpring_.position);
+    int const width = tabWidth_ > 0 ? tabWidth_ : getWidth();
+    return {0, indicatorXSpring_.position, static_cast<float>(width), indicatorWidthSpring_.position};
 }
 
 } // namespace oscil

@@ -21,6 +21,7 @@ FramebufferPool::~FramebufferPool()
 
 std::unique_ptr<Framebuffer> FramebufferPool::createFramebuffer() { return std::make_unique<Framebuffer>(); }
 
+// NOLINTNEXTLINE(readability-function-size)
 bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int height)
 {
     if (initialized_)
@@ -162,8 +163,9 @@ bool FramebufferPool::createFullscreenQuad(juce::OpenGLContext& context)
 
     // Attribute 1: texcoord (vec2)
     juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(1);
-    juce::OpenGLExtensionFunctions::glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                                                          reinterpret_cast<void*>(2 * sizeof(float)));
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(
+        1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+        reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
 
     // Unbind
     juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);

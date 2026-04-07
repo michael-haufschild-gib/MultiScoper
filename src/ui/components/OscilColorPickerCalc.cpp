@@ -3,6 +3,7 @@
     (Core setup, events, and interaction are in OscilColorPicker.cpp)
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilColorPicker.h"
 
 namespace oscil
@@ -10,6 +11,10 @@ namespace oscil
 
 void OscilColorPicker::paint(juce::Graphics& g)
 {
+    // Glass panel background for the entire picker container
+    GlassPainter::paintGlassPanel(g, getLocalBounds().toFloat(), getGlass(), ComponentLayout::RADIUS_XL,
+                                  BorderLevel::Subtle);
+
     if (mode_ == Mode::Square)
         paintSquareMode(g);
     else
@@ -71,8 +76,8 @@ void OscilColorPicker::paintWheelMode(juce::Graphics& g)
     float const indicatorAngle = (hue_ * 2.0f * juce::MathConstants<float>::pi) - juce::MathConstants<float>::pi;
     float const indicatorDist = saturation_ * radius;
 
-    float const cx = static_cast<float>(bounds.getCentreX());
-    float const cy = static_cast<float>(bounds.getCentreY());
+    auto const cx = static_cast<float>(bounds.getCentreX());
+    auto const cy = static_cast<float>(bounds.getCentreY());
 
     float const indicatorX = cx + (std::cos(indicatorAngle) * indicatorDist);
     float const indicatorY = cy + (std::sin(indicatorAngle) * indicatorDist);
@@ -175,17 +180,7 @@ void OscilColorPicker::paintHueSlider(juce::Graphics& g, juce::Rectangle<int> bo
 void OscilColorPicker::paintAlphaSlider(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     // Checker background
-    int const checkerSize = 6;
-    for (int y = bounds.getY(); y < bounds.getBottom(); y += checkerSize)
-    {
-        for (int x = bounds.getX(); x < bounds.getRight(); x += checkerSize)
-        {
-            bool const isWhite = (((x - bounds.getX()) / checkerSize) + ((y - bounds.getY()) / checkerSize)) % 2 == 0;
-            g.setColour(isWhite ? juce::Colours::white : juce::Colours::lightgrey);
-            g.fillRect(x, y, std::min(checkerSize, bounds.getRight() - x),
-                       std::min(checkerSize, bounds.getBottom() - y));
-        }
-    }
+    GlassPainter::paintCheckerboard(g, bounds);
 
     // Alpha gradient
     auto baseColor = juce::Colour::fromHSV(hue_, saturation_, brightness_, 1.0f);
@@ -223,20 +218,7 @@ void OscilColorPicker::paintPreview(juce::Graphics& g, juce::Rectangle<int> boun
 
     // Checker for alpha
     if (currentColor_.getAlpha() < 255)
-    {
-        int const checkerSize = 6;
-        for (int y = currentBounds.getY(); y < currentBounds.getBottom(); y += checkerSize)
-        {
-            for (int x = currentBounds.getX(); x < currentBounds.getRight(); x += checkerSize)
-            {
-                bool const isWhite =
-                    (((x - currentBounds.getX()) / checkerSize) + ((y - currentBounds.getY()) / checkerSize)) % 2 == 0;
-                g.setColour(isWhite ? juce::Colours::white : juce::Colours::lightgrey);
-                g.fillRect(x, y, std::min(checkerSize, currentBounds.getRight() - x),
-                           std::min(checkerSize, currentBounds.getBottom() - y));
-            }
-        }
-    }
+        GlassPainter::paintCheckerboard(g, currentBounds);
 
     g.setColour(currentColor_);
     g.fillRect(currentBounds);

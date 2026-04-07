@@ -280,6 +280,13 @@ private:
     // Use this when you already hold buffersMutex_
     [[nodiscard]] QualityPreset getRecommendedQualityForCount(int numBuffers) const;
 
+    // Shared implementation for applyRecommendedQuality() and reconfigureAllBuffers().
+    // Handles the thread-safety-critical lock→collect→unlock→configure→lock→update sequence.
+    // filter: returns true if the buffer should be reconfigured.
+    // configFor: returns the CaptureQualityConfig for a given buffer. Called under lock.
+    void reconfigureBuffersImpl(const std::function<bool(const BufferInfo&)>& filter,
+                                const std::function<CaptureQualityConfig(const BufferInfo&)>& configFor);
+
     CaptureQualityConfig globalConfig_;
     int sourceRate_ = 44100;
 

@@ -117,7 +117,7 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
         // Update cached state for real-time safe getStateInformation()
         processor->updateCachedState();
 
-        OSCIL_LOG(PLUGIN, "setStateInformation: restored successfully, " << processor->state_.getOscillators().size()
+        OSCIL_LOG(PLUGIN, "setStateInformation: restored successfully, " << processor->state_.getOscillatorCount()
                                                                          << " oscillators");
     };
 

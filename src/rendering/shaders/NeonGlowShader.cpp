@@ -14,16 +14,9 @@ namespace oscil
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
 
-struct NeonGlowShader::GLResources
+struct NeonGlowShader::GLResources : WaveformShader::WaveformGLResources
 {
-    std::unique_ptr<juce::OpenGLShaderProgram> program;
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    bool compiled = false;
-
-    GLint projectionLoc = -1;
-    GLint baseColorLoc = -1;
-    GLint opacityLoc = -1;
+    // Extra uniform locations (beyond base projection, baseColor, opacity)
     GLint glowIntensityLoc = -1;
     GLint geometryScaleLoc = -1;
 };
@@ -48,56 +41,32 @@ NeonGlowShader::~NeonGlowShader()
 }
 
 #if OSCIL_ENABLE_OPENGL
+// NOLINTNEXTLINE(readability-function-size)
 bool NeonGlowShader::compile(juce::OpenGLContext& context)
 {
-    if (gl_->compiled)
-        return true;
-
-    gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    juce::String const vertexCode =
-        juce::String::createStringFromData(BinaryData::neon_glow_vert, BinaryData::neon_glow_vertSize);
-    juce::String const fragmentCode =
-        juce::String::createStringFromData(BinaryData::neon_glow_frag, BinaryData::neon_glow_fragSize);
-
-    if (!gl_->program->addVertexShader(vertexCode) || !gl_->program->addFragmentShader(fragmentCode) ||
-        !gl_->program->link())
+    if (!compileFromBinaryData(*gl_, context, BinaryData::neon_glow_vert, BinaryData::neon_glow_vertSize,
+                               BinaryData::neon_glow_frag, BinaryData::neon_glow_fragSize, "NeonGlowShader"))
     {
-        DBG("NeonGlowShader compile error: " << gl_->program->getLastError());
-        gl_->program.reset();
         return false;
     }
 
-    gl_->projectionLoc = gl_->program->getUniformIDFromName("projection");
-    gl_->baseColorLoc = gl_->program->getUniformIDFromName("baseColor");
-    gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
     gl_->geometryScaleLoc = gl_->program->getUniformIDFromName("geometryScale");
 
-    if (gl_->projectionLoc < 0 || gl_->baseColorLoc < 0 || gl_->opacityLoc < 0 || gl_->glowIntensityLoc < 0 ||
-        gl_->geometryScaleLoc < 0)
+    if (gl_->glowIntensityLoc < 0 || gl_->geometryScaleLoc < 0)
     {
-        DBG("NeonGlowShader: Missing required uniforms");
-        gl_->program.reset();
+        DBG("NeonGlowShader: Missing required extra uniforms");
+        releaseGLResources(*gl_);
         return false;
     }
 
-    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &gl_->vao);
-    juce::OpenGLExtensionFunctions::glGenBuffers(1, &gl_->vbo);
-
-    gl_->compiled = true;
     return true;
 }
 
 void NeonGlowShader::release(juce::OpenGLContext& context)
 {
     juce::ignoreUnused(context);
-    if (!gl_->compiled)
-        return;
-    juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &gl_->vbo);
-    juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &gl_->vao);
-    gl_->program.reset();
-    gl_->compiled = false;
+    releaseGLResources(*gl_);
 }
 
 bool NeonGlowShader::isCompiled() const { return gl_->compiled; }
@@ -129,10 +98,10 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
     juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, gl_->vbo);
 
     float const height = params.bounds.getHeight();
-    float centerY1;
-    float centerY2;
-    float amp1;
-    float amp2;
+    float centerY1 = 0.0f;
+    float centerY2 = 0.0f;
+    float amp1 = 0.0f;
+    float amp2 = 0.0f;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     auto programId = gl_->program->getProgramID();
@@ -140,7 +109,7 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
     GLint distLoc =
         std::max(GLint{1}, juce::OpenGLExtensionFunctions::glGetAttribLocation(programId, "distFromCenter"));
 
-    float visualWidth = params.lineWidth * kGeometryScale;
+    float const visualWidth = params.lineWidth * kGeometryScale;
     auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {
         std::vector<float> vertices;
         buildLineGeometry(vertices, data, cy, amp, visualWidth, params.bounds.getX(), params.bounds.getWidth());

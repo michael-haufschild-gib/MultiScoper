@@ -12,10 +12,9 @@
 #include "ui/components/OscilSlider.h"
 #include "ui/components/OscilToggle.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
 #include "ui/layout/sections/SectionConstants.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -33,8 +32,7 @@ namespace oscil
  * This section is designed to be wrapped in a CollapsibleSection
  */
 class OptionsSection
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public TestIdSupport
     , public DynamicHeightContent
 {
@@ -76,8 +74,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
+    /// Apply updated theme colors to labels and child components.
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
     // Gain state
     void setGainDb(float dB);
@@ -86,7 +84,6 @@ public:
     // Display options state
     void setShowGrid(bool enabled);
     void setAutoScale(bool enabled);
-    void setHoldDisplay(bool enabled);
 
     bool isShowGridEnabled() const { return showGridEnabled_; }
     bool isAutoScaleEnabled() const { return autoScaleEnabled_; }
@@ -186,8 +183,6 @@ private:
     bool autoAdjustQualityEnabled_ = true;
 
     juce::ListenerList<Listener> listeners_;
-
-    IThemeService& themeService_;
 
     OSCIL_TESTABLE();
 

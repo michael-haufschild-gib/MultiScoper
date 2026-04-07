@@ -8,6 +8,7 @@
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
+#include "ui/components/GlassPainter.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -95,6 +96,8 @@ public:
 
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     void focusGained(FocusChangeType cause) override;
@@ -147,8 +150,13 @@ private:
     // Validation
     Callbacks::ValidationCallback validator_;
 
+    // State tracking
+    bool isHovered_ = false;
+    bool hasFocus_ = false;
+
     // Animation
     SpringAnimation focusSpring_;
+    SpringAnimation shakeSpring_;
     float focusAmount_ = 0.0f;
 
     juce::Font cachedErrorFont_;

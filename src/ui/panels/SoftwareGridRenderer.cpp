@@ -8,7 +8,6 @@
 #include "ui/theme/ThemeManager.h"
 
 #include <cmath>
-#include <math.h>
 
 namespace oscil
 {
@@ -101,7 +100,7 @@ void SoftwareGridRenderer::drawChannelGrid(juce::Graphics& g, juce::Rectangle<in
 {
     const auto& theme = themeService_.getCurrentTheme();
     int const height = area.getHeight();
-    float const centerY = static_cast<float>(area.getCentreY());
+    auto const centerY = static_cast<float>(area.getCentreY());
 
     // Minor horizontal lines (8 divisions)
     g.setColour(theme.gridMinor);
@@ -111,19 +110,23 @@ void SoftwareGridRenderer::drawChannelGrid(juce::Graphics& g, juce::Rectangle<in
         float const y = static_cast<float>(area.getY()) +
                         ((static_cast<float>(i) / static_cast<float>(numMinorLines)) * static_cast<float>(height));
         if (std::abs(y - centerY) > 1.0f)
+            // NOLINTNEXTLINE(bugprone-swapped-arguments)
             g.drawHorizontalLine(static_cast<int>(y), static_cast<float>(area.getX()),
                                  static_cast<float>(area.getRight()));
     }
 
     // Major horizontal lines (top/bottom quarters)
     g.setColour(theme.gridMajor);
+    // NOLINTNEXTLINE(bugprone-swapped-arguments)
     g.drawHorizontalLine(static_cast<int>(static_cast<float>(area.getY()) + static_cast<float>(height) * 0.25f),
                          static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
+    // NOLINTNEXTLINE(bugprone-swapped-arguments)
     g.drawHorizontalLine(static_cast<int>(static_cast<float>(area.getY()) + static_cast<float>(height) * 0.75f),
                          static_cast<float>(area.getX()), static_cast<float>(area.getRight()));
 
     // Zero line
     g.setColour(theme.gridZeroLine);
+    // NOLINTNEXTLINE(bugprone-swapped-arguments)
     g.drawHorizontalLine(static_cast<int>(centerY), static_cast<float>(area.getX()),
                          static_cast<float>(area.getRight()));
 
@@ -161,9 +164,12 @@ void SoftwareGridRenderer::drawTimeVerticalLines(juce::Graphics& g, juce::Rectan
 
     g.setColour(theme.gridMajor.withAlpha(0.5f));
 
-    for (float t = stepSize; t < durationMs; t += stepSize)
+    int const numSteps = static_cast<int>(durationMs / stepSize);
+    for (int step = 1; step <= numSteps; ++step)
     {
+        float const t = static_cast<float>(step) * stepSize;
         float const x = static_cast<float>(area.getX()) + ((t / durationMs) * static_cast<float>(width));
+        // NOLINTNEXTLINE(bugprone-swapped-arguments)
         g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()), static_cast<float>(area.getBottom()));
     }
 }
@@ -181,6 +187,7 @@ void SoftwareGridRenderer::drawMelodicVerticalLines(juce::Graphics& g, juce::Rec
     {
         float const x = static_cast<float>(area.getX()) + (static_cast<float>(i) * widthPerDiv);
         g.setColour(div.barBased ? theme.gridMajor : theme.gridMajor.withAlpha(0.6f));
+        // NOLINTNEXTLINE(bugprone-swapped-arguments)
         g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()), static_cast<float>(area.getBottom()));
     }
 
@@ -197,6 +204,7 @@ void SoftwareGridRenderer::drawMelodicVerticalLines(juce::Graphics& g, juce::Rec
             for (int j = 1; j < subBeatsPerDiv; ++j)
             {
                 float const x = baseX + (static_cast<float>(j) * subBeatWidth);
+                // NOLINTNEXTLINE(bugprone-swapped-arguments)
                 g.drawVerticalLine(static_cast<int>(x), static_cast<float>(area.getY()),
                                    static_cast<float>(area.getBottom()));
             }
@@ -213,19 +221,17 @@ juce::String SoftwareGridRenderer::formatTimeLabel(float ms)
             return juce::String(static_cast<int>(seconds)) + "s";
         return juce::String(seconds, 1) + "s";
     }
-    else if (ms >= 1.0f)
+
+    if (ms >= 1.0f)
     {
         if (ms >= 100.0f)
             return juce::String(static_cast<int>(ms)) + "ms";
         if (ms >= 10.0f)
             return juce::String(ms, 0) + "ms";
-        else
-            return juce::String(ms, 1) + "ms";
+        return juce::String(ms, 1) + "ms";
     }
-    else
-    {
-        return juce::String(ms * 1000.0f, 0) + "us";
-    }
+
+    return juce::String(ms * 1000.0f, 0) + "us";
 }
 
 float SoftwareGridRenderer::calculateGridStepSize(float totalDuration, int targetDivisions)
@@ -300,8 +306,10 @@ void SoftwareGridRenderer::drawTimeAxisLabels(juce::Graphics& g, juce::Rectangle
 
     g.drawText("0", bounds.getX() + leftMargin, bounds.getBottom() - 14, 30, 12, juce::Justification::centredLeft);
 
-    for (float t = stepSize; t < durationMs - (stepSize * 0.1f); t += stepSize)
+    int const numLabelSteps = static_cast<int>((durationMs - (stepSize * 0.1f)) / stepSize);
+    for (int step = 1; step <= numLabelSteps; ++step)
     {
+        float const t = static_cast<float>(step) * stepSize;
         float const xRatio = t / durationMs;
         int const x = bounds.getX() + static_cast<int>(xRatio * static_cast<float>(width));
 

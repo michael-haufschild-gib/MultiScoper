@@ -19,13 +19,13 @@ void MemoryBudgetManager::setGlobalConfig(const CaptureQualityConfig& config, in
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    bool configChanged = false;
-    {
+    bool const configChanged = [&]() {
         std::scoped_lock const lock(buffersMutex_);
-        configChanged = (globalConfig_ != config) || (sourceRate_ != sourceRate);
+        bool const changed = (globalConfig_ != config) || (sourceRate_ != sourceRate);
         globalConfig_ = config;
         sourceRate_ = sourceRate;
-    }
+        return changed;
+    }();
 
     if (configChanged)
     {
@@ -76,14 +76,13 @@ void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
             juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    bool removed = false;
-
-    {
+    bool const removed = [&]() {
         std::scoped_lock const lock(buffersMutex_);
-        removed = buffers_.erase(id) > 0;
-        if (removed)
+        bool const erased = buffers_.erase(id) > 0;
+        if (erased)
             usageCacheDirty_ = true;
-    }
+        return erased;
+    }();
 
     if (removed)
     {
@@ -116,19 +115,10 @@ void MemoryBudgetManager::setBufferQualityOverride(const juce::String& id, Quali
         if (!bufferToReconfigure)
             return;
 
-        QualityPreset effectivePreset;
-        if (override != QualityOverride::UseGlobal)
-        {
-            effectivePreset = resolveQualityOverride(override, globalConfig_.qualityPreset);
-        }
-        else if (globalConfig_.autoAdjustQuality)
-        {
-            effectivePreset = getRecommendedQualityForCount(static_cast<int>(buffers_.size()));
-        }
-        else
-        {
-            effectivePreset = globalConfig_.qualityPreset;
-        }
+        QualityPreset const effectivePreset =
+            (override != QualityOverride::UseGlobal)
+                ? resolveQualityOverride(override, globalConfig_.qualityPreset)
+                : globalConfig_.getEffectiveQuality(static_cast<int>(buffers_.size()), sourceRate_);
 
         bufferConfig = globalConfig_;
         bufferConfig.qualityPreset = effectivePreset;
@@ -160,60 +150,9 @@ QualityOverride MemoryBudgetManager::getBufferQualityOverride(const juce::String
     return QualityOverride::UseGlobal;
 }
 
-void MemoryBudgetManager::applyRecommendedQuality()
-{
-    struct ReconfigJob
-    {
-        juce::String id;
-        std::shared_ptr<DecimatingCaptureBuffer> buffer;
-    };
-
-    std::vector<ReconfigJob> jobs;
-    CaptureQualityConfig bufferConfig;
-    int srcRate = 0;
-    QualityPreset recommended;
-
-    {
-        std::scoped_lock const lock(buffersMutex_);
-        pruneExpiredBuffersLocked();
-        recommended = getRecommendedQualityForCount(static_cast<int>(buffers_.size()));
-        bufferConfig = globalConfig_;
-        bufferConfig.qualityPreset = recommended;
-        srcRate = sourceRate_;
-
-        for (auto& [id, info] : buffers_)
-        {
-            if (info.qualityOverride != QualityOverride::UseGlobal)
-                continue;
-
-            if (auto buffer = info.buffer.lock())
-                jobs.push_back({.id = id, .buffer = std::move(buffer)});
-        }
-    }
-
-    // Configure outside the lock — this allocates memory and may be slow.
-    for (auto& job : jobs)
-        job.buffer->configure(bufferConfig, srcRate);
-
-    {
-        std::scoped_lock const lock(buffersMutex_);
-        for (auto& job : jobs)
-        {
-            auto it = buffers_.find(job.id);
-            if (it != buffers_.end())
-                it->second.lastKnownMemoryBytes = job.buffer->getMemoryUsageBytes();
-        }
-        usageCacheDirty_ = true;
-    }
-
-    if (recommended != lastEffectiveQuality_)
-    {
-        lastEffectiveQuality_ = recommended;
-        notifyEffectiveQualityChanged(recommended);
-    }
-}
-
-void MemoryBudgetManager::reconfigureAllBuffers()
+void MemoryBudgetManager::reconfigureBuffersImpl(
+    const std::function<bool(const BufferInfo&)>& filter,
+    const std::function<CaptureQualityConfig(const BufferInfo&)>& configFor)
 {
     struct ReconfigJob
     {
@@ -232,28 +171,14 @@ void MemoryBudgetManager::reconfigureAllBuffers()
 
         for (auto& [id, info] : buffers_)
         {
+            if (!filter(info))
+                continue;
+
             auto buffer = info.buffer.lock();
             if (!buffer)
                 continue;
 
-            QualityPreset effectivePreset;
-
-            if (info.qualityOverride != QualityOverride::UseGlobal)
-            {
-                effectivePreset = resolveQualityOverride(info.qualityOverride, globalConfig_.qualityPreset);
-            }
-            else if (globalConfig_.autoAdjustQuality)
-            {
-                effectivePreset = globalConfig_.getEffectiveQuality(static_cast<int>(buffers_.size()), sourceRate_);
-            }
-            else
-            {
-                effectivePreset = globalConfig_.qualityPreset;
-            }
-
-            CaptureQualityConfig bufferConfig = globalConfig_;
-            bufferConfig.qualityPreset = effectivePreset;
-            jobs.push_back({.id = id, .buffer = std::move(buffer), .config = bufferConfig});
+            jobs.push_back({.id = id, .buffer = std::move(buffer), .config = configFor(info)});
         }
     }
 
@@ -271,6 +196,46 @@ void MemoryBudgetManager::reconfigureAllBuffers()
         }
         usageCacheDirty_ = true;
     }
+}
+
+void MemoryBudgetManager::applyRecommendedQuality()
+{
+    QualityPreset recommended = QualityPreset::Standard;
+    CaptureQualityConfig sharedConfig;
+    {
+        std::scoped_lock const lock(buffersMutex_);
+        pruneExpiredBuffersLocked();
+        recommended = globalConfig_.getEffectiveQuality(static_cast<int>(buffers_.size()), sourceRate_);
+        sharedConfig = globalConfig_;
+        sharedConfig.qualityPreset = recommended;
+    }
+
+    reconfigureBuffersImpl([](const BufferInfo& info) { return info.qualityOverride == QualityOverride::UseGlobal; },
+                           [&sharedConfig](const BufferInfo&) { return sharedConfig; });
+
+    if (recommended != lastEffectiveQuality_)
+    {
+        lastEffectiveQuality_ = recommended;
+        notifyEffectiveQualityChanged(recommended);
+    }
+}
+
+void MemoryBudgetManager::reconfigureAllBuffers()
+{
+    reconfigureBuffersImpl(
+        [](const BufferInfo&) { return true; },
+        [this](const BufferInfo& info) -> CaptureQualityConfig {
+            QualityPreset effectivePreset = globalConfig_.qualityPreset;
+
+            if (info.qualityOverride != QualityOverride::UseGlobal)
+                effectivePreset = resolveQualityOverride(info.qualityOverride, globalConfig_.qualityPreset);
+            else if (globalConfig_.autoAdjustQuality)
+                effectivePreset = globalConfig_.getEffectiveQuality(static_cast<int>(buffers_.size()), sourceRate_);
+
+            CaptureQualityConfig bufferConfig = globalConfig_;
+            bufferConfig.qualityPreset = effectivePreset;
+            return bufferConfig;
+        });
 }
 
 } // namespace oscil

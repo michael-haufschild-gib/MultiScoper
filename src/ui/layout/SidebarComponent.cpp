@@ -5,6 +5,8 @@
 
 #include "ui/layout/SidebarComponent.h"
 
+#include "ui/components/GlassPainter.h"
+#include "ui/components/GlassStyle.h"
 #include "ui/components/TestId.h"
 
 namespace oscil
@@ -27,11 +29,11 @@ void SidebarResizeHandle::paint(juce::Graphics& g)
 
     if (isDragging_ || isHovered_)
     {
-        g.setColour(theme.controlActive);
+        g.setColour(theme.textPrimary.withAlpha(0.20f));
     }
     else
     {
-        g.setColour(theme.controlBorder);
+        g.setColour(theme.textPrimary.withAlpha(0.08f));
     }
 
     // Draw resize grip lines
@@ -97,7 +99,7 @@ void SidebarCollapseButton::paint(juce::Graphics& g)
     // Background
     if (isHovered_)
     {
-        g.setColour(theme.controlHighlight);
+        g.setColour(theme.textPrimary.withAlpha(0.08f));
         g.fillRoundedRectangle(bounds, 4.0f);
     }
 
@@ -154,12 +156,10 @@ void SidebarCollapseButton::setCollapsed(bool collapsed)
 // SidebarComponent implementation
 
 SidebarComponent::SidebarComponent(ServiceContext& context)
-    : context_(context)
-    , themeService_(context.themeService)
+    : ThemedComponent(context.themeService)
+    , context_(context)
     , instanceRegistry_(context.instanceRegistry)
 {
-    themeService_.addListener(this);
-
     // Initialize width spring to expanded width
     widthSpring_.position = static_cast<float>(expandedWidth_);
     widthSpring_.target = static_cast<float>(expandedWidth_);
@@ -169,7 +169,7 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
 #endif
 
     // Create resize handle
-    resizeHandle_ = std::make_unique<SidebarResizeHandle>(themeService_);
+    resizeHandle_ = std::make_unique<SidebarResizeHandle>(getThemeService());
     resizeHandle_->onResizeStart = [this]() { dragStartWidth_ = expandedWidth_; };
     resizeHandle_->onResizeDrag = [this](int deltaX) {
         int newWidth = dragStartWidth_ - deltaX;
@@ -185,13 +185,13 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
     addAndMakeVisible(resizeHandle_.get());
 
     // Create collapse button
-    collapseButton_ = std::make_unique<SidebarCollapseButton>(themeService_);
+    collapseButton_ = std::make_unique<SidebarCollapseButton>(getThemeService());
     collapseButton_->onClick = [this]() { toggleCollapsed(); };
     addAndMakeVisible(collapseButton_.get());
 
     // All sections in scrollable viewport
     accordionViewport_ = std::make_unique<juce::Viewport>();
-    accordion_ = std::make_unique<OscilAccordion>(themeService_);
+    accordion_ = std::make_unique<OscilAccordion>(getThemeService());
 
     accordionViewport_->setViewedComponent(accordion_.get(), false);
     accordionViewport_->setScrollBarsShown(true, false);
@@ -201,13 +201,13 @@ SidebarComponent::SidebarComponent(ServiceContext& context)
     setupSections();
 
     // Force initial layout to size accordion after sections are added
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
     resized();
 }
 
 SidebarComponent::~SidebarComponent()
 {
     stopTimer();
-    themeService_.removeListener(this);
     if (oscillatorSection_)
         oscillatorSection_->removeListener(this);
     if (timingSection_)
@@ -218,13 +218,13 @@ SidebarComponent::~SidebarComponent()
 
 void SidebarComponent::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& glass = getGlass();
 
-    // Background
-    g.fillAll(theme.backgroundSecondary);
+    // Glass panel background (no corner radius — sidebar is edge-to-edge)
+    GlassPainter::paintGlassPanel(g, getLocalBounds().toFloat(), glass, 0.0f, BorderLevel::None);
 
     // Left border
-    g.setColour(theme.controlBorder);
+    g.setColour(glass.borderSubtle);
     g.drawVerticalLine(0, 0.0f, static_cast<float>(getHeight()));
 }
 
@@ -262,8 +262,6 @@ void SidebarComponent::resized()
         }
     }
 }
-
-void SidebarComponent::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 void SidebarComponent::timerCallback()
 {
@@ -387,7 +385,7 @@ void SidebarComponent::setupSections()
     }
 
     // Create timing section
-    timingSection_ = std::make_unique<TimingSidebarSection>(themeService_);
+    timingSection_ = std::make_unique<TimingSidebarSection>(getThemeService());
     timingSection_->addListener(this);
 
     auto* timing = accordion_->addSection("TIMING", timingSection_.get());
@@ -398,11 +396,11 @@ void SidebarComponent::setupSections()
     }
 
     // Create options section
-    optionsSection_ = std::make_unique<OptionsSection>(themeService_);
+    optionsSection_ = std::make_unique<OptionsSection>(getThemeService());
     optionsSection_->addListener(this);
 
-    optionsSection_->setAvailableThemes(themeService_.getAvailableThemes());
-    optionsSection_->setCurrentTheme(themeService_.getCurrentTheme().name);
+    optionsSection_->setAvailableThemes(getThemeService().getAvailableThemes());
+    optionsSection_->setCurrentTheme(getThemeService().getCurrentTheme().name);
 
     auto* options = accordion_->addSection("OPTIONS", optionsSection_.get());
     if (options)

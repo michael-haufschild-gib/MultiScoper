@@ -19,24 +19,22 @@ namespace oscil
 {
 
 OscillatorConfigDialog::OscillatorConfigDialog(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
     , instanceRegistry_(instanceRegistry)
 {
     OSCIL_REGISTER_TEST_ID("configPopup");
     setupComponents();
-    themeService_.addListener(this);
 }
 
 OscillatorConfigDialog::~OscillatorConfigDialog()
 {
-    OSCIL_UNREGISTER_CHILD_TEST_ID("configPopup_sourceDropdown");
-    OSCIL_UNREGISTER_CHILD_TEST_ID("configPopup_modeSelector");
-    themeService_.removeListener(this);
+    OSCIL_UNREGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
+    OSCIL_UNREGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
 }
 
 void OscillatorConfigDialog::setupSourceAndMode()
 {
-    nameEditor_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "configPopup_nameField");
+    nameEditor_ = std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Text, "configPopup_nameField");
     nameEditor_->setPlaceholder("Oscillator Name");
     nameEditor_->onReturnPressed = [this]() { handleNameEdit(); };
     nameEditor_->onTextChanged = [this](const juce::String&) { handleNameEdit(); };
@@ -45,7 +43,7 @@ void OscillatorConfigDialog::setupSourceAndMode()
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
     addAndMakeVisible(*sourceLabel_);
 
-    sourceSelector_ = std::make_unique<SourceSelectorComponent>(themeService_, instanceRegistry_);
+    sourceSelector_ = std::make_unique<SourceSelectorComponent>(getThemeService(), instanceRegistry_);
     sourceSelector_->onSelectionChanged([this](const SourceId& id) { handleSourceChange(id); });
     addAndMakeVisible(*sourceSelector_);
     OSCIL_REGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
@@ -53,7 +51,7 @@ void OscillatorConfigDialog::setupSourceAndMode()
     modeLabel_ = std::make_unique<juce::Label>("", "Processing Mode");
     addAndMakeVisible(*modeLabel_);
 
-    modeButtons_ = std::make_unique<SegmentedButtonBar>(themeService_);
+    modeButtons_ = std::make_unique<SegmentedButtonBar>(getThemeService());
     modeButtons_->setMinButtonWidth(40);
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(16),
                                     static_cast<int>(ProcessingMode::FullStereo), "configPopup_modeSelector_stereo");
@@ -77,7 +75,7 @@ void OscillatorConfigDialog::setupAppearanceControls()
     colorLabel_ = std::make_unique<juce::Label>("", "Color");
     addAndMakeVisible(*colorLabel_);
 
-    colorSwatches_ = std::make_unique<OscilColorSwatches>(themeService_, "configPopup_colorPicker");
+    colorSwatches_ = std::make_unique<OscilColorSwatches>(getThemeService(), "configPopup_colorPicker");
     colorSwatches_->setColors(getDefaultColors());
     colorSwatches_->onColorSelected = [this](int, juce::Colour color) { handleColorSelect(color); };
     addAndMakeVisible(*colorSwatches_);
@@ -85,13 +83,13 @@ void OscillatorConfigDialog::setupAppearanceControls()
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
 
-    visualPresetDropdown_ = std::make_unique<OscilDropdown>(themeService_, "", "configPopup_visualPresetDropdown");
+    visualPresetDropdown_ = std::make_unique<OscilDropdown>(getThemeService(), "", "configPopup_visualPresetDropdown");
     for (const auto& preset : VisualConfiguration::getAvailablePresets())
         visualPresetDropdown_->addItem(preset.second, preset.first);
     visualPresetDropdown_->onSelectionChanged = [this](int) { handleVisualPresetChange(); };
     addAndMakeVisible(*visualPresetDropdown_);
 
-    lineWidthSlider_ = std::make_unique<OscilSlider>(themeService_, "configPopup_lineWidthSlider");
+    lineWidthSlider_ = std::make_unique<OscilSlider>(getThemeService(), "configPopup_lineWidthSlider");
     lineWidthSlider_->setLabel("Line Width");
     lineWidthSlider_->setRange(Oscillator::MIN_LINE_WIDTH, Oscillator::MAX_LINE_WIDTH);
     lineWidthSlider_->setStep(0.1);
@@ -100,7 +98,7 @@ void OscillatorConfigDialog::setupAppearanceControls()
     lineWidthSlider_->onValueChanged = [this](double) { handleLineWidthChange(); };
     addAndMakeVisible(*lineWidthSlider_);
 
-    opacitySlider_ = std::make_unique<OscilSlider>(themeService_, "configPopup_opacitySlider");
+    opacitySlider_ = std::make_unique<OscilSlider>(getThemeService(), "configPopup_opacitySlider");
     opacitySlider_->setLabel("Opacity");
     opacitySlider_->setRange(0.0, 100.0);
     opacitySlider_->setStep(1.0);
@@ -115,11 +113,12 @@ void OscillatorConfigDialog::setupPaneAndFooter()
     paneLabel_ = std::make_unique<juce::Label>("", "Pane");
     addAndMakeVisible(*paneLabel_);
 
-    paneSelectorComponent_ = std::make_unique<PaneSelectorComponent>(themeService_, false, "configPopup_paneSelector");
+    paneSelectorComponent_ =
+        std::make_unique<PaneSelectorComponent>(getThemeService(), false, "configPopup_paneSelector");
     paneSelectorComponent_->onSelectionChanged = [this](const PaneId&, bool) { handlePaneChange(); };
     addAndMakeVisible(*paneSelectorComponent_);
 
-    footerCloseButton_ = std::make_unique<OscilButton>(themeService_, "Close", "configPopup_closeBtn");
+    footerCloseButton_ = std::make_unique<OscilButton>(getThemeService(), "Close", "configPopup_closeBtn");
     footerCloseButton_->setVariant(ButtonVariant::Secondary);
     footerCloseButton_->onClick = [this]() { handleClose(); };
     addAndMakeVisible(*footerCloseButton_);
@@ -131,7 +130,8 @@ void OscillatorConfigDialog::setupComponents()
     setupAppearanceControls();
     setupPaneAndFooter();
     setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
-    themeChanged(themeService_.getCurrentTheme());
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
+    onThemeChanged(getTheme());
 }
 
 void OscillatorConfigDialog::paint(juce::Graphics& /*g*/)
@@ -145,46 +145,46 @@ void OscillatorConfigDialog::resized()
 
     // Name editor at top
     nameEditor_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
-    bounds.removeFromTop(SPACING_LARGE);
+    bounds.removeFromTop(ComponentLayout::SPACING_MD);
 
     // Source section
     sourceLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
     sourceSelector_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
-    bounds.removeFromTop(SPACING_LARGE);
+    bounds.removeFromTop(ComponentLayout::SPACING_MD);
 
     // Processing mode section
     modeLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
     modeButtons_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
-    bounds.removeFromTop(SPACING_LARGE);
+    bounds.removeFromTop(ComponentLayout::SPACING_MD);
 
     // Color section
     colorLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
     colorSwatches_->setBounds(bounds.removeFromTop(COLOR_PICKER_HEIGHT));
-    bounds.removeFromTop(SPACING_LARGE);
+    bounds.removeFromTop(ComponentLayout::SPACING_MD);
 
     // Visual preset dropdown
     visualPresetLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
     visualPresetDropdown_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
-    bounds.removeFromTop(SPACING_MEDIUM);
+    bounds.removeFromTop(ComponentLayout::SPACING_SM);
 
     // Sliders
     lineWidthSlider_->setBounds(bounds.removeFromTop(SLIDER_ROW_HEIGHT));
-    bounds.removeFromTop(SPACING_SMALL);
+    bounds.removeFromTop(ComponentLayout::SPACING_XS);
 
     opacitySlider_->setBounds(bounds.removeFromTop(SLIDER_ROW_HEIGHT));
-    bounds.removeFromTop(SPACING_MEDIUM);
+    bounds.removeFromTop(ComponentLayout::SPACING_SM);
 
     // Pane selector
     paneLabel_->setBounds(bounds.removeFromTop(LABEL_HEIGHT));
     paneSelectorComponent_->setBounds(bounds.removeFromTop(CONTROL_HEIGHT));
-    bounds.removeFromTop(SPACING_SECTION);
+    bounds.removeFromTop(ComponentLayout::SPACING_LG);
 
     // Footer: Close button (centered or right aligned)
     auto footerRow = bounds.removeFromBottom(FOOTER_HEIGHT);
     footerCloseButton_->setBounds(footerRow.withSizeKeepingCentre(100, FOOTER_HEIGHT));
 }
 
-void OscillatorConfigDialog::themeChanged(const ColorTheme& newTheme)
+void OscillatorConfigDialog::onThemeChanged(const ColorTheme& newTheme)
 {
     auto styleLabel = [&newTheme](juce::Label* label) {
         label->setColour(juce::Label::textColourId, newTheme.textSecondary);
@@ -196,8 +196,6 @@ void OscillatorConfigDialog::themeChanged(const ColorTheme& newTheme)
     styleLabel(colorLabel_.get());
     styleLabel(visualPresetLabel_.get());
     styleLabel(paneLabel_.get());
-
-    repaint();
 }
 
 void OscillatorConfigDialog::showForOscillator(const Oscillator& oscillator)
@@ -255,18 +253,18 @@ void OscillatorConfigDialog::setAvailablePanes(const std::vector<std::pair<PaneI
 
 void OscillatorConfigDialog::notifyConfigChanged()
 {
-    juce::ValueTree state("Oscillator");
-    state.setProperty("id", oscillatorId_.id, nullptr);
-    state.setProperty("sourceId", sourceId_.id, nullptr);
-    state.setProperty("oscillatorState", sourceId_.isValid() ? 0 : 1, nullptr);
-    state.setProperty("processingMode", processingModeToString(processingMode_), nullptr);
-    state.setProperty("colour", static_cast<int>(colour_.getARGB()), nullptr);
-    state.setProperty("opacity", opacity_, nullptr);
-    state.setProperty("visible", visible_, nullptr);
-    state.setProperty("name", name_, nullptr);
-    state.setProperty("lineWidth", lineWidth_, nullptr);
-    state.setProperty("paneId", paneId_.id, nullptr);
-    state.setProperty("order", orderIndex_, nullptr);
+    juce::ValueTree state(StateIds::Oscillator);
+    state.setProperty(StateIds::Id, oscillatorId_.id, nullptr);
+    state.setProperty(StateIds::SourceId, sourceId_.id, nullptr);
+    state.setProperty(StateIds::OscillatorState, sourceId_.isValid() ? 0 : 1, nullptr);
+    state.setProperty(StateIds::ProcessingMode, processingModeToString(processingMode_), nullptr);
+    state.setProperty(StateIds::Colour, static_cast<int>(colour_.getARGB()), nullptr);
+    state.setProperty(StateIds::Opacity, opacity_, nullptr);
+    state.setProperty(StateIds::Visible, visible_, nullptr);
+    state.setProperty(StateIds::Name, name_, nullptr);
+    state.setProperty(StateIds::LineWidth, lineWidth_, nullptr);
+    state.setProperty(StateIds::PaneId, paneId_.id, nullptr);
+    state.setProperty(StateIds::Order, orderIndex_, nullptr);
     state.setProperty(StateIds::VisualPresetId, visualPresetId_, nullptr);
     state.setProperty(StateIds::SchemaVersion, Oscillator::CURRENT_SCHEMA_VERSION, nullptr);
 

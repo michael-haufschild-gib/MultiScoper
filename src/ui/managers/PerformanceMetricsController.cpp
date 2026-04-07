@@ -61,8 +61,8 @@ void PerformanceMetricsController::update()
     statusBar_.setMemoryUsage(memoryMB);
 
     // Oscillator and source counts.
-    size_t const oscillatorCount = dataProvider_.getState().getOscillators().size();
-    statusBar_.setOscillatorCount(static_cast<int>(oscillatorCount));
+    int const oscillatorCount = dataProvider_.getState().getOscillatorCount();
+    statusBar_.setOscillatorCount(oscillatorCount);
     statusBar_.setSourceCount(static_cast<int>(sourceCount));
 
     statusBar_.repaint();

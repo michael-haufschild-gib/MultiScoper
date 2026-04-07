@@ -75,9 +75,9 @@ public:
     /// Unregister a waveform ID and release its render state.
     void unregisterWaveform(int waveformId);
     /// Get the visual configuration for a registered waveform.
-    [[nodiscard]] std::optional<VisualConfiguration> getWaveformConfig(int waveformId);
+    [[nodiscard]] std::optional<VisualConfiguration> getWaveformConfig(int waveformId) const;
     /// Check whether a waveform ID is registered.
-    [[nodiscard]] bool hasWaveform(int waveformId);
+    [[nodiscard]] bool hasWaveform(int waveformId) const;
     /// Set the visual configuration for a registered waveform.
     void setWaveformConfig(int waveformId, const VisualConfiguration& config);
     /// Remove all registered waveforms and their render states.
@@ -124,6 +124,7 @@ private:
     void executeComposite(Framebuffer* source, const VisualConfiguration& config);
     WaveformRenderState* resolveWaveformState(int waveformId);
     void renderWaveformLayer(const WaveformRenderData& data, WaveformRenderState& state);
+    void unregisterWaveformLocked(int waveformId);
 
     // Subsystems
     std::unique_ptr<RenderBootstrapper> bootstrapper_;

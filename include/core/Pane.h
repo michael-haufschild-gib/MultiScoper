@@ -290,6 +290,9 @@ private:
     void notifyPaneOrderChanged();
     void notifyPaneAdded(const PaneId& paneId);
     void notifyPaneRemoved(const PaneId& paneId);
+    [[nodiscard]] juce::Rectangle<int> calculatePaneBoundsInColumn(const std::vector<const Pane*>& columnPanes,
+                                                                   const PaneId& paneId,
+                                                                   juce::Rectangle<int> columnArea) const;
 };
 
 // ValueTree identifiers for Pane and PaneLayout

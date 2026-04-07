@@ -33,6 +33,17 @@ std::shared_ptr<IAudioBuffer> resolveCaptureBufferForSource(IAudioDataProvider& 
 }
 } // namespace
 
+void WaveformStack::configureWaveformFromOscillator(WaveformComponent& waveform, const Oscillator& oscillator)
+{
+    waveform.setProcessingMode(oscillator.getProcessingMode());
+    waveform.setColour(oscillator.getColour());
+    waveform.setOpacity(oscillator.getOpacity());
+    waveform.setLineWidth(oscillator.getLineWidth());
+    waveform.setShaderId(oscillator.getShaderId());
+    waveform.setVisualPresetId(oscillator.getVisualPresetId());
+    waveform.setVisualOverrides(oscillator.getVisualOverrides());
+}
+
 WaveformStack::WaveformStack(IAudioDataProvider& dataProvider, IThemeService& themeService,
                              ShaderRegistry& shaderRegistry)
     : dataProvider_(dataProvider)
@@ -52,14 +63,7 @@ void WaveformStack::addOscillator(const Oscillator& oscillator)
     entry.oscillator = oscillator;
     entry.waveform = std::make_unique<WaveformComponent>(themeService_, shaderRegistry_);
 
-    // Configure waveform with all oscillator properties
-    entry.waveform->setProcessingMode(oscillator.getProcessingMode());
-    entry.waveform->setColour(oscillator.getColour());
-    entry.waveform->setOpacity(oscillator.getOpacity());
-    entry.waveform->setLineWidth(oscillator.getLineWidth());
-    entry.waveform->setShaderId(oscillator.getShaderId());
-    entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
-    entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
+    configureWaveformFromOscillator(*entry.waveform, oscillator);
 
     auto buffer = resolveCaptureBufferForSource(dataProvider_, oscillator.getSourceId());
     entry.waveform->setCaptureBuffer(buffer);
@@ -171,14 +175,8 @@ void WaveformStack::updateOscillatorFull(const Oscillator& oscillator)
             }
 
             entry.oscillator = oscillator;
-            entry.waveform->setProcessingMode(oscillator.getProcessingMode());
-            entry.waveform->setColour(oscillator.getColour());
-            entry.waveform->setOpacity(oscillator.getOpacity());
-            entry.waveform->setLineWidth(oscillator.getLineWidth());
+            configureWaveformFromOscillator(*entry.waveform, oscillator);
             entry.waveform->setVisible(oscillator.isVisible());
-            entry.waveform->setShaderId(oscillator.getShaderId());
-            entry.waveform->setVisualPresetId(oscillator.getVisualPresetId());
-            entry.waveform->setVisualOverrides(oscillator.getVisualOverrides());
             break;
         }
     }

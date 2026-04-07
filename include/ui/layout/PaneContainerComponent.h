@@ -6,6 +6,7 @@
 #pragma once
 
 #include "ui/layout/PaneComponent.h"
+#include "ui/theme/IThemeService.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -26,7 +27,7 @@ public:
     using PaneDropCallback = std::function<void(const PaneId& movedPaneId, const PaneId& targetPaneId)>;
     using EmptyColumnDropCallback = std::function<void(const PaneId& movedPaneId, int targetColumn)>;
 
-    PaneContainerComponent();
+    explicit PaneContainerComponent(IThemeService& themeService);
     ~PaneContainerComponent() override = default;
 
     void setPaneDropCallback(PaneDropCallback callback);
@@ -47,6 +48,7 @@ private:
     void updateDropTarget(const SourceDetails& dragSourceDetails);
     void clearDropHighlight();
 
+    IThemeService& themeService_;
     PaneDropCallback paneDropCallback_;
     EmptyColumnDropCallback emptyColumnDropCallback_;
     int columnCount_ = 1;

@@ -3,6 +3,7 @@
     Individual collapsible section with header, chevron animation, and content
 */
 
+#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilAccordion.h"
 
 #include <utility>
@@ -90,6 +91,7 @@ void OscilAccordionSection::setContent(juce::Component* content)
     }
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 {
     if (expanded_ == expanded)
@@ -142,6 +144,7 @@ void OscilAccordionSection::setEnabled(bool enabled)
     if (enabled_ != enabled)
     {
         enabled_ = enabled;
+        juce::Component::setEnabled(enabled);
         repaint();
     }
 }
@@ -185,15 +188,10 @@ void OscilAccordionSection::paint(juce::Graphics& g)
     auto headerBounds = bounds.removeFromTop(HEADER_HEIGHT);
     paintHeader(g, headerBounds);
 
-    // Content area (clipped)
+    // Content area (clipped) — no special background, inherits parent
     if (content_ && expandSpring_.position > 0.01f)
     {
-        auto contentBounds = bounds;
-        g.reduceClipRegion(contentBounds);
-
-        // Optional: subtle background for content
-        g.setColour(getTheme().backgroundPrimary.withAlpha(0.3f));
-        g.fillRect(contentBounds);
+        g.reduceClipRegion(bounds);
     }
 }
 
@@ -201,17 +199,18 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const hoverAmount = hoverSpring_.position;
+    const auto& glass = getGlass();
 
-    // Background
+    // Background — blend toward bgHover on hover
     auto bgColour = getTheme().backgroundSecondary;
     if (hoverAmount > 0.01f && enabled_)
-        bgColour = bgColour.brighter(0.05f * hoverAmount);
+        bgColour = bgColour.interpolatedWith(glass.bgHover, hoverAmount);
 
     g.setColour(bgColour.withAlpha(opacity));
     g.fillRect(bounds);
 
-    // Bottom border
-    g.setColour(getTheme().controlBorder.withAlpha(opacity * 0.3f));
+    // Bottom border — glass borderSubtle
+    g.setColour(glass.borderSubtle.withAlpha(opacity));
     g.fillRect(bounds.getX(), bounds.getBottom() - 1, bounds.getWidth(), 1);
 
     auto contentBounds = bounds.reduced(PADDING_H, 0);
@@ -233,14 +232,13 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 
     // Title
     g.setColour(getTheme().textPrimary.withAlpha(opacity));
-    g.setFont(juce::Font(juce::FontOptions().withHeight(ComponentLayout::FONT_SIZE_DEFAULT)).boldened());
+    g.setFont(ComponentLayout::defaultFont().boldened());
     g.drawText(title_, contentBounds, juce::Justification::centredLeft);
 
     // Focus ring
     if (hasFocus_ && enabled_)
     {
-        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRect(bounds.reduced(2), 2);
+        GlassPainter::paintFocusRing(g, bounds.toFloat(), ComponentLayout::RADIUS_SM, glass.accent);
     }
 }
 

@@ -9,12 +9,13 @@
 #include "core/OscilState.h"
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
+#include "ui/controllers/OscillatorPanelController.h"
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
 #include "plugin/PluginProcessor.h"
+#include "tools/test_server/TestWaveformGenerator.h"
 
-#include <cmath>
 #include <utility>
 
 namespace oscil
@@ -31,62 +32,6 @@ OscillatorId resolveOscId(const std::string& idStr, int index, const std::vector
     else if (index >= 0 && std::cmp_less(index, oscillators.size()))
         targetId = oscillators[static_cast<size_t>(index)].getId();
     return targetId;
-}
-
-void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType, float frequency,
-                          float amplitude, float sampleRate)
-{
-    int const numSamples = buffer.getNumSamples();
-    float phase = 0.0f;
-    float const safeSampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
-    float const phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / safeSampleRate;
-
-    for (int i = 0; i < numSamples; ++i)
-    {
-        float sample = 0.0f;
-
-        if (waveformType == "sine")
-        {
-            sample = std::sin(phase) * amplitude;
-        }
-        else if (waveformType == "square")
-        {
-            sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
-        }
-        else if (waveformType == "triangle")
-        {
-            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
-            sample = ((2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f)))) - 1.0f) * amplitude;
-        }
-        else if (waveformType == "sawtooth")
-        {
-            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
-            sample = (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
-        }
-        else if (waveformType == "noise")
-        {
-            sample = (((static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * 2.0f) - 1.0f) * amplitude;
-        }
-
-        buffer.setSample(0, i, sample);
-        buffer.setSample(1, i, sample * 0.8f);
-
-        phase += phaseIncrement;
-        if (phase > 2.0f * juce::MathConstants<float>::pi)
-            phase -= 2.0f * juce::MathConstants<float>::pi;
-    }
-}
-
-CaptureFrameMetadata makeTestMetadata(float sampleRate, int numSamples)
-{
-    CaptureFrameMetadata metadata;
-    metadata.sampleRate = sampleRate;
-    metadata.numChannels = 2;
-    metadata.numSamples = numSamples;
-    metadata.isPlaying = true;
-    metadata.bpm = 120.0f;
-    metadata.timestamp = 0;
-    return metadata;
 }
 
 } // namespace
@@ -130,6 +75,7 @@ void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Respon
         double const sampleRate = body.value("sampleRate", 44100.0);
         std::string const trackId = body.value("trackId", juce::Uuid().toString().toStdString());
 
+        // NOLINTNEXTLINE(bugprone-exception-escape)
         auto result = runOnMessageThread([this, name, channelCount, sampleRate, trackId]() -> nlohmann::json {
             nlohmann::json response;
             auto& registry = PluginFactory::getInstance().getInstanceRegistry();
@@ -169,7 +115,7 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
 {
     try
     {
-        auto body = nlohmann::json::parse(req.body);
+        auto body = nlohmann::json::parse(req.body.empty() ? "{}" : req.body);
         std::string const sourceIdStr = body.value("sourceId", "");
 
         if (sourceIdStr.empty())
@@ -181,6 +127,7 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
             return;
         }
 
+        // NOLINTNEXTLINE(bugprone-exception-escape)
         auto result = runOnMessageThread([this, sourceIdStr]() -> nlohmann::json {
             nlohmann::json response;
             auto& registry = PluginFactory::getInstance().getInstanceRegistry();
@@ -269,6 +216,7 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
             return;
         }
 
+        // NOLINTNEXTLINE(bugprone-exception-escape)
         auto result = runOnMessageThread([this, oscillatorId, sourceId, oscillatorIndex]() {
             return assignSourceOnMessageThread(oscillatorId, sourceId, oscillatorIndex);
         });
@@ -358,11 +306,11 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             return;
         }
 
-        auto result =
-            runOnMessageThread([this, sourceId, waveformType, frequency, amplitude, numSamples, sampleRate]() {
-                return injectSourceDataOnMessageThread(sourceId, waveformType, frequency, amplitude, numSamples,
-                                                       sampleRate);
-            });
+        auto result = runOnMessageThread([this, sourceId, waveformType, frequency, amplitude, numSamples,
+                                          sampleRate]() { // NOLINT(bugprone-exception-escape)
+            return injectSourceDataOnMessageThread(sourceId, waveformType, frequency, amplitude, numSamples,
+                                                   sampleRate);
+        });
         res.set_content(result.dump(), "application/json");
     }
     catch (const std::exception& e)

@@ -8,8 +8,7 @@
 #include "core/ServiceContext.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
-#include "ui/theme/IThemeService.h"
-#include "ui/theme/ThemeManager.h"
+#include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -33,8 +32,7 @@ enum class OscillatorFilterMode : std::uint8_t
  * Provides filter and count display
  */
 class OscillatorListToolbar
-    : public juce::Component
-    , public ThemeManagerListener
+    : public ThemedComponent
     , public TestIdSupport
 {
 public:
@@ -55,9 +53,6 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-
-    // ThemeManagerListener
-    void themeChanged(const ColorTheme& newTheme) override;
 
     // State setters
     void setFilterMode(OscillatorFilterMode mode);
@@ -91,8 +86,6 @@ private:
     int visibleCount_ = 0;
 
     juce::ListenerList<Listener> listeners_;
-
-    IThemeService& themeService_;
 
     // TestIdSupport
     void registerTestId() override;

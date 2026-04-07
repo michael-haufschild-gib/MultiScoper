@@ -314,7 +314,7 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
 
         size_t const writePos = writePos_.load(std::memory_order_acquire);
         size_t const readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
-        size_t channelOffset = static_cast<size_t>(channel) * capacity_;
+        size_t const channelOffset = static_cast<size_t>(channel) * capacity_;
 
         float peak = 0.0f;
 
@@ -368,7 +368,7 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
 
         size_t const writePos = writePos_.load(std::memory_order_acquire);
         size_t const readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
-        size_t channelOffset = static_cast<size_t>(channel) * capacity_;
+        size_t const channelOffset = static_cast<size_t>(channel) * capacity_;
 
         double sumSquares = 0.0;
 
@@ -390,14 +390,12 @@ float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
             analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
         }
 
-        auto const rms = static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
-
         std::atomic_thread_fence(std::memory_order_acquire);
 
         uint32_t const epoch2 = writeEpoch_.load(std::memory_order_acquire);
 
         if (epoch1 == epoch2)
-            return rms;
+            return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
     }
 }
 

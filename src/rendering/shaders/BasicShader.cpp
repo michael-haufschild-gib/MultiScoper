@@ -13,25 +13,18 @@ namespace oscil
 {
 
 // Debug-only logging macro — no output in release builds
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define BASIC_LOG(msg) DBG("[BASIC] " << msg)
 
 #if OSCIL_ENABLE_OPENGL
 using namespace juce::gl;
 
-struct BasicShader::GLResources
+struct BasicShader::GLResources : WaveformShader::WaveformGLResources
 {
-    std::unique_ptr<juce::OpenGLShaderProgram> program;
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    bool compiled = false;
-
-    // Uniform locations (get these after compilation)
-    GLint projectionLoc = -1;
-    GLint baseColorLoc = -1;
-    GLint opacityLoc = -1;
+    // Extra uniform locations (beyond base projection, baseColor, opacity)
     GLint glowIntensityLoc = -1;
 
-    // Attribute locations (get these after compilation)
+    // Attribute locations
     GLint positionLoc = -1;
     GLint distFromCenterLoc = -1;
 };
@@ -64,9 +57,7 @@ BasicShader::~BasicShader()
 void BasicShader::resolveUniforms(juce::OpenGLContext& context)
 {
     juce::ignoreUnused(context);
-    gl_->projectionLoc = gl_->program->getUniformIDFromName("projection");
-    gl_->baseColorLoc = gl_->program->getUniformIDFromName("baseColor");
-    gl_->opacityLoc = gl_->program->getUniformIDFromName("opacity");
+    // Base uniforms (projection, baseColor, opacity) already resolved by compileFromBinaryData
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
 
     BASIC_LOG("Uniform locations - projection=" << gl_->projectionLoc << ", baseColor=" << gl_->baseColorLoc
@@ -85,48 +76,24 @@ void BasicShader::resolveUniforms(juce::OpenGLContext& context)
 
 bool BasicShader::validateUniforms() const
 {
-    bool valid = true;
-    if (gl_->projectionLoc < 0)
-    {
-        BASIC_LOG("Failed to find uniform 'projection'");
-        valid = false;
-    }
-    if (gl_->baseColorLoc < 0)
-    {
-        BASIC_LOG("Failed to find uniform 'baseColor'");
-        valid = false;
-    }
-    if (gl_->opacityLoc < 0)
-    {
-        BASIC_LOG("Failed to find uniform 'opacity'");
-        valid = false;
-    }
+    // Base uniforms (projection, baseColor, opacity) already validated by compileFromBinaryData
     if (gl_->glowIntensityLoc < 0)
     {
         BASIC_LOG("Failed to find uniform 'glowIntensity'");
-        valid = false;
+        return false;
     }
-    return valid;
+    return true;
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 bool BasicShader::compile(juce::OpenGLContext& context)
 {
     BASIC_LOG("compile() called, already compiled=" << static_cast<int>(gl_->compiled));
 
-    if (gl_->compiled)
-        return true;
-
-    gl_->program = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    juce::String const vertexCode =
-        juce::String::createStringFromData(BinaryData::basic_vert, BinaryData::basic_vertSize);
-    juce::String const fragmentCode =
-        juce::String::createStringFromData(BinaryData::basic_frag, BinaryData::basic_fragSize);
-
-    if (!compileShaderProgram(*gl_->program, vertexCode.toRawUTF8(), fragmentCode.toRawUTF8()))
+    if (!compileFromBinaryData(*gl_, context, BinaryData::basic_vert, BinaryData::basic_vertSize,
+                               BinaryData::basic_frag, BinaryData::basic_fragSize, "BasicShader"))
     {
-        BASIC_LOG("Shader compilation/linking FAILED: " << gl_->program->getLastError());
-        gl_->program.reset();
+        BASIC_LOG("Base shader compilation failed");
         return false;
     }
 
@@ -134,17 +101,12 @@ bool BasicShader::compile(juce::OpenGLContext& context)
 
     if (!validateUniforms())
     {
-        BASIC_LOG("Shader compilation failed - missing uniforms");
-        gl_->program.reset();
+        BASIC_LOG("Shader compilation failed - missing extra uniforms");
+        releaseGLResources(*gl_);
         return false;
     }
 
-    juce::OpenGLExtensionFunctions::glGenVertexArrays(1, &gl_->vao);
-    juce::OpenGLExtensionFunctions::glGenBuffers(1, &gl_->vbo);
-
     BASIC_LOG("Created VAO=" << static_cast<int>(gl_->vao) << ", VBO=" << static_cast<int>(gl_->vbo));
-
-    gl_->compiled = true;
     BASIC_LOG("Shader fully initialized, compiled=true");
     return true;
 }
@@ -152,24 +114,7 @@ bool BasicShader::compile(juce::OpenGLContext& context)
 void BasicShader::release(juce::OpenGLContext& context)
 {
     juce::ignoreUnused(context);
-    if (!gl_->compiled)
-        return;
-
-    // Properly delete VAO and VBO to prevent resource leaks
-    if (gl_->vbo != 0)
-    {
-        juce::OpenGLExtensionFunctions::glDeleteBuffers(1, &gl_->vbo);
-        gl_->vbo = 0;
-    }
-
-    if (gl_->vao != 0)
-    {
-        juce::OpenGLExtensionFunctions::glDeleteVertexArrays(1, &gl_->vao);
-        gl_->vao = 0;
-    }
-
-    gl_->program.reset();
-    gl_->compiled = false;
+    releaseGLResources(*gl_);
 }
 
 bool BasicShader::isCompiled() const { return gl_->compiled; }
@@ -218,10 +163,10 @@ void BasicShader::render(juce::OpenGLContext& context, const std::vector<float>&
     juce::OpenGLExtensionFunctions::glUniform1f(gl_->glowIntensityLoc, GLOW_INTENSITY);
 
     float const height = params.bounds.getHeight();
-    float centerY1;
-    float centerY2;
-    float amp1;
-    float amp2;
+    float centerY1 = 0.0f;
+    float centerY2 = 0.0f;
+    float amp1 = 0.0f;
+    float amp2 = 0.0f;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     juce::OpenGLExtensionFunctions::glBindVertexArray(gl_->vao);
@@ -231,9 +176,9 @@ void BasicShader::render(juce::OpenGLContext& context, const std::vector<float>&
     juce::OpenGLExtensionFunctions::glVertexAttribPointer(static_cast<GLuint>(gl_->positionLoc), 2, GL_FLOAT, GL_FALSE,
                                                           4 * sizeof(float), nullptr);
     juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(static_cast<GLuint>(gl_->distFromCenterLoc));
-    juce::OpenGLExtensionFunctions::glVertexAttribPointer(static_cast<GLuint>(gl_->distFromCenterLoc), 1, GL_FLOAT,
-                                                          GL_FALSE, 4 * sizeof(float),
-                                                          reinterpret_cast<void*>(2 * sizeof(float)));
+    juce::OpenGLExtensionFunctions::glVertexAttribPointer(
+        static_cast<GLuint>(gl_->distFromCenterLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+        reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
 
     float const glowWidth = params.lineWidth * 10.0f;
     renderChannel(ext, channel1, centerY1, amp1, glowWidth, params.bounds.getX(), params.bounds.getWidth());
@@ -292,22 +237,11 @@ void BasicShader::renderSoftware(juce::Graphics& g, const std::vector<float>& ch
     auto bounds = params.bounds;
     float const height = bounds.getHeight();
 
-    float centerY1;
-    float centerY2;
-    float amp1;
-    float amp2;
-    if (params.isStereo && channel2 != nullptr)
-    {
-        float const halfH = height * 0.5f;
-        centerY1 = bounds.getY() + (halfH * 0.5f);
-        centerY2 = bounds.getY() + (halfH * 1.5f);
-        amp1 = amp2 = halfH * 0.45f * params.verticalScale;
-    }
-    else
-    {
-        centerY1 = centerY2 = bounds.getCentreY();
-        amp1 = amp2 = height * 0.45f * params.verticalScale;
-    }
+    float centerY1 = 0.0f;
+    float centerY2 = 0.0f;
+    float amp1 = 0.0f;
+    float amp2 = 0.0f;
+    calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
     drawGlowingChannel(g, channel1, centerY1, amp1, bounds.getX(), bounds.getWidth(), params);
 

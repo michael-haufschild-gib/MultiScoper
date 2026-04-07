@@ -8,6 +8,7 @@
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilTextField.h"
 #include "ui/components/TestId.h"
+#include "ui/components/ThemedComponent.h"
 #include "ui/theme/IThemeService.h"
 
 #include "ColorPickerComponent.h"
@@ -82,13 +83,47 @@ private:
 };
 
 /**
+ * Row of accent color preset buttons for quick accent switching
+ */
+class AccentPresetRow : public juce::Component
+{
+public:
+    explicit AccentPresetRow(IThemeService& themeService);
+
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+    void mouseUp(const juce::MouseEvent& e) override;
+
+    /// Callback when an accent preset is clicked: (hue, saturation, lightness)
+    std::function<void(float, float, float)> onAccentSelected;
+
+    /// Enable or disable the row and its buttons.
+    void setRowEnabled(bool enabled);
+
+    static constexpr int PREFERRED_HEIGHT = 54;
+
+private:
+    struct AccentPreset
+    {
+        float hue;
+        float saturation;
+        float lightness;
+        juce::String name;
+    };
+
+    IThemeService& themeService_;
+    std::vector<AccentPreset> presets_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AccentPresetRow)
+};
+
+/**
  * Main theme editor component
  * Allows creating, editing, and deleting themes
  */
 class ThemeEditorComponent
-    : public juce::Component
+    : public ThemedComponent
     , public juce::ListBoxModel
-    , public ThemeManagerListener
     , public TestIdSupport
 {
 public:
@@ -104,9 +139,6 @@ public:
     void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
     /// Apply the selected theme when the list selection changes (ListBoxModel).
     void selectedRowsChanged(int lastRowSelected) override;
-
-    // ThemeManagerListener interface
-    void themeChanged(const ColorTheme& newTheme) override;
 
     /**
      * Callback when user wants to close the editor
@@ -129,8 +161,6 @@ private:
     void handleExportTheme();
     void handleApplyTheme();
     void handleColorChanged();
-
-    IThemeService& themeService_;
 
     // Theme list
     std::unique_ptr<juce::ListBox> themeList_;
@@ -162,6 +192,9 @@ private:
 
     // System theme indicator
     std::unique_ptr<juce::Label> systemThemeLabel_;
+
+    // Accent color presets
+    std::unique_ptr<AccentPresetRow> accentPresetRow_;
 
     std::function<void()> closeCallback_;
 

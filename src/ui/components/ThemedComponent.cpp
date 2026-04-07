@@ -11,6 +11,7 @@ ThemedComponent::ThemedComponent(IThemeService& themeService) : themeService_(th
 {
     // Initialize theme cache from service
     theme_ = themeService_.getCurrentTheme();
+    glass_.computeFrom(theme_);
 
     // Register as listener for theme changes
     themeService_.addListener(this);
@@ -26,6 +27,7 @@ void ThemedComponent::themeChanged(const ColorTheme& newTheme)
 {
     // Update cached theme
     theme_ = newTheme;
+    glass_.computeFrom(theme_);
 
     // Allow subclasses to customize behavior
     onThemeChanged(newTheme);

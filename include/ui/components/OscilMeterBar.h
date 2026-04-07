@@ -105,13 +105,12 @@ private:
 
     float levelToPosition(float level) const;
     float dbToLevel(float db) const;
-    juce::Colour getLevelColour(float level) const;
 
     void paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds, float level, float rms, float peakHold, bool clip);
     void paintMeterVertical(juce::Graphics& g, const juce::Rectangle<int>& bounds, juce::ColourGradient& gradient,
                             float levelPos, float rmsPos, float peakPos, bool clip);
     void paintMeterHorizontal(juce::Graphics& g, const juce::Rectangle<int>& bounds, juce::ColourGradient& gradient,
-                              float levelPos, float peakPos, bool clip);
+                              float levelPos, float rmsPos, float peakPos, bool clip);
     void paintScale(juce::Graphics& g, juce::Rectangle<int> bounds);
 
     // Current levels

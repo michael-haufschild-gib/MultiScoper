@@ -7,6 +7,7 @@
 
 #include "core/MemoryBudgetManager.h"
 #include "core/dsp/TimingEngine.h"
+#include "ui/controllers/OscillatorPanelController.h"
 #include "ui/dialogs/OscillatorConfigDialog.h"
 #include "ui/layout/SidebarComponent.h"
 

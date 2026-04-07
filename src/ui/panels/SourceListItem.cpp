@@ -3,6 +3,7 @@
     Rich source item rendering for SourceSelectorComponent
 */
 
+#include "ui/components/GlassStyle.h"
 #include "ui/panels/SourceSelectorComponent.h"
 
 namespace oscil
@@ -24,17 +25,18 @@ void SourceListItem::paint(juce::Graphics& g)
         return;
 
     const auto& theme = themeService_.getCurrentTheme();
+    auto glass = GlassStyle::fromTheme(theme);
     auto bounds = getLocalBounds().toFloat();
 
     // Background
     if (selected_)
     {
-        g.setColour(theme.controlActive.withAlpha(0.3f));
+        g.setColour(glass.accentSubtle);
         g.fillRoundedRectangle(bounds.reduced(4, 2), 4.0f);
     }
     else if (hovered_)
     {
-        g.setColour(theme.controlHighlight.withAlpha(0.2f));
+        g.setColour(glass.bgHover);
         g.fillRoundedRectangle(bounds.reduced(4, 2), 4.0f);
     }
 
@@ -72,7 +74,7 @@ void SourceListItem::paint(juce::Graphics& g)
     bounds.removeFromRight(8);
 
     // Name (remaining space)
-    g.setColour(selected_ ? theme.textHighlight : theme.textPrimary);
+    g.setColour(selected_ ? glass.accent : theme.textPrimary);
     g.setFont(juce::FontOptions(13.0f));
     g.drawText(name_, bounds.toNearestInt(), juce::Justification::centredLeft, true);
 }
@@ -81,7 +83,7 @@ void SourceListItem::drawSourceIcon(juce::Graphics& g, juce::Rectangle<float> bo
 {
     const auto& theme = themeService_.getCurrentTheme();
     g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(16.0f));
+    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_HEADER));
 
     // Use emoji/unicode icons based on source type detection
     juce::String const icon = getIconForSource();
@@ -173,12 +175,12 @@ void NoSourceItem::paint(juce::Graphics& g)
     // Background on hover
     if (hovered_)
     {
-        g.setColour(theme.controlHighlight.withAlpha(0.2f));
+        g.setColour(theme.textPrimary.withAlpha(0.08f));
         g.fillRoundedRectangle(bounds.reduced(4, 2), 4.0f);
     }
 
     // Separator line above
-    g.setColour(theme.controlBorder.withAlpha(0.3f));
+    g.setColour(theme.textPrimary.withAlpha(0.08f));
     g.drawHorizontalLine(2, 8.0f, bounds.getWidth() - 8.0f);
 
     // Icon and text
@@ -213,18 +215,18 @@ void NoSourceItem::mouseUp(const juce::MouseEvent& e)
 //==============================================================================
 
 SourceSelectorPopup::SourceSelectorPopup(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
-    : themeService_(themeService)
+    : ThemedComponent(themeService)
     , instanceRegistry_(instanceRegistry)
 {
     // Search input with magnifier icon
-    searchInput_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Search, "");
+    searchInput_ = std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Search, "");
     searchInput_->setPlaceholder("Search sources...");
     searchInput_->onTextChanged = [this](const juce::String& /*text*/) { handleFilterChange(); };
     addAndMakeVisible(*searchInput_);
 
     // Section header
     sectionHeader_ = std::make_unique<juce::Label>("", "AVAILABLE SOURCES");
-    sectionHeader_->setFont(juce::FontOptions(11.0f).withStyle("Bold"));
+    sectionHeader_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION).withStyle("Bold"));
     addAndMakeVisible(*sectionHeader_);
 
     // List container and viewport
@@ -235,7 +237,7 @@ SourceSelectorPopup::SourceSelectorPopup(IThemeService& themeService, IInstanceR
     addAndMakeVisible(*listViewport_);
 
     // No Source option
-    noSourceItem_ = std::make_unique<NoSourceItem>(themeService_);
+    noSourceItem_ = std::make_unique<NoSourceItem>(getThemeService());
     noSourceItem_->onClick = [this]() {
         if (onDisconnect)
             onDisconnect();
@@ -244,26 +246,21 @@ SourceSelectorPopup::SourceSelectorPopup(IThemeService& themeService, IInstanceR
 
     // Register listeners
     instanceRegistry_.addListener(this);
-    themeService_.addListener(this);
 
     // Initial population
     refreshSources();
-    updateThemeColors(themeService_.getCurrentTheme());
+    updateThemeColors(getThemeService().getCurrentTheme());
 }
 
-SourceSelectorPopup::~SourceSelectorPopup()
-{
-    instanceRegistry_.removeListener(this);
-    themeService_.removeListener(this);
-}
+SourceSelectorPopup::~SourceSelectorPopup() { instanceRegistry_.removeListener(this); }
 
 void SourceSelectorPopup::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
     g.fillAll(theme.backgroundPrimary);
 
-    // Border
-    g.setColour(theme.controlBorder);
+    // Border (glass borderDefault)
+    g.setColour(theme.textPrimary.withAlpha(0.12f));
     g.drawRect(getLocalBounds(), 1);
 }
 
@@ -322,7 +319,7 @@ void SourceSelectorPopup::refreshSources()
 
     for (const auto& source : sources)
     {
-        auto item = std::make_unique<SourceListItem>(themeService_, source);
+        auto item = std::make_unique<SourceListItem>(getThemeService(), source);
         item->setSelected(source.sourceId == selectedSourceId_);
         item->onClick = [this](const SourceId& id) {
             if (onSourceSelected)
@@ -332,7 +329,7 @@ void SourceSelectorPopup::refreshSources()
         sourceItems_.push_back(std::move(item));
     }
 
-    layoutContent();
+    applyFilter();
 }
 
 void SourceSelectorPopup::handleFilterChange()
@@ -377,7 +374,7 @@ void SourceSelectorPopup::sourceUpdated(const SourceId& /*sourceId*/)
     });
 }
 
-void SourceSelectorPopup::themeChanged(const ColorTheme& newTheme) { updateThemeColors(newTheme); }
+void SourceSelectorPopup::onThemeChanged(const ColorTheme& newTheme) { updateThemeColors(newTheme); }
 
 void SourceSelectorPopup::updateThemeColors(const ColorTheme& newTheme)
 {
@@ -385,8 +382,6 @@ void SourceSelectorPopup::updateThemeColors(const ColorTheme& newTheme)
 
     // Style header
     sectionHeader_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-
-    repaint();
 }
 
 int SourceSelectorPopup::getPreferredHeight() const
@@ -398,7 +393,8 @@ int SourceSelectorPopup::getPreferredHeight() const
 
     listHeight = std::max(minListHeight, std::min(listHeight, maxListHeight));
 
-    return 16 + SEARCH_HEIGHT + 4 + HEADER_HEIGHT + 4 + listHeight + 4 + NoSourceItem::ITEM_HEIGHT + 16;
+    // Must match layoutContent(): reduced(8) top/bottom + spacing between sections
+    return 8 + SEARCH_HEIGHT + 4 + HEADER_HEIGHT + 4 + listHeight + 4 + NoSourceItem::ITEM_HEIGHT + 8;
 }
 
 //==============================================================================

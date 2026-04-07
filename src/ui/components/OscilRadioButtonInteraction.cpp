@@ -8,6 +8,23 @@
 namespace oscil
 {
 
+void OscilRadioButton::triggerSelection()
+{
+    if (!enabled_ || selected_)
+        return;
+
+    if (parentGroup_)
+    {
+        int const myIndex = findOwnIndexInGroup();
+        if (myIndex >= 0)
+            parentGroup_->setSelectedIndex(myIndex);
+    }
+    else
+    {
+        setSelected(true);
+    }
+}
+
 void OscilRadioButton::mouseDown(const juce::MouseEvent& /*event*/)
 {
     if (enabled_)
@@ -17,21 +34,7 @@ void OscilRadioButton::mouseDown(const juce::MouseEvent& /*event*/)
 void OscilRadioButton::mouseUp(const juce::MouseEvent& e)
 {
     if (isPressed_ && enabled_ && contains(e.getPosition()))
-    {
-        if (!selected_)
-        {
-            if (parentGroup_)
-            {
-                int const myIndex = findOwnIndexInGroup();
-                if (myIndex >= 0)
-                    parentGroup_->setSelectedIndex(myIndex);
-            }
-            else
-            {
-                setSelected(true);
-            }
-        }
-    }
+        triggerSelection();
     isPressed_ = false;
 }
 
@@ -74,19 +77,7 @@ bool OscilRadioButton::keyPressed(const juce::KeyPress& key)
 {
     if (enabled_ && (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey))
     {
-        if (!selected_)
-        {
-            if (parentGroup_)
-            {
-                int const myIndex = findOwnIndexInGroup();
-                if (myIndex >= 0)
-                    parentGroup_->setSelectedIndex(myIndex);
-            }
-            else
-            {
-                setSelected(true);
-            }
-        }
+        triggerSelection();
         return true;
     }
     return false;
@@ -121,7 +112,7 @@ void OscilRadioButton::timerCallback()
 {
     updateAnimations();
 
-    if (selectionSpring_.isSettled() && hoverSpring_.isSettled())
+    if (selectionSpring_.isSettled() && hoverSpring_.isSettled() && scaleSpring_.isSettled())
         stopTimer();
 
     repaint();
@@ -132,16 +123,14 @@ void OscilRadioButton::updateAnimations()
     float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     selectionSpring_.update(dt);
     hoverSpring_.update(dt);
+    scaleSpring_.update(dt);
 }
 
 std::unique_ptr<juce::AccessibilityHandler> OscilRadioButton::createAccessibilityHandler()
 {
     return std::make_unique<juce::AccessibilityHandler>(
         *this, juce::AccessibilityRole::radioButton,
-        juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] {
-            if (enabled_ && !selected_)
-                setSelected(true);
-        }));
+        juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] { triggerSelection(); }));
 }
 
 } // namespace oscil

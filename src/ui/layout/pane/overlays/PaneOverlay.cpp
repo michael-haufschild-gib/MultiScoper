@@ -4,8 +4,6 @@
 
 #include "ui/layout/pane/overlays/PaneOverlay.h"
 
-#include "ui/theme/ThemeManager.h"
-
 namespace oscil
 {
 
@@ -25,12 +23,10 @@ private:
     std::function<void()> callback_;
 };
 
-PaneOverlay::PaneOverlay(IThemeService& themeService) : themeService_(themeService)
+PaneOverlay::PaneOverlay(IThemeService& themeService) : ThemedComponent(themeService)
 {
     setOpaque(false);
     setInterceptsMouseClicks(false, false); // Default click-through
-
-    themeService_.addListener(this);
 }
 
 PaneOverlay::PaneOverlay(IThemeService& themeService, const juce::String& testId) : PaneOverlay(themeService)
@@ -46,8 +42,6 @@ PaneOverlay::~PaneOverlay()
 {
     if (fadeTimer_)
         fadeTimer_->stopTimer();
-
-    themeService_.removeListener(this);
 }
 
 void PaneOverlay::setPosition(Position pos)
@@ -139,7 +133,7 @@ void PaneOverlay::paint(juce::Graphics& g)
 
 void PaneOverlay::paintOverlayBackground(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getThemeService().getCurrentTheme();
     auto bounds = getLocalBounds().toFloat();
 
     // Semi-transparent background
@@ -158,8 +152,6 @@ bool PaneOverlay::hitTest(int x, int y)
 
     return getLocalBounds().contains(x, y);
 }
-
-void PaneOverlay::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 juce::Rectangle<int> PaneOverlay::getContentBounds() const { return getLocalBounds().reduced(CONTENT_PADDING); }
 

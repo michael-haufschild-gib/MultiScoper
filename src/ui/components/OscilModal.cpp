@@ -121,11 +121,14 @@ void OscilModal::show(juce::Component* parent)
             content_->setAlpha(showSpring_.position);
 
         showSpring_.setTarget(1.0f);
+        scaleSpring_.setTarget(1.0f, 0.95f); // scale from 0.95 → 1.0
         startTimerHz(ComponentLayout::ANIMATION_FPS);
     }
     else
     {
         showSpring_.position = 1.0f;
+        scaleSpring_.position = 1.0f;
+        scaleSpring_.target = 1.0f;
 
         if (content_)
             content_->setAlpha(1.0f);
@@ -141,6 +144,8 @@ void OscilModal::hide()
     stopTimer();
     showSpring_.position = 0.0f;
     showSpring_.target = 0.0f;
+    scaleSpring_.position = 0.95f;
+    scaleSpring_.target = 0.95f;
     setVisible(false);
 
     if (content_)
@@ -310,7 +315,7 @@ void OscilModal::timerCallback()
 {
     updateAnimations();
 
-    bool const isSettled = showSpring_.isSettled();
+    bool const isSettled = showSpring_.isSettled() && scaleSpring_.isSettled();
 
     if (isSettled)
     {
@@ -339,6 +344,7 @@ void OscilModal::updateAnimations()
 {
     float const dt = AnimationTiming::FRAME_DURATION_60FPS;
     showSpring_.update(dt);
+    scaleSpring_.update(dt);
     closeHoverSpring_.update(dt);
 
     if (content_)

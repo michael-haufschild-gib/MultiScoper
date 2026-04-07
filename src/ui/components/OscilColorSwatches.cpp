@@ -4,6 +4,8 @@
 
 #include "ui/components/OscilColorSwatches.h"
 
+#include "ui/components/GlassPainter.h"
+
 #include <utility>
 
 namespace oscil
@@ -162,13 +164,11 @@ void OscilColorSwatches::paint(juce::Graphics& g)
         paintSwatch(g, i, bounds);
     }
 
-    // Focus ring around focused swatch
+    // Focus ring around focused swatch — accent-colored via GlassPainter
     if (hasFocus_ && focusedIndex_ >= 0 && std::cmp_less(focusedIndex_, colors_.size()))
     {
-        auto bounds = getSwatchBounds(focusedIndex_).toFloat();
-        g.setColour(getTheme().controlActive.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-        g.drawRoundedRectangle(bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET), ComponentLayout::RADIUS_SM,
-                               ComponentLayout::FOCUS_RING_WIDTH);
+        auto focusBounds = getSwatchBounds(focusedIndex_).toFloat();
+        GlassPainter::paintFocusRing(g, focusBounds, ComponentLayout::RADIUS_SM, getGlass().accent);
     }
 }
 
@@ -187,31 +187,27 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
     // Draw checker pattern for transparent colors
     if (color.getAlpha() < 255)
     {
-        int const checkerSize = 4;
-        for (int y = bounds.getY(); y < bounds.getBottom(); y += checkerSize)
-        {
-            for (int x = bounds.getX(); x < bounds.getRight(); x += checkerSize)
-            {
-                bool const isWhite =
-                    (((x - bounds.getX()) / checkerSize) + ((y - bounds.getY()) / checkerSize)) % 2 == 0;
-                g.setColour(isWhite ? juce::Colours::white : juce::Colours::lightgrey);
-                g.fillRect(x, y, std::min(checkerSize, bounds.getRight() - x),
-                           std::min(checkerSize, bounds.getBottom() - y));
-            }
-        }
+        GlassPainter::paintCheckerboard(g, bounds, 4);
     }
 
     // Color fill
     g.setColour(color);
     g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
 
-    // Border
-    auto borderColour = isSelected                     ? getTheme().controlActive
-                        : color.getBrightness() > 0.9f ? getTheme().controlBorder
+    // Border — use accent for selection, glass borderSubtle otherwise
+    const auto& glass = getGlass();
+    auto borderColour = isSelected                     ? glass.accent
+                        : color.getBrightness() > 0.9f ? glass.borderSubtle
                                                        : color.darker(0.3f);
 
     g.setColour(borderColour);
     g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), ComponentLayout::RADIUS_SM, isSelected ? 2.0f : 1.0f);
+
+    // Selection ring for selected swatch
+    if (isSelected)
+    {
+        GlassPainter::paintFocusRing(g, bounds.toFloat(), ComponentLayout::RADIUS_SM, glass.accent, 1.5f, 1.5f);
+    }
 
     // Selection checkmark
     if (isSelected && showCheckmark_)

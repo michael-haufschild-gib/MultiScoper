@@ -18,15 +18,14 @@ OscillatorListComponent::OscillatorListComponent(ServiceContext& context)
 }
 
 OscillatorListComponent::OscillatorListComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
-    : instanceRegistry_(instanceRegistry)
-    , themeService_(themeService)
+    : ThemedComponent(themeService)
+    , instanceRegistry_(instanceRegistry)
 {
     setOpaque(true);
-    themeService_.addListener(this);
 
     setTestId("oscillatorList");
 
-    toolbar_ = std::make_unique<OscillatorListToolbar>(themeService_);
+    toolbar_ = std::make_unique<OscillatorListToolbar>(getThemeService());
     toolbar_->addListener(this);
     addAndMakeVisible(toolbar_.get());
 
@@ -41,7 +40,7 @@ OscillatorListComponent::OscillatorListComponent(IThemeService& themeService, II
     emptyStateLabel_->setText("No oscillators yet.\nClick '+ Add Oscillator' above to get started.",
                               juce::dontSendNotification);
     emptyStateLabel_->setJustificationType(juce::Justification::centred);
-    emptyStateLabel_->setColour(juce::Label::textColourId, themeService_.getCurrentTheme().textSecondary);
+    emptyStateLabel_->setColour(juce::Label::textColourId, getThemeService().getCurrentTheme().textSecondary);
     addChildComponent(emptyStateLabel_.get());
 }
 
@@ -49,7 +48,6 @@ OscillatorListComponent::~OscillatorListComponent()
 {
     removeAllChildren(); // Prevent double-free/UAF in base Component destructor
 
-    themeService_.removeListener(this);
     toolbar_->removeListener(this);
 
     for (auto& item : items_)
@@ -63,8 +61,8 @@ void OscillatorListComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_)
 
 void OscillatorListComponent::paint(juce::Graphics& g)
 {
-    const auto& theme = themeService_.getCurrentTheme();
-    g.fillAll(theme.backgroundSecondary);
+    const auto& theme = getThemeService().getCurrentTheme();
+    g.fillAll(theme.backgroundPane.withAlpha(theme.panelAlpha));
 
     // Draw drag indicator line
     if (dragTargetIndex_ >= 0)
@@ -206,7 +204,7 @@ void OscillatorListComponent::rebuildItems(
         }
         else
         {
-            item = std::make_unique<OscillatorListItemComponent>(osc, instanceRegistry_, themeService_);
+            item = std::make_unique<OscillatorListItemComponent>(osc, instanceRegistry_, getThemeService());
             OSCIL_LOG(UI, "OscList: created new item for " << osc.getName() << " order=" << osc.getOrderIndex());
         }
 
@@ -435,8 +433,6 @@ void OscillatorListComponent::updateDragIndicator(int targetIndex)
         repaint();
     }
 }
-
-void OscillatorListComponent::themeChanged(const ColorTheme& /*newTheme*/) { repaint(); }
 
 void OscillatorListComponent::filterModeChanged(OscillatorFilterMode mode)
 {

@@ -8,6 +8,7 @@
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
+#include "ui/components/GlassPainter.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -174,6 +175,9 @@ private:
     SpringAnimation brightnessSpring_;
     float currentScale_ = 1.0f;
     float currentBrightness_ = 0.0f;
+
+    // Ripple feedback
+    RippleManager rippleManager_;
 
     // Constants
     static constexpr int ICON_PADDING = 8;

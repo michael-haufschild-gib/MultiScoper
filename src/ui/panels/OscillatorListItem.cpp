@@ -18,9 +18,9 @@ namespace oscil
 OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscillator,
                                                          IInstanceRegistry& instanceRegistry,
                                                          IThemeService& themeService)
-    : oscillatorId_(oscillator.getId())
+    : ThemedComponent(themeService)
+    , oscillatorId_(oscillator.getId())
     , instanceRegistry_(instanceRegistry)
-    , themeService_(themeService)
     , displayName_(oscillator.getName())
     , colour_(oscillator.getColour())
     , processingMode_(oscillator.getProcessingMode())
@@ -49,12 +49,11 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
         trackName_ = "Self";
     }
 
-    themeService_.addListener(this);
-
     setupComponents(oscillator.getOrderIndex());
 
     // Initialize colors
-    themeChanged(themeService_.getCurrentTheme());
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
+    onThemeChanged(getTheme());
 
     // Enable keyboard focus for accessibility
     setWantsKeyboardFocus(true);
@@ -62,7 +61,7 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
 
 void OscillatorListItemComponent::setupLabels()
 {
-    nameLabel_ = std::make_unique<InlineEditLabel>(themeService_, getTestId() + "_name");
+    nameLabel_ = std::make_unique<InlineEditLabel>(getThemeService(), getTestId() + "_name");
     nameLabel_->setText(displayName_, false);
     nameLabel_->setPlaceholder("Oscillator name...");
     nameLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT).withStyle("Bold"));
@@ -86,7 +85,7 @@ void OscillatorListItemComponent::setupLabels()
 
 void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
 {
-    deleteButton_ = std::make_unique<OscilButton>(themeService_, "");
+    deleteButton_ = std::make_unique<OscilButton>(getThemeService(), "");
     deleteButton_->setVariant(ButtonVariant::Icon);
     deleteButton_->setIconPath(ListItemIcons::createTrashIcon(static_cast<float>(ICON_BUTTON_SIZE)));
     deleteButton_->setTooltip("Delete Oscillator (Delete/Backspace)");
@@ -97,7 +96,7 @@ void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
     };
     addChildComponent(*deleteButton_);
 
-    settingsButton_ = std::make_unique<OscilButton>(themeService_, "");
+    settingsButton_ = std::make_unique<OscilButton>(getThemeService(), "");
     settingsButton_->setVariant(ButtonVariant::Icon);
     settingsButton_->setIconPath(ListItemIcons::createGearIcon(static_cast<float>(ICON_BUTTON_SIZE)));
     settingsButton_->setTooltip("Configure Oscillator (Enter)");
@@ -108,7 +107,7 @@ void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
     };
     addChildComponent(*settingsButton_);
 
-    visibilityButton_ = std::make_unique<OscilButton>(themeService_, "");
+    visibilityButton_ = std::make_unique<OscilButton>(getThemeService(), "");
     visibilityButton_->setVariant(ButtonVariant::Icon);
     if (suffix.isNotEmpty())
         visibilityButton_->setTestId(getTestId() + "_vis_btn");
@@ -127,7 +126,7 @@ void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
 
 void OscillatorListItemComponent::setupModeButtons(const juce::String& suffix)
 {
-    modeButtons_ = std::make_unique<SegmentedButtonBar>(themeService_);
+    modeButtons_ = std::make_unique<SegmentedButtonBar>(getThemeService());
     modeButtons_->setMinButtonWidth(36);
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(14),
                                     static_cast<int>(ProcessingMode::FullStereo), {},
@@ -162,7 +161,7 @@ void OscillatorListItemComponent::setupComponents(int orderIndex)
 
 void OscillatorListItemComponent::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
 
-OscillatorListItemComponent::~OscillatorListItemComponent() { themeService_.removeListener(this); }
+OscillatorListItemComponent::~OscillatorListItemComponent() = default;
 
 void OscillatorListItemComponent::updateVisibility()
 {
@@ -177,7 +176,7 @@ void OscillatorListItemComponent::updateVisibility()
     settingsButton_->setAlpha(buttonAlpha);
 
     // Update label alpha based on visibility
-    const auto& theme = themeService_.getCurrentTheme();
+    const auto& theme = getTheme();
     float const alpha = isVisible_ ? 1.0f : 0.5f;
 
     if (nameLabel_)
@@ -262,22 +261,19 @@ void OscillatorListItemComponent::resized()
 
 bool OscillatorListItemComponent::isInDragZone(const juce::Point<int>& pos) const { return pos.x < DRAG_HANDLE_WIDTH; }
 
-void OscillatorListItemComponent::themeChanged(const ColorTheme& /*newTheme*/)
+void OscillatorListItemComponent::onThemeChanged(const ColorTheme& newTheme)
 {
-    const auto& theme = themeService_.getCurrentTheme();
     float const alpha = isVisible_ ? 1.0f : 0.5f;
 
     if (nameLabel_)
     {
-        nameLabel_->setTextColour((selected_ ? theme.textHighlight : theme.textPrimary).withAlpha(alpha));
+        nameLabel_->setTextColour((selected_ ? newTheme.textHighlight : newTheme.textPrimary).withAlpha(alpha));
     }
 
     if (trackLabel_)
     {
-        trackLabel_->setColour(juce::Label::textColourId, theme.textSecondary.withAlpha(alpha));
+        trackLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary.withAlpha(alpha));
     }
-
-    repaint();
 }
 
 void OscillatorListItemComponent::setSelected(bool selected)
@@ -287,7 +283,7 @@ void OscillatorListItemComponent::setSelected(bool selected)
         selected_ = selected;
 
         // Update label colors for selection state
-        const auto& theme = themeService_.getCurrentTheme();
+        const auto& theme = getTheme();
         float const alpha = isVisible_ ? 1.0f : 0.5f;
         if (nameLabel_)
         {

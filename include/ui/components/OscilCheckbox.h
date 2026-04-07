@@ -8,6 +8,7 @@
 #include "ui/components/AnimationSettings.h"
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/ComponentTypes.h"
+#include "ui/components/GlassPainter.h"
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -106,6 +107,7 @@ private:
     // Animation
     SpringAnimation checkSpring_; // 0 = unchecked, 1 = checked
     SpringAnimation hoverSpring_;
+    SpringAnimation scaleSpring_; // Pop scale on check/uncheck
 
     // Theme
 
