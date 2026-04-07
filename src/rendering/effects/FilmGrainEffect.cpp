@@ -88,7 +88,7 @@ void FilmGrainEffect::setUniforms(const Framebuffer& source, float deltaTime)
     // makes the wrap boundary invisible.
     accumulatedTime_ += deltaTime * settings_.speed;
     if (accumulatedTime_ > 10.0f)
-        accumulatedTime_ -= 10.0f;
+        accumulatedTime_ = std::fmod(accumulatedTime_, 10.0f);
 
     juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
     juce::OpenGLExtensionFunctions::glUniform1f(timeLoc_, accumulatedTime_);

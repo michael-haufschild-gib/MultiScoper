@@ -110,11 +110,7 @@ void PaneComponent::handleHeaderAction(PaneAction action, bool state)
             break;
 
         case PaneAction::Screenshot:
-            // Future: Implement screenshot capture
-            break;
-
         case PaneAction::ReorderWaveforms:
-            // Future: Implement waveform reordering
             break;
     }
 }
