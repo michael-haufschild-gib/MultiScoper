@@ -64,7 +64,8 @@ void VignetteEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
     juce::ignoreUnused(source, deltaTime);
     juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
-    juce::OpenGLExtensionFunctions::glUniform1f(softnessLoc_, settings_.softness);
+    float const safeSoftness = std::max(settings_.softness, 1.0e-4f);
+    juce::OpenGLExtensionFunctions::glUniform1f(softnessLoc_, safeSoftness);
     juce::OpenGLExtensionFunctions::glUniform4f(colorLoc_, settings_.colour.getFloatRed(),
                                                 settings_.colour.getFloatGreen(), settings_.colour.getFloatBlue(),
                                                 settings_.colour.getFloatAlpha());

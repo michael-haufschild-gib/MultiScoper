@@ -352,12 +352,12 @@ public:
     bool isSystemTheme(const juce::String& name) const override;
 
     /**
-     * Import theme from JSON
+     * Import theme from XML string (JUCE ValueTree format).
      */
     bool importTheme(const juce::String& xmlString) override;
 
     /**
-     * Export theme to JSON
+     * Export theme to XML string (JUCE ValueTree format).
      */
     juce::String exportTheme(const juce::String& name) const override;
 

@@ -237,8 +237,8 @@ void EffectPipeline::setQualityLevel(QualityLevel level)
     bool const enableHeavy = (level != QualityLevel::Eco);
     for (const auto* id : heavyEffects)
     {
-        if (auto* effect = getEffect(id))
-            effect->setEnabled(enableHeavy);
+        if (auto it = effects_.find(id); it != effects_.end() && it->second)
+            it->second->setEnabled(enableHeavy);
     }
 }
 

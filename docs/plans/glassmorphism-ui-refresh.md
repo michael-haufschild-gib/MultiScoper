@@ -2,7 +2,7 @@
 
 **Status**: Approved for implementation
 **Date**: 2026-04-04
-**Reference**: `/Users/Spare/Documents/code/monetisation/projects/animations/src/demo-ui`
+**Reference**: See internal demo-ui project for web reference implementation
 **Scope**: Full visual + interaction refresh of all Oscil UI components, no backward compatibility required
 
 ---

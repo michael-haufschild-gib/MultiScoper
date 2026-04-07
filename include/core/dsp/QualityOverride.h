@@ -84,10 +84,19 @@ inline QualityPreset resolveQualityOverride(QualityOverride override, QualityPre
 
 inline juce::String qualityOverrideToDisplayName(QualityOverride override)
 {
-    if (override == QualityOverride::UseGlobal)
-        return "Use Global";
+    switch (override)
+    {
+        case QualityOverride::UseGlobal:
+            return "Use Global";
+        case QualityOverride::Eco:
+        case QualityOverride::Standard:
+        case QualityOverride::High:
+        case QualityOverride::Ultra:
+            return qualityPresetToDisplayName(resolveQualityOverride(override, QualityPreset::Standard));
+    }
 
-    return qualityPresetToDisplayName(resolveQualityOverride(override, QualityPreset::Standard));
+    jassertfalse; // Invalid enum value
+    return "Use Global";
 }
 
 } // namespace oscil

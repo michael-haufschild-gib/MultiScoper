@@ -213,11 +213,7 @@ void RenderEngine::renderWaveform(const WaveformRenderData& data)
     if (!initialized_ || !data.visible || data.bounds.isEmpty())
         return;
 
-    auto* statePtr = resolveWaveformState(data.id);
-    if (statePtr == nullptr)
-        return;
-
-    WaveformRenderState& state = *statePtr;
+    WaveformRenderState& state = *resolveWaveformState(data.id);
 
     waveformPass_->prepareRender(data, state, stats_.getDeltaTime());
 

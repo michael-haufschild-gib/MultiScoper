@@ -37,7 +37,7 @@ public:
      */
     struct Result
     {
-        PaneId paneId;        // Valid if createNewPane is false
+        PaneId paneId{};      // Valid if createNewPane is false
         bool createNewPane{}; // True if "New pane" was selected
     };
 

@@ -52,13 +52,6 @@ private:
     std::unique_ptr<ShaderRegistry> registry_;
 
     // Compiled per-instance shaders
-    struct JuceStringHash
-    {
-        std::size_t operator()(const juce::String& s) const
-        {
-            return static_cast<std::size_t>(static_cast<uint32_t>(s.hashCode()));
-        }
-    };
     std::unordered_map<juce::String, std::unique_ptr<WaveformShader>, JuceStringHash> compiledShaders_;
 
     juce::OpenGLContext* context_ = nullptr;

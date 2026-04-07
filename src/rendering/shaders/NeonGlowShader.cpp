@@ -19,6 +19,9 @@ struct NeonGlowShader::GLResources : WaveformShader::WaveformGLResources
     // Extra uniform locations (beyond base projection, baseColor, opacity)
     GLint glowIntensityLoc = -1;
     GLint geometryScaleLoc = -1;
+    // Attribute locations (cached at compile time)
+    GLint positionLoc = -1;
+    GLint distFromCenterLoc = -1;
 };
 #endif
 
@@ -52,10 +55,13 @@ bool NeonGlowShader::compile(juce::OpenGLContext& context)
 
     gl_->glowIntensityLoc = gl_->program->getUniformIDFromName("glowIntensity");
     gl_->geometryScaleLoc = gl_->program->getUniformIDFromName("geometryScale");
+    gl_->positionLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "position");
+    gl_->distFromCenterLoc =
+        juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
 
-    if (gl_->glowIntensityLoc < 0 || gl_->geometryScaleLoc < 0)
+    if (gl_->glowIntensityLoc < 0 || gl_->geometryScaleLoc < 0 || gl_->positionLoc < 0 || gl_->distFromCenterLoc < 0)
     {
-        DBG("NeonGlowShader: Missing required extra uniforms");
+        DBG("NeonGlowShader: Missing required uniforms or attributes");
         releaseGLResources(*gl_);
         return false;
     }
@@ -104,10 +110,8 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
     float amp2 = 0.0f;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    auto programId = gl_->program->getProgramID();
-    GLint posLoc = std::max(GLint{0}, juce::OpenGLExtensionFunctions::glGetAttribLocation(programId, "position"));
-    GLint distLoc =
-        std::max(GLint{1}, juce::OpenGLExtensionFunctions::glGetAttribLocation(programId, "distFromCenter"));
+    GLint const posLoc = gl_->positionLoc;
+    GLint const distLoc = gl_->distFromCenterLoc;
 
     float const visualWidth = params.lineWidth * kGeometryScale;
     auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {

@@ -55,7 +55,15 @@ if [ -n "$STAGED_CPP" ]; then
                 # Check if file needs formatting
                 DIFF=$(clang-format --dry-run --Werror "$file" 2>&1 || true)
                 if [ -n "$DIFF" ]; then
-                    # Auto-fix and re-stage
+                    # Check if file has unstaged changes (partial staging)
+                    if git diff --name-only -- "$file" | grep -q .; then
+                        echo -e "${RED}FAILED${NC}"
+                        echo "    $file needs formatting but has unstaged changes."
+                        echo "    Please format and stage manually: clang-format -i \"$file\" && git add \"$file\""
+                        FAIL=1
+                        break
+                    fi
+                    # Auto-fix and re-stage (safe: no unstaged changes)
                     clang-format -i "$file"
                     git add "$file"
                     FORMATTED_FILES="${FORMATTED_FILES}\n    ${file}"

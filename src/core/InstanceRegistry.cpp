@@ -85,7 +85,6 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
 {
     // Preconditions
     jassert(captureBuffer != nullptr);
-    jassert(trackIdentifier.isNotEmpty());
     jassert(channelCount > 0 && channelCount <= 2);
     jassert(sampleRate > 0.0);
 

@@ -114,6 +114,13 @@ protected:
         GLuint vbo = 0;
         bool compiled = false;
 
+        WaveformGLResources() = default;
+        ~WaveformGLResources() = default;
+        WaveformGLResources(const WaveformGLResources&) = delete;
+        WaveformGLResources& operator=(const WaveformGLResources&) = delete;
+        WaveformGLResources(WaveformGLResources&&) = delete;
+        WaveformGLResources& operator=(WaveformGLResources&&) = delete;
+
         GLint projectionLoc = -1;
         GLint baseColorLoc = -1;
         GLint opacityLoc = -1;

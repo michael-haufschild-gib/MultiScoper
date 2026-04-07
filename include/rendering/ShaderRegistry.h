@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "JuceStringHash.h"
 #include "WaveformShader.h"
 
 #include <juce_core/juce_core.h>
@@ -75,14 +76,6 @@ private:
      * Register built-in shaders
      */
     void registerBuiltInShaders();
-
-    struct JuceStringHash
-    {
-        std::size_t operator()(const juce::String& s) const
-        {
-            return static_cast<std::size_t>(static_cast<uint32_t>(s.hashCode()));
-        }
-    };
 
     // Prototype storage
     std::unordered_map<juce::String, std::unique_ptr<WaveformShader>, JuceStringHash> shaders_;

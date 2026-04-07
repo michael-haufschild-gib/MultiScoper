@@ -450,9 +450,16 @@ void BloomEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Frame
     if (source->width != lastWidth_ || source->height != lastHeight_)
         resizeMipChain(context, source->width, source->height);
 
-    // If mip chain allocation failed, skip rendering
+    // If mip chain allocation failed, pass through source unmodified
     if (lastWidth_ == 0 || lastHeight_ == 0)
+    {
+        juce::gl::glBindFramebuffer(juce::gl::GL_READ_FRAMEBUFFER, source->fbo);
+        juce::gl::glBindFramebuffer(juce::gl::GL_DRAW_FRAMEBUFFER, destination->fbo);
+        juce::gl::glBlitFramebuffer(0, 0, source->width, source->height, 0, 0, destination->width, destination->height,
+                                    GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        juce::gl::glBindFramebuffer(juce::gl::GL_FRAMEBUFFER, 0);
         return;
+    }
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);

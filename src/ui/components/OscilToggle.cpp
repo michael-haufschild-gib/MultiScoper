@@ -5,6 +5,8 @@
 
 #include "ui/components/OscilToggle.h"
 
+#include "ui/components/GlassPainter.h"
+
 namespace oscil
 {
 

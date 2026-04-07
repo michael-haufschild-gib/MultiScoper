@@ -5,6 +5,8 @@
 
 #include "ui/components/OscilCheckbox.h"
 
+#include "ui/components/GlassPainter.h"
+
 namespace oscil
 {
 

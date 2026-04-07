@@ -111,10 +111,15 @@ void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<f
     float amp2 = 0.0f;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    GLint const posLoc = std::max(0, static_cast<int>(juce::OpenGLExtensionFunctions::glGetAttribLocation(
-                                         gl_->program->getProgramID(), "position")));
-    GLint const distLoc = std::max(1, static_cast<int>(juce::OpenGLExtensionFunctions::glGetAttribLocation(
-                                          gl_->program->getProgramID(), "distFromCenter")));
+    GLint const posLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "position");
+    GLint const distLoc =
+        juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
+
+    if (posLoc < 0 || distLoc < 0)
+    {
+        jassertfalse; // Shader attributes not found
+        return;
+    }
 
     drawChannel(ext, channel1, centerY1, amp1, params.bounds.getX(), params.bounds.getWidth(), params.lineWidth, posLoc,
                 distLoc);
