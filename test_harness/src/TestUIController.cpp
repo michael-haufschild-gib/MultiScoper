@@ -103,69 +103,41 @@ bool TestUIController::click(const juce::String& elementId)
 
 bool TestUIController::clickWithModifiers(const juce::String& elementId, const ModifierKeyState& modifiers)
 {
-    bool result = false;
     auto mods = modifiers.toJuceModifiers();
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, mods, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
-            simulateMouseClick(comp, false, mods);
-            result = true;
-        }
-        done.signal();
+    return runOnMessageThreadSync(elementId, [this, mods](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        simulateMouseClick(comp, false, mods);
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 bool TestUIController::doubleClick(const juce::String& elementId)
 {
-    bool result = false;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
-            simulateMouseClick(comp, true);
-            result = true;
-        }
-        done.signal();
+    return runOnMessageThreadSync(elementId, [this](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        simulateMouseClick(comp, true);
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 bool TestUIController::rightClick(const juce::String& elementId)
 {
-    bool result = false;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
-            simulateMouseRightClick(comp);
-            result = true;
-        }
-        done.signal();
+    return runOnMessageThreadSync(elementId, [this](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        simulateMouseRightClick(comp);
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 bool TestUIController::hover(const juce::String& elementId, int durationMs)
 {
-    bool result = false;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, durationMs, &result, &done]() {
-        auto* component = getTargetComponent(elementId);
-        if (component == nullptr)
-        {
-            done.signal();
-            return;
-        }
+    return runOnMessageThreadSync(elementId, [this, durationMs](juce::Component* component) -> bool {
+        if (!component)
+            return false;
         simulateMouseHover(component);
-        result = true;
 
         // Schedule hover end
         juce::Component::SafePointer<juce::Component> hoverSafe(component);
@@ -185,11 +157,8 @@ bool TestUIController::hover(const juce::String& elementId, int durationMs)
 
             comp->mouseExit(mouseEvent);
         });
-        done.signal();
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 bool TestUIController::drag(const juce::String& fromElementId, const juce::String& toElementId)
@@ -234,113 +203,73 @@ bool TestUIController::dragWithModifiers(const juce::String& fromElementId, cons
 
 bool TestUIController::dragByOffset(const juce::String& elementId, int deltaX, int deltaY)
 {
-    bool result = false;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, deltaX, deltaY, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
-            simulateMouseDragOffset(comp, deltaX, deltaY);
-            result = true;
-        }
-        done.signal();
+    return runOnMessageThreadSync(elementId, [this, deltaX, deltaY](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        simulateMouseDragOffset(comp, deltaX, deltaY);
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 bool TestUIController::dragByOffsetWithModifiers(const juce::String& elementId, int deltaX, int deltaY,
                                                  const ModifierKeyState& modifiers)
 {
-    bool result = false;
     auto mods = modifiers.toJuceModifiers();
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, deltaX, deltaY, mods, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
-            simulateMouseDragOffset(comp, deltaX, deltaY, mods);
-            result = true;
-        }
-        done.signal();
+    return runOnMessageThreadSync(elementId, [this, deltaX, deltaY, mods](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        simulateMouseDragOffset(comp, deltaX, deltaY, mods);
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 ScrollResult TestUIController::scroll(const juce::String& elementId, float deltaY, float deltaX)
 {
-    ScrollResult result;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, deltaX, deltaY, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
+    return runOnMessageThreadSyncWithResult<ScrollResult>(
+        elementId, ScrollResult{}, [this, deltaX, deltaY](juce::Component* comp) -> ScrollResult {
+            if (!comp)
+                return {};
             simulateMouseWheel(comp, deltaX, deltaY);
-            result.success = true;
-        }
-        done.signal();
-    });
-    done.wait(3000);
-
-    return result;
+            return {true, 0.0, 0.0};
+        });
 }
 
 ScrollResult TestUIController::scrollWithModifiers(const juce::String& elementId, float deltaY, float deltaX,
                                                    const ModifierKeyState& modifiers)
 {
-    ScrollResult result;
     auto mods = modifiers.toJuceModifiers();
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, deltaX, deltaY, mods, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
+    return runOnMessageThreadSyncWithResult<ScrollResult>(
+        elementId, ScrollResult{}, [this, deltaX, deltaY, mods](juce::Component* comp) -> ScrollResult {
+            if (!comp)
+                return {};
             simulateMouseWheel(comp, deltaX, deltaY, mods);
-            result.success = true;
-        }
-        done.signal();
-    });
-    done.wait(3000);
-
-    return result;
+            return {true, 0.0, 0.0};
+        });
 }
 
 // ================== Keyboard Interactions ==================
 
 bool TestUIController::pressKey(int keyCode, const juce::String& elementId)
 {
-    bool result = false;
     juce::KeyPress key(keyCode);
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, key, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
-            simulateKeyPress(comp, key);
-            result = true;
-        }
-        done.signal();
+    return runOnMessageThreadSync(elementId, [this, key](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        simulateKeyPress(comp, key);
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 bool TestUIController::pressKeyWithModifiers(int keyCode, const ModifierKeyState& modifiers,
                                              const juce::String& elementId)
 {
-    bool result = false;
     juce::KeyPress key(keyCode, modifiers.toJuceModifiers(), 0);
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, key, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
-        {
-            simulateKeyPress(comp, key);
-            result = true;
-        }
-        done.signal();
+    return runOnMessageThreadSync(elementId, [this, key](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        simulateKeyPress(comp, key);
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 bool TestUIController::pressEscape(const juce::String& elementId)
@@ -403,24 +332,17 @@ bool TestUIController::pressDelete(const juce::String& elementId)
 
 bool TestUIController::typeCharacters(const juce::String& text, const juce::String& elementId)
 {
-    bool result = false;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, elementId, text, &result, &done]() {
-        if (auto* comp = getTargetComponent(elementId))
+    return runOnMessageThreadSync(elementId, [this, text](juce::Component* comp) -> bool {
+        if (!comp)
+            return false;
+        for (int i = 0; i < text.length(); ++i)
         {
-            for (int i = 0; i < text.length(); ++i)
-            {
-                juce::juce_wchar ch = text[i];
-                juce::KeyPress key(ch);
-                simulateKeyPress(comp, key);
-            }
-            result = true;
+            juce::juce_wchar ch = text[i];
+            juce::KeyPress key(ch);
+            simulateKeyPress(comp, key);
         }
-        done.signal();
+        return true;
     });
-    done.wait(3000);
-
-    return result;
 }
 
 } // namespace oscil::test

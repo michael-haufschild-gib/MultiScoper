@@ -86,14 +86,11 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -133,7 +130,7 @@ void WaveformHandler::handleGetWaveformState(const httplib::Request& /*req*/, ht
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 } // namespace oscil

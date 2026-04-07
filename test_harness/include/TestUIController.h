@@ -348,6 +348,55 @@ public:
      */
     bool waitForSliderValue(const juce::String& elementId, double value, double tolerance = 0.01, int timeoutMs = 5000);
 
+protected:
+    static constexpr int MESSAGE_THREAD_TIMEOUT_MS = 3000;
+
+    /// Run a function on the message thread synchronously, returning its bool result.
+    /// Resolves the element via getTargetComponent and passes it (possibly nullptr) to func.
+    template <typename Func>
+    bool runOnMessageThreadSync(const juce::String& elementId, Func&& func)
+    {
+        bool result = false;
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([this, elementId, &result, &done, f = std::forward<Func>(func)]() mutable {
+            auto* component = getTargetComponent(elementId);
+            result = f(component);
+            done.signal();
+        });
+        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
+        return result;
+    }
+
+    /// Overload for lambdas that don't need component resolution.
+    template <typename Func>
+    bool runOnMessageThreadSync(Func&& func)
+    {
+        bool result = false;
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([&result, &done, f = std::forward<Func>(func)]() mutable {
+            result = f();
+            done.signal();
+        });
+        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
+        return result;
+    }
+
+    /// Run a function on the message thread synchronously, returning a value of type T.
+    /// Resolves the element via getTargetComponent and passes it to func.
+    template <typename T, typename Func>
+    T runOnMessageThreadSyncWithResult(const juce::String& elementId, T defaultValue, Func&& func)
+    {
+        T result = std::move(defaultValue);
+        juce::WaitableEvent done;
+        juce::MessageManager::callAsync([this, elementId, &result, &done, f = std::forward<Func>(func)]() mutable {
+            auto* component = getTargetComponent(elementId);
+            result = f(component);
+            done.signal();
+        });
+        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
+        return result;
+    }
+
 private:
     void simulateMouseClick(juce::Component* component, bool doubleClick = false, const juce::ModifierKeys& mods = {});
     void simulateMouseRightClick(juce::Component* component);
@@ -369,6 +418,8 @@ private:
     juce::Component* getTargetComponent(const juce::String& elementId);
     juce::Component* getCurrentFocusedComponent();
     juce::String getFocusedElementIdOnMessageThread();
+
+    bool adjustSlider(const juce::String& elementId, int direction);
 
     // Track scope for multi-instance element resolution
     int trackScopeIndex_ = -1; // -1 = no scope (global)

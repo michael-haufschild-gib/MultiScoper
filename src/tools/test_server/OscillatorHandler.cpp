@@ -11,6 +11,7 @@
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
+#include "tools/test_server/TestServerUtils.h"
 
 #include <algorithm>
 #include <utility>
@@ -21,17 +22,7 @@ namespace oscil
 namespace
 {
 
-OscillatorId resolveOscillatorId(const std::string& idStr, int index, const std::vector<Oscillator>& oscillators)
-{
-    OscillatorId targetId;
-    if (!idStr.empty())
-        targetId.id = juce::String(idStr);
-    else if (index >= 0 && std::cmp_less(index, oscillators.size()))
-        targetId = oscillators[static_cast<size_t>(index)].getId();
-    return targetId;
-}
-
-nlohmann::json serializeOscillatorList(std::vector<Oscillator>& oscillators)
+nlohmann::json serializeOscillatorList(std::vector<Oscillator> oscillators)
 {
     std::ranges::sort(oscillators,
                       [](const Oscillator& a, const Oscillator& b) { return a.getOrderIndex() < b.getOrderIndex(); });
@@ -145,7 +136,7 @@ void OscillatorHandler::handleAddOscillator(const httplib::Request& /*req*/, htt
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, httplib::Response& res)
@@ -174,8 +165,7 @@ void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, http
             }
             else
             {
-                response["error"] = "No valid oscillator specified";
-                return response;
+                return jsonError("No valid oscillator specified");
             }
 
             int const countBefore = static_cast<int>(oscillators.size());
@@ -192,14 +182,11 @@ void OscillatorHandler::handleDeleteOscillator(const httplib::Request& req, http
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -215,10 +202,7 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
 
         if (oscillatorIndex < 0 && oscillatorIdStr.empty())
         {
-            nlohmann::json error;
-            error["error"] = "Either index or id required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
+            sendJson(res, jsonError("Either index or id required"), 400);
             return;
         }
 
@@ -226,14 +210,11 @@ void OscillatorHandler::handleUpdateOscillator(const httplib::Request& req, http
         auto result = runOnMessageThread([this, oscillatorIndex, oscillatorIdStr, processingMode, visible]() {
             return updateOscillatorOnMessageThread(oscillatorIdStr, oscillatorIndex, processingMode, visible);
         });
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -261,7 +242,7 @@ void OscillatorHandler::handleGetOscillators(const httplib::Request& /*req*/, ht
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 void OscillatorHandler::handleReorderOscillator(const httplib::Request& req, httplib::Response& res)
@@ -274,10 +255,7 @@ void OscillatorHandler::handleReorderOscillator(const httplib::Request& req, htt
 
         if (fromIndex < 0 || toIndex < 0)
         {
-            nlohmann::json error;
-            error["error"] = "fromIndex and toIndex are required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
+            sendJson(res, jsonError("fromIndex and toIndex are required"), 400);
             return;
         }
 
@@ -305,14 +283,11 @@ void OscillatorHandler::handleReorderOscillator(const httplib::Request& req, htt
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 

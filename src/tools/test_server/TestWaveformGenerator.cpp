@@ -56,8 +56,7 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
             buffer.setSample(1, i, sample * 0.8f);
 
         phase += phaseIncrement;
-        if (phase > 2.0f * juce::MathConstants<float>::pi)
-            phase -= 2.0f * juce::MathConstants<float>::pi;
+        phase = std::fmod(phase, 2.0f * juce::MathConstants<float>::pi);
     }
 }
 

@@ -14,27 +14,13 @@
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
 #include "plugin/PluginProcessor.h"
+#include "tools/test_server/TestServerUtils.h"
 #include "tools/test_server/TestWaveformGenerator.h"
 
 #include <utility>
 
 namespace oscil
 {
-
-namespace
-{
-
-OscillatorId resolveOscId(const std::string& idStr, int index, const std::vector<Oscillator>& oscillators)
-{
-    OscillatorId targetId;
-    if (!idStr.empty())
-        targetId.id = juce::String(idStr);
-    else if (index >= 0 && std::cmp_less(index, oscillators.size()))
-        targetId = oscillators[static_cast<size_t>(index)].getId();
-    return targetId;
-}
-
-} // namespace
 
 void SourceHandler::handleGetSources(const httplib::Request& /*req*/, httplib::Response& res)
 {
@@ -62,7 +48,7 @@ void SourceHandler::handleGetSources(const httplib::Request& /*req*/, httplib::R
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Response& res)
@@ -100,14 +86,11 @@ void SourceHandler::handleAddSource(const httplib::Request& req, httplib::Respon
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -120,10 +103,7 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
 
         if (sourceIdStr.empty())
         {
-            nlohmann::json error;
-            error["error"] = "sourceId required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
+            sendJson(res, jsonError("sourceId required"), 400);
             return;
         }
 
@@ -147,14 +127,11 @@ void SourceHandler::handleRemoveSource(const httplib::Request& req, httplib::Res
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -165,7 +142,7 @@ nlohmann::json SourceHandler::assignSourceOnMessageThread(const std::string& osc
     auto& state = editor_.getProcessor().getState();
     auto oscillators = state.getOscillators();
 
-    auto targetOscId = resolveOscId(oscillatorId, oscillatorIndex, oscillators);
+    auto targetOscId = resolveOscillatorId(oscillatorId, oscillatorIndex, oscillators);
     if (!targetOscId.isValid())
     {
         response["error"] = "Invalid oscillator index";
@@ -209,10 +186,7 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
 
         if (oscillatorId.empty() && oscillatorIndex < 0)
         {
-            nlohmann::json error;
-            error["error"] = "oscillatorId or oscillatorIndex required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
+            sendJson(res, jsonError("oscillatorId or oscillatorIndex required"), 400);
             return;
         }
 
@@ -220,14 +194,11 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
         auto result = runOnMessageThread([this, oscillatorId, sourceId, oscillatorIndex]() {
             return assignSourceOnMessageThread(oscillatorId, sourceId, oscillatorIndex);
         });
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -299,10 +270,7 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
 
         if (sourceId.empty())
         {
-            nlohmann::json error;
-            error["error"] = "sourceId required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
+            sendJson(res, jsonError("sourceId required"), 400);
             return;
         }
 
@@ -311,14 +279,11 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             return injectSourceDataOnMessageThread(sourceId, waveformType, frequency, amplitude, numSamples,
                                                    sampleRate);
         });
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 

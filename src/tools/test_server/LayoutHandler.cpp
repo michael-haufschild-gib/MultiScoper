@@ -33,7 +33,7 @@ void LayoutHandler::handleGetLayout(const httplib::Request& /*req*/, httplib::Re
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 void LayoutHandler::handleSetColumnLayout(const httplib::Request& req, httplib::Response& res)
@@ -45,10 +45,7 @@ void LayoutHandler::handleSetColumnLayout(const httplib::Request& req, httplib::
 
         if (columns < 1 || columns > 3)
         {
-            nlohmann::json error;
-            error["error"] = "columns must be 1, 2, or 3";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
+            sendJson(res, jsonError("columns must be 1, 2, or 3"), 400);
             return;
         }
 
@@ -63,14 +60,11 @@ void LayoutHandler::handleSetColumnLayout(const httplib::Request& req, httplib::
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -80,12 +74,12 @@ void LayoutHandler::handleGetPaneBounds(const httplib::Request& /*req*/, httplib
         nlohmann::json response;
         auto& layoutManager = editor_.getProcessor().getState().getLayoutManager();
 
-        // Approximate available area for pane layout.
-        // These constants must stay in sync with PluginEditorLayout.
-        // A future improvement would expose getContentArea() from the editor.
+        // Compute available area by subtracting sidebar and status bar from editor bounds.
+        // Status bar height matches PluginEditorLayout::STATUS_BAR_HEIGHT (24px).
+        // Sidebar width is read from persisted state, matching the live sidebar.
         auto editorBounds = editor_.getLocalBounds();
-        static constexpr int STATUS_BAR_HEIGHT = 24; // PluginEditorLayout::STATUS_BAR_HEIGHT
-        int const sidebarWidth = 250;                // Approximate (user-adjustable)
+        static constexpr int STATUS_BAR_HEIGHT = 24;
+        int const sidebarWidth = editor_.getProcessor().getState().getSidebarWidth();
 
         int availableWidth = editorBounds.getWidth() - sidebarWidth;
         int availableHeight = editorBounds.getHeight() - STATUS_BAR_HEIGHT;
@@ -118,7 +112,7 @@ void LayoutHandler::handleGetPaneBounds(const httplib::Request& /*req*/, httplib
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 void LayoutHandler::handleMovePane(const httplib::Request& req, httplib::Response& res)
@@ -131,10 +125,7 @@ void LayoutHandler::handleMovePane(const httplib::Request& req, httplib::Respons
 
         if (fromIndex < 0 || toIndex < 0)
         {
-            nlohmann::json error;
-            error["error"] = "fromIndex and toIndex are required";
-            res.status = 400;
-            res.set_content(error.dump(), "application/json");
+            sendJson(res, jsonError("fromIndex and toIndex are required"), 400);
             return;
         }
 
@@ -162,14 +153,11 @@ void LayoutHandler::handleMovePane(const httplib::Request& req, httplib::Respons
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 

@@ -297,6 +297,7 @@ void OscilTextField::validateAndUpdate()
             numValue_ = parsed;
             applyNumericConstraints(numValue_);
             internalSlider_.setValue(numValue_, juce::dontSendNotification);
+            updateFromNumericValue();
             notifyValueChanged();
         }
     }
