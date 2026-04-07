@@ -43,14 +43,14 @@ std::vector<PresetInfo> PresetManager::getAvailablePresets() const
 
     // Built-in presets first
     auto builtIn = VisualConfiguration::getAvailablePresets();
-    presets.reserve(builtIn.size());
+    auto files = getUserPresetFiles();
+    presets.reserve(builtIn.size() + files.size());
     for (const auto& [id, name] : builtIn)
     {
         presets.push_back({.id = id, .displayName = name, .isBuiltIn = true});
     }
 
     // User presets from disk
-    auto files = getUserPresetFiles();
     for (const auto& file : files)
     {
         auto tree = parsePresetFile(file);

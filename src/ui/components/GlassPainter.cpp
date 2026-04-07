@@ -5,6 +5,8 @@
 
 #include "ui/components/GlassPainter.h"
 
+#include "ui/components/ComponentConstants.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -277,7 +279,7 @@ void paintFocusRing(juce::Graphics& g, juce::Rectangle<float> bounds, float corn
                     float width, float offset)
 {
     auto ringBounds = bounds.expanded(offset);
-    g.setColour(accentColour.withAlpha(0.75f));
+    g.setColour(accentColour.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawRoundedRectangle(ringBounds, cornerRadius + offset, width);
 }
 

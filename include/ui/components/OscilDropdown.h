@@ -168,8 +168,7 @@ public:
     void setSearchable(bool searchable);
     bool isSearchable() const { return searchable_; }
 
-    void setEnabled(bool enabled);
-    bool isEnabled() const { return enabled_; }
+    void enablementChanged() override;
 
     /// Open the dropdown popup (shows item list).
     void showPopup();
@@ -213,8 +212,6 @@ private:
     juce::String displayText_;
     bool multiSelect_ = false;
     bool searchable_ = false;
-    bool enabled_ = true;
-
     bool isHovered_ = false;
     bool hasFocus_ = false;
     bool popupVisible_ = false;

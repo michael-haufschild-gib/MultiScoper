@@ -100,7 +100,7 @@ private:
  * - Memory usage tracking for dashboard display
  *
  * Thread safety:
- * - write() safe from audio thread (non-blocking tryLock)
+ * - write() safe from audio thread (lock-free seqlock — no CAS or spinlock)
  * - read() safe from UI/render threads (brief blocking lock — NOT audio thread)
  */
 class DecimatingCaptureBuffer : public IAudioBuffer
@@ -171,7 +171,7 @@ public:
 
     /**
      * Write audio samples with decimation
-     * Safe to call from audio thread (uses tryLock internally)
+     * Safe to call from audio thread (lock-free seqlock read)
      *
      * @param buffer Audio buffer containing samples
      * @param metadata Frame metadata
@@ -180,7 +180,7 @@ public:
 
     /**
      * Write raw sample data with decimation
-     * Safe to call from audio thread (uses tryLock internally)
+     * Safe to call from audio thread (lock-free seqlock read)
      *
      * @param samples Channel pointers to sample data
      * @param numSamples Number of samples per channel
@@ -295,8 +295,7 @@ private:
     };
 
     void reconfigure();
-    void processAndWriteDecimated(const std::shared_ptr<SharedCaptureBuffer>& buf,
-                                  const std::shared_ptr<ProcessingContext>& ctx, const float* const* samples,
+    void processAndWriteDecimated(SharedCaptureBuffer& buf, ProcessingContext& ctx, const float* const* samples,
                                   int numSamples, int numChannels, const CaptureFrameMetadata& metadata,
                                   const RateSnapshot& rates);
     static int decimateChannel(const float* src, float* dest, DecimationFilter& filter, int& counter, int numSamples,
@@ -311,8 +310,16 @@ private:
     std::atomic<int> captureRate_{CaptureRate::STANDARD};
     std::atomic<int> decimationRatio_{1};
 
-    // Internal storage protected by spin lock for reconfiguration safety
-    // SpinLock is used because std::atomic<shared_ptr> is not yet portable
+    // Lock-free seqlock for the audio thread write() path.
+    // configSeq_ is odd while reconfigure() is updating, even otherwise.
+    // publishedBuffer_/publishedContext_ are raw pointers to the objects owned
+    // by buffer_/context_; the graveyard ensures they remain valid for 2s.
+    std::atomic<uint32_t> configSeq_{0};
+    std::atomic<SharedCaptureBuffer*> publishedBuffer_{nullptr};
+    std::atomic<ProcessingContext*> publishedContext_{nullptr};
+
+    // Shared ownership storage — still protected by bufferSwapLock_ for
+    // UI/render thread reads.  Audio thread uses the lock-free published ptrs.
     std::shared_ptr<SharedCaptureBuffer> buffer_;
     mutable juce::SpinLock bufferSwapLock_;
     std::shared_ptr<ProcessingContext> context_;

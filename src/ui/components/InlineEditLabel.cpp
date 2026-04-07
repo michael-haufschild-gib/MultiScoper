@@ -308,28 +308,26 @@ void InlineEditLabel::paint(juce::Graphics& g)
     {
         // Truncate with ellipsis
         juce::String const ellipsis = "...";
-        juce::GlyphArrangement const ellipsisGlyphs = [&]() {
-            juce::GlyphArrangement eg;
-            eg.addLineOfText(font_, ellipsis, 0.0f, 0.0f);
-            return eg;
-        }();
-        float const ellipsisWidth = ellipsisGlyphs.getBoundingBox(0, -1, false).getWidth();
+        auto measureWidth = [&](const juce::String& text) {
+            juce::GlyphArrangement ga;
+            ga.addLineOfText(font_, text, 0.0f, 0.0f);
+            return ga.getBoundingBox(0, -1, false).getWidth();
+        };
+        float const ellipsisWidth = measureWidth(ellipsis);
         float const availableWidth = bounds.getWidth() - ellipsisWidth;
 
-        juce::String truncated;
-        for (int i = 0; i < displayText.length(); ++i)
+        // Binary search for the longest fitting substring (O(log n) measurements)
+        int lo = 0;
+        int hi = displayText.length();
+        while (lo < hi)
         {
-            juce::String const test = displayText.substring(0, i + 1);
-            juce::GlyphArrangement const testGlyphs = [&]() {
-                juce::GlyphArrangement tg;
-                tg.addLineOfText(font_, test, 0.0f, 0.0f);
-                return tg;
-            }();
-            if (testGlyphs.getBoundingBox(0, -1, false).getWidth() > availableWidth)
-                break;
-            truncated = test;
+            int const mid = (lo + hi + 1) / 2;
+            if (measureWidth(displayText.substring(0, mid)) <= availableWidth)
+                lo = mid;
+            else
+                hi = mid - 1;
         }
-        displayText = truncated + ellipsis;
+        displayText = displayText.substring(0, lo) + ellipsis;
     }
 
     g.drawText(displayText, bounds.toNearestInt(), justification_, false);

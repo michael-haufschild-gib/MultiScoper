@@ -16,7 +16,7 @@ Accepted
 
 ## Decision
 
-Graveyard pattern. It is simple, correct, and requires no special library support. The SpinLock on `bufferSwapLock_` serializes pointer swaps (message thread) and pointer reads (UI/render thread). The audio thread uses `tryLock` (a single CAS atomic — not a blocking lock) and skips the write if contended, dropping frames rather than blocking. This preserves the lock-free guarantee on the audio thread: `tryLock` either succeeds immediately or returns false without spinning or waiting.
+Graveyard pattern with seqlock. The SpinLock on `bufferSwapLock_` serializes pointer swaps (message thread) and pointer reads (UI/render thread). The audio thread uses a lock-free seqlock (`configSeq_`) with atomic published pointers (`publishedBuffer_`, `publishedContext_`) — no CAS, no spinlock, just atomic loads. If `reconfigure()` is mid-update (odd sequence) or completes between the two sequence reads (mismatch), the audio thread drops the frame. The graveyard ensures raw pointers remain valid for 2 seconds after replacement.
 
 ## Consequences
 

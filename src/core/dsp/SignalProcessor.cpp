@@ -254,6 +254,11 @@ float SignalProcessor::calculateRMS(std::span<const float> samples)
 
 void SignalProcessor::upsample(std::span<const float> input, std::span<float> output)
 {
+    if (input.empty())
+    {
+        std::ranges::fill(output, 0.0f);
+        return;
+    }
     if (input.size() == 1)
     {
         std::ranges::fill(output, input[0]);

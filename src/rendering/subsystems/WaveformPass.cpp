@@ -40,7 +40,8 @@ bool WaveformPass::initialize(juce::OpenGLContext& context)
         }
         else
         {
-            RE_LOG("WaveformPass: WARNING - Failed to compile basic shader!");
+            RE_LOG("WaveformPass: FATAL - Failed to compile basic shader, initialization aborted");
+            return false;
         }
     }
 

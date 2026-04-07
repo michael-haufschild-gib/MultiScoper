@@ -41,7 +41,8 @@ void WaveformRenderState::disableTrails(juce::OpenGLContext& context)
     trailsEnabled = false;
 }
 
-void WaveformRenderState::resizeHistoryFBO(juce::OpenGLContext& context, int width, int height) const
+// NOLINTNEXTLINE(readability-make-member-function-const) — mutates historyFBO via resize()
+void WaveformRenderState::resizeHistoryFBO(juce::OpenGLContext& context, int width, int height)
 {
     if (historyFBO && historyFBO->isValid())
     {

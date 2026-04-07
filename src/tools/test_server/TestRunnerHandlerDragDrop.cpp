@@ -145,6 +145,7 @@ nlohmann::json testThreeColumnCrossMove(OscilState& state, PaneLayoutManager& la
 {
     nlohmann::json test;
     test["name"] = "ThreeColumnCrossMove";
+    auto const originalLayout = state.getColumnLayout();
     state.setColumnLayout(ColumnLayout::Triple);
     editor.resized();
     auto panesBefore = layoutManager.getPanes();
@@ -157,9 +158,9 @@ nlohmann::json testThreeColumnCrossMove(OscilState& state, PaneLayoutManager& la
         const Pane* movedPane = layoutManager.getPane(paneToMove);
         test["passed"] = (movedPane != nullptr) && movedPane->getColumnIndex() == 2;
         test["details"] = "Pane should move to column 2 in 3-column layout";
-        // Restore pane to original column and reset layout
+        // Restore pane to original column and layout
         layoutManager.movePaneToColumn(paneToMove, originalColumn, 0);
-        state.setColumnLayout(ColumnLayout::Single);
+        state.setColumnLayout(originalLayout);
         editor.resized();
     }
     else

@@ -165,20 +165,15 @@ void OscilDropdown::setMultiSelect(bool multiSelect)
 
 void OscilDropdown::setSearchable(bool searchable) { searchable_ = searchable; }
 
-void OscilDropdown::setEnabled(bool enabled)
+void OscilDropdown::enablementChanged()
 {
-    if (enabled_ != enabled)
-    {
-        enabled_ = enabled;
-        juce::Component::setEnabled(enabled);
-        setMouseCursor(enabled ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
-        repaint();
-    }
+    setMouseCursor(isEnabled() ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
+    repaint();
 }
 
 void OscilDropdown::showPopup()
 {
-    if (!enabled_ || items_.empty())
+    if (!isEnabled() || items_.empty())
         return;
 
     popupVisible_ = true;
@@ -286,9 +281,9 @@ int OscilDropdown::getPreferredHeight() const { return ComponentLayout::INPUT_HE
 void OscilDropdown::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = isEnabled() ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
-    if (!enabled_)
+    if (!isEnabled())
         g.setOpacity(opacity);
 
     // Use GlassPainter::paintGlassInput for the trigger area
@@ -296,7 +291,7 @@ void OscilDropdown::paint(juce::Graphics& g)
     GlassPainter::paintGlassInput(g, bounds, getGlass(), ComponentLayout::RADIUS_SM, isFocused, isHovered_);
 
     // Focus ring when focused
-    if (hasFocus_ && enabled_)
+    if (hasFocus_ && isEnabled())
         GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_SM, getGlass().accent);
 
     // Text
@@ -314,13 +309,13 @@ void OscilDropdown::paint(juce::Graphics& g)
 
     paintChevron(g, chevronBounds);
 
-    if (!enabled_)
+    if (!isEnabled())
         g.setOpacity(1.0f);
 }
 
 void OscilDropdown::paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = isEnabled() ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const rotation = chevronSpring_.position * juce::MathConstants<float>::pi;
 
     // Chevron: textSecondary default (tertiary feel), textPrimary on hover

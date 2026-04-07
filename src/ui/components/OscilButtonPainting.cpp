@@ -31,7 +31,7 @@ void OscilButton::paint(juce::Graphics& g)
     paintButton(g, bounds);
 
     if (hasFocus_ && enabled_)
-        paintFocusRing(g, getLocalBounds().toFloat());
+        paintFocusRing(g, bounds);
 }
 
 void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)

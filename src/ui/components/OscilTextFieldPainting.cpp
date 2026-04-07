@@ -45,6 +45,9 @@ void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<fl
     // Error message below
     if (hasError())
     {
+        // Restore full graphics opacity so error text isn't double-dimmed
+        // when the parent paint() already applied DISABLED_OPACITY
+        g.setOpacity(1.0f);
         float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
         g.setColour(getTheme().statusError.withAlpha(opacity));
         g.setFont(cachedErrorFont_);

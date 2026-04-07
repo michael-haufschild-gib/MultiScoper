@@ -14,7 +14,8 @@ Oscil has three thread domains with different latency requirements:
 | Primitive | Where Used | Why |
 |-----------|-----------|-----|
 | `SeqLock<T>` | `TimingEngine` config/host info, `SharedCaptureBuffer` metadata | Zero-allocation, zero-blocking for audio thread writer. Reader spins briefly (~ns). |
-| `juce::SpinLock` | `RenderEngine::waveformStatesMutex_`, `DecimatingCaptureBuffer::bufferSwapLock_`, `PluginProcessor::stateLock_`, `PluginProcessor::captureConfigLock_` | Short critical sections (<1us). No syscall overhead. Used between message and render threads, never contested by audio thread. |
+| `juce::SpinLock` | `RenderEngine::waveformStatesMutex_`, `DecimatingCaptureBuffer::bufferSwapLock_` (UI/render reads only), `PluginProcessor::stateLock_`, `PluginProcessor::captureConfigLock_` | Short critical sections (<1us). No syscall overhead. Used between message and render threads, never contested by audio thread. |
+| Seqlock (manual) | `DecimatingCaptureBuffer::configSeq_` + published atomic ptrs | Lock-free audio-thread read of buffer/context/rates. Odd sequence = writer in progress, drops frame. No CAS on audio thread. |
 | `std::shared_mutex` | `InstanceRegistry::mutex_` | Read-heavy access pattern (many readers querying sources, few writers registering/unregistering). Registration is infrequent and non-realtime. |
 | `std::mutex` | `GlobalPreferences::mutex_`, `MemoryBudgetManager::buffersMutex_` | Infrequent access from message thread only. Simple and correct. |
 | `std::atomic<T>` | `Source::state_`, `TimingEngine::triggered_`, `PluginProcessor::cpuUsage_` | Single-word values read/written from different threads. No struct consistency needed. |

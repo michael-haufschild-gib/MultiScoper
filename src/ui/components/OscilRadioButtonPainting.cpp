@@ -98,7 +98,7 @@ void OscilRadioButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<f
 {
     // Use GlassPainter::paintFocusRing with accent color, adapted for ellipse
     auto ringBounds = bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET);
-    g.setColour(getGlass().accent.withAlpha(0.75f));
+    g.setColour(getGlass().accent.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawEllipse(ringBounds, ComponentLayout::FOCUS_RING_WIDTH);
 }
 

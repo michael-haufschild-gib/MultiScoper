@@ -10,7 +10,7 @@ namespace oscil
 
 void OscilDropdown::mouseDown(const juce::MouseEvent& /*event*/)
 {
-    if (!enabled_)
+    if (!isEnabled())
         return;
 
     if (popupVisible_)
@@ -21,7 +21,7 @@ void OscilDropdown::mouseDown(const juce::MouseEvent& /*event*/)
 
 void OscilDropdown::mouseEnter(const juce::MouseEvent& /*event*/)
 {
-    if (!enabled_)
+    if (!isEnabled())
         return;
 
     isHovered_ = true;
@@ -56,7 +56,7 @@ void OscilDropdown::mouseExit(const juce::MouseEvent& /*event*/)
 
 bool OscilDropdown::keyPressed(const juce::KeyPress& key)
 {
-    if (!enabled_)
+    if (!isEnabled())
         return false;
 
     if (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey)

@@ -135,19 +135,11 @@ void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 
 void OscilAccordionSection::toggle()
 {
-    if (enabled_)
+    if (isEnabled())
         setExpanded(!expanded_);
 }
 
-void OscilAccordionSection::setEnabled(bool enabled)
-{
-    if (enabled_ != enabled)
-    {
-        enabled_ = enabled;
-        juce::Component::setEnabled(enabled);
-        repaint();
-    }
-}
+void OscilAccordionSection::enablementChanged() { repaint(); }
 
 int OscilAccordionSection::getContentHeight() const
 {
@@ -197,13 +189,13 @@ void OscilAccordionSection::paint(juce::Graphics& g)
 
 void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = isEnabled() ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const hoverAmount = hoverSpring_.position;
     const auto& glass = getGlass();
 
     // Background — blend toward bgHover on hover
     auto bgColour = getTheme().backgroundSecondary;
-    if (hoverAmount > 0.01f && enabled_)
+    if (hoverAmount > 0.01f && isEnabled())
         bgColour = bgColour.interpolatedWith(glass.bgHover, hoverAmount);
 
     g.setColour(bgColour.withAlpha(opacity));
@@ -236,7 +228,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
     g.drawText(title_, contentBounds, juce::Justification::centredLeft);
 
     // Focus ring
-    if (hasFocus_ && enabled_)
+    if (hasFocus_ && isEnabled())
     {
         GlassPainter::paintFocusRing(g, bounds.toFloat(), ComponentLayout::RADIUS_SM, glass.accent);
     }
@@ -244,7 +236,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 
 void OscilAccordionSection::paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    float const opacity = isEnabled() ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const rotation = chevronSpring_.position * juce::MathConstants<float>::halfPi;
 
     g.setColour(getTheme().textSecondary.withAlpha(opacity));
@@ -279,7 +271,7 @@ void OscilAccordionSection::mouseDown(const juce::MouseEvent& e)
 {
     // Track if mouseDown started in header area for proper click detection
     // This prevents trackpad gestures from triggering false toggles
-    mouseDownInHeader_ = e.mods.isLeftButtonDown() && !e.mods.isPopupMenu() && e.y < HEADER_HEIGHT && enabled_;
+    mouseDownInHeader_ = e.mods.isLeftButtonDown() && !e.mods.isPopupMenu() && e.y < HEADER_HEIGHT && isEnabled();
 }
 
 void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
@@ -297,7 +289,7 @@ void OscilAccordionSection::mouseUp(const juce::MouseEvent& e)
 
 void OscilAccordionSection::mouseEnter(const juce::MouseEvent& /*event*/)
 {
-    if (!enabled_)
+    if (!isEnabled())
         return;
 
     isHovered_ = true;
@@ -332,7 +324,7 @@ void OscilAccordionSection::mouseExit(const juce::MouseEvent& /*event*/)
 
 bool OscilAccordionSection::keyPressed(const juce::KeyPress& key)
 {
-    if (enabled_ && (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey))
+    if (isEnabled() && (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey))
     {
         toggle();
         return true;

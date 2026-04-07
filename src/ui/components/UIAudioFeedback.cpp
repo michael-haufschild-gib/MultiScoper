@@ -364,9 +364,9 @@ void UIAudioFeedback::applyEnvelope(juce::AudioBuffer<float>& buffer, float atta
         {
             float envelope = 1.0f;
 
-            if (i < attackSamples)
+            if (attackSamples > 0 && i < attackSamples)
                 envelope = static_cast<float>(i) / static_cast<float>(attackSamples);
-            else if (i > numSamples - releaseSamples)
+            else if (releaseSamples > 0 && i > numSamples - releaseSamples)
                 envelope = static_cast<float>(numSamples - i) / static_cast<float>(releaseSamples);
 
             data[i] *= envelope;

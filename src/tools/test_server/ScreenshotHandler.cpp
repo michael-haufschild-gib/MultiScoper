@@ -41,9 +41,15 @@ void ScreenshotHandler::handleTakeScreenshot(const httplib::Request& req, httpli
             if (stream.openedOk())
             {
                 juce::PNGImageFormat pngFormat;
-                pngFormat.writeImageToStream(image, stream);
-                response["status"] = "ok";
-                response["path"] = outputFile.getFullPathName().toStdString();
+                if (pngFormat.writeImageToStream(image, stream))
+                {
+                    response["status"] = "ok";
+                    response["path"] = outputFile.getFullPathName().toStdString();
+                }
+                else
+                {
+                    response["error"] = "Failed to encode PNG image";
+                }
             }
             else
             {

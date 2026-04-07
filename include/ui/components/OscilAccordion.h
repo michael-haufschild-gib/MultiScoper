@@ -58,8 +58,7 @@ public:
     /// Toggle between expanded and collapsed.
     void toggle();
 
-    void setEnabled(bool enabled);
-    bool isEnabled() const { return enabled_; }
+    void enablementChanged() override;
 
     // Callbacks
     std::function<void(bool)> onExpandedChanged;
@@ -96,7 +95,6 @@ private:
     juce::Component* content_ = nullptr;
     DynamicHeightContent* dynamicContent_ = nullptr;
     bool expanded_ = false;
-    bool enabled_ = true;
     bool isHovered_ = false;
     bool hasFocus_ = false;
     bool mouseDownInHeader_ = false; // Track if mouseDown occurred in header for proper click detection

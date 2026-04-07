@@ -221,7 +221,10 @@ if [ -n "$STAGED_CPP" ]; then
 fi
 
 # ─── 8. clang-tidy ───
-if [ -n "$STAGED_CPP" ]; then
+# Filter to only src/*.cpp files — headers are checked via HeaderFilterRegex,
+# and non-src commits shouldn't trigger prerequisite failures.
+STAGED_SRC=$(echo "$STAGED_CPP" | grep -E '^src/.*\.cpp$' || true)
+if [ -n "$STAGED_SRC" ]; then
     # Look for clang-tidy in common locations
     CLANG_TIDY=""
     for candidate in \
@@ -244,12 +247,9 @@ if [ -n "$STAGED_CPP" ]; then
         FAILED=1
     else
         CT_ERRORS=0
-        for file in $STAGED_CPP; do
-            # Only check source files (not headers — they're checked via HeaderFilterRegex)
-            if [[ "$file" == src/*.cpp ]]; then
-                if ! "$CLANG_TIDY" -p "$REPO_ROOT/build/dev" "$REPO_ROOT/$file" --quiet 2>/dev/null; then
-                    CT_ERRORS=$((CT_ERRORS + 1))
-                fi
+        for file in $STAGED_SRC; do
+            if ! "$CLANG_TIDY" -p "$REPO_ROOT/build/dev" "$REPO_ROOT/$file" --quiet 2>/dev/null; then
+                CT_ERRORS=$((CT_ERRORS + 1))
             fi
         done
         if [ $CT_ERRORS -gt 0 ]; then

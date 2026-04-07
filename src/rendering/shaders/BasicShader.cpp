@@ -67,9 +67,11 @@ void BasicShader::resolveUniforms(juce::OpenGLContext& context)
     gl_->positionLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "position");
     gl_->distFromCenterLoc =
         juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-    gl_->positionLoc = std::max(gl_->positionLoc, 0);
+
+    if (gl_->positionLoc < 0)
+        BASIC_LOG("WARNING: attribute 'position' not found (location=" << gl_->positionLoc << ")");
     if (gl_->distFromCenterLoc < 0)
-        gl_->distFromCenterLoc = 1;
+        BASIC_LOG("WARNING: attribute 'distFromCenter' not found (location=" << gl_->distFromCenterLoc << ")");
 
     BASIC_LOG("Attribute locations - position=" << gl_->positionLoc << ", distFromCenter=" << gl_->distFromCenterLoc);
 }
@@ -80,6 +82,16 @@ bool BasicShader::validateUniforms() const
     if (gl_->glowIntensityLoc < 0)
     {
         BASIC_LOG("Failed to find uniform 'glowIntensity'");
+        return false;
+    }
+    if (gl_->positionLoc < 0)
+    {
+        BASIC_LOG("Failed to find attribute 'position'");
+        return false;
+    }
+    if (gl_->distFromCenterLoc < 0)
+    {
+        BASIC_LOG("Failed to find attribute 'distFromCenter'");
         return false;
     }
     return true;
