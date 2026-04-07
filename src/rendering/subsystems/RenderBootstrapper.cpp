@@ -81,50 +81,40 @@ RenderBootstrapper::RenderBootstrapper() {}
 
 RenderBootstrapper::~RenderBootstrapper() {}
 
+bool RenderBootstrapper::compileAndLink(juce::OpenGLShaderProgram& shader, const char* vertexSource,
+                                        const char* fragmentSource, const char* label)
+{
+    if (!shader.addVertexShader(vertexSource) || !shader.addFragmentShader(fragmentSource))
+    {
+        DBG("RenderBootstrapper: Failed to compile " << label << " shader: " << shader.getLastError());
+        return false;
+    }
+
+    GLuint const programID = shader.getProgramID();
+    juce::gl::glBindAttribLocation(programID, 0, "position");
+    juce::gl::glBindAttribLocation(programID, 1, "texCoord");
+
+    if (!shader.link())
+    {
+        DBG("RenderBootstrapper: Failed to link " << label << " shader: " << shader.getLastError());
+        return false;
+    }
+
+    return true;
+}
+
 bool RenderBootstrapper::initialize(juce::OpenGLContext& context)
 {
-    // Compile blit shader (tone map + gamma) for final output
     blitShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!blitShader_->addVertexShader(blitVertexShader) || !blitShader_->addFragmentShader(blitFragmentShader))
-    {
-        DBG("RenderBootstrapper: Failed to compile blit shader: " << blitShader_->getLastError());
+    if (!compileAndLink(*blitShader_, blitVertexShader, blitFragmentShader, "blit"))
         return false;
-    }
-
-    // Bind attribute locations BEFORE linking
-    GLuint const programID = blitShader_->getProgramID();
-    juce::OpenGLExtensionFunctions::glBindAttribLocation(programID, 0, "position");
-    juce::OpenGLExtensionFunctions::glBindAttribLocation(programID, 1, "texCoord");
-
-    if (!blitShader_->link())
-    {
-        DBG("RenderBootstrapper: Failed to link blit shader: " << blitShader_->getLastError());
-        return false;
-    }
 
     blitTextureLoc_ = blitShader_->getUniformIDFromName("sourceTexture");
     DBG("RenderBootstrapper: Blit shader compiled, sourceTexture uniform=" << blitTextureLoc_);
 
-    // Compile composite shader (linear pass-through)
     compositeShader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
-
-    if (!compositeShader_->addVertexShader(blitVertexShader) ||
-        !compositeShader_->addFragmentShader(compositeFragmentShader))
+    if (!compileAndLink(*compositeShader_, blitVertexShader, compositeFragmentShader, "composite"))
     {
-        DBG("RenderBootstrapper: Failed to compile composite shader: " << compositeShader_->getLastError());
-        blitShader_.reset();
-        return false;
-    }
-
-    GLuint const compositeProgramId = compositeShader_->getProgramID();
-    juce::OpenGLExtensionFunctions::glBindAttribLocation(compositeProgramId, 0, "position");
-    juce::OpenGLExtensionFunctions::glBindAttribLocation(compositeProgramId, 1, "texCoord");
-
-    if (!compositeShader_->link())
-    {
-        DBG("RenderBootstrapper: Failed to link composite shader: " << compositeShader_->getLastError());
-        compositeShader_.reset();
         blitShader_.reset();
         return false;
     }

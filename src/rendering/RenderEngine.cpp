@@ -162,10 +162,7 @@ void RenderEngine::beginFrame(float deltaTime)
 
 WaveformRenderState* RenderEngine::resolveWaveformState(int waveformId)
 {
-    // Called from renderWaveform(), which is always invoked under the
-    // WaveformGLRenderer::engineLock_ WriteLock.  No concurrent mutation
-    // of waveformStates_ is possible, so the SpinLock is not needed here
-    // and returning a raw pointer is safe for the duration of the render pass.
+    juce::SpinLock::ScopedLockType const lock(waveformStatesMutex_);
 
     auto [it, inserted] = waveformStates_.try_emplace(waveformId);
     if (inserted)

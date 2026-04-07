@@ -120,7 +120,7 @@ void GridRenderer::compileShaders(juce::OpenGLContext& context)
     }
 
     GLuint const colorProgramID = colorShader_->getProgramID();
-    juce::OpenGLExtensionFunctions::glBindAttribLocation(colorProgramID, 0, "position");
+    juce::gl::glBindAttribLocation(colorProgramID, 0, "position");
 
     if (!colorShader_->link())
     {

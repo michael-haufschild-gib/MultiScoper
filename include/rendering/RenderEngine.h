@@ -132,8 +132,7 @@ private:
     std::unique_ptr<WaveformPass> waveformPass_;
     RenderStats stats_;
 
-    // Per-waveform states (protected by waveformStatesMutex_ for management methods;
-    // render path accesses without this lock under the external WriteLock guarantee)
+    // Per-waveform states (protected by waveformStatesMutex_ for all access paths)
     mutable juce::SpinLock waveformStatesMutex_;
     std::unordered_map<int, WaveformRenderState> waveformStates_;
 
