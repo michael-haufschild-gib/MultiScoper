@@ -230,7 +230,7 @@ if [ -n "$STAGED_HEADERS" ]; then
     HEADER_INCLUDERS=""
     for header in $STAGED_HEADERS; do
         BASENAME_H=$(basename "$header")
-        FOUND=$(grep -rl --include='*.cpp' "#include.*${BASENAME_H}" "$REPO_ROOT/src" 2>/dev/null \
+        FOUND=$(grep -rl --include='*.cpp' "#include.*[\"/<]${BASENAME_H}[>\"]" "$REPO_ROOT/src" 2>/dev/null \
             | sed "s|^$REPO_ROOT/||" || true)
         HEADER_INCLUDERS="${HEADER_INCLUDERS:+$HEADER_INCLUDERS
 }$FOUND"
