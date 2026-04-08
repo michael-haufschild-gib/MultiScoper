@@ -221,9 +221,24 @@ if [ -n "$STAGED_CPP" ]; then
 fi
 
 # ─── 8. clang-tidy ───
-# Filter to only src/*.cpp files — headers are checked via HeaderFilterRegex,
-# and non-src commits shouldn't trigger prerequisite failures.
+# Primary: staged src/*.cpp files.
+# Fallback: if only headers are staged, find src/*.cpp files that include them
+# so clang-tidy's HeaderFilterRegex still checks the changed headers.
 STAGED_SRC=$(echo "$STAGED_CPP" | grep -E '^src/.*\.cpp$' || true)
+if [ -z "$STAGED_SRC" ] && [ -n "$STAGED_CPP" ]; then
+    STAGED_HEADERS=$(echo "$STAGED_CPP" | grep -E '^include/.*\.h$' || true)
+    if [ -n "$STAGED_HEADERS" ]; then
+        HEADER_INCLUDERS=""
+        for header in $STAGED_HEADERS; do
+            BASENAME_H=$(basename "$header")
+            FOUND=$(grep -rl --include='*.cpp' "#include.*${BASENAME_H}" "$REPO_ROOT/src" 2>/dev/null \
+                | sed "s|^$REPO_ROOT/||" || true)
+            HEADER_INCLUDERS="${HEADER_INCLUDERS:+$HEADER_INCLUDERS
+}$FOUND"
+        done
+        STAGED_SRC=$(echo "$HEADER_INCLUDERS" | sort -u | head -10)
+    fi
+fi
 if [ -n "$STAGED_SRC" ]; then
     # Look for clang-tidy in common locations
     CLANG_TIDY=""
