@@ -21,6 +21,9 @@ std::optional<juce::ValueTree> PresetManager::parsePresetFile(const juce::File& 
     if (!tree.isValid() || tree.getType() != PRESET_WRAPPER_TYPE)
         return std::nullopt;
 
+    if (!tree.getChildWithName("VisualConfiguration").isValid())
+        return std::nullopt;
+
     return tree;
 }
 

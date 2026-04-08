@@ -291,8 +291,8 @@ juce::Rectangle<int> PaneLayoutManager::calculatePaneBoundsInColumn(const std::v
                                       static_cast<float>(columnArea.getHeight()));
 
     constexpr int margin = 2;
-    return {columnArea.getX() + margin, paneY + margin, columnArea.getWidth() - (2 * margin),
-            paneHeight - (2 * margin)};
+    return {columnArea.getX() + margin, paneY + margin, std::max(0, columnArea.getWidth() - (2 * margin)),
+            std::max(0, paneHeight - (2 * margin))};
 }
 
 juce::Rectangle<int> PaneLayoutManager::getPaneBounds(int paneIndex, juce::Rectangle<int> availableArea) const

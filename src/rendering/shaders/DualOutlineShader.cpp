@@ -118,6 +118,9 @@ void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<f
     if (posLoc < 0 || distLoc < 0)
     {
         jassertfalse; // Shader attributes not found
+        juce::OpenGLExtensionFunctions::glBindVertexArray(0);
+        juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDisable(GL_BLEND);
         return;
     }
 

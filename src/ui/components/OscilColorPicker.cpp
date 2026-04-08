@@ -136,6 +136,9 @@ juce::Rectangle<int> OscilColorPicker::getPreviewBounds() const
         y += SLIDER_SPACING + SLIDER_HEIGHT;
     y += SLIDER_SPACING;
 
+    if (!showPreview_)
+        return {0, y, 0, PREVIEW_HEIGHT};
+
     int const width = showHexInput_ ? (getWidth() / 2) - 4 : getWidth();
     return {0, y, width, PREVIEW_HEIGHT};
 }
@@ -143,6 +146,9 @@ juce::Rectangle<int> OscilColorPicker::getPreviewBounds() const
 juce::Rectangle<int> OscilColorPicker::getHexInputBounds() const
 {
     auto previewBounds = getPreviewBounds();
+    if (!showPreview_)
+        return {0, previewBounds.getY(), getWidth(), PREVIEW_HEIGHT};
+
     return {previewBounds.getRight() + 8, previewBounds.getY(), getWidth() - previewBounds.getRight() - 8,
             PREVIEW_HEIGHT};
 }

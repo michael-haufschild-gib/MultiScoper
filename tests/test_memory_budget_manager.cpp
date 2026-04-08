@@ -191,11 +191,12 @@ TEST_F(MemoryBudgetTrackingTest, TotalMemoryUsageIncludesAllBuffers)
 TEST_F(MemoryBudgetTrackingTest, GetBufferMemoryUsageReturnsCorrectValue)
 {
     auto buffer = createBuffer(QualityPreset::Standard);
-    size_t expectedUsage = buffer->getMemoryUsageBytes();
 
     manager().registerBuffer("buffer1", buffer);
 
-    EXPECT_EQ(manager().getBufferMemoryUsage("buffer1"), expectedUsage);
+    // After registration, auto-quality adjustment may reconfigure the buffer.
+    // The tracked usage must match the buffer's actual current size.
+    EXPECT_EQ(manager().getBufferMemoryUsage("buffer1"), buffer->getMemoryUsageBytes());
 }
 
 TEST_F(MemoryBudgetTrackingTest, GetBufferMemoryUsageReturnsZeroForUnknownId)

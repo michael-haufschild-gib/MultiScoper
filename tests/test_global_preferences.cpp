@@ -147,28 +147,28 @@ TEST_F(GlobalPreferencesTest, SpecialCharactersInThemeName)
 
 TEST_F(GlobalPreferencesTest, NegativeColumnLayout)
 {
-    // GlobalPreferences stores raw int — caller is responsible for clamping.
-    // Test verifies no crash or silent corruption.
+    // GlobalPreferences clamps column layout to valid range [1, 8].
     prefs_->setDefaultColumnLayout(-5);
-    EXPECT_EQ(prefs_->getDefaultColumnLayout(), -5);
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 1);
 }
 
 TEST_F(GlobalPreferencesTest, ZeroSidebarWidth)
 {
+    // GlobalPreferences clamps sidebar width to valid range [150, 600].
     prefs_->setDefaultSidebarWidth(0);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 0);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 150);
 }
 
 TEST_F(GlobalPreferencesTest, NegativeSidebarWidth)
 {
     prefs_->setDefaultSidebarWidth(-100);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), -100);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 150);
 }
 
 TEST_F(GlobalPreferencesTest, VeryLargeSidebarWidth)
 {
     prefs_->setDefaultSidebarWidth(100000);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 100000);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 600);
 }
 
 TEST_F(GlobalPreferencesTest, PreferencesFilePathIsValid)
@@ -186,11 +186,11 @@ TEST_F(GlobalPreferencesTest, PreferencesFilePathIsValid)
 TEST_F(GlobalPreferencesTest, RapidSetOverwritesCorrectly)
 {
     // Bug caught: race between save and subsequent set causing stale values
-    for (int i = 0; i < 100; ++i)
+    for (int i = 1; i <= 8; ++i)
     {
         prefs_->setDefaultColumnLayout(i);
     }
-    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 99);
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 8);
 }
 
 TEST_F(GlobalPreferencesTest, InterleavedSetsDontCorrupt)
@@ -229,7 +229,7 @@ TEST_F(GlobalPreferencesTest, ConcurrentReadsDoNotCorruptDuringWrite)
     std::thread writer([&]() {
         for (int i = 0; i < 10; ++i)
         {
-            prefs_->setDefaultColumnLayout(i % 10);
+            prefs_->setDefaultColumnLayout((i % 8) + 1);
         }
         writerDone.store(true, std::memory_order_release);
     });
@@ -239,7 +239,7 @@ TEST_F(GlobalPreferencesTest, ConcurrentReadsDoNotCorruptDuringWrite)
         while (!writerDone.load(std::memory_order_acquire))
         {
             int cols = prefs_->getDefaultColumnLayout();
-            if (cols < 0 || cols >= 10)
+            if (cols < 1 || cols > 8)
                 readErrors.fetch_add(1, std::memory_order_relaxed);
         }
     });
@@ -249,8 +249,8 @@ TEST_F(GlobalPreferencesTest, ConcurrentReadsDoNotCorruptDuringWrite)
 
     EXPECT_EQ(readErrors.load(), 0) << "Reader saw invalid column layout during concurrent writes";
 
-    // Final state must be deterministic (last write wins)
-    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 9);
+    // Final state must be deterministic (last write wins: (9 % 8) + 1 = 2)
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 2);
 }
 
 // ============================================================================

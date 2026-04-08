@@ -44,6 +44,8 @@ private:
     GLint widthLoc_ = -1;
     GLint heightLoc_ = -1;
     GLint phosphorGlowLoc_ = -1;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScanlineEffect)
 };
 
 } // namespace oscil

@@ -49,6 +49,8 @@ private:
     GLint intensityLoc_ = -1;
     GLint softnessLoc_ = -1;
     GLint colorLoc_ = -1;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VignetteEffect)
 };
 
 } // namespace oscil

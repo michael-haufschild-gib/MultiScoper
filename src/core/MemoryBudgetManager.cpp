@@ -61,13 +61,8 @@ void MemoryBudgetManager::registerBuffer(const juce::String& id, std::shared_ptr
     notifyBufferCountChanged();
     notifyMemoryUsageChanged();
 
-    // Check if quality needs adjustment
-    QualityPreset const recommended = getRecommendedQuality();
-    if (recommended != lastEffectiveQuality_ && globalConfig_.autoAdjustQuality)
-    {
-        lastEffectiveQuality_ = recommended;
-        notifyEffectiveQualityChanged(recommended);
-    }
+    if (globalConfig_.autoAdjustQuality)
+        applyRecommendedQuality();
 }
 
 void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
@@ -88,6 +83,9 @@ void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
     {
         notifyBufferCountChanged();
         notifyMemoryUsageChanged();
+
+        if (globalConfig_.autoAdjustQuality)
+            applyRecommendedQuality();
     }
 }
 

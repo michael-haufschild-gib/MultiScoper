@@ -312,6 +312,10 @@ juce::Colour OscilButton::getBorderColour() const
     if (toggleable_ && isToggled_)
         return glass.accent;
 
+    // Segmented buttons always need a visible border regardless of variant
+    if (segmentPosition_ != SegmentPosition::None)
+        return glass.borderDefault;
+
     switch (variant_)
     {
         case ButtonVariant::Primary:
@@ -323,12 +327,8 @@ juce::Colour OscilButton::getBorderColour() const
         case ButtonVariant::Ghost:
         case ButtonVariant::Tertiary:
         case ButtonVariant::Icon:
-            return juce::Colours::transparentBlack; // No border for ghost variants
+            return juce::Colours::transparentBlack;
     }
-
-    // Segmented buttons always need a border
-    if (segmentPosition_ != SegmentPosition::None)
-        return glass.borderDefault;
 
     return juce::Colours::transparentBlack;
 }

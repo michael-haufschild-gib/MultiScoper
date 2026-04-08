@@ -234,11 +234,21 @@ void EffectPipeline::setQualityLevel(QualityLevel level)
         return;
     }
 
-    bool const enableHeavy = (level != QualityLevel::Eco);
+    if (level == QualityLevel::Eco)
+    {
+        for (auto& [id, effect] : effects_)
+            effect->setEnabled(false);
+        return;
+    }
+
+    // Normal: enable light effects, disable heavy ones
+    for (auto& [id, effect] : effects_)
+        effect->setEnabled(true);
+
     for (const auto* id : heavyEffects)
     {
         if (auto it = effects_.find(id); it != effects_.end() && it->second)
-            it->second->setEnabled(enableHeavy);
+            it->second->setEnabled(false);
     }
 }
 

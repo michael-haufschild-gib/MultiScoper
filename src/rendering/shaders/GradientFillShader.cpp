@@ -114,6 +114,9 @@ void GradientFillShader::render(juce::OpenGLContext& context, const std::vector<
     if (posLoc < 0 || vLoc < 0)
     {
         DBG("[GradientFillShader] Missing attributes: position=" << posLoc << " vParam=" << vLoc);
+        juce::OpenGLExtensionFunctions::glBindVertexArray(0);
+        juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDisable(GL_BLEND);
         return;
     }
 

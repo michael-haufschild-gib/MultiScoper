@@ -14,6 +14,7 @@ The current Oscil UI uses flat opaque backgrounds, single-layer borders, and eas
 ## Design Decisions
 
 ### What we ARE doing
+
 - Faux glassmorphism: translucent backgrounds + multi-layer shadows + inset light edges
 - Accent color as a first-class concept (7 presets: cyan, green, magenta, orange, blue, violet, red)
 - 4 new glass-aware dark themes matching the web reference palettes
@@ -23,6 +24,7 @@ The current Oscil UI uses flat opaque backgrounds, single-layer borders, and eas
 - Updated component painting for every control
 
 ### What we are NOT doing
+
 - **Real backdrop blur** — JUCE has no `backdrop-filter`. Faux glass (translucent bg + borders + shadows) delivers 95% of the visual impact with zero runtime cost. The web reference's blur is barely visible on dark backgrounds.
 - **OKLCH color space** — JUCE only supports RGB/HSV/HSL. We use RGB. The perceptual difference in alpha/lightness operations on dark themes is negligible.
 - **Audio feedback (SoundManager)** — The web project stubs it as no-ops. Audio feedback in an audio plugin interferes with monitoring. Skip.
@@ -583,7 +585,7 @@ This gives the plugin a subtle accent-tinted ambiance that ties the whole UI tog
 
 ## Implementation Order
 
-```
+```text
 WP1 (Theme Extension) ──────────┐
                                  ├── WP4 (Component Visual Refresh)
 WP2 (Glass Painting Utilities) ──┤     ├── OscilButton

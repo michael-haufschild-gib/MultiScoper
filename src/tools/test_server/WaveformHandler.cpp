@@ -54,6 +54,11 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
         float const frequency = body.value("frequency", 440.0f);
         float const amplitude = body.value("amplitude", 0.8f);
         int const numSamples = body.value("samples", 4096);
+        if (numSamples <= 0 || numSamples > 1048576)
+        {
+            sendJson(res, {{"error", "samples must be between 1 and 1048576"}}, 400);
+            return;
+        }
         float sampleRate = body.value("sampleRate", 44100.0f);
         if (sampleRate <= 0.0f)
             sampleRate = 44100.0f;

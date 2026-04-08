@@ -95,7 +95,7 @@ struct ColorTheme
     // Accent color (HSV-based, since JUCE doesn't support OKLCH)
     float accentHue = 220.0f;      // 0-360 hue
     float accentSaturation = 0.7f; // 0-1
-    float accentLightness = 0.6f;  // 0-1
+    float accentLightness = 0.6f;  // 0-1 (HSV brightness/value, not HSL lightness)
 
     // Glass parameters
     float glassAlpha = 0.55f; // bg alpha for glass panels

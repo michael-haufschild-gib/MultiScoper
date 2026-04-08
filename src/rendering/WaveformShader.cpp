@@ -35,7 +35,7 @@ void strokeChannelPath(juce::Graphics& g, const std::vector<float>& samples, flo
 void WaveformShader::calculateStereoLayout(const ShaderRenderParams& params, const std::vector<float>* channel2,
                                            float height, float& centerY1, float& centerY2, float& amp1, float& amp2)
 {
-    if (params.isStereo && channel2 != nullptr)
+    if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)
     {
         float const halfHeight = height * 0.5f;
         centerY1 = params.bounds.getY() + (halfHeight * 0.5f);
