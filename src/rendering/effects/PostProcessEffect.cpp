@@ -45,8 +45,8 @@ bool PostProcessEffect::compileEffectShader(juce::OpenGLShaderProgram& program, 
     // FramebufferPool::renderFullscreenQuad() assumes location 0 is position and 1 is texCoord
     if (juce::OpenGLContext::getCurrentContext() != nullptr)
     {
-        juce::OpenGLExtensionFunctions::glBindAttribLocation(program.getProgramID(), 0, "position");
-        juce::OpenGLExtensionFunctions::glBindAttribLocation(program.getProgramID(), 1, "texCoord");
+        juce::gl::glBindAttribLocation(program.getProgramID(), 0, "position");
+        juce::gl::glBindAttribLocation(program.getProgramID(), 1, "texCoord");
     }
 
     if (!program.link())

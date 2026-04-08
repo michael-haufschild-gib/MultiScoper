@@ -140,7 +140,7 @@ void OscillatorHandler::handleTestOscillatorReorder(const httplib::Request& /*un
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 } // namespace oscil

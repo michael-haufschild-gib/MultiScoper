@@ -354,9 +354,12 @@ void BloomEffect::resizeMipChain(juce::OpenGLContext& context, int w, int h)
         if (!mipChain_[static_cast<size_t>(i)]->create(context, mipW, mipH, 0, GL_RGBA16F, false))
         {
             DBG("BloomEffect: Failed to create mip level " << i << " (" << mipW << "x" << mipH << ")");
-            // Destroy any successfully created mips and mark as failed
-            for (int j = 0; j < i; ++j)
-                mipChain_[static_cast<size_t>(j)]->destroy(context);
+            // Destroy all mips (including any from a previous resize) and mark as failed
+            for (auto& mip : mipChain_)
+            {
+                if (mip->isValid())
+                    mip->destroy(context);
+            }
             lastWidth_ = 0;
             lastHeight_ = 0;
             return;

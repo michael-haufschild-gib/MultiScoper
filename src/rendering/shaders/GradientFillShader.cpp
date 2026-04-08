@@ -6,8 +6,6 @@
 
 #include "BinaryData.h"
 
-#include <cmath>
-
 namespace oscil
 {
 
@@ -93,7 +91,10 @@ void GradientFillShader::render(juce::OpenGLContext& context, const std::vector<
 
     gl_->program->use();
     if (!setup2DProjection(context, ext, gl_->projectionLoc))
+    {
+        glDisable(GL_BLEND);
         return;
+    }
 
     juce::OpenGLExtensionFunctions::glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
                                                 params.colour.getFloatGreen(), params.colour.getFloatBlue(),
@@ -110,10 +111,17 @@ void GradientFillShader::render(juce::OpenGLContext& context, const std::vector<
     float amp2 = 0.0f;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    GLint const posLoc = std::max(0, static_cast<int>(juce::OpenGLExtensionFunctions::glGetAttribLocation(
-                                         gl_->program->getProgramID(), "position")));
-    GLint const vLoc = std::max(1, static_cast<int>(juce::OpenGLExtensionFunctions::glGetAttribLocation(
-                                       gl_->program->getProgramID(), "vParam")));
+    GLint const posLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "position");
+    GLint const vLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "vParam");
+
+    if (posLoc < 0 || vLoc < 0)
+    {
+        DBG("[GradientFillShader] Missing attributes: position=" << posLoc << " vParam=" << vLoc);
+        juce::OpenGLExtensionFunctions::glBindVertexArray(0);
+        juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDisable(GL_BLEND);
+        return;
+    }
 
     drawFillChannel(ext, channel1, centerY1, amp1, params.bounds.getX(), params.bounds.getWidth(), posLoc, vLoc);
 

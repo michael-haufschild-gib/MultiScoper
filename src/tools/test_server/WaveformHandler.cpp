@@ -54,6 +54,11 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
         float const frequency = body.value("frequency", 440.0f);
         float const amplitude = body.value("amplitude", 0.8f);
         int const numSamples = body.value("samples", 4096);
+        if (numSamples <= 0 || numSamples > 1048576)
+        {
+            sendJson(res, {{"error", "samples must be between 1 and 1048576"}}, 400);
+            return;
+        }
         float sampleRate = body.value("sampleRate", 44100.0f);
         if (sampleRate <= 0.0f)
             sampleRate = 44100.0f;
@@ -86,14 +91,11 @@ void WaveformHandler::handleInjectTestData(const httplib::Request& req, httplib:
             return response;
         });
 
-        res.set_content(result.dump(), "application/json");
+        sendJson(res, result);
     }
     catch (const std::exception& e)
     {
-        nlohmann::json error;
-        error["error"] = e.what();
-        res.status = 400;
-        res.set_content(error.dump(), "application/json");
+        sendJson(res, jsonError(e.what()), 400);
     }
 }
 
@@ -133,7 +135,7 @@ void WaveformHandler::handleGetWaveformState(const httplib::Request& /*req*/, ht
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 } // namespace oscil

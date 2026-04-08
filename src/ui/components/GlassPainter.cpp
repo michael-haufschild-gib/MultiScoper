@@ -285,6 +285,9 @@ void paintFocusRing(juce::Graphics& g, juce::Rectangle<float> bounds, float corn
 
 void paintCheckerboard(juce::Graphics& g, juce::Rectangle<int> bounds, int checkerSize)
 {
+    if (checkerSize <= 0)
+        return;
+
     for (int y = bounds.getY(); y < bounds.getBottom(); y += checkerSize)
     {
         for (int x = bounds.getX(); x < bounds.getRight(); x += checkerSize)

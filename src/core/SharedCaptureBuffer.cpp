@@ -293,7 +293,7 @@ void SharedCaptureBuffer::clear()
 
 float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
 {
-    if (channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS))
+    if (channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS) || numSamples <= 0)
         return 0.0f;
 
     for (;;)
@@ -347,7 +347,7 @@ float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
 
 float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
 {
-    if (channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS))
+    if (channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS) || numSamples <= 0)
         return 0.0f;
 
     for (;;)

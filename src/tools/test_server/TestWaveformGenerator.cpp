@@ -9,9 +9,39 @@
 namespace oscil
 {
 
+namespace
+{
+float generateSample(const std::string& waveformType, float phase, float amplitude, juce::Random& rng)
+{
+    if (waveformType == "sine")
+        return std::sin(phase) * amplitude;
+    if (waveformType == "square")
+        return (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
+    if (waveformType == "triangle")
+    {
+        float const t = phase / (2.0f * juce::MathConstants<float>::pi);
+        return ((2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f)))) - 1.0f) * amplitude;
+    }
+    if (waveformType == "sawtooth")
+    {
+        float const t = phase / (2.0f * juce::MathConstants<float>::pi);
+        return (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
+    }
+    if (waveformType == "noise")
+        return (rng.nextFloat() * 2.0f - 1.0f) * amplitude;
+    if (waveformType == "dc")
+        return amplitude;
+    return 0.0f; // "silence" or unknown
+}
+} // namespace
+
 void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType, float frequency,
                           float amplitude, float sampleRate)
 {
+    jassert(buffer.getNumChannels() >= 2);
+    if (buffer.getNumChannels() < 2)
+        return;
+
     int const numSamples = buffer.getNumSamples();
     float phase = 0.0f;
     float const safeSampleRate = sampleRate > 0.0f ? sampleRate : 44100.0f;
@@ -21,43 +51,12 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float sample = 0.0f;
-
-        if (waveformType == "sine")
-        {
-            sample = std::sin(phase) * amplitude;
-        }
-        else if (waveformType == "square")
-        {
-            sample = (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
-        }
-        else if (waveformType == "triangle")
-        {
-            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
-            sample = ((2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f)))) - 1.0f) * amplitude;
-        }
-        else if (waveformType == "sawtooth")
-        {
-            float const t = phase / (2.0f * juce::MathConstants<float>::pi);
-            sample = (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
-        }
-        else if (waveformType == "noise")
-        {
-            sample = (rng.nextFloat() * 2.0f - 1.0f) * amplitude;
-        }
-        else if (waveformType == "dc")
-        {
-            sample = amplitude;
-        }
-        // "silence" or unknown → sample remains 0.0f
-
+        float const sample = generateSample(waveformType, phase, amplitude, rng);
         buffer.setSample(0, i, sample);
-        if (buffer.getNumChannels() > 1)
-            buffer.setSample(1, i, sample * 0.8f);
+        buffer.setSample(1, i, sample * 0.8f);
 
         phase += phaseIncrement;
-        if (phase > 2.0f * juce::MathConstants<float>::pi)
-            phase -= 2.0f * juce::MathConstants<float>::pi;
+        phase = std::fmod(phase, 2.0f * juce::MathConstants<float>::pi);
     }
 }
 

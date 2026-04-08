@@ -74,7 +74,17 @@ void TestHttpServer::handleMetricsStats(const httplib::Request& req, httplib::Re
     int periodMs = 0;
     auto periodParam = req.get_param_value("periodMs");
     if (!periodParam.empty())
-        periodMs = std::stoi(periodParam);
+    {
+        try
+        {
+            periodMs = std::stoi(periodParam);
+        }
+        catch (const std::exception&)
+        {
+            res.set_content(errorResponse("Invalid periodMs parameter").dump(), "application/json");
+            return;
+        }
+    }
 
     PerformanceStats stats;
     if (periodMs > 0)

@@ -5,7 +5,7 @@ Accepted
 
 ## Context
 Oscil has three thread domains with different latency requirements:
-1. **Audio thread** -- must never block. Budget: ~1ms per block at 48kHz/512 samples.
+1. **Audio thread** -- must never block. Budget: ~10ms per block at 48kHz/512 samples (less at smaller buffer sizes).
 2. **Message (UI) thread** -- can block briefly. Budget: ~16ms per frame at 60fps.
 3. **OpenGL thread** -- can block briefly but contention causes frame drops.
 

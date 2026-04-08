@@ -192,7 +192,13 @@ void WaveformGLRenderer::renderDebugRect(const juce::Rectangle<float>& bounds, j
     juce::OpenGLExtensionFunctions::glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
     auto positionLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(static_cast<GLuint>(programID), "position");
-    auto posAttrib = static_cast<GLuint>(positionLoc >= 0 ? positionLoc : 0);
+    if (positionLoc < 0)
+    {
+        juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
+        juce::OpenGLExtensionFunctions::glBindVertexArray(0);
+        return;
+    }
+    auto posAttrib = static_cast<GLuint>(positionLoc);
     juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(posAttrib);
     juce::OpenGLExtensionFunctions::glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
 

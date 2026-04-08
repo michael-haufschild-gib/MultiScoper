@@ -20,7 +20,7 @@ void StateHandler::handleHealth(const httplib::Request& /*req*/, httplib::Respon
     nlohmann::json response;
     response["status"] = "ok";
     response["port"] = port_;
-    res.set_content(response.dump(), "application/json");
+    sendJson(res, response);
 }
 
 void StateHandler::handleStateReset(const httplib::Request& /*req*/, httplib::Response& res)
@@ -61,7 +61,7 @@ void StateHandler::handleStateReset(const httplib::Request& /*req*/, httplib::Re
         return response;
     });
 
-    res.set_content(result.dump(), "application/json");
+    sendJson(res, result);
 }
 
 void StateHandler::clearTestSources()

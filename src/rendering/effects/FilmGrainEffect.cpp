@@ -84,11 +84,11 @@ bool FilmGrainEffect::resolveUniforms()
 void FilmGrainEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
     // Update time based on configured speed.
-    // Wrap at 10.0 to keep float precision high — the shader's hash(fract(...))
-    // makes the wrap boundary invisible.
+    // Wrap at 10000.0 to keep float precision reasonable while avoiding
+    // visible jumps — the shader's hash function is not periodic at the wrap point.
     accumulatedTime_ += deltaTime * settings_.speed;
-    if (accumulatedTime_ > 10.0f)
-        accumulatedTime_ = std::fmod(accumulatedTime_, 10.0f);
+    if (accumulatedTime_ > 10000.0f)
+        accumulatedTime_ = std::fmod(accumulatedTime_, 10000.0f);
 
     juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
     juce::OpenGLExtensionFunctions::glUniform1f(timeLoc_, accumulatedTime_);

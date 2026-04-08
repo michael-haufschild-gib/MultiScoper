@@ -36,6 +36,9 @@ public:
     GLint getCompositeTextureLoc() const { return compositeTextureLoc_; }
 
 private:
+    static bool compileAndLink(juce::OpenGLShaderProgram& shader, const char* vertexSource, const char* fragmentSource,
+                               const char* label);
+
     std::unique_ptr<juce::OpenGLShaderProgram> blitShader_;
     std::unique_ptr<juce::OpenGLShaderProgram> compositeShader_;
 

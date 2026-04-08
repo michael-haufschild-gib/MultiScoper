@@ -166,7 +166,10 @@ void BasicShader::render(juce::OpenGLContext& context, const std::vector<float>&
     gl_->program->use();
 
     if (!setup2DProjection(context, ext, gl_->projectionLoc))
+    {
+        glDisable(GL_BLEND);
         return;
+    }
 
     juce::OpenGLExtensionFunctions::glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
                                                 params.colour.getFloatGreen(), params.colour.getFloatBlue(),

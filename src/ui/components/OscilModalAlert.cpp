@@ -50,11 +50,15 @@ void OscilAlertModal::show(IThemeService& themeService, const juce::String& titl
     res->modal->setSize(ModalSize::Small);
 
     auto* modalPtr = res->modal.get();
-    res->modal->onClose = [res, onOk]() {
+    res->modal->onClose = [res, onOk]() mutable {
         if (onOk)
             onOk();
-        // Destroy resources on next message loop iteration (after callback returns)
-        juce::MessageManager::callAsync([prevent_destruction = res]() {});
+        // Break the circular reference (AlertResources→modal→onClose→AlertResources)
+        // by moving the shared_ptr into a deferred callback.  After this move, the
+        // onClose lambda no longer holds a reference, so the cycle is broken.
+        // The callAsync lambda is the sole owner and destroys resources on the next
+        // message loop iteration — safely after hide() returns.
+        juce::MessageManager::callAsync([prevent_destruction = std::move(res)]() {});
     };
 
     res->okButton->onClick = [modalPtr]() { modalPtr->hide(); };

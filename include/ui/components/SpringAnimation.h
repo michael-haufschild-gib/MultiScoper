@@ -196,7 +196,9 @@ private:
         const float displacement = position - target;
         const float springForce = -stiffness * displacement;
         const float dampingForce = -damping * velocity;
-        const float acceleration = (springForce + dampingForce) / mass;
+        jassert(mass > 0.0f);
+        const float safeMass = mass > 0.0f ? mass : 1.0f;
+        const float acceleration = (springForce + dampingForce) / safeMass;
 
         velocity += acceleration * deltaTime;
         position += velocity * deltaTime;

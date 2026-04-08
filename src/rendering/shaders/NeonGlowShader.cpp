@@ -90,7 +90,10 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
     gl_->program->use();
 
     if (!setup2DProjection(context, ext, gl_->projectionLoc))
+    {
+        glDisable(GL_BLEND);
         return;
+    }
 
     const float kGeometryScale = 12.0f;
     juce::OpenGLExtensionFunctions::glUniform4f(gl_->baseColorLoc, params.colour.getFloatRed(),
