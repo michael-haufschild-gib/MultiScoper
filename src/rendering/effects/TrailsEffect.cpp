@@ -54,12 +54,17 @@ bool TrailsEffect::compile(juce::OpenGLContext& context)
     if (compiled_)
         return true;
 
+    // Short-circuit if a prior attempt failed so we don't retry every frame.
+    if (hasCompileFailedPermanently())
+        return false;
+
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
     if (!compileEffectShader(*shader_, trailsFragmentShader))
     {
         DBG("TrailsEffect: Failed to compile shader");
         shader_.reset();
+        markCompileFailed();
         return false;
     }
 
@@ -72,6 +77,7 @@ bool TrailsEffect::compile(juce::OpenGLContext& context)
     {
         DBG("TrailsEffect: Missing uniforms");
         shader_.reset();
+        markCompileFailed();
         return false;
     }
 
@@ -85,6 +91,7 @@ void TrailsEffect::release(juce::OpenGLContext& context)
     juce::ignoreUnused(context);
     shader_.reset();
     compiled_ = false;
+    resetCompileFailed();
 }
 
 bool TrailsEffect::isCompiled() const { return compiled_; }

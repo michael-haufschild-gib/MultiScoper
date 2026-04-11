@@ -16,12 +16,18 @@ bool SingleShaderEffect::compile(juce::OpenGLContext& context)
     if (compiled_)
         return true;
 
+    // Bail out of permanent-failure state to prevent per-frame retry loops;
+    // release() is the reset point if a new GL context is initialized later.
+    if (hasCompileFailedPermanently())
+        return false;
+
     shader_ = std::make_unique<juce::OpenGLShaderProgram>(context);
 
     if (!compileEffectShader(*shader_, getFragmentSource()))
     {
         DBG(getId() + ": Failed to compile shader");
         shader_.reset();
+        markCompileFailed();
         return false;
     }
 
@@ -31,6 +37,7 @@ bool SingleShaderEffect::compile(juce::OpenGLContext& context)
     {
         DBG(getId() + ": Missing uniforms");
         shader_.reset();
+        markCompileFailed();
         return false;
     }
 
@@ -43,6 +50,7 @@ void SingleShaderEffect::release(juce::OpenGLContext& context)
     juce::ignoreUnused(context);
     shader_.reset();
     compiled_ = false;
+    resetCompileFailed();
 }
 
 bool SingleShaderEffect::isCompiled() const { return compiled_; }

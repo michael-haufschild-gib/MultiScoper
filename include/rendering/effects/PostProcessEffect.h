@@ -90,6 +90,17 @@ public:
     [[nodiscard]] bool isEnabled() const { return enabled_.load(std::memory_order_relaxed); }
 
     /**
+     * Report whether a previous compile attempt failed permanently.
+     * Callers (e.g. EffectPipeline's lazy compiler) should consult this before
+     * retrying compile() so a bad shader does not re-allocate and re-log every
+     * frame. Cleared by release() so a subsequent initialize round may try again.
+     */
+    [[nodiscard]] bool hasCompileFailedPermanently() const
+    {
+        return compileFailedPermanently_.load(std::memory_order_relaxed);
+    }
+
+    /**
      * Configure the effect from a VisualConfiguration.
      * Override in derived classes to extract relevant settings.
      * Default implementation does nothing (for effects that configure via other means).
@@ -99,6 +110,20 @@ public:
 
 protected:
     PostProcessEffect() = default;
+
+    /**
+     * Mark this effect's shader compilation as permanently failed for the
+     * current GL context lifetime. Called by subclass compile() on any failure
+     * (shader compile error, missing uniform) so retry loops stop.
+     */
+    void markCompileFailed() { compileFailedPermanently_.store(true, std::memory_order_relaxed); }
+
+    /**
+     * Reset the permanent-failure flag. Subclasses should call this from
+     * release() so that re-initialization (e.g. after a GL context loss)
+     * gets a fresh compile attempt.
+     */
+    void resetCompileFailed() { compileFailedPermanently_.store(false, std::memory_order_relaxed); }
 
     /**
      * Helper to compile a shader program with fullscreen quad vertex shader.
@@ -117,6 +142,8 @@ protected:
 
     std::atomic<float> intensity_{1.0f};
     std::atomic<bool> enabled_{true};
+    /// Set to true the first time compile() fails, to prevent per-frame retry loops.
+    std::atomic<bool> compileFailedPermanently_{false};
 };
 
 } // namespace oscil
