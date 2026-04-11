@@ -325,6 +325,54 @@ def has_doc_comment(lines: List[str], decl_line_idx: int) -> bool:
     return False
 
 
+# Detects `class Name` / `struct Name` at the start of a line. A trailing
+# semicolon (forward declaration) is rejected by the caller, not this regex.
+CLASS_DECL_RE = re.compile(
+    r"^\s*(?:template\s*<[^>]*>\s*)?(class|struct)\s+[A-Za-z_]\w*"
+)
+
+
+def strip_line_for_braces(line: str) -> str:
+    """Return the line with string / char literals and line comments removed so
+    brace counting does not get confused by `{` inside a string. Block comments
+    are handled at a higher level; this only deals with single-line concerns."""
+    out: List[str] = []
+    i = 0
+    n = len(line)
+    while i < n:
+        ch = line[i]
+        # Strip // line comments
+        if ch == "/" and i + 1 < n and line[i + 1] == "/":
+            break
+        # Strip "..." strings
+        if ch == '"':
+            i += 1
+            while i < n:
+                if line[i] == "\\" and i + 1 < n:
+                    i += 2
+                    continue
+                if line[i] == '"':
+                    i += 1
+                    break
+                i += 1
+            continue
+        # Strip '...' char literals
+        if ch == "'":
+            i += 1
+            while i < n:
+                if line[i] == "\\" and i + 1 < n:
+                    i += 2
+                    continue
+                if line[i] == "'":
+                    i += 1
+                    break
+                i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def find_missing_docs(
     path: Path, root: Path
 ) -> List[MissingDocViolation]:
@@ -335,7 +383,20 @@ def find_missing_docs(
     lines = content.splitlines()
 
     in_block_comment = False
-    access_level = "public"  # Default for non-class context in headers
+    # Access level is scoped per class. The top-level (no class) defaults to
+    # "public" so namespace-scope free functions still get linted. When we
+    # enter a class body we push the prior access level onto `class_stack`
+    # and default to "private" for `class`, "public" for `struct`. When the
+    # matching closing brace returns brace_depth to the pushed level we pop
+    # and restore the prior access level — preventing nested classes with
+    # their own `public:` from polluting the outer class's tracking state.
+    access_level = "public"
+    brace_depth = 0
+    class_stack: List[tuple] = []  # (depth_at_entry, prev_access_level)
+    # Set when a `class X` / `struct X` declaration has been seen but its
+    # opening brace has not yet arrived (Allman style puts `{` on the next
+    # line). Consumed by the next `{` we encounter.
+    pending_class_kind: Optional[str] = None
 
     for line_no_1based, line in enumerate(lines, start=1):
         idx = line_no_1based - 1
@@ -354,7 +415,34 @@ def find_missing_docs(
         if stripped.startswith("//"):
             continue
 
-        # Track access specifiers
+        # Detect class / struct declarations so we can track nested scopes.
+        # Forward declarations (`class X;`) and variable-like uses are ignored.
+        code_only = strip_line_for_braces(line)
+        code_stripped = code_only.strip()
+        if pending_class_kind is None:
+            class_match = CLASS_DECL_RE.match(code_stripped)
+            if class_match and not code_stripped.rstrip().endswith(";"):
+                pending_class_kind = class_match.group(1)
+
+        # Walk the line character by character so that scope transitions
+        # happen at the exact brace, not at end-of-line granularity.
+        for ch in code_only:
+            if ch == "{":
+                if pending_class_kind is not None:
+                    class_stack.append((brace_depth, access_level))
+                    access_level = (
+                        "private" if pending_class_kind == "class" else "public"
+                    )
+                    pending_class_kind = None
+                brace_depth += 1
+            elif ch == "}":
+                if brace_depth > 0:
+                    brace_depth -= 1
+                while class_stack and brace_depth <= class_stack[-1][0]:
+                    _, prev_access = class_stack.pop()
+                    access_level = prev_access
+
+        # Track access specifiers (only meaningful inside the innermost class)
         if stripped.startswith("public:"):
             access_level = "public"
             continue

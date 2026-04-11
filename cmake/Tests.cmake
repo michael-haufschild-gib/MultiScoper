@@ -100,6 +100,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_preset_manager.cpp
     tests/test_shaders.cpp
     tests/test_effect_chain.cpp
+    tests/test_single_shader_effects.cpp
     tests/test_framebuffer_pool.cpp
     tests/test_waveform_presenter.cpp
     tests/test_timing_presenter.cpp
@@ -136,10 +137,13 @@ set(OSCIL_TEST_SOURCES
     tests/test_oscil_tabs.cpp
     tests/test_oscil_textfield.cpp
     tests/test_oscillator_list_component.cpp
+    tests/test_oscillator_list_item.cpp
     tests/test_oscillator_color_dialog.cpp
+    tests/test_oscillator_config_dialog.cpp
     tests/test_pane_closing_bug.cpp
     tests/test_pane_selector.cpp
     tests/test_select_pane_dialog.cpp
+    tests/test_dialog_manager.cpp
     tests/test_oscillator_panel_controller.cpp
 
     # Concurrency primitives
