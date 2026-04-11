@@ -6,6 +6,8 @@
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
 
+#include "Oscil.h"
+
 #include <juce_events/juce_events.h>
 
 #include <gtest/gtest.h>
@@ -284,6 +286,78 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAndUnregisterManyTimes)
         getRegistry().unregisterInstance(sourceId);
         EXPECT_EQ(getRegistry().getSourceCount(), 0);
     }
+}
+
+// Registration must refuse silently at the hard limit so a pathological
+// DAW session (many plugin instances) cannot blow past MAX_TRACKS and
+// wedge the registry. Verifies SourceId::invalid() is returned and the
+// source count is clamped at the limit.
+TEST_F(InstanceRegistryLifecycleTest, RegisterAtMaxTracksLimitRejectsExtras)
+{
+    std::vector<std::shared_ptr<SharedCaptureBuffer>> buffers;
+    buffers.reserve(MAX_TRACKS);
+
+    for (int i = 0; i < MAX_TRACKS; ++i)
+    {
+        auto buffer = std::make_shared<SharedCaptureBuffer>();
+        buffers.push_back(buffer);
+        auto id = getRegistry().registerInstance("max_track_" + juce::String(i), buffer, "Track " + juce::String(i));
+        ASSERT_TRUE(id.isValid()) << "Registration " << i << " below the limit should succeed";
+    }
+
+    ASSERT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS));
+
+    // One past the limit — must reject without throwing.
+    auto overflowBuffer = std::make_shared<SharedCaptureBuffer>();
+    auto overflowId = getRegistry().registerInstance("overflow_track", overflowBuffer, "Overflow");
+
+    EXPECT_FALSE(overflowId.isValid()) << "Registration beyond MAX_TRACKS must return an invalid SourceId";
+    EXPECT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS))
+        << "Failed registration must not inflate the source count";
+
+    // Re-registering the same track id for an already-known source must still
+    // succeed through deduplication, even when we are at the limit. This
+    // guards against a DAW session where a track updates its metadata after
+    // the registry hit the cap.
+    auto dedupId = getRegistry().registerInstance("max_track_0", buffers[0], "Track 0 renamed", 2, 48000.0);
+    EXPECT_TRUE(dedupId.isValid()) << "Dedup re-registration at the limit must still update the existing source";
+}
+
+TEST_F(InstanceRegistryLifecycleTest, SetDispatcherRejectsEmptyCallable)
+{
+    // Passing an empty std::function must not brick future notifications.
+    // After a no-op attempt, the default (or previously installed) dispatcher
+    // must still handle events.
+    CountingRegistryListener listener;
+    getRegistry().addListener(&listener);
+
+    // Attempt to install a null dispatcher.
+    getRegistry().setDispatcher({});
+
+    auto buffer = std::make_shared<SharedCaptureBuffer>();
+    auto id = getRegistry().registerInstance("dispatcher_guard", buffer, "Dispatcher Guard");
+    EXPECT_TRUE(id.isValid());
+
+    // The previously-installed (synchronous) dispatcher should still be active.
+    EXPECT_EQ(listener.addedCount, 1) << "setDispatcher({}) must leave the previously installed dispatcher in place";
+
+    getRegistry().removeListener(&listener);
+}
+
+TEST_F(InstanceRegistryLifecycleTest, UpdateSourceWithEmptyNamePreservesExistingName)
+{
+    auto buffer = std::make_shared<SharedCaptureBuffer>();
+    auto sourceId = getRegistry().registerInstance("track_preserve", buffer, "Original Name");
+    ASSERT_TRUE(sourceId.isValid());
+
+    // Empty name must be a no-op on the name field — only channel/rate update.
+    getRegistry().updateSource(sourceId, juce::String{}, 1, 48000.0);
+
+    auto info = getRegistry().getSource(sourceId);
+    ASSERT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Original Name") << "Empty name on updateSource must not wipe the existing name";
+    EXPECT_EQ(info->channelCount, 1);
+    EXPECT_DOUBLE_EQ(info->sampleRate, 48000.0);
 }
 
 TEST_F(InstanceRegistryLifecycleTest, RegisterManyDifferentSources)

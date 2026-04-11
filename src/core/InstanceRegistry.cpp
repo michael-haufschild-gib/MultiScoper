@@ -31,7 +31,14 @@ InstanceRegistry::InstanceRegistry()
 
 InstanceRegistry::~InstanceRegistry() { shutdown(); }
 
-void InstanceRegistry::setDispatcher(Dispatcher dispatcher) { dispatcher_ = std::move(dispatcher); }
+void InstanceRegistry::setDispatcher(Dispatcher dispatcher)
+{
+    // Reject empty callables so a caller passing `{}` or a default-constructed
+    // std::function cannot brick all subsequent notifications — dispatchNotification
+    // would otherwise throw std::bad_function_call and terminate.
+    if (dispatcher)
+        dispatcher_ = std::move(dispatcher);
+}
 
 void InstanceRegistry::shutdown()
 {
@@ -83,8 +90,10 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
                                             int channelCount, double sampleRate,
                                             std::shared_ptr<AnalysisEngine> analysisEngine)
 {
-    // Preconditions
-    jassert(captureBuffer != nullptr);
+    // Preconditions. `captureBuffer` is intentionally allowed to be null so
+    // that dedup re-registration can later attach a real buffer to the
+    // already-known source (see tryReuseExistingSource). getCaptureBuffer()
+    // returns nullptr in the meantime.
     jassert(channelCount > 0 && channelCount <= 2);
     jassert(sampleRate > 0.0);
 
@@ -232,7 +241,13 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
 
         OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " name=" << name << " channels="
                                                       << validChannelCount << " sampleRate=" << validSampleRate);
-        it->second.name = name;
+        // Preserve the existing name on empty input, matching the dedup
+        // re-registration path in tryReuseExistingSource. Empty strings are
+        // treated as "leave unchanged" so a caller that only wants to update
+        // channelCount/sampleRate cannot accidentally wipe the user-visible
+        // track name.
+        if (name.isNotEmpty())
+            it->second.name = name;
         it->second.channelCount = validChannelCount;
         it->second.sampleRate = validSampleRate;
         shouldNotify = true;
@@ -269,6 +284,8 @@ void InstanceRegistry::dispatchNotification(const char* eventName, const SourceI
                                             void (InstanceRegistryListener::*callback)(const SourceId&))
 {
     OSCIL_LOG(REGISTRY, eventName << ": sourceId=" << sourceId.id);
+    if (!dispatcher_)
+        return; // Defensive: setDispatcher guards this, but avoid UB if a future path bypasses it.
     auto weakThis = juce::WeakReference<InstanceRegistry>(this);
 
     dispatcher_([weakThis, sourceId, callback]() {

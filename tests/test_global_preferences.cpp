@@ -282,3 +282,60 @@ TEST_F(GlobalPreferencesTest, SaveAndLoadPreservesAllSettings)
     EXPECT_FALSE(prefs2->getTooltipsEnabled());
     EXPECT_EQ(prefs2->getDefaultSidebarWidth(), 350);
 }
+
+// ============================================================================
+// Corrupt / Wrong-Root File Recovery
+// ============================================================================
+
+TEST_F(GlobalPreferencesTest, LoadRejectsWrongRootXmlAndResavesWithCorrectRoot)
+{
+    // Bug caught: load() accepts any valid XML as preferences_ (including
+    // wrong-root trees like <SomethingElse/>). This silently changes the
+    // persisted format: subsequent save() writes the file with the wrong
+    // root permanently. An audit tool or schema validator would flag the
+    // file as invalid, and cross-version migration assumes the canonical
+    // root is "GlobalPreferences".
+
+    prefs_.reset();
+
+    auto prefsFile = getPreferencesFilePath();
+    prefsFile.getParentDirectory().createDirectory();
+    prefsFile.replaceWithText(R"(<?xml version="1.0"?><SomethingElse foo="bar" defaultTheme="Lurking"/>)");
+
+    // Construct — load() should reject the wrong root and fall back to defaults.
+    auto prefs = std::make_unique<GlobalPreferences>();
+
+    // Fallback to defaults — the garbage "defaultTheme" in SomethingElse is ignored.
+    EXPECT_EQ(prefs->getDefaultTheme(), juce::String("Dark Professional"));
+
+    // Setter triggers save(), which should rewrite the file with the correct root.
+    prefs->setDefaultTheme("Recovery Theme");
+
+    // Verify the file on disk now has the CANONICAL root type.
+    auto xml = juce::XmlDocument::parse(prefsFile);
+    ASSERT_NE(xml, nullptr);
+    EXPECT_TRUE(xml->hasTagName("GlobalPreferences"))
+        << "Expected root <GlobalPreferences/>, got <" << xml->getTagName() << "/>";
+
+    // Reload preserves the recovery write.
+    auto prefs2 = std::make_unique<GlobalPreferences>();
+    EXPECT_EQ(prefs2->getDefaultTheme(), juce::String("Recovery Theme"));
+}
+
+TEST_F(GlobalPreferencesTest, LoadRecoversFromMalformedXml)
+{
+    // Separate concern from wrong-root: bytes that aren't valid XML at all.
+    // juce::XmlDocument::parse already fails gracefully here, but the test
+    // guards the contract.
+    prefs_.reset();
+
+    auto prefsFile = getPreferencesFilePath();
+    prefsFile.getParentDirectory().createDirectory();
+    prefsFile.replaceWithText("not xml at all <<<");
+
+    auto prefs = std::make_unique<GlobalPreferences>();
+    EXPECT_EQ(prefs->getDefaultTheme(), juce::String("Dark Professional"));
+
+    prefs->setDefaultTheme("Recovery From Garbage");
+    EXPECT_EQ(prefs->getDefaultTheme(), juce::String("Recovery From Garbage"));
+}

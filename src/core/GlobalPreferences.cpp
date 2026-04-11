@@ -26,13 +26,19 @@ void GlobalPreferences::load()
 {
     std::scoped_lock const lock(mutex_);
     auto file = getPreferencesFile();
-    if (file.existsAsFile())
-    {
-        if (auto xml = juce::XmlDocument::parse(file))
-        {
-            preferences_ = juce::ValueTree::fromXml(*xml);
-        }
-    }
+    if (!file.existsAsFile())
+        return;
+
+    auto xml = juce::XmlDocument::parse(file);
+    if (!xml)
+        return; // Malformed XML — keep the default-constructed tree.
+
+    auto loaded = juce::ValueTree::fromXml(*xml);
+    // Only adopt the loaded tree when it matches our canonical root type.
+    // A valid-but-wrong-type tree (from format drift or a tampered file) is
+    // rejected to prevent persisting with the wrong root on the next save().
+    if (loaded.isValid() && loaded.hasType("GlobalPreferences"))
+        preferences_ = loaded;
 }
 
 void GlobalPreferences::save()
