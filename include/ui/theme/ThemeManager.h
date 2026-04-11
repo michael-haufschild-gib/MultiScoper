@@ -429,14 +429,23 @@ private:
 // Pre-defined system themes
 namespace SystemThemes
 {
+/// Factory for the default dark professional theme.
 ColorTheme createDarkProfessional();
+/// Factory for the classic green oscilloscope theme.
 ColorTheme createClassicGreen();
+/// Factory for the classic amber oscilloscope theme.
 ColorTheme createClassicAmber();
+/// Factory for the high-contrast accessibility theme.
 ColorTheme createHighContrast();
+/// Factory for the light-mode theme.
 ColorTheme createLightMode();
+/// Factory for the glassmorphism dark-blue theme variant.
 ColorTheme createGlassDarkBlue();
+/// Factory for the glassmorphism dark-purple theme variant.
 ColorTheme createGlassDarkPurple();
+/// Factory for the glassmorphism dark-brown theme variant.
 ColorTheme createGlassDarkBrown();
+/// Factory for the glassmorphism dark-black theme variant.
 ColorTheme createGlassDarkBlack();
 } // namespace SystemThemes
 

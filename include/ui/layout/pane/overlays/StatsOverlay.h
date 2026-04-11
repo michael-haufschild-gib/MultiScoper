@@ -70,6 +70,8 @@ public:
 protected:
     juce::Rectangle<int> getPreferredContentSize() const override;
     void onAnimationVisibilityChanged(bool becameVisible) override;
+    /// Refresh cached theme colours that the inner TextEditor depends on.
+    void onThemeChanged(const ColorTheme& newTheme) override;
 
 private:
     void setupComponents();
@@ -84,7 +86,7 @@ private:
     std::unique_ptr<juce::TextEditor> statsDisplay_;
     std::unique_ptr<OscilButton> resetButton_;
 
-    // Layout constants
+    // Pixel layout constants
     static constexpr int ROW_HEIGHT = 15;
     static constexpr int HEADER_HEIGHT = 20;
     static constexpr int LABEL_COLUMN_WIDTH = 60;
@@ -93,6 +95,12 @@ private:
     static constexpr int RESET_BUTTON_SIZE = 16;
     static constexpr int METRIC_ROW_COUNT = 7;                    // Peak, Max Pk, RMS, Crest, DC, Attack, Decay
     static constexpr int TOTAL_TABLE_ROWS = 1 + METRIC_ROW_COUNT; // column header + metric rows
+
+    // Text layout constants (character-based, used by formatTable). These
+    // define the fixed-width monospace grid written into the TextEditor. The
+    // total row length must remain stable for selection preservation to work.
+    static constexpr int LABEL_CHAR_WIDTH = 8; // "Max Pk  " etc.
+    static constexpr int DATA_CHAR_WIDTH = 10; // per-oscillator column width
 
     // State for sizing
     int numOscillators_ = 0;
