@@ -38,8 +38,16 @@ DialogManager::DialogManager(juce::Component& parent, IThemeService& themeServic
     configModal_ = std::make_unique<OscilModal>(themeService_, "Configure Oscillator", "configModal");
     configModal_->setContent(configPopup_.get());
 
-    // Connect internal close button/action to modal hide
+    // Close wiring: the content's footer Close button asks the modal to hide.
+    // Every close path (footer / X / Escape / backdrop / animation-settle)
+    // terminates at the modal's onClose, which we route back to the content's
+    // onExternalClose(). That is the single point that flushes pending edits
+    // and fires the configDialogClosed listener notification.
     configPopup_->onClose = [this]() { configModal_->hide(); };
+    configModal_->onClose = [this]() {
+        if (configPopup_)
+            configPopup_->onExternalClose();
+    };
 }
 
 DialogManager::~DialogManager() { parent_.removeComponentListener(this); }
@@ -155,15 +163,16 @@ void DialogManager::componentBeingDeleted(juce::Component& component)
 {
     if (&component == &parent_)
     {
-        // Parent is dying, ensure modals are closed/detached
+        // Parent is dying — force synchronous teardown. Animated hide() would
+        // leave a timer alive on an orphaned component tree.
         if (addOscillatorModal_)
-            addOscillatorModal_->hide();
+            addOscillatorModal_->hideImmediate();
         if (colorModal_)
-            colorModal_->hide();
+            colorModal_->hideImmediate();
         if (selectPaneModal_)
-            selectPaneModal_->hide();
+            selectPaneModal_->hideImmediate();
         if (configModal_)
-            configModal_->hide();
+            configModal_->hideImmediate();
     }
 }
 

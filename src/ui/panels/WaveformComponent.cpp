@@ -218,11 +218,6 @@ void WaveformComponent::setVisualPresetId(const juce::String& presetId)
     visualPresetId_ = presetId.isNotEmpty() ? presetId : "default";
 }
 
-void WaveformComponent::setVisualOverrides(const juce::ValueTree& overrides)
-{
-    visualOverrides_ = overrides.createCopy();
-}
-
 void WaveformComponent::setGpuRenderingEnabled(bool enabled) { gpuRenderingEnabled_ = enabled; }
 
 void WaveformComponent::setGridConfig(const GridConfiguration& config)
@@ -327,10 +322,6 @@ void WaveformComponent::populateGLRenderData(WaveformRenderData& data) const
     data.gridColors.gridZeroLine = theme.gridZeroLine;
 
     data.visualConfig = VisualConfiguration::getPreset(visualPresetId_);
-
-    // Visual overrides reserved for future per-oscillator customization.
-    // Currently no UI sets overrides, so the ValueTree is always empty.
-    juce::ignoreUnused(visualOverrides_);
 #else
     juce::ignoreUnused(data);
 #endif

@@ -190,7 +190,7 @@ void TestRunnerHandler::handleRunRenderingTest(const httplib::Request& /*req*/, 
             const auto& paneComponents = editor_.getPaneComponents();
             bool allPanesValid = true;
             for (const auto& paneComponent : paneComponents)
-                if (!paneComponent.get())
+                if (!paneComponent)
                 {
                     allPanesValid = false;
                     break;

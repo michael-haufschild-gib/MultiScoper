@@ -41,7 +41,6 @@ void WaveformStack::configureWaveformFromOscillator(WaveformComponent& waveform,
     waveform.setLineWidth(oscillator.getLineWidth());
     waveform.setShaderId(oscillator.getShaderId());
     waveform.setVisualPresetId(oscillator.getVisualPresetId());
-    waveform.setVisualOverrides(oscillator.getVisualOverrides());
 }
 
 WaveformStack::WaveformStack(IAudioDataProvider& dataProvider, IThemeService& themeService,

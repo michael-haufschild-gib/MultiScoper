@@ -81,6 +81,12 @@ public:
     void attachToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId);
     void detachFromParameter();
 
+    /// Request keyboard focus on the internal editor. The OscilTextField wrapper
+    /// itself is not focus-eligible (its visuals mirror the inner editor), so
+    /// callers that want to programmatically focus the field should use this
+    /// helper instead of Component::grabKeyboardFocus on the wrapper.
+    void grabInnerFocus();
+
     // Callbacks
     std::function<void(const juce::String&)> onTextChanged;
     std::function<void(double)> onValueChanged;

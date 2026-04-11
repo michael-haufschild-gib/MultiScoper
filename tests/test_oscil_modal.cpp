@@ -3,6 +3,7 @@
     Tests for OscilModal UI component
 */
 
+#include "ui/components/AnimationSettings.h"
 #include "ui/components/OscilModal.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -179,80 +180,187 @@ TEST_F(OscilModalTest, SetCloseOnBackdropClick)
 // Show/Hide Tests
 // =============================================================================
 
-TEST_F(OscilModalTest, ShowModal)
-{
-    OscilModal modal(getThemeManager());
-
-    modal.show(nullptr);
-    // Modal should retain its configuration after show attempt
-    EXPECT_TRUE(modal.getShowCloseButton());
-    EXPECT_TRUE(modal.getCloseOnEscape());
-}
-
-TEST_F(OscilModalTest, HideModal)
-{
-    OscilModal modal(getThemeManager());
-
-    modal.hide();
-    // Modal configuration should persist after hide
-    EXPECT_TRUE(modal.getCloseOnEscape());
-    EXPECT_TRUE(modal.getShowCloseButton());
-}
-
-TEST_F(OscilModalTest, HideWhenNotShown)
-{
-    OscilModal modal(getThemeManager());
-
-    modal.hide();
-    // Double hide should not corrupt state
-    modal.hide();
-    EXPECT_TRUE(modal.getCloseOnEscape());
-}
-
 // =============================================================================
-// Callback Tests
+// Show / Hide Lifecycle Tests
+//
+// These tests exercise the actual visibility state machine using a dummy
+// parent component. The earlier version of this file contained placebo tests
+// that set a callback, ran nothing, then asserted "not called" — which is
+// coverage theater. The tests below verify the real flow: show + hide change
+// visibility, onClose fires once per close, requestClose runs through the
+// onCloseRequested gate, and hideImmediate is a synchronous shortcut path
+// safe to use during teardown.
 // =============================================================================
 
-TEST_F(OscilModalTest, OnCloseCallback)
+TEST_F(OscilModalTest, ShowOnParentMakesComponentVisible)
+{
+    juce::Component parent;
+    parent.setSize(800, 600);
+
+    OscilModal modal(getThemeManager());
+    modal.show(&parent);
+
+    EXPECT_TRUE(modal.isVisible());
+    EXPECT_EQ(modal.getParentComponent(), &parent);
+    EXPECT_EQ(modal.getBounds(), parent.getLocalBounds());
+}
+
+TEST_F(OscilModalTest, HideImmediateFiresOnCloseAndHides)
+{
+    juce::Component parent;
+    parent.setSize(400, 300);
+
+    OscilModal modal(getThemeManager());
+
+    bool closeCalled = false;
+    modal.onClose = [&closeCalled]() { closeCalled = true; };
+
+    modal.show(&parent);
+    ASSERT_TRUE(modal.isVisible());
+
+    modal.hideImmediate();
+
+    EXPECT_FALSE(modal.isVisible());
+    EXPECT_TRUE(closeCalled) << "hideImmediate must invoke onClose synchronously";
+}
+
+TEST_F(OscilModalTest, HideImmediateOnUnshownModalIsNoOp)
 {
     OscilModal modal(getThemeManager());
 
     bool closeCalled = false;
     modal.onClose = [&closeCalled]() { closeCalled = true; };
 
-    // Callback would be triggered when modal closes
-    // Just verify callback can be set
+    // Unshown modal: hideImmediate must not crash and must fire onClose at most once.
+    modal.hideImmediate();
+    modal.hideImmediate();
+
+    EXPECT_FALSE(modal.isVisible());
+    // onClose is fired each call — the test just proves no crash and state stays hidden.
+    EXPECT_TRUE(closeCalled);
+}
+
+TEST_F(OscilModalTest, HideOnNotVisibleModalFallsThroughToImmediate)
+{
+    OscilModal modal(getThemeManager());
+
+    bool closeCalled = false;
+    modal.onClose = [&closeCalled]() { closeCalled = true; };
+
+    // hide() on a modal that was never shown should take the synchronous fallback
+    // path (see OscilModal::hide — isVisible() false routes to hideImmediate),
+    // so onClose fires deterministically without a live message loop.
+    modal.hide();
+
+    EXPECT_FALSE(modal.isVisible());
+    EXPECT_TRUE(closeCalled);
+}
+
+// =============================================================================
+// Close Request Gate Tests
+// =============================================================================
+
+TEST_F(OscilModalTest, EscapeKeyFiresOnCloseWhenCloseOnEscapeIsTrue)
+{
+    // Force the synchronous hide path — the animated path relies on a JUCE timer
+    // that never fires in unit tests (no message loop pump). Reduced-motion is a
+    // real code branch, not a test hack: hide() routes to hideImmediate() under it.
+    ScopedReducedMotion reducedMotion;
+
+    juce::Component parent;
+    parent.setSize(400, 300);
+
+    OscilModal modal(getThemeManager());
+    modal.setCloseOnEscape(true);
+
+    int closeCount = 0;
+    modal.onClose = [&closeCount]() { ++closeCount; };
+
+    modal.show(&parent);
+    ASSERT_TRUE(modal.isVisible());
+
+    // Direct invocation mirrors what JUCE dispatches for real keypresses.
+    bool const handled = modal.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+
+    EXPECT_TRUE(handled);
+    EXPECT_FALSE(modal.isVisible()) << "Escape must dismiss the modal";
+    EXPECT_EQ(closeCount, 1) << "onClose must fire exactly once per dismissal";
+}
+
+TEST_F(OscilModalTest, EscapeKeyIgnoredWhenCloseOnEscapeIsFalse)
+{
+    juce::Component parent;
+    parent.setSize(400, 300);
+
+    OscilModal modal(getThemeManager());
+    modal.setCloseOnEscape(false);
+
+    bool closeCalled = false;
+    modal.onClose = [&closeCalled]() { closeCalled = true; };
+
+    modal.show(&parent);
+    ASSERT_TRUE(modal.isVisible());
+
+    bool const handled = modal.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+
+    EXPECT_FALSE(handled) << "keyPressed must decline Escape when closeOnEscape is disabled";
+    EXPECT_TRUE(modal.isVisible()) << "Modal must remain visible";
     EXPECT_FALSE(closeCalled);
 }
 
-TEST_F(OscilModalTest, OnCloseRequestedCallback)
+TEST_F(OscilModalTest, OnCloseRequestedReturningFalseVetosHide)
 {
+    juce::Component parent;
+    parent.setSize(400, 300);
+
     OscilModal modal(getThemeManager());
 
-    bool requestCalled = false;
-    modal.onCloseRequested = [&requestCalled]() {
-        requestCalled = true;
-        return true; // Allow close
+    int vetoCount = 0;
+    modal.onCloseRequested = [&vetoCount]() {
+        ++vetoCount;
+        return false; // veto
     };
 
-    // Callback would be triggered when close is requested
-    // Just verify callback can be set
-    EXPECT_FALSE(requestCalled);
+    bool closeCalled = false;
+    modal.onClose = [&closeCalled]() { closeCalled = true; };
+
+    modal.show(&parent);
+    ASSERT_TRUE(modal.isVisible());
+
+    // Escape drives requestClose → onCloseRequested → veto.
+    bool const handled = modal.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+
+    EXPECT_TRUE(handled) << "Escape key is still consumed even when close is vetoed";
+    EXPECT_EQ(vetoCount, 1) << "onCloseRequested must be consulted once";
+    EXPECT_TRUE(modal.isVisible()) << "Veto must keep the modal open";
+    EXPECT_FALSE(closeCalled) << "onClose must not fire when close is vetoed";
 }
 
-TEST_F(OscilModalTest, OnCloseRequestedPreventClose)
+TEST_F(OscilModalTest, OnCloseRequestedReturningTrueAllowsHide)
 {
+    // Force synchronous hide; see EscapeKeyFiresOnCloseWhenCloseOnEscapeIsTrue.
+    ScopedReducedMotion reducedMotion;
+
+    juce::Component parent;
+    parent.setSize(400, 300);
+
     OscilModal modal(getThemeManager());
 
-    bool requestCalled = false;
-    modal.onCloseRequested = [&requestCalled]() {
-        requestCalled = true;
-        return false;
+    int requestCount = 0;
+    modal.onCloseRequested = [&requestCount]() {
+        ++requestCount;
+        return true; // allow
     };
 
-    // Callback can be set and modal retains its configuration
-    EXPECT_FALSE(requestCalled);
-    EXPECT_TRUE(modal.getShowCloseButton());
+    int closeCount = 0;
+    modal.onClose = [&closeCount]() { ++closeCount; };
+
+    modal.show(&parent);
+    modal.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+
+    EXPECT_EQ(requestCount, 1);
+    EXPECT_EQ(closeCount, 1);
+    EXPECT_FALSE(modal.isVisible());
 }
 
 // =============================================================================

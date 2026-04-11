@@ -69,8 +69,13 @@ public:
 
     /// Display the modal overlay, optionally parented to a specific component.
     void show(juce::Component* parent = nullptr);
-    /// Dismiss the modal overlay with a fade-out animation.
+    /// Dismiss the modal overlay, animating out when spring animations are enabled.
+    /// The onClose callback fires once the exit animation settles (or synchronously
+    /// when animations are disabled).
     void hide();
+    /// Dismiss the modal overlay without animation. Used on parent destruction and
+    /// when reduced-motion is active; safe to call when the modal is already hidden.
+    void hideImmediate();
     bool isShowing() const { return isVisible() && showSpring_.position > 0.01f; }
 
     // Callbacks

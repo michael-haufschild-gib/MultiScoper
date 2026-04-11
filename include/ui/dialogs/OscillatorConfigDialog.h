@@ -71,6 +71,14 @@ public:
     void setAvailablePanes(const std::vector<std::pair<PaneId, juce::String>>& panes);
 
     /**
+     * Invoked by the hosting modal when it has finished closing (via the X button,
+     * Escape, backdrop click, or the content's own Close button path). Flushes any
+     * pending debounced edits and fires configDialogClosed on all listeners, so
+     * every close path goes through exactly one notification point.
+     */
+    void onExternalClose();
+
+    /**
      * Get the oscillator ID being edited
      */
     OscillatorId getOscillatorId() const { return oscillatorId_; }
@@ -100,6 +108,16 @@ public:
     static constexpr size_t NUM_COLOR_SWATCHES = WaveformColorPalette::NUM_COLORS;
 
 private:
+    /// Generic single-shot debounce timer used to coalesce high-frequency events
+    /// (e.g. keystrokes in the name editor) into a single listener notification.
+    /// Declared here so it can live as a member of OscillatorConfigDialog.
+    class DebounceTimer : public juce::Timer
+    {
+    public:
+        std::function<void()> onFire;
+        void timerCallback() override;
+    };
+
     IInstanceRegistry& instanceRegistry_;
 
     void setupComponents();
@@ -108,8 +126,10 @@ private:
     void setupPaneAndFooter();
     void updateFromOscillator(const Oscillator& oscillator);
     void notifyConfigChanged();
-    void handleClose();
+    void handleClose() const;
     void handleNameEdit();
+    /// Flush any pending debounced name edit immediately.
+    void flushPendingNameEdit();
     void handleSourceChange(const SourceId& sourceId);
     void handleProcessingModeChange(int modeId);
     void handleColorSelect(juce::Colour colour);
@@ -163,6 +183,11 @@ private:
 
     // Footer buttons
     std::unique_ptr<OscilButton> footerCloseButton_;
+
+    // Debounces keystroke-driven name edits so we do not churn the entire
+    // oscillator ValueTree on every character. Flushed on Close / Enter.
+    DebounceTimer nameDebounce_;
+    static constexpr int NAME_DEBOUNCE_MS = 250;
 
     juce::ListenerList<Listener> listeners_;
 

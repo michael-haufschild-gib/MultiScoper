@@ -165,6 +165,12 @@ void OscilDropdown::setMultiSelect(bool multiSelect)
 
 void OscilDropdown::setSearchable(bool searchable) { searchable_ = searchable; }
 
+void OscilDropdown::setTooltip(const juce::String& tooltip)
+{
+    tooltipText_ = tooltip;
+    setHelpText(tooltip);
+}
+
 void OscilDropdown::enablementChanged()
 {
     setMouseCursor(isEnabled() ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);

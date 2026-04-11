@@ -139,6 +139,29 @@ void OscilModal::show(juce::Component* parent)
 
 void OscilModal::hide()
 {
+    // Animate out when motion is allowed and the modal is actually on screen.
+    // Otherwise fall back to the synchronous path so reduced-motion users and
+    // not-yet-shown modals still collapse cleanly.
+    if (!isVisible() || !AnimationSettings::shouldUseSpringAnimations())
+    {
+        hideImmediate();
+        return;
+    }
+
+    // Stop listening for external focus changes up front — during the fade-out
+    // we don't want the focus trap to steal focus back.
+    juce::Desktop::getInstance().removeFocusChangeListener(this);
+
+    // Kick off the exit animation. timerCallback() is responsible for calling
+    // setVisible(false), restoring previous focus, and firing onClose once the
+    // springs settle below the visibility threshold.
+    showSpring_.setTarget(0.0f);
+    scaleSpring_.setTarget(0.95f);
+    startTimerHz(ComponentLayout::ANIMATION_FPS);
+}
+
+void OscilModal::hideImmediate()
+{
     juce::Desktop::getInstance().removeFocusChangeListener(this);
 
     stopTimer();
