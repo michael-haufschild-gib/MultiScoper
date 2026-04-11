@@ -27,9 +27,9 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
     , isVisible_(oscillator.isVisible())
     , paneId_(oscillator.getPaneId())
 {
-    // Register test ID with oscillator index
-    juce::String const testId = "sidebar_oscillators_item_" + juce::String(oscillator.getOrderIndex());
-    setTestId(testId);
+    // Note: testId is intentionally NOT set here. The owning OscillatorListComponent
+    // calls setListIndex(i) after construction, which is the single source of truth
+    // for display-position-based test IDs. Child widgets are registered there too.
 
     // Get track name from source registry
     if (oscillator.getSourceId().isValid())
@@ -49,7 +49,7 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
         trackName_ = "Self";
     }
 
-    setupComponents(oscillator.getOrderIndex());
+    setupComponents();
 
     // Initialize colors
     // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
@@ -61,7 +61,9 @@ OscillatorListItemComponent::OscillatorListItemComponent(const Oscillator& oscil
 
 void OscillatorListItemComponent::setupLabels()
 {
-    nameLabel_ = std::make_unique<InlineEditLabel>(getThemeService(), getTestId() + "_name");
+    // testId is assigned by setListIndex() after construction — pass empty here
+    // and let setListIndex register the correct child test IDs as "<parent>_name".
+    nameLabel_ = std::make_unique<InlineEditLabel>(getThemeService());
     nameLabel_->setText(displayName_, false);
     nameLabel_->setPlaceholder("Oscillator name...");
     nameLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT).withStyle("Bold"));
@@ -83,14 +85,13 @@ void OscillatorListItemComponent::setupLabels()
     addAndMakeVisible(*trackLabel_);
 }
 
-void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
+void OscillatorListItemComponent::setupActionButtons()
 {
+    // testIds for action buttons are assigned by setListIndex() after construction.
     deleteButton_ = std::make_unique<OscilButton>(getThemeService(), "");
     deleteButton_->setVariant(ButtonVariant::Icon);
     deleteButton_->setIconPath(ListItemIcons::createTrashIcon(static_cast<float>(ICON_BUTTON_SIZE)));
     deleteButton_->setTooltip("Delete Oscillator (Delete/Backspace)");
-    if (suffix.isNotEmpty())
-        deleteButton_->setTestId(getTestId() + "_delete");
     deleteButton_->onClick = [this]() {
         listeners_.call([this](Listener& l) { l.oscillatorDeleteRequested(oscillatorId_); });
     };
@@ -100,8 +101,6 @@ void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
     settingsButton_->setVariant(ButtonVariant::Icon);
     settingsButton_->setIconPath(ListItemIcons::createGearIcon(static_cast<float>(ICON_BUTTON_SIZE)));
     settingsButton_->setTooltip("Configure Oscillator (Enter)");
-    if (suffix.isNotEmpty())
-        settingsButton_->setTestId(getTestId() + "_settings");
     settingsButton_->onClick = [this]() {
         listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); });
     };
@@ -109,8 +108,6 @@ void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
 
     visibilityButton_ = std::make_unique<OscilButton>(getThemeService(), "");
     visibilityButton_->setVariant(ButtonVariant::Icon);
-    if (suffix.isNotEmpty())
-        visibilityButton_->setTestId(getTestId() + "_vis_btn");
     visibilityButton_->onClick = [this]() {
         if (!isVisible_ && !paneId_.isValid())
         {
@@ -124,8 +121,9 @@ void OscillatorListItemComponent::setupActionButtons(const juce::String& suffix)
     addChildComponent(*visibilityButton_);
 }
 
-void OscillatorListItemComponent::setupModeButtons(const juce::String& suffix)
+void OscillatorListItemComponent::setupModeButtons()
 {
+    // testId for modeButtons_ is assigned by setListIndex() after construction.
     modeButtons_ = std::make_unique<SegmentedButtonBar>(getThemeService());
     modeButtons_->setMinButtonWidth(36);
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createStereoIcon(14),
@@ -141,8 +139,6 @@ void OscillatorListItemComponent::setupModeButtons(const juce::String& suffix)
                                     "Left: Left channel only");
     modeButtons_->addButtonWithPath(ProcessingModeIcons::createRightIcon(14), static_cast<int>(ProcessingMode::Right),
                                     {}, "Right: Right channel only");
-    if (suffix.isNotEmpty())
-        OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, getTestId() + "_mode");
     modeButtons_->onSelectionChanged = [this](int id) {
         processingMode_ = static_cast<ProcessingMode>(id);
         listeners_.call([this](Listener& l) { l.oscillatorModeChanged(oscillatorId_, processingMode_); });
@@ -150,12 +146,11 @@ void OscillatorListItemComponent::setupModeButtons(const juce::String& suffix)
     addChildComponent(*modeButtons_);
 }
 
-void OscillatorListItemComponent::setupComponents(int orderIndex)
+void OscillatorListItemComponent::setupComponents()
 {
-    juce::String const suffix = juce::String(orderIndex);
     setupLabels();
-    setupActionButtons(suffix);
-    setupModeButtons(suffix);
+    setupActionButtons();
+    setupModeButtons();
     updateVisibility();
 }
 
@@ -208,6 +203,11 @@ void OscillatorListItemComponent::updateVisibility()
     }
 
     repaint();
+    // resized() is safe here in normal use; it is also invoked transitively from
+    // the constructor (ctor -> setupComponents -> updateVisibility), where
+    // clang-analyzer flags it as a virtual call during construction. Bounds are
+    // empty that early so the call is effectively a no-op; suppress the warning.
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
     resized();
 }
 
@@ -252,12 +252,8 @@ void OscillatorListItemComponent::resized()
     }
 }
 
-// ... (Remove custom paint methods: paintCompact, paintExpanded, paintModeButton, paintVisibilityToggle,
-// paintIconButton)
-// ... (Remove hit test methods: isInSettingsButton, isInDeleteButton, isInVisibilityToggle, isInModeButton)
-
-// mouseEnter, mouseExit, mouseMove, mouseDown, mouseDrag, mouseDoubleClick,
-// mouseUp, keyPressed, focusGained, focusLost are in OscillatorListItemPainting.cpp
+// paint(), mouseEnter/Exit/Move/Down/Up/Drag/DoubleClick, keyPressed, focusGained/Lost
+// are implemented in OscillatorListItemPainting.cpp
 
 bool OscillatorListItemComponent::isInDragZone(const juce::Point<int>& pos) const { return pos.x < DRAG_HANDLE_WIDTH; }
 
@@ -317,21 +313,9 @@ void OscillatorListItemComponent::updateFromOscillator(const Oscillator& oscilla
     if (trackLabel_)
         trackLabel_->setText(trackName_, juce::dontSendNotification);
 
-    // Re-register test IDs if order index changed (list rebuild after deletion)
-    int const newOrder = oscillator.getOrderIndex();
-    juce::String const newTestId = "sidebar_oscillators_item_" + juce::String(newOrder);
-    OSCIL_LOG(UI, "ListItem: updateFromOscillator name=" << displayName_ << " oldTestId=" << getTestId()
-                                                         << " newTestId=" << newTestId << " orderIndex=" << newOrder);
-    if (newTestId != getTestId())
-    {
-        OSCIL_LOG(UI, "ListItem: re-registering test IDs: " << getTestId() << " -> " << newTestId);
-        setTestId(newTestId);
-        deleteButton_->setTestId(newTestId + "_delete");
-        settingsButton_->setTestId(newTestId + "_settings");
-        visibilityButton_->setTestId(newTestId + "_vis_btn");
-        OSCIL_REGISTER_CHILD_TEST_ID(*modeButtons_, newTestId + "_mode");
-        nameLabel_->setTestId(newTestId + "_name");
-    }
+    // Note: testId is intentionally NOT updated here. The owning OscillatorListComponent
+    // calls setListIndex() after a refresh, which is the single source of truth for
+    // display-position-based test IDs.
 
     updateVisibility();
 }

@@ -119,6 +119,10 @@ public:
      */
     void setSelectedOscillator(const OscillatorId& oscillatorId);
 
+    /// Number of list items currently displayed (after filter).
+    /// Exposed for tests and diagnostics; does not allocate.
+    [[nodiscard]] size_t getDisplayedItemCount() const noexcept { return items_.size(); }
+
     /// Register a listener for oscillator list events.
     void addListener(Listener* listener);
     /// Remove a previously registered listener.

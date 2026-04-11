@@ -30,7 +30,9 @@ OscillatorListComponent::OscillatorListComponent(IThemeService& themeService, II
     addAndMakeVisible(toolbar_.get());
 
     viewport_ = std::make_unique<juce::Viewport>();
+    viewport_->setComponentID("oscillatorListViewport");
     container_ = std::make_unique<juce::Component>();
+    container_->setComponentID("oscillatorListContainer");
     viewport_->setViewedComponent(container_.get(), false);
     viewport_->setScrollBarsShown(true, false);
     viewport_->setScrollOnDragMode(juce::Viewport::ScrollOnDragMode::never);

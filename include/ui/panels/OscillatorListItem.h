@@ -102,10 +102,10 @@ public:
     static constexpr int PREFERRED_HEIGHT = COMPACT_HEIGHT; // Default for layout calculations
 
 private:
-    void setupComponents(int orderIndex);
+    void setupComponents();
     void setupLabels();
-    void setupActionButtons(const juce::String& suffix);
-    void setupModeButtons(const juce::String& suffix);
+    void setupActionButtons();
+    void setupModeButtons();
     void updateVisibility();
 
     bool isInDragZone(const juce::Point<int>& pos) const;

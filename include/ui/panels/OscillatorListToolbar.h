@@ -61,6 +61,10 @@ public:
 
     // State getters
     OscillatorFilterMode getFilterMode() const { return currentFilterMode_; }
+    /// Last total count set via setOscillatorCount. Exposed for tests/diagnostics.
+    [[nodiscard]] int getTotalCount() const noexcept { return totalCount_; }
+    /// Last visible count set via setOscillatorCount. Exposed for tests/diagnostics.
+    [[nodiscard]] int getVisibleCount() const noexcept { return visibleCount_; }
 
     void addListener(Listener* listener);
     void removeListener(Listener* listener);

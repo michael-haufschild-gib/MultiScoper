@@ -106,6 +106,8 @@ public:
     void oscillatorModeChanged(const OscillatorId& oscillatorId, ProcessingMode mode) override;
     void oscillatorVisibilityChanged(const OscillatorId& oscillatorId, bool visible) override;
     void oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId) override;
+    void oscillatorNameChanged(const OscillatorId& oscillatorId, const juce::String& newName) override;
+    void oscillatorsReordered(int fromIndex, int toIndex) override;
     void addOscillatorDialogRequested() override;
     void addOscillatorRequested(const AddOscillatorDialog::Result& result) override;
 

@@ -203,4 +203,101 @@ TEST_F(OscillatorPanelControllerTest, ReorderPaneUpdatesLayout)
     EXPECT_EQ(layout.getPane(p2.getId())->getOrderIndex(), 0);
 }
 
+TEST_F(OscillatorPanelControllerTest, OscillatorNameChangedPersistsToState)
+{
+    auto& state = processor_.getState();
+
+    Pane pane;
+    state.getLayoutManager().addPane(pane);
+
+    Oscillator osc;
+    osc.setName("Old Name");
+    osc.setPaneId(pane.getId());
+    state.addOscillator(osc);
+
+    // Trigger the SidebarComponent::Listener override on the controller.
+    controller_->oscillatorNameChanged(osc.getId(), "New Name");
+
+    // The controller should have written the new name back to state.
+    auto updated = state.getOscillators();
+    auto it =
+        std::find_if(updated.begin(), updated.end(), [&](const Oscillator& o) { return o.getId() == osc.getId(); });
+    ASSERT_NE(it, updated.end());
+    EXPECT_EQ(it->getName(), "New Name");
+}
+
+TEST_F(OscillatorPanelControllerTest, OscillatorNameChangedRejectsEmptyName)
+{
+    auto& state = processor_.getState();
+
+    Pane pane;
+    state.getLayoutManager().addPane(pane);
+
+    Oscillator osc;
+    osc.setName("Keep Me");
+    osc.setPaneId(pane.getId());
+    state.addOscillator(osc);
+
+    controller_->oscillatorNameChanged(osc.getId(), "");
+
+    auto updated = state.getOscillators();
+    auto it =
+        std::find_if(updated.begin(), updated.end(), [&](const Oscillator& o) { return o.getId() == osc.getId(); });
+    ASSERT_NE(it, updated.end());
+    EXPECT_EQ(it->getName(), "Keep Me"); // unchanged
+}
+
+TEST_F(OscillatorPanelControllerTest, OscillatorNameChangedIgnoresUnknownId)
+{
+    // Calling with an unknown id should not crash or mutate state.
+    auto& state = processor_.getState();
+    const auto oscCountBefore = state.getOscillators().size();
+
+    controller_->oscillatorNameChanged(OscillatorId::generate(), "Ghost");
+
+    EXPECT_EQ(state.getOscillators().size(), oscCountBefore);
+}
+
+TEST_F(OscillatorPanelControllerTest, OscillatorsReorderedPersistsNewOrderToState)
+{
+    // Drag-to-reorder regression: this override must forward to state so
+    // that dragging in the sidebar actually updates the stored order.
+    auto& state = processor_.getState();
+    state.getOscillators().clear();
+    state.getLayoutManager().clear();
+
+    Pane pane;
+    state.getLayoutManager().addPane(pane);
+
+    OscillatorId ids[3];
+    for (int i = 0; i < 3; ++i)
+    {
+        Oscillator osc;
+        osc.setName("Osc_" + juce::String(i));
+        osc.setOrderIndex(i);
+        osc.setPaneId(pane.getId());
+        state.addOscillator(osc);
+        ids[i] = osc.getId();
+    }
+
+    // Move the first oscillator to the end.
+    controller_->oscillatorsReordered(0, 2);
+
+    auto oscillators = state.getOscillators();
+    ASSERT_EQ(oscillators.size(), 3u);
+
+    // After state.reorderOscillators(0, 2), Osc_0 should now have the
+    // highest orderIndex and the other two should shift up.
+    const auto findOrderFor = [&](const OscillatorId& id) {
+        for (const auto& o : oscillators)
+            if (o.getId() == id)
+                return o.getOrderIndex();
+        return -1;
+    };
+
+    EXPECT_EQ(findOrderFor(ids[0]), 2);
+    EXPECT_EQ(findOrderFor(ids[1]), 0);
+    EXPECT_EQ(findOrderFor(ids[2]), 1);
+}
+
 } // namespace oscil

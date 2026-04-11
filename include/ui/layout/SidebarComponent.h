@@ -127,6 +127,12 @@ public:
          */
         virtual void oscillatorPaneSelectionRequested(const OscillatorId& /*oscillatorId*/) {}
 
+        /**
+         * Called when the user edits an oscillator name inline in the sidebar list.
+         * The handler is responsible for persisting the new name to state.
+         */
+        virtual void oscillatorNameChanged(const OscillatorId& /*oscillatorId*/, const juce::String& /*newName*/) {}
+
         // Timing section events
         virtual void timingModeChanged(TimingMode /*mode*/) {}
         virtual void noteIntervalChanged(NoteInterval /*interval*/) {}

@@ -120,6 +120,43 @@ void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& 
     }
 }
 
+void OscillatorPanelController::oscillatorNameChanged(const OscillatorId& oscillatorId, const juce::String& newName)
+{
+    OSCIL_LOG(CONTROLLER, "oscillatorNameChanged: id=" << oscillatorId.id << " newName=" << newName);
+    // Reject empty names — preserves the existing name on blank input.
+    if (!Oscillator::isValidName(newName))
+        return;
+
+    auto& state = dataProvider_.getState();
+    auto oscillators = state.getOscillators();
+    for (auto& osc : oscillators)
+    {
+        if (osc.getId() == oscillatorId)
+        {
+            if (osc.getName() == newName)
+                return; // No change — skip redundant state update.
+            osc.setName(newName);
+            state.updateOscillator(osc);
+            return;
+        }
+    }
+}
+
+void OscillatorPanelController::oscillatorsReordered(int fromIndex, int toIndex)
+{
+    OSCIL_LOG(CONTROLLER, "oscillatorsReordered: from=" << fromIndex << " to=" << toIndex);
+    // Persist the new ordering to state. The ValueTree listener chain triggers
+    // applyOscillatorPropertyChange for each affected oscillator and refreshes
+    // the sidebar/panes accordingly.
+    //
+    // Note: fromIndex and toIndex are positions in the currently displayed
+    // sidebar list. When no filter is active this matches the global orderIndex
+    // space one-to-one, which is what state.reorderOscillators expects. Drag
+    // reorder while a non-All filter is applied is intentionally not supported
+    // yet (filter indices would need per-ID translation).
+    dataProvider_.getState().reorderOscillators(fromIndex, toIndex);
+}
+
 void OscillatorPanelController::oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId)
 {
     if (!dialogManager_)
