@@ -323,8 +323,8 @@ TEST_F(OscilModalTest, OnCloseRequestedReturningFalseVetosHide)
         return false; // veto
     };
 
-    bool closeCalled = false;
-    modal.onClose = [&closeCalled]() { closeCalled = true; };
+    int closeCount = 0;
+    modal.onClose = [&closeCount]() { ++closeCount; };
 
     modal.show(&parent);
     ASSERT_TRUE(modal.isVisible());
@@ -335,7 +335,7 @@ TEST_F(OscilModalTest, OnCloseRequestedReturningFalseVetosHide)
     EXPECT_TRUE(handled) << "Escape key is still consumed even when close is vetoed";
     EXPECT_EQ(vetoCount, 1) << "onCloseRequested must be consulted once";
     EXPECT_TRUE(modal.isVisible()) << "Veto must keep the modal open";
-    EXPECT_FALSE(closeCalled) << "onClose must not fire when close is vetoed";
+    EXPECT_EQ(closeCount, 0) << "onClose must not fire when close is vetoed";
 }
 
 TEST_F(OscilModalTest, OnCloseRequestedReturningTrueAllowsHide)

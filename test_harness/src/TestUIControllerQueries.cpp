@@ -54,7 +54,8 @@ juce::String TestUIController::getFocusedElementId()
         }
         state->done.signal();
     });
-    state->done.wait(MESSAGE_THREAD_TIMEOUT_MS);
+    if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+        return {};
     return state->result;
 }
 
@@ -120,7 +121,7 @@ json TestUIController::getUIState()
     auto weak = self_;
     juce::MessageManager::callAsync([weak, state]() {
         auto locked = weak.lock();
-        if (!locked || !locked->load(std::memory_order_acquire))
+        if (!isControllerAlive(locked))
         {
             state->done.signal();
             return;
@@ -133,7 +134,8 @@ json TestUIController::getUIState()
         state->result["focusedElement"] = self->getFocusedElementIdOnMessageThread().toStdString();
         state->done.signal();
     });
-    state->done.wait(MESSAGE_THREAD_TIMEOUT_MS);
+    if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+        return json{{"error", "timeout"}};
     return state->result;
 }
 

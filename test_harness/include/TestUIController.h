@@ -369,8 +369,12 @@ public:
 protected:
     static constexpr int MESSAGE_THREAD_TIMEOUT_MS = 3000;
 
-    /// Run func on the message thread synchronously, resolving elementId first.
-    /// Captures `self_` (weak_ptr) so late-executing callbacks after destruction are safe.
+    // Returns true if the ControlBlock is alive and controller is non-null.
+    static bool isControllerAlive(const std::shared_ptr<ControlBlock>& locked)
+    {
+        return locked && locked->load(std::memory_order_acquire) && locked->controller != nullptr;
+    }
+
     template <typename Func>
     bool runOnMessageThreadSync(const juce::String& elementId, Func&& func)
     {
@@ -383,14 +387,12 @@ protected:
         auto weak = self_;
         juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
             auto locked = weak.lock();
-            if (!locked || !locked->load(std::memory_order_acquire))
+            if (!isControllerAlive(locked))
             {
                 state->done.signal();
                 return;
             }
-            auto* self = locked->controller;
-            auto* component = self->getTargetComponent(elementId);
-            state->result = f(component);
+            state->result = f(locked->controller->getTargetComponent(elementId));
             state->done.signal();
         });
         if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
@@ -398,8 +400,6 @@ protected:
         return state->result;
     }
 
-    /// Overload for lambdas that don't need component resolution.
-    /// Captures `self_` (weak_ptr) to guard against late execution after destruction.
     template <typename Func>
     bool runOnMessageThreadSync(Func&& func)
     {
@@ -412,7 +412,7 @@ protected:
         auto weak = self_;
         juce::MessageManager::callAsync([weak, state, f = std::forward<Func>(func)]() mutable {
             auto locked = weak.lock();
-            if (!locked || !locked->load(std::memory_order_acquire))
+            if (!isControllerAlive(locked))
             {
                 state->done.signal();
                 return;
@@ -425,9 +425,6 @@ protected:
         return state->result;
     }
 
-    /// Run a function on the message thread synchronously, returning a value of type T.
-    /// Resolves the element via getTargetComponent and passes it to func.
-    /// Captures `self_` (weak_ptr) instead of `this` for late-execution safety.
     template <typename T, typename Func>
     T runOnMessageThreadSyncWithResult(const juce::String& elementId, T defaultValue, Func&& func)
     {
@@ -440,18 +437,15 @@ protected:
         auto weak = self_;
         juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
             auto locked = weak.lock();
-            if (!locked || !locked->load(std::memory_order_acquire))
+            if (!isControllerAlive(locked))
             {
                 state->done.signal();
                 return;
             }
-            auto* self = locked->controller;
-            auto* component = self->getTargetComponent(elementId);
-            state->result = f(component);
+            state->result = f(locked->controller->getTargetComponent(elementId));
             state->done.signal();
         });
-        if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
-            return std::move(state->result);
+        state->done.wait(MESSAGE_THREAD_TIMEOUT_MS);
         return std::move(state->result);
     }
 
