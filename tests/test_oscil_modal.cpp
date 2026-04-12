@@ -228,16 +228,15 @@ TEST_F(OscilModalTest, HideImmediateOnUnshownModalIsNoOp)
 {
     OscilModal modal(getThemeManager());
 
-    bool closeCalled = false;
-    modal.onClose = [&closeCalled]() { closeCalled = true; };
+    int closeCount = 0;
+    modal.onClose = [&closeCount]() { ++closeCount; };
 
     // Unshown modal: hideImmediate must not crash and must fire onClose at most once.
     modal.hideImmediate();
     modal.hideImmediate();
 
     EXPECT_FALSE(modal.isVisible());
-    // onClose is fired each call — the test just proves no crash and state stays hidden.
-    EXPECT_TRUE(closeCalled);
+    EXPECT_LE(closeCount, 1) << "onClose should fire at most once across repeated hideImmediate calls";
 }
 
 TEST_F(OscilModalTest, HideOnNotVisibleModalFallsThroughToImmediate)

@@ -169,19 +169,12 @@ TEST_F(DialogManagerTest, ParentDestructionTearsDownModalsSynchronously)
     manager_->showConfigPopup(osc, panes);
     ASSERT_TRUE(manager_->isConfigPopupVisibleFor(osc.getId()));
 
-    // Simulate the parent dying BEFORE the DialogManager by explicitly resetting
-    // the parent first. componentBeingDeleted on DialogManager must drive every
-    // modal through hideImmediate so no timers are left running on an orphaned
-    // component tree. If the synchronous teardown path is broken, this test
-    // would either crash on shutdown or leak a timer detected by the leak
-    // checker in the base component.
-    //
-    // Note: parent_ is a unique_ptr; manager_ holds a reference to the parent.
-    // We must destroy manager_ BEFORE parent_ so DialogManager's destructor
-    // can unregister from parent_. In production the PluginEditor owns both as
-    // members and destruction happens in reverse declaration order.
-    manager_.reset();
+    // Destroy parent first to trigger componentBeingDeleted on DialogManager.
+    // This exercises the synchronous teardown path: hideImmediate on every open
+    // modal, then unregister as a listener so the destructor doesn't touch the
+    // now-dead parent reference.
     parent_.reset();
+    manager_.reset();
 
     SUCCEED() << "Synchronous teardown completed without crash";
 }

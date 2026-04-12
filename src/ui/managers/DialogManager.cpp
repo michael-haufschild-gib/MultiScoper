@@ -50,7 +50,11 @@ DialogManager::DialogManager(juce::Component& parent, IThemeService& themeServic
     };
 }
 
-DialogManager::~DialogManager() { parent_.removeComponentListener(this); }
+DialogManager::~DialogManager()
+{
+    if (parentAlive_)
+        parent_.removeComponentListener(this);
+}
 
 void DialogManager::showAddOscillatorDialog(const std::vector<SourceInfo>& sources, const std::vector<Pane>& panes,
                                             std::function<void(const AddOscillatorDialog::Result&)> onComplete)
@@ -173,6 +177,10 @@ void DialogManager::componentBeingDeleted(juce::Component& component)
             selectPaneModal_->hideImmediate();
         if (configModal_)
             configModal_->hideImmediate();
+
+        // Unregister now so the destructor doesn't touch a dangling reference.
+        parent_.removeComponentListener(this);
+        parentAlive_ = false;
     }
 }
 

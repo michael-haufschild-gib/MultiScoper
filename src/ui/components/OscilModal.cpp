@@ -95,6 +95,7 @@ void OscilModal::setCloseOnBackdropClick(bool close) { closeOnBackdropClick_ = c
 
 void OscilModal::show(juce::Component* parent)
 {
+    hideNotified_ = false;
     previousFocus_ = juce::Component::getCurrentlyFocusedComponent();
 
     juce::Desktop::getInstance().removeFocusChangeListener(this);
@@ -177,8 +178,11 @@ void OscilModal::hideImmediate()
     if (previousFocus_ && previousFocus_->isShowing())
         previousFocus_->grabKeyboardFocus();
 
-    if (onClose)
+    if (onClose && !hideNotified_)
+    {
+        hideNotified_ = true;
         onClose();
+    }
 }
 
 bool OscilModal::requestClose()
@@ -354,8 +358,11 @@ void OscilModal::timerCallback()
             if (previousFocus_ && previousFocus_->isShowing())
                 previousFocus_->grabKeyboardFocus();
 
-            if (onClose)
+            if (onClose && !hideNotified_)
+            {
+                hideNotified_ = true;
                 onClose();
+            }
         }
     }
 

@@ -40,7 +40,10 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
 {
     jassert(buffer.getNumChannels() >= 2);
     if (buffer.getNumChannels() < 2)
+    {
+        buffer.clear();
         return;
+    }
 
     int const numSamples = buffer.getNumSamples();
     float phase = 0.0f;

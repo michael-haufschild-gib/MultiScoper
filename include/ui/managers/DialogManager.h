@@ -53,6 +53,7 @@ private:
     juce::Component& parent_;
     IThemeService& themeService_;
     IInstanceRegistry& instanceRegistry_;
+    bool parentAlive_ = true;
 
     // Dialogs
     std::unique_ptr<OscilModal> addOscillatorModal_;

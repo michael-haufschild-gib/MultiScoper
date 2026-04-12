@@ -12,6 +12,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <thread>
 
 namespace oscil::test
@@ -148,13 +149,14 @@ bool TestUIController::isElementFocusable(const juce::String& elementId)
 
 double TestUIController::getSliderValue(const juce::String& elementId)
 {
-    return runOnMessageThreadSyncWithResult<double>(elementId, 0.0, [](juce::Component* component) -> double {
-        if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
-            return oscilSlider->getValue();
-        if (auto* slider = dynamic_cast<juce::Slider*>(component))
-            return slider->getValue();
-        return 0.0;
-    });
+    return runOnMessageThreadSyncWithResult<double>(
+        elementId, std::numeric_limits<double>::quiet_NaN(), [](juce::Component* component) -> double {
+            if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+                return oscilSlider->getValue();
+            if (auto* slider = dynamic_cast<juce::Slider*>(component))
+                return slider->getValue();
+            return std::numeric_limits<double>::quiet_NaN();
+        });
 }
 
 std::pair<double, double> TestUIController::getSliderRange(const juce::String& elementId)

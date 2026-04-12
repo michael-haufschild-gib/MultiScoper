@@ -129,6 +129,7 @@ private:
     bool closeOnBackdropClick_ = true;
 
     bool isHoveringClose_ = false;
+    bool hideNotified_ = false;
     juce::Component::SafePointer<juce::Component> previousFocus_;
 
     SpringAnimation showSpring_;

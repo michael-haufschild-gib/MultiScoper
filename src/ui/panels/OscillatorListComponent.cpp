@@ -366,6 +366,11 @@ void OscillatorListComponent::itemDropped(const SourceDetails& dragSourceDetails
 
     if (sourceIndex != -1 && targetIndex != -1 && sourceIndex != targetIndex)
     {
+        // Filtered indices don't map 1:1 to global orderIndex — reject reorder
+        // while a filter is active to avoid corrupting oscillator order.
+        if (currentFilterMode_ != OscillatorFilterMode::All)
+            return;
+
         if (sourceIndex < targetIndex)
         {
             targetIndex--;
@@ -377,6 +382,10 @@ void OscillatorListComponent::itemDropped(const SourceDetails& dragSourceDetails
 
 void OscillatorListComponent::oscillatorMoveRequested(const OscillatorId& id, int direction)
 {
+    // Reject moves while a filter is active — same rationale as itemDropped.
+    if (currentFilterMode_ != OscillatorFilterMode::All)
+        return;
+
     // Find current index
     int currentIndex = -1;
     for (size_t i = 0; i < items_.size(); ++i)

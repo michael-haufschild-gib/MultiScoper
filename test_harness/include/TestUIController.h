@@ -17,6 +17,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <memory>
 #include <nlohmann/json.hpp>
 
 namespace oscil::test
@@ -353,32 +354,44 @@ protected:
 
     /// Run a function on the message thread synchronously, returning its bool result.
     /// Resolves the element via getTargetComponent and passes it (possibly nullptr) to func.
+    /// Uses heap-allocated shared state to prevent use-after-free if the timeout expires
+    /// before the queued lambda runs.
     template <typename Func>
     bool runOnMessageThreadSync(const juce::String& elementId, Func&& func)
     {
-        bool result = false;
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([this, elementId, &result, &done, f = std::forward<Func>(func)]() mutable {
+        struct State
+        {
+            bool result = false;
+            juce::WaitableEvent done;
+        };
+        auto state = std::make_shared<State>();
+        juce::MessageManager::callAsync([this, elementId, state, f = std::forward<Func>(func)]() mutable {
             auto* component = getTargetComponent(elementId);
-            result = f(component);
-            done.signal();
+            state->result = f(component);
+            state->done.signal();
         });
-        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-        return result;
+        if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+            return false;
+        return state->result;
     }
 
     /// Overload for lambdas that don't need component resolution.
     template <typename Func>
     bool runOnMessageThreadSync(Func&& func)
     {
-        bool result = false;
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([&result, &done, f = std::forward<Func>(func)]() mutable {
-            result = f();
-            done.signal();
+        struct State
+        {
+            bool result = false;
+            juce::WaitableEvent done;
+        };
+        auto state = std::make_shared<State>();
+        juce::MessageManager::callAsync([state, f = std::forward<Func>(func)]() mutable {
+            state->result = f();
+            state->done.signal();
         });
-        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-        return result;
+        if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+            return false;
+        return state->result;
     }
 
     /// Run a function on the message thread synchronously, returning a value of type T.
@@ -386,15 +399,20 @@ protected:
     template <typename T, typename Func>
     T runOnMessageThreadSyncWithResult(const juce::String& elementId, T defaultValue, Func&& func)
     {
-        T result = std::move(defaultValue);
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([this, elementId, &result, &done, f = std::forward<Func>(func)]() mutable {
+        struct State
+        {
+            T result;
+            juce::WaitableEvent done;
+        };
+        auto state = std::make_shared<State>(State{std::move(defaultValue), {}});
+        juce::MessageManager::callAsync([this, elementId, state, f = std::forward<Func>(func)]() mutable {
             auto* component = getTargetComponent(elementId);
-            result = f(component);
-            done.signal();
+            state->result = f(component);
+            state->done.signal();
         });
-        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-        return result;
+        if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+            return std::move(state->result);
+        return std::move(state->result);
     }
 
 private:

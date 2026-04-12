@@ -81,7 +81,7 @@ juce::String GlobalPreferences::getDefaultTheme() const
 }
 void GlobalPreferences::setDefaultTheme(const juce::String& themeName) { setPref("defaultTheme", themeName); }
 
-int GlobalPreferences::getDefaultColumnLayout() const { return getPref<int>("defaultColumns", 1); }
+int GlobalPreferences::getDefaultColumnLayout() const { return juce::jlimit(1, 8, getPref<int>("defaultColumns", 1)); }
 void GlobalPreferences::setDefaultColumnLayout(int columns) { setPref("defaultColumns", juce::jlimit(1, 8, columns)); }
 
 bool GlobalPreferences::getShowStatusBar() const { return getPref<bool>("showStatusBar", true); }
@@ -96,7 +96,10 @@ void GlobalPreferences::setUIAudioFeedback(bool enabled) { setPref("uiAudioFeedb
 bool GlobalPreferences::getTooltipsEnabled() const { return getPref<bool>("tooltipsEnabled", true); }
 void GlobalPreferences::setTooltipsEnabled(bool enabled) { setPref("tooltipsEnabled", enabled); }
 
-int GlobalPreferences::getDefaultSidebarWidth() const { return getPref<int>("defaultSidebarWidth", 280); }
+int GlobalPreferences::getDefaultSidebarWidth() const
+{
+    return juce::jlimit(150, 600, getPref<int>("defaultSidebarWidth", 280));
+}
 void GlobalPreferences::setDefaultSidebarWidth(int width)
 {
     setPref("defaultSidebarWidth", juce::jlimit(150, 600, width));

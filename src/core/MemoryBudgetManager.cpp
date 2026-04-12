@@ -59,10 +59,13 @@ void MemoryBudgetManager::registerBuffer(const juce::String& id, std::shared_ptr
     }
 
     notifyBufferCountChanged();
-    notifyMemoryUsageChanged();
 
+    // Notify memory usage *after* auto-quality adjustment so listeners see the
+    // final buffer sizes, not a stale pre-adjustment snapshot.
     if (globalConfig_.autoAdjustQuality)
         applyRecommendedQuality();
+
+    notifyMemoryUsageChanged();
 }
 
 void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
@@ -82,10 +85,11 @@ void MemoryBudgetManager::unregisterBuffer(const juce::String& id)
     if (removed)
     {
         notifyBufferCountChanged();
-        notifyMemoryUsageChanged();
 
         if (globalConfig_.autoAdjustQuality)
             applyRecommendedQuality();
+
+        notifyMemoryUsageChanged();
     }
 }
 

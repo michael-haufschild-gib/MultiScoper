@@ -77,7 +77,10 @@ void TestHttpServer::handleMetricsStats(const httplib::Request& req, httplib::Re
     {
         try
         {
-            periodMs = std::stoi(periodParam);
+            std::size_t pos = 0;
+            periodMs = std::stoi(periodParam, &pos);
+            if (pos != periodParam.size())
+                throw std::invalid_argument("trailing characters");
         }
         catch (const std::exception&)
         {
