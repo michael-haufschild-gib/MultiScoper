@@ -62,12 +62,13 @@ public:
     TestUIController() = default;
     ~TestUIController()
     {
-        alive_->store(false, std::memory_order_release);
-        // Flush pending message-thread callbacks that captured `this`.
-        // On the message thread this is a no-op (callbacks are serialized).
-        // Off the message thread we post a sentinel and block until it runs,
-        // guaranteeing every earlier-posted lambda has already observed the
-        // flag and returned without dereferencing `this`.
+        // Mark the control block as dead. Lambdas holding a weak_ptr to it will
+        // see the flag (or fail to lock entirely once the shared_ptr is gone).
+        self_->store(false, std::memory_order_release);
+        self_->controller = nullptr;
+        // Flush pending message-thread callbacks.  Even though lambdas now use
+        // weak_ptr and cannot dereference a dead controller, flushing ensures
+        // orderly completion of any in-flight work.
         if (auto* mm = juce::MessageManager::getInstanceWithoutCreating();
             mm != nullptr && !mm->isThisTheMessageThread())
         {
@@ -371,7 +372,8 @@ protected:
     /// Run a function on the message thread synchronously, returning its bool result.
     /// Resolves the element via getTargetComponent and passes it (possibly nullptr) to func.
     /// Uses heap-allocated shared state to prevent use-after-free if the timeout expires
-    /// before the queued lambda runs.
+    /// before the queued lambda runs. The lambda captures `self_` (weak_ptr) instead of
+    /// `this` so a late-executing callback after timeout + controller destruction is safe.
     template <typename Func>
     bool runOnMessageThreadSync(const juce::String& elementId, Func&& func)
     {
@@ -381,14 +383,16 @@ protected:
             juce::WaitableEvent done;
         };
         auto state = std::make_shared<State>();
-        auto aliveFlag = alive_;
-        juce::MessageManager::callAsync([aliveFlag, this, elementId, state, f = std::forward<Func>(func)]() mutable {
-            if (!aliveFlag->load(std::memory_order_acquire))
+        auto weak = self_;
+        juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
+            auto locked = weak.lock();
+            if (!locked || !locked->load(std::memory_order_acquire))
             {
                 state->done.signal();
                 return;
             }
-            auto* component = getTargetComponent(elementId);
+            auto* self = locked->controller;
+            auto* component = self->getTargetComponent(elementId);
             state->result = f(component);
             state->done.signal();
         });
@@ -418,6 +422,7 @@ protected:
 
     /// Run a function on the message thread synchronously, returning a value of type T.
     /// Resolves the element via getTargetComponent and passes it to func.
+    /// Captures `self_` (weak_ptr) instead of `this` for late-execution safety.
     template <typename T, typename Func>
     T runOnMessageThreadSyncWithResult(const juce::String& elementId, T defaultValue, Func&& func)
     {
@@ -427,14 +432,16 @@ protected:
             juce::WaitableEvent done;
         };
         auto state = std::make_shared<State>(State{std::move(defaultValue), {}});
-        auto aliveFlag = alive_;
-        juce::MessageManager::callAsync([aliveFlag, this, elementId, state, f = std::forward<Func>(func)]() mutable {
-            if (!aliveFlag->load(std::memory_order_acquire))
+        auto weak = self_;
+        juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
+            auto locked = weak.lock();
+            if (!locked || !locked->load(std::memory_order_acquire))
             {
                 state->done.signal();
                 return;
             }
-            auto* component = getTargetComponent(elementId);
+            auto* self = locked->controller;
+            auto* component = self->getTargetComponent(elementId);
             state->result = f(component);
             state->done.signal();
         });
@@ -467,10 +474,15 @@ private:
 
     bool adjustSlider(const juce::String& elementId, int direction);
 
-    // Shared flag set to false by the destructor. Queued callAsync lambdas
-    // check this before dereferencing `this`, preventing use-after-free when
-    // the controller is destroyed before a pending lambda executes.
-    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
+    // Control block shared between the controller and queued callAsync lambdas.
+    // Lambdas capture a weak_ptr<ControlBlock> so they can safely detect
+    // destruction even if the destructor's flush sentinel times out.
+    struct ControlBlock : std::atomic<bool>
+    {
+        explicit ControlBlock(TestUIController* ctrl) : std::atomic<bool>(true), controller(ctrl) {}
+        TestUIController* controller;
+    };
+    std::shared_ptr<ControlBlock> self_ = std::make_shared<ControlBlock>(this);
 
     // Track scope for multi-instance element resolution
     int trackScopeIndex_ = -1; // -1 = no scope (global)

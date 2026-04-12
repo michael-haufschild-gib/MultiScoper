@@ -58,8 +58,12 @@ void OscilAlertModal::show(IThemeService& themeService, const juce::String& titl
         // onClose lambda no longer holds a reference, so the cycle is broken.
         // The callAsync lambda is the sole owner and destroys resources on the next
         // message loop iteration — safely after hide() returns.
-        if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
-            juce::MessageManager::callAsync([prevent_destruction = std::move(res)]() {});
+        if (juce::MessageManager::getInstanceWithoutCreating() != nullptr &&
+            juce::MessageManager::callAsync([prevent_destruction = std::move(res)]() {}))
+            return;
+        // MessageManager unavailable or callAsync failed (shutdown). Break the cycle
+        // directly — destruction is synchronous but safe since hide() already returned.
+        res.reset();
     };
 
     res->okButton->onClick = [modalPtr]() { modalPtr->hide(); };

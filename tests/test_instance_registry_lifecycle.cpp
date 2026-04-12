@@ -296,7 +296,9 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAndUnregisterManyTimes)
 TEST_F(InstanceRegistryLifecycleTest, RegisterAtMaxTracksLimitRejectsExtras)
 {
     std::vector<std::shared_ptr<SharedCaptureBuffer>> buffers;
+    std::vector<SourceId> originalIds;
     buffers.reserve(MAX_TRACKS);
+    originalIds.reserve(MAX_TRACKS);
 
     for (int i = 0; i < MAX_TRACKS; ++i)
     {
@@ -304,6 +306,7 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAtMaxTracksLimitRejectsExtras)
         buffers.push_back(buffer);
         auto id = getRegistry().registerInstance("max_track_" + juce::String(i), buffer, "Track " + juce::String(i));
         ASSERT_TRUE(id.isValid()) << "Registration " << i << " below the limit should succeed";
+        originalIds.push_back(id);
     }
 
     ASSERT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS));
@@ -322,6 +325,9 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAtMaxTracksLimitRejectsExtras)
     // the registry hit the cap.
     auto dedupId = getRegistry().registerInstance("max_track_0", buffers[0], "Track 0 renamed", 2, 48000.0);
     EXPECT_TRUE(dedupId.isValid()) << "Dedup re-registration at the limit must still update the existing source";
+
+    // Dedup must return the same SourceId as the original registration.
+    EXPECT_EQ(dedupId, originalIds[0]) << "Dedup must return the original SourceId, not a new one";
 
     // The source count must not grow — dedup must reuse the existing slot.
     EXPECT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS))

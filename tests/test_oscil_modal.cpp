@@ -231,20 +231,23 @@ TEST_F(OscilModalTest, HideImmediateOnUnshownModalIsNoOp)
     int closeCount = 0;
     modal.onClose = [&closeCount]() { ++closeCount; };
 
-    // Unshown modal: hideImmediate must not crash and must fire onClose at most once.
+    // Unshown modal: first hideImmediate may fire onClose once (implementation-defined).
+    // Second call must be a no-op — the "at most once per show" contract.
     modal.hideImmediate();
+    int const countAfterFirst = closeCount;
     modal.hideImmediate();
 
     EXPECT_FALSE(modal.isVisible());
-    EXPECT_LE(closeCount, 1) << "onClose should fire at most once across repeated hideImmediate calls";
+    EXPECT_LE(countAfterFirst, 1) << "First hideImmediate on unshown modal fires onClose at most once";
+    EXPECT_EQ(closeCount, countAfterFirst) << "Second hideImmediate must be a no-op (no additional onClose)";
 }
 
 TEST_F(OscilModalTest, HideOnNotVisibleModalFallsThroughToImmediate)
 {
     OscilModal modal(getThemeManager());
 
-    bool closeCalled = false;
-    modal.onClose = [&closeCalled]() { closeCalled = true; };
+    int closeCount = 0;
+    modal.onClose = [&closeCount]() { ++closeCount; };
 
     // hide() on a modal that was never shown should take the synchronous fallback
     // path (see OscilModal::hide — isVisible() false routes to hideImmediate),
@@ -252,7 +255,7 @@ TEST_F(OscilModalTest, HideOnNotVisibleModalFallsThroughToImmediate)
     modal.hide();
 
     EXPECT_FALSE(modal.isVisible());
-    EXPECT_TRUE(closeCalled);
+    EXPECT_EQ(closeCount, 1) << "hide() fallback path must fire onClose exactly once";
 }
 
 // =============================================================================
