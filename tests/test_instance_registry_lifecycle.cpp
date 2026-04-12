@@ -12,7 +12,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+namespace oscil
+{
 
 class InstanceRegistryLifecycleTest : public ::testing::Test
 {
@@ -321,6 +322,17 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAtMaxTracksLimitRejectsExtras)
     // the registry hit the cap.
     auto dedupId = getRegistry().registerInstance("max_track_0", buffers[0], "Track 0 renamed", 2, 48000.0);
     EXPECT_TRUE(dedupId.isValid()) << "Dedup re-registration at the limit must still update the existing source";
+
+    // The source count must not grow — dedup must reuse the existing slot.
+    EXPECT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS))
+        << "Dedup re-registration must not inflate the source count";
+
+    // The returned id must match the original registration for that track.
+    auto info = getRegistry().getSource(dedupId);
+    ASSERT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Track 0 renamed") << "Dedup must update the name";
+    EXPECT_EQ(info->channelCount, 2) << "Dedup must update the channel count";
+    EXPECT_DOUBLE_EQ(info->sampleRate, 48000.0) << "Dedup must update the sample rate";
 }
 
 TEST_F(InstanceRegistryLifecycleTest, SetDispatcherRejectsEmptyCallable)
@@ -458,3 +470,5 @@ TEST_F(InstanceRegistryLifecycleTest, MultipleUpdatesToSameSource)
     EXPECT_EQ(info->channelCount, 2); // 99 % 2 + 1 = 2
     EXPECT_EQ(info->sampleRate, 44100.0 + 99 * 1000.0);
 }
+
+} // namespace oscil

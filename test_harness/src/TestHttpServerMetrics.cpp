@@ -84,6 +84,7 @@ void TestHttpServer::handleMetricsStats(const httplib::Request& req, httplib::Re
         }
         catch (const std::exception&)
         {
+            res.status = 400;
             res.set_content(errorResponse("Invalid periodMs parameter").dump(), "application/json");
             return;
         }

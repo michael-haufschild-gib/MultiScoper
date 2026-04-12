@@ -21,7 +21,9 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+namespace oscil
+{
+
 using namespace oscil::test;
 
 namespace
@@ -492,3 +494,5 @@ TEST_F(OscillatorListComponentTest, ItemExpansionUpdatesListLayout)
     // Height should now be EXPANDED_HEIGHT (100)
     EXPECT_EQ(container->getHeight(), OscillatorListItemComponent::EXPANDED_HEIGHT);
 }
+
+} // namespace oscil

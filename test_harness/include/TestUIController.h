@@ -17,6 +17,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <atomic>
 #include <memory>
 #include <nlohmann/json.hpp>
 
@@ -59,7 +60,7 @@ class TestUIController
 {
 public:
     TestUIController() = default;
-    ~TestUIController() = default;
+    ~TestUIController() { alive_->store(false, std::memory_order_release); }
 
     /**
      * Set track scope for element lookups.
@@ -365,7 +366,13 @@ protected:
             juce::WaitableEvent done;
         };
         auto state = std::make_shared<State>();
-        juce::MessageManager::callAsync([this, elementId, state, f = std::forward<Func>(func)]() mutable {
+        auto aliveFlag = alive_;
+        juce::MessageManager::callAsync([aliveFlag, this, elementId, state, f = std::forward<Func>(func)]() mutable {
+            if (!aliveFlag->load(std::memory_order_acquire))
+            {
+                state->done.signal();
+                return;
+            }
             auto* component = getTargetComponent(elementId);
             state->result = f(component);
             state->done.signal();
@@ -405,7 +412,13 @@ protected:
             juce::WaitableEvent done;
         };
         auto state = std::make_shared<State>(State{std::move(defaultValue), {}});
-        juce::MessageManager::callAsync([this, elementId, state, f = std::forward<Func>(func)]() mutable {
+        auto aliveFlag = alive_;
+        juce::MessageManager::callAsync([aliveFlag, this, elementId, state, f = std::forward<Func>(func)]() mutable {
+            if (!aliveFlag->load(std::memory_order_acquire))
+            {
+                state->done.signal();
+                return;
+            }
             auto* component = getTargetComponent(elementId);
             state->result = f(component);
             state->done.signal();
@@ -438,6 +451,11 @@ private:
     juce::String getFocusedElementIdOnMessageThread();
 
     bool adjustSlider(const juce::String& elementId, int direction);
+
+    // Shared flag set to false by the destructor. Queued callAsync lambdas
+    // check this before dereferencing `this`, preventing use-after-free when
+    // the controller is destroyed before a pending lambda executes.
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 
     // Track scope for multi-instance element resolution
     int trackScopeIndex_ = -1; // -1 = no scope (global)

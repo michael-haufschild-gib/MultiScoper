@@ -212,8 +212,8 @@ TEST_F(OscilModalTest, HideImmediateFiresOnCloseAndHides)
 
     OscilModal modal(getThemeManager());
 
-    bool closeCalled = false;
-    modal.onClose = [&closeCalled]() { closeCalled = true; };
+    int closeCount = 0;
+    modal.onClose = [&closeCount]() { ++closeCount; };
 
     modal.show(&parent);
     ASSERT_TRUE(modal.isVisible());
@@ -221,7 +221,7 @@ TEST_F(OscilModalTest, HideImmediateFiresOnCloseAndHides)
     modal.hideImmediate();
 
     EXPECT_FALSE(modal.isVisible());
-    EXPECT_TRUE(closeCalled) << "hideImmediate must invoke onClose synchronously";
+    EXPECT_EQ(closeCount, 1) << "hideImmediate must invoke onClose exactly once";
 }
 
 TEST_F(OscilModalTest, HideImmediateOnUnshownModalIsNoOp)

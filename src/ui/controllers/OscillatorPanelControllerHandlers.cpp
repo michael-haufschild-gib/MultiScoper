@@ -145,6 +145,14 @@ void OscillatorPanelController::oscillatorNameChanged(const OscillatorId& oscill
 void OscillatorPanelController::oscillatorsReordered(int fromIndex, int toIndex)
 {
     OSCIL_LOG(CONTROLLER, "oscillatorsReordered: from=" << fromIndex << " to=" << toIndex);
+    if (fromIndex == toIndex || fromIndex < 0 || toIndex < 0)
+        return;
+
+    auto& state = dataProvider_.getState();
+    auto const oscCount = static_cast<int>(state.getOscillators().size());
+    if (fromIndex >= oscCount || toIndex >= oscCount)
+        return;
+
     // Persist the new ordering to state. The ValueTree listener chain triggers
     // applyOscillatorPropertyChange for each affected oscillator and refreshes
     // the sidebar/panes accordingly.
@@ -153,8 +161,9 @@ void OscillatorPanelController::oscillatorsReordered(int fromIndex, int toIndex)
     // sidebar list. When no filter is active this matches the global orderIndex
     // space one-to-one, which is what state.reorderOscillators expects. Drag
     // reorder while a non-All filter is applied is intentionally not supported
-    // yet (filter indices would need per-ID translation).
-    dataProvider_.getState().reorderOscillators(fromIndex, toIndex);
+    // yet — the UI disables drag while a filter is active to avoid index
+    // mismatch (filter indices would need per-ID translation).
+    state.reorderOscillators(fromIndex, toIndex);
 }
 
 void OscillatorPanelController::oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId)

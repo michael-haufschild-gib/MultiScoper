@@ -235,10 +235,11 @@ if [ -n "$STAGED_HEADERS" ]; then
         HEADER_INCLUDERS="${HEADER_INCLUDERS:+$HEADER_INCLUDERS
 }$FOUND"
     done
-    # Cap auto-discovered includers to avoid excessive runtime, but never drop
-    # actually staged .cpp files — those must always be checked.
-    CAPPED_INCLUDERS=$(echo "$HEADER_INCLUDERS" | sed '/^$/d' | sort -u | head -20)
-    STAGED_SRC=$(printf '%s\n%s\n' "$STAGED_SRC" "$CAPPED_INCLUDERS" | sed '/^$/d' | sort -u)
+    # Merge auto-discovered includers with staged .cpp files. Staged files
+    # are always checked; includers provide clang-tidy coverage for staged
+    # headers via HeaderFilterRegex.
+    ALL_INCLUDERS=$(echo "$HEADER_INCLUDERS" | sed '/^$/d' | sort -u)
+    STAGED_SRC=$(printf '%s\n%s\n' "$STAGED_SRC" "$ALL_INCLUDERS" | sed '/^$/d' | sort -u)
 fi
 if [ -n "$STAGED_SRC" ]; then
     # Look for clang-tidy in common locations

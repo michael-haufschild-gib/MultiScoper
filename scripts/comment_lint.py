@@ -16,7 +16,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence
+from typing import Iterator, List, Optional, Sequence, Tuple
 
 EXCLUDED_DIR_NAMES = {"build", ".git", ".serena", ".claude", "_deps"}
 DEFAULT_EXTENSIONS = {".h", ".hh", ".hpp", ".hxx"}
@@ -344,6 +344,19 @@ def strip_line_for_braces(line: str) -> str:
         # Strip // line comments
         if ch == "/" and i + 1 < n and line[i + 1] == "/":
             break
+        # Strip C++11 raw string literals: R"delim(...)delim"
+        if ch == "R" and i + 1 < n and line[i + 1] == '"':
+            # Find the opening delimiter: everything between " and (
+            paren_pos = line.find("(", i + 2)
+            if paren_pos != -1:
+                delim = line[i + 2 : paren_pos]
+                closing = ")" + delim + '"'
+                close_pos = line.find(closing, paren_pos + 1)
+                if close_pos != -1:
+                    i = close_pos + len(closing)
+                    continue
+                # Multi-line raw string — skip rest of line
+                break
         # Strip "..." strings
         if ch == '"':
             i += 1
@@ -392,7 +405,7 @@ def find_missing_docs(
     # their own `public:` from polluting the outer class's tracking state.
     access_level = "public"
     brace_depth = 0
-    class_stack: List[tuple] = []  # (depth_at_entry, prev_access_level)
+    class_stack: List[Tuple[int, str]] = []  # (depth_at_entry, prev_access_level)
     # Set when a `class X` / `struct X` declaration has been seen but its
     # opening brace has not yet arrived (Allman style puts `{` on the next
     # line). Consumed by the next `{` we encounter.

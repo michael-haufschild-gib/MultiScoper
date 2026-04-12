@@ -90,6 +90,9 @@ private:
         saveUnlocked();
     }
 
+    /** Clamp all persisted values to valid ranges after loading from disk. */
+    void clampPersistedValues();
+
     mutable std::mutex mutex_; // Thread safety for multi-instance access
     juce::ValueTree preferences_;
 };

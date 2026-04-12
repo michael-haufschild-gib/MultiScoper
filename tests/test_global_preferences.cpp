@@ -76,7 +76,7 @@ TEST_F(GlobalPreferencesTest, DefaultUIAudioFeedbackIsFalse) { EXPECT_FALSE(pref
 
 TEST_F(GlobalPreferencesTest, DefaultTooltipsEnabledIsTrue) { EXPECT_TRUE(prefs_->getTooltipsEnabled()); }
 
-TEST_F(GlobalPreferencesTest, DefaultSidebarWidthIs280) { EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 280); }
+TEST_F(GlobalPreferencesTest, DefaultSidebarWidthIs300) { EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 300); }
 
 // ============================================================================
 // Set-Then-Get Round Trip
@@ -147,28 +147,28 @@ TEST_F(GlobalPreferencesTest, SpecialCharactersInThemeName)
 
 TEST_F(GlobalPreferencesTest, NegativeColumnLayout)
 {
-    // GlobalPreferences clamps column layout to valid range [1, 8].
+    // GlobalPreferences clamps column layout to valid ColumnLayout range [1, 3].
     prefs_->setDefaultColumnLayout(-5);
     EXPECT_EQ(prefs_->getDefaultColumnLayout(), 1);
 }
 
 TEST_F(GlobalPreferencesTest, ZeroSidebarWidth)
 {
-    // GlobalPreferences clamps sidebar width to valid range [150, 600].
+    // GlobalPreferences clamps sidebar width to WindowLayout bounds.
     prefs_->setDefaultSidebarWidth(0);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 150);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 200);
 }
 
 TEST_F(GlobalPreferencesTest, NegativeSidebarWidth)
 {
     prefs_->setDefaultSidebarWidth(-100);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 150);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 200);
 }
 
 TEST_F(GlobalPreferencesTest, VeryLargeSidebarWidth)
 {
     prefs_->setDefaultSidebarWidth(100000);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 600);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 800);
 }
 
 TEST_F(GlobalPreferencesTest, PreferencesFilePathIsValid)
@@ -186,11 +186,11 @@ TEST_F(GlobalPreferencesTest, PreferencesFilePathIsValid)
 TEST_F(GlobalPreferencesTest, RapidSetOverwritesCorrectly)
 {
     // Bug caught: race between save and subsequent set causing stale values
-    for (int i = 1; i <= 8; ++i)
+    for (int i = 1; i <= 3; ++i)
     {
         prefs_->setDefaultColumnLayout(i);
     }
-    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 8);
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 3);
 }
 
 TEST_F(GlobalPreferencesTest, InterleavedSetsDontCorrupt)

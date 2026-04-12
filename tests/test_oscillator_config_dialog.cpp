@@ -126,10 +126,13 @@ TEST_F(OscillatorConfigDialogTest, HandleCloseFiresOnCloseHookOnceAndDoesNotFire
     dialog_->removeListener(&listener);
 }
 
-TEST_F(OscillatorConfigDialogTest, OnExternalCloseIsIdempotentForPendingEdits)
+TEST_F(OscillatorConfigDialogTest, RepeatedOnExternalCloseFiresListenerEachTime)
 {
-    // Calling onExternalClose multiple times must only ever notify once per call
+    // Calling onExternalClose multiple times must notify once per call
     // and must not crash even if there is no pending debounce to flush.
+    // Note: this exercises the no-pending-edit path only — the debounced
+    // name-edit flush is an internal mechanism triggered by text field
+    // interaction which cannot be driven from the public API.
     CountingDialogListener listener;
     dialog_->addListener(&listener);
 

@@ -8,6 +8,12 @@
 namespace oscil
 {
 
+// Sidebar width bounds — must match WindowLayout::MIN/MAX/DEFAULT_SIDEBAR_WIDTH.
+// Duplicated here because core/ must not depend on ui/.
+static constexpr int SIDEBAR_MIN = 200;
+static constexpr int SIDEBAR_MAX = 800;
+static constexpr int SIDEBAR_DEFAULT = 300;
+
 GlobalPreferences::GlobalPreferences()
 {
     preferences_ = juce::ValueTree("GlobalPreferences");
@@ -38,7 +44,10 @@ void GlobalPreferences::load()
     // A valid-but-wrong-type tree (from format drift or a tampered file) is
     // rejected to prevent persisting with the wrong root on the next save().
     if (loaded.isValid() && loaded.hasType("GlobalPreferences"))
+    {
         preferences_ = loaded;
+        clampPersistedValues();
+    }
 }
 
 void GlobalPreferences::save()
@@ -81,8 +90,8 @@ juce::String GlobalPreferences::getDefaultTheme() const
 }
 void GlobalPreferences::setDefaultTheme(const juce::String& themeName) { setPref("defaultTheme", themeName); }
 
-int GlobalPreferences::getDefaultColumnLayout() const { return juce::jlimit(1, 8, getPref<int>("defaultColumns", 1)); }
-void GlobalPreferences::setDefaultColumnLayout(int columns) { setPref("defaultColumns", juce::jlimit(1, 8, columns)); }
+int GlobalPreferences::getDefaultColumnLayout() const { return juce::jlimit(1, 3, getPref<int>("defaultColumns", 1)); }
+void GlobalPreferences::setDefaultColumnLayout(int columns) { setPref("defaultColumns", juce::jlimit(1, 3, columns)); }
 
 bool GlobalPreferences::getShowStatusBar() const { return getPref<bool>("showStatusBar", true); }
 void GlobalPreferences::setShowStatusBar(bool show) { setPref("showStatusBar", show); }
@@ -98,11 +107,26 @@ void GlobalPreferences::setTooltipsEnabled(bool enabled) { setPref("tooltipsEnab
 
 int GlobalPreferences::getDefaultSidebarWidth() const
 {
-    return juce::jlimit(150, 600, getPref<int>("defaultSidebarWidth", 280));
+    return juce::jlimit(SIDEBAR_MIN, SIDEBAR_MAX, getPref<int>("defaultSidebarWidth", SIDEBAR_DEFAULT));
 }
 void GlobalPreferences::setDefaultSidebarWidth(int width)
 {
-    setPref("defaultSidebarWidth", juce::jlimit(150, 600, width));
+    setPref("defaultSidebarWidth", juce::jlimit(SIDEBAR_MIN, SIDEBAR_MAX, width));
+}
+
+void GlobalPreferences::clampPersistedValues()
+{
+    // Sanitize values loaded from disk so out-of-range data from older versions
+    // or manual edits cannot propagate through the rest of the application.
+    auto clampInt = [this](const juce::Identifier& key, int lo, int hi, int fallback) {
+        int const raw = static_cast<int>(preferences_.getProperty(key, fallback));
+        int const clamped = juce::jlimit(lo, hi, raw);
+        if (clamped != raw)
+            preferences_.setProperty(key, clamped, nullptr);
+    };
+
+    clampInt("defaultColumns", 1, 3, 1);
+    clampInt("defaultSidebarWidth", SIDEBAR_MIN, SIDEBAR_MAX, SIDEBAR_DEFAULT);
 }
 
 } // namespace oscil
