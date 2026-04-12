@@ -297,8 +297,8 @@ TEST_F(OscilModalTest, EscapeKeyIgnoredWhenCloseOnEscapeIsFalse)
     OscilModal modal(getThemeManager());
     modal.setCloseOnEscape(false);
 
-    bool closeCalled = false;
-    modal.onClose = [&closeCalled]() { closeCalled = true; };
+    int closeCount = 0;
+    modal.onClose = [&closeCount]() { ++closeCount; };
 
     modal.show(&parent);
     ASSERT_TRUE(modal.isVisible());
@@ -307,7 +307,7 @@ TEST_F(OscilModalTest, EscapeKeyIgnoredWhenCloseOnEscapeIsFalse)
 
     EXPECT_FALSE(handled) << "keyPressed must decline Escape when closeOnEscape is disabled";
     EXPECT_TRUE(modal.isVisible()) << "Modal must remain visible";
-    EXPECT_FALSE(closeCalled);
+    EXPECT_EQ(closeCount, 0) << "onClose must not fire when Escape is disabled";
 }
 
 TEST_F(OscilModalTest, OnCloseRequestedReturningFalseVetosHide)
