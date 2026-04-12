@@ -16,7 +16,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple
+from collections.abc import Iterator, Sequence
 
 EXCLUDED_DIR_NAMES = {"build", ".git", ".serena", ".claude", "_deps"}
 DEFAULT_EXTENSIONS = {".h", ".hh", ".hpp", ".hxx"}
@@ -216,13 +216,13 @@ def iter_files(
 
 def find_empty_comments(
     path: Path, root: Path
-) -> List[EmptyCommentViolation]:
-    violations: List[EmptyCommentViolation] = []
+) -> list[EmptyCommentViolation]:
+    violations: list[EmptyCommentViolation] = []
     relative = str(path.relative_to(root))
     lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
 
     in_block_comment = False
-    block_start: Optional[int] = None
+    block_start: int | None = None
     block_content_seen = False
 
     for line_no, line in enumerate(lines, start=1):
@@ -306,7 +306,7 @@ def is_function_declaration(line: str) -> bool:
     return False
 
 
-def has_doc_comment(lines: List[str], decl_line_idx: int) -> bool:
+def has_doc_comment(lines: list[str], decl_line_idx: int) -> bool:
     """Check if the line above the declaration (or nearby) has a doc comment."""
     # Walk upward past blank lines and find the nearest comment
     idx = decl_line_idx - 1
@@ -336,7 +336,7 @@ def strip_line_for_braces(line: str) -> str:
     """Return the line with string / char literals and line comments removed so
     brace counting does not get confused by `{` inside a string. Block comments
     are handled at a higher level; this only deals with single-line concerns."""
-    out: List[str] = []
+    out: list[str] = []
     i = 0
     n = len(line)
     while i < n:
@@ -388,9 +388,9 @@ def strip_line_for_braces(line: str) -> str:
 
 def find_missing_docs(
     path: Path, root: Path
-) -> List[MissingDocViolation]:
+) -> list[MissingDocViolation]:
     """Check public header files for undocumented function declarations."""
-    violations: List[MissingDocViolation] = []
+    violations: list[MissingDocViolation] = []
     relative = str(path.relative_to(root))
     content = path.read_text(encoding="utf-8", errors="ignore")
     lines = content.splitlines()
@@ -405,11 +405,11 @@ def find_missing_docs(
     # their own `public:` from polluting the outer class's tracking state.
     access_level = "public"
     brace_depth = 0
-    class_stack: List[Tuple[int, str]] = []  # (depth_at_entry, prev_access_level)
+    class_stack: list[tuple[int, str]] = []  # (depth_at_entry, prev_access_level)
     # Set when a `class X` / `struct X` declaration has been seen but its
     # opening brace has not yet arrived (Allman style puts `{` on the next
     # line). Consumed by the next `{` we encounter.
-    pending_class_kind: Optional[str] = None
+    pending_class_kind: str | None = None
 
     for line_no_1based, line in enumerate(lines, start=1):
         idx = line_no_1based - 1
@@ -538,8 +538,8 @@ def main(argv: Sequence[str]) -> int:
     args = parse_args(argv)
     root = args.root.resolve()
 
-    empty_violations: List[EmptyCommentViolation] = []
-    doc_violations: List[MissingDocViolation] = []
+    empty_violations: list[EmptyCommentViolation] = []
+    doc_violations: list[MissingDocViolation] = []
     scanned_empty = 0
     scanned_doc = 0
 

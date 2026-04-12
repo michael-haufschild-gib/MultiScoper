@@ -60,7 +60,22 @@ class TestUIController
 {
 public:
     TestUIController() = default;
-    ~TestUIController() { alive_->store(false, std::memory_order_release); }
+    ~TestUIController()
+    {
+        alive_->store(false, std::memory_order_release);
+        // Flush pending message-thread callbacks that captured `this`.
+        // On the message thread this is a no-op (callbacks are serialized).
+        // Off the message thread we post a sentinel and block until it runs,
+        // guaranteeing every earlier-posted lambda has already observed the
+        // flag and returned without dereferencing `this`.
+        if (auto* mm = juce::MessageManager::getInstanceWithoutCreating();
+            mm != nullptr && !mm->isThisTheMessageThread())
+        {
+            auto flushed = std::make_shared<juce::WaitableEvent>();
+            mm->callAsync([flushed]() { flushed->signal(); });
+            flushed->wait(MESSAGE_THREAD_TIMEOUT_MS);
+        }
+    }
 
     /**
      * Set track scope for element lookups.
