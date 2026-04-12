@@ -369,11 +369,8 @@ public:
 protected:
     static constexpr int MESSAGE_THREAD_TIMEOUT_MS = 3000;
 
-    /// Run a function on the message thread synchronously, returning its bool result.
-    /// Resolves the element via getTargetComponent and passes it (possibly nullptr) to func.
-    /// Uses heap-allocated shared state to prevent use-after-free if the timeout expires
-    /// before the queued lambda runs. The lambda captures `self_` (weak_ptr) instead of
-    /// `this` so a late-executing callback after timeout + controller destruction is safe.
+    /// Run func on the message thread synchronously, resolving elementId first.
+    /// Captures `self_` (weak_ptr) so late-executing callbacks after destruction are safe.
     template <typename Func>
     bool runOnMessageThreadSync(const juce::String& elementId, Func&& func)
     {
@@ -402,6 +399,7 @@ protected:
     }
 
     /// Overload for lambdas that don't need component resolution.
+    /// Captures `self_` (weak_ptr) to guard against late execution after destruction.
     template <typename Func>
     bool runOnMessageThreadSync(Func&& func)
     {
@@ -411,7 +409,14 @@ protected:
             juce::WaitableEvent done;
         };
         auto state = std::make_shared<State>();
-        juce::MessageManager::callAsync([state, f = std::forward<Func>(func)]() mutable {
+        auto weak = self_;
+        juce::MessageManager::callAsync([weak, state, f = std::forward<Func>(func)]() mutable {
+            auto locked = weak.lock();
+            if (!locked || !locked->load(std::memory_order_acquire))
+            {
+                state->done.signal();
+                return;
+            }
             state->result = f();
             state->done.signal();
         });

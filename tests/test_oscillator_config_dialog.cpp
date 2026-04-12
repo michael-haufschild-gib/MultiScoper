@@ -148,6 +148,45 @@ TEST_F(OscillatorConfigDialogTest, RepeatedOnExternalCloseFiresListenerEachTime)
     dialog_->removeListener(&listener);
 }
 
+TEST_F(OscillatorConfigDialogTest, OnExternalCloseFlushesPendingDebouncedNameEdit)
+{
+    // When the user is typing a name and the dialog is externally closed (e.g. modal
+    // dismissed), onExternalClose must flush the pending debounced name edit so the
+    // new name is not silently lost.
+    CountingDialogListener listener;
+    dialog_->addListener(&listener);
+
+    auto osc = makeSampleOscillator();
+    dialog_->showForOscillator(osc);
+
+    // Locate the name text field among the dialog's children.
+    OscilTextField* nameField = nullptr;
+    for (int i = 0; i < dialog_->getNumChildComponents(); ++i)
+    {
+        if (auto* tf = dynamic_cast<OscilTextField*>(dialog_->getChildComponent(i)))
+        {
+            nameField = tf;
+            break;
+        }
+    }
+    ASSERT_NE(nameField, nullptr) << "OscillatorConfigDialog must contain an OscilTextField for the name";
+
+    // Simulate typing — setText with notify=true triggers onTextChanged, which
+    // starts the debounce timer.  We call onExternalClose before it fires.
+    nameField->setText("Debounced Name", true);
+
+    // onExternalClose must flush the pending edit before notifying listeners.
+    dialog_->onExternalClose();
+
+    EXPECT_GE(listener.changedCount, 1)
+        << "onExternalClose must flush the pending debounced name edit and fire oscillatorConfigChanged";
+    EXPECT_EQ(listener.lastOscillator.getName(), "Debounced Name")
+        << "The flushed name must match the text that was pending in the debounce timer";
+    EXPECT_EQ(listener.closedCount, 1) << "onExternalClose must still fire configDialogClosed";
+
+    dialog_->removeListener(&listener);
+}
+
 TEST_F(OscillatorConfigDialogTest, RemovedListenerNoLongerReceivesClose)
 {
     CountingDialogListener listener;

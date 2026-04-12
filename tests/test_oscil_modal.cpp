@@ -231,14 +231,14 @@ TEST_F(OscilModalTest, HideImmediateOnUnshownModalIsNoOp)
     int closeCount = 0;
     modal.onClose = [&closeCount]() { ++closeCount; };
 
-    // Unshown modal: first hideImmediate may fire onClose once (implementation-defined).
-    // Second call must be a no-op — the "at most once per show" contract.
+    // Unshown modal: hideNotified_ starts false, so the first hideImmediate
+    // fires onClose exactly once.  Second call is a no-op (hideNotified_ guard).
     modal.hideImmediate();
     int const countAfterFirst = closeCount;
     modal.hideImmediate();
 
     EXPECT_FALSE(modal.isVisible());
-    EXPECT_LE(countAfterFirst, 1) << "First hideImmediate on unshown modal fires onClose at most once";
+    EXPECT_EQ(countAfterFirst, 1) << "First hideImmediate on unshown modal fires onClose exactly once";
     EXPECT_EQ(closeCount, countAfterFirst) << "Second hideImmediate must be a no-op (no additional onClose)";
 }
 
