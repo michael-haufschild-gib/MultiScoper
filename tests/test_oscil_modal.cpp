@@ -312,6 +312,11 @@ TEST_F(OscilModalTest, EscapeKeyIgnoredWhenCloseOnEscapeIsFalse)
 
 TEST_F(OscilModalTest, OnCloseRequestedReturningFalseVetosHide)
 {
+    // Force synchronous hide so a regression that calls hide() (instead of
+    // requestClose()) is immediately observable — the animated path would
+    // keep isVisible() true and defer onClose until a timer runs.
+    ScopedReducedMotion reducedMotion;
+
     juce::Component parent;
     parent.setSize(400, 300);
 

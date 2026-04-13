@@ -181,7 +181,11 @@ void OscilModal::hideImmediate()
     if (onClose && !hideNotified_)
     {
         hideNotified_ = true;
-        onClose();
+        // Copy the callback before invoking: onClose's captures may own the
+        // modal (e.g. AlertResources shared_ptr cycle) and `res.reset()` inside
+        // onClose would destroy this lambda mid-execution.
+        auto onCloseCopy = onClose;
+        onCloseCopy();
     }
 }
 
@@ -361,7 +365,10 @@ void OscilModal::timerCallback()
             if (onClose && !hideNotified_)
             {
                 hideNotified_ = true;
-                onClose();
+                // See hideImmediate(): copy before invoke to survive callbacks
+                // that destroy the modal's storage (UAF otherwise).
+                auto onCloseCopy = onClose;
+                onCloseCopy();
             }
         }
     }
