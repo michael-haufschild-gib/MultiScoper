@@ -10,9 +10,6 @@
 #if OSCIL_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 #endif
-#if OSCIL_ENABLE_INSPECTOR
-    #include <melatonin_inspector/melatonin_inspector.h>
-#endif
 #include "core/ServiceContext.h"
 #include "ui/components/TestId.h"
 #include "ui/layout/SidebarComponent.h"
@@ -201,11 +198,6 @@ private:
 
     // Metrics Controller
     std::unique_ptr<PerformanceMetricsController> metricsController_;
-
-#if OSCIL_ENABLE_INSPECTOR
-    // Melatonin Inspector for UI debugging (toggle with Cmd+I / Ctrl+I)
-    melatonin::Inspector inspector_{*this};
-#endif
 
     static constexpr int STATUS_BAR_HEIGHT = 24;
     static constexpr int DEFAULT_WIDTH = 1200;

@@ -44,7 +44,6 @@ NeonGlowShader::~NeonGlowShader()
 }
 
 #if OSCIL_ENABLE_OPENGL
-// NOLINTNEXTLINE(readability-function-size)
 bool NeonGlowShader::compile(juce::OpenGLContext& context)
 {
     if (!compileFromBinaryData(*gl_, context, BinaryData::neon_glow_vert, BinaryData::neon_glow_vertSize,

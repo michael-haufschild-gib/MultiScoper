@@ -50,6 +50,13 @@ public:
     [[nodiscard]] const BloomSettings& getSettings() const { return settings_; }
 
 private:
+    /// Compile a single bloom pipeline stage. Returns true on success; on failure
+    /// the caller is expected to invoke release() to clean up partial state.
+    bool compilePrefilterStage(juce::OpenGLContext& context);
+    bool compileDownsampleStage(juce::OpenGLContext& context);
+    bool compileUpsampleStage(juce::OpenGLContext& context);
+    bool compileCombineStage(juce::OpenGLContext& context);
+
     BloomSettings settings_;
 
     // Shaders

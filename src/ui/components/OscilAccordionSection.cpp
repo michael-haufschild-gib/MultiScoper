@@ -91,7 +91,39 @@ void OscilAccordionSection::setContent(juce::Component* content)
     }
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void OscilAccordionSection::startExpandAnimation(bool expandTarget)
+{
+    float const target = expandTarget ? 1.0f : 0.0f;
+    expandSpring_.setTarget(target);
+    chevronSpring_.setTarget(target);
+    startTimerHz(ComponentLayout::ANIMATION_FPS);
+
+    // Immediately hide content on collapse so visibility state is
+    // consistent before the animation completes. Expand reveals
+    // content via the timer callback once the spring crosses 0.01.
+    if (!expandTarget && content_)
+        content_->setVisible(false);
+}
+
+void OscilAccordionSection::applyExpandedImmediate(bool expandTarget)
+{
+    // When skipping animation, set BOTH position AND target to prevent
+    // the spring from animating toward the wrong value when timer runs.
+    float const value = expandTarget ? 1.0f : 0.0f;
+    expandSpring_.position = value;
+    expandSpring_.target = value;
+    chevronSpring_.position = value;
+    chevronSpring_.target = value;
+
+    if (content_)
+        content_->setVisible(expandTarget);
+
+    if (auto* parent = getParentComponent())
+        parent->resized();
+
+    repaint();
+}
+
 void OscilAccordionSection::setExpanded(bool expanded, bool animate)
 {
     if (expanded_ == expanded)
@@ -100,34 +132,9 @@ void OscilAccordionSection::setExpanded(bool expanded, bool animate)
     expanded_ = expanded;
 
     if (animate && AnimationSettings::shouldUseSpringAnimations())
-    {
-        expandSpring_.setTarget(expanded ? 1.0f : 0.0f);
-        chevronSpring_.setTarget(expanded ? 1.0f : 0.0f);
-        startTimerHz(ComponentLayout::ANIMATION_FPS);
-
-        // Immediately hide content on collapse so visibility state is
-        // consistent before the animation completes.  Expand reveals
-        // content via the timer callback once the spring crosses 0.01.
-        if (!expanded && content_)
-            content_->setVisible(false);
-    }
+        startExpandAnimation(expanded);
     else
-    {
-        // When skipping animation, set BOTH position AND target to prevent
-        // the spring from animating toward the wrong value when timer runs
-        expandSpring_.position = expanded ? 1.0f : 0.0f;
-        expandSpring_.target = expanded ? 1.0f : 0.0f;
-        chevronSpring_.position = expanded ? 1.0f : 0.0f;
-        chevronSpring_.target = expanded ? 1.0f : 0.0f;
-
-        if (content_)
-            content_->setVisible(expanded);
-
-        if (auto* parent = getParentComponent())
-            parent->resized();
-
-        repaint();
-    }
+        applyExpandedImmediate(expanded);
 
     if (onExpandedChanged)
         onExpandedChanged(expanded_);

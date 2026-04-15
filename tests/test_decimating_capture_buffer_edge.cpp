@@ -282,7 +282,7 @@ TEST_F(DecimatingBufferAccuracyTest, AntiAliasingRemovesHighFrequencyContent)
     buffer->write(hf, CaptureFrameMetadata{});
 
     std::vector<float> out(4096);
-    int n = buffer->read(out.data(), 4096, 0);
+    int n = buffer->readBlocking(out.data(), 4096, 0);
     ASSERT_GT(n, 100);
 
     double sumSq = 0.0;
@@ -315,7 +315,7 @@ TEST_F(DecimatingBufferAccuracyTest, LowFrequencySignalPreservedAfterDecimation)
     buffer->write(lf, CaptureFrameMetadata{});
 
     std::vector<float> out(4096);
-    int n = buffer->read(out.data(), 4096, 0);
+    int n = buffer->readBlocking(out.data(), 4096, 0);
     ASSERT_GT(n, 200);
 
     double sumSq = 0.0;
@@ -389,7 +389,7 @@ void runReader(DecimatingCaptureBuffer& buffer, std::atomic<bool>& running, std:
     std::vector<float> output(1024);
     while (running.load(std::memory_order_relaxed))
     {
-        int n = buffer.read(output.data(), 1024, 0);
+        int n = buffer.readBlocking(output.data(), 1024, 0);
         for (int i = 0; i < n; ++i)
         {
             if (!std::isfinite(output[static_cast<size_t>(i)]))

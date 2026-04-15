@@ -12,15 +12,19 @@ set(OSCIL_SOURCES
     # Core (business logic)
     ${CMAKE_SOURCE_DIR}/src/core/InstanceRegistry.cpp
     ${CMAKE_SOURCE_DIR}/src/core/SharedCaptureBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/SharedCaptureBufferAnalysis.cpp
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBufferQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManagerQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/OscilStateLayout.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/SchemaMigration.cpp
     ${CMAKE_SOURCE_DIR}/src/core/GlobalPreferences.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Oscillator.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Pane.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/PaneLayoutManager.cpp
 
     # Core DSP
     ${CMAKE_SOURCE_DIR}/src/core/dsp/SignalProcessor.cpp
@@ -63,6 +67,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/VignetteEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/FilmGrainEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/BloomEffect.cpp
+    ${CMAKE_SOURCE_DIR}/src/rendering/effects/BloomEffectShaders.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/TrailsEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ColorGradeEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ChromaticAberrationEffect.cpp
@@ -110,6 +115,7 @@ set(OSCIL_SOURCES
 
     # UI (panels)
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListComponentEvents.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListToolbar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListItem.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListItemPainting.cpp
@@ -167,6 +173,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeManagerSerialization.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/SystemThemes.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorComponent.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorWidgets.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorActions.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ColorPickerComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeCoordinator.cpp

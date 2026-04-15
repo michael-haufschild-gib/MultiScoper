@@ -16,10 +16,11 @@ class StatePersistenceMigrationTest : public StateTestFixture
 {
 };
 
-// Test: Missing schema version
+// Test: Missing schema version (pre-versioned v0 fixture) migrates forward.
+// SchemaMigration treats a missing "version" attribute as v0 and chain-migrates
+// v0 -> v1 -> CURRENT_SCHEMA_VERSION. Payload is preserved.
 TEST_F(StatePersistenceMigrationTest, MissingSchemaVersion)
 {
-    // Old state without version property
     juce::String oldXml = R"(
         <OscilState>
             <Oscillators/>
@@ -28,14 +29,14 @@ TEST_F(StatePersistenceMigrationTest, MissingSchemaVersion)
     )";
     EXPECT_TRUE(state->fromXmlString(oldXml));
 
-    // getSchemaVersion defaults to 1 for old states
-    EXPECT_EQ(state->getSchemaVersion(), 1);
+    // Post-migration the version is stamped to current.
+    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state->getThemeName(), "Classic Green");
 }
 
-// Test: Old schema version
+// Test: Old schema version v1 migrates forward to current and preserves payload.
 TEST_F(StatePersistenceMigrationTest, OldSchemaVersion)
 {
-    // Version 1 state
     juce::String v1Xml = R"(
         <OscilState version="1">
             <Oscillators/>
@@ -44,23 +45,25 @@ TEST_F(StatePersistenceMigrationTest, OldSchemaVersion)
     )";
     EXPECT_TRUE(state->fromXmlString(v1Xml));
 
-    EXPECT_EQ(state->getSchemaVersion(), 1);
+    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(state->getThemeName(), "Old Theme");
 }
 
-// Test: Future schema version
+// Test: Future schema version is rejected (fail-closed). State is preserved.
 TEST_F(StatePersistenceMigrationTest, FutureSchemaVersion)
 {
-    // Future version (should still load)
+    auto const themeBefore = state->getThemeName();
     juce::String futureXml = R"(
         <OscilState version="999">
             <Oscillators/>
             <Theme themeName="Future Theme"/>
         </OscilState>
     )";
-    EXPECT_TRUE(state->fromXmlString(futureXml));
+    EXPECT_FALSE(state->fromXmlString(futureXml));
 
-    EXPECT_EQ(state->getSchemaVersion(), 999);
+    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state->getThemeName(), themeBefore);
+    EXPECT_NE(state->getThemeName(), "Future Theme");
 }
 
 // Test: Malformed XML recovery

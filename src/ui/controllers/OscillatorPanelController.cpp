@@ -60,7 +60,47 @@ void OscillatorPanelController::refreshSidebar(const std::vector<Oscillator>& os
 
 void OscillatorPanelController::handleAsyncUpdate() { refreshPanels(); }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity,readability-function-size)
+void OscillatorPanelController::runRefreshIteration()
+{
+    isUpdating_ = true;
+    pendingRefresh_ = false;
+
+    gpuCoordinator_.clearWaveforms();
+    paneComponents_.clear();
+
+    auto oscillators = dataProvider_.getState().getOscillators();
+    auto& layoutManager = dataProvider_.getState().getLayoutManager();
+
+    OSCIL_LOG(CONTROLLER,
+              "refreshPanels: " << oscillators.size() << " oscillators, " << layoutManager.getPaneCount() << " panes");
+
+    createPaneComponents(oscillators, layoutManager);
+    refreshSidebar(oscillators, layoutManager);
+    reapplyGlobalSettings();
+    gpuCoordinator_.propagateGpuStateToPanes(paneComponents_);
+
+    if (layoutNeededCallback_)
+        layoutNeededCallback_();
+
+    isUpdating_ = false;
+}
+
+bool OscillatorPanelController::runRefreshLoop()
+{
+    static constexpr int kMaxRefreshIterations = 10;
+    for (int iteration = 0; iteration < kMaxRefreshIterations; ++iteration)
+    {
+        if (iteration > 0)
+            OSCIL_LOG(CONTROLLER, "refreshPanels: processing queued refresh (iteration " << iteration << ")");
+
+        runRefreshIteration();
+
+        if (!pendingRefresh_)
+            return true;
+    }
+    return false;
+}
+
 void OscillatorPanelController::refreshPanels()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -75,41 +115,11 @@ void OscillatorPanelController::refreshPanels()
         return;
     }
 
-    static constexpr int kMaxRefreshIterations = 10;
-
-    for (int iteration = 0; iteration < kMaxRefreshIterations; ++iteration)
-    {
-        isUpdating_ = true;
-        pendingRefresh_ = false;
-
-        gpuCoordinator_.clearWaveforms();
-        paneComponents_.clear();
-
-        auto oscillators = dataProvider_.getState().getOscillators();
-        auto& layoutManager = dataProvider_.getState().getLayoutManager();
-
-        OSCIL_LOG(CONTROLLER, "refreshPanels: "
-                                  << oscillators.size() << " oscillators, " << layoutManager.getPaneCount() << " panes"
-                                  << (iteration > 0 ? " (iteration " + juce::String(iteration) + ")" : ""));
-
-        createPaneComponents(oscillators, layoutManager);
-        refreshSidebar(oscillators, layoutManager);
-        reapplyGlobalSettings();
-        gpuCoordinator_.propagateGpuStateToPanes(paneComponents_);
-
-        if (layoutNeededCallback_)
-            layoutNeededCallback_();
-
-        isUpdating_ = false;
-
-        if (!pendingRefresh_)
-            return;
-
-        OSCIL_LOG(CONTROLLER, "refreshPanels: processing queued refresh");
-    }
+    if (runRefreshLoop())
+        return;
 
     jassertfalse; // unexpected refresh reentrancy loop
-    OSCIL_LOG(CONTROLLER, "refreshPanels: WARNING — hit max iteration limit (" << kMaxRefreshIterations << ")");
+    OSCIL_LOG(CONTROLLER, "refreshPanels: WARNING — hit max iteration limit");
     triggerAsyncUpdate(); // preserve the final queued refresh for the next async cycle
 }
 
@@ -125,12 +135,13 @@ void OscillatorPanelController::createPaneComponents(const std::vector<Oscillato
         oscillatorsByPane[osc.getPaneId().id].push_back(osc);
     }
 
-    int paneIndex = 0;
-    for (const auto& pane : layoutManager.getPanes())
+    const auto& panes = layoutManager.getPanes();
+    for (size_t paneIndex = 0; paneIndex < panes.size(); ++paneIndex)
     {
+        const auto& pane = panes[paneIndex];
         auto paneComponent = std::make_unique<PaneComponent>(dataProvider_, serviceContext_, pane.getId());
         paneComponent->setTestId("pane_" + pane.getId().id);
-        paneComponent->setPaneIndex(paneIndex++);
+        paneComponent->setPaneIndex(static_cast<int>(paneIndex));
 
         // Set up drag-and-drop reorder callback - managed by Container now, but component initiates drag
         paneComponent->onPaneReordered(

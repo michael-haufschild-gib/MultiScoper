@@ -50,8 +50,10 @@ WaveformGLRenderer::WaveformGLRenderer()
 WaveformGLRenderer::~WaveformGLRenderer()
 {
     // Ensure cleanup happens even if openGLContextClosing() callback wasn't invoked
-    // (e.g., in headless test environments where JUCE callbacks may not fire)
-    openGLContextClosing();
+    // (e.g., in headless test environments where JUCE callbacks may not fire).
+    // Qualified call avoids virtual dispatch during destruction (the derived
+    // vtable is gone; subclasses must cleanup in their own destructors).
+    WaveformGLRenderer::openGLContextClosing();
 
     GL_LOG("WaveformGLRenderer DESTROYED");
     DBG("WaveformGLRenderer destroyed");
@@ -63,7 +65,26 @@ void WaveformGLRenderer::setContext(juce::OpenGLContext* context)
     context_ = context;
 }
 
-// NOLINTNEXTLINE(readability-function-size)
+void WaveformGLRenderer::initializeRenderEngine()
+{
+    if (!useRenderEngine_ || !context_)
+        return;
+
+    const juce::ScopedWriteLock lock(engineLock_);
+    renderEngine_ = std::make_unique<RenderEngine>();
+    if (!renderEngine_->initialize(*context_))
+    {
+        GL_LOG("WARNING: RenderEngine initialization failed, falling back to basic rendering");
+        DBG("WaveformGLRenderer: RenderEngine initialization failed");
+        renderEngine_.reset();
+    }
+    else
+    {
+        GL_LOG("RenderEngine initialized successfully");
+        DBG("WaveformGLRenderer: RenderEngine initialized");
+    }
+}
+
 void WaveformGLRenderer::newOpenGLContextCreated()
 {
     GL_LOG("=== newOpenGLContextCreated CALLED ===");
@@ -76,23 +97,7 @@ void WaveformGLRenderer::newOpenGLContextCreated()
         compileDebugShader();
     }
 
-    // Initialize the advanced render engine
-    if (useRenderEngine_ && context_)
-    {
-        const juce::ScopedWriteLock lock(engineLock_);
-        renderEngine_ = std::make_unique<RenderEngine>();
-        if (!renderEngine_->initialize(*context_))
-        {
-            GL_LOG("WARNING: RenderEngine initialization failed, falling back to basic rendering");
-            DBG("WaveformGLRenderer: RenderEngine initialization failed");
-            renderEngine_.reset();
-        }
-        else
-        {
-            GL_LOG("RenderEngine initialized successfully");
-            DBG("WaveformGLRenderer: RenderEngine initialized");
-        }
-    }
+    initializeRenderEngine();
 
     // Initialize frame timing
     lastFrameTime_ = std::chrono::steady_clock::now();
@@ -101,7 +106,37 @@ void WaveformGLRenderer::newOpenGLContextCreated()
     GL_LOG("contextReady_ set to TRUE");
 }
 
-// NOLINTNEXTLINE(readability-function-size)
+bool WaveformGLRenderer::buildDebugShaderProgram()
+{
+    debugShader_ = std::make_unique<juce::OpenGLShaderProgram>(*context_);
+
+    if (!debugShader_->addVertexShader(debugVertexShader))
+    {
+        GL_LOG("DEBUG SHADER: Vertex shader compilation FAILED: " << debugShader_->getLastError().toStdString());
+        debugShader_.reset();
+        return false;
+    }
+    GL_LOG("DEBUG SHADER: Vertex shader compiled OK");
+
+    if (!debugShader_->addFragmentShader(debugFragmentShader))
+    {
+        GL_LOG("DEBUG SHADER: Fragment shader compilation FAILED: " << debugShader_->getLastError().toStdString());
+        debugShader_.reset();
+        return false;
+    }
+    GL_LOG("DEBUG SHADER: Fragment shader compiled OK");
+
+    if (!debugShader_->link())
+    {
+        GL_LOG("DEBUG SHADER: Link FAILED");
+        debugShader_.reset();
+        return false;
+    }
+    GL_LOG("DEBUG SHADER: Link OK");
+
+    return true;
+}
+
 void WaveformGLRenderer::compileDebugShader()
 {
     GL_LOG("compileDebugShader called, context_=" << (context_ ? "valid" : "nullptr")
@@ -112,31 +147,8 @@ void WaveformGLRenderer::compileDebugShader()
 
     GL_LOG("Compiling DEBUG shader...");
 
-    debugShader_ = std::make_unique<juce::OpenGLShaderProgram>(*context_);
-
-    if (!debugShader_->addVertexShader(debugVertexShader))
-    {
-        GL_LOG("DEBUG SHADER: Vertex shader compilation FAILED: " << debugShader_->getLastError().toStdString());
-        debugShader_.reset();
+    if (!buildDebugShaderProgram())
         return;
-    }
-    GL_LOG("DEBUG SHADER: Vertex shader compiled OK");
-
-    if (!debugShader_->addFragmentShader(debugFragmentShader))
-    {
-        GL_LOG("DEBUG SHADER: Fragment shader compilation FAILED: " << debugShader_->getLastError().toStdString());
-        debugShader_.reset();
-        return;
-    }
-    GL_LOG("DEBUG SHADER: Fragment shader compiled OK");
-
-    if (!debugShader_->link())
-    {
-        GL_LOG("DEBUG SHADER: Link FAILED");
-        debugShader_.reset();
-        return;
-    }
-    GL_LOG("DEBUG SHADER: Link OK");
 
     debugProjectionLoc_ = debugShader_->getUniformIDFromName("projection");
     debugColorLoc_ = debugShader_->getUniformIDFromName("color");

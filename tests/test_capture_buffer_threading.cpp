@@ -57,7 +57,7 @@ TEST_F(CaptureBufferThreadingTest, ConcurrentWriteReadDataIntegrity)
         std::vector<float> out(kBlock);
         while (running.load(std::memory_order_relaxed))
         {
-            if (buffer->read(out.data(), kBlock, 0) == kBlock)
+            if (buffer->readBlocking(out.data(), kBlock, 0) == kBlock)
             {
                 float first = out[0];
                 for (int i = 1; i < kBlock; ++i)
@@ -111,7 +111,7 @@ TEST_F(CaptureBufferThreadingTest, MultiReaderConcurrentAccess)
             std::vector<float> out(kBlock);
             while (running.load(std::memory_order_relaxed))
             {
-                if (buffer->read(out.data(), kBlock, 0) == kBlock)
+                if (buffer->readBlocking(out.data(), kBlock, 0) == kBlock)
                 {
                     float first = out[0];
                     for (int i = 1; i < kBlock; ++i)
@@ -200,7 +200,7 @@ TEST_F(CaptureBufferThreadingTest, ClearDuringConcurrentReads)
         std::vector<float> out(128);
         while (running.load(std::memory_order_relaxed))
         {
-            int n = buffer->read(out.data(), 128, 0);
+            int n = buffer->readBlocking(out.data(), 128, 0);
             if (n > 0)
             {
                 bool hasOrig = false, hasZero = false;
@@ -259,7 +259,7 @@ TEST_F(CaptureBufferThreadingTest, RingWrapDataIntegrity)
         std::vector<float> out(kBlock);
         while (running.load(std::memory_order_relaxed))
         {
-            if (buffer->read(out.data(), kBlock, 0) == kBlock)
+            if (buffer->readBlocking(out.data(), kBlock, 0) == kBlock)
             {
                 float first = out[0];
                 for (int i = 1; i < kBlock; ++i)

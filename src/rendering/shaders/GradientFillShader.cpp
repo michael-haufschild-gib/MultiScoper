@@ -36,7 +36,6 @@ GradientFillShader::~GradientFillShader()
 }
 
 #if OSCIL_ENABLE_OPENGL
-// NOLINTNEXTLINE(readability-function-size)
 bool GradientFillShader::compile(juce::OpenGLContext& context)
 {
     if (!compileFromBinaryData(*gl_, context, BinaryData::gradient_fill_vert, BinaryData::gradient_fill_vertSize,

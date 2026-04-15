@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Future schema version. ADR-009 says this must fail-closed: fromXmlString
+     returns false, in-memory state is preserved. Seed exists so the fuzzer
+     has a sample of the downgrade-rejection path to mutate around. -->
+<OscilState version="999">
+  <Oscillators/>
+  <Panes/>
+  <Layout columns="1"/>
+  <Theme themeName="Dark Professional"/>
+  <Timing/>
+</OscilState>

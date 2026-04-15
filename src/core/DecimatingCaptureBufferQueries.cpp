@@ -31,21 +31,51 @@ T withBuffer(const std::shared_ptr<SharedCaptureBuffer>& buffer, juce::SpinLock&
 
 } // namespace
 
-int DecimatingCaptureBuffer::read(float* output, int numSamples, int channel) const
+int DecimatingCaptureBuffer::readBlocking(float* output, int numSamples, int channel) const
 {
     return withBuffer(buffer_, bufferSwapLock_, 0,
-                      [=](SharedCaptureBuffer& buf) { return buf.read(output, numSamples, channel); });
+                      [=](SharedCaptureBuffer& buf) { return buf.readBlocking(output, numSamples, channel); });
 }
 
-int DecimatingCaptureBuffer::read(std::span<float> output, int channel) const
-{
-    return withBuffer(buffer_, bufferSwapLock_, 0, [=](SharedCaptureBuffer& buf) { return buf.read(output, channel); });
-}
-
-int DecimatingCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) const
+int DecimatingCaptureBuffer::readBlocking(std::span<float> output, int channel) const
 {
     return withBuffer(buffer_, bufferSwapLock_, 0,
-                      [&](SharedCaptureBuffer& buf) { return buf.read(output, numSamples); });
+                      [=](SharedCaptureBuffer& buf) { return buf.readBlocking(output, channel); });
+}
+
+int DecimatingCaptureBuffer::readBlocking(juce::AudioBuffer<float>& output, int numSamples) const
+{
+    return withBuffer(buffer_, bufferSwapLock_, 0,
+                      [&](SharedCaptureBuffer& buf) { return buf.readBlocking(output, numSamples); });
+}
+
+// Snapshot paths are real-time safe: they must NOT take the bufferSwapLock_
+// SpinLock. Instead they use the lock-free publishedBuffer_ atomic (which
+// is already used by the audio-thread write path). The graveyard keeps
+// swapped-out buffers alive for ~2s so the raw pointer remains valid even
+// if reconfigure() ran between the load and the dereference.
+std::optional<int> DecimatingCaptureBuffer::readSnapshot(float* output, int numSamples, int channel) const
+{
+    const SharedCaptureBuffer* const buf = publishedBuffer_.load(std::memory_order_acquire);
+    if (buf == nullptr)
+        return std::nullopt;
+    return buf->readSnapshot(output, numSamples, channel);
+}
+
+std::optional<int> DecimatingCaptureBuffer::readSnapshot(std::span<float> output, int channel) const
+{
+    const SharedCaptureBuffer* const buf = publishedBuffer_.load(std::memory_order_acquire);
+    if (buf == nullptr)
+        return std::nullopt;
+    return buf->readSnapshot(output, channel);
+}
+
+std::optional<int> DecimatingCaptureBuffer::readSnapshot(juce::AudioBuffer<float>& output, int numSamples) const
+{
+    const SharedCaptureBuffer* const buf = publishedBuffer_.load(std::memory_order_acquire);
+    if (buf == nullptr)
+        return std::nullopt;
+    return buf->readSnapshot(output, numSamples);
 }
 
 CaptureFrameMetadata DecimatingCaptureBuffer::getLatestMetadata() const

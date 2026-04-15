@@ -43,7 +43,6 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_MAKE_PROGRAM": "${sourceDir}/scripts/ninja-wrapper",
         "OSCIL_BUILD_TESTS": "ON",
-        "OSCIL_ENABLE_INSPECTOR": "ON",
         "OSCIL_COPY_PLUGIN_AFTER_BUILD": "OFF"
       }
     },
@@ -55,8 +54,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_MAKE_PROGRAM": "${sourceDir}/scripts/ninja-wrapper",
-        "OSCIL_BUILD_TESTS": "ON",
-        "OSCIL_ENABLE_INSPECTOR": "ON"
+        "OSCIL_BUILD_TESTS": "ON"
       }
     },
     {
@@ -66,8 +64,7 @@
       "inherits": ["base", "ninja", "ccache"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "OSCIL_BUILD_TESTS": "OFF",
-        "OSCIL_ENABLE_INSPECTOR": "OFF"
+        "OSCIL_BUILD_TESTS": "OFF"
       }
     },
     {
@@ -77,8 +74,7 @@
       "inherits": ["base", "ninja", "ccache"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "OSCIL_BUILD_TESTS": "ON",
-        "OSCIL_ENABLE_INSPECTOR": "OFF"
+        "OSCIL_BUILD_TESTS": "ON"
       }
     },
     {
@@ -125,8 +121,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "OSCIL_BUILD_TESTS": "ON",
-        "OSCIL_ENABLE_RTSAN": "ON",
-        "OSCIL_ENABLE_INSPECTOR": "OFF"
+        "OSCIL_ENABLE_RTSAN": "ON"
       }
     },
     {

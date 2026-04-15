@@ -126,6 +126,10 @@ private:
     void renderWaveformLayer(const WaveformRenderData& data, WaveformRenderState& state);
     void unregisterWaveformLocked(int waveformId);
 
+    /// Initialize all rendering subsystems in order.
+    /// On failure, rolls back any subsystems that were initialized earlier and returns false.
+    bool initializeSubsystems(juce::OpenGLContext& context);
+
     // Subsystems
     std::unique_ptr<RenderBootstrapper> bootstrapper_;
     std::unique_ptr<EffectPipeline> effectPipeline_;

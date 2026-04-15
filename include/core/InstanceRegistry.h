@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "core/Mutex.h"
 #include "core/interfaces/IInstanceRegistry.h"
 
 #include <juce_core/juce_core.h>
@@ -14,8 +15,6 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <mutex>
-#include <shared_mutex>
 #include <unordered_map>
 
 namespace oscil
@@ -116,21 +115,48 @@ public:
     InstanceRegistry& operator=(const InstanceRegistry&) = delete;
 
 private:
+    struct RegisterOutcome
+    {
+        enum class Kind
+        {
+            Added,
+            Updated,
+            Rejected
+        };
+        SourceId sourceId = SourceId::invalid();
+        Kind kind = Kind::Rejected;
+    };
+
+    RegisterOutcome resolveOrInsertLocked(const juce::String& effectiveTrackId,
+                                          const std::shared_ptr<IAudioBuffer>& captureBuffer, const juce::String& name,
+                                          int validChannelCount, double validSampleRate,
+                                          const std::shared_ptr<AnalysisEngine>& analysisEngine) OSCIL_REQUIRES(mutex_);
+
     SourceId tryReuseExistingSource(const juce::String& trackIdentifier, std::shared_ptr<IAudioBuffer> captureBuffer,
                                     const juce::String& name, int channelCount, double sampleRate,
-                                    std::shared_ptr<AnalysisEngine> analysisEngine);
+                                    std::shared_ptr<AnalysisEngine> analysisEngine) OSCIL_REQUIRES(mutex_);
+    SourceId insertNewSource(const juce::String& effectiveTrackId, std::shared_ptr<IAudioBuffer> captureBuffer,
+                             const juce::String& name, int channelCount, double sampleRate,
+                             std::shared_ptr<AnalysisEngine> analysisEngine) OSCIL_REQUIRES(mutex_);
     void notifySourceAdded(const SourceId& sourceId);
     void notifySourceRemoved(const SourceId& sourceId);
     void notifySourceUpdated(const SourceId& sourceId);
     void dispatchNotification(const char* eventName, const SourceId& sourceId,
                               void (InstanceRegistryListener::*callback)(const SourceId&));
 
-    mutable std::shared_mutex mutex_;
-    std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_;
-    std::unordered_map<juce::String, SourceId> trackToSourceMap_; // Deduplication map
+    mutable oscil::SharedMutex mutex_;
+    std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_ OSCIL_GUARDED_BY(mutex_);
+    std::unordered_map<juce::String, SourceId> trackToSourceMap_ OSCIL_GUARDED_BY(mutex_); // Deduplication map
 
-    // Dispatcher for notifications
-    Dispatcher dispatcher_;
+    // Dispatcher for notifications. Guarded by dispatcherMutex_ because setDispatcher
+    // may run concurrently with dispatchNotification — the former is typically
+    // called during test setup on the message thread, the latter is triggered
+    // by registerInstance/unregisterInstance which may run on audio or worker
+    // threads in production. Without synchronization, assigning std::function
+    // while another thread is copying it is a data race (std::function has no
+    // thread-safe copy guarantee).
+    mutable oscil::Mutex dispatcherMutex_;
+    Dispatcher dispatcher_ OSCIL_GUARDED_BY(dispatcherMutex_);
 
     // Using JUCE ListenerList for safe listener management
     // ListenerList handles removal during iteration and prevents dangling pointer issues

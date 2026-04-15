@@ -76,6 +76,23 @@ protected:
     virtual void unbindFramebuffer(Framebuffer* fb);
 
 private:
+    /// Bundle of per-process() state shared across all steps — keeps applyStep
+    /// parameter count within clang-tidy readability thresholds.
+    struct StepContext
+    {
+        juce::OpenGLContext& glContext;
+        FramebufferPool& pool;
+        Framebuffer* ping;
+        Framebuffer* pong;
+        const VisualConfiguration& config;
+        IEffectProvider& effectProvider;
+        float deltaTime;
+    };
+
+    /// Apply a single step, returning the framebuffer to use as the next input
+    /// (unchanged `current` if the step was skipped).
+    static Framebuffer* applyStep(const EffectStep& step, const StepContext& ctx, Framebuffer* current);
+
     std::vector<EffectStep> steps_;
 };
 

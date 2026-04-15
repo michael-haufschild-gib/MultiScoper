@@ -33,7 +33,32 @@ RenderEngine::~RenderEngine()
     }
 }
 
-// NOLINTNEXTLINE(readability-function-size)
+bool RenderEngine::initializeSubsystems(juce::OpenGLContext& context)
+{
+    if (!bootstrapper_->initialize(context))
+    {
+        RE_LOG("RenderEngine: Failed to initialize bootstrapper");
+        return false;
+    }
+
+    if (!effectPipeline_->initialize(context, currentWidth_, currentHeight_))
+    {
+        RE_LOG("RenderEngine: Failed to initialize effect pipeline");
+        bootstrapper_->shutdown(context);
+        return false;
+    }
+
+    if (!waveformPass_->initialize(context))
+    {
+        RE_LOG("RenderEngine: Failed to initialize waveform pass");
+        effectPipeline_->shutdown(context);
+        bootstrapper_->shutdown(context);
+        return false;
+    }
+
+    return true;
+}
+
 bool RenderEngine::initialize(juce::OpenGLContext& context)
 {
     if (initialized_)
@@ -60,27 +85,8 @@ bool RenderEngine::initialize(juce::OpenGLContext& context)
         return false;
     }
 
-    // Initialize subsystems
-    if (!bootstrapper_->initialize(context))
-    {
-        RE_LOG("RenderEngine: Failed to initialize bootstrapper");
+    if (!initializeSubsystems(context))
         return false;
-    }
-
-    if (!effectPipeline_->initialize(context, currentWidth_, currentHeight_))
-    {
-        RE_LOG("RenderEngine: Failed to initialize effect pipeline");
-        bootstrapper_->shutdown(context);
-        return false;
-    }
-
-    if (!waveformPass_->initialize(context))
-    {
-        RE_LOG("RenderEngine: Failed to initialize waveform pass");
-        effectPipeline_->shutdown(context);
-        bootstrapper_->shutdown(context);
-        return false;
-    }
 
     initialized_ = true;
     RE_LOG("RenderEngine: Initialized " << currentWidth_ << "x" << currentHeight_);

@@ -10,6 +10,25 @@ CPMAddPackage(
     GIT_TAG v1.17.0
 )
 
+# rapidcheck — property-based testing, test-only dependency.
+#
+# Rapidcheck is linked only into OscilTests (see target_link_libraries below).
+# Plugin artifacts (VST3 / AU / CLAP / Standalone), the fuzzer subtree, RTSan
+# builds, and the release preset do NOT fetch or link rapidcheck.
+#
+# Pinned to a commit SHA because upstream does not publish semver tags.
+# See docs/decisions/006-dependency-pinning.md (policy) and
+# docs/decisions/011-property-based-dsp-tests.md (scope and review cadence).
+#
+# Pin date: 2024-09 (emil-e/rapidcheck HEAD at time of introduction).
+# Review cadence: quarterly, per docs/decisions/006-dependency-pinning.md.
+CPMAddPackage(
+    NAME rapidcheck
+    GITHUB_REPOSITORY emil-e/rapidcheck
+    GIT_TAG ff6af6fc683159deb51c543b065eba14dfcf329b
+    OPTIONS "RC_ENABLE_GTEST ON"
+)
+
 # Test source files
 set(OSCIL_TEST_SOURCES
     # Signal processor tests
@@ -25,6 +44,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_instance_registry_crud.cpp
     tests/test_instance_registry_sync.cpp
     tests/test_instance_registry_lifecycle.cpp
+    tests/test_instance_registry_dispatcher.cpp
     tests/test_plugin_processor_lifecycle.cpp
     tests/test_plugin_processor_state.cpp
     tests/test_plugin_processor_audio.cpp
@@ -36,6 +56,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_capture_buffer_concurrent.cpp
     tests/test_capture_buffer_integrity.cpp
     tests/test_capture_buffer_lifecycle.cpp
+    tests/test_audio_buffer_thread_safety.cpp
 
     # Oscillator and pane tests
     tests/test_pane_drag_state.cpp
@@ -148,12 +169,17 @@ set(OSCIL_TEST_SOURCES
 
     # Concurrency primitives
     tests/test_seqlock.cpp
+    tests/test_mutex_annotations.cpp
 
     # UI logic controllers
     tests/test_magnetic_snap_controller.cpp
 
     # OscilState unit tests
     tests/test_oscil_state.cpp
+
+    # Schema migration framework and fixture-driven end-to-end migrations
+    tests/test_schema_migration.cpp
+    tests/test_oscil_state_migration.cpp
 
     # Integration tests
     tests/test_state_integration.cpp
@@ -170,6 +196,12 @@ set(OSCIL_TEST_SOURCES
 
     # Performance benchmarks
     tests/test_performance_benchmarks.cpp
+
+    # Property-based DSP tests (rapidcheck). See ADR-011.
+    tests/test_signal_processor_properties.cpp
+    tests/test_timing_engine_properties.cpp
+    tests/test_decimating_capture_buffer_properties.cpp
+    tests/test_shared_capture_buffer_properties.cpp
 )
 
 add_executable(OscilTests
@@ -196,6 +228,8 @@ target_link_libraries(OscilTests
     PRIVATE
         OscilBinaryData
         GTest::gtest_main  # gtest_main already includes gtest
+        rapidcheck
+        rapidcheck_gtest   # property-based testing adapter (ADR-011)
         juce::juce_core
         juce::juce_data_structures
         juce::juce_graphics

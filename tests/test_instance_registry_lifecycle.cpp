@@ -341,27 +341,6 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAtMaxTracksLimitRejectsExtras)
     EXPECT_DOUBLE_EQ(info->sampleRate, 48000.0) << "Dedup must update the sample rate";
 }
 
-TEST_F(InstanceRegistryLifecycleTest, SetDispatcherRejectsEmptyCallable)
-{
-    // Passing an empty std::function must not brick future notifications.
-    // After a no-op attempt, the default (or previously installed) dispatcher
-    // must still handle events.
-    CountingRegistryListener listener;
-    getRegistry().addListener(&listener);
-
-    // Attempt to install a null dispatcher.
-    getRegistry().setDispatcher({});
-
-    auto buffer = std::make_shared<SharedCaptureBuffer>();
-    auto id = getRegistry().registerInstance("dispatcher_guard", buffer, "Dispatcher Guard");
-    EXPECT_TRUE(id.isValid());
-
-    // The previously-installed (synchronous) dispatcher should still be active.
-    EXPECT_EQ(listener.addedCount, 1) << "setDispatcher({}) must leave the previously installed dispatcher in place";
-
-    getRegistry().removeListener(&listener);
-}
-
 TEST_F(InstanceRegistryLifecycleTest, UpdateSourceWithEmptyNamePreservesExistingName)
 {
     auto buffer = std::make_shared<SharedCaptureBuffer>();

@@ -1,0 +1,90 @@
+name: Benchmarks
+
+# Benchmarks build in Release mode and run on every PR and push to main.
+# NO regression gate is applied — the job uploads the JSON results as an
+# artifact and exits 0 unless the binary crashes. GitHub-hosted runner
+# variance on tight microbenchmarks exceeds practical gate thresholds; see
+# docs/decisions/012-benchmarks-no-regression-gate.md for the full rationale
+# and the planned follow-up (variance characterization over ≥50 runs, then
+# a Mann–Whitney U comparison gate).
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  benchmarks:
+    name: Google Benchmark (Ubuntu 24.04, Release)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: bench-${{ github.ref_name }}
+          restore-keys: |
+            bench-${{ github.ref_name }}
+            bench-main
+            bench-
+          max-size: 1G
+          verbose: 2
+
+      - name: Install JUCE dependencies
+        run: |
+          sudo apt-get install -y \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            ladspa-sdk \
+            libcurl4-openssl-dev \
+            libfreetype6-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            libwebkit2gtk-4.1-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev
+
+      - name: Configure CMake (benchmarks)
+        run: |
+          cmake -B build/bench -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DOSCIL_BUILD_BENCHMARKS=ON \
+            -DOSCIL_BUILD_TESTS=OFF \
+            -DOSCIL_COPY_PLUGIN_AFTER_BUILD=OFF
+
+      - name: Build OscilBenchmarks
+        run: cmake --build build/bench --target OscilBenchmarks --parallel
+
+      # NO regression gate. We only run the suite and archive the JSON.
+      # See docs/decisions/012-benchmarks-no-regression-gate.md.
+      - name: Run benchmarks
+        working-directory: build/bench
+        run: |
+          ./benchmarks/OscilBenchmarks \
+            --benchmark_format=json \
+            --benchmark_out=bench.json \
+            --benchmark_repetitions=3 \
+            --benchmark_min_time=1s
+
+      - name: Upload benchmark JSON artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ github.sha }}
+          path: build/bench/bench.json
+          if-no-files-found: error

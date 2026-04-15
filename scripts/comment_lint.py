@@ -308,14 +308,16 @@ def is_function_declaration(line: str) -> bool:
 
 def has_doc_comment(lines: list[str], decl_line_idx: int) -> bool:
     """Check if the line above the declaration (or nearby) has a doc comment."""
-    # Walk upward past blank lines and find the nearest comment
+    # Walk upward past blank lines and template headers, which are part of the
+    # declaration (e.g. `template <typename T>` above a function or deduction
+    # guide), to find the nearest comment.
     idx = decl_line_idx - 1
     while idx >= 0:
         stripped = lines[idx].strip()
-        if not stripped:
+        if not stripped or stripped.startswith("template"):
             idx -= 1
             continue
-        # Found a non-blank line — is it a doc comment or end of block comment?
+        # Found a non-blank, non-template line — is it a doc comment or end of block comment?
         if DOC_COMMENT_RE.match(lines[idx]):
             return True
         if BLOCK_COMMENT_END_RE.search(lines[idx]):

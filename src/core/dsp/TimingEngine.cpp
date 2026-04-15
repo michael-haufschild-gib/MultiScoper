@@ -28,7 +28,7 @@ void TimingEngine::updateHostBPM(const juce::AudioPlayHead::PositionInfo& positi
     // Publish immediately so recalculateInterval() sees updated BPM
     hostInfoLock_.write(audioThreadHostInfo_);
 
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     if (cfg.timingMode == TimingMode::MELODIC)
         recalculateInterval();
 
@@ -43,7 +43,7 @@ void TimingEngine::updateSyncState(bool wasPlaying, bool isPlaying, const juce::
                                    int64_t previousTimeInSamples)
 {
     bool const playStateChanged = (wasPlaying != isPlaying);
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
 
     if ((cfg.hostSyncEnabled || cfg.syncToPlayhead) && playStateChanged)
     {
@@ -129,7 +129,7 @@ bool TimingEngine::processBlock(const juce::AudioBuffer<float>& buffer)
         previousSample_ = 0.0f;
     }
 
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
 
     if (cfg.triggerMode == WaveformTriggerMode::None)
         return true;
@@ -173,8 +173,8 @@ void TimingEngine::recalculateInterval()
 {
     float newInterval = 0.0f;
 
-    auto cfg = configLock_.read();
-    auto hostInfo = hostInfoLock_.read();
+    auto cfg = configLock_.readBlocking();
+    auto hostInfo = hostInfoLock_.readBlocking();
 
     switch (cfg.timingMode)
     {
@@ -209,7 +209,7 @@ void TimingEngine::recalculateInterval()
 
 bool TimingEngine::processMidi(const juce::MidiBuffer& midiMessages)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
 
     if (cfg.triggerMode != WaveformTriggerMode::Midi)
         return false;
@@ -249,13 +249,13 @@ void TimingEngine::requestManualTrigger()
 {
     manualTrigger_.store(true, std::memory_order_relaxed);
     triggered_.store(true, std::memory_order_relaxed);
-    auto hostInfo = hostInfoLock_.read();
+    auto hostInfo = hostInfoLock_.readBlocking();
     atomicLastSyncTimestamp_.store(static_cast<double>(hostInfo.timeInSamples), std::memory_order_relaxed);
 }
 
 void TimingEngine::setSampleRate(double sampleRate)
 {
-    auto info = hostInfoLock_.read();
+    auto info = hostInfoLock_.readBlocking();
     info.sampleRate = sampleRate;
     hostInfoLock_.write(info);
     // Also update the audio-thread mirror in case this is called from prepareToPlay
@@ -265,7 +265,7 @@ void TimingEngine::setSampleRate(double sampleRate)
 bool TimingEngine::detectTrigger(const float* samples, int numSamples)
 {
     // Read config once per block — avoid per-sample SeqLock reads in the inner loop
-    const auto cfg = configLock_.read();
+    const auto cfg = configLock_.readBlocking();
 
     for (int i = 0; i < numSamples; ++i)
     {
@@ -371,7 +371,7 @@ void TimingEngine::dispatchPendingUpdates()
 
     if ((flags & kPendingTimingMode) != 0)
     {
-        auto cfg = configLock_.read();
+        auto cfg = configLock_.readBlocking();
         listeners_.call([mode = cfg.timingMode](Listener& l) { l.timingModeChanged(mode); });
     }
 
@@ -383,20 +383,20 @@ void TimingEngine::dispatchPendingUpdates()
 
     if ((flags & kPendingHostBPM) != 0)
     {
-        auto hostInfo = hostInfoLock_.read();
+        auto hostInfo = hostInfoLock_.readBlocking();
         auto bpm = static_cast<float>(hostInfo.bpm);
         listeners_.call([bpm](Listener& l) { l.hostBPMChanged(bpm); });
     }
 
     if ((flags & kPendingHostSync) != 0)
     {
-        auto cfg = configLock_.read();
+        auto cfg = configLock_.readBlocking();
         listeners_.call([enabled = cfg.hostSyncEnabled](Listener& l) { l.hostSyncStateChanged(enabled); });
     }
 
     if ((flags & kPendingTimeSignature) != 0)
     {
-        auto hostInfo = hostInfoLock_.read();
+        auto hostInfo = hostInfoLock_.readBlocking();
         listeners_.call([num = hostInfo.timeSigNumerator, den = hostInfo.timeSigDenominator](Listener& l) {
             l.timeSignatureChanged(num, den);
         });

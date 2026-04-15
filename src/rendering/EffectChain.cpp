@@ -15,48 +15,48 @@ void EffectChain::addStep(EffectStep step) { steps_.push_back(std::move(step)); 
 
 void EffectChain::clear() { steps_.clear(); }
 
+// static
+Framebuffer* EffectChain::applyStep(const EffectStep& step, const StepContext& ctx, Framebuffer* current)
+{
+    if (!step.isEnabled(ctx.config))
+        return current;
+
+    auto* effect = ctx.effectProvider.getEffect(step.effectId);
+    if (!effect || !effect->isCompiled() || !effect->isEnabled())
+        return current;
+
+    if (step.configure)
+        step.configure(effect, ctx.config);
+
+    Framebuffer* dest = (current == ctx.ping) ? ctx.pong : ctx.ping;
+    if (!dest || !dest->isValid())
+    {
+        jassertfalse; // Pool FBO invalid — indicates FramebufferPool setup failure
+        DBG("EffectChain: dest FBO null/invalid for effect '" << step.effectId << "' — skipping");
+        return current;
+    }
+
+    // Effects own their FBO bind/unbind lifecycle (multi-pass effects like Bloom need fine-grained control)
+    effect->apply(ctx.glContext, current, dest, ctx.pool, ctx.deltaTime);
+    return dest;
+}
+
 Framebuffer* EffectChain::process(juce::OpenGLContext& context, Framebuffer* source, FramebufferPool& pool,
                                   float deltaTime, const VisualConfiguration& config, IEffectProvider& effectProvider)
 {
+    const StepContext ctx{
+        .glContext = context,
+        .pool = pool,
+        .ping = pool.getPingFBO(),
+        .pong = pool.getPongFBO(),
+        .config = config,
+        .effectProvider = effectProvider,
+        .deltaTime = deltaTime,
+    };
+
     Framebuffer* current = source;
-    Framebuffer* ping = pool.getPingFBO();
-    Framebuffer* pong = pool.getPongFBO();
-
     for (const auto& step : steps_)
-    {
-        // Check if effect is enabled in config
-        if (!step.isEnabled(config))
-            continue;
-
-        // Retrieve effect instance
-        auto* effect = effectProvider.getEffect(step.effectId);
-        if (!effect || !effect->isCompiled() || !effect->isEnabled())
-            continue;
-
-        // Configure effect
-        if (step.configure)
-        {
-            step.configure(effect, config);
-        }
-
-        // Determine destination
-        // If current is ping, dest is pong. If current is source (or pong), dest is ping.
-        Framebuffer* dest = (current == ping) ? pong : ping;
-
-        if (!dest || !dest->isValid())
-        {
-            jassertfalse; // Pool FBO invalid — indicates FramebufferPool setup failure
-            DBG("EffectChain: dest FBO null/invalid for effect '" << step.effectId << "' — skipping");
-            continue;
-        }
-
-        // Apply effect — effects own their FBO bind/unbind lifecycle
-        // (multi-pass effects like Bloom need fine-grained FBO control)
-        effect->apply(context, current, dest, pool, deltaTime);
-
-        // Swap
-        current = dest;
-    }
+        current = applyStep(step, ctx, current);
 
     return current;
 }

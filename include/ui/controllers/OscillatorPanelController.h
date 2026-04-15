@@ -130,6 +130,21 @@ private:
     void createPaneComponents(const std::vector<Oscillator>& oscillators, const PaneLayoutManager& layoutManager);
     void applyOscillatorPropertyChange(const OscillatorId& oscId, const juce::Identifier& property);
 
+    /// Persist a new colour for the oscillator identified by oscillatorId.
+    /// No-op if the oscillator has been removed by the time the colour dialog closes.
+    void applyOscillatorColor(const OscillatorId& oscillatorId, juce::Colour color);
+
+    /// Apply a single ValueTree property change to the matching PaneComponent.
+    /// Returns true if the property was handled by a pane (sidebar was already refreshed).
+    bool dispatchOscillatorPropertyToPane(const Oscillator& osc, const juce::Identifier& property);
+
+    /// Run one refreshPanels iteration: clear GPU state, rebuild panes and sidebar, reapply settings.
+    void runRefreshIteration();
+
+    /// Drive the bounded refresh retry loop. Returns true if the refresh
+    /// completed within the iteration budget, false if it blew the budget.
+    bool runRefreshLoop();
+
     IAudioDataProvider& dataProvider_;
     ServiceContext& serviceContext_;
     PaneContainerComponent& container_;
@@ -143,7 +158,7 @@ private:
     std::vector<std::unique_ptr<PaneComponent>> paneComponents_;
     bool isUpdating_ = false;     // Guard against recursive updates
     bool pendingRefresh_ = false; // Coalesce refresh requests that arrive mid-update
-    std::function<void()> layoutNeededCallback_;
+    std::function<void()> layoutNeededCallback_{};
 
     // Track oscillator pending visibility change (for pane selection dialog)
     OscillatorId pendingVisibilityOscillatorId_;

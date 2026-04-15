@@ -38,7 +38,7 @@ TEST_F(CaptureBufferCoreTest, BasicWriteRead)
     buffer->write(testBuffer, metadata);
 
     std::vector<float> output(100);
-    int samplesRead = buffer->read(output.data(), 100, 0);
+    int samplesRead = buffer->readBlocking(output.data(), 100, 0);
 
     EXPECT_EQ(samplesRead, 100);
     EXPECT_NEAR(output[0], 0.5f, 0.001f);
@@ -60,7 +60,7 @@ TEST_F(CaptureBufferCoreTest, RingBufferWrappingPreservesLatestData)
 
     // Read the most recent 100 samples — they must match the last write's value
     std::vector<float> output(100);
-    int samplesRead = buffer->read(output.data(), 100, 0);
+    int samplesRead = buffer->readBlocking(output.data(), 100, 0);
 
     ASSERT_EQ(samplesRead, 100);
     for (int i = 0; i < 100; ++i)
@@ -164,8 +164,8 @@ TEST_F(CaptureBufferCoreTest, StereoChannelSeparation)
     std::vector<float> leftOutput(100);
     std::vector<float> rightOutput(100);
 
-    buffer->read(leftOutput.data(), 100, 0);
-    buffer->read(rightOutput.data(), 100, 1);
+    (void) buffer->readBlocking(leftOutput.data(), 100, 0);
+    (void) buffer->readBlocking(rightOutput.data(), 100, 1);
 
     EXPECT_NEAR(leftOutput[50], 0.3f, 0.001f);
     EXPECT_NEAR(rightOutput[50], 0.7f, 0.001f);
@@ -211,7 +211,7 @@ TEST_F(CaptureBufferCoreTest, SmallCapacity)
     smallBuffer->write(testBuf, meta);
 
     std::vector<float> output(1);
-    int read = smallBuffer->read(output.data(), 1, 0);
+    int read = smallBuffer->readBlocking(output.data(), 1, 0);
     EXPECT_EQ(read, 1);
 }
 
@@ -230,7 +230,7 @@ TEST_F(CaptureBufferCoreTest, CapacityOne)
 
     // Verify we can read back the written value
     std::vector<float> output(1);
-    int read = tinyBuffer->read(output.data(), 1, 0);
+    int read = tinyBuffer->readBlocking(output.data(), 1, 0);
     EXPECT_EQ(read, 1);
     EXPECT_NEAR(output[0], 0.5f, 0.001f);
 }
@@ -261,7 +261,7 @@ TEST_F(CaptureBufferCoreTest, WriteMonoBuffer)
     buffer->write(monoBuf, meta);
 
     std::vector<float> output(100);
-    int read = buffer->read(output.data(), 100, 0);
+    int read = buffer->readBlocking(output.data(), 100, 0);
     EXPECT_EQ(read, 100);
     EXPECT_NEAR(output[50], 0.7f, 0.001f);
 }
@@ -280,7 +280,7 @@ TEST_F(CaptureBufferCoreTest, WriteNullChannelPointerWritesSilence)
     buffer->write(channels, 64, 2, meta);
 
     std::vector<float> rightOutput(64, -1.0f);
-    const int read = buffer->read(rightOutput.data(), 64, 1);
+    const int read = buffer->readBlocking(rightOutput.data(), 64, 1);
     ASSERT_EQ(read, 64);
 
     for (float sample : rightOutput)
@@ -361,7 +361,7 @@ TEST_F(CaptureBufferCoreTest, WriteExceedsCapacityPreservesLastSamples)
 
     // Read back and verify we got the LAST 1024 samples (the upper half)
     std::vector<float> output(1024);
-    int read = buffer->read(output.data(), 1024, 0);
+    int read = buffer->readBlocking(output.data(), 1024, 0);
     ASSERT_EQ(read, 1024);
 
     // The last 1024 samples of a 2048-sample ramp from 0.0 to 1.0
@@ -374,7 +374,7 @@ TEST_F(CaptureBufferCoreTest, WriteExceedsCapacityPreservesLastSamples)
 TEST_F(CaptureBufferCoreTest, ReadFromEmptyBuffer)
 {
     std::vector<float> output(100, -999.0f);
-    int read = buffer->read(output.data(), 100, 0);
+    int read = buffer->readBlocking(output.data(), 100, 0);
 
     EXPECT_EQ(read, 0);
     // Output should be untouched since no data was available
@@ -392,7 +392,7 @@ TEST_F(CaptureBufferCoreTest, ReadMoreThanAvailable)
     buffer->write(testBuf, meta);
 
     std::vector<float> output(100, -999.0f);
-    int read = buffer->read(output.data(), 100, 0);
+    int read = buffer->readBlocking(output.data(), 100, 0);
 
     EXPECT_EQ(read, 50);
     // First 50 samples should have the written data
@@ -411,7 +411,7 @@ TEST_F(CaptureBufferCoreTest, ReadMoreThanCapacity)
 
     // Try to read more than capacity
     std::vector<float> output(2048);
-    int read = buffer->read(output.data(), 2048, 0);
+    int read = buffer->readBlocking(output.data(), 2048, 0);
 
     // Should be limited to available samples
     EXPECT_LE(static_cast<size_t>(read), buffer->getCapacity());
@@ -427,11 +427,11 @@ TEST_F(CaptureBufferCoreTest, ReadFromInvalidChannel)
     std::vector<float> output(100, -999.0f);
 
     // Channel 5 doesn't exist (only 0 and 1), should return 0
-    int read = buffer->read(output.data(), 100, 5);
+    int read = buffer->readBlocking(output.data(), 100, 5);
     EXPECT_EQ(read, 0);
 
     // Negative channel should also return 0
-    read = buffer->read(output.data(), 100, -1);
+    read = buffer->readBlocking(output.data(), 100, -1);
     EXPECT_EQ(read, 0);
 }
 
@@ -443,7 +443,7 @@ TEST_F(CaptureBufferCoreTest, ReadToAudioBuffer)
     buffer->write(testBuf, meta);
 
     juce::AudioBuffer<float> output(2, 100);
-    int read = buffer->read(output, 100);
+    int read = buffer->readBlocking(output, 100);
 
     EXPECT_EQ(read, 100);
     EXPECT_NEAR(output.getSample(0, 50), 0.5f, 0.01f);
@@ -459,7 +459,7 @@ TEST_F(CaptureBufferCoreTest, ReadZeroSamples)
     buffer->write(testBuf, meta);
 
     std::vector<float> output(10);
-    int read = buffer->read(output.data(), 0, 0);
+    int read = buffer->readBlocking(output.data(), 0, 0);
 
     EXPECT_EQ(read, 0);
 }

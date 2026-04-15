@@ -25,10 +25,10 @@ ctest --preset dev
 
 | Preset | Description | Use Case |
 |--------|-------------|----------|
-| `dev` | Debug + Ninja + ccache + Inspector | Daily development |
+| `dev` | Debug + Ninja + ccache | Daily development |
 | `dev-release` | RelWithDebInfo + Ninja + ccache | Profiling with debug info |
 | `release` | Release + Ninja + ccache | Local release builds |
-| `ci` | Release + tests (no inspector) | CI builds |
+| `ci` | Release + tests | CI builds |
 | `ci-macos` | CI + universal binary | macOS CI |
 | `ci-linux` | CI for Linux | Linux CI |
 | `ci-windows` | CI for Windows | Windows CI |
@@ -70,7 +70,6 @@ ctest --test-dir build --output-on-failure
 | `OSCIL_BUILD_TESTS` | ON | Build unit tests |
 | `OSCIL_BUILD_TEST_HARNESS` | OFF | Build E2E test harness |
 | `OSCIL_ENABLE_OPENGL` | ON | Enable OpenGL for GPU compositing |
-| `OSCIL_ENABLE_INSPECTOR` | OFF | Enable Melatonin Inspector (dev only) |
 | `OSCIL_ENABLE_RTSAN` | OFF | Enable RealtimeSanitizer (Clang 20+) |
 | `CMAKE_BUILD_TYPE` | (none) | Debug, Release, RelWithDebInfo |
 
@@ -207,7 +206,6 @@ All dependencies are fetched automatically via CMake FetchContent:
 | GoogleTest | 1.17.0 | Unit testing (if tests enabled) |
 | cpp-httplib | 0.38.0 | HTTP server for E2E test harness |
 | nlohmann/json | 3.11.3 | JSON parsing for test harness API |
-| Melatonin Inspector | main | UI debugging (if inspector enabled) |
 
 First build will download dependencies (requires internet).
 
@@ -246,11 +244,6 @@ Run the Standalone target directly or attach debugger.
 # Run specific test with verbose output
 ./build/dev/OscilTests --gtest_filter="SignalProcessorTest.*" --gtest_break_on_failure
 ```
-
-### UI Debugging with Melatonin Inspector
-Enable with `OSCIL_ENABLE_INSPECTOR=ON` (included in `dev` preset):
-- Press `Cmd+I` (macOS) or `Ctrl+I` (Windows/Linux) to toggle
-- Inspect component hierarchy, bounds, and properties
 
 ### E2E Test Harness
 ```bash

@@ -288,7 +288,7 @@ TEST_F(DecimatingBufferWriteReadTest, ReadReturnsWrittenSamples)
     buffer->write(audioBuffer, meta);
 
     std::vector<float> output(1024);
-    int samplesRead = buffer->read(output.data(), 1024, 0);
+    int samplesRead = buffer->readBlocking(output.data(), 1024, 0);
 
     EXPECT_GT(samplesRead, 0);
 }
@@ -309,7 +309,7 @@ TEST_F(DecimatingBufferWriteReadTest, DCSignalPreservedAfterDecimation)
 
     // Read back
     std::vector<float> output(1024);
-    int samplesRead = buffer->read(output.data(), 1024, 0);
+    int samplesRead = buffer->readBlocking(output.data(), 1024, 0);
 
     // DC should be preserved (allow for filter warmup)
     float avgOutput = 0.0f;

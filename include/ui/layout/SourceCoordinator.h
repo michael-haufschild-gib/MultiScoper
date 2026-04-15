@@ -66,8 +66,8 @@ private:
     void postToMessageThread(std::function<void()> callback);
 
     IInstanceRegistry& registry_;
-    SourcesChangedCallback onSourcesChanged_;
-    std::vector<SourceId> availableSources_;
+    SourcesChangedCallback onSourcesChanged_{};
+    std::vector<SourceId> availableSources_{};
 
     // Flag to track if we're still valid for callbacks
     // Use shared_ptr so the flag outlives this object if async callbacks are pending

@@ -87,6 +87,11 @@ private:
     void updateAnimations();
     void contentHeightChanged();
 
+    /// Start the expand/collapse animation toward the given target (assumes expanded_ updated).
+    void startExpandAnimation(bool expandTarget);
+    /// Immediately apply the expanded/collapsed layout without animating.
+    void applyExpandedImmediate(bool expandTarget);
+
     void paintHeader(juce::Graphics& g, juce::Rectangle<int> bounds);
     void paintChevron(juce::Graphics& g, juce::Rectangle<float> bounds);
 

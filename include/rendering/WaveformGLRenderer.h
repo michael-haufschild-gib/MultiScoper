@@ -155,6 +155,12 @@ public:
 
 private:
     void compileDebugShader();
+    /// Compile, link, and attach the debug shader program (uniforms + VAO/VBO).
+    /// Returns true iff the compiled program is usable; on failure, debugShader_ is reset.
+    bool buildDebugShaderProgram();
+    /// Create the render engine and wire it to the current context. Called from
+    /// newOpenGLContextCreated() under engineLock_ WriteLock.
+    void initializeRenderEngine();
     void renderDebugRect(const juce::Rectangle<float>& bounds, juce::Colour colour);
     std::vector<WaveformRenderData> collectWaveformsToRender();
     void renderWithEngine(const std::vector<WaveformRenderData>& waveformsToRender, float deltaTime);

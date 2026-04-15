@@ -43,7 +43,7 @@ TEST_F(CaptureBufferLifecycleTest, WriteAfterClear)
     EXPECT_EQ(buffer->getAvailableSamples(), 50u);
 
     std::vector<float> output(50);
-    buffer->read(output.data(), 50, 0);
+    (void) buffer->readBlocking(output.data(), 50, 0);
     EXPECT_NEAR(output[0], 0.8f, 0.001f);
 }
 

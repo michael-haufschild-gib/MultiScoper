@@ -157,51 +157,55 @@ void WaveformShader::releaseGLResources(WaveformGLResources& gl)
 
 namespace
 {
-// NOLINTNEXTLINE(readability-function-size)
-void computeLineNormal(const std::vector<float>& samples, size_t i, float boundsX, float xScale, float centerY,
-                       float amplitude, float x, float y, float& nx, float& ny)
+struct NormalContext
+{
+    const std::vector<float>& samples;
+    float boundsX;
+    float xScale;
+    float centerY;
+    float amplitude;
+};
+
+// Convert a perpendicular (dx,dy) to a unit normal, returning {nx,ny}.
+// Falls back to {0,1} if the segment is degenerate.
+void perpendicularUnitNormal(float dx, float dy, float& nx, float& ny)
+{
+    float const len = std::sqrt((dx * dx) + (dy * dy));
+    if (len > 0.001f)
+    {
+        nx = -dy / len;
+        ny = dx / len;
+    }
+}
+
+void computeLineNormal(const NormalContext& ctx, size_t i, float x, float y, float& nx, float& ny)
 {
     nx = 0.0f;
     ny = 1.0f;
 
-    if (i > 0 && i < samples.size() - 1)
+    const auto& samples = ctx.samples;
+    size_t const n = samples.size();
+    if (n < 2)
+        return;
+
+    if (i > 0 && i < n - 1)
     {
-        float const prevX = boundsX + ((static_cast<float>(i) - 1.0f) * xScale);
-        float const prevY = centerY - (samples[i - 1] * amplitude);
-        float const nextX = boundsX + ((static_cast<float>(i) + 1.0f) * xScale);
-        float const nextY = centerY - (samples[i + 1] * amplitude);
-        float const dx = nextX - prevX;
-        float const dy = nextY - prevY;
-        float const len = std::sqrt((dx * dx) + (dy * dy));
-        if (len > 0.001f)
-        {
-            nx = -dy / len;
-            ny = dx / len;
-        }
+        float const prevX = ctx.boundsX + ((static_cast<float>(i) - 1.0f) * ctx.xScale);
+        float const prevY = ctx.centerY - (samples[i - 1] * ctx.amplitude);
+        float const nextX = ctx.boundsX + ((static_cast<float>(i) + 1.0f) * ctx.xScale);
+        float const nextY = ctx.centerY - (samples[i + 1] * ctx.amplitude);
+        perpendicularUnitNormal(nextX - prevX, nextY - prevY, nx, ny);
     }
-    else if (i == 0 && samples.size() > 1)
+    else if (i == 0)
     {
-        float const dx = (boundsX + xScale) - x;
-        float const dy = (centerY - (samples[1] * amplitude)) - y;
-        float const len = std::sqrt((dx * dx) + (dy * dy));
-        if (len > 0.001f)
-        {
-            nx = -dy / len;
-            ny = dx / len;
-        }
+        perpendicularUnitNormal((ctx.boundsX + ctx.xScale) - x, (ctx.centerY - (samples[1] * ctx.amplitude)) - y, nx,
+                                ny);
     }
-    else if (i == samples.size() - 1 && samples.size() > 1)
+    else // i == n - 1
     {
-        float const prevX = boundsX + ((static_cast<float>(i) - 1.0f) * xScale);
-        float const prevY = centerY - (samples[i - 1] * amplitude);
-        float const dx = x - prevX;
-        float const dy = y - prevY;
-        float const len = std::sqrt((dx * dx) + (dy * dy));
-        if (len > 0.001f)
-        {
-            nx = -dy / len;
-            ny = dx / len;
-        }
+        float const prevX = ctx.boundsX + ((static_cast<float>(i) - 1.0f) * ctx.xScale);
+        float const prevY = ctx.centerY - (samples[i - 1] * ctx.amplitude);
+        perpendicularUnitNormal(x - prevX, y - prevY, nx, ny);
     }
 }
 } // namespace
@@ -216,13 +220,16 @@ void WaveformShader::buildLineGeometry(std::vector<float>& vertices, const std::
     float const xScale = boundsWidth / static_cast<float>(samples.size() - 1);
     float const halfWidth = lineWidth * 0.5f;
 
+    NormalContext const ctx{
+        .samples = samples, .boundsX = boundsX, .xScale = xScale, .centerY = centerY, .amplitude = amplitude};
+
     for (size_t i = 0; i < samples.size(); ++i)
     {
         float const x = boundsX + (static_cast<float>(i) * xScale);
         float const y = centerY - (samples[i] * amplitude);
         float nx = NAN;
         float ny = NAN;
-        computeLineNormal(samples, i, boundsX, xScale, centerY, amplitude, x, y, nx, ny);
+        computeLineNormal(ctx, i, x, y, nx, ny);
 
         float const t = static_cast<float>(i) / static_cast<float>(samples.size() - 1);
 
