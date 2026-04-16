@@ -127,8 +127,9 @@ void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& 
 void OscillatorPanelController::oscillatorNameChanged(const OscillatorId& oscillatorId, const juce::String& newName)
 {
     OSCIL_LOG(CONTROLLER, "oscillatorNameChanged: id=" << oscillatorId.id << " newName=" << newName);
-    // Reject empty names — preserves the existing name on blank input.
-    if (!Oscillator::isValidName(newName))
+    auto const trimmedName = newName.trim();
+    // Reject empty/whitespace-only names — preserves the existing name on blank input.
+    if (!Oscillator::isValidName(trimmedName))
         return;
 
     auto& state = dataProvider_.getState();
@@ -137,9 +138,9 @@ void OscillatorPanelController::oscillatorNameChanged(const OscillatorId& oscill
     {
         if (osc.getId() == oscillatorId)
         {
-            if (osc.getName() == newName)
+            if (osc.getName() == trimmedName)
                 return; // No change — skip redundant state update.
-            osc.setName(newName);
+            osc.setName(trimmedName);
             state.updateOscillator(osc);
             return;
         }

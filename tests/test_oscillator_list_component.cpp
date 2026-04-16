@@ -125,7 +125,6 @@ class OscillatorListComponentTest : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // Create owned service instances (no singletons)
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
         mockRegistry_ = std::make_unique<MockInstanceRegistry>();
@@ -133,22 +132,16 @@ protected:
 
     void TearDown() override
     {
-        // Pump to process any pending callbacks
         pumpMessageQueue(50);
-
-        // Destroy services in reverse order
         mockRegistry_.reset();
         shaderRegistry_.reset();
         themeManager_.reset();
-
-        // Final cleanup
         pumpMessageQueue(50);
     }
 
     IThemeService& getThemeService() { return *themeManager_; }
     IInstanceRegistry& getRegistry() { return *mockRegistry_; }
 
-    // Owned services
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<MockInstanceRegistry> mockRegistry_;
@@ -157,14 +150,12 @@ protected:
 TEST_F(OscillatorListComponentTest, ToolbarConstruction)
 {
     OscillatorListToolbar toolbar(getThemeService());
-    // OscillatorListToolbar registers itself with TestElementRegistry
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_toolbar"), &toolbar);
 }
 
 TEST_F(OscillatorListComponentTest, Construction)
 {
     OscillatorListComponent list(getThemeService(), getRegistry());
-    // OscillatorListComponent inherits TestIdSupport and sets testId="oscillatorList"
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), &list);
     EXPECT_EQ(list.getDisplayedItemCount(), 0u);
 }
@@ -193,10 +184,8 @@ TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)
     EXPECT_NE(item0, nullptr);
     EXPECT_NE(item1, nullptr);
 
-    // Verify the list's displayed-item count matches the provided data.
     EXPECT_EQ(list.getDisplayedItemCount(), 2u);
 
-    // Verify the scroll container actually holds the item widgets.
     auto* container = findListContainer(list);
     ASSERT_NE(container, nullptr);
     EXPECT_EQ(container->getNumChildComponents(), 2);
@@ -385,6 +374,18 @@ TEST_F(OscillatorListComponentTest, MoveRequestEmitsReorderWithinBounds)
     // Move first item up — out of bounds, no emission.
     list.oscillatorMoveRequested(osc0.getId(), -1);
     EXPECT_EQ(listener.reorderedCount, 1);
+
+    // Reorder suppressed while a non-All filter is active.
+    list.filterModeChanged(OscillatorFilterMode::Visible);
+    list.oscillatorMoveRequested(osc1.getId(), -1);
+    EXPECT_EQ(listener.reorderedCount, 1) << "Suppressed under Visible filter";
+    list.filterModeChanged(OscillatorFilterMode::Hidden);
+    list.oscillatorMoveRequested(osc1.getId(), 1);
+    EXPECT_EQ(listener.reorderedCount, 1) << "Suppressed under Hidden filter";
+    // Re-enable All — reorder resumes.
+    list.filterModeChanged(OscillatorFilterMode::All);
+    list.oscillatorMoveRequested(osc1.getId(), -1);
+    EXPECT_EQ(listener.reorderedCount, 2) << "Resumes when filter returns to All";
 
     list.removeListener(&listener);
 }

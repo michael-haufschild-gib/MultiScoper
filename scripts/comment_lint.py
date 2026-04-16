@@ -346,6 +346,14 @@ def strip_line_for_braces(line: str) -> str:
         # Strip // line comments
         if ch == "/" and i + 1 < n and line[i + 1] == "/":
             break
+        # Strip single-line /* ... */ block comments
+        if ch == "/" and i + 1 < n and line[i + 1] == "*":
+            close_pos = line.find("*/", i + 2)
+            if close_pos != -1:
+                i = close_pos + 2
+                continue
+            # Unclosed block comment — skip rest of line
+            break
         # Strip C++11 raw string literals: R"delim(...)delim"
         if ch == "R" and i + 1 < n and line[i + 1] == '"':
             # Find the opening delimiter: everything between " and (
