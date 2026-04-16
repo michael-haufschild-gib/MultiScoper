@@ -73,8 +73,8 @@ public:
             mm != nullptr && !mm->isThisTheMessageThread())
         {
             auto flushed = std::make_shared<juce::WaitableEvent>();
-            mm->callAsync([flushed]() { flushed->signal(); });
-            flushed->wait(MESSAGE_THREAD_TIMEOUT_MS);
+            if (mm->callAsync([flushed]() { flushed->signal(); }))
+                flushed->wait(MESSAGE_THREAD_TIMEOUT_MS);
         }
     }
 
@@ -385,7 +385,7 @@ protected:
         };
         auto state = std::make_shared<State>();
         auto weak = self_;
-        juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
+        bool posted = juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
             auto locked = weak.lock();
             if (!isControllerAlive(locked))
             {
@@ -395,6 +395,8 @@ protected:
             state->result = f(locked->controller->getTargetComponent(elementId));
             state->done.signal();
         });
+        if (!posted)
+            return false;
         if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
             return false;
         return state->result;
@@ -410,7 +412,7 @@ protected:
         };
         auto state = std::make_shared<State>();
         auto weak = self_;
-        juce::MessageManager::callAsync([weak, state, f = std::forward<Func>(func)]() mutable {
+        bool posted = juce::MessageManager::callAsync([weak, state, f = std::forward<Func>(func)]() mutable {
             auto locked = weak.lock();
             if (!isControllerAlive(locked))
             {
@@ -420,6 +422,8 @@ protected:
             state->result = f();
             state->done.signal();
         });
+        if (!posted)
+            return false;
         if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
             return false;
         return state->result;
@@ -435,7 +439,7 @@ protected:
         };
         auto state = std::make_shared<State>(State{std::move(defaultValue), {}});
         auto weak = self_;
-        juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
+        bool posted = juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
             auto locked = weak.lock();
             if (!isControllerAlive(locked))
             {
@@ -445,6 +449,8 @@ protected:
             state->result = f(locked->controller->getTargetComponent(elementId));
             state->done.signal();
         });
+        if (!posted)
+            return std::move(state->result);
         state->done.wait(MESSAGE_THREAD_TIMEOUT_MS);
         return std::move(state->result);
     }

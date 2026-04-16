@@ -321,6 +321,7 @@ TEST_F(OscilModalTest, OnCloseRequestedReturningFalseVetosHide)
     parent.setSize(400, 300);
 
     OscilModal modal(getThemeManager());
+    modal.setCloseOnEscape(true);
 
     int vetoCount = 0;
     modal.onCloseRequested = [&vetoCount]() {
@@ -352,6 +353,7 @@ TEST_F(OscilModalTest, OnCloseRequestedReturningTrueAllowsHide)
     parent.setSize(400, 300);
 
     OscilModal modal(getThemeManager());
+    modal.setCloseOnEscape(true);
 
     int requestCount = 0;
     modal.onCloseRequested = [&requestCount]() {

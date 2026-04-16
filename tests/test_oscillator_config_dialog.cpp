@@ -55,18 +55,18 @@ protected:
 class CountingDialogListener : public OscillatorConfigDialog::Listener
 {
 public:
-    int changedCount = 0;
-    int closedCount = 0;
-    Oscillator lastOscillator;
-    OscillatorId lastChangedId;
+    int changedCount_ = 0;
+    int closedCount_ = 0;
+    Oscillator lastOscillator_;
+    OscillatorId lastChangedId_;
 
     void oscillatorConfigChanged(const OscillatorId& id, const Oscillator& osc) override
     {
-        ++changedCount;
-        lastChangedId = id;
-        lastOscillator = osc;
+        ++changedCount_;
+        lastChangedId_ = id;
+        lastOscillator_ = osc;
     }
-    void configDialogClosed() override { ++closedCount; }
+    void configDialogClosed() override { ++closedCount_; }
 };
 
 TEST_F(OscillatorConfigDialogTest, ShowForOscillatorSeedsOscillatorId)
@@ -119,7 +119,7 @@ TEST_F(OscillatorConfigDialogTest, HandleCloseFiresOnCloseHookOnceAndDoesNotFire
     // initiated (footer button, modal X, Escape, backdrop click).
     dialog_->onExternalClose();
 
-    EXPECT_EQ(listener.closedCount, 1) << "onExternalClose must emit configDialogClosed exactly once";
+    EXPECT_EQ(listener.closedCount_, 1) << "onExternalClose must emit configDialogClosed exactly once";
     EXPECT_EQ(onCloseCount, 0)
         << "onExternalClose must not re-enter the modal hide chain — onClose is for footer button only";
 
@@ -142,7 +142,7 @@ TEST_F(OscillatorConfigDialogTest, RepeatedOnExternalCloseFiresListenerEachTime)
     dialog_->onExternalClose();
     dialog_->onExternalClose();
 
-    EXPECT_EQ(listener.closedCount, 2)
+    EXPECT_EQ(listener.closedCount_, 2)
         << "Each onExternalClose fires configDialogClosed once — idempotency is at the caller, not here";
 
     dialog_->removeListener(&listener);
@@ -178,11 +178,11 @@ TEST_F(OscillatorConfigDialogTest, OnExternalCloseFlushesPendingDebouncedNameEdi
     // onExternalClose must flush the pending edit before notifying listeners.
     dialog_->onExternalClose();
 
-    EXPECT_GE(listener.changedCount, 1)
+    EXPECT_GE(listener.changedCount_, 1)
         << "onExternalClose must flush the pending debounced name edit and fire oscillatorConfigChanged";
-    EXPECT_EQ(listener.lastOscillator.getName(), "Debounced Name")
+    EXPECT_EQ(listener.lastOscillator_.getName(), "Debounced Name")
         << "The flushed name must match the text that was pending in the debounce timer";
-    EXPECT_EQ(listener.closedCount, 1) << "onExternalClose must still fire configDialogClosed";
+    EXPECT_EQ(listener.closedCount_, 1) << "onExternalClose must still fire configDialogClosed";
 
     dialog_->removeListener(&listener);
 }
@@ -197,7 +197,7 @@ TEST_F(OscillatorConfigDialogTest, RemovedListenerNoLongerReceivesClose)
     dialog_->showForOscillator(osc);
     dialog_->onExternalClose();
 
-    EXPECT_EQ(listener.closedCount, 0);
+    EXPECT_EQ(listener.closedCount_, 0);
 }
 
 TEST_F(OscillatorConfigDialogTest, ShowForOscillatorForDifferentIdUpdatesTrackedId)

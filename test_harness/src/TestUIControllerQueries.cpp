@@ -294,6 +294,8 @@ bool TestUIController::waitForSliderValue(const juce::String& elementId, double 
     while (true)
     {
         double currentValue = getSliderValue(elementId);
+        if (std::isnan(currentValue))
+            return false;
         if (std::abs(currentValue - value) <= tolerance)
             return true;
 
