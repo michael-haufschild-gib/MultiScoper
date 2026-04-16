@@ -9,6 +9,7 @@
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/panels/OscillatorListComponent.h"
 #include "ui/panels/OscillatorListItem.h"
+#include "ui/panels/OscillatorListToolbar.h"
 #include "ui/theme/ThemeManager.h"
 
 #include "OscilTestFixtures.h"
@@ -20,78 +21,148 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+namespace oscil
+{
+
 using namespace oscil::test;
 
-// Dummy Registry for simple tests
-class DummyRegistry : public IInstanceRegistry
+namespace
+{
+
+// Find the first child component of the given type in parent. Returns nullptr if none.
+template <typename T>
+T* findChildOfType(juce::Component& parent)
+{
+    for (int i = 0; i < parent.getNumChildComponents(); ++i)
+    {
+        if (auto* typed = dynamic_cast<T*>(parent.getChildComponent(i)))
+            return typed;
+    }
+    return nullptr;
+}
+
+// Locate the scrolling container inside an OscillatorListComponent by its stable componentID.
+juce::Component* findListContainer(OscillatorListComponent& list)
+{
+    auto* viewport = dynamic_cast<juce::Viewport*>(list.findChildWithID("oscillatorListViewport"));
+    return viewport != nullptr ? viewport->getViewedComponent() : nullptr;
+}
+
+juce::Viewport* findListViewport(OscillatorListComponent& list)
+{
+    return dynamic_cast<juce::Viewport*>(list.findChildWithID("oscillatorListViewport"));
+}
+
+// Mock listener that records every callback and its arguments.
+class RecordingListener : public OscillatorListComponent::Listener
 {
 public:
-    SourceId registerInstance(const juce::String&, std::shared_ptr<IAudioBuffer>, const juce::String&, int, double,
-                              std::shared_ptr<AnalysisEngine>) override
+    OscillatorId lastSelectedId, lastDeletedId, lastConfigRequestedId, lastColorConfigRequestedId;
+    OscillatorId lastPaneSelectionRequestedId, lastNameChangedId, lastVisibilityChangedId, lastModeChangedId;
+    juce::String lastNewName;
+    bool lastVisible = false;
+    ProcessingMode lastMode = ProcessingMode::FullStereo;
+    int lastReorderFromIndex = -1, lastReorderToIndex = -1;
+    int selectionCount = 0, deleteCount = 0, configRequestedCount = 0, colorConfigRequestedCount = 0;
+    int paneSelectionRequestedCount = 0, nameChangedCount = 0, visibilityChangedCount = 0;
+    int modeChangedCount = 0, reorderedCount = 0;
+
+    void oscillatorSelected(const OscillatorId& id) override
     {
-        return SourceId::generate();
+        lastSelectedId = id;
+        ++selectionCount;
     }
-    void unregisterInstance(const SourceId&) override {}
-    std::vector<SourceInfo> getAllSources() const override { return {}; }
-    std::optional<SourceInfo> getSource(const SourceId&) const override { return std::nullopt; }
-    std::shared_ptr<IAudioBuffer> getCaptureBuffer(const SourceId&) const override { return nullptr; }
-    void updateSource(const SourceId&, const juce::String&, int, double) override {}
-    size_t getSourceCount() const override { return 0; }
-    void addListener(InstanceRegistryListener*) override {}
-    void removeListener(InstanceRegistryListener*) override {}
+    void oscillatorDeleteRequested(const OscillatorId& id) override
+    {
+        lastDeletedId = id;
+        ++deleteCount;
+    }
+    void oscillatorConfigRequested(const OscillatorId& id) override
+    {
+        lastConfigRequestedId = id;
+        ++configRequestedCount;
+    }
+    void oscillatorColorConfigRequested(const OscillatorId& id) override
+    {
+        lastColorConfigRequestedId = id;
+        ++colorConfigRequestedCount;
+    }
+    void oscillatorPaneSelectionRequested(const OscillatorId& id) override
+    {
+        lastPaneSelectionRequestedId = id;
+        ++paneSelectionRequestedCount;
+    }
+    void oscillatorNameChanged(const OscillatorId& id, const juce::String& newName) override
+    {
+        lastNameChangedId = id;
+        lastNewName = newName;
+        ++nameChangedCount;
+    }
+    void oscillatorVisibilityChanged(const OscillatorId& id, bool visible) override
+    {
+        lastVisibilityChangedId = id;
+        lastVisible = visible;
+        ++visibilityChangedCount;
+    }
+    void oscillatorModeChanged(const OscillatorId& id, ProcessingMode mode) override
+    {
+        lastModeChangedId = id;
+        lastMode = mode;
+        ++modeChangedCount;
+    }
+    void oscillatorsReordered(int fromIndex, int toIndex) override
+    {
+        lastReorderFromIndex = fromIndex;
+        lastReorderToIndex = toIndex;
+        ++reorderedCount;
+    }
 };
+
+} // anonymous namespace
 
 class OscillatorListComponentTest : public ::testing::Test
 {
 protected:
     void SetUp() override
     {
-        // Create owned service instances (no singletons)
         themeManager_ = std::make_unique<ThemeManager>();
         shaderRegistry_ = std::make_unique<ShaderRegistry>();
+        mockRegistry_ = std::make_unique<MockInstanceRegistry>();
     }
 
     void TearDown() override
     {
-        // Pump to process any pending callbacks
         pumpMessageQueue(50);
-
-        // Destroy services in reverse order
+        mockRegistry_.reset();
         shaderRegistry_.reset();
         themeManager_.reset();
-
-        // Final cleanup
         pumpMessageQueue(50);
     }
 
     IThemeService& getThemeService() { return *themeManager_; }
+    IInstanceRegistry& getRegistry() { return *mockRegistry_; }
 
-    // Owned services
     std::unique_ptr<ThemeManager> themeManager_;
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
+    std::unique_ptr<MockInstanceRegistry> mockRegistry_;
 };
 
 TEST_F(OscillatorListComponentTest, ToolbarConstruction)
 {
     OscillatorListToolbar toolbar(getThemeService());
-    // OscillatorListToolbar registers itself with TestElementRegistry
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_toolbar"), &toolbar);
 }
 
 TEST_F(OscillatorListComponentTest, Construction)
 {
-    DummyRegistry registry;
-    auto list = std::make_unique<OscillatorListComponent>(getThemeService(), registry);
-    // OscillatorListComponent inherits TestIdSupport and sets testId="oscillatorList"
-    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), list.get());
-    list.reset();
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("oscillatorList"), &list);
+    EXPECT_EQ(list.getDisplayedItemCount(), 0u);
 }
 
 TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)
 {
-    DummyRegistry registry;
-    OscillatorListComponent list(getThemeService(), registry);
+    OscillatorListComponent list(getThemeService(), getRegistry());
     list.setSize(300, 400);
 
     std::vector<Oscillator> oscillators;
@@ -112,14 +183,17 @@ TEST_F(OscillatorListComponentTest, RefreshListPopulatesItems)
     auto* item1 = oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1");
     EXPECT_NE(item0, nullptr);
     EXPECT_NE(item1, nullptr);
-    // Verify list has correct child count
-    EXPECT_GE(list.getNumChildComponents(), 2);
+
+    EXPECT_EQ(list.getDisplayedItemCount(), 2u);
+
+    auto* container = findListContainer(list);
+    ASSERT_NE(container, nullptr);
+    EXPECT_EQ(container->getNumChildComponents(), 2);
 }
 
-TEST_F(OscillatorListComponentTest, FilteringVisiblity)
+TEST_F(OscillatorListComponentTest, FilteringVisibility)
 {
-    DummyRegistry registry;
-    OscillatorListComponent list(getThemeService(), registry);
+    OscillatorListComponent list(getThemeService(), getRegistry());
 
     Oscillator visibleOsc;
     visibleOsc.setName("Visible");
@@ -133,51 +207,30 @@ TEST_F(OscillatorListComponentTest, FilteringVisiblity)
 
     std::vector<Oscillator> oscillators = {visibleOsc, hiddenOsc};
 
-    // 1. All mode
+    // 1. All mode — both items displayed.
     list.filterModeChanged(OscillatorFilterMode::All);
     list.refreshList(oscillators);
+    EXPECT_EQ(list.getDisplayedItemCount(), 2u);
     EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
     EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
 
-    // 2. Visible mode
+    // 2. Visible mode — hidden osc is removed.
     list.filterModeChanged(OscillatorFilterMode::Visible);
+    EXPECT_EQ(list.getDisplayedItemCount(), 1u);
     EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
-    // hiddenOsc (item 1) should be removed/destroyed
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
 
-    // 3. Hidden mode — only the hidden osc is shown, re-indexed to position 0
+    // 3. Hidden mode — only the hidden osc is shown, re-indexed to position 0.
     list.filterModeChanged(OscillatorFilterMode::Hidden);
+    EXPECT_EQ(list.getDisplayedItemCount(), 1u);
     EXPECT_NE(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_0"), nullptr);
     EXPECT_EQ(oscil::test::TestElementRegistry::getInstance().findElement("sidebar_oscillators_item_1"), nullptr);
 }
 
-// Mock Listener
-class SimpleMockListener : public OscillatorListComponent::Listener
-{
-public:
-    OscillatorId lastSelectedId;
-    OscillatorId lastDeletedId;
-    int selectionCount = 0;
-    int deleteCount = 0;
-
-    void oscillatorSelected(const OscillatorId& id) override
-    {
-        lastSelectedId = id;
-        selectionCount++;
-    }
-
-    void oscillatorDeleteRequested(const OscillatorId& id) override
-    {
-        lastDeletedId = id;
-        deleteCount++;
-    }
-};
-
 TEST_F(OscillatorListComponentTest, SelectionPropagatesToListener)
 {
-    DummyRegistry registry;
-    OscillatorListComponent list(getThemeService(), registry);
-    SimpleMockListener listener;
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    RecordingListener listener;
     list.addListener(&listener);
 
     std::vector<Oscillator> oscillators;
@@ -185,7 +238,7 @@ TEST_F(OscillatorListComponentTest, SelectionPropagatesToListener)
     oscillators.push_back(osc1);
     list.refreshList(oscillators);
 
-    // Simulate selection
+    // Simulate selection via the item-listener interface implemented by the list.
     list.oscillatorSelected(osc1.getId());
 
     EXPECT_EQ(listener.selectionCount, 1);
@@ -196,9 +249,8 @@ TEST_F(OscillatorListComponentTest, SelectionPropagatesToListener)
 
 TEST_F(OscillatorListComponentTest, DeletionPropagatesToListener)
 {
-    DummyRegistry registry;
-    OscillatorListComponent list(getThemeService(), registry);
-    SimpleMockListener listener;
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    RecordingListener listener;
     list.addListener(&listener);
 
     std::vector<Oscillator> oscillators;
@@ -215,38 +267,213 @@ TEST_F(OscillatorListComponentTest, DeletionPropagatesToListener)
     list.removeListener(&listener);
 }
 
-TEST_F(OscillatorListComponentTest, LabelUpdates)
+TEST_F(OscillatorListComponentTest, ConfigAndColorRequestsPropagate)
 {
-    DummyRegistry registry;
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    RecordingListener listener;
+    list.addListener(&listener);
+
     Oscillator osc;
-    osc.setName("Initial Name");
+    list.refreshList({osc});
 
-    OscillatorListItemComponent item(osc, registry, getThemeService());
+    list.oscillatorConfigRequested(osc.getId());
+    list.oscillatorColorConfigRequested(osc.getId());
 
-    // Find InlineEditLabel by iterating through children
-    InlineEditLabel* nameLabel = nullptr;
-    for (int i = 0; i < item.getNumChildComponents(); ++i)
-    {
-        if (auto* label = dynamic_cast<InlineEditLabel*>(item.getChildComponent(i)))
-        {
-            nameLabel = label;
-            break;
-        }
-    }
-    ASSERT_NE(nameLabel, nullptr);
-    EXPECT_EQ(nameLabel->getText(), "Initial Name");
+    EXPECT_EQ(listener.configRequestedCount, 1);
+    EXPECT_EQ(listener.lastConfigRequestedId, osc.getId());
+    EXPECT_EQ(listener.colorConfigRequestedCount, 1);
+    EXPECT_EQ(listener.lastColorConfigRequestedId, osc.getId());
 
-    // Update oscillator
-    osc.setName("Updated Name");
-    item.updateFromOscillator(osc);
+    list.removeListener(&listener);
+}
 
-    EXPECT_EQ(nameLabel->getText(), "Updated Name");
+TEST_F(OscillatorListComponentTest, VisibilityAndModeChangesPropagate)
+{
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    RecordingListener listener;
+    list.addListener(&listener);
+
+    Oscillator osc;
+    list.refreshList({osc});
+
+    list.oscillatorVisibilityChanged(osc.getId(), false);
+    list.oscillatorModeChanged(osc.getId(), ProcessingMode::Side);
+
+    EXPECT_EQ(listener.visibilityChangedCount, 1);
+    EXPECT_EQ(listener.lastVisibilityChangedId, osc.getId());
+    EXPECT_FALSE(listener.lastVisible);
+
+    EXPECT_EQ(listener.modeChangedCount, 1);
+    EXPECT_EQ(listener.lastModeChangedId, osc.getId());
+    EXPECT_EQ(listener.lastMode, ProcessingMode::Side);
+
+    list.removeListener(&listener);
+}
+
+TEST_F(OscillatorListComponentTest, NameChangePropagates)
+{
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    RecordingListener listener;
+    list.addListener(&listener);
+
+    Oscillator osc;
+    osc.setName("Original");
+    list.refreshList({osc});
+
+    list.oscillatorNameChanged(osc.getId(), "Renamed");
+
+    EXPECT_EQ(listener.nameChangedCount, 1);
+    EXPECT_EQ(listener.lastNameChangedId, osc.getId());
+    EXPECT_EQ(listener.lastNewName, "Renamed");
+
+    list.removeListener(&listener);
+}
+
+TEST_F(OscillatorListComponentTest, PaneSelectionRequestPropagates)
+{
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    RecordingListener listener;
+    list.addListener(&listener);
+
+    Oscillator osc;
+    list.refreshList({osc});
+
+    list.oscillatorPaneSelectionRequested(osc.getId());
+
+    EXPECT_EQ(listener.paneSelectionRequestedCount, 1);
+    EXPECT_EQ(listener.lastPaneSelectionRequestedId, osc.getId());
+
+    list.removeListener(&listener);
+}
+
+TEST_F(OscillatorListComponentTest, MoveRequestEmitsReorderWithinBounds)
+{
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    RecordingListener listener;
+    list.addListener(&listener);
+
+    Oscillator osc0;
+    osc0.setOrderIndex(0);
+    Oscillator osc1;
+    osc1.setOrderIndex(1);
+    Oscillator osc2;
+    osc2.setOrderIndex(2);
+
+    list.refreshList({osc0, osc1, osc2});
+
+    // Move middle item up — should emit reorder(1, 0).
+    list.oscillatorMoveRequested(osc1.getId(), -1);
+    EXPECT_EQ(listener.reorderedCount, 1);
+    EXPECT_EQ(listener.lastReorderFromIndex, 1);
+    EXPECT_EQ(listener.lastReorderToIndex, 0);
+
+    // Move last item down — out of bounds, no emission.
+    list.oscillatorMoveRequested(osc2.getId(), 1);
+    EXPECT_EQ(listener.reorderedCount, 1);
+
+    // Move first item up — out of bounds, no emission.
+    list.oscillatorMoveRequested(osc0.getId(), -1);
+    EXPECT_EQ(listener.reorderedCount, 1);
+
+    // Reorder suppressed while a non-All filter is active.
+    list.filterModeChanged(OscillatorFilterMode::Visible);
+    list.oscillatorMoveRequested(osc1.getId(), -1);
+    EXPECT_EQ(listener.reorderedCount, 1) << "Suppressed under Visible filter";
+    list.filterModeChanged(OscillatorFilterMode::Hidden);
+    list.oscillatorMoveRequested(osc1.getId(), 1);
+    EXPECT_EQ(listener.reorderedCount, 1) << "Suppressed under Hidden filter";
+    // Re-enable All — reorder resumes.
+    list.filterModeChanged(OscillatorFilterMode::All);
+    list.oscillatorMoveRequested(osc1.getId(), -1);
+    EXPECT_EQ(listener.reorderedCount, 2) << "Resumes when filter returns to All";
+
+    list.removeListener(&listener);
+}
+
+TEST_F(OscillatorListComponentTest, ToolbarCountBadgeReflectsVisibleTotals)
+{
+    OscillatorListComponent list(getThemeService(), getRegistry());
+
+    Oscillator visible0;
+    visible0.setVisible(true);
+    visible0.setOrderIndex(0);
+    Oscillator hidden1;
+    hidden1.setVisible(false);
+    hidden1.setOrderIndex(1);
+    Oscillator visible2;
+    visible2.setVisible(true);
+    visible2.setOrderIndex(2);
+
+    list.refreshList({visible0, hidden1, visible2});
+
+    // Locate toolbar as child; it's the first OscillatorListToolbar inside list.
+    auto* toolbar = findChildOfType<OscillatorListToolbar>(list);
+    ASSERT_NE(toolbar, nullptr);
+    EXPECT_EQ(toolbar->getTotalCount(), 3);
+    EXPECT_EQ(toolbar->getVisibleCount(), 2);
+
+    // Refresh with an empty set — counts collapse to 0.
+    list.refreshList({});
+    EXPECT_EQ(toolbar->getTotalCount(), 0);
+    EXPECT_EQ(toolbar->getVisibleCount(), 0);
+}
+
+TEST_F(OscillatorListComponentTest, EmptyStateHidesViewportWhenNoItems)
+{
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    list.setSize(300, 400);
+
+    auto* viewport = findListViewport(list);
+    ASSERT_NE(viewport, nullptr);
+
+    // Empty list — viewport hidden (empty-state label shown).
+    list.refreshList({});
+    EXPECT_FALSE(viewport->isVisible());
+    EXPECT_EQ(list.getDisplayedItemCount(), 0u);
+
+    // Populate — viewport visible.
+    Oscillator osc;
+    list.refreshList({osc});
+    EXPECT_TRUE(viewport->isVisible());
+    EXPECT_EQ(list.getDisplayedItemCount(), 1u);
+
+    // Clear again — viewport hidden.
+    list.refreshList({});
+    EXPECT_FALSE(viewport->isVisible());
+}
+
+TEST_F(OscillatorListComponentTest, RefreshReusesExistingItemsForSameIds)
+{
+    OscillatorListComponent list(getThemeService(), getRegistry());
+    list.setSize(300, 400);
+
+    Oscillator osc;
+    osc.setName("Original");
+    list.refreshList({osc});
+
+    auto* container = findListContainer(list);
+    ASSERT_NE(container, nullptr);
+    ASSERT_EQ(container->getNumChildComponents(), 1);
+
+    // Capture the item widget identity.
+    juce::Component* originalItem = container->getChildComponent(0);
+    ASSERT_NE(originalItem, nullptr);
+
+    // Refresh with the same oscillator (same ID) but renamed.
+    osc.setName("Renamed");
+    list.refreshList({osc});
+
+    container = findListContainer(list);
+    ASSERT_NE(container, nullptr);
+    ASSERT_EQ(container->getNumChildComponents(), 1);
+
+    // Same widget instance should be reused — not destroyed and recreated.
+    EXPECT_EQ(container->getChildComponent(0), originalItem);
 }
 
 TEST_F(OscillatorListComponentTest, ItemExpansionUpdatesListLayout)
 {
-    DummyRegistry registry;
-    OscillatorListComponent list(getThemeService(), registry);
+    OscillatorListComponent list(getThemeService(), getRegistry());
     list.setSize(300, 400);
 
     std::vector<Oscillator> oscillators;
@@ -256,11 +483,7 @@ TEST_F(OscillatorListComponentTest, ItemExpansionUpdatesListLayout)
 
     list.refreshList(oscillators);
 
-    // Access container via viewport
-    // Child 0 is toolbar, Child 1 is Viewport
-    auto* viewport = dynamic_cast<juce::Viewport*>(list.getChildComponent(1));
-    ASSERT_NE(viewport, nullptr);
-    auto* container = viewport->getViewedComponent();
+    auto* container = findListContainer(list);
     ASSERT_NE(container, nullptr);
 
     // Initial height should be COMPACT_HEIGHT (56)
@@ -273,24 +496,4 @@ TEST_F(OscillatorListComponentTest, ItemExpansionUpdatesListLayout)
     EXPECT_EQ(container->getHeight(), OscillatorListItemComponent::EXPANDED_HEIGHT);
 }
 
-TEST_F(OscillatorListComponentTest, NameLabelIsVisible)
-{
-    DummyRegistry registry;
-    Oscillator osc;
-    osc.setName("Visible Test");
-
-    OscillatorListItemComponent item(osc, registry, getThemeService());
-
-    InlineEditLabel* nameLabel = nullptr;
-    for (int i = 0; i < item.getNumChildComponents(); ++i)
-    {
-        if (auto* label = dynamic_cast<InlineEditLabel*>(item.getChildComponent(i)))
-        {
-            nameLabel = label;
-            break;
-        }
-    }
-    ASSERT_NE(nameLabel, nullptr);
-
-    EXPECT_TRUE(nameLabel->isVisible());
-}
+} // namespace oscil

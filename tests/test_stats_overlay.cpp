@@ -145,3 +145,44 @@ TEST_F(StatsOverlayTest, FormattingChecks)
     EXPECT_TRUE(text.contains("50.0%"));
     EXPECT_TRUE(text.contains("150 ms"));
 }
+
+// Regression: a drag-selection inside the stats TextEditor must survive a
+// metrics update when the table structure is unchanged, otherwise the 15 Hz
+// update loop destroys any selection before the user can copy a value.
+TEST_F(StatsOverlayTest, SelectionPreservedAcrossStructureStableUpdate)
+{
+    // Seed an initial set of stats so the display has real content.
+    std::vector<OscillatorStats> stats;
+    OscillatorStats os;
+    os.name = "Osc1";
+    os.left.rmsDb = -6.0f;
+    os.right.rmsDb = -6.0f;
+    stats.push_back(os);
+    overlay.updateStats(stats);
+
+    // Drive a selection range on the inner TextEditor the same way the user would.
+    juce::TextEditor* editor = nullptr;
+    for (auto* child : overlay.getChildren())
+    {
+        if (auto* te = dynamic_cast<juce::TextEditor*>(child))
+        {
+            editor = te;
+            break;
+        }
+    }
+    ASSERT_NE(editor, nullptr);
+
+    juce::Range<int> const selectedRange{5, 15};
+    editor->setHighlightedRegion(selectedRange);
+    ASSERT_EQ(editor->getHighlightedRegion(), selectedRange);
+
+    // Change metric values WITHOUT changing table structure (same osc count).
+    stats[0].left.rmsDb = -6.1f;
+    stats[0].right.rmsDb = -6.2f;
+    overlay.updateStats(stats);
+
+    // Content changed but length is stable, so selection must be preserved.
+    EXPECT_NE(overlay.getDisplayedText(), juce::String{});
+    EXPECT_EQ(editor->getHighlightedRegion(), selectedRange)
+        << "Selection should survive a structure-stable metric update so users can copy values";
+}

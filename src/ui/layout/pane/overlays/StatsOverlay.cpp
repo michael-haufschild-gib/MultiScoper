@@ -38,9 +38,13 @@ void StatsOverlay::setupComponents()
     statsDisplay_->setPopupMenuEnabled(true); // Allow right-click copy
     statsDisplay_->setJustification(juce::Justification::topLeft);
     statsDisplay_->setBorder(juce::BorderSize<int>(0));
-    statsDisplay_->setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
-    statsDisplay_->setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
     statsDisplay_->setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
+    // Seed the palette from the current theme; onThemeChanged keeps it in sync afterwards.
+    // Safe even though onThemeChanged is virtual: StatsOverlay has no subclass that overrides
+    // it, and the call runs after statsDisplay_ is constructed so the theme write targets a
+    // valid object. NOLINT pacifies clang-analyzer's chain trace from the constructor.
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
+    onThemeChanged(getThemeService().getCurrentTheme());
     addChildComponent(*statsDisplay_); // Hidden until visible
 
     // Reset Button
@@ -71,14 +75,29 @@ void StatsOverlay::paint(juce::Graphics& g)
 {
     PaneOverlay::paint(g);
 
+    // Keep the text colour in sync with the live fade opacity. The base text
+    // colour (hue) is already applied in onThemeChanged; here we only rewrite
+    // the alpha so fade animations look correct. A no-op when the overlay is
+    // fully hidden.
     float const opacity = getCurrentOpacity();
-    if (opacity <= 0.0f)
+    if (opacity <= 0.0f || statsDisplay_ == nullptr)
         return;
 
-    const auto& theme = getThemeService().getCurrentTheme();
+    statsDisplay_->setColour(juce::TextEditor::textColourId,
+                             getThemeService().getCurrentTheme().textPrimary.withAlpha(opacity));
+}
 
-    if (statsDisplay_)
-        statsDisplay_->setColour(juce::TextEditor::textColourId, theme.textPrimary.withAlpha(opacity));
+void StatsOverlay::onThemeChanged(const ColorTheme& newTheme)
+{
+    // Update the TextEditor's palette on actual theme changes rather than on
+    // every paint tick. Background/outline are always transparent — the
+    // overlay's own backdrop paints them — but textColourId picks up the
+    // palette's primary text colour.
+    if (statsDisplay_ == nullptr)
+        return;
+    statsDisplay_->setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
+    statsDisplay_->setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
+    statsDisplay_->setColour(juce::TextEditor::textColourId, newTheme.textPrimary);
 }
 
 void StatsOverlay::onAnimationVisibilityChanged(bool becameVisible)
@@ -106,30 +125,48 @@ void StatsOverlay::updateStats(const std::vector<OscillatorStats>& stats)
             getParentComponent()->resized();
     }
 
+    if (statsDisplay_ == nullptr)
+        return;
+
     // Rebuild table content
     juce::String const tableText = formatTable(stats);
+    juce::String const oldText = statsDisplay_->getText();
 
-    // Only update if changed to avoid caret/selection reset flicker
-    if (statsDisplay_ && statsDisplay_->getText() != tableText)
+    // Identical text: skip the setText entirely to avoid caret/selection churn.
+    if (oldText == tableText)
+        return;
+
+    // Content changed. juce::TextEditor::setText wipes selection + caret + scroll
+    // unconditionally, which at a 15 Hz update rate makes drag-selecting any metric
+    // for copy/paste impossible. Snapshot the selection around the setText call and
+    // restore it when the structure (row/column count) is stable — approximated by
+    // text length equality, which holds for cell-value swaps within a fixed grid.
+    auto const oldSelection = statsDisplay_->getHighlightedRegion();
+    int const oldCaret = statsDisplay_->getCaretPosition();
+    bool const structureStable = oldText.length() == tableText.length();
+
+    statsDisplay_->setText(tableText, /*sendTextChangeMessage=*/false);
+
+    if (structureStable)
     {
-        statsDisplay_->setText(tableText);
+        if (!oldSelection.isEmpty())
+            statsDisplay_->setHighlightedRegion(oldSelection);
+        else
+            statsDisplay_->setCaretPosition(oldCaret);
     }
 }
 
 juce::String StatsOverlay::formatTable(const std::vector<OscillatorStats>& stats)
 {
-    static constexpr int colChars = 10;
-    static constexpr int labelChars = 8;
-
-    juce::String s = juce::String("").paddedRight(' ', labelChars);
+    juce::String s = juce::String("").paddedRight(' ', LABEL_CHAR_WIDTH);
     for (const auto& osc : stats)
-        s << " " << osc.name.substring(0, colChars - 1).paddedRight(' ', colChars);
+        s << " " << osc.name.substring(0, DATA_CHAR_WIDTH - 1).paddedRight(' ', DATA_CHAR_WIDTH);
     s << "\n";
 
     auto appendRow = [&](const juce::String& label, auto valueGetter) {
-        s << label.paddedRight(' ', labelChars);
+        s << label.paddedRight(' ', LABEL_CHAR_WIDTH);
         for (const auto& osc : stats)
-            s << " " << valueGetter(osc).paddedRight(' ', colChars);
+            s << " " << valueGetter(osc).paddedRight(' ', DATA_CHAR_WIDTH);
         s << "\n";
     };
 

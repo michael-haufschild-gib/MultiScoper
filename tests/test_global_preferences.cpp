@@ -76,7 +76,7 @@ TEST_F(GlobalPreferencesTest, DefaultUIAudioFeedbackIsFalse) { EXPECT_FALSE(pref
 
 TEST_F(GlobalPreferencesTest, DefaultTooltipsEnabledIsTrue) { EXPECT_TRUE(prefs_->getTooltipsEnabled()); }
 
-TEST_F(GlobalPreferencesTest, DefaultSidebarWidthIs280) { EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 280); }
+TEST_F(GlobalPreferencesTest, DefaultSidebarWidthIs300) { EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 300); }
 
 // ============================================================================
 // Set-Then-Get Round Trip
@@ -147,28 +147,28 @@ TEST_F(GlobalPreferencesTest, SpecialCharactersInThemeName)
 
 TEST_F(GlobalPreferencesTest, NegativeColumnLayout)
 {
-    // GlobalPreferences clamps column layout to valid range [1, 8].
+    // GlobalPreferences clamps column layout to valid ColumnLayout range [1, 3].
     prefs_->setDefaultColumnLayout(-5);
     EXPECT_EQ(prefs_->getDefaultColumnLayout(), 1);
 }
 
 TEST_F(GlobalPreferencesTest, ZeroSidebarWidth)
 {
-    // GlobalPreferences clamps sidebar width to valid range [150, 600].
+    // GlobalPreferences clamps sidebar width to WindowLayout bounds.
     prefs_->setDefaultSidebarWidth(0);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 150);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 200);
 }
 
 TEST_F(GlobalPreferencesTest, NegativeSidebarWidth)
 {
     prefs_->setDefaultSidebarWidth(-100);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 150);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 200);
 }
 
 TEST_F(GlobalPreferencesTest, VeryLargeSidebarWidth)
 {
     prefs_->setDefaultSidebarWidth(100000);
-    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 600);
+    EXPECT_EQ(prefs_->getDefaultSidebarWidth(), 800);
 }
 
 TEST_F(GlobalPreferencesTest, PreferencesFilePathIsValid)
@@ -186,11 +186,11 @@ TEST_F(GlobalPreferencesTest, PreferencesFilePathIsValid)
 TEST_F(GlobalPreferencesTest, RapidSetOverwritesCorrectly)
 {
     // Bug caught: race between save and subsequent set causing stale values
-    for (int i = 1; i <= 8; ++i)
+    for (int i = 1; i <= 3; ++i)
     {
         prefs_->setDefaultColumnLayout(i);
     }
-    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 8);
+    EXPECT_EQ(prefs_->getDefaultColumnLayout(), 3);
 }
 
 TEST_F(GlobalPreferencesTest, InterleavedSetsDontCorrupt)
@@ -281,4 +281,61 @@ TEST_F(GlobalPreferencesTest, SaveAndLoadPreservesAllSettings)
     EXPECT_TRUE(prefs2->getUIAudioFeedback());
     EXPECT_FALSE(prefs2->getTooltipsEnabled());
     EXPECT_EQ(prefs2->getDefaultSidebarWidth(), 350);
+}
+
+// ============================================================================
+// Corrupt / Wrong-Root File Recovery
+// ============================================================================
+
+TEST_F(GlobalPreferencesTest, LoadRejectsWrongRootXmlAndResavesWithCorrectRoot)
+{
+    // Bug caught: load() accepts any valid XML as preferences_ (including
+    // wrong-root trees like <SomethingElse/>). This silently changes the
+    // persisted format: subsequent save() writes the file with the wrong
+    // root permanently. An audit tool or schema validator would flag the
+    // file as invalid, and cross-version migration assumes the canonical
+    // root is "GlobalPreferences".
+
+    prefs_.reset();
+
+    auto prefsFile = getPreferencesFilePath();
+    prefsFile.getParentDirectory().createDirectory();
+    prefsFile.replaceWithText(R"(<?xml version="1.0"?><SomethingElse foo="bar" defaultTheme="Lurking"/>)");
+
+    // Construct — load() should reject the wrong root and fall back to defaults.
+    auto prefs = std::make_unique<GlobalPreferences>();
+
+    // Fallback to defaults — the garbage "defaultTheme" in SomethingElse is ignored.
+    EXPECT_EQ(prefs->getDefaultTheme(), juce::String("Dark Professional"));
+
+    // Setter triggers save(), which should rewrite the file with the correct root.
+    prefs->setDefaultTheme("Recovery Theme");
+
+    // Verify the file on disk now has the CANONICAL root type.
+    auto xml = juce::XmlDocument::parse(prefsFile);
+    ASSERT_NE(xml, nullptr);
+    EXPECT_TRUE(xml->hasTagName("GlobalPreferences"))
+        << "Expected root <GlobalPreferences/>, got <" << xml->getTagName() << "/>";
+
+    // Reload preserves the recovery write.
+    auto prefs2 = std::make_unique<GlobalPreferences>();
+    EXPECT_EQ(prefs2->getDefaultTheme(), juce::String("Recovery Theme"));
+}
+
+TEST_F(GlobalPreferencesTest, LoadRecoversFromMalformedXml)
+{
+    // Separate concern from wrong-root: bytes that aren't valid XML at all.
+    // juce::XmlDocument::parse already fails gracefully here, but the test
+    // guards the contract.
+    prefs_.reset();
+
+    auto prefsFile = getPreferencesFilePath();
+    prefsFile.getParentDirectory().createDirectory();
+    prefsFile.replaceWithText("not xml at all <<<");
+
+    auto prefs = std::make_unique<GlobalPreferences>();
+    EXPECT_EQ(prefs->getDefaultTheme(), juce::String("Dark Professional"));
+
+    prefs->setDefaultTheme("Recovery From Garbage");
+    EXPECT_EQ(prefs->getDefaultTheme(), juce::String("Recovery From Garbage"));
 }

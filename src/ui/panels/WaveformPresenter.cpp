@@ -72,7 +72,8 @@ WaveformPresenter::ReadResult WaveformPresenter::readAndPadSamples(int requested
     // The per-channel read() validates epochs independently, which can yield
     // L/R data from different write epochs under concurrent audio writes.
     juce::AudioBuffer<float> stereoScratch(2, requestedSamples);
-    int samplesRead = captureBuffer_->read(stereoScratch, requestedSamples);
+    // UI/message-thread path: use blocking variant for cross-channel consistency.
+    int samplesRead = captureBuffer_->readBlocking(stereoScratch, requestedSamples);
 
     if (samplesRead <= 0)
         return {};

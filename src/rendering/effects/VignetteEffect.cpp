@@ -63,7 +63,11 @@ bool VignetteEffect::resolveUniforms()
 void VignetteEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
     juce::ignoreUnused(source, deltaTime);
-    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
+    // Clamp to documented [0,1] range; unchecked values could drive the
+    // smoothstep blend outside the intended falloff and push pixels beyond
+    // the vignette colour.
+    float const clampedIntensity = juce::jlimit(0.0f, 1.0f, settings_.intensity);
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, clampedIntensity * getIntensity());
     float const safeSoftness = std::max(settings_.softness, 1.0e-4f);
     juce::OpenGLExtensionFunctions::glUniform1f(softnessLoc_, safeSoftness);
     juce::OpenGLExtensionFunctions::glUniform4f(colorLoc_, settings_.colour.getFloatRed(),

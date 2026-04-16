@@ -6,7 +6,7 @@
 ## Quick Reference (Using CMake Presets)
 
 ```bash
-# Development build (Debug + tests + Melatonin Inspector)
+# Development build (Debug + tests)
 cmake --preset dev
 cmake --build --preset dev
 
@@ -41,7 +41,7 @@ The project uses CMake presets for consistent builds across all developers.
 
 | Preset | Description | Use Case |
 |--------|-------------|----------|
-| `dev` | Debug + tests + Inspector | Daily development |
+| `dev` | Debug + tests | Daily development |
 | `dev-release` | RelWithDebInfo + tests | Profiling |
 | `release` | Optimized, no tests | Distribution |
 | `ci` | Release + tests | CI/CD pipelines |
@@ -82,7 +82,6 @@ Only use these when overriding presets:
 |--------|---------|-------------|
 | `OSCIL_BUILD_TESTS` | ON | Build GoogleTest unit tests |
 | `OSCIL_ENABLE_OPENGL` | ON | Enable OpenGL GPU rendering |
-| `OSCIL_ENABLE_INSPECTOR` | OFF | Enable Melatonin Inspector (dev only) |
 | `OSCIL_ENABLE_RTSAN` | OFF | Enable RealtimeSanitizer (Clang 20+) |
 | `OSCIL_BUILD_TEST_HARNESS` | OFF | Build E2E test harness app |
 | `OSCIL_ENABLE_COVERAGE` | OFF | Enable code coverage |
@@ -258,20 +257,6 @@ lldb ./build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/osci
 # Debug tests
 lldb ./build/dev/OscilTests
 ```
-
-### Melatonin Inspector (UI Debugging)
-
-The `dev` preset includes Melatonin Inspector for browser-like dev tools:
-
-```bash
-# Already enabled in dev preset
-cmake --preset dev
-cmake --build --preset dev
-
-# Toggle inspector: Cmd+I (macOS) / Ctrl+I (Windows/Linux)
-```
-
-**Note**: Inspector creates a separate window. Disabled in CI builds.
 
 ## Troubleshooting
 

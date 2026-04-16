@@ -81,8 +81,8 @@ void LayoutHandler::handleGetPaneBounds(const httplib::Request& /*req*/, httplib
         static constexpr int STATUS_BAR_HEIGHT = 24;
         int const sidebarWidth = editor_.getProcessor().getState().getSidebarWidth();
 
-        int availableWidth = editorBounds.getWidth() - sidebarWidth;
-        int availableHeight = editorBounds.getHeight() - STATUS_BAR_HEIGHT;
+        int availableWidth = std::max(0, editorBounds.getWidth() - sidebarWidth);
+        int availableHeight = std::max(0, editorBounds.getHeight() - STATUS_BAR_HEIGHT);
 
         juce::Rectangle<int> const availableArea(0, 0, availableWidth, availableHeight);
 

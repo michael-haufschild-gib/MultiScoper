@@ -17,6 +17,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <atomic>
+#include <memory>
 #include <nlohmann/json.hpp>
 
 namespace oscil::test
@@ -58,7 +60,23 @@ class TestUIController
 {
 public:
     TestUIController() = default;
-    ~TestUIController() = default;
+    ~TestUIController()
+    {
+        // Mark the control block as dead. Lambdas holding a weak_ptr to it will
+        // see the flag (or fail to lock entirely once the shared_ptr is gone).
+        self_->store(false, std::memory_order_release);
+        self_->controller = nullptr;
+        // Flush pending message-thread callbacks.  Even though lambdas now use
+        // weak_ptr and cannot dereference a dead controller, flushing ensures
+        // orderly completion of any in-flight work.
+        if (auto* mm = juce::MessageManager::getInstanceWithoutCreating();
+            mm != nullptr && !mm->isThisTheMessageThread())
+        {
+            auto flushed = std::make_shared<juce::WaitableEvent>();
+            if (mm->callAsync([flushed]() { flushed->signal(); }))
+                flushed->wait(MESSAGE_THREAD_TIMEOUT_MS);
+        }
+    }
 
     /**
      * Set track scope for element lookups.
@@ -351,50 +369,90 @@ public:
 protected:
     static constexpr int MESSAGE_THREAD_TIMEOUT_MS = 3000;
 
-    /// Run a function on the message thread synchronously, returning its bool result.
-    /// Resolves the element via getTargetComponent and passes it (possibly nullptr) to func.
+    // Returns true if the ControlBlock is alive and controller is non-null.
+    static bool isControllerAlive(const std::shared_ptr<ControlBlock>& locked)
+    {
+        return locked && locked->load(std::memory_order_acquire) && locked->controller != nullptr;
+    }
+
     template <typename Func>
     bool runOnMessageThreadSync(const juce::String& elementId, Func&& func)
     {
-        bool result = false;
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([this, elementId, &result, &done, f = std::forward<Func>(func)]() mutable {
-            auto* component = getTargetComponent(elementId);
-            result = f(component);
-            done.signal();
+        struct State
+        {
+            bool result = false;
+            juce::WaitableEvent done;
+        };
+        auto state = std::make_shared<State>();
+        auto weak = self_;
+        bool posted = juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
+            auto locked = weak.lock();
+            if (!isControllerAlive(locked))
+            {
+                state->done.signal();
+                return;
+            }
+            state->result = f(locked->controller->getTargetComponent(elementId));
+            state->done.signal();
         });
-        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-        return result;
+        if (!posted)
+            return false;
+        if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+            return false;
+        return state->result;
     }
 
-    /// Overload for lambdas that don't need component resolution.
     template <typename Func>
     bool runOnMessageThreadSync(Func&& func)
     {
-        bool result = false;
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([&result, &done, f = std::forward<Func>(func)]() mutable {
-            result = f();
-            done.signal();
+        struct State
+        {
+            bool result = false;
+            juce::WaitableEvent done;
+        };
+        auto state = std::make_shared<State>();
+        auto weak = self_;
+        bool posted = juce::MessageManager::callAsync([weak, state, f = std::forward<Func>(func)]() mutable {
+            auto locked = weak.lock();
+            if (!isControllerAlive(locked))
+            {
+                state->done.signal();
+                return;
+            }
+            state->result = f();
+            state->done.signal();
         });
-        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-        return result;
+        if (!posted)
+            return false;
+        if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+            return false;
+        return state->result;
     }
 
-    /// Run a function on the message thread synchronously, returning a value of type T.
-    /// Resolves the element via getTargetComponent and passes it to func.
     template <typename T, typename Func>
     T runOnMessageThreadSyncWithResult(const juce::String& elementId, T defaultValue, Func&& func)
     {
-        T result = std::move(defaultValue);
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([this, elementId, &result, &done, f = std::forward<Func>(func)]() mutable {
-            auto* component = getTargetComponent(elementId);
-            result = f(component);
-            done.signal();
+        struct State
+        {
+            T result;
+            juce::WaitableEvent done;
+        };
+        auto state = std::make_shared<State>(State{std::move(defaultValue), {}});
+        auto weak = self_;
+        bool posted = juce::MessageManager::callAsync([weak, elementId, state, f = std::forward<Func>(func)]() mutable {
+            auto locked = weak.lock();
+            if (!isControllerAlive(locked))
+            {
+                state->done.signal();
+                return;
+            }
+            state->result = f(locked->controller->getTargetComponent(elementId));
+            state->done.signal();
         });
-        done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-        return result;
+        if (!posted)
+            return std::move(state->result);
+        state->done.wait(MESSAGE_THREAD_TIMEOUT_MS);
+        return std::move(state->result);
     }
 
 private:
@@ -420,6 +478,16 @@ private:
     juce::String getFocusedElementIdOnMessageThread();
 
     bool adjustSlider(const juce::String& elementId, int direction);
+
+    // Control block shared between the controller and queued callAsync lambdas.
+    // Lambdas capture a weak_ptr<ControlBlock> so they can safely detect
+    // destruction even if the destructor's flush sentinel times out.
+    struct ControlBlock : std::atomic<bool>
+    {
+        explicit ControlBlock(TestUIController* ctrl) : std::atomic<bool>(true), controller(ctrl) {}
+        TestUIController* controller;
+    };
+    std::shared_ptr<ControlBlock> self_ = std::make_shared<ControlBlock>(this);
 
     // Track scope for multi-instance element resolution
     int trackScopeIndex_ = -1; // -1 = no scope (global)

@@ -6,11 +6,14 @@
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
 
+#include "Oscil.h"
+
 #include <juce_events/juce_events.h>
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+namespace oscil
+{
 
 class InstanceRegistryLifecycleTest : public ::testing::Test
 {
@@ -286,6 +289,74 @@ TEST_F(InstanceRegistryLifecycleTest, RegisterAndUnregisterManyTimes)
     }
 }
 
+// Registration must refuse silently at the hard limit so a pathological
+// DAW session (many plugin instances) cannot blow past MAX_TRACKS and
+// wedge the registry. Verifies SourceId::invalid() is returned and the
+// source count is clamped at the limit.
+TEST_F(InstanceRegistryLifecycleTest, RegisterAtMaxTracksLimitRejectsExtras)
+{
+    std::vector<std::shared_ptr<SharedCaptureBuffer>> buffers;
+    std::vector<SourceId> originalIds;
+    buffers.reserve(MAX_TRACKS);
+    originalIds.reserve(MAX_TRACKS);
+
+    for (int i = 0; i < MAX_TRACKS; ++i)
+    {
+        auto buffer = std::make_shared<SharedCaptureBuffer>();
+        buffers.push_back(buffer);
+        auto id = getRegistry().registerInstance("max_track_" + juce::String(i), buffer, "Track " + juce::String(i));
+        ASSERT_TRUE(id.isValid()) << "Registration " << i << " below the limit should succeed";
+        originalIds.push_back(id);
+    }
+
+    ASSERT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS));
+
+    // One past the limit — must reject without throwing.
+    auto overflowBuffer = std::make_shared<SharedCaptureBuffer>();
+    auto overflowId = getRegistry().registerInstance("overflow_track", overflowBuffer, "Overflow");
+
+    EXPECT_FALSE(overflowId.isValid()) << "Registration beyond MAX_TRACKS must return an invalid SourceId";
+    EXPECT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS))
+        << "Failed registration must not inflate the source count";
+
+    // Re-registering the same track id for an already-known source must still
+    // succeed through deduplication, even when we are at the limit. This
+    // guards against a DAW session where a track updates its metadata after
+    // the registry hit the cap.
+    auto dedupId = getRegistry().registerInstance("max_track_0", buffers[0], "Track 0 renamed", 2, 48000.0);
+    EXPECT_TRUE(dedupId.isValid()) << "Dedup re-registration at the limit must still update the existing source";
+
+    // Dedup must return the same SourceId as the original registration.
+    EXPECT_EQ(dedupId, originalIds[0]) << "Dedup must return the original SourceId, not a new one";
+
+    // The source count must not grow — dedup must reuse the existing slot.
+    EXPECT_EQ(getRegistry().getSourceCount(), static_cast<size_t>(MAX_TRACKS))
+        << "Dedup re-registration must not inflate the source count";
+
+    // The returned id must match the original registration for that track.
+    auto info = getRegistry().getSource(dedupId);
+    ASSERT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Track 0 renamed") << "Dedup must update the name";
+    EXPECT_EQ(info->channelCount, 2) << "Dedup must update the channel count";
+    EXPECT_DOUBLE_EQ(info->sampleRate, 48000.0) << "Dedup must update the sample rate";
+}
+
+TEST_F(InstanceRegistryLifecycleTest, UpdateSourceWithEmptyNamePreservesExistingName)
+{
+    auto buffer = std::make_shared<SharedCaptureBuffer>();
+    auto sourceId = getRegistry().registerInstance("track_preserve", buffer, "Original Name");
+    ASSERT_TRUE(sourceId.isValid());
+
+    // Empty name must be a no-op on the name field — only channel/rate update.
+    getRegistry().updateSource(sourceId, juce::String{}, 1, 48000.0);
+
+    auto info = getRegistry().getSource(sourceId);
+    ASSERT_TRUE(info.has_value());
+    EXPECT_EQ(info->name, "Original Name") << "Empty name on updateSource must not wipe the existing name";
+    EXPECT_EQ(info->channelCount, 1);
+    EXPECT_DOUBLE_EQ(info->sampleRate, 48000.0);
+}
+
 TEST_F(InstanceRegistryLifecycleTest, RegisterManyDifferentSources)
 {
     constexpr int count = 50;
@@ -384,3 +455,5 @@ TEST_F(InstanceRegistryLifecycleTest, MultipleUpdatesToSameSource)
     EXPECT_EQ(info->channelCount, 2); // 99 % 2 + 1 = 2
     EXPECT_EQ(info->sampleRate, 44100.0 + 99 * 1000.0);
 }
+
+} // namespace oscil

@@ -8,7 +8,6 @@
 #include "core/Oscillator.h"
 
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace oscil

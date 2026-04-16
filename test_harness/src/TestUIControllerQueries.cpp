@@ -12,6 +12,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <thread>
 
 namespace oscil::test
@@ -31,25 +32,31 @@ bool TestUIController::setFocus(const juce::String& elementId)
 
 juce::String TestUIController::getFocusedElementId()
 {
-    juce::String result;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([&result, &done]() {
-        result = [&]() -> juce::String {
-            auto* focused = juce::Component::getCurrentlyFocusedComponent();
-            if (!focused)
-                return {};
+    struct State
+    {
+        juce::String result;
+        juce::WaitableEvent done;
+    };
+    auto state = std::make_shared<State>();
+    juce::MessageManager::callAsync([state]() {
+        auto* focused = juce::Component::getCurrentlyFocusedComponent();
+        if (focused)
+        {
             auto elements = TestElementRegistry::getInstance().getAllElements();
             for (const auto& [testId, component] : elements)
             {
                 if (component == focused)
-                    return testId;
+                {
+                    state->result = testId;
+                    break;
+                }
             }
-            return {};
-        }();
-        done.signal();
+        }
+        state->done.signal();
     });
-    done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-    return result;
+    if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+        return {};
+    return state->result;
 }
 
 juce::String TestUIController::getFocusedElementIdOnMessageThread()
@@ -105,18 +112,31 @@ bool TestUIController::focusPrevious()
 
 json TestUIController::getUIState()
 {
-    json state;
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([this, &state, &done]() {
-        state["elements"] = json::object();
+    struct State
+    {
+        json result;
+        juce::WaitableEvent done;
+    };
+    auto state = std::make_shared<State>();
+    auto weak = self_;
+    juce::MessageManager::callAsync([weak, state]() {
+        auto locked = weak.lock();
+        if (!isControllerAlive(locked))
+        {
+            state->done.signal();
+            return;
+        }
+        auto* self = locked->controller;
+        state->result["elements"] = json::object();
         auto elements = TestElementRegistry::getInstance().getAllElements();
         for (const auto& [testId, component] : elements)
-            state["elements"][testId.toStdString()] = componentToJson(component, testId);
-        state["focusedElement"] = getFocusedElementIdOnMessageThread().toStdString();
-        done.signal();
+            state->result["elements"][testId.toStdString()] = self->componentToJson(component, testId);
+        state->result["focusedElement"] = self->getFocusedElementIdOnMessageThread().toStdString();
+        state->done.signal();
     });
-    done.wait(MESSAGE_THREAD_TIMEOUT_MS);
-    return state;
+    if (!state->done.wait(MESSAGE_THREAD_TIMEOUT_MS))
+        return json{{"error", "timeout"}};
+    return state->result;
 }
 
 json TestUIController::getElementInfo(const juce::String& elementId)
@@ -148,13 +168,14 @@ bool TestUIController::isElementFocusable(const juce::String& elementId)
 
 double TestUIController::getSliderValue(const juce::String& elementId)
 {
-    return runOnMessageThreadSyncWithResult<double>(elementId, 0.0, [](juce::Component* component) -> double {
-        if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
-            return oscilSlider->getValue();
-        if (auto* slider = dynamic_cast<juce::Slider*>(component))
-            return slider->getValue();
-        return 0.0;
-    });
+    return runOnMessageThreadSyncWithResult<double>(
+        elementId, std::numeric_limits<double>::quiet_NaN(), [](juce::Component* component) -> double {
+            if (auto* oscilSlider = dynamic_cast<oscil::OscilSlider*>(component))
+                return oscilSlider->getValue();
+            if (auto* slider = dynamic_cast<juce::Slider*>(component))
+                return slider->getValue();
+            return std::numeric_limits<double>::quiet_NaN();
+        });
 }
 
 std::pair<double, double> TestUIController::getSliderRange(const juce::String& elementId)
@@ -273,6 +294,8 @@ bool TestUIController::waitForSliderValue(const juce::String& elementId, double 
     while (true)
     {
         double currentValue = getSliderValue(elementId);
+        if (std::isnan(currentValue))
+            return false;
         if (std::abs(currentValue - value) <= tolerance)
             return true;
 

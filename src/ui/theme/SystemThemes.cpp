@@ -13,6 +13,38 @@ namespace oscil::SystemThemes
 namespace
 {
 
+/// Button palette for the Light Mode theme.
+/// Extracted from createLightMode() to keep that function within statement limits.
+void setLightModeButtons(ColorTheme& theme)
+{
+    theme.btnPrimaryBg = juce::Colour(0xFF0066CC);
+    theme.btnPrimaryBgHover = juce::Colour(0xFF0077DD);
+    theme.btnPrimaryBgActive = juce::Colour(0xFF005599);
+    theme.btnPrimaryBgDisabled = juce::Colour(0xFFCCCCCC);
+    theme.btnPrimaryText = juce::Colour(0xFFFFFFFF);
+    theme.btnPrimaryTextHover = juce::Colour(0xFFFFFFFF);
+    theme.btnPrimaryTextActive = juce::Colour(0xFFFFFFFF);
+    theme.btnPrimaryTextDisabled = juce::Colour(0xFF888888);
+
+    theme.btnSecondaryBg = juce::Colour(0xFFE0E0E0);
+    theme.btnSecondaryBgHover = juce::Colour(0xFFD0D0D0);
+    theme.btnSecondaryBgActive = juce::Colour(0xFFC0C0C0);
+    theme.btnSecondaryBgDisabled = juce::Colour(0xFFF0F0F0);
+    theme.btnSecondaryText = juce::Colour(0xFF303030);
+    theme.btnSecondaryTextHover = juce::Colour(0xFF202020);
+    theme.btnSecondaryTextActive = juce::Colour(0xFF202020);
+    theme.btnSecondaryTextDisabled = juce::Colour(0xFFA0A0A0);
+
+    theme.btnTertiaryBg = juce::Colours::transparentBlack;
+    theme.btnTertiaryBgHover = juce::Colour(0x1A000000);
+    theme.btnTertiaryBgActive = juce::Colour(0x33000000);
+    theme.btnTertiaryBgDisabled = juce::Colours::transparentBlack;
+    theme.btnTertiaryText = juce::Colour(0xFF404040);
+    theme.btnTertiaryTextHover = juce::Colour(0xFF202020);
+    theme.btnTertiaryTextActive = juce::Colour(0xFF202020);
+    theme.btnTertiaryTextDisabled = juce::Colour(0xFFA0A0A0);
+}
+
 /// Set glass-style button colors from an accent color and background.
 /// Primary: accent-tinted bg. Secondary/Tertiary: transparent with white overlay on hover.
 void setGlassButtons(ColorTheme& theme, juce::Colour accent, juce::Colour disabledText)
@@ -244,7 +276,6 @@ ColorTheme createHighContrast()
     return theme;
 }
 
-// NOLINTNEXTLINE(readability-function-size)
 ColorTheme createLightMode()
 {
     ColorTheme theme;
@@ -278,32 +309,7 @@ ColorTheme createLightMode()
     theme.accentLightness = 0.45f;
 
     // Light-mode buttons: dark accent on light bg
-    theme.btnPrimaryBg = juce::Colour(0xFF0066CC);
-    theme.btnPrimaryBgHover = juce::Colour(0xFF0077DD);
-    theme.btnPrimaryBgActive = juce::Colour(0xFF005599);
-    theme.btnPrimaryBgDisabled = juce::Colour(0xFFCCCCCC);
-    theme.btnPrimaryText = juce::Colour(0xFFFFFFFF);
-    theme.btnPrimaryTextHover = juce::Colour(0xFFFFFFFF);
-    theme.btnPrimaryTextActive = juce::Colour(0xFFFFFFFF);
-    theme.btnPrimaryTextDisabled = juce::Colour(0xFF888888);
-
-    theme.btnSecondaryBg = juce::Colour(0xFFE0E0E0);
-    theme.btnSecondaryBgHover = juce::Colour(0xFFD0D0D0);
-    theme.btnSecondaryBgActive = juce::Colour(0xFFC0C0C0);
-    theme.btnSecondaryBgDisabled = juce::Colour(0xFFF0F0F0);
-    theme.btnSecondaryText = juce::Colour(0xFF303030);
-    theme.btnSecondaryTextHover = juce::Colour(0xFF202020);
-    theme.btnSecondaryTextActive = juce::Colour(0xFF202020);
-    theme.btnSecondaryTextDisabled = juce::Colour(0xFFA0A0A0);
-
-    theme.btnTertiaryBg = juce::Colours::transparentBlack;
-    theme.btnTertiaryBgHover = juce::Colour(0x1A000000);
-    theme.btnTertiaryBgActive = juce::Colour(0x33000000);
-    theme.btnTertiaryBgDisabled = juce::Colours::transparentBlack;
-    theme.btnTertiaryText = juce::Colour(0xFF404040);
-    theme.btnTertiaryTextHover = juce::Colour(0xFF202020);
-    theme.btnTertiaryTextActive = juce::Colour(0xFF202020);
-    theme.btnTertiaryTextDisabled = juce::Colour(0xFFA0A0A0);
+    setLightModeButtons(theme);
 
     theme.waveformColors.clear();
     theme.waveformColors = {

@@ -168,6 +168,10 @@ public:
     void setSearchable(bool searchable);
     bool isSearchable() const { return searchable_; }
 
+    /// Set tooltip text (also exposed as accessibility help text).
+    void setTooltip(const juce::String& tooltip);
+    juce::String getTooltip() const { return tooltipText_; }
+
     void enablementChanged() override;
 
     /// Open the dropdown popup (shows item list).
@@ -210,6 +214,7 @@ private:
     std::set<int> selectedIndices_;
     juce::String placeholder_ = "Select...";
     juce::String displayText_;
+    juce::String tooltipText_;
     bool multiSelect_ = false;
     bool searchable_ = false;
     bool isHovered_ = false;

@@ -80,6 +80,9 @@
 #     returns; -Wmisleading-indentation catches the dangerous variant
 #   readability-simplify-boolean-expr         — DeMorgan suggestions on jassert(!a || b) patterns
 #     are less readable than the original; 100% false positive rate on JUCE assertion macros
+#   readability-redundant-member-init         — conflicts with cppcoreguidelines-pro-type-member-init
+#     for std::function / std::vector members; we prefer the explicit-init discipline, so leave
+#     `Callback cb_{}` in place and don't fight the "redundant" diagnostic.
 
 Checks: >
   bugprone-*,
@@ -138,6 +141,7 @@ Checks: >
   -readability-magic-numbers,
   -readability-math-missing-parentheses,
   -readability-redundant-access-specifiers,
+  -readability-redundant-member-init,
   -readability-uppercase-literal-suffix,
   -readability-use-anyofallof,
 

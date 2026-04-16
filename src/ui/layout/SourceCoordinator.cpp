@@ -75,17 +75,17 @@ void SourceCoordinator::refreshFromRegistry()
     OSCIL_LOG(SOURCE, "refreshFromRegistry: " << availableSources_.size() << " sources");
 }
 
-void SourceCoordinator::postToMessageThread(std::function<void()> cb)
+void SourceCoordinator::postToMessageThread(std::function<void()> callback)
 {
     // Capture shared_ptr to isValid_ flag - this keeps the atomic alive
     // even if SourceCoordinator is destroyed before the callback executes
     auto validFlag = isValid_;
 
-    juce::MessageManager::callAsync([validFlag, callback = std::move(cb)]() {
+    juce::MessageManager::callAsync([validFlag, cb = std::move(callback)]() {
         // Check if coordinator is still valid before executing callback
         if (validFlag->load(std::memory_order_acquire))
         {
-            callback();
+            cb();
         }
     });
 }

@@ -20,9 +20,10 @@ public:
 
     MockCaptureBuffer() : SharedCaptureBuffer(4096) {} // dummy size
 
-    using SharedCaptureBuffer::read;
+    using SharedCaptureBuffer::readBlocking;
+    using SharedCaptureBuffer::readSnapshot;
 
-    int read(float* dest, int numSamples, int channel) const override
+    int readBlocking(float* dest, int numSamples, int channel) const override
     {
         if (channel == 0)
             lastRequestedSamplesLeft = numSamples;
@@ -42,7 +43,7 @@ public:
         return count;
     }
 
-    int read(juce::AudioBuffer<float>& output, int numSamples) const override
+    int readBlocking(juce::AudioBuffer<float>& output, int numSamples) const override
     {
         lastRequestedSamplesLeft = numSamples;
         lastRequestedSamplesRight = numSamples;
@@ -64,6 +65,16 @@ public:
                 dest[i] = 0.0f;
         }
         return samplesRead;
+    }
+
+    std::optional<int> readSnapshot(float* dest, int numSamples, int channel) const override
+    {
+        return readBlocking(dest, numSamples, channel);
+    }
+
+    std::optional<int> readSnapshot(juce::AudioBuffer<float>& output, int numSamples) const override
+    {
+        return readBlocking(output, numSamples);
     }
 
     CaptureFrameMetadata getLatestMetadata() const override { return metadata; }

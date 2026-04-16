@@ -114,7 +114,11 @@ struct FilmGrainSettings
 {
     bool enabled = false;
     float intensity = 0.1f; // 0.0 to 0.5
-    float speed = 24.0f;    // Animation speed (FPS)
+    /// Rate at which the grain pattern evolves, in "noise units per second".
+    /// Not rendering FPS — this is a multiplier applied to the shader's time
+    /// offset. Clamped to >= 0 at the shader boundary. Default 24 roughly
+    /// matches classic film cadence.
+    float speed = 24.0f;
 };
 
 /**

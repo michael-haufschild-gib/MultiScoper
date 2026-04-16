@@ -70,7 +70,7 @@ TEST_F(DecimatingCaptureBufferConcurrentTest, ConcurrentWriteReadDataIntegrity)
         std::vector<float> out(kBlock);
         while (running.load(std::memory_order_relaxed))
         {
-            int n = buffer.read(out.data(), kBlock, 0);
+            int n = buffer.readBlocking(out.data(), kBlock, 0);
             if (n == kBlock)
             {
                 float first = out[0];
@@ -238,7 +238,7 @@ TEST_F(DecimatingCaptureBufferConcurrentTest, ReadDuringReconfigureDoesNotCrash)
         while (running.load(std::memory_order_relaxed))
         {
             // These calls must not crash, even during reconfigure
-            (void) buffer.read(out.data(), 256, 0);
+            (void) buffer.readBlocking(out.data(), 256, 0);
             (void) buffer.getLatestMetadata();
             (void) buffer.getAvailableSamples();
             (void) buffer.getCapacity();
@@ -296,8 +296,8 @@ TEST_F(DecimatingCaptureBufferConcurrentTest, MultipleReadersWithConcurrentWrite
             std::vector<float> out(128);
             while (running.load(std::memory_order_relaxed))
             {
-                (void) buffer.read(out.data(), 128, 0);
-                (void) buffer.read(out.data(), 128, 1);
+                (void) buffer.readBlocking(out.data(), 128, 0);
+                (void) buffer.readBlocking(out.data(), 128, 1);
                 (void) buffer.getLatestMetadata();
                 (void) buffer.getPeakLevel(0, 128);
                 (void) buffer.getRMSLevel(0, 128);

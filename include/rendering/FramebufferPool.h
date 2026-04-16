@@ -109,6 +109,9 @@ protected:
     virtual void destroyFullscreenQuad(juce::OpenGLContext& context);
 
 private:
+    /// Allocate and GPU-create the waveform/ping/pong FBOs. Helper for initialize().
+    bool createCoreFBOs(juce::OpenGLContext& context, int width, int height);
+
     std::unique_ptr<Framebuffer> waveformFBO_;
     std::unique_ptr<Framebuffer> pingFBO_;
     std::unique_ptr<Framebuffer> pongFBO_;

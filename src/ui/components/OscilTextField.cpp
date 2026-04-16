@@ -127,6 +127,12 @@ void OscilTextField::setText(const juce::String& text, bool notify) { editor_->s
 
 juce::String OscilTextField::getText() const { return editor_->getText(); }
 
+void OscilTextField::grabInnerFocus()
+{
+    if (editor_ != nullptr)
+        editor_->grabKeyboardFocus();
+}
+
 void OscilTextField::setPlaceholder(const juce::String& placeholder)
 {
     placeholder_ = placeholder;

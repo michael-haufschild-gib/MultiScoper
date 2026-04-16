@@ -11,27 +11,45 @@ namespace oscil
 
 namespace
 {
-float generateSample(const std::string& waveformType, float phase, float amplitude, juce::Random& rng)
+using SampleFunc = float (*)(float phase, float amplitude, juce::Random& rng);
+
+float sineSample(float phase, float amplitude, juce::Random& /*rng*/) { return std::sin(phase) * amplitude; }
+float squareSample(float phase, float amplitude, juce::Random& /*rng*/)
 {
-    if (waveformType == "sine")
-        return std::sin(phase) * amplitude;
-    if (waveformType == "square")
-        return (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
-    if (waveformType == "triangle")
-    {
-        float const t = phase / (2.0f * juce::MathConstants<float>::pi);
-        return ((2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f)))) - 1.0f) * amplitude;
-    }
-    if (waveformType == "sawtooth")
-    {
-        float const t = phase / (2.0f * juce::MathConstants<float>::pi);
-        return (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
-    }
-    if (waveformType == "noise")
-        return (rng.nextFloat() * 2.0f - 1.0f) * amplitude;
-    if (waveformType == "dc")
-        return amplitude;
-    return 0.0f; // "silence" or unknown
+    return (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
+}
+float triangleSample(float phase, float amplitude, juce::Random& /*rng*/)
+{
+    float const t = phase / (2.0f * juce::MathConstants<float>::pi);
+    return ((2.0f * std::abs(2.0f * (t - std::floor(t + 0.5f)))) - 1.0f) * amplitude;
+}
+float sawtoothSample(float phase, float amplitude, juce::Random& /*rng*/)
+{
+    float const t = phase / (2.0f * juce::MathConstants<float>::pi);
+    return (2.0f * (t - std::floor(t + 0.5f))) * amplitude;
+}
+float noiseSample(float /*phase*/, float amplitude, juce::Random& rng)
+{
+    return (rng.nextFloat() * 2.0f - 1.0f) * amplitude;
+}
+float dcSample(float /*phase*/, float amplitude, juce::Random& /*rng*/) { return amplitude; }
+float silenceSample(float /*phase*/, float /*amplitude*/, juce::Random& /*rng*/) { return 0.0f; }
+
+SampleFunc resolveWaveform(const std::string& type)
+{
+    if (type == "sine")
+        return sineSample;
+    if (type == "square")
+        return squareSample;
+    if (type == "triangle")
+        return triangleSample;
+    if (type == "sawtooth")
+        return sawtoothSample;
+    if (type == "noise")
+        return noiseSample;
+    if (type == "dc")
+        return dcSample;
+    return silenceSample;
 }
 } // namespace
 
@@ -40,7 +58,10 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
 {
     jassert(buffer.getNumChannels() >= 2);
     if (buffer.getNumChannels() < 2)
+    {
+        buffer.clear();
         return;
+    }
 
     int const numSamples = buffer.getNumSamples();
     float phase = 0.0f;
@@ -48,10 +69,11 @@ void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& w
     float const phaseIncrement = (2.0f * juce::MathConstants<float>::pi * frequency) / safeSampleRate;
 
     auto& rng = juce::Random::getSystemRandom();
+    SampleFunc const generate = resolveWaveform(waveformType);
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float const sample = generateSample(waveformType, phase, amplitude, rng);
+        float const sample = generate(phase, amplitude, rng);
         buffer.setSample(0, i, sample);
         buffer.setSample(1, i, sample * 0.8f);
 

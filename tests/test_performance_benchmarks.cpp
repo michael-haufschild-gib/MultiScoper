@@ -81,7 +81,7 @@ TEST(PerformanceBenchmarks, SharedCaptureBufferReadThroughput)
 
     auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < kIterations; ++i)
-        buffer.read(readBuf.data(), kReadSize, 0);
+        (void) buffer.readBlocking(readBuf.data(), kReadSize, 0);
     auto elapsed = std::chrono::steady_clock::now() - start;
 
     auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
@@ -206,7 +206,7 @@ TEST(PerformanceBenchmarks, SeqLockWriteReadThroughput)
     auto startRead = std::chrono::steady_clock::now();
     for (int i = 0; i < kIterations; ++i)
     {
-        CaptureFrameMetadata snapshot = seqLock.read();
+        CaptureFrameMetadata snapshot = seqLock.readBlocking();
         // Prevent compiler from optimizing away
         if (snapshot.sampleRate < 0.0)
             std::abort();

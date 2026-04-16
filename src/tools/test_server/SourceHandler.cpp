@@ -194,7 +194,7 @@ void SourceHandler::handleAssignSource(const httplib::Request& req, httplib::Res
         auto result = runOnMessageThread([this, oscillatorId, sourceId, oscillatorIndex]() {
             return assignSourceOnMessageThread(oscillatorId, sourceId, oscillatorIndex);
         });
-        sendJson(res, result);
+        sendJson(res, result, result.contains("error") ? 400 : 200);
     }
     catch (const std::exception& e)
     {
@@ -279,7 +279,7 @@ void SourceHandler::handleInjectSourceData(const httplib::Request& req, httplib:
             return injectSourceDataOnMessageThread(sourceId, waveformType, frequency, amplitude, numSamples,
                                                    sampleRate);
         });
-        sendJson(res, result);
+        sendJson(res, result, result.contains("error") ? 400 : 200);
     }
     catch (const std::exception& e)
     {

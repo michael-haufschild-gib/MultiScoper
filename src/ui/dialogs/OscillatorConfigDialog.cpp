@@ -18,16 +18,27 @@
 namespace oscil
 {
 
+void OscillatorConfigDialog::DebounceTimer::timerCallback()
+{
+    stopTimer();
+    if (onFire)
+        onFire();
+}
+
 OscillatorConfigDialog::OscillatorConfigDialog(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
     : ThemedComponent(themeService)
     , instanceRegistry_(instanceRegistry)
 {
     OSCIL_REGISTER_TEST_ID("configPopup");
+    nameDebounce_.onFire = [this]() { handleNameEdit(); };
     setupComponents();
 }
 
 OscillatorConfigDialog::~OscillatorConfigDialog()
 {
+    // Stop any pending debounce *before* member destruction so its callback
+    // cannot re-enter a half-destroyed dialog on the message loop.
+    nameDebounce_.stopTimer();
     OSCIL_UNREGISTER_CHILD_TEST_ID(*sourceSelector_, "configPopup_sourceDropdown");
     OSCIL_UNREGISTER_CHILD_TEST_ID(*modeButtons_, "configPopup_modeSelector");
 }
@@ -36,8 +47,13 @@ void OscillatorConfigDialog::setupSourceAndMode()
 {
     nameEditor_ = std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Text, "configPopup_nameField");
     nameEditor_->setPlaceholder("Oscillator Name");
-    nameEditor_->onReturnPressed = [this]() { handleNameEdit(); };
-    nameEditor_->onTextChanged = [this](const juce::String&) { handleNameEdit(); };
+    // Return commits immediately; text changes are coalesced via nameDebounce_
+    // so that typing does not trigger a full ValueTree rewrite on every keystroke.
+    nameEditor_->onReturnPressed = [this]() { flushPendingNameEdit(); };
+    nameEditor_->onTextChanged = [this](const juce::String&) {
+        nameDebounce_.stopTimer();
+        nameDebounce_.startTimer(NAME_DEBOUNCE_MS);
+    };
     addAndMakeVisible(*nameEditor_);
 
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
@@ -84,6 +100,7 @@ void OscillatorConfigDialog::setupAppearanceControls()
     addAndMakeVisible(*visualPresetLabel_);
 
     visualPresetDropdown_ = std::make_unique<OscilDropdown>(getThemeService(), "", "configPopup_visualPresetDropdown");
+    visualPresetDropdown_->setTooltip("Changing preset resets any per-oscillator visual overrides");
     for (const auto& preset : VisualConfiguration::getAvailablePresets())
         visualPresetDropdown_->addItem(preset.second, preset.first);
     visualPresetDropdown_->onSelectionChanged = [this](int) { handleVisualPresetChange(); };
@@ -201,7 +218,20 @@ void OscillatorConfigDialog::onThemeChanged(const ColorTheme& newTheme)
 void OscillatorConfigDialog::showForOscillator(const Oscillator& oscillator)
 {
     updateFromOscillator(oscillator);
-    nameEditor_->grabKeyboardFocus();
+
+    // Defer the focus grab: DialogManager shows the hosting OscilModal synchronously
+    // *after* this call returns, so the name editor is not yet on-screen here and a
+    // direct grabKeyboardFocus would silently no-op. Post it back through the message
+    // loop so it lands once the modal is visible. Use a SafePointer so a quick close
+    // between the two does not dereference a destroyed component.
+    juce::Component::SafePointer<OscillatorConfigDialog> const safeThis(this);
+    juce::MessageManager::callAsync([safeThis]() {
+        if (auto* self = safeThis.getComponent())
+        {
+            if (self->nameEditor_ != nullptr && self->isShowing())
+                self->nameEditor_->grabInnerFocus();
+        }
+    });
 }
 
 void OscillatorConfigDialog::updateFromOscillator(const Oscillator& oscillator)
@@ -278,10 +308,19 @@ void OscillatorConfigDialog::notifyConfigChanged()
     listeners_.call([this, &updated](Listener& l) { l.oscillatorConfigChanged(oscillatorId_, updated); });
 }
 
-void OscillatorConfigDialog::handleClose()
+void OscillatorConfigDialog::handleClose() const
 {
+    // The footer Close button simply asks the hosting modal to dismiss.
+    // Listener notification and debounce flushing happen in onExternalClose(),
+    // which the modal invokes once its hide animation settles — giving every
+    // close path (footer / X / Escape / backdrop) a single notification point.
     if (onClose)
         onClose();
+}
+
+void OscillatorConfigDialog::onExternalClose()
+{
+    flushPendingNameEdit();
     listeners_.call([](Listener& l) { l.configDialogClosed(); });
 }
 
@@ -293,6 +332,13 @@ void OscillatorConfigDialog::handleNameEdit()
         name_ = newName;
         notifyConfigChanged();
     }
+}
+
+void OscillatorConfigDialog::flushPendingNameEdit()
+{
+    if (nameDebounce_.isTimerRunning())
+        nameDebounce_.stopTimer();
+    handleNameEdit();
 }
 
 void OscillatorConfigDialog::handleSourceChange(const SourceId& sourceId)
@@ -342,12 +388,23 @@ void OscillatorConfigDialog::handleVisualPresetChange()
 {
     int const index = visualPresetDropdown_->getSelectedIndex();
     auto availablePresets = VisualConfiguration::getAvailablePresets();
-    if (index >= 0 && static_cast<size_t>(index) < availablePresets.size())
-    {
-        visualPresetId_ = availablePresets[static_cast<size_t>(index)].first;
-        visualOverrides_.removeAllProperties(nullptr);
-        notifyConfigChanged();
-    }
+    if (index < 0 || static_cast<size_t>(index) >= availablePresets.size())
+        return;
+
+    auto const& newPresetId = availablePresets[static_cast<size_t>(index)].first;
+
+    // Skip when the user re-selects the already-active preset: otherwise a
+    // stray onSelectionChanged would silently wipe any per-oscillator overrides
+    // the user had tweaked, even though nothing semantically changed.
+    if (newPresetId == visualPresetId_)
+        return;
+
+    // Switching to a different preset intentionally resets overrides — the
+    // user is asking for a fresh look. Document the destructive semantic so
+    // future edits don't second-guess it.
+    visualPresetId_ = newPresetId;
+    visualOverrides_.removeAllProperties(nullptr);
+    notifyConfigChanged();
 }
 
 void OscillatorConfigDialog::addListener(Listener* listener) { listeners_.add(listener); }

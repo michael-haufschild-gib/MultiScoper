@@ -227,15 +227,42 @@ fi
 STAGED_SRC=$(echo "$STAGED_CPP" | grep -E '^src/.*\.cpp$' || true)
 STAGED_HEADERS=$(echo "$STAGED_CPP" | grep -E '^include/.*\.h$' || true)
 if [ -n "$STAGED_HEADERS" ]; then
+    COMPILE_DB="$REPO_ROOT/build/dev/compile_commands.json"
     HEADER_INCLUDERS=""
-    for header in $STAGED_HEADERS; do
-        BASENAME_H=$(basename "$header")
-        FOUND=$(grep -rl --include='*.cpp' "#include.*[\"/<]${BASENAME_H}[>\"]" "$REPO_ROOT/src" 2>/dev/null \
-            | sed "s|^$REPO_ROOT/||" || true)
-        HEADER_INCLUDERS="${HEADER_INCLUDERS:+$HEADER_INCLUDERS
+    HI_SCRIPT="$REPO_ROOT/scripts/header_includers.py"
+    USE_FAST_PATH=0
+    if command -v python3 &>/dev/null && [ -f "$HI_SCRIPT" ]; then
+        USE_FAST_PATH=1
+    fi
+    if [ $USE_FAST_PATH -eq 1 ]; then
+        HI_OUT=$(python3 "$HI_SCRIPT" \
+            --compile-db "$COMPILE_DB" \
+            --repo-root "$REPO_ROOT" \
+            --headers $STAGED_HEADERS 2>/dev/null)
+        HI_EXIT=$?
+        if [ $HI_EXIT -eq 0 ]; then
+            HEADER_INCLUDERS="$HI_OUT"
+        elif [ $HI_EXIT -eq 2 ]; then
+            echo -e "${YELLOW:-}warning:${NC:-} header_includers fast path unavailable (compile_commands.json missing — run: cmake --preset dev); falling back to grep"
+            USE_FAST_PATH=0
+        else
+            USE_FAST_PATH=0
+        fi
+    fi
+    if [ $USE_FAST_PATH -eq 0 ]; then
+        for header in $STAGED_HEADERS; do
+            BASENAME_H=$(basename "$header")
+            FOUND=$(grep -rl --include='*.cpp' "#include.*[\"/<]${BASENAME_H}[>\"]" "$REPO_ROOT/src" 2>/dev/null \
+                | sed "s|^$REPO_ROOT/||" || true)
+            HEADER_INCLUDERS="${HEADER_INCLUDERS:+$HEADER_INCLUDERS
 }$FOUND"
-    done
-    STAGED_SRC=$(printf '%s\n%s\n' "$STAGED_SRC" "$HEADER_INCLUDERS" | sed '/^$/d' | sort -u | head -20)
+        done
+    fi
+    # Merge auto-discovered includers with staged .cpp files. Staged files
+    # are always checked; includers provide clang-tidy coverage for staged
+    # headers via HeaderFilterRegex.
+    ALL_INCLUDERS=$(echo "$HEADER_INCLUDERS" | sed '/^$/d' | sort -u)
+    STAGED_SRC=$(printf '%s\n%s\n' "$STAGED_SRC" "$ALL_INCLUDERS" | sed '/^$/d' | sort -u)
 fi
 if [ -n "$STAGED_SRC" ]; then
     # Look for clang-tidy in common locations
@@ -259,18 +286,29 @@ if [ -n "$STAGED_SRC" ]; then
         echo -e "${RED}FAILED${NC} (compile_commands.json missing — run: cmake --preset dev)"
         FAILED=1
     else
-        CT_ERRORS=0
-        for file in $STAGED_SRC; do
-            if ! "$CLANG_TIDY" -p "$REPO_ROOT/build/dev" "$REPO_ROOT/$file" --quiet 2>/dev/null; then
-                CT_ERRORS=$((CT_ERRORS + 1))
+        # Parallel clang-tidy: each invocation re-parses JUCE headers (~5s), so
+        # serial fan-out over many files bottlenecks the hook. Dispatch one job
+        # per core via xargs and collect per-file failures through a tempfile.
+        CT_JOBS=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
+        CT_ERR_FILE=$(mktemp -t oscil-clang-tidy-errs.XXXXXX)
+        CT_LOG_FILE=$(mktemp -t oscil-clang-tidy-log.XXXXXX)
+        printf '%s\n' $STAGED_SRC | xargs -P "$CT_JOBS" -I {} bash -c '
+            out=$("$1" -p "$2" "$3/$4" --quiet 2>&1)
+            status=$?
+            if [ $status -ne 0 ] || echo "$out" | grep -q "error:"; then
+                printf "%s\n" "$4" >> "$5"
+                printf "%s\n" "$out" >> "$6"
             fi
-        done
-        if [ $CT_ERRORS -gt 0 ]; then
-            echo -e "${RED}FAILED${NC} ($CT_ERRORS file(s) with clang-tidy errors)"
+        ' _ "$CLANG_TIDY" "$REPO_ROOT/build/dev" "$REPO_ROOT" "{}" "$CT_ERR_FILE" "$CT_LOG_FILE"
+        CT_ERRORS=$(wc -l < "$CT_ERR_FILE" | tr -d ' ')
+        if [ "$CT_ERRORS" -gt 0 ]; then
+            echo -e "${RED}FAILED${NC} ($CT_ERRORS file(s) with clang-tidy errors, $CT_JOBS-way parallel)"
+            grep "error:" "$CT_LOG_FILE" | head -40
             FAILED=1
         else
-            echo -e "${GREEN}OK${NC}"
+            echo -e "${GREEN}OK${NC} ($CT_JOBS-way parallel)"
         fi
+        rm -f "$CT_ERR_FILE" "$CT_LOG_FILE"
     fi
 fi
 

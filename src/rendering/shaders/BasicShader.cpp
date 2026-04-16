@@ -97,7 +97,6 @@ bool BasicShader::validateUniforms() const
     return true;
 }
 
-// NOLINTNEXTLINE(readability-function-size)
 bool BasicShader::compile(juce::OpenGLContext& context)
 {
     BASIC_LOG("compile() called, already compiled=" << static_cast<int>(gl_->compiled));

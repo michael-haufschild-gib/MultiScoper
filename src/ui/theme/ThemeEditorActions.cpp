@@ -111,7 +111,42 @@ void AccentPresetRow::mouseUp(const juce::MouseEvent& e)
 // ThemeEditorComponent action handlers
 //==============================================================================
 
-// NOLINTNEXTLINE(readability-function-size)
+void ThemeEditorComponent::finalizeCreateTheme(const juce::String& name)
+{
+    if (name.isEmpty())
+        return;
+
+    if (getThemeService().createTheme(name))
+    {
+        refreshThemeList();
+        selectTheme(name);
+    }
+    else
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Create Failed",
+                                               "Could not create theme. The name may already exist or "
+                                               "contain invalid characters.");
+    }
+}
+
+void ThemeEditorComponent::finalizeCloneTheme(const juce::String& sourceTheme, const juce::String& name)
+{
+    if (name.isEmpty())
+        return;
+
+    if (getThemeService().cloneTheme(sourceTheme, name))
+    {
+        refreshThemeList();
+        selectTheme(name);
+    }
+    else
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Clone Failed",
+                                               "Could not clone theme. The name may already exist or "
+                                               "contain invalid characters.");
+    }
+}
+
 void ThemeEditorComponent::handleCreateTheme()
 {
     // Raw new is intentional — JUCE's enterModalState(deleteWhenDismissed=true) takes ownership.
@@ -123,35 +158,17 @@ void ThemeEditorComponent::handleCreateTheme()
     nameInput->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
     nameInput->enterModalState(true, juce::ModalCallbackFunction::create([this](int result) {
-                                   if (result == 1)
-                                   {
-                                       auto* aw = dynamic_cast<juce::AlertWindow*>(
-                                           juce::Component::getCurrentlyModalComponent());
-                                       if (aw)
-                                       {
-                                           auto name = aw->getTextEditorContents("name").trim();
-                                           if (name.isNotEmpty())
-                                           {
-                                               if (getThemeService().createTheme(name))
-                                               {
-                                                   refreshThemeList();
-                                                   selectTheme(name);
-                                               }
-                                               else
-                                               {
-                                                   juce::AlertWindow::showMessageBoxAsync(
-                                                       juce::MessageBoxIconType::WarningIcon, "Create Failed",
-                                                       "Could not create theme. The name may already exist or "
-                                                       "contain invalid characters.");
-                                               }
-                                           }
-                                       }
-                                   }
+                                   if (result != 1)
+                                       return;
+                                   auto* aw =
+                                       dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
+                                   if (aw == nullptr)
+                                       return;
+                                   finalizeCreateTheme(aw->getTextEditorContents("name").trim());
                                }),
                                true);
 }
 
-// NOLINTNEXTLINE(readability-function-size)
 void ThemeEditorComponent::handleCloneTheme()
 {
     if (selectedThemeName_.isEmpty())
@@ -167,30 +184,13 @@ void ThemeEditorComponent::handleCloneTheme()
 
     auto sourceTheme = selectedThemeName_;
     nameInput->enterModalState(true, juce::ModalCallbackFunction::create([this, sourceTheme](int result) {
-                                   if (result == 1)
-                                   {
-                                       auto* aw = dynamic_cast<juce::AlertWindow*>(
-                                           juce::Component::getCurrentlyModalComponent());
-                                       if (aw)
-                                       {
-                                           auto name = aw->getTextEditorContents("name").trim();
-                                           if (name.isNotEmpty())
-                                           {
-                                               if (getThemeService().cloneTheme(sourceTheme, name))
-                                               {
-                                                   refreshThemeList();
-                                                   selectTheme(name);
-                                               }
-                                               else
-                                               {
-                                                   juce::AlertWindow::showMessageBoxAsync(
-                                                       juce::MessageBoxIconType::WarningIcon, "Clone Failed",
-                                                       "Could not clone theme. The name may already exist or "
-                                                       "contain invalid characters.");
-                                               }
-                                           }
-                                       }
-                                   }
+                                   if (result != 1)
+                                       return;
+                                   auto* aw =
+                                       dynamic_cast<juce::AlertWindow*>(juce::Component::getCurrentlyModalComponent());
+                                   if (aw == nullptr)
+                                       return;
+                                   finalizeCloneTheme(sourceTheme, aw->getTextEditorContents("name").trim());
                                }),
                                true);
 }

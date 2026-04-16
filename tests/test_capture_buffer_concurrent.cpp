@@ -80,7 +80,7 @@ TEST_F(CaptureBufferConcurrentTest, OversizedWriteUnderConcurrency)
         std::vector<float> out(128);
         for (int i = 0; i < kReaderIterations; ++i)
         {
-            int n = buffer->read(out.data(), 128, 0);
+            int n = buffer->readBlocking(out.data(), 128, 0);
             for (int j = 0; j < n; ++j)
                 EXPECT_NEAR(out[static_cast<size_t>(j)], 0.42f, 0.001f);
         }
@@ -123,7 +123,7 @@ TEST_F(CaptureBufferConcurrentTest, StereoChannelConsistency)
         juce::AudioBuffer<float> out(2, kBlock);
         for (int i = 0; i < kReaderIterations; ++i)
         {
-            if (buffer->read(out, kBlock) == kBlock)
+            if (buffer->readBlocking(out, kBlock) == kBlock)
             {
                 for (int s = 0; s < kBlock; ++s)
                 {

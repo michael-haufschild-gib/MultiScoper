@@ -16,7 +16,11 @@ namespace oscil
 
 InstanceRegistry::InstanceRegistry()
 {
-    // Default dispatcher uses MessageManager::callAsync
+    // Default dispatcher uses MessageManager::callAsync.
+    // Constructor runs synchronously on the caller's thread; no other thread can
+    // observe dispatcher_ yet, but we still take the lock to satisfy
+    // thread-safety analysis (dispatcher_ is OSCIL_GUARDED_BY(dispatcherMutex_)).
+    const oscil::ScopedLock lock(dispatcherMutex_);
     dispatcher_ = [](std::function<void()> f) {
         if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
         {
@@ -31,17 +35,40 @@ InstanceRegistry::InstanceRegistry()
 
 InstanceRegistry::~InstanceRegistry() { shutdown(); }
 
-void InstanceRegistry::setDispatcher(Dispatcher dispatcher) { dispatcher_ = std::move(dispatcher); }
+void InstanceRegistry::setDispatcher(Dispatcher dispatcher)
+{
+    // Dispatcher replacement is a construction-time operation (typically test
+    // setup or composition-root wiring). Enforce message-thread ownership to
+    // match addListener/removeListener — the dispatcher feeds listener
+    // callbacks, so changing it from another thread while callbacks are in
+    // flight would be a layering violation.
+    jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
+            juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Reject empty callables so a caller passing `{}` or a default-constructed
+    // std::function cannot brick all subsequent notifications — dispatchNotification
+    // would otherwise throw std::bad_function_call and terminate.
+    if (!dispatcher)
+        return;
+
+    const oscil::ScopedLock lock(dispatcherMutex_);
+    dispatcher_ = std::move(dispatcher);
+}
 
 void InstanceRegistry::shutdown()
 {
-    OSCIL_LOG(REGISTRY, "shutdown: clearing " << sources_.size() << " sources");
     // Set shutdown flag first to prevent new async notifications
     shuttingDown_.store(true, std::memory_order_release);
 
     // Clear all sources and listeners
     {
-        std::unique_lock<std::shared_mutex> const lock(mutex_);
+        const oscil::ScopedLock lock(mutex_);
+        // Capture count into a local before logging — clang thread-safety
+        // analysis does not propagate lock ownership into the OSCIL_LOG
+        // lambda, so accessing guarded members from within the log message
+        // fails -Wthread-safety even though the lock is held here.
+        auto const sourceCount = sources_.size();
+        OSCIL_LOG(REGISTRY, "shutdown: clearing " << sourceCount << " sources");
         sources_.clear();
         trackToSourceMap_.clear();
     }
@@ -77,70 +104,90 @@ SourceId InstanceRegistry::tryReuseExistingSource(const juce::String& trackIdent
     return existingIt->second;
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity,readability-function-size)
+SourceId InstanceRegistry::insertNewSource(const juce::String& effectiveTrackId,
+                                           std::shared_ptr<IAudioBuffer> captureBuffer, const juce::String& name,
+                                           int channelCount, double sampleRate,
+                                           std::shared_ptr<AnalysisEngine> analysisEngine)
+{
+    SourceId const sourceId = SourceId::generate();
+    SourceInfo info;
+    info.sourceId = sourceId;
+    info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
+    info.trackIdentifier = effectiveTrackId;
+    info.channelCount = channelCount;
+    info.sampleRate = sampleRate;
+    info.buffer = captureBuffer;
+    info.analysisEngine = analysisEngine;
+    info.active = true;
+    sources_[sourceId] = info;
+    trackToSourceMap_[effectiveTrackId] = sourceId;
+
+    // Local for lock-analysis-friendly logging (OSCIL_LOG lambda does
+    // not propagate lock ownership from enclosing scope).
+    auto const totalSources = sources_.size();
+    OSCIL_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name << " ch=" << channelCount
+                                                    << " sr=" << sampleRate << " total=" << totalSources);
+    return sourceId;
+}
+
+InstanceRegistry::RegisterOutcome InstanceRegistry::resolveOrInsertLocked(
+    const juce::String& effectiveTrackId, const std::shared_ptr<IAudioBuffer>& captureBuffer, const juce::String& name,
+    int validChannelCount, double validSampleRate, const std::shared_ptr<AnalysisEngine>& analysisEngine)
+{
+    RegisterOutcome outcome;
+    outcome.sourceId = tryReuseExistingSource(effectiveTrackId, captureBuffer, name, validChannelCount, validSampleRate,
+                                              analysisEngine);
+    if (outcome.sourceId.isValid())
+    {
+        outcome.kind = RegisterOutcome::Kind::Updated;
+        return outcome;
+    }
+    if (sources_.size() >= MAX_TRACKS)
+    {
+        OSCIL_LOG(REGISTRY, "registerInstance: REJECTED max=" << MAX_TRACKS);
+        outcome.kind = RegisterOutcome::Kind::Rejected;
+        return outcome;
+    }
+    outcome.sourceId =
+        insertNewSource(effectiveTrackId, captureBuffer, name, validChannelCount, validSampleRate, analysisEngine);
+    outcome.kind = RegisterOutcome::Kind::Added;
+    return outcome;
+}
+
 SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
                                             std::shared_ptr<IAudioBuffer> captureBuffer, const juce::String& name,
                                             int channelCount, double sampleRate,
                                             std::shared_ptr<AnalysisEngine> analysisEngine)
 {
-    // Preconditions
-    jassert(captureBuffer != nullptr);
+    // `captureBuffer` may be null so a later dedup re-registration can attach a
+    // real buffer to the already-known source (see tryReuseExistingSource).
     jassert(channelCount > 0 && channelCount <= 2);
     jassert(sampleRate > 0.0);
 
-    // Sanitize inputs: clamp channelCount and sampleRate to valid ranges
     int const validChannelCount = juce::jlimit(1, 2, channelCount);
     double const validSampleRate = std::max(1.0, sampleRate);
+    juce::String const effectiveTrackId =
+        trackIdentifier.isEmpty() ? "__auto_" + juce::Uuid().toString() : trackIdentifier;
 
-    SourceId sourceId = SourceId::invalid();
-    bool shouldNotifyAdded = false;
-    bool shouldNotifyUpdated = false;
-
+    RegisterOutcome outcome;
     {
-        std::unique_lock<std::shared_mutex> const lock(mutex_);
-
-        // Empty track identifiers bypass deduplication to prevent unrelated sources colliding
-        juce::String const effectiveTrackId =
-            trackIdentifier.isEmpty() ? "__auto_" + juce::Uuid().toString() : trackIdentifier;
-
-        sourceId = tryReuseExistingSource(effectiveTrackId, captureBuffer, name, validChannelCount, validSampleRate,
-                                          analysisEngine);
-        if (sourceId.isValid())
-        {
-            shouldNotifyUpdated = true;
-        }
-        else if (sources_.size() >= MAX_TRACKS)
-        {
-            OSCIL_LOG(REGISTRY, "registerInstance: REJECTED max=" << MAX_TRACKS);
-            return SourceId::invalid();
-        }
-        else
-        {
-            sourceId = SourceId::generate();
-            SourceInfo info;
-            info.sourceId = sourceId;
-            info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
-            info.trackIdentifier = effectiveTrackId;
-            info.channelCount = validChannelCount;
-            info.sampleRate = validSampleRate;
-            info.buffer = captureBuffer;
-            info.analysisEngine = analysisEngine;
-            info.active = true;
-            sources_[sourceId] = info;
-            trackToSourceMap_[effectiveTrackId] = sourceId;
-            shouldNotifyAdded = true;
-            OSCIL_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name
-                                                            << " ch=" << validChannelCount << " sr=" << validSampleRate
-                                                            << " total=" << sources_.size());
-        }
+        const oscil::ScopedLock lock(mutex_);
+        outcome = resolveOrInsertLocked(effectiveTrackId, captureBuffer, name, validChannelCount, validSampleRate,
+                                        analysisEngine);
     }
 
-    if (shouldNotifyAdded)
-        notifySourceAdded(sourceId);
-    else if (shouldNotifyUpdated)
-        notifySourceUpdated(sourceId);
-
-    return sourceId;
+    switch (outcome.kind)
+    {
+        case RegisterOutcome::Kind::Added:
+            notifySourceAdded(outcome.sourceId);
+            break;
+        case RegisterOutcome::Kind::Updated:
+            notifySourceUpdated(outcome.sourceId);
+            break;
+        case RegisterOutcome::Kind::Rejected:
+            return SourceId::invalid();
+    }
+    return outcome.sourceId;
 }
 
 void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
@@ -148,7 +195,7 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
     bool shouldNotify = false;
 
     {
-        std::unique_lock<std::shared_mutex> const lock(mutex_);
+        const oscil::ScopedLock lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
@@ -157,9 +204,11 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
             return;
         }
 
-        OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " name=" << it->second.name
-                                                            << " trackId=" << it->second.trackIdentifier
-                                                            << " remaining=" << (sources_.size() - 1));
+        auto const remaining = sources_.size() - 1;
+        auto const nameCopy = it->second.name;
+        auto const trackIdCopy = it->second.trackIdentifier;
+        OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " name=" << nameCopy << " trackId="
+                                                            << trackIdCopy << " remaining=" << remaining);
         // Remove from track map using stored identifier (O(1))
         trackToSourceMap_.erase(it->second.trackIdentifier);
 
@@ -176,7 +225,7 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
 
 std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 {
-    std::shared_lock<std::shared_mutex> const lock(mutex_);
+    const oscil::ScopedSharedLock lock(mutex_);
 
     std::vector<SourceInfo> result;
     result.reserve(sources_.size());
@@ -191,7 +240,7 @@ std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 
 std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) const
 {
-    std::shared_lock<std::shared_mutex> const lock(mutex_);
+    const oscil::ScopedSharedLock lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -202,7 +251,7 @@ std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) 
 
 std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId& sourceId) const
 {
-    std::shared_lock<std::shared_mutex> const lock(mutex_);
+    const oscil::ScopedSharedLock lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -221,7 +270,7 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
     bool shouldNotify = false;
 
     {
-        std::unique_lock<std::shared_mutex> const lock(mutex_);
+        const oscil::ScopedLock lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
@@ -232,7 +281,13 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
 
         OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " name=" << name << " channels="
                                                       << validChannelCount << " sampleRate=" << validSampleRate);
-        it->second.name = name;
+        // Preserve the existing name on empty input, matching the dedup
+        // re-registration path in tryReuseExistingSource. Empty strings are
+        // treated as "leave unchanged" so a caller that only wants to update
+        // channelCount/sampleRate cannot accidentally wipe the user-visible
+        // track name.
+        if (name.isNotEmpty())
+            it->second.name = name;
         it->second.channelCount = validChannelCount;
         it->second.sampleRate = validSampleRate;
         shouldNotify = true;
@@ -247,7 +302,7 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
 
 size_t InstanceRegistry::getSourceCount() const
 {
-    std::shared_lock<std::shared_mutex> const lock(mutex_);
+    const oscil::ScopedSharedLock lock(mutex_);
     return sources_.size();
 }
 
@@ -269,9 +324,21 @@ void InstanceRegistry::dispatchNotification(const char* eventName, const SourceI
                                             void (InstanceRegistryListener::*callback)(const SourceId&))
 {
     OSCIL_LOG(REGISTRY, eventName << ": sourceId=" << sourceId.id);
+
+    // Snapshot the dispatcher under lock so setDispatcher running concurrently
+    // cannot produce a torn read of std::function (which has no thread-safe
+    // copy guarantee). We invoke the snapshot outside the lock to avoid
+    // holding dispatcherMutex_ across arbitrary user code.
+    Dispatcher dispatcherSnapshot;
+    {
+        const oscil::ScopedLock lock(dispatcherMutex_);
+        dispatcherSnapshot = dispatcher_;
+    }
+    if (!dispatcherSnapshot)
+        return; // Defensive: setDispatcher guards this, but avoid UB if a future path bypasses it.
     auto weakThis = juce::WeakReference<InstanceRegistry>(this);
 
-    dispatcher_([weakThis, sourceId, callback]() {
+    dispatcherSnapshot([weakThis, sourceId, callback]() {
         auto* self = weakThis.get();
         if (!self)
             return;

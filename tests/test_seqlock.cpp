@@ -51,7 +51,7 @@ TEST(SeqLockTest, DefaultInitializedDataIsZero)
 {
     // Bug caught: data_ not zero-initialized, reader sees garbage on first read
     SeqLock<CorrelatedPayload> lock;
-    auto snapshot = lock.read();
+    auto snapshot = lock.readBlocking();
 
     EXPECT_EQ(snapshot.a, 0);
     EXPECT_EQ(snapshot.b, 0);
@@ -70,7 +70,7 @@ TEST(SeqLockTest, SingleWriteThenRead)
     payload.d = 42.0;
 
     lock.write(payload);
-    auto snapshot = lock.read();
+    auto snapshot = lock.readBlocking();
 
     EXPECT_EQ(snapshot.a, 42);
     EXPECT_EQ(snapshot.b, 42);
@@ -93,7 +93,7 @@ TEST(SeqLockTest, SequentialWritesReturnLatestValue)
         lock.write(payload);
     }
 
-    auto snapshot = lock.read();
+    auto snapshot = lock.readBlocking();
     EXPECT_EQ(snapshot.a, 100);
     EXPECT_EQ(snapshot.b, 100);
     EXPECT_EQ(snapshot.c, 100);
@@ -110,7 +110,7 @@ TEST(SeqLockTest, LargePayloadConsistency)
         payload.values[i] = 999;
 
     lock.write(payload);
-    auto snapshot = lock.read();
+    auto snapshot = lock.readBlocking();
 
     for (int i = 0; i < 32; ++i)
     {
@@ -151,7 +151,7 @@ TEST(SeqLockTest, ConcurrentSingleWriterSingleReaderConsistency)
     std::thread reader([&]() {
         while (running.load(std::memory_order_relaxed))
         {
-            auto snapshot = lock.read();
+            auto snapshot = lock.readBlocking();
             // All fields must be from the same write
             if (snapshot.a != snapshot.b || snapshot.b != snapshot.c || static_cast<double>(snapshot.a) != snapshot.d)
             {
@@ -211,7 +211,7 @@ TEST(SeqLockTest, ConcurrentSingleWriterMultipleReadersConsistency)
         readers.emplace_back([&]() {
             while (running.load(std::memory_order_relaxed))
             {
-                auto snapshot = lock.read();
+                auto snapshot = lock.readBlocking();
                 if (snapshot.a != snapshot.b || snapshot.b != snapshot.c ||
                     static_cast<double>(snapshot.a) != snapshot.d)
                 {
@@ -264,7 +264,7 @@ TEST(SeqLockTest, ConcurrentLargePayloadConsistency)
     std::thread reader([&]() {
         while (running.load(std::memory_order_relaxed))
         {
-            auto snapshot = lock.read();
+            auto snapshot = lock.readBlocking();
             // All 32 elements must be the same value
             int64_t first = snapshot.values[0];
             for (int j = 1; j < 32; ++j)
@@ -315,7 +315,7 @@ TEST(SeqLockTest, ReaderSeesLatestAfterWriterStops)
     }
 
     // After writer stops, reader must see the final value
-    auto snapshot = lock.read();
+    auto snapshot = lock.readBlocking();
     EXPECT_EQ(snapshot.a, kFinalValue);
     EXPECT_EQ(snapshot.b, kFinalValue);
     EXPECT_EQ(snapshot.c, kFinalValue);
@@ -350,7 +350,7 @@ TEST(SeqLockTest, CaptureFrameMetadataConcurrentConsistency)
     std::thread reader([&]() {
         while (running.load(std::memory_order_relaxed))
         {
-            auto s = lock.read();
+            auto s = lock.readBlocking();
             if (s.bpm >= 1.0)
             {
                 bool ok = std::abs(s.sampleRate - 1000.0 * s.bpm) < 0.01 &&
@@ -385,4 +385,111 @@ TEST(SeqLockTest, PayloadTypesAreTriviallyCopyable)
     EXPECT_TRUE(std::is_trivially_copyable_v<CaptureFrameMetadata>);
     EXPECT_TRUE(std::is_trivially_copyable_v<CorrelatedPayload>);
     EXPECT_TRUE(std::is_trivially_copyable_v<LargePayload>);
+}
+
+// ============================================================================
+// tryRead: Real-time-safe non-blocking read
+// ============================================================================
+
+TEST(SeqLockTryReadTest, ReturnsValueWhenNoContention)
+{
+    SeqLock<CorrelatedPayload> lock;
+
+    CorrelatedPayload payload;
+    payload.a = 7;
+    payload.b = 7;
+    payload.c = 7;
+    payload.d = 7.0;
+    lock.write(payload);
+
+    auto snapshot = lock.tryRead();
+    ASSERT_TRUE(snapshot.has_value());
+    EXPECT_EQ(snapshot->a, 7);
+    EXPECT_EQ(snapshot->b, 7);
+    EXPECT_EQ(snapshot->c, 7);
+    EXPECT_DOUBLE_EQ(snapshot->d, 7.0);
+}
+
+TEST(SeqLockTryReadTest, DefaultInitializedReadSucceeds)
+{
+    SeqLock<CorrelatedPayload> lock;
+    auto snapshot = lock.tryRead();
+    ASSERT_TRUE(snapshot.has_value());
+    EXPECT_EQ(snapshot->a, 0);
+    EXPECT_EQ(snapshot->b, 0);
+    EXPECT_EQ(snapshot->c, 0);
+    EXPECT_DOUBLE_EQ(snapshot->d, 0.0);
+}
+
+TEST(SeqLockTryReadTest, ConcurrentReadsAreEitherValidOrNullopt)
+{
+    // Under contention tryRead must NEVER return a torn snapshot.
+    // It either returns nullopt (writer mid-write, or torn detected) or
+    // a fully self-consistent payload. No yields.
+    SeqLock<LargePayload> lock;
+    std::atomic<bool> running{true};
+    std::atomic<int> wc{0}, validReads{0}, nullReads{0}, inconsistent{0};
+
+    std::thread writer([&]() {
+        for (int64_t i = 1; running.load(std::memory_order_relaxed); ++i)
+        {
+            LargePayload payload;
+            for (int j = 0; j < 32; ++j)
+                payload.values[j] = i;
+            lock.write(payload);
+            wc.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    std::thread reader([&]() {
+        while (running.load(std::memory_order_relaxed))
+        {
+            auto snapshot = lock.tryRead();
+            if (!snapshot.has_value())
+            {
+                nullReads.fetch_add(1, std::memory_order_relaxed);
+                continue;
+            }
+            int64_t const first = snapshot->values[0];
+            for (int j = 1; j < 32; ++j)
+            {
+                if (snapshot->values[j] != first)
+                {
+                    inconsistent.fetch_add(1, std::memory_order_relaxed);
+                    break;
+                }
+            }
+            validReads.fetch_add(1, std::memory_order_relaxed);
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    running.store(false, std::memory_order_relaxed);
+    writer.join();
+    reader.join();
+
+    EXPECT_GT(wc.load(), 1000);
+    EXPECT_GT(validReads.load() + nullReads.load(), 1000);
+    EXPECT_EQ(inconsistent.load(), 0) << "tryRead returned torn snapshot (" << inconsistent.load() << " torn)";
+}
+
+TEST(SeqLockTryReadTest, ReturnsLatestValueAfterWriterStops)
+{
+    SeqLock<CorrelatedPayload> lock;
+    for (int64_t i = 1; i <= 100; ++i)
+    {
+        CorrelatedPayload payload;
+        payload.a = i;
+        payload.b = i;
+        payload.c = i;
+        payload.d = static_cast<double>(i);
+        lock.write(payload);
+    }
+
+    auto snapshot = lock.tryRead();
+    ASSERT_TRUE(snapshot.has_value());
+    EXPECT_EQ(snapshot->a, 100);
+    EXPECT_EQ(snapshot->b, 100);
+    EXPECT_EQ(snapshot->c, 100);
+    EXPECT_DOUBLE_EQ(snapshot->d, 100.0);
 }

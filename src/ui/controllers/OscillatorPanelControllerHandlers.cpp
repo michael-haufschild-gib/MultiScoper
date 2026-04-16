@@ -49,7 +49,21 @@ void OscillatorPanelController::oscillatorConfigRequested(const OscillatorId& os
     }
 }
 
-// NOLINTNEXTLINE(readability-function-size)
+void OscillatorPanelController::applyOscillatorColor(const OscillatorId& oscillatorId, juce::Colour color)
+{
+    auto& oscilState = dataProvider_.getState();
+    auto oscList = oscilState.getOscillators();
+    for (auto& o : oscList)
+    {
+        if (o.getId() == oscillatorId)
+        {
+            o.setColour(color);
+            oscilState.updateOscillator(o);
+            return;
+        }
+    }
+}
+
 void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorId& oscillatorId)
 {
     if (!dialogManager_)
@@ -63,19 +77,9 @@ void OscillatorPanelController::oscillatorColorConfigRequested(const OscillatorI
         if (osc.getId() == oscillatorId)
         {
             dialogManager_->showColorDialog(osc.getColour(), [this, oscillatorId](juce::Colour color) {
-                auto& oscilState = dataProvider_.getState();
-                auto oscList = oscilState.getOscillators();
-                for (auto& o : oscList)
-                {
-                    if (o.getId() == oscillatorId)
-                    {
-                        o.setColour(color);
-                        oscilState.updateOscillator(o);
-                        break;
-                    }
-                }
+                applyOscillatorColor(oscillatorId, color);
             });
-            break;
+            return;
         }
     }
 }
@@ -118,6 +122,53 @@ void OscillatorPanelController::oscillatorVisibilityChanged(const OscillatorId& 
             break;
         }
     }
+}
+
+void OscillatorPanelController::oscillatorNameChanged(const OscillatorId& oscillatorId, const juce::String& newName)
+{
+    OSCIL_LOG(CONTROLLER, "oscillatorNameChanged: id=" << oscillatorId.id << " newName=" << newName);
+    auto const trimmedName = newName.trim();
+    // Reject empty/whitespace-only names — preserves the existing name on blank input.
+    if (!Oscillator::isValidName(trimmedName))
+        return;
+
+    auto& state = dataProvider_.getState();
+    auto oscillators = state.getOscillators();
+    for (auto& osc : oscillators)
+    {
+        if (osc.getId() == oscillatorId)
+        {
+            if (osc.getName() == trimmedName)
+                return; // No change — skip redundant state update.
+            osc.setName(trimmedName);
+            state.updateOscillator(osc);
+            return;
+        }
+    }
+}
+
+void OscillatorPanelController::oscillatorsReordered(int fromIndex, int toIndex)
+{
+    OSCIL_LOG(CONTROLLER, "oscillatorsReordered: from=" << fromIndex << " to=" << toIndex);
+    if (fromIndex == toIndex || fromIndex < 0 || toIndex < 0)
+        return;
+
+    auto& state = dataProvider_.getState();
+    auto const oscCount = static_cast<int>(state.getOscillators().size());
+    if (fromIndex >= oscCount || toIndex >= oscCount)
+        return;
+
+    // Persist the new ordering to state. The ValueTree listener chain triggers
+    // applyOscillatorPropertyChange for each affected oscillator and refreshes
+    // the sidebar/panes accordingly.
+    //
+    // Note: fromIndex and toIndex are positions in the currently displayed
+    // sidebar list. When no filter is active this matches the global orderIndex
+    // space one-to-one, which is what state.reorderOscillators expects. Drag
+    // reorder while a non-All filter is applied is intentionally not supported
+    // yet — the UI disables drag while a filter is active to avoid index
+    // mismatch (filter indices would need per-ID translation).
+    state.reorderOscillators(fromIndex, toIndex);
 }
 
 void OscillatorPanelController::oscillatorPaneSelectionRequested(const OscillatorId& oscillatorId)
@@ -248,44 +299,49 @@ void OscillatorPanelController::updateOscillatorSource(const OscillatorId& oscil
 
 // ValueTree Listeners
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+bool OscillatorPanelController::dispatchOscillatorPropertyToPane(const Oscillator& osc,
+                                                                 const juce::Identifier& property)
+{
+    const auto& oscId = osc.getId();
+    for (auto& pane : paneComponents_)
+    {
+        if (!pane || pane->getPaneId() != osc.getPaneId())
+            continue;
+
+        if (property == StateIds::Name)
+            pane->updateOscillatorName(oscId, osc.getName());
+        else if (property == StateIds::Colour)
+            pane->updateOscillatorColor(oscId, osc.getColour());
+        else if (property == StateIds::ProcessingMode || property == StateIds::Visible)
+            pane->updateOscillator(oscId, osc.getProcessingMode(), osc.isVisible());
+        else if (property == StateIds::SourceId)
+            pane->updateOscillatorSource(oscId, osc.getSourceId());
+
+        return true;
+    }
+    return false;
+}
+
 void OscillatorPanelController::applyOscillatorPropertyChange(const OscillatorId& oscId,
                                                               const juce::Identifier& property)
 {
     OSCIL_LOG(CONTROLLER, "applyOscillatorPropertyChange: oscId=" << oscId.id << " property=" << property.toString());
     auto oscillators = dataProvider_.getState().getOscillators();
-    bool handled = false;
 
     for (const auto& osc : oscillators)
     {
-        if (osc.getId() == oscId)
-        {
-            if (sidebar_)
-                sidebar_->refreshOscillatorList(oscillators);
+        if (osc.getId() != oscId)
+            continue;
 
-            for (auto& pane : paneComponents_)
-            {
-                if (pane && pane->getPaneId() == osc.getPaneId())
-                {
-                    if (property == StateIds::Name)
-                        pane->updateOscillatorName(oscId, osc.getName());
-                    else if (property == StateIds::Colour)
-                        pane->updateOscillatorColor(oscId, osc.getColour());
-                    else if (property == StateIds::ProcessingMode || property == StateIds::Visible)
-                        pane->updateOscillator(oscId, osc.getProcessingMode(), osc.isVisible());
-                    else if (property == StateIds::SourceId)
-                        pane->updateOscillatorSource(oscId, osc.getSourceId());
+        if (sidebar_)
+            sidebar_->refreshOscillatorList(oscillators);
 
-                    handled = true;
-                    break;
-                }
-            }
-            break;
-        }
+        if (dispatchOscillatorPropertyToPane(osc, property))
+            return;
+        break;
     }
 
-    if (!handled)
-        triggerAsyncUpdate();
+    triggerAsyncUpdate();
 }
 
 void OscillatorPanelController::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)

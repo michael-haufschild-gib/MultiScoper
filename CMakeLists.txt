@@ -59,13 +59,14 @@ option(OSCIL_COPY_PLUGIN_AFTER_BUILD "Copy built plugins to system plugin direct
 # Option for OpenGL support
 option(OSCIL_ENABLE_OPENGL "Enable OpenGL context for GPU compositing" ON)
 
-# Option for Melatonin Inspector (UI debugging tool)
-# Disabled by default for CI/release builds - creates a separate window that can timeout in headless environments
-option(OSCIL_ENABLE_INSPECTOR "Enable Melatonin Inspector for UI debugging (development only)" OFF)
-
 # Option for RealtimeSanitizer (requires Clang 18+)
 # Detects real-time safety violations: allocations, locks, syscalls in audio thread
 option(OSCIL_ENABLE_RTSAN "Enable RealtimeSanitizer for real-time safety checking" OFF)
+
+# Option for libFuzzer targets (requires mainline LLVM Clang, Linux-only in CI).
+# AppleClang does NOT ship a working libFuzzer runtime. See fuzz/CMakeLists.txt
+# and docs/decisions/010-fuzz-targets.md for the full rationale.
+option(OSCIL_BUILD_FUZZERS "Build libFuzzer targets (Linux + Clang only)" OFF)
 
 # Option for Clang-Tidy Static Analysis
 # Catches performance issues, bugs, and modernization opportunities
@@ -183,17 +184,6 @@ CPMAddPackage(
     GIT_TAG e1f67893cc409a40c1154fa2e78c97046da24ce0
 )
 
-# Melatonin Inspector for UI debugging (browser-like devtools for JUCE)
-# Only fetch/build when explicitly enabled
-if(OSCIL_ENABLE_INSPECTOR)
-    CPMAddPackage(
-        NAME melatonin_inspector
-        GITHUB_REPOSITORY sudara/melatonin_inspector
-        GIT_TAG origin/main
-        SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/melatonin_inspector
-    )
-endif()
-
 # Include source file definitions
 include(cmake/Sources.cmake)
 
@@ -268,7 +258,6 @@ target_compile_definitions(Oscil
         JUCE_REPORT_APP_USAGE=0
         JUCE_STRICT_REFCOUNTEDPOINTER=1
         $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
-        $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:OSCIL_ENABLE_INSPECTOR=1>
 )
 
 # Strict warnings — applied via interface library so only project targets link it.
@@ -307,7 +296,6 @@ target_link_libraries(Oscil
         juce::juce_events
         juce::juce_dsp
         nlohmann_json::nlohmann_json
-        $<$<BOOL:${OSCIL_ENABLE_INSPECTOR}>:melatonin_inspector>
         $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
     PUBLIC
         juce::juce_recommended_config_flags
@@ -316,6 +304,18 @@ target_link_libraries(Oscil
         OscilStrictWarnings      # -Werror for project code
         OscilWarningSuppressions # Must be after JUCE warnings to override
 )
+
+# Enable Clang thread-safety analysis ONLY on InstanceRegistry.cpp.
+# Applied per-source rather than globally because types not yet annotated
+# with capability/guarded_by would produce false negatives if -Wthread-safety
+# fired against them. Expand this list as more types adopt oscil::Mutex.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set_source_files_properties(
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/InstanceRegistry.cpp
+        PROPERTIES
+            COMPILE_OPTIONS "-Wthread-safety;-Wthread-safety-analysis;-Werror=thread-safety"
+    )
+endif()
 
 # Apply clang-tidy only to our source files (excluding JUCE)
 if(OSCIL_CLANG_TIDY_CMD)
@@ -460,4 +460,18 @@ option(OSCIL_BUILD_TEST_HARNESS "Build E2E test harness application" OFF)
 
 if(OSCIL_BUILD_TEST_HARNESS)
     add_subdirectory(test_harness)
+endif()
+
+# libFuzzer targets (optional, Clang + Linux only — AppleClang is not supported).
+# See fuzz/CMakeLists.txt and docs/decisions/010-fuzz-targets.md.
+if(OSCIL_BUILD_FUZZERS)
+    add_subdirectory(fuzz)
+endif()
+
+# Google Benchmark microbenchmarks (optional developer tool / CI artifact).
+# NO regression gate — see docs/decisions/012-benchmarks-no-regression-gate.md.
+option(OSCIL_BUILD_BENCHMARKS "Build Google Benchmark microbenchmarks" OFF)
+
+if(OSCIL_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif()

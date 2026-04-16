@@ -14,8 +14,8 @@ namespace oscil
 
 EngineTimingConfig TimingEngine::getConfig() const
 {
-    auto cfg = configLock_.read();
-    auto hostInfo = hostInfoLock_.read();
+    auto cfg = configLock_.readBlocking();
+    auto hostInfo = hostInfoLock_.readBlocking();
 
     EngineTimingConfig result;
     result.timingMode = cfg.timingMode;
@@ -36,7 +36,7 @@ EngineTimingConfig TimingEngine::getConfig() const
     return result;
 }
 
-HostTimingInfo TimingEngine::getHostInfo() const { return hostInfoLock_.read(); }
+HostTimingInfo TimingEngine::getHostInfo() const { return hostInfoLock_.readBlocking(); }
 
 // === Configuration Setters ===
 
@@ -58,7 +58,7 @@ void TimingEngine::setConfig(const EngineTimingConfig& config)
     configLock_.write(cfg);
 
     // Update host BPM in the host info (written from UI thread for setConfig)
-    auto hostInfo = hostInfoLock_.read();
+    auto hostInfo = hostInfoLock_.readBlocking();
     hostInfo.bpm = static_cast<double>(config.hostBPM);
     hostInfoLock_.write(hostInfo);
     audioThreadHostInfo_.bpm = static_cast<double>(config.hostBPM);
@@ -69,7 +69,7 @@ void TimingEngine::setConfig(const EngineTimingConfig& config)
 
 void TimingEngine::setTimingMode(TimingMode mode)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     if (cfg.timingMode != mode)
     {
         cfg.timingMode = mode;
@@ -81,7 +81,7 @@ void TimingEngine::setTimingMode(TimingMode mode)
 
 void TimingEngine::setHostSyncEnabled(bool enabled)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     if (cfg.hostSyncEnabled != enabled)
     {
         cfg.hostSyncEnabled = enabled;
@@ -96,7 +96,7 @@ void TimingEngine::setInternalBPM(float bpm)
 {
     bpm = juce::jlimit(EngineTimingConfig::MIN_BPM, EngineTimingConfig::MAX_BPM, bpm);
 
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     if (std::abs(cfg.internalBPM - bpm) > 0.01f)
     {
         cfg.internalBPM = bpm;
@@ -110,7 +110,7 @@ void TimingEngine::setTimeIntervalMs(float ms)
 {
     ms = juce::jlimit(EngineTimingConfig::MIN_TIME_INTERVAL_MS, EngineTimingConfig::MAX_TIME_INTERVAL_MS, ms);
 
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     if (std::abs(cfg.timeIntervalMs - ms) > 0.001f)
     {
         cfg.timeIntervalMs = ms;
@@ -122,7 +122,7 @@ void TimingEngine::setTimeIntervalMs(float ms)
 
 void TimingEngine::setNoteInterval(EngineNoteInterval interval)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     if (cfg.noteInterval != interval)
     {
         cfg.noteInterval = interval;
@@ -134,7 +134,7 @@ void TimingEngine::setNoteInterval(EngineNoteInterval interval)
 
 void TimingEngine::setWaveformTriggerMode(WaveformTriggerMode mode)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     cfg.triggerMode = mode;
     configLock_.write(cfg);
 }
@@ -142,42 +142,42 @@ void TimingEngine::setWaveformTriggerMode(WaveformTriggerMode mode)
 void TimingEngine::setTriggerThreshold(float threshold)
 {
     threshold = juce::jlimit(0.0f, 1.0f, threshold);
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     cfg.triggerThreshold = threshold;
     configLock_.write(cfg);
 }
 
 void TimingEngine::setTriggerChannel(int channel)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     cfg.triggerChannel = channel;
     configLock_.write(cfg);
 }
 
 void TimingEngine::setTriggerHysteresis(float hysteresis)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     cfg.triggerHysteresis = hysteresis;
     configLock_.write(cfg);
 }
 
 void TimingEngine::setMidiTriggerNote(int note)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     cfg.midiTriggerNote = note;
     configLock_.write(cfg);
 }
 
 void TimingEngine::setMidiTriggerChannel(int channel)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     cfg.midiTriggerChannel = channel;
     configLock_.write(cfg);
 }
 
 void TimingEngine::setSyncToPlayhead(bool enabled)
 {
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
     cfg.syncToPlayhead = enabled;
     configLock_.write(cfg);
 }
@@ -187,7 +187,7 @@ void TimingEngine::setSyncToPlayhead(bool enabled)
 juce::ValueTree TimingEngine::toValueTree() const
 {
     juce::ValueTree state(TimingIds::Timing);
-    auto cfg = configLock_.read();
+    auto cfg = configLock_.readBlocking();
 
     state.setProperty(TimingIds::TimingMode, static_cast<int>(cfg.timingMode), nullptr);
     state.setProperty(TimingIds::HostSyncEnabled, cfg.hostSyncEnabled, nullptr);
@@ -296,7 +296,7 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
     cfg.noteInterval = entityToEngineNoteInterval(entityConfig.noteInterval);
     cfg.hostSyncEnabled = entityConfig.hostSyncEnabled;
     cfg.syncToPlayhead = entityConfig.syncToPlayhead;
-    cfg.internalBPM = configLock_.read().internalBPM; // Preserve existing
+    cfg.internalBPM = configLock_.readBlocking().internalBPM; // Preserve existing
 
     // Convert entity trigger mode to waveform trigger
     WaveformTriggerMode newTriggerMode = WaveformTriggerMode::None;
@@ -337,7 +337,7 @@ void TimingEngine::applyEntityConfig(const TimingConfig& entityConfig)
     configLock_.write(cfg);
 
     // Update host BPM in the host info
-    auto hostInfo = hostInfoLock_.read();
+    auto hostInfo = hostInfoLock_.readBlocking();
     hostInfo.bpm = static_cast<double>(entityConfig.hostBPM);
     hostInfoLock_.write(hostInfo);
     audioThreadHostInfo_.bpm = static_cast<double>(entityConfig.hostBPM);
@@ -382,8 +382,8 @@ void convertTriggerMode(const TimingConfigData& cfg, TimingConfig& out)
 
 TimingConfig TimingEngine::toEntityConfig() const
 {
-    auto cfg = configLock_.read();
-    auto hostInfo = hostInfoLock_.read();
+    auto cfg = configLock_.readBlocking();
+    auto hostInfo = hostInfoLock_.readBlocking();
 
     TimingConfig entityConfig;
     entityConfig.timingMode = cfg.timingMode;

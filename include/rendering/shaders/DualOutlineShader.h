@@ -42,8 +42,19 @@ private:
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
 
-    void drawChannel(juce::OpenGLExtensionFunctions& ext, const std::vector<float>& samples, float centerY,
-                     float amplitude, float boundsX, float boundsWidth, float lineWidth, GLint posLoc, GLint distLoc);
+    /// Per-call draw parameters grouped to keep drawChannel() under the parameter limit.
+    struct DrawArgs
+    {
+        float centerY;
+        float amplitude;
+        float boundsX;
+        float boundsWidth;
+        float lineWidth;
+        GLint posLoc;
+        GLint distLoc;
+    };
+
+    void drawChannel(juce::OpenGLExtensionFunctions& ext, const std::vector<float>& samples, const DrawArgs& args);
 #endif
 };
 

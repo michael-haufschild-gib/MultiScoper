@@ -21,7 +21,43 @@ FramebufferPool::~FramebufferPool()
 
 std::unique_ptr<Framebuffer> FramebufferPool::createFramebuffer() { return std::make_unique<Framebuffer>(); }
 
-// NOLINTNEXTLINE(readability-function-size)
+bool FramebufferPool::createCoreFBOs(juce::OpenGLContext& context, int width, int height)
+{
+    // Ensure FBOs are allocated
+    if (!waveformFBO_)
+        waveformFBO_ = createFramebuffer();
+    if (!pingFBO_)
+        pingFBO_ = createFramebuffer();
+    if (!pongFBO_)
+        pongFBO_ = createFramebuffer();
+
+    // Waveform FBO: depth buffer + depth texture for 3D rendering and post-processing (DoF)
+    if (!waveformFBO_->create(context, width, height, 0, GL_RGBA16F, true, true))
+    {
+        DBG("FramebufferPool: Failed to create waveform FBO");
+        return false;
+    }
+
+    // Ping FBO for effect chain (HDR, no depth)
+    if (!pingFBO_->create(context, width, height, 0, GL_RGBA16F, false))
+    {
+        DBG("FramebufferPool: Failed to create ping FBO");
+        waveformFBO_->destroy(context);
+        return false;
+    }
+
+    // Pong FBO for effect chain (HDR, no depth)
+    if (!pongFBO_->create(context, width, height, 0, GL_RGBA16F, false))
+    {
+        DBG("FramebufferPool: Failed to create pong FBO");
+        waveformFBO_->destroy(context);
+        pingFBO_->destroy(context);
+        return false;
+    }
+
+    return true;
+}
+
 bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int height)
 {
     if (initialized_)
@@ -31,40 +67,9 @@ bool FramebufferPool::initialize(juce::OpenGLContext& context, int width, int he
     width_ = width;
     height_ = height;
 
-    // Ensure FBOs are created
-    if (!waveformFBO_)
-        waveformFBO_ = createFramebuffer();
-    if (!pingFBO_)
-        pingFBO_ = createFramebuffer();
-    if (!pongFBO_)
-        pongFBO_ = createFramebuffer();
-
-    // Create waveform FBO with depth buffer (for 3D rendering) and HDR format
-    // Enable depth texture for post-processing effects like Depth of Field
-    if (!waveformFBO_->create(context, width, height, 0, GL_RGBA16F, true, true))
-    {
-        DBG("FramebufferPool: Failed to create waveform FBO");
+    if (!createCoreFBOs(context, width, height))
         return false;
-    }
 
-    // Create ping FBO for effect chain (HDR, no depth)
-    if (!pingFBO_->create(context, width, height, 0, GL_RGBA16F, false))
-    {
-        DBG("FramebufferPool: Failed to create ping FBO");
-        waveformFBO_->destroy(context);
-        return false;
-    }
-
-    // Create pong FBO for effect chain (HDR, no depth)
-    if (!pongFBO_->create(context, width, height, 0, GL_RGBA16F, false))
-    {
-        DBG("FramebufferPool: Failed to create pong FBO");
-        waveformFBO_->destroy(context);
-        pingFBO_->destroy(context);
-        return false;
-    }
-
-    // Create fullscreen quad for effect rendering
     if (!createFullscreenQuad(context))
     {
         DBG("FramebufferPool: Failed to create fullscreen quad");

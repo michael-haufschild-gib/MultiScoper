@@ -15,6 +15,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace oscil
@@ -196,23 +197,39 @@ public:
     //==========================================================================
 
     /**
-     * Read the most recent samples
+     * Blocking read (UI/message thread only — NOT real-time safe).
      * @param output Buffer to write samples into
      * @param numSamples Number of samples to read (at capture rate)
      * @param channel Channel index
      * @return Actual number of samples read
      */
-    [[nodiscard]] int read(float* output, int numSamples, int channel = 0) const override;
+    [[nodiscard]] int readBlocking(float* output, int numSamples, int channel = 0) const override;
 
     /**
-     * Read into span
+     * Blocking read into span (UI/message thread only).
      */
-    [[nodiscard]] int read(std::span<float> output, int channel = 0) const;
+    [[nodiscard]] int readBlocking(std::span<float> output, int channel = 0) const;
 
     /**
-     * Read all channels
+     * Blocking multi-channel read (UI/message thread only).
      */
-    [[nodiscard]] int read(juce::AudioBuffer<float>& output, int numSamples) const override;
+    [[nodiscard]] int readBlocking(juce::AudioBuffer<float>& output, int numSamples) const override;
+
+    /**
+     * Real-time-safe single-pass snapshot read. Returns std::nullopt on torn read
+     * or when the underlying buffer is being swapped.
+     */
+    [[nodiscard]] std::optional<int> readSnapshot(float* output, int numSamples, int channel = 0) const override;
+
+    /**
+     * Real-time-safe snapshot read into a span. Returns std::nullopt on torn read.
+     */
+    [[nodiscard]] std::optional<int> readSnapshot(std::span<float> output, int channel = 0) const;
+
+    /**
+     * Real-time-safe multi-channel snapshot read. Returns std::nullopt on torn read.
+     */
+    [[nodiscard]] std::optional<int> readSnapshot(juce::AudioBuffer<float>& output, int numSamples) const override;
 
     /**
      * Get the latest metadata

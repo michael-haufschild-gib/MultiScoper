@@ -156,6 +156,10 @@ private:
     void updateColorSections();
     void handleCreateTheme();
     void handleCloneTheme();
+    /// Finalize theme creation after the "New Theme" modal closes. name has been trimmed.
+    void finalizeCreateTheme(const juce::String& name);
+    /// Finalize theme clone after the "Clone Theme" modal closes. name has been trimmed.
+    void finalizeCloneTheme(const juce::String& sourceTheme, const juce::String& name);
     void handleDeleteTheme();
     void handleImportTheme();
     void handleExportTheme();

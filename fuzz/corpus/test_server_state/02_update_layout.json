@@ -1,0 +1,7 @@
+{
+  "columns": 2,
+  "panes": [
+    {"id": "pane-1", "heightRatio": 0.5, "columnIndex": 0},
+    {"id": "pane-2", "heightRatio": 0.5, "columnIndex": 1}
+  ]
+}

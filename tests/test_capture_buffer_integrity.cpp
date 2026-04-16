@@ -38,7 +38,7 @@ TEST_F(CaptureBufferIntegrityTest, MultipleWrapsPreserveExactSampleValues)
     }
 
     std::vector<float> out(kBlock);
-    ASSERT_EQ(buffer->read(out.data(), kBlock, 0), kBlock);
+    ASSERT_EQ(buffer->readBlocking(out.data(), kBlock, 0), kBlock);
     for (int i = 0; i < kBlock; ++i)
         EXPECT_NEAR(out[i], lastDC, 0.001f) << "Sample " << i << " wrong after wraps";
 }
@@ -56,8 +56,8 @@ TEST_F(CaptureBufferIntegrityTest, StereoChannelSeparationAllSamples)
     buffer->write(buf, CaptureFrameMetadata{});
 
     std::vector<float> L(kN), R(kN);
-    ASSERT_EQ(buffer->read(L.data(), kN, 0), kN);
-    ASSERT_EQ(buffer->read(R.data(), kN, 1), kN);
+    ASSERT_EQ(buffer->readBlocking(L.data(), kN, 0), kN);
+    ASSERT_EQ(buffer->readBlocking(R.data(), kN, 1), kN);
 
     for (int i = 0; i < kN; ++i)
     {
@@ -73,14 +73,14 @@ TEST_F(CaptureBufferIntegrityTest, ClearProducesSilenceOnRead)
     buffer->clear();
 
     std::vector<float> out(512, -999.0f);
-    EXPECT_EQ(buffer->read(out.data(), 512, 0), 0);
+    EXPECT_EQ(buffer->readBlocking(out.data(), 512, 0), 0);
 
     // Write new data and verify no bleed-through
     CaptureFrameMetadata m;
     buffer->write(generateDC(100, 0.1f), m);
 
     std::vector<float> fresh(100);
-    ASSERT_EQ(buffer->read(fresh.data(), 100, 0), 100);
+    ASSERT_EQ(buffer->readBlocking(fresh.data(), 100, 0), 100);
     for (int i = 0; i < 100; ++i)
         EXPECT_NEAR(fresh[i], 0.1f, 0.001f) << "Stale data at " << i;
 }
@@ -168,8 +168,8 @@ TEST_F(CaptureBufferIntegrityTest, WriteExcessChannelsCapsAtMax)
 
     // Only channels 0 and 1 should be stored
     std::vector<float> ch0(64), ch1(64);
-    ASSERT_EQ(buffer->read(ch0.data(), 64, 0), 64);
-    ASSERT_EQ(buffer->read(ch1.data(), 64, 1), 64);
+    ASSERT_EQ(buffer->readBlocking(ch0.data(), 64, 0), 64);
+    ASSERT_EQ(buffer->readBlocking(ch1.data(), 64, 1), 64);
 
     EXPECT_NEAR(ch0[0], 0.0f, 0.001f);  // channel 0: 0 * 0.25
     EXPECT_NEAR(ch1[0], 0.25f, 0.001f); // channel 1: 1 * 0.25
@@ -220,7 +220,7 @@ TEST_F(CaptureBufferIntegrityTest, AudioBufferReadCrossChannelConsistency)
     buffer->write(stereo, CaptureFrameMetadata{});
 
     juce::AudioBuffer<float> output(2, kN);
-    int read = buffer->read(output, kN);
+    int read = buffer->readBlocking(output, kN);
     ASSERT_EQ(read, kN);
 
     for (int i = 0; i < kN; ++i)

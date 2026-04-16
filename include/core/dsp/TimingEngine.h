@@ -164,7 +164,7 @@ public:
      */
     [[nodiscard]] NoteInterval getNoteIntervalAsEntity() const
     {
-        auto cfg = configLock_.read();
+        auto cfg = configLock_.readBlocking();
         return engineToEntityNoteInterval(cfg.noteInterval);
     }
 

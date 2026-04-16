@@ -77,10 +77,14 @@ void TestHttpServer::handleMetricsStats(const httplib::Request& req, httplib::Re
     {
         try
         {
-            periodMs = std::stoi(periodParam);
+            std::size_t pos = 0;
+            periodMs = std::stoi(periodParam, &pos);
+            if (pos != periodParam.size())
+                throw std::invalid_argument("trailing characters");
         }
         catch (const std::exception&)
         {
+            res.status = 400;
             res.set_content(errorResponse("Invalid periodMs parameter").dump(), "application/json");
             return;
         }

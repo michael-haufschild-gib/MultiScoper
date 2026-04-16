@@ -168,6 +168,9 @@ private:
     // Cached layout
     std::vector<juce::Rectangle<int>> cachedTabBounds_;
     void updateLayoutCache();
+    /// Compute cachedTabBounds_ for the given orientation.
+    void updateHorizontalLayoutCache(juce::Rectangle<int> bounds);
+    void updateVerticalLayoutCache(juce::Rectangle<int> bounds);
 
     // TestIdSupport
     void registerTestId() override;

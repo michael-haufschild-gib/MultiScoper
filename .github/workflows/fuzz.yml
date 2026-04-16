@@ -1,0 +1,109 @@
+name: Fuzz
+
+on:
+  schedule:
+    # Nightly at 02:00 UTC.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    name: libFuzzer (LLVM 20)
+    runs-on: ubuntu-24.04
+    # Crashes must fail the workflow.
+    continue-on-error: false
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: fuzz-${{ github.ref_name }}
+          restore-keys: |
+            fuzz-${{ github.ref_name }}
+            fuzz-main
+            fuzz-
+          max-size: 1G
+          verbose: 2
+
+      # Same pattern as the rtsan job in build_and_test.yml: mainline LLVM
+      # via apt.llvm.org, pinned to 20. Ubuntu's packaged clang does not ship
+      # a reliable libFuzzer runtime.
+      - name: Install LLVM 20
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 20
+          sudo apt-get install -y clang-20 lld-20
+
+      - name: Install JUCE dependencies
+        run: |
+          sudo apt-get install -y \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            ladspa-sdk \
+            libcurl4-openssl-dev \
+            libfreetype6-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            libwebkit2gtk-4.1-dev \
+            libglu1-mesa-dev \
+            mesa-common-dev
+
+      - name: Configure CMake (fuzzers)
+        run: |
+          cmake -B build/fuzz -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=clang-20 \
+            -DCMAKE_CXX_COMPILER=clang++-20 \
+            -DOSCIL_BUILD_FUZZERS=ON \
+            -DOSCIL_BUILD_TESTS=OFF \
+            -DOSCIL_COPY_PLUGIN_AFTER_BUILD=OFF
+
+      - name: Build fuzz_oscil_state_fromxml
+        run: cmake --build build/fuzz --target fuzz_oscil_state_fromxml --parallel
+
+      - name: Build fuzz_plugin_test_server_state
+        run: cmake --build build/fuzz --target fuzz_plugin_test_server_state --parallel
+
+      - name: Run fuzz_oscil_state_fromxml (5 min)
+        working-directory: build/fuzz
+        run: |
+          mkdir -p artifacts/oscil_state
+          ./fuzz/fuzz_oscil_state_fromxml \
+            ../../fuzz/corpus/oscil_state/ \
+            -max_total_time=300 \
+            -print_final_stats=1 \
+            -artifact_prefix=artifacts/oscil_state/fuzz-
+
+      - name: Run fuzz_plugin_test_server_state (5 min)
+        working-directory: build/fuzz
+        run: |
+          mkdir -p artifacts/test_server_state
+          ./fuzz/fuzz_plugin_test_server_state \
+            ../../fuzz/corpus/test_server_state/ \
+            -max_total_time=300 \
+            -print_final_stats=1 \
+            -artifact_prefix=artifacts/test_server_state/fuzz-
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: |
+            build/fuzz/artifacts/**/fuzz-*
+          if-no-files-found: ignore

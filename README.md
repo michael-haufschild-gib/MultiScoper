@@ -89,9 +89,16 @@ Higher layers depend on lower layers, never the reverse. See [docs/architecture.
 | [Shaders](docs/shaders.md) | Adding GPU-accelerated waveform shaders |
 | [API](docs/api.md) | Test harness HTTP API reference |
 
-## Built with AI
+## Development workflow
 
-This project is fully vibecoded using [Claude Code](https://claude.ai/claude-code) (CLI).
+Oscil is developed with AI-assisted tooling (primarily [Claude Code](https://claude.ai/claude-code)) operating under the project's lint and test gates:
+
+- every commit passes through a pre-commit hook running eight independent lint checks (formatting, file/function size, test quality, source registry, placeholder detection, architecture boundaries, comment quality, clang-tidy) — see [`scripts/pre-commit`](scripts/pre-commit);
+- every push runs the same lint gate plus a multi-platform build (macOS, Windows, Linux), `pluginval` validation at strictness level 10, unit tests, and RealtimeSanitizer on audio-path tests — see [`.github/workflows/build_and_test.yml`](.github/workflows/build_and_test.yml);
+- architectural layer boundaries are enforced by [`scripts/architecture_lint.py`](scripts/architecture_lint.py) and documented in [ADR-005](docs/decisions/005-architecture-lint-enforcement.md);
+- CI failures are investigated by humans, not auto-routed to AI agents — see [ADR-007](docs/decisions/007-ci-failure-triage.md).
+
+See [`docs/development.md`](docs/development.md) for the full workflow.
 
 ## License
 

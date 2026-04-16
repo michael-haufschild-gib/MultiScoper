@@ -143,7 +143,9 @@ PostProcessEffect* EffectPipeline::getEffect(const juce::String& effectId)
     {
         auto* effect = it->second.get();
         // LAZY EFFECT COMPILATION
-        if (effect && !effect->isCompiled() && context_)
+        // Skip retry if a previous attempt already failed permanently — otherwise
+        // we burn a shader compile + a log line every frame for a broken effect.
+        if (effect && !effect->isCompiled() && !effect->hasCompileFailedPermanently() && context_)
         {
             if (effect->compile(*context_))
             {
@@ -151,7 +153,8 @@ PostProcessEffect* EffectPipeline::getEffect(const juce::String& effectId)
             }
             else
             {
-                RE_LOG("Failed to lazy-compile effect: " << effectId.toStdString());
+                RE_LOG("Failed to lazy-compile effect: " << effectId.toStdString()
+                                                         << " (will not retry until release)");
             }
         }
         return effect;

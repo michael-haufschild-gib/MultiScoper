@@ -95,6 +95,7 @@ void OscilModal::setCloseOnBackdropClick(bool close) { closeOnBackdropClick_ = c
 
 void OscilModal::show(juce::Component* parent)
 {
+    hideNotified_ = false;
     previousFocus_ = juce::Component::getCurrentlyFocusedComponent();
 
     juce::Desktop::getInstance().removeFocusChangeListener(this);
@@ -139,6 +140,29 @@ void OscilModal::show(juce::Component* parent)
 
 void OscilModal::hide()
 {
+    // Animate out when motion is allowed and the modal is actually on screen.
+    // Otherwise fall back to the synchronous path so reduced-motion users and
+    // not-yet-shown modals still collapse cleanly.
+    if (!isVisible() || !AnimationSettings::shouldUseSpringAnimations())
+    {
+        hideImmediate();
+        return;
+    }
+
+    // Stop listening for external focus changes up front — during the fade-out
+    // we don't want the focus trap to steal focus back.
+    juce::Desktop::getInstance().removeFocusChangeListener(this);
+
+    // Kick off the exit animation. timerCallback() is responsible for calling
+    // setVisible(false), restoring previous focus, and firing onClose once the
+    // springs settle below the visibility threshold.
+    showSpring_.setTarget(0.0f);
+    scaleSpring_.setTarget(0.95f);
+    startTimerHz(ComponentLayout::ANIMATION_FPS);
+}
+
+void OscilModal::hideImmediate()
+{
     juce::Desktop::getInstance().removeFocusChangeListener(this);
 
     stopTimer();
@@ -154,8 +178,15 @@ void OscilModal::hide()
     if (previousFocus_ && previousFocus_->isShowing())
         previousFocus_->grabKeyboardFocus();
 
-    if (onClose)
-        onClose();
+    if (onClose && !hideNotified_)
+    {
+        hideNotified_ = true;
+        // Copy the callback before invoking: onClose's captures may own the
+        // modal (e.g. AlertResources shared_ptr cycle) and `res.reset()` inside
+        // onClose would destroy this lambda mid-execution.
+        auto onCloseCopy = onClose;
+        onCloseCopy();
+    }
 }
 
 bool OscilModal::requestClose()
@@ -331,8 +362,14 @@ void OscilModal::timerCallback()
             if (previousFocus_ && previousFocus_->isShowing())
                 previousFocus_->grabKeyboardFocus();
 
-            if (onClose)
-                onClose();
+            if (onClose && !hideNotified_)
+            {
+                hideNotified_ = true;
+                // See hideImmediate(): copy before invoke to survive callbacks
+                // that destroy the modal's storage (UAF otherwise).
+                auto onCloseCopy = onClose;
+                onCloseCopy();
+            }
         }
     }
 

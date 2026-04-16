@@ -97,11 +97,6 @@ public:
     void setVisualPresetId(const juce::String& presetId);
 
     /**
-     * Set visual configuration overrides.
-     */
-    void setVisualOverrides(const juce::ValueTree& overrides);
-
-    /**
      * Enable/disable GPU shader rendering
      * When enabled and a valid shader is set, uses GPU rendering
      */
@@ -227,7 +222,6 @@ private:
     // Shader rendering
     juce::String shaderId_ = "basic";
     juce::String visualPresetId_ = "default"; // Visual preset for advanced rendering
-    juce::ValueTree visualOverrides_;         // Custom visual settings overrides
     bool gpuRenderingEnabled_ = false;
     int waveformId_ = 0;                     // Unique ID for GL renderer registration
     static std::atomic<int> nextWaveformId_; // Counter for generating unique IDs

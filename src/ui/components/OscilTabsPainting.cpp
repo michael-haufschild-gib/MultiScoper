@@ -159,7 +159,60 @@ juce::Rectangle<int> OscilTabs::getTabBounds(int index) const
     return cachedTabBounds_[static_cast<size_t>(index)];
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void OscilTabs::updateHorizontalLayoutCache(juce::Rectangle<int> bounds)
+{
+    int const height = tabHeight_ > 0 ? tabHeight_ : bounds.getHeight();
+
+    if (stretchTabs_)
+    {
+        int const numTabs = static_cast<int>(tabs_.size());
+        int const tabWidth = bounds.getWidth() / numTabs;
+        for (int i = 0; i < numTabs; ++i)
+        {
+            // Last tab gets remaining width to avoid rounding gap
+            int const w = (i == numTabs - 1) ? (bounds.getWidth() - i * tabWidth) : tabWidth;
+            cachedTabBounds_.emplace_back(i * tabWidth, 0, w, height);
+        }
+        return;
+    }
+
+    if (tabWidth_ > 0)
+    {
+        for (int i = 0; std::cmp_less(i, tabs_.size()); ++i)
+        {
+            cachedTabBounds_.emplace_back(i * tabWidth_, 0, tabWidth_, height);
+        }
+        return;
+    }
+
+    int x = 0;
+    auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
+
+    for (const auto& tab : tabs_)
+    {
+        juce::GlyphArrangement glyphs;
+        glyphs.addLineOfText(font, tab.label, 0, 0);
+        int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
+        int const iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
+        int const badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
+        int const width = labelWidth + iconWidth + badgeWidth + (TAB_PADDING_H * 2);
+
+        cachedTabBounds_.emplace_back(x, 0, width, height);
+        x += width;
+    }
+}
+
+void OscilTabs::updateVerticalLayoutCache(juce::Rectangle<int> bounds)
+{
+    int const width = tabWidth_ > 0 ? tabWidth_ : bounds.getWidth();
+    int const height = tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
+
+    for (int i = 0; std::cmp_less(i, tabs_.size()); ++i)
+    {
+        cachedTabBounds_.emplace_back(0, i * height, width, height);
+    }
+}
+
 void OscilTabs::updateLayoutCache()
 {
     cachedTabBounds_.clear();
@@ -171,56 +224,9 @@ void OscilTabs::updateLayoutCache()
     cachedTabBounds_.reserve(tabs_.size());
 
     if (orientation_ == Orientation::Horizontal)
-    {
-        int const height = tabHeight_ > 0 ? tabHeight_ : bounds.getHeight();
-
-        if (stretchTabs_)
-        {
-            int const numTabs = static_cast<int>(tabs_.size());
-            int const tabWidth = bounds.getWidth() / numTabs;
-            for (int i = 0; i < numTabs; ++i)
-            {
-                // Last tab gets remaining width to avoid rounding gap
-                int const w = (i == numTabs - 1) ? (bounds.getWidth() - i * tabWidth) : tabWidth;
-                cachedTabBounds_.emplace_back(i * tabWidth, 0, w, height);
-            }
-        }
-        else if (tabWidth_ > 0)
-        {
-            for (int i = 0; std::cmp_less(i, tabs_.size()); ++i)
-            {
-                cachedTabBounds_.emplace_back(i * tabWidth_, 0, tabWidth_, height);
-            }
-        }
-        else
-        {
-            int x = 0;
-            auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
-
-            for (const auto& tab : tabs_)
-            {
-                juce::GlyphArrangement glyphs;
-                glyphs.addLineOfText(font, tab.label, 0, 0);
-                int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-                int const iconWidth = tab.icon.isValid() ? ICON_SIZE + 8 : 0;
-                int const badgeWidth = tab.badgeCount > 0 ? BADGE_SIZE + 4 : 0;
-                int const width = labelWidth + iconWidth + badgeWidth + (TAB_PADDING_H * 2);
-
-                cachedTabBounds_.emplace_back(x, 0, width, height);
-                x += width;
-            }
-        }
-    }
+        updateHorizontalLayoutCache(bounds);
     else
-    {
-        int const width = tabWidth_ > 0 ? tabWidth_ : bounds.getWidth();
-        int const height = tabHeight_ > 0 ? tabHeight_ : DEFAULT_TAB_HEIGHT;
-
-        for (int i = 0; std::cmp_less(i, tabs_.size()); ++i)
-        {
-            cachedTabBounds_.emplace_back(0, i * height, width, height);
-        }
-    }
+        updateVerticalLayoutCache(bounds);
 }
 
 juce::Rectangle<float> OscilTabs::getIndicatorBounds() const

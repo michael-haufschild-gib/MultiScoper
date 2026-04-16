@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Adversarial: two oscillators with the same id, and a paneId that points
+     to a non-existent pane. Expected: fromXmlString either normalizes or
+     rejects; must not crash. -->
+<OscilState version="2">
+  <Oscillators>
+    <Oscillator id="dup"    sourceId="src-a" name="A" paneId="ghost-pane"
+                order="0" processingMode="0" colour="ffff0000" opacity="1.0"
+                visible="1" schemaVersion="2"/>
+    <Oscillator id="dup"    sourceId="src-b" name="B" paneId="ghost-pane"
+                order="0" processingMode="0" colour="ff00ff00" opacity="1.0"
+                visible="1" schemaVersion="2"/>
+    <Oscillator id="nested" sourceId="src-c" name="C" paneId="dup"
+                order="0" processingMode="0" colour="ff0000ff" opacity="1.0"
+                visible="1" schemaVersion="2">
+      <Oscillator id="dup" sourceId="src-d" name="D" paneId="pane-1"
+                  order="0" processingMode="0" colour="ffffffff" opacity="1.0"
+                  visible="1" schemaVersion="2"/>
+    </Oscillator>
+  </Oscillators>
+  <Panes>
+    <Pane id="dup" orderIndex="0" collapsed="0" name="Dup pane"
+          heightRatio="1.0" columnIndex="0"/>
+    <Pane id="dup" orderIndex="1" collapsed="0" name="Dup pane 2"
+          heightRatio="0.5" columnIndex="0"/>
+  </Panes>
+  <Layout columns="-1"/>
+  <Theme themeName=""/>
+  <Timing/>
+</OscilState>

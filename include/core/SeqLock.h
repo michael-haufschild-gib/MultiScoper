@@ -10,6 +10,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <thread>
 #include <type_traits>
 
@@ -27,6 +28,13 @@ namespace oscil
  * Uses memcpy for the data store/load, which is safe for any trivially
  * copyable type regardless of size. The sequence counter (not the data
  * atomicity) provides the torn-read protection.
+ *
+ * Two read variants are provided:
+ *   - readBlocking() — spins with std::this_thread::yield() until a
+ *     consistent snapshot is observed. Correct for UI/message threads
+ *     but NOT real-time safe (yield is a syscall).
+ *   - tryRead() — single pass; returns std::nullopt if a writer is in
+ *     progress or a torn read is detected. Real-time safe; no syscalls.
  */
 template <typename T>
 struct SeqLock
@@ -41,7 +49,11 @@ struct SeqLock
         sequence_.fetch_add(1, std::memory_order_release);   // even → write complete
     }
 
-    T read() const
+    /**
+     * Blocking read — spins with yield until a consistent snapshot is
+     * observed. Use from UI/message threads only. Not real-time safe.
+     */
+    T readBlocking() const
     {
         T snapshot;
         for (;;)
@@ -59,6 +71,29 @@ struct SeqLock
             if (seq1 == seq2)
                 return snapshot;
         }
+    }
+
+    /**
+     * Non-blocking, real-time-safe single-pass read. Returns std::nullopt
+     * if a writer is currently in progress or a torn read is detected.
+     * Callers should have a fallback (e.g. cached last value, skip frame).
+     */
+    [[nodiscard]] std::optional<T> tryRead() const
+    {
+        uint32_t const seq1 = sequence_.load(std::memory_order_acquire);
+        if ((seq1 & 1) != 0u)
+            return std::nullopt;
+
+        T snapshot;
+        std::atomic_thread_fence(std::memory_order_acquire);
+        std::memcpy(&snapshot, &data_, sizeof(T));
+        std::atomic_thread_fence(std::memory_order_acquire);
+
+        uint32_t const seq2 = sequence_.load(std::memory_order_acquire);
+        if (seq1 != seq2)
+            return std::nullopt;
+
+        return snapshot;
     }
 
 private:

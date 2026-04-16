@@ -83,14 +83,20 @@ bool FilmGrainEffect::resolveUniforms()
 
 void FilmGrainEffect::setUniforms(const Framebuffer& source, float deltaTime)
 {
-    // Update time based on configured speed.
-    // Wrap at 10000.0 to keep float precision reasonable while avoiding
-    // visible jumps — the shader's hash function is not periodic at the wrap point.
-    accumulatedTime_ += deltaTime * settings_.speed;
+    // Advance the time accumulator used by the shader's noise offset. Bounding
+    // at 10000.0 keeps the float inputs the shader multiplies by 100.0 well
+    // within single-precision resolution (~1e6 max), which is what matters for
+    // the hash output — the wrap itself is imperceptible because the grain
+    // has no frame-to-frame temporal coherence to disrupt.
+    accumulatedTime_ += deltaTime * std::max(settings_.speed, 0.0f);
     if (accumulatedTime_ > 10000.0f)
         accumulatedTime_ = std::fmod(accumulatedTime_, 10000.0f);
 
-    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, settings_.intensity * getIntensity());
+    // Clamp intensity to the documented [0, 0.5] range so a malformed preset
+    // or a stray value in state cannot drive the shader into a near-solid
+    // noise overlay.
+    float const clampedIntensity = juce::jlimit(0.0f, 0.5f, settings_.intensity);
+    juce::OpenGLExtensionFunctions::glUniform1f(intensityLoc_, clampedIntensity * getIntensity());
     juce::OpenGLExtensionFunctions::glUniform1f(timeLoc_, accumulatedTime_);
     juce::OpenGLExtensionFunctions::glUniform2f(resolutionLoc_, static_cast<float>(source.width),
                                                 static_cast<float>(source.height));

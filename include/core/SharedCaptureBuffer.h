@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -79,33 +80,48 @@ public:
                bool tryLock = false);
 
     /**
-     * Read the most recent samples into a buffer.
-     * Safe to call from any thread (UI thread typically).
+     * Blocking read (UI/message thread only — NOT real-time safe).
+     * Spins with yield until a consistent snapshot is observed.
      *
      * @param output Buffer to write samples into
      * @param numSamples Number of samples to read
      * @param channel Channel index (0 = left, 1 = right)
      * @return Actual number of samples read
      */
-    int read(float* output, int numSamples, int channel = 0) const override;
+    [[nodiscard]] int readBlocking(float* output, int numSamples, int channel = 0) const override;
 
     /**
-     * Read the most recent samples into a span.
-     * Safe to call from any thread (UI thread typically).
+     * Blocking read into a span (UI/message thread only).
      *
      * @param output Span to write samples into
      * @param channel Channel index (0 = left, 1 = right)
      * @return Actual number of samples read
      */
-    int read(std::span<float> output, int channel = 0) const;
+    [[nodiscard]] int readBlocking(std::span<float> output, int channel = 0) const;
 
     /**
-     * Read the most recent samples for all channels.
+     * Blocking multi-channel read (UI/message thread only).
      * @param output Audio buffer to write into
      * @param numSamples Number of samples to read
      * @return Actual number of samples read
      */
-    int read(juce::AudioBuffer<float>& output, int numSamples) const override;
+    [[nodiscard]] int readBlocking(juce::AudioBuffer<float>& output, int numSamples) const override;
+
+    /**
+     * Real-time-safe single-pass snapshot read. Returns std::nullopt if
+     * a concurrent writer produced a torn read. Never yields.
+     */
+    [[nodiscard]] std::optional<int> readSnapshot(float* output, int numSamples, int channel = 0) const override;
+
+    /**
+     * Real-time-safe snapshot read into a span. Returns std::nullopt on torn read.
+     */
+    [[nodiscard]] std::optional<int> readSnapshot(std::span<float> output, int channel = 0) const;
+
+    /**
+     * Real-time-safe multi-channel snapshot read. Returns std::nullopt on torn read.
+     */
+    [[nodiscard]] std::optional<int> readSnapshot(juce::AudioBuffer<float>& output, int numSamples) const override;
 
     /**
      * Get the latest metadata
@@ -149,6 +165,9 @@ public:
 private:
     void writeInternal(const float* const* samples, int numSamples, int numChannels,
                        const CaptureFrameMetadata& metadata);
+    void publishChannelWrites(const float* const* samples, int actualChannels, size_t srcOffset, size_t maskedWritePos,
+                              size_t firstCount, size_t secondCount);
+    void publishMetadata(const CaptureFrameMetadata& metadata, int numSamples, int actualChannels);
     size_t capacity_;
     std::vector<float> buffer_; // Flat buffer: [Channel 0][Channel 1]...
     std::atomic<size_t> writePos_{0};

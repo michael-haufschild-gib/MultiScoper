@@ -68,7 +68,49 @@ void SharedCaptureBuffer::write(const juce::AudioBuffer<float>& buffer, const Ca
     write(channels, numSamples, numChannels, metadata, tryLock);
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity,readability-function-size)
+namespace
+{
+// Copy `firstCount` + `secondCount` samples from `src` into the wrap-around buffer at `dst`,
+// starting at `maskedWritePos`. If `src` is nullptr, zeros are written instead.
+// Helper extracted to keep writeInternal under complexity thresholds.
+inline void writeChannelSamples(float* dst, const float* src, size_t maskedWritePos, size_t firstCount,
+                                size_t secondCount)
+{
+    if (src != nullptr)
+    {
+        std::memcpy(dst + maskedWritePos, src, firstCount * sizeof(float));
+        if (secondCount > 0)
+            std::memcpy(dst, src + firstCount, secondCount * sizeof(float));
+    }
+    else
+    {
+        std::memset(dst + maskedWritePos, 0, firstCount * sizeof(float));
+        if (secondCount > 0)
+            std::memset(dst, 0, secondCount * sizeof(float));
+    }
+}
+} // namespace
+
+void SharedCaptureBuffer::publishChannelWrites(const float* const* samples, int actualChannels, size_t srcOffset,
+                                               size_t maskedWritePos, size_t firstCount, size_t secondCount)
+{
+    for (int ch = 0; std::cmp_less(ch, MAX_CHANNELS); ++ch)
+    {
+        float* dst = buffer_.data() + (static_cast<size_t>(ch) * capacity_);
+        const float* src =
+            (ch < actualChannels && samples != nullptr && samples[ch] != nullptr) ? samples[ch] + srcOffset : nullptr;
+        writeChannelSamples(dst, src, maskedWritePos, firstCount, secondCount);
+    }
+}
+
+void SharedCaptureBuffer::publishMetadata(const CaptureFrameMetadata& metadata, int numSamples, int actualChannels)
+{
+    CaptureFrameMetadata meta = metadata;
+    meta.numSamples = numSamples;
+    meta.numChannels = actualChannels;
+    metadata_.write(meta);
+}
+
 void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamples, int numChannels,
                                         const CaptureFrameMetadata& metadata)
 {
@@ -91,39 +133,17 @@ void SharedCaptureBuffer::writeInternal(const float* const* samples, int numSamp
     }
 
     const size_t maskedWritePos = wrapPosition(writePos + srcOffset);
-    // First segment: from maskedWritePos to end of buffer (or fewer if effectiveSamples fits)
     const size_t firstCount = std::min(effectiveSamples, capacity_ - maskedWritePos);
     const size_t secondCount = effectiveSamples - firstCount;
 
     // Increment epoch to odd → signals "write in progress" to readers
     writeEpoch_.fetch_add(1, std::memory_order_acq_rel);
 
-    for (int ch = 0; std::cmp_less(ch, MAX_CHANNELS); ++ch)
-    {
-        float* dst = buffer_.data() + (static_cast<size_t>(ch) * capacity_);
-
-        if (ch < actualChannels && samples != nullptr && samples[ch] != nullptr)
-        {
-            const float* src = samples[ch] + srcOffset;
-            std::memcpy(dst + maskedWritePos, src, firstCount * sizeof(float));
-            if (secondCount > 0)
-                std::memcpy(dst, src + firstCount, secondCount * sizeof(float));
-        }
-        else
-        {
-            std::memset(dst + maskedWritePos, 0, firstCount * sizeof(float));
-            if (secondCount > 0)
-                std::memset(dst, 0, secondCount * sizeof(float));
-        }
-    }
+    publishChannelWrites(samples, actualChannels, srcOffset, maskedWritePos, firstCount, secondCount);
 
     writePos_.store(wrapPosition(writePos + totalSamples), std::memory_order_release);
     samplesWritten_.fetch_add(totalSamples, std::memory_order_release);
-
-    CaptureFrameMetadata meta = metadata;
-    meta.numSamples = numSamples;
-    meta.numChannels = actualChannels;
-    metadata_.write(meta);
+    publishMetadata(metadata, numSamples, actualChannels);
 
     // Fence: ensure all data stores are visible before epoch even signal
     std::atomic_thread_fence(std::memory_order_release);
@@ -150,119 +170,155 @@ void SharedCaptureBuffer::write(const float* const* samples, int numSamples, int
     }
 }
 
-int SharedCaptureBuffer::read(float* output, int numSamples, int channel) const
+// Core read helpers below. Each public overload is a thin wrapper that
+// either loops on torn reads (Blocking variants) or performs a single
+// attempt and returns nullopt on torn read (Snapshot variants). The
+// inner helpers are the only place that actually copies buffer data,
+// guaranteeing identical torn-read semantics across all code paths.
+
+namespace
+{
+
+// Single-channel epoch-bracketed copy. nullopt on torn read.
+std::optional<int> attemptReadChannel(const std::vector<float>& buffer, const std::atomic<uint32_t>& writeEpoch,
+                                      const std::atomic<size_t>& writePos, size_t capacity, size_t available,
+                                      std::span<float> output, int channel)
+{
+    uint32_t const epoch1 = writeEpoch.load(std::memory_order_acquire);
+    if ((epoch1 & 1) != 0u)
+        return std::nullopt;
+
+    size_t const safeAvailable = std::min(available, capacity);
+    size_t const samplesToRead = std::min(output.size(), safeAvailable);
+    if (samplesToRead == 0)
+    {
+        uint32_t const epoch2 = writeEpoch.load(std::memory_order_acquire);
+        return (epoch1 == epoch2) ? std::optional<int>{0} : std::nullopt;
+    }
+
+    size_t const wp = writePos.load(std::memory_order_acquire);
+    size_t const readStart = (wp + capacity - samplesToRead) & (capacity - 1);
+    size_t const channelOffset = static_cast<size_t>(channel) * capacity;
+    size_t const firstChunk = std::min(samplesToRead, capacity - readStart);
+    size_t const secondChunk = samplesToRead - firstChunk;
+
+    std::atomic_thread_fence(std::memory_order_acquire);
+    std::memcpy(output.data(), &buffer[channelOffset + readStart], firstChunk * sizeof(float));
+    if (secondChunk > 0)
+        std::memcpy(output.data() + firstChunk, &buffer[channelOffset], secondChunk * sizeof(float));
+    std::atomic_thread_fence(std::memory_order_acquire);
+
+    uint32_t const epoch2 = writeEpoch.load(std::memory_order_acquire);
+    if (epoch1 != epoch2)
+        return std::nullopt;
+    return static_cast<int>(samplesToRead);
+}
+
+// Multi-channel epoch-bracketed copy; guarantees cross-channel consistency.
+std::optional<int> attemptReadAllChannels(const std::vector<float>& buffer, const std::atomic<uint32_t>& writeEpoch,
+                                          const std::atomic<size_t>& writePos, size_t capacity, size_t available,
+                                          juce::AudioBuffer<float>& output, int numSamples, int numChannels)
+{
+    uint32_t const epoch1 = writeEpoch.load(std::memory_order_acquire);
+    if ((epoch1 & 1) != 0u)
+        return std::nullopt;
+
+    size_t const safeAvailable = std::min(available, capacity);
+    size_t const samplesToRead = std::min(static_cast<size_t>(numSamples), safeAvailable);
+    if (samplesToRead == 0)
+    {
+        uint32_t const epoch2 = writeEpoch.load(std::memory_order_acquire);
+        return (epoch1 == epoch2) ? std::optional<int>{0} : std::nullopt;
+    }
+
+    size_t const wp = writePos.load(std::memory_order_acquire);
+    size_t const readStart = (wp + capacity - samplesToRead) & (capacity - 1);
+    size_t const firstChunk = std::min(samplesToRead, capacity - readStart);
+    size_t const secondChunk = samplesToRead - firstChunk;
+
+    std::atomic_thread_fence(std::memory_order_acquire);
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        size_t const channelOffset = static_cast<size_t>(ch) * capacity;
+        float* dst = output.getWritePointer(ch);
+        std::memcpy(dst, &buffer[channelOffset + readStart], firstChunk * sizeof(float));
+        if (secondChunk > 0)
+            std::memcpy(dst + firstChunk, &buffer[channelOffset], secondChunk * sizeof(float));
+    }
+    std::atomic_thread_fence(std::memory_order_acquire);
+
+    uint32_t const epoch2 = writeEpoch.load(std::memory_order_acquire);
+    if (epoch1 != epoch2)
+        return std::nullopt;
+    return static_cast<int>(samplesToRead);
+}
+
+} // namespace
+
+int SharedCaptureBuffer::readBlocking(float* output, int numSamples, int channel) const
 {
     if (output == nullptr || numSamples <= 0 || channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS))
         return 0;
-
-    return read(std::span<float>(output, static_cast<size_t>(numSamples)), channel);
+    return readBlocking(std::span<float>(output, static_cast<size_t>(numSamples)), channel);
 }
 
-int SharedCaptureBuffer::read(std::span<float> output, int channel) const
+int SharedCaptureBuffer::readBlocking(std::span<float> output, int channel) const
 {
     if (output.empty() || channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS))
         return 0;
 
-    // Torn-read detection: retry if a write occurred during our read.
-    // The writer brackets data copies with odd/even epoch increments.
-    // We spin with yield until we observe a consistent (untorn) snapshot.
+    // Spin with yield until a non-torn read is observed. UI/message thread only.
     for (;;)
     {
-        uint32_t const epoch1 = writeEpoch_.load(std::memory_order_acquire);
-        if ((epoch1 & 1) != 0u)
-        {
-            std::this_thread::yield();
-            continue;
-        }
-
-        size_t const available = getAvailableSamples();
-        size_t const requestedSamples = output.size();
-
-        size_t const safeAvailable = std::min(available, capacity_);
-        size_t const samplesToRead = std::min(requestedSamples, safeAvailable);
-
-        if (samplesToRead == 0)
-            return 0;
-
-        size_t const writePos = writePos_.load(std::memory_order_acquire);
-
-        size_t const readStart = (writePos + capacity_ - samplesToRead) & (capacity_ - 1);
-        size_t const channelOffset = static_cast<size_t>(channel) * capacity_;
-
-        size_t const firstChunk = std::min(samplesToRead, capacity_ - readStart);
-        size_t const secondChunk = samplesToRead - firstChunk;
-
-        // Fence: ensure buffer reads happen strictly after epoch1 load
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        std::memcpy(output.data(), &buffer_[channelOffset + readStart], firstChunk * sizeof(float));
-
-        if (secondChunk > 0)
-        {
-            std::memcpy(output.data() + firstChunk, &buffer_[channelOffset], secondChunk * sizeof(float));
-        }
-
-        // Fence: ensure buffer reads complete before epoch2 load
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        uint32_t const epoch2 = writeEpoch_.load(std::memory_order_acquire);
-
-        if (epoch1 == epoch2)
-            return static_cast<int>(samplesToRead);
+        auto const result =
+            attemptReadChannel(buffer_, writeEpoch_, writePos_, capacity_, getAvailableSamples(), output, channel);
+        if (result.has_value())
+            return *result;
+        std::this_thread::yield();
     }
 }
 
-int SharedCaptureBuffer::read(juce::AudioBuffer<float>& output, int numSamples) const
+std::optional<int> SharedCaptureBuffer::readSnapshot(float* output, int numSamples, int channel) const
+{
+    if (output == nullptr || numSamples <= 0 || channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS))
+        return std::nullopt;
+    return readSnapshot(std::span<float>(output, static_cast<size_t>(numSamples)), channel);
+}
+
+std::optional<int> SharedCaptureBuffer::readSnapshot(std::span<float> output, int channel) const
+{
+    if (output.empty() || channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS))
+        return std::nullopt;
+    // Single attempt — real-time safe. No yield, no loop.
+    return attemptReadChannel(buffer_, writeEpoch_, writePos_, capacity_, getAvailableSamples(), output, channel);
+}
+
+int SharedCaptureBuffer::readBlocking(juce::AudioBuffer<float>& output, int numSamples) const
 {
     int const numChannels = std::min(output.getNumChannels(), static_cast<int>(MAX_CHANNELS));
     if (numChannels <= 0 || numSamples <= 0)
         return 0;
 
-    // Read all channels within a single epoch validation to guarantee
-    // cross-channel consistency. The per-channel read() method validates
-    // epochs independently, which can yield channels from different writes.
     for (;;)
     {
-        uint32_t const epoch1 = writeEpoch_.load(std::memory_order_acquire);
-        if ((epoch1 & 1) != 0u)
-        {
-            std::this_thread::yield();
-            continue;
-        }
-
-        size_t const available = getAvailableSamples();
-        size_t const safeAvailable = std::min(available, capacity_);
-        size_t const samplesToRead = std::min(static_cast<size_t>(numSamples), safeAvailable);
-
-        if (samplesToRead == 0)
-            return 0;
-
-        size_t const writePos = writePos_.load(std::memory_order_acquire);
-        size_t const readStart = (writePos + capacity_ - samplesToRead) & (capacity_ - 1);
-        size_t const firstChunk = std::min(samplesToRead, capacity_ - readStart);
-        size_t const secondChunk = samplesToRead - firstChunk;
-
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        for (int ch = 0; ch < numChannels; ++ch)
-        {
-            size_t const channelOffset = static_cast<size_t>(ch) * capacity_;
-            float* dst = output.getWritePointer(ch);
-
-            std::memcpy(dst, &buffer_[channelOffset + readStart], firstChunk * sizeof(float));
-            if (secondChunk > 0)
-                std::memcpy(dst + firstChunk, &buffer_[channelOffset], secondChunk * sizeof(float));
-        }
-
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        uint32_t const epoch2 = writeEpoch_.load(std::memory_order_acquire);
-        if (epoch1 == epoch2)
-            return static_cast<int>(samplesToRead);
+        auto const result = attemptReadAllChannels(buffer_, writeEpoch_, writePos_, capacity_, getAvailableSamples(),
+                                                   output, numSamples, numChannels);
+        if (result.has_value())
+            return *result;
+        std::this_thread::yield();
     }
 }
 
-CaptureFrameMetadata SharedCaptureBuffer::getLatestMetadata() const { return metadata_.read(); }
+std::optional<int> SharedCaptureBuffer::readSnapshot(juce::AudioBuffer<float>& output, int numSamples) const
+{
+    int const numChannels = std::min(output.getNumChannels(), static_cast<int>(MAX_CHANNELS));
+    if (numChannels <= 0 || numSamples <= 0)
+        return std::nullopt;
+    return attemptReadAllChannels(buffer_, writeEpoch_, writePos_, capacity_, getAvailableSamples(), output, numSamples,
+                                  numChannels);
+}
+
+CaptureFrameMetadata SharedCaptureBuffer::getLatestMetadata() const { return metadata_.readBlocking(); }
 
 size_t SharedCaptureBuffer::getAvailableSamples() const
 {
@@ -283,7 +339,7 @@ void SharedCaptureBuffer::clear()
     writePos_.store(0, std::memory_order_release);
     samplesWritten_.store(0, std::memory_order_release);
 
-    auto meta = metadata_.read();
+    auto meta = metadata_.readBlocking();
     meta.numSamples = 0;
     metadata_.write(meta);
 
@@ -291,112 +347,6 @@ void SharedCaptureBuffer::clear()
     writeEpoch_.fetch_add(1, std::memory_order_release); // even → modification complete
 }
 
-float SharedCaptureBuffer::getPeakLevel(int channel, int numSamples) const
-{
-    if (channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS) || numSamples <= 0)
-        return 0.0f;
-
-    for (;;)
-    {
-        uint32_t const epoch1 = writeEpoch_.load(std::memory_order_acquire);
-        if ((epoch1 & 1) != 0u)
-        {
-            std::this_thread::yield();
-            continue;
-        }
-
-        size_t const available = getAvailableSamples();
-        auto const requestedSamples = static_cast<size_t>(numSamples);
-        int const samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
-
-        if (samplesToAnalyze <= 0)
-            return 0.0f;
-
-        size_t const writePos = writePos_.load(std::memory_order_acquire);
-        size_t const readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
-        size_t const channelOffset = static_cast<size_t>(channel) * capacity_;
-
-        float peak = 0.0f;
-
-        auto analyzeChunk = [&](size_t start, size_t count) {
-            for (size_t i = 0; i < count; ++i)
-            {
-                float const val = std::abs(buffer_[channelOffset + start + i]);
-                peak = std::max(val, peak);
-            }
-        };
-
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        size_t const firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
-        analyzeChunk(readStart, firstChunk);
-
-        if (std::cmp_less(firstChunk, samplesToAnalyze))
-        {
-            analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
-        }
-
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        uint32_t const epoch2 = writeEpoch_.load(std::memory_order_acquire);
-
-        if (epoch1 == epoch2)
-            return peak;
-    }
-}
-
-float SharedCaptureBuffer::getRMSLevel(int channel, int numSamples) const
-{
-    if (channel < 0 || std::cmp_greater_equal(channel, MAX_CHANNELS) || numSamples <= 0)
-        return 0.0f;
-
-    for (;;)
-    {
-        uint32_t const epoch1 = writeEpoch_.load(std::memory_order_acquire);
-        if ((epoch1 & 1) != 0u)
-        {
-            std::this_thread::yield();
-            continue;
-        }
-
-        size_t const available = getAvailableSamples();
-        auto const requestedSamples = static_cast<size_t>(numSamples);
-        int const samplesToAnalyze = static_cast<int>(std::min(requestedSamples, available));
-
-        if (samplesToAnalyze <= 0)
-            return 0.0f;
-
-        size_t const writePos = writePos_.load(std::memory_order_acquire);
-        size_t const readStart = (writePos + capacity_ - static_cast<size_t>(samplesToAnalyze)) & (capacity_ - 1);
-        size_t const channelOffset = static_cast<size_t>(channel) * capacity_;
-
-        double sumSquares = 0.0;
-
-        auto analyzeChunk = [&](size_t start, size_t count) {
-            for (size_t i = 0; i < count; ++i)
-            {
-                float const val = buffer_[channelOffset + start + i];
-                sumSquares += val * val;
-            }
-        };
-
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        size_t const firstChunk = std::min(static_cast<size_t>(samplesToAnalyze), capacity_ - readStart);
-        analyzeChunk(readStart, firstChunk);
-
-        if (std::cmp_less(firstChunk, samplesToAnalyze))
-        {
-            analyzeChunk(0, static_cast<size_t>(samplesToAnalyze) - firstChunk);
-        }
-
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        uint32_t const epoch2 = writeEpoch_.load(std::memory_order_acquire);
-
-        if (epoch1 == epoch2)
-            return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samplesToAnalyze)));
-    }
-}
+// Peak/RMS level analysis is implemented in SharedCaptureBufferAnalysis.cpp.
 
 } // namespace oscil

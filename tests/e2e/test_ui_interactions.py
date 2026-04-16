@@ -175,9 +175,9 @@ class TestDragInteraction:
         self, editor: OscilTestClient, two_oscillators
     ):
         """
-        Bug caught: drag-to-reorder handler not wired, or drag operation
-        corrupting the item being dragged.
-        Known failure: drag between list items does not change order.
+        Bug caught: drag-to-reorder handler not wired (regression from
+        SidebarComponent::Listener::oscillatorsReordered being a default
+        no-op because no concrete listener overrode it).
         """
         item0 = "sidebar_oscillators_item_0"
         item1 = "sidebar_oscillators_item_1"
@@ -187,24 +187,24 @@ class TestDragInteraction:
 
         oscs_before = editor.get_oscillators()
         ids_before = [o["id"] for o in oscs_before]
-        names_before = [o["name"] for o in oscs_before]
 
         result = editor.drag(item0, item1)
+        assert result, "drag operation should report success"
 
-        # Verify no data loss regardless of whether drag is supported
         oscs_after = editor.get_oscillators()
         ids_after = [o["id"] for o in oscs_after]
+
+        # No data loss — set membership preserved
         assert set(ids_after) == set(ids_before), (
             "Drag should not add or remove oscillators"
         )
 
-        # If drag succeeded, verify order changed
-        if result:
-            names_after = [o["name"] for o in oscs_after]
-            assert names_after != names_before, (
-                f"Successful drag should change order: "
-                f"before={names_before}, after={names_after}"
-            )
+        # Order must actually change — the whole point of drag-to-reorder.
+        # Compare by ID, not name, since names can be duplicated.
+        assert ids_after != ids_before, (
+            f"Drag-to-reorder must change order: "
+            f"before={ids_before}, after={ids_after}"
+        )
 
     def test_drag_offset_on_resize_handle(self, editor: OscilTestClient):
         """
