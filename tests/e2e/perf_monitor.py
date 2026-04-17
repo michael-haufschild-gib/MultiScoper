@@ -35,7 +35,9 @@ HARNESS_URL = "http://localhost:8765"
 HARNESS_PROCESS_NAME = "Oscil Test Harness"
 
 
-def find_harness_pid(port: int = 8765) -> Optional[int]:
+def find_harness_pid(
+    port: int = 8765, harness_url: Optional[str] = None
+) -> Optional[int]:
     """Find the PID of the running harness.
 
     Tries two strategies in order of reliability:
@@ -44,9 +46,14 @@ def find_harness_pid(port: int = 8765) -> Optional[int]:
        This is the most accurate route and works without elevated privileges.
     2. Fall back to scanning processes by name.  ``psutil.net_connections``
        requires root on macOS, so we avoid it entirely.
+
+    ``harness_url`` overrides the default so callers running against a
+    non-default port / host attach to the correct process. ``port`` is kept
+    for backwards compatibility and used only when ``harness_url`` is None.
     """
+    url = harness_url if harness_url else f"http://localhost:{port}"
     try:
-        resp = requests.get(f"{HARNESS_URL}/health", timeout=2.0).json()
+        resp = requests.get(f"{url}/health", timeout=2.0).json()
         pid = resp.get("data", {}).get("pid")
         if isinstance(pid, int) and pid > 0 and psutil.pid_exists(pid):
             return pid
@@ -161,10 +168,10 @@ class ResourceMonitor:
         self._running = False
 
     def __enter__(self) -> "ResourceMonitor":
-        pid = find_harness_pid()
+        pid = find_harness_pid(harness_url=self.harness_url)
         if pid is None:
             raise RuntimeError(
-                "Could not find harness PID on port 8765 — is the harness running?"
+                f"Could not find harness PID via {self.harness_url} — is the harness running?"
             )
         self._proc = psutil.Process(pid)
         # Prime cpu_percent for delta sampling.

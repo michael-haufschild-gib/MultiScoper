@@ -5,6 +5,8 @@
 #include "TestElementRegistry.h"
 #include "TestHttpServer.h"
 
+#include <optional>
+
 namespace oscil::test
 {
 
@@ -311,13 +313,16 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 {
     std::string elementId = req.matches[1];
 
-    // Apply track scope if specified
+    // Resolve the optional track scope on the request thread but apply it
+    // inside the async closure so that a concurrent request cannot mutate
+    // the shared controller scope between dispatch and execution.
+    std::optional<int> trackScope;
     auto trackIt = req.params.find("trackId");
     if (trackIt != req.params.end())
     {
         try
         {
-            uiController_.setTrackScope(std::stoi(trackIt->second), &daw_);
+            trackScope = std::stoi(trackIt->second);
         }
         catch (...)
         {
@@ -331,12 +336,16 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
     auto info = std::make_shared<json>();
     auto done = std::make_shared<juce::WaitableEvent>();
     auto& ctrl = uiController_;
-    juce::MessageManager::callAsync([info, done, &ctrl, elementId]() {
+    TestDAW* dawPtr = &daw_;
+    juce::MessageManager::callAsync([info, done, &ctrl, elementId, trackScope, dawPtr]() {
+        if (trackScope.has_value())
+            ctrl.setTrackScope(*trackScope, dawPtr);
         *info = ctrl.getElementInfo(juce::String(elementId));
+        if (trackScope.has_value())
+            ctrl.clearTrackScope();
         done->signal();
     });
     bool waited = done->wait(3000);
-    uiController_.clearTrackScope();
 
     if (!waited)
     {
@@ -393,7 +402,12 @@ void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response
         done->signal();
     });
 
-    done->wait(5000);
+    if (!done->wait(5000))
+    {
+        res.status = 504;
+        res.set_content(errorResponse("Timeout waiting for UI elements enumeration").dump(), "application/json");
+        return;
+    }
     res.set_content(successResponse(*data).dump(), "application/json");
 }
 

@@ -18,12 +18,6 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
     const auto& theme = getTheme();
     auto const bounds = getLocalBounds().toFloat();
 
-    // Hidden oscillators dim the whole tile (background + children) via a saved
-    // opacity layer. Scoped so the child-paint pass inherits the reduced opacity.
-    juce::Graphics::ScopedSaveState const savedState(g);
-    if (!isVisible_)
-        g.setOpacity(0.6f);
-
     // Tile background. Hover and selected both lift to backgroundRaised; rest uses
     // backgroundSecondary so the tile reads against the sidebar surface.
     auto const tileBg = (selected_ || isHovered_) ? theme.backgroundRaised : theme.backgroundSecondary;
@@ -60,8 +54,9 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
         g.drawRoundedRectangle(bounds.reduced(1.0f), ComponentLayout::RADIUS_SM, 2.0f);
     }
 
-    // Drag handle dots. Unchanged from the prior affordance; global opacity from the
-    // ScopedSaveState handles the hidden-state dim.
+    // Drag handle dots. Tile-wide dim for hidden rows is applied in
+    // paintOverChildren() — Graphics opacity set here would not affect child
+    // labels/buttons that paint in their own paint() pass.
     auto const dragArea = bounds.withWidth(static_cast<float>(DRAG_HANDLE_WIDTH));
     float const dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
     g.setColour(theme.textSecondary.withAlpha(dotAlpha));
@@ -73,6 +68,19 @@ void OscillatorListItemComponent::paint(juce::Graphics& g)
         for (int col = 0; col < 2; ++col)
             g.fillEllipse(startX + (static_cast<float>(col) * dotSpacing) - (dotSize / 2.0f),
                           startY + (static_cast<float>(row) * dotSpacing) - (dotSize / 2.0f), dotSize, dotSize);
+}
+
+void OscillatorListItemComponent::paintOverChildren(juce::Graphics& g)
+{
+    // paintOverChildren runs after every child component has painted, so a
+    // translucent overlay here dims the whole tile — background and children
+    // alike. Graphics opacity in paint() cannot achieve this because each
+    // child receives a fresh Graphics state.
+    if (!isVisible_)
+    {
+        g.setColour(juce::Colours::black.withAlpha(0.4f));
+        g.fillRoundedRectangle(getLocalBounds().toFloat(), ComponentLayout::RADIUS_SM);
+    }
 }
 
 void OscillatorListItemComponent::mouseEnter(const juce::MouseEvent& /*event*/)

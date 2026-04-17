@@ -34,7 +34,8 @@ import dataclasses
 import re
 import sys
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Sequence
+from collections.abc import Iterator, Sequence
+from typing import Optional
 
 EXCLUDED_DIR_NAMES = {"build", ".git", ".serena", ".claude", "_deps"}
 DEFAULT_EXTENSIONS = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".mm"}
@@ -49,7 +50,7 @@ class ForbiddenRule:
     rationale: str
 
 
-RULES: List[ForbiddenRule] = [
+RULES: list[ForbiddenRule] = [
     ForbiddenRule(
         name="setDefaultLookAndFeel",
         # Match either `juce::LookAndFeel::setDefaultLookAndFeel(` or a bare
@@ -102,16 +103,38 @@ class Violation:
     rule: ForbiddenRule
 
 
+_RAW_STRING_OPEN = re.compile(r'R"([^(\\\s]*)\(')
+
+
 def strip_comments_and_strings(content: str) -> str:
     """Remove C/C++ comments and string literals so rules don't trip on
     rationale text the pattern itself cites. A line's line-number offsets
-    are preserved (newlines kept)."""
-    out: List[str] = []
+    are preserved (newlines kept).
+
+    Handles C++ raw string literals (``R"delim(...)delim"``) so forbidden
+    API names embedded in documentation strings do not trigger violations.
+    """
+    out: list[str] = []
     i = 0
     n = len(content)
     while i < n:
         c = content[i]
         c2 = content[i : i + 2]
+        # Raw string literal: R"delim(...)delim"
+        if c == "R" and i + 1 < n and content[i + 1] == '"':
+            match = _RAW_STRING_OPEN.match(content, i)
+            if match:
+                delim = match.group(1)
+                close = f"){delim}\""
+                end = content.find(close, match.end())
+                if end == -1:
+                    # Unterminated raw string — fall through to literal handling
+                    pass
+                else:
+                    block = content[i : end + len(close)]
+                    out.append(re.sub(r"[^\n]", " ", block))
+                    i = end + len(close)
+                    continue
         if c2 == "//":
             # rest-of-line comment — skip until newline, keep newline
             j = content.find("\n", i)
@@ -166,7 +189,7 @@ def iter_source_files(root: Path, scan_paths: Sequence[str]) -> Iterator[Path]:
             yield path
 
 
-def scan_file(path: Path, root: Path) -> List[Violation]:
+def scan_file(path: Path, root: Path) -> list[Violation]:
     try:
         content = path.read_text(encoding="utf-8", errors="ignore")
     except OSError:
@@ -176,7 +199,7 @@ def scan_file(path: Path, root: Path) -> List[Violation]:
     # documentation explaining the rule itself.
     sanitized = strip_comments_and_strings(content)
     lines = sanitized.splitlines()
-    violations: List[Violation] = []
+    violations: list[Violation] = []
 
     relative = str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
 
@@ -225,7 +248,7 @@ def main(argv: Sequence[str]) -> int:
     print(f"  scanned files: {len(files)}")
     print(f"  rules: {len(RULES)}")
 
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     for path in files:
         violations.extend(scan_file(path, root))
 

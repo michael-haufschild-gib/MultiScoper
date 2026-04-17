@@ -26,10 +26,10 @@ SegmentedButtonBar::~SegmentedButtonBar() { stopTimer(); }
 void SegmentedButtonBar::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    const auto& glass = getSurface();
+    const auto& surface = getSurface();
 
-    // Container: glass input styling on the entire bar
-    SurfacePainter::paintInput(g, bounds, glass, ComponentLayout::RADIUS_LG, false, false);
+    // Container: flat input styling on the entire bar.
+    SurfacePainter::paintInput(g, bounds, surface, ComponentLayout::RADIUS_LG, false, false);
 
     // Sliding indicator behind the active button
     if (!buttons_.empty() && selectedId_ >= 0)
@@ -42,11 +42,11 @@ void SegmentedButtonBar::paint(juce::Graphics& g)
             juce::Rectangle<float>(indicatorX + 2.0f, indicatorY, indicatorWidth_ - 4.0f, indicatorH);
 
         // Fill with accentSubtle
-        g.setColour(glass.accentSubtle);
+        g.setColour(surface.accentSubtle);
         g.fillRoundedRectangle(indicatorBounds, ComponentLayout::RADIUS_MD);
 
         // Border with accentMuted
-        g.setColour(glass.accentMuted);
+        g.setColour(surface.accentMuted);
         g.drawRoundedRectangle(indicatorBounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
     }
 }

@@ -597,7 +597,7 @@ Move existing hardcoded presets to JSON files:
 Before marking this feature complete, verify:
 
 - [ ] All 15 ShaderTypes selectable in presets
-- [ ] All 11 post-processing effects configurable
+- [ ] All 10 active post-processing effects configurable (Scanlines was retired in the 2026 flat-surface uplift)
 - [ ] All particle settings configurable
 - [ ] All 3D settings configurable
 - [ ] All material settings configurable

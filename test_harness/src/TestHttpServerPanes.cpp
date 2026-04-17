@@ -66,8 +66,13 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
             dynamic_cast<OscilPluginEditor*>(track->getEditor()));
 
         auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([pane, track, safeEditor, done]() mutable {
-            track->getProcessor().getState().getLayoutManager().addPane(pane);
+        int const trackIndex = track->getTrackIndex();
+        juce::MessageManager::callAsync([this, pane, trackIndex, safeEditor, done]() mutable {
+            // Re-resolve the track on the message thread so a concurrent
+            // removeTrack() between dispatch and execution cannot leave us
+            // touching a freed TestTrack.
+            if (auto* t = daw_.getTrack(trackIndex))
+                t->getProcessor().getState().getLayoutManager().addPane(pane);
             if (auto* ed = safeEditor.getComponent())
                 ed->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
@@ -121,10 +126,14 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
         juce::Component::SafePointer<OscilPluginEditor> safeEditor(
             dynamic_cast<OscilPluginEditor*>(track->getEditor()));
         auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([paneId, track, safeEditor, done]() {
-            auto& st = track->getProcessor().getState();
-            auto& lm = st.getLayoutManager();
-            reassignOrphansAndRemovePane(st, lm, paneId);
+        int const trackIndex = track->getTrackIndex();
+        juce::MessageManager::callAsync([this, paneId, trackIndex, safeEditor, done]() {
+            if (auto* t = daw_.getTrack(trackIndex))
+            {
+                auto& st = t->getProcessor().getState();
+                auto& lm = st.getLayoutManager();
+                reassignOrphansAndRemovePane(st, lm, paneId);
+            }
             if (auto* ed = safeEditor.getComponent())
                 ed->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
@@ -191,8 +200,10 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
         juce::Component::SafePointer<OscilPluginEditor> safeEditor(
             dynamic_cast<OscilPluginEditor*>(track->getEditor()));
         auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([osc, track, safeEditor, done]() {
-            track->getProcessor().getState().updateOscillator(osc);
+        int const trackIndex = track->getTrackIndex();
+        juce::MessageManager::callAsync([this, osc, trackIndex, safeEditor, done]() {
+            if (auto* t = daw_.getTrack(trackIndex))
+                t->getProcessor().getState().updateOscillator(osc);
             if (auto* ed = safeEditor.getComponent())
                 ed->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
@@ -254,8 +265,10 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
             dynamic_cast<OscilPluginEditor*>(track->getEditor()));
 
         auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([track, layout, safeEditor, done]() {
-            track->getProcessor().getState().setColumnLayout(layout);
+        int const trackIndex = track->getTrackIndex();
+        juce::MessageManager::callAsync([this, trackIndex, layout, safeEditor, done]() {
+            if (auto* t = daw_.getTrack(trackIndex))
+                t->getProcessor().getState().setColumnLayout(layout);
             if (auto* ed = safeEditor.getComponent())
                 ed->refreshPanels();
             juce::MessageManager::callAsync([done]() { done->signal(); });
@@ -400,8 +413,10 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
 
         auto paneId = panes[static_cast<size_t>(fromIndex)].getId();
         auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([track, paneId, toIndex, done]() {
-            track->getProcessor().getState().getLayoutManager().movePane(paneId, toIndex);
+        int const trackIndex = track->getTrackIndex();
+        juce::MessageManager::callAsync([this, trackIndex, paneId, toIndex, done]() {
+            if (auto* t = daw_.getTrack(trackIndex))
+                t->getProcessor().getState().getLayoutManager().movePane(paneId, toIndex);
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
         if (!done->wait(5000))

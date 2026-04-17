@@ -52,27 +52,30 @@ public:
     juce::String getHintText() const { return hintText_; }
 
     /**
+     * Detect rendering mode based on compile-time options and runtime state
+     */
+    static RenderingMode detectRenderingMode();
+
+private:
+    /**
      * Return the hint text as it would render in `availableWidth` pixels,
      * elided at the end with `...` when the full string would not fit.
-     * Exposed so unit tests can assert layout behaviour without scraping
-     * rendered pixels.
+     * Private implementation detail; exposed to tests through the friend
+     * declaration below so unit tests can assert layout behaviour without
+     * scraping rendered pixels.
      */
     juce::String getElidedHintText(float availableWidth) const;
 
     /**
      * True when the vertical separator between the hint zone and the
      * metrics zone should be drawn (i.e. the hint is non-empty and the
-     * layout has space for both zones). Exposed for the same reason as
+     * layout has space for both zones). Private for the same reason as
      * `getElidedHintText`.
      */
     bool shouldDrawSeparator() const;
 
-    /**
-     * Detect rendering mode based on compile-time options and runtime state
-     */
-    static RenderingMode detectRenderingMode();
+    friend class StatusBarComponentTestAccess;
 
-private:
     void updateFpsLabel();
     void updateCpuLabel();
     void updateMemoryLabel();

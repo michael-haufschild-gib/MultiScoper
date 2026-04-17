@@ -341,7 +341,9 @@ void OscilSlider::paintRotaryArcs(juce::Graphics& g, juce::Rectangle<float> knob
 
     auto glyphArea = juce::Rectangle<float>(knobBounds.getRight() - 10.0f, knobBounds.getY() - 2.0f, 10.0f, 10.0f);
     g.setFont(Typography::caption().withHeight(8.0f));
-    g.drawText("+", glyphArea, juce::Justification::centred);
+    // Show the actual modulation polarity: the arc direction already flips
+    // with sign; the badge must match or the badge misreports the control.
+    g.drawText(modAmount_ >= 0.0f ? "+" : "-", glyphArea, juce::Justification::centred);
 }
 
 void OscilSlider::paintRotaryLabelAndValue(juce::Graphics& g, juce::Rectangle<float> knobBounds, float opacity)

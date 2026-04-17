@@ -100,7 +100,8 @@ void paintInsetLightEdge(juce::Graphics& /*g*/, juce::Rectangle<float> /*bounds*
     // compatibility with legacy call sites.
 }
 
-void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius)
+void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass,
+                          float cornerRadius)
 {
     // Solid fill, no translucency.
     g.setColour(glass.bgPanel);
@@ -108,7 +109,7 @@ void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, cons
 }
 
 void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
-                     BorderLevel border)
+                BorderLevel border)
 {
     // 1. Single-layer drop shadow (skipped when shadowIntensity == 0).
     paintShadow(g, bounds, cornerRadius, glass.shadowIntensity, glass.shadowSpread);
@@ -142,13 +143,19 @@ void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
 
     if (drawBorder)
     {
+        // drawRoundedRectangle centers the stroke on the bounds path; without
+        // this inset the outer half of the 1px border clips at tight component
+        // edges. Mirrors bounds.reduced(strokeWidth*0.5f) used elsewhere.
+        constexpr float borderWidth = 1.0f;
+        auto const strokeBounds = bounds.reduced(borderWidth * 0.5f);
+        auto const strokeRadius = std::max(cornerRadius - (borderWidth * 0.5f), 0.0f);
         g.setColour(borderColour);
-        g.drawRoundedRectangle(bounds, cornerRadius, 1.0f);
+        g.drawRoundedRectangle(strokeBounds, strokeRadius, borderWidth);
     }
 }
 
 void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
-                     bool focused, bool hovered, bool error, juce::Colour errorColour)
+                bool focused, bool hovered, bool error, juce::Colour errorColour)
 {
     // Flat input: solid dark fill, 1px border that shifts colour by state.
     juce::Colour const bgColour = glass.bgPanel;
@@ -170,8 +177,13 @@ void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
     g.setColour(bgColour);
     g.fillRoundedRectangle(bounds, cornerRadius);
 
+    // Inset the stroke so the focused 1.5px accent border doesn't clip on
+    // tight component edges; see paintPanel above.
+    float const borderWidth = focused ? 1.5f : 1.0f;
+    auto const strokeBounds = bounds.reduced(borderWidth * 0.5f);
+    auto const strokeRadius = std::max(cornerRadius - (borderWidth * 0.5f), 0.0f);
     g.setColour(borderColour);
-    g.drawRoundedRectangle(bounds, cornerRadius, focused ? 1.5f : 1.0f);
+    g.drawRoundedRectangle(strokeBounds, strokeRadius, borderWidth);
 }
 
 void paintAccentGlow(juce::Graphics& /*g*/, juce::Rectangle<float> /*bounds*/, juce::Colour /*colour*/,

@@ -5,9 +5,8 @@ Used to compare pre/post the continuous-repaint gating change.
 from __future__ import annotations
 
 import sys
-import time
 
-from oscil_test_utils import OscilTestClient
+from oscil_test_utils import OscilTestClient, settle
 from perf_monitor import ResourceMonitor
 
 
@@ -24,7 +23,9 @@ def main(n_editors: int) -> None:
         c.set_track_audio(idx, amplitude=0.0)
         c.reset_track_state(idx)  # remove oscillators/panes
 
-    # Open exactly n_editors editors; close any past n.
+    # Open exactly n_editors editors; close any past n. Swallowing the
+    # close-editor error would let us measure more editors than the user
+    # asked for; re-validate the open-editor count before sampling.
     tracks = c.get_tracks()
     for t in tracks:
         idx = int(t["index"])
@@ -33,14 +34,33 @@ def main(n_editors: int) -> None:
         else:
             try:
                 c.close_editor(track_id=idx)
-            except Exception:
-                pass
+            except Exception as exc:
+                msg = str(exc).lower()
+                if "not found" not in msg and "already" not in msg:
+                    raise
 
     c.transport_stop()
 
-    # Let everything settle — the post-silence tail is 30 frames (~0.5s);
-    # give it a generous margin.
-    time.sleep(2.0)
+    def _exact_editor_count() -> bool:
+        open_editors = sum(
+            1 for t in c.get_tracks() if bool(t.get("editorVisible", False))
+        )
+        return open_editors == n_editors
+
+    # Fallback if the harness doesn't expose editorVisible in get_tracks:
+    # we still rely on settle() to damp animation tails. wait_until is
+    # infrastructure-friendly and avoids hard-coded sleeps.
+    try:
+        c.wait_until(
+            _exact_editor_count,
+            timeout_s=5.0,
+            desc=f"exactly {n_editors} editors visible before idle probe",
+        )
+    except Exception:
+        # Field may not exist; fall back to settle() for animation damping.
+        pass
+
+    settle(1.5, reason="post-silence tail / editor animations before idle probe")
 
     with ResourceMonitor(sample_interval_s=0.5) as mon:
         mon.sample_for(10.0)

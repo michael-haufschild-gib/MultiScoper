@@ -9,7 +9,13 @@
 #include "TestElementRegistry.h"
 #include "plugin/PluginFactory.h"
 
-#include <unistd.h>
+#include <juce_core/juce_core.h>
+
+#if JUCE_WINDOWS
+    #include <process.h>
+#else
+    #include <unistd.h>
+#endif
 
 namespace oscil::test
 {
@@ -155,7 +161,11 @@ void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& re
     data["running"] = daw_.isRunning();
     data["tracks"] = daw_.getNumTracks();
     data["sources"] = static_cast<int>(PluginFactory::getInstance().getInstanceRegistry().getSourceCount());
+#if JUCE_WINDOWS
+    data["pid"] = static_cast<int>(_getpid());
+#else
     data["pid"] = static_cast<int>(::getpid());
+#endif
     // Multi-core hosting diagnostics: proves the audio dispatcher is alive
     // and reveals how much parallelism the harness is modeling.
     data["audioTicks"] = static_cast<uint64_t>(daw_.getProcessedTickCount());

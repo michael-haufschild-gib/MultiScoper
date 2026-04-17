@@ -63,6 +63,9 @@ public:
     ~OscillatorListItemComponent() override;
 
     void paint(juce::Graphics& g) override;
+    /// Draws a translucent tile overlay when the oscillator is hidden so the
+    /// whole row (background + child labels/buttons) reads as dimmed.
+    void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent& e) override;

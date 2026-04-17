@@ -13,6 +13,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include <mutex>
+
 namespace oscil::test
 {
 
@@ -53,13 +55,17 @@ public:
     TestAudioGenerator& getAudioGenerator() { return audioGenerator_; }
 
     /**
-     * Get the source ID for this track
+     * Get the source ID for this track.
+     *
+     * Thread-safety: callers from any thread are serialized by
+     * ``sourceIdMutex_``. The processor's source ID can be queried
+     * concurrently from HTTP handler threads during registry scans, so the
+     * cache read-modify-write is guarded even though most callers are
+     * single-threaded.
      */
-    const SourceId& getSourceId() const
+    SourceId getSourceId() const
     {
-        // prepare() caches sourceId_ but can observe an empty value if it
-        // runs off the message thread (registration is deferred there).
-        // Re-query the processor so callers always see the current ID.
+        std::lock_guard<std::mutex> lock(sourceIdMutex_);
         if (!sourceId_.isValid() && processor_ != nullptr)
         {
             auto live = processor_->getSourceId();
@@ -110,6 +116,7 @@ public:
 private:
     int trackIndex_;
     juce::String name_;
+    mutable std::mutex sourceIdMutex_;
     mutable SourceId sourceId_;
     TestTransport& transport_;
 

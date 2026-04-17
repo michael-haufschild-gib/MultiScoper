@@ -29,6 +29,15 @@ void PerformanceMetricsController::reset()
     frameCount_ = 0;
     lastFrameTime_ = juce::Time::getMillisecondCounterHiRes();
     currentFps_ = 0.0f;
+
+    // Restore sentinel values so the first update() after reset unconditionally
+    // repaints the status bar even if the new metric lands within the change
+    // threshold of the previously displayed value.
+    lastCpuUsage_ = -1.0f;
+    lastMemoryMB_ = -1.0f;
+    lastFpsDisplayed_ = -1.0f;
+    lastOscillatorCount_ = -1;
+    lastSourceCount_ = -1;
 }
 
 void PerformanceMetricsController::update()

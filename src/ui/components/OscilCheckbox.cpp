@@ -205,7 +205,7 @@ void OscilCheckbox::paintBox(juce::Graphics& g, const juce::Rectangle<float>& bo
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const hoverAmount = hoverSpring_.position;
-    const auto& glass = getSurface();
+    const auto& surface = getSurface();
 
     bool const isCheckedOrTransitioning = (state_ != CheckState::Unchecked || checkSpring_.position > 0.01f);
 
@@ -213,7 +213,7 @@ void OscilCheckbox::paintBox(juce::Graphics& g, const juce::Rectangle<float>& bo
     {
         // Checked state: accent fill
         float const fillAmount = std::min(1.0f, checkSpring_.position * 2.0f);
-        auto bgColour = glass.bgGlass.interpolatedWith(glass.accent, fillAmount);
+        auto bgColour = surface.bgGlass.interpolatedWith(surface.accent, fillAmount);
 
         // Hover on checked: slightly brighter accent
         if (hoverAmount > 0.01f && fillAmount > 0.5f)
@@ -223,18 +223,18 @@ void OscilCheckbox::paintBox(juce::Graphics& g, const juce::Rectangle<float>& bo
         g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
 
         // Border: accent when checked
-        auto borderColour = glass.borderDefault.interpolatedWith(glass.accent, fillAmount);
+        auto borderColour = surface.borderDefault.interpolatedWith(surface.accent, fillAmount);
         g.setColour(borderColour.withAlpha(borderColour.getFloatAlpha() * opacity));
         g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
     }
     else
     {
         // Unchecked state: bgGlass fill + borderDefault border
-        g.setColour(glass.bgGlass.withAlpha(glass.bgGlass.getFloatAlpha() * opacity));
+        g.setColour(surface.bgGlass.withAlpha(surface.bgGlass.getFloatAlpha() * opacity));
         g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_MD);
 
         // Hover: borderStrong instead of borderDefault
-        auto borderColour = (hoverAmount > 0.5f) ? glass.borderStrong : glass.borderDefault;
+        auto borderColour = (hoverAmount > 0.5f) ? surface.borderStrong : surface.borderDefault;
         g.setColour(borderColour.withAlpha(borderColour.getFloatAlpha() * opacity));
         g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
     }

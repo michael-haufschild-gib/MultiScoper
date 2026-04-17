@@ -99,7 +99,9 @@ void OscilRadioButton::paintDot(juce::Graphics& g, const juce::Rectangle<float>&
 
 void OscilRadioButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    // Use SurfacePainter::paintFocusRing with accent color, adapted for ellipse
+    // Accent-coloured focus ring. SurfacePainter::paintFocusRing renders a
+    // rounded rectangle; radio buttons are circular, so we draw the ellipse
+    // inline with matching offset/alpha/width constants.
     auto ringBounds = bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET);
     g.setColour(getSurface().accent.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawEllipse(ringBounds, ComponentLayout::FOCUS_RING_WIDTH);

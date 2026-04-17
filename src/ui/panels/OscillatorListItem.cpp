@@ -184,7 +184,8 @@ void OscillatorListItemComponent::updateVisibility()
 
     if (trackLabel_)
     {
-        trackLabel_->setColour(juce::Label::textColourId, theme.textSecondary);
+        auto const trackColour = !isVisible_ ? theme.textMuted : theme.textSecondary;
+        trackLabel_->setColour(juce::Label::textColourId, trackColour);
     }
 
     // Always update button icon and tooltip based on current state
@@ -271,7 +272,8 @@ void OscillatorListItemComponent::onThemeChanged(const ColorTheme& newTheme)
 
     if (trackLabel_)
     {
-        trackLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
+        auto const trackColour = !isVisible_ ? newTheme.textMuted : newTheme.textSecondary;
+        trackLabel_->setColour(juce::Label::textColourId, trackColour);
     }
 }
 

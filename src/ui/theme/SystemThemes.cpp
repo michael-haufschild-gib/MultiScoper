@@ -48,7 +48,7 @@ void setLightModeButtons(ColorTheme& theme)
 /// Flat button colour pack: solid accent fill for Primary, dark
 /// contrast-safe text on the accent, transparent chromeless Secondary /
 /// Tertiary with white overlay on hover.
-void setGlassButtons(ColorTheme& theme, juce::Colour accent, juce::Colour /*disabledText*/)
+void setGlassButtons(ColorTheme& theme, juce::Colour accent)
 {
     // Pick the text colour that actually gives the higher WCAG contrast
     // against the accent. A fixed luminance threshold (previously 0.55)
@@ -427,7 +427,7 @@ ColorTheme createGlassDarkBlue()
     // zone where neither white nor black text passes.
     applyFlatBase(theme, /*hue=*/220.0f, /*saturation=*/0.7f, /*lightness=*/0.95f);
     auto accent = juce::Colour::fromHSV(220.0f / 360.0f, 0.7f, 0.95f, 1.0f);
-    setGlassButtons(theme, accent, theme.textMuted);
+    setGlassButtons(theme, accent);
     return theme;
 }
 
@@ -441,7 +441,7 @@ ColorTheme createGlassDarkPurple()
     // (see Glass Dark Blue comment).
     applyFlatBase(theme, /*hue=*/270.0f, /*saturation=*/0.6f, /*lightness=*/0.95f);
     auto accent = juce::Colour::fromHSV(270.0f / 360.0f, 0.6f, 0.95f, 1.0f);
-    setGlassButtons(theme, accent, theme.textMuted);
+    setGlassButtons(theme, accent);
     return theme;
 }
 
@@ -454,7 +454,7 @@ ColorTheme createGlassDarkBrown()
     // Amber accent — #D4952A-ish.
     applyFlatBase(theme, /*hue=*/40.0f, /*saturation=*/0.8f, /*lightness=*/0.85f);
     auto accent = juce::Colour::fromHSV(40.0f / 360.0f, 0.8f, 0.85f, 1.0f);
-    setGlassButtons(theme, accent, theme.textMuted);
+    setGlassButtons(theme, accent);
     return theme;
 }
 
@@ -467,7 +467,7 @@ ColorTheme createGlassDarkBlack()
     // Neutral cool-grey accent — muted, engineering-tool aesthetic.
     applyFlatBase(theme, /*hue=*/220.0f, /*saturation=*/0.15f, /*lightness=*/0.75f);
     auto accent = juce::Colour::fromHSV(220.0f / 360.0f, 0.15f, 0.75f, 1.0f);
-    setGlassButtons(theme, accent, theme.textMuted);
+    setGlassButtons(theme, accent);
     return theme;
 }
 

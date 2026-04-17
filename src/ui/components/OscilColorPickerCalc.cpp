@@ -11,7 +11,7 @@ namespace oscil
 
 void OscilColorPicker::paint(juce::Graphics& g)
 {
-    // Glass panel background for the entire picker container
+    // Surface panel background for the entire picker container.
     SurfacePainter::paintPanel(g, getLocalBounds().toFloat(), getSurface(), ComponentLayout::RADIUS_XL,
                                BorderLevel::Subtle);
 

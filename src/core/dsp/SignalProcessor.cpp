@@ -125,14 +125,35 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
     int const numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
 
-    bool const hasRight = !right.empty();
-    size_t const rightSize = right.size();
+    float* __restrict__ out = output.channel1.data();
+    const float* __restrict__ lp = left.data();
+    auto const n = static_cast<size_t>(numSamples);
 
-    for (int i = 0; i < numSamples; ++i)
+    // Hoist loop-invariant branch outside the loop so the body has no data
+    // dependencies that block SIMD auto-vectorization.  Measured: the inner
+    // branch + bounds check kept Mono/Mid/Side ~3.6× slower than FullStereo
+    // (see logs/perf/baseline_20260417.json).
+    if (right.size() >= n)
     {
-        float const l = left[static_cast<size_t>(i)];
-        float const r = (hasRight && std::cmp_less(i, rightSize)) ? right[static_cast<size_t>(i)] : l;
-        output.channel1[static_cast<size_t>(i)] = (l + r) * 0.5f;
+        const float* __restrict__ rp = right.data();
+        for (size_t i = 0; i < n; ++i)
+            out[i] = (lp[i] + rp[i]) * 0.5f;
+    }
+    else if (!right.empty())
+    {
+        // Uncommon: right is shorter than left.  Straight portion, then mono-fold tail.
+        const size_t common = right.size();
+        const float* __restrict__ rp = right.data();
+        for (size_t i = 0; i < common; ++i)
+            out[i] = (lp[i] + rp[i]) * 0.5f;
+        for (size_t i = common; i < n; ++i)
+            out[i] = lp[i]; // mono-fold: mean of (l, l) = l
+    }
+    else
+    {
+        // No right channel: duplicate-mix collapses to identity on left.
+        for (size_t i = 0; i < n; ++i)
+            out[i] = lp[i];
     }
 }
 
@@ -149,14 +170,30 @@ void SignalProcessor::processSide(std::span<const float> left, std::span<const f
     int const numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
 
-    bool const hasRight = !right.empty();
-    size_t const rightSize = right.size();
+    float* __restrict__ out = output.channel1.data();
+    const float* __restrict__ lp = left.data();
+    auto const n = static_cast<size_t>(numSamples);
 
-    for (int i = 0; i < numSamples; ++i)
+    // See processMono for rationale on hoisting the branch.
+    if (right.size() >= n)
     {
-        float const l = left[static_cast<size_t>(i)];
-        float const r = (hasRight && std::cmp_less(i, rightSize)) ? right[static_cast<size_t>(i)] : l;
-        output.channel1[static_cast<size_t>(i)] = (l - r) * 0.5f;
+        const float* __restrict__ rp = right.data();
+        for (size_t i = 0; i < n; ++i)
+            out[i] = (lp[i] - rp[i]) * 0.5f;
+    }
+    else if (!right.empty())
+    {
+        const size_t common = right.size();
+        const float* __restrict__ rp = right.data();
+        for (size_t i = 0; i < common; ++i)
+            out[i] = (lp[i] - rp[i]) * 0.5f;
+        for (size_t i = common; i < n; ++i)
+            out[i] = 0.0f; // side of duplicate-mono is 0
+    }
+    else
+    {
+        // No right channel: side of (l, l) = 0
+        std::fill_n(out, n, 0.0f);
     }
 }
 

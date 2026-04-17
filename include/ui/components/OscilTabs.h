@@ -87,6 +87,12 @@ public:
      */
     void setTabAccentColour(int index, juce::Colour colour);
 
+    /**
+     * Clear the per-tab accent override at @p index so the tab falls back
+     * to the theme accent. Out-of-range indices are silently ignored.
+     */
+    void clearTabAccentColour(int index);
+
     // Selection
     void setSelectedIndex(int index, bool notify = true);
     int getSelectedIndex() const { return selectedIndex_; }

@@ -8,6 +8,24 @@
 
 #include <gtest/gtest.h>
 
+namespace oscil
+{
+
+/// Test-only accessor that forwards to the component's private layout
+/// helpers. Declared as a friend of StatusBarComponent in the header so
+/// production code does not need to expose these on the public API.
+class StatusBarComponentTestAccess
+{
+public:
+    static juce::String elided(const StatusBarComponent& bar, float availableWidth)
+    {
+        return bar.getElidedHintText(availableWidth);
+    }
+    static bool separator(const StatusBarComponent& bar) { return bar.shouldDrawSeparator(); }
+};
+
+} // namespace oscil
+
 using namespace oscil;
 
 class StatusBarComponentTest : public ::testing::Test
@@ -54,7 +72,7 @@ TEST_F(StatusBarComponentTest, EmptyHintDoesNotDrawSeparator)
     StatusBarComponent bar(getThemeManager());
     // Wide enough that a hint would have space; assert only the empty-hint gate.
     bar.setSize(1200, 24);
-    EXPECT_FALSE(bar.shouldDrawSeparator());
+    EXPECT_FALSE(StatusBarComponentTestAccess::separator(bar));
 }
 
 TEST_F(StatusBarComponentTest, NonEmptyHintWithRoomEnablesSeparator)
@@ -62,7 +80,7 @@ TEST_F(StatusBarComponentTest, NonEmptyHintWithRoomEnablesSeparator)
     StatusBarComponent bar(getThemeManager());
     bar.setSize(1200, 24);
     bar.setHintText("Ready");
-    EXPECT_TRUE(bar.shouldDrawSeparator());
+    EXPECT_TRUE(StatusBarComponentTestAccess::separator(bar));
 }
 
 TEST_F(StatusBarComponentTest, NonEmptyHintWithoutRoomSuppressesSeparator)
@@ -71,7 +89,7 @@ TEST_F(StatusBarComponentTest, NonEmptyHintWithoutRoomSuppressesSeparator)
     // Too narrow to fit the right-zone plus separator region plus any hint.
     bar.setSize(50, 24);
     bar.setHintText("Ready");
-    EXPECT_FALSE(bar.shouldDrawSeparator());
+    EXPECT_FALSE(StatusBarComponentTestAccess::separator(bar));
 }
 
 TEST_F(StatusBarComponentTest, LongHintIsElidedAndEndsWithEllipsis)
@@ -82,7 +100,7 @@ TEST_F(StatusBarComponentTest, LongHintIsElidedAndEndsWithEllipsis)
 
     // A narrow available width forces elision. The returned string must fit and
     // end with the ellipsis marker used by the implementation.
-    const auto elided = bar.getElidedHintText(100.0f);
+    const auto elided = StatusBarComponentTestAccess::elided(bar, 100.0f);
     EXPECT_TRUE(elided.endsWith("..."));
     EXPECT_LT(elided.length(), longText.length());
 }
@@ -92,7 +110,7 @@ TEST_F(StatusBarComponentTest, ShortHintIsNotElided)
     StatusBarComponent bar(getThemeManager());
     const juce::String text = "OK";
     bar.setHintText(text);
-    const auto elided = bar.getElidedHintText(500.0f);
+    const auto elided = StatusBarComponentTestAccess::elided(bar, 500.0f);
     EXPECT_EQ(elided, text);
 }
 
@@ -100,7 +118,7 @@ TEST_F(StatusBarComponentTest, ZeroAvailableWidthReturnsEmpty)
 {
     StatusBarComponent bar(getThemeManager());
     bar.setHintText("Anything");
-    EXPECT_TRUE(bar.getElidedHintText(0.0f).isEmpty());
+    EXPECT_TRUE(StatusBarComponentTestAccess::elided(bar, 0.0f).isEmpty());
 }
 
 TEST_F(StatusBarComponentTest, RenderingModeIsPreservedAcrossSetters)

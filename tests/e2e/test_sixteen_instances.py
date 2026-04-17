@@ -118,8 +118,8 @@ class TestSixteenInstanceDiscovery:
         """With 16 plugin instances, the registry reports 16 sources, each unique."""
         client, track_ids, source_ids = sixteen_instances
         sources = client.get_sources()
-        assert len(sources) >= TARGET_INSTANCES, (
-            f"Expected >= {TARGET_INSTANCES} sources, got {len(sources)}"
+        assert len(sources) == TARGET_INSTANCES, (
+            f"Expected exactly {TARGET_INSTANCES} sources, got {len(sources)}"
         )
         ids = [s["id"] for s in sources]
         assert len(set(ids)) == len(ids), (
@@ -145,6 +145,7 @@ class TestSixteenInstanceDiscovery:
         If the audio loop regresses back to message-thread serial processing,
         or the pool is disabled, this test catches it.
         """
+        client, _, _ = sixteen_instances
         import requests
         base = "http://localhost:8765"
 

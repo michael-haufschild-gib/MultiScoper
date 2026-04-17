@@ -145,6 +145,15 @@ void OscilTabs::setTabAccentColour(int index, juce::Colour colour)
     }
 }
 
+void OscilTabs::clearTabAccentColour(int index)
+{
+    if (index >= 0 && std::cmp_less(index, tabAccentColours_.size()))
+    {
+        tabAccentColours_[static_cast<size_t>(index)].reset();
+        repaint();
+    }
+}
+
 juce::Colour OscilTabs::getEffectiveTabAccent(int index) const
 {
     if (index >= 0 && std::cmp_less(index, tabAccentColours_.size()))

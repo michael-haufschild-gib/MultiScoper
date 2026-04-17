@@ -127,6 +127,46 @@ class TestBody:
     start_line: int
     lines: List[str] = field(default_factory=list)
     raw_text: str = ""
+    _sanitized_text: Optional[str] = None
+
+    @property
+    def sanitized_text(self) -> str:
+        """raw_text with // and /* */ comments and "..."/'...' string literals
+        blanked out. Used by indicator matchers so a commented-out
+        ``EXPECT_THROW`` or a string literal containing ``.mouseDown(`` cannot
+        trigger a false positive.
+        """
+        if self._sanitized_text is None:
+            self._sanitized_text = _strip_comments_and_strings(self.raw_text)
+        return self._sanitized_text
+
+
+_STRING_LITERAL_RE = re.compile(
+    r"""
+    R"([^(\\s]*)\((?:[^)]|\)(?!\1"))*\)\1"   # C++ raw string literal  R"delim(...)delim"
+    | "(?:\\.|[^"\\])*"                       # "…" with escapes
+    | '(?:\\.|[^'\\])*'                       # '…' with escapes
+    """,
+    re.VERBOSE,
+)
+
+
+def _strip_comments_and_strings(text: str) -> str:
+    """Replace // and /* */ comments and all string-literal contents with
+    equal-length runs of spaces so line/column offsets are preserved.
+    """
+    # Strip /* ... */ block comments first (non-greedy, multi-line).
+    def _blank_block(match: re.Match) -> str:
+        return re.sub(r"[^\n]", " ", match.group(0))
+
+    text = re.sub(r"/\*.*?\*/", _blank_block, text, flags=re.DOTALL)
+
+    # Strip // line comments.
+    text = re.sub(r"//[^\n]*", lambda m: " " * len(m.group(0)), text)
+
+    # Strip string literals (raw and regular).
+    text = _STRING_LITERAL_RE.sub(_blank_block, text)
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -222,8 +262,11 @@ def has_assertion_behavioral_indicator(body: TestBody) -> bool:
     """True when the test contains an assertion that *is* a behavior check
     (e.g., DEATH/THROW). Such tests may legitimately have few assertions
     or assertions that look existence-only to the pattern matcher.
+
+    Searches sanitized text so commented-out indicators (``// TODO:
+    EXPECT_THROW(...)``) don't grant false behavioral bypasses.
     """
-    return any(p.search(body.raw_text) for p in ASSERTION_BEHAVIORAL_INDICATORS)
+    return any(p.search(body.sanitized_text) for p in ASSERTION_BEHAVIORAL_INDICATORS)
 
 
 def has_method_call_indicator(body: TestBody) -> bool:
@@ -231,8 +274,11 @@ def has_method_call_indicator(body: TestBody) -> bool:
     Exercising code is not the same as asserting on its effect; method-call
     indicators lift the assertion-count floor but do NOT excuse existence-only
     assertion patterns.
+
+    Searches sanitized text so a string literal containing ``.mouseDown(``
+    does not count as a real call site.
     """
-    return any(p.search(body.raw_text) for p in METHOD_CALL_INDICATORS)
+    return any(p.search(body.sanitized_text) for p in METHOD_CALL_INDICATORS)
 
 
 def has_behavioral_indicator(body: TestBody) -> bool:
