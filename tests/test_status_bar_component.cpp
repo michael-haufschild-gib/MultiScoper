@@ -25,10 +25,6 @@ public:
     static bool separator(const StatusBarComponent& bar) { return bar.shouldDrawSeparator(); }
 };
 
-} // namespace oscil
-
-using namespace oscil;
-
 class StatusBarComponentTest : public ::testing::Test
 {
 protected:
@@ -140,3 +136,5 @@ TEST_F(StatusBarComponentTest, RenderingModeIsPreservedAcrossSetters)
     bar.setSourceCount(2);
     EXPECT_EQ(bar.getRenderingMode(), initial);
 }
+
+} // namespace oscil

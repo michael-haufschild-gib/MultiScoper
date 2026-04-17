@@ -67,7 +67,6 @@ void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 void OscilButton::paintButtonBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds, juce::Colour bgColour)
 {
     juce::ignoreUnused(bounds);
-    const auto& glass = getSurface();
 
     bool const isGhostType =
         (variant_ == ButtonVariant::Ghost || variant_ == ButtonVariant::Tertiary || variant_ == ButtonVariant::Icon);
@@ -84,13 +83,6 @@ void OscilButton::paintButtonBackground(juce::Graphics& g, const juce::Rectangle
     {
         auto rippleColour = getTheme().textPrimary.withAlpha(0.1f);
         SurfacePainter::paintRipples(g, bounds, rippleManager_.getRipples(), rippleColour);
-    }
-
-    // Primary hover: accent glow behind the button
-    if (variant_ == ButtonVariant::Primary && isHovered_ && enabled_)
-    {
-        SurfacePainter::paintAccentGlow(g, bounds, glass.accentGlow, glass.accentGlowRadius,
-                                        glass.accentGlowAlpha * 0.5f);
     }
 
     // Border

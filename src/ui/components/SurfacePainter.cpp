@@ -91,13 +91,6 @@ void paintShadow(juce::Graphics& g, juce::Rectangle<float> bounds, float cornerR
     g.fillRoundedRectangle(shadowBounds, cornerRadius + (expand * 0.5f));
 }
 
-void paintInsetLightEdge(juce::Graphics& /*g*/, juce::Rectangle<float> /*bounds*/, float /*cornerRadius*/,
-                         float /*alpha*/)
-{
-    // Flat aesthetic — no inset highlight. Retained as a no-op for API
-    // compatibility with legacy call sites.
-}
-
 void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass,
                           float cornerRadius)
 {
@@ -182,12 +175,6 @@ void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
     auto const strokeRadius = std::max(cornerRadius - (borderWidth * 0.5f), 0.0f);
     g.setColour(borderColour);
     g.drawRoundedRectangle(strokeBounds, strokeRadius, borderWidth);
-}
-
-void paintAccentGlow(juce::Graphics& /*g*/, juce::Rectangle<float> /*bounds*/, juce::Colour /*colour*/,
-                     float /*radius*/, float /*alpha*/)
-{
-    // Flat aesthetic — no glow. No-op retained for legacy call sites.
 }
 
 void paintRipples(juce::Graphics& g, juce::Rectangle<float> bounds, const std::vector<RippleState>& ripples,

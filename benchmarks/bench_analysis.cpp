@@ -24,11 +24,11 @@ namespace oscil
 namespace
 {
 
-void fillDeterministic(std::vector<float>& buf, int offset)
+void fillDeterministic(std::vector<float>& buf, size_t offset)
 {
     for (size_t i = 0; i < buf.size(); ++i)
     {
-        const uint32_t idx = static_cast<uint32_t>(static_cast<int>(i) + offset);
+        const uint32_t idx = static_cast<uint32_t>(i + offset);
         const uint32_t v = idx * 1103515245u + 12345u;
         buf[i] = static_cast<float>(v & 0xFFFFu) / 65536.0f - 0.5f;
     }
@@ -89,6 +89,7 @@ static void BM_CalculateCorrelation(benchmark::State& state)
     }
 
     state.SetItemsProcessed(state.iterations() * n * 2);
+    state.SetBytesProcessed(state.iterations() * n * 2 * static_cast<int64_t>(sizeof(float)));
 }
 BENCHMARK(BM_CalculateCorrelation)->Arg(256)->Arg(1024)->Arg(2048)->Arg(4096);
 

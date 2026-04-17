@@ -280,9 +280,6 @@ TEST_F(ThemeManagerPersistenceTest, GlassFieldsRoundtrip)
     original.borderStrongAlpha = 0.25f;
     original.shadowIntensity = 0.5f;
     original.shadowSpread = 16.0f;
-    original.lightEdgeAlpha = 0.08f;
-    original.accentGlowRadius = 18.0f;
-    original.accentGlowAlpha = 0.4f;
 
     auto valueTree = original.toValueTree();
     ColorTheme restored;
@@ -299,9 +296,6 @@ TEST_F(ThemeManagerPersistenceTest, GlassFieldsRoundtrip)
     EXPECT_NEAR(restored.borderStrongAlpha, 0.25f, 0.001f);
     EXPECT_NEAR(restored.shadowIntensity, 0.5f, 0.001f);
     EXPECT_NEAR(restored.shadowSpread, 16.0f, 0.01f);
-    EXPECT_NEAR(restored.lightEdgeAlpha, 0.08f, 0.001f);
-    EXPECT_NEAR(restored.accentGlowRadius, 18.0f, 0.01f);
-    EXPECT_NEAR(restored.accentGlowAlpha, 0.4f, 0.001f);
 }
 
 // Test: glass fields survive round-trip through XML (export/import)
@@ -353,9 +347,6 @@ TEST_F(ThemeManagerPersistenceTest, OldThemeWithoutGlassFieldsGetsDefaults)
     EXPECT_NEAR(theme.borderStrongAlpha, defaults.borderStrongAlpha, 0.001f);
     EXPECT_NEAR(theme.shadowIntensity, defaults.shadowIntensity, 0.001f);
     EXPECT_NEAR(theme.shadowSpread, defaults.shadowSpread, 0.01f);
-    EXPECT_NEAR(theme.lightEdgeAlpha, defaults.lightEdgeAlpha, 0.001f);
-    EXPECT_NEAR(theme.accentGlowRadius, defaults.accentGlowRadius, 0.01f);
-    EXPECT_NEAR(theme.accentGlowAlpha, defaults.accentGlowAlpha, 0.001f);
 }
 
 // Test: all four new glass system themes are listed in getAvailableThemes()

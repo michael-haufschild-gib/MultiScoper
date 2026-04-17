@@ -116,43 +116,26 @@ void setDarkProfessionalPalette(ColorTheme& theme)
     theme.glassAlpha = 1.0f;
     theme.panelAlpha = 1.0f;
     theme.blurRadius = 0.0f;
-    theme.lightEdgeAlpha = 0.0f;
-    theme.accentGlowRadius = 0.0f;
-    theme.accentGlowAlpha = 0.0f;
     theme.shadowIntensity = 0.18f;
     theme.shadowSpread = 4.0f;
+
+    // Initialise flat-surface border alphas explicitly so Dark Professional
+    // does not silently drift if ColorTheme default values are changed.
+    // Keep in lock-step with applyFlatBase() below.
+    theme.borderSubtleAlpha = 0.06f;
+    theme.borderDefaultAlpha = 0.10f;
+    theme.borderStrongAlpha = 0.20f;
 }
 
 void setDarkProfessionalButtons(ColorTheme& theme)
 {
-    // Primary: solid accent fill with contrast-safe text (white).
-    theme.btnPrimaryBg = juce::Colour(0xFF1FD4F3);
-    theme.btnPrimaryBgHover = juce::Colour(0xFF4DDDF5);
-    theme.btnPrimaryBgActive = juce::Colour(0xFF16ADC5);
-    theme.btnPrimaryBgDisabled = juce::Colour(0xFF161B24);
-    theme.btnPrimaryText = juce::Colour(0xFF0A0D12);
-    theme.btnPrimaryTextHover = juce::Colour(0xFF0A0D12);
-    theme.btnPrimaryTextActive = juce::Colour(0xFF0A0D12);
-    theme.btnPrimaryTextDisabled = juce::Colour(0xFF4B5563);
-
-    // Secondary: transparent with hairline border; turns raised on hover.
-    theme.btnSecondaryBg = juce::Colours::transparentBlack;
-    theme.btnSecondaryBgHover = juce::Colour(0x14FFFFFF);
-    theme.btnSecondaryBgActive = juce::Colour(0x1FFFFFFF);
-    theme.btnSecondaryBgDisabled = juce::Colours::transparentBlack;
-    theme.btnSecondaryText = juce::Colour(0xFFE8EAED);
-    theme.btnSecondaryTextHover = juce::Colour(0xFFFFFFFF);
-    theme.btnSecondaryTextActive = juce::Colour(0xFFFFFFFF);
-    theme.btnSecondaryTextDisabled = juce::Colour(0xFF4B5563);
-
-    theme.btnTertiaryBg = juce::Colours::transparentBlack;
-    theme.btnTertiaryBgHover = juce::Colour(0x14FFFFFF);
-    theme.btnTertiaryBgActive = juce::Colour(0x1FFFFFFF);
-    theme.btnTertiaryBgDisabled = juce::Colours::transparentBlack;
+    // Share the contrast-safe primary/secondary/tertiary state computation
+    // with applyFlatBase() via setGlassButtons so a future tweak to the
+    // accent-to-text mapping lands in every theme at once. Only override
+    // the tertiary text colour — Dark Professional uses a slightly cooler
+    // grey than the derived `textSecondary`.
+    setGlassButtons(theme, theme.controlActive);
     theme.btnTertiaryText = juce::Colour(0xFF7A8293);
-    theme.btnTertiaryTextHover = juce::Colour(0xFFE8EAED);
-    theme.btnTertiaryTextActive = juce::Colour(0xFFE8EAED);
-    theme.btnTertiaryTextDisabled = juce::Colour(0xFF4B5563);
 }
 
 } // namespace
@@ -308,7 +291,6 @@ ColorTheme createHighContrast()
     theme.borderSubtleAlpha = 0.30f;
     theme.borderDefaultAlpha = 0.50f;
     theme.borderStrongAlpha = 0.80f;
-    theme.lightEdgeAlpha = 0.0f;
     theme.accentHue = 60.0f; // yellow accent matching textHighlight
     theme.accentSaturation = 1.0f;
     theme.accentLightness = 0.5f;
@@ -407,9 +389,6 @@ void applyFlatBase(ColorTheme& theme, float hue, float saturation, float lightne
     theme.glassAlpha = 1.0f;
     theme.panelAlpha = 1.0f;
     theme.blurRadius = 0.0f;
-    theme.lightEdgeAlpha = 0.0f;
-    theme.accentGlowRadius = 0.0f;
-    theme.accentGlowAlpha = 0.0f;
     theme.shadowIntensity = 0.18f;
     theme.shadowSpread = 4.0f;
     theme.borderSubtleAlpha = 0.06f;

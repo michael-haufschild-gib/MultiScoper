@@ -100,6 +100,21 @@ class ForbiddenPatternsLintTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
             self.assertIn("PASSED", result.stdout)
 
+    def test_catches_wrapped_forbidden_call(self):
+        # Regression: a forbidden call split across lines — e.g.
+        # `setContinuousRepainting\n(true)` — must still be reported at the
+        # identifier's line, not slip past per-line scanning.
+        with tempfile.TemporaryDirectory() as tmp:
+            write(os.path.join(tmp, "src", "evil.cpp"), """
+                void configureContext(juce::OpenGLContext& ctx) {
+                    ctx.setContinuousRepainting
+                        (true);
+                }
+            """)
+            result = run_script(tmp)
+            self.assertEqual(result.returncode, 1, msg=result.stdout + result.stderr)
+            self.assertIn("setContinuousRepainting(true)", result.stdout)
+
     def test_catches_stdio_logging(self):
         for snippet in [
             'std::printf("%s", "x");',

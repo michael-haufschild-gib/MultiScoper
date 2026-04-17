@@ -200,13 +200,6 @@ void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
 
     float const cornerRadius = bounds.getHeight() / 2.0f;
 
-    // Track ON: accent glow behind
-    if (progress > 0.01f)
-    {
-        SurfacePainter::paintAccentGlow(g, bounds, glass.accentGlow, glass.accentGlowRadius * progress,
-                                        glass.accentGlowAlpha * progress * 0.5f);
-    }
-
     // Track background: interpolate between OFF (bgGlass) and ON (accent)
     auto offColor = glass.bgGlass;
     auto onColor = glass.accent;

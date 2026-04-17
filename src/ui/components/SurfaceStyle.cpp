@@ -3,9 +3,9 @@
 
     Historical name: "GlassStyle" / "glassmorphism". The 2026 Oscil uplift
     removed that aesthetic entirely. The struct was renamed to SurfaceStyle
-    but field names (`bgGlass`, `glassAlpha`, `lightEdgeAlpha`, `accentGlow*`)
-    are retained as stable ValueTree serialization tokens — changing them
-    would break user theme files on disk.
+    but some *Glass* field names (`bgGlass`, `glassAlpha`) remain as stable
+    ValueTree serialization tokens — changing them would break user theme
+    files on disk.
 
     Token semantics under the flat surface system:
 
@@ -14,8 +14,7 @@
         on interaction without changing its hue.
       * `accentSubtle` / `accentMuted` are tints of the accent used for
         selection/hover tints, NOT button-background colours.
-      * `insetLightEdge` is transparent (no glass highlight).
-      * Shadow/glow parameters are zero by default; paint code should treat
+      * Shadow parameters are zero by default; paint code should treat
         them as optional.
 */
 
@@ -49,15 +48,9 @@ void SurfaceStyle::computeFrom(const ColorTheme& theme)
     accent = juce::Colour::fromHSV(theme.accentHue / 360.0f, theme.accentSaturation, theme.accentLightness, 1.0f);
     accentSubtle = accent.withAlpha(0.15f);
     accentMuted = accent.withAlpha(0.35f);
-    accentGlow = accent; // legacy alias; glow painter is a no-op now.
-
-    // Flat aesthetic: no inset light edge.
-    insetLightEdge = juce::Colours::transparentBlack;
 
     shadowIntensity = theme.shadowIntensity;
     shadowSpread = theme.shadowSpread;
-    accentGlowRadius = theme.accentGlowRadius; // typically 0 on new themes
-    accentGlowAlpha = theme.accentGlowAlpha;   // typically 0 on new themes
 }
 
 } // namespace oscil

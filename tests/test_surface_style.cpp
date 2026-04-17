@@ -34,11 +34,8 @@ protected:
         theme.borderSubtleAlpha = 0.06f;
         theme.borderDefaultAlpha = 0.10f;
         theme.borderStrongAlpha = 0.20f;
-        theme.lightEdgeAlpha = 0.0f;
         theme.shadowIntensity = 0.18f;
         theme.shadowSpread = 4.0f;
-        theme.accentGlowRadius = 0.0f;
-        theme.accentGlowAlpha = 0.0f;
 
         return theme;
     }
@@ -132,17 +129,6 @@ TEST_F(SurfaceStyleTest, AccentMutedHas35PercentAlpha)
     EXPECT_NEAR(surface.accentMuted.getFloatAlpha(), 0.35f, 0.01f);
 }
 
-TEST_F(SurfaceStyleTest, AccentGlowMatchesAccentColor)
-{
-    auto theme = makeTestTheme();
-    SurfaceStyle surface;
-    surface.computeFrom(theme);
-
-    // accentGlow is kept as an alias of accent for legacy paint call sites;
-    // the glow painter itself is a no-op in the flat aesthetic.
-    EXPECT_EQ(surface.accentGlow.getARGB(), surface.accent.getARGB());
-}
-
 // =============================================================================
 // Border alpha levels — still derived from textPrimary at theme-configured alphas
 // =============================================================================
@@ -227,20 +213,8 @@ TEST_F(SurfaceStyleTest, BgActiveIsStrongerThanBgHover)
 // Inset light edge: transparent in the flat aesthetic
 // =============================================================================
 
-TEST_F(SurfaceStyleTest, InsetLightEdgeIsTransparent)
-{
-    auto theme = makeTestTheme();
-    SurfaceStyle surface;
-    surface.computeFrom(theme);
-
-    // Flat surfaces no longer draw a 1px inset highlight. This token is
-    // kept on SurfaceStyle for legacy call-site compatibility but must
-    // resolve to fully transparent.
-    EXPECT_EQ(surface.insetLightEdge.getFloatAlpha(), 0.0f);
-}
-
 // =============================================================================
-// Shadow and glow parameters: passed through for the one-layer drop shadow
+// Shadow parameters: passed through for the one-layer drop shadow
 // =============================================================================
 
 TEST_F(SurfaceStyleTest, ShadowParametersPassedThrough)
@@ -253,20 +227,6 @@ TEST_F(SurfaceStyleTest, ShadowParametersPassedThrough)
 
     EXPECT_NEAR(surface.shadowIntensity, 0.6f, 0.001f);
     EXPECT_NEAR(surface.shadowSpread, 18.0f, 0.001f);
-}
-
-TEST_F(SurfaceStyleTest, AccentGlowParametersPassedThrough)
-{
-    // Glow is a no-op in the flat painter, but the parameter passthrough
-    // remains so themes can still opt into a glow if they set > 0 values.
-    auto theme = makeTestTheme();
-    theme.accentGlowRadius = 20.0f;
-    theme.accentGlowAlpha = 0.5f;
-    SurfaceStyle surface;
-    surface.computeFrom(theme);
-
-    EXPECT_NEAR(surface.accentGlowRadius, 20.0f, 0.001f);
-    EXPECT_NEAR(surface.accentGlowAlpha, 0.5f, 0.001f);
 }
 
 // =============================================================================

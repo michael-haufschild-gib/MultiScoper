@@ -23,6 +23,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Set, Tuple
 
+# Reuse the comment/string stripper with scripts/forbidden_patterns_lint.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lint_utils import strip_comments_and_strings as _strip_comments_and_strings  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -51,7 +55,9 @@ EXISTENCE_PATTERNS: List[re.Pattern] = [
     re.compile(r"\b(?:EXPECT|ASSERT)_NE\s*\(\s*nullptr\s*,"),
     # EXPECT_TRUE(x != nullptr) / EXPECT_TRUE(x)
     re.compile(r"\b(?:EXPECT|ASSERT)_TRUE\s*\(\s*\w+\s*!=\s*nullptr\s*\)"),
-    re.compile(r"\b(?:EXPECT|ASSERT)_TRUE\s*\(\s*\w+\s*\)$"),
+    # MULTILINE so `$` anchors at end-of-line when the assertion is wrapped
+    # across lines and matched via .match(sanitized, pos).
+    re.compile(r"\b(?:EXPECT|ASSERT)_TRUE\s*\(\s*\w+\s*\)$", re.MULTILINE),
     # EXPECT_FALSE(x == nullptr)
     re.compile(r"\b(?:EXPECT|ASSERT)_FALSE\s*\(\s*\w+\s*==\s*nullptr\s*\)"),
     # EXPECT_TRUE(!x.empty()) / EXPECT_FALSE(x.empty())
@@ -141,104 +147,6 @@ class TestBody:
         return self._sanitized_text
 
 
-_RAW_STRING_OPEN = re.compile(r'(?:u8|u|U|L)?R"([^(\\\s]*)\(')
-_STRING_PREFIX = re.compile(r'(?:u8|u|U|L)')
-
-
-def _is_ident_char(ch: str) -> bool:
-    return ch.isalnum() or ch == "_"
-
-
-def _strip_comments_and_strings(text: str) -> str:
-    """Replace // and /* */ comments and all string-literal contents with
-    equal-length runs of spaces so line/column offsets are preserved.
-
-    A character-wise state machine (rather than layered regexes) so that
-    string literals containing comment markers — e.g. ``"http://..."`` or
-    ``"/* not a comment */"`` — and comments containing stray quotes —
-    e.g. ``// we can't...`` — are handled correctly. Regex-based stripping
-    is order-sensitive and has repeatedly misidentified one construct as
-    the other.
-    """
-    out: list[str] = []
-    i = 0
-    n = len(text)
-    while i < n:
-        ch = text[i]
-        two = text[i:i + 2]
-
-        # Block comment: /* ... */ — blank but keep newlines for offset.
-        if two == "/*":
-            end = text.find("*/", i + 2)
-            if end == -1:
-                end = n
-            else:
-                end += 2
-            out.append(re.sub(r"[^\n]", " ", text[i:end]))
-            i = end
-            continue
-
-        # Line comment: // ... to newline.
-        if two == "//":
-            end = text.find("\n", i)
-            if end == -1:
-                end = n
-            out.append(" " * (end - i))
-            i = end
-            continue
-
-        # String literal (possibly with prefix). Only accept a prefix when
-        # the preceding character isn't an identifier char, so we don't
-        # misread `myUR"..."` or similar.
-        prev_is_ident = i > 0 and _is_ident_char(text[i - 1])
-
-        # Raw string literal with optional prefix.
-        if not prev_is_ident:
-            raw_match = _RAW_STRING_OPEN.match(text, i)
-            if raw_match:
-                delim = raw_match.group(1)
-                close = f"){delim}\""
-                end = text.find(close, raw_match.end())
-                if end == -1:
-                    end = n
-                else:
-                    end += len(close)
-                out.append(re.sub(r"[^\n]", " ", text[i:end]))
-                i = end
-                continue
-
-        # Prefixed non-raw literal: consume prefix, then fall through.
-        if not prev_is_ident and ch in ("u", "U", "L"):
-            prefix_match = _STRING_PREFIX.match(text, i)
-            if prefix_match and prefix_match.end() < n and text[prefix_match.end()] in ('"', "'"):
-                out.append(" " * (prefix_match.end() - i))
-                i = prefix_match.end()
-                ch = text[i]
-
-        # Regular string or char literal.
-        if ch in ('"', "'"):
-            quote = ch
-            start = i
-            i += 1
-            while i < n:
-                c = text[i]
-                if c == "\\" and i + 1 < n:
-                    i += 2
-                    continue
-                if c == quote or c == "\n":
-                    if c == quote:
-                        i += 1
-                    break
-                i += 1
-            out.append(re.sub(r"[^\n]", " ", text[start:i]))
-            continue
-
-        out.append(ch)
-        i += 1
-
-    return "".join(out)
-
-
 # ---------------------------------------------------------------------------
 # Extraction
 # ---------------------------------------------------------------------------
@@ -307,22 +215,23 @@ def count_assertions(body: TestBody) -> int:
 
 
 def is_existence_only(body: TestBody) -> bool:
-    """Return True if ALL assertions in the body are existence-only patterns."""
+    """Return True if ALL assertions in the body are existence-only patterns.
+
+    Anchors each pattern at the assertion's start offset in the full
+    sanitized buffer (``pattern.match(sanitized, pos)``) so assertions
+    wrapped across lines — e.g. ``EXPECT_TRUE(\\n    value.has_value())`` —
+    are classified consistently with their single-line equivalents.
+    Previously the scanner narrowed to a single line and missed wrapped
+    shallow assertions.
+    """
     sanitized = body.sanitized_text
     assertions = list(ASSERTION_RE.finditer(sanitized))
     if not assertions:
         return False  # No assertions → separate violation
 
     for assertion_match in assertions:
-        # Get the line containing this assertion
         pos = assertion_match.start()
-        line_start = sanitized.rfind("\n", 0, pos) + 1
-        line_end = sanitized.find("\n", pos)
-        if line_end == -1:
-            line_end = len(sanitized)
-        assertion_line = sanitized[line_start:line_end].strip()
-
-        is_existence = any(p.search(assertion_line) for p in EXISTENCE_PATTERNS)
+        is_existence = any(p.match(sanitized, pos) for p in EXISTENCE_PATTERNS)
         if not is_existence:
             return False  # At least one non-existence assertion
 

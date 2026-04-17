@@ -224,7 +224,7 @@ class ResourceMonitor:
         except psutil.NoSuchProcess:
             raise RuntimeError(
                 "Harness process disappeared during monitoring — likely a crash."
-            )
+            ) from None
         fps = 0.0
         harness_cpu = 0.0
         harness_mem_mb = 0.0
@@ -265,10 +265,13 @@ class ResourceMonitor:
 
 @contextmanager
 def monitor_resources(
+    harness_url: str = HARNESS_URL,
     sample_interval_s: float = 0.25,
 ) -> Iterator[ResourceMonitor]:
     """Convenience wrapper: with monitor_resources() as mon: ..."""
-    with ResourceMonitor(sample_interval_s=sample_interval_s) as mon:
+    with ResourceMonitor(
+        harness_url=harness_url, sample_interval_s=sample_interval_s
+    ) as mon:
         yield mon
 
 

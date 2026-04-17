@@ -30,12 +30,19 @@ rationale so reviewers don't have to guess.
 from __future__ import annotations
 
 import argparse
+import bisect
 import dataclasses
 import re
 import sys
 from pathlib import Path
 from collections.abc import Iterator, Sequence
 from typing import Optional
+
+# Share the comment/string stripper with scripts/test_quality_lint.py so any
+# parser edge-case fix lands in both linters simultaneously. The history here
+# is two near-copy state machines that drifted on raw-string handling.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lint_utils import strip_comments_and_strings  # noqa: E402
 
 EXCLUDED_DIR_NAMES = {"build", ".git", ".serena", ".claude", "_deps"}
 DEFAULT_EXTENSIONS = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".mm"}
@@ -103,110 +110,6 @@ class Violation:
     rule: ForbiddenRule
 
 
-_RAW_STRING_OPEN = re.compile(r'(?:u8|u|U|L)?R"([^(\\\s]*)\(')
-_STRING_PREFIX = re.compile(r'(?:u8|u|U|L)')
-
-
-def _is_identifier_char(ch: str) -> bool:
-    return ch.isalnum() or ch == "_"
-
-
-def strip_comments_and_strings(content: str) -> str:
-    """Remove C/C++ comments and string literals so rules don't trip on
-    rationale text the pattern itself cites. A line's line-number offsets
-    are preserved (newlines kept).
-
-    Handles C++ raw string literals (``R"delim(...)delim"``) and their
-    encoding-prefixed variants (``L"..."``, ``u8"..."``, ``LR"..."``,
-    ``u8R"..."``, etc.) so forbidden API names embedded in documentation
-    strings do not trigger violations.
-    """
-    out: list[str] = []
-    i = 0
-    n = len(content)
-    while i < n:
-        c = content[i]
-        c2 = content[i : i + 2]
-        # String literal opener — optionally prefixed with u8/u/U/L and/or R.
-        # Only accept a prefix when the preceding character is not an
-        # identifier character (so we don't misread `myUR"str"` etc.).
-        prev_is_ident = i > 0 and _is_identifier_char(content[i - 1])
-        if not prev_is_ident and c in ("u", "U", "L"):
-            # Raw form with prefix: e.g. u8R"(..)", LR"(..)".
-            raw_match = _RAW_STRING_OPEN.match(content, i)
-            if raw_match:
-                delim = raw_match.group(1)
-                close = f"){delim}\""
-                end = content.find(close, raw_match.end())
-                if end != -1:
-                    block = content[i : end + len(close)]
-                    out.append(re.sub(r"[^\n]", " ", block))
-                    i = end + len(close)
-                    continue
-            # Non-raw prefixed literal: consume the prefix, then let the
-            # standard string/char handler below pick up the quote.
-            prefix_match = _STRING_PREFIX.match(content, i)
-            if prefix_match:
-                end_prefix = prefix_match.end()
-                if end_prefix < n and content[end_prefix] in ('"', "'"):
-                    out.append(" " * (end_prefix - i))
-                    i = end_prefix
-                    c = content[i]
-                    c2 = content[i : i + 2]
-        # Raw string literal without prefix: R"delim(...)delim"
-        if c == "R" and i + 1 < n and content[i + 1] == '"' and not prev_is_ident:
-            match = _RAW_STRING_OPEN.match(content, i)
-            if match:
-                delim = match.group(1)
-                close = f"){delim}\""
-                end = content.find(close, match.end())
-                if end == -1:
-                    # Unterminated raw string — fall through to literal handling
-                    pass
-                else:
-                    block = content[i : end + len(close)]
-                    out.append(re.sub(r"[^\n]", " ", block))
-                    i = end + len(close)
-                    continue
-        if c2 == "//":
-            # rest-of-line comment — skip until newline, keep newline
-            j = content.find("\n", i)
-            if j == -1:
-                break
-            i = j
-            continue
-        if c2 == "/*":
-            # block comment — skip until */, preserve newlines
-            j = content.find("*/", i + 2)
-            if j == -1:
-                break
-            block = content[i : j + 2]
-            out.append(re.sub(r"[^\n]", " ", block))
-            i = j + 2
-            continue
-        if c in ('"', "'"):
-            # string literal — consume escapes, preserve newlines
-            quote = c
-            out.append(c)
-            i += 1
-            while i < n:
-                if content[i] == "\\" and i + 1 < n:
-                    out.append(" ")
-                    out.append(" ")
-                    i += 2
-                    continue
-                if content[i] == quote:
-                    out.append(c)
-                    i += 1
-                    break
-                out.append("\n" if content[i] == "\n" else " ")
-                i += 1
-            continue
-        out.append(c)
-        i += 1
-    return "".join(out)
-
-
 def iter_source_files(root: Path, scan_paths: Sequence[str]) -> Iterator[Path]:
     for relative in scan_paths:
         start = (root / relative).resolve()
@@ -231,24 +134,35 @@ def scan_file(path: Path, root: Path) -> list[Violation]:
     # Strip out comments and string literals so rules don't self-trigger on
     # documentation explaining the rule itself.
     sanitized = strip_comments_and_strings(content)
-    lines = sanitized.splitlines()
     violations: list[Violation] = []
+
+    # Map character offsets back to 1-based line numbers so matches that span
+    # a newline (e.g. `setContinuousRepainting\n(true)`) still report the
+    # line of the offending identifier instead of being missed by per-line
+    # searches.
+    line_starts = [0]
+    line_starts.extend(i + 1 for i, ch in enumerate(sanitized) if ch == "\n")
 
     relative = str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
 
     for rule in RULES:
         if relative in rule.allow_files:
             continue
-        for lineno, line in enumerate(lines, start=1):
-            if rule.pattern.search(line):
-                violations.append(
-                    Violation(
-                        path=relative,
-                        line=lineno,
-                        text=line.rstrip(),
-                        rule=rule,
-                    )
+        for match in rule.pattern.finditer(sanitized):
+            lineno = bisect.bisect_right(line_starts, match.start())
+            line_start = line_starts[lineno - 1]
+            line_end = sanitized.find("\n", match.start())
+            if line_end == -1:
+                line_end = len(sanitized)
+            line = sanitized[line_start:line_end]
+            violations.append(
+                Violation(
+                    path=relative,
+                    line=lineno,
+                    text=line.rstrip(),
+                    rule=rule,
                 )
+            )
 
     return violations
 

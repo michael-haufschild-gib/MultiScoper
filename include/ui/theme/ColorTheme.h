@@ -126,12 +126,6 @@ struct ColorTheme
     float shadowIntensity = 0.18f;
     float shadowSpread = 4.0f;
 
-    // Legacy glass-effect parameters — retained for serialization back-compat.
-    // New painters ignore these (flat aesthetic; no inset highlight, no glow).
-    float lightEdgeAlpha = 0.0f;
-    float accentGlowRadius = 0.0f;
-    float accentGlowAlpha = 0.0f;
-
     // Default waveform colors (up to 64)
     std::vector<juce::Colour> waveformColors;
 
