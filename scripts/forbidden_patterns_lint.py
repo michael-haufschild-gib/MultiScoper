@@ -120,7 +120,11 @@ def iter_source_files(root: Path, scan_paths: Sequence[str]) -> Iterator[Path]:
                 continue
             if path.suffix.lower() not in DEFAULT_EXTENSIONS:
                 continue
-            if any(part in EXCLUDED_DIR_NAMES for part in path.parts):
+            try:
+                rel_parts = path.relative_to(root).parts
+            except ValueError:
+                rel_parts = path.parts
+            if any(part in EXCLUDED_DIR_NAMES for part in rel_parts):
                 continue
             yield path
 

@@ -117,24 +117,24 @@ class ResourceReport:
         return min((s.rss_mb for s in self.samples), default=0.0)
 
     def cpu_percent_avg(self) -> float:
+        # ResourceMonitor.__enter__() primes cpu_percent(interval=None) before
+        # the first Sample is appended, so samples[0] is already a real delta
+        # reading rather than a warm-up zero — include every sample.
         if not self.samples:
             return 0.0
-        # Skip the first sample — psutil's cpu_percent() returns 0 the first
-        # time it is called on a new Process handle.
-        meaningful = self.samples[1:] or self.samples
-        return statistics.mean(s.cpu_percent for s in meaningful)
+        return statistics.mean(s.cpu_percent for s in self.samples)
 
     def cpu_percent_p95(self) -> float:
-        vals = sorted(s.cpu_percent for s in self.samples[1:] or self.samples)
+        vals = sorted(s.cpu_percent for s in self.samples)
         if not vals:
             return 0.0
         idx = min(int(len(vals) * 0.95), len(vals) - 1)
         return vals[idx]
 
     def cpu_percent_peak(self) -> float:
-        if len(self.samples) < 2:
+        if not self.samples:
             return 0.0
-        return max(s.cpu_percent for s in self.samples[1:])
+        return max(s.cpu_percent for s in self.samples)
 
     def fps_avg(self) -> float:
         # Include zero-fps samples: `sample()` leaves fps == 0 when
@@ -233,12 +233,31 @@ class ResourceMonitor:
         try:
             resp = requests.get(f"{self.harness_url}/metrics/current", timeout=2.0)
             if resp.status_code == 200:
-                m = resp.json().get("data", {})
-                fps = float(m.get("fps") or 0.0)
-                harness_cpu = float(m.get("cpuPercent") or 0.0)
-                harness_mem_mb = float(m.get("memoryMB") or 0.0)
-                osc_count = int(m.get("oscillatorCount") or 0)
-                source_count = int(m.get("sourceCount") or 0)
+                try:
+                    body = resp.json()
+                except ValueError:
+                    body = {}
+                m = body.get("data", {}) if isinstance(body, dict) else {}
+                if not isinstance(m, dict):
+                    m = {}
+
+                def _as_float(value) -> float:
+                    try:
+                        return float(value) if value is not None else 0.0
+                    except (TypeError, ValueError):
+                        return 0.0
+
+                def _as_int(value) -> int:
+                    try:
+                        return int(value) if value is not None else 0
+                    except (TypeError, ValueError):
+                        return 0
+
+                fps = _as_float(m.get("fps"))
+                harness_cpu = _as_float(m.get("cpuPercent"))
+                harness_mem_mb = _as_float(m.get("memoryMB"))
+                osc_count = _as_int(m.get("oscillatorCount"))
+                source_count = _as_int(m.get("sourceCount"))
         except requests.RequestException:
             pass
         s = Sample(

@@ -29,7 +29,7 @@ struct SurfaceStyle
 
     juce::Colour accent;
     juce::Colour accentSubtle; // accent at 15% alpha
-    juce::Colour accentMuted;  // accent at 30% alpha
+    juce::Colour accentMuted;  // accent at 35% alpha
 
     float shadowIntensity = 0.4f;
     float shadowSpread = 12.0f;

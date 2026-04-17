@@ -8,6 +8,7 @@
 #include "ui/theme/ThemeManager.h"
 
 #include <gtest/gtest.h>
+#include <memory>
 
 namespace oscil
 {
