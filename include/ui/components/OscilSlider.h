@@ -240,6 +240,11 @@ private:
     static constexpr int TOOLTIP_PADDING = 8;
     static constexpr float THUMB_HIT_EXTRA = 15.0f; // Increased for WCAG 44px touch target
 
+    // Rotary layout — shared source of truth across OscilSlider.cpp and OscilSliderPainting.cpp.
+    static constexpr int ROTARY_KNOB_SIZE = 56;
+    static constexpr int ROTARY_LABEL_HEIGHT = 14;
+    static constexpr int ROTARY_VALUE_HEIGHT = 14;
+
     // TestIdSupport
     void registerTestId() override;
     OSCIL_TESTABLE();

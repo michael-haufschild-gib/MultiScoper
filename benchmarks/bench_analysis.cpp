@@ -15,9 +15,12 @@
 
 #include <benchmark/benchmark.h>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <vector>
 
+namespace oscil
+{
 namespace
 {
 
@@ -25,8 +28,9 @@ void fillDeterministic(std::vector<float>& buf, int offset)
 {
     for (size_t i = 0; i < buf.size(); ++i)
     {
-        const int idx = static_cast<int>(i) + offset;
-        buf[i] = static_cast<float>((idx * 1103515245 + 12345) & 0xFFFF) / 65536.0f - 0.5f;
+        const uint32_t idx = static_cast<uint32_t>(static_cast<int>(i) + offset);
+        const uint32_t v = idx * 1103515245u + 12345u;
+        buf[i] = static_cast<float>(v & 0xFFFFu) / 65536.0f - 0.5f;
     }
 }
 
@@ -161,3 +165,5 @@ static void BM_PeakDecimator(benchmark::State& state)
     state.SetBytesProcessed(state.iterations() * inputSamples * static_cast<int64_t>(sizeof(float)));
 }
 BENCHMARK(BM_PeakDecimator)->ArgsProduct({{2048, 4096, 8192, 16384}, {800, 1600}});
+
+} // namespace oscil

@@ -3,6 +3,7 @@
     Verifies the two-zone layout's hint-text API, elision, and separator gating.
 */
 
+#include "ui/components/ComponentConstants.h"
 #include "ui/panels/StatusBarComponent.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -100,9 +101,16 @@ TEST_F(StatusBarComponentTest, LongHintIsElidedAndEndsWithEllipsis)
 
     // A narrow available width forces elision. The returned string must fit and
     // end with the ellipsis marker used by the implementation.
-    const auto elided = StatusBarComponentTestAccess::elided(bar, 100.0f);
+    constexpr float kAvailableWidth = 100.0f;
+    const auto elided = StatusBarComponentTestAccess::elided(bar, kAvailableWidth);
     EXPECT_TRUE(elided.endsWith("..."));
     EXPECT_LT(elided.length(), longText.length());
+
+    // The core truncation contract: the rendered width of the elided string
+    // must actually fit the budget. Asserting only the ellipsis suffix would
+    // pass even if the binary-search bound were off by one.
+    const auto font = ComponentLayout::captionFont();
+    EXPECT_LE(juce::GlyphArrangement::getStringWidth(font, elided), kAvailableWidth);
 }
 
 TEST_F(StatusBarComponentTest, ShortHintIsNotElided)

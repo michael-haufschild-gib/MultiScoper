@@ -4,10 +4,13 @@ Used to compare pre/post the continuous-repaint gating change.
 """
 from __future__ import annotations
 
+import logging
 import sys
 
 from oscil_test_utils import OscilTestClient, settle
 from perf_monitor import ResourceMonitor
+
+log = logging.getLogger(__name__)
 
 
 def main(n_editors: int) -> None:
@@ -56,9 +59,14 @@ def main(n_editors: int) -> None:
             timeout_s=5.0,
             desc=f"exactly {n_editors} editors visible before idle probe",
         )
-    except Exception:
+    except Exception as exc:
         # Field may not exist; fall back to settle() for animation damping.
-        pass
+        # Log so test flakiness is diagnosable instead of silently degrading.
+        log.warning(
+            "editor-count wait failed for n_editors=%d (%s); falling back to settle()",
+            n_editors,
+            exc,
+        )
 
     settle(1.5, reason="post-silence tail / editor animations before idle probe")
 

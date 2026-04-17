@@ -103,7 +103,12 @@ class Violation:
     rule: ForbiddenRule
 
 
-_RAW_STRING_OPEN = re.compile(r'R"([^(\\\s]*)\(')
+_RAW_STRING_OPEN = re.compile(r'(?:u8|u|U|L)?R"([^(\\\s]*)\(')
+_STRING_PREFIX = re.compile(r'(?:u8|u|U|L)')
+
+
+def _is_identifier_char(ch: str) -> bool:
+    return ch.isalnum() or ch == "_"
 
 
 def strip_comments_and_strings(content: str) -> str:
@@ -111,8 +116,10 @@ def strip_comments_and_strings(content: str) -> str:
     rationale text the pattern itself cites. A line's line-number offsets
     are preserved (newlines kept).
 
-    Handles C++ raw string literals (``R"delim(...)delim"``) so forbidden
-    API names embedded in documentation strings do not trigger violations.
+    Handles C++ raw string literals (``R"delim(...)delim"``) and their
+    encoding-prefixed variants (``L"..."``, ``u8"..."``, ``LR"..."``,
+    ``u8R"..."``, etc.) so forbidden API names embedded in documentation
+    strings do not trigger violations.
     """
     out: list[str] = []
     i = 0
@@ -120,8 +127,34 @@ def strip_comments_and_strings(content: str) -> str:
     while i < n:
         c = content[i]
         c2 = content[i : i + 2]
-        # Raw string literal: R"delim(...)delim"
-        if c == "R" and i + 1 < n and content[i + 1] == '"':
+        # String literal opener — optionally prefixed with u8/u/U/L and/or R.
+        # Only accept a prefix when the preceding character is not an
+        # identifier character (so we don't misread `myUR"str"` etc.).
+        prev_is_ident = i > 0 and _is_identifier_char(content[i - 1])
+        if not prev_is_ident and c in ("u", "U", "L"):
+            # Raw form with prefix: e.g. u8R"(..)", LR"(..)".
+            raw_match = _RAW_STRING_OPEN.match(content, i)
+            if raw_match:
+                delim = raw_match.group(1)
+                close = f"){delim}\""
+                end = content.find(close, raw_match.end())
+                if end != -1:
+                    block = content[i : end + len(close)]
+                    out.append(re.sub(r"[^\n]", " ", block))
+                    i = end + len(close)
+                    continue
+            # Non-raw prefixed literal: consume the prefix, then let the
+            # standard string/char handler below pick up the quote.
+            prefix_match = _STRING_PREFIX.match(content, i)
+            if prefix_match:
+                end_prefix = prefix_match.end()
+                if end_prefix < n and content[end_prefix] in ('"', "'"):
+                    out.append(" " * (end_prefix - i))
+                    i = end_prefix
+                    c = content[i]
+                    c2 = content[i : i + 2]
+        # Raw string literal without prefix: R"delim(...)delim"
+        if c == "R" and i + 1 < n and content[i + 1] == '"' and not prev_is_ident:
             match = _RAW_STRING_OPEN.match(content, i)
             if match:
                 delim = match.group(1)

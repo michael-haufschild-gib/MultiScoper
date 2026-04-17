@@ -51,22 +51,25 @@ void setLightModeButtons(ColorTheme& theme)
 void setGlassButtons(ColorTheme& theme, juce::Colour accent)
 {
     // Pick the text colour that actually gives the higher WCAG contrast
-    // against the accent. A fixed luminance threshold (previously 0.55)
-    // straddles the switchover for several accent hues, producing AA
-    // failures — compute both ratios and pick the winner instead.
+    // against the button background. A fixed luminance threshold straddles
+    // the switchover for several accent hues, producing AA failures —
+    // compute ratios against each actual state background (base, hover,
+    // active) so the winner is stable across the whole button life cycle.
     auto const kWhite = juce::Colour(0xFFFFFFFF);
     auto const kNearBlack = juce::Colour(0xFF0A0D12);
-    auto const whiteRatio = ColorTheme::calculateContrastRatio(kWhite, accent);
-    auto const blackRatio = ColorTheme::calculateContrastRatio(kNearBlack, accent);
-    auto const primaryText = (whiteRatio >= blackRatio) ? kWhite : kNearBlack;
+    auto const pickPrimaryText = [kWhite, kNearBlack](juce::Colour background) {
+        auto const whiteRatio = ColorTheme::calculateContrastRatio(kWhite, background);
+        auto const blackRatio = ColorTheme::calculateContrastRatio(kNearBlack, background);
+        return (whiteRatio >= blackRatio) ? kWhite : kNearBlack;
+    };
 
     theme.btnPrimaryBg = accent;
     theme.btnPrimaryBgHover = accent.brighter(0.10f);
     theme.btnPrimaryBgActive = accent.darker(0.18f);
     theme.btnPrimaryBgDisabled = theme.controlBackground;
-    theme.btnPrimaryText = primaryText;
-    theme.btnPrimaryTextHover = primaryText;
-    theme.btnPrimaryTextActive = primaryText;
+    theme.btnPrimaryText = pickPrimaryText(theme.btnPrimaryBg);
+    theme.btnPrimaryTextHover = pickPrimaryText(theme.btnPrimaryBgHover);
+    theme.btnPrimaryTextActive = pickPrimaryText(theme.btnPrimaryBgActive);
     theme.btnPrimaryTextDisabled = theme.textMuted;
 
     theme.btnSecondaryBg = juce::Colour(0x00000000);

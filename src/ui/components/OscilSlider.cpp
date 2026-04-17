@@ -228,17 +228,10 @@ void OscilSlider::attachToParameter(juce::AudioProcessorValueTreeState& apvts, c
 
 void OscilSlider::detachFromParameter() { attachment_.reset(); }
 
-namespace
-{
-constexpr int kRotaryKnobSize = 56;
-constexpr int kRotaryLabelHeight = 14;
-constexpr int kRotaryValueHeight = 14;
-} // namespace
-
 int OscilSlider::getPreferredWidth() const
 {
     if (variant_ == SliderVariant::Rotary)
-        return kRotaryKnobSize;
+        return ROTARY_KNOB_SIZE;
     return variant_ == SliderVariant::Vertical ? THUMB_SIZE + 8 : 150;
 }
 
@@ -246,11 +239,11 @@ int OscilSlider::getPreferredHeight() const
 {
     if (variant_ == SliderVariant::Rotary)
     {
-        int height = kRotaryKnobSize;
+        int height = ROTARY_KNOB_SIZE;
         if (label_.isNotEmpty())
-            height += kRotaryLabelHeight;
+            height += ROTARY_LABEL_HEIGHT;
         if (showValue_)
-            height += kRotaryValueHeight;
+            height += ROTARY_VALUE_HEIGHT;
         return height;
     }
     return variant_ == SliderVariant::Vertical ? 100 : THUMB_SIZE + 8;

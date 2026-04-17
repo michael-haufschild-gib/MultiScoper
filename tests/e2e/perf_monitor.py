@@ -29,14 +29,15 @@ import psutil
 import requests
 
 
-HARNESS_URL = "http://localhost:8765"
+DEFAULT_HARNESS_PORT = 8765
+HARNESS_URL = f"http://localhost:{DEFAULT_HARNESS_PORT}"
 
 
 HARNESS_PROCESS_NAME = "Oscil Test Harness"
 
 
 def find_harness_pid(
-    port: int = 8765, harness_url: Optional[str] = None
+    port: int = DEFAULT_HARNESS_PORT, harness_url: Optional[str] = None
 ) -> Optional[int]:
     """Find the PID of the running harness.
 
@@ -50,6 +51,11 @@ def find_harness_pid(
     ``harness_url`` overrides the default so callers running against a
     non-default port / host attach to the correct process. ``port`` is kept
     for backwards compatibility and used only when ``harness_url`` is None.
+
+    The name-scan fallback cannot disambiguate between multiple harnesses on
+    different ports/hosts, so it only runs for the default local harness.
+    For non-default targets we return ``None`` on health failure — attaching
+    to the wrong process would silently make the perf report meaningless.
     """
     url = harness_url if harness_url else f"http://localhost:{port}"
     try:
@@ -59,6 +65,12 @@ def find_harness_pid(
             return pid
     except (requests.RequestException, ValueError):
         pass
+
+    # Only scan processes by name when the caller is targeting the default
+    # local harness — any custom URL/port implies multiple harnesses could be
+    # running and a name scan cannot distinguish them.
+    if url.rstrip("/") != HARNESS_URL:
+        return None
 
     for proc in psutil.process_iter(["pid", "name"]):
         if proc.info.get("name") == HARNESS_PROCESS_NAME:
@@ -125,12 +137,17 @@ class ResourceReport:
         return max(s.cpu_percent for s in self.samples[1:])
 
     def fps_avg(self) -> float:
-        fps = [s.fps for s in self.samples if s.fps > 0]
-        return statistics.mean(fps) if fps else 0.0
+        # Include zero-fps samples: `sample()` leaves fps == 0 when
+        # /metrics/current fails, and a real render stall also produces
+        # zero. Dropping those would let assert_fps_above() pass on a
+        # handful of healthy samples while the rest of the run had no
+        # usable frames.
+        if not self.samples:
+            return 0.0
+        return statistics.mean(s.fps for s in self.samples)
 
     def fps_min(self) -> float:
-        fps = [s.fps for s in self.samples if s.fps > 0]
-        return min(fps) if fps else 0.0
+        return min((s.fps for s in self.samples), default=0.0)
 
     def thread_peak(self) -> int:
         return max((s.num_threads for s in self.samples), default=0)

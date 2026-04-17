@@ -247,9 +247,9 @@ juce::Rectangle<float> OscilSlider::getRotaryKnobBounds() const
 
     float reserved = 0.0f;
     if (label_.isNotEmpty())
-        reserved += 14.0f;
+        reserved += static_cast<float>(ROTARY_LABEL_HEIGHT);
     if (showValue_)
-        reserved += 14.0f;
+        reserved += static_cast<float>(ROTARY_VALUE_HEIGHT);
 
     auto knobArea = bounds.withTrimmedBottom(reserved);
     float const side = std::min(knobArea.getWidth(), knobArea.getHeight()) - (ROTARY_KNOB_INSET * 2.0f);
@@ -351,21 +351,24 @@ void OscilSlider::paintRotaryLabelAndValue(juce::Graphics& g, juce::Rectangle<fl
     const auto& theme = getTheme();
     const auto& surface = getSurface();
 
+    auto const labelHeight = static_cast<float>(ROTARY_LABEL_HEIGHT);
+    auto const valueHeight = static_cast<float>(ROTARY_VALUE_HEIGHT);
+
     float labelY = knobBounds.getBottom() + 2.0f;
     if (label_.isNotEmpty())
     {
-        auto labelArea = juce::Rectangle<float>(0.0f, labelY, static_cast<float>(getWidth()), 14.0f);
+        auto labelArea = juce::Rectangle<float>(0.0f, labelY, static_cast<float>(getWidth()), labelHeight);
         g.setColour(theme.textSecondary.withAlpha(opacity));
-        g.setFont(ComponentLayout::captionFont());
+        g.setFont(Typography::caption());
         g.drawText(label_, labelArea, juce::Justification::centred);
-        labelY += 14.0f;
+        labelY += labelHeight;
     }
 
     if (showValue_)
     {
-        auto valueArea = juce::Rectangle<float>(0.0f, labelY, static_cast<float>(getWidth()), 14.0f);
+        auto valueArea = juce::Rectangle<float>(0.0f, labelY, static_cast<float>(getWidth()), valueHeight);
         g.setColour(surface.accent.withMultipliedAlpha(opacity));
-        g.setFont(ComponentLayout::smallFont());
+        g.setFont(Typography::small());
         g.drawText(formatValue(value_), valueArea, juce::Justification::centred);
     }
 }

@@ -38,6 +38,9 @@ public:
     // Keyboard navigation
     bool keyPressed(const juce::KeyPress& key) override;
 
+    void focusGained(FocusChangeType cause) override;
+    void focusLost(FocusChangeType cause) override;
+
     /**
      * Add a button to the bar with text label
      * @param label Display text for the button

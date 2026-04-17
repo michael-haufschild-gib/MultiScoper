@@ -52,13 +52,21 @@ def print_diff(base_path, new_path):
         if n is None:
             print(f"{k:55} {b:12.2f} {'—':>12}")
             continue
-        delta = (n - b) / b * 100.0
+        if b == 0.0:
+            delta = None
+        else:
+            delta = (n - b) / b * 100.0
         bcvp = bcv.get(k, 0.0)
         ncvp = ncv.get(k, 0.0)
         noise_floor = max(bcvp, ncvp)
-        flag = "NOISE" if abs(delta) < noise_floor else ("WIN " if delta < 0 else "LOSS")
-        arrow = "↓" if delta < 0 else ("↑" if delta > 0 else "=")
-        print(f"{k:55} {b:12.2f} {n:12.2f} {arrow}{abs(delta):6.2f}% {bcvp:7.2f}% {ncvp:7.2f}% {flag}")
+        if delta is None:
+            delta_cell = "   n/a  "
+            flag = "NOBASE"
+        else:
+            flag = "NOISE" if abs(delta) < noise_floor else ("WIN " if delta < 0 else "LOSS")
+            arrow = "↓" if delta < 0 else ("↑" if delta > 0 else "=")
+            delta_cell = f"{arrow}{abs(delta):6.2f}%"
+        print(f"{k:55} {b:12.2f} {n:12.2f} {delta_cell:>8} {bcvp:7.2f}% {ncvp:7.2f}% {flag}")
 
 
 def main():

@@ -1,8 +1,9 @@
 /*
     Oscil - Surface Painter (flat) — Implementation
 
-    Historical name: "SurfacePainter". The 2026 uplift replaced the glassmorphism
-    aesthetic with a flat surface system:
+    Historical name: "GlassPainter". The 2026 uplift replaced the glassmorphism
+    aesthetic with a flat surface system and the module was renamed to
+    SurfacePainter:
 
       * Single-layer drop shadow under raised surfaces (popups, modals).
         No three-layer stack, no blur radii masquerading as shadows.
@@ -11,9 +12,6 @@
       * No accent glow. Focus is communicated by a 2px accent ring.
       * Ripples and focus-ring painters remain — they are interaction
         feedback, not glass ornamentation.
-
-    Function names are kept for API compatibility with ~30 call sites; a
-    follow-up commit will rename this module to `SurfacePainter`.
 */
 
 #include "ui/components/SurfacePainter.h"
