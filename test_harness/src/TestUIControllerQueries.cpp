@@ -118,7 +118,7 @@ json TestUIController::getUIState()
         juce::WaitableEvent done;
     };
     auto state = std::make_shared<State>();
-    auto weak = self_;
+    std::weak_ptr<ControlBlock> weak = self_;
     juce::MessageManager::callAsync([weak, state]() {
         auto locked = weak.lock();
         if (!isControllerAlive(locked))

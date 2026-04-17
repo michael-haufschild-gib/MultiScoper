@@ -5,6 +5,8 @@
 
 #include "ui/panels/SourceSelectorComponent.h"
 
+#include "ui/theme/Typography.h"
+
 namespace oscil
 {
 SourceSelectorComponent::SourceSelectorComponent(IThemeService& themeService, IInstanceRegistry& instanceRegistry)
@@ -58,7 +60,8 @@ void SourceSelectorComponent::paint(juce::Graphics& g)
         g.setColour(badgeColor.withAlpha(0.2f));
         g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 8.0f);
         g.setColour(badgeColor);
-        g.setFont(juce::FontOptions(10.0f));
+        // Preserve 10pt — pre-sized badge; upsize risks clipping.
+        g.setFont(Typography::caption().withHeight(10.0f));
         g.drawText(badgeText, badgeBounds, juce::Justification::centred);
 
         bounds.removeFromRight(4);
@@ -66,7 +69,7 @@ void SourceSelectorComponent::paint(juce::Graphics& g)
 
     // Display text
     g.setColour(theme.textPrimary);
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(Typography::body());
     g.drawText(displayText_, bounds.toNearestInt(), juce::Justification::centredLeft, true);
 }
 

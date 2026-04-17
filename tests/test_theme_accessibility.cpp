@@ -3,7 +3,7 @@
     Tests for WCAG contrast validation, theme name safety, and glass-contrast checks
 */
 
-#include "ui/components/GlassStyle.h"
+#include "ui/components/SurfaceStyle.h"
 #include "ui/theme/ThemeManager.h"
 
 #include <gtest/gtest.h>
@@ -202,7 +202,7 @@ TEST_F(ThemeAccessibilityTest, AccentColorVisibleOnBackgroundForGlassThemes)
         auto* theme = getThemeManager().getTheme(name);
         ASSERT_NE(theme, nullptr) << name << " not found";
 
-        GlassStyle glass;
+        SurfaceStyle glass;
         glass.computeFrom(*theme);
 
         // Accent as non-text graphical element: WCAG 1.4.11 requires 3:1 for

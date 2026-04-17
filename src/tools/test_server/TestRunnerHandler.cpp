@@ -133,6 +133,9 @@ void TestRunnerHandler::handleRunLayoutTest(const httplib::Request& /*req*/, htt
         int const availableHeight = std::max(100, editorBounds.getHeight() - 40 - 24);
         juce::Rectangle<int> const availableArea(0, 0, availableWidth, availableHeight);
 
+        // Snapshot original state for restoration after tests
+        auto const originalLayout = state.getColumnLayout();
+
         // Track panes added by this test so we can remove them afterward
         std::vector<PaneId> addedPaneIds;
         while (layoutManager.getPaneCount() < 3)
@@ -151,6 +154,10 @@ void TestRunnerHandler::handleRunLayoutTest(const httplib::Request& /*req*/, htt
         // Remove panes added by this test to avoid leaking into live state
         for (const auto& id : addedPaneIds)
             layoutManager.removePane(id);
+
+        // Restore original column layout
+        state.setColumnLayout(originalLayout);
+        editor_.resized();
 
         TestServerHandlerBase::countTestResults(tests, response);
         return response;

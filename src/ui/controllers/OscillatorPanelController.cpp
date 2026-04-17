@@ -82,6 +82,13 @@ void OscillatorPanelController::runRefreshIteration()
     if (layoutNeededCallback_)
         layoutNeededCallback_();
 
+    // Any refresh that creates/removes panes or reorders them changes the
+    // scene topology; the GL context has continuous repaint disabled, so
+    // explicitly force one redraw.  Without this, silent-audio edits
+    // (add oscillator, close pane, reorder) leave the previous scene on
+    // screen until audio starts flowing again.
+    gpuCoordinator_.forceRepaint();
+
     isUpdating_ = false;
 }
 

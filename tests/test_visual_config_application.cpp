@@ -46,20 +46,19 @@ TEST_F(VisualConfigApplicationTest, HasPostProcessingDetectsEveryEffect)
     testEffect([](VisualConfiguration& c) { c.vignette.enabled = true; });
     testEffect([](VisualConfiguration& c) { c.filmGrain.enabled = true; });
     testEffect([](VisualConfiguration& c) { c.chromaticAberration.enabled = true; });
-    testEffect([](VisualConfiguration& c) { c.scanlines.enabled = true; });
 }
 
 TEST_F(VisualConfigApplicationTest, HasPostProcessingMultipleEffectsStillTrue)
 {
     VisualConfiguration config;
     config.bloom.enabled = true;
-    config.scanlines.enabled = true;
+    config.vignette.enabled = true;
     EXPECT_TRUE(config.hasPostProcessing());
 
     config.bloom.enabled = false;
     EXPECT_TRUE(config.hasPostProcessing());
 
-    config.scanlines.enabled = false;
+    config.vignette.enabled = false;
     EXPECT_FALSE(config.hasPostProcessing());
 }
 

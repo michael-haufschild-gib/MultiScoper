@@ -16,6 +16,8 @@ using namespace juce::gl;
 
 struct DualOutlineShader::GLResources : WaveformShader::WaveformGLResources
 {
+    GLint positionLoc = -1;
+    GLint distFromCenterLoc = -1;
 };
 #endif
 
@@ -43,6 +45,18 @@ bool DualOutlineShader::compile(juce::OpenGLContext& context)
     if (!compileFromBinaryData(*gl_, context, BinaryData::dual_outline_vert, BinaryData::dual_outline_vertSize,
                                BinaryData::dual_outline_frag, BinaryData::dual_outline_fragSize, "DualOutlineShader"))
         return false;
+
+    gl_->positionLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "position");
+    gl_->distFromCenterLoc =
+        juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
+
+    if (gl_->positionLoc < 0 || gl_->distFromCenterLoc < 0)
+    {
+        DBG("[DualOutlineShader] Missing required attributes");
+        releaseGLResources(*gl_);
+        return false;
+    }
+
     return true;
 }
 
@@ -58,12 +72,14 @@ void DualOutlineShader::drawChannel(juce::OpenGLExtensionFunctions& ext, const s
                                     const DrawArgs& args)
 {
     juce::ignoreUnused(ext);
-    std::vector<float> vertices;
+    vertexBuffer_.clear();
     float const lineGeomWidth = args.lineWidth * 6.0f;
-    buildLineGeometry(vertices, samples, args.centerY, args.amplitude, lineGeomWidth, args.boundsX, args.boundsWidth);
+    buildLineGeometry(vertexBuffer_, samples, args.centerY, args.amplitude, lineGeomWidth, args.boundsX,
+                      args.boundsWidth);
 
-    juce::OpenGLExtensionFunctions::glBufferData(
-        GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_DYNAMIC_DRAW);
+    juce::OpenGLExtensionFunctions::glBufferData(GL_ARRAY_BUFFER,
+                                                 static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
+                                                 vertexBuffer_.data(), GL_DYNAMIC_DRAW);
 
     juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(static_cast<GLuint>(args.posLoc));
     juce::OpenGLExtensionFunctions::glVertexAttribPointer(static_cast<GLuint>(args.posLoc), 2, GL_FLOAT, GL_FALSE,
@@ -73,7 +89,7 @@ void DualOutlineShader::drawChannel(juce::OpenGLExtensionFunctions& ext, const s
         static_cast<GLuint>(args.distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
         reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
 
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertexBuffer_.size() / 4));
 
     juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(args.posLoc));
     juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(args.distLoc));
@@ -111,26 +127,13 @@ void DualOutlineShader::render(juce::OpenGLContext& context, const std::vector<f
     float amp2 = 0.0f;
     calculateStereoLayout(params, channel2, height, centerY1, centerY2, amp1, amp2);
 
-    GLint const posLoc = juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "position");
-    GLint const distLoc =
-        juce::OpenGLExtensionFunctions::glGetAttribLocation(gl_->program->getProgramID(), "distFromCenter");
-
-    if (posLoc < 0 || distLoc < 0)
-    {
-        jassertfalse; // Shader attributes not found
-        juce::OpenGLExtensionFunctions::glBindVertexArray(0);
-        juce::OpenGLExtensionFunctions::glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glDisable(GL_BLEND);
-        return;
-    }
-
     DrawArgs args{.centerY = centerY1,
                   .amplitude = amp1,
                   .boundsX = params.bounds.getX(),
                   .boundsWidth = params.bounds.getWidth(),
                   .lineWidth = params.lineWidth,
-                  .posLoc = posLoc,
-                  .distLoc = distLoc};
+                  .posLoc = gl_->positionLoc,
+                  .distLoc = gl_->distFromCenterLoc};
     drawChannel(ext, channel1, args);
 
     if (params.isStereo && channel2 != nullptr && channel2->size() >= 2)

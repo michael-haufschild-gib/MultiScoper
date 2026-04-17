@@ -67,6 +67,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_theme_manager_apply.cpp
     tests/test_theme_manager_persistence.cpp
     tests/test_theme_accessibility.cpp
+    tests/test_button_contrast_regression.cpp
 
     # State persistence tests - split for better isolation
     tests/test_state_persistence_save.cpp
@@ -107,7 +108,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_animation_settings_validation.cpp
     tests/test_animation_settings_presets.cpp
     tests/test_animation_settings_persistence.cpp
-    tests/test_glass_style.cpp
+    tests/test_surface_style.cpp
     tests/test_spring_animation.cpp
     tests/test_ripple_manager.cpp
 
@@ -118,6 +119,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_accordion_sections_e2e.cpp
     tests/test_sidebar_theme_population.cpp
     tests/test_sidebar_component.cpp
+    tests/test_status_bar_component.cpp
     tests/test_preset_manager.cpp
     tests/test_shaders.cpp
     tests/test_effect_chain.cpp
@@ -159,6 +161,8 @@ set(OSCIL_TEST_SOURCES
     tests/test_oscil_textfield.cpp
     tests/test_oscillator_list_component.cpp
     tests/test_oscillator_list_item.cpp
+    tests/test_section_header.cpp
+    tests/test_oscil_look_and_feel.cpp
     tests/test_oscillator_color_dialog.cpp
     tests/test_oscillator_config_dialog.cpp
     tests/test_pane_closing_bug.cpp
@@ -338,4 +342,24 @@ if(OSCIL_ENABLE_COMMENT_LINT)
             --max-violations 0
     )
     set_tests_properties(CommentLint PROPERTIES LABELS "lint")
+endif()
+
+if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+    add_test(NAME ForbiddenPatternsLint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths include src
+    )
+    set_tests_properties(ForbiddenPatternsLint PROPERTIES LABELS "lint")
+endif()
+
+# Unit tests for the lint scripts themselves. These seed a synthetic source
+# tree and assert the scripts' exit codes and reports — so regressions of
+# the lint SCRIPTS are caught even if the real repo happens to stay clean.
+if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+    add_test(NAME LintScriptsUnitTests
+        COMMAND ${Python3_EXECUTABLE} -m unittest discover
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/lint
+    )
+    set_tests_properties(LintScriptsUnitTests PROPERTIES LABELS "lint")
 endif()

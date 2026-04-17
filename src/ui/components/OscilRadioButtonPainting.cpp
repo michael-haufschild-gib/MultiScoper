@@ -2,8 +2,8 @@
     Oscil - Radio Button Component Painting
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilRadioButton.h"
+#include "ui/components/SurfacePainter.h"
 
 namespace oscil
 {
@@ -63,16 +63,19 @@ void OscilRadioButton::paintCircle(juce::Graphics& g, const juce::Rectangle<floa
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const hoverAmount = hoverSpring_.position;
 
-    // Background: bgGlass fill in the circle area
-    g.setColour(getGlass().bgGlass.withAlpha(opacity));
+    // Background: bgGlass fill in the circle area. bgGlass carries a
+    // designed alpha; use withMultipliedAlpha so a disabled state scales
+    // the tint instead of replacing it with a solid pane color.
+    g.setColour(getSurface().bgGlass.withMultipliedAlpha(opacity));
     g.fillEllipse(bounds);
 
-    // Border: borderDefault default, borderStrong on hover
-    auto borderColour = getGlass().borderDefault;
+    // Border: borderDefault default, borderStrong on hover (both already
+    // have designed tints — multiply, don't replace).
+    auto borderColour = getSurface().borderDefault;
     if (hoverAmount > 0.01f)
-        borderColour = borderColour.interpolatedWith(getGlass().borderStrong, hoverAmount);
+        borderColour = borderColour.interpolatedWith(getSurface().borderStrong, hoverAmount);
 
-    g.setColour(borderColour.withAlpha(opacity));
+    g.setColour(borderColour.withMultipliedAlpha(opacity));
     g.drawEllipse(bounds.reduced(0.5f), ComponentLayout::BORDER_THIN);
 }
 
@@ -90,15 +93,17 @@ void OscilRadioButton::paintDot(juce::Graphics& g, const juce::Rectangle<float>&
     float const dotRadius = (DOT_SIZE / 2.0f) * dotScale;
 
     // Selected: accent filled inner dot
-    g.setColour(getGlass().accent.withAlpha(opacity * progress));
+    g.setColour(getSurface().accent.withAlpha(opacity * progress));
     g.fillEllipse(bounds.getCentreX() - dotRadius, bounds.getCentreY() - dotRadius, dotRadius * 2.0f, dotRadius * 2.0f);
 }
 
 void OscilRadioButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    // Use GlassPainter::paintFocusRing with accent color, adapted for ellipse
+    // Accent-coloured focus ring. SurfacePainter::paintFocusRing renders a
+    // rounded rectangle; radio buttons are circular, so we draw the ellipse
+    // inline with matching offset/alpha/width constants.
     auto ringBounds = bounds.expanded(ComponentLayout::FOCUS_RING_OFFSET);
-    g.setColour(getGlass().accent.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
+    g.setColour(getSurface().accent.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawEllipse(ringBounds, ComponentLayout::FOCUS_RING_WIDTH);
 }
 

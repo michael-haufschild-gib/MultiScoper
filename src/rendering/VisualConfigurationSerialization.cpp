@@ -15,7 +15,6 @@ static const juce::Identifier COLORGRADE_TYPE("ColorGrade");
 static const juce::Identifier VIGNETTE_TYPE("Vignette");
 static const juce::Identifier FILMGRAIN_TYPE("FilmGrain");
 static const juce::Identifier CHROMATIC_TYPE("ChromaticAberration");
-static const juce::Identifier SCANLINES_TYPE("Scanlines");
 static const juce::Identifier TILTSHIFT_TYPE("TiltShift");
 static const juce::Identifier RADIALBLUR_TYPE("RadialBlur");
 
@@ -93,16 +92,6 @@ static void serializeChromaticAberration(juce::ValueTree& parent, const Chromati
     juce::ValueTree t(CHROMATIC_TYPE);
     t.setProperty("enabled", ca.enabled, nullptr);
     t.setProperty("intensity", ca.intensity, nullptr);
-    parent.addChild(t, -1, nullptr);
-}
-
-static void serializeScanlines(juce::ValueTree& parent, const ScanlineSettings& s)
-{
-    juce::ValueTree t(SCANLINES_TYPE);
-    t.setProperty("enabled", s.enabled, nullptr);
-    t.setProperty("intensity", s.intensity, nullptr);
-    t.setProperty("density", s.density, nullptr);
-    t.setProperty("phosphorGlow", s.phosphorGlow, nullptr);
     parent.addChild(t, -1, nullptr);
 }
 
@@ -204,17 +193,6 @@ static void deserializeChromaticAberration(const juce::ValueTree& tree, Chromati
     ca.intensity = t.getProperty("intensity", 0.005f);
 }
 
-static void deserializeScanlines(const juce::ValueTree& tree, ScanlineSettings& s)
-{
-    auto t = tree.getChildWithName(SCANLINES_TYPE);
-    if (!t.isValid())
-        return;
-    s.enabled = t.getProperty("enabled", false);
-    s.intensity = t.getProperty("intensity", 0.3f);
-    s.density = t.getProperty("density", 2.0f);
-    s.phosphorGlow = t.getProperty("phosphorGlow", true);
-}
-
 static void deserializeTiltShift(const juce::ValueTree& tree, TiltShiftSettings& ts)
 {
     auto t = tree.getChildWithName(TILTSHIFT_TYPE);
@@ -246,7 +224,6 @@ juce::ValueTree VisualConfiguration::toValueTree() const
     serializeVignette(tree, vignette);
     serializeFilmGrain(tree, filmGrain);
     serializeChromaticAberration(tree, chromaticAberration);
-    serializeScanlines(tree, scanlines);
     serializeTiltShift(tree, tiltShift);
 
     if (presetId.isNotEmpty())
@@ -276,7 +253,6 @@ VisualConfiguration VisualConfiguration::fromValueTree(const juce::ValueTree& tr
     deserializeVignette(tree, config.vignette);
     deserializeFilmGrain(tree, config.filmGrain);
     deserializeChromaticAberration(tree, config.chromaticAberration);
-    deserializeScanlines(tree, config.scanlines);
     deserializeTiltShift(tree, config.tiltShift);
 
     config.presetId = tree.getProperty("presetId", "default").toString();

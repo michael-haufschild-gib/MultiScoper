@@ -60,6 +60,7 @@ add_executable(OscilBenchmarks
     bench_decimating_capture_buffer.cpp
     bench_signal_processor.cpp
     bench_timing_engine.cpp
+    bench_analysis.cpp
     ${OSCIL_BENCH_CORE_SOURCES}
 )
 

@@ -7,38 +7,60 @@
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/Typography.h"
 
 namespace oscil
 {
+
+namespace
+{
+// Outer horizontal padding matches the previous single-zone layout so that the
+// right-anchored metrics visually align with the original position.
+constexpr int kOuterPaddingPx = 10;
+
+// Spec: 8px between right-zone items for a consistent rhythm.
+constexpr int kItemSpacingPx = 8;
+
+// Spec: 12px horizontal padding on each side of the 1px separator.
+constexpr int kSeparatorPaddingPx = 12;
+constexpr int kSeparatorWidthPx = 1;
+constexpr int kSeparatorRegionPx = kSeparatorPaddingPx * 2 + kSeparatorWidthPx;
+
+// Preserved per-label widths from the previous layout.
+constexpr int kFpsWidthPx = 70;
+constexpr int kCpuWidthPx = 80;
+constexpr int kMemWidthPx = 90;
+constexpr int kOscWidthPx = 60;
+constexpr int kSrcWidthPx = 60;
+constexpr int kModeWidthPx = 80;
+} // namespace
 
 StatusBarComponent::StatusBarComponent(IThemeService& themeService)
     : themeService_(themeService)
     , renderingMode_(detectRenderingMode())
 {
+    // Opaque because the hint text is painted directly and a background fill
+    // is required for correct text rendering.
     setOpaque(true);
-    // Detect rendering mode at construction time
 
-    auto createLabel = [this](std::unique_ptr<juce::Label>& label, [[maybe_unused]] const juce::String& testId) {
+    auto createLabel = [this](std::unique_ptr<juce::Label>& label, [[maybe_unused]] const juce::String& testId,
+                              juce::Justification justification) {
         label = std::make_unique<juce::Label>();
-        label->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION));
-        label->setJustificationType(juce::Justification::centredLeft);
+        label->setFont(Typography::caption());
+        label->setJustificationType(justification);
         addAndMakeVisible(*label);
         OSCIL_REGISTER_CHILD_TEST_ID(*label, testId);
     };
 
-    createLabel(fpsLabel_, "statusBar_fps");
-    createLabel(cpuLabel_, "statusBar_cpu");
-    createLabel(memoryLabel_, "statusBar_mem");
-    createLabel(oscillatorLabel_, "statusBar_osc");
-    createLabel(sourceLabel_, "statusBar_src");
+    // Metrics labels are right-aligned so their text hugs the separator side;
+    // mode label stays right-aligned at the far edge.
+    createLabel(fpsLabel_, "statusBar_fps", juce::Justification::centredRight);
+    createLabel(cpuLabel_, "statusBar_cpu", juce::Justification::centredRight);
+    createLabel(memoryLabel_, "statusBar_mem", juce::Justification::centredRight);
+    createLabel(oscillatorLabel_, "statusBar_osc", juce::Justification::centredRight);
+    createLabel(sourceLabel_, "statusBar_src", juce::Justification::centredRight);
+    createLabel(renderModeLabel_, "statusBar_mode", juce::Justification::centredRight);
 
-    renderModeLabel_ = std::make_unique<juce::Label>();
-    renderModeLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION));
-    renderModeLabel_->setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(*renderModeLabel_);
-    OSCIL_REGISTER_CHILD_TEST_ID(*renderModeLabel_, "statusBar_mode");
-
-    // Initialize text
     updateFpsLabel();
     updateCpuLabel();
     updateMemoryLabel();
@@ -60,46 +82,81 @@ RenderingMode StatusBarComponent::detectRenderingMode()
 #endif
 }
 
+int StatusBarComponent::getRightZoneWidth() const
+{
+    // Six items separated by five inter-item gaps.
+    return kFpsWidthPx + kCpuWidthPx + kMemWidthPx + kOscWidthPx + kSrcWidthPx + kModeWidthPx + (5 * kItemSpacingPx);
+}
+
+int StatusBarComponent::getLeftZoneWidth() const
+{
+    // Total width minus outer padding on both sides, separator region, and the
+    // right-zone. Separator region is always reserved so that right-zone
+    // position stays stable when the hint toggles on and off.
+    const int reserved = (2 * kOuterPaddingPx) + kSeparatorRegionPx + getRightZoneWidth();
+    return juce::jmax(0, getWidth() - reserved);
+}
+
 void StatusBarComponent::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds();
+    const auto bounds = getLocalBounds();
     const auto& theme = themeService_.getCurrentTheme();
 
-    // Draw background
+    // Flat fill, no border, no rounded corners per spec.
     g.setColour(theme.backgroundSecondary);
     g.fillRect(bounds);
 
-    // Draw top border
-    g.setColour(theme.controlBorder);
-    g.drawHorizontalLine(0, 0.0f, static_cast<float>(getWidth()));
+    if (hintText_.isEmpty())
+        return;
+
+    const int leftZoneWidth = getLeftZoneWidth();
+    if (leftZoneWidth <= 0)
+        return;
+
+    // Hint text occupies the left zone, vertically centered.
+    const auto elided = getElidedHintText(static_cast<float>(leftZoneWidth));
+    g.setColour(theme.textSecondary);
+    g.setFont(ComponentLayout::captionFont());
+
+    const juce::Rectangle<int> hintArea(kOuterPaddingPx, 0, leftZoneWidth, getHeight());
+    g.drawText(elided, hintArea, juce::Justification::centredLeft, false);
+
+    // Separator drawn only when there is hint content to visually separate.
+    const int separatorX = kOuterPaddingPx + leftZoneWidth + kSeparatorPaddingPx;
+    g.setColour(theme.divider);
+    g.fillRect(juce::Rectangle<int>(separatorX, 0, kSeparatorWidthPx, getHeight()));
 }
 
 void StatusBarComponent::resized()
 {
-    auto bounds = getLocalBounds().reduced(10, 0);
+    // Right-anchor the metrics group; left zone is handled at paint time so
+    // that hint elision adapts to the exact pixel width without re-laying out
+    // the metrics whenever the hint text changes.
+    auto bounds = getLocalBounds().reduced(kOuterPaddingPx, 0);
 
-    // Manually position right-aligned item and reserve space
+    const auto h = bounds.getHeight();
+
+    // Place labels from the far right inward so the order on screen reads
+    // [fps][cpu][memory][osc][src][mode] left-to-right within the right zone.
+    auto placeFromRight = [&bounds, h](juce::Label& label, int width, bool isLastOnRight) {
+        if (!isLastOnRight)
+            bounds.removeFromRight(kItemSpacingPx);
+        auto area = bounds.removeFromRight(width);
+        label.setBounds(area.withSizeKeepingCentre(width, h));
+    };
+
     if (renderModeLabel_)
-    {
-        renderModeLabel_->setBounds(bounds.removeFromRight(80));
-        bounds.removeFromRight(10); // Spacing
-    }
-
-    juce::FlexBox flex;
-    flex.flexDirection = juce::FlexBox::Direction::row;
-    flex.justifyContent = juce::FlexBox::JustifyContent::flexStart;
-    flex.alignItems = juce::FlexBox::AlignItems::center;
-
-    // Add left-aligned items
-    auto const h = static_cast<float>(bounds.getHeight());
-    flex.items.add(juce::FlexItem(*fpsLabel_).withWidth(70).withHeight(h));
-    flex.items.add(juce::FlexItem(*cpuLabel_).withWidth(80).withHeight(h));
-    flex.items.add(juce::FlexItem(*memoryLabel_).withWidth(90).withHeight(h));
-    flex.items.add(juce::FlexItem(*oscillatorLabel_).withWidth(60).withHeight(h));
-    flex.items.add(juce::FlexItem(*sourceLabel_).withWidth(60).withHeight(h));
-
-    // Perform layout for left items
-    flex.performLayout(bounds);
+        placeFromRight(*renderModeLabel_, kModeWidthPx, true);
+    if (sourceLabel_)
+        placeFromRight(*sourceLabel_, kSrcWidthPx, false);
+    if (oscillatorLabel_)
+        placeFromRight(*oscillatorLabel_, kOscWidthPx, false);
+    if (memoryLabel_)
+        placeFromRight(*memoryLabel_, kMemWidthPx, false);
+    if (cpuLabel_)
+        placeFromRight(*cpuLabel_, kCpuWidthPx, false);
+    if (fpsLabel_)
+        placeFromRight(*fpsLabel_, kFpsWidthPx, false);
 }
 
 void StatusBarComponent::setFps(float fps)
@@ -156,6 +213,52 @@ void StatusBarComponent::setRenderingMode(RenderingMode mode)
         renderingMode_ = mode;
         updateRenderModeLabel();
     }
+}
+
+void StatusBarComponent::setHintText(const juce::String& text)
+{
+    if (hintText_ == text)
+        return;
+    hintText_ = text;
+    repaint();
+}
+
+bool StatusBarComponent::shouldDrawSeparator() const { return !hintText_.isEmpty() && getLeftZoneWidth() > 0; }
+
+juce::String StatusBarComponent::getElidedHintText(float availableWidth) const
+{
+    if (hintText_.isEmpty() || availableWidth <= 0.0f)
+        return {};
+
+    const auto font = ComponentLayout::captionFont();
+    if (juce::GlyphArrangement::getStringWidth(font, hintText_) <= availableWidth)
+        return hintText_;
+
+    // Trim from the end and append an ellipsis marker until it fits.
+    // A space + three dots reads cleanly with proportional fonts.
+    const juce::String suffix(" ...");
+    const float suffixWidth = juce::GlyphArrangement::getStringWidth(font, suffix);
+
+    if (suffixWidth >= availableWidth)
+        return {};
+
+    const int n = hintText_.length();
+    int lo = 0;
+    int hi = n;
+    // Binary search the largest prefix whose width plus suffix fits.
+    while (lo < hi)
+    {
+        const int mid = lo + ((hi - lo + 1) / 2);
+        const float w = juce::GlyphArrangement::getStringWidth(font, hintText_.substring(0, mid)) + suffixWidth;
+        if (w <= availableWidth)
+            lo = mid;
+        else
+            hi = mid - 1;
+    }
+
+    if (lo <= 0)
+        return suffix.trimStart();
+    return hintText_.substring(0, lo) + suffix;
 }
 
 void StatusBarComponent::updateFpsLabel()

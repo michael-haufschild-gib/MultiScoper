@@ -110,7 +110,6 @@ TEST(PerformanceBenchmarks, VisualConfigurationSerializationRoundTrip)
     config.trails.decay = 0.15f;
     config.colorGrade.enabled = true;
     config.colorGrade.contrast = 1.3f;
-    config.scanlines.enabled = true;
     auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < kIterations; ++i)
     {

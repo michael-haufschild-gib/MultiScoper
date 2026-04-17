@@ -6,6 +6,7 @@
 
 #include "ui/components/ListItemIcons.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/Typography.h"
 
 #include <utility>
 
@@ -38,7 +39,8 @@ void StatsOverlay::setupComponents()
     statsDisplay_->setPopupMenuEnabled(true); // Allow right-click copy
     statsDisplay_->setJustification(juce::Justification::topLeft);
     statsDisplay_->setBorder(juce::BorderSize<int>(0));
-    statsDisplay_->setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
+    // 12pt mono — tighter than canonical 15pt readout; layout-tuned for stats table density.
+    statsDisplay_->setFont(Typography::readout().withHeight(12.0f));
     // Seed the palette from the current theme; onThemeChanged keeps it in sync afterwards.
     // Safe even though onThemeChanged is virtual: StatsOverlay has no subclass that overrides
     // it, and the call runs after statsDisplay_ is constructed so the theme write targets a

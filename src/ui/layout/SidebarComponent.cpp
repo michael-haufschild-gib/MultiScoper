@@ -5,8 +5,8 @@
 
 #include "ui/layout/SidebarComponent.h"
 
-#include "ui/components/GlassPainter.h"
-#include "ui/components/GlassStyle.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/components/SurfaceStyle.h"
 #include "ui/components/TestId.h"
 
 namespace oscil
@@ -218,10 +218,10 @@ SidebarComponent::~SidebarComponent()
 
 void SidebarComponent::paint(juce::Graphics& g)
 {
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     // Glass panel background (no corner radius — sidebar is edge-to-edge)
-    GlassPainter::paintGlassPanel(g, getLocalBounds().toFloat(), glass, 0.0f, BorderLevel::None);
+    SurfacePainter::paintPanel(g, getLocalBounds().toFloat(), glass, 0.0f, BorderLevel::None);
 
     // Left border
     g.setColour(glass.borderSubtle);

@@ -42,6 +42,7 @@ screenshots/
 # Claude settings (user-specific)
 .claude/settings.json
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Temporary build logs and artifacts
 buildwarning*.txt

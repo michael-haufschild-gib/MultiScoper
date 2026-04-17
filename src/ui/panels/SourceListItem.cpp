@@ -3,8 +3,9 @@
     Rich source item rendering for SourceSelectorComponent
 */
 
-#include "ui/components/GlassStyle.h"
+#include "ui/components/SurfaceStyle.h"
 #include "ui/panels/SourceSelectorComponent.h"
+#include "ui/theme/Typography.h"
 
 namespace oscil
 {
@@ -25,7 +26,7 @@ void SourceListItem::paint(juce::Graphics& g)
         return;
 
     const auto& theme = themeService_.getCurrentTheme();
-    auto glass = GlassStyle::fromTheme(theme);
+    auto glass = SurfaceStyle::fromTheme(theme);
     auto bounds = getLocalBounds().toFloat();
 
     // Background
@@ -68,14 +69,15 @@ void SourceListItem::paint(juce::Graphics& g)
     g.setColour(badgeColor.withAlpha(0.2f));
     g.fillRoundedRectangle(badgeBounds.reduced(2, 6), 8.0f);
     g.setColour(badgeColor);
-    g.setFont(juce::FontOptions(10.0f));
+    // Preserve 10pt — pre-sized 50px badge; upsize risks clipping.
+    g.setFont(Typography::caption().withHeight(10.0f));
     g.drawText(badgeText, badgeBounds, juce::Justification::centred);
 
     bounds.removeFromRight(8);
 
     // Name (remaining space)
     g.setColour(selected_ ? glass.accent : theme.textPrimary);
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(Typography::body());
     g.drawText(name_, bounds.toNearestInt(), juce::Justification::centredLeft, true);
 }
 
@@ -83,7 +85,8 @@ void SourceListItem::drawSourceIcon(juce::Graphics& g, juce::Rectangle<float> bo
 {
     const auto& theme = themeService_.getCurrentTheme();
     g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_HEADER));
+    // headerRegular: 16pt plain — bold variant would alter emoji/icon glyph metrics.
+    g.setFont(Typography::headerRegular());
 
     // Use emoji/unicode icons based on source type detection
     juce::String const icon = getIconForSource();
@@ -185,7 +188,7 @@ void NoSourceItem::paint(juce::Graphics& g)
 
     // Icon and text
     g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(Typography::body());
     g.drawText(juce::String::charToString(0x26D4) + "  No Source (Disconnect)", bounds.reduced(12, 0).toNearestInt(),
                juce::Justification::centredLeft);
 }
@@ -224,9 +227,7 @@ SourceSelectorPopup::SourceSelectorPopup(IThemeService& themeService, IInstanceR
     searchInput_->onTextChanged = [this](const juce::String& /*text*/) { handleFilterChange(); };
     addAndMakeVisible(*searchInput_);
 
-    // Section header
-    sectionHeader_ = std::make_unique<juce::Label>("", "AVAILABLE SOURCES");
-    sectionHeader_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION).withStyle("Bold"));
+    sectionHeader_ = std::make_unique<SectionHeader>(getThemeService(), "AVAILABLE SOURCES");
     addAndMakeVisible(*sectionHeader_);
 
     // List container and viewport
@@ -376,12 +377,10 @@ void SourceSelectorPopup::sourceUpdated(const SourceId& /*sourceId*/)
 
 void SourceSelectorPopup::onThemeChanged(const ColorTheme& newTheme) { updateThemeColors(newTheme); }
 
-void SourceSelectorPopup::updateThemeColors(const ColorTheme& newTheme)
+void SourceSelectorPopup::updateThemeColors(const ColorTheme& /*newTheme*/)
 {
-    // OscilTextField handles its own theme colors automatically
-
-    // Style header
-    sectionHeader_->setColour(juce::Label::textColourId, newTheme.textSecondary);
+    // OscilTextField and SectionHeader both subclass ThemedComponent and
+    // react to theme changes on their own. No per-field colour push needed.
 }
 
 int SourceSelectorPopup::getPreferredHeight() const

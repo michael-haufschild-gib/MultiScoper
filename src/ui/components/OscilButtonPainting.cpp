@@ -1,9 +1,13 @@
 /*
     Oscil - Button Component Painting
-    Glassmorphism rendering, colour resolution, and path caching for OscilButton
+    Flat-surface rendering, colour resolution, and path caching for OscilButton.
+    (Historical: this module was "glassmorphism rendering" prior to the 2026-Q2
+    flat-surface uplift; field names such as `bgGlass` remain for ColorTheme
+    serialization compatibility — see ui/components/SurfaceStyle.cpp.)
 */
 
 #include "ui/components/OscilButton.h"
+#include "ui/theme/ColorTheme.h"
 
 #include <algorithm>
 
@@ -63,7 +67,6 @@ void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 void OscilButton::paintButtonBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds, juce::Colour bgColour)
 {
     juce::ignoreUnused(bounds);
-    const auto& glass = getGlass();
 
     bool const isGhostType =
         (variant_ == ButtonVariant::Ghost || variant_ == ButtonVariant::Tertiary || variant_ == ButtonVariant::Icon);
@@ -79,14 +82,7 @@ void OscilButton::paintButtonBackground(juce::Graphics& g, const juce::Rectangle
     if (!rippleManager_.empty())
     {
         auto rippleColour = getTheme().textPrimary.withAlpha(0.1f);
-        GlassPainter::paintRipples(g, bounds, rippleManager_.getRipples(), rippleColour);
-    }
-
-    // Primary hover: accent glow behind the button
-    if (variant_ == ButtonVariant::Primary && isHovered_ && enabled_)
-    {
-        GlassPainter::paintAccentGlow(g, bounds, glass.accentGlow, glass.accentGlowRadius,
-                                      glass.accentGlowAlpha * 0.5f);
+        SurfacePainter::paintRipples(g, bounds, rippleManager_.getRipples(), rippleColour);
     }
 
     // Border
@@ -202,7 +198,7 @@ void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>
     float const cornerRadius =
         variant_ == ButtonVariant::Icon ? ComponentLayout::RADIUS_MD : ComponentLayout::RADIUS_LG;
 
-    GlassPainter::paintFocusRing(g, bounds, cornerRadius, getGlass().accent);
+    SurfacePainter::paintFocusRing(g, bounds, cornerRadius, getSurface().accent);
 }
 
 // ---------------------------------------------------------------------------
@@ -211,30 +207,35 @@ void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>
 
 juce::Colour OscilButton::getBackgroundColour() const
 {
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
     const auto& theme = getTheme();
 
-    // Toggled state (segmented button bars)
-    if (toggleable_ && isToggled_)
-        return glass.accentSubtle;
+    // Flat Primary: solid accent fill, shifted slightly on hover
+    // (lighter) and pressed (darker). No glass tinting.
+    // Secondary / Ghost / Tertiary / Icon: transparent at rest,
+    // faint white overlay on hover / pressed (surface-style feedback).
 
-    // Disabled — same base color at reduced opacity (handled by caller)
+    // Toggled state (segmented button bars): behaves like a Primary.
+    if (toggleable_ && isToggled_)
+        return glass.accent;
+
+    // Disabled
     if (!enabled_)
     {
         if (variant_ == ButtonVariant::Primary)
-            return glass.accentSubtle;
+            return theme.controlBackground;
         if (variant_ == ButtonVariant::Danger)
             return theme.statusError.withAlpha(0.15f);
         return juce::Colours::transparentBlack;
     }
 
-    // Active / pressed
+    // Pressed
     if (isPressed_)
     {
         if (variant_ == ButtonVariant::Primary)
-            return glass.accent.withAlpha(0.25f);
+            return glass.accent.darker(0.18f);
         if (variant_ == ButtonVariant::Danger)
-            return theme.statusError.withAlpha(0.20f);
+            return theme.statusError.darker(0.15f);
         return glass.bgActive;
     }
 
@@ -242,26 +243,54 @@ juce::Colour OscilButton::getBackgroundColour() const
     if (isHovered_)
     {
         if (variant_ == ButtonVariant::Primary)
-            return glass.accentMuted;
+            return glass.accent.brighter(0.10f);
         if (variant_ == ButtonVariant::Danger)
-            return theme.statusError.withAlpha(0.15f);
+            return theme.statusError.brighter(0.08f);
         return glass.bgHover;
     }
 
-    // Default — only Primary has a visible background
+    // Default
     if (variant_ == ButtonVariant::Primary)
-        return glass.accentSubtle;
+        return glass.accent;
+    if (variant_ == ButtonVariant::Danger)
+        return theme.statusError;
     return juce::Colours::transparentBlack;
 }
 
+namespace
+{
+// Composite a semi-transparent tint over an opaque panel background and
+// return the contrast-safe text colour for the resulting surface. Primary /
+// Danger buttons paint accent-tinted or error-tinted backgrounds; using the
+// same accent/error hue for text collapses hue contrast ("blue on blue") and
+// can fail WCAG AA even when luminance contrast appears ok in isolation.
+juce::Colour pickContrastingTextOver(juce::Colour tint, juce::Colour panelBg, const ColorTheme& theme)
+{
+    auto effective = ColorTheme::compositeOnBackground(tint, panelBg);
+    // Threshold 0.4 — below this we treat surface as "dark" and use the
+    // brightest token (textHighlight, usually white); above, use a dark
+    // token. Exact fallbacks below keep contrast predictable across themes.
+    if (ColorTheme::calculateLuminance(effective) < 0.4f)
+        return theme.textHighlight;
+    return juce::Colour(0xFF1A1A1A);
+}
+} // namespace
+
 juce::Colour OscilButton::getTextColour() const
 {
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
     const auto& theme = getTheme();
 
-    // Toggled state
+    // Primary / Danger / toggled buttons paint solid-accent / solid-error
+    // backgrounds. Text must contrast with the bright fill (no alpha
+    // compositing — the fill is opaque).
+    auto primaryTextColour = [&]() { return pickContrastingTextOver(glass.accent, theme.backgroundPane, theme); };
+    auto dangerTextColour = [&]() { return pickContrastingTextOver(theme.statusError, theme.backgroundPane, theme); };
+
+    // Toggled state — toggled segmented buttons render on accent tint,
+    // so we need a contrast-safe text colour rather than the accent hue.
     if (toggleable_ && isToggled_)
-        return glass.accent;
+        return primaryTextColour();
 
     // Disabled
     if (!enabled_)
@@ -269,9 +298,9 @@ juce::Colour OscilButton::getTextColour() const
         switch (variant_)
         {
             case ButtonVariant::Primary:
-                return glass.accent;
+                return primaryTextColour();
             case ButtonVariant::Danger:
-                return theme.statusError;
+                return dangerTextColour();
             case ButtonVariant::Secondary:
             case ButtonVariant::Ghost:
             case ButtonVariant::Tertiary:
@@ -280,18 +309,12 @@ juce::Colour OscilButton::getTextColour() const
         }
     }
 
-    // Pressed / Hovered — same logic, just potentially different brightness
-    // For Primary: accent text color throughout all states
-    // For Secondary: textPrimary on hover/press, textSecondary default
-    // For Ghost/Tertiary/Icon: same as Secondary
-    // For Danger: statusError throughout
-
     switch (variant_)
     {
         case ButtonVariant::Primary:
-            return glass.accent;
+            return primaryTextColour();
         case ButtonVariant::Danger:
-            return theme.statusError;
+            return dangerTextColour();
         case ButtonVariant::Secondary:
         case ButtonVariant::Ghost:
         case ButtonVariant::Tertiary:
@@ -305,25 +328,23 @@ juce::Colour OscilButton::getTextColour() const
 
 juce::Colour OscilButton::getBorderColour() const
 {
-    const auto& glass = getGlass();
-    const auto& theme = getTheme();
+    const auto& glass = getSurface();
 
-    // Toggled state
+    // Flat borders: Primary has no border (solid fill speaks for
+    // itself), Secondary uses a 1px accent-tinted hairline that brightens
+    // on hover, Ghost/Tertiary/Icon have no border.
     if (toggleable_ && isToggled_)
-        return glass.accent;
+        return juce::Colours::transparentBlack;
 
-    // Segmented buttons always need a visible border regardless of variant
     if (segmentPosition_ != SegmentPosition::None)
         return glass.borderDefault;
 
     switch (variant_)
     {
-        case ButtonVariant::Primary:
-            return glass.accent;
         case ButtonVariant::Secondary:
-            return isHovered_ ? glass.borderStrong : glass.borderDefault;
+            return isHovered_ || hasFocus_ ? glass.accent.withAlpha(0.6f) : glass.borderDefault;
+        case ButtonVariant::Primary:
         case ButtonVariant::Danger:
-            return theme.statusError.withAlpha(0.3f);
         case ButtonVariant::Ghost:
         case ButtonVariant::Tertiary:
         case ButtonVariant::Icon:

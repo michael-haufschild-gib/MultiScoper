@@ -5,6 +5,8 @@
 #include "TestElementRegistry.h"
 #include "TestHttpServer.h"
 
+#include <optional>
+
 namespace oscil::test
 {
 
@@ -311,13 +313,16 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 {
     std::string elementId = req.matches[1];
 
-    // Apply track scope if specified
+    // Resolve the optional track scope on the request thread but apply it
+    // inside the async closure so that a concurrent request cannot mutate
+    // the shared controller scope between dispatch and execution.
+    std::optional<int> trackScope;
     auto trackIt = req.params.find("trackId");
     if (trackIt != req.params.end())
     {
         try
         {
-            uiController_.setTrackScope(std::stoi(trackIt->second), &daw_);
+            trackScope = std::stoi(trackIt->second);
         }
         catch (...)
         {
@@ -326,15 +331,21 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 
     // Run on message thread — component queries (isVisible, isShowing,
     // getBounds) must only be called there to avoid data races.
-    json info;
-    juce::WaitableEvent done;
+    // Capture by shared_ptr so if we time out and return, the lambda can
+    // still execute later without touching dead stack memory.
+    auto info = std::make_shared<json>();
+    auto done = std::make_shared<juce::WaitableEvent>();
     auto& ctrl = uiController_;
-    juce::MessageManager::callAsync([&info, &done, &ctrl, elementId]() {
-        info = ctrl.getElementInfo(juce::String(elementId));
-        done.signal();
+    TestDAW* dawPtr = &daw_;
+    juce::MessageManager::callAsync([info, done, &ctrl, elementId, trackScope, dawPtr]() {
+        if (trackScope.has_value())
+            ctrl.setTrackScope(*trackScope, dawPtr);
+        *info = ctrl.getElementInfo(juce::String(elementId));
+        if (trackScope.has_value())
+            ctrl.clearTrackScope();
+        done->signal();
     });
-    bool waited = done.wait(3000);
-    uiController_.clearTrackScope();
+    bool waited = done->wait(3000);
 
     if (!waited)
     {
@@ -344,28 +355,29 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
         return;
     }
     fprintf(stderr, "[UIElement] callAsync completed for %s, info.contains(error)=%d\n", elementId.c_str(),
-            info.contains("error") ? 1 : 0);
+            info->contains("error") ? 1 : 0);
 
-    if (info.contains("error"))
+    if (info->contains("error"))
     {
         res.status = 404;
         res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
         return;
     }
 
-    res.set_content(successResponse(info).dump(), "application/json");
+    res.set_content(successResponse(*info).dump(), "application/json");
 }
 
 void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response& res)
 {
     // Build the response on the message thread because component methods
     // (isVisible, isEnabled, getBounds) must only be called there.
-    json data;
-    juce::WaitableEvent done;
+    // Capture by shared_ptr so a late-firing lambda cannot touch dead stack.
+    auto data = std::make_shared<json>();
+    auto done = std::make_shared<juce::WaitableEvent>();
 
-    juce::MessageManager::callAsync([&data, &done]() {
-        data["count"] = 0;
-        data["elements"] = json::array();
+    juce::MessageManager::callAsync([data, done]() {
+        (*data)["count"] = 0;
+        (*data)["elements"] = json::array();
 
         // getAllElements() uses SafePointer internally — dead components
         // are automatically filtered out and cleaned from the registry.
@@ -383,15 +395,20 @@ void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response
                                      {"width", bounds.getWidth()},
                                      {"height", bounds.getHeight()}};
 
-            data["elements"].push_back(elementInfo);
+            (*data)["elements"].push_back(elementInfo);
         }
 
-        data["count"] = static_cast<int>(data["elements"].size());
-        done.signal();
+        (*data)["count"] = static_cast<int>((*data)["elements"].size());
+        done->signal();
     });
 
-    done.wait(5000);
-    res.set_content(successResponse(data).dump(), "application/json");
+    if (!done->wait(5000))
+    {
+        res.status = 504;
+        res.set_content(errorResponse("Timeout waiting for UI elements enumeration").dump(), "application/json");
+        return;
+    }
+    res.set_content(successResponse(*data).dump(), "application/json");
 }
 
 } // namespace oscil::test

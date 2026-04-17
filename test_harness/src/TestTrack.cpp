@@ -88,8 +88,10 @@ void TestTrack::processBlock()
     // Process through plugin
     processor_->processBlock(audioBuffer_, midiBuffer_);
 
-    // Advance transport
-    transport_.advancePosition(audioBuffer_.getNumSamples());
+    // NOTE: transport_.advancePosition is NOT called here. The DAW dispatcher
+    // (TestDAW::processAudioTick) advances the shared transport exactly once
+    // per tick — calling it per-track would (a) race across parallel pool
+    // jobs and (b) advance N× per block, which no real DAW does.
 }
 
 void TestTrack::showEditor()

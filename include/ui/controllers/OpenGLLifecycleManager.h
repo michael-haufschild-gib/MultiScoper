@@ -27,7 +27,15 @@ public:
     bool isGpuRenderingEnabled() const { return gpuRenderingEnabled_; }
 
     /// Push latest waveform sample data to the GL renderer for all panes.
-    void updateWaveformData(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents);
+    /// Returns true if any waveform reported non-silent signal (peak > epsilon).
+    /// Callers use the flag to decide whether a repaint is actually needed;
+    /// continuous VSync-rate repainting is disabled so silent editors idle
+    /// at zero GPU cost.
+    bool updateWaveformData(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents);
+
+    /// Request a single repaint on the GL context.  Called from the editor's
+    /// timer when waveform data has changed or a UI event forces a redraw.
+    void triggerRepaint();
 
     WaveformGLRenderer* getRenderer() { return renderer_.get(); }
     juce::OpenGLContext& getContext() { return context_; }

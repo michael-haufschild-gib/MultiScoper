@@ -14,7 +14,6 @@
 #include "rendering/effects/ColorGradeEffect.h"
 #include "rendering/effects/FilmGrainEffect.h"
 #include "rendering/effects/RadialBlurEffect.h"
-#include "rendering/effects/ScanlineEffect.h"
 #include "rendering/effects/TiltShiftEffect.h"
 #include "rendering/effects/VignetteEffect.h"
 
@@ -35,7 +34,6 @@ TEST(SingleShaderEffectIds, EffectIdsAreStableStrings)
     EXPECT_EQ(BloomEffect().getId(), juce::String("bloom"));
     EXPECT_EQ(ColorGradeEffect().getId(), juce::String("color_grade"));
     EXPECT_EQ(ChromaticAberrationEffect().getId(), juce::String("chromatic_aberration"));
-    EXPECT_EQ(ScanlineEffect().getId(), juce::String("scanlines"));
     EXPECT_EQ(RadialBlurEffect().getId(), juce::String("radial_blur"));
     EXPECT_EQ(TiltShiftEffect().getId(), juce::String("tilt_shift"));
 }
@@ -47,7 +45,6 @@ TEST(SingleShaderEffectIds, EffectDisplayNamesAreNonEmpty)
     EXPECT_FALSE(BloomEffect().getDisplayName().isEmpty());
     EXPECT_FALSE(ColorGradeEffect().getDisplayName().isEmpty());
     EXPECT_FALSE(ChromaticAberrationEffect().getDisplayName().isEmpty());
-    EXPECT_FALSE(ScanlineEffect().getDisplayName().isEmpty());
     EXPECT_FALSE(RadialBlurEffect().getDisplayName().isEmpty());
     EXPECT_FALSE(TiltShiftEffect().getDisplayName().isEmpty());
 }

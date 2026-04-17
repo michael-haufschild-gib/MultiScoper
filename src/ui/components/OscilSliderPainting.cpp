@@ -1,18 +1,38 @@
 /*
     Oscil - Slider Component Painting
-    Glassmorphism rendering for OscilSlider (track, thumb, tooltip, focus ring)
+    Flat-surface rendering for OscilSlider (track, thumb, tooltip, focus ring).
+    (Historical: "glassmorphism rendering" prior to the 2026-Q2 uplift.)
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilSlider.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/theme/Typography.h"
 
 #include <cmath>
 
 namespace oscil
 {
 
+namespace
+{
+constexpr float ROTARY_START_ANGLE = -5.0f * juce::MathConstants<float>::pi / 6.0f;
+constexpr float ROTARY_END_ANGLE = 5.0f * juce::MathConstants<float>::pi / 6.0f;
+constexpr float ROTARY_SWEEP = ROTARY_END_ANGLE - ROTARY_START_ANGLE;
+constexpr float ROTARY_KNOB_INSET = 4.0f;
+constexpr float ROTARY_ARC_GAP = 3.0f;
+constexpr float ROTARY_ARC_THICKNESS = 2.0f;
+constexpr float ROTARY_TICK_THICKNESS = 1.5f;
+constexpr float ROTARY_TICK_LENGTH_RATIO = 0.8f;
+} // namespace
+
 void OscilSlider::paint(juce::Graphics& g)
 {
+    if (variant_ == SliderVariant::Rotary)
+    {
+        paintRotary(g);
+        return;
+    }
+
     if (variant_ == SliderVariant::Vertical)
         paintVertical(g);
     else
@@ -32,7 +52,7 @@ void OscilSlider::paintHorizontal(juce::Graphics& g)
     {
         labelHeight = 14.0f;
         g.setColour(getTheme().textSecondary.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.setFont(Typography::caption());
         g.drawText(label_, bounds.withHeight(labelHeight), juce::Justification::centredLeft);
     }
 
@@ -66,7 +86,7 @@ void OscilSlider::paintVertical(juce::Graphics& g)
     {
         labelHeight = 14.0f;
         g.setColour(getTheme().textSecondary.withAlpha(opacity));
-        g.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+        g.setFont(Typography::caption());
         g.drawText(label_, bounds.removeFromBottom(labelHeight), juce::Justification::centred);
     }
 
@@ -84,7 +104,7 @@ void OscilSlider::paintVertical(juce::Graphics& g)
 void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds, bool isVertical)
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     // Track background: bgGlass fill + borderSubtle border, fully rounded
     float const cornerRadius = bounds.getHeight() / 2.0f;
@@ -136,7 +156,7 @@ void OscilSlider::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
 void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical, bool /*isRangeEnd*/, float labelOffset)
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
     auto bounds = getLocalBounds().toFloat();
 
     float const scale = currentThumbScale_;
@@ -172,10 +192,10 @@ void OscilSlider::paintThumb(juce::Graphics& g, float position, bool isVertical,
 
 void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool isVertical)
 {
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
     juce::String const valueText = formatValue(value_);
 
-    auto font = juce::Font(juce::FontOptions().withHeight(12.0f));
+    auto font = Typography::small();
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, valueText, 0, 0);
     float const textWidthF = glyphs.getBoundingBox(0, -1, false).getWidth() + (TOOLTIP_PADDING * 2);
@@ -197,7 +217,7 @@ void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool
     tooltipBounds = tooltipBounds.constrainedWithin(getLocalBounds().toFloat().expanded(50, 30));
 
     // Glass panel tooltip
-    GlassPainter::paintGlassPanel(g, tooltipBounds, glass, ComponentLayout::RADIUS_SM, BorderLevel::Subtle);
+    SurfacePainter::paintPanel(g, tooltipBounds, glass, ComponentLayout::RADIUS_SM, BorderLevel::Subtle);
 
     g.setColour(getTheme().textPrimary);
     g.setFont(font);
@@ -206,7 +226,7 @@ void OscilSlider::paintValueTooltip(juce::Graphics& g, float thumbPosition, bool
 
 void OscilSlider::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_SM, getGlass().accent);
+    SurfacePainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_SM, getSurface().accent);
 }
 
 juce::String OscilSlider::formatValue(double value) const
@@ -219,6 +239,138 @@ juce::String OscilSlider::formatValue(double value) const
         text += " " + suffix_;
 
     return text;
+}
+
+juce::Rectangle<float> OscilSlider::getRotaryKnobBounds() const
+{
+    auto bounds = getLocalBounds().toFloat();
+
+    float reserved = 0.0f;
+    if (label_.isNotEmpty())
+        reserved += static_cast<float>(ROTARY_LABEL_HEIGHT);
+    if (showValue_)
+        reserved += static_cast<float>(ROTARY_VALUE_HEIGHT);
+
+    auto knobArea = bounds.withTrimmedBottom(reserved);
+    float const side = std::min(knobArea.getWidth(), knobArea.getHeight()) - (ROTARY_KNOB_INSET * 2.0f);
+    float const safeSide = std::max(side, 8.0f);
+
+    return juce::Rectangle<float>(safeSide, safeSide).withCentre(knobArea.getCentre());
+}
+
+juce::Colour OscilSlider::getEffectiveArcColour() const
+{
+    if (arcColour_.getAlpha() == 0)
+        return getSurface().accent;
+    return arcColour_;
+}
+
+void OscilSlider::paintRotary(juce::Graphics& g)
+{
+    float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    const auto& theme = getTheme();
+    const auto& surface = getSurface();
+
+    auto knobBounds = getRotaryKnobBounds();
+
+    g.setColour(theme.controlBackground.withAlpha(opacity));
+    g.fillEllipse(knobBounds);
+    g.setColour(surface.borderDefault.withAlpha(surface.borderDefault.getFloatAlpha() * opacity));
+    g.drawEllipse(knobBounds.reduced(0.5f), 1.0f);
+
+    paintRotaryArcs(g, knobBounds, opacity);
+
+    // Indicator tick.
+    float const radius = knobBounds.getWidth() * 0.5f;
+    float const cx = knobBounds.getCentreX();
+    float const cy = knobBounds.getCentreY();
+    auto proportion = static_cast<float>(juce::jlimit(0.0, 1.0, valueToProportionOfLength(value_)));
+    float const valueAngle = ROTARY_START_ANGLE + (proportion * ROTARY_SWEEP);
+
+    juce::Colour tickColour = theme.textPrimary;
+    if (isDragging_)
+        tickColour = getEffectiveArcColour();
+    else if (isHovered_)
+        tickColour = theme.textHighlight;
+    tickColour = tickColour.withMultipliedAlpha(opacity);
+
+    float const tickLen = radius * ROTARY_TICK_LENGTH_RATIO;
+    // JUCE convention: 0 rad = 12 o'clock, positive = CW.
+    float const sinA = std::sin(valueAngle);
+    float const cosA = std::cos(valueAngle);
+    g.setColour(tickColour);
+    g.drawLine(cx, cy, cx + (sinA * tickLen), cy - (cosA * tickLen), ROTARY_TICK_THICKNESS);
+
+    paintRotaryLabelAndValue(g, knobBounds, opacity);
+
+    if (hasFocus_ && enabled_)
+        SurfacePainter::paintFocusRing(g, knobBounds, knobBounds.getWidth() * 0.5f, surface.accent);
+}
+
+void OscilSlider::paintRotaryArcs(juce::Graphics& g, juce::Rectangle<float> knobBounds, float opacity)
+{
+    float const radius = knobBounds.getWidth() * 0.5f;
+    float const cx = knobBounds.getCentreX();
+    float const cy = knobBounds.getCentreY();
+    float const arcRadius = radius + ROTARY_ARC_GAP;
+    auto proportion = static_cast<float>(juce::jlimit(0.0, 1.0, valueToProportionOfLength(value_)));
+
+    juce::Colour arcColour = getEffectiveArcColour();
+    if (isHovered_ && !isDragging_)
+        arcColour = arcColour.brighter(0.1f);
+    arcColour = arcColour.withMultipliedAlpha(opacity);
+
+    float const valueAngle = ROTARY_START_ANGLE + (proportion * ROTARY_SWEEP);
+    float const arcFromAngle = bipolar_ ? 0.0f : ROTARY_START_ANGLE;
+
+    juce::Path arc;
+    arc.addCentredArc(cx, cy, arcRadius, arcRadius, 0.0f, arcFromAngle, valueAngle, true);
+    g.setColour(arcColour);
+    g.strokePath(
+        arc, juce::PathStrokeType(ROTARY_ARC_THICKNESS, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    if (std::abs(modAmount_) <= 1e-5f)
+        return;
+
+    float const modEnd = juce::jlimit(ROTARY_START_ANGLE, ROTARY_END_ANGLE, valueAngle + (modAmount_ * ROTARY_SWEEP));
+    juce::Path modArc;
+    modArc.addCentredArc(cx, cy, arcRadius, arcRadius, 0.0f, valueAngle, modEnd, true);
+    g.setColour(modColour_.withMultipliedAlpha(opacity));
+    g.strokePath(modArc, juce::PathStrokeType(ROTARY_ARC_THICKNESS, juce::PathStrokeType::curved,
+                                              juce::PathStrokeType::rounded));
+
+    auto glyphArea = juce::Rectangle<float>(knobBounds.getRight() - 10.0f, knobBounds.getY() - 2.0f, 10.0f, 10.0f);
+    g.setFont(Typography::caption().withHeight(8.0f));
+    // Show the actual modulation polarity: the arc direction already flips
+    // with sign; the badge must match or the badge misreports the control.
+    g.drawText(modAmount_ >= 0.0f ? "+" : "-", glyphArea, juce::Justification::centred);
+}
+
+void OscilSlider::paintRotaryLabelAndValue(juce::Graphics& g, juce::Rectangle<float> knobBounds, float opacity)
+{
+    const auto& theme = getTheme();
+    const auto& surface = getSurface();
+
+    auto const labelHeight = static_cast<float>(ROTARY_LABEL_HEIGHT);
+    auto const valueHeight = static_cast<float>(ROTARY_VALUE_HEIGHT);
+
+    float labelY = knobBounds.getBottom() + 2.0f;
+    if (label_.isNotEmpty())
+    {
+        auto labelArea = juce::Rectangle<float>(0.0f, labelY, static_cast<float>(getWidth()), labelHeight);
+        g.setColour(theme.textSecondary.withAlpha(opacity));
+        g.setFont(Typography::caption());
+        g.drawText(label_, labelArea, juce::Justification::centred);
+        labelY += labelHeight;
+    }
+
+    if (showValue_)
+    {
+        auto valueArea = juce::Rectangle<float>(0.0f, labelY, static_cast<float>(getWidth()), valueHeight);
+        g.setColour(surface.accent.withMultipliedAlpha(opacity));
+        g.setFont(Typography::small());
+        g.drawText(formatValue(value_), valueArea, juce::Justification::centred);
+    }
 }
 
 float OscilSlider::getThumbPosition(bool isRangeEnd) const

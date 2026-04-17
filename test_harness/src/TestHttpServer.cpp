@@ -9,6 +9,14 @@
 #include "TestElementRegistry.h"
 #include "plugin/PluginFactory.h"
 
+#include <juce_core/juce_core.h>
+
+#if JUCE_WINDOWS
+    #include <process.h>
+#else
+    #include <unistd.h>
+#endif
+
 namespace oscil::test
 {
 
@@ -153,6 +161,15 @@ void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& re
     data["running"] = daw_.isRunning();
     data["tracks"] = daw_.getNumTracks();
     data["sources"] = static_cast<int>(PluginFactory::getInstance().getInstanceRegistry().getSourceCount());
+#if JUCE_WINDOWS
+    data["pid"] = static_cast<int>(_getpid());
+#else
+    data["pid"] = static_cast<int>(::getpid());
+#endif
+    // Multi-core hosting diagnostics: proves the audio dispatcher is alive
+    // and reveals how much parallelism the harness is modeling.
+    data["audioTicks"] = static_cast<uint64_t>(daw_.getProcessedTickCount());
+    data["audioPoolThreads"] = daw_.getPoolThreadCount();
     res.set_content(successResponse(data).dump(), "application/json");
 }
 
@@ -223,27 +240,32 @@ void TestHttpServer::handleDawTrackAdd(const httplib::Request& req, httplib::Res
         auto body = json::parse(req.body);
         std::string name = body.value("name", "");
 
-        int index = daw_.addTrack(juce::String(name));
-        auto* track = daw_.getTrack(index);
-
-        // prepareToPlay defers source registration to the message thread.
-        // Wait for the registration to complete so sourceId is available
-        // in the response (callers need it immediately).
+        // Construct + prepare the track on the message thread.  TestTrack
+        // construction invokes prepareToPlay, which in turn runs plugin
+        // init paths that assert message-thread affinity (MemoryBudget,
+        // DecimatingCaptureBuffer, PluginProcessorState).
+        auto index = std::make_shared<int>(-1);
         auto resolvedSourceId = std::make_shared<juce::String>();
-        if (track)
+        auto resolvedName = std::make_shared<juce::String>();
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([this, name, index, resolvedSourceId, resolvedName, done]() {
+            *index = daw_.addTrack(juce::String(name));
+            if (auto* t = daw_.getTrack(*index))
+            {
+                *resolvedSourceId = t->getProcessor().getSourceId().id;
+                *resolvedName = t->getName();
+            }
+            done->signal();
+        });
+        if (!done->wait(5000))
         {
-            auto done = std::make_shared<juce::WaitableEvent>();
-            auto* processor = &track->getProcessor();
-            juce::MessageManager::callAsync([processor, resolvedSourceId, done]() {
-                *resolvedSourceId = processor->getSourceId().id;
-                done->signal();
-            });
-            done->wait(3000);
+            res.set_content(errorResponse("Timeout adding track").dump(), "application/json");
+            return;
         }
 
         json data;
-        data["trackIndex"] = index;
-        data["name"] = track ? track->getName().toStdString() : "";
+        data["trackIndex"] = *index;
+        data["name"] = resolvedName->toStdString();
         data["sourceId"] = resolvedSourceId->toStdString();
         res.set_content(successResponse(data).dump(), "application/json");
     }
@@ -266,7 +288,21 @@ void TestHttpServer::handleDawTrackRemove(const httplib::Request& req, httplib::
             return;
         }
 
-        if (daw_.removeTrack(trackIndex))
+        // Destroy the track (and its plugin processor) on the message thread.
+        // MemoryBudgetManager::unregisterBuffer asserts message-thread affinity;
+        // destroying a TestTrack from the HTTP thread trips that assertion.
+        auto removed = std::make_shared<bool>(false);
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([this, trackIndex, removed, done]() {
+            *removed = daw_.removeTrack(trackIndex);
+            done->signal();
+        });
+        if (!done->wait(5000))
+        {
+            res.set_content(errorResponse("Timeout removing track").dump(), "application/json");
+            return;
+        }
+        if (*removed)
         {
             json data;
             data["trackIndex"] = trackIndex;

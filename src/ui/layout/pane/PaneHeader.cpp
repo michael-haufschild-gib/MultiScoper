@@ -6,6 +6,7 @@
 
 #include "ui/components/ListItemIcons.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/Typography.h"
 
 namespace oscil
 {
@@ -18,7 +19,7 @@ void PaneHeader::setupComponents()
     nameLabel_ = std::make_unique<InlineEditLabel>(themeService_, "pane_nameLabel");
     nameLabel_->setText("Pane", false);
     nameLabel_->setPlaceholder("Pane name...");
-    nameLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
+    nameLabel_->setFont(Typography::smallBold());
     nameLabel_->setTextJustification(juce::Justification::centredLeft);
     nameLabel_->onTextChanged = [this](const juce::String& newName) {
         if (onNameChanged)
@@ -68,7 +69,7 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     juce::Colour const modeColor = primaryOscillator_->getColour();
 
     g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION));
+    g.setFont(Typography::caption());
     g.drawText("Processing:", bounds.removeFromLeft(70), juce::Justification::centredLeft);
 
     auto badgeBounds = bounds.removeFromLeft(BADGE_WIDTH).toFloat();
@@ -76,14 +77,15 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
 
     g.setColour(modeColor);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
+    g.setFont(Typography::smallBold());
     g.drawText(processingModeToString(mode), badgeBounds.toNearestInt(), juce::Justification::centred);
 
     if (oscillatorCount_ > 1)
     {
         bounds.removeFromLeft(8);
         g.setColour(theme.textSecondary);
-        g.setFont(juce::FontOptions(10.0f));
+        // 10pt preserved — non-critical secondary hint, keep size consistent with other badges.
+        g.setFont(Typography::caption().withHeight(10.0f));
         g.drawText("+" + juce::String(oscillatorCount_ - 1) + " more", bounds, juce::Justification::centredLeft);
     }
 }

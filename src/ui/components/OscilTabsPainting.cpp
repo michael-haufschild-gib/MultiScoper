@@ -3,8 +3,9 @@
     Rendering, layout calculation, and indicator animation for OscilTabs
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilTabs.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/theme/Typography.h"
 
 #include <utility>
 
@@ -18,7 +19,7 @@ void OscilTabs::paint(juce::Graphics& g)
     // Default variant: borderSubtle bottom line under tab list
     if (variant_ == Variant::Default && orientation_ == Orientation::Horizontal)
     {
-        g.setColour(getGlass().borderSubtle);
+        g.setColour(getSurface().borderSubtle);
         g.fillRect(0, bounds.getHeight() - 1, bounds.getWidth(), 1);
     }
 
@@ -28,13 +29,24 @@ void OscilTabs::paint(juce::Graphics& g)
         paintTab(g, i, tabBounds);
     }
 
+    // 1px vertical hairline separators between adjacent tabs (Default horizontal only).
+    if (variant_ == Variant::Default && orientation_ == Orientation::Horizontal && tabs_.size() > 1)
+    {
+        g.setColour(getSurface().borderSubtle);
+        for (int i = 0; std::cmp_less(i + 1, tabs_.size()); ++i)
+        {
+            auto tb = getTabBounds(i);
+            g.fillRect(tb.getRight() - 1, tb.getY() + 4, 1, tb.getHeight() - 8);
+        }
+    }
+
     paintIndicator(g);
 
     // Focus ring around active tab
     if (hasFocus_)
     {
         auto selectedBounds = getTabBounds(selectedIndex_).toFloat();
-        GlassPainter::paintFocusRing(g, selectedBounds, ComponentLayout::RADIUS_SM, getGlass().accent);
+        SurfacePainter::paintFocusRing(g, selectedBounds, ComponentLayout::RADIUS_SM, getSurface().accent);
     }
 }
 
@@ -43,32 +55,49 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
     const auto& tab = tabs_[static_cast<size_t>(index)];
     bool const isSelected = (index == selectedIndex_);
     bool const isHovered = (index == hoveredIndex_);
-    float const opacity = tab.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
+    bool const isDefaultHorizontal = (variant_ == Variant::Default && orientation_ == Orientation::Horizontal);
 
-    // Tab hover: bgHover background
-    if (isHovered && !isSelected && tab.enabled)
+    if (isSelected)
     {
-        g.setColour(getGlass().bgHover);
-        g.fillRoundedRectangle(bounds.reduced(2).toFloat(), ComponentLayout::RADIUS_SM);
+        g.setColour(getSurface().bgActive);
+        g.fillRect(bounds);
+    }
+    else if (isHovered && tab.enabled)
+    {
+        g.setColour(getSurface().bgHover);
+        g.fillRect(bounds);
     }
 
-    auto contentBounds = bounds.reduced(TAB_PADDING_H, 0);
-    int contentWidth = 0;
+    paintTabContent(g, index, bounds, isSelected, isHovered);
 
-    auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
+    if (isDefaultHorizontal && isHovered && !isSelected && tab.enabled)
+    {
+        auto accent = getEffectiveTabAccent(index).withAlpha(HOVER_UNDERLINE_ALPHA);
+        g.setColour(accent);
+        g.fillRect(bounds.getX() + 1, bounds.getBottom() - HOVER_UNDERLINE_HEIGHT, bounds.getWidth() - 2,
+                   HOVER_UNDERLINE_HEIGHT);
+    }
+}
+
+void OscilTabs::paintTabContent(juce::Graphics& g, int index, juce::Rectangle<int> bounds, bool isSelected,
+                                bool isHovered)
+{
+    const auto& tab = tabs_[static_cast<size_t>(index)];
+    auto contentBounds = bounds.reduced(TAB_PADDING_H, 0);
+    auto font = Typography::body().withHeight(TAB_FONT_SIZE);
+
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, tab.label, 0, 0);
     int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
-    contentWidth += labelWidth;
-
+    int contentWidth = labelWidth;
     if (tab.icon.isValid())
         contentWidth += ICON_SIZE + 8;
-
     if (tab.badgeCount > 0)
         contentWidth += BADGE_SIZE + 4;
 
     int startX = contentBounds.getX() + ((contentBounds.getWidth() - contentWidth) / 2);
     int const centerY = bounds.getCentreY();
+    float const opacity = tab.enabled ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
     if (tab.icon.isValid())
     {
@@ -81,16 +110,20 @@ void OscilTabs::paintTab(juce::Graphics& g, int index, juce::Rectangle<int> boun
         startX += ICON_SIZE + 8;
     }
 
-    // Text color: accent when active, textSecondary default
-    auto textColour = isSelected                 ? getGlass().accent
-                      : isHovered && tab.enabled ? getTheme().textPrimary
-                                                 : getTheme().textSecondary;
+    juce::Colour textColour;
+    if (!tab.enabled)
+        textColour = getTheme().textMuted;
+    else if (isSelected)
+        textColour = getTheme().textPrimary;
+    else if (isHovered)
+        textColour = getTheme().textHighlight;
+    else
+        textColour = getTheme().textSecondary;
 
     g.setColour(textColour.withAlpha(opacity));
     g.setFont(font);
-
-    auto labelBounds = juce::Rectangle<int>(startX, 0, labelWidth, bounds.getHeight());
-    g.drawText(tab.label, labelBounds, juce::Justification::centred);
+    g.drawText(tab.label, juce::Rectangle<int>(startX, 0, labelWidth, bounds.getHeight()),
+               juce::Justification::centred);
     startX += labelWidth;
 
     if (tab.badgeCount > 0)
@@ -110,30 +143,30 @@ void OscilTabs::paintIndicator(juce::Graphics& g)
     switch (variant_)
     {
         case Variant::Default:
-            // Animated accent underline that slides between tabs
-            g.setColour(getGlass().accent);
+            // Active tab underline in per-tab accent colour. Flat 2px bar, 1px inset each side.
+            g.setColour(getEffectiveTabAccent(selectedIndex_));
             if (orientation_ == Orientation::Horizontal)
             {
-                g.fillRoundedRectangle(indicatorBounds.getX(), static_cast<float>(getHeight() - INDICATOR_HEIGHT),
-                                       indicatorBounds.getWidth(), INDICATOR_HEIGHT, INDICATOR_HEIGHT / 2.0f);
+                g.fillRect(indicatorBounds.getX() + 1.0f, static_cast<float>(getHeight() - ACTIVE_UNDERLINE_HEIGHT),
+                           indicatorBounds.getWidth() - 2.0f, static_cast<float>(ACTIVE_UNDERLINE_HEIGHT));
             }
             else
             {
-                g.fillRoundedRectangle(0, indicatorBounds.getY(), INDICATOR_HEIGHT, indicatorBounds.getHeight(),
-                                       INDICATOR_HEIGHT / 2.0f);
+                g.fillRect(0.0f, indicatorBounds.getY() + 1.0f, static_cast<float>(ACTIVE_UNDERLINE_HEIGHT),
+                           indicatorBounds.getHeight() - 2.0f);
             }
             break;
 
         case Variant::Pills:
             // accentSubtle bg + accentMuted border
-            g.setColour(getGlass().accentSubtle);
+            g.setColour(getSurface().accentSubtle);
             g.fillRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM);
-            g.setColour(getGlass().accentMuted);
+            g.setColour(getSurface().accentMuted);
             g.drawRoundedRectangle(indicatorBounds.reduced(2), ComponentLayout::RADIUS_SM, 1.0f);
             break;
 
         case Variant::Bordered:
-            g.setColour(getGlass().borderDefault);
+            g.setColour(getSurface().borderDefault);
             g.drawRoundedRectangle(indicatorBounds.reduced(1), ComponentLayout::RADIUS_SM, 1.0f);
             break;
     }
@@ -145,7 +178,8 @@ void OscilTabs::paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int c
     g.fillEllipse(bounds.toFloat());
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(BADGE_FONT_SIZE)).boldened());
+    // BADGE_FONT_SIZE is 10pt; ellipse sized for this font.
+    g.setFont(Typography::captionBold().withHeight(BADGE_FONT_SIZE));
 
     juce::String const text = count > 99 ? "99+" : juce::String(count);
     g.drawText(text, bounds, juce::Justification::centred);
@@ -186,7 +220,7 @@ void OscilTabs::updateHorizontalLayoutCache(juce::Rectangle<int> bounds)
     }
 
     int x = 0;
-    auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
+    auto font = Typography::body().withHeight(TAB_FONT_SIZE);
 
     for (const auto& tab : tabs_)
     {

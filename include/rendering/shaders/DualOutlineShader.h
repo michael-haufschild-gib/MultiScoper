@@ -55,6 +55,7 @@ private:
     };
 
     void drawChannel(juce::OpenGLExtensionFunctions& ext, const std::vector<float>& samples, const DrawArgs& args);
+    std::vector<float> vertexBuffer_;
 #endif
 };
 

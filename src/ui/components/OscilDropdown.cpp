@@ -5,7 +5,8 @@
 
 #include "ui/components/OscilDropdown.h"
 
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/theme/Typography.h"
 
 #include <utility>
 
@@ -272,7 +273,7 @@ int OscilDropdown::getPreferredWidth() const
 
     for (const auto& item : items_)
     {
-        auto font = juce::Font(juce::FontOptions().withHeight(13.0f));
+        auto font = Typography::body();
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, item.label, 0, 0);
         int const width = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -292,13 +293,13 @@ void OscilDropdown::paint(juce::Graphics& g)
     if (!isEnabled())
         g.setOpacity(opacity);
 
-    // Use GlassPainter::paintGlassInput for the trigger area
+    // Use SurfacePainter::paintInput for the trigger area
     bool const isFocused = hasFocus_ || popupVisible_;
-    GlassPainter::paintGlassInput(g, bounds, getGlass(), ComponentLayout::RADIUS_SM, isFocused, isHovered_);
+    SurfacePainter::paintInput(g, bounds, getSurface(), ComponentLayout::RADIUS_SM, isFocused, isHovered_);
 
     // Focus ring when focused
     if (hasFocus_ && isEnabled())
-        GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_SM, getGlass().accent);
+        SurfacePainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_SM, getSurface().accent);
 
     // Text
     auto textBounds = bounds.reduced(PADDING_H, 0);
@@ -306,7 +307,7 @@ void OscilDropdown::paint(juce::Graphics& g)
 
     bool const isPlaceholder = selectedIndices_.empty();
     g.setColour((isPlaceholder ? getTheme().textSecondary : getTheme().textPrimary).withAlpha(opacity));
-    g.setFont(juce::Font(juce::FontOptions().withHeight(13.0f)));
+    g.setFont(Typography::body());
     g.drawText(displayText_, textBounds, juce::Justification::centredLeft);
 
     // Chevron

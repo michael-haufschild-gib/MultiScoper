@@ -23,6 +23,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Set, Tuple
 
+# Reuse the comment/string stripper with scripts/forbidden_patterns_lint.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lint_utils import strip_comments_and_strings as _strip_comments_and_strings  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -51,7 +55,9 @@ EXISTENCE_PATTERNS: List[re.Pattern] = [
     re.compile(r"\b(?:EXPECT|ASSERT)_NE\s*\(\s*nullptr\s*,"),
     # EXPECT_TRUE(x != nullptr) / EXPECT_TRUE(x)
     re.compile(r"\b(?:EXPECT|ASSERT)_TRUE\s*\(\s*\w+\s*!=\s*nullptr\s*\)"),
-    re.compile(r"\b(?:EXPECT|ASSERT)_TRUE\s*\(\s*\w+\s*\)$"),
+    # MULTILINE so `$` anchors at end-of-line when the assertion is wrapped
+    # across lines and matched via .match(sanitized, pos).
+    re.compile(r"\b(?:EXPECT|ASSERT)_TRUE\s*\(\s*\w+\s*\)$", re.MULTILINE),
     # EXPECT_FALSE(x == nullptr)
     re.compile(r"\b(?:EXPECT|ASSERT)_FALSE\s*\(\s*\w+\s*==\s*nullptr\s*\)"),
     # EXPECT_TRUE(!x.empty()) / EXPECT_FALSE(x.empty())
@@ -85,17 +91,29 @@ TAUTOLOGY_PATTERNS: List[re.Pattern] = [
     re.compile(r"\b(?:EXPECT|ASSERT)_LE\s*\(\s*(\w+(?:\.\w+)*)\s*,\s*\1\s*\)"),
 ]
 
-# Patterns that indicate a test IS behavioral even with few assertions
-BEHAVIORAL_INDICATORS = [
-    # Death tests are single-assertion but meaningful
-    re.compile(r"\b(?:EXPECT|ASSERT)_(?:DEATH|DEATH_IF_SUPPORTED|THROW|ANY_THROW)\b"),
-    # EXPECT_THAT with matchers
+# Assertion-class behavioral indicators. These assertions *are* the behavior
+# check (e.g., DEATH/THROW verify an exception path). A test built around
+# them is meaningful even with a single assertion and even if *other* on-line
+# assertions look existence-only.
+ASSERTION_BEHAVIORAL_INDICATORS = [
+    re.compile(r"\b(?:EXPECT|ASSERT)_(?:DEATH|DEATH_IF_SUPPORTED|THROW|ANY_THROW|NO_THROW)\b"),
     re.compile(r"\b(?:EXPECT|ASSERT)_THAT\b"),
-    # Calling methods that clearly exercise behavior
+]
+
+# Method-call behavioral indicators. These show the code under test is being
+# *exercised*, but they are not assertions. A test that calls `.process()` and
+# then only checks `EXPECT_NE(x, nullptr)` is still a shallow test — it runs
+# the code but does not verify the behavior. These indicators lift the
+# minimum-assertion floor but do NOT bypass the existence-only rule.
+METHOD_CALL_INDICATORS = [
     re.compile(r"\.processBlock\s*\("),
     re.compile(r"\.process\s*\("),
     re.compile(r"\.paint\s*\("),
     re.compile(r"\.resized\s*\("),
+    re.compile(r"\.mouseDown\s*\("),
+    re.compile(r"\.mouseUp\s*\("),
+    re.compile(r"\.mouseDrag\s*\("),
+    re.compile(r"\.keyPressed\s*\("),
 ]
 
 
@@ -115,6 +133,18 @@ class TestBody:
     start_line: int
     lines: List[str] = field(default_factory=list)
     raw_text: str = ""
+    _sanitized_text: Optional[str] = None
+
+    @property
+    def sanitized_text(self) -> str:
+        """raw_text with // and /* */ comments and "..."/'...' string literals
+        blanked out. Used by indicator matchers so a commented-out
+        ``EXPECT_THROW`` or a string literal containing ``.mouseDown(`` cannot
+        trigger a false positive.
+        """
+        if self._sanitized_text is None:
+            self._sanitized_text = _strip_comments_and_strings(self.raw_text)
+        return self._sanitized_text
 
 
 # ---------------------------------------------------------------------------
@@ -181,40 +211,69 @@ def extract_test_bodies(path: Path) -> List[TestBody]:
 
 
 def count_assertions(body: TestBody) -> int:
-    return len(ASSERTION_RE.findall(body.raw_text))
+    return len(ASSERTION_RE.findall(body.sanitized_text))
 
 
 def is_existence_only(body: TestBody) -> bool:
-    """Return True if ALL assertions in the body are existence-only patterns."""
-    assertions = list(ASSERTION_RE.finditer(body.raw_text))
+    """Return True if ALL assertions in the body are existence-only patterns.
+
+    Anchors each pattern at the assertion's start offset in the full
+    sanitized buffer (``pattern.match(sanitized, pos)``) so assertions
+    wrapped across lines — e.g. ``EXPECT_TRUE(\\n    value.has_value())`` —
+    are classified consistently with their single-line equivalents.
+    Previously the scanner narrowed to a single line and missed wrapped
+    shallow assertions.
+    """
+    sanitized = body.sanitized_text
+    assertions = list(ASSERTION_RE.finditer(sanitized))
     if not assertions:
         return False  # No assertions → separate violation
 
     for assertion_match in assertions:
-        # Get the line containing this assertion
         pos = assertion_match.start()
-        line_start = body.raw_text.rfind("\n", 0, pos) + 1
-        line_end = body.raw_text.find("\n", pos)
-        if line_end == -1:
-            line_end = len(body.raw_text)
-        assertion_line = body.raw_text[line_start:line_end].strip()
-
-        is_existence = any(p.search(assertion_line) for p in EXISTENCE_PATTERNS)
+        is_existence = any(p.match(sanitized, pos) for p in EXISTENCE_PATTERNS)
         if not is_existence:
             return False  # At least one non-existence assertion
 
     return True
 
 
+def has_assertion_behavioral_indicator(body: TestBody) -> bool:
+    """True when the test contains an assertion that *is* a behavior check
+    (e.g., DEATH/THROW). Such tests may legitimately have few assertions
+    or assertions that look existence-only to the pattern matcher.
+
+    Searches sanitized text so commented-out indicators (``// TODO:
+    EXPECT_THROW(...)``) don't grant false behavioral bypasses.
+    """
+    return any(p.search(body.sanitized_text) for p in ASSERTION_BEHAVIORAL_INDICATORS)
+
+
+def has_method_call_indicator(body: TestBody) -> bool:
+    """True when the test exercises code via a method call (process/paint/etc.).
+    Exercising code is not the same as asserting on its effect; method-call
+    indicators lift the assertion-count floor but do NOT excuse existence-only
+    assertion patterns.
+
+    Searches sanitized text so a string literal containing ``.mouseDown(``
+    does not count as a real call site.
+    """
+    return any(p.search(body.sanitized_text) for p in METHOD_CALL_INDICATORS)
+
+
 def has_behavioral_indicator(body: TestBody) -> bool:
-    return any(p.search(body.raw_text) for p in BEHAVIORAL_INDICATORS)
+    """Back-compat shim: true when a test is non-trivial enough to bypass
+    the minimum assertion-count floor. Existence-only detection uses the
+    stricter assertion-behavioral indicator.
+    """
+    return has_assertion_behavioral_indicator(body) or has_method_call_indicator(body)
 
 
 def find_tautologies(body: TestBody) -> List[str]:
     """Return list of tautological assertion descriptions."""
     found: List[str] = []
     for pattern in TAUTOLOGY_PATTERNS:
-        for match in pattern.finditer(body.raw_text):
+        for match in pattern.finditer(body.sanitized_text):
             found.append(match.group().strip())
     return found
 
@@ -245,8 +304,10 @@ def analyze_test(body: TestBody, min_assertions: int) -> Optional[Violation]:
             reason="test has zero assertions",
         )
 
-    # All assertions are existence-only (but skip if behavioral indicators present)
-    if is_existence_only(body) and not has_behavioral_indicator(body):
+    # All assertions are existence-only. Only *assertion-class* behavioral
+    # indicators (DEATH/THROW/THAT) excuse this — exercising a method without
+    # asserting on its effect is still a shallow test.
+    if is_existence_only(body) and not has_assertion_behavioral_indicator(body):
         return Violation(
             file="",
             line=body.start_line,

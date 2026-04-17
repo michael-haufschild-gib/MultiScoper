@@ -261,7 +261,11 @@ TEST_F(ThemeManagerApplyTest, SetGlassThemeUpdatesCurrentTheme)
     EXPECT_EQ(current.name, "Glass Dark Blue");
     EXPECT_NEAR(current.accentHue, 220.0f, 0.01f);
     EXPECT_NEAR(current.accentSaturation, 0.7f, 0.001f);
-    EXPECT_NEAR(current.accentLightness, 0.6f, 0.001f);
+    // Accent brightness was bumped when the glass themes were flattened so
+    // accent-tinted UI (knob rings, focus outlines) stays readable on a
+    // near-black surface. The hue is the theme's identity; the brightness
+    // is tuned, not load-bearing.
+    EXPECT_NEAR(current.accentLightness, 0.95f, 0.001f);
 }
 
 // Test: Glass fields are accessible after switching between glass themes
@@ -312,10 +316,13 @@ TEST_F(ThemeManagerApplyTest, ClonePreservesGlassFields)
     getThemeManager().deleteTheme("GlassCloneTest");
 }
 
-// Test: Listener is notified with correct glass fields on glass theme change
+// Test: Listener is notified with correct accent fields on theme change.
+// Glass-era `glassAlpha < 1.0` was dropped when the aesthetic flattened —
+// the field is kept for serialization back-compat but now always 1.0 on
+// system themes. The hue is the identity and is still load-bearing.
 TEST_F(ThemeManagerApplyTest, ListenerReceivesGlassFieldsOnChange)
 {
-    struct GlassCapturingListener : ThemeManagerListener
+    struct CapturingListener : ThemeManagerListener
     {
         float capturedHue = -1.0f;
         float capturedGlassAlpha = -1.0f;
@@ -327,13 +334,13 @@ TEST_F(ThemeManagerApplyTest, ListenerReceivesGlassFieldsOnChange)
         }
     };
 
-    GlassCapturingListener listener;
+    CapturingListener listener;
     getThemeManager().addListener(&listener);
 
     getThemeManager().setCurrentTheme("Glass Dark Brown");
 
     EXPECT_NEAR(listener.capturedHue, 40.0f, 0.01f);
-    EXPECT_NEAR(listener.capturedGlassAlpha, 0.55f, 0.001f);
+    EXPECT_NEAR(listener.capturedGlassAlpha, 1.0f, 0.001f);
 
     getThemeManager().removeListener(&listener);
 }

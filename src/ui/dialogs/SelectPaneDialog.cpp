@@ -5,6 +5,8 @@
 
 #include "ui/dialogs/SelectPaneDialog.h"
 
+#include "ui/theme/Typography.h"
+
 namespace oscil
 {
 
@@ -89,11 +91,11 @@ void SelectPaneDialog::onThemeChanged(const ColorTheme& newTheme)
 {
     // Style instruction label
     instructionLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
-    instructionLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+    instructionLabel_->setFont(Typography::small());
 
     // Error label uses error color
     errorLabel_->setColour(juce::Label::textColourId, newTheme.statusError);
-    errorLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+    errorLabel_->setFont(Typography::small());
 }
 
 void SelectPaneDialog::setAvailablePanes(const std::vector<Pane>& panes)

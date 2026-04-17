@@ -5,6 +5,8 @@
 
 #include "ui/panels/OscillatorListToolbar.h"
 
+#include "ui/theme/Typography.h"
+
 namespace oscil
 {
 
@@ -75,7 +77,8 @@ void OscillatorListToolbar::paint(juce::Graphics& g)
 
     // Cyan text
     g.setColour(theme.controlActive);
-    g.setFont(juce::FontOptions(BADGE_FONT_SIZE).withStyle("Bold"));
+    // BADGE_FONT_SIZE is 10pt; pill bounds pre-sized for this exact size.
+    g.setFont(Typography::captionBold().withHeight(BADGE_FONT_SIZE));
     g.drawText(countText, countBounds, juce::Justification::centred);
 }
 

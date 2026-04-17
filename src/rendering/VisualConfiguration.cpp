@@ -55,9 +55,6 @@ void validateStyleEffects(VisualConfiguration& c)
 
     c.chromaticAberration.intensity = sanitize(c.chromaticAberration.intensity, 0.0f, 0.02f, 0.005f);
 
-    c.scanlines.intensity = sanitize(c.scanlines.intensity, 0.0f, 1.0f, 0.3f);
-    c.scanlines.density = sanitize(c.scanlines.density, 0.5f, 8.0f, 2.0f);
-
     c.tiltShift.position = sanitize(c.tiltShift.position, 0.0f, 1.0f, 0.5f);
     c.tiltShift.range = sanitize(c.tiltShift.range, 0.0f, 1.0f, 0.3f);
     c.tiltShift.blurRadius = sanitize(c.tiltShift.blurRadius, 0.0f, 10.0f, 2.0f);
@@ -76,7 +73,7 @@ void VisualConfiguration::validate()
 bool VisualConfiguration::hasPostProcessing() const
 {
     return bloom.enabled || radialBlur.enabled || tiltShift.enabled || trails.enabled || colorGrade.enabled ||
-           vignette.enabled || filmGrain.enabled || chromaticAberration.enabled || scanlines.enabled;
+           vignette.enabled || filmGrain.enabled || chromaticAberration.enabled;
 }
 
 VisualConfiguration VisualConfiguration::getDefault() { return {}; }
@@ -84,10 +81,6 @@ VisualConfiguration VisualConfiguration::getDefault() { return {}; }
 void VisualConfiguration::setupVectorScopePreset(VisualConfiguration& c)
 {
     c.shaderType = ShaderType::Basic2D;
-    c.scanlines.enabled = true;
-    c.scanlines.intensity = 0.4f;
-    c.scanlines.density = 2.0f;
-    c.scanlines.phosphorGlow = true;
     c.bloom.enabled = true;
     c.bloom.intensity = 1.2f;
     c.bloom.threshold = 0.1f;

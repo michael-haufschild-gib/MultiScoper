@@ -64,7 +64,6 @@ TEST_F(VisualConfigPresetTest, SerializationPreservesAllPostProcessing)
     original.vignette.enabled = true;
     original.filmGrain.enabled = true;
     original.chromaticAberration.enabled = true;
-    original.scanlines.enabled = true;
     original.tiltShift.enabled = true;
 
     auto tree = original.toValueTree();
@@ -77,7 +76,6 @@ TEST_F(VisualConfigPresetTest, SerializationPreservesAllPostProcessing)
     EXPECT_TRUE(restored.vignette.enabled);
     EXPECT_TRUE(restored.filmGrain.enabled);
     EXPECT_TRUE(restored.chromaticAberration.enabled);
-    EXPECT_TRUE(restored.scanlines.enabled);
     EXPECT_TRUE(restored.tiltShift.enabled);
 }
 

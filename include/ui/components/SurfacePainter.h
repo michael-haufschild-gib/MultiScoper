@@ -1,11 +1,14 @@
 /*
-    Oscil - Glass Painter
-    Reusable glassmorphism painting utilities for UI components
+    Oscil - Surface Painter
+    Reusable flat-surface painting utilities for UI components. Historical
+    name: "GlassPainter" (glassmorphism aesthetic, removed in 2026). The
+    `SurfacePainter` namespace is the sole entry point for panel, input,
+    shadow, focus-ring, and ripple painting used across all Oscil widgets.
 */
 
 #pragma once
 
-#include "ui/components/GlassStyle.h"
+#include "ui/components/SurfaceStyle.h"
 
 #include <juce_graphics/juce_graphics.h>
 
@@ -66,31 +69,23 @@ private:
 };
 
 /// Reusable painting functions for glassmorphism UI
-namespace GlassPainter
+namespace SurfacePainter
 {
 /// Full glass panel: translucent fill + inset light edge + shadow + border
-void paintGlassPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const GlassStyle& glass, float cornerRadius,
-                     BorderLevel border = BorderLevel::Subtle);
+void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
+                BorderLevel border = BorderLevel::Subtle);
 
 /// Just the glass background fill (no border or shadow)
-void paintGlassBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const GlassStyle& glass,
+void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass,
                           float cornerRadius);
 
 /// Glass input field (text field / dropdown trigger)
 /// focused: accent border + glow. hovered: brighter border + bg. error: danger border.
-void paintGlassInput(juce::Graphics& g, juce::Rectangle<float> bounds, const GlassStyle& glass, float cornerRadius,
-                     bool focused, bool hovered, bool error = false,
-                     juce::Colour errorColour = juce::Colour(0xFFEE4444));
+void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
+                bool focused, bool hovered, bool error = false, juce::Colour errorColour = juce::Colour(0xFFEE4444));
 
 /// Multi-layer shadow behind a rounded rect
 void paintShadow(juce::Graphics& g, juce::Rectangle<float> bounds, float cornerRadius, float intensity, float spread);
-
-/// Inset light edge at top of a rounded rect (1px white highlight)
-void paintInsetLightEdge(juce::Graphics& g, juce::Rectangle<float> bounds, float cornerRadius, float alpha);
-
-/// Soft accent glow behind an element (for hover/active states)
-void paintAccentGlow(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour accentColour, float radius,
-                     float alpha);
 
 /// Paint expanding ripple effect(s) from click points
 void paintRipples(juce::Graphics& g, juce::Rectangle<float> bounds, const std::vector<RippleState>& ripples,
@@ -103,6 +98,6 @@ void paintFocusRing(juce::Graphics& g, juce::Rectangle<float> bounds, float corn
 /// Checkerboard pattern for transparent color visualization.
 /// Draws alternating white/lightgrey squares within the given bounds.
 void paintCheckerboard(juce::Graphics& g, juce::Rectangle<int> bounds, int checkerSize = 6);
-} // namespace GlassPainter
+} // namespace SurfacePainter
 
 } // namespace oscil

@@ -24,29 +24,46 @@ struct ColorTheme
     juce::String name;
     bool isSystemTheme = false; // System themes cannot be edited/deleted
 
-    // Background colors
-    juce::Colour backgroundPrimary{0xFF1E1E1E};
-    juce::Colour backgroundSecondary{0xFF2D2D2D};
-    juce::Colour backgroundPane{0xFF252525};
+    // Background colors — flat dark palette: near-black surfaces with a
+    // cool blue undertone, separated only by 1px hairline dividers.
+    juce::Colour backgroundPrimary{0xFF0A0D12};   // deepest — window chrome
+    juce::Colour backgroundSecondary{0xFF10141B}; // sidebar / secondary
+    juce::Colour backgroundPane{0xFF0F131A};      // main panes / modal
+    juce::Colour backgroundRaised{0xFF161B24};    // raised surfaces (popups, active tabs)
 
-    // Grid colors
-    juce::Colour gridMajor{0xFF3A3A3A};
-    juce::Colour gridMinor{0xFF2A2A2A};
-    juce::Colour gridZeroLine{0xFF4A4A4A};
+    // Grid colors — very subtle; grids exist to inform, not decorate.
+    juce::Colour gridMajor{0xFF242A35};
+    juce::Colour gridMinor{0xFF171C25};
+    juce::Colour gridZeroLine{0xFF3B4555};
 
     // Crosshair color
-    juce::Colour crosshairLine{0x80FFFFFF};
+    juce::Colour crosshairLine{0x99FFFFFF};
 
-    // Text colors
-    juce::Colour textPrimary{0xFFE0E0E0};
-    juce::Colour textSecondary{0xFFA0A0A0};
+    // Text colors — three-tier hierarchy: bright primary, muted secondary, faint tertiary.
+    juce::Colour textPrimary{0xFFE8EAED};
+    juce::Colour textSecondary{0xFF8A94A3};
     juce::Colour textHighlight{0xFFFFFFFF};
+    juce::Colour textMuted{0xFF4B5563};
+
+    // Thin hairline divider — never a full border, a one-pixel visual break.
+    juce::Colour divider{0xFF1F2630};
 
     // Control colors
-    juce::Colour controlBackground{0xFF353535};
-    juce::Colour controlBorder{0xFF454545};
-    juce::Colour controlHighlight{0xFF505050};
-    juce::Colour controlActive{0xFF007ACC};
+    juce::Colour controlBackground{0xFF161B24};
+    juce::Colour controlBorder{0xFF242A35};
+    juce::Colour controlHighlight{0xFF1F2630};
+    juce::Colour controlActive{0xFF1FD4F3};
+
+    // Companion accent palette — sibling colors to `accent` for per-section
+    // or per-category visual differentiation (tabs, list chips, tile
+    // highlights). Sites opt into a specific hue; there is no enforced
+    // category→color mapping.
+    juce::Colour accentMagenta{0xFFE24BA6};
+    juce::Colour accentOrange{0xFFE87B3A};
+    juce::Colour accentYellow{0xFFD4B02C};
+    juce::Colour accentGreen{0xFF4AD070};
+    juce::Colour accentViolet{0xFF9F70E5};
+    juce::Colour accentRed{0xFFE05A4A};
 
     // Status colors (bright enough for WCAG large text AA 3:1 on dark backgrounds)
     juce::Colour statusActive{0xFF00DD00};
@@ -83,33 +100,31 @@ struct ColorTheme
     juce::Colour btnTertiaryTextActive{0xFFFFFFFF};
     juce::Colour btnTertiaryTextDisabled{0xFF606060};
 
-    // === Glass / Accent System ===
+    // === Accent System ===
 
-    // Accent color (HSV-based, since JUCE doesn't support OKLCH)
-    float accentHue = 220.0f;      // 0-360 hue
-    float accentSaturation = 0.7f; // 0-1
-    float accentLightness = 0.6f;  // 0-1 (HSV brightness/value, not HSL lightness)
+    // Accent color (HSV-based, since JUCE doesn't support OKLCH).
+    // Default: bright cyan (#1FD4F3 — HSV ~188°, 87% sat, 95% value).
+    float accentHue = 188.0f;       // 0-360 hue
+    float accentSaturation = 0.87f; // 0-1
+    float accentLightness = 0.95f;  // HSV brightness/value
 
-    // Glass parameters
-    float glassAlpha = 0.55f; // bg alpha for glass panels
-    float panelAlpha = 0.82f; // bg alpha for panel containers
-    float blurRadius = 20.0f; // conceptual blur (drives shadow spread)
+    // Surface parameters (kept for serialization compatibility; the painter
+    // now uses flat surfaces. `glassAlpha` / `panelAlpha` = 1 means fully
+    // opaque panels. `blurRadius` is unused.)
+    float glassAlpha = 1.0f;
+    float panelAlpha = 1.0f;
+    float blurRadius = 0.0f;
 
-    // Border alpha levels (white * alpha for dark themes)
-    float borderSubtleAlpha = 0.08f;
-    float borderDefaultAlpha = 0.12f;
+    // Border alpha levels (white * alpha for dark themes). Dividers are
+    // very subtle — a single hairline separates sections.
+    float borderSubtleAlpha = 0.06f;
+    float borderDefaultAlpha = 0.10f;
     float borderStrongAlpha = 0.20f;
 
-    // Shadow
-    float shadowIntensity = 0.4f; // overall shadow darkness
-    float shadowSpread = 12.0f;   // shadow blur radius px
-
-    // Inset light edge
-    float lightEdgeAlpha = 0.06f; // top highlight on glass panels
-
-    // Accent glow
-    float accentGlowRadius = 12.0f; // glow spread px
-    float accentGlowAlpha = 0.3f;   // glow opacity
+    // Shadow — single low-intensity drop shadow for raised surfaces
+    // (popups, modal). Multi-layer glass shadows have been removed.
+    float shadowIntensity = 0.18f;
+    float shadowSpread = 4.0f;
 
     // Default waveform colors (up to 64)
     std::vector<juce::Colour> waveformColors;

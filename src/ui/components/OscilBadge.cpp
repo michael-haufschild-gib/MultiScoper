@@ -4,7 +4,8 @@
 
 #include "ui/components/OscilBadge.h"
 
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/theme/Typography.h"
 
 namespace oscil
 {
@@ -83,7 +84,7 @@ void OscilBadge::setCompact(bool compact)
 
 int OscilBadge::getPreferredWidth() const
 {
-    auto font = juce::Font(juce::FontOptions().withHeight(compact_ ? 11.0f : 12.0f));
+    auto font = compact_ ? Typography::caption() : Typography::small();
     juce::GlyphArrangement glyphs;
     glyphs.addLineOfText(font, text_, 0, 0);
     int const textWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());
@@ -101,7 +102,7 @@ int OscilBadge::getPreferredHeight() const
 void OscilBadge::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     auto bgColour = getBackgroundColour();
     auto textColour = getTextColour();
@@ -154,13 +155,13 @@ void OscilBadge::paint(juce::Graphics& g)
     }
 
     g.setColour(textColour);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(compact_ ? 11.0f : 12.0f)));
+    g.setFont(compact_ ? Typography::caption() : Typography::small());
     g.drawText(text_, contentBounds, juce::Justification::centred);
 }
 
 juce::Colour OscilBadge::getBackgroundColour() const
 {
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     switch (color_)
     {
@@ -180,7 +181,7 @@ juce::Colour OscilBadge::getBackgroundColour() const
 
 juce::Colour OscilBadge::getTextColour() const
 {
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     if (color_ == BadgeColor::Default)
         return getTheme().textPrimary;
@@ -197,7 +198,7 @@ juce::Colour OscilBadge::getTextColour() const
 
 juce::Colour OscilBadge::getBorderColour() const
 {
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     switch (color_)
     {

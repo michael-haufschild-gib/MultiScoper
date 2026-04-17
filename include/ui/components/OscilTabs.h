@@ -15,6 +15,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <cstdint>
+#include <optional>
 
 namespace oscil
 {
@@ -78,6 +79,20 @@ public:
     void setTabBadge(int index, int count);
     void setTabEnabled(int index, bool enabled);
 
+    /**
+     * Per-tab accent colour for the active-tab underline and the hover
+     * underline. Tabs with no override fall back to the theme accent
+     * (`SurfaceStyle::accent` / `ColorTheme::controlActive`). Out-of-range
+     * indices are silently ignored.
+     */
+    void setTabAccentColour(int index, juce::Colour colour);
+
+    /**
+     * Clear the per-tab accent override at @p index so the tab falls back
+     * to the theme accent. Out-of-range indices are silently ignored.
+     */
+    void clearTabAccentColour(int index);
+
     // Selection
     void setSelectedIndex(int index, bool notify = true);
     int getSelectedIndex() const { return selectedIndex_; }
@@ -134,10 +149,14 @@ private:
     juce::Rectangle<float> getIndicatorBounds() const;
 
     void paintTab(juce::Graphics& g, int index, juce::Rectangle<int> bounds);
+    void paintTabContent(juce::Graphics& g, int index, juce::Rectangle<int> bounds, bool isSelected, bool isHovered);
     void paintIndicator(juce::Graphics& g);
     void paintBadge(juce::Graphics& g, juce::Rectangle<int> bounds, int count);
 
+    juce::Colour getEffectiveTabAccent(int index) const;
+
     std::vector<TabItem> tabs_;
+    std::vector<std::optional<juce::Colour>> tabAccentColours_;
     int selectedIndex_ = 0;
     int hoveredIndex_ = -1;
 
@@ -159,6 +178,9 @@ private:
 
     static constexpr int DEFAULT_TAB_HEIGHT = 40;
     static constexpr int INDICATOR_HEIGHT = 3;
+    static constexpr int ACTIVE_UNDERLINE_HEIGHT = 2;
+    static constexpr int HOVER_UNDERLINE_HEIGHT = 1;
+    static constexpr float HOVER_UNDERLINE_ALPHA = 0.40f;
     static constexpr int TAB_PADDING_H = 16;
     static constexpr int ICON_SIZE = 16;
     static constexpr int BADGE_SIZE = 18;

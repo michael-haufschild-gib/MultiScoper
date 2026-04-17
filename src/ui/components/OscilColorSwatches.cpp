@@ -4,7 +4,7 @@
 
 #include "ui/components/OscilColorSwatches.h"
 
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 
 #include <utility>
 
@@ -164,11 +164,11 @@ void OscilColorSwatches::paint(juce::Graphics& g)
         paintSwatch(g, i, bounds);
     }
 
-    // Focus ring around focused swatch — accent-colored via GlassPainter
+    // Focus ring around focused swatch — accent-colored via SurfacePainter
     if (hasFocus_ && focusedIndex_ >= 0 && std::cmp_less(focusedIndex_, colors_.size()))
     {
         auto focusBounds = getSwatchBounds(focusedIndex_).toFloat();
-        GlassPainter::paintFocusRing(g, focusBounds, ComponentLayout::RADIUS_SM, getGlass().accent);
+        SurfacePainter::paintFocusRing(g, focusBounds, ComponentLayout::RADIUS_SM, getSurface().accent);
     }
 }
 
@@ -187,7 +187,7 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
     // Draw checker pattern for transparent colors
     if (color.getAlpha() < 255)
     {
-        GlassPainter::paintCheckerboard(g, bounds, 4);
+        SurfacePainter::paintCheckerboard(g, bounds, 4);
     }
 
     // Color fill
@@ -195,7 +195,7 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
     g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
 
     // Border — use accent for selection, glass borderSubtle otherwise
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
     auto borderColour = isSelected                     ? glass.accent
                         : color.getBrightness() > 0.9f ? glass.borderSubtle
                                                        : color.darker(0.3f);
@@ -206,7 +206,7 @@ void OscilColorSwatches::paintSwatch(juce::Graphics& g, int index, juce::Rectang
     // Selection ring for selected swatch
     if (isSelected)
     {
-        GlassPainter::paintFocusRing(g, bounds.toFloat(), ComponentLayout::RADIUS_SM, glass.accent, 1.5f, 1.5f);
+        SurfacePainter::paintFocusRing(g, bounds.toFloat(), ComponentLayout::RADIUS_SM, glass.accent, 1.5f, 1.5f);
     }
 
     // Selection checkmark

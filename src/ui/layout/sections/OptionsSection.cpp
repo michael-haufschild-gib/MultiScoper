@@ -5,6 +5,8 @@
 
 #include "ui/layout/sections/OptionsSection.h"
 
+#include "ui/theme/Typography.h"
+
 namespace oscil
 {
 
@@ -235,7 +237,7 @@ void OptionsSection::resized()
 
 void OptionsSection::onThemeChanged(const ColorTheme& newTheme)
 {
-    auto const sectionFont = juce::FontOptions(ComponentLayout::FONT_SIZE_CAPTION).withStyle("Bold");
+    auto const sectionFont = Typography::captionBold();
 
     for (auto* label :
          {displayLabel_.get(), layoutLabel_.get(), themeLabel_.get(), renderingLabel_.get(), qualityLabel_.get()})

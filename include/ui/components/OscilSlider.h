@@ -88,6 +88,25 @@ public:
     void setShowValueOnHover(bool show);
     bool getShowValueOnHover() const { return showValueOnHover_; }
 
+    // Rotary-only: persistent value readout under the knob, independent of hover tooltip.
+    void setShowValue(bool show);
+    bool getShowValue() const { return showValue_; }
+
+    // Rotary-only: bipolar knobs anchor the arc at 12 o'clock and sweep outward.
+    void setBipolar(bool bipolar);
+    bool isBipolar() const { return bipolar_; }
+
+    // Rotary-only: override for the value arc colour. transparentBlack means "use theme accent".
+    void setArcColour(juce::Colour colour);
+    juce::Colour getArcColour() const { return arcColour_; }
+
+    // Rotary-only: secondary arc overlay representing modulation depth (normalized delta, [-1, 1]).
+    void setModAmount(float deltaNormalized);
+    float getModAmount() const { return modAmount_; }
+
+    void setModColour(juce::Colour colour);
+    juce::Colour getModColour() const { return modColour_; }
+
     // Magnetic snapping
     void setMagneticSnappingEnabled(bool enabled);
     bool isMagneticSnappingEnabled() const { return snapController_.isEnabled(); }
@@ -153,11 +172,17 @@ private:
     // Rendering
     void paintHorizontal(juce::Graphics& g);
     void paintVertical(juce::Graphics& g);
+    void paintRotary(juce::Graphics& g);
+    void paintRotaryArcs(juce::Graphics& g, juce::Rectangle<float> knobBounds, float opacity);
+    void paintRotaryLabelAndValue(juce::Graphics& g, juce::Rectangle<float> knobBounds, float opacity);
     void paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds, bool isVertical);
     void paintThumb(juce::Graphics& g, float position, bool isVertical, bool isRangeEnd = false,
                     float labelOffset = 0.0f);
     void paintValueTooltip(juce::Graphics& g, float thumbPosition, bool isVertical);
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
+
+    juce::Rectangle<float> getRotaryKnobBounds() const;
+    juce::Colour getEffectiveArcColour() const;
     juce::String formatValue(double value) const;
 
     // Hit testing
@@ -179,6 +204,11 @@ private:
     int decimalPlaces_ = 1;
     bool enabled_ = true;
     bool showValueOnHover_ = true;
+    bool showValue_ = false;
+    bool bipolar_ = false;
+    float modAmount_ = 0.0f;
+    juce::Colour arcColour_{juce::Colours::transparentBlack};
+    juce::Colour modColour_{0xFF4AD070};
 
     // Magnetic snapping
     MagneticSnapController snapController_;
@@ -209,6 +239,11 @@ private:
     static constexpr int TOOLTIP_HEIGHT = 24;
     static constexpr int TOOLTIP_PADDING = 8;
     static constexpr float THUMB_HIT_EXTRA = 15.0f; // Increased for WCAG 44px touch target
+
+    // Rotary layout — shared source of truth across OscilSlider.cpp and OscilSliderPainting.cpp.
+    static constexpr int ROTARY_KNOB_SIZE = 56;
+    static constexpr int ROTARY_LABEL_HEIGHT = 14;
+    static constexpr int ROTARY_VALUE_HEIGHT = 14;
 
     // TestIdSupport
     void registerTestId() override;

@@ -12,6 +12,7 @@
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/panels/SourceSelectorComponent.h"
 #include "ui/theme/IThemeService.h"
+#include "ui/theme/Typography.h"
 
 #include "rendering/VisualConfiguration.h"
 
@@ -205,7 +206,7 @@ void OscillatorConfigDialog::onThemeChanged(const ColorTheme& newTheme)
 {
     auto styleLabel = [&newTheme](juce::Label* label) {
         label->setColour(juce::Label::textColourId, newTheme.textSecondary);
-        label->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+        label->setFont(Typography::small());
     };
 
     styleLabel(sourceLabel_.get());

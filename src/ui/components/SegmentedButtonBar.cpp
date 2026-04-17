@@ -1,12 +1,13 @@
 /*
     Oscil - Segmented Button Bar Implementation
-    Glassmorphism-styled segmented control with spring-animated sliding indicator
+    Flat-surface segmented control with a spring-animated sliding indicator.
+    (Historical: "glassmorphism-styled" prior to the 2026-Q2 uplift.)
 */
 
 #include "ui/components/SegmentedButtonBar.h"
 
 #include "ui/components/AnimationSettings.h"
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 
 #include <algorithm>
 #include <utility>
@@ -25,10 +26,13 @@ SegmentedButtonBar::~SegmentedButtonBar() { stopTimer(); }
 void SegmentedButtonBar::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    const auto& glass = getGlass();
+    const auto& surface = getSurface();
 
-    // Container: glass input styling on the entire bar
-    GlassPainter::paintGlassInput(g, bounds, glass, ComponentLayout::RADIUS_LG, false, false);
+    // Container: flat input styling on the entire bar. Honour real keyboard
+    // focus so keyboard users get the focus affordance around the whole bar
+    // (the bar itself handles left/right navigation between segments).
+    bool const barFocused = hasKeyboardFocus(true);
+    SurfacePainter::paintInput(g, bounds, surface, ComponentLayout::RADIUS_LG, barFocused, false);
 
     // Sliding indicator behind the active button
     if (!buttons_.empty() && selectedId_ >= 0)
@@ -41,12 +45,16 @@ void SegmentedButtonBar::paint(juce::Graphics& g)
             juce::Rectangle<float>(indicatorX + 2.0f, indicatorY, indicatorWidth_ - 4.0f, indicatorH);
 
         // Fill with accentSubtle
-        g.setColour(glass.accentSubtle);
+        g.setColour(surface.accentSubtle);
         g.fillRoundedRectangle(indicatorBounds, ComponentLayout::RADIUS_MD);
 
-        // Border with accentMuted
-        g.setColour(glass.accentMuted);
-        g.drawRoundedRectangle(indicatorBounds.reduced(0.5f), ComponentLayout::RADIUS_MD, 1.0f);
+        // Border with accentMuted. Inset the stroke by half its width and shrink
+        // the corner radius by the same amount so the outline curve matches the
+        // fill exactly — mirrors SurfacePainter::paintPanel().
+        g.setColour(surface.accentMuted);
+        auto const strokeBounds = indicatorBounds.reduced(0.5f);
+        auto const strokeRadius = std::max(ComponentLayout::RADIUS_MD - 0.5f, 0.0f);
+        g.drawRoundedRectangle(strokeBounds, strokeRadius, 1.0f);
     }
 }
 
@@ -258,6 +266,10 @@ int SegmentedButtonBar::getSelectedIndex() const
     }
     return -1;
 }
+
+void SegmentedButtonBar::focusGained(FocusChangeType /*cause*/) { repaint(); }
+
+void SegmentedButtonBar::focusLost(FocusChangeType /*cause*/) { repaint(); }
 
 bool SegmentedButtonBar::keyPressed(const juce::KeyPress& key)
 {

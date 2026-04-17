@@ -7,6 +7,7 @@
 
 #include "core/InstanceRegistry.h"
 #include "ui/components/OscilTextField.h"
+#include "ui/components/SectionHeader.h"
 #include "ui/components/ThemedComponent.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -121,7 +122,7 @@ private:
     void applyFilter();
 
     std::unique_ptr<OscilTextField> searchInput_;
-    std::unique_ptr<juce::Label> sectionHeader_;
+    std::unique_ptr<SectionHeader> sectionHeader_;
     std::unique_ptr<juce::Viewport> listViewport_;
     std::unique_ptr<juce::Component> listContainer_;
     std::vector<std::unique_ptr<SourceListItem>> sourceItems_;

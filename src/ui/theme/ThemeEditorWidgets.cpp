@@ -7,8 +7,9 @@
 */
 
 #include "ui/components/ComponentConstants.h"
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 #include "ui/theme/ThemeEditorComponent.h"
+#include "ui/theme/Typography.h"
 
 #include <utility>
 
@@ -40,7 +41,7 @@ void ColorSwatchButton::paint(juce::Graphics& g)
 
     auto swatchBounds = bounds.reduced(2.0f);
 
-    GlassPainter::paintCheckerboard(g, swatchBounds.toNearestInt());
+    SurfacePainter::paintCheckerboard(g, swatchBounds.toNearestInt());
 
     g.setColour(colour_);
     g.fillRect(swatchBounds);
@@ -99,7 +100,7 @@ void ThemeColorSection::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
 
     g.setColour(theme.textPrimary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT).withStyle("Bold"));
+    g.setFont(Typography::heading());
     g.drawText(title_, bounds.removeFromTop(24), juce::Justification::centredLeft);
 
     g.setColour(theme.gridMajor);

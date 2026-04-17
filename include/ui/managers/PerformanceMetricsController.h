@@ -33,6 +33,14 @@ private:
     int frameCount_ = 0;
     double lastFrameTime_ = 0.0;
     float currentFps_ = 0.0f;
+
+    // Cached last-displayed values so we only repaint the status bar when
+    // something the user would actually notice has changed.
+    float lastCpuUsage_ = -1.0f;
+    float lastMemoryMB_ = -1.0f;
+    float lastFpsDisplayed_ = -1.0f;
+    int lastOscillatorCount_ = -1;
+    int lastSourceCount_ = -1;
 };
 
 } // namespace oscil

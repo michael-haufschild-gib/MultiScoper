@@ -20,8 +20,17 @@ void GpuRenderCoordinator::setGpuRenderingEnabled(bool enabled)
 {
     if (glManager_)
     {
+        const bool wasEnabled = glManager_->isGpuRenderingEnabled();
         glManager_->setGpuRenderingEnabled(enabled);
         statusBar_.setRenderingMode(enabled ? RenderingMode::OpenGL : RenderingMode::Software);
+
+        // On transition to enabled, seed an explicit repaint so the GL
+        // context draws a fresh frame rather than potentially showing
+        // garbage pixels until the first signal-driven tick fires. Without
+        // this, toggling GPU on while audio is silent leaves a blank /
+        // uninitialised framebuffer on screen indefinitely.
+        if (!wasEnabled && enabled)
+            forceRepaint();
     }
 }
 
@@ -32,7 +41,21 @@ void GpuRenderCoordinator::updateRendering(const std::vector<std::unique_ptr<Pan
     // Update GL renderer with waveform data (if GPU mode enabled)
     if (glManager_ && glManager_->isGpuRenderingEnabled())
     {
-        glManager_->updateWaveformData(panes);
+        bool const hasSignal = glManager_->updateWaveformData(panes);
+        // Gate repaints on actual signal activity + a short post-signal tail.
+        // The tail ensures fade-outs / envelope decays still render smoothly
+        // for a few frames after the source goes silent.
+        if (hasSignal)
+        {
+            silentFrames_ = 0;
+            glManager_->triggerRepaint();
+        }
+        else if (silentFrames_ < kPostSilenceFrames)
+        {
+            ++silentFrames_;
+            glManager_->triggerRepaint();
+        }
+        // else: truly idle — skip the repaint.  No VSync wake, no GPU work.
     }
     else
     {
@@ -43,6 +66,15 @@ void GpuRenderCoordinator::updateRendering(const std::vector<std::unique_ptr<Pan
                 pane->repaint();
         }
     }
+}
+
+void GpuRenderCoordinator::forceRepaint()
+{
+    // Called when a non-signal event (UI change, theme, layout) needs to
+    // refresh the scene even though audio activity alone wouldn't.
+    silentFrames_ = 0;
+    if (glManager_ && glManager_->isGpuRenderingEnabled())
+        glManager_->triggerRepaint();
 }
 
 void GpuRenderCoordinator::propagateGpuStateToPanes(const std::vector<std::unique_ptr<PaneComponent>>& panes) const

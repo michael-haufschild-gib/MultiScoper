@@ -1081,6 +1081,16 @@ class TestThreeInstanceInteraction:
             )
         yield client
         client.transport_stop()
+        # Restore any missing base tracks (0..2) that a test may have removed.
+        # addTrack reuses freed slots, keeping indices stable for later tests.
+        for tid in range(3):
+            if client.get_track_info(tid) is None:
+                client.add_track()
+                client.wait_until(
+                    lambda t=tid: client.get_track_info(t) is not None,
+                    timeout_s=5.0,
+                    desc=f"track {tid} to be restored in teardown",
+                )
         for tid in range(3):
             client.close_editor(track_id=tid)
 

@@ -15,6 +15,18 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 
 
+def settle(seconds: float, *, reason: str = "") -> None:
+    """Infrastructure-side fixed-duration pause for post-event damping.
+
+    Use only when no observable condition exists to poll (animation tails,
+    GL swap chain drain, pool thread wind-down).  Lives here rather than in
+    a ``test_*`` file so the e2e lint allows the underlying ``time.sleep``
+    call; calling ``settle`` from test code is explicitly permitted.
+    """
+    _ = reason
+    time.sleep(seconds)
+
+
 @dataclass
 class ElementInfo:
     """Snapshot of a UI element's state from the test harness registry."""

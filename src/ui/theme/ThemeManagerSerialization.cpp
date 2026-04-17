@@ -62,9 +62,6 @@ void saveGlassParams(juce::ValueTree& state, const ColorTheme& t)
     set("borderStrongAlpha", t.borderStrongAlpha);
     set("shadowIntensity", t.shadowIntensity);
     set("shadowSpread", t.shadowSpread);
-    set("lightEdgeAlpha", t.lightEdgeAlpha);
-    set("accentGlowRadius", t.accentGlowRadius);
-    set("accentGlowAlpha", t.accentGlowAlpha);
 }
 
 using ColourReader = std::function<juce::Colour(const char*, juce::Colour)>;
@@ -201,9 +198,6 @@ void ColorTheme::fromValueTree(const juce::ValueTree& state)
     borderStrongAlpha = getFloat("borderStrongAlpha", defaults.borderStrongAlpha);
     shadowIntensity = getFloat("shadowIntensity", defaults.shadowIntensity);
     shadowSpread = getFloat("shadowSpread", defaults.shadowSpread);
-    lightEdgeAlpha = getFloat("lightEdgeAlpha", defaults.lightEdgeAlpha);
-    accentGlowRadius = getFloat("accentGlowRadius", defaults.accentGlowRadius);
-    accentGlowAlpha = getFloat("accentGlowAlpha", defaults.accentGlowAlpha);
 
     loadWaveformColors(*this, state);
 }

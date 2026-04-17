@@ -5,7 +5,7 @@
 
 #include "ui/theme/ColorPickerComponent.h"
 
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 
 namespace oscil
 {
@@ -62,7 +62,7 @@ void ColorPickerComponent::paint(juce::Graphics& g)
     // Draw color preview with checkerboard for transparency
     if (!previewBounds_.isEmpty())
     {
-        GlassPainter::paintCheckerboard(g, previewBounds_, 8);
+        SurfacePainter::paintCheckerboard(g, previewBounds_, 8);
 
         // Draw the actual color on top
         g.setColour(currentColour_);
