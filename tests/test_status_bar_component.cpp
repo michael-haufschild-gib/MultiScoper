@@ -31,8 +31,6 @@ class StatusBarComponentTest : public ::testing::Test
 protected:
     void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
 
-    void TearDown() override { themeManager_.reset(); }
-
     ThemeManager& getThemeManager() { return *themeManager_; }
 
 private:

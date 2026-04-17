@@ -132,8 +132,13 @@ def iter_source_files(root: Path, scan_paths: Sequence[str]) -> Iterator[Path]:
 def scan_file(path: Path, root: Path) -> list[Violation]:
     try:
         content = path.read_text(encoding="utf-8", errors="ignore")
-    except OSError:
-        return []
+    except OSError as exc:
+        # Fail loudly instead of silently dropping the file from the scan.
+        # Swallowing the error would let a permissions or encoding problem
+        # hide a real violation and produce a false CI pass.
+        raise RuntimeError(
+            f"forbidden_patterns_lint: failed to read {path}: {exc}"
+        ) from exc
 
     # Strip out comments and string literals so rules don't self-trigger on
     # documentation explaining the rule itself.
@@ -198,6 +203,16 @@ def main(argv: Sequence[str]) -> int:
     print(f"  paths: {', '.join(args.paths)}")
     print(f"  scanned files: {len(files)}")
     print(f"  rules: {len(RULES)}")
+
+    if not files:
+        # Fail closed: an empty scan almost always means --root/--paths are
+        # misconfigured, and silently returning 0 would make the CI gate
+        # stop enforcing anything.
+        print(
+            "\nFAILED: no source files matched the configured root/paths.",
+            file=sys.stderr,
+        )
+        return 1
 
     violations: list[Violation] = []
     for path in files:

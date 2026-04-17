@@ -93,12 +93,15 @@ class ForbiddenPatternsLintTests(unittest.TestCase):
             result = run_script(tmp)
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
 
-    def test_allows_empty_tree(self):
+    def test_fails_closed_on_empty_tree(self):
+        # A zero-file scan almost always means --root / --paths were
+        # misconfigured; silently exiting 0 would let CI stop enforcing
+        # the forbidden-patterns gate without anyone noticing.
         with tempfile.TemporaryDirectory() as tmp:
             os.makedirs(os.path.join(tmp, "src"), exist_ok=True)
             result = run_script(tmp)
-            self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-            self.assertIn("PASSED", result.stdout)
+            self.assertEqual(result.returncode, 1, msg=result.stdout + result.stderr)
+            self.assertIn("no source files matched", result.stderr + result.stdout)
 
     def test_catches_wrapped_forbidden_call(self):
         # Regression: a forbidden call split across lines — e.g.

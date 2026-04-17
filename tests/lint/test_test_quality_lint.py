@@ -38,7 +38,15 @@ def run_script(root: str, paths=("tests",), min_assertions: int = 1):
         "--min-assertions",
         str(min_assertions),
     ]
-    return subprocess.run(cmd, capture_output=True, text=True, check=False)
+    # S603: the executable is sys.executable and the script path is repo-fixed;
+    # all other args come from hand-rolled fixtures in this file.
+    return subprocess.run(  # noqa: S603
+        cmd,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
 
 
 class TestQualityLintTests(unittest.TestCase):

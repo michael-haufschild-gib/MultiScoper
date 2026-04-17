@@ -23,7 +23,8 @@ import statistics
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Iterator, List, Optional
+from collections.abc import Iterator
+from typing import Optional
 
 import psutil
 import requests
@@ -93,7 +94,7 @@ class Sample:
 
 @dataclass
 class ResourceReport:
-    samples: List[Sample] = field(default_factory=list)
+    samples: list[Sample] = field(default_factory=list)
     harness_url: str = HARNESS_URL
 
     # ---------------------------------------------------------------
@@ -184,7 +185,7 @@ class ResourceMonitor:
         self._proc: Optional[psutil.Process] = None
         self._running = False
 
-    def __enter__(self) -> "ResourceMonitor":
+    def __enter__(self) -> ResourceMonitor:
         pid = find_harness_pid(harness_url=self.harness_url)
         if pid is None:
             raise RuntimeError(

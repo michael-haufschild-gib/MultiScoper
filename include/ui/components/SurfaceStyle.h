@@ -31,8 +31,12 @@ struct SurfaceStyle
     juce::Colour accentSubtle; // accent at 15% alpha
     juce::Colour accentMuted;  // accent at 35% alpha
 
-    float shadowIntensity = 0.4f;
-    float shadowSpread = 12.0f;
+    // Neutral baseline: no shadow until computeFrom() inherits the theme's
+    // flat-surface values (ColorTheme defaults 0.18 / 4.0). Starting above
+    // that baseline can produce a heavy drop shadow on any default-constructed
+    // SurfaceStyle before the theme is applied.
+    float shadowIntensity = 0.0f;
+    float shadowSpread = 0.0f;
 
     /// Recompute all derived values from a ColorTheme
     void computeFrom(const ColorTheme& theme);
