@@ -6,6 +6,7 @@
 #include "ui/panels/SoftwareGridRenderer.h"
 
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/Typography.h"
 
 #include <cmath>
 
@@ -84,7 +85,8 @@ void SoftwareGridRenderer::render(juce::Graphics& g, juce::Rectangle<int> bounds
                              static_cast<float>(bounds.getRight()));
 
         g.setColour(theme.textSecondary.withAlpha(0.6f));
-        g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+        // 10pt preserved — channel marker box is 20x14; upsize risks clipping.
+        g.setFont(Typography::captionBold().withHeight(10.0f));
         g.drawText("L", topBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2),
                    juce::Justification::centredLeft);
         g.drawText("R", bottomBounds.removeFromLeft(20).removeFromTop(14).translated(4, 2),
@@ -264,7 +266,8 @@ void SoftwareGridRenderer::renderLabels(juce::Graphics& g, juce::Rectangle<int> 
 {
     const auto& theme = themeService_.getCurrentTheme();
 
-    g.setFont(juce::FontOptions(9.0f));
+    // 9pt axis labels preserved — grid label boxes tuned for this size.
+    g.setFont(Typography::caption().withHeight(9.0f));
     g.setColour(theme.textSecondary.withAlpha(0.7f));
 
     int const height = bounds.getHeight();
@@ -357,9 +360,10 @@ void SoftwareGridRenderer::drawAmplitudeLabels(juce::Graphics& g, juce::Rectangl
 
     if (showChannelLabel && !channelLabel.isEmpty())
     {
-        g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+        g.setFont(Typography::captionBold().withHeight(10.0f));
         g.drawText(channelLabel, area.getRight() - 18, area.getY() + 2, 14, 12, juce::Justification::centredRight);
-        g.setFont(juce::FontOptions(9.0f));
+        // Reset back to axis label size for remaining draws in caller.
+        g.setFont(Typography::caption().withHeight(9.0f));
     }
 }
 

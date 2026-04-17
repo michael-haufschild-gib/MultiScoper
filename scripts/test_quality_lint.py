@@ -85,17 +85,29 @@ TAUTOLOGY_PATTERNS: List[re.Pattern] = [
     re.compile(r"\b(?:EXPECT|ASSERT)_LE\s*\(\s*(\w+(?:\.\w+)*)\s*,\s*\1\s*\)"),
 ]
 
-# Patterns that indicate a test IS behavioral even with few assertions
-BEHAVIORAL_INDICATORS = [
-    # Death tests are single-assertion but meaningful
-    re.compile(r"\b(?:EXPECT|ASSERT)_(?:DEATH|DEATH_IF_SUPPORTED|THROW|ANY_THROW)\b"),
-    # EXPECT_THAT with matchers
+# Assertion-class behavioral indicators. These assertions *are* the behavior
+# check (e.g., DEATH/THROW verify an exception path). A test built around
+# them is meaningful even with a single assertion and even if *other* on-line
+# assertions look existence-only.
+ASSERTION_BEHAVIORAL_INDICATORS = [
+    re.compile(r"\b(?:EXPECT|ASSERT)_(?:DEATH|DEATH_IF_SUPPORTED|THROW|ANY_THROW|NO_THROW)\b"),
     re.compile(r"\b(?:EXPECT|ASSERT)_THAT\b"),
-    # Calling methods that clearly exercise behavior
+]
+
+# Method-call behavioral indicators. These show the code under test is being
+# *exercised*, but they are not assertions. A test that calls `.process()` and
+# then only checks `EXPECT_NE(x, nullptr)` is still a shallow test — it runs
+# the code but does not verify the behavior. These indicators lift the
+# minimum-assertion floor but do NOT bypass the existence-only rule.
+METHOD_CALL_INDICATORS = [
     re.compile(r"\.processBlock\s*\("),
     re.compile(r"\.process\s*\("),
     re.compile(r"\.paint\s*\("),
     re.compile(r"\.resized\s*\("),
+    re.compile(r"\.mouseDown\s*\("),
+    re.compile(r"\.mouseUp\s*\("),
+    re.compile(r"\.mouseDrag\s*\("),
+    re.compile(r"\.keyPressed\s*\("),
 ]
 
 
@@ -206,8 +218,29 @@ def is_existence_only(body: TestBody) -> bool:
     return True
 
 
+def has_assertion_behavioral_indicator(body: TestBody) -> bool:
+    """True when the test contains an assertion that *is* a behavior check
+    (e.g., DEATH/THROW). Such tests may legitimately have few assertions
+    or assertions that look existence-only to the pattern matcher.
+    """
+    return any(p.search(body.raw_text) for p in ASSERTION_BEHAVIORAL_INDICATORS)
+
+
+def has_method_call_indicator(body: TestBody) -> bool:
+    """True when the test exercises code via a method call (process/paint/etc.).
+    Exercising code is not the same as asserting on its effect; method-call
+    indicators lift the assertion-count floor but do NOT excuse existence-only
+    assertion patterns.
+    """
+    return any(p.search(body.raw_text) for p in METHOD_CALL_INDICATORS)
+
+
 def has_behavioral_indicator(body: TestBody) -> bool:
-    return any(p.search(body.raw_text) for p in BEHAVIORAL_INDICATORS)
+    """Back-compat shim: true when a test is non-trivial enough to bypass
+    the minimum assertion-count floor. Existence-only detection uses the
+    stricter assertion-behavioral indicator.
+    """
+    return has_assertion_behavioral_indicator(body) or has_method_call_indicator(body)
 
 
 def find_tautologies(body: TestBody) -> List[str]:
@@ -245,8 +278,10 @@ def analyze_test(body: TestBody, min_assertions: int) -> Optional[Violation]:
             reason="test has zero assertions",
         )
 
-    # All assertions are existence-only (but skip if behavioral indicators present)
-    if is_existence_only(body) and not has_behavioral_indicator(body):
+    # All assertions are existence-only. Only *assertion-class* behavioral
+    # indicators (DEATH/THROW/THAT) excuse this — exercising a method without
+    # asserting on its effect is still a shallow test.
+    if is_existence_only(body) and not has_assertion_behavioral_indicator(body):
         return Violation(
             file="",
             line=body.start_line,

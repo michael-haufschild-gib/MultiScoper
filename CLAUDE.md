@@ -121,7 +121,7 @@ src/                        # Implementation files (.cpp, .mm)
 ├── platform/macos/         # Platform-specific implementations
 ├── plugin/                 # Plugin entry points (PluginProcessor, PluginEditor)
 ├── rendering/              # OpenGL visualization engine
-│   ├── effects/            # Post-processing (Bloom, Glitch, Scanline, etc.)
+│   ├── effects/            # Post-processing (Bloom, Vignette, Film Grain, etc.)
 │   ├── materials/          # Material shaders (Glass, Chrome, Crystalline)
 │   ├── particles/          # Particle system
 │   ├── shaders/            # 2D waveform shaders

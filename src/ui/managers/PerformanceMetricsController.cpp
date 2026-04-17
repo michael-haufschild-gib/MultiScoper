@@ -9,6 +9,8 @@
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 
+#include <cmath>
+
 namespace oscil
 {
 
@@ -36,6 +38,8 @@ void PerformanceMetricsController::update()
     if (lastFrameTime_ <= 0.0)
         lastFrameTime_ = currentTime;
 
+    bool changed = false;
+
     // Calculate FPS on a stable 1-second window.
     frameCount_++;
     if (currentTime - lastFrameTime_ >= 1000.0)
@@ -44,11 +48,26 @@ void PerformanceMetricsController::update()
         frameCount_ = 0;
         lastFrameTime_ = currentTime;
 
-        statusBar_.setFps(currentFps_);
+        // Only repaint FPS once it has drifted by at least 2 — users can't
+        // distinguish 58 vs 58.4 fps, and jitter below that costs a repaint
+        // per timer tick across every open editor.
+        if (std::abs(currentFps_ - lastFpsDisplayed_) >= 2.0f)
+        {
+            statusBar_.setFps(currentFps_);
+            lastFpsDisplayed_ = currentFps_;
+            changed = true;
+        }
     }
 
-    // Update non-FPS metrics every tick to avoid visible lag after state changes.
-    statusBar_.setCpuUsage(dataProvider_.getCpuUsage());
+    // CPU usage.  1 percentage point is the smallest visible change in the
+    // status bar's single-digit display; anything finer is just noise.
+    float const cpu = dataProvider_.getCpuUsage();
+    if (std::abs(cpu - lastCpuUsage_) >= 1.0f)
+    {
+        statusBar_.setCpuUsage(cpu);
+        lastCpuUsage_ = cpu;
+        changed = true;
+    }
 
     // Memory usage — computed from capture quality config and source count.
     // Each source gets one DecimatingCaptureBuffer sized per the quality config.
@@ -58,14 +77,34 @@ void PerformanceMetricsController::update()
     size_t const sourceCount = instanceRegistry_.getSourceCount();
     size_t const totalBytes = perBufferBytes * sourceCount;
     float const memoryMB = static_cast<float>(totalBytes) / (1024.0f * 1024.0f);
-    statusBar_.setMemoryUsage(memoryMB);
+    if (std::abs(memoryMB - lastMemoryMB_) >= 0.1f)
+    {
+        statusBar_.setMemoryUsage(memoryMB);
+        lastMemoryMB_ = memoryMB;
+        changed = true;
+    }
 
     // Oscillator and source counts.
     int const oscillatorCount = dataProvider_.getState().getOscillatorCount();
-    statusBar_.setOscillatorCount(oscillatorCount);
-    statusBar_.setSourceCount(static_cast<int>(sourceCount));
+    if (oscillatorCount != lastOscillatorCount_)
+    {
+        statusBar_.setOscillatorCount(oscillatorCount);
+        lastOscillatorCount_ = oscillatorCount;
+        changed = true;
+    }
 
-    statusBar_.repaint();
+    int const sourceCountInt = static_cast<int>(sourceCount);
+    if (sourceCountInt != lastSourceCount_)
+    {
+        statusBar_.setSourceCount(sourceCountInt);
+        lastSourceCount_ = sourceCountInt;
+        changed = true;
+    }
+
+    // Only repaint if a value actually moved — saves ~60 repaints/sec per
+    // editor during idle (which, with 16 open editors, is ~1 full core).
+    if (changed)
+        statusBar_.repaint();
 }
 
 } // namespace oscil

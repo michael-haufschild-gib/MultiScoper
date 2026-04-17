@@ -6,7 +6,7 @@
 #include "plugin/PluginEditor.h"
 
 #include "core/InstanceRegistry.h"
-#include "ui/components/GlassStyle.h"
+#include "ui/components/SurfaceStyle.h"
 #include "ui/controllers/GpuRenderCoordinator.h"
 #include "ui/controllers/OscillatorPanelController.h"
 #include "ui/layout/LayoutCoordinator.h"
@@ -74,6 +74,31 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     layoutCoordinator_ = std::make_unique<LayoutCoordinator>(windowLayout_, [this]() { onLayoutChanged(); });
 
     processor_.getThemeService().setCurrentTheme(processor_.getState().getThemeName());
+
+    // Install the project-wide LookAndFeel BEFORE any child components are
+    // constructed so their colour lookups (called in ctor) see themed values.
+    // Seed it with the active theme so first paint is already themed.
+    //
+    // Only the editor subtree gets lookAndFeel_ — the process-wide
+    // juce::LookAndFeel::setDefaultLookAndFeel() is deliberately NOT touched.
+    // Writing the process-global default from a plugin is a supply-chain
+    // hazard:
+    //   (a) non-Oscil plugins loaded in the same DAW process would have
+    //       their theme overridden until Oscil is unloaded, and
+    //   (b) multi-instance destruction cannot reliably restore a known
+    //       prior default because other instances write the same global
+    //       concurrently.
+    //
+    // Trade-off: juce::AlertWindow::showMessageBoxAsync(...) with no
+    // associated component uses the global default LookAndFeel, so those
+    // (rare) alerts render with JUCE's stock LookAndFeel_V4 chrome rather
+    // than Oscil's dark theme. All other popups (PopupMenu, TooltipWindow,
+    // modal AlertWindow shown from a themed parent) inherit this editor's
+    // LookAndFeel through the component hierarchy. If future UX work needs
+    // themed async alerts, replace the showMessageBoxAsync call sites with
+    // a custom AlertWindow that explicitly setLookAndFeel(&lookAndFeel_).
+    lookAndFeel_.applyTheme(processor_.getThemeService().getCurrentTheme());
+    setLookAndFeel(&lookAndFeel_);
 
     initUIComponents();
     initManagers();
@@ -212,6 +237,11 @@ OscilPluginEditor::~OscilPluginEditor()
 
     if (timingEngineAdapter_)
         processor_.getTimingEngine().removeListener(timingEngineAdapter_.get());
+
+    // Detach LookAndFeel before lookAndFeel_ is destroyed. The process-wide
+    // default is never modified by Oscil (see ctor comment), so no restore
+    // is needed here.
+    setLookAndFeel(nullptr);
 }
 
 void OscilPluginEditor::parentHierarchyChanged()
@@ -235,7 +265,7 @@ void OscilPluginEditor::paint(juce::Graphics& g)
         g.fillAll(theme.backgroundPrimary);
 
         // Subtle accent-tinted radial gradient overlay
-        auto glass = GlassStyle::fromTheme(theme);
+        auto glass = SurfaceStyle::fromTheme(theme);
 
         auto bounds = getLocalBounds().toFloat();
         auto accentLow = glass.accent.withAlpha(0.08f);
@@ -265,6 +295,9 @@ void OscilPluginEditor::resized()
         // We pass the one from the controller
         editorLayout_->updateLayout(oscillatorPanelController_->getPaneComponents());
     }
+    // Resize changes the scene even when audio is silent — request a paint.
+    if (renderCoordinator_)
+        renderCoordinator_->forceRepaint();
 }
 
 void OscilPluginEditor::timerCallback()

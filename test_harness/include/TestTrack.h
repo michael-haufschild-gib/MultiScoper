@@ -55,7 +55,19 @@ public:
     /**
      * Get the source ID for this track
      */
-    const SourceId& getSourceId() const { return sourceId_; }
+    const SourceId& getSourceId() const
+    {
+        // prepare() caches sourceId_ but can observe an empty value if it
+        // runs off the message thread (registration is deferred there).
+        // Re-query the processor so callers always see the current ID.
+        if (!sourceId_.isValid() && processor_ != nullptr)
+        {
+            auto live = processor_->getSourceId();
+            if (live.isValid())
+                sourceId_ = live;
+        }
+        return sourceId_;
+    }
 
     /**
      * Get track name
@@ -98,7 +110,7 @@ public:
 private:
     int trackIndex_;
     juce::String name_;
-    SourceId sourceId_;
+    mutable SourceId sourceId_;
     TestTransport& transport_;
 
     std::unique_ptr<OscilPluginProcessor> processor_;

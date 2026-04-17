@@ -4,8 +4,8 @@
 
 #include "ui/layout/pane/PaneActionBar.h"
 
-#include "ui/components/GlassStyle.h"
 #include "ui/components/ListItemIcons.h"
+#include "ui/components/SurfaceStyle.h"
 
 namespace oscil
 {
@@ -18,7 +18,7 @@ void applyHoldButtonVisuals(OscilButton& button, IThemeService& themeService, bo
 {
     if (toggled)
     {
-        auto glass = GlassStyle::fromTheme(themeService.getCurrentTheme());
+        auto glass = SurfaceStyle::fromTheme(themeService.getCurrentTheme());
         button.setIconPath(ListItemIcons::createPlayIcon(kHoldIconSize));
         button.setBorder(glass.accent, 1.0f);
     }

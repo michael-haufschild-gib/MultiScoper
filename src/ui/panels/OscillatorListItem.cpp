@@ -11,6 +11,7 @@
 #include "ui/components/InlineEditLabel.h"
 #include "ui/components/ListItemIcons.h"
 #include "ui/components/ProcessingModeIcons.h"
+#include "ui/theme/Typography.h"
 
 namespace oscil
 {
@@ -66,7 +67,8 @@ void OscillatorListItemComponent::setupLabels()
     nameLabel_ = std::make_unique<InlineEditLabel>(getThemeService());
     nameLabel_->setText(displayName_, false);
     nameLabel_->setPlaceholder("Oscillator name...");
-    nameLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT).withStyle("Bold"));
+    // Tile treatment uses compact bold name + caption track label (see spec).
+    nameLabel_->setFont(Typography::smallBold());
     nameLabel_->setTextJustification(juce::Justification::bottomLeft);
     nameLabel_->onTextChanged = [this](const juce::String& newName) {
         displayName_ = newName;
@@ -79,7 +81,7 @@ void OscillatorListItemComponent::setupLabels()
 
     trackLabel_ = std::make_unique<juce::Label>("track", trackName_);
     trackLabel_->setComponentID("trackLabel");
-    trackLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+    trackLabel_->setFont(Typography::caption());
     trackLabel_->setJustificationType(juce::Justification::topLeft);
     trackLabel_->setInterceptsMouseClicks(false, false);
     addAndMakeVisible(*trackLabel_);
@@ -170,18 +172,19 @@ void OscillatorListItemComponent::updateVisibility()
     deleteButton_->setAlpha(buttonAlpha);
     settingsButton_->setAlpha(buttonAlpha);
 
-    // Update label alpha based on visibility
+    // Tile treatment: hidden state uses textMuted directly; the tile paint applies a 0.6
+    // global opacity so no additional alpha manipulation is needed here.
     const auto& theme = getTheme();
-    float const alpha = isVisible_ ? 1.0f : 0.5f;
 
     if (nameLabel_)
     {
-        nameLabel_->setTextColour((selected_ ? theme.textHighlight : theme.textPrimary).withAlpha(alpha));
+        auto const nameColour = !isVisible_ ? theme.textMuted : (selected_ ? theme.textHighlight : theme.textPrimary);
+        nameLabel_->setTextColour(nameColour);
     }
 
     if (trackLabel_)
     {
-        trackLabel_->setColour(juce::Label::textColourId, theme.textSecondary.withAlpha(alpha));
+        trackLabel_->setColour(juce::Label::textColourId, theme.textSecondary);
     }
 
     // Always update button icon and tooltip based on current state
@@ -259,16 +262,16 @@ bool OscillatorListItemComponent::isInDragZone(const juce::Point<int>& pos) cons
 
 void OscillatorListItemComponent::onThemeChanged(const ColorTheme& newTheme)
 {
-    float const alpha = isVisible_ ? 1.0f : 0.5f;
-
     if (nameLabel_)
     {
-        nameLabel_->setTextColour((selected_ ? newTheme.textHighlight : newTheme.textPrimary).withAlpha(alpha));
+        auto const nameColour =
+            !isVisible_ ? newTheme.textMuted : (selected_ ? newTheme.textHighlight : newTheme.textPrimary);
+        nameLabel_->setTextColour(nameColour);
     }
 
     if (trackLabel_)
     {
-        trackLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary.withAlpha(alpha));
+        trackLabel_->setColour(juce::Label::textColourId, newTheme.textSecondary);
     }
 }
 
@@ -278,14 +281,8 @@ void OscillatorListItemComponent::setSelected(bool selected)
     {
         selected_ = selected;
 
-        // Update label colors for selection state
-        const auto& theme = getTheme();
-        float const alpha = isVisible_ ? 1.0f : 0.5f;
-        if (nameLabel_)
-        {
-            nameLabel_->setTextColour((selected_ ? theme.textHighlight : theme.textPrimary).withAlpha(alpha));
-        }
-
+        // Update label colors for selection state. updateVisibility() handles both
+        // selected and hidden colour resolution via textMuted/textHighlight/textPrimary.
         updateVisibility(); // Triggers repaint and resize
     }
 }

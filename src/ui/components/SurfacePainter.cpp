@@ -1,9 +1,22 @@
 /*
-    Oscil - Glass Painter
-    Reusable glassmorphism painting utilities for UI components
+    Oscil - Surface Painter (flat) — Implementation
+
+    Historical name: "SurfacePainter". The 2026 uplift replaced the glassmorphism
+    aesthetic with a flat surface system:
+
+      * Single-layer drop shadow under raised surfaces (popups, modals).
+        No three-layer stack, no blur radii masquerading as shadows.
+      * Solid panel fills with a single 1px hairline border. No inset light
+        edge, no translucent glass.
+      * No accent glow. Focus is communicated by a 2px accent ring.
+      * Ripples and focus-ring painters remain — they are interaction
+        feedback, not glass ornamentation.
+
+    Function names are kept for API compatibility with ~30 call sites; a
+    follow-up commit will rename this module to `SurfacePainter`.
 */
 
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 
 #include "ui/components/ComponentConstants.h"
 
@@ -14,7 +27,8 @@ namespace oscil
 {
 
 // ============================================================================
-// RippleState
+// RippleState / RippleManager — unchanged from the pre-uplift implementation.
+// Ripples are a modern interaction affordance, not a glass effect.
 // ============================================================================
 
 float RippleState::getProgress(double currentTime) const
@@ -32,10 +46,6 @@ float RippleState::getAlpha(double currentTime) const
 float RippleState::getRadius(double currentTime) const { return getProgress(currentTime) * maxRadius; }
 
 bool RippleState::isExpired(double currentTime) const { return getProgress(currentTime) >= 1.0f; }
-
-// ============================================================================
-// RippleManager
-// ============================================================================
 
 double RippleManager::getTime() { return juce::Time::getMillisecondCounterHiRes() / 1000.0; }
 
@@ -64,87 +74,50 @@ bool RippleManager::hasActiveRipples(double currentTime) const
 }
 
 // ============================================================================
-// GlassPainter
+// SurfacePainter — flat surface painters
 // ============================================================================
 
-namespace GlassPainter
+namespace SurfacePainter
 {
 
 void paintShadow(juce::Graphics& g, juce::Rectangle<float> bounds, float cornerRadius, float intensity, float spread)
 {
-    if (intensity <= 0.0f)
+    if (intensity <= 0.0f || spread <= 0.0f)
         return;
 
-    auto black = juce::Colours::black;
-
-    // Layer 1: tight shadow, 1px down
-    {
-        float const expand = 2.0f;
-        auto shadowBounds = bounds.expanded(expand).translated(0.0f, 1.0f);
-        g.setColour(black.withAlpha(intensity * 0.3f));
-        g.fillRoundedRectangle(shadowBounds, cornerRadius + expand);
-    }
-
-    // Layer 2: medium shadow, 4px down
-    {
-        float const expand = spread * 0.5f;
-        auto shadowBounds = bounds.expanded(expand).translated(0.0f, 4.0f);
-        g.setColour(black.withAlpha(intensity * 0.5f));
-        g.fillRoundedRectangle(shadowBounds, cornerRadius + expand);
-    }
-
-    // Layer 3: wide shadow, 8px down
-    {
-        float const expand = spread;
-        auto shadowBounds = bounds.expanded(expand).translated(0.0f, 8.0f);
-        g.setColour(black.withAlpha(intensity * 0.3f));
-        g.fillRoundedRectangle(shadowBounds, cornerRadius + expand);
-    }
+    // Single drop shadow: 4px offset down, spread-sized blur. No halo
+    // stack; modals and popups get one clean shadow to establish depth.
+    float const expand = spread;
+    auto shadowBounds = bounds.expanded(expand * 0.5f).translated(0.0f, 4.0f);
+    g.setColour(juce::Colours::black.withAlpha(intensity));
+    g.fillRoundedRectangle(shadowBounds, cornerRadius + (expand * 0.5f));
 }
 
-void paintInsetLightEdge(juce::Graphics& g, juce::Rectangle<float> bounds, float cornerRadius, float alpha)
+void paintInsetLightEdge(juce::Graphics& /*g*/, juce::Rectangle<float> /*bounds*/, float /*cornerRadius*/,
+                         float /*alpha*/)
 {
-    if (alpha <= 0.0f)
-        return;
-
-    auto white = juce::Colours::white;
-
-    // 1px horizontal highlight at the top, inset by cornerRadius
-    float const lineY = bounds.getY() + 1.0f;
-    float const lineLeft = bounds.getX() + cornerRadius;
-    float const lineRight = bounds.getRight() - cornerRadius;
-
-    if (lineRight > lineLeft)
-    {
-        g.setColour(white.withAlpha(alpha));
-        g.fillRect(lineLeft, lineY, lineRight - lineLeft, 1.0f);
-    }
-
-    // Subtle perimeter glow: inner stroke at white 2% alpha
-    g.setColour(white.withAlpha(0.02f));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), cornerRadius, 1.0f);
+    // Flat aesthetic — no inset highlight. Retained as a no-op for API
+    // compatibility with legacy call sites.
 }
 
-void paintGlassBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const GlassStyle& glass, float cornerRadius)
+void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius)
 {
-    // Fill with glass background
-    g.setColour(glass.bgGlass);
+    // Solid fill, no translucency.
+    g.setColour(glass.bgPanel);
     g.fillRoundedRectangle(bounds, cornerRadius);
-
-    // Inset light edge
-    paintInsetLightEdge(g, bounds, cornerRadius, glass.insetLightEdge.getFloatAlpha());
 }
 
-void paintGlassPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const GlassStyle& glass, float cornerRadius,
+void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
                      BorderLevel border)
 {
-    // 1. Shadow
+    // 1. Single-layer drop shadow (skipped when shadowIntensity == 0).
     paintShadow(g, bounds, cornerRadius, glass.shadowIntensity, glass.shadowSpread);
 
-    // 2. Glass background fill + inset light edge
-    paintGlassBackground(g, bounds, glass, cornerRadius);
+    // 2. Flat solid fill.
+    g.setColour(glass.bgPanel);
+    g.fillRoundedRectangle(bounds, cornerRadius);
 
-    // 3. Border based on level
+    // 3. 1px hairline border at the chosen intensity.
     juce::Colour borderColour;
     bool drawBorder = true;
 
@@ -172,77 +145,39 @@ void paintGlassPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const Gla
         g.setColour(borderColour);
         g.drawRoundedRectangle(bounds, cornerRadius, 1.0f);
     }
-
-    // 4. Dark outline: black at 15% alpha, 0.5px stroke
-    g.setColour(juce::Colours::black.withAlpha(0.15f));
-    g.drawRoundedRectangle(bounds, cornerRadius, 0.5f);
 }
 
-void paintGlassInput(juce::Graphics& g, juce::Rectangle<float> bounds, const GlassStyle& glass, float cornerRadius,
+void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
                      bool focused, bool hovered, bool error, juce::Colour errorColour)
 {
-    juce::Colour bgColour = glass.bgGlass;
+    // Flat input: solid dark fill, 1px border that shifts colour by state.
+    juce::Colour const bgColour = glass.bgPanel;
     juce::Colour borderColour = glass.borderSubtle;
 
     if (error)
     {
-        // Error state: danger border, no glow
         borderColour = errorColour;
     }
     else if (focused)
     {
-        // Focused: accent border + glow + bg tint
         borderColour = glass.accent;
-        bgColour = glass.bgGlass.interpolatedWith(glass.accentSubtle, 0.3f);
-
-        // Accent glow ring
-        paintAccentGlow(g, bounds, glass.accent, glass.accentGlowRadius, glass.accentGlowAlpha);
     }
     else if (hovered)
     {
-        // Hovered: brighter border + slightly lighter bg
         borderColour = glass.borderDefault;
-        bgColour = glass.bgGlass.interpolatedWith(glass.bgHover, 0.5f);
     }
 
-    // Fill background
     g.setColour(bgColour);
     g.fillRoundedRectangle(bounds, cornerRadius);
 
-    // Inset shadow at top: 1px inner shadow (black 5% alpha)
-    {
-        float const lineY = bounds.getY() + 0.5f;
-        float const lineLeft = bounds.getX() + cornerRadius;
-        float const lineRight = bounds.getRight() - cornerRadius;
-        if (lineRight > lineLeft)
-        {
-            g.setColour(juce::Colours::black.withAlpha(0.05f));
-            g.fillRect(lineLeft, lineY, lineRight - lineLeft, 1.0f);
-        }
-    }
-
-    // Border
     g.setColour(borderColour);
-    g.drawRoundedRectangle(bounds, cornerRadius, 1.0f);
+    g.drawRoundedRectangle(bounds, cornerRadius, focused ? 1.5f : 1.0f);
 }
 
-void paintAccentGlow(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour accentColour, float radius,
-                     float alpha)
+void paintAccentGlow(juce::Graphics& /*g*/, juce::Rectangle<float> /*bounds*/, juce::Colour /*colour*/,
+                     float /*radius*/, float /*alpha*/)
 {
-    if (alpha <= 0.0f || radius <= 0.0f)
-        return;
-
-    // Multiple layers at decreasing alpha for soft falloff
-    constexpr int numLayers = 3;
-    for (int i = numLayers; i >= 1; --i)
-    {
-        float const layerExpand = radius * (static_cast<float>(i) / static_cast<float>(numLayers));
-        float const layerAlpha = alpha * (1.0f / static_cast<float>(i + 1));
-
-        auto glowBounds = bounds.expanded(layerExpand);
-        g.setColour(accentColour.withAlpha(layerAlpha));
-        g.fillRoundedRectangle(glowBounds, layerExpand * 0.5f + 4.0f);
-    }
+    // Flat aesthetic — no glow. No-op retained for legacy call sites.
 }
 
 void paintRipples(juce::Graphics& g, juce::Rectangle<float> bounds, const std::vector<RippleState>& ripples,
@@ -278,6 +213,7 @@ void paintRipples(juce::Graphics& g, juce::Rectangle<float> bounds, const std::v
 void paintFocusRing(juce::Graphics& g, juce::Rectangle<float> bounds, float cornerRadius, juce::Colour accentColour,
                     float width, float offset)
 {
+    // WCAG focus ring: solid accent stroke, offset outside the element.
     auto ringBounds = bounds.expanded(offset);
     g.setColour(accentColour.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
     g.drawRoundedRectangle(ringBounds, cornerRadius + offset, width);
@@ -300,6 +236,6 @@ void paintCheckerboard(juce::Graphics& g, juce::Rectangle<int> bounds, int check
     }
 }
 
-} // namespace GlassPainter
+} // namespace SurfacePainter
 
 } // namespace oscil

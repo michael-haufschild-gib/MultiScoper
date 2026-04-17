@@ -1,11 +1,12 @@
 /*
     Oscil - Toggle Component Implementation
-    Glassmorphism rendering with spring physics toggle animation
+    Flat-surface rendering with spring-physics toggle animation.
+    (Historical: "glassmorphism rendering" prior to the 2026-Q2 uplift.)
 */
 
 #include "ui/components/OscilToggle.h"
 
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 
 namespace oscil
 {
@@ -194,7 +195,7 @@ void OscilToggle::paint(juce::Graphics& g)
 void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
     float const progress = std::clamp(positionSpring_.position, 0.0f, 1.0f);
 
     float const cornerRadius = bounds.getHeight() / 2.0f;
@@ -202,8 +203,8 @@ void OscilToggle::paintTrack(juce::Graphics& g, const juce::Rectangle<float>& bo
     // Track ON: accent glow behind
     if (progress > 0.01f)
     {
-        GlassPainter::paintAccentGlow(g, bounds, glass.accentGlow, glass.accentGlowRadius * progress,
-                                      glass.accentGlowAlpha * progress * 0.5f);
+        SurfacePainter::paintAccentGlow(g, bounds, glass.accentGlow, glass.accentGlowRadius * progress,
+                                        glass.accentGlowAlpha * progress * 0.5f);
     }
 
     // Track background: interpolate between OFF (bgGlass) and ON (accent)
@@ -269,7 +270,7 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
 void OscilToggle::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
     float const cornerRadius = bounds.getHeight() / 2.0f;
-    GlassPainter::paintFocusRing(g, bounds, cornerRadius, getGlass().accent);
+    SurfacePainter::paintFocusRing(g, bounds, cornerRadius, getSurface().accent);
 }
 
 void OscilToggle::resized()

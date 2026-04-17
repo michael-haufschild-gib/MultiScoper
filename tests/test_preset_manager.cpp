@@ -58,9 +58,9 @@ TEST_F(PresetManagerTest, BuiltInPresetsAvailable)
 TEST_F(PresetManagerTest, LoadBuiltInPreset)
 {
     auto config = manager.loadPreset("vector_scope");
-    EXPECT_TRUE(config.scanlines.enabled);
     EXPECT_TRUE(config.bloom.enabled);
     EXPECT_TRUE(config.trails.enabled);
+    EXPECT_TRUE(config.filmGrain.enabled);
 }
 
 TEST_F(PresetManagerTest, SaveAndLoadUserPreset)

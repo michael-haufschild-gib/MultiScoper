@@ -5,6 +5,8 @@
 
 #include "ui/dialogs/AddOscillatorDialog.h"
 
+#include "ui/theme/Typography.h"
+
 #include "rendering/VisualConfiguration.h"
 
 namespace oscil
@@ -133,7 +135,7 @@ void AddOscillatorDialog::onThemeChanged(const ColorTheme& newTheme)
 {
     auto styleLabel = [&newTheme](juce::Label* label) {
         label->setColour(juce::Label::textColourId, newTheme.textSecondary);
-        label->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+        label->setFont(Typography::small());
     };
 
     styleLabel(sourceLabel_.get());
@@ -144,7 +146,7 @@ void AddOscillatorDialog::onThemeChanged(const ColorTheme& newTheme)
 
     // Error label uses error color
     errorLabel_->setColour(juce::Label::textColourId, newTheme.statusError);
-    errorLabel_->setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+    errorLabel_->setFont(Typography::small());
 }
 
 void AddOscillatorDialog::setData(const std::vector<SourceInfo>& sources, const std::vector<Pane>& panes)

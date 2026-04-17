@@ -157,14 +157,12 @@ The `VisualConfiguration` struct contains all configurable parameters. Each pres
 | enabled | bool | - | - | false | Enable effect |
 | intensity | float | 0.0 | 0.02 | 0.005 | RGB channel offset |
 
-#### 3.3.8 ScanlineSettings
+#### 3.3.8 ScanlineSettings *(removed 2026-Q2)*
 
-| Parameter | Type | Min | Max | Default | Description |
-|-----------|------|-----|-----|---------|-------------|
-| enabled | bool | - | - | false | Enable effect |
-| intensity | float | 0.0 | 1.0 | 0.3 | Line darkness |
-| density | float | 0.5 | 4.0 | 2.0 | Lines per pixel |
-| phosphorGlow | bool | - | - | true | Subtle inter-line glow |
+The CRT scanline effect was removed from the post-processing chain. Presets
+that previously referenced it deserialize without the field; `toValueTree()`
+no longer emits a `Scanlines` child. The entry is retained here as a
+historical record of the struct shape used in older preset XMLs.
 
 #### 3.3.9 DistortionSettings
 
@@ -354,7 +352,6 @@ Presets/
     "vignette": { "enabled": false },
     "film_grain": { "enabled": false },
     "chromatic_aberration": { "enabled": false },
-    "scanlines": { "enabled": false },
     "distortion": { "enabled": false },
     "glitch": { "enabled": false },
     "tilt_shift": { "enabled": false },
@@ -517,7 +514,7 @@ Move existing hardcoded presets to JSON files:
 | ID | Name | Shader | Key Features |
 |----|------|--------|--------------|
 | default | Default | Basic2D | Clean waveform, no effects |
-| vector_scope | Vector Scope | Basic2D | Scanlines, bloom, phosphor glow, film grain |
+| vector_scope | Vector Scope | Basic2D | Bloom, phosphor glow, film grain |
 | string_theory | String Theory | StringTheory | 3D, auto-rotate, bloom, particles |
 | crystalline | Crystalline | Crystalline | Material shader, high refraction, sparkle particles |
 
@@ -526,7 +523,7 @@ Move existing hardcoded presets to JSON files:
 | ID | Name | Shader | Key Features |
 |----|------|--------|--------------|
 | neon_glow | Neon Glow | NeonGlow | Intense bloom, additive blend |
-| synthwave | Synthwave | WireframeMesh | Retro grid, scanlines, chromatic aberration |
+| synthwave | Synthwave | WireframeMesh | Retro grid, chromatic aberration |
 | liquid_metal | Liquid Metal | LiquidChrome | Material shader, ripples, reflections |
 | electric | Electric | ElectricFiligree | Lightning noise, bloom, trails |
 | plasma | Plasma | PlasmaSine | Animated procedural fill, color grade |

@@ -36,9 +36,20 @@ public:
     /// Detach the OpenGL context from the editor.
     void detach();
 
+    /// Force a one-off repaint even when the waveform is silent.
+    /// Callers: anyone changing scene state that isn't driven by audio
+    /// (theme change, pane reorder, oscillator add/remove, resize).
+    void forceRepaint();
+
 private:
     std::unique_ptr<OpenGLLifecycleManager> glManager_;
     StatusBarComponent& statusBar_;
+
+    // Post-silence tail — after the last non-silent frame we still repaint
+    // for a few more ticks so fades/decays don't freeze mid-animation.
+    // 60Hz timer × 30 frames = ~0.5s.
+    static constexpr int kPostSilenceFrames = 30;
+    int silentFrames_ = kPostSilenceFrames;
 };
 
 } // namespace oscil

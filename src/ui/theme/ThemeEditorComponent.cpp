@@ -7,8 +7,8 @@
 #include "ui/theme/ThemeEditorComponent.h"
 
 #include "ui/components/ComponentConstants.h"
-#include "ui/components/GlassPainter.h"
-#include "ui/components/GlassStyle.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/components/SurfaceStyle.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -125,10 +125,9 @@ ThemeEditorComponent::~ThemeEditorComponent()
 void ThemeEditorComponent::paint(juce::Graphics& g)
 {
     const auto& theme = getThemeService().getCurrentTheme();
-    auto glass = GlassStyle::fromTheme(theme);
+    auto glass = SurfaceStyle::fromTheme(theme);
 
-    GlassPainter::paintGlassPanel(g, getLocalBounds().toFloat(), glass, ComponentLayout::RADIUS_XL,
-                                  BorderLevel::Subtle);
+    SurfacePainter::paintPanel(g, getLocalBounds().toFloat(), glass, ComponentLayout::RADIUS_XL, BorderLevel::Subtle);
 
     g.setColour(glass.borderSubtle);
     g.drawVerticalLine(kLeftPanelWidth + kSeparatorPadding, 0.0f, static_cast<float>(getHeight()));

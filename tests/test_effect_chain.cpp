@@ -192,7 +192,7 @@ TEST_F(EffectChainTest, MissingEffectSkipped)
 
     // Config should still be in its original state after processing
     EXPECT_FALSE(config.bloom.enabled);
-    EXPECT_FALSE(config.scanlines.enabled);
+    EXPECT_FALSE(config.vignette.enabled);
 }
 
 TEST_F(EffectChainTest, EffectReceivesCorrectDestination)

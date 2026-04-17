@@ -326,14 +326,16 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
 
     // Run on message thread — component queries (isVisible, isShowing,
     // getBounds) must only be called there to avoid data races.
-    json info;
-    juce::WaitableEvent done;
+    // Capture by shared_ptr so if we time out and return, the lambda can
+    // still execute later without touching dead stack memory.
+    auto info = std::make_shared<json>();
+    auto done = std::make_shared<juce::WaitableEvent>();
     auto& ctrl = uiController_;
-    juce::MessageManager::callAsync([&info, &done, &ctrl, elementId]() {
-        info = ctrl.getElementInfo(juce::String(elementId));
-        done.signal();
+    juce::MessageManager::callAsync([info, done, &ctrl, elementId]() {
+        *info = ctrl.getElementInfo(juce::String(elementId));
+        done->signal();
     });
-    bool waited = done.wait(3000);
+    bool waited = done->wait(3000);
     uiController_.clearTrackScope();
 
     if (!waited)
@@ -344,28 +346,29 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
         return;
     }
     fprintf(stderr, "[UIElement] callAsync completed for %s, info.contains(error)=%d\n", elementId.c_str(),
-            info.contains("error") ? 1 : 0);
+            info->contains("error") ? 1 : 0);
 
-    if (info.contains("error"))
+    if (info->contains("error"))
     {
         res.status = 404;
         res.set_content(errorResponse("Element not found: " + elementId).dump(), "application/json");
         return;
     }
 
-    res.set_content(successResponse(info).dump(), "application/json");
+    res.set_content(successResponse(*info).dump(), "application/json");
 }
 
 void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response& res)
 {
     // Build the response on the message thread because component methods
     // (isVisible, isEnabled, getBounds) must only be called there.
-    json data;
-    juce::WaitableEvent done;
+    // Capture by shared_ptr so a late-firing lambda cannot touch dead stack.
+    auto data = std::make_shared<json>();
+    auto done = std::make_shared<juce::WaitableEvent>();
 
-    juce::MessageManager::callAsync([&data, &done]() {
-        data["count"] = 0;
-        data["elements"] = json::array();
+    juce::MessageManager::callAsync([data, done]() {
+        (*data)["count"] = 0;
+        (*data)["elements"] = json::array();
 
         // getAllElements() uses SafePointer internally — dead components
         // are automatically filtered out and cleaned from the registry.
@@ -383,15 +386,15 @@ void TestHttpServer::handleUIElements(const httplib::Request&, httplib::Response
                                      {"width", bounds.getWidth()},
                                      {"height", bounds.getHeight()}};
 
-            data["elements"].push_back(elementInfo);
+            (*data)["elements"].push_back(elementInfo);
         }
 
-        data["count"] = static_cast<int>(data["elements"].size());
-        done.signal();
+        (*data)["count"] = static_cast<int>((*data)["elements"].size());
+        done->signal();
     });
 
-    done.wait(5000);
-    res.set_content(successResponse(data).dump(), "application/json");
+    done->wait(5000);
+    res.set_content(successResponse(*data).dump(), "application/json");
 }
 
 } // namespace oscil::test

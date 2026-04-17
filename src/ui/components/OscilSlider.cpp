@@ -153,6 +153,52 @@ void OscilSlider::setDecimalPlaces(int places)
 
 void OscilSlider::setShowValueOnHover(bool show) { showValueOnHover_ = show; }
 
+void OscilSlider::setShowValue(bool show)
+{
+    if (showValue_ != show)
+    {
+        showValue_ = show;
+        repaint();
+    }
+}
+
+void OscilSlider::setBipolar(bool bipolar)
+{
+    if (bipolar_ != bipolar)
+    {
+        bipolar_ = bipolar;
+        repaint();
+    }
+}
+
+void OscilSlider::setArcColour(juce::Colour colour)
+{
+    if (arcColour_ != colour)
+    {
+        arcColour_ = colour;
+        repaint();
+    }
+}
+
+void OscilSlider::setModAmount(float deltaNormalized)
+{
+    float const clamped = juce::jlimit(-1.0f, 1.0f, deltaNormalized);
+    if (std::abs(modAmount_ - clamped) > 1e-5f)
+    {
+        modAmount_ = clamped;
+        repaint();
+    }
+}
+
+void OscilSlider::setModColour(juce::Colour colour)
+{
+    if (modColour_ != colour)
+    {
+        modColour_ = colour;
+        repaint();
+    }
+}
+
 void OscilSlider::setMagneticSnappingEnabled(bool enabled) { snapController_.setEnabled(enabled); }
 
 void OscilSlider::setMagneticPoints(const std::vector<double>& points) { snapController_.setMagneticPoints(points); }
@@ -182,9 +228,26 @@ void OscilSlider::attachToParameter(juce::AudioProcessorValueTreeState& apvts, c
 
 void OscilSlider::detachFromParameter() { attachment_.reset(); }
 
-int OscilSlider::getPreferredWidth() const { return variant_ == SliderVariant::Vertical ? THUMB_SIZE + 8 : 150; }
+int OscilSlider::getPreferredWidth() const
+{
+    if (variant_ == SliderVariant::Rotary)
+        return 56;
+    return variant_ == SliderVariant::Vertical ? THUMB_SIZE + 8 : 150;
+}
 
-int OscilSlider::getPreferredHeight() const { return variant_ == SliderVariant::Vertical ? 100 : THUMB_SIZE + 8; }
+int OscilSlider::getPreferredHeight() const
+{
+    if (variant_ == SliderVariant::Rotary)
+    {
+        int height = 56;
+        if (label_.isNotEmpty())
+            height += 14;
+        if (showValue_)
+            height += 14;
+        return height;
+    }
+    return variant_ == SliderVariant::Vertical ? 100 : THUMB_SIZE + 8;
+}
 
 void OscilSlider::resized() {}
 

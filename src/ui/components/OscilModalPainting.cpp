@@ -3,9 +3,10 @@
     Rendering, backdrop, title bar, and layout bounds for OscilModal
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/ListItemIcons.h"
 #include "ui/components/OscilModal.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/theme/Typography.h"
 
 namespace oscil
 {
@@ -22,8 +23,10 @@ void OscilModal::paint(juce::Graphics& g)
 
 void OscilModal::paintBackdrop(juce::Graphics& g)
 {
-    float const alpha = showSpring_.position * 0.5f;
-    g.setColour(getTheme().backgroundPrimary.withAlpha(alpha));
+    // Darken the content behind the modal. 60% black dim: strong enough
+    // to foreground the modal, not so opaque the backdrop looks "turned off".
+    float const alpha = showSpring_.position * 0.6f;
+    g.setColour(juce::Colours::black.withAlpha(alpha));
     g.fillRect(getLocalBounds());
 }
 
@@ -31,7 +34,7 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     float const alpha = showSpring_.position;
     float const scale = scaleSpring_.position;
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     // Apply scale transform around the center of the modal bounds
     auto scaledBounds = bounds.toFloat().withSizeKeepingCentre(static_cast<float>(bounds.getWidth()) * scale,
@@ -42,7 +45,7 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
     g.setOpacity(alpha);
 
     // Glass panel background with full shadow treatment
-    GlassPainter::paintGlassPanel(g, scaledBounds, glass, ComponentLayout::RADIUS_XL, BorderLevel::Default);
+    SurfacePainter::paintPanel(g, scaledBounds, glass, ComponentLayout::RADIUS_XL, BorderLevel::Default);
 
     g.setOpacity(1.0f);
 
@@ -58,20 +61,22 @@ void OscilModal::paintModal(juce::Graphics& g, juce::Rectangle<int> bounds)
 void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     float const alpha = showSpring_.position;
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
-    // Header background — bgHover tinted
-    g.setColour(glass.bgHover.withAlpha(alpha));
-    // Only fill top portion with rounded top corners (within the parent's rounded rect)
+    // Flat titlebar: a slightly raised surface layer above the modal body,
+    // separated by a 1px hairline. No gradient, no tinted overlay.
+    // Animation alpha is honoured via withMultipliedAlpha so fade-in is clean.
+    auto raisedBg = getTheme().backgroundRaised.withMultipliedAlpha(alpha);
+    g.setColour(raisedBg);
     g.fillRect(bounds.reduced(1, 0).withBottom(bounds.getBottom()));
 
     auto textBounds = bounds.reduced(MODAL_PADDING, 0);
     if (showCloseButton_)
         textBounds.removeFromRight(CLOSE_BUTTON_SIZE + 8);
 
-    // Title text — textPrimary
-    g.setColour(getTheme().textPrimary.withAlpha(alpha));
-    g.setFont(juce::Font(juce::FontOptions().withHeight(15.0f)).boldened());
+    // Title text: bright primary at typography 'heading' size/weight.
+    g.setColour(getTheme().textPrimary.withMultipliedAlpha(alpha));
+    g.setFont(Typography::heading());
     g.drawText(title_, textBounds, juce::Justification::centredLeft);
 
     if (showCloseButton_)
@@ -81,15 +86,16 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
         float const hoverAlpha = closeHoverSpring_.position;
         if (hoverAlpha > 0.01f)
         {
-            // Close button hover — bgHover
-            g.setColour(glass.bgHover.withAlpha(alpha * hoverAlpha));
+            // Close button hover — bgHover (multiply animation alpha into the
+            // designed tint; see titlebar note above).
+            g.setColour(glass.bgHover.withMultipliedAlpha(alpha * hoverAlpha));
             g.fillRoundedRectangle(closeBounds, ComponentLayout::RADIUS_SM);
         }
 
         // Focus ring on close button when hovered
         if (hoverAlpha > 0.5f)
         {
-            GlassPainter::paintFocusRing(g, closeBounds, ComponentLayout::RADIUS_SM, glass.accent, 1.5f, 2.0f);
+            SurfacePainter::paintFocusRing(g, closeBounds, ComponentLayout::RADIUS_SM, glass.accent, 1.5f, 2.0f);
         }
 
         auto iconColor = getTheme().textSecondary.interpolatedWith(getTheme().textPrimary, hoverAlpha);
@@ -105,8 +111,8 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
         g.fillPath(iconPath);
     }
 
-    // Bottom border — borderDefault
-    g.setColour(glass.borderDefault.withAlpha(alpha));
+    // 1px hairline divider between titlebar and modal body.
+    g.setColour(getTheme().divider.withMultipliedAlpha(alpha));
     g.fillRect(bounds.getX() + 1, bounds.getBottom() - 1, bounds.getWidth() - 2, 1);
 }
 

@@ -38,20 +38,17 @@ json oscillatorToJson(const Oscillator& osc)
 // Configure an Oscillator from JSON request body fields
 void configureOscillatorFromJson(Oscillator& osc, const json& body, OscilState& state, TestTrack* track)
 {
-    // Name
     std::string name = body.value("name", "");
     if (name.empty())
         name = "Oscillator " + std::to_string(state.getOscillators().size() + 1);
     osc.setName(name);
 
-    // Source ID
     std::string sourceIdStr = body.value("sourceId", "");
     if (!sourceIdStr.empty())
         osc.setSourceId(SourceId{juce::String(sourceIdStr)});
     else if (track->getProcessor().getSourceId().isValid())
         osc.setSourceId(track->getProcessor().getSourceId());
 
-    // Pane ID
     std::string paneIdStr = body.value("paneId", "");
     if (!paneIdStr.empty())
     {
@@ -68,7 +65,6 @@ void configureOscillatorFromJson(Oscillator& osc, const json& body, OscilState& 
     std::string modeStr = body.value("mode", "FullStereo");
     osc.setProcessingMode(stringToProcessingMode(juce::String(modeStr)));
 
-    // Colour
     std::string colourStr = body.value("colour", "");
     if (!colourStr.empty())
     {
@@ -151,8 +147,14 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
             for (const auto& osc : state.getOscillators())
                 state.removeOscillator(osc.getId());
             auto& lm = state.getLayoutManager();
+            // Snapshot pane IDs before mutation — getPanes() returns a reference
+            // to the underlying vector, which removePane() erases from.
+            std::vector<PaneId> paneIds;
+            paneIds.reserve(lm.getPanes().size());
             for (const auto& pane : lm.getPanes())
-                lm.removePane(pane.getId());
+                paneIds.push_back(pane.getId());
+            for (const auto& id : paneIds)
+                lm.removePane(id);
             track->getProcessor().getTimingEngine().setConfig(EngineTimingConfig{});
             juce::MessageManager::callAsync([done]() { done->signal(); });
         });
@@ -409,19 +411,20 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
 
         Oscillator osc = existingOsc.value();
         applyOscillatorJsonUpdates(osc, body);
-        state.updateOscillator(osc);
 
         juce::Component::SafePointer<OscilPluginEditor> safeEditor(
             dynamic_cast<OscilPluginEditor*>(track->getEditor()));
-        if (safeEditor.getComponent())
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([osc, track, safeEditor, done]() {
+            track->getProcessor().getState().updateOscillator(osc);
+            if (auto* ed = safeEditor.getComponent())
+                ed->refreshPanels();
+            juce::MessageManager::callAsync([done]() { done->signal(); });
+        });
+        if (!done->wait(5000))
         {
-            auto refreshDone = std::make_shared<juce::WaitableEvent>();
-            juce::MessageManager::callAsync([safeEditor, refreshDone]() {
-                if (auto* ed = safeEditor.getComponent())
-                    ed->refreshPanels();
-                refreshDone->signal();
-            });
-            refreshDone->wait(3000);
+            res.set_content(errorResponse("Timeout updating oscillator").dump(), "application/json");
+            return;
         }
 
         json oscJson;
@@ -459,9 +462,22 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
             return;
         }
 
-        auto& state = track->getProcessor().getState();
-        state.reorderOscillators(fromIndex, toIndex);
+        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
+            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
+        auto done = std::make_shared<juce::WaitableEvent>();
+        juce::MessageManager::callAsync([track, fromIndex, toIndex, safeEditor, done]() {
+            track->getProcessor().getState().reorderOscillators(fromIndex, toIndex);
+            if (auto* ed = safeEditor.getComponent())
+                ed->refreshPanels();
+            juce::MessageManager::callAsync([done]() { done->signal(); });
+        });
+        if (!done->wait(5000))
+        {
+            res.set_content(errorResponse("Timeout reordering oscillators").dump(), "application/json");
+            return;
+        }
 
+        auto& state = track->getProcessor().getState();
         json oscillators = json::array();
         for (const auto& osc : state.getOscillators())
         {
@@ -479,8 +495,5 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
         res.set_content(errorResponse(e.what()).dump(), "application/json");
     }
 }
-
-// handleStatePanes and handleStateSources are in TestHttpServerPanes.cpp
-// handleStateDeleteOscillator and handleWaveformState are in TestHttpServerWaveform.cpp
 
 } // namespace oscil::test

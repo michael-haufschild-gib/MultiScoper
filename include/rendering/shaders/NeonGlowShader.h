@@ -41,6 +41,7 @@ private:
 #if OSCIL_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
+    std::vector<float> vertexBuffer_;
 #endif
 };
 

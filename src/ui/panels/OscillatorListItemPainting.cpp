@@ -16,53 +16,63 @@ namespace oscil
 void OscillatorListItemComponent::paint(juce::Graphics& g)
 {
     const auto& theme = getTheme();
-    auto bounds = getLocalBounds().toFloat();
-    float const alpha = isVisible_ ? 1.0f : 0.5f;
+    auto const bounds = getLocalBounds().toFloat();
 
-    // Background
+    // Hidden oscillators dim the whole tile (background + children) via a saved
+    // opacity layer. Scoped so the child-paint pass inherits the reduced opacity.
+    juce::Graphics::ScopedSaveState const savedState(g);
+    if (!isVisible_)
+        g.setOpacity(0.6f);
+
+    // Tile background. Hover and selected both lift to backgroundRaised; rest uses
+    // backgroundSecondary so the tile reads against the sidebar surface.
+    auto const tileBg = (selected_ || isHovered_) ? theme.backgroundRaised : theme.backgroundSecondary;
+    g.setColour(tileBg);
+    g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
+
+    // Left colour swatch strip. Widened to 4px after consolidating with the
+    // previous colour indicator ellipse — this strip is now the double-click
+    // hit target for the colour picker (see mouseDoubleClick).
+    constexpr float kSwatchWidth = 4.0f;
+    auto const swatchColour = isVisible_ ? colour_ : colour_.withAlpha(0.3f);
+    g.setColour(swatchColour);
+    g.fillRoundedRectangle(juce::Rectangle<float>(0.0f, 0.0f, kSwatchWidth, bounds.getHeight()),
+                           ComponentLayout::RADIUS_SM);
+
+    // Selection + focus outline. Selected tiles get a 1px border in the oscillator's
+    // colour. A focused tile — selected or not — also gets an accessibility ring so
+    // keyboard users can always see the focus target (WCAG 2.4.7).
     if (selected_)
     {
-        g.setColour(theme.backgroundSecondary.brighter(0.05f));
-        g.fillRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_LG);
-
-        g.setColour(hasFocus_ ? theme.controlActive.withAlpha(0.8f) : theme.controlBorder.withAlpha(0.5f));
-        g.drawRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_LG, hasFocus_ ? 2.0f : 1.0f);
-    }
-    else
-    {
-        if (isHovered_)
-        {
-            g.setColour(theme.controlHighlight.withAlpha(0.2f));
-            g.fillRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_MD);
-        }
+        g.setColour(colour_);
+        g.drawRoundedRectangle(bounds.reduced(0.5f), ComponentLayout::RADIUS_SM, 1.0f);
 
         if (hasFocus_)
         {
-            g.setColour(theme.controlActive.withAlpha(0.6f));
-            g.drawRoundedRectangle(bounds.reduced(2), ComponentLayout::RADIUS_MD, 2.0f);
+            // Inset ring so the coloured border stays visible beneath the focus indicator.
+            g.setColour(theme.controlActive.withAlpha(0.8f));
+            g.drawRoundedRectangle(bounds.reduced(2.0f), ComponentLayout::RADIUS_SM, 1.0f);
         }
     }
+    else if (hasFocus_)
+    {
+        g.setColour(theme.controlActive.withAlpha(0.6f));
+        g.drawRoundedRectangle(bounds.reduced(1.0f), ComponentLayout::RADIUS_SM, 2.0f);
+    }
 
-    // Drag handle
-    auto dragArea = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);
+    // Drag handle dots. Unchanged from the prior affordance; global opacity from the
+    // ScopedSaveState handles the hidden-state dim.
+    auto const dragArea = bounds.withWidth(static_cast<float>(DRAG_HANDLE_WIDTH));
     float const dotAlpha = dragHandleHovered_ ? 0.8f : 0.4f;
-    g.setColour(theme.textSecondary.withAlpha(dotAlpha * alpha));
-    float const dotSize = 3.0f;
-    float const dotSpacing = 5.0f;
-    float const startX = dragArea.getCentreX() - (dotSpacing / 2);
+    g.setColour(theme.textSecondary.withAlpha(dotAlpha));
+    constexpr float dotSize = 3.0f;
+    constexpr float dotSpacing = 5.0f;
+    float const startX = dragArea.getCentreX() - (dotSpacing / 2.0f);
     float const startY = dragArea.getCentreY() - dotSpacing;
     for (int row = 0; row < 3; ++row)
         for (int col = 0; col < 2; ++col)
-            g.fillEllipse(startX + (static_cast<float>(col) * dotSpacing) - (dotSize / 2),
-                          startY + (static_cast<float>(row) * dotSpacing) - (dotSize / 2), dotSize, dotSize);
-
-    // Color indicator
-    bounds.removeFromLeft(4);
-    float const colorY = selected_ ? ((COMPACT_HEIGHT / 2.0f) - (COLOR_INDICATOR_SIZE / 2.0f))
-                                   : (bounds.getCentreY() - (COLOR_INDICATOR_SIZE / 2.0f));
-    g.setColour(colour_.withAlpha(alpha));
-    g.fillEllipse(bounds.getX(), colorY, static_cast<float>(COLOR_INDICATOR_SIZE),
-                  static_cast<float>(COLOR_INDICATOR_SIZE));
+            g.fillEllipse(startX + (static_cast<float>(col) * dotSpacing) - (dotSize / 2.0f),
+                          startY + (static_cast<float>(row) * dotSpacing) - (dotSize / 2.0f), dotSize, dotSize);
 }
 
 void OscillatorListItemComponent::mouseEnter(const juce::MouseEvent& /*event*/)
@@ -105,29 +115,17 @@ void OscillatorListItemComponent::mouseDrag(const juce::MouseEvent& e)
 
 void OscillatorListItemComponent::mouseDoubleClick(const juce::MouseEvent& e)
 {
-    // Check if double click is on color indicator
-    // Logic mirrors paint() positioning
-    auto pos = e.getPosition();
-
-    // Drag handle is on left (width 24)
-    // Then 4px margin
-    // Then color indicator (size 14)
-
-    int const indicatorX = DRAG_HANDLE_WIDTH + 4;
-    int const indicatorY =
-        selected_ ? (COMPACT_HEIGHT - COLOR_INDICATOR_SIZE) / 2 : (getHeight() - COLOR_INDICATOR_SIZE) / 2;
-
-    auto indicatorBounds = juce::Rectangle<int>(indicatorX, indicatorY, COLOR_INDICATOR_SIZE, COLOR_INDICATOR_SIZE);
-
-    // Expand hit target slightly for better usability
-    if (indicatorBounds.expanded(4).contains(pos))
+    // Left swatch strip is the colour-picker hit target after the ellipse
+    // was removed. Hit zone = 12px from the left edge (4px strip + 8px
+    // tolerance) so users can reliably double-click it without aiming
+    // exactly at a 4px-wide target.
+    constexpr int kSwatchHitWidth = 12;
+    if (e.getPosition().getX() < kSwatchHitWidth)
     {
         listeners_.call([this](Listener& l) { l.oscillatorColorConfigRequested(oscillatorId_); });
         return;
     }
 
-    // Otherwise treat as selection (already handled by mouseDown/Up but double click might need specific handling if we
-    // wanted to open config) For now, just select
     listeners_.call([this](Listener& l) { l.oscillatorConfigRequested(oscillatorId_); });
 }
 

@@ -116,9 +116,14 @@ set(OSCIL_ARCHITECTURE_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/architec
 option(OSCIL_ENABLE_COMMENT_LINT "Enable comment quality lint checks" ON)
 set(OSCIL_COMMENT_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/comment_lint.py")
 
+# Option for forbidden-patterns linting (ratchets against past bug reintroductions)
+option(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT "Enable forbidden-patterns lint checks" ON)
+set(OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/forbidden_patterns_lint.py")
+
 if(OSCIL_ENABLE_SIZE_LIMIT_LINT OR OSCIL_ENABLE_TEST_QUALITY_LINT
    OR OSCIL_ENABLE_SOURCE_REGISTRY_LINT OR OSCIL_ENABLE_TODO_LINT
-   OR OSCIL_ENABLE_ARCHITECTURE_LINT OR OSCIL_ENABLE_COMMENT_LINT)
+   OR OSCIL_ENABLE_ARCHITECTURE_LINT OR OSCIL_ENABLE_COMMENT_LINT
+   OR OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
 endif()
 
@@ -131,6 +136,12 @@ endif()
 if(OSCIL_ENABLE_TEST_QUALITY_LINT)
     if(NOT EXISTS "${OSCIL_TEST_QUALITY_LINT_SCRIPT}")
         message(FATAL_ERROR "OSCIL_ENABLE_TEST_QUALITY_LINT is ON but lint script was not found: ${OSCIL_TEST_QUALITY_LINT_SCRIPT}")
+    endif()
+endif()
+
+if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+    if(NOT EXISTS "${OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT}")
+        message(FATAL_ERROR "OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT is ON but lint script was not found: ${OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT}")
     endif()
 endif()
 
@@ -403,6 +414,18 @@ if(OSCIL_ENABLE_COMMENT_LINT)
     )
 endif()
 
+# Repo-wide forbidden-patterns linting target (ratchets past-bug regressions)
+if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+    add_custom_target(forbidden_patterns_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths include src
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running forbidden-patterns lint checks"
+        VERBATIM
+    )
+endif()
+
 # Unified lint target — runs all enabled lint checks in one command
 # Usage: cmake --build --preset dev --target lint
 set(OSCIL_LINT_DEPENDENCIES "")
@@ -423,6 +446,9 @@ if(OSCIL_ENABLE_ARCHITECTURE_LINT)
 endif()
 if(OSCIL_ENABLE_COMMENT_LINT)
     list(APPEND OSCIL_LINT_DEPENDENCIES comment_lint)
+endif()
+if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES forbidden_patterns_lint)
 endif()
 if(OSCIL_LINT_DEPENDENCIES)
     add_custom_target(lint DEPENDS ${OSCIL_LINT_DEPENDENCIES})

@@ -50,7 +50,11 @@ void OpenGLLifecycleManager::setGpuRenderingEnabled(bool enabled)
 
         context_.setPixelFormat(format);
         context_.setRenderer(renderer_.get());
-        context_.setContinuousRepainting(true);
+        // Continuous repainting drives a VSync-rate redraw even when nothing
+        // has changed — 16 idle editors cost a full core that way.  We drive
+        // repaints explicitly from the editor's 60Hz timer when waveform
+        // data actually changed (see triggerRepaint() / updateWaveformData()).
+        context_.setContinuousRepainting(false);
         context_.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);
         context_.attachTo(editor_);
         isDetached_ = false;
@@ -75,11 +79,14 @@ void OpenGLLifecycleManager::clearAllWaveforms()
 #endif
 }
 
-void OpenGLLifecycleManager::updateWaveformData(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents)
+bool OpenGLLifecycleManager::updateWaveformData(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents)
 {
 #if OSCIL_ENABLE_OPENGL
     if (!renderer_ || !gpuRenderingEnabled_)
-        return;
+        return false;
+
+    constexpr float kSilenceEpsilon = 1.0e-4f;
+    bool anySignal = false;
 
     for (const auto& pane : paneComponents)
     {
@@ -99,8 +106,24 @@ void OpenGLLifecycleManager::updateWaveformData(const std::vector<std::unique_pt
 
             renderer_->registerWaveform(data.id);
             renderer_->updateWaveform(data);
+
+            if (waveform->getPeakLevel() > kSilenceEpsilon)
+                anySignal = true;
         }
     }
+
+    return anySignal;
+#else
+    juce::ignoreUnused(paneComponents);
+    return false;
+#endif
+}
+
+void OpenGLLifecycleManager::triggerRepaint()
+{
+#if OSCIL_ENABLE_OPENGL
+    if (gpuRenderingEnabled_ && context_.isAttached())
+        context_.triggerRepaint();
 #endif
 }
 

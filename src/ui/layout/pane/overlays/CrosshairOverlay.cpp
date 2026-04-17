@@ -4,6 +4,8 @@
 
 #include "ui/layout/pane/overlays/CrosshairOverlay.h"
 
+#include "ui/theme/Typography.h"
+
 #include <cmath>
 
 namespace oscil
@@ -111,11 +113,11 @@ void CrosshairOverlay::paintTooltip(juce::Graphics& g)
     auto timeValueBounds = timeRowBounds;
 
     g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+    g.setFont(Typography::small());
     g.drawText("Time:", timeLabelBounds, juce::Justification::centredLeft);
 
     g.setColour(theme.textPrimary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
+    g.setFont(Typography::smallBold());
     g.drawText(juce::String(timeMs_, 2) + " ms", timeValueBounds, juce::Justification::centredRight);
 
     // Amplitude row
@@ -124,11 +126,11 @@ void CrosshairOverlay::paintTooltip(juce::Graphics& g)
     auto ampValueBounds = ampRowBounds;
 
     g.setColour(theme.textSecondary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL));
+    g.setFont(Typography::small());
     g.drawText("Amp:", ampLabelBounds, juce::Justification::centredLeft);
 
     g.setColour(theme.textPrimary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
+    g.setFont(Typography::smallBold());
     g.drawText(juce::String(ampDb_, 1) + " dB", ampValueBounds, juce::Justification::centredRight);
 }
 

@@ -45,6 +45,7 @@ private:
 
     void drawFillChannel(juce::OpenGLExtensionFunctions& ext, const std::vector<float>& samples, float centerY,
                          float amplitude, float boundsX, float boundsWidth, GLint posLoc, GLint vLoc);
+    std::vector<float> vertexBuffer_;
 #endif
 };
 

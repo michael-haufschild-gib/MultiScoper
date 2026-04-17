@@ -4,8 +4,9 @@
     Event handling is in OscilDropdownPopupEvents.cpp
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilDropdown.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/theme/Typography.h"
 
 #include <utility>
 
@@ -51,12 +52,13 @@ public:
     }
 
     void paintItemBackground(juce::Graphics& g, const juce::Rectangle<int>& bounds, bool isHovered, bool isSelected,
-                             bool isFocused, bool enabled, float alpha, const GlassStyle& glass)
+                             bool isFocused, bool enabled, float alpha, const SurfaceStyle& glass)
     {
         if (isSelected)
         {
-            // Selected: accentSubtle fill
-            g.setColour(glass.accentSubtle.withAlpha(alpha));
+            // Selected: accentSubtle fill (multiply animation alpha into the
+            // designed tint — replacing it would paint a solid accent row).
+            g.setColour(glass.accentSubtle.withMultipliedAlpha(alpha));
             g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
         }
         else if (isFocused)
@@ -67,26 +69,29 @@ public:
 
         if (isHovered && enabled && !isSelected)
         {
-            // Hover: bgHover fill
-            g.setColour(glass.bgHover.withAlpha(alpha));
+            // Hover: bgHover fill (multiply animation alpha — bgHover already
+            // carries a 0.08 design tint).
+            g.setColour(glass.bgHover.withMultipliedAlpha(alpha));
             g.fillRoundedRectangle(bounds.toFloat(), ComponentLayout::RADIUS_SM);
         }
     }
 
     void paintCheckbox(juce::Graphics& g, juce::Rectangle<int>& contentBounds, bool isSelected, float alpha,
-                       float opacity, const GlassStyle& glass)
+                       float opacity, const SurfaceStyle& glass)
     {
         auto checkBounds = contentBounds.removeFromLeft(20).toFloat().withSizeKeepingCentre(16, 16);
 
-        g.setColour(glass.bgGlass.withAlpha(alpha * opacity));
+        g.setColour(glass.bgGlass.withMultipliedAlpha(alpha * opacity));
         g.fillRoundedRectangle(checkBounds, 3.0f);
 
-        g.setColour((isSelected ? glass.accent : glass.borderDefault).withAlpha(alpha * opacity));
+        // accent/borderDefault already have designed alphas; multiply so
+        // the animation/disabled fade scales them rather than replacing them.
+        g.setColour((isSelected ? glass.accent : glass.borderDefault).withMultipliedAlpha(alpha * opacity));
         g.drawRoundedRectangle(checkBounds.reduced(0.5f), 3.0f, 1.0f);
 
         if (isSelected)
         {
-            g.setColour(glass.accent.withAlpha(alpha * opacity));
+            g.setColour(glass.accent.withMultipliedAlpha(alpha * opacity));
             float const cx = checkBounds.getCentreX();
             float const cy = checkBounds.getCentreY();
             juce::Path checkPath;
@@ -102,13 +107,13 @@ public:
     void paintItem(juce::Graphics& g, const DropdownItem& item, juce::Rectangle<int> bounds, bool isHovered,
                    bool isSelected, bool isFocused, float alpha)
     {
-        const auto& glass = owner_.getGlass();
+        const auto& glass = owner_.getSurface();
         const auto& theme = owner_.getTheme();
 
         if (item.isSeparator)
         {
-            // Separator: borderSubtle 1px line
-            g.setColour(glass.borderSubtle.withAlpha(alpha));
+            // Separator: borderSubtle 1px line (multiply animation alpha)
+            g.setColour(glass.borderSubtle.withMultipliedAlpha(alpha));
             g.fillRect(bounds.reduced(8, (ITEM_HEIGHT / 2) - 1).withHeight(1));
             return;
         }
@@ -132,7 +137,7 @@ public:
         // Selected: accent text; default: textPrimary
         g.setColour((isSelected ? glass.accent : theme.textPrimary).withAlpha(alpha * opacity));
 
-        static const juce::Font itemFont(juce::FontOptions().withHeight(13.0f));
+        static const juce::Font itemFont(Typography::body());
         g.setFont(itemFont);
 
         if (item.description.isNotEmpty())
@@ -141,7 +146,7 @@ public:
             g.drawText(item.label, labelBounds, juce::Justification::centredLeft);
 
             g.setColour(theme.textSecondary.withAlpha(alpha * opacity * 0.8f));
-            static const juce::Font descFont(juce::FontOptions().withHeight(11.0f));
+            static const juce::Font descFont(Typography::caption());
             g.setFont(descFont);
             g.drawText(item.description, contentBounds, juce::Justification::centredLeft);
         }
@@ -410,8 +415,8 @@ void OscilDropdownPopup::paint(juce::Graphics& g)
 
     g.setOpacity(alpha);
 
-    // Use GlassPainter::paintGlassPanel for popup background
-    GlassPainter::paintGlassPanel(g, scaledBounds, getGlass(), ComponentLayout::RADIUS_XL, BorderLevel::Default);
+    // Use SurfacePainter::paintPanel for popup background
+    SurfacePainter::paintPanel(g, scaledBounds, getSurface(), ComponentLayout::RADIUS_XL, BorderLevel::Default);
 
     g.setOpacity(1.0f);
 }

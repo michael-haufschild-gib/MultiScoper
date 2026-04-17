@@ -8,6 +8,7 @@
 #include "ui/components/ComponentConstants.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
+#include "ui/theme/Typography.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -111,7 +112,7 @@ private:
     int maxLength_ = 256;
 
     // Styling
-    juce::Font font_{juce::FontOptions(ComponentLayout::FONT_SIZE_DEFAULT)};
+    juce::Font font_{Typography::headingRegular()};
     juce::Justification justification_ = juce::Justification::centredLeft;
     juce::Colour textColour_;
     bool useCustomTextColour_ = false;

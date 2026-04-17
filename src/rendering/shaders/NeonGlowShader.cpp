@@ -117,11 +117,11 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
 
     float const visualWidth = params.lineWidth * kGeometryScale;
     auto renderChannel = [&](const std::vector<float>& data, float cy, float amp) {
-        std::vector<float> vertices;
-        buildLineGeometry(vertices, data, cy, amp, visualWidth, params.bounds.getX(), params.bounds.getWidth());
+        vertexBuffer_.clear();
+        buildLineGeometry(vertexBuffer_, data, cy, amp, visualWidth, params.bounds.getX(), params.bounds.getWidth());
         juce::OpenGLExtensionFunctions::glBufferData(GL_ARRAY_BUFFER,
-                                                     static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
-                                                     vertices.data(), GL_DYNAMIC_DRAW);
+                                                     static_cast<GLsizeiptr>(vertexBuffer_.size() * sizeof(float)),
+                                                     vertexBuffer_.data(), GL_DYNAMIC_DRAW);
         juce::OpenGLExtensionFunctions::glEnableVertexAttribArray(static_cast<GLuint>(posLoc));
         juce::OpenGLExtensionFunctions::glVertexAttribPointer(static_cast<GLuint>(posLoc), 2, GL_FLOAT, GL_FALSE,
                                                               4 * sizeof(float), nullptr);
@@ -129,7 +129,7 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
         juce::OpenGLExtensionFunctions::glVertexAttribPointer(
             static_cast<GLuint>(distLoc), 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
             reinterpret_cast<void*>(2 * sizeof(float))); // NOLINT(performance-no-int-to-ptr)
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertices.size() / 4));
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(vertexBuffer_.size() / 4));
         juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(posLoc));
         juce::OpenGLExtensionFunctions::glDisableVertexAttribArray(static_cast<GLuint>(distLoc));
     };

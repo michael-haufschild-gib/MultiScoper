@@ -57,9 +57,10 @@ enum class TextFieldState : std::uint8_t
 // Slider variants
 enum class SliderVariant : std::uint8_t
 {
-    Single,  // Standard single-value slider
-    Range,   // Dual-handle range slider
-    Vertical // Vertical orientation
+    Single,   // Standard single-value slider
+    Range,    // Dual-handle range slider
+    Vertical, // Vertical orientation
+    Rotary    // Circular knob
 };
 
 // Checkbox state (tri-state support)

@@ -3,9 +3,9 @@
     (Core setup and logic are in OscilTextField.cpp)
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilButton.h"
 #include "ui/components/OscilTextField.h"
+#include "ui/components/SurfacePainter.h"
 
 namespace oscil
 {
@@ -28,9 +28,9 @@ void OscilTextField::paint(juce::Graphics& g)
     if (variant_ == TextFieldVariant::Search)
         paintSearchIcon(g, bounds);
 
-    // Focus ring via GlassPainter when focused
+    // Focus ring via SurfacePainter when focused
     if (hasFocus_ && enabled_ && !hasError())
-        GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_MD, getGlass().accent);
+        SurfacePainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_MD, getSurface().accent);
 
     if (!enabled_)
         g.setOpacity(1.0f);
@@ -38,9 +38,9 @@ void OscilTextField::paint(juce::Graphics& g)
 
 void OscilTextField::paintBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    // Use GlassPainter::paintGlassInput for all states
-    GlassPainter::paintGlassInput(g, bounds, getGlass(), ComponentLayout::RADIUS_MD, hasFocus_, isHovered_, hasError(),
-                                  getTheme().statusError);
+    // Use SurfacePainter::paintInput for all states
+    SurfacePainter::paintInput(g, bounds, getSurface(), ComponentLayout::RADIUS_MD, hasFocus_, isHovered_, hasError(),
+                               getTheme().statusError);
 
     // Error message below
     if (hasError())
@@ -74,7 +74,7 @@ void OscilTextField::paintSearchIcon(juce::Graphics& g, const juce::Rectangle<fl
 
 void OscilTextField::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    GlassPainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_MD, getGlass().accent);
+    SurfacePainter::paintFocusRing(g, bounds, ComponentLayout::RADIUS_MD, getSurface().accent);
 }
 
 void OscilTextField::mouseDown(const juce::MouseEvent& /*e*/)
@@ -172,8 +172,8 @@ void OscilTextField::updateEditorStyle()
     editor_->setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
     editor_->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
     editor_->setColour(juce::TextEditor::textColourId, getTheme().textPrimary);
-    editor_->setColour(juce::TextEditor::highlightColourId, getGlass().accent.withAlpha(0.3f));
-    editor_->setColour(juce::CaretComponent::caretColourId, getGlass().accent);
+    editor_->setColour(juce::TextEditor::highlightColourId, getSurface().accent.withAlpha(0.3f));
+    editor_->setColour(juce::CaretComponent::caretColourId, getSurface().accent);
 
     editor_->setFont(ComponentLayout::defaultFont());
     editor_->setTextToShowWhenEmpty(placeholder_, getTheme().textSecondary);

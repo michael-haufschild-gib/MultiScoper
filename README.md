@@ -15,7 +15,7 @@ Oscil is a real-time audio visualization platform that lets you analyze multiple
 - **Per-oscillator signal processing** — Stereo, Mono, Mid, Side, Left, Right modes
 - **Cross-instance communication** — plugin instances auto-discover each other across DAW tracks
 - **OpenGL-accelerated rendering** — GPU-composited waveforms at 60 fps with shader effects (Neon Glow, Gradient Fill, Dual Outline)
-- **Post-processing pipeline** — Bloom, Vignette, Film Grain, Chromatic Aberration, Scanlines, Trails, and more
+- **Post-processing pipeline** — Bloom, Vignette, Film Grain, Chromatic Aberration, Trails, and more
 - **Flexible layout** — multi-pane waveform display with drag-and-drop oscillator assignment
 - **Theming** — custom color schemes with live preview
 - **Timing modes** — time-based and melodic (beat-synced) waveform display

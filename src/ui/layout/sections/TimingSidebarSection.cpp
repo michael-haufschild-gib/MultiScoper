@@ -5,6 +5,8 @@
 
 #include "ui/layout/sections/TimingSidebarSection.h"
 
+#include "ui/theme/Typography.h"
+
 namespace oscil
 {
 
@@ -213,7 +215,8 @@ void TimingSidebarSection::paint(juce::Graphics& g)
 
         // Green text
         g.setColour(theme.statusActive);
-        g.setFont(juce::FontOptions(10.0f).withStyle("Bold"));
+        // 10pt preserved — pill bounds pre-sized for this exact font.
+        g.setFont(Typography::captionBold().withHeight(10.0f));
         g.drawText("SYNCED", pillRect.toNearestInt(), juce::Justification::centred);
     }
 }

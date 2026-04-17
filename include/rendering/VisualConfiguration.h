@@ -131,17 +131,6 @@ struct ChromaticAberrationSettings
 };
 
 /**
- * CRT scanline effect settings.
- */
-struct ScanlineSettings
-{
-    bool enabled = false;
-    float intensity = 0.3f;   // Line darkness
-    float density = 2.0f;     // Lines per pixel
-    bool phosphorGlow = true; // Add subtle glow between lines
-};
-
-/**
  * Tilt Shift (Fake Depth of Field) settings.
  */
 struct TiltShiftSettings
@@ -174,7 +163,6 @@ struct VisualConfiguration
     VignetteSettings vignette;
     FilmGrainSettings filmGrain;
     ChromaticAberrationSettings chromaticAberration;
-    ScanlineSettings scanlines;
     TiltShiftSettings tiltShift;
 
     // Compositing

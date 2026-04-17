@@ -444,6 +444,11 @@ def multi_editor(client: OscilTestClient):
     auto-created default state exists), then reset each track,
     then verify both oscillators AND panes are cleared.
     """
+    # Base tracks 0 and 1 must exist — if a previous test removed one
+    # (e.g. test_remove_middle_track_cascade), recreate before opening.
+    for tid in (0, 1):
+        if client.get_track_info(tid) is None:
+            client.add_track()
     client.open_editor(track_id=0)
     client.open_editor(track_id=1)
     client.reset_track_state(0)

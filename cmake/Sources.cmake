@@ -71,13 +71,12 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/TrailsEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ColorGradeEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/ChromaticAberrationEffect.cpp
-    ${CMAKE_SOURCE_DIR}/src/rendering/effects/ScanlineEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/RadialBlurEffect.cpp
     ${CMAKE_SOURCE_DIR}/src/rendering/effects/TiltShiftEffect.cpp
 
     # UI (components)
-    ${CMAKE_SOURCE_DIR}/src/ui/components/GlassStyle.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/GlassPainter.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/SurfaceStyle.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/SurfacePainter.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/ThemedComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButton.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButtonPainting.cpp
@@ -101,6 +100,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordion.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordionSection.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilBadge.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/SectionHeader.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModal.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModalAlert.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModalPainting.cpp
@@ -177,6 +177,7 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorActions.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ColorPickerComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeCoordinator.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/theme/OscilLookAndFeel.cpp
 
     # Tools (test server)
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/PluginTestServer.cpp

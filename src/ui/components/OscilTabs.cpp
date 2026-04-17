@@ -5,6 +5,8 @@
 
 #include "ui/components/OscilTabs.h"
 
+#include "ui/theme/Typography.h"
+
 #include <utility>
 
 namespace oscil
@@ -50,6 +52,7 @@ void OscilTabs::addTab(const juce::String& label, const juce::String& id)
 void OscilTabs::addTab(const TabItem& tab)
 {
     tabs_.push_back(tab);
+    tabAccentColours_.emplace_back();
 
     if (tabs_.size() == 1)
     {
@@ -73,6 +76,7 @@ void OscilTabs::addTabs(const std::vector<juce::String>& labels)
         tab.id = label;
         tab.label = label;
         tabs_.push_back(tab);
+        tabAccentColours_.emplace_back();
     }
 
     updateLayoutCache();
@@ -86,7 +90,10 @@ void OscilTabs::addTabs(const std::vector<juce::String>& labels)
 void OscilTabs::addTabs(const std::vector<TabItem>& tabs)
 {
     for (const auto& tab : tabs)
+    {
         tabs_.push_back(tab);
+        tabAccentColours_.emplace_back();
+    }
 
     updateLayoutCache();
 
@@ -100,6 +107,7 @@ void OscilTabs::clearTabs()
 {
     stopTimer();
     tabs_.clear();
+    tabAccentColours_.clear();
     selectedIndex_ = 0;
     hoveredIndex_ = -1;
     targetIndicatorX_ = 0;
@@ -126,6 +134,25 @@ void OscilTabs::setTabEnabled(int index, bool enabled)
         tabs_[static_cast<size_t>(index)].enabled = enabled;
         repaint();
     }
+}
+
+void OscilTabs::setTabAccentColour(int index, juce::Colour colour)
+{
+    if (index >= 0 && std::cmp_less(index, tabAccentColours_.size()))
+    {
+        tabAccentColours_[static_cast<size_t>(index)] = colour;
+        repaint();
+    }
+}
+
+juce::Colour OscilTabs::getEffectiveTabAccent(int index) const
+{
+    if (index >= 0 && std::cmp_less(index, tabAccentColours_.size()))
+    {
+        if (auto const& c = tabAccentColours_[static_cast<size_t>(index)])
+            return *c;
+    }
+    return getSurface().accent;
 }
 
 void OscilTabs::setSelectedIndex(int index, bool notify)
@@ -240,7 +267,7 @@ int OscilTabs::getPreferredWidth() const
         return 100;
 
     auto computeTabContentWidth = [](const TabItem& tab) -> int {
-        auto font = juce::Font(juce::FontOptions().withHeight(TAB_FONT_SIZE));
+        auto font = Typography::body().withHeight(TAB_FONT_SIZE);
         juce::GlyphArrangement glyphs;
         glyphs.addLineOfText(font, tab.label, 0, 0);
         int const labelWidth = static_cast<int>(glyphs.getBoundingBox(0, -1, false).getWidth());

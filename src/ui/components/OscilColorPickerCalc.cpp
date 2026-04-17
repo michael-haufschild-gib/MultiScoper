@@ -3,8 +3,8 @@
     (Core setup, events, and interaction are in OscilColorPicker.cpp)
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilColorPicker.h"
+#include "ui/components/SurfacePainter.h"
 
 namespace oscil
 {
@@ -12,8 +12,8 @@ namespace oscil
 void OscilColorPicker::paint(juce::Graphics& g)
 {
     // Glass panel background for the entire picker container
-    GlassPainter::paintGlassPanel(g, getLocalBounds().toFloat(), getGlass(), ComponentLayout::RADIUS_XL,
-                                  BorderLevel::Subtle);
+    SurfacePainter::paintPanel(g, getLocalBounds().toFloat(), getSurface(), ComponentLayout::RADIUS_XL,
+                               BorderLevel::Subtle);
 
     if (mode_ == Mode::Square)
         paintSquareMode(g);
@@ -180,7 +180,7 @@ void OscilColorPicker::paintHueSlider(juce::Graphics& g, juce::Rectangle<int> bo
 void OscilColorPicker::paintAlphaSlider(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     // Checker background
-    GlassPainter::paintCheckerboard(g, bounds);
+    SurfacePainter::paintCheckerboard(g, bounds);
 
     // Alpha gradient
     auto baseColor = juce::Colour::fromHSV(hue_, saturation_, brightness_, 1.0f);
@@ -218,7 +218,7 @@ void OscilColorPicker::paintPreview(juce::Graphics& g, juce::Rectangle<int> boun
 
     // Checker for alpha
     if (currentColor_.getAlpha() < 255)
-        GlassPainter::paintCheckerboard(g, currentBounds);
+        SurfacePainter::paintCheckerboard(g, currentBounds);
 
     g.setColour(currentColor_);
     g.fillRect(currentBounds);

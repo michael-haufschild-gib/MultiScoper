@@ -77,10 +77,12 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
         if (track)
         {
             juce::WaitableEvent done;
-            juce::MessageManager::callAsync([track, bpm, &done]() {
+            juce::MessageManager::callAsync([this, track, bpm, &done]() {
                 auto& timingEngine = track->getProcessor().getTimingEngine();
                 timingEngine.setInternalBPM(static_cast<float>(bpm));
-                track->processBlock();
+                // Serialize with the audio dispatcher so we never run a block
+                // on this track concurrently with a pool-dispatched tick.
+                daw_.runSingleBlockSynchronously(*track);
                 if (auto* editor = track->getEditor())
                 {
                     if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))

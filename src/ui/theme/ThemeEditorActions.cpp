@@ -6,6 +6,7 @@
 
 #include "ui/theme/ThemeEditorComponent.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/Typography.h"
 
 #include <cmath>
 
@@ -35,7 +36,7 @@ void AccentPresetRow::paint(juce::Graphics& g)
 {
     const auto& theme = themeService_.getCurrentTheme();
     g.setColour(theme.textPrimary);
-    g.setFont(juce::FontOptions(ComponentLayout::FONT_SIZE_SMALL).withStyle("Bold"));
+    g.setFont(Typography::smallBold());
     g.drawText("Accent Color", getLocalBounds().removeFromTop(20), juce::Justification::centredLeft);
 
     // Draw colour circles

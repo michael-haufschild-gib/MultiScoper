@@ -94,6 +94,9 @@ jobs:
             --paths include src tests test_harness \
             --doc-paths include
 
+      - name: Forbidden-patterns lint (ADR-014 + past-bug ratchets)
+        run: python3 scripts/forbidden_patterns_lint.py --root . --paths include src
+
   build:
     name: ${{ matrix.name }}
     needs: [lint]

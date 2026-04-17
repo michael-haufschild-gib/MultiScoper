@@ -3,7 +3,7 @@
     Tests for ripple spawn, expiration, and lifecycle management
 */
 
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 
 #include <cmath>
 #include <gtest/gtest.h>

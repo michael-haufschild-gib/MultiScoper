@@ -14,6 +14,7 @@
 #include "ui/components/TestId.h"
 #include "ui/layout/SidebarComponent.h"
 #include "ui/layout/WindowLayout.h"
+#include "ui/theme/OscilLookAndFeel.h"
 
 #include "plugin/PluginProcessor.h"
 
@@ -159,6 +160,14 @@ private:
     OscilPluginProcessor& processor_;
     ServiceContext serviceContext_;
     WindowLayout windowLayout_;
+
+    // Editor-subtree LookAndFeel — maps raw JUCE widget colour IDs to
+    // theme tokens so juce::Label / juce::TextEditor / juce::ComboBox /
+    // juce::PopupMenu / juce::TooltipWindow inside this editor do not leak
+    // LookAndFeel_V4 defaults into dark-theme dialogs. The process-wide
+    // JUCE default LookAndFeel is deliberately NOT set from here — see
+    // the ctor comment for the rationale and the AlertWindow trade-off.
+    OscilLookAndFeel lookAndFeel_;
 
     // Coordinators (manage listener registrations)
     std::unique_ptr<SourceCoordinator> sourceCoordinator_;

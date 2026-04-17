@@ -337,7 +337,14 @@ void OscillatorPanelController::applyOscillatorPropertyChange(const OscillatorId
             sidebar_->refreshOscillatorList(oscillators);
 
         if (dispatchOscillatorPropertyToPane(osc, property))
+        {
+            // GL context has continuous repaint disabled; silent audio would
+            // leave the new property (colour, processing mode, visibility)
+            // unseen until audio resumes.  Force one explicit repaint so the
+            // visual change is visible immediately.
+            gpuCoordinator_.forceRepaint();
             return;
+        }
         break;
     }
 

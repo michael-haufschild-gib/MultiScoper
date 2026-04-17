@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "ui/theme/Typography.h"
+
 #include <juce_graphics/juce_graphics.h>
 
 namespace oscil
@@ -31,17 +33,17 @@ static constexpr int TOOLTIP_MAX_WIDTH = 200;
 static constexpr int DROPDOWN_MAX_HEIGHT = 300;
 static constexpr int MODAL_MIN_WIDTH = 280;
 
-// Typography
-static constexpr float FONT_SIZE_CAPTION = 11.0f;
-static constexpr float FONT_SIZE_SMALL = 12.0f;
-static constexpr float FONT_SIZE_DEFAULT = 14.0f;
-static constexpr float FONT_SIZE_HEADER = 16.0f;
+// Typography — legacy aliases; canonical values live in oscil::Typography.
+inline constexpr float FONT_SIZE_CAPTION = Typography::sizeCaption;
+inline constexpr float FONT_SIZE_SMALL = Typography::sizeSmall;
+inline constexpr float FONT_SIZE_DEFAULT = Typography::sizeHeading;
+inline constexpr float FONT_SIZE_HEADER = Typography::sizeHeader;
 
-// Font factories — eliminates verbose juce::Font(juce::FontOptions().withHeight(...)) boilerplate
-inline juce::Font captionFont() { return {juce::FontOptions().withHeight(FONT_SIZE_CAPTION)}; }
-inline juce::Font smallFont() { return {juce::FontOptions().withHeight(FONT_SIZE_SMALL)}; }
-inline juce::Font defaultFont() { return {juce::FontOptions().withHeight(FONT_SIZE_DEFAULT)}; }
-inline juce::Font headerFont() { return {juce::FontOptions().withHeight(FONT_SIZE_HEADER)}; }
+// Factories delegate to Typography. defaultFont/headerFont stay regular-weight to preserve legacy visuals.
+inline juce::Font captionFont() { return Typography::caption(); }
+inline juce::Font smallFont() { return Typography::small(); }
+inline juce::Font defaultFont() { return Typography::headingRegular(); }
+inline juce::Font headerFont() { return Typography::headerRegular(); }
 
 // Button Internal Layout
 static constexpr int BUTTON_SEGMENT_PADDING = 6;

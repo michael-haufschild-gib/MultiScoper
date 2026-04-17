@@ -9,7 +9,6 @@
 #include "rendering/effects/ColorGradeEffect.h"
 #include "rendering/effects/FilmGrainEffect.h"
 #include "rendering/effects/RadialBlurEffect.h"
-#include "rendering/effects/ScanlineEffect.h"
 #include "rendering/effects/TiltShiftEffect.h"
 #include "rendering/effects/TrailsEffect.h"
 #include "rendering/effects/VignetteEffect.h"
@@ -84,7 +83,6 @@ void EffectPipeline::createEffectInstances()
     add(std::make_unique<TiltShiftEffect>());
     add(std::make_unique<ColorGradeEffect>());
     add(std::make_unique<ChromaticAberrationEffect>());
-    add(std::make_unique<ScanlineEffect>());
     add(std::make_unique<RadialBlurEffect>());
 }
 
@@ -106,7 +104,6 @@ void EffectPipeline::buildEffectChain()
         {.id = "color_grade", .isEnabled = [](const VisualConfiguration& c) { return c.colorGrade.enabled; }},
         {.id = "chromatic_aberration",
          .isEnabled = [](const VisualConfiguration& c) { return c.chromaticAberration.enabled; }},
-        {.id = "scanlines", .isEnabled = [](const VisualConfiguration& c) { return c.scanlines.enabled; }},
         {.id = "vignette", .isEnabled = [](const VisualConfiguration& c) { return c.vignette.enabled; }},
         {.id = "film_grain", .isEnabled = [](const VisualConfiguration& c) { return c.filmGrain.enabled; }},
     });

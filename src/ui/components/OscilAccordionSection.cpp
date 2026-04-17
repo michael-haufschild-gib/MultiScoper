@@ -3,8 +3,8 @@
     Individual collapsible section with header, chevron animation, and content
 */
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/OscilAccordion.h"
+#include "ui/components/SurfacePainter.h"
 
 #include <utility>
 
@@ -198,18 +198,22 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
 {
     float const opacity = isEnabled() ? 1.0f : ComponentLayout::DISABLED_OPACITY;
     float const hoverAmount = hoverSpring_.position;
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     // Background — blend toward bgHover on hover
     auto bgColour = getTheme().backgroundSecondary;
     if (hoverAmount > 0.01f && isEnabled())
         bgColour = bgColour.interpolatedWith(glass.bgHover, hoverAmount);
 
-    g.setColour(bgColour.withAlpha(opacity));
+    // bgColour is interpolated with glass.bgHover (which carries a designed
+    // 0.08 alpha), so the blend may already be semi-transparent. Multiply
+    // rather than replace so the disabled-state dim scales the existing
+    // alpha instead of forcing the header fill to full-opacity textPrimary.
+    g.setColour(bgColour.withMultipliedAlpha(opacity));
     g.fillRect(bounds);
 
-    // Bottom border — glass borderSubtle
-    g.setColour(glass.borderSubtle.withAlpha(opacity));
+    // Bottom border — glass borderSubtle (multiply; already alpha-tinted)
+    g.setColour(glass.borderSubtle.withMultipliedAlpha(opacity));
     g.fillRect(bounds.getX(), bounds.getBottom() - 1, bounds.getWidth(), 1);
 
     auto contentBounds = bounds.reduced(PADDING_H, 0);
@@ -237,7 +241,7 @@ void OscilAccordionSection::paintHeader(juce::Graphics& g, juce::Rectangle<int> 
     // Focus ring
     if (hasFocus_ && isEnabled())
     {
-        GlassPainter::paintFocusRing(g, bounds.toFloat(), ComponentLayout::RADIUS_SM, glass.accent);
+        SurfacePainter::paintFocusRing(g, bounds.toFloat(), ComponentLayout::RADIUS_SM, glass.accent);
     }
 }
 

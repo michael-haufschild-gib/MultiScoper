@@ -4,6 +4,8 @@
 
 #include "ui/components/OscilMeterBar.h"
 
+#include "ui/theme/Typography.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -255,7 +257,8 @@ void OscilMeterBar::paintMeter(juce::Graphics& g, juce::Rectangle<int> bounds, f
 void OscilMeterBar::paintScale(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
     g.setColour(getTheme().textSecondary);
-    g.setFont(juce::Font(juce::FontOptions().withHeight(9.0f)));
+    // 9pt meter scale preserved — meter layout tuned for this exact size.
+    g.setFont(Typography::caption().withHeight(9.0f));
 
     // Draw dB markers
     static const std::vector<float> markers = {0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -48.0f};

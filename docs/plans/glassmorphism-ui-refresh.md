@@ -1,9 +1,20 @@
 # Glassmorphism UI Refresh Plan
 
-**Status**: Approved for implementation
-**Date**: 2026-04-04
+**Status**: Historical. Superseded by the 2026-Q2 flat-surface uplift.
+**Date**: 2026-04-04 (original), superseded 2026-Q2
 **Reference**: See internal demo-ui project for web reference implementation
 **Scope**: Full visual + interaction refresh of all Oscil UI components, no backward compatibility required
+
+> **Note (2026-Q2 update)**: The glassmorphism aesthetic was short-lived.
+> The current UI system is a **flat surface** design; `GlassStyle` /
+> `GlassPainter` were renamed to `SurfaceStyle` / `SurfacePainter` and the
+> translucent / multi-layer-shadow / inset-highlight treatments described
+> below were removed. Some *Glass*-prefixed serialization tokens
+> (`bgGlass`, `glassAlpha`, `accentGlow*`) are retained in `ColorTheme`
+> for back-compat only — new code should treat them as opaque surface
+> tokens. This document is kept as historical context for the 2026-Q1 pass;
+> consult the current source (`include/ui/components/SurfaceStyle.h`,
+> `SurfacePainter.h`) for the authoritative API.
 
 ---
 

@@ -1,6 +1,10 @@
 /*
-    Oscil - Glass Style
-    Computed color/parameter struct derived from ColorTheme glass fields
+    Oscil - Surface Style
+    Computed color/parameter pack derived from a ColorTheme. Used by the
+    flat-surface paint system. Note: the struct retains some *Glass* field
+    names (bgGlass, glassAlpha, etc.) as stable ValueTree serialization
+    tokens — ColorTheme exports them and user themes on disk reference
+    them. Production paint code treats these as opaque surface tokens.
 */
 
 #pragma once
@@ -12,7 +16,7 @@ namespace oscil
 
 struct ColorTheme; // forward declare
 
-struct GlassStyle
+struct SurfaceStyle
 {
     juce::Colour bgGlass;
     juce::Colour bgPanel;
@@ -38,12 +42,12 @@ struct GlassStyle
     /// Recompute all derived values from a ColorTheme
     void computeFrom(const ColorTheme& theme);
 
-    /// Construct a GlassStyle from a theme in one call
-    static GlassStyle fromTheme(const ColorTheme& theme)
+    /// Construct a SurfaceStyle from a theme in one call
+    static SurfaceStyle fromTheme(const ColorTheme& theme)
     {
-        GlassStyle glass;
-        glass.computeFrom(theme);
-        return glass;
+        SurfaceStyle surface;
+        surface.computeFrom(theme);
+        return surface;
     }
 };
 

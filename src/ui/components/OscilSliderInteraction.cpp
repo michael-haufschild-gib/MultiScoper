@@ -106,7 +106,15 @@ void OscilSlider::mouseDrag(const juce::MouseEvent& e)
     bool const isVertical = variant_ == SliderVariant::Vertical;
 
     float proportion = 0.0f;
-    if (isVertical)
+    if (variant_ == SliderVariant::Rotary)
+    {
+        // Vertical pixel delta from the drag-start point drives the knob: up = increase.
+        constexpr float PIXELS_PER_FULL_SWEEP = 150.0f;
+        float const dy = static_cast<float>(dragStartPoint_.y - e.getPosition().y);
+        auto const startProp = static_cast<float>(valueToProportionOfLength(dragStartValue_));
+        proportion = startProp + (dy / PIXELS_PER_FULL_SWEEP);
+    }
+    else if (isVertical)
     {
         float const trackHeight = std::max(1.0f, static_cast<float>(bounds.getHeight()) - THUMB_SIZE);
         float const relY =

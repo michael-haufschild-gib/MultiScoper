@@ -47,8 +47,15 @@ void WindowLayout::setWindowWidth(int width)
     if (windowWidth_ != width)
     {
         windowWidth_ = width;
+
         // Ensure sidebar width is still valid for new window width
-        sidebarWidth_ = clampSidebarWidth(sidebarWidth_);
+        int const clampedSidebar = clampSidebarWidth(sidebarWidth_);
+        if (clampedSidebar != sidebarWidth_)
+        {
+            sidebarWidth_ = clampedSidebar;
+            notifySidebarWidthChanged();
+        }
+
         notifyWindowSizeChanged();
     }
 }

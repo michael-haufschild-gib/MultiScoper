@@ -1,12 +1,13 @@
 /*
     Oscil - Segmented Button Bar Implementation
-    Glassmorphism-styled segmented control with spring-animated sliding indicator
+    Flat-surface segmented control with a spring-animated sliding indicator.
+    (Historical: "glassmorphism-styled" prior to the 2026-Q2 uplift.)
 */
 
 #include "ui/components/SegmentedButtonBar.h"
 
 #include "ui/components/AnimationSettings.h"
-#include "ui/components/GlassPainter.h"
+#include "ui/components/SurfacePainter.h"
 
 #include <algorithm>
 #include <utility>
@@ -25,10 +26,10 @@ SegmentedButtonBar::~SegmentedButtonBar() { stopTimer(); }
 void SegmentedButtonBar::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     // Container: glass input styling on the entire bar
-    GlassPainter::paintGlassInput(g, bounds, glass, ComponentLayout::RADIUS_LG, false, false);
+    SurfacePainter::paintInput(g, bounds, glass, ComponentLayout::RADIUS_LG, false, false);
 
     // Sliding indicator behind the active button
     if (!buttons_.empty() && selectedId_ >= 0)

@@ -4,6 +4,8 @@
 
 #include "ui/panels/SourceItemComponent.h"
 
+#include "ui/theme/Typography.h"
+
 namespace oscil
 {
 
@@ -59,7 +61,7 @@ void SourceItemComponent::paint(juce::Graphics& g)
 
     // Source name
     g.setColour(theme.textPrimary);
-    g.setFont(juce::FontOptions(13.0f));
+    g.setFont(Typography::body());
 
     auto textArea = leftArea.reduced(4, 0);
     textArea.removeFromRight(DROPDOWN_WIDTH + 4); // Leave space for dropdown

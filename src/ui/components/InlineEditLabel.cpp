@@ -4,9 +4,9 @@
 
 #include "ui/components/InlineEditLabel.h"
 
-#include "ui/components/GlassPainter.h"
 #include "ui/components/ListItemIcons.h"
 #include "ui/components/OscilButton.h"
+#include "ui/components/SurfacePainter.h"
 
 namespace oscil
 {
@@ -250,7 +250,7 @@ void InlineEditLabel::updateEditorStyle()
         return;
 
     const auto& theme = getTheme();
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
 
     editor_->setFont(font_);
     editor_->setJustification(justification_);
@@ -275,7 +275,7 @@ void InlineEditLabel::paint(juce::Graphics& g)
         return; // Editor and buttons handle rendering
 
     const auto& theme = getTheme();
-    const auto& glass = getGlass();
+    const auto& glass = getSurface();
     auto bounds = getLocalBounds().toFloat();
 
     // Hover indication — subtle bgHover background to signal editability

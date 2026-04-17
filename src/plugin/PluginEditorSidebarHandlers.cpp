@@ -80,8 +80,13 @@ void OscilPluginEditor::onSourcesChanged()
         oscillatorPanelController_->refreshPanels();
 }
 
-void OscilPluginEditor::onThemeChanged(const ColorTheme& /*newTheme*/)
+void OscilPluginEditor::onThemeChanged(const ColorTheme& newTheme)
 {
+    // Push the new theme into the project-wide LookAndFeel so raw JUCE
+    // widgets (Label/ListBox/AlertWindow/PopupMenu/etc.) update their
+    // colour IDs in lockstep with Oscil-themed components.
+    lookAndFeel_.applyTheme(newTheme);
+
     repaint();
 
     if (statusBar_ != nullptr)
@@ -98,6 +103,13 @@ void OscilPluginEditor::onThemeChanged(const ColorTheme& /*newTheme*/)
                 pane->repaint();
         }
     }
+
+    // Continuous GL repainting is disabled; if audio is silent the GL context
+    // would otherwise skip repainting and the waveforms would render with the
+    // previous theme's colours until audio resumes.  Force one explicit
+    // repaint so the new palette becomes visible immediately.
+    if (renderCoordinator_ != nullptr)
+        renderCoordinator_->forceRepaint();
 }
 
 void OscilPluginEditor::onLayoutChanged()
@@ -174,12 +186,20 @@ void OscilPluginEditor::showGridChanged(bool enabled)
 {
     processor_.getState().setShowGridEnabled(enabled);
     setShowGridForAllPanes(enabled);
+    // Grid visibility toggle is a pure visual change; silent audio would
+    // leave it unrendered until audio resumes.
+    if (renderCoordinator_ != nullptr)
+        renderCoordinator_->forceRepaint();
 }
 
 void OscilPluginEditor::autoScaleChanged(bool enabled)
 {
     processor_.getState().setAutoScaleEnabled(enabled);
     setAutoScaleForAllPanes(enabled);
+    // Autoscale changes the vertical mapping — must repaint even if no new
+    // samples arrive for a while.
+    if (renderCoordinator_ != nullptr)
+        renderCoordinator_->forceRepaint();
 }
 
 void OscilPluginEditor::layoutChanged(int columnCount)
@@ -270,6 +290,11 @@ void OscilPluginEditor::setGridConfigForAllPanes(const GridConfiguration& config
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setGridConfigForAll(config);
+    // Timing/grid changes affect the time axis and grid line placement
+    // irrespective of audio activity; force one repaint so the new config
+    // is visible immediately even when input is silent.
+    if (renderCoordinator_ != nullptr)
+        renderCoordinator_->forceRepaint();
 }
 
 void OscilPluginEditor::setAutoScaleForAllPanes(bool enabled)
@@ -288,6 +313,10 @@ void OscilPluginEditor::setDisplaySamplesForAllPanes(int samples)
 {
     if (displaySettingsManager_ != nullptr)
         displaySettingsManager_->setDisplaySamplesForAll(samples);
+    // Time-interval / sync changes scale the visible window — repaint so
+    // the new display length is rendered even before audio resumes.
+    if (renderCoordinator_ != nullptr)
+        renderCoordinator_->forceRepaint();
 }
 
 void OscilPluginEditor::setSampleRateForAllPanes(int sampleRate)
@@ -320,6 +349,9 @@ const std::vector<std::unique_ptr<PaneComponent>>& OscilPluginEditor::getPaneCom
 
 void OscilPluginEditor::refreshPanels()
 {
+    // OscillatorPanelController::refreshPanels() is the authoritative path
+    // and already forces a GL repaint at its tail — no need to duplicate
+    // the forceRepaint() here.
     if (oscillatorPanelController_ != nullptr)
         oscillatorPanelController_->refreshPanels();
 }
