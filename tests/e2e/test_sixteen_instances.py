@@ -68,17 +68,26 @@ def sixteen_instances(client: OscilTestClient):
     for tid in range(TARGET_INSTANCES):
         client.open_editor(track_id=tid)
 
-    # Wait until every instance has registered its source with the registry.
-    def _all_sources_registered() -> bool:
-        return len(client.get_sources()) >= TARGET_INSTANCES
+    # Wait until every *target* track has registered its own sourceId.
+    # Checking only the aggregate registry size is too weak: a stale source
+    # left behind by a previous test, plus 15 of the 16 tracks having
+    # registered, would satisfy the count check while `source_ids[tid]`
+    # below comes back empty for the lagging track.
+    track_ids = list(range(TARGET_INSTANCES))
+
+    def _all_tracks_have_source() -> bool:
+        for tid in track_ids:
+            info = client.get_track_info(tid)
+            if info is None or not info.get("sourceId"):
+                return False
+        return True
 
     client.wait_until(
-        _all_sources_registered,
+        _all_tracks_have_source,
         timeout_s=15.0,
-        desc=f"all {TARGET_INSTANCES} instances to register sources",
+        desc=f"all {TARGET_INSTANCES} target tracks to publish a sourceId",
     )
 
-    track_ids = list(range(TARGET_INSTANCES))
     source_ids = {}
     for tid in track_ids:
         info = client.get_track_info(tid)
@@ -105,12 +114,20 @@ def sixteen_instances(client: OscilTestClient):
         # attributable to the specific track that misbehaved.
         print(f"[sixteen_instances teardown] {len(cleanup_errors)} cleanup error(s): "
               + "; ".join(cleanup_errors))
-    # Remove every dynamic track (index >= BASELINE_INSTANCES).
-    tracks = client.get_tracks()
-    for t in tracks:
-        idx = int(t.get("index", 0))
-        if idx >= BASELINE_INSTANCES:
-            client.remove_track(idx)
+    # Remove every dynamic track (index >= BASELINE_INSTANCES). Walk the
+    # indices in descending order: if `remove_track()` compacts indices,
+    # ascending iteration over a stale snapshot would shift later tracks
+    # into already-processed slots and leak them across tests.
+    dynamic_indices = sorted(
+        (
+            int(t["index"])
+            for t in client.get_tracks()
+            if int(t.get("index", 0)) >= BASELINE_INSTANCES
+        ),
+        reverse=True,
+    )
+    for idx in dynamic_indices:
+        client.remove_track(idx)
     # Ensure the base 3 exist for the next test that uses multi_editor etc.
     for tid in range(BASELINE_INSTANCES):
         if client.get_track_info(tid) is None:
@@ -548,9 +565,19 @@ class TestInstanceScalingCost:
         if teardown_errors:
             print(f"[scaling_client teardown] {len(teardown_errors)} error(s): "
                   + "; ".join(teardown_errors))
-        for t in client.get_tracks():
-            if int(t.get("index", 0)) >= BASELINE_INSTANCES:
-                client.remove_track(int(t["index"]))
+        # Remove dynamic tracks in descending-index order so the harness
+        # index compaction can't shift a later track into an already-
+        # processed slot and leak it.
+        dynamic_indices = sorted(
+            (
+                int(t["index"])
+                for t in client.get_tracks()
+                if int(t.get("index", 0)) >= BASELINE_INSTANCES
+            ),
+            reverse=True,
+        )
+        for idx in dynamic_indices:
+            client.remove_track(idx)
 
     def _measure_idle_cpu_with_n_editors(
         self, client: OscilTestClient, n_open: int, sample_s: float = 3.0
@@ -569,8 +596,44 @@ class TestInstanceScalingCost:
         if close_errors:
             print(f"[_measure_idle_cpu_with_n_editors n={n_open}] "
                   f"{len(close_errors)} close error(s): " + "; ".join(close_errors))
-        settle(1.5, reason="editor open/close animations before CPU sampling")
-        with ResourceMonitor(sample_interval_s=0.25) as mon:
+
+        # A blind settle() would let a failed open/close silently bias the
+        # CPU sample. Prove the harness is actually in the requested state
+        # before measuring — mirrors the explicit editor-count wait used in
+        # tests/e2e/_probe_idle_cpu.py.
+        def _exact_editor_count() -> bool:
+            open_count = sum(
+                1
+                for t in client.get_tracks()
+                if bool(t.get("editorVisible", False))
+            )
+            return open_count == n_open
+
+        refresh_tracks = client.get_tracks()
+        if refresh_tracks and all("editorVisible" in t for t in refresh_tracks):
+            try:
+                client.wait_until(
+                    _exact_editor_count,
+                    timeout_s=5.0,
+                    desc=f"exactly {n_open} editors visible before CPU sampling",
+                )
+            except TimeoutError as err:
+                visible = [
+                    int(t["index"])
+                    for t in client.get_tracks()
+                    if bool(t.get("editorVisible", False))
+                ]
+                raise AssertionError(
+                    f"editor-count mismatch before CPU sampling "
+                    f"(expected n_open={n_open}, visible={visible}): {err}"
+                ) from err
+        else:
+            # Harness build without editorVisible reporting: fall back to a
+            # short settle so the test is still runnable on older builds,
+            # but make the degradation visible.
+            settle(1.5, reason=f"editor animations (no editorVisible field; n_open={n_open})")
+
+        with ResourceMonitor(harness_url=client.base_url, sample_interval_s=0.25) as mon:
             mon.sample_for(sample_s)
         print(
             f"[scaling n={n_open:2d}] {mon.report.summary()}  "

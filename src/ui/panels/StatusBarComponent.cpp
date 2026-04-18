@@ -113,8 +113,14 @@ void StatusBarComponent::paint(juce::Graphics& g)
     if (leftZoneWidth <= 0)
         return;
 
-    // Hint text occupies the left zone, vertically centered.
+    // Hint text occupies the left zone, vertically centered. If the zone is
+    // too narrow to fit even a bare ellipsis, getElidedHintText returns an
+    // empty string — in that case skip the divider as well so the user never
+    // sees a naked separator floating over nothing.
     const auto elided = getElidedHintText(static_cast<float>(leftZoneWidth));
+    if (elided.isEmpty())
+        return;
+
     g.setColour(theme.textSecondary);
     g.setFont(Typography::caption());
 
@@ -223,7 +229,16 @@ void StatusBarComponent::setHintText(const juce::String& text)
     repaint();
 }
 
-bool StatusBarComponent::shouldDrawSeparator() const { return !hintText_.isEmpty() && getLeftZoneWidth() > 0; }
+bool StatusBarComponent::shouldDrawSeparator() const
+{
+    // Divider visibility must track the actual painted text: if the left zone
+    // is too narrow for even a bare ellipsis, getElidedHintText() returns
+    // empty and paint() suppresses the divider. Mirror that rule here.
+    const int leftZoneWidth = getLeftZoneWidth();
+    if (leftZoneWidth <= 0)
+        return false;
+    return !getElidedHintText(static_cast<float>(leftZoneWidth)).isEmpty();
+}
 
 juce::String StatusBarComponent::getElidedHintText(float availableWidth) const
 {

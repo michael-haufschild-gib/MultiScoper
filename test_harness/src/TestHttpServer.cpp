@@ -297,6 +297,11 @@ bool TestHttpServer::respondIfTrackCallFailed(TrackCallResult r, httplib::Respon
 {
     if (r == TrackCallResult::NotFound)
     {
+        // Match HTTP semantics with the JSON body: a missing track is a 404,
+        // mirroring the 504 we already set for Timeout. Status-only clients
+        // (CI smoke probes, browser tooling) would otherwise read the 200
+        // default as success.
+        res.status = 404;
         res.set_content(errorResponse(notFoundMsg).dump(), "application/json");
         return true;
     }

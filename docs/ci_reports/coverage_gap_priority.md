@@ -13,7 +13,7 @@ Sources:
 - **Zero CI coverage for E2E.** The 27-file Python suite runs on-demand only.
 - **26 of 70 documented user scenarios have no test evidence.** 17 more are partial.
 - **18 distinct DAW behaviors are physically unreproducible in the current harness.** Most are structural — one process, fixed sample rate, fixed buffer size, no bus renegotiation.
-- **At least 9 HTTP endpoints read mutable plugin state from the HTTP worker thread without a MessageManager hop.** Harness itself contains race conditions that mask real races in the plugin.
+- **Harness HTTP worker-thread races — resolved in this PR.** MT-dispatch migration (ADR-016) plus a `forbidden_patterns_lint` rule now force every mutable-state HTTP handler through a MessageManager hop. No endpoints remain in the original 9-endpoint gap.
 
 ## P0 — Ship blockers / likely causes of the instability testers report
 
@@ -34,7 +34,7 @@ Not structural; the harness can hit these, tests just don't.
 
 | Gap | Evidence | Addressed by |
 |---|---|---|
-| **Harness HTTP endpoints read state from worker thread** — `/state/oscillators`, `/state/panes`, `/waveform/state`, `/diagnostic/snapshot`, `/daw/tracks`, `/track/{id}/info`, most of `/track/{id}/audio`, `/track/{id}/burst`. Torn reads masquerade as flake. | harness_api_audit § "Fire-and-forget / race risk" (9 endpoints) | Separate P1 task — serialize HTTP reads via MessageManager hop |
+| ~~**Harness HTTP endpoints read state from worker thread**~~ — `/state/oscillators`, `/state/panes`, `/waveform/state`, `/diagnostic/snapshot`, `/daw/tracks`, `/track/{id}/info`, most of `/track/{id}/audio`, `/track/{id}/burst`. Torn reads masquerade as flake. | harness_api_audit § "Fire-and-forget / race risk" (9 endpoints) | **Resolved in this PR** — ADR-016 MT-dispatch + `forbidden_patterns_lint` gate |
 | **Plugin scan cycle (instantiate → query → destroy, repeat)** — no coverage; DAWs do this on startup and a crash here fails plugin validation silently. | harness gap #6 | Stream 2.7 |
 | **Bus-layout renegotiation (stereo↔mono, disabled bus)** — `isBusesLayoutSupported` never called by the harness. FL Studio/Ableton exercise the "reject disabled bus" branch. | `PluginProcessor.cpp:183-198`; harness gap #3 | Stream 2.3 + Stream 3.5 |
 | **Transport backwards / loop wrap** — `TestTransport::advancePosition` only increments; `isLooping` hard-coded false. Loop-wrap triggers never reach the trigger-timestamp math. | `TestTransport.cpp:35-41, 60`; harness gap #10 | Separate P1 task — extend `TestTransport` |
@@ -77,10 +77,11 @@ Not structural; the harness can hit these, tests just don't.
 
 ## Gaps that no current stream addresses — file separate tasks
 
-1. **Harness HTTP thread-safety pass** — P1. 9 endpoints need MessageManager hops.
-2. **P1 scenario backlog** — TC-LAY-006, TC-OSC-002, TC-SRC-004, TC-CNF-001, TC-TRG-001/002, TC-DIS-003, TC-MC-001, TC-KEY-003/005/006. Each a small E2E PR.
-3. **Transport backwards/loop wrap** — extend `TestTransport`.
-4. **`updateTrackProperties` ordering** — small defensive-code test.
+1. **P1 scenario backlog** — TC-LAY-006, TC-OSC-002, TC-SRC-004, TC-CNF-001, TC-TRG-001/002, TC-DIS-003, TC-MC-001, TC-KEY-003/005/006. Each a small E2E PR.
+2. **Transport backwards/loop wrap** — extend `TestTransport`.
+3. **`updateTrackProperties` ordering** — small defensive-code test.
+
+(Formerly listed: "Harness HTTP thread-safety pass — 9 endpoints need MessageManager hops." Resolved in this PR via the ADR-016 MT-dispatch migration and `forbidden_patterns_lint` enforcement.)
 
 (Formerly listed: `PluginTestServer` compile-time gate. Resolved — sources
 are now gated behind `OSCIL_ENABLE_TEST_SERVER`, off for shipping builds.)
@@ -89,4 +90,4 @@ are now gated behind `OSCIL_ENABLE_TEST_SERVER`, off for shipping builds.)
 
 - P0 gaps all have at least one covering test (Stream 2 primitive **or** Stream 3 scenario).
 - The next externally-reported DAW crash is reproducible via one of the new tests.
-- No harness HTTP endpoint reads mutable plugin state from a worker thread without a MessageManager hop.
+- No harness HTTP endpoint reads mutable plugin state from a worker thread without a MessageManager hop. **Met in this PR** — enforced by `forbidden_patterns_lint`.

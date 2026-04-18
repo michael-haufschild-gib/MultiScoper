@@ -23,7 +23,12 @@
 #include <cstdint>
 #include <cstdlib>
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+namespace oscil
+{
+// Core fuzz driver. Lives in the project namespace per repo conventions;
+// LLVMFuzzerTestOneInput below is a thin extern "C" ABI shim that forwards
+// to this helper.
+static int fuzzOscilStateRoundtrip(const uint8_t* data, size_t size)
 {
     // Guard against negative size cast to int in juce::String::fromUTF8.
     if (size > static_cast<size_t>(INT_MAX))
@@ -84,4 +89,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
     }
 
     return 0;
+}
+} // namespace oscil
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+{
+    return oscil::fuzzOscilStateRoundtrip(data, size);
 }

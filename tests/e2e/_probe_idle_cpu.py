@@ -80,7 +80,12 @@ def main(n_editors: int) -> None:
 
     settle(1.5, reason="post-silence tail / editor animations before idle probe")
 
-    with ResourceMonitor(sample_interval_s=0.5) as mon:
+    # Pin ResourceMonitor to the same harness URL that OscilTestClient is
+    # talking to; otherwise a non-default base URL would silently sample a
+    # different process than the one we just prepared.
+    with ResourceMonitor(
+        harness_url=c.base_url, sample_interval_s=0.5
+    ) as mon:
         mon.sample_for(10.0)
 
     print(f"[{n_editors:2d} editors idle] {mon.report.summary()}")
