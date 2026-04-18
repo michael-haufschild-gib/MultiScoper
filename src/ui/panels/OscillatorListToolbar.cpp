@@ -5,6 +5,7 @@
 
 #include "ui/panels/OscillatorListToolbar.h"
 
+#include "ui/theme/ColorTheme.h"
 #include "ui/theme/Typography.h"
 
 namespace oscil
@@ -72,11 +73,14 @@ void OscillatorListToolbar::paint(juce::Graphics& g)
 
     // Cyan pill badge background
     auto pillBounds = countBounds.toFloat().reduced(2, 4);
-    g.setColour(theme.controlActive.withAlpha(0.2f));
+    constexpr float kBgAlpha = 0.2f;
+    g.setColour(theme.controlActive.withAlpha(kBgAlpha));
     g.fillRoundedRectangle(pillBounds, BADGE_CORNER_RADIUS);
 
-    // Cyan text
-    g.setColour(theme.controlActive);
+    // Theme-aware text: accent text on accent-tinted bg fails WCAG AA in
+    // light themes (blue on pale blue). Pick contrast-safe text.
+    g.setColour(ColorTheme::pickContrastingText(
+        ColorTheme::compositeOnBackground(theme.controlActive.withAlpha(kBgAlpha), theme.backgroundSecondary)));
     // BADGE_FONT_SIZE is 10pt; pill bounds pre-sized for this exact size.
     g.setFont(Typography::captionBold().withHeight(BADGE_FONT_SIZE));
     g.drawText(countText, countBounds, juce::Justification::centred);

@@ -5,6 +5,7 @@
 
 #include "ui/layout/sections/TimingSidebarSection.h"
 
+#include "ui/theme/ColorTheme.h"
 #include "ui/theme/Typography.h"
 
 namespace oscil
@@ -210,11 +211,14 @@ void TimingSidebarSection::paint(juce::Graphics& g)
         juce::Rectangle<float> const pillRect(pillX, badgeBounds.getY() + 2, pillWidth, badgeBounds.getHeight() - 4);
 
         // Green pill background
-        g.setColour(theme.statusActive.withAlpha(0.2f));
+        constexpr float kBgAlpha = 0.2f;
+        g.setColour(theme.statusActive.withAlpha(kBgAlpha));
         g.fillRoundedRectangle(pillRect, 10.0f);
 
-        // Green text
-        g.setColour(theme.statusActive);
+        // Theme-aware text: status hue on status-tinted bg fails AA in light
+        // themes (green on pale green). Pick contrast-safe text.
+        g.setColour(ColorTheme::pickContrastingText(
+            ColorTheme::compositeOnBackground(theme.statusActive.withAlpha(kBgAlpha), theme.backgroundPane)));
         // 10pt preserved — pill bounds pre-sized for this exact font.
         g.setFont(Typography::captionBold().withHeight(10.0f));
         g.drawText("SYNCED", pillRect.toNearestInt(), juce::Justification::centred);

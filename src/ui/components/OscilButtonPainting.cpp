@@ -41,27 +41,9 @@ void OscilButton::paint(juce::Graphics& g)
 void OscilButton::updatePathCache(const juce::Rectangle<float>& bounds)
 {
     cachedButtonPath_.clear();
-    float const cornerRadius =
-        variant_ == ButtonVariant::Icon ? ComponentLayout::RADIUS_MD : ComponentLayout::RADIUS_LG;
-
-    if (segmentPosition_ == SegmentPosition::None || segmentPosition_ == SegmentPosition::Only)
-    {
-        cachedButtonPath_.addRoundedRectangle(bounds, cornerRadius);
-    }
-    else if (segmentPosition_ == SegmentPosition::First)
-    {
-        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
-                                              cornerRadius, cornerRadius, true, false, true, false);
-    }
-    else if (segmentPosition_ == SegmentPosition::Last)
-    {
-        cachedButtonPath_.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
-                                              cornerRadius, cornerRadius, false, true, false, true);
-    }
-    else
-    {
-        cachedButtonPath_.addRectangle(bounds);
-    }
+    // Flat aesthetic: button corners are square. The variant + segment
+    // branches collapse to plain rectangles.
+    cachedButtonPath_.addRectangle(bounds);
 }
 
 void OscilButton::paintButtonBackground(juce::Graphics& g, const juce::Rectangle<float>& bounds, juce::Colour bgColour)
@@ -195,10 +177,8 @@ void OscilButton::paintButton(juce::Graphics& g, const juce::Rectangle<float>& b
 
 void OscilButton::paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds)
 {
-    float const cornerRadius =
-        variant_ == ButtonVariant::Icon ? ComponentLayout::RADIUS_MD : ComponentLayout::RADIUS_LG;
-
-    SurfacePainter::paintFocusRing(g, bounds, cornerRadius, getSurface().accent);
+    // Flat buttons → square focus ring matches the button outline.
+    SurfacePainter::paintFocusRing(g, bounds, 0.0f, getSurface().accent);
 }
 
 // ---------------------------------------------------------------------------
@@ -257,25 +237,6 @@ juce::Colour OscilButton::getBackgroundColour() const
     return juce::Colours::transparentBlack;
 }
 
-namespace
-{
-// Composite a semi-transparent tint over an opaque panel background and
-// return the contrast-safe text colour for the resulting surface. Primary /
-// Danger buttons paint accent-tinted or error-tinted backgrounds; using the
-// same accent/error hue for text collapses hue contrast ("blue on blue") and
-// can fail WCAG AA even when luminance contrast appears ok in isolation.
-juce::Colour pickContrastingTextOver(juce::Colour tint, juce::Colour panelBg, const ColorTheme& theme)
-{
-    auto effective = ColorTheme::compositeOnBackground(tint, panelBg);
-    // Threshold 0.4 — below this we treat surface as "dark" and use the
-    // brightest token (textHighlight, usually white); above, use a dark
-    // token. Exact fallbacks below keep contrast predictable across themes.
-    if (ColorTheme::calculateLuminance(effective) < 0.4f)
-        return theme.textHighlight;
-    return juce::Colour(0xFF1A1A1A);
-}
-} // namespace
-
 juce::Colour OscilButton::getTextColour() const
 {
     const auto& glass = getSurface();
@@ -283,9 +244,15 @@ juce::Colour OscilButton::getTextColour() const
 
     // Primary / Danger / toggled buttons paint solid-accent / solid-error
     // backgrounds. Text must contrast with the bright fill (no alpha
-    // compositing — the fill is opaque).
-    auto primaryTextColour = [&]() { return pickContrastingTextOver(glass.accent, theme.backgroundPane, theme); };
-    auto dangerTextColour = [&]() { return pickContrastingTextOver(theme.statusError, theme.backgroundPane, theme); };
+    // compositing — the fill is opaque). Light themes set textHighlight to
+    // BLACK, so the picker uses literal white/near-black by WCAG ratio.
+    auto primaryTextColour = [&]() {
+        return ColorTheme::pickContrastingText(ColorTheme::compositeOnBackground(glass.accent, theme.backgroundPane));
+    };
+    auto dangerTextColour = [&]() {
+        return ColorTheme::pickContrastingText(
+            ColorTheme::compositeOnBackground(theme.statusError, theme.backgroundPane));
+    };
 
     // Toggled state — toggled segmented buttons render on accent tint,
     // so we need a contrast-safe text colour rather than the accent hue.

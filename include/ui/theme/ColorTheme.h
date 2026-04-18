@@ -115,11 +115,13 @@ struct ColorTheme
     float panelAlpha = 1.0f;
     float blurRadius = 0.0f;
 
-    // Border alpha levels (white * alpha for dark themes). Dividers are
-    // very subtle — a single hairline separates sections.
-    float borderSubtleAlpha = 0.06f;
-    float borderDefaultAlpha = 0.10f;
-    float borderStrongAlpha = 0.20f;
+    // Border alpha levels (textPrimary * alpha; SurfaceStyle composites
+    // these onto the panel surface). Hairlines are still subtle but were
+    // bumped from 0.06 / 0.10 / 0.20 because dark-theme borders disappeared
+    // against near-black surfaces.
+    float borderSubtleAlpha = 0.12f;
+    float borderDefaultAlpha = 0.18f;
+    float borderStrongAlpha = 0.30f;
 
     // Shadow — single low-intensity drop shadow for raised surfaces
     // (popups, modal). Multi-layer glass shadows have been removed.
@@ -230,6 +232,24 @@ struct ColorTheme
         if (a >= 1.0f)
             return fg;
         return bg.interpolatedWith(fg.withAlpha(1.0f), a);
+    }
+
+    /**
+     * Pick contrast-safe text colour (literal white or near-black) by WCAG
+     * ratio against the given surface. Use this for text painted on a
+     * computed colour fill (button accent, status pill bg, etc.) where the
+     * surface is not a theme token and `textPrimary`/`textHighlight` may be
+     * the wrong polarity (e.g. light themes set `textHighlight = BLACK`).
+     *
+     * @param surface  Opaque colour the text will be painted on. If your
+     *                 fill is semi-transparent, composite it first via
+     *                 `compositeOnBackground`.
+     */
+    static juce::Colour pickContrastingText(juce::Colour surface)
+    {
+        juce::Colour const white{0xFFFFFFFF};
+        juce::Colour const dark{0xFF1A1A1A};
+        return calculateContrastRatio(white, surface) >= calculateContrastRatio(dark, surface) ? white : dark;
     }
 
     /**

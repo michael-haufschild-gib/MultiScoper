@@ -249,6 +249,15 @@ int OscilTextField::getPreferredHeight() const { return ComponentLayout::INPUT_H
 
 // paint, paintBackground, paintSearchIcon, paintFocusRing are in OscilTextFieldPainting.cpp
 
+void OscilTextField::onThemeChanged(const ColorTheme& /*newTheme*/)
+{
+    // The wrapped juce::TextEditor caches its colour palette and font when
+    // setColour() is called. Without re-applying the editor style here, the
+    // text colour stays frozen at construction time and won't follow theme
+    // changes (visible in the BPM number field after switching themes).
+    updateEditorStyle();
+}
+
 void OscilTextField::resized()
 {
     auto bounds = getLocalBounds();

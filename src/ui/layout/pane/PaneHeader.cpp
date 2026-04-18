@@ -5,11 +5,14 @@
 #include "ui/layout/pane/PaneHeader.h"
 
 #include "ui/components/ListItemIcons.h"
+#include "ui/theme/ColorTheme.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/theme/Typography.h"
 
 namespace oscil
 {
+
+// pill text colour comes from ColorTheme::pickContrastingText.
 
 PaneHeader::PaneHeader(IThemeService& themeService) : themeService_(themeService) { setupComponents(); }
 
@@ -73,10 +76,13 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     g.drawText("Processing:", bounds.removeFromLeft(70), juce::Justification::centredLeft);
 
     auto badgeBounds = bounds.removeFromLeft(BADGE_WIDTH).toFloat();
-    g.setColour(modeColor.withAlpha(0.2f));
+    constexpr float kBgAlpha = 0.2f;
+    g.setColour(modeColor.withAlpha(kBgAlpha));
     g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
 
-    g.setColour(modeColor);
+    // Theme-aware text: pick contrast-safe text against the composited bg.
+    g.setColour(ColorTheme::pickContrastingText(
+        ColorTheme::compositeOnBackground(modeColor.withAlpha(kBgAlpha), theme.backgroundPane)));
     g.setFont(Typography::smallBold());
     g.drawText(processingModeToString(mode), badgeBounds.toNearestInt(), juce::Justification::centred);
 

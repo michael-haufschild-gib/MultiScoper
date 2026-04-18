@@ -109,6 +109,13 @@ public:
     void focusGained(FocusChangeType cause) override;
     void focusLost(FocusChangeType cause) override;
 
+    /**
+     * ThemedComponent hook — re-read theme colors and mark repaint.
+     * Called by ThemeManager whenever the active ColorTheme changes so
+     * every text field updates in lockstep without a global repaint.
+     */
+    void onThemeChanged(const ColorTheme& newTheme) override;
+
     // Accessibility
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 

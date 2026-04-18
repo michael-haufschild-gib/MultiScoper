@@ -90,6 +90,12 @@ public:
     void updateTimingSidebarHostSyncEnabled(bool enabled);
     /// Sync timing sidebar BPM display from host.
     void updateTimingSidebarHostBpm(float bpm);
+    /// Force-sync all timing sidebar presenter fields from current engine
+    /// state. Use after bulk engine config mutations (e.g. setConfig() from
+    /// harness state reset or state-load) that bypass the listener chain so
+    /// the presenter's guarded setters fire for the next user interaction.
+    /// Must be called on the message thread.
+    void refreshTimingSidebarFromEngine();
 
     /// Called when oscillator config popup closes (refresh panels).
     void onConfigPopupClosed();
@@ -193,8 +199,12 @@ private:
     // Display Settings Manager
     std::unique_ptr<DisplaySettingsManager> displaySettingsManager_;
 
-    // Test server (for automated UI testing)
+#if OSCIL_ENABLE_TEST_SERVER
+    // Test server (for automated UI testing). Only compiled in when
+    // OSCIL_ENABLE_TEST_SERVER is defined — production plugin builds must
+    // not open port 9876. The standalone test harness flips this on.
     std::unique_ptr<PluginTestServer> testServer_;
+#endif
 
     // State
     // Metrics handled by PerformanceMetricsController

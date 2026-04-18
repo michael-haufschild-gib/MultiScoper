@@ -32,7 +32,7 @@ void SegmentedButtonBar::paint(juce::Graphics& g)
     // focus so keyboard users get the focus affordance around the whole bar
     // (the bar itself handles left/right navigation between segments).
     bool const barFocused = hasKeyboardFocus(true);
-    SurfacePainter::paintInput(g, bounds, surface, ComponentLayout::RADIUS_LG, barFocused, false);
+    SurfacePainter::paintInput(g, bounds, surface, 0.0f, barFocused, false);
 
     // Sliding indicator behind the active button
     if (!buttons_.empty() && selectedId_ >= 0)
@@ -46,15 +46,13 @@ void SegmentedButtonBar::paint(juce::Graphics& g)
 
         // Fill with accentSubtle
         g.setColour(surface.accentSubtle);
-        g.fillRoundedRectangle(indicatorBounds, ComponentLayout::RADIUS_MD);
+        g.fillRect(indicatorBounds);
 
-        // Border with accentMuted. Inset the stroke by half its width and shrink
-        // the corner radius by the same amount so the outline curve matches the
-        // fill exactly — mirrors SurfacePainter::paintPanel().
+        // Border with accentMuted. Inset the stroke by half its width so the
+        // 1px outline lands inside the fill bounds.
         g.setColour(surface.accentMuted);
         auto const strokeBounds = indicatorBounds.reduced(0.5f);
-        auto const strokeRadius = std::max(ComponentLayout::RADIUS_MD - 0.5f, 0.0f);
-        g.drawRoundedRectangle(strokeBounds, strokeRadius, 1.0f);
+        g.drawRect(strokeBounds, 1.0f);
     }
 }
 

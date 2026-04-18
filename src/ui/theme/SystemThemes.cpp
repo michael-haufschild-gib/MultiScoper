@@ -97,7 +97,9 @@ void setDarkProfessionalPalette(ColorTheme& theme)
     theme.backgroundSecondary = juce::Colour(0xFF10141B);
     theme.backgroundPane = juce::Colour(0xFF0F131A);
     theme.backgroundRaised = juce::Colour(0xFF161B24);
-    theme.divider = juce::Colour(0xFF1F2630);
+    // Brighter divider hairline. Previous 0xFF1F2630 was nearly invisible
+    // against near-black surfaces.
+    theme.divider = juce::Colour(0xFF2F3845);
     theme.gridMajor = juce::Colour(0xFF242A35);
     theme.gridMinor = juce::Colour(0xFF171C25);
     theme.gridZeroLine = juce::Colour(0xFF3B4555);
@@ -122,9 +124,9 @@ void setDarkProfessionalPalette(ColorTheme& theme)
     // Initialise flat-surface border alphas explicitly so Dark Professional
     // does not silently drift if ColorTheme default values are changed.
     // Keep in lock-step with applyFlatBase() below.
-    theme.borderSubtleAlpha = 0.06f;
-    theme.borderDefaultAlpha = 0.10f;
-    theme.borderStrongAlpha = 0.20f;
+    theme.borderSubtleAlpha = 0.12f;
+    theme.borderDefaultAlpha = 0.18f;
+    theme.borderStrongAlpha = 0.30f;
 }
 
 void setDarkProfessionalButtons(ColorTheme& theme)
@@ -313,6 +315,11 @@ ColorTheme createLightMode()
     theme.backgroundPrimary = juce::Colour(0xFFF5F5F5);
     theme.backgroundSecondary = juce::Colour(0xFFE8E8E8);
     theme.backgroundPane = juce::Colour(0xFFFFFFFF);
+    // Raised surfaces (dialog title bars, hovered list rows) need a value
+    // that sits between Primary and Secondary backgrounds; the ColorTheme
+    // default targets dark themes and would render near-black in light mode.
+    theme.backgroundRaised = juce::Colour(0xFFEDEDED);
+    theme.divider = juce::Colour(0xFFD0D0D0);
     theme.gridMajor = juce::Colour(0xFFCCCCCC);
     theme.gridMinor = juce::Colour(0xFFE0E0E0);
     theme.gridZeroLine = juce::Colour(0xFFAAAAAA);
@@ -369,7 +376,8 @@ void applyFlatBase(ColorTheme& theme, float hue, float saturation, float lightne
     theme.backgroundSecondary = juce::Colour(0xFF10141B);
     theme.backgroundPane = juce::Colour(0xFF0F131A);
     theme.backgroundRaised = juce::Colour(0xFF161B24);
-    theme.divider = juce::Colour(0xFF1F2630);
+    // See Dark Professional palette: brighter divider hairline.
+    theme.divider = juce::Colour(0xFF2F3845);
     theme.gridMajor = juce::Colour(0xFF242A35);
     theme.gridMinor = juce::Colour(0xFF171C25);
     theme.gridZeroLine = juce::Colour(0xFF3B4555);
@@ -391,9 +399,9 @@ void applyFlatBase(ColorTheme& theme, float hue, float saturation, float lightne
     theme.blurRadius = 0.0f;
     theme.shadowIntensity = 0.18f;
     theme.shadowSpread = 4.0f;
-    theme.borderSubtleAlpha = 0.06f;
-    theme.borderDefaultAlpha = 0.10f;
-    theme.borderStrongAlpha = 0.20f;
+    theme.borderSubtleAlpha = 0.12f;
+    theme.borderDefaultAlpha = 0.18f;
+    theme.borderStrongAlpha = 0.30f;
 }
 } // namespace
 

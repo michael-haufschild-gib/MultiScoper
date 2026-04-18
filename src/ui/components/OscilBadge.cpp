@@ -190,7 +190,13 @@ juce::Colour OscilBadge::getTextColour() const
         return glass.accent;
 
     if (variant_ == BadgeVariant::Filled)
-        return juce::Colours::white;
+    {
+        // Text contrasts with the opaque status fill. Hardcoded white fails
+        // AA against bright statuses in dark themes (e.g. #00DD00) and
+        // succeeds against dark statuses in light themes (e.g. #006600);
+        // compute per theme instead.
+        return ColorTheme::pickContrastingText(getBackgroundColour());
+    }
 
     // Colored text on outline badges for status variants
     return getBackgroundColour();

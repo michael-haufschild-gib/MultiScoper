@@ -25,7 +25,9 @@
 #include "rendering/ShaderRegistry.h"
 #include "rendering/VisualConfiguration.h"
 #include "tools/PluginEditor_Adapters.h"
-#include "tools/test_server/PluginTestServer.h"
+#if OSCIL_ENABLE_TEST_SERVER
+    #include "tools/test_server/PluginTestServer.h"
+#endif
 
 #include <cmath>
 #include <limits>
@@ -115,12 +117,14 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     startTimerHz(TIMER_REFRESH_RATE_HZ);
 
+#if OSCIL_ENABLE_TEST_SERVER
     if (juce::PluginHostType::getPluginLoadedAs() == juce::AudioProcessor::wrapperType_Standalone)
     {
         testServer_ = std::make_unique<PluginTestServer>(*this);
         testServer_->start(TEST_SERVER_PORT);
         DBG("Test server started on port " << TEST_SERVER_PORT);
     }
+#endif
 }
 
 void OscilPluginEditor::initUIComponents()
@@ -196,24 +200,35 @@ void OscilPluginEditor::initTimingEngine()
 {
     timingEngineAdapter_ = std::make_unique<TimingEngineListenerAdapter>(*this);
     processor_.getTimingEngine().addListener(timingEngineAdapter_.get());
+    refreshTimingSidebarFromEngine();
+}
+
+void OscilPluginEditor::refreshTimingSidebarFromEngine()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (sidebar_ == nullptr)
+        return;
+
+    auto* timingSection = sidebar_->getTimingSection();
+    if (timingSection == nullptr)
+        return;
 
     auto timingConfig = processor_.getTimingEngine().toEntityConfig();
     auto engineTimingConfig = processor_.getTimingEngine().getConfig();
-    if (auto* timingSection = sidebar_->getTimingSection())
-    {
-        WaveformMode waveformMode = WaveformMode::FreeRunning;
-        if (engineTimingConfig.triggerMode == WaveformTriggerMode::Midi)
-            waveformMode = WaveformMode::RestartOnNote;
-        else if (engineTimingConfig.syncToPlayhead)
-            waveformMode = WaveformMode::RestartOnPlay;
 
-        timingSection->setTimingMode(timingConfig.timingMode);
-        timingSection->setTimeIntervalMs(timingConfig.timeIntervalMs);
-        timingSection->setNoteInterval(timingConfig.noteInterval);
-        timingSection->setHostSyncEnabled(timingConfig.hostSyncEnabled);
-        timingSection->setHostBPM(timingConfig.hostBPM);
-        timingSection->setWaveformMode(waveformMode);
-    }
+    WaveformMode waveformMode = WaveformMode::FreeRunning;
+    if (engineTimingConfig.triggerMode == WaveformTriggerMode::Midi)
+        waveformMode = WaveformMode::RestartOnNote;
+    else if (engineTimingConfig.syncToPlayhead)
+        waveformMode = WaveformMode::RestartOnPlay;
+
+    timingSection->setTimingMode(timingConfig.timingMode);
+    timingSection->setTimeIntervalMs(timingConfig.timeIntervalMs);
+    timingSection->setNoteInterval(timingConfig.noteInterval);
+    timingSection->setHostSyncEnabled(timingConfig.hostSyncEnabled);
+    timingSection->setHostBPM(timingConfig.hostBPM);
+    timingSection->setWaveformMode(waveformMode);
 }
 
 OscilPluginEditor::~OscilPluginEditor()
@@ -223,8 +238,10 @@ OscilPluginEditor::~OscilPluginEditor()
     if (renderCoordinator_)
         renderCoordinator_->detach();
 
+#if OSCIL_ENABLE_TEST_SERVER
     if (testServer_)
         testServer_->stop();
+#endif
 
     if (sidebar_ && oscillatorPanelController_)
         sidebar_->removeListener(oscillatorPanelController_.get());
