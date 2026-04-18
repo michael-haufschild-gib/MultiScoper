@@ -1,6 +1,6 @@
 # E2E Test Suite Coverage Audit
 
-Audit of `tests/e2e/test_*.py` (27 files; prompt listed 27 of a claimed 32 — 5 nominal files are not present on disk).
+Audit of `tests/e2e/test_*.py` (27 files; the PR audit baseline listed 27 of a claimed 32 — 5 nominal files are not present on disk).
 
 | file | flow tested | assertions | gaps |
 |---|---|---|---|
@@ -34,13 +34,13 @@ Audit of `tests/e2e/test_*.py` (27 files; prompt listed 27 of a claimed 32 — 5
 
 ## Top gaps across the suite
 
-1. No test harness lifecycle churn — no "load/unload plugin 100×" to catch JUCE component, OpenGL context, or InstanceRegistry leaks across process-stable but plugin-restart scenarios.
-2. No real DAW host integration — everything runs in the standalone harness; VST3/AU/CLAP wrapper-specific bugs (parameter automation, preset recall, sidechain, bus layouts) are entirely uncovered.
-3. No visual/pixel regression — `verify_element_color` is tested only as an API contract; no golden-image comparison or perceptual hashing for waveform rendering, theme changes, or 3D shaders.
-4. No fuzz/property-based testing on operation sequences — corruption tests use hand-crafted sequences; no generative fuzzer over (add/delete/move/reorder/save/load) with shrinking.
-5. No sustained soak test — longest perf test is 10s; no hours-long run to surface slow leaks, timer drift, or accumulated listener bloat.
-6. No concurrent HTTP client testing — harness is driven serially; a DAW GUI + MIDI + automation threads hitting state simultaneously is not modeled.
-7. No failure-injection — no OpenGL driver loss, no file-system ENOSPC / EACCES on state save, no network partition between harness and test, no OOM simulation.
-8. No undo/redo coverage — undo stack, edit history, and multi-step undo are not exercised despite being core DAW expectations.
-9. No accessibility coverage — no screen-reader label assertions, no keyboard-only workflow completion, no color-contrast / WCAG checks, no focus-trap verification in modals.
-10. No parameter automation / MIDI / host-sync — no host PPQ sync verification, no MIDI CC binding, no AudioProcessorParameter automation from host, no tempo-map handling.
+1. Missing test-harness lifecycle churn — no "load/unload plugin 100×" to catch JUCE component, OpenGL context, or InstanceRegistry leaks across process-stable but plugin-restart scenarios.
+2. Missing real DAW host integration — everything runs in the standalone harness; VST3/AU/CLAP wrapper-specific bugs (parameter automation, preset recall, sidechain, bus layouts) are entirely uncovered.
+3. Absent visual/pixel regression — `verify_element_color` is tested only as an API contract; no golden-image comparison or perceptual hashing for waveform rendering, theme changes, or 3D shaders.
+4. No generative fuzz / property-based coverage on operation sequences — corruption tests use hand-crafted sequences; no fuzzer over (add/delete/move/reorder/save/load) with shrinking.
+5. Lacks sustained soak test — longest perf test is 10s; no hours-long run to surface slow leaks, timer drift, or accumulated listener bloat.
+6. Does not exercise concurrent HTTP clients — harness is driven serially; a DAW GUI + MIDI + automation threads hitting state simultaneously is not modeled.
+7. No failure-injection — missing OpenGL driver-loss, file-system ENOSPC / EACCES on state save, network partition between harness and test, or OOM simulation.
+8. Not testing undo/redo — undo stack, edit history, and multi-step undo are not exercised despite being core DAW expectations.
+9. Missing accessibility coverage — no screen-reader label assertions, no keyboard-only workflow completion, no color-contrast / WCAG checks, no focus-trap verification in modals.
+10. No automated check for parameter automation / MIDI / host-sync — missing host PPQ sync verification, MIDI CC binding, AudioProcessorParameter automation from host, and tempo-map handling.

@@ -61,12 +61,24 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
         std::abort();
     }
 
-    // Re-serializing the already-parsed value must produce byte-identical
-    // XML. A weaker count-only check would pass even if the round-trip reset
-    // oscillator parameters, pane layout, or source state; stability of the
-    // serialized string proves the full state survived the cycle.
+    // Re-serializing the already-parsed value must preserve the *semantic*
+    // XML tree. A byte-for-byte comparison of the two serialized strings
+    // would false-positive: JUCE's XmlElement::toString normalizes
+    // whitespace, line wrapping, and attribute spacing per TextFormat, so
+    // two logically identical serializations can still differ as strings.
+    // Use XmlElement::isEquivalentTo so structure, attributes, and values
+    // are checked while format noise is ignored.
     const juce::String reserialized = second.toXmlString();
-    if (reserialized != serialized)
+
+    const auto firstTree = juce::parseXML(serialized);
+    const auto secondTree = juce::parseXML(reserialized);
+    if (firstTree == nullptr || secondTree == nullptr)
+    {
+        // Our own serializer produced XML that can't be re-parsed as XML at
+        // all — that's a serializer bug, abort so the fuzzer captures it.
+        std::abort();
+    }
+    if (!firstTree->isEquivalentTo(secondTree.get(), /*ignoreOrderOfAttributes=*/true))
     {
         std::abort();
     }

@@ -42,7 +42,10 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         std::string name = body.value("name", "");
 
@@ -80,7 +83,10 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         std::string idStr = body.value("id", "");
         if (idStr.empty())
@@ -130,7 +136,10 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         std::string idStr = body.value("id", "");
         std::string paneIdStr = body.value("paneId", "");
@@ -197,7 +206,10 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
 
 void TestHttpServer::handleLayoutInfo(const httplib::Request& req, httplib::Response& res)
 {
-    const int trackId = resolveTrackId(req);
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
+        return;
+    const int trackId = *trackIdOpt;
     auto data = std::make_shared<json>();
     const auto result = runOnTrackSync(trackId, [data](TestTrack& track) {
         auto& layoutManager = track.getProcessor().getState().getLayoutManager();
@@ -214,7 +226,10 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         int columns = body.value("columns", 1);
         if (columns < 1 || columns > 3)
@@ -293,7 +308,10 @@ json buildPaneBounds(const PaneId& paneId, OscilPluginEditor* editor)
 
 void TestHttpServer::handlePaneLayout(const httplib::Request& req, httplib::Response& res)
 {
-    const int trackId = resolveTrackId(req);
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
+        return;
+    const int trackId = *trackIdOpt;
 
     auto data = std::make_shared<json>();
     const auto result = runOnTrackSync(
@@ -328,7 +346,10 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         int fromIndex = body.value("fromIndex", -1);
         int toIndex = body.value("toIndex", -1);
@@ -393,7 +414,10 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
 
 void TestHttpServer::handleStatePanes(const httplib::Request& req, httplib::Response& res)
 {
-    const int trackId = resolveTrackId(req);
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
+        return;
+    const int trackId = *trackIdOpt;
     auto panes = std::make_shared<json>(json::array());
 
     (void) runOnTrackSync(trackId, [panes](TestTrack& track) {

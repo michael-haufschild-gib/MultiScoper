@@ -47,7 +47,7 @@ local function run()
 
   local fx, used = try_add_clap(0)
   T.assert_true(fx >= 0,
-    "CLAP oscil4 load failed for all prefix forms (CLAP:, CLAPi:, clap., bare). " ..
+    "CLAP oscil4 load failed for all prefix forms (CLAP:, CLAPi:, clap.). " ..
     "Ensure Reaper >=7.0 is installed and has scanned the CLAP build.")
   T.log("[05] CLAP loaded via prefix form: " .. used)
 

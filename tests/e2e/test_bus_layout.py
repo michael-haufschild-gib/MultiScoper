@@ -33,6 +33,19 @@ def _set_layout(client: OscilTestClient, track_id: int, layout: str) -> dict:
 
 
 class TestLayoutRoundTrip:
+    @pytest.fixture(autouse=True)
+    def _reset_layout(self, client: OscilTestClient):
+        """Restore track 0 to stereo before and after each test in this class.
+
+        Without this guard, `test_stereo_to_mono_reduces_channels` would
+        leave track 0 in mono and leak that state into any later test that
+        assumes a stereo-channel default (including tests in other files
+        running after this module in the pytest order).
+        """
+        _set_layout(client, 0, "stereo")
+        yield
+        _set_layout(client, 0, "stereo")
+
     def test_stereo_to_mono_reduces_channels(self, client: OscilTestClient):
         """
         Initial prepare is stereo.  Switching to mono should see the

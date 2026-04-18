@@ -136,8 +136,13 @@ void TestHttpServer::setupStateRoutes()
 void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Response& res)
 {
     juce::Logger::writeToLog("[Harness] State reset requested");
-    const int trackId = resolveTrackId(req);
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
+        return;
+    const int trackId = *trackIdOpt;
 
+    // Intentionally lenient: /state/reset succeeds even when trackId is
+    // missing; transport/options reset below runs unconditionally.
     (void) runOnTrackSync(
         trackId,
         [](TestTrack& track) {
@@ -145,8 +150,7 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
             for (const auto& osc : state.getOscillators())
                 state.removeOscillator(osc.getId());
             auto& lm = state.getLayoutManager();
-            // Snapshot pane IDs before mutation — getPanes() returns a reference
-            // to the underlying vector, which removePane() erases from.
+            // Snapshot pane IDs before mutation (getPanes() is a reference).
             std::vector<PaneId> paneIds;
             paneIds.reserve(lm.getPanes().size());
             for (const auto& pane : lm.getPanes())
@@ -155,12 +159,10 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
                 lm.removePane(id);
             track.getProcessor().getTimingEngine().setConfig(EngineTimingConfig{});
 
-            // setConfig() writes the engine SeqLock directly and bypasses the
-            // listener chain. Without this sync, the TimingPresenter keeps its
-            // stale cached mode/hostSync/BPM, and the next click(MELODIC_SEG)
-            // or set_bpm() from a fresh test is suppressed by the presenter's
-            // `if (currentMode_ != mode)` guards — leaving the engine in TIME
-            // mode so BPM changes never recalculate displaySamples.
+            // setConfig() bypasses the listener chain (writes the SeqLock
+            // directly); refresh the sidebar so the presenter's cached
+            // mode/hostSync/BPM don't suppress the next test's changes via
+            // its `if (currentMode_ != mode)` early-outs.
             if (auto* editor = track.getEditor())
                 if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
                     oscilEditor->refreshTimingSidebarFromEngine();
@@ -170,18 +172,16 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
     resetAudioAndTransport();
     resetOptionsControls();
 
-    // Do NOT clear the element registry here — components that are still alive
-    // (sidebar, buttons, timing controls) keep their registrations.  Components
-    // tied to removed oscillators/panes will self-unregister via their RAII
-    // TestRegistration destructors when state listeners destroy them.
+    // Element registry is NOT cleared here: live components (sidebar, buttons,
+    // timing controls) keep their registrations; components tied to removed
+    // oscillators/panes self-unregister via RAII TestRegistration.
     res.set_content(successResponse().dump(), "application/json");
 }
 
 void TestHttpServer::resetAudioAndTransport()
 {
-    // Hop to the message thread so add/remove can't invalidate track slots
-    // beneath the generator resets. The transport object itself is stable
-    // for the life of the DAW, but the track vector is not.
+    // Hop to the message thread so add/remove can't invalidate track slots.
+    // Transport itself is stable for the DAW's lifetime; the track vector is not.
     runOnMessageThreadBlocking(
         [this]() {
             for (int i = 0; i < daw_.getNumTracks(); ++i)
@@ -216,7 +216,10 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
     {
         auto body = json::parse(req.body);
         std::string path = body.value("path", "/tmp/state.xml");
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
 
         auto xml = std::make_shared<juce::String>();
         const auto result = runOnTrackSync(
@@ -285,7 +288,10 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         }
 
         juce::String xml = file.loadFileAsString();
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
 
         auto success = std::make_shared<bool>(false);
         const auto result = runOnTrackSync(
@@ -313,7 +319,10 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
 
 void TestHttpServer::handleStateOscillators(const httplib::Request& req, httplib::Response& res)
 {
-    const int trackId = resolveTrackId(req);
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
+        return;
+    const int trackId = *trackIdOpt;
     auto oscillators = std::make_shared<json>(json::array());
 
     const auto result = runOnTrackSync(trackId, [oscillators](TestTrack& track) {
@@ -337,7 +346,10 @@ void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httpl
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = std::make_shared<json>(json::parse(req.body));
 
         auto oscJson = std::make_shared<json>();
@@ -381,7 +393,10 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = std::make_shared<json>(json::parse(req.body));
         std::string idStr = body->value("id", "");
         if (idStr.empty())
@@ -438,7 +453,10 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         int fromIndex = body.value("fromIndex", -1);
         int toIndex = body.value("toIndex", -1);

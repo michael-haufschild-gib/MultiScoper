@@ -12,6 +12,16 @@
 namespace oscil
 {
 
+namespace
+{
+// Single source of truth for the header-tint alpha. The same factor is used
+// by PaneHeader::paint() (background fill) and by paintOscillatorBadge() when
+// computing a contrast-safe text colour over that same tinted background —
+// if the two drifted apart the processing-mode badge would regress on
+// borderline themes.
+constexpr float kHeaderTintAlpha = 0.08f;
+} // namespace
+
 // pill text colour comes from ColorTheme::pickContrastingText.
 
 PaneHeader::PaneHeader(IThemeService& themeService) : themeService_(themeService) { setupComponents(); }
@@ -84,7 +94,8 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     // background (tinted by textPrimary @ 0.08 in paint()), not the raw
     // backgroundPane. Using backgroundPane picks the wrong foreground on
     // borderline themes where the header tint flips local contrast.
-    auto const headerBg = ColorTheme::compositeOnBackground(theme.textPrimary.withAlpha(0.08f), theme.backgroundPane);
+    auto const headerBg =
+        ColorTheme::compositeOnBackground(theme.textPrimary.withAlpha(kHeaderTintAlpha), theme.backgroundPane);
     auto const badgeBg = ColorTheme::compositeOnBackground(modeColor.withAlpha(kBgAlpha), headerBg);
     g.setColour(ColorTheme::pickContrastingText(badgeBg));
     g.setFont(Typography::smallBold());
@@ -106,7 +117,7 @@ void PaneHeader::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
 
     // Tinted header background (bgHover equivalent)
-    g.setColour(theme.textPrimary.withAlpha(0.08f));
+    g.setColour(theme.textPrimary.withAlpha(kHeaderTintAlpha));
     g.fillRect(bounds);
 
     auto handleBounds = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);

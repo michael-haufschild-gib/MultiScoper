@@ -52,17 +52,36 @@ local function run()
 
   -- Phase 2: toggle anticipative FX to force Reaper to re-run prepareToPlay
   -- on all plugins. This is the scriptable proxy for a block-size change.
+  -- `Main_OnCommand` is documented as void in the REAPER API — pcall-wrapping
+  -- it only protects against a Lua-level exception, NOT against an invalid
+  -- command ID or a no-op execution. Use GetToggleCommandStateEx before and
+  -- after so we can tell whether the toggle actually flipped.
+  local before_state = reaper.GetToggleCommandStateEx(0, CMD_TOGGLE_ANTICIPATIVE_FX)
   local ok_toggle = pcall(reaper.Main_OnCommand, CMD_TOGGLE_ANTICIPATIVE_FX, 0)
   if not ok_toggle then
-    T.log("[04] anticipative-FX toggle failed; continuing without re-prepare")
+    T.log("[04] anticipative-FX toggle raised a Lua error; continuing without re-prepare")
+  end
+  local after_state = reaper.GetToggleCommandStateEx(0, CMD_TOGGLE_ANTICIPATIVE_FX)
+  if before_state == after_state then
+    T.log(string.format(
+      "[04] anticipative-FX toggle did not change state (before=%s after=%s); "
+      .. "command id %d may be wrong on this Reaper — continuing without re-prepare",
+      tostring(before_state), tostring(after_state), CMD_TOGGLE_ANTICIPATIVE_FX))
   end
   T.play_seconds(2.0)
   T.assert_eq(T.count_fx(0), 1, "plugin present after phase 2")
 
   -- Phase 3: toggle back and play again. Net effect: prepareToPlay was called
-  -- twice during this scenario, exercising the audio-thread prepare path that
-  -- the in-process harness never hits.
+  -- twice during this scenario (when the toggle succeeded), exercising the
+  -- audio-thread prepare path the in-process harness never hits.
+  local mid_state = reaper.GetToggleCommandStateEx(0, CMD_TOGGLE_ANTICIPATIVE_FX)
   pcall(reaper.Main_OnCommand, CMD_TOGGLE_ANTICIPATIVE_FX, 0)
+  local final_state = reaper.GetToggleCommandStateEx(0, CMD_TOGGLE_ANTICIPATIVE_FX)
+  if mid_state ~= -1 and final_state ~= -1 and mid_state == final_state then
+    T.log(string.format(
+      "[04] anticipative-FX second toggle did not change state (mid=%s final=%s)",
+      tostring(mid_state), tostring(final_state)))
+  end
   T.play_seconds(2.0)
   T.assert_eq(T.count_fx(0), 1, "plugin present after phase 3")
 

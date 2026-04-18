@@ -178,15 +178,28 @@ void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& re
 
 int TestHttpServer::resolveTrackId(const httplib::Request& req)
 {
+    // A malformed `trackId` (e.g. "abc") must not silently alias to track 0 —
+    // that would let a bad request mutate the first track. Parse errors on an
+    // explicitly-provided `trackId` throw `BadTrackIdError`; handlers convert
+    // that into a 400 via `tryResolveTrackId`.
     auto it = req.params.find("trackId");
     if (it != req.params.end())
     {
         try
         {
-            return std::stoi(it->second);
+            size_t pos = 0;
+            const int parsed = std::stoi(it->second, &pos);
+            if (pos != it->second.size())
+                throw BadTrackIdError("Invalid trackId query param: " + it->second);
+            return parsed;
+        }
+        catch (const BadTrackIdError&)
+        {
+            throw;
         }
         catch (...)
         {
+            throw BadTrackIdError("Invalid trackId query param: " + it->second);
         }
     }
 
@@ -196,14 +209,38 @@ int TestHttpServer::resolveTrackId(const httplib::Request& req)
         {
             auto body = json::parse(req.body);
             if (body.contains("trackId"))
+            {
+                if (!body["trackId"].is_number_integer())
+                    throw BadTrackIdError("trackId must be an integer");
                 return body["trackId"].get<int>();
+            }
         }
-        catch (...)
+        catch (const BadTrackIdError&)
         {
+            throw;
+        }
+        catch (const json::exception&)
+        {
+            // Body didn't parse as JSON — handler's own body parse will surface
+            // that error. Fall through to the default-track path.
         }
     }
 
     return 0;
+}
+
+std::optional<int> TestHttpServer::tryResolveTrackId(const httplib::Request& req, httplib::Response& res)
+{
+    try
+    {
+        return resolveTrackId(req);
+    }
+    catch (const BadTrackIdError& e)
+    {
+        res.status = 400;
+        res.set_content(errorResponse(e.what()).dump(), "application/json");
+        return std::nullopt;
+    }
 }
 
 int TestHttpServer::resolveTrackIdFromBody(const json& body) { return body.value("trackId", 0); }
@@ -352,6 +389,7 @@ void TestHttpServer::handleDawTrackAdd(const httplib::Request& req, httplib::Res
         });
         if (!done->wait(5000))
         {
+            res.status = 504;
             res.set_content(errorResponse("Timeout adding track").dump(), "application/json");
             return;
         }
@@ -392,6 +430,7 @@ void TestHttpServer::handleDawTrackRemove(const httplib::Request& req, httplib::
         });
         if (!done->wait(5000))
         {
+            res.status = 504;
             res.set_content(errorResponse("Timeout removing track").dump(), "application/json");
             return;
         }
@@ -444,6 +483,7 @@ void TestHttpServer::handleDawTracks(const httplib::Request&, httplib::Response&
     // a clean timeout error instead.
     if (!ok)
     {
+        res.status = 504;
         res.set_content(errorResponse("Timeout listing tracks").dump(), "application/json");
         return;
     }

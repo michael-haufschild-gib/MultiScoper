@@ -116,7 +116,7 @@ void StatusBarComponent::paint(juce::Graphics& g)
     // Hint text occupies the left zone, vertically centered.
     const auto elided = getElidedHintText(static_cast<float>(leftZoneWidth));
     g.setColour(theme.textSecondary);
-    g.setFont(ComponentLayout::captionFont());
+    g.setFont(Typography::caption());
 
     const juce::Rectangle<int> hintArea(kOuterPaddingPx, 0, leftZoneWidth, getHeight());
     g.drawText(elided, hintArea, juce::Justification::centredLeft, false);
@@ -230,7 +230,7 @@ juce::String StatusBarComponent::getElidedHintText(float availableWidth) const
     if (hintText_.isEmpty() || availableWidth <= 0.0f)
         return {};
 
-    const auto font = ComponentLayout::captionFont();
+    const auto font = Typography::caption();
     if (juce::GlyphArrangement::getStringWidth(font, hintText_) <= availableWidth)
         return hintText_;
 

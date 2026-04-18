@@ -25,6 +25,8 @@
 #include <future>
 #include <httplib.h>
 #include <nlohmann/json.hpp>
+#include <optional>
+#include <stdexcept>
 #include <thread>
 
 namespace oscil
@@ -212,7 +214,20 @@ private:
     // a dangling `TestTrack*` from a concurrent remove on the message thread.
     // Pair them with `runOnTrackSync` so the actual pointer lookup happens
     // inside the message-thread lambda where add/remove are serialized.
+    // Thrown by `resolveTrackId` when the request carries an explicit
+    // `trackId` that can't be parsed as an integer. Handlers should not
+    // swallow these — use `tryResolveTrackId` to convert them into a 400.
+    class BadTrackIdError : public std::invalid_argument
+    {
+    public:
+        using std::invalid_argument::invalid_argument;
+    };
+
     int resolveTrackId(const httplib::Request& req);
+    // Preferred entry point in handlers: on parse failure writes a 400
+    // response and returns `nullopt`. The handler must early-return in that
+    // case. Returns the resolved id (defaulting to 0 when absent) otherwise.
+    std::optional<int> tryResolveTrackId(const httplib::Request& req, httplib::Response& res);
     int resolveTrackIdFromBody(const json& body);
 
     // Legacy pointer-returning resolvers — retained for callers that still run

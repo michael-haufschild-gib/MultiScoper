@@ -21,7 +21,10 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         // Accept either "id" or "oscillatorId". Historical callers used
         // "id"; newer scale tests (test_sixteen_instances) use
@@ -118,7 +121,10 @@ void TestHttpServer::handleWaveformState(const httplib::Request& req, httplib::R
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto data = std::make_shared<json>();
 
         const auto result = runOnTrackSync(

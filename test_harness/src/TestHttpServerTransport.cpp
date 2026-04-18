@@ -74,7 +74,10 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
         // MT-dispatched block so a timeout or missing track surfaces as an
         // HTTP error instead of leaving the global transport BPM updated
         // while the timing-engine/editor refresh never happened.
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         const auto result = runOnTrackSync(trackId, [this, bpm](TestTrack& track) {
             daw_.getTransport().setBpm(bpm);
             auto& timingEngine = track.getProcessor().getTimingEngine();

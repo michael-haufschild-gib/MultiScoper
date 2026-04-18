@@ -172,8 +172,9 @@ void OscillatorListItemComponent::updateVisibility()
     deleteButton_->setAlpha(buttonAlpha);
     settingsButton_->setAlpha(buttonAlpha);
 
-    // Tile treatment: hidden state uses textMuted directly; the tile paint applies a 0.6
-    // global opacity so no additional alpha manipulation is needed here.
+    // Hidden state uses textMuted directly; final dimming is applied by the
+    // paintOverChildren() overlay in OscillatorListItemPainting.cpp (a black
+    // fill @ alpha 0.4), so no extra text alpha manipulation is needed here.
     applyLabelColours(getTheme());
 
     // Always update button icon and tooltip based on current state

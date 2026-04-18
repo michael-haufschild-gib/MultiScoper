@@ -184,7 +184,12 @@ json snapshotAudioGenerators(TestDAW& daw)
     });
     if (!done->wait(3000))
     {
+        // Do NOT dereference `arr` here: the MT lambda may still fire and
+        // mutate the same json object, racing with our copy. Return a
+        // distinct diagnostic payload instead so callers can tell a timeout
+        // apart from an actually-empty generator list.
         juce::Logger::writeToLog("[snapshotAudioGenerators] soft timeout 3000ms; giving up");
+        return json{{"_timeout", true}, {"_error", "snapshotAudioGenerators timeout after 3000ms"}};
     }
     return *arr;
 }
@@ -217,23 +222,26 @@ json serializeWaveformState(WaveformComponent* wf, const Oscillator* osc)
 
 json snapshotGUI(TestDAW& daw)
 {
-    // Must read WaveformComponent state on the message thread.  Outputs
+    // Must read WaveformComponent state on the message thread. Outputs
     // (`result`, `done`) are heap-owned via shared_ptr so the MT lambda is
-    // safe even if we return early on timeout. `oscilEditor` is captured by
-    // value (pointer); its lifetime is managed by the plugin / DAW.
+    // safe even if we return early on timeout.
+    //
+    // Fetch the editor pointer inside the MT lambda. Reading it here on the
+    // HTTP worker thread and capturing across the dispatch could land us on
+    // a stale pointer if the editor is closed between post and execution.
     auto result = std::make_shared<json>();
     (*result)["editorOpen"] = false;
 
-    auto* editor = daw.getPrimaryEditor();
-    if (!editor)
-        return *result;
-
-    auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor);
-    if (!oscilEditor)
-        return *result;
-
     auto done = std::make_shared<juce::WaitableEvent>();
-    juce::MessageManager::callAsync([oscilEditor, result, done]() {
+    juce::MessageManager::callAsync([&daw, result, done]() {
+        auto* editor = daw.getPrimaryEditor();
+        auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor);
+        if (!oscilEditor)
+        {
+            done->signal();
+            return;
+        }
+
         (*result)["editorOpen"] = true;
         const auto& paneComponents = oscilEditor->getPaneComponents();
         json panesArr = json::array();
@@ -269,7 +277,11 @@ json snapshotGUI(TestDAW& daw)
     });
     if (!done->wait(3000))
     {
+        // Same rationale as snapshotAudioGenerators: on timeout the MT
+        // lambda may still execute and write to *result, so returning it
+        // would race with a later write. Emit a distinct timeout payload.
         juce::Logger::writeToLog("[snapshotGUI] soft timeout 3000ms; giving up");
+        return json{{"_timeout", true}, {"_error", "snapshotGUI timeout after 3000ms"}};
     }
 
     return *result;
@@ -279,7 +291,10 @@ void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httpl
 {
     try
     {
-        const int trackId = resolveTrackId(req);
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
+            return;
+        const int trackId = *trackIdOpt;
         auto data = std::make_shared<json>();
 
         // Snapshots that read plugin state (oscillators / panes / timing /

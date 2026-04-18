@@ -5,9 +5,12 @@
 -- scenario 01 but exercises the Audio Unit code path, which differs from VST3
 -- in state chunk format and in Logic's sandboxed-process model.
 --
--- Platform gate: AU is macOS-only. On Windows/Linux this scenario exits cleanly
--- with a "skipped" result rather than failing (since Reaper's Windows/Linux
--- builds cannot load .component bundles at all).
+-- Platform gate: AU is macOS-only. On Windows/Linux this scenario returns
+-- without raising, which the current runner (`tests/reaper/lib/run_all.lua`)
+-- records as `pass` — there is no explicit skip status in the runner
+-- contract today. The log line below leaves an audit trail so a pass on
+-- a non-macOS runner is interpretable as "AU path not exercised" rather
+-- than "AU path verified".
 --
 -- Assumptions (cannot be verified without running Reaper):
 --   * `reaper.GetOS()` returns a string starting with "OSX" on macOS per docs.
@@ -28,9 +31,11 @@ end
 
 local function run()
   if not is_macos() then
-    T.log("[03] skipped: platform is not macOS (GetOS=" .. tostring(reaper.GetOS()) .. ")")
-    -- Return without raising — scenario runner records this as pass.
-    -- The log line above leaves a clear audit trail.
+    T.log("[03] no-op: platform is not macOS (GetOS=" .. tostring(reaper.GetOS())
+          .. "); AU path not exercised on this runner")
+    -- Return without raising. The runner records this as `pass` (see header
+    -- comment); the log prefix above distinguishes a platform-skip from a
+    -- real AU verification pass when scanning scenario output.
     return
   end
 

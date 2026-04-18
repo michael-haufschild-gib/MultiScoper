@@ -47,9 +47,9 @@ Not structural; the harness can hit these, tests just don't.
 - Sustained soak test > 10s — leak detection horizon too short (`test_performance.py`).
 - No visual/pixel regression for waveform / themes / 3D shaders — `verify_element_color` tests API contract only.
 - No fuzz over operation sequences (add/delete/move/reorder/save/load with shrinking).
-- No OpenGL driver-loss / context-lost simulation.
-- No clipboard / context menu / drag-and-drop-container coverage at E2E.
-- No Retina/HiDPI scaling tests; window is fixed-size in harness.
+- Missing OpenGL driver-loss / context-lost simulation.
+- Missing clipboard, context menu, and drag-and-drop-container E2E coverage.
+- Missing Retina/HiDPI scaling tests; the harness uses a fixed-size window.
 - 16-instance test claims cover scale but all in one process — same singleton problem as P0 #1.
 - `MidiBuffer` never carries real events in harness — MIDI-trigger waveform restart path is dead code under test.
 - `releaseResources` contract untested (no-op today, but regression risk if body gains logic).

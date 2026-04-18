@@ -15,10 +15,18 @@ log = logging.getLogger(__name__)
 
 def main(n_editors: int) -> None:
     c = OscilTestClient()
+    # Fail loudly if the harness isn't reachable rather than spinning on
+    # an unbounded provisioning loop below.
+    c.wait_for_harness(max_retries=15, delay=1.0)
 
     # Ensure we have at least n tracks.
     while len(c.get_tracks()) < n_editors:
-        c.add_track(f"probe{len(c.get_tracks())}")
+        created = c.add_track(f"probe{len(c.get_tracks())}")
+        if created is None:
+            raise RuntimeError(
+                f"add_track failed while provisioning tracks for idle probe "
+                f"(wanted {n_editors}, have {len(c.get_tracks())})"
+            )
 
     # Silence every track's generator.
     for t in c.get_tracks():
