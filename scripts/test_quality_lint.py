@@ -71,6 +71,16 @@ EXISTENCE_PATTERNS: List[re.Pattern] = [
     # EXPECT_GT(x.size(), 0) — checks non-emptiness, not behavior
     re.compile(r"\b(?:EXPECT|ASSERT)_GT\s*\(\s*\w+\.(?:size|count|length)\s*\(\s*\)\s*,\s*0\s*\)"),
     re.compile(r"\b(?:EXPECT|ASSERT)_GE\s*\(\s*\w+\.(?:size|count|length)\s*\(\s*\)\s*,\s*1\s*\)"),
+    # EXPECT_THAT(x, NotNull()) / Not(IsNull()) / IsEmpty() / Not(IsEmpty())
+    # — matchers that check structural properties, not behavior.
+    re.compile(
+        r"\b(?:EXPECT|ASSERT)_THAT\s*\([^,]+,\s*(?:::)?(?:testing::)?"
+        r"(?:NotNull\s*\(\s*\)|Not\s*\(\s*(?:::)?(?:testing::)?IsNull\s*\(\s*\)\s*\))\s*\)"
+    ),
+    re.compile(
+        r"\b(?:EXPECT|ASSERT)_THAT\s*\([^,]+,\s*(?:::)?(?:testing::)?"
+        r"(?:IsEmpty\s*\(\s*\)|Not\s*\(\s*(?:::)?(?:testing::)?IsEmpty\s*\(\s*\)\s*\))\s*\)"
+    ),
 ]
 
 # Tautological assertion patterns — assertions that can NEVER fail.
@@ -95,9 +105,12 @@ TAUTOLOGY_PATTERNS: List[re.Pattern] = [
 # check (e.g., DEATH/THROW verify an exception path). A test built around
 # them is meaningful even with a single assertion and even if *other* on-line
 # assertions look existence-only.
+#
+# EXPECT_THAT / ASSERT_THAT are intentionally NOT listed here: matchers like
+# NotNull() and IsEmpty() only check structural properties, so blanket-listing
+# THAT would let shallow matcher-only tests bypass the existence-only rule.
 ASSERTION_BEHAVIORAL_INDICATORS = [
     re.compile(r"\b(?:EXPECT|ASSERT)_(?:DEATH|DEATH_IF_SUPPORTED|THROW|ANY_THROW|NO_THROW)\b"),
-    re.compile(r"\b(?:EXPECT|ASSERT)_THAT\b"),
 ]
 
 # Method-call behavioral indicators. These show the code under test is being
@@ -305,7 +318,7 @@ def analyze_test(body: TestBody, min_assertions: int) -> Optional[Violation]:
         )
 
     # All assertions are existence-only. Only *assertion-class* behavioral
-    # indicators (DEATH/THROW/THAT) excuse this — exercising a method without
+    # indicators (DEATH/THROW) excuse this — exercising a method without
     # asserting on its effect is still a shallow test.
     if is_existence_only(body) and not has_assertion_behavioral_indicator(body):
         return Violation(

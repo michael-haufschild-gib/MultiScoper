@@ -9,6 +9,7 @@
 #include "core/dsp/TimingEngine.h"
 #include "core/dsp/TimingEngineTypes.h"
 #include "core/interfaces/IAudioBuffer.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
 
@@ -112,10 +113,10 @@ json snapshotTiming(OscilPluginProcessor& processor)
             {"triggerMode", static_cast<int>(config.triggerMode)}};
 }
 
-json snapshotSources()
+json snapshotSources(IInstanceRegistry& registry)
 {
     json arr = json::array();
-    auto allSources = PluginFactory::getInstance().getInstanceRegistry().getAllSources();
+    auto allSources = registry.getAllSources();
     for (const auto& s : allSources)
     {
         arr.push_back({{"id", s.sourceId.id.toStdString()},
@@ -159,20 +160,38 @@ json snapshotLogs()
 
 json snapshotAudioGenerators(TestDAW& daw)
 {
-    json arr = json::array();
-    for (int i = 0; i < daw.getNumTracks(); ++i)
+    // Iterate on the message thread — add/remove track also runs on the MT,
+    // so walking the vector here cannot race a slot reassignment.  Outputs
+    // (`arr`, `done`) are heap-owned via shared_ptr so the MT lambda is safe
+    // even if we return early on timeout. `&daw` is fine: TestDAW has
+    // process lifetime (owned by the application).
+    auto arr = std::make_shared<json>(json::array());
+    auto done = std::make_shared<juce::WaitableEvent>();
+    juce::MessageManager::callAsync([&daw, arr, done]() {
+        for (int i = 0; i < daw.getNumTracks(); ++i)
+        {
+            auto* track = daw.getTrack(i);
+            if (!track)
+                continue;
+            auto& gen = track->getAudioGenerator();
+            arr->push_back({{"track", i},
+                            {"waveform", TestAudioGenerator::waveformToString(gen.getWaveform()).toStdString()},
+                            {"frequency", gen.getFrequency()},
+                            {"amplitude", gen.getAmplitude()},
+                            {"generating", gen.isGenerating()}});
+        }
+        done->signal();
+    });
+    if (!done->wait(3000))
     {
-        auto* track = daw.getTrack(i);
-        if (!track)
-            continue;
-        auto& gen = track->getAudioGenerator();
-        arr.push_back({{"track", i},
-                       {"waveform", TestAudioGenerator::waveformToString(gen.getWaveform()).toStdString()},
-                       {"frequency", gen.getFrequency()},
-                       {"amplitude", gen.getAmplitude()},
-                       {"generating", gen.isGenerating()}});
+        // Do NOT dereference `arr` here: the MT lambda may still fire and
+        // mutate the same json object, racing with our copy. Return a
+        // distinct diagnostic payload instead so callers can tell a timeout
+        // apart from an actually-empty generator list.
+        juce::Logger::writeToLog("[snapshotAudioGenerators] soft timeout 3000ms; giving up");
+        return json{{"_timeout", true}, {"_error", "snapshotAudioGenerators timeout after 3000ms"}};
     }
-    return arr;
+    return *arr;
 }
 
 json serializeWaveformState(WaveformComponent* wf, const Oscillator* osc)
@@ -203,22 +222,27 @@ json serializeWaveformState(WaveformComponent* wf, const Oscillator* osc)
 
 json snapshotGUI(TestDAW& daw)
 {
-    // Must read WaveformComponent state on the message thread
-    json result;
-    result["editorOpen"] = false;
+    // Must read WaveformComponent state on the message thread. Outputs
+    // (`result`, `done`) are heap-owned via shared_ptr so the MT lambda is
+    // safe even if we return early on timeout.
+    //
+    // Fetch the editor pointer inside the MT lambda. Reading it here on the
+    // HTTP worker thread and capturing across the dispatch could land us on
+    // a stale pointer if the editor is closed between post and execution.
+    auto result = std::make_shared<json>();
+    (*result)["editorOpen"] = false;
 
-    auto* editor = daw.getPrimaryEditor();
-    if (!editor)
-        return result;
+    auto done = std::make_shared<juce::WaitableEvent>();
+    juce::MessageManager::callAsync([&daw, result, done]() {
+        auto* editor = daw.getPrimaryEditor();
+        auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor);
+        if (!oscilEditor)
+        {
+            done->signal();
+            return;
+        }
 
-    auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor);
-    if (!oscilEditor)
-        return result;
-
-    // Block until message thread completes the snapshot
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([oscilEditor, &result, &done]() {
-        result["editorOpen"] = true;
+        (*result)["editorOpen"] = true;
         const auto& paneComponents = oscilEditor->getPaneComponents();
         json panesArr = json::array();
 
@@ -248,39 +272,60 @@ json snapshotGUI(TestDAW& daw)
             paneJson["waveforms"] = waveformsArr;
             panesArr.push_back(paneJson);
         }
-        result["panes"] = panesArr;
-        done.signal();
+        (*result)["panes"] = panesArr;
+        done->signal();
     });
-    done.wait(3000); // 3 second timeout
+    if (!done->wait(3000))
+    {
+        // Same rationale as snapshotAudioGenerators: on timeout the MT
+        // lambda may still execute and write to *result, so returning it
+        // would race with a later write. Emit a distinct timeout payload.
+        juce::Logger::writeToLog("[snapshotGUI] soft timeout 3000ms; giving up");
+        return json{{"_timeout", true}, {"_error", "snapshotGUI timeout after 3000ms"}};
+    }
 
-    return result;
+    return *result;
 }
 
 void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httplib::Response& res)
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
+        const int trackId = *trackIdOpt;
+        auto data = std::make_shared<json>();
 
-        auto& processor = track->getProcessor();
-        json data;
-        data["oscillators"] = snapshotOscillators(processor);
-        data["panes"] = snapshotPanes(processor.getState());
-        data["transport"] = snapshotTransport(daw_);
-        data["timing"] = snapshotTiming(processor);
-        data["sources"] = snapshotSources();
-        data["audioGenerators"] = snapshotAudioGenerators(daw_);
-        data["ui"] = snapshotUI();
-        data["gui"] = snapshotGUI(daw_);
-        data["metrics"] = snapshotMetrics(metrics_);
-        data["logs"] = snapshotLogs();
+        // Snapshots that read plugin state (oscillators / panes / timing /
+        // sources) must run on the message thread: add/remove track and
+        // state mutations are all MT-serialized, so a read inside the
+        // lambda sees a coherent view. Sources in particular must come from
+        // the *track-scoped* InstanceRegistry — in registry-isolation mode
+        // PluginFactory's global registry reports peers the resolved track
+        // cannot actually see, making /diagnostic/snapshot inconsistent.
+        const auto result = runOnTrackSync(
+            trackId,
+            [data](TestTrack& track) {
+                auto& processor = track.getProcessor();
+                (*data)["oscillators"] = snapshotOscillators(processor);
+                (*data)["panes"] = snapshotPanes(processor.getState());
+                (*data)["timing"] = snapshotTiming(processor);
+                (*data)["sources"] = snapshotSources(track.getInstanceRegistry());
+            },
+            5000);
 
-        res.set_content(successResponse(data).dump(), "application/json");
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout collecting diagnostic snapshot"))
+            return;
+
+        (*data)["transport"] = snapshotTransport(daw_);
+        (*data)["audioGenerators"] = snapshotAudioGenerators(daw_);
+        (*data)["ui"] = snapshotUI();
+        (*data)["gui"] = snapshotGUI(daw_);
+        (*data)["metrics"] = snapshotMetrics(metrics_);
+        (*data)["logs"] = snapshotLogs();
+
+        res.set_content(successResponse(*data).dump(), "application/json");
     }
     catch (const std::exception& e)
     {

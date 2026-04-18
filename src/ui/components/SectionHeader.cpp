@@ -29,6 +29,10 @@ SectionHeader::SectionHeader(IThemeService& themeService, juce::String title)
     , title_(std::move(title))
 {
     setInterceptsMouseClicks(true, false);
+    // Keyboard users (and assistive tech) need a way to invoke onPrev/onNext.
+    // Accept focus whenever the component exists so keyPressed() can fire;
+    // focus is further gated on chevronsVisible_ inside the handler.
+    setWantsKeyboardFocus(true);
 }
 
 void SectionHeader::setTitle(const juce::String& title)
@@ -52,6 +56,8 @@ void SectionHeader::setChevronsVisible(bool visible)
 
 void SectionHeader::setAccentColour(juce::Colour accent)
 {
+    if (accent_ == accent)
+        return;
     accent_ = accent;
     repaint();
 }
@@ -153,6 +159,38 @@ void SectionHeader::mouseDown(const juce::MouseEvent& e)
         if (onNext)
             onNext();
     }
+}
+
+bool SectionHeader::keyPressed(const juce::KeyPress& key)
+{
+    if (!chevronsVisible_)
+        return false;
+
+    // Map the standard navigation set onto the chevrons so keyboard users
+    // and assistive tech can invoke them:
+    //   ← / PageUp / Home   → onPrev
+    //   → / PageDown / End  → onNext
+    // We do not consume Tab or Enter; those stay with JUCE focus traversal
+    // and default activation so the component plays nicely inside forms.
+    const auto code = key.getKeyCode();
+    const bool isPrev =
+        code == juce::KeyPress::leftKey || code == juce::KeyPress::pageUpKey || code == juce::KeyPress::homeKey;
+    const bool isNext =
+        code == juce::KeyPress::rightKey || code == juce::KeyPress::pageDownKey || code == juce::KeyPress::endKey;
+
+    if (isPrev)
+    {
+        if (onPrev)
+            onPrev();
+        return true;
+    }
+    if (isNext)
+    {
+        if (onNext)
+            onNext();
+        return true;
+    }
+    return false;
 }
 
 } // namespace oscil

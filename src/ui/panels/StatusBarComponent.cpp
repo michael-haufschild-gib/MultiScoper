@@ -113,10 +113,16 @@ void StatusBarComponent::paint(juce::Graphics& g)
     if (leftZoneWidth <= 0)
         return;
 
-    // Hint text occupies the left zone, vertically centered.
+    // Hint text occupies the left zone, vertically centered. If the zone is
+    // too narrow to fit even a bare ellipsis, getElidedHintText returns an
+    // empty string — in that case skip the divider as well so the user never
+    // sees a naked separator floating over nothing.
     const auto elided = getElidedHintText(static_cast<float>(leftZoneWidth));
+    if (elided.isEmpty())
+        return;
+
     g.setColour(theme.textSecondary);
-    g.setFont(ComponentLayout::captionFont());
+    g.setFont(Typography::caption());
 
     const juce::Rectangle<int> hintArea(kOuterPaddingPx, 0, leftZoneWidth, getHeight());
     g.drawText(elided, hintArea, juce::Justification::centredLeft, false);
@@ -223,29 +229,44 @@ void StatusBarComponent::setHintText(const juce::String& text)
     repaint();
 }
 
-bool StatusBarComponent::shouldDrawSeparator() const { return !hintText_.isEmpty() && getLeftZoneWidth() > 0; }
+bool StatusBarComponent::shouldDrawSeparator() const
+{
+    // Divider visibility must track the actual painted text: if the left zone
+    // is too narrow for even a bare ellipsis, getElidedHintText() returns
+    // empty and paint() suppresses the divider. Mirror that rule here.
+    const int leftZoneWidth = getLeftZoneWidth();
+    if (leftZoneWidth <= 0)
+        return false;
+    return !getElidedHintText(static_cast<float>(leftZoneWidth)).isEmpty();
+}
 
 juce::String StatusBarComponent::getElidedHintText(float availableWidth) const
 {
     if (hintText_.isEmpty() || availableWidth <= 0.0f)
         return {};
 
-    const auto font = ComponentLayout::captionFont();
+    const auto font = Typography::caption();
     if (juce::GlyphArrangement::getStringWidth(font, hintText_) <= availableWidth)
         return hintText_;
 
     // Trim from the end and append an ellipsis marker until it fits.
-    // A space + three dots reads cleanly with proportional fonts.
+    // A space + three dots reads cleanly with proportional fonts; at very
+    // narrow widths we fall back to a bare ellipsis so the paint path always
+    // renders a visible hint instead of a naked separator.
     const juce::String suffix(" ...");
+    juce::String ellipsis("...");
     const float suffixWidth = juce::GlyphArrangement::getStringWidth(font, suffix);
+    const float ellipsisWidth = juce::GlyphArrangement::getStringWidth(font, ellipsis);
 
-    if (suffixWidth >= availableWidth)
+    if (ellipsisWidth > availableWidth)
         return {};
 
     const int n = hintText_.length();
     int lo = 0;
     int hi = n;
-    // Binary search the largest prefix whose width plus suffix fits.
+    // Binary search the largest prefix whose width plus the `" ..."` suffix
+    // fits. If nothing fits with the padded suffix, fall through to the bare
+    // ellipsis below — matching the width check we actually gate on.
     while (lo < hi)
     {
         const int mid = lo + ((hi - lo + 1) / 2);
@@ -257,7 +278,7 @@ juce::String StatusBarComponent::getElidedHintText(float availableWidth) const
     }
 
     if (lo <= 0)
-        return suffix.trimStart();
+        return ellipsis;
     return hintText_.substring(0, lo) + suffix;
 }
 

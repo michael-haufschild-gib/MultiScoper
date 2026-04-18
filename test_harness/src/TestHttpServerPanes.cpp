@@ -42,50 +42,35 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
-
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         std::string name = body.value("name", "");
 
-        auto& state = track->getProcessor().getState();
-        auto& layoutManager = state.getLayoutManager();
+        auto pane = std::make_shared<Pane>();
+        const auto result = runOnTrackSync(
+            trackId,
+            [pane, name](TestTrack& track) {
+                auto& layoutManager = track.getProcessor().getState().getLayoutManager();
+                if (!name.empty())
+                    pane->setName(juce::String(name));
+                else
+                    pane->setName("Pane " + juce::String(layoutManager.getPaneCount() + 1));
+                pane->setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
+                layoutManager.addPane(*pane);
+                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                    ed->refreshPanels();
+            },
+            5000);
 
-        Pane pane;
-        if (!name.empty())
-            pane.setName(juce::String(name));
-        else
-            pane.setName("Pane " + juce::String(layoutManager.getPaneCount() + 1));
-        pane.setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
-
-        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
-            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
-
-        auto done = std::make_shared<juce::WaitableEvent>();
-        int const trackIndex = track->getTrackIndex();
-        juce::MessageManager::callAsync([this, pane, trackIndex, safeEditor, done]() mutable {
-            // Re-resolve the track on the message thread so a concurrent
-            // removeTrack() between dispatch and execution cannot leave us
-            // touching a freed TestTrack.
-            if (auto* t = daw_.getTrack(trackIndex))
-                t->getProcessor().getState().getLayoutManager().addPane(pane);
-            if (auto* ed = safeEditor.getComponent())
-                ed->refreshPanels();
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        if (!done->wait(5000))
-        {
-            res.set_content(errorResponse("Timeout adding pane").dump(), "application/json");
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout adding pane"))
             return;
-        }
 
         json data;
-        data["id"] = pane.getId().id.toStdString();
-        data["name"] = pane.getName().toStdString();
+        data["id"] = pane->getId().id.toStdString();
+        data["name"] = pane->getName().toStdString();
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -98,13 +83,10 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
-
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         std::string idStr = body.value("id", "");
         if (idStr.empty())
@@ -114,33 +96,29 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
         }
 
         PaneId paneId{juce::String(idStr)};
-        auto& state = track->getProcessor().getState();
-        auto& layoutManager = state.getLayoutManager();
+        auto lastPane = std::make_shared<bool>(false);
 
-        if (layoutManager.getPaneCount() <= 1)
+        const auto result = runOnTrackSync(
+            trackId,
+            [paneId, lastPane](TestTrack& track) {
+                auto& state = track.getProcessor().getState();
+                auto& layoutManager = state.getLayoutManager();
+                if (layoutManager.getPaneCount() <= 1)
+                {
+                    *lastPane = true;
+                    return;
+                }
+                reassignOrphansAndRemovePane(state, layoutManager, paneId);
+                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                    ed->refreshPanels();
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout removing pane"))
+            return;
+        if (*lastPane)
         {
             res.set_content(errorResponse("Cannot remove the last pane").dump(), "application/json");
-            return;
-        }
-
-        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
-            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
-        auto done = std::make_shared<juce::WaitableEvent>();
-        int const trackIndex = track->getTrackIndex();
-        juce::MessageManager::callAsync([this, paneId, trackIndex, safeEditor, done]() {
-            if (auto* t = daw_.getTrack(trackIndex))
-            {
-                auto& st = t->getProcessor().getState();
-                auto& lm = st.getLayoutManager();
-                reassignOrphansAndRemovePane(st, lm, paneId);
-            }
-            if (auto* ed = safeEditor.getComponent())
-                ed->refreshPanels();
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        if (!done->wait(5000))
-        {
-            res.set_content(errorResponse("Timeout removing pane").dump(), "application/json");
             return;
         }
 
@@ -158,13 +136,10 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
-
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         std::string idStr = body.value("id", "");
         std::string paneIdStr = body.value("paneId", "");
@@ -175,42 +150,46 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
             return;
         }
 
-        auto& state = track->getProcessor().getState();
-        auto& layoutManager = state.getLayoutManager();
         OscillatorId oscId{juce::String(idStr)};
         PaneId targetPaneId{juce::String(paneIdStr)};
 
-        auto existingOsc = state.getOscillator(oscId);
-        if (!existingOsc.has_value())
+        auto oscMissing = std::make_shared<bool>(false);
+        auto targetPaneMissing = std::make_shared<bool>(false);
+
+        const auto result = runOnTrackSync(
+            trackId,
+            [oscId, targetPaneId, oscMissing, targetPaneMissing](TestTrack& track) {
+                auto& state = track.getProcessor().getState();
+                auto& layoutManager = state.getLayoutManager();
+                auto existingOsc = state.getOscillator(oscId);
+                if (!existingOsc.has_value())
+                {
+                    *oscMissing = true;
+                    return;
+                }
+                if (layoutManager.getPane(targetPaneId) == nullptr)
+                {
+                    *targetPaneMissing = true;
+                    return;
+                }
+                Oscillator osc = existingOsc.value();
+                osc.setPaneId(targetPaneId);
+                state.updateOscillator(osc);
+                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                    ed->refreshPanels();
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout moving oscillator"))
+            return;
+        if (*oscMissing)
         {
             res.set_content(errorResponse("Oscillator not found: " + idStr).dump(), "application/json");
             return;
         }
-
-        // Validate target pane exists
-        if (layoutManager.getPane(targetPaneId) == nullptr)
+        if (*targetPaneMissing)
         {
             res.set_content(errorResponse("Target pane not found: " + paneIdStr).dump(), "application/json");
-            return;
-        }
-
-        Oscillator osc = existingOsc.value();
-        osc.setPaneId(targetPaneId);
-
-        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
-            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
-        auto done = std::make_shared<juce::WaitableEvent>();
-        int const trackIndex = track->getTrackIndex();
-        juce::MessageManager::callAsync([this, osc, trackIndex, safeEditor, done]() {
-            if (auto* t = daw_.getTrack(trackIndex))
-                t->getProcessor().getState().updateOscillator(osc);
-            if (auto* ed = safeEditor.getComponent())
-                ed->refreshPanels();
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        if (!done->wait(5000))
-        {
-            res.set_content(errorResponse("Timeout moving oscillator").dump(), "application/json");
             return;
         }
 
@@ -227,31 +206,30 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
 
 void TestHttpServer::handleLayoutInfo(const httplib::Request& req, httplib::Response& res)
 {
-    auto* track = resolveTrack(req);
-    if (!track)
-    {
-        res.set_content(errorResponse("No track available").dump(), "application/json");
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
         return;
-    }
+    const int trackId = *trackIdOpt;
+    auto data = std::make_shared<json>();
+    const auto result = runOnTrackSync(trackId, [data](TestTrack& track) {
+        auto& layoutManager = track.getProcessor().getState().getLayoutManager();
+        (*data)["columns"] = layoutManager.getColumnCount();
+        (*data)["paneCount"] = static_cast<int>(layoutManager.getPaneCount());
+    });
 
-    auto& layoutManager = track->getProcessor().getState().getLayoutManager();
-    json data;
-    data["columns"] = layoutManager.getColumnCount();
-    data["paneCount"] = static_cast<int>(layoutManager.getPaneCount());
-    res.set_content(successResponse(data).dump(), "application/json");
+    if (respondIfTrackCallFailed(result, res, "No track available", "Timeout reading layout info"))
+        return;
+    res.set_content(successResponse(*data).dump(), "application/json");
 }
 
 void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Response& res)
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
-
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         int columns = body.value("columns", 1);
         if (columns < 1 || columns > 3)
@@ -261,27 +239,21 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
         }
 
         auto layout = static_cast<ColumnLayout>(columns);
-        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
-            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
+        auto resolvedColumns = std::make_shared<int>(0);
 
-        auto done = std::make_shared<juce::WaitableEvent>();
-        int const trackIndex = track->getTrackIndex();
-        juce::MessageManager::callAsync([this, trackIndex, layout, safeEditor, done]() {
-            if (auto* t = daw_.getTrack(trackIndex))
-                t->getProcessor().getState().setColumnLayout(layout);
-            if (auto* ed = safeEditor.getComponent())
+        const auto result = runOnTrackSync(trackId, [layout, resolvedColumns](TestTrack& track) {
+            track.getProcessor().getState().setColumnLayout(layout);
+            if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
                 ed->refreshPanels();
-            juce::MessageManager::callAsync([done]() { done->signal(); });
+            *resolvedColumns = track.getProcessor().getState().getLayoutManager().getColumnCount();
         });
-        if (!done->wait(3000))
-        {
-            res.set_content(errorResponse("Timeout setting layout").dump(), "application/json");
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout setting layout"))
             return;
-        }
 
         json data;
         data["status"] = "ok";
-        data["columns"] = track->getProcessor().getState().getLayoutManager().getColumnCount();
+        data["columns"] = *resolvedColumns;
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -336,41 +308,36 @@ json buildPaneBounds(const PaneId& paneId, OscilPluginEditor* editor)
 
 void TestHttpServer::handlePaneLayout(const httplib::Request& req, httplib::Response& res)
 {
-    auto* track = resolveTrack(req);
-    if (!track)
-    {
-        res.set_content(errorResponse("No track available").dump(), "application/json");
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
         return;
-    }
+    const int trackId = *trackIdOpt;
 
     auto data = std::make_shared<json>();
-    auto done = std::make_shared<juce::WaitableEvent>();
-    auto& layoutManager = track->getProcessor().getState().getLayoutManager();
-    juce::Component::SafePointer<OscilPluginEditor> safeEditor(dynamic_cast<OscilPluginEditor*>(track->getEditor()));
+    const auto result = runOnTrackSync(
+        trackId,
+        [data](TestTrack& track) {
+            auto& layoutManager = track.getProcessor().getState().getLayoutManager();
+            auto* editor = dynamic_cast<OscilPluginEditor*>(track.getEditor());
+            (*data)["columns"] = layoutManager.getColumnCount();
+            (*data)["availableArea"] = buildAvailableArea(editor);
 
-    juce::MessageManager::callAsync([data, &layoutManager, safeEditor, done]() {
-        auto* editor = safeEditor.getComponent();
-        (*data)["columns"] = layoutManager.getColumnCount();
-        (*data)["availableArea"] = buildAvailableArea(editor);
+            json panesJson = json::array();
+            for (int i = 0; i < static_cast<int>(layoutManager.getPanes().size()); ++i)
+            {
+                const auto& pane = layoutManager.getPanes()[static_cast<size_t>(i)];
+                panesJson.push_back({{"index", i},
+                                     {"id", pane.getId().id.toStdString()},
+                                     {"name", pane.getName().toStdString()},
+                                     {"columnIndex", pane.getColumnIndex()},
+                                     {"bounds", buildPaneBounds(pane.getId(), editor)}});
+            }
+            (*data)["panes"] = panesJson;
+        },
+        5000);
 
-        json panesJson = json::array();
-        for (int i = 0; i < static_cast<int>(layoutManager.getPanes().size()); ++i)
-        {
-            const auto& pane = layoutManager.getPanes()[static_cast<size_t>(i)];
-            panesJson.push_back({{"index", i},
-                                 {"id", pane.getId().id.toStdString()},
-                                 {"name", pane.getName().toStdString()},
-                                 {"columnIndex", pane.getColumnIndex()},
-                                 {"bounds", buildPaneBounds(pane.getId(), editor)}});
-        }
-        (*data)["panes"] = panesJson;
-        done->signal();
-    });
-    if (!done->wait(5000))
-    {
-        res.set_content(errorResponse("Timeout building pane layout").dump(), "application/json");
+    if (respondIfTrackCallFailed(result, res, "No track available", "Timeout building pane layout"))
         return;
-    }
 
     res.set_content(successResponse(*data).dump(), "application/json");
 }
@@ -379,13 +346,10 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
-
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
         int fromIndex = body.value("fromIndex", -1);
         int toIndex = body.value("toIndex", -1);
@@ -396,32 +360,45 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
             return;
         }
 
-        auto& layoutManager = track->getProcessor().getState().getLayoutManager();
-        auto& panes = layoutManager.getPanes();
+        enum class RangeErr
+        {
+            None,
+            FromOutOfRange,
+            ToOutOfRange
+        };
+        auto rangeErr = std::make_shared<RangeErr>(RangeErr::None);
 
-        auto paneCount = static_cast<int>(panes.size());
-        if (fromIndex >= paneCount)
+        const auto result = runOnTrackSync(
+            trackId,
+            [fromIndex, toIndex, rangeErr](TestTrack& track) {
+                auto& layoutManager = track.getProcessor().getState().getLayoutManager();
+                auto& panes = layoutManager.getPanes();
+                const int paneCount = static_cast<int>(panes.size());
+                if (fromIndex >= paneCount)
+                {
+                    *rangeErr = RangeErr::FromOutOfRange;
+                    return;
+                }
+                if (toIndex >= paneCount)
+                {
+                    *rangeErr = RangeErr::ToOutOfRange;
+                    return;
+                }
+                const auto paneId = panes[static_cast<size_t>(fromIndex)].getId();
+                layoutManager.movePane(paneId, toIndex);
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout moving pane"))
+            return;
+        if (*rangeErr == RangeErr::FromOutOfRange)
         {
             res.set_content(errorResponse("fromIndex out of range").dump(), "application/json");
             return;
         }
-        if (toIndex >= paneCount)
+        if (*rangeErr == RangeErr::ToOutOfRange)
         {
             res.set_content(errorResponse("toIndex out of range").dump(), "application/json");
-            return;
-        }
-
-        auto paneId = panes[static_cast<size_t>(fromIndex)].getId();
-        auto done = std::make_shared<juce::WaitableEvent>();
-        int const trackIndex = track->getTrackIndex();
-        juce::MessageManager::callAsync([this, trackIndex, paneId, toIndex, done]() {
-            if (auto* t = daw_.getTrack(trackIndex))
-                t->getProcessor().getState().getLayoutManager().movePane(paneId, toIndex);
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        if (!done->wait(5000))
-        {
-            res.set_content(errorResponse("Timeout moving pane").dump(), "application/json");
             return;
         }
 
@@ -437,12 +414,14 @@ void TestHttpServer::handlePaneMove(const httplib::Request& req, httplib::Respon
 
 void TestHttpServer::handleStatePanes(const httplib::Request& req, httplib::Response& res)
 {
-    json panes = json::array();
+    const auto trackIdOpt = tryResolveTrackId(req, res);
+    if (!trackIdOpt)
+        return;
+    const int trackId = *trackIdOpt;
+    auto panes = std::make_shared<json>(json::array());
 
-    if (auto* track = resolveTrack(req))
-    {
-        auto& layoutManager = track->getProcessor().getState().getLayoutManager();
-
+    (void) runOnTrackSync(trackId, [panes](TestTrack& track) {
+        auto& layoutManager = track.getProcessor().getState().getLayoutManager();
         for (const auto& pane : layoutManager.getPanes())
         {
             json paneJson;
@@ -451,11 +430,13 @@ void TestHttpServer::handleStatePanes(const httplib::Request& req, httplib::Resp
             paneJson["column"] = pane.getColumnIndex();
             paneJson["order"] = pane.getOrderIndex();
             paneJson["collapsed"] = pane.isCollapsed();
-            panes.push_back(paneJson);
+            panes->push_back(paneJson);
         }
-    }
+    });
 
-    res.set_content(successResponse(panes).dump(), "application/json");
+    // NotFound or Timeout fall through to an empty array, preserving the
+    // historical "best-effort" semantic this endpoint offered.
+    res.set_content(successResponse(*panes).dump(), "application/json");
 }
 
 void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Response& res)

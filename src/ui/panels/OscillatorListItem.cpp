@@ -172,21 +172,10 @@ void OscillatorListItemComponent::updateVisibility()
     deleteButton_->setAlpha(buttonAlpha);
     settingsButton_->setAlpha(buttonAlpha);
 
-    // Tile treatment: hidden state uses textMuted directly; the tile paint applies a 0.6
-    // global opacity so no additional alpha manipulation is needed here.
-    const auto& theme = getTheme();
-
-    if (nameLabel_)
-    {
-        auto const nameColour = !isVisible_ ? theme.textMuted : (selected_ ? theme.textHighlight : theme.textPrimary);
-        nameLabel_->setTextColour(nameColour);
-    }
-
-    if (trackLabel_)
-    {
-        auto const trackColour = !isVisible_ ? theme.textMuted : theme.textSecondary;
-        trackLabel_->setColour(juce::Label::textColourId, trackColour);
-    }
+    // Hidden state uses textMuted directly; final dimming is applied by the
+    // paintOverChildren() overlay in OscillatorListItemPainting.cpp (a black
+    // fill @ alpha 0.4), so no extra text alpha manipulation is needed here.
+    applyLabelColours(getTheme());
 
     // Always update button icon and tooltip based on current state
     visibilityButton_->setIconPath(isVisible_
@@ -261,18 +250,19 @@ void OscillatorListItemComponent::resized()
 
 bool OscillatorListItemComponent::isInDragZone(const juce::Point<int>& pos) const { return pos.x < DRAG_HANDLE_WIDTH; }
 
-void OscillatorListItemComponent::onThemeChanged(const ColorTheme& newTheme)
+void OscillatorListItemComponent::onThemeChanged(const ColorTheme& newTheme) { applyLabelColours(newTheme); }
+
+void OscillatorListItemComponent::applyLabelColours(const ColorTheme& theme)
 {
     if (nameLabel_)
     {
-        auto const nameColour =
-            !isVisible_ ? newTheme.textMuted : (selected_ ? newTheme.textHighlight : newTheme.textPrimary);
+        auto const nameColour = !isVisible_ ? theme.textMuted : (selected_ ? theme.textHighlight : theme.textPrimary);
         nameLabel_->setTextColour(nameColour);
     }
 
     if (trackLabel_)
     {
-        auto const trackColour = !isVisible_ ? newTheme.textMuted : newTheme.textSecondary;
+        auto const trackColour = !isVisible_ ? theme.textMuted : theme.textSecondary;
         trackLabel_->setColour(juce::Label::textColourId, trackColour);
     }
 }

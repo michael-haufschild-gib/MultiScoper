@@ -21,37 +21,47 @@ void TestHttpServer::handleStateDeleteOscillator(const httplib::Request& req, ht
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
-
+        const int trackId = *trackIdOpt;
         auto body = json::parse(req.body);
+        // Accept either "id" or "oscillatorId". Historical callers used
+        // "id"; newer scale tests (test_sixteen_instances) use
+        // "oscillatorId" to mirror the /state/oscillator/add contract.
         std::string idStr = body.value("id", "");
         if (idStr.empty())
+            idStr = body.value("oscillatorId", "");
+        if (idStr.empty())
         {
-            res.set_content(errorResponse("Oscillator 'id' is required").dump(), "application/json");
+            res.set_content(errorResponse("Oscillator 'id' or 'oscillatorId' is required").dump(), "application/json");
             return;
         }
 
-        auto& state = track->getProcessor().getState();
-        OscillatorId oscId{juce::String(idStr)};
+        auto oscId = std::make_shared<OscillatorId>(OscillatorId{juce::String(idStr)});
+        auto oscMissing = std::make_shared<bool>(false);
 
-        if (!state.getOscillator(oscId).has_value())
+        juce::Logger::writeToLog("[Harness] Deleting oscillator: " + juce::String(idStr));
+        const auto result = runOnTrackSync(
+            trackId,
+            [oscId, oscMissing](TestTrack& track) {
+                auto& state = track.getProcessor().getState();
+                if (!state.getOscillator(*oscId).has_value())
+                {
+                    *oscMissing = true;
+                    return;
+                }
+                state.removeOscillator(*oscId);
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout deleting oscillator"))
+            return;
+        if (*oscMissing)
         {
             res.set_content(errorResponse("Oscillator not found: " + idStr).dump(), "application/json");
             return;
         }
-
-        juce::Logger::writeToLog("[Harness] Deleting oscillator: " + juce::String(idStr));
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([oscId, track, &done]() {
-            track->getProcessor().getState().removeOscillator(oscId);
-            juce::MessageManager::callAsync([&done]() { done.signal(); });
-        });
-        done.wait(5000);
 
         json data;
         data["id"] = idStr;
@@ -111,53 +121,59 @@ void TestHttpServer::handleWaveformState(const httplib::Request& req, httplib::R
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const auto trackIdOpt = tryResolveTrackId(req, res);
+        if (!trackIdOpt)
             return;
-        }
+        const int trackId = *trackIdOpt;
+        auto data = std::make_shared<json>();
 
-        auto& processor = track->getProcessor();
-        auto& state = processor.getState();
-        auto& timingEngine = processor.getTimingEngine();
-        double sampleRate = processor.getSampleRate();
-        int displaySamples = timingEngine.getDisplaySampleCount(sampleRate);
+        const auto result = runOnTrackSync(
+            trackId,
+            [data](TestTrack& track) {
+                auto& processor = track.getProcessor();
+                auto& state = processor.getState();
+                auto& timingEngine = processor.getTimingEngine();
+                double sampleRate = processor.getSampleRate();
+                int displaySamples = timingEngine.getDisplaySampleCount(sampleRate);
 
-        auto oscillators = state.getOscillators();
-        auto panes = state.getLayoutManager().getPanes();
+                auto oscillators = state.getOscillators();
+                auto panes = state.getLayoutManager().getPanes();
 
-        json panesJson = json::array();
-        for (const auto& pane : panes)
-        {
-            json paneJson;
-            paneJson["id"] = pane.getId().id.toStdString();
-            paneJson["name"] = pane.getName().toStdString();
+                json panesJson = json::array();
+                for (const auto& pane : panes)
+                {
+                    json paneJson;
+                    paneJson["id"] = pane.getId().id.toStdString();
+                    paneJson["name"] = pane.getName().toStdString();
 
-            json waveformsJson = json::array();
-            int oscCount = 0;
+                    json waveformsJson = json::array();
+                    int oscCount = 0;
 
-            for (const auto& osc : oscillators)
-            {
-                if (osc.getPaneId() != pane.getId())
-                    continue;
-                oscCount++;
-                waveformsJson.push_back(buildWaveformJson(osc, processor, displaySamples));
-            }
+                    for (const auto& osc : oscillators)
+                    {
+                        if (osc.getPaneId() != pane.getId())
+                            continue;
+                        oscCount++;
+                        waveformsJson.push_back(buildWaveformJson(osc, processor, displaySamples));
+                    }
 
-            paneJson["oscillatorCount"] = oscCount;
-            paneJson["waveforms"] = waveformsJson;
-            panesJson.push_back(paneJson);
-        }
+                    paneJson["oscillatorCount"] = oscCount;
+                    paneJson["waveforms"] = waveformsJson;
+                    panesJson.push_back(paneJson);
+                }
 
-        json data;
-        data["panes"] = panesJson;
-        data["displaySamples"] = displaySamples;
-        data["sampleRate"] = sampleRate;
-        data["oscillatorCount"] = static_cast<int>(oscillators.size());
-        data["paneCount"] = static_cast<int>(panes.size());
+                (*data)["panes"] = panesJson;
+                (*data)["displaySamples"] = displaySamples;
+                (*data)["sampleRate"] = sampleRate;
+                (*data)["oscillatorCount"] = static_cast<int>(oscillators.size());
+                (*data)["paneCount"] = static_cast<int>(panes.size());
+            },
+            5000);
 
-        res.set_content(successResponse(data).dump(), "application/json");
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout reading waveform state"))
+            return;
+
+        res.set_content(successResponse(*data).dump(), "application/json");
     }
     catch (const std::exception& e)
     {

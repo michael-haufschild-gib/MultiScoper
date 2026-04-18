@@ -47,6 +47,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_instance_registry_dispatcher.cpp
     tests/test_plugin_processor_lifecycle.cpp
     tests/test_plugin_processor_state.cpp
+    tests/test_plugin_processor_state_race.cpp
     tests/test_plugin_processor_audio.cpp
 
     # Capture buffer tests - split for better isolation
@@ -277,9 +278,18 @@ if(OSCIL_ENABLE_RTSAN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_C
 endif()
 
 include(GoogleTest)
+# Per-test TIMEOUT is generous by design. CTestCostData shows every test
+# normally finishes well under 1s, but ctest re-invokes the OscilTests
+# binary 1900+ times per suite run. On macOS that occasionally produces
+# multi-second startup stalls (Spotlight re-index / Gatekeeper verify /
+# stdout pipe buffering under pressure). A tight 30s ceiling was turning
+# those transient stalls into flaky CI failures on tests that complete in
+# milliseconds when run individually. 60s still surfaces real hangs while
+# tolerating the macOS cold-launch tax. Do not raise this further without
+# data — the goal is flake tolerance, not hiding slow tests.
 gtest_discover_tests(OscilTests
     DISCOVERY_TIMEOUT 30
-    PROPERTIES TIMEOUT 30
+    PROPERTIES TIMEOUT 60
 )
 
 # ============================================================================
@@ -353,10 +363,19 @@ if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
     set_tests_properties(ForbiddenPatternsLint PROPERTIES LABELS "lint")
 endif()
 
+if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+    add_test(NAME HarnessMtCaptureLint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths test_harness/src test_harness/include
+    )
+    set_tests_properties(HarnessMtCaptureLint PROPERTIES LABELS "lint")
+endif()
+
 # Unit tests for the lint scripts themselves. These seed a synthetic source
 # tree and assert the scripts' exit codes and reports — so regressions of
 # the lint SCRIPTS are caught even if the real repo happens to stay clean.
-if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT OR OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
     add_test(NAME LintScriptsUnitTests
         COMMAND ${Python3_EXECUTABLE} -m unittest discover
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/lint

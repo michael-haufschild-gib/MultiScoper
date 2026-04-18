@@ -28,10 +28,22 @@ class TestTrack : public juce::AudioPlayHead
 {
 public:
     /**
-     * Create a test track with given name
+     * Create a test track with given name.
+     *
+     * If `overrideRegistry` is non-null, the plugin processor is constructed
+     * with that registry injected instead of the PluginFactory singleton's
+     * shared one. Used to simulate Logic AU sandbox isolation, where each
+     * plugin lives in its own process and cannot see other instances'
+     * sources. Ownership of the registry remains with the caller (TestDAW).
      */
-    TestTrack(int trackIndex, const juce::String& name, TestTransport& transport);
+    TestTrack(int trackIndex, const juce::String& name, TestTransport& transport,
+              IInstanceRegistry* overrideRegistry = nullptr);
     ~TestTrack() override;
+
+    /// Returns the `IInstanceRegistry` this track's processor was wired up
+    /// with. Matches `PluginFactory::getInstance().getInstanceRegistry()`
+    /// under normal operation, or a per-track registry under isolation mode.
+    IInstanceRegistry& getInstanceRegistry() const;
 
     /**
      * Prepare for playback
@@ -101,6 +113,32 @@ public:
     bool isEditorVisible() const;
 
     /**
+     * Detach the editor component from its window without destroying it.
+     *
+     * Unlike hideEditor(), which clears the content component and resets
+     * editor_, this call only removes the editor from the window — both
+     * editor_ and editorWindow_ remain alive.  This reproduces the
+     * parentHierarchyChanged(null-parent) transition that real DAWs
+     * (Logic, Cubase) trigger when the user collapses a plugin window
+     * without destroying the plugin.
+     *
+     * Returns true if an editor was previously attached and is now detached.
+     */
+    bool detachEditor();
+
+    /**
+     * Reattach a previously-detached editor to its window.
+     *
+     * Pairs with detachEditor(): puts the existing editor_ back into the
+     * existing editorWindow_ (or returns false if either is missing).  This
+     * exercises the parentHierarchyChanged(non-null-parent) path without
+     * going through createEditor() again.
+     *
+     * Returns true if an editor was reattached.
+     */
+    bool reattachEditor();
+
+    /**
      * Get the editor component (may be null)
      */
     juce::AudioProcessorEditor* getEditor() { return editor_.get(); }
@@ -109,6 +147,18 @@ public:
      * Get the editor window (may be null)
      */
     juce::DocumentWindow* getEditorWindow() { return editorWindow_.get(); }
+
+    /**
+     * Apply a new channel layout by reconfiguring the processor's bus layout.
+     *
+     * ``layout`` must be "mono" or "stereo".  If the processor rejects the
+     * layout (isBusesLayoutSupported returns false), the audio buffer keeps
+     * its existing channel count and this method returns false — matching the
+     * contract a real host observes when setBusesLayout refuses a request.
+     *
+     * Returns true on success, false on rejection / invalid argument.
+     */
+    bool setChannelLayout(const juce::String& layout);
 
     // AudioPlayHead implementation
     juce::Optional<juce::AudioPlayHead::PositionInfo> getPosition() const override;
@@ -121,6 +171,9 @@ private:
     TestTransport& transport_;
 
     std::unique_ptr<OscilPluginProcessor> processor_;
+    // Non-owning pointer to the registry the processor was constructed with.
+    // Null if we used the factory default (which is the common path).
+    IInstanceRegistry* overrideRegistry_{nullptr};
     std::unique_ptr<juce::AudioProcessorEditor> editor_;
     std::unique_ptr<juce::DocumentWindow> editorWindow_;
 

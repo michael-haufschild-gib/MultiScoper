@@ -7,6 +7,7 @@
 #include "TestDAW.h"
 
 #include <algorithm>
+#include <cmath>
 #include <thread>
 
 namespace oscil::test
@@ -179,8 +180,28 @@ int TestDAW::addTrack(const juce::String& name)
     if (index < 0)
         index = static_cast<int>(tracks_.size());
 
+    // Keep perTrackRegistries_ sized in lockstep with tracks_ so slot
+    // indices line up for add/remove/reuse. Null means "use factory".
+    if (static_cast<size_t>(index) >= perTrackRegistries_.size())
+        perTrackRegistries_.resize(static_cast<size_t>(index) + 1);
+
+    IInstanceRegistry* overrideRegistry = nullptr;
+    if (isolatedRegistries_.load(std::memory_order_acquire))
+    {
+        // Isolation mode: create a fresh registry for this track.  Replaces
+        // any stale entry left by a previous remove on the same slot.
+        perTrackRegistries_[static_cast<size_t>(index)] = std::make_unique<InstanceRegistry>();
+        overrideRegistry = perTrackRegistries_[static_cast<size_t>(index)].get();
+    }
+    else
+    {
+        // Ensure no stale isolation registry from a prior cycle lingers
+        // when isolation has been turned off mid-session.
+        perTrackRegistries_[static_cast<size_t>(index)].reset();
+    }
+
     juce::String trackName = name.isEmpty() ? ("Track " + juce::String(index + 1)) : name;
-    auto track = std::make_unique<TestTrack>(index, trackName, transport_);
+    auto track = std::make_unique<TestTrack>(index, trackName, transport_, overrideRegistry);
     track->prepare(sampleRate_, bufferSize_);
     track->getAudioGenerator().setFrequency(440.0f);
     track->getAudioGenerator().setWaveform(Waveform::Sine);
@@ -204,6 +225,12 @@ bool TestDAW::removeTrack(int trackIndex)
 
     tracks_[static_cast<size_t>(trackIndex)]->hideEditor();
     tracks_[static_cast<size_t>(trackIndex)].reset();
+    // Destroy the paired per-track registry (if any) AFTER the track —
+    // ~TestTrack runs the processor's ~OscilPluginProcessor which calls
+    // unregisterInstance on this registry. The registry must still be alive
+    // during that call.
+    if (static_cast<size_t>(trackIndex) < perTrackRegistries_.size())
+        perTrackRegistries_[static_cast<size_t>(trackIndex)].reset();
     return true;
 }
 
@@ -217,6 +244,151 @@ void TestDAW::runSingleBlockSynchronously(TestTrack& track)
 }
 
 int TestDAW::getPoolThreadCount() const { return audioThreadPool_ ? audioThreadPool_->getNumThreads() : 0; }
+
+namespace
+{
+// Blocking job used to dispatch prepare() onto a pool thread for the
+// audio-thread-prepare simulation.  juce::ThreadPoolJob::runJob is the
+// canonical hook to guarantee the callable executes on a pool worker; we
+// signal completion via a WaitableEvent so the caller can bound the wait.
+class PreparePoolJob final : public juce::ThreadPoolJob
+{
+public:
+    PreparePoolJob(std::function<void()> fn, juce::WaitableEvent& done)
+        : juce::ThreadPoolJob("OscilTestDAW::prepare")
+        , fn_(std::move(fn))
+        , done_(done)
+    {
+    }
+
+    JobStatus runJob() override
+    {
+        if (fn_)
+            fn_();
+        done_.signal();
+        return jobHasFinished;
+    }
+
+private:
+    std::function<void()> fn_;
+    juce::WaitableEvent& done_;
+};
+} // namespace
+
+bool TestDAW::setSampleRate(double newRate)
+{
+    if (!std::isfinite(newRate) || newRate <= 0.0)
+        return false;
+
+    // Serialize with the audio dispatcher.  prepareToPlay mutates per-track
+    // state that the pool reads — the dispatch mutex is the only place in
+    // the harness that provides that ordering guarantee.
+    std::lock_guard<std::mutex> lock(dispatchMutex_);
+
+    sampleRate_ = newRate;
+    transport_.prepare(newRate);
+
+    auto runPrepare = [this, newRate]() {
+        for (auto& track : tracks_)
+        {
+            if (track != nullptr)
+                track->prepare(newRate, bufferSize_);
+        }
+    };
+
+    if (audioThreadPrepareMode_.load() && audioThreadPool_ != nullptr)
+    {
+        juce::WaitableEvent done;
+        // ThreadPool takes ownership of raw pointer (deleteJob=true).
+        audioThreadPool_->addJob(new PreparePoolJob(std::move(runPrepare), done), true);
+        done.wait(5000);
+    }
+    else
+    {
+        runPrepare();
+    }
+    return true;
+}
+
+bool TestDAW::setBufferSize(int newSize)
+{
+    if (newSize < 16 || newSize > 8192)
+        return false;
+
+    std::lock_guard<std::mutex> lock(dispatchMutex_);
+
+    bufferSize_ = newSize;
+
+    auto runPrepare = [this, newSize]() {
+        for (auto& track : tracks_)
+        {
+            if (track != nullptr)
+                track->prepare(sampleRate_, newSize);
+        }
+    };
+
+    if (audioThreadPrepareMode_.load() && audioThreadPool_ != nullptr)
+    {
+        juce::WaitableEvent done;
+        audioThreadPool_->addJob(new PreparePoolJob(std::move(runPrepare), done), true);
+        done.wait(5000);
+    }
+    else
+    {
+        runPrepare();
+    }
+    return true;
+}
+
+bool TestDAW::setChannelLayout(int trackIndex, const juce::String& layout)
+{
+    std::lock_guard<std::mutex> lock(dispatchMutex_);
+
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks_.size()))
+        return false;
+
+    auto& track = tracks_[static_cast<size_t>(trackIndex)];
+    if (track == nullptr)
+        return false;
+
+    return track->setChannelLayout(layout);
+}
+
+int TestDAW::scanCycle(const juce::String& trackName, int cycles)
+{
+    if (cycles <= 0)
+        return 0;
+
+    int successful = 0;
+    for (int i = 0; i < cycles; ++i)
+    {
+        const int index = addTrack(trackName);
+        if (index < 0)
+            continue;
+
+        // Scanner-style probe: read the track's metadata without ever
+        // processing a block.  These reads go through the same public API
+        // a DAW scanner uses (getName + bus layout) so any ordering bug
+        // between prepareToPlay and getSourceId still surfaces.  The
+        // dispatch lock keeps the pool from racing us on the track slot;
+        // asm-volatile-free reads prevent the optimizer from elidng them.
+        {
+            std::lock_guard<std::mutex> lock(dispatchMutex_);
+            if (auto* t = (index >= 0 && index < static_cast<int>(tracks_.size()))
+                              ? tracks_[static_cast<size_t>(index)].get()
+                              : nullptr)
+            {
+                auto name = t->getName();
+                auto channels = t->getProcessor().getTotalNumInputChannels();
+                juce::ignoreUnused(name, channels);
+            }
+        }
+
+        if (removeTrack(index))
+            ++successful;
+    }
+    return successful;
+}
 
 void TestDAW::hiResTimerCallback()
 {

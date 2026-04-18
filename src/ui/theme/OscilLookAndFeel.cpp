@@ -67,9 +67,12 @@ void OscilLookAndFeel::applyTheme(const ColorTheme& theme)
     setColour(juce::AlertWindow::outlineColourId, theme.controlBorder);
 
     // ---- TextButton (raw juce::TextButton inside AlertWindow & elsewhere) ----
+    // textColourOnId paints on top of buttonOnColourId (the saturated accent
+    // fill). textHighlight is BLACK in light themes, so it would put black
+    // text on a dark accent — pick a contrast-safe colour instead.
     setColour(juce::TextButton::buttonColourId, theme.controlBackground);
     setColour(juce::TextButton::buttonOnColourId, accent);
-    setColour(juce::TextButton::textColourOnId, theme.textHighlight);
+    setColour(juce::TextButton::textColourOnId, ColorTheme::pickContrastingText(accent));
     setColour(juce::TextButton::textColourOffId, theme.textPrimary);
 
     // ---- DocumentWindow / ResizableWindow (plugin host frames, rare) ----

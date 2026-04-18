@@ -22,6 +22,11 @@ void TestElementRegistry::registerElement(const juce::String& testId, juce::Comp
     std::scoped_lock lock(mutex_);
     auto& entries = elements_[testId];
 
+    // Prune stale SafePointers first so each open/close cycle does not
+    // accumulate null entries under the same testId. Without this, the
+    // 16-instance editor stress test steadily grows the registry.
+    pruneStaleEntries(entries);
+
     // Avoid duplicate registrations of the same component
     for (auto& sp : entries)
     {

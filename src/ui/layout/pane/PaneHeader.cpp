@@ -5,11 +5,24 @@
 #include "ui/layout/pane/PaneHeader.h"
 
 #include "ui/components/ListItemIcons.h"
+#include "ui/theme/ColorTheme.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/theme/Typography.h"
 
 namespace oscil
 {
+
+namespace
+{
+// Single source of truth for the header-tint alpha. The same factor is used
+// by PaneHeader::paint() (background fill) and by paintOscillatorBadge() when
+// computing a contrast-safe text colour over that same tinted background —
+// if the two drifted apart the processing-mode badge would regress on
+// borderline themes.
+constexpr float kHeaderTintAlpha = 0.08f;
+} // namespace
+
+// pill text colour comes from ColorTheme::pickContrastingText.
 
 PaneHeader::PaneHeader(IThemeService& themeService) : themeService_(themeService) { setupComponents(); }
 
@@ -73,10 +86,18 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     g.drawText("Processing:", bounds.removeFromLeft(70), juce::Justification::centredLeft);
 
     auto badgeBounds = bounds.removeFromLeft(BADGE_WIDTH).toFloat();
-    g.setColour(modeColor.withAlpha(0.2f));
+    constexpr float kBgAlpha = 0.2f;
+    g.setColour(modeColor.withAlpha(kBgAlpha));
     g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
 
-    g.setColour(modeColor);
+    // Theme-aware text: composite the badge tint over the *actual* header
+    // background (tinted by textPrimary @ 0.08 in paint()), not the raw
+    // backgroundPane. Using backgroundPane picks the wrong foreground on
+    // borderline themes where the header tint flips local contrast.
+    auto const headerBg =
+        ColorTheme::compositeOnBackground(theme.textPrimary.withAlpha(kHeaderTintAlpha), theme.backgroundPane);
+    auto const badgeBg = ColorTheme::compositeOnBackground(modeColor.withAlpha(kBgAlpha), headerBg);
+    g.setColour(ColorTheme::pickContrastingText(badgeBg));
     g.setFont(Typography::smallBold());
     g.drawText(processingModeToString(mode), badgeBounds.toNearestInt(), juce::Justification::centred);
 
@@ -96,7 +117,7 @@ void PaneHeader::paint(juce::Graphics& g)
     auto bounds = getLocalBounds();
 
     // Tinted header background (bgHover equivalent)
-    g.setColour(theme.textPrimary.withAlpha(0.08f));
+    g.setColour(theme.textPrimary.withAlpha(kHeaderTintAlpha));
     g.fillRect(bounds);
 
     auto handleBounds = bounds.removeFromLeft(DRAG_HANDLE_WIDTH);

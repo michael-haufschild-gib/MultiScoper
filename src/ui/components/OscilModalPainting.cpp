@@ -89,14 +89,13 @@ void OscilModal::paintTitleBar(juce::Graphics& g, juce::Rectangle<int> bounds)
             // Close button hover — bgHover (multiply animation alpha into the
             // designed tint; see titlebar note above).
             g.setColour(glass.bgHover.withMultipliedAlpha(alpha * hoverAlpha));
-            g.fillRoundedRectangle(closeBounds, ComponentLayout::RADIUS_SM);
+            g.fillRect(closeBounds);
         }
 
-        // Focus ring on close button when hovered
-        if (hoverAlpha > 0.5f)
-        {
-            SurfacePainter::paintFocusRing(g, closeBounds, ComponentLayout::RADIUS_SM, glass.accent, 1.5f, 2.0f);
-        }
+        // No focus ring on hover: the ring uses an outward offset and was
+        // visible as a halo behind the button. Keyboard focus state isn't
+        // tracked separately for the close icon (it isn't a real Component),
+        // so a focus indicator here would either be wrong or redundant.
 
         auto iconColor = getTheme().textSecondary.interpolatedWith(getTheme().textPrimary, hoverAlpha);
         g.setColour(iconColor.withAlpha(alpha));

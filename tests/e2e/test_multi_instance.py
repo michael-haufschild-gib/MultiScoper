@@ -1085,7 +1085,10 @@ class TestThreeInstanceInteraction:
         # addTrack reuses freed slots, keeping indices stable for later tests.
         for tid in range(3):
             if client.get_track_info(tid) is None:
-                client.add_track()
+                restored = client.add_track()
+                assert restored is not None, (
+                    f"failed to restore missing track {tid} in teardown"
+                )
                 client.wait_until(
                     lambda t=tid: client.get_track_info(t) is not None,
                     timeout_s=5.0,

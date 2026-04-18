@@ -248,8 +248,10 @@ void OscilCheckbox::paintCheckMark(juce::Graphics& g, const juce::Rectangle<floa
     if (progress < 0.01f)
         return;
 
-    // White checkmark on accent background
-    g.setColour(juce::Colours::white.withAlpha(opacity * progress));
+    // Checkmark on accent fill: pick contrast-safe colour. White over a
+    // bright cyan accent (Dark Pro) fails WCAG AA; this falls back to
+    // near-black for bright accents and stays white for dark accents.
+    g.setColour(ColorTheme::pickContrastingText(getSurface().accent).withAlpha(opacity * progress));
 
     // Draw animated checkmark
     float const cx = bounds.getCentreX();
@@ -271,7 +273,8 @@ void OscilCheckbox::paintIndeterminate(juce::Graphics& g, const juce::Rectangle<
 {
     float const opacity = enabled_ ? 1.0f : ComponentLayout::DISABLED_OPACITY;
 
-    g.setColour(juce::Colours::white.withAlpha(opacity));
+    // See paintCheckMark: contrast-safe colour against the accent fill.
+    g.setColour(ColorTheme::pickContrastingText(getSurface().accent).withAlpha(opacity));
 
     float const lineWidth = bounds.getWidth() * 0.5f;
     float const lineHeight = 2.0f;

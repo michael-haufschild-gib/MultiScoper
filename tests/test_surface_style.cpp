@@ -174,29 +174,32 @@ TEST_F(SurfaceStyleTest, BorderAlphaOrderingSubtleLessThanDefaultLessThanStrong)
 }
 
 // =============================================================================
-// Hover / active: neutral white overlay that reads the same on any hue
-// (previously: textPrimary-tinted overlay)
+// Hover / active: textPrimary-tinted overlay so light themes get a darker
+// overlay and dark themes get a lighter one (a hardcoded white tint is
+// invisible on light surfaces).
 // =============================================================================
 
-TEST_F(SurfaceStyleTest, BgHoverIsWhiteAtLowAlpha)
+TEST_F(SurfaceStyleTest, BgHoverDerivedFromTextPrimaryAtLowAlpha)
 {
     auto theme = makeTestTheme();
     SurfaceStyle surface;
     surface.computeFrom(theme);
 
-    EXPECT_EQ(surface.bgHover.getRed(), 255);
-    EXPECT_EQ(surface.bgHover.getGreen(), 255);
-    EXPECT_EQ(surface.bgHover.getBlue(), 255);
+    EXPECT_EQ(surface.bgHover.getRed(), theme.textPrimary.getRed());
+    EXPECT_EQ(surface.bgHover.getGreen(), theme.textPrimary.getGreen());
+    EXPECT_EQ(surface.bgHover.getBlue(), theme.textPrimary.getBlue());
     EXPECT_NEAR(surface.bgHover.getFloatAlpha(), 0.06f, 0.01f);
 }
 
-TEST_F(SurfaceStyleTest, BgActiveIsWhiteAtHigherAlpha)
+TEST_F(SurfaceStyleTest, BgActiveDerivedFromTextPrimaryAtHigherAlpha)
 {
     auto theme = makeTestTheme();
     SurfaceStyle surface;
     surface.computeFrom(theme);
 
-    EXPECT_EQ(surface.bgActive.getRed(), 255);
+    EXPECT_EQ(surface.bgActive.getRed(), theme.textPrimary.getRed());
+    EXPECT_EQ(surface.bgActive.getGreen(), theme.textPrimary.getGreen());
+    EXPECT_EQ(surface.bgActive.getBlue(), theme.textPrimary.getBlue());
     EXPECT_NEAR(surface.bgActive.getFloatAlpha(), 0.10f, 0.01f);
 }
 

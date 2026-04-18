@@ -18,9 +18,9 @@ void applyHoldButtonVisuals(OscilButton& button, IThemeService& themeService, bo
 {
     if (toggled)
     {
-        auto glass = SurfaceStyle::fromTheme(themeService.getCurrentTheme());
+        auto surface = SurfaceStyle::fromTheme(themeService.getCurrentTheme());
         button.setIconPath(ListItemIcons::createPlayIcon(kHoldIconSize));
-        button.setBorder(glass.accent, 1.0f);
+        button.setBorder(surface.accent, 1.0f);
     }
     else
     {

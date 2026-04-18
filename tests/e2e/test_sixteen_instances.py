@@ -25,6 +25,7 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+import requests
 
 from oscil_test_utils import OscilTestClient, settle
 from perf_monitor import (
@@ -67,17 +68,26 @@ def sixteen_instances(client: OscilTestClient):
     for tid in range(TARGET_INSTANCES):
         client.open_editor(track_id=tid)
 
-    # Wait until every instance has registered its source with the registry.
-    def _all_sources_registered() -> bool:
-        return len(client.get_sources()) >= TARGET_INSTANCES
+    # Wait until every *target* track has registered its own sourceId.
+    # Checking only the aggregate registry size is too weak: a stale source
+    # left behind by a previous test, plus 15 of the 16 tracks having
+    # registered, would satisfy the count check while `source_ids[tid]`
+    # below comes back empty for the lagging track.
+    track_ids = list(range(TARGET_INSTANCES))
+
+    def _all_tracks_have_source() -> bool:
+        for tid in track_ids:
+            info = client.get_track_info(tid)
+            if info is None or not info.get("sourceId"):
+                return False
+        return True
 
     client.wait_until(
-        _all_sources_registered,
+        _all_tracks_have_source,
         timeout_s=15.0,
-        desc=f"all {TARGET_INSTANCES} instances to register sources",
+        desc=f"all {TARGET_INSTANCES} target tracks to publish a sourceId",
     )
 
-    track_ids = list(range(TARGET_INSTANCES))
     source_ids = {}
     for tid in track_ids:
         info = client.get_track_info(tid)
@@ -88,22 +98,36 @@ def sixteen_instances(client: OscilTestClient):
 
     # Teardown ------------------------------------------------------
     client.transport_stop()
+    cleanup_errors: list[str] = []
     for tid in range(TARGET_INSTANCES):
         try:
             client.reset_track_state(tid)
-        except Exception:
-            pass
+        except (requests.exceptions.RequestException, RuntimeError) as err:
+            cleanup_errors.append(f"reset_track_state({tid}) failed: {err}")
     for tid in range(TARGET_INSTANCES):
         try:
             client.close_editor(track_id=tid)
-        except Exception:
-            pass
-    # Remove every dynamic track (index >= BASELINE_INSTANCES).
-    tracks = client.get_tracks()
-    for t in tracks:
-        idx = int(t.get("index", 0))
-        if idx >= BASELINE_INSTANCES:
-            client.remove_track(idx)
+        except (requests.exceptions.RequestException, RuntimeError) as err:
+            cleanup_errors.append(f"close_editor({tid}) failed: {err}")
+    if cleanup_errors:
+        # Surface — but don't fail — teardown noise so leaked state is
+        # attributable to the specific track that misbehaved.
+        print(f"[sixteen_instances teardown] {len(cleanup_errors)} cleanup error(s): "
+              + "; ".join(cleanup_errors))
+    # Remove every dynamic track (index >= BASELINE_INSTANCES). Walk the
+    # indices in descending order: if `remove_track()` compacts indices,
+    # ascending iteration over a stale snapshot would shift later tracks
+    # into already-processed slots and leak them across tests.
+    dynamic_indices = sorted(
+        (
+            int(t["index"])
+            for t in client.get_tracks()
+            if int(t.get("index", 0)) >= BASELINE_INSTANCES
+        ),
+        reverse=True,
+    )
+    for idx in dynamic_indices:
+        client.remove_track(idx)
     # Ensure the base 3 exist for the next test that uses multi_editor etc.
     for tid in range(BASELINE_INSTANCES):
         if client.get_track_info(tid) is None:
@@ -116,7 +140,7 @@ def sixteen_instances(client: OscilTestClient):
 class TestSixteenInstanceDiscovery:
     def test_exactly_sixteen_instances_registered(self, sixteen_instances):
         """With 16 plugin instances, the registry reports 16 sources, each unique."""
-        client, track_ids, source_ids = sixteen_instances
+        client, _track_ids, _source_ids = sixteen_instances
         sources = client.get_sources()
         assert len(sources) == TARGET_INSTANCES, (
             f"Expected exactly {TARGET_INSTANCES} sources, got {len(sources)}"
@@ -128,7 +152,7 @@ class TestSixteenInstanceDiscovery:
 
     def test_every_instance_has_nonempty_source_id(self, sixteen_instances):
         """Every one of the 16 tracks exposes a non-empty sourceId."""
-        client, track_ids, source_ids = sixteen_instances
+        client, _track_ids, source_ids = sixteen_instances
         missing = [tid for tid, sid in source_ids.items() if not sid]
         assert not missing, f"Instances missing sourceId: {missing}"
 
@@ -146,10 +170,8 @@ class TestSixteenInstanceDiscovery:
         or the pool is disabled, this test catches it.
         """
         client, _, _ = sixteen_instances
-        import requests
-        base = "http://localhost:8765"
 
-        probe1 = requests.get(f"{base}/health", timeout=2.0).json()["data"]
+        probe1 = client.health_check()["data"]
         assert probe1["audioPoolThreads"] >= 2, (
             f"audio pool should have >= 2 worker threads for multi-core modeling; "
             f"got {probe1['audioPoolThreads']}"
@@ -160,7 +182,7 @@ class TestSixteenInstanceDiscovery:
         # /health until the counter advances by that much (or timeout trips,
         # which is a real failure — the dispatcher is stalled).
         def _ticks_advanced_by_ten() -> Optional[int]:
-            probe = requests.get(f"{base}/health", timeout=2.0).json()["data"]
+            probe = client.health_check()["data"]
             delta_now = int(probe["audioTicks"]) - ticks_before
             return delta_now if delta_now >= 10 else None
 
@@ -180,7 +202,7 @@ class TestSixteenInstanceDiscovery:
         in the global registry — if one instance's source is invisible to
         another, cross-instance oscillators there would be orphaned.
         """
-        client, track_ids, source_ids = sixteen_instances
+        client, _track_ids, source_ids = sixteen_instances
         sources = client.get_sources()
         visible_ids = {s["id"] for s in sources}
         for tid, sid in source_ids.items():
@@ -350,7 +372,7 @@ class TestSixteenInstanceCrudStress:
         hierarchies, OpenGL contexts, and the test-element registry must
         clean up on close.
         """
-        client, track_ids, source_ids = sixteen_instances
+        client, track_ids, _source_ids = sixteen_instances
 
         # Start from "all open" (the fixture guarantees this) — damp any
         # in-flight editor animations before the measurement window.
@@ -510,15 +532,23 @@ class TestInstanceScalingCost:
         for tid in range(BASELINE_INSTANCES):
             if client.get_track_info(tid) is None:
                 client.add_track()
-        existing = len(client.get_tracks())
-        while existing < TARGET_INSTANCES:
-            client.add_track(f"Scale {existing + 1}")
-            existing += 1
+        # Drive track count from authoritative server state, not an
+        # optimistic local counter — add_track can fail or settle async
+        # and we must not proceed with fewer than TARGET_INSTANCES.
+        existing = client.get_tracks()
+        while len(existing) < TARGET_INSTANCES:
+            result = client.add_track(f"Scale {len(existing) + 1}")
+            assert result is not None, "add_track returned None while scaling up"
+            existing = client.get_tracks()
+        setup_errors: list[str] = []
         for tid in range(TARGET_INSTANCES):
             try:
                 client.close_editor(track_id=tid)
-            except Exception:
-                pass
+            except (requests.exceptions.RequestException, RuntimeError) as err:
+                setup_errors.append(f"close_editor({tid}): {err}")
+        if setup_errors:
+            print(f"[scaling_client setup] {len(setup_errors)} close-editor error(s): "
+                  + "; ".join(setup_errors))
         client.transport_stop()
         client.wait_until(
             lambda: not client.is_playing(), timeout_s=2.0, desc="transport to stop"
@@ -526,30 +556,84 @@ class TestInstanceScalingCost:
         settle(1.0, reason="editor close animations to wind down")
         yield client
         # Teardown: close everything again; remove dynamic tracks.
+        teardown_errors: list[str] = []
         for tid in range(TARGET_INSTANCES):
             try:
                 client.close_editor(track_id=tid)
-            except Exception:
-                pass
-        for t in client.get_tracks():
-            if int(t.get("index", 0)) >= BASELINE_INSTANCES:
-                client.remove_track(int(t["index"]))
+            except (requests.exceptions.RequestException, RuntimeError) as err:
+                teardown_errors.append(f"close_editor({tid}): {err}")
+        if teardown_errors:
+            print(f"[scaling_client teardown] {len(teardown_errors)} error(s): "
+                  + "; ".join(teardown_errors))
+        # Remove dynamic tracks in descending-index order so the harness
+        # index compaction can't shift a later track into an already-
+        # processed slot and leak it.
+        dynamic_indices = sorted(
+            (
+                int(t["index"])
+                for t in client.get_tracks()
+                if int(t.get("index", 0)) >= BASELINE_INSTANCES
+            ),
+            reverse=True,
+        )
+        for idx in dynamic_indices:
+            client.remove_track(idx)
 
     def _measure_idle_cpu_with_n_editors(
         self, client: OscilTestClient, n_open: int, sample_s: float = 3.0
     ) -> float:
         """Open exactly n_open editors, wait for settle, measure CPU."""
         # Open first n, close the rest.
+        close_errors: list[str] = []
         for tid in range(TARGET_INSTANCES):
             if tid < n_open:
                 client.open_editor(track_id=tid)
             else:
                 try:
                     client.close_editor(track_id=tid)
-                except Exception:
-                    pass
-        settle(1.5, reason="editor open/close animations before CPU sampling")
-        with ResourceMonitor(sample_interval_s=0.25) as mon:
+                except (requests.exceptions.RequestException, RuntimeError) as err:
+                    close_errors.append(f"close_editor({tid}): {err}")
+        if close_errors:
+            print(f"[_measure_idle_cpu_with_n_editors n={n_open}] "
+                  f"{len(close_errors)} close error(s): " + "; ".join(close_errors))
+
+        # A blind settle() would let a failed open/close silently bias the
+        # CPU sample. Prove the harness is actually in the requested state
+        # before measuring — mirrors the explicit editor-count wait used in
+        # tests/e2e/_probe_idle_cpu.py.
+        def _exact_editor_count() -> bool:
+            open_count = sum(
+                1
+                for t in client.get_tracks()
+                if bool(t.get("editorVisible", False))
+            )
+            return open_count == n_open
+
+        refresh_tracks = client.get_tracks()
+        if refresh_tracks and all("editorVisible" in t for t in refresh_tracks):
+            try:
+                client.wait_until(
+                    _exact_editor_count,
+                    timeout_s=5.0,
+                    desc=f"exactly {n_open} editors visible before CPU sampling",
+                )
+            except TimeoutError as err:
+                visible = [
+                    int(t["index"])
+                    for t in client.get_tracks()
+                    if bool(t.get("editorVisible", False))
+                ]
+                raise AssertionError(
+                    f"editor-count mismatch before CPU sampling "
+                    f"(expected n_open={n_open}, visible={visible}): {err}"
+                ) from err
+        else:
+            # Harness build without editorVisible reporting: fall back to a
+            # short settle so the test is still runnable on older builds,
+            # but make the degradation visible.
+            settle(1.5, reason=f"editor animations (no editorVisible field; n_open={n_open})")
+
+        with ResourceMonitor(harness_url=client.base_url, sample_interval_s=0.25) as mon:
             mon.sample_for(sample_s)
         print(
             f"[scaling n={n_open:2d}] {mon.report.summary()}  "
@@ -578,13 +662,21 @@ class TestInstanceScalingCost:
             f"cpu(4)={cpu_4:.1f}% cpu(8)={cpu_8:.1f}% cpu(16)={cpu_16:.1f}%"
         )
 
-        # Super-linear guard: doubling editors shouldn't more than 1.6× CPU.
-        if cpu_8 > 5.0:  # only meaningful if there's real signal to measure
-            ratio = cpu_16 / cpu_8
-            assert ratio < 1.6, (
-                f"CPU scales super-linearly: cpu(16)/cpu(8) = {ratio:.2f} "
-                f"(expected < 1.6 for linear-or-better). "
-                f"cpu(1)={cpu_1:.1f}% cpu(8)={cpu_8:.1f}% cpu(16)={cpu_16:.1f}%"
+        # Super-linear guard: doubling editor count shouldn't more than
+        # double the *rendering* cost. Compare deltas against the harness
+        # baseline (cpu_0) to isolate render-only cost; the raw cpu_16 /
+        # cpu_8 ratio is skewed by the constant harness-only term and can
+        # flag perfectly-linear rendering as a regression.
+        render_8 = max(cpu_8 - cpu_0, 0.0)
+        render_16 = max(cpu_16 - cpu_0, 0.0)
+        if render_8 > 5.0:  # only meaningful if render cost is measurable
+            ratio = render_16 / render_8
+            assert ratio <= 2.0, (
+                "Render cost scales worse than linearly: "
+                f"(cpu(16)-cpu(0))/(cpu(8)-cpu(0)) = {ratio:.2f} "
+                f"(expected <= 2.0 for linear-or-better). "
+                f"cpu(0)={cpu_0:.1f}% cpu(1)={cpu_1:.1f}% "
+                f"cpu(8)={cpu_8:.1f}% cpu(16)={cpu_16:.1f}%"
             )
 
     def test_per_instance_idle_cpu_within_budget(self, scaling_client):
@@ -621,10 +713,19 @@ class TestSixteenInstanceTeardown:
         see exactly 3 instances.
         """
         tracks = client.get_tracks()
-        # Base tracks (0,1,2) must exist.  Dynamic slots may be null but
-        # the live track count must be at least BASELINE_INSTANCES.
         live = [t for t in tracks if t.get("index") is not None]
-        assert len(live) >= BASELINE_INSTANCES
+        # Exact restoration: the suite is required to end on the same
+        # 3-track baseline it started on. `>=` silently passed when a
+        # test leaked dynamic tracks, so tighten to `==` to catch that.
+        assert len(live) == BASELINE_INSTANCES, (
+            f"Expected exactly {BASELINE_INSTANCES} live tracks after 16-instance "
+            f"suite teardown, got {len(live)}: indices="
+            f"{sorted(int(t['index']) for t in live)}"
+        )
+        live_indices = {int(t["index"]) for t in live}
         for tid in range(BASELINE_INSTANCES):
+            assert tid in live_indices, (
+                f"Base track {tid} missing after 16-instance suite; live={sorted(live_indices)}"
+            )
             info = client.get_track_info(tid)
             assert info is not None, f"Base track {tid} missing after 16-instance suite"

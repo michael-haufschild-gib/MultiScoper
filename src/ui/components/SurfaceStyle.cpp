@@ -32,10 +32,13 @@ void SurfaceStyle::computeFrom(const ColorTheme& theme)
     bgGlass = theme.backgroundPane;
     bgPanel = theme.backgroundPane;
 
-    // Interaction tints: uniformly light overlay so hover/active look the
-    // same on any hue. Alpha is deliberately modest.
-    bgHover = juce::Colour(0xFFFFFFFF).withAlpha(0.06f);
-    bgActive = juce::Colour(0xFFFFFFFF).withAlpha(0.10f);
+    // Interaction tints: derived from textPrimary so a dark theme gets a
+    // pale overlay (textPrimary ~ white) and a light theme gets a darker
+    // overlay (textPrimary ~ near-black). A hardcoded white tint is
+    // invisible on light surfaces and was the cause of "no hover feedback"
+    // / "hover paints near-black" bugs in mixed-theme paint code.
+    bgHover = theme.textPrimary.withAlpha(0.06f);
+    bgActive = theme.textPrimary.withAlpha(0.10f);
 
     // Hairline-class borders derived from textPrimary so they look crisp
     // on every palette (dark or light).

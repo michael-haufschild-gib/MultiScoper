@@ -68,20 +68,20 @@ private:
     static double getTime();
 };
 
-/// Reusable painting functions for glassmorphism UI
+/// Reusable painting functions for flat-surface UI
 namespace SurfacePainter
 {
-/// Full glass panel: translucent fill + inset light edge + shadow + border
-void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
+/// Full surface panel: fill + border
+void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& surface, float cornerRadius,
                 BorderLevel border = BorderLevel::Subtle);
 
-/// Just the glass background fill (no border or shadow)
-void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass,
+/// Just the surface background fill (no border)
+void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& surface,
                           float cornerRadius);
 
-/// Glass input field (text field / dropdown trigger)
-/// focused: accent border + glow. hovered: brighter border + bg. error: danger border.
-void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
+/// Surface input field (text field / dropdown trigger)
+/// focused: accent border. hovered: brighter border + bg. error: danger border.
+void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& surface, float cornerRadius,
                 bool focused, bool hovered, bool error = false, juce::Colour errorColour = juce::Colour(0xFFEE4444));
 
 /// Multi-layer shadow behind a rounded rect

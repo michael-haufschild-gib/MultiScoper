@@ -14,7 +14,7 @@
 > for back-compat only — new code should treat them as opaque surface
 > tokens. This document is kept as historical context for the 2026-Q1 pass;
 > consult the current source (`include/ui/components/SurfaceStyle.h`,
-> `SurfacePainter.h`) for the authoritative API.
+> `include/ui/components/SurfacePainter.h`) for the authoritative API.
 
 ---
 

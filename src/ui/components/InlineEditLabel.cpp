@@ -250,19 +250,19 @@ void InlineEditLabel::updateEditorStyle()
         return;
 
     const auto& theme = getTheme();
-    const auto& glass = getSurface();
+    const auto& surface = getSurface();
 
     editor_->setFont(font_);
     editor_->setJustification(justification_);
 
     juce::Colour const textCol = useCustomTextColour_ ? textColour_ : theme.textPrimary;
     editor_->setColour(juce::TextEditor::textColourId, textCol);
-    // Glass input background
-    editor_->setColour(juce::TextEditor::backgroundColourId, glass.bgGlass);
-    editor_->setColour(juce::TextEditor::outlineColourId, glass.borderDefault);
+    // Surface input background
+    editor_->setColour(juce::TextEditor::backgroundColourId, surface.bgGlass);
+    editor_->setColour(juce::TextEditor::outlineColourId, surface.borderDefault);
     // Accent border on focus
-    editor_->setColour(juce::TextEditor::focusedOutlineColourId, glass.accent);
-    editor_->setColour(juce::TextEditor::highlightColourId, glass.accentSubtle);
+    editor_->setColour(juce::TextEditor::focusedOutlineColourId, surface.accent);
+    editor_->setColour(juce::TextEditor::highlightColourId, surface.accentSubtle);
     editor_->setColour(juce::TextEditor::highlightedTextColourId, textCol);
 
     editor_->setTextToShowWhenEmpty(placeholder_, theme.textSecondary);
@@ -275,13 +275,13 @@ void InlineEditLabel::paint(juce::Graphics& g)
         return; // Editor and buttons handle rendering
 
     const auto& theme = getTheme();
-    const auto& glass = getSurface();
+    const auto& surface = getSurface();
     auto bounds = getLocalBounds().toFloat();
 
     // Hover indication — subtle bgHover background to signal editability
     if (isHovered_ && !readOnly_)
     {
-        g.setColour(glass.bgHover);
+        g.setColour(surface.bgHover);
         g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
     }
 

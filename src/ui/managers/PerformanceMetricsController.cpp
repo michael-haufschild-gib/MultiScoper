@@ -57,10 +57,10 @@ void PerformanceMetricsController::update()
         frameCount_ = 0;
         lastFrameTime_ = currentTime;
 
-        // Only repaint FPS once it has drifted by at least 2 — users can't
-        // distinguish 58 vs 58.4 fps, and jitter below that costs a repaint
-        // per timer tick across every open editor.
-        if (std::abs(currentFps_ - lastFpsDisplayed_) >= 2.0f)
+        // Repaint FPS when it drifts >= 2 (users can't tell 58 vs 58.4) or
+        // on the first post-reset sample — the -1.0f sentinel alone isn't
+        // enough (abs(0 - -1) = 1 < 2 would keep the stale pre-reset FPS).
+        if (lastFpsDisplayed_ < 0.0f || std::abs(currentFps_ - lastFpsDisplayed_) >= 2.0f)
         {
             statusBar_.setFps(currentFps_);
             lastFpsDisplayed_ = currentFps_;

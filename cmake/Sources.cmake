@@ -179,7 +179,15 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeCoordinator.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/OscilLookAndFeel.cpp
 
-    # Tools (test server)
+)
+
+# Test-server sources — separated so production plugin builds can omit them.
+# These expose an HTTP server from inside the plugin when loaded as
+# Standalone; shipping a release binary that opens port 9876 is a security
+# and supply-chain liability.  The OscilTestHarness target always compiles
+# them in; the main Oscil plugin only does so when OSCIL_ENABLE_TEST_SERVER
+# is ON (default OFF).
+set(OSCIL_TEST_SERVER_SOURCES
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/PluginTestServer.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/LayoutHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/OscillatorHandler.cpp

@@ -65,10 +65,14 @@ void SourceListItem::paint(juce::Graphics& g)
     auto badgeBounds = bounds.removeFromRight(50);
     juce::String const badgeText = channelCount_ == 2 ? "Stereo" : "Mono";
     juce::Colour const badgeColor = channelCount_ == 2 ? theme.controlActive : theme.textSecondary;
+    constexpr float kBadgeAlpha = 0.2f;
 
-    g.setColour(badgeColor.withAlpha(0.2f));
+    g.setColour(badgeColor.withAlpha(kBadgeAlpha));
     g.fillRoundedRectangle(badgeBounds.reduced(2, 6), 8.0f);
-    g.setColour(badgeColor);
+    // Theme-aware text — same-hue text on same-hue bg (blue-on-pale-blue /
+    // gray-on-pale-gray) fails AA. Pick contrast-safe text.
+    g.setColour(ColorTheme::pickContrastingText(
+        ColorTheme::compositeOnBackground(badgeColor.withAlpha(kBadgeAlpha), theme.backgroundPrimary)));
     // Preserve 10pt — pre-sized 50px badge; upsize risks clipping.
     g.setFont(Typography::caption().withHeight(10.0f));
     g.drawText(badgeText, badgeBounds, juce::Justification::centred);

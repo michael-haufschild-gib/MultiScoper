@@ -218,13 +218,13 @@ SidebarComponent::~SidebarComponent()
 
 void SidebarComponent::paint(juce::Graphics& g)
 {
-    const auto& glass = getSurface();
+    const auto& surface = getSurface();
 
-    // Glass panel background (no corner radius — sidebar is edge-to-edge)
-    SurfacePainter::paintPanel(g, getLocalBounds().toFloat(), glass, 0.0f, BorderLevel::None);
+    // Surface panel background (no corner radius — sidebar is edge-to-edge)
+    SurfacePainter::paintPanel(g, getLocalBounds().toFloat(), surface, 0.0f, BorderLevel::None);
 
     // Left border
-    g.setColour(glass.borderSubtle);
+    g.setColour(surface.borderSubtle);
     g.drawVerticalLine(0, 0.0f, static_cast<float>(getHeight()));
 }
 

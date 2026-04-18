@@ -118,6 +118,8 @@ static void BM_EnvelopeDecimator(benchmark::State& state)
 
     for (auto _ : state)
     {
+        minEnv.clear();
+        maxEnv.clear();
         decimator.processWithEnvelope(span, minEnv, maxEnv);
         benchmark::DoNotOptimize(minEnv.data());
         benchmark::DoNotOptimize(maxEnv.data());
@@ -157,6 +159,7 @@ static void BM_PeakDecimator(benchmark::State& state)
 
     for (auto _ : state)
     {
+        out.clear();
         decimator.process(span, out);
         benchmark::DoNotOptimize(out.data());
         benchmark::ClobberMemory();

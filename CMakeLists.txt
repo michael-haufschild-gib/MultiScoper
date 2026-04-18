@@ -120,10 +120,17 @@ set(OSCIL_COMMENT_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/comment_lint.
 option(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT "Enable forbidden-patterns lint checks" ON)
 set(OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/forbidden_patterns_lint.py")
 
+# Option for harness MT-dispatch capture linting (ADR-016: lambdas passed to
+# runOnTrackSync / runOnMessageThreadBlocking must own their payload via
+# shared_ptr captures, not reference captures).
+option(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT "Enable harness MT-dispatch capture lint (ADR-016)" ON)
+set(OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/harness_mt_capture_lint.py")
+
 if(OSCIL_ENABLE_SIZE_LIMIT_LINT OR OSCIL_ENABLE_TEST_QUALITY_LINT
    OR OSCIL_ENABLE_SOURCE_REGISTRY_LINT OR OSCIL_ENABLE_TODO_LINT
    OR OSCIL_ENABLE_ARCHITECTURE_LINT OR OSCIL_ENABLE_COMMENT_LINT
-   OR OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+   OR OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT
+   OR OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
 endif()
 
@@ -142,6 +149,12 @@ endif()
 if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
     if(NOT EXISTS "${OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT}")
         message(FATAL_ERROR "OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT is ON but lint script was not found: ${OSCIL_FORBIDDEN_PATTERNS_LINT_SCRIPT}")
+    endif()
+endif()
+
+if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+    if(NOT EXISTS "${OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT}")
+        message(FATAL_ERROR "OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT is ON but lint script was not found: ${OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT}")
     endif()
 endif()
 
@@ -250,6 +263,17 @@ juce_add_binary_data(OscilBinaryData
 
 # Source files
 target_sources(Oscil PRIVATE ${OSCIL_SOURCES})
+
+# Test-server (HTTP automation endpoint inside the plugin). OFF for ship
+# builds — a release binary must NOT start an HTTP server on port 9876.
+# The standalone test harness builds this in via its own CMakeLists.
+option(OSCIL_ENABLE_TEST_SERVER
+    "Compile the PluginTestServer into the plugin (Standalone HTTP API on port 9876). Disable for release." OFF)
+
+if(OSCIL_ENABLE_TEST_SERVER)
+    target_sources(Oscil PRIVATE ${OSCIL_TEST_SERVER_SOURCES})
+    target_compile_definitions(Oscil PRIVATE OSCIL_ENABLE_TEST_SERVER=1)
+endif()
 
 # Include directories
 target_include_directories(Oscil
@@ -426,6 +450,18 @@ if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
     )
 endif()
 
+# Repo-wide harness MT-dispatch capture linting target (ADR 016)
+if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+    add_custom_target(harness_mt_capture_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths test_harness/src test_harness/include
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running harness MT-dispatch capture lint checks"
+        VERBATIM
+    )
+endif()
+
 # Unified lint target — runs all enabled lint checks in one command
 # Usage: cmake --build --preset dev --target lint
 set(OSCIL_LINT_DEPENDENCIES "")
@@ -449,6 +485,9 @@ if(OSCIL_ENABLE_COMMENT_LINT)
 endif()
 if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
     list(APPEND OSCIL_LINT_DEPENDENCIES forbidden_patterns_lint)
+endif()
+if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES harness_mt_capture_lint)
 endif()
 if(OSCIL_LINT_DEPENDENCIES)
     add_custom_target(lint DEPENDS ${OSCIL_LINT_DEPENDENCIES})

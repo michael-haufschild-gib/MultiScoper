@@ -244,12 +244,13 @@ void OscilToggle::paintKnob(juce::Graphics& g, const juce::Rectangle<float>& tra
         g.fillEllipse(knobBounds.translated(0, 1));
     }
 
-    // Knob color: textSecondary (OFF) -> white (ON)
-    // Hover OFF: textPrimary
+    // Knob color: textSecondary (OFF) -> contrast-safe over accent (ON).
+    // Hardcoded white fails AA against bright accent themes (Dark Pro cyan).
+    // Hover OFF: textPrimary.
     juce::Colour knobColour;
     if (progress > 0.5f)
     {
-        knobColour = juce::Colours::white;
+        knobColour = ColorTheme::pickContrastingText(getSurface().accent);
     }
     else
     {

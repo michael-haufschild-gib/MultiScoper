@@ -292,28 +292,14 @@ void TestHttpServer::handleUIDrag(const httplib::Request& req, httplib::Response
             success = uiController_.drag(from, to);
         }
 
-        // Synthetic drag can't trigger JUCE DragAndDropContainer — interpret
-        // oscillator item drags as reorder operations.
-        const std::string prefix = "sidebar_oscillators_item_";
-        if (success && from.size() > prefix.size() && to.size() > prefix.size() &&
-            from.compare(0, prefix.size(), prefix) == 0 && to.compare(0, prefix.size(), prefix) == 0)
-        {
-            int fromIdx = std::stoi(from.substr(prefix.size()));
-            int toIdx = std::stoi(to.substr(prefix.size()));
-            if (fromIdx != toIdx)
-            {
-                auto* track = resolveTrack(req);
-                if (track)
-                {
-                    juce::WaitableEvent done;
-                    juce::MessageManager::callAsync([track, fromIdx, toIdx, &done]() {
-                        track->getProcessor().getState().reorderOscillators(fromIdx, toIdx);
-                        done.signal();
-                    });
-                    done.wait(3000);
-                }
-            }
-        }
+        // Historical note: this handler used to invoke
+        // `state.reorderOscillators(from, to)` here as a workaround for
+        // synthetic mouse drags not reaching the reorder listener. That
+        // listener is now wired via `OscillatorPanelController::oscillatorsReordered`
+        // and responds to the real mouse events simulateMouseDrag fires —
+        // so the explicit call became a DOUBLE reorder that cancelled the
+        // first one, breaking test_drag_between_list_items. The UI path
+        // is now the only reorder driver.
 
         if (success)
             res.set_content(successResponse().dump(), "application/json");

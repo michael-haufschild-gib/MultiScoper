@@ -126,6 +126,13 @@ public:
     /// Simulate a click programmatically (for test harness and accessibility).
     void triggerClick();
 
+    /// Resolved fill / text / border colour for the current variant + state.
+    /// Exposed so regression tests can assert on the exact colour pair the
+    /// paint path will emit, rather than reimplementing the composition rules.
+    [[nodiscard]] juce::Colour getBackgroundColour() const;
+    [[nodiscard]] juce::Colour getTextColour() const;
+    [[nodiscard]] juce::Colour getBorderColour() const;
+
 private:
     void timerCallback() override;
     void updateAnimations();
@@ -141,9 +148,6 @@ private:
                             const juce::Rectangle<float>& contentBounds, juce::Colour textColour);
     void paintIconWithText(juce::Graphics& g, const juce::Rectangle<float>& bounds, const juce::Font& font);
     void paintFocusRing(juce::Graphics& g, const juce::Rectangle<float>& bounds);
-    juce::Colour getBackgroundColour() const;
-    juce::Colour getTextColour() const;
-    juce::Colour getBorderColour() const;
 
     // State
     ButtonVariant variant_ = ButtonVariant::Primary;

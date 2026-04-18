@@ -35,6 +35,7 @@ public:
     /** Optional accent colour used for chevrons / divider tint. When left
         transparent, theme.divider and theme.textSecondary are used. */
     void setAccentColour(juce::Colour accent);
+    [[nodiscard]] juce::Colour getAccentColour() const { return accent_; }
 
     std::function<void()> onPrev;
     std::function<void()> onNext;
@@ -42,6 +43,7 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
+    bool keyPressed(const juce::KeyPress& key) override;
 
     static constexpr int PREFERRED_HEIGHT = 22;
 
