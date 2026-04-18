@@ -107,6 +107,36 @@ target_compile_options(fuzz_oscil_state_fromxml PRIVATE ${OSCIL_FUZZ_FLAGS})
 target_link_options(fuzz_oscil_state_fromxml PRIVATE ${OSCIL_FUZZ_FLAGS})
 
 # -----------------------------------------------------------------------------
+# Fuzzer 1b: OscilState XML round-trip preservation.
+# Shares the core/ source set and JUCE link closure with fuzzer 1. Asserts
+# that fromXmlString(toXmlString(fromXmlString(x))) succeeds and preserves
+# oscillator count.
+# -----------------------------------------------------------------------------
+add_executable(fuzz_oscil_state_roundtrip
+    fuzz_oscil_state_roundtrip.cpp
+    ${OSCIL_FUZZ_CORE_SOURCES}
+)
+
+target_include_directories(fuzz_oscil_state_roundtrip PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(fuzz_oscil_state_roundtrip PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_audio_basics
+    juce::juce_dsp
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags
+)
+
+target_compile_options(fuzz_oscil_state_roundtrip PRIVATE ${OSCIL_FUZZ_FLAGS})
+target_link_options(fuzz_oscil_state_roundtrip PRIVATE ${OSCIL_FUZZ_FLAGS})
+
+# -----------------------------------------------------------------------------
 # Fuzzer 2: Plugin test-server JSON parse path
 # -----------------------------------------------------------------------------
 # The real StateHandler/OscillatorHandler/SourceHandler validators are
@@ -125,4 +155,4 @@ target_link_libraries(fuzz_plugin_test_server_state PRIVATE
 target_compile_options(fuzz_plugin_test_server_state PRIVATE ${OSCIL_FUZZ_FLAGS})
 target_link_options(fuzz_plugin_test_server_state PRIVATE ${OSCIL_FUZZ_FLAGS})
 
-message(STATUS "Fuzz targets enabled: fuzz_oscil_state_fromxml, fuzz_plugin_test_server_state")
+message(STATUS "Fuzz targets enabled: fuzz_oscil_state_fromxml, fuzz_oscil_state_roundtrip, fuzz_plugin_test_server_state")
