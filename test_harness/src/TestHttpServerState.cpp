@@ -136,14 +136,12 @@ void TestHttpServer::setupStateRoutes()
 void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Response& res)
 {
     juce::Logger::writeToLog("[Harness] State reset requested");
-    auto* track = resolveTrack(req);
-    if (track)
-    {
-        // Block until message thread completes the removal to prevent race
-        // conditions where the next operation starts before reset finishes.
-        auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([track, done]() {
-            auto& state = track->getProcessor().getState();
+    const int trackId = resolveTrackId(req);
+
+    (void) runOnTrackSync(
+        trackId,
+        [](TestTrack& track) {
+            auto& state = track.getProcessor().getState();
             for (const auto& osc : state.getOscillators())
                 state.removeOscillator(osc.getId());
             auto& lm = state.getLayoutManager();
@@ -155,11 +153,19 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
                 paneIds.push_back(pane.getId());
             for (const auto& id : paneIds)
                 lm.removePane(id);
-            track->getProcessor().getTimingEngine().setConfig(EngineTimingConfig{});
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        done->wait(5000);
-    }
+            track.getProcessor().getTimingEngine().setConfig(EngineTimingConfig{});
+
+            // setConfig() writes the engine SeqLock directly and bypasses the
+            // listener chain. Without this sync, the TimingPresenter keeps its
+            // stale cached mode/hostSync/BPM, and the next click(MELODIC_SEG)
+            // or set_bpm() from a fresh test is suppressed by the presenter's
+            // `if (currentMode_ != mode)` guards — leaving the engine in TIME
+            // mode so BPM changes never recalculate displaySamples.
+            if (auto* editor = track.getEditor())
+                if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
+                    oscilEditor->refreshTimingSidebarFromEngine();
+        },
+        5000);
 
     resetAudioAndTransport();
     resetOptionsControls();
@@ -173,18 +179,25 @@ void TestHttpServer::handleStateReset(const httplib::Request& req, httplib::Resp
 
 void TestHttpServer::resetAudioAndTransport()
 {
-    for (int i = 0; i < daw_.getNumTracks(); ++i)
-    {
-        if (auto* t = daw_.getTrack(i))
-        {
-            t->getAudioGenerator().setWaveform(Waveform::Sine);
-            t->getAudioGenerator().setFrequency(440.0f);
-            t->getAudioGenerator().setAmplitude(0.5f);
-        }
-    }
-    daw_.getTransport().play();
-    daw_.getTransport().setBpm(120.0);
-    daw_.getTransport().setPositionSamples(0);
+    // Hop to the message thread so add/remove can't invalidate track slots
+    // beneath the generator resets. The transport object itself is stable
+    // for the life of the DAW, but the track vector is not.
+    runOnMessageThreadBlocking(
+        [this]() {
+            for (int i = 0; i < daw_.getNumTracks(); ++i)
+            {
+                if (auto* t = daw_.getTrack(i))
+                {
+                    t->getAudioGenerator().setWaveform(Waveform::Sine);
+                    t->getAudioGenerator().setFrequency(440.0f);
+                    t->getAudioGenerator().setAmplitude(0.5f);
+                }
+            }
+            daw_.getTransport().play();
+            daw_.getTransport().setBpm(120.0);
+            daw_.getTransport().setPositionSamples(0);
+        },
+        3000, "resetAudioAndTransport");
 }
 
 void TestHttpServer::resetOptionsControls()
@@ -203,15 +216,13 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
     {
         auto body = json::parse(req.body);
         std::string path = body.value("path", "/tmp/state.xml");
+        const int trackId = resolveTrackId(req);
 
-        auto* track = resolveTrack(req);
-        if (track)
-        {
-            auto& processor = track->getProcessor();
-            // Serialize on the message thread to avoid racing with ValueTree listeners.
-            auto xml = std::make_shared<juce::String>();
-            auto done = std::make_shared<juce::WaitableEvent>();
-            juce::MessageManager::callAsync([&processor, xml, done]() {
+        auto xml = std::make_shared<juce::String>();
+        const auto result = runOnTrackSync(
+            trackId,
+            [xml](TestTrack& track) {
+                auto& processor = track.getProcessor();
                 auto& stateTree = processor.getState().getState();
                 auto timingState = processor.getTimingEngine().toValueTree();
                 auto existingTiming = stateTree.getChildWithName(StateIds::Timing);
@@ -219,25 +230,18 @@ void TestHttpServer::handleStateSave(const httplib::Request& req, httplib::Respo
                     stateTree.removeChild(existingTiming, nullptr);
                 stateTree.appendChild(timingState, nullptr);
                 *xml = processor.getState().toXmlString();
-                done->signal();
-            });
-            if (!done->wait(5000))
-            {
-                res.set_content(errorResponse("Timeout serializing state").dump(), "application/json");
-                return;
-            }
+            },
+            5000);
 
-            juce::File file(path);
-            bool written = file.replaceWithText(*xml);
-            if (written && file.existsAsFile())
-                res.set_content(successResponse().dump(), "application/json");
-            else
-                res.set_content(errorResponse("Failed to write state to: " + path).dump(), "application/json");
-        }
+        if (respondIfTrackCallFailed(result, res, "No tracks available", "Timeout serializing state"))
+            return;
+
+        juce::File file(path);
+        bool written = file.replaceWithText(*xml);
+        if (written && file.existsAsFile())
+            res.set_content(successResponse().dump(), "application/json");
         else
-        {
-            res.set_content(errorResponse("No tracks available").dump(), "application/json");
-        }
+            res.set_content(errorResponse("Failed to write state to: " + path).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
@@ -281,28 +285,20 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
         }
 
         juce::String xml = file.loadFileAsString();
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No tracks available").dump(), "application/json");
-            return;
-        }
+        const int trackId = resolveTrackId(req);
 
-        auto& processor = track->getProcessor();
-        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
-            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
-
-        auto done = std::make_shared<juce::WaitableEvent>();
         auto success = std::make_shared<bool>(false);
-        juce::MessageManager::callAsync([&processor, safeEditor, xml, this, done, success]() {
-            *success = restoreLoadedState(processor, safeEditor.getComponent(), xml);
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        if (!done->wait(5000))
-        {
-            res.set_content(errorResponse("Timeout restoring state").dump(), "application/json");
+        const auto result = runOnTrackSync(
+            trackId,
+            [this, success, xml](TestTrack& track) {
+                auto& processor = track.getProcessor();
+                auto* editor = dynamic_cast<OscilPluginEditor*>(track.getEditor());
+                *success = restoreLoadedState(processor, editor, xml);
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No tracks available", "Timeout restoring state"))
             return;
-        }
 
         if (*success)
             res.set_content(successResponse().dump(), "application/json");
@@ -317,62 +313,60 @@ void TestHttpServer::handleStateLoad(const httplib::Request& req, httplib::Respo
 
 void TestHttpServer::handleStateOscillators(const httplib::Request& req, httplib::Response& res)
 {
-    json oscillators = json::array();
+    const int trackId = resolveTrackId(req);
+    auto oscillators = std::make_shared<json>(json::array());
 
-    if (auto* track = resolveTrack(req))
-    {
-        auto& state = track->getProcessor().getState();
+    (void) runOnTrackSync(trackId, [oscillators](TestTrack& track) {
+        auto& state = track.getProcessor().getState();
         auto oscList = state.getOscillators();
 
         std::sort(oscList.begin(), oscList.end(),
                   [](const auto& a, const auto& b) { return a.getOrderIndex() < b.getOrderIndex(); });
 
         for (const auto& osc : oscList)
-            oscillators.push_back(oscillatorToJson(osc));
-    }
+            oscillators->push_back(oscillatorToJson(osc));
+    });
 
-    res.set_content(successResponse(oscillators).dump(), "application/json");
+    res.set_content(successResponse(*oscillators).dump(), "application/json");
 }
 
 void TestHttpServer::handleStateAddOscillator(const httplib::Request& req, httplib::Response& res)
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const int trackId = resolveTrackId(req);
+        auto body = std::make_shared<json>(json::parse(req.body));
+
+        auto oscJson = std::make_shared<json>();
+
+        const auto result = runOnTrackSync(
+            trackId,
+            [body, oscJson](TestTrack& track) {
+                Oscillator osc;
+                auto& state = track.getProcessor().getState();
+                auto& layoutManager = state.getLayoutManager();
+
+                if (layoutManager.getPaneCount() == 0)
+                {
+                    Pane defaultPane;
+                    defaultPane.setName("Pane 1");
+                    defaultPane.setOrderIndex(0);
+                    layoutManager.addPane(defaultPane);
+                }
+
+                configureOscillatorFromJson(osc, *body, state, &track);
+                *oscJson = oscillatorToJson(osc);
+
+                juce::Logger::writeToLog("[Harness] Adding oscillator: " + osc.getName() +
+                                         " source=" + osc.getSourceId().id + " pane=" + osc.getPaneId().id);
+                state.addOscillator(osc);
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout adding oscillator"))
             return;
-        }
 
-        auto body = json::parse(req.body);
-        auto& state = track->getProcessor().getState();
-        auto& layoutManager = state.getLayoutManager();
-
-        if (layoutManager.getPaneCount() == 0)
-        {
-            Pane defaultPane;
-            defaultPane.setName("Pane 1");
-            defaultPane.setOrderIndex(0);
-            layoutManager.addPane(defaultPane);
-        }
-
-        Oscillator osc;
-        configureOscillatorFromJson(osc, body, state, track);
-
-        json oscJson = oscillatorToJson(osc);
-
-        juce::Logger::writeToLog("[Harness] Adding oscillator: " + osc.getName() + " source=" + osc.getSourceId().id +
-                                 " pane=" + osc.getPaneId().id);
-        Oscillator oscCopy = osc;
-        auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([oscCopy, track, done]() mutable {
-            track->getProcessor().getState().addOscillator(oscCopy);
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        done->wait(5000);
-
-        res.set_content(successResponse(oscJson).dump(), "application/json");
+        res.set_content(successResponse(*oscJson).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
@@ -384,55 +378,51 @@ void TestHttpServer::handleStateUpdateOscillator(const httplib::Request& req, ht
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
-            return;
-        }
-
-        auto body = json::parse(req.body);
-        std::string idStr = body.value("id", "");
+        const int trackId = resolveTrackId(req);
+        auto body = std::make_shared<json>(json::parse(req.body));
+        std::string idStr = body->value("id", "");
         if (idStr.empty())
         {
             res.set_content(errorResponse("Oscillator 'id' is required").dump(), "application/json");
             return;
         }
 
-        auto& state = track->getProcessor().getState();
         OscillatorId oscId{juce::String(idStr)};
+        auto osc = std::make_shared<Oscillator>();
+        auto oscMissing = std::make_shared<bool>(false);
 
-        auto existingOsc = state.getOscillator(oscId);
-        if (!existingOsc.has_value())
+        const auto result = runOnTrackSync(
+            trackId,
+            [oscId, body, osc, oscMissing](TestTrack& track) {
+                auto& state = track.getProcessor().getState();
+                auto existingOsc = state.getOscillator(oscId);
+                if (!existingOsc.has_value())
+                {
+                    *oscMissing = true;
+                    return;
+                }
+                *osc = existingOsc.value();
+                applyOscillatorJsonUpdates(*osc, *body);
+                state.updateOscillator(*osc);
+                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                    ed->refreshPanels();
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout updating oscillator"))
+            return;
+        if (*oscMissing)
         {
             res.set_content(errorResponse("Oscillator not found: " + idStr).dump(), "application/json");
             return;
         }
 
-        Oscillator osc = existingOsc.value();
-        applyOscillatorJsonUpdates(osc, body);
-
-        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
-            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
-        auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([osc, track, safeEditor, done]() {
-            track->getProcessor().getState().updateOscillator(osc);
-            if (auto* ed = safeEditor.getComponent())
-                ed->refreshPanels();
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        if (!done->wait(5000))
-        {
-            res.set_content(errorResponse("Timeout updating oscillator").dump(), "application/json");
-            return;
-        }
-
         json oscJson;
-        oscJson["id"] = osc.getId().id.toStdString();
-        oscJson["name"] = osc.getName().toStdString();
-        oscJson["visible"] = osc.isVisible();
-        oscJson["opacity"] = osc.getOpacity();
-        oscJson["lineWidth"] = osc.getLineWidth();
+        oscJson["id"] = osc->getId().id.toStdString();
+        oscJson["name"] = osc->getName().toStdString();
+        oscJson["visible"] = osc->isVisible();
+        oscJson["opacity"] = osc->getOpacity();
+        oscJson["lineWidth"] = osc->getLineWidth();
         res.set_content(successResponse(oscJson).dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -445,13 +435,7 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
-            return;
-        }
-
+        const int trackId = resolveTrackId(req);
         auto body = json::parse(req.body);
         int fromIndex = body.value("fromIndex", -1);
         int toIndex = body.value("toIndex", -1);
@@ -462,33 +446,29 @@ void TestHttpServer::handleStateReorderOscillators(const httplib::Request& req, 
             return;
         }
 
-        juce::Component::SafePointer<OscilPluginEditor> safeEditor(
-            dynamic_cast<OscilPluginEditor*>(track->getEditor()));
-        auto done = std::make_shared<juce::WaitableEvent>();
-        juce::MessageManager::callAsync([track, fromIndex, toIndex, safeEditor, done]() {
-            track->getProcessor().getState().reorderOscillators(fromIndex, toIndex);
-            if (auto* ed = safeEditor.getComponent())
-                ed->refreshPanels();
-            juce::MessageManager::callAsync([done]() { done->signal(); });
-        });
-        if (!done->wait(5000))
-        {
-            res.set_content(errorResponse("Timeout reordering oscillators").dump(), "application/json");
+        auto oscillators = std::make_shared<json>(json::array());
+        const auto result = runOnTrackSync(
+            trackId,
+            [fromIndex, toIndex, oscillators](TestTrack& track) {
+                auto& state = track.getProcessor().getState();
+                state.reorderOscillators(fromIndex, toIndex);
+                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                    ed->refreshPanels();
+                for (const auto& osc : state.getOscillators())
+                {
+                    json oscJson;
+                    oscJson["id"] = osc.getId().id.toStdString();
+                    oscJson["name"] = osc.getName().toStdString();
+                    oscJson["orderIndex"] = osc.getOrderIndex();
+                    oscillators->push_back(oscJson);
+                }
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout reordering oscillators"))
             return;
-        }
 
-        auto& state = track->getProcessor().getState();
-        json oscillators = json::array();
-        for (const auto& osc : state.getOscillators())
-        {
-            json oscJson;
-            oscJson["id"] = osc.getId().id.toStdString();
-            oscJson["name"] = osc.getName().toStdString();
-            oscJson["orderIndex"] = osc.getOrderIndex();
-            oscillators.push_back(oscJson);
-        }
-
-        res.set_content(successResponse(oscillators).dump(), "application/json");
+        res.set_content(successResponse(*oscillators).dump(), "application/json");
     }
     catch (const std::exception& e)
     {

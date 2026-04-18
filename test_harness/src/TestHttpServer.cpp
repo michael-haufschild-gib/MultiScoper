@@ -117,6 +117,7 @@ void TestHttpServer::setupRoutes()
     setupTransportRoutes();
     setupTrackRoutes();
     setupInstanceRoutes();
+    setupDawLifecycleRoutes();
     setupUIMouseRoutes();
     setupUIKeyboardRoutes();
     setupVerificationRoutes();
@@ -159,7 +160,7 @@ void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& re
     json data;
     data["status"] = "ok";
     data["running"] = daw_.isRunning();
-    data["tracks"] = daw_.getNumTracks();
+    data["tracks"] = daw_.getActiveTrackCount();
     data["sources"] = static_cast<int>(PluginFactory::getInstance().getInstanceRegistry().getSourceCount());
 #if JUCE_WINDOWS
     data["pid"] = static_cast<int>(_getpid());
@@ -175,50 +176,142 @@ void TestHttpServer::handleHealth(const httplib::Request&, httplib::Response& re
 
 // ================== Track Resolver ==================
 
-TestTrack* TestHttpServer::resolveTrack(const httplib::Request& req)
+int TestHttpServer::resolveTrackId(const httplib::Request& req)
 {
-    // 1. Check URL query parameter (?trackId=N)
     auto it = req.params.find("trackId");
     if (it != req.params.end())
     {
         try
         {
-            int id = std::stoi(it->second);
-            if (auto* t = daw_.getTrack(id))
-                return t;
+            return std::stoi(it->second);
         }
         catch (...)
         {
         }
     }
 
-    // 2. For POST requests, also check the JSON body for "trackId"
     if (req.method == "POST" && !req.body.empty())
     {
         try
         {
             auto body = json::parse(req.body);
             if (body.contains("trackId"))
-            {
-                int id = body["trackId"].get<int>();
-                if (auto* t = daw_.getTrack(id))
-                    return t;
-            }
+                return body["trackId"].get<int>();
         }
         catch (...)
         {
         }
     }
 
+    return 0;
+}
+
+int TestHttpServer::resolveTrackIdFromBody(const json& body) { return body.value("trackId", 0); }
+
+TestTrack* TestHttpServer::resolveTrack(const httplib::Request& req)
+{
+    // Legacy — see header warning. Only safe on the message thread.
+    const int id = resolveTrackId(req);
+    if (auto* t = daw_.getTrack(id))
+        return t;
     return daw_.getTrack(0);
 }
 
 TestTrack* TestHttpServer::resolveTrackFromBody(const json& body)
 {
-    int id = body.value("trackId", 0);
+    // Legacy — see header warning. Only safe on the message thread.
+    const int id = resolveTrackIdFromBody(body);
     if (auto* t = daw_.getTrack(id))
         return t;
     return daw_.getTrack(0);
+}
+
+bool TestHttpServer::runOnMessageThreadBlocking(std::function<void()> fn, int timeoutMs, const char* label)
+{
+    // Same heap-own-state contract as runOnTrackSync: `fn` and `done` both
+    // live in a shared_ptr so a timeout here is safe even when the lambda
+    // eventually runs. Caller's `fn` captures must still be heap-owned
+    // (shared_ptr<T>) — this helper cannot make stack captures safe.
+    struct State
+    {
+        std::function<void()> fn;
+        juce::WaitableEvent done;
+    };
+    auto state = std::make_shared<State>();
+    state->fn = std::move(fn);
+
+    juce::MessageManager::callAsync([state]() {
+        if (state->fn)
+            state->fn();
+        state->done.signal();
+    });
+
+    if (!state->done.wait(timeoutMs))
+    {
+        juce::Logger::writeToLog(juce::String("[runOnMessageThreadBlocking] timeout after ") + juce::String(timeoutMs) +
+                                 juce::String("ms: ") + juce::String(label != nullptr ? label : "<unlabeled>"));
+        return false;
+    }
+    return true;
+}
+
+bool TestHttpServer::respondIfTrackCallFailed(TrackCallResult r, httplib::Response& res, const char* notFoundMsg,
+                                              const char* timeoutMsg)
+{
+    if (r == TrackCallResult::NotFound)
+    {
+        res.set_content(errorResponse(notFoundMsg).dump(), "application/json");
+        return true;
+    }
+    if (r == TrackCallResult::Timeout)
+    {
+        res.status = 504;
+        res.set_content(errorResponse(timeoutMsg).dump(), "application/json");
+        return true;
+    }
+    return false;
+}
+
+TestHttpServer::TrackCallResult TestHttpServer::runOnTrackSync(int trackId, std::function<void(TestTrack&)> fn,
+                                                               int timeoutMs)
+{
+    // All helper-owned state lives on the heap via `state`. The MT lambda
+    // captures `state` by value (shared_ptr), so even if this helper returns
+    // on timeout, the lambda still finds `fn`, `result`, and `done` alive
+    // when it finally runs. No use-after-free on helper internals.
+    //
+    // The ONLY remaining unsafe pattern is a handler that captures its own
+    // stack into `fn` via `[&]`. Handlers in this codebase are required to
+    // capture all lambda outputs via `std::shared_ptr<T>` (by value) so that
+    // a timeout here — which does return Timeout and lets the handler
+    // return — cannot leave the lambda writing into dead memory when it
+    // eventually fires.
+    struct State
+    {
+        std::function<void(TestTrack&)> fn;
+        TrackCallResult result = TrackCallResult::NotFound;
+        juce::WaitableEvent done;
+    };
+    auto state = std::make_shared<State>();
+    state->fn = std::move(fn);
+
+    juce::MessageManager::callAsync([this, trackId, state]() {
+        if (auto* t = daw_.getTrack(trackId))
+        {
+            state->result = TrackCallResult::Ok;
+            if (state->fn)
+                state->fn(*t);
+        }
+        state->done.signal();
+    });
+
+    if (!state->done.wait(timeoutMs))
+    {
+        juce::Logger::writeToLog(juce::String("[runOnTrackSync] timeout after ") + juce::String(timeoutMs) +
+                                 juce::String("ms waiting on MT for trackId=") + juce::String(trackId));
+        return TrackCallResult::Timeout;
+    }
+    return state->result;
 }
 
 // ================== Instance Routes ==================
@@ -321,21 +414,30 @@ void TestHttpServer::handleDawTrackRemove(const httplib::Request& req, httplib::
 
 void TestHttpServer::handleDawTracks(const httplib::Request&, httplib::Response& res)
 {
-    json tracks = json::array();
-    for (int i = 0; i < daw_.getNumTracks(); ++i)
-    {
-        auto* track = daw_.getTrack(i);
-        if (track == nullptr)
-            continue;
+    // Iterate tracks on the message thread so we never observe a slot being
+    // reassigned by addTrack/removeTrack while we read it. Touching
+    // TestTrack::sourceIdMutex_ from the HTTP worker thread without this
+    // barrier produces pthread_mutex_lock(EINVAL) when the track is freed
+    // mid-iteration.
+    auto tracks = std::make_shared<json>(json::array());
+    (void) runOnMessageThreadBlocking(
+        [this, tracks]() {
+            for (int i = 0; i < daw_.getNumTracks(); ++i)
+            {
+                auto* track = daw_.getTrack(i);
+                if (track == nullptr)
+                    continue;
 
-        json t;
-        t["index"] = track->getTrackIndex();
-        t["name"] = track->getName().toStdString();
-        t["sourceId"] = track->getSourceId().id.toStdString();
-        t["editorVisible"] = track->isEditorVisible();
-        tracks.push_back(t);
-    }
-    res.set_content(successResponse(tracks).dump(), "application/json");
+                json t;
+                t["index"] = track->getTrackIndex();
+                t["name"] = track->getName().toStdString();
+                t["sourceId"] = track->getSourceId().id.toStdString();
+                t["editorVisible"] = track->isEditorVisible();
+                tracks->push_back(t);
+            }
+        },
+        5000, "handleDawTracks");
+    res.set_content(successResponse(*tracks).dump(), "application/json");
 }
 
 } // namespace oscil::test

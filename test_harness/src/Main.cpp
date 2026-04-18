@@ -9,6 +9,11 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <cstdlib>
+#include <exception>
+#include <iostream>
+#include <typeinfo>
+
 namespace oscil::test
 {
 
@@ -328,6 +333,32 @@ public:
 
         // Install log capture before anything else logs
         juce::Logger::setCurrentLogger(&TestLogCapture::getInstance());
+
+        // Last-resort diagnostic: if a message-thread callback throws, JUCE's
+        // runLoopCallback propagates the exception to std::terminate(). The
+        // default terminate handler aborts without naming the exception. Log
+        // the type + what() so the crash report points at the source file to
+        // fix, not just "abort() called".
+        std::set_terminate([]() noexcept {
+            const char* what = "<unknown>";
+            const char* typeName = "<unknown>";
+            try
+            {
+                if (auto eptr = std::current_exception())
+                    std::rethrow_exception(eptr);
+            }
+            catch (const std::exception& e)
+            {
+                what = e.what();
+                typeName = typeid(e).name();
+            }
+            catch (...)
+            {
+            }
+            std::cerr << "[TERMINATE] Uncaught exception — type=" << typeName << " what=" << what << std::endl;
+            juce::Logger::writeToLog(juce::String("[TERMINATE] type=") + typeName + " what=" + what);
+            std::abort();
+        });
 
         // Parse command line for port
         int port = TestHttpServer::DEFAULT_PORT;

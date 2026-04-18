@@ -47,6 +47,7 @@ set(OSCIL_TEST_SOURCES
     tests/test_instance_registry_dispatcher.cpp
     tests/test_plugin_processor_lifecycle.cpp
     tests/test_plugin_processor_state.cpp
+    tests/test_plugin_processor_state_race.cpp
     tests/test_plugin_processor_audio.cpp
 
     # Capture buffer tests - split for better isolation
@@ -351,6 +352,15 @@ if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
             --paths include src
     )
     set_tests_properties(ForbiddenPatternsLint PROPERTIES LABELS "lint")
+endif()
+
+if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+    add_test(NAME HarnessMtCaptureLint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths test_harness/src test_harness/include
+    )
+    set_tests_properties(HarnessMtCaptureLint PROPERTIES LABELS "lint")
 endif()
 
 # Unit tests for the lint scripts themselves. These seed a synthetic source

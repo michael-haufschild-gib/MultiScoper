@@ -21,6 +21,7 @@
 #include "TestUIController.h"
 
 #include <atomic>
+#include <functional>
 #include <future>
 #include <httplib.h>
 #include <nlohmann/json.hpp>
@@ -179,6 +180,23 @@ private:
     void handleDawTrackRemove(const httplib::Request& req, httplib::Response& res);
     void handleDawTracks(const httplib::Request& req, httplib::Response& res);
 
+    // Route handlers - DAW host-lifecycle simulation (TestHttpServerDAW.cpp)
+    //
+    // Each endpoint dispatches its state-touching work onto the JUCE
+    // message thread via callAsync + WaitableEvent.  The HTTP worker
+    // thread must never call prepareToPlay / setBusesLayout / track
+    // mutation directly — those paths assume message-thread affinity.
+    void setupDawLifecycleRoutes();
+    void handleDawSetSampleRate(const httplib::Request& req, httplib::Response& res);
+    void handleDawSetBufferSize(const httplib::Request& req, httplib::Response& res);
+    void handleDawSetAudioThreadPrepare(const httplib::Request& req, httplib::Response& res);
+    void handleDawScanCycle(const httplib::Request& req, httplib::Response& res);
+    void handleTrackChannelLayout(const httplib::Request& req, httplib::Response& res);
+    void handleTrackDetachEditor(const httplib::Request& req, httplib::Response& res);
+    void handleTrackReattachEditor(const httplib::Request& req, httplib::Response& res);
+    void handleDawSetIsolatedRegistries(const httplib::Request& req, httplib::Response& res);
+    void handleTrackSources(const httplib::Request& req, httplib::Response& res);
+
     // Reset helpers
     void resetAudioAndTransport();
     void resetOptionsControls();
@@ -187,9 +205,53 @@ private:
     // Returns false if XML parsing fails.
     bool restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor, const juce::String& xml);
 
-    // Track resolver — extracts trackId from GET query param or POST body, defaults to 0
+    // Track resolver — extracts trackId from GET query param or POST body, defaults to 0.
+    //
+    // The *Id* variants are the preferred API: they only parse the request and
+    // never touch `TestDAW::getTrack`, so the HTTP worker thread cannot observe
+    // a dangling `TestTrack*` from a concurrent remove on the message thread.
+    // Pair them with `runOnTrackSync` so the actual pointer lookup happens
+    // inside the message-thread lambda where add/remove are serialized.
+    int resolveTrackId(const httplib::Request& req);
+    int resolveTrackIdFromBody(const json& body);
+
+    // Legacy pointer-returning resolvers — retained for callers that still run
+    // entirely on the message thread (e.g., inside a lambda already dispatched
+    // via callAsync). Never call from an HTTP worker thread: concurrent
+    // addTrack/removeTrack on the MT can free the returned pointer before the
+    // caller dereferences it, causing pthread_mutex_lock(EINVAL) when the
+    // caller touches TestTrack::sourceIdMutex_.
     TestTrack* resolveTrack(const httplib::Request& req);
     TestTrack* resolveTrackFromBody(const json& body);
+
+    // Result of a `runOnTrackSync` dispatch.
+    enum class TrackCallResult
+    {
+        Ok,       // track existed and fn executed
+        NotFound, // message thread ran but no track at that index
+        Timeout   // dispatch never completed within the bound
+    };
+
+    // Dispatch `fn(track)` onto the message thread and block the caller (HTTP
+    // worker thread) until it completes. Looks up the track inside the lambda
+    // so add/remove races from other HTTP workers are ordered behind this
+    // dispatch. Safe to call from any thread.
+    TrackCallResult runOnTrackSync(int trackId, std::function<void(TestTrack&)> fn, int timeoutMs = 3000);
+
+    // If `r` is NotFound/Timeout, write the matching error response and
+    // return true; caller should early-return. Returns false on Ok so the
+    // caller proceeds with the success payload. Keeps handler bodies short.
+    bool respondIfTrackCallFailed(TrackCallResult r, httplib::Response& res, const char* notFoundMsg,
+                                  const char* timeoutMsg);
+
+    // Dispatch `fn` onto the message thread and block up to `timeoutMs`.
+    //
+    // Returns true if the lambda completed, false on timeout. On timeout
+    // the lambda may still fire later — that is safe because `fn` and the
+    // WaitableEvent are owned by an internal shared_ptr. Any captures
+    // *inside* `fn` must also be heap-owned (shared_ptr<T>) so they
+    // survive the caller returning.
+    bool runOnMessageThreadBlocking(std::function<void()> fn, int timeoutMs, const char* label);
 
     // Health check
     void handleHealth(const httplib::Request& req, httplib::Response& res);

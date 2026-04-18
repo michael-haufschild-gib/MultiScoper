@@ -30,6 +30,7 @@ set(TEST_HARNESS_SOURCES
     src/TestHttpServerDiagnostic.cpp
     src/TestHttpServerPanes.cpp
     src/TestHttpServerMetrics.cpp
+    src/TestHttpServerDAW.cpp
     src/TestElementRegistry.cpp
     src/TestUIController.cpp
     src/TestUIControllerForms.cpp
@@ -70,11 +71,14 @@ juce_add_gui_app(OscilTestHarness
     BUNDLE_ID "com.oscilaudio.testharness"
 )
 
-# Add sources to the target
+# Add sources to the target.  The harness always needs the test-server
+# sources so the Python E2E suite can drive the editor via HTTP; production
+# plugin builds gate them behind OSCIL_ENABLE_TEST_SERVER.
 target_sources(OscilTestHarness PRIVATE
     ${TEST_HARNESS_SOURCES}
     ${TEST_HARNESS_HEADERS}
     ${OSCIL_SOURCES}
+    ${OSCIL_TEST_SERVER_SOURCES}
 )
 
 # Include directories
@@ -114,5 +118,6 @@ target_compile_definitions(OscilTestHarness PRIVATE
     JUCE_REPORT_APP_USAGE=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1
     TEST_HARNESS=1
+    OSCIL_ENABLE_TEST_SERVER=1
     $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
 )

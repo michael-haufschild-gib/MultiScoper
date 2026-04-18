@@ -71,27 +71,21 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
         double bpm = body.value("bpm", 120.0);
         daw_.getTransport().setBpm(bpm);
 
-        // Update both host BPM and internal BPM on the timing engine,
-        // then force processBlock + refreshPanels to recalculate displaySamples.
-        auto* track = resolveTrack(req);
-        if (track)
-        {
-            juce::WaitableEvent done;
-            juce::MessageManager::callAsync([this, track, bpm, &done]() {
-                auto& timingEngine = track->getProcessor().getTimingEngine();
-                timingEngine.setInternalBPM(static_cast<float>(bpm));
-                // Serialize with the audio dispatcher so we never run a block
-                // on this track concurrently with a pool-dispatched tick.
-                daw_.runSingleBlockSynchronously(*track);
-                if (auto* editor = track->getEditor())
-                {
-                    if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
-                        oscilEditor->refreshPanels();
-                }
-                done.signal();
-            });
-            done.wait(3000);
-        }
+        // Update internal BPM on the timing engine, then force processBlock +
+        // refreshPanels to recalculate displaySamples. All track pointer
+        // access happens inside the MT lambda so a concurrent removeTrack
+        // from another HTTP worker cannot free the track beneath us.
+        const int trackId = resolveTrackId(req);
+        runOnTrackSync(trackId, [this, bpm](TestTrack& track) {
+            auto& timingEngine = track.getProcessor().getTimingEngine();
+            timingEngine.setInternalBPM(static_cast<float>(bpm));
+            daw_.runSingleBlockSynchronously(track);
+            if (auto* editor = track.getEditor())
+            {
+                if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
+                    oscilEditor->refreshPanels();
+            }
+        });
 
         res.set_content(successResponse().dump(), "application/json");
     }
@@ -134,23 +128,19 @@ void TestHttpServer::handleTrackAudio(const httplib::Request& req, httplib::Resp
     try
     {
         int trackId = std::stoi(req.matches[1]);
-        auto* track = daw_.getTrack(trackId);
-
-        if (track == nullptr)
-        {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
-            return;
-        }
-
         auto body = json::parse(req.body);
         std::string waveform = body.value("waveform", "sine");
         float frequency = body.value("frequency", 440.0f);
         float amplitude = body.value("amplitude", 0.8f);
 
-        track->getAudioGenerator().setWaveform(TestAudioGenerator::stringToWaveform(waveform));
-        track->getAudioGenerator().setFrequency(frequency);
-        track->getAudioGenerator().setAmplitude(amplitude);
+        const auto result = runOnTrackSync(trackId, [waveform, frequency, amplitude](TestTrack& track) {
+            track.getAudioGenerator().setWaveform(TestAudioGenerator::stringToWaveform(waveform));
+            track.getAudioGenerator().setFrequency(frequency);
+            track.getAudioGenerator().setAmplitude(amplitude);
+        });
 
+        if (respondIfTrackCallFailed(result, res, "Track not found", "Timeout updating track audio"))
+            return;
         res.set_content(successResponse().dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -164,24 +154,18 @@ void TestHttpServer::handleTrackBurst(const httplib::Request& req, httplib::Resp
     try
     {
         int trackId = std::stoi(req.matches[1]);
-        auto* track = daw_.getTrack(trackId);
-
-        if (track == nullptr)
-        {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
-            return;
-        }
-
         auto body = json::parse(req.body);
         int samples = body.value("samples", 4410);
         std::string waveform = body.value("waveform", "");
 
-        if (!waveform.empty())
-        {
-            track->getAudioGenerator().setWaveform(TestAudioGenerator::stringToWaveform(waveform));
-        }
-        track->getAudioGenerator().setBurstSamples(samples);
+        const auto result = runOnTrackSync(trackId, [samples, waveform](TestTrack& track) {
+            if (!waveform.empty())
+                track.getAudioGenerator().setWaveform(TestAudioGenerator::stringToWaveform(waveform));
+            track.getAudioGenerator().setBurstSamples(samples);
+        });
 
+        if (respondIfTrackCallFailed(result, res, "Track not found", "Timeout scheduling burst"))
+            return;
         res.set_content(successResponse().dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -195,24 +179,22 @@ void TestHttpServer::handleTrackInfo(const httplib::Request& req, httplib::Respo
     try
     {
         int trackId = std::stoi(req.matches[1]);
-        auto* track = daw_.getTrack(trackId);
 
-        if (track == nullptr)
-        {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
+        auto data = std::make_shared<json>();
+        const auto result = runOnTrackSync(trackId, [data](TestTrack& track) {
+            (*data)["index"] = track.getTrackIndex();
+            (*data)["name"] = track.getName().toStdString();
+            (*data)["sourceId"] = track.getSourceId().id.toStdString();
+            (*data)["waveform"] =
+                TestAudioGenerator::waveformToString(track.getAudioGenerator().getWaveform()).toStdString();
+            (*data)["frequency"] = track.getAudioGenerator().getFrequency();
+            (*data)["amplitude"] = track.getAudioGenerator().getAmplitude();
+            (*data)["generating"] = track.getAudioGenerator().isGenerating();
+        });
+
+        if (respondIfTrackCallFailed(result, res, "Track not found", "Timeout reading track info"))
             return;
-        }
-
-        json data;
-        data["index"] = track->getTrackIndex();
-        data["name"] = track->getName().toStdString();
-        data["sourceId"] = track->getSourceId().id.toStdString();
-        data["waveform"] = TestAudioGenerator::waveformToString(track->getAudioGenerator().getWaveform()).toStdString();
-        data["frequency"] = track->getAudioGenerator().getFrequency();
-        data["amplitude"] = track->getAudioGenerator().getAmplitude();
-        data["generating"] = track->getAudioGenerator().isGenerating();
-
-        res.set_content(successResponse(data).dump(), "application/json");
+        res.set_content(successResponse(*data).dump(), "application/json");
     }
     catch (const std::exception& e)
     {
@@ -225,42 +207,40 @@ void TestHttpServer::handleTrackShowEditor(const httplib::Request& req, httplib:
     try
     {
         int trackId = std::stoi(req.matches[1]);
-        auto* track = daw_.getTrack(trackId);
-
-        if (track == nullptr)
-        {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
-            return;
-        }
-
-        if (track->isEditorVisible())
-        {
-            int elemCount = static_cast<int>(TestElementRegistry::getInstance().getAllElements().size());
-            json data;
-            data["trackId"] = trackId;
-            data["editorVisible"] = true;
-            data["elementsRegistered"] = elemCount;
-            data["alreadyOpen"] = true;
-            res.set_content(successResponse(data).dump(), "application/json");
-            return;
-        }
-
         juce::Logger::writeToLog("[Harness] Opening editor for track " + juce::String(trackId));
-        juce::WaitableEvent done;
-        juce::MessageManager::callAsync([this, trackId, &done]() {
-            daw_.showTrackEditor(trackId);
-            done.signal();
-        });
-        done.wait(5000);
 
-        // Report actual state after editor creation completes
+        auto alreadyOpen = std::make_shared<bool>(false);
+        auto editorVisible = std::make_shared<bool>(false);
+
+        const auto result = runOnTrackSync(
+            trackId,
+            [this, trackId, alreadyOpen, editorVisible](TestTrack& track) {
+                if (track.isEditorVisible())
+                {
+                    *alreadyOpen = true;
+                    *editorVisible = true;
+                    return;
+                }
+                // Route through the DAW so showEditor stays serialized with
+                // the audio thread pool (see TestDAW::showTrackEditor for
+                // the dispatch-mutex rationale). We're already on the MT so
+                // another getTrack inside is consistent with our lookup.
+                daw_.showTrackEditor(trackId);
+                *editorVisible = track.isEditorVisible();
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "Track not found", "Timeout opening editor"))
+            return;
+
+        // TestElementRegistry is process-lifetime and internally locked, so
+        // reading from the HTTP thread after the MT hop is safe.
         int elemCount = static_cast<int>(TestElementRegistry::getInstance().getAllElements().size());
-        bool editorVisible = track->isEditorVisible();
         json data;
         data["trackId"] = trackId;
-        data["editorVisible"] = editorVisible;
+        data["editorVisible"] = *editorVisible;
         data["elementsRegistered"] = elemCount;
-        data["alreadyOpen"] = false;
+        data["alreadyOpen"] = *alreadyOpen;
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)
@@ -274,24 +254,22 @@ void TestHttpServer::handleTrackHideEditor(const httplib::Request& req, httplib:
     try
     {
         int trackId = std::stoi(req.matches[1]);
-        auto* track = daw_.getTrack(trackId);
 
-        if (track == nullptr)
-        {
-            res.set_content(errorResponse("Track not found").dump(), "application/json");
+        auto editorVisible = std::make_shared<bool>(false);
+        const auto result = runOnTrackSync(
+            trackId,
+            [editorVisible](TestTrack& track) {
+                track.hideEditor();
+                *editorVisible = track.isEditorVisible();
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "Track not found", "Timeout hiding editor"))
             return;
-        }
-
-        juce::WaitableEvent hideDone;
-        juce::MessageManager::callAsync([track, &hideDone]() {
-            track->hideEditor();
-            hideDone.signal();
-        });
-        hideDone.wait(5000);
 
         json data;
         data["trackId"] = trackId;
-        data["editorVisible"] = track->isEditorVisible();
+        data["editorVisible"] = *editorVisible;
         res.set_content(successResponse(data).dump(), "application/json");
     }
     catch (const std::exception& e)

@@ -159,20 +159,33 @@ json snapshotLogs()
 
 json snapshotAudioGenerators(TestDAW& daw)
 {
-    json arr = json::array();
-    for (int i = 0; i < daw.getNumTracks(); ++i)
+    // Iterate on the message thread — add/remove track also runs on the MT,
+    // so walking the vector here cannot race a slot reassignment.  Outputs
+    // (`arr`, `done`) are heap-owned via shared_ptr so the MT lambda is safe
+    // even if we return early on timeout. `&daw` is fine: TestDAW has
+    // process lifetime (owned by the application).
+    auto arr = std::make_shared<json>(json::array());
+    auto done = std::make_shared<juce::WaitableEvent>();
+    juce::MessageManager::callAsync([&daw, arr, done]() {
+        for (int i = 0; i < daw.getNumTracks(); ++i)
+        {
+            auto* track = daw.getTrack(i);
+            if (!track)
+                continue;
+            auto& gen = track->getAudioGenerator();
+            arr->push_back({{"track", i},
+                            {"waveform", TestAudioGenerator::waveformToString(gen.getWaveform()).toStdString()},
+                            {"frequency", gen.getFrequency()},
+                            {"amplitude", gen.getAmplitude()},
+                            {"generating", gen.isGenerating()}});
+        }
+        done->signal();
+    });
+    if (!done->wait(3000))
     {
-        auto* track = daw.getTrack(i);
-        if (!track)
-            continue;
-        auto& gen = track->getAudioGenerator();
-        arr.push_back({{"track", i},
-                       {"waveform", TestAudioGenerator::waveformToString(gen.getWaveform()).toStdString()},
-                       {"frequency", gen.getFrequency()},
-                       {"amplitude", gen.getAmplitude()},
-                       {"generating", gen.isGenerating()}});
+        juce::Logger::writeToLog("[snapshotAudioGenerators] soft timeout 3000ms; giving up");
     }
-    return arr;
+    return *arr;
 }
 
 json serializeWaveformState(WaveformComponent* wf, const Oscillator* osc)
@@ -203,22 +216,24 @@ json serializeWaveformState(WaveformComponent* wf, const Oscillator* osc)
 
 json snapshotGUI(TestDAW& daw)
 {
-    // Must read WaveformComponent state on the message thread
-    json result;
-    result["editorOpen"] = false;
+    // Must read WaveformComponent state on the message thread.  Outputs
+    // (`result`, `done`) are heap-owned via shared_ptr so the MT lambda is
+    // safe even if we return early on timeout. `oscilEditor` is captured by
+    // value (pointer); its lifetime is managed by the plugin / DAW.
+    auto result = std::make_shared<json>();
+    (*result)["editorOpen"] = false;
 
     auto* editor = daw.getPrimaryEditor();
     if (!editor)
-        return result;
+        return *result;
 
     auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor);
     if (!oscilEditor)
-        return result;
+        return *result;
 
-    // Block until message thread completes the snapshot
-    juce::WaitableEvent done;
-    juce::MessageManager::callAsync([oscilEditor, &result, &done]() {
-        result["editorOpen"] = true;
+    auto done = std::make_shared<juce::WaitableEvent>();
+    juce::MessageManager::callAsync([oscilEditor, result, done]() {
+        (*result)["editorOpen"] = true;
         const auto& paneComponents = oscilEditor->getPaneComponents();
         json panesArr = json::array();
 
@@ -248,39 +263,51 @@ json snapshotGUI(TestDAW& daw)
             paneJson["waveforms"] = waveformsArr;
             panesArr.push_back(paneJson);
         }
-        result["panes"] = panesArr;
-        done.signal();
+        (*result)["panes"] = panesArr;
+        done->signal();
     });
-    done.wait(3000); // 3 second timeout
+    if (!done->wait(3000))
+    {
+        juce::Logger::writeToLog("[snapshotGUI] soft timeout 3000ms; giving up");
+    }
 
-    return result;
+    return *result;
 }
 
 void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httplib::Response& res)
 {
     try
     {
-        auto* track = resolveTrack(req);
-        if (!track)
-        {
-            res.set_content(errorResponse("No track available").dump(), "application/json");
+        const int trackId = resolveTrackId(req);
+        auto data = std::make_shared<json>();
+
+        // Snapshots that read plugin state (oscillators / panes / timing) must
+        // run on the message thread: add/remove track and state mutations are
+        // all MT-serialized, so a read inside the lambda sees a coherent view.
+        // Snapshots that only read process-global state (sources, UI registry,
+        // metrics, logs) are internally locked and safe from any thread.
+        const auto result = runOnTrackSync(
+            trackId,
+            [data](TestTrack& track) {
+                auto& processor = track.getProcessor();
+                (*data)["oscillators"] = snapshotOscillators(processor);
+                (*data)["panes"] = snapshotPanes(processor.getState());
+                (*data)["timing"] = snapshotTiming(processor);
+            },
+            5000);
+
+        if (respondIfTrackCallFailed(result, res, "No track available", "Timeout collecting diagnostic snapshot"))
             return;
-        }
 
-        auto& processor = track->getProcessor();
-        json data;
-        data["oscillators"] = snapshotOscillators(processor);
-        data["panes"] = snapshotPanes(processor.getState());
-        data["transport"] = snapshotTransport(daw_);
-        data["timing"] = snapshotTiming(processor);
-        data["sources"] = snapshotSources();
-        data["audioGenerators"] = snapshotAudioGenerators(daw_);
-        data["ui"] = snapshotUI();
-        data["gui"] = snapshotGUI(daw_);
-        data["metrics"] = snapshotMetrics(metrics_);
-        data["logs"] = snapshotLogs();
+        (*data)["transport"] = snapshotTransport(daw_);
+        (*data)["sources"] = snapshotSources();
+        (*data)["audioGenerators"] = snapshotAudioGenerators(daw_);
+        (*data)["ui"] = snapshotUI();
+        (*data)["gui"] = snapshotGUI(daw_);
+        (*data)["metrics"] = snapshotMetrics(metrics_);
+        (*data)["logs"] = snapshotLogs();
 
-        res.set_content(successResponse(data).dump(), "application/json");
+        res.set_content(successResponse(*data).dump(), "application/json");
     }
     catch (const std::exception& e)
     {

@@ -78,10 +78,24 @@ public:
     TestTrack* getTrack(int index);
     const TestTrack* getTrack(int index) const;
 
-    /**
-     * Get number of tracks
-     */
+    /// Slot count of the internal track vector, including null slots left by
+    /// removeTrack. Pair with `getTrack(i)` + nullptr skip when iterating.
     int getNumTracks() const { return static_cast<int>(tracks_.size()); }
+
+    /// Live track count (non-null slots). Use for external "current tracks"
+    /// reporting — health endpoint, scan-cycle post-condition, etc.
+    /// Takes dispatchMutex_ so callers on any thread observe a coherent
+    /// view — without the lock, unique_ptr slot writes from the message
+    /// thread are not visible to HTTP-worker readers.
+    int getActiveTrackCount() const
+    {
+        std::lock_guard<std::mutex> lock(dispatchMutex_);
+        int n = 0;
+        for (const auto& t : tracks_)
+            if (t != nullptr)
+                ++n;
+        return n;
+    }
 
     /**
      * Get all tracks
@@ -146,6 +160,98 @@ public:
      */
     int getPoolThreadCount() const;
 
+    // ------------------------------------------------------------------
+    //  Host-lifecycle simulation primitives
+    //
+    //  These reproduce DAW-initiated events that `prepareToPlay` / bus
+    //  renegotiation / scanner cycles drive in production, and that the
+    //  plain construct-once initialize() flow does not exercise.
+    // ------------------------------------------------------------------
+
+    /**
+     * Reconfigure the session sample rate.
+     *
+     * Calls `prepare(newRate, bufferSize_)` on every live track — which in
+     * turn invokes `prepareToPlay` on each processor — and updates the DAW's
+     * own cached sample rate so later add/track uses the new value.
+     *
+     * If `audioThreadPrepareMode_` is true, the re-prepare is posted to the
+     * audio thread pool instead of running inline on the caller's thread,
+     * reproducing Pro Tools / Reaper behaviour where the host calls
+     * `prepareToPlay` from the audio thread.
+     *
+     * Returns false if `newRate` is non-positive or non-finite.
+     */
+    bool setSampleRate(double newRate);
+
+    /**
+     * Reconfigure the session block size.
+     *
+     * Calls `prepare(sampleRate_, newSize)` on every live track and updates
+     * the DAW's own cached size.  Honours `audioThreadPrepareMode_` the same
+     * way `setSampleRate` does.
+     *
+     * Returns false if `newSize` is outside the accepted [16, 8192] range.
+     */
+    bool setBufferSize(int newSize);
+
+    /**
+     * Force the next `setSampleRate` / `setBufferSize` call to dispatch its
+     * prepare work onto the audio thread pool instead of the caller's thread.
+     *
+     * This surfaces the non-message-thread branch of
+     * `OscilPluginProcessor::deferRegistration` that is otherwise unreachable
+     * from harness tests.  A single flag — both host-triggered reprepares
+     * happen on the same thread in real DAWs.
+     */
+    void setAudioThreadPrepareMode(bool enabled) { audioThreadPrepareMode_.store(enabled); }
+
+    /**
+     * True if audio-thread prepare mode is currently armed.
+     */
+    bool isAudioThreadPrepareMode() const { return audioThreadPrepareMode_.load(); }
+
+    /**
+     * Change the channel layout of a specific track.
+     *
+     * ``layout`` must be "mono" or "stereo".  Delegates to
+     * `TestTrack::setChannelLayout` under the dispatch mutex so we can never
+     * race a pool-dispatched tick.  Returns false for an unknown track index,
+     * invalid layout name, or a processor that rejects the layout.
+     */
+    bool setChannelLayout(int trackIndex, const juce::String& layout);
+
+    /**
+     * Repeat an `addTrack → query state → removeTrack` cycle `cycles` times
+     * without ever calling `processBlock` on the added track.
+     *
+     * Reproduces Ableton / Bitwig / Studio One plugin-scanner behaviour: the
+     * host instantiates, reads names and layouts, then destroys — all without
+     * feeding a single audio buffer.  Used for leak / UUID-collision tests.
+     *
+     * Returns the number of successful iterations (normally == `cycles`).
+     */
+    int scanCycle(const juce::String& trackName, int cycles);
+
+    /**
+     * Isolation mode: when enabled, every `addTrack` call constructs a fresh
+     * `InstanceRegistry` dedicated to that one track, instead of sharing the
+     * process-wide `PluginFactory::getInstance().getInstanceRegistry()`.
+     *
+     * This reproduces Logic Pro's AU sandbox model, where each plugin
+     * instance runs in its own process and the registry singleton is NOT
+     * shared across instances.  Without this, the in-process harness
+     * structurally cannot fail cross-instance-discovery features — because
+     * every track sees every other track's registered source through the
+     * shared singleton.
+     *
+     * Existing tracks retain whatever registry they were constructed with.
+     * Reset state + toggle the flag + re-add tracks to apply to a fresh
+     * session.
+     */
+    void setIsolatedRegistriesEnabled(bool enabled) { isolatedRegistries_.store(enabled, std::memory_order_release); }
+    bool isIsolatedRegistriesEnabled() const { return isolatedRegistries_.load(std::memory_order_acquire); }
+
 private:
     void hiResTimerCallback() override;
     void processAudioTick();
@@ -162,6 +268,22 @@ private:
     std::unique_ptr<juce::ThreadPool> audioThreadPool_;
     mutable std::mutex dispatchMutex_;
     std::atomic<uint64_t> processedTicks_{0};
+
+    // When true, the next setSampleRate / setBufferSize posts its prepare
+    // call onto a pool thread instead of running inline.  Reproduces the
+    // Pro Tools / Reaper audio-thread prepareToPlay contract.
+    std::atomic<bool> audioThreadPrepareMode_{false};
+
+    // When true, addTrack() creates a per-track InstanceRegistry instead of
+    // using the PluginFactory singleton's shared registry. Simulates Logic's
+    // AU sandbox isolation — cross-instance source discovery will NOT work
+    // because registries are not shared. See setIsolatedRegistriesEnabled.
+    std::atomic<bool> isolatedRegistries_{false};
+
+    // Per-track owned InstanceRegistry instances, created lazily by addTrack
+    // when isolation mode is on. Entries pair with tracks_ by index; null
+    // slots indicate tracks constructed against the shared factory registry.
+    std::vector<std::unique_ptr<InstanceRegistry>> perTrackRegistries_;
 
     // Timer-based audio simulation (not real audio device)
     static constexpr int TIMER_INTERVAL_MS = 10; // ~100 callbacks per second
