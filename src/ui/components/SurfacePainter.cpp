@@ -91,22 +91,22 @@ void paintShadow(juce::Graphics& g, juce::Rectangle<float> bounds, float cornerR
     g.fillRoundedRectangle(shadowBounds, cornerRadius + (expand * 0.5f));
 }
 
-void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass,
+void paintPanelBackground(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& surface,
                           float cornerRadius)
 {
     // Solid fill, no translucency.
-    g.setColour(glass.bgPanel);
+    g.setColour(surface.bgPanel);
     g.fillRoundedRectangle(bounds, cornerRadius);
 }
 
-void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
+void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& surface, float cornerRadius,
                 BorderLevel border)
 {
     // 1. Single-layer drop shadow (skipped when shadowIntensity == 0).
-    paintShadow(g, bounds, cornerRadius, glass.shadowIntensity, glass.shadowSpread);
+    paintShadow(g, bounds, cornerRadius, surface.shadowIntensity, surface.shadowSpread);
 
     // 2. Flat solid fill.
-    g.setColour(glass.bgPanel);
+    g.setColour(surface.bgPanel);
     g.fillRoundedRectangle(bounds, cornerRadius);
 
     // 3. 1px hairline border at the chosen intensity.
@@ -119,16 +119,16 @@ void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
             drawBorder = false;
             break;
         case BorderLevel::Subtle:
-            borderColour = glass.borderSubtle;
+            borderColour = surface.borderSubtle;
             break;
         case BorderLevel::Default:
-            borderColour = glass.borderDefault;
+            borderColour = surface.borderDefault;
             break;
         case BorderLevel::Strong:
-            borderColour = glass.borderStrong;
+            borderColour = surface.borderStrong;
             break;
         case BorderLevel::Accent:
-            borderColour = glass.accent;
+            borderColour = surface.accent;
             break;
     }
 
@@ -145,12 +145,12 @@ void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
     }
 }
 
-void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& glass, float cornerRadius,
+void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& surface, float cornerRadius,
                 bool focused, bool hovered, bool error, juce::Colour errorColour)
 {
     // Flat input: solid dark fill, 1px border that shifts colour by state.
-    juce::Colour const bgColour = glass.bgPanel;
-    juce::Colour borderColour = glass.borderSubtle;
+    juce::Colour const bgColour = surface.bgPanel;
+    juce::Colour borderColour = surface.borderSubtle;
 
     if (error)
     {
@@ -158,11 +158,11 @@ void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
     }
     else if (focused)
     {
-        borderColour = glass.accent;
+        borderColour = surface.accent;
     }
     else if (hovered)
     {
-        borderColour = glass.borderDefault;
+        borderColour = surface.borderDefault;
     }
 
     g.setColour(bgColour);

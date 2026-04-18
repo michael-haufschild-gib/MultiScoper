@@ -109,7 +109,11 @@ class OscilTestClient:
         )
 
     def _post(
-        self, path: str, payload: Dict = None, *, timeout: Optional[float] = None
+        self,
+        path: str,
+        payload: Optional[Dict[str, Any]] = None,
+        *,
+        timeout: Optional[float] = None,
     ) -> requests.Response:
         return requests.post(
             f"{self.base_url}{path}",
@@ -117,7 +121,7 @@ class OscilTestClient:
             timeout=timeout if timeout is not None else self.timeout,
         )
 
-    def _get_json(self, path: str, **kwargs) -> Optional[Dict]:
+    def _get_json(self, path: str, **kwargs) -> Optional[Dict[str, Any]]:
         try:
             r = self._get(path, **kwargs)
         except requests.exceptions.ConnectionError:
@@ -129,8 +133,12 @@ class OscilTestClient:
         return None
 
     def _post_json(
-        self, path: str, payload: Dict = None, *, timeout: Optional[float] = None
-    ) -> Optional[Dict]:
+        self,
+        path: str,
+        payload: Optional[Dict[str, Any]] = None,
+        *,
+        timeout: Optional[float] = None,
+    ) -> Optional[Dict[str, Any]]:
         try:
             r = self._post(path, payload, timeout=timeout)
         except requests.exceptions.ConnectionError:
@@ -141,7 +149,7 @@ class OscilTestClient:
             return r.json()
         return None
 
-    def _post_ok(self, path: str, payload: Dict = None) -> bool:
+    def _post_ok(self, path: str, payload: Optional[Dict[str, Any]] = None) -> bool:
         """POST and return True only if response has success=true."""
         resp = self._post_json(path, payload)
         return resp is not None and resp.get("success", False)

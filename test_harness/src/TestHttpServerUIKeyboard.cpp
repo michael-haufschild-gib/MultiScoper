@@ -338,9 +338,27 @@ void TestHttpServer::handleUIElement(const httplib::Request& req, httplib::Respo
     auto& ctrl = uiController_;
     TestDAW* dawPtr = &daw_;
     juce::MessageManager::callAsync([info, done, &ctrl, elementId, trackScope, dawPtr]() {
-        if (trackScope.has_value())
-            ctrl.setTrackScope(*trackScope, dawPtr);
-        *info = ctrl.getElementInfo(juce::String(elementId));
+        // setTrackScope/getElementInfo can throw. Guarantee clearTrackScope
+        // and done->signal() run on every path so we never leave the UI
+        // controller pinned to the wrong track and never deadlock the HTTP
+        // worker waiting on an event that's never signalled. The error JSON
+        // is constructed inline to avoid capturing `this` just to reach
+        // TestHttpServer::errorResponse — the handler below the callAsync
+        // only checks `info->contains("error")`, so this shape is enough.
+        try
+        {
+            if (trackScope.has_value())
+                ctrl.setTrackScope(*trackScope, dawPtr);
+            *info = ctrl.getElementInfo(juce::String(elementId));
+        }
+        catch (const std::exception& e)
+        {
+            *info = json{{"success", false}, {"error", std::string(e.what())}};
+        }
+        catch (...)
+        {
+            *info = json{{"success", false}, {"error", "unknown exception in getElementInfo"}};
+        }
         if (trackScope.has_value())
             ctrl.clearTrackScope();
         done->signal();

@@ -24,7 +24,8 @@
 
 local T = require("reaper_test_lib")
 
-local SAVE_PATH = "/tmp/oscil_reaper_scenario_04.rpp"
+local SAVE_PATH = (os.getenv("TMPDIR") or os.getenv("TMP") or os.getenv("TEMP") or "/tmp")
+  .. "/oscil_reaper_scenario_04.rpp"
 
 -- Reaper's command id for "Options: Enable anticipative FX processing" toggle.
 -- Verified for Reaper 7.x. If this id is wrong on older/newer Reapers the

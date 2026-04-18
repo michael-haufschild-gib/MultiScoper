@@ -161,11 +161,21 @@ TEST_F(SectionHeaderTest, NullCallbacksDoNotCrash)
 // Accent Colour Contract
 // =============================================================================
 
-TEST_F(SectionHeaderTest, AccentColourSetterDoesNotThrow)
+TEST_F(SectionHeaderTest, AccentColourSetterPersistsValue)
 {
     SectionHeader header(getThemeManager(), "Section");
-    header.setAccentColour(juce::Colour(0xFF3AA0FF));
+
+    auto const customAccent = juce::Colour(0xFF3AA0FF);
+    header.setAccentColour(customAccent);
+    EXPECT_EQ(header.getAccentColour(), customAccent);
+
+    // Setting transparent black must overwrite, not silently ignore — the
+    // "transparent means use theme defaults" rule lives in paint(), not in
+    // the setter. A no-op setter would hide state drift on theme swap.
     header.setAccentColour(juce::Colours::transparentBlack);
+    EXPECT_EQ(header.getAccentColour(), juce::Colours::transparentBlack);
+
+    // Title is unchanged as a side-effect guard.
     EXPECT_EQ(header.getTitle(), juce::String("Section"));
 }
 

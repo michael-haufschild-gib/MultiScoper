@@ -35,6 +35,7 @@ public:
     /** Optional accent colour used for chevrons / divider tint. When left
         transparent, theme.divider and theme.textSecondary are used. */
     void setAccentColour(juce::Colour accent);
+    [[nodiscard]] juce::Colour getAccentColour() const { return accent_; }
 
     std::function<void()> onPrev;
     std::function<void()> onNext;

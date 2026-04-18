@@ -148,6 +148,16 @@ on the MT and wants a one-liner.
 
 Any new HTTP handler that takes a `TestTrack*` outside an MT lambda, or
 that passes `[&]` captures into `runOnTrackSync` /
-`runOnMessageThreadBlocking` / `callAsync`, is a regression. Reviewers
-should flag both patterns on sight. A future lint rule could grep for
-the combination, but nothing exists today.
+`runOnMessageThreadBlocking` / `callAsync`, is a regression. Two lint
+scripts now enforce this automatically:
+
+- `scripts/forbidden_patterns_lint.py` — catches the broader set of
+  past-bug regressions (gated by `OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT`).
+- `scripts/harness_mt_capture_lint.py` — specifically flags `[&]` and
+  stack-borrowing captures feeding `runOnTrackSync` /
+  `runOnMessageThreadBlocking` / `callAsync` under `test_harness/`
+  (gated by `OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT`; both CMake switches
+  default ON in the `dev` preset).
+
+Reviewers should still flag the pattern on sight — the linters shrink the
+blast radius but cannot substitute for reading the diff.

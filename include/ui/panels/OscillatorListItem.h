@@ -111,6 +111,11 @@ private:
     void setupModeButtons();
     void updateVisibility();
 
+    // Resolve and apply label colours for the current (isVisible_, selected_)
+    // state against the given theme. Called from both updateVisibility() and
+    // onThemeChanged() so theme swaps and visibility toggles never disagree.
+    void applyLabelColours(const ColorTheme& theme);
+
     bool isInDragZone(const juce::Point<int>& pos) const;
 
     // Data

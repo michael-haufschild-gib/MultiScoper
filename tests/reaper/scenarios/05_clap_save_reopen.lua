@@ -15,7 +15,8 @@
 
 local T = require("reaper_test_lib")
 
-local SAVE_PATH = "/tmp/oscil_reaper_scenario_05.rpp"
+local SAVE_PATH = (os.getenv("TMPDIR") or os.getenv("TMP") or os.getenv("TEMP") or "/tmp")
+  .. "/oscil_reaper_scenario_05.rpp"
 
 -- Try multiple prefix forms. Returns (fx_index, prefix_used) on success, or
 -- (-1, "") on total failure. load_clap in the lib uses "CLAP:" by default;
@@ -23,7 +24,10 @@ local SAVE_PATH = "/tmp/oscil_reaper_scenario_05.rpp"
 local function try_add_clap(track_idx)
   local tr = reaper.GetTrack(0, track_idx)
   T.assert_true(tr ~= nil, "no track " .. tostring(track_idx))
-  local candidates = { "CLAP:oscil4", "CLAPi:oscil4", "clap.oscil4", "oscil4" }
+  -- Keep CLAP-specific identifiers only. The generic "oscil4" probe can
+  -- resolve to AU/VST3 on systems with multiple formats installed, which
+  -- would let this scenario pass without ever touching the CLAP wrapper.
+  local candidates = { "CLAP:oscil4", "CLAPi:oscil4", "clap.oscil4" }
   for _, name in ipairs(candidates) do
     local fx = reaper.TrackFX_AddByName(tr, name, false, -1)
     if fx >= 0 then

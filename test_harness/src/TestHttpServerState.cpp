@@ -316,7 +316,7 @@ void TestHttpServer::handleStateOscillators(const httplib::Request& req, httplib
     const int trackId = resolveTrackId(req);
     auto oscillators = std::make_shared<json>(json::array());
 
-    (void) runOnTrackSync(trackId, [oscillators](TestTrack& track) {
+    const auto result = runOnTrackSync(trackId, [oscillators](TestTrack& track) {
         auto& state = track.getProcessor().getState();
         auto oscList = state.getOscillators();
 
@@ -326,6 +326,9 @@ void TestHttpServer::handleStateOscillators(const httplib::Request& req, httplib
         for (const auto& osc : oscList)
             oscillators->push_back(oscillatorToJson(osc));
     });
+
+    if (respondIfTrackCallFailed(result, res, "No track available", "Timeout listing oscillators"))
+        return;
 
     res.set_content(successResponse(*oscillators).dump(), "application/json");
 }

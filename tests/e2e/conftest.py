@@ -446,13 +446,20 @@ def multi_editor(client: OscilTestClient):
     """
     # Base tracks 0 and 1 must exist — if a previous test removed one
     # (e.g. test_remove_middle_track_cascade), recreate before opening.
+    # add_track() may append non-contiguous indices, so retry until the
+    # specific tid becomes observable rather than assuming a single call
+    # makes it so.
     for tid in (0, 1):
-        if client.get_track_info(tid) is None:
-            client.add_track()
+        while client.get_track_info(tid) is None:
+            created = client.add_track()
+            assert created is not None, (
+                f"add_track() failed while restoring base track {tid}"
+            )
             client.wait_until(
-                lambda t=tid: client.get_track_info(t) is not None,
+                lambda c=created: client.get_track_info(c) is not None,
                 timeout_s=5.0,
-                desc=f"track {tid} to be observable after add_track()",
+                desc=f"newly-added track {created} to be observable "
+                f"while restoring base track {tid}",
             )
     client.open_editor(track_id=0)
     client.open_editor(track_id=1)

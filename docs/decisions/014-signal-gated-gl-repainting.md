@@ -1,9 +1,11 @@
 # ADR-014: Signal-Gated OpenGL Repainting
 
 ## Status
+
 Accepted
 
 ## Context
+
 Oscil is designed to run as many simultaneous plugin instances as a DAW
 project contains tracks. Real sessions routinely carry 8–16 open editors.
 Each editor owns a `juce::OpenGLContext`; left in the JUCE default of
@@ -18,6 +20,7 @@ states that dominate battery life. This is a quality-of-life regression
 users notice when they leave Oscil on a bus track and walk away.
 
 ## Decision
+
 Disable `context_.setContinuousRepainting(true)`. Drive OpenGL redraws
 explicitly in two situations:
 
@@ -80,6 +83,7 @@ explicitly in two situations:
 | Fades/envelope decays freeze before finishing | `kPostSilenceFrames` tail is too short for the effect. Either extend the effect's own redraw trigger, or accept the limit. |
 
 ## Verification
+
 - `tests/test_oscil_look_and_feel.cpp` — theme-token propagation into
   JUCE widget colour IDs, exercised on theme change.
 - `tests/test_oscillator_panel_controller.cpp` — property-change dispatch

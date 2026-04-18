@@ -450,6 +450,18 @@ if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
     )
 endif()
 
+# Repo-wide harness MT-dispatch capture linting target (ADR 016)
+if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+    add_custom_target(harness_mt_capture_lint
+        COMMAND ${Python3_EXECUTABLE} ${OSCIL_HARNESS_MT_CAPTURE_LINT_SCRIPT}
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --paths test_harness/src test_harness/include
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running harness MT-dispatch capture lint checks"
+        VERBATIM
+    )
+endif()
+
 # Unified lint target — runs all enabled lint checks in one command
 # Usage: cmake --build --preset dev --target lint
 set(OSCIL_LINT_DEPENDENCIES "")
@@ -473,6 +485,9 @@ if(OSCIL_ENABLE_COMMENT_LINT)
 endif()
 if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
     list(APPEND OSCIL_LINT_DEPENDENCIES forbidden_patterns_lint)
+endif()
+if(OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
+    list(APPEND OSCIL_LINT_DEPENDENCIES harness_mt_capture_lint)
 endif()
 if(OSCIL_LINT_DEPENDENCIES)
     add_custom_target(lint DEPENDS ${OSCIL_LINT_DEPENDENCIES})

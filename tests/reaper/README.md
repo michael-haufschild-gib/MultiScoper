@@ -17,8 +17,8 @@ DAW host integration tests for Oscil, driven by Reaper (ReaScript/Lua). Run manu
 # Run full suite
 tests/reaper/run_reaper_tests.sh
 
-# Run a single scenario by name (without .lua extension)
-tests/reaper/run_reaper_tests.sh load_vst3_smoke
+# Run a single scenario by name (the filename stem in scenarios/, without .lua)
+tests/reaper/run_reaper_tests.sh 01_vst3_save_reopen
 ```
 
 The script launches Reaper headlessly-ish (`-nonewinst -new`), Reaper auto-runs
@@ -27,7 +27,7 @@ the script reads that file and reports pass/fail. Non-zero exit on any failure.
 
 ## Layout
 
-```
+```text
 tests/reaper/
   README.md                      # this file
   run_reaper_tests.sh            # shell entrypoint (chmod +x)

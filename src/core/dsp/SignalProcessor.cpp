@@ -8,6 +8,17 @@
 #include <cmath>
 #include <utility>
 
+// Cross-compiler restrict qualifier. MSVC does not recognize GCC/Clang's
+// double-underscore spelling; this TU-scoped macro resolves to the correct
+// keyword per compiler (kept local since no other TU currently needs it).
+#ifdef _MSC_VER
+    #define OSCIL_RESTRICT __restrict
+#elif defined(__GNUC__) || defined(__clang__)
+    #define OSCIL_RESTRICT __restrict__
+#else
+    #define OSCIL_RESTRICT
+#endif
+
 namespace oscil
 {
 namespace
@@ -125,8 +136,8 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
     int const numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
 
-    float* __restrict__ out = output.channel1.data();
-    const float* __restrict__ lp = left.data();
+    float* OSCIL_RESTRICT out = output.channel1.data();
+    const float* OSCIL_RESTRICT lp = left.data();
     auto const n = static_cast<size_t>(numSamples);
 
     // Hoist loop-invariant branch outside the loop so the body has no data
@@ -135,7 +146,7 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
     // (see logs/perf/baseline_20260417.json).
     if (right.size() >= n)
     {
-        const float* __restrict__ rp = right.data();
+        const float* OSCIL_RESTRICT rp = right.data();
         for (size_t i = 0; i < n; ++i)
             out[i] = (lp[i] + rp[i]) * 0.5f;
     }
@@ -143,7 +154,7 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
     {
         // Uncommon: right is shorter than left.  Straight portion, then mono-fold tail.
         const size_t common = right.size();
-        const float* __restrict__ rp = right.data();
+        const float* OSCIL_RESTRICT rp = right.data();
         for (size_t i = 0; i < common; ++i)
             out[i] = (lp[i] + rp[i]) * 0.5f;
         for (size_t i = common; i < n; ++i)
@@ -170,21 +181,21 @@ void SignalProcessor::processSide(std::span<const float> left, std::span<const f
     int const numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
 
-    float* __restrict__ out = output.channel1.data();
-    const float* __restrict__ lp = left.data();
+    float* OSCIL_RESTRICT out = output.channel1.data();
+    const float* OSCIL_RESTRICT lp = left.data();
     auto const n = static_cast<size_t>(numSamples);
 
     // See processMono for rationale on hoisting the branch.
     if (right.size() >= n)
     {
-        const float* __restrict__ rp = right.data();
+        const float* OSCIL_RESTRICT rp = right.data();
         for (size_t i = 0; i < n; ++i)
             out[i] = (lp[i] - rp[i]) * 0.5f;
     }
     else if (!right.empty())
     {
         const size_t common = right.size();
-        const float* __restrict__ rp = right.data();
+        const float* OSCIL_RESTRICT rp = right.data();
         for (size_t i = 0; i < common; ++i)
             out[i] = (lp[i] - rp[i]) * 0.5f;
         for (size_t i = common; i < n; ++i)

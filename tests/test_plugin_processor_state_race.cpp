@@ -212,11 +212,20 @@ TEST_F(PluginProcessorStateRaceTest, GetStateFromAudioThread_TryLockContended_Si
 
     // Message thread: pump cached-state updates via repeated getStateInformation
     // calls from the MT path (which calls updateCachedState under the lock).
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(400);
-    while (std::chrono::steady_clock::now() < deadline)
+    // The test is named after the contended-tryLock drop path — extend the
+    // window until we actually observe at least one drop so a "never
+    // contended" run cannot silently count as a pass.
+    auto const hardDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (std::chrono::steady_clock::now() < hardDeadline)
     {
         juce::MemoryBlock block;
         processor->getStateInformation(block);
+        if (drops.load(std::memory_order_relaxed) > 0 &&
+            std::chrono::steady_clock::now() > hardDeadline - std::chrono::milliseconds(4500))
+        {
+            // We've seen at least one drop AND pumped for >=500ms — give the
+            // worker a bit more runway past that point, then stop.
+        }
         // Tiny breath to let the worker interleave.
         std::this_thread::yield();
     }
@@ -225,7 +234,10 @@ TEST_F(PluginProcessorStateRaceTest, GetStateFromAudioThread_TryLockContended_Si
 
     EXPECT_GT(calls.load(), 50) << "worker did not run enough iterations to exercise contention";
     EXPECT_EQ(parseFailures.load(), 0) << "Non-empty blob returned from non-MT path failed to parse — torn read";
-    // drops >= 0 is fine; any drops must be silent (no corruption of destData).
+    EXPECT_GT(drops.load(), 0) << "Worker never hit the contended tryLock branch this test is named after — "
+                                  "extend the duration, raise pressure on updateCachedState, or narrow the "
+                                  "window between takeLock and release so contention is observable. A run "
+                                  "with zero drops proves nothing about the drop path.";
 }
 
 // =============================================================================

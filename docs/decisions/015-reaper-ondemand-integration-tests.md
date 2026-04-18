@@ -65,7 +65,7 @@ identically to both languages.
 
 ## Structure
 
-```
+```text
 tests/reaper/
   run_reaper_tests.sh     # shell entrypoint; launches Reaper, reads JSON results
   lib/reaper_test_lib.lua # helpers (load_vst3, play_seconds, assertions, ...)

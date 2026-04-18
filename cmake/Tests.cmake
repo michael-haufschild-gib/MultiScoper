@@ -366,7 +366,7 @@ endif()
 # Unit tests for the lint scripts themselves. These seed a synthetic source
 # tree and assert the scripts' exit codes and reports — so regressions of
 # the lint SCRIPTS are caught even if the real repo happens to stay clean.
-if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT)
+if(OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT OR OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT)
     add_test(NAME LintScriptsUnitTests
         COMMAND ${Python3_EXECUTABLE} -m unittest discover
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/lint

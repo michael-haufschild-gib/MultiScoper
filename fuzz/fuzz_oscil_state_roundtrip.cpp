@@ -61,5 +61,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
         std::abort();
     }
 
+    // Re-serializing the already-parsed value must produce byte-identical
+    // XML. A weaker count-only check would pass even if the round-trip reset
+    // oscillator parameters, pane layout, or source state; stability of the
+    // serialized string proves the full state survived the cycle.
+    const juce::String reserialized = second.toXmlString();
+    if (reserialized != serialized)
+    {
+        std::abort();
+    }
+
     return 0;
 }

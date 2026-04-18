@@ -235,17 +235,23 @@ juce::String StatusBarComponent::getElidedHintText(float availableWidth) const
         return hintText_;
 
     // Trim from the end and append an ellipsis marker until it fits.
-    // A space + three dots reads cleanly with proportional fonts.
+    // A space + three dots reads cleanly with proportional fonts; at very
+    // narrow widths we fall back to a bare ellipsis so the paint path always
+    // renders a visible hint instead of a naked separator.
     const juce::String suffix(" ...");
+    juce::String ellipsis("...");
     const float suffixWidth = juce::GlyphArrangement::getStringWidth(font, suffix);
+    const float ellipsisWidth = juce::GlyphArrangement::getStringWidth(font, ellipsis);
 
-    if (suffixWidth >= availableWidth)
+    if (ellipsisWidth > availableWidth)
         return {};
 
     const int n = hintText_.length();
     int lo = 0;
     int hi = n;
-    // Binary search the largest prefix whose width plus suffix fits.
+    // Binary search the largest prefix whose width plus the `" ..."` suffix
+    // fits. If nothing fits with the padded suffix, fall through to the bare
+    // ellipsis below — matching the width check we actually gate on.
     while (lo < hi)
     {
         const int mid = lo + ((hi - lo + 1) / 2);
@@ -257,7 +263,7 @@ juce::String StatusBarComponent::getElidedHintText(float availableWidth) const
     }
 
     if (lo <= 0)
-        return suffix.trimStart();
+        return ellipsis;
     return hintText_.substring(0, lo) + suffix;
 }
 

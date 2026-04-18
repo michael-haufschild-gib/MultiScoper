@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <string>
 #include <typeinfo>
 
 namespace oscil::test
@@ -340,8 +341,11 @@ public:
         // the type + what() so the crash report points at the source file to
         // fix, not just "abort() called".
         std::set_terminate([]() noexcept {
-            const char* what = "<unknown>";
-            const char* typeName = "<unknown>";
+            // Own the exception strings — e.what() and typeid::name() point
+            // into the exception object, which is destroyed as we exit the
+            // catch block. Reading those pointers later would be a UAF.
+            std::string whatStr = "<unknown>";
+            std::string typeNameStr = "<unknown>";
             try
             {
                 if (auto eptr = std::current_exception())
@@ -349,14 +353,15 @@ public:
             }
             catch (const std::exception& e)
             {
-                what = e.what();
-                typeName = typeid(e).name();
+                whatStr = e.what();
+                typeNameStr = typeid(e).name();
             }
             catch (...)
             {
             }
-            std::cerr << "[TERMINATE] Uncaught exception — type=" << typeName << " what=" << what << std::endl;
-            juce::Logger::writeToLog(juce::String("[TERMINATE] type=") + typeName + " what=" + what);
+            std::cerr << "[TERMINATE] Uncaught exception — type=" << typeNameStr << " what=" << whatStr << std::endl;
+            juce::Logger::writeToLog(juce::String("[TERMINATE] type=") + typeNameStr.c_str() +
+                                     " what=" + whatStr.c_str());
             std::abort();
         });
 

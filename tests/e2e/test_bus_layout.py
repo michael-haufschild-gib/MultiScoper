@@ -66,7 +66,7 @@ class TestLayoutValidation:
         passes an arbitrary string through.  The plugin would then reject
         it but the HTTP surface would hide that behind a 500.
         """
-        resp = client._post(f"/track/0/channelLayout", {"layout": "disabled"})
+        resp = client._post("/track/0/channelLayout", {"layout": "disabled"})
         assert resp.status_code == 400
 
     def test_reject_surround(self, client: OscilTestClient):
@@ -75,11 +75,11 @@ class TestLayoutValidation:
         mono or stereo.  We surface that rejection at the harness boundary
         as a 400 (invalid argument) so tests can assert cleanly.
         """
-        resp = client._post(f"/track/0/channelLayout", {"layout": "surround"})
+        resp = client._post("/track/0/channelLayout", {"layout": "surround"})
         assert resp.status_code == 400
 
     def test_reject_missing_field(self, client: OscilTestClient):
-        resp = client._post(f"/track/0/channelLayout", {})
+        resp = client._post("/track/0/channelLayout", {})
         assert resp.status_code == 400
 
     def test_invalid_layout_leaves_last_valid_intact(self, client: OscilTestClient):
@@ -90,7 +90,7 @@ class TestLayoutValidation:
         """
         before = _set_layout(client, 0, "stereo")
         # Reject
-        resp = client._post(f"/track/0/channelLayout", {"layout": "disabled"})
+        resp = client._post("/track/0/channelLayout", {"layout": "disabled"})
         assert resp.status_code == 400
         # Confirm the track still looks like stereo
         after = _set_layout(client, 0, "stereo")  # no-op-ish reassert

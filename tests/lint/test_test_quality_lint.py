@@ -89,6 +89,27 @@ class TestQualityLintTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, msg=result.stdout + result.stderr)
             self.assertIn("existence-only", result.stdout)
 
+    def test_expect_that_does_not_excuse_existence_only(self):
+        # EXPECT_THAT matchers (NotNull/IsEmpty) only check structural
+        # properties. A test whose assertions are existence-only must NOT
+        # slip through just because one of them happens to be EXPECT_THAT.
+        with tempfile.TemporaryDirectory() as tmp:
+            write(
+                os.path.join(tmp, "tests", "test_shallow_that.cpp"),
+                """
+                #include <gtest/gtest.h>
+                #include <gmock/gmock.h>
+                TEST(ShallowSuite, OnlyNullAndThat) {
+                    auto* ptr = getThing();
+                    EXPECT_NE(ptr, nullptr);
+                    EXPECT_THAT(ptr, testing::NotNull());
+                }
+                """,
+            )
+            result = run_script(tmp)
+            self.assertEqual(result.returncode, 1, msg=result.stdout + result.stderr)
+            self.assertIn("existence-only", result.stdout)
+
     def test_allows_behavioral_assertions(self):
         with tempfile.TemporaryDirectory() as tmp:
             write(

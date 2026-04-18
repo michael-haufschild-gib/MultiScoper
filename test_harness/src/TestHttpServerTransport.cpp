@@ -69,14 +69,14 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
     {
         auto body = json::parse(req.body);
         double bpm = body.value("bpm", 120.0);
-        daw_.getTransport().setBpm(bpm);
 
-        // Update internal BPM on the timing engine, then force processBlock +
-        // refreshPanels to recalculate displaySamples. All track pointer
-        // access happens inside the MT lambda so a concurrent removeTrack
-        // from another HTTP worker cannot free the track beneath us.
+        // Fold the transport mutation + per-track refresh into a single
+        // MT-dispatched block so a timeout or missing track surfaces as an
+        // HTTP error instead of leaving the global transport BPM updated
+        // while the timing-engine/editor refresh never happened.
         const int trackId = resolveTrackId(req);
-        runOnTrackSync(trackId, [this, bpm](TestTrack& track) {
+        const auto result = runOnTrackSync(trackId, [this, bpm](TestTrack& track) {
+            daw_.getTransport().setBpm(bpm);
             auto& timingEngine = track.getProcessor().getTimingEngine();
             timingEngine.setInternalBPM(static_cast<float>(bpm));
             daw_.runSingleBlockSynchronously(track);
@@ -86,6 +86,9 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
                     oscilEditor->refreshPanels();
             }
         });
+
+        if (respondIfTrackCallFailed(result, res, "Track not found", "Timeout updating BPM"))
+            return;
 
         res.set_content(successResponse().dump(), "application/json");
     }

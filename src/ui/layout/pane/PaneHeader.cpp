@@ -80,9 +80,13 @@ void PaneHeader::paintOscillatorBadge(juce::Graphics& g, juce::Rectangle<int>& b
     g.setColour(modeColor.withAlpha(kBgAlpha));
     g.fillRoundedRectangle(badgeBounds.reduced(2, 4), 10.0f);
 
-    // Theme-aware text: pick contrast-safe text against the composited bg.
-    g.setColour(ColorTheme::pickContrastingText(
-        ColorTheme::compositeOnBackground(modeColor.withAlpha(kBgAlpha), theme.backgroundPane)));
+    // Theme-aware text: composite the badge tint over the *actual* header
+    // background (tinted by textPrimary @ 0.08 in paint()), not the raw
+    // backgroundPane. Using backgroundPane picks the wrong foreground on
+    // borderline themes where the header tint flips local contrast.
+    auto const headerBg = ColorTheme::compositeOnBackground(theme.textPrimary.withAlpha(0.08f), theme.backgroundPane);
+    auto const badgeBg = ColorTheme::compositeOnBackground(modeColor.withAlpha(kBgAlpha), headerBg);
+    g.setColour(ColorTheme::pickContrastingText(badgeBg));
     g.setFont(Typography::smallBold());
     g.drawText(processingModeToString(mode), badgeBounds.toNearestInt(), juce::Justification::centred);
 

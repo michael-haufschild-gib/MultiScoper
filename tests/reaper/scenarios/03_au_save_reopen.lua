@@ -16,7 +16,8 @@
 
 local T = require("reaper_test_lib")
 
-local SAVE_PATH = "/tmp/oscil_reaper_scenario_03.rpp"
+local SAVE_PATH = (os.getenv("TMPDIR") or os.getenv("TMP") or os.getenv("TEMP") or "/tmp")
+  .. "/oscil_reaper_scenario_03.rpp"
 
 local function is_macos()
   local os_name = reaper.GetOS() or ""

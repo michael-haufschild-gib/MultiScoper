@@ -114,12 +114,34 @@ local function run()
   T.assert_true(T.state_mentions_plugin(c1, "oscil4"),
     "fallback: track 1 chunk missing oscil4 marker")
 
-  -- Fallback is a DEGRADED pass — flag it so the engineer running the suite
-  -- knows to re-examine the state format. We still return without raising,
-  -- matching the scenario contract of "run() throws on fail, returns on pass".
-  T.log("[02] DEGRADED PASS: cross-instance chunk did not expose peer list; " ..
-        "both instances coexist and persist. Verify InstanceRegistry serialization " ..
-        "or update src_markers[] in this scenario.")
+  -- Re-probe the source markers on the post-reopen chunks before declaring
+  -- anything a pass. Merely proving that two oscil4 instances reopened does
+  -- NOT prove cross-instance discovery — one-way or fully broken peer-list
+  -- serialization would still look healthy by that weaker check. Require at
+  -- least one of the two instances to surface a peer marker, and fail the
+  -- scenario if neither does.
+  local post_max_count = 0
+  local post_used_marker = ""
+  for _, chunk_to_check in ipairs({ c0, c1 }) do
+    for _, m in ipairs(src_markers) do
+      local c = count_occurrences(chunk_to_check, m)
+      if c > post_max_count then
+        post_max_count = c
+        post_used_marker = m
+      end
+    end
+  end
+
+  if post_max_count < 2 then
+    T.assert_true(false,
+      "fallback: neither reopened chunk exposes >=2 source markers — " ..
+      "cross-instance discovery cannot be proven. Verify " ..
+      "InstanceRegistry serialization or update src_markers[] in this scenario.")
+  end
+
+  T.log(string.format(
+    "[02] fallback PASS after reopen: found %d occurrences of '%s' across reopened chunks",
+    post_max_count, post_used_marker))
 end
 
 return { name = "cross_instance_discovery", run = run }

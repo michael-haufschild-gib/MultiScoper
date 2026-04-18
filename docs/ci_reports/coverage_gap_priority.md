@@ -27,7 +27,6 @@ These are the ones that best explain "plugin is unstable in different DAWs."
 | **Sample-rate change mid-session** — `prepareToPlay` runs once per track; users commonly open sessions at 44.1k then swap devices to 48k. Every `currentSampleRate_` reader could be stale during reconfigure. | `TestTrack.cpp:76`; harness gap #1 | Stream 2.1 + Stream 3.5 |
 | **Buffer-size change mid-session** — same class, different parameter. | harness gap #2 | Stream 2.2 + Stream 3.5 |
 | **Editor detach/reattach without destroying the processor** — harness tears down editor fully; DAWs reparent. `parentHierarchyChanged` reattach branch + OpenGL re-attach + `testServer_` double-start on port 8765/9876 are blind spots. | `PluginEditor.cpp:118-123, 247-256`; harness gap #8 | Stream 2.5 |
-| **`PluginTestServer` ships in Standalone release builds** — HTTP server on port 9876 is compiled into production binaries regardless of preset. Attack surface + bloat. | `PluginEditor.cpp:118-123`, no compile-time gate | Not in streams 1–3 — needs separate P0 security task |
 
 ## P1 — Important coverage gaps the existing harness CAN reach
 
@@ -78,15 +77,16 @@ Not structural; the harness can hit these, tests just don't.
 
 ## Gaps that no current stream addresses — file separate tasks
 
-1. **`PluginTestServer` compile-time gate** — P0 security. File as a standalone task.
-2. **Harness HTTP thread-safety pass** — P1. 9 endpoints need MessageManager hops.
-3. **P1 scenario backlog** — TC-LAY-006, TC-OSC-002, TC-SRC-004, TC-CNF-001, TC-TRG-001/002, TC-DIS-003, TC-MC-001, TC-KEY-003/005/006. Each a small E2E PR.
-4. **Transport backwards/loop wrap** — extend `TestTransport`.
-5. **`updateTrackProperties` ordering** — small defensive-code test.
+1. **Harness HTTP thread-safety pass** — P1. 9 endpoints need MessageManager hops.
+2. **P1 scenario backlog** — TC-LAY-006, TC-OSC-002, TC-SRC-004, TC-CNF-001, TC-TRG-001/002, TC-DIS-003, TC-MC-001, TC-KEY-003/005/006. Each a small E2E PR.
+3. **Transport backwards/loop wrap** — extend `TestTransport`.
+4. **`updateTrackProperties` ordering** — small defensive-code test.
+
+(Formerly listed: `PluginTestServer` compile-time gate. Resolved — sources
+are now gated behind `OSCIL_ENABLE_TEST_SERVER`, off for shipping builds.)
 
 ## Exit criteria for "tests now match reality"
 
 - P0 gaps all have at least one covering test (Stream 2 primitive **or** Stream 3 scenario).
 - The next externally-reported DAW crash is reproducible via one of the new tests.
 - No harness HTTP endpoint reads mutable plugin state from a worker thread without a MessageManager hop.
-- `PluginTestServer` absent from `ship` builds (checked via `nm`/`otool` on the artifact).

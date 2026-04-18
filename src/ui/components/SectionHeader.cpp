@@ -52,6 +52,8 @@ void SectionHeader::setChevronsVisible(bool visible)
 
 void SectionHeader::setAccentColour(juce::Colour accent)
 {
+    if (accent_ == accent)
+        return;
     accent_ = accent;
     repaint();
 }

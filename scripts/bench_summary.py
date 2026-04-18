@@ -11,9 +11,18 @@ import json
 import sys
 from pathlib import Path
 
+# Google Benchmark emits "time_unit" per aggregate; convert to nanoseconds so
+# the reported medians and %Δ comparisons stay comparable across runs.
+_UNIT_TO_NS = {
+    "ns": 1.0,
+    "us": 1_000.0,
+    "ms": 1_000_000.0,
+    "s": 1_000_000_000.0,
+}
+
 
 def load_aggregates(path):
-    data = json.loads(Path(path).read_text())
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
     medians = {}
     cvs = {}
     for entry in data["benchmarks"]:
@@ -21,10 +30,17 @@ def load_aggregates(path):
             continue
         name = entry["run_name"]
         agg = entry["aggregate_name"]
+        time_unit = entry.get("time_unit", "ns")
+        factor = _UNIT_TO_NS.get(time_unit)
+        if factor is None:
+            raise ValueError(f"Unsupported benchmark time_unit: {time_unit!r}")
         if agg == "median":
-            medians[name] = entry["real_time"]
+            medians[name] = float(entry["real_time"]) * factor
         elif agg == "cv":
-            cvs[name] = entry["real_time"] * 100.0  # cv as percent
+            # cv is unitless — Google Benchmark still reports it under
+            # `real_time`, but the value is a ratio (std / mean). Convert to
+            # percent independent of time_unit.
+            cvs[name] = float(entry["real_time"]) * 100.0
     return medians, cvs
 
 

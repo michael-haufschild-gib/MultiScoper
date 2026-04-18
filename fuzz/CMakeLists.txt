@@ -75,16 +75,10 @@ if(NOT OSCIL_FUZZ_CORE_SOURCES)
         "before add_subdirectory(fuzz).")
 endif()
 
-add_executable(fuzz_oscil_state_fromxml
-    fuzz_oscil_state_fromxml.cpp
-    ${OSCIL_FUZZ_CORE_SOURCES}
-)
-
-target_include_directories(fuzz_oscil_state_fromxml PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/src
-)
-
+# Helper: wire a fuzzer that compiles against the core/ source subtree with
+# the same JUCE link closure, include dirs, and sanitizer flags. Keeps both
+# state fuzzers in sync when the closure changes (e.g., new JUCE module).
+#
 # JUCE modules needed by the core/ subtree:
 #   juce_core             — juce::String, juce::XmlDocument, juce::Logger
 #   juce_data_structures  — juce::ValueTree, juce::Identifier
@@ -92,49 +86,41 @@ target_include_directories(fuzz_oscil_state_fromxml PRIVATE
 #   juce_graphics         — juce::Colour (pulled by Oscillator.h)
 #   juce_audio_basics     — juce::AudioBuffer (analysis/AnalysisEngine.h)
 #   juce_dsp              — DSP primitives referenced from core/dsp headers
-target_link_libraries(fuzz_oscil_state_fromxml PRIVATE
-    juce::juce_core
-    juce::juce_data_structures
-    juce::juce_events
-    juce::juce_graphics
-    juce::juce_audio_basics
-    juce::juce_dsp
-    juce::juce_recommended_config_flags
-    juce::juce_recommended_warning_flags
-)
+function(add_oscil_core_fuzzer target source)
+    add_executable(${target}
+        ${source}
+        ${OSCIL_FUZZ_CORE_SOURCES}
+    )
 
-target_compile_options(fuzz_oscil_state_fromxml PRIVATE ${OSCIL_FUZZ_FLAGS})
-target_link_options(fuzz_oscil_state_fromxml PRIVATE ${OSCIL_FUZZ_FLAGS})
+    target_include_directories(${target} PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+
+    target_link_libraries(${target} PRIVATE
+        juce::juce_core
+        juce::juce_data_structures
+        juce::juce_events
+        juce::juce_graphics
+        juce::juce_audio_basics
+        juce::juce_dsp
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+    )
+
+    target_compile_options(${target} PRIVATE ${OSCIL_FUZZ_FLAGS})
+    target_link_options(${target} PRIVATE ${OSCIL_FUZZ_FLAGS})
+endfunction()
+
+add_oscil_core_fuzzer(fuzz_oscil_state_fromxml   fuzz_oscil_state_fromxml.cpp)
 
 # -----------------------------------------------------------------------------
 # Fuzzer 1b: OscilState XML round-trip preservation.
 # Shares the core/ source set and JUCE link closure with fuzzer 1. Asserts
-# that fromXmlString(toXmlString(fromXmlString(x))) succeeds and preserves
-# oscillator count.
+# that fromXmlString(toXmlString(fromXmlString(x))) succeeds and produces a
+# byte-stable re-serialization (so count drops / parameter resets are caught).
 # -----------------------------------------------------------------------------
-add_executable(fuzz_oscil_state_roundtrip
-    fuzz_oscil_state_roundtrip.cpp
-    ${OSCIL_FUZZ_CORE_SOURCES}
-)
-
-target_include_directories(fuzz_oscil_state_roundtrip PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/src
-)
-
-target_link_libraries(fuzz_oscil_state_roundtrip PRIVATE
-    juce::juce_core
-    juce::juce_data_structures
-    juce::juce_events
-    juce::juce_graphics
-    juce::juce_audio_basics
-    juce::juce_dsp
-    juce::juce_recommended_config_flags
-    juce::juce_recommended_warning_flags
-)
-
-target_compile_options(fuzz_oscil_state_roundtrip PRIVATE ${OSCIL_FUZZ_FLAGS})
-target_link_options(fuzz_oscil_state_roundtrip PRIVATE ${OSCIL_FUZZ_FLAGS})
+add_oscil_core_fuzzer(fuzz_oscil_state_roundtrip fuzz_oscil_state_roundtrip.cpp)
 
 # -----------------------------------------------------------------------------
 # Fuzzer 2: Plugin test-server JSON parse path

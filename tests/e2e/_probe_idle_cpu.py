@@ -26,13 +26,15 @@ def main(n_editors: int) -> None:
         c.set_track_audio(idx, amplitude=0.0)
         c.reset_track_state(idx)  # remove oscillators/panes
 
-    # Open exactly n_editors editors; close any past n. Swallowing the
-    # close-editor error would let us measure more editors than the user
-    # asked for; re-validate the open-editor count before sampling.
-    tracks = c.get_tracks()
+    # Open exactly n_editors editors; close any past n. Don't assume the
+    # track "index" field is a zero-based ordinal — pick the lowest-indexed
+    # n_editors tracks explicitly so we can't silently benchmark the wrong
+    # editor set when indices are non-contiguous.
+    tracks = sorted(c.get_tracks(), key=lambda t: int(t["index"]))
+    target_ids = {int(t["index"]) for t in tracks[:n_editors]}
     for t in tracks:
         idx = int(t["index"])
-        if idx < n_editors:
+        if idx in target_ids:
             c.open_editor(track_id=idx)
         else:
             try:
@@ -50,22 +52,22 @@ def main(n_editors: int) -> None:
         )
         return open_editors == n_editors
 
-    # Fallback if the harness doesn't expose editorVisible in get_tracks:
-    # we still rely on settle() to damp animation tails. wait_until is
-    # infrastructure-friendly and avoids hard-coded sleeps.
-    try:
+    # Only run the exact-count wait if the harness actually reports
+    # `editorVisible` — otherwise the wait is a no-op that would hide a
+    # harness regression. When the field is present, a timeout here is a
+    # real bug (wrong editors open / mismatched count), so let it propagate
+    # instead of silently degrading to settle().
+    refresh_tracks = c.get_tracks()
+    if refresh_tracks and all("editorVisible" in t for t in refresh_tracks):
         c.wait_until(
             _exact_editor_count,
             timeout_s=5.0,
             desc=f"exactly {n_editors} editors visible before idle probe",
         )
-    except Exception as exc:
-        # Field may not exist; fall back to settle() for animation damping.
-        # Log so test flakiness is diagnosable instead of silently degrading.
+    else:
         log.warning(
-            "editor-count wait failed for n_editors=%d (%s); falling back to settle()",
+            "editorVisible missing from get_tracks(); falling back to settle() for n_editors=%d",
             n_editors,
-            exc,
         )
 
     settle(1.5, reason="post-silence tail / editor animations before idle probe")
