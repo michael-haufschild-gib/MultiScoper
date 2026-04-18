@@ -438,3 +438,69 @@ EXPECT_TRUE(component.isAnimating());  // May fail!
 | `ctest --preset dev -V` | Verbose output |
 | `./build/dev/OscilTests --gtest_filter="*"` | Run with GoogleTest filter |
 | `./build/dev/OscilTests --gtest_list_tests` | List all tests |
+
+---
+
+## On-demand DAW integration tests (Reaper)
+
+A third tier of tests hosts Oscil inside a real DAW (Reaper) via ReaScript Lua.
+This catches bugs that only surface in a real host: VST3/AU/CLAP wrapper
+divergence, DAW save/reload state round-trips, and transport-driven
+`processBlock` cadence. Complementary to unit tests and the in-process test
+harness; see [ADR 015](decisions/015-reaper-ondemand-integration-tests.md).
+
+### Prerequisites
+
+- Reaper installed at `/Applications/REAPER.app` on macOS (or set
+  `REAPER_PATH=/path/to/REAPER`).
+- Oscil built locally: `cmake --build --preset dev`.
+- Plugin directory (for VST3): by default
+  `build/dev/Oscil_artefacts/Debug/VST3`. Override with `OSCIL_PLUGIN_DIR`.
+- Reaper must have already scanned oscil4 at least once
+  (Preferences -> Plug-ins -> VST/AU/CLAP -> Re-scan).
+
+### How to run
+
+```bash
+# Full suite
+tests/reaper/run_reaper_tests.sh
+
+# Single scenario (name without the .lua extension)
+tests/reaper/run_reaper_tests.sh 02_cross_instance_discovery
+```
+
+Scenarios live in `tests/reaper/scenarios/*.lua`. Results land at
+`/tmp/oscil_reaper_results.json`; the runner exits non-zero on any failure.
+
+### When to run
+
+- Before every release.
+- After touching `PluginProcessor`, `PluginEditor`, or `InstanceRegistry`.
+- After changing plugin state serialization (`PluginProcessorState`).
+- After changing build flags that affect any of VST3/AU/CLAP wrappers.
+
+### How to interpret failures
+
+1. Read `/tmp/oscil_reaper_results.json` — each failed scenario includes a
+   `detail` field with the Lua error message.
+2. Check Reaper's ReaScript console (Actions -> Show console) for
+   `[run_all]`, `[reaper_test_lib]`, and scenario-specific log lines.
+3. If a scenario fails with "no results written", Reaper never reached
+   `flush_results` — usually a syntax error in a scenario file. Re-run with
+   the single-scenario filter to isolate.
+4. If a scenario reports `DEGRADED PASS`, the primary assertion path was
+   not exercised (e.g. state format changed). Treat as a stale test, not a
+   product bug.
+
+### Not in CI
+
+This suite is intentionally excluded from CI. Rationale:
+
+- Reaper is not free to license or provision on CI runners.
+- GUI automation is slow (seconds per scenario) and environment-sensitive
+  (audio device selection, plugin-scan cache, window focus).
+- Value is pre-release confidence; per-commit regression is already caught
+  by unit tests and the in-process harness.
+
+See [ADR 015](decisions/015-reaper-ondemand-integration-tests.md) for the
+full decision record.
