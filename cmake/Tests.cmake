@@ -278,9 +278,18 @@ if(OSCIL_ENABLE_RTSAN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_C
 endif()
 
 include(GoogleTest)
+# Per-test TIMEOUT is generous by design. CTestCostData shows every test
+# normally finishes well under 1s, but ctest re-invokes the OscilTests
+# binary 1900+ times per suite run. On macOS that occasionally produces
+# multi-second startup stalls (Spotlight re-index / Gatekeeper verify /
+# stdout pipe buffering under pressure). A tight 30s ceiling was turning
+# those transient stalls into flaky CI failures on tests that complete in
+# milliseconds when run individually. 60s still surfaces real hangs while
+# tolerating the macOS cold-launch tax. Do not raise this further without
+# data — the goal is flake tolerance, not hiding slow tests.
 gtest_discover_tests(OscilTests
     DISCOVERY_TIMEOUT 30
-    PROPERTIES TIMEOUT 30
+    PROPERTIES TIMEOUT 60
 )
 
 # ============================================================================
