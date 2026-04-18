@@ -19,14 +19,14 @@ between 16 and 8192 inclusive and asserts:
 
 from __future__ import annotations
 
-from typing import List
+import contextlib
 
 import pytest
 
 from oscil_test_utils import OscilTestClient
 
 
-SWEEP_SIZES: List[int] = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+SWEEP_SIZES: list[int] = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
 DEFAULT_BUFFER_SIZE = 512
 
 
@@ -45,10 +45,8 @@ def _restore_buffer_size(client: OscilTestClient):
     at 8192-sample blocks compounds memory pressure in downstream 16-
     instance scale tests."""
     yield
-    try:
+    with contextlib.suppress(AssertionError):
         _set_buffer_size(client, DEFAULT_BUFFER_SIZE)
-    except AssertionError:
-        pass
 
 
 class TestBufferSizeSweep:

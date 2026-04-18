@@ -29,14 +29,12 @@ immediately.
 
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from oscil_test_utils import OscilTestClient
 
 
-SWEEP_RATES: List[float] = [44100.0, 48000.0, 88200.0, 96000.0, 176400.0, 192000.0]
+SWEEP_RATES: list[float] = [44100.0, 48000.0, 88200.0, 96000.0, 176400.0, 192000.0]
 DEFAULT_RATE = 44100.0
 
 

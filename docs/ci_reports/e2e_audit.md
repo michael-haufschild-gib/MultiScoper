@@ -1,6 +1,6 @@
 # E2E Test Suite Coverage Audit
 
-Audit of `/Users/Spare/Documents/code/MultiScoper/tests/e2e/test_*.py` (27 files; prompt listed 27 of a claimed 32 — 5 nominal files are not present on disk).
+Audit of `tests/e2e/test_*.py` (27 files; prompt listed 27 of a claimed 32 — 5 nominal files are not present on disk).
 
 | file | flow tested | assertions | gaps |
 |---|---|---|---|

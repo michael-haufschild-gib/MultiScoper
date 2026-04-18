@@ -420,7 +420,7 @@ void TestHttpServer::handleDawTracks(const httplib::Request&, httplib::Response&
     // barrier produces pthread_mutex_lock(EINVAL) when the track is freed
     // mid-iteration.
     auto tracks = std::make_shared<json>(json::array());
-    (void) runOnMessageThreadBlocking(
+    const bool ok = runOnMessageThreadBlocking(
         [this, tracks]() {
             for (int i = 0; i < daw_.getNumTracks(); ++i)
             {
@@ -437,6 +437,16 @@ void TestHttpServer::handleDawTracks(const httplib::Request&, httplib::Response&
             }
         },
         5000, "handleDawTracks");
+    // Without the ok check a timeout would return an empty or partial
+    // track list under the "success": true shape — the callers cannot
+    // distinguish that from "no tracks", and assertions downstream go
+    // flaky. Mirror handleDawTrackAdd / handleDawTrackRemove and return
+    // a clean timeout error instead.
+    if (!ok)
+    {
+        res.set_content(errorResponse("Timeout listing tracks").dump(), "application/json");
+        return;
+    }
     res.set_content(successResponse(*tracks).dump(), "application/json");
 }
 

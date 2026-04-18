@@ -116,7 +116,7 @@ def sixteen_instances(client: OscilTestClient):
 class TestSixteenInstanceDiscovery:
     def test_exactly_sixteen_instances_registered(self, sixteen_instances):
         """With 16 plugin instances, the registry reports 16 sources, each unique."""
-        client, track_ids, source_ids = sixteen_instances
+        client, _track_ids, _source_ids = sixteen_instances
         sources = client.get_sources()
         assert len(sources) == TARGET_INSTANCES, (
             f"Expected exactly {TARGET_INSTANCES} sources, got {len(sources)}"
@@ -128,7 +128,7 @@ class TestSixteenInstanceDiscovery:
 
     def test_every_instance_has_nonempty_source_id(self, sixteen_instances):
         """Every one of the 16 tracks exposes a non-empty sourceId."""
-        client, track_ids, source_ids = sixteen_instances
+        client, _track_ids, source_ids = sixteen_instances
         missing = [tid for tid, sid in source_ids.items() if not sid]
         assert not missing, f"Instances missing sourceId: {missing}"
 
@@ -180,7 +180,7 @@ class TestSixteenInstanceDiscovery:
         in the global registry — if one instance's source is invisible to
         another, cross-instance oscillators there would be orphaned.
         """
-        client, track_ids, source_ids = sixteen_instances
+        client, _track_ids, source_ids = sixteen_instances
         sources = client.get_sources()
         visible_ids = {s["id"] for s in sources}
         for tid, sid in source_ids.items():
@@ -350,7 +350,7 @@ class TestSixteenInstanceCrudStress:
         hierarchies, OpenGL contexts, and the test-element registry must
         clean up on close.
         """
-        client, track_ids, source_ids = sixteen_instances
+        client, track_ids, _source_ids = sixteen_instances
 
         # Start from "all open" (the fixture guarantees this) — damp any
         # in-flight editor animations before the measurement window.

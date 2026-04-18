@@ -9,6 +9,7 @@
 #include "core/dsp/TimingEngine.h"
 #include "core/dsp/TimingEngineTypes.h"
 #include "core/interfaces/IAudioBuffer.h"
+#include "core/interfaces/IInstanceRegistry.h"
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
 
@@ -112,10 +113,10 @@ json snapshotTiming(OscilPluginProcessor& processor)
             {"triggerMode", static_cast<int>(config.triggerMode)}};
 }
 
-json snapshotSources()
+json snapshotSources(IInstanceRegistry& registry)
 {
     json arr = json::array();
-    auto allSources = PluginFactory::getInstance().getInstanceRegistry().getAllSources();
+    auto allSources = registry.getAllSources();
     for (const auto& s : allSources)
     {
         arr.push_back({{"id", s.sourceId.id.toStdString()},
@@ -281,11 +282,13 @@ void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httpl
         const int trackId = resolveTrackId(req);
         auto data = std::make_shared<json>();
 
-        // Snapshots that read plugin state (oscillators / panes / timing) must
-        // run on the message thread: add/remove track and state mutations are
-        // all MT-serialized, so a read inside the lambda sees a coherent view.
-        // Snapshots that only read process-global state (sources, UI registry,
-        // metrics, logs) are internally locked and safe from any thread.
+        // Snapshots that read plugin state (oscillators / panes / timing /
+        // sources) must run on the message thread: add/remove track and
+        // state mutations are all MT-serialized, so a read inside the
+        // lambda sees a coherent view. Sources in particular must come from
+        // the *track-scoped* InstanceRegistry — in registry-isolation mode
+        // PluginFactory's global registry reports peers the resolved track
+        // cannot actually see, making /diagnostic/snapshot inconsistent.
         const auto result = runOnTrackSync(
             trackId,
             [data](TestTrack& track) {
@@ -293,6 +296,7 @@ void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httpl
                 (*data)["oscillators"] = snapshotOscillators(processor);
                 (*data)["panes"] = snapshotPanes(processor.getState());
                 (*data)["timing"] = snapshotTiming(processor);
+                (*data)["sources"] = snapshotSources(track.getInstanceRegistry());
             },
             5000);
 
@@ -300,7 +304,6 @@ void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httpl
             return;
 
         (*data)["transport"] = snapshotTransport(daw_);
-        (*data)["sources"] = snapshotSources();
         (*data)["audioGenerators"] = snapshotAudioGenerators(daw_);
         (*data)["ui"] = snapshotUI();
         (*data)["gui"] = snapshotGUI(daw_);
