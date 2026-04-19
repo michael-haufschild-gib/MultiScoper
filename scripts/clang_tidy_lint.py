@@ -43,9 +43,17 @@ def discover_cpp_files(root: Path, paths: list[str]) -> list[Path]:
 
 
 def resolve_macos_sysroot() -> str | None:
+    # Resolve xcrun to an absolute path so subprocess.run doesn't get a
+    # partial executable name (satisfies Ruff S607 and tightens launch
+    # hygiene). Missing xcrun is benign — the caller just skips --isysroot.
+    xcrun = shutil.which("xcrun")
+    if xcrun is None:
+        return None
     try:
-        result = subprocess.run(
-            ["xcrun", "--show-sdk-path"],
+        # S603 is suppressed because ``xcrun`` is resolved via shutil.which()
+        # above and the argument list is a hardcoded literal with shell=False.
+        result = subprocess.run(  # noqa: S603
+            [xcrun, "--show-sdk-path"],
             capture_output=True,
             text=True,
             check=True,
@@ -57,7 +65,16 @@ def resolve_macos_sysroot() -> str | None:
 
 def run_one(exe: str, build_dir: str, extra_args: list[str], file_path: str) -> tuple[str, int, str]:
     cmd = [exe, "-p", build_dir, *[a for ea in extra_args for a in ("--extra-arg", ea)], file_path]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    # check=False is intentional: we inspect proc.returncode directly so
+    # clang-tidy's normal non-zero "found issues" exit doesn't raise.
+    # S603 is suppressed because ``exe`` is resolved via shutil.which() in
+    # main() and the argument list uses shell=False.
+    proc = subprocess.run(  # noqa: S603
+        cmd,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
     return file_path, proc.returncode, proc.stdout + proc.stderr
 
 

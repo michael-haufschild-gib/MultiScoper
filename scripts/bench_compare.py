@@ -155,8 +155,21 @@ def load_iteration_samples(path: Path, metric: str) -> dict[str, list[float]]:
         print(f"FAILED: cannot read {path}: {e}", file=sys.stderr)
         raise
 
+    # Validate shape before iterating. A well-formed JSON payload with the
+    # wrong structure used to escape main() as an AttributeError traceback;
+    # raise TypeError (Ruff TRY004 — semantically correct for type mismatches)
+    # so main()'s ``except (OSError, TypeError, ValueError)`` converts it into
+    # the documented exit code 2.
+    if not isinstance(data, dict):
+        raise TypeError(f"{path}: expected a top-level JSON object")
+    benchmarks = data.get("benchmarks", [])
+    if not isinstance(benchmarks, list):
+        raise TypeError(f"{path}: 'benchmarks' must be a list")
+
     out: dict[str, list[float]] = {}
-    for entry in data.get("benchmarks", []):
+    for entry in benchmarks:
+        if not isinstance(entry, dict):
+            raise TypeError(f"{path}: benchmark entries must be objects")
         if entry.get("run_type") != "iteration":
             continue
         name = entry.get("name")
@@ -200,11 +213,18 @@ def main() -> int:
     try:
         baseline = load_iteration_samples(args.baseline, args.metric)
         current = load_iteration_samples(args.current, args.metric)
-    except (OSError, ValueError):
+    except (OSError, TypeError, ValueError) as e:
         # OSError covers FileNotFoundError / PermissionError / IsADirectoryError.
         # ValueError covers UnicodeDecodeError from Path.read_text() and
-        # json.JSONDecodeError from json.loads(). Narrow so non-input bugs
-        # (KeyError, TypeError) surface instead of masquerading as exit 2.
+        # json.JSONDecodeError from json.loads(). TypeError covers the
+        # shape-validation errors raised by load_iteration_samples for
+        # wrong JSON structure. Narrow so unrelated bugs (KeyError, IndexError)
+        # surface instead of masquerading as exit 2.
+        # OSError from load_iteration_samples is already surfaced there;
+        # echo shape/decode errors so CI logs show the specific failure
+        # instead of just exit code 2.
+        if not isinstance(e, OSError):
+            print(f"FAILED: {e}", file=sys.stderr)
         return 2
 
     shared = sorted(set(baseline) & set(current))
@@ -224,11 +244,19 @@ def main() -> int:
         print(f"  only in current ({len(current_only)}): {current_only}")
 
     if not shared:
+        # Distinguish truly-empty inputs from the "renamed / mis-keyed suite"
+        # footgun. Both sides populated but no overlap means the comparison
+        # would have silently passed even though the gate is effectively off.
+        if baseline and current:
+            print(
+                "FAILED: benchmark sets do not overlap — baseline and current "
+                "share no benchmark names. This is almost always a rename or "
+                "suite-naming mismatch, not a real pass.",
+                file=sys.stderr,
+            )
+            return 2
         print("PASSED: no shared benchmarks to compare.")
         return 0
-
-    # Bonferroni-corrected per-test alpha.
-    alpha_per_test = args.alpha / len(shared)
 
     def median(values: list[float]) -> float:
         if not values:
@@ -238,18 +266,42 @@ def main() -> int:
         m = n // 2
         return xs[m] if n % 2 else 0.5 * (xs[m - 1] + xs[m])
 
-    regressions: list[tuple[str, float, float, float]] = []
-    improvements: list[tuple[str, float, float]] = []
+    # Partition shared benchmarks into those we can actually test (>= 2 samples
+    # per side) and those that must be skipped. Bonferroni correction is based
+    # on the TESTED count — skipped benchmarks don't contribute to the family
+    # of hypotheses and must not shrink the per-test cutoff (otherwise a
+    # misconfigured --benchmark_repetitions run makes the gate artificially
+    # conservative and flips real regressions into false negatives).
+    comparable: list[str] = []
     skipped_small_n: list[tuple[str, int, int]] = []
     for name in shared:
         b = baseline[name]
         c = current[name]
         if len(b) < 2 or len(c) < 2:
-            # Keep the compare step transparent: a silently-skipped benchmark
-            # usually means --benchmark_repetitions didn't apply on one side
-            # and we'd otherwise mask a config bug as a clean pass.
             skipped_small_n.append((name, len(b), len(c)))
             continue
+        comparable.append(name)
+
+    # Guard: if every shared benchmark is skipped for small-n, the gate
+    # would silently exit 0 after printing SKIPPED. That turns a misconfigured
+    # --benchmark_repetitions run into a free pass. Treat it as an input error.
+    if not comparable:
+        print(
+            "FAILED: shared benchmarks found, but none have >= 2 samples on "
+            "both sides; cannot run statistical comparison.",
+            file=sys.stderr,
+        )
+        for name, nb, nc in skipped_small_n:
+            print(f"  {name}: baseline n={nb}, current n={nc}", file=sys.stderr)
+        return 2
+
+    alpha_per_test = args.alpha / len(comparable)
+
+    regressions: list[tuple[str, float, float, float]] = []
+    improvements: list[tuple[str, float, float]] = []
+    for name in comparable:
+        b = baseline[name]
+        c = current[name]
         median_b = median(b)
         median_c = median(c)
         rel = (median_c - median_b) / median_b if median_b > 0 else 0.0

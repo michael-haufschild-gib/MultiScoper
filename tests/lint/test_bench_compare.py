@@ -92,15 +92,65 @@ class BenchCompareTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
             self.assertIn("BM_NEW", result.stdout)
 
-    def test_empty_shared_set_passes(self):
+    def test_disjoint_benchmark_sets_fail(self):
+        # Both sides populated but with no overlapping benchmark names is
+        # almost always a rename or suite-naming mismatch, not a legitimate
+        # pass. Exit 2 guards against silently disabling the regression gate.
         with tempfile.TemporaryDirectory() as tmp:
             base = os.path.join(tmp, "base.json")
             curr = os.path.join(tmp, "curr.json")
             _make_bench_json(base, {"BM_OLD": [100.0] * 9})
             _make_bench_json(curr, {"BM_DIFFERENT": [100.0] * 9})
             result = _run("--baseline", base, "--current", curr)
+            self.assertEqual(result.returncode, 2, msg=result.stdout + result.stderr)
+            self.assertIn("do not overlap", result.stderr)
+
+    def test_both_sides_empty_still_passes(self):
+        # If neither input has benchmarks, there's nothing to compare and
+        # nothing to rename-detect — keep the benign exit-0 path for that.
+        with tempfile.TemporaryDirectory() as tmp:
+            base = os.path.join(tmp, "base.json")
+            curr = os.path.join(tmp, "curr.json")
+            _make_bench_json(base, {})
+            _make_bench_json(curr, {})
+            result = _run("--baseline", base, "--current", curr)
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
             self.assertIn("no shared benchmarks", result.stdout)
+
+    def test_one_side_populated_passes(self):
+        # Asymmetric empty: populated baseline with empty current (or vice
+        # versa) is a legitimate "no comparable benchmarks yet" state — e.g.
+        # the PR run produced no benchmarks for some reason — and must not
+        # trip the rename/disjoint gate. Both directions return exit 0.
+        with tempfile.TemporaryDirectory() as tmp:
+            base = os.path.join(tmp, "base.json")
+            curr = os.path.join(tmp, "curr.json")
+
+            _make_bench_json(base, {"BM_A": [100.0] * 9})
+            _make_bench_json(curr, {})
+            result = _run("--baseline", base, "--current", curr)
+            self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+            self.assertIn("no shared benchmarks", result.stdout)
+
+            _make_bench_json(base, {})
+            _make_bench_json(curr, {"BM_A": [100.0] * 9})
+            result = _run("--baseline", base, "--current", curr)
+            self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+            self.assertIn("no shared benchmarks", result.stdout)
+
+    def test_all_shared_skipped_for_small_n_fails(self):
+        # Every shared benchmark has <2 samples on at least one side → the
+        # comparable set is empty. Pre-fix this silently exited 0 after
+        # printing SKIPPED, disabling the gate for misconfigured
+        # --benchmark_repetitions runs. Now it must exit 2.
+        with tempfile.TemporaryDirectory() as tmp:
+            base = os.path.join(tmp, "base.json")
+            curr = os.path.join(tmp, "curr.json")
+            _make_bench_json(base, {"BM_A": [100.0]})  # n=1
+            _make_bench_json(curr, {"BM_A": [100.0]})  # n=1
+            result = _run("--baseline", base, "--current", curr)
+            self.assertEqual(result.returncode, 2, msg=result.stdout + result.stderr)
+            self.assertIn("none have >= 2 samples", result.stderr)
 
     def test_bonferroni_correction_prevents_false_positive(self):
         # 24 benchmarks — all identical means no regression. Without Bonferroni,

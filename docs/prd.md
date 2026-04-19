@@ -4729,7 +4729,8 @@ Medium – ThemeManager.cpp & ThemeEditorComponent.cpp (~665 & 709 LOC) currentl
 Medium – SourceSelectorComponent.cpp, OscillatorConfigPopup.cpp, SidebarComponent.cpp, WaveformComponent.cpp (≈500–600 LOC) each orchestrate multiple sub-controls inline. Break them into child components per section (e.g., “sources header”, “filter row”, “pane list”) to keep responsibilities narrow.
 
 Medium – Rendering/DSP support files ParticleSystem.cpp, WaveformGLRenderer.cpp, VisualConfiguration.cpp, BasicShader.cpp, TimingEngine.cpp, MultiScoperState.cpp (560–680 LOC) combine shader strings, CPU data structures, serialization, and runtime logic. Extract shader sources into .glsl assets or dedicated headers, move math helpers into utility modules, and isolate serialization/state-diff code so real-time paths stay lean and testable.
-----
+
+---
 
 we have several "god files" in our project. here is the result of a review of such files in our test setup that need refactoring. review what is to do, plan the refactoring project, write the todos and delegate the refactoring to subagents with detailed prompts that give them all the context they need (but not unnecessary information):
 
@@ -4778,18 +4779,19 @@ Add this feature:
 3. The lines are getting their own color in the theme's color scheme. the colors are not shared with other elemenets.
 
 
-⊶  Shell cmake --build --preset dev --target MultiScoperTests && ./build/dev/MultiScoperTests --gtest_filter=PaneClosingBugTest.* [current working directory /Users/Spare/Documents/code/MultiScoper]               (Focused) │
-│                                                                                                                                                                                                                   │
-│ ninja: warning: premature end of file; recovering                                                                                                                                                                 │
-│ [0/2] Re-checking globbed directories...                                                                                                                                                                          │
-│ [235/236] Linking CXX executable MultiScoperTests                                                                                                                                                                       │
-│ JUCE v8.0.5                                                                                                                                                                                                       │
-│ JUCE v8.0.5                                                                                                                                                                                                       │
-│ Note: Google Test filter = PaneClosingBugTest.*                                                                                                                                                                   │
-│ [==========] Running 1 test from 1 test suite.                                                                                                                                                                    │
-│ [----------] Global test environment set-up.                                                                                                                                                                      │
-│ [----------] 1 test from PaneClosingBugTest                                                                                                                                                                       │
-│ [ RUN      ] PaneClosingBugTest.ClosingPaneRemovesItAndHidesOscillator
+```text
+$ cmake --build --preset dev --target MultiScoperTests \
+    && ./build/dev/MultiScoperTests --gtest_filter=PaneClosingBugTest.*
+ninja: warning: premature end of file; recovering
+[0/2] Re-checking globbed directories...
+[235/236] Linking CXX executable MultiScoperTests
+JUCE v8.0.12
+Note: Google Test filter = PaneClosingBugTest.*
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from PaneClosingBugTest
+[ RUN      ] PaneClosingBugTest.ClosingPaneRemovesItAndHidesOscillator
+```
 
 
 Pane
