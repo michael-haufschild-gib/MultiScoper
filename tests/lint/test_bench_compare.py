@@ -92,12 +92,27 @@ class BenchCompareTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
             self.assertIn("BM_NEW", result.stdout)
 
-    def test_empty_shared_set_passes(self):
+    def test_disjoint_benchmark_sets_fail(self):
+        # Both sides populated but with no overlapping benchmark names is
+        # almost always a rename or suite-naming mismatch, not a legitimate
+        # pass. Exit 2 guards against silently disabling the regression gate.
         with tempfile.TemporaryDirectory() as tmp:
             base = os.path.join(tmp, "base.json")
             curr = os.path.join(tmp, "curr.json")
             _make_bench_json(base, {"BM_OLD": [100.0] * 9})
             _make_bench_json(curr, {"BM_DIFFERENT": [100.0] * 9})
+            result = _run("--baseline", base, "--current", curr)
+            self.assertEqual(result.returncode, 2, msg=result.stdout + result.stderr)
+            self.assertIn("do not overlap", result.stderr)
+
+    def test_both_sides_empty_still_passes(self):
+        # If neither input has benchmarks, there's nothing to compare and
+        # nothing to rename-detect — keep the benign exit-0 path for that.
+        with tempfile.TemporaryDirectory() as tmp:
+            base = os.path.join(tmp, "base.json")
+            curr = os.path.join(tmp, "curr.json")
+            _make_bench_json(base, {})
+            _make_bench_json(curr, {})
             result = _run("--baseline", base, "--current", curr)
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
             self.assertIn("no shared benchmarks", result.stdout)
