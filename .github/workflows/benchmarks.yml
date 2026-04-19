@@ -151,12 +151,19 @@ jobs:
       # when available it auto-selects the exact method for small samples.
       # The pure-Python fallback in the script also has an exact path but is
       # slower, so we install scipy on CI for both correctness and speed.
+      #
+      # ``steps.baseline.outcome == 'success'`` is not sufficient on its own:
+      # dawidd6/action-download-artifact with ``if_no_artifact_found: warn``
+      # reports a successful step outcome even when no baseline artifact was
+      # produced (cold-start repos, fresh forks). Additionally gate on the
+      # actual file being present so the compare step doesn't try to run
+      # against a nonexistent baseline path.
       - name: Install scipy (for bench_compare)
-        if: steps.baseline.outcome == 'success'
+        if: steps.baseline.outcome == 'success' && hashFiles('baseline/bench.json') != ''
         run: python3 -m pip install --user scipy
 
       - name: Compare against baseline
-        if: steps.baseline.outcome == 'success'
+        if: steps.baseline.outcome == 'success' && hashFiles('baseline/bench.json') != ''
         run: |
           ls -la baseline/bench.json build/bench/bench.json 2>/dev/null || true
           python3 scripts/bench_compare.py \

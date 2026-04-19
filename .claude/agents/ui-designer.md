@@ -58,6 +58,7 @@ private:
 ```
 
 ## File Naming
+
 - Components: `MultiScoper{Name}.h/cpp` (e.g., `MultiScoperButton.h`)
 - Panels: `{Name}Component.h/cpp` (e.g., `SidebarComponent.h`)
 - Dialogs: `{Name}Dialog.h/cpp` (e.g., `AddOscillatorDialog.h`)
