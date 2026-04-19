@@ -98,7 +98,7 @@ EXPECT_THAT_EXISTENCE_MATCHER_RE = re.compile(
 EXPECT_THAT_CALL_RE = re.compile(r"\b(?:EXPECT|ASSERT)_THAT\s*\(")
 
 
-def _split_expect_that_args(sanitized: str, call_start: int) -> Optional[Tuple[str, list[int], int]]:
+def _split_expect_that_args(sanitized: str, call_start: int) -> Optional[Tuple[str, List[int], int]]:
     """Given a buffer and the index of ``EXPECT_THAT``/``ASSERT_THAT``, walk
     balanced parens and return ``(body, depth1_commas, close_idx)`` where
     ``body`` is the full call text, ``depth1_commas`` are the absolute offsets
@@ -115,7 +115,7 @@ def _split_expect_that_args(sanitized: str, call_start: int) -> Optional[Tuple[s
     if open_paren == -1:
         return None
     depth = 0
-    commas: list[int] = []
+    commas: List[int] = []
     i = open_paren
     while i < len(sanitized):
         ch = sanitized[i]

@@ -100,12 +100,20 @@ using namespace multiscoper;
 class MultiScoperButtonTest : public ::testing::Test
 {
 protected:
-    // No SetUp needed - global JuceTestEnvironment handles initialization
+    void SetUp() override { themeManager_ = std::make_unique<ThemeManager>(); }
+    void TearDown() override { themeManager_.reset(); }
+
+    ThemeManager& getThemeManager() { return *themeManager_; }
+
+private:
+    std::unique_ptr<ThemeManager> themeManager_;
 };
 
 TEST_F(MultiScoperButtonTest, Construction)
 {
-    MultiScoperButton button("Click Me", "test_button");
+    // MultiScoperButton takes an IThemeService& first; text and testId are optional.
+    // See include/ui/components/MultiScoperButton.h for all overloads.
+    MultiScoperButton button(getThemeManager(), "Click Me", "test_button");
 
     EXPECT_EQ(button.getText(), "Click Me");
     EXPECT_TRUE(button.isEnabled());
@@ -113,7 +121,7 @@ TEST_F(MultiScoperButtonTest, Construction)
 
 TEST_F(MultiScoperButtonTest, TestIdRegistration)
 {
-    MultiScoperButton button("Test", "my_test_id");
+    MultiScoperButton button(getThemeManager(), "Test", "my_test_id");
 
     auto* found = multiscoper::test::TestElementRegistry::getInstance()
                       .findElement("my_test_id");
@@ -122,7 +130,7 @@ TEST_F(MultiScoperButtonTest, TestIdRegistration)
 
 TEST_F(MultiScoperButtonTest, ClickCallback)
 {
-    MultiScoperButton button;
+    MultiScoperButton button(getThemeManager());
     bool clicked = false;
 
     button.onClick = [&clicked]() { clicked = true; };
@@ -482,10 +490,12 @@ Scenarios live in `tests/reaper/scenarios/*.lua`. Results land at
 
 ### How to interpret failures
 
-1. Read the results JSON (`$TMPDIR/multiscoper_reaper_results.json` on macOS/Linux,
-   `%TEMP%\multiscoper_reaper_results.json` on Windows, or the path from
-   `$MULTISCOPER_REAPER_RESULTS` if set) — each failed scenario includes a
-   `detail` field with the Lua error message.
+1. Read the results JSON — each failed scenario includes a `detail` field with
+   the Lua error message. The runner (`tests/reaper/run_reaper_tests.sh`) uses
+   the `$RESULTS_FILE` env var as both the input override and the on-disk path
+   (default `/tmp/multiscoper_reaper_results.json`), and exports
+   `$MULTISCOPER_TEST_RESULTS_FILE` to the Lua driver so scenarios write to the
+   same location.
 2. Check Reaper's ReaScript console (Actions -> Show console) for
    `[run_all]`, `[reaper_test_lib]`, and scenario-specific log lines.
 3. If a scenario fails with "no results written", Reaper never reached
