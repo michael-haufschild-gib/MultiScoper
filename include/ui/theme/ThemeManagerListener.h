@@ -1,10 +1,10 @@
 /*
-    Oscil - Theme Manager Listener Interface
+    MultiScoper - Theme Manager Listener Interface
 */
 
 #pragma once
 
-namespace oscil
+namespace multiscoper
 {
 
 struct ColorTheme;
@@ -19,4 +19,4 @@ public:
     virtual void themeChanged(const ColorTheme& newTheme) = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper

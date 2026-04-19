@@ -11,13 +11,13 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestSourceListAPI:
     """Verify source list API returns valid data."""
 
-    def test_sources_available(self, client: OscilTestClient):
+    def test_sources_available(self, client: MultiScoperTestClient):
         """
         Bug caught: instance registry not providing sources to the
         test harness, making oscillator creation impossible.
@@ -27,7 +27,7 @@ class TestSourceListAPI:
             "Test harness should register at least 1 audio source"
         )
 
-    def test_source_has_id(self, client: OscilTestClient):
+    def test_source_has_id(self, client: MultiScoperTestClient):
         """
         Bug caught: source serialization returning empty/null ID.
         """
@@ -40,7 +40,7 @@ class TestSourceListAPI:
                 f"Source should have non-empty id, got: {source}"
             )
 
-    def test_source_ids_are_unique(self, client: OscilTestClient):
+    def test_source_ids_are_unique(self, client: MultiScoperTestClient):
         """
         Bug caught: duplicate source IDs causing oscillator creation to
         bind to wrong source.
@@ -54,7 +54,7 @@ class TestSourceListAPI:
             f"Source IDs should be unique, got duplicates: {ids}"
         )
 
-    def test_source_has_name(self, client: OscilTestClient):
+    def test_source_has_name(self, client: MultiScoperTestClient):
         """
         Bug caught: source name field empty, causing blank entries in
         source dropdown.
@@ -73,7 +73,7 @@ class TestSourceBinding:
     """Verify oscillators bind correctly to sources."""
 
     def test_oscillator_bound_to_specified_source(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator creation ignoring the sourceId parameter
@@ -90,7 +90,7 @@ class TestSourceBinding:
         )
 
     def test_multiple_oscillators_same_source(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: source binding uses a one-to-one mapping that prevents
@@ -107,7 +107,7 @@ class TestSourceBinding:
         assert osc2.get("sourceId") == source_id
 
     def test_source_in_diagnostic_snapshot(
-        self, editor: OscilTestClient
+        self, editor: MultiScoperTestClient
     ):
         """
         Bug caught: sources section missing from diagnostic snapshot,

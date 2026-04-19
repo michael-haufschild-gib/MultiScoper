@@ -1,12 +1,12 @@
 /*
-    Oscil Test Harness - HTTP Server: Transport & Track Handlers
+    MultiScoper Test Harness - HTTP Server: Transport & Track Handlers
 */
 
 #include "TestElementRegistry.h"
 #include "TestHttpServer.h"
 #include "plugin/PluginEditor.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 void TestHttpServer::setupTransportRoutes()
@@ -85,8 +85,8 @@ void TestHttpServer::handleTransportSetBpm(const httplib::Request& req, httplib:
             daw_.runSingleBlockSynchronously(track);
             if (auto* editor = track.getEditor())
             {
-                if (auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor))
-                    oscilEditor->refreshPanels();
+                if (auto* multiscoperEditor = dynamic_cast<MultiScoperPluginEditor*>(editor))
+                    multiscoperEditor->refreshPanels();
             }
         });
 
@@ -284,4 +284,4 @@ void TestHttpServer::handleTrackHideEditor(const httplib::Request& req, httplib:
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

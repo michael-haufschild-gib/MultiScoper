@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Color Palette
+    MultiScoper - Waveform Color Palette
     Centralized predefined colors for waveform oscillators
 */
 
@@ -10,7 +10,7 @@
 #include <array>
 #include <random>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -82,4 +82,4 @@ struct WaveformColorPalette
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,14 +1,14 @@
 /*
-    Oscil - Waveform Render State Implementation
+    MultiScoper - Waveform Render State Implementation
 */
 
 #include "rendering/WaveformRenderState.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
 using namespace juce::gl;
 
-namespace oscil
+namespace multiscoper
 {
 
 void WaveformRenderState::enableTrails(juce::OpenGLContext& context, int width, int height)
@@ -62,6 +62,6 @@ void WaveformRenderState::updateTiming(float deltaTime)
 
 void WaveformRenderState::release(juce::OpenGLContext& context) { disableTrails(context); }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

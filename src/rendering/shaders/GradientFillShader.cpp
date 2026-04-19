@@ -1,15 +1,15 @@
 /*
-    Oscil - Gradient Fill Shader Implementation
+    MultiScoper - Gradient Fill Shader Implementation
 */
 
 #include "rendering/shaders/GradientFillShader.h"
 
 #include "BinaryData.h"
 
-namespace oscil
+namespace multiscoper
 {
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 using namespace juce::gl;
 
 struct GradientFillShader::GLResources : WaveformShader::WaveformGLResources
@@ -20,7 +20,7 @@ struct GradientFillShader::GLResources : WaveformShader::WaveformGLResources
 #endif
 
 GradientFillShader::GradientFillShader()
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     : gl_(std::make_unique<GLResources>())
 #endif
 {
@@ -28,7 +28,7 @@ GradientFillShader::GradientFillShader()
 
 GradientFillShader::~GradientFillShader()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     if (gl_ && gl_->compiled)
     {
         jassertfalse;
@@ -37,7 +37,7 @@ GradientFillShader::~GradientFillShader()
 #endif
 }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 bool GradientFillShader::compile(juce::OpenGLContext& context)
 {
     if (!compileFromBinaryData(*gl_, context, BinaryData::gradient_fill_vert, BinaryData::gradient_fill_vertSize,
@@ -139,4 +139,4 @@ void GradientFillShader::render(juce::OpenGLContext& context, const std::vector<
 }
 #endif
 
-} // namespace oscil
+} // namespace multiscoper

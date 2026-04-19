@@ -1,5 +1,5 @@
 /*
-    Oscil - Typography Tokens
+    MultiScoper - Typography Tokens
     Single source for UI font construction. Sizes are pixels at 1.0x DPI;
     JUCE handles HiDPI scaling automatically.
 */
@@ -8,7 +8,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct Typography
@@ -66,4 +66,4 @@ struct Typography
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

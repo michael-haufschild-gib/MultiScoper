@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Handler
+    MultiScoper - Source Handler
     Handles source management test server endpoints
 */
 
@@ -11,7 +11,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace oscil
+namespace multiscoper
 {
 
 class SharedCaptureBuffer;
@@ -27,7 +27,7 @@ class SharedCaptureBuffer;
 class SourceHandler : public TestServerHandlerBase
 {
 public:
-    SourceHandler(OscilPluginEditor& editor,
+    SourceHandler(MultiScoperPluginEditor& editor,
                   std::unordered_map<std::string, std::shared_ptr<SharedCaptureBuffer>>& testSourceBuffers)
         : TestServerHandlerBase(editor)
         , testSourceBuffers_(testSourceBuffers)
@@ -48,4 +48,4 @@ private:
     std::unordered_map<std::string, std::shared_ptr<SharedCaptureBuffer>>& testSourceBuffers_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

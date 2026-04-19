@@ -8,7 +8,7 @@ Studio One) reparent the editor component — the window goes away, the
 editor stays alive, then a later reopen reattaches the same editor to a
 new host window.
 
-`OscilPluginEditor::parentHierarchyChanged` (PluginEditor.cpp:247-256)
+`MultiScoperPluginEditor::parentHierarchyChanged` (PluginEditor.cpp:247-256)
 has the detach-OpenGL-on-reparent branch that fires every time the
 editor's parent goes null.  This branch was never exercised by the old
 harness because it only fired on destruction.  This test file covers it.
@@ -36,23 +36,23 @@ from __future__ import annotations
 
 import pytest
 
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
-def _detach(client: OscilTestClient, track_id: int = 0) -> dict:
+def _detach(client: MultiScoperTestClient, track_id: int = 0) -> dict:
     resp = client._post_json(f"/track/{track_id}/detachEditor")
     assert resp is not None and resp.get("success"), f"detach failed: {resp}"
     return resp.get("data", {})
 
 
-def _reattach(client: OscilTestClient, track_id: int = 0) -> dict:
+def _reattach(client: MultiScoperTestClient, track_id: int = 0) -> dict:
     resp = client._post_json(f"/track/{track_id}/reattachEditor")
     assert resp is not None and resp.get("success"), f"reattach failed: {resp}"
     return resp.get("data", {})
 
 
 class TestDetachReattachCycle:
-    def test_single_detach_then_reattach(self, editor: OscilTestClient):
+    def test_single_detach_then_reattach(self, editor: MultiScoperTestClient):
         """
         Bare-minimum sanity: after open_editor, detach clears the window
         content but leaves the editor alive; reattach restores it.
@@ -67,7 +67,7 @@ class TestDetachReattachCycle:
             f"Reattach should succeed after detach, got {r}"
         )
 
-    def test_idempotent_detach_reports_false(self, editor: OscilTestClient):
+    def test_idempotent_detach_reports_false(self, editor: MultiScoperTestClient):
         """Calling detach twice in a row returns {detached: false} the
         second time — the operation is genuinely a no-op, not a crash."""
         _detach(editor)
@@ -75,7 +75,7 @@ class TestDetachReattachCycle:
         assert second.get("detached") is False, second
 
     def test_fifty_cycles_under_playback_no_crash(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         The real stress test.  50 detach/reattach passes while audio is
@@ -118,7 +118,7 @@ class TestDetachReattachCycle:
 
 
 class TestDetachReattachInvariants:
-    def test_detach_without_editor_is_graceful(self, client: OscilTestClient):
+    def test_detach_without_editor_is_graceful(self, client: MultiScoperTestClient):
         """
         Without a prior open_editor, detach returns success with
         detached=false.  The harness must not 500 just because there is

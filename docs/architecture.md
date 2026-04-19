@@ -44,10 +44,10 @@ include/ui/panels/Foo.h      ←→    src/ui/panels/Foo.cpp
 
 ```cpp
 // Good: Dependencies injected
-OscilPluginProcessor(IInstanceRegistry& registry, IThemeService& theme);
+MultiScoperPluginProcessor(IInstanceRegistry& registry, IThemeService& theme);
 
 // Bad: Hidden dependencies
-OscilPluginProcessor() { registry_ = GlobalRegistry::getInstance(); }
+MultiScoperPluginProcessor() { registry_ = GlobalRegistry::getInstance(); }
 ```
 
 ---
@@ -95,7 +95,7 @@ Is it platform-specific (.mm)?               → platform/macos/
 All custom UI components follow this pattern:
 
 ```cpp
-// include/ui/components/OscilFoo.h
+// include/ui/components/MultiScoperFoo.h
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -104,17 +104,17 @@ All custom UI components follow this pattern:
 #include "ui/components/SpringAnimation.h"
 #include "ui/components/TestId.h"
 
-namespace oscil
+namespace multiscoper
 {
 
-class OscilFoo : public juce::Component,
+class MultiScoperFoo : public juce::Component,
                  public ThemeManagerListener,  // Theme changes
                  public TestIdSupport,         // E2E test IDs
                  private juce::Timer           // Animations
 {
 public:
-    explicit OscilFoo(const juce::String& testId = {});
-    ~OscilFoo() override;
+    explicit MultiScoperFoo(const juce::String& testId = {});
+    ~MultiScoperFoo() override;
 
     // Component overrides
     void paint(juce::Graphics& g) override;
@@ -129,10 +129,10 @@ private:
     ColorTheme theme_;
     SpringAnimation hoverSpring_;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilFoo)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MultiScoperFoo)
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 **Key Points**:
@@ -151,7 +151,7 @@ Domain models use value semantics with unique IDs:
 
 #include <juce_core/juce_core.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct MyModelId
@@ -180,7 +180,7 @@ private:
     // Properties...
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ### Waveform Shader Pattern
@@ -193,7 +193,7 @@ All waveform shaders inherit from `WaveformShader`:
 
 #include "rendering/WaveformShader.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 class MyShader : public WaveformShader
@@ -207,7 +207,7 @@ public:
     [[nodiscard]] juce::String getDisplayName() const override { return "My Shader"; }
     [[nodiscard]] juce::String getDescription() const override { return "Description"; }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     bool compile(juce::OpenGLContext& context) override;
     void release(juce::OpenGLContext& context) override;
     bool isCompiled() const override;
@@ -220,7 +220,7 @@ private:
     // OpenGL resources...
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ### Post-Process Effect Pattern
@@ -233,7 +233,7 @@ Effects go in `rendering/effects/`:
 
 #include "rendering/effects/PostProcessEffect.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 class MyEffect : public PostProcessEffect
@@ -247,7 +247,7 @@ public:
 
     void setIntensity(float intensity) { intensity_ = intensity; }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     bool compile(juce::OpenGLContext& context) override;
     void release(juce::OpenGLContext& context) override;
     void apply(juce::OpenGLContext& context,
@@ -260,7 +260,7 @@ private:
     float intensity_ = 1.0f;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ---
@@ -280,7 +280,7 @@ Create interfaces (`I*` prefix) when:
 // include/core/interfaces/IFoo.h
 #pragma once
 
-namespace oscil
+namespace multiscoper
 {
 
 class IFoo
@@ -292,7 +292,7 @@ public:
     virtual int getValue() const = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ### Existing Interfaces
@@ -339,7 +339,7 @@ private:
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| UI Component | `Oscil{Name}.h/cpp` | `OscilButton.h` |
+| UI Component | `MultiScoper{Name}.h/cpp` | `MultiScoperButton.h` |
 | Panel | `{Name}Component.h/cpp` | `SidebarComponent.h` |
 | Dialog | `{Name}Dialog.h/cpp` | `AddOscillatorDialog.h` |
 | Sidebar Section | `{Name}Section.h/cpp` | `TimingSidebarSection.h` |
@@ -359,13 +359,13 @@ private:
 ```cpp
 // Core includes
 #include "core/Oscillator.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/analysis/AnalysisEngine.h"
 
 // UI includes
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/panels/WaveformComponent.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/theme/ThemeManager.h"
@@ -394,11 +394,11 @@ After creating new `.cpp` files, add them to `cmake/Sources.cmake`:
 ```cmake
 # In cmake/Sources.cmake, find the appropriate section:
 
-set(OSCIL_SOURCES
+set(MULTISCOPER_SOURCES
     # ... existing sources ...
 
     # Add your new file in the appropriate section:
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilNewWidget.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperNewWidget.cpp
 )
 ```
 
@@ -494,7 +494,7 @@ void processBlock(...) {
 - `PostProcessEffect` - Post-processing effects
 
 ### Key Namespaces
-- `oscil` - All project code
+- `multiscoper` - All project code
 - `juce` - JUCE framework (use explicitly)
 
 ### Build Commands

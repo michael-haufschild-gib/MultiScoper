@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator Model
+    MultiScoper - Oscillator Model
     Represents a single visualization unit with source, processing, and appearance settings
 */
 
@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <optional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -277,4 +277,4 @@ private:
     int schemaVersion_ = CURRENT_SCHEMA_VERSION;
 };
 
-} // namespace oscil
+} // namespace multiscoper

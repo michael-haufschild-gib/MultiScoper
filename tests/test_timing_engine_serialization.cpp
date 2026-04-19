@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Tests (Serialization)
+    MultiScoper - Timing Engine Tests (Serialization)
     ValueTree persistence, entity config, note interval, edge cases
 */
 

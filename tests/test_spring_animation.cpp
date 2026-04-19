@@ -1,5 +1,5 @@
 /*
-    Oscil - Spring Mode Animation Tests
+    MultiScoper - Spring Mode Animation Tests
     Tests for spring physics mode: overshoot, settling, velocity tracking,
     and spring preset configurations. Existing ease-out tests live in
     test_spring_physics.cpp / test_spring_interaction.cpp / test_spring_edge.cpp.
@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SpringModeTest : public ::testing::Test
 {

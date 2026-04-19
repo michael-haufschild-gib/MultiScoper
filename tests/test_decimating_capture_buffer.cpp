@@ -1,5 +1,5 @@
 /*
-    Oscil - Decimating Capture Buffer Unit Tests
+    MultiScoper - Decimating Capture Buffer Unit Tests
     Tests for decimation, anti-aliasing filter, and memory management
 */
 
@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 #include <numeric>
 
-using namespace oscil;
+using namespace multiscoper;
 
 //==============================================================================
 // Decimation Filter Tests

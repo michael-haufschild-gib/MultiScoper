@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Tests (Host Info)
+    MultiScoper - Timing Engine Tests (Host Info)
     Host info updates, transport, BPM, time signature
 */
 

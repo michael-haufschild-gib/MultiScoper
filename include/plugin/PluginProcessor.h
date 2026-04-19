@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Processor Header
+    MultiScoper - Plugin Processor Header
     Main audio plugin processor
 */
 
@@ -8,7 +8,7 @@
 #include "core/DecimatingCaptureBuffer.h"
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/SharedCaptureBuffer.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/interfaces/IAudioDataProvider.h"
@@ -20,14 +20,14 @@
 #include <memory>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 class ShaderRegistry;
 class PresetManager;
 
 /**
- * Aggregates the injected dependencies for OscilPluginProcessor construction.
+ * Aggregates the injected dependencies for MultiScoperPluginProcessor construction.
  */
 struct PluginProcessorConfig
 {
@@ -38,20 +38,20 @@ struct PluginProcessorConfig
     MemoryBudgetManager& memoryBudgetManager;
 };
 
-class OscilPluginProcessor
+class MultiScoperPluginProcessor
     : public juce::AudioProcessor
     , public IAudioDataProvider
     , public juce::ValueTree::Listener
 {
 public:
     /// Construct with aggregated dependency config.
-    explicit OscilPluginProcessor(const PluginProcessorConfig& config);
+    explicit MultiScoperPluginProcessor(const PluginProcessorConfig& config);
 
     /// Legacy constructor — delegates to the config constructor.
-    OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
-                         ShaderRegistry& shaderRegistry, PresetManager& presetManager,
-                         MemoryBudgetManager& memoryBudgetManager);
-    ~OscilPluginProcessor() override;
+    MultiScoperPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
+                               ShaderRegistry& shaderRegistry, PresetManager& presetManager,
+                               MemoryBudgetManager& memoryBudgetManager);
+    ~MultiScoperPluginProcessor() override;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -95,7 +95,7 @@ public:
     /// Get the capture buffer for the given source (local or from registry).
     std::shared_ptr<IAudioBuffer> getBuffer(const SourceId& sourceId) override;
     /// Get the mutable plugin state tree.
-    OscilState& getState() override;
+    MultiScoperState& getState() override;
     float getCpuUsage() const override { return cpuUsage_.load(std::memory_order_relaxed); }
     double getSampleRate() const override { return currentSampleRate_.load(std::memory_order_relaxed); }
     int getCaptureRate() const override;
@@ -115,6 +115,20 @@ private:
     void deferRegistration(double sampleRate);
     void updateCpuUsage(int64_t startTicks, int numSamples);
 
+    /**
+     * Apply a persisted trackIdentifier that arrived via setStateInformation
+     * after registration may already have happened under the provisional
+     * ctor-generated UUID. Unregisters any prior registration and re-registers
+     * under the persisted identity so cross-instance oscillator bindings
+     * resolve to the stable SourceId.
+     *
+     * No-op when newTrackIdentifier is empty (legacy v2 state), when it equals
+     * the current trackIdentifier_, or when prepareToPlay has not yet run
+     * (sourceId_ still invalid — the eventual deferRegistration will pick up
+     * the new value).
+     */
+    void reRegisterUnderPersistedTrackIdentifier(const juce::String& newTrackIdentifier);
+
     IInstanceRegistry& instanceRegistry_;      // Injected dependency
     IThemeService& themeService_;              // Injected dependency
     ShaderRegistry& shaderRegistry_;           // Injected dependency
@@ -127,10 +141,10 @@ private:
 
     // Unique identifier for this instance
     juce::String trackIdentifier_;
-    juce::String sourceDisplayName_{"Oscil Track"};
+    juce::String sourceDisplayName_{"MultiScoper Track"};
     SourceId sourceId_;
 
-    OscilState state_;
+    MultiScoperState state_;
     TimingEngine timingEngine_;
 
     std::atomic<double> currentSampleRate_{44100.0};
@@ -166,8 +180,8 @@ private:
     // Helper to thread-safely set current capture config
     void setCaptureQualityConfig(const CaptureQualityConfig& config);
 
-    JUCE_DECLARE_WEAK_REFERENCEABLE(OscilPluginProcessor)
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilPluginProcessor)
+    JUCE_DECLARE_WEAK_REFERENCEABLE(MultiScoperPluginProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MultiScoperPluginProcessor)
 };
 
-} // namespace oscil
+} // namespace multiscoper

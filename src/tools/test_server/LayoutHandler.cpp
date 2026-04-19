@@ -1,10 +1,10 @@
 /*
-    Oscil - Layout Handler Implementation
+    MultiScoper - Layout Handler Implementation
 */
 
 #include "tools/test_server/LayoutHandler.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Pane.h"
 
 #include "plugin/PluginEditor.h"
@@ -12,7 +12,7 @@
 
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 void LayoutHandler::handleGetLayout(const httplib::Request& /*req*/, httplib::Response& res)
@@ -161,4 +161,4 @@ void LayoutHandler::handleMovePane(const httplib::Request& req, httplib::Respons
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

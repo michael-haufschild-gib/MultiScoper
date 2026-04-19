@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class OscillatorColorDialogTest : public ::testing::Test
@@ -24,11 +24,11 @@ protected:
 
     ThemeManager& getThemeManager() { return *themeManager_; }
 
-    OscilButton* findButtonWithText(const juce::String& text)
+    MultiScoperButton* findButtonWithText(const juce::String& text)
     {
         for (auto* child : dialog->getChildren())
         {
-            if (auto* button = dynamic_cast<OscilButton*>(child))
+            if (auto* button = dynamic_cast<MultiScoperButton*>(child))
             {
                 if (button->getText() == text)
                     return button;
@@ -131,4 +131,4 @@ TEST_F(OscillatorColorDialogTest, NonPaletteColorDoesNotReusePreviousSelection)
     EXPECT_EQ(selectedColor.getARGB(), WaveformColorPalette::getColor(0).getARGB());
 }
 
-} // namespace oscil
+} // namespace multiscoper

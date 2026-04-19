@@ -1,5 +1,5 @@
 /*
-    Oscil - TimingConfig Entity Tests
+    MultiScoper - TimingConfig Entity Tests
 */
 
 #include "core/dsp/TimingConfig.h"
@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class TimingConfigTest : public ::testing::Test
 {

@@ -1,14 +1,14 @@
 /*
-    Oscil - Inline Edit Label Component Implementation
+    MultiScoper - Inline Edit Label Component Implementation
 */
 
 #include "ui/components/InlineEditLabel.h"
 
 #include "ui/components/ListItemIcons.h"
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/SurfacePainter.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 InlineEditLabel::InlineEditLabel(IThemeService& themeService) : ThemedComponent(themeService)
@@ -56,7 +56,7 @@ void InlineEditLabel::setupComponents()
     addChildComponent(*editor_);
 
     // Create save button
-    saveButton_ = std::make_unique<OscilButton>(getThemeService(), "");
+    saveButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "");
     saveButton_->setVariant(ButtonVariant::Icon);
     saveButton_->setIconPath(ListItemIcons::createCheckmarkIcon(static_cast<float>(BUTTON_SIZE)));
     saveButton_->setTooltip("Save (Enter)");
@@ -64,7 +64,7 @@ void InlineEditLabel::setupComponents()
     addChildComponent(*saveButton_);
 
     // Create cancel button
-    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "");
+    cancelButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "");
     cancelButton_->setVariant(ButtonVariant::Icon);
     cancelButton_->setIconPath(ListItemIcons::createCloseIcon(static_cast<float>(BUTTON_SIZE)));
     cancelButton_->setTooltip("Cancel (Escape)");
@@ -74,7 +74,7 @@ void InlineEditLabel::setupComponents()
     updateEditorStyle();
 }
 
-void InlineEditLabel::registerTestId() { OSCIL_REGISTER_TEST_ID(testId_); }
+void InlineEditLabel::registerTestId() { MULTISCOPER_REGISTER_TEST_ID(testId_); }
 
 void InlineEditLabel::setText(const juce::String& text, bool notify)
 {
@@ -282,7 +282,7 @@ void InlineEditLabel::paint(juce::Graphics& g)
     if (isHovered_ && !readOnly_)
     {
         g.setColour(surface.bgHover);
-        g.fillRoundedRectangle(bounds, ComponentLayout::RADIUS_SM);
+        g.fillRect(bounds);
     }
 
     // Get text color — display mode: textPrimary
@@ -414,4 +414,4 @@ int InlineEditLabel::getPreferredHeight() const
     return static_cast<int>(font_.getHeight()) + 8; // Font height + padding
 }
 
-} // namespace oscil
+} // namespace multiscoper

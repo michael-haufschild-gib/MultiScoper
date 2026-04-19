@@ -1,18 +1,18 @@
 /*
-    Oscil - Coordinator Event Tests
+    MultiScoper - Coordinator Event Tests
     Tests for coordinator event callbacks and notifications
 */
 
 #include "ui/layout/LayoutCoordinator.h"
 #include "ui/theme/ThemeCoordinator.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 
 #include <atomic>
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 // =============================================================================
 // ThemeCoordinator Event Tests

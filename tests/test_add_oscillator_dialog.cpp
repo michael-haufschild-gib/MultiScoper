@@ -1,7 +1,7 @@
 /*
-    Oscil - E2E Tests for AddOscillatorDialog
+    MultiScoper - E2E Tests for AddOscillatorDialog
     Tests the Add Oscillator dialog functionality via direct component interaction
-    Note: AddOscillatorDialog is now a content component designed to be hosted in OscilModal
+    Note: AddOscillatorDialog is now a content component designed to be hosted in MultiScoperModal
 */
 
 #include "core/Oscillator.h"
@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class AddOscillatorDialogTest : public ::testing::Test
 {
@@ -95,12 +95,12 @@ TEST_F(AddOscillatorDialogTest, DialogHasValidPreferredDimensions)
 }
 
 // Test: Dialog test ID support is properly configured
-// Note: In unit tests (without TEST_HARNESS), OSCIL_REGISTER_TEST_ID is a no-op
+// Note: In unit tests (without TEST_HARNESS), MULTISCOPER_REGISTER_TEST_ID is a no-op
 // The test ID would be set when running with the test harness
 TEST_F(AddOscillatorDialogTest, DialogHasTestIdSupport)
 {
     auto testId = dialog_->getTestId();
-    // In unit tests OSCIL_REGISTER_TEST_ID is a no-op, so testId is empty
+    // In unit tests MULTISCOPER_REGISTER_TEST_ID is a no-op, so testId is empty
     // Verify the method returns without error and dimensions are valid
     EXPECT_GT(dialog_->getPreferredWidth(), 0);
     EXPECT_GT(dialog_->getPreferredHeight(), 0);

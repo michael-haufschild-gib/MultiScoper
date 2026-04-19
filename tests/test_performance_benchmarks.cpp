@@ -1,5 +1,5 @@
 /*
-    Oscil - Performance Benchmarks
+    MultiScoper - Performance Benchmarks
     Regression detection for render-loop-critical data paths.
 
     Threshold policy: each threshold is ~3-5x the typical measured time
@@ -18,7 +18,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 // ============================================================================
 // SharedCaptureBuffer Throughput

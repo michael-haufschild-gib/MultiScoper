@@ -1,12 +1,12 @@
 /*
-    Oscil - Test Waveform Generator Implementation
+    MultiScoper - Test Waveform Generator Implementation
 */
 
 #include "tools/test_server/TestWaveformGenerator.h"
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -16,7 +16,10 @@ using SampleFunc = float (*)(float phase, float amplitude, juce::Random& rng);
 float sineSample(float phase, float amplitude, juce::Random& /*rng*/) { return std::sin(phase) * amplitude; }
 float squareSample(float phase, float amplitude, juce::Random& /*rng*/)
 {
-    return (std::sin(phase) > 0.0f ? 1.0f : -1.0f) * amplitude;
+    // Phase is kept in [0, 2π) by the caller, so the sign of sin(phase)
+    // is simply "below or above π". Computing sin just to check the
+    // sign is a trig call per sample for no reason.
+    return (phase < juce::MathConstants<float>::pi ? 1.0f : -1.0f) * amplitude;
 }
 float triangleSample(float phase, float amplitude, juce::Random& /*rng*/)
 {
@@ -52,6 +55,12 @@ SampleFunc resolveWaveform(const std::string& type)
     return silenceSample;
 }
 } // namespace
+
+bool isValidWaveformType(const std::string& waveformType)
+{
+    return waveformType == "sine" || waveformType == "square" || waveformType == "triangle" ||
+           waveformType == "sawtooth" || waveformType == "noise" || waveformType == "dc" || waveformType == "silence";
+}
 
 void generateTestWaveform(juce::AudioBuffer<float>& buffer, const std::string& waveformType, float frequency,
                           float amplitude, float sampleRate)
@@ -94,4 +103,4 @@ CaptureFrameMetadata makeTestMetadata(float sampleRate, int numSamples)
     return metadata;
 }
 
-} // namespace oscil
+} // namespace multiscoper

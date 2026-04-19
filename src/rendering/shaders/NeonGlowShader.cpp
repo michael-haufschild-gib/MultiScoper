@@ -1,5 +1,5 @@
 /*
-    Oscil - Neon Glow Shader Implementation
+    MultiScoper - Neon Glow Shader Implementation
 */
 
 #include "rendering/shaders/NeonGlowShader.h"
@@ -8,10 +8,10 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 using namespace juce::gl;
 
 struct NeonGlowShader::GLResources : WaveformShader::WaveformGLResources
@@ -26,7 +26,7 @@ struct NeonGlowShader::GLResources : WaveformShader::WaveformGLResources
 #endif
 
 NeonGlowShader::NeonGlowShader()
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     : gl_(std::make_unique<GLResources>())
 #endif
 {
@@ -34,7 +34,7 @@ NeonGlowShader::NeonGlowShader()
 
 NeonGlowShader::~NeonGlowShader()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     if (gl_ && gl_->compiled)
     {
         jassertfalse;
@@ -43,7 +43,7 @@ NeonGlowShader::~NeonGlowShader()
 #endif
 }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 bool NeonGlowShader::compile(juce::OpenGLContext& context)
 {
     if (!compileFromBinaryData(*gl_, context, BinaryData::neon_glow_vert, BinaryData::neon_glow_vertSize,
@@ -144,4 +144,4 @@ void NeonGlowShader::render(juce::OpenGLContext& context, const std::vector<floa
 }
 #endif
 
-} // namespace oscil
+} // namespace multiscoper

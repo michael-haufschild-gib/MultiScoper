@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - HTTP Server
+    MultiScoper Test Harness - HTTP Server
     REST API for remote control of the test harness
 */
 
@@ -29,13 +29,13 @@
 #include <stdexcept>
 #include <thread>
 
-namespace oscil
+namespace multiscoper
 {
-class OscilPluginProcessor;
-class OscilPluginEditor;
-} // namespace oscil
+class MultiScoperPluginProcessor;
+class MultiScoperPluginEditor;
+} // namespace multiscoper
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 using json = nlohmann::json;
@@ -104,6 +104,8 @@ private:
     // Route handlers - UI Mouse
     void handleUIClick(const httplib::Request& req, httplib::Response& res);
     void handleUIDoubleClick(const httplib::Request& req, httplib::Response& res);
+    void handleUIClickAtOffset(const httplib::Request& req, httplib::Response& res);
+    void handleUIDoubleClickAtOffset(const httplib::Request& req, httplib::Response& res);
     void handleUIRightClick(const httplib::Request& req, httplib::Response& res);
     void handleUIHover(const httplib::Request& req, httplib::Response& res);
     void handleUISelect(const httplib::Request& req, httplib::Response& res);
@@ -159,6 +161,20 @@ private:
     void handleStateSources(const httplib::Request& req, httplib::Response& res);
     void handleStateDeleteOscillator(const httplib::Request& req, httplib::Response& res);
 
+    // Route handlers - Project (multi-track save/close/reopen simulation)
+    //
+    // These mirror what a DAW does on File > Save / File > Close / File > Open:
+    // save bundles every live track's state into one file, close tears all
+    // tracks down (destroying plugin processors and their InstanceRegistry
+    // entries), reopen re-creates the tracks and restores their state.
+    //
+    // Used by tests that need to verify behavior across genuine session
+    // boundaries — e.g., cross-instance oscillator bindings surviving
+    // save+close+reopen (the Bitwig scenario).
+    void handleProjectSave(const httplib::Request& req, httplib::Response& res);
+    void handleProjectClose(const httplib::Request& req, httplib::Response& res);
+    void handleProjectReopen(const httplib::Request& req, httplib::Response& res);
+
     // Route handlers - Pane Management
     void handlePaneAdd(const httplib::Request& req, httplib::Response& res);
     void handlePaneRemove(const httplib::Request& req, httplib::Response& res);
@@ -205,7 +221,14 @@ private:
 
     // State restore — applies loaded XML, restores TimingEngine, syncs sidebar UI.
     // Returns false if XML parsing fails.
-    bool restoreLoadedState(OscilPluginProcessor& processor, OscilPluginEditor* editor, const juce::String& xml);
+    bool restoreLoadedState(MultiScoperPluginProcessor& processor, MultiScoperPluginEditor* editor,
+                            const juce::String& xml);
+
+    // Restore one /project bundle entry into a freshly-created track.
+    // Message-thread only (calls daw_.addTrack and restoreLoadedState).
+    // Returns the new track index on success, or -1 on failure with
+    // failureMessage populated.
+    int reopenTrackFromBundleEntry(const json& entry, std::string& failureMessage);
 
     // Track resolver — extracts trackId from GET query param or POST body, defaults to 0.
     //
@@ -292,4 +315,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestHttpServer)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

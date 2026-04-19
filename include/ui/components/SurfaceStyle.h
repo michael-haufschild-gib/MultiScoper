@@ -1,5 +1,5 @@
 /*
-    Oscil - Surface Style
+    MultiScoper - Surface Style
     Computed color/parameter pack derived from a ColorTheme. Used by the
     flat-surface paint system. Note: the struct retains some *Glass* field
     names (bgGlass, glassAlpha, etc.) as stable ValueTree serialization
@@ -11,7 +11,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct ColorTheme; // forward declare
@@ -50,4 +50,4 @@ struct SurfaceStyle
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

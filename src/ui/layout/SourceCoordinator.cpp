@@ -1,19 +1,21 @@
 /*
-    Oscil - Source Coordinator Implementation
+    MultiScoper - Source Coordinator Implementation
 */
 
 #include "ui/layout/SourceCoordinator.h"
 
-#include "core/OscilLog.h"
+#include "core/MultiScoperLog.h"
 
 #include <algorithm>
 
-namespace oscil
+namespace multiscoper
 {
 
-SourceCoordinator::SourceCoordinator(IInstanceRegistry& registry, SourcesChangedCallback onSourcesChanged)
+SourceCoordinator::SourceCoordinator(IInstanceRegistry& registry, SourcesChangedCallback onSourcesChanged,
+                                     SourceRemovedCallback onSourceRemoved)
     : registry_(registry)
     , onSourcesChanged_(std::move(onSourcesChanged))
+    , onSourceRemoved_(std::move(onSourceRemoved))
 {
     // Register as listener
     registry_.addListener(this);
@@ -34,7 +36,7 @@ SourceCoordinator::~SourceCoordinator()
 
 void SourceCoordinator::sourceAdded(const SourceId& sourceId)
 {
-    OSCIL_LOG(SOURCE, "sourceAdded: id=" << sourceId.id << " totalSources=" << (availableSources_.size() + 1));
+    MULTISCOPER_LOG(SOURCE, "sourceAdded: id=" << sourceId.id << " totalSources=" << (availableSources_.size() + 1));
     // Capture by value for thread safety
     postToMessageThread([this, sourceId]() {
         availableSources_.push_back(sourceId);
@@ -45,10 +47,16 @@ void SourceCoordinator::sourceAdded(const SourceId& sourceId)
 
 void SourceCoordinator::sourceRemoved(const SourceId& sourceId)
 {
-    OSCIL_LOG(SOURCE, "sourceRemoved: id=" << sourceId.id << " remainingSources="
-                                           << (!availableSources_.empty() ? availableSources_.size() - 1 : 0));
+    MULTISCOPER_LOG(SOURCE, "sourceRemoved: id=" << sourceId.id << " remainingSources="
+                                                 << (!availableSources_.empty() ? availableSources_.size() - 1 : 0));
     postToMessageThread([this, sourceId]() {
         std::erase(availableSources_, sourceId);
+        // Fire the targeted remove callback BEFORE the aggregate "changed"
+        // callback so the editor can clear oscillator bindings that specifically
+        // referenced this sourceId — the aggregate callback no longer clears
+        // unresolved bindings on its own (see onSourcesChanged).
+        if (onSourceRemoved_)
+            onSourceRemoved_(sourceId);
         if (onSourcesChanged_)
             onSourcesChanged_();
     });
@@ -56,7 +64,7 @@ void SourceCoordinator::sourceRemoved(const SourceId& sourceId)
 
 void SourceCoordinator::sourceUpdated(const SourceId& sourceId)
 {
-    OSCIL_LOG(SOURCE, "sourceUpdated: id=" << sourceId.id);
+    MULTISCOPER_LOG(SOURCE, "sourceUpdated: id=" << sourceId.id);
     juce::ignoreUnused(sourceId);
     postToMessageThread([this]() {
         if (onSourcesChanged_)
@@ -72,7 +80,7 @@ void SourceCoordinator::refreshFromRegistry()
     {
         availableSources_.push_back(source.sourceId);
     }
-    OSCIL_LOG(SOURCE, "refreshFromRegistry: " << availableSources_.size() << " sources");
+    MULTISCOPER_LOG(SOURCE, "refreshFromRegistry: " << availableSources_.size() << " sources");
 }
 
 void SourceCoordinator::postToMessageThread(std::function<void()> callback)
@@ -90,4 +98,4 @@ void SourceCoordinator::postToMessageThread(std::function<void()> callback)
     });
 }
 
-} // namespace oscil
+} // namespace multiscoper

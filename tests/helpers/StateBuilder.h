@@ -1,21 +1,21 @@
 /*
-    Oscil - State Builder
-    Fluent builder for creating OscilState objects in tests
+    MultiScoper - State Builder
+    Fluent builder for creating MultiScoperState objects in tests
 */
 
 #pragma once
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 
 #include <memory>
 #include <vector>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
- * Fluent builder for creating test OscilState objects
+ * Fluent builder for creating test MultiScoperState objects
  *
  * Example usage:
  *   auto state = StateBuilder()
@@ -258,11 +258,11 @@ public:
     }
 
     /**
-     * Build and return a unique_ptr to the OscilState
+     * Build and return a unique_ptr to the MultiScoperState
      */
-    std::unique_ptr<OscilState> buildUnique()
+    std::unique_ptr<MultiScoperState> buildUnique()
     {
-        auto state = std::make_unique<OscilState>();
+        auto state = std::make_unique<MultiScoperState>();
 
         // Set properties
         state->setThemeName(themeName_);
@@ -285,19 +285,22 @@ public:
     }
 
     /**
-     * Build and return an OscilState by value
-     * NOTE: Disabled because OscilState has deleted copy constructor
+     * Build and return an MultiScoperState by value
+     * NOTE: Disabled because MultiScoperState has deleted copy constructor
      */
-    // OscilState build()
+    // MultiScoperState build()
     // {
     //     auto ptr = buildUnique();
     //     return std::move(*ptr);
     // }
 
     /**
-     * Build and return a shared_ptr to the OscilState
+     * Build and return a shared_ptr to the MultiScoperState
      */
-    std::shared_ptr<OscilState> buildShared() { return std::shared_ptr<OscilState>(buildUnique().release()); }
+    std::shared_ptr<MultiScoperState> buildShared()
+    {
+        return std::shared_ptr<MultiScoperState>(buildUnique().release());
+    }
 
     /**
      * Build and serialize to XML string
@@ -321,4 +324,4 @@ private:
     bool gpuRenderingEnabled_;
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

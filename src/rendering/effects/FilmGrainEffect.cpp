@@ -1,12 +1,12 @@
 /*
-    Oscil - Film Grain Effect Implementation
+    MultiScoper - Film Grain Effect Implementation
 */
 
 #include "rendering/effects/FilmGrainEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 // Film grain fragment shader using procedural noise
@@ -102,6 +102,6 @@ void FilmGrainEffect::setUniforms(const Framebuffer& source, float deltaTime)
                                                 static_cast<float>(source.height));
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

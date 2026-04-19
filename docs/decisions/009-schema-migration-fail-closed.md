@@ -6,40 +6,40 @@ Accepted
 
 ## Context
 
-`OscilState::fromXmlString` is the single ingress for persisted plugin state coming back from a DAW session. Prior to this decision, on schema version mismatch it logged a warning and then assigned `state_ = loadedState` anyway. Three failure modes resulted:
+`MultiScoperState::fromXmlString` is the single ingress for persisted plugin state coming back from a DAW session. Prior to this decision, on schema version mismatch it logged a warning and then assigned `state_ = loadedState` anyway. Three failure modes resulted:
 
 1. **Silent downgrade** -- a session saved by a newer build loaded into an older build would overwrite in-memory state with XML whose fields this build does not understand. The unknown fields were ignored; the known-but-semantically-different fields were accepted at face value.
 2. **Silent forward-load of unknown-future data** -- a session with `version="999"` parsed fine and was committed to `state_`, even though no migration logic exists for it.
 3. **No central migration surface** -- per-entity migration (`Oscillator::migrateOscillatorState`) was hidden inside `fromValueTree`. There was no place to register a new step without touching multiple call sites.
 
-The audit of `CURRENT_SCHEMA_VERSION` across `OscilState`, `Oscillator`, and `Source` showed the constants have all been static since the initial commit -- the drift that did happen (the `OscillatorState` enum added at Oscillator v2) is handled inside `Oscillator::migrateOscillatorState` using the per-child `schemaVersion` property, so the top-level OscilState schema has had no field drift. Nevertheless, the framework is needed now because future schema changes are expected and the silent-accept behavior is unsafe to keep.
+The audit of `CURRENT_SCHEMA_VERSION` across `MultiScoperState`, `Oscillator`, and `Source` showed the constants have all been static since the initial commit -- the drift that did happen (the `OscillatorState` enum added at Oscillator v2) is handled inside `Oscillator::migrateOscillatorState` using the per-child `schemaVersion` property, so the top-level MultiScoperState schema has had no field drift. Nevertheless, the framework is needed now because future schema changes are expected and the silent-accept behavior is unsafe to keep.
 
 ## Decision
 
-A dedicated `oscil::migration` module (`include/core/SchemaMigration.h`, `src/core/SchemaMigration.cpp`) owns all OscilState-level schema migrations. It exposes one entry point:
+A dedicated `multiscoper::migration` module (`include/core/SchemaMigration.h`, `src/core/SchemaMigration.cpp`) owns all MultiScoperState-level schema migrations. It exposes one entry point:
 
 ```cpp
-[[nodiscard]] MigrationResult migrateOscilState(juce::ValueTree& state,
+[[nodiscard]] MigrationResult migrateMultiScoperState(juce::ValueTree& state,
                                                 int fromVersion,
                                                 int toVersion);
 ```
 
 `MigrationResult` is `Success`, `UnsupportedFromVersion`, `UnsupportedToVersion`, or `DowngradeUnsupported`.
 
-`OscilState::fromXmlString` calls this entry point. On any result other than `Success`, it logs the reason and returns `false` **without** assigning `state_`. The in-memory state is preserved. This is the fail-closed behavior that replaces log-and-continue.
+`MultiScoperState::fromXmlString` calls this entry point. On any result other than `Success`, it logs the reason and returns `false` **without** assigning `state_`. The in-memory state is preserved. This is the fail-closed behavior that replaces log-and-continue.
 
 The migration table is:
 
 | From | To | Step       | Notes                                                                                           |
 |------|----|-----------|-------------------------------------------------------------------------------------------------|
 | 0    | 1  | no-op     | v0 denotes pre-versioned XML (no `version` attribute). Structurally identical to v1.            |
-| 1    | 2  | no-op     | No OscilState-level field drift between v1 and v2. Oscillator v1->v2 is handled internally.     |
+| 1    | 2  | no-op     | No MultiScoperState-level field drift between v1 and v2. Oscillator v1->v2 is handled internally.     |
 
 Both steps stamp the `version` property to their target version so chained calls and `getSchemaVersion()` observe the post-migration version.
 
 Downgrades (`fromVersion > toVersion`) are always rejected. This includes the case where a persisted state claims a version higher than this build's `CURRENT_SCHEMA_VERSION`.
 
-Chain migration is attempted automatically. `migrateOscilState(tree, 0, 2)` walks `v0 -> v1` then `v1 -> v2`.
+Chain migration is attempted automatically. `migrateMultiScoperState(tree, 0, 2)` walks `v0 -> v1` then `v1 -> v2`.
 
 ## Consequences
 

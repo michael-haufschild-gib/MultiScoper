@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Tests (Core)
+    MultiScoper - Timing Engine Tests (Core)
     Default config, TIME mode, MELODIC mode, trigger detection, manual trigger
 */
 

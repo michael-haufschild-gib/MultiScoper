@@ -23,14 +23,14 @@ import contextlib
 
 import pytest
 
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 SWEEP_SIZES: list[int] = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
 DEFAULT_BUFFER_SIZE = 512
 
 
-def _set_buffer_size(client: OscilTestClient, size: int) -> dict:
+def _set_buffer_size(client: MultiScoperTestClient, size: int) -> dict:
     resp = client._post_json("/daw/bufferSize", {"size": size})
     assert resp is not None, f"Harness did not respond to buffer size {size}"
     assert resp.get("success"), f"Buffer size {size} rejected: {resp}"
@@ -38,7 +38,7 @@ def _set_buffer_size(client: OscilTestClient, size: int) -> dict:
 
 
 @pytest.fixture(autouse=True, scope="module")
-def _restore_buffer_size(client: OscilTestClient):
+def _restore_buffer_size(client: MultiScoperTestClient):
     """Restore the DAW to 512-sample blocks after every module in this file.
 
     Same rationale as the sample-rate-cleanup fixture: leaving the harness
@@ -51,7 +51,7 @@ def _restore_buffer_size(client: OscilTestClient):
 
 class TestBufferSizeSweep:
     def test_sweep_power_of_two_sizes(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         osc_id = editor.add_oscillator(source_id, name="Buffer Sweep Oscillator")
         assert osc_id is not None
@@ -79,7 +79,7 @@ class TestBufferSizeSweep:
             )
 
     def test_waveform_resumes_after_each_size(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: any downstream code path that cached a pointer /
@@ -106,21 +106,21 @@ class TestBufferSizeSweep:
 
 
 class TestBufferSizeValidation:
-    def test_reject_below_minimum(self, client: OscilTestClient):
+    def test_reject_below_minimum(self, client: MultiScoperTestClient):
         """15 is one below the documented floor — must be rejected."""
         resp = client._post("/daw/bufferSize", {"size": 15})
         assert resp.status_code == 400, (
             f"Out-of-range size should 400, got {resp.status_code}"
         )
 
-    def test_reject_above_maximum(self, client: OscilTestClient):
+    def test_reject_above_maximum(self, client: MultiScoperTestClient):
         resp = client._post("/daw/bufferSize", {"size": 9000})
         assert resp.status_code == 400
 
-    def test_reject_missing_field(self, client: OscilTestClient):
+    def test_reject_missing_field(self, client: MultiScoperTestClient):
         resp = client._post("/daw/bufferSize", {})
         assert resp.status_code == 400
 
-    def test_reject_zero(self, client: OscilTestClient):
+    def test_reject_zero(self, client: MultiScoperTestClient):
         resp = client._post("/daw/bufferSize", {"size": 0})
         assert resp.status_code == 400

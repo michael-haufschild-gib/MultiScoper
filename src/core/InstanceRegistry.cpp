@@ -1,15 +1,15 @@
 /*
-    Oscil - Instance Registry Implementation
+    MultiScoper - Instance Registry Implementation
 */
 
 #include "core/InstanceRegistry.h"
 
-#include "core/OscilLog.h"
+#include "core/MultiScoperLog.h"
 #include "core/SharedCaptureBuffer.h"
 
-#include "Oscil.h"
+#include "MultiScoper.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 // Note: SourceId::generate() and InstanceId::generate() are implemented in Source.cpp
@@ -19,8 +19,8 @@ InstanceRegistry::InstanceRegistry()
     // Default dispatcher uses MessageManager::callAsync.
     // Constructor runs synchronously on the caller's thread; no other thread can
     // observe dispatcher_ yet, but we still take the lock to satisfy
-    // thread-safety analysis (dispatcher_ is OSCIL_GUARDED_BY(dispatcherMutex_)).
-    const oscil::ScopedLock lock(dispatcherMutex_);
+    // thread-safety analysis (dispatcher_ is MULTISCOPER_GUARDED_BY(dispatcherMutex_)).
+    const multiscoper::ScopedLock lock(dispatcherMutex_);
     dispatcher_ = [](std::function<void()> f) {
         if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
         {
@@ -51,7 +51,7 @@ void InstanceRegistry::setDispatcher(Dispatcher dispatcher)
     if (!dispatcher)
         return;
 
-    const oscil::ScopedLock lock(dispatcherMutex_);
+    const multiscoper::ScopedLock lock(dispatcherMutex_);
     dispatcher_ = std::move(dispatcher);
 }
 
@@ -62,13 +62,13 @@ void InstanceRegistry::shutdown()
 
     // Clear all sources and listeners
     {
-        const oscil::ScopedLock lock(mutex_);
+        const multiscoper::ScopedLock lock(mutex_);
         // Capture count into a local before logging — clang thread-safety
-        // analysis does not propagate lock ownership into the OSCIL_LOG
+        // analysis does not propagate lock ownership into the MULTISCOPER_LOG
         // lambda, so accessing guarded members from within the log message
         // fails -Wthread-safety even though the lock is held here.
-        auto const sourceCount = sources_.size();
-        OSCIL_LOG(REGISTRY, "shutdown: clearing " << sourceCount << " sources");
+        [[maybe_unused]] auto const sourceCount = sources_.size();
+        MULTISCOPER_LOG(REGISTRY, "shutdown: clearing " << sourceCount << " sources");
         sources_.clear();
         trackToSourceMap_.clear();
     }
@@ -91,16 +91,25 @@ SourceId InstanceRegistry::tryReuseExistingSource(const juce::String& trackIdent
     if (sourceIt == sources_.end())
         return SourceId::invalid();
 
-    sourceIt->second.buffer = captureBuffer;
-    sourceIt->second.analysisEngine = analysisEngine;
+    // Preserve the existing buffer/analysisEngine when the caller passes
+    // a null — matches the name-preserves-on-empty rule above and the
+    // intent of the ownership contract: the registry's weak_ref should
+    // only reflect a buffer the caller actually has. A caller that
+    // re-registers to update sampleRate or channelCount should not
+    // accidentally erase the registry's handle to a still-owned buffer.
+    if (captureBuffer)
+        sourceIt->second.buffer = captureBuffer;
+    if (analysisEngine)
+        sourceIt->second.analysisEngine = analysisEngine;
     sourceIt->second.channelCount = channelCount;
     sourceIt->second.sampleRate = sampleRate;
     if (name.isNotEmpty())
         sourceIt->second.name = name;
 
-    OSCIL_LOG(REGISTRY, "tryReuseExistingSource: reused sourceId="
-                            << existingIt->second.id << " trackId=" << trackIdentifier << " name="
-                            << sourceIt->second.name << " channels=" << channelCount << " sampleRate=" << sampleRate);
+    MULTISCOPER_LOG(REGISTRY, "tryReuseExistingSource: reused sourceId="
+                                  << existingIt->second.id << " trackId=" << trackIdentifier
+                                  << " name=" << sourceIt->second.name << " channels=" << channelCount
+                                  << " sampleRate=" << sampleRate);
     return existingIt->second;
 }
 
@@ -109,7 +118,12 @@ SourceId InstanceRegistry::insertNewSource(const juce::String& effectiveTrackId,
                                            int channelCount, double sampleRate,
                                            std::shared_ptr<AnalysisEngine> analysisEngine)
 {
-    SourceId const sourceId = SourceId::generate();
+    // Derive SourceId deterministically from the trackIdentifier so that a plugin
+    // instance which persists its trackIdentifier_ across DAW save/load cycles
+    // re-registers with the same SourceId — keeping cross-instance oscillator
+    // bindings (oscillator.sourceId -> another instance's SourceId) resolvable
+    // after reload.
+    SourceId const sourceId{effectiveTrackId};
     SourceInfo info;
     info.sourceId = sourceId;
     info.name = name.isEmpty() ? "Track " + juce::String(sources_.size() + 1) : name;
@@ -122,11 +136,12 @@ SourceId InstanceRegistry::insertNewSource(const juce::String& effectiveTrackId,
     sources_[sourceId] = info;
     trackToSourceMap_[effectiveTrackId] = sourceId;
 
-    // Local for lock-analysis-friendly logging (OSCIL_LOG lambda does
+    // Local for lock-analysis-friendly logging (MULTISCOPER_LOG lambda does
     // not propagate lock ownership from enclosing scope).
-    auto const totalSources = sources_.size();
-    OSCIL_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name << " ch=" << channelCount
-                                                    << " sr=" << sampleRate << " total=" << totalSources);
+    [[maybe_unused]] auto const totalSources = sources_.size();
+    MULTISCOPER_LOG(REGISTRY, "registerInstance: NEW id=" << sourceId.id << " name=" << info.name
+                                                          << " ch=" << channelCount << " sr=" << sampleRate
+                                                          << " total=" << totalSources);
     return sourceId;
 }
 
@@ -144,7 +159,7 @@ InstanceRegistry::RegisterOutcome InstanceRegistry::resolveOrInsertLocked(
     }
     if (sources_.size() >= MAX_TRACKS)
     {
-        OSCIL_LOG(REGISTRY, "registerInstance: REJECTED max=" << MAX_TRACKS);
+        MULTISCOPER_LOG(REGISTRY, "registerInstance: REJECTED max=" << MAX_TRACKS);
         outcome.kind = RegisterOutcome::Kind::Rejected;
         return outcome;
     }
@@ -171,7 +186,7 @@ SourceId InstanceRegistry::registerInstance(const juce::String& trackIdentifier,
 
     RegisterOutcome outcome;
     {
-        const oscil::ScopedLock lock(mutex_);
+        const multiscoper::ScopedLock lock(mutex_);
         outcome = resolveOrInsertLocked(effectiveTrackId, captureBuffer, name, validChannelCount, validSampleRate,
                                         analysisEngine);
     }
@@ -195,20 +210,20 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
     bool shouldNotify = false;
 
     {
-        const oscil::ScopedLock lock(mutex_);
+        const multiscoper::ScopedLock lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
         {
-            OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " NOT FOUND");
+            MULTISCOPER_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " NOT FOUND");
             return;
         }
 
-        auto const remaining = sources_.size() - 1;
-        auto const nameCopy = it->second.name;
-        auto const trackIdCopy = it->second.trackIdentifier;
-        OSCIL_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " name=" << nameCopy << " trackId="
-                                                            << trackIdCopy << " remaining=" << remaining);
+        [[maybe_unused]] auto const remaining = sources_.size() - 1;
+        [[maybe_unused]] auto const nameCopy = it->second.name;
+        [[maybe_unused]] auto const trackIdCopy = it->second.trackIdentifier;
+        MULTISCOPER_LOG(REGISTRY, "unregisterInstance: sourceId=" << sourceId.id << " name=" << nameCopy << " trackId="
+                                                                  << trackIdCopy << " remaining=" << remaining);
         // Remove from track map using stored identifier (O(1))
         trackToSourceMap_.erase(it->second.trackIdentifier);
 
@@ -225,7 +240,7 @@ void InstanceRegistry::unregisterInstance(const SourceId& sourceId)
 
 std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 {
-    const oscil::ScopedSharedLock lock(mutex_);
+    const multiscoper::ScopedSharedLock lock(mutex_);
 
     std::vector<SourceInfo> result;
     result.reserve(sources_.size());
@@ -240,7 +255,7 @@ std::vector<SourceInfo> InstanceRegistry::getAllSources() const
 
 std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) const
 {
-    const oscil::ScopedSharedLock lock(mutex_);
+    const multiscoper::ScopedSharedLock lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -251,7 +266,7 @@ std::optional<SourceInfo> InstanceRegistry::getSource(const SourceId& sourceId) 
 
 std::shared_ptr<IAudioBuffer> InstanceRegistry::getCaptureBuffer(const SourceId& sourceId) const
 {
-    const oscil::ScopedSharedLock lock(mutex_);
+    const multiscoper::ScopedSharedLock lock(mutex_);
 
     auto it = sources_.find(sourceId);
     if (it != sources_.end())
@@ -270,17 +285,17 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
     bool shouldNotify = false;
 
     {
-        const oscil::ScopedLock lock(mutex_);
+        const multiscoper::ScopedLock lock(mutex_);
 
         auto it = sources_.find(sourceId);
         if (it == sources_.end())
         {
-            OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " NOT FOUND");
+            MULTISCOPER_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " NOT FOUND");
             return;
         }
 
-        OSCIL_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " name=" << name << " channels="
-                                                      << validChannelCount << " sampleRate=" << validSampleRate);
+        MULTISCOPER_LOG(REGISTRY, "updateSource: sourceId=" << sourceId.id << " name=" << name << " channels="
+                                                            << validChannelCount << " sampleRate=" << validSampleRate);
         // Preserve the existing name on empty input, matching the dedup
         // re-registration path in tryReuseExistingSource. Empty strings are
         // treated as "leave unchanged" so a caller that only wants to update
@@ -302,7 +317,7 @@ void InstanceRegistry::updateSource(const SourceId& sourceId, const juce::String
 
 size_t InstanceRegistry::getSourceCount() const
 {
-    const oscil::ScopedSharedLock lock(mutex_);
+    const multiscoper::ScopedSharedLock lock(mutex_);
     return sources_.size();
 }
 
@@ -320,10 +335,10 @@ void InstanceRegistry::removeListener(InstanceRegistryListener* listener)
     listeners_.remove(listener);
 }
 
-void InstanceRegistry::dispatchNotification(const char* eventName, const SourceId& sourceId,
+void InstanceRegistry::dispatchNotification([[maybe_unused]] const char* eventName, const SourceId& sourceId,
                                             void (InstanceRegistryListener::*callback)(const SourceId&))
 {
-    OSCIL_LOG(REGISTRY, eventName << ": sourceId=" << sourceId.id);
+    MULTISCOPER_LOG(REGISTRY, eventName << ": sourceId=" << sourceId.id);
 
     // Snapshot the dispatcher under lock so setDispatcher running concurrently
     // cannot produce a torn read of std::function (which has no thread-safe
@@ -331,7 +346,7 @@ void InstanceRegistry::dispatchNotification(const char* eventName, const SourceI
     // holding dispatcherMutex_ across arbitrary user code.
     Dispatcher dispatcherSnapshot;
     {
-        const oscil::ScopedLock lock(dispatcherMutex_);
+        const multiscoper::ScopedLock lock(dispatcherMutex_);
         dispatcherSnapshot = dispatcher_;
     }
     if (!dispatcherSnapshot)
@@ -364,4 +379,4 @@ void InstanceRegistry::notifySourceUpdated(const SourceId& sourceId)
     dispatchNotification("notifySourceUpdated", sourceId, &InstanceRegistryListener::sourceUpdated);
 }
 
-} // namespace oscil
+} // namespace multiscoper

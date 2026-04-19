@@ -1,7 +1,7 @@
 ---
-# Oscil .clang-tidy — maximum strictness, all warnings are errors.
+# MultiScoper .clang-tidy — maximum strictness, all warnings are errors.
 #
-# Run: cmake --preset dev -DOSCIL_ENABLE_CLANG_TIDY=ON
+# Run: cmake --preset dev -DMULTISCOPER_ENABLE_CLANG_TIDY=ON
 # Or standalone: clang-tidy -p build/dev src/core/Source.cpp
 #
 # Check families enabled:

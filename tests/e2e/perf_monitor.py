@@ -1,5 +1,5 @@
 """
-Performance / resource monitoring for Oscil test harness.
+Performance / resource monitoring for MultiScoper test harness.
 
 Measures the harness process from the outside (psutil) for OS-level truth
 about RSS, CPU, and thread count, and combines that with the harness's
@@ -34,7 +34,7 @@ DEFAULT_HARNESS_PORT = 8765
 HARNESS_URL = f"http://localhost:{DEFAULT_HARNESS_PORT}"
 
 
-HARNESS_PROCESS_NAME = "Oscil Test Harness"
+HARNESS_PROCESS_NAME = "MultiScoper Test Harness"
 
 
 def find_harness_pid(

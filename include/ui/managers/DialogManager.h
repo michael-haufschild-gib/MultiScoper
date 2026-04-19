@@ -1,18 +1,18 @@
 /*
-    Oscil - Dialog Manager
+    MultiScoper - Dialog Manager
     Manages modal dialogs and popups to reduce PluginEditor complexity
 */
 
 #pragma once
 
-#include "core/OscilState.h"
-#include "ui/components/OscilModal.h"
+#include "core/MultiScoperState.h"
+#include "ui/components/MultiScoperModal.h"
 #include "ui/dialogs/AddOscillatorDialog.h"
 #include "ui/dialogs/OscillatorColorDialog.h"
 #include "ui/dialogs/OscillatorConfigDialog.h"
 #include "ui/dialogs/SelectPaneDialog.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 class DialogManager : public juce::ComponentListener
@@ -56,14 +56,14 @@ private:
     bool parentAlive_ = true;
 
     // Dialogs
-    std::unique_ptr<OscilModal> addOscillatorModal_;
+    std::unique_ptr<MultiScoperModal> addOscillatorModal_;
     std::unique_ptr<AddOscillatorDialog> addOscillatorDialogContent_;
-    std::unique_ptr<OscilModal> colorModal_;
+    std::unique_ptr<MultiScoperModal> colorModal_;
     std::unique_ptr<OscillatorColorDialog> colorDialogContent_;
-    std::unique_ptr<OscilModal> selectPaneModal_;
+    std::unique_ptr<MultiScoperModal> selectPaneModal_;
     std::unique_ptr<SelectPaneDialog> selectPaneDialogContent_;
-    std::unique_ptr<OscilModal> configModal_;
+    std::unique_ptr<MultiScoperModal> configModal_;
     std::unique_ptr<OscillatorConfigDialog> configPopup_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

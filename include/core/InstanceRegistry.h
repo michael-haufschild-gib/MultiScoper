@@ -1,6 +1,6 @@
 /*
-    Oscil - Instance Registry
-    Thread-safe registry for all active Oscil instances, enabling multi-instance coordination.
+    MultiScoper - Instance Registry
+    Thread-safe registry for all active MultiScoper instances, enabling multi-instance coordination.
     Owned by PluginFactory and injected via IInstanceRegistry interface.
 */
 
@@ -17,11 +17,11 @@
 #include <memory>
 #include <unordered_map>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
- * Registry for all active Oscil plugin instances.
+ * Registry for all active MultiScoper plugin instances.
  * Provides source discovery and deduplication for multi-instance coordination.
  *
  * Thread safety: All public methods are thread-safe.
@@ -130,23 +130,24 @@ private:
     RegisterOutcome resolveOrInsertLocked(const juce::String& effectiveTrackId,
                                           const std::shared_ptr<IAudioBuffer>& captureBuffer, const juce::String& name,
                                           int validChannelCount, double validSampleRate,
-                                          const std::shared_ptr<AnalysisEngine>& analysisEngine) OSCIL_REQUIRES(mutex_);
+                                          const std::shared_ptr<AnalysisEngine>& analysisEngine)
+        MULTISCOPER_REQUIRES(mutex_);
 
     SourceId tryReuseExistingSource(const juce::String& trackIdentifier, std::shared_ptr<IAudioBuffer> captureBuffer,
                                     const juce::String& name, int channelCount, double sampleRate,
-                                    std::shared_ptr<AnalysisEngine> analysisEngine) OSCIL_REQUIRES(mutex_);
+                                    std::shared_ptr<AnalysisEngine> analysisEngine) MULTISCOPER_REQUIRES(mutex_);
     SourceId insertNewSource(const juce::String& effectiveTrackId, std::shared_ptr<IAudioBuffer> captureBuffer,
                              const juce::String& name, int channelCount, double sampleRate,
-                             std::shared_ptr<AnalysisEngine> analysisEngine) OSCIL_REQUIRES(mutex_);
+                             std::shared_ptr<AnalysisEngine> analysisEngine) MULTISCOPER_REQUIRES(mutex_);
     void notifySourceAdded(const SourceId& sourceId);
     void notifySourceRemoved(const SourceId& sourceId);
     void notifySourceUpdated(const SourceId& sourceId);
     void dispatchNotification(const char* eventName, const SourceId& sourceId,
                               void (InstanceRegistryListener::*callback)(const SourceId&));
 
-    mutable oscil::SharedMutex mutex_;
-    std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_ OSCIL_GUARDED_BY(mutex_);
-    std::unordered_map<juce::String, SourceId> trackToSourceMap_ OSCIL_GUARDED_BY(mutex_); // Deduplication map
+    mutable multiscoper::SharedMutex mutex_;
+    std::unordered_map<SourceId, SourceInfo, SourceIdHash> sources_ MULTISCOPER_GUARDED_BY(mutex_);
+    std::unordered_map<juce::String, SourceId> trackToSourceMap_ MULTISCOPER_GUARDED_BY(mutex_); // Deduplication map
 
     // Dispatcher for notifications. Guarded by dispatcherMutex_ because setDispatcher
     // may run concurrently with dispatchNotification — the former is typically
@@ -155,8 +156,8 @@ private:
     // threads in production. Without synchronization, assigning std::function
     // while another thread is copying it is a data race (std::function has no
     // thread-safe copy guarantee).
-    mutable oscil::Mutex dispatcherMutex_;
-    Dispatcher dispatcher_ OSCIL_GUARDED_BY(dispatcherMutex_);
+    mutable multiscoper::Mutex dispatcherMutex_;
+    Dispatcher dispatcher_ MULTISCOPER_GUARDED_BY(dispatcherMutex_);
 
     // Using JUCE ListenerList for safe listener management
     // ListenerList handles removal during iteration and prevents dangling pointer issues
@@ -168,4 +169,4 @@ private:
     JUCE_DECLARE_WEAK_REFERENCEABLE(InstanceRegistry)
 };
 
-} // namespace oscil
+} // namespace multiscoper

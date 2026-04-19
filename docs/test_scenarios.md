@@ -1,8 +1,8 @@
-# Oscil Plugin - End-to-End Test Scenarios
+# MultiScoper Plugin - End-to-End Test Scenarios
 
 ## Overview
 
-This document defines comprehensive user journey test scenarios for the Oscil multi-track oscilloscope plugin. Each scenario represents a complete user workflow, not just isolated interactions.
+This document defines comprehensive user journey test scenarios for the MultiScoper multi-track oscilloscope plugin. Each scenario represents a complete user workflow, not just isolated interactions.
 
 **Testing Philosophy**: Every user-visible element must be correct and themed. Every user action must work completely. Tests follow complete journeys from trigger to final verification.
 
@@ -22,12 +22,12 @@ This document defines comprehensive user journey test scenarios for the Oscil mu
 **Description**: Verify plugin loads correctly with default state on first use.
 
 **Preconditions**:
-- No previous Oscil state saved in project
+- No previous MultiScoper state saved in project
 - Clean DAW project
 
 **User Actions**:
 1. Create new audio track
-2. Insert Oscil plugin on track
+2. Insert MultiScoper plugin on track
 3. Open plugin UI
 
 **Expected Results**:
@@ -53,12 +53,12 @@ This document defines comprehensive user journey test scenarios for the Oscil mu
 **Description**: Verify plugin restores saved state correctly when reopening project.
 
 **Preconditions**:
-- Previously saved project with Oscil configuration
+- Previously saved project with MultiScoper configuration
 - Saved state includes: 2 oscillators, custom theme, 2-column layout, sidebar collapsed
 
 **User Actions**:
 1. Open saved DAW project
-2. Open Oscil plugin UI
+2. Open MultiScoper plugin UI
 
 **Expected Results**:
 - All 2 oscillators visible in their respective panes
@@ -86,17 +86,17 @@ This document defines comprehensive user journey test scenarios for the Oscil mu
 **Description**: Verify sources are automatically discovered when plugin instances are added to DAW tracks.
 
 **Preconditions**:
-- Open Oscil instance (aggregator) on track 1
-- No other Oscil instances
+- Open MultiScoper instance (aggregator) on track 1
+- No other MultiScoper instances
 
 **User Actions**:
 1. Create new audio track (track 2)
 2. Add audio content to track 2
-3. Insert Oscil plugin on track 2
-4. Return to track 1's Oscil UI
+3. Insert MultiScoper plugin on track 2
+4. Return to track 1's MultiScoper UI
 
 **Expected Results**:
-- Track 1's Oscil now shows 2 sources in sidebar Sources section
+- Track 1's MultiScoper now shows 2 sources in sidebar Sources section
 - Each source shows: Track name (from DAW), Activity indicator, "Add to Pane" dropdown
 - Sources are uniquely identified (no duplicates)
 - Source list updates automatically without manual refresh
@@ -114,19 +114,19 @@ This document defines comprehensive user journey test scenarios for the Oscil mu
 **Description**: Verify source removal is handled gracefully when plugin instance is removed.
 
 **Preconditions**:
-- Oscil on track 1 showing oscillator from track 2's source
-- Track 2 has Oscil instance
+- MultiScoper on track 1 showing oscillator from track 2's source
+- Track 2 has MultiScoper instance
 
 **User Actions**:
-1. Remove Oscil plugin from track 2
-2. Observe track 1's Oscil UI
+1. Remove MultiScoper plugin from track 2
+2. Observe track 1's MultiScoper UI
 
 **Expected Results**:
 - Source from track 2 disappears from Sources list
 - Oscillator using track 2's source shows "No Source" or placeholder state
 - Oscillator is NOT automatically deleted (preserves user configuration)
 - Waveform shows flat line (no audio data)
-- Source can be reassigned later when track 2's Oscil is re-added
+- Source can be reassigned later when track 2's MultiScoper is re-added
 
 **Verification Points**:
 - [ ] Source removed from list
@@ -486,7 +486,7 @@ This document defines comprehensive user journey test scenarios for the Oscil mu
 - Modified background color applied to UI
 - Theme is selected and active
 - Theme persists in theme list after plugin restart
-- Theme available across all Oscil instances
+- Theme available across all MultiScoper instances
 
 **Verification Points**:
 - [ ] Theme appears in list
@@ -1117,7 +1117,7 @@ This document defines comprehensive user journey test scenarios for the Oscil mu
 1. Save DAW project
 2. Close project
 3. Reopen project
-4. Open Oscil UI
+4. Open MultiScoper UI
 
 **Expected Results**:
 - All oscillators restored with correct:
@@ -1154,7 +1154,7 @@ This document defines comprehensive user journey test scenarios for the Oscil mu
 1. Close DAW completely
 2. Reopen DAW
 3. Create new project
-4. Add Oscil plugin
+4. Add MultiScoper plugin
 
 **Expected Results**:
 - Default theme from preferences applied to new instance

@@ -14,6 +14,9 @@ If a test fails, it fails. No exceptions.
 
 Allowed:
   - @pytest.mark.slow  — categorization, not disabling
+  - trailing ``# noqa: e2e-lint`` on a line — suppress lint for a legitimate
+    case (stays-true polling, settle-wait after rate change, etc.). Each use
+    must document *why* the pattern is legitimate.
 
 Exit code 1 on any violation.
 """
@@ -51,6 +54,9 @@ FORBIDDEN_PARAM_MARKS = [
 ]
 
 
+NOQA_MARKER = re.compile(r"#\s*noqa:\s*e2e-lint\b")
+
+
 @dataclass(frozen=True)
 class Violation:
     file: str
@@ -71,6 +77,9 @@ def lint_file(path: Path, root: Path) -> List[Violation]:
         return violations
 
     for i, line in enumerate(lines, start=1):
+        if NOQA_MARKER.search(line):
+            continue
+
         for pattern, reason in FORBIDDEN_DECORATORS:
             if pattern.search(line):
                 violations.append(Violation(relative, i, line.strip(), reason))

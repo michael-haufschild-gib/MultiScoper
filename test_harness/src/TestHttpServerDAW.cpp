@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - HTTP Server: DAW host-lifecycle simulation
+    MultiScoper Test Harness - HTTP Server: DAW host-lifecycle simulation
 
     Endpoints defined here close the gap between the fixed-sample-rate /
     fixed-buffer-size test harness and the mutable lifecycle real DAWs
@@ -34,7 +34,7 @@
 #include <memory>
 #include <string>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 void TestHttpServer::setupDawLifecycleRoutes()
@@ -92,8 +92,14 @@ void TestHttpServer::handleDawSetSampleRate(const httplib::Request& req, httplib
         }
         if (!*ok)
         {
-            res.status = 400;
-            res.set_content(errorResponse("Invalid sample rate: " + std::to_string(rate)).dump(), "application/json");
+            // setSampleRate returns false for non-finite/non-positive input OR
+            // for a pool-dispatched prepare timeout under audioThreadPrepareMode.
+            // 400 is the right status for input errors; 504 for timeouts. The
+            // two branches are indistinguishable from here, so use 409 Conflict
+            // which covers "accepted but could not apply" on either path.
+            res.status = 409;
+            res.set_content(errorResponse("sample rate rejected or prepare timed out: " + std::to_string(rate)).dump(),
+                            "application/json");
             return;
         }
 
@@ -139,8 +145,10 @@ void TestHttpServer::handleDawSetBufferSize(const httplib::Request& req, httplib
         }
         if (!*ok)
         {
-            res.status = 400;
-            res.set_content(errorResponse("Buffer size outside [16, 8192]: " + std::to_string(size)).dump(),
+            // Same rationale as setSampleRate: false covers both input-range
+            // rejection and pool-prepare timeout. 409 Conflict covers both.
+            res.status = 409;
+            res.set_content(errorResponse("buffer size rejected or prepare timed out: " + std::to_string(size)).dump(),
                             "application/json");
             return;
         }
@@ -218,7 +226,7 @@ void TestHttpServer::handleDawScanCycle(const httplib::Request& req, httplib::Re
             done->signal();
         });
         // Cycles can be expensive — scale generously.  Construct/destroy
-        // of OscilPluginProcessor, InstanceRegistry register/unregister,
+        // of MultiScoperPluginProcessor, InstanceRegistry register/unregister,
         // and the capture buffer allocation add up to roughly 50-60 ms per
         // cycle on a warm debug build plus thread-scheduling jitter, so
         // 100 ms per cycle + 2 s base is the minimum slack that keeps
@@ -472,4 +480,4 @@ void TestHttpServer::handleTrackSources(const httplib::Request& req, httplib::Re
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

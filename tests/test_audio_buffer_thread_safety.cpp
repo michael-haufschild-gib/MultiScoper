@@ -1,5 +1,5 @@
 /*
-    Oscil - IAudioBuffer Thread-Safety Tests (readSnapshot RT-safety)
+    MultiScoper - IAudioBuffer Thread-Safety Tests (readSnapshot RT-safety)
 
     Verifies the contract that SharedCaptureBuffer::readSnapshot() and
     DecimatingCaptureBuffer::readSnapshot() NEVER yield or otherwise
@@ -28,7 +28,7 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {

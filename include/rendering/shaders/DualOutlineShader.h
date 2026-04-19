@@ -1,5 +1,5 @@
 /*
-    Oscil - Dual Outline Shader
+    MultiScoper - Dual Outline Shader
     Renders waveform with double outlines (inner and outer)
 */
 
@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -26,7 +26,7 @@ public:
     [[nodiscard]] juce::String getDisplayName() const override { return "Dual Outline"; }
     [[nodiscard]] juce::String getDescription() const override { return "Waveform with double outline effect"; }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     /// Compile the dual outline shader program.
     bool compile(juce::OpenGLContext& context) override;
     /// Release the shader program and GPU resources.
@@ -38,7 +38,7 @@ public:
 #endif
 
 private:
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
 
@@ -59,4 +59,4 @@ private:
 #endif
 };
 
-} // namespace oscil
+} // namespace multiscoper

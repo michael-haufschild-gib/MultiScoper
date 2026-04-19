@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Editor Layout
+    MultiScoper - Plugin Editor Layout
     Handles component positioning and layout calculations
 */
 
@@ -12,7 +12,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class IAudioDataProvider;
@@ -41,4 +41,4 @@ private:
     static constexpr int MIN_PANE_HEIGHT = 200;
 };
 
-} // namespace oscil
+} // namespace multiscoper

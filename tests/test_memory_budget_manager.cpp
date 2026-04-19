@@ -1,5 +1,5 @@
 /*
-    Oscil - Memory Budget Manager Unit Tests
+    MultiScoper - Memory Budget Manager Unit Tests
     Tests for buffer tracking, memory calculations, and auto-quality adjustment
 */
 
@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 //==============================================================================
 // Test Listener

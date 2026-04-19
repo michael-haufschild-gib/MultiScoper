@@ -1,5 +1,5 @@
 /*
-    Oscil - Status Bar Component Header
+    MultiScoper - Status Bar Component Header
     Two-zone layout: left contextual hint text, right metrics/mode group.
 */
 
@@ -9,7 +9,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class IThemeService;
@@ -106,9 +106,9 @@ private:
     std::unique_ptr<juce::Label> renderModeLabel_;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StatusBarComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

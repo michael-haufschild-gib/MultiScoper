@@ -1,5 +1,5 @@
 /*
-    Oscil - Magnetic Snap Controller Tests
+    MultiScoper - Magnetic Snap Controller Tests
     Tests for the magnetic snapping logic used by sliders and knobs
 
     Bug targets:
@@ -15,7 +15,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class MagneticSnapControllerTest : public ::testing::Test
 {

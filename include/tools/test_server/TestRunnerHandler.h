@@ -1,5 +1,5 @@
 /*
-    Oscil - Test Runner Handler
+    MultiScoper - Test Runner Handler
     Handles automated test runner endpoints
 */
 
@@ -7,7 +7,7 @@
 
 #include "TestServerHandlerBase.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -30,4 +30,4 @@ public:
     void handleRunRenderingTest(const httplib::Request& req, httplib::Response& res);
 };
 
-} // namespace oscil
+} // namespace multiscoper

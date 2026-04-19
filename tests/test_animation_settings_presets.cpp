@@ -1,5 +1,5 @@
 /*
-    Oscil - Animation Settings Tests: Easing Presets
+    MultiScoper - Animation Settings Tests: Easing Presets
     Tests for easing functions, lerp, and animation helpers
 */
 
@@ -8,7 +8,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class AnimationSettingsPresetsTest : public ::testing::Test
 {

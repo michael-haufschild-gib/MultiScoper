@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Test DAW Implementation
+    MultiScoper Test Harness - Test DAW Implementation
 
     See TestDAW.h for the multi-core threading model.
 */
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <thread>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 namespace
@@ -226,7 +226,7 @@ bool TestDAW::removeTrack(int trackIndex)
     tracks_[static_cast<size_t>(trackIndex)]->hideEditor();
     tracks_[static_cast<size_t>(trackIndex)].reset();
     // Destroy the paired per-track registry (if any) AFTER the track —
-    // ~TestTrack runs the processor's ~OscilPluginProcessor which calls
+    // ~TestTrack runs the processor's ~MultiScoperPluginProcessor which calls
     // unregisterInstance on this registry. The registry must still be alive
     // during that call.
     if (static_cast<size_t>(trackIndex) < perTrackRegistries_.size())
@@ -255,7 +255,7 @@ class PreparePoolJob final : public juce::ThreadPoolJob
 {
 public:
     PreparePoolJob(std::function<void()> fn, juce::WaitableEvent& done)
-        : juce::ThreadPoolJob("OscilTestDAW::prepare")
+        : juce::ThreadPoolJob("MultiScoperTestDAW::prepare")
         , fn_(std::move(fn))
         , done_(done)
     {
@@ -301,12 +301,13 @@ bool TestDAW::setSampleRate(double newRate)
         juce::WaitableEvent done;
         // ThreadPool takes ownership of raw pointer (deleteJob=true).
         audioThreadPool_->addJob(new PreparePoolJob(std::move(runPrepare), done), true);
-        done.wait(5000);
+        // Return honestly: if the pool-dispatched prepare didn't complete
+        // in 5s, the DAW's cached sample rate is already updated but the
+        // tracks haven't been re-prepared. Callers who rely on "true means
+        // the tracks are at the new rate" need that distinction.
+        return done.wait(5000);
     }
-    else
-    {
-        runPrepare();
-    }
+    runPrepare();
     return true;
 }
 
@@ -331,12 +332,11 @@ bool TestDAW::setBufferSize(int newSize)
     {
         juce::WaitableEvent done;
         audioThreadPool_->addJob(new PreparePoolJob(std::move(runPrepare), done), true);
-        done.wait(5000);
+        // Same timeout honesty as setSampleRate — return false so callers
+        // can distinguish a completed prepare from a silent stall.
+        return done.wait(5000);
     }
-    else
-    {
-        runPrepare();
-    }
+    runPrepare();
     return true;
 }
 
@@ -428,23 +428,38 @@ void TestDAW::processAudioTick()
         return;
     }
 
-    juce::WaitableEvent done;
-    std::atomic<int> remaining{static_cast<int>(live.size())};
+    // Sync state lives on the heap under a shared_ptr — each pool lambda
+    // captures its own copy. If done.wait(5000) times out and removeAllJobs
+    // fails to actually cancel a still-running lambda (lambda jobs don't
+    // check shouldExit()), the lambda's shared_ptr copy keeps the state
+    // alive after processAudioTick returns. A stack-local WaitableEvent +
+    // atomic would have been a use-after-free under that timeout path.
+    struct TickState
+    {
+        juce::WaitableEvent done;
+        std::atomic<int> remaining;
+        explicit TickState(int n) : remaining(n) {}
+    };
+    auto state = std::make_shared<TickState>(static_cast<int>(live.size()));
 
     for (TestTrack* track : live)
     {
-        audioThreadPool_->addJob([track, &remaining, &done]() {
+        audioThreadPool_->addJob([track, state]() {
             track->processBlock();
-            if (remaining.fetch_sub(1, std::memory_order_acq_rel) == 1)
-                done.signal();
+            if (state->remaining.fetch_sub(1, std::memory_order_acq_rel) == 1)
+                state->done.signal();
         });
     }
 
-    // Synchronous wait — done lives on this stack and outlives all jobs.
-    // Timeout guards against a pathological stall without hanging tests.
-    if (!done.wait(5000))
+    // Synchronous wait. Timeout guards against a pathological stall
+    // without hanging tests. The shared_ptr makes the state's lifetime
+    // safe even if a pool job outlives the tick on the timeout path.
+    if (!state->done.wait(5000))
     {
-        // If we ever time out, drain the pool so no lambdas race our stack.
+        // Drain the pool best-effort. juce's removeAllJobs(interruptRunningJobs)
+        // is advisory — lambda jobs don't check shouldExit(), so a truly
+        // stuck processBlock keeps running. The shared_ptr above ensures
+        // that's safe wrt sync-state lifetime.
         audioThreadPool_->removeAllJobs(/*interruptRunningJobs=*/true, /*timeOutMs=*/2000);
     }
 
@@ -454,4 +469,4 @@ void TestDAW::processAudioTick()
     processedTicks_.fetch_add(1, std::memory_order_relaxed);
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

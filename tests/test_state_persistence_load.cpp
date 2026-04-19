@@ -1,17 +1,17 @@
 /*
-    Oscil - State Persistence Tests: Load Operations
+    MultiScoper - State Persistence Tests: Load Operations
     Tests for state deserialization, XML parsing, and load operations
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 
 #include "helpers/Fixtures.h"
 #include "helpers/StateBuilder.h"
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class StatePersistenceLoadTest : public StateTestFixture
 {
@@ -34,8 +34,8 @@ TEST_F(StatePersistenceLoadTest, InvalidXmlHandling)
 // Test: XML with missing child nodes
 TEST_F(StatePersistenceLoadTest, XmlWithMissingChildNodes)
 {
-    // Valid OscilState but missing all child nodes
-    juce::String minimalXml = "<OscilState version=\"2\"/>";
+    // Valid MultiScoperState but missing all child nodes
+    juce::String minimalXml = "<MultiScoperState version=\"2\"/>";
     EXPECT_TRUE(state->fromXmlString(minimalXml));
 
     // Should have empty oscillators
@@ -50,7 +50,7 @@ TEST_F(StatePersistenceLoadTest, XmlWithMissingChildNodes)
 // Test: Setting theme after loading minimal state creates missing Theme node
 TEST_F(StatePersistenceLoadTest, SetThemeNameAfterMissingChildNodesCreatesThemeNode)
 {
-    ASSERT_TRUE(state->fromXmlString("<OscilState version=\"2\"/>"));
+    ASSERT_TRUE(state->fromXmlString("<MultiScoperState version=\"2\"/>"));
 
     state->setThemeName("Recovered Theme");
 
@@ -60,7 +60,7 @@ TEST_F(StatePersistenceLoadTest, SetThemeNameAfterMissingChildNodesCreatesThemeN
 // Test: Setting layout after loading minimal state creates missing Layout node
 TEST_F(StatePersistenceLoadTest, SetColumnLayoutAfterMissingChildNodesCreatesLayoutNode)
 {
-    ASSERT_TRUE(state->fromXmlString("<OscilState version=\"2\"/>"));
+    ASSERT_TRUE(state->fromXmlString("<MultiScoperState version=\"2\"/>"));
 
     state->setColumnLayout(ColumnLayout::Triple);
 
@@ -72,9 +72,9 @@ TEST_F(StatePersistenceLoadTest, XmlWithPartialChildNodes)
 {
     // Has Oscillators but missing Layout and Theme
     juce::String partialXml = R"(
-        <OscilState version="2">
+        <MultiScoperState version="2">
             <Oscillators/>
-        </OscilState>
+        </MultiScoperState>
     )";
     EXPECT_TRUE(state->fromXmlString(partialXml));
 
@@ -87,12 +87,12 @@ TEST_F(StatePersistenceLoadTest, CorruptedOscillatorDataRecovery)
 {
     // Oscillator with invalid/missing properties
     juce::String xmlWithBadOsc = R"(
-        <OscilState version="2">
+        <MultiScoperState version="2">
             <Oscillators>
                 <Oscillator/>
                 <Oscillator id="valid-id" name="Valid Osc"/>
             </Oscillators>
-        </OscilState>
+        </MultiScoperState>
     )";
     EXPECT_TRUE(state->fromXmlString(xmlWithBadOsc));
 
@@ -105,13 +105,13 @@ TEST_F(StatePersistenceLoadTest, CorruptedOscillatorDataRecovery)
 TEST_F(StatePersistenceLoadTest, ConstructFromValidXml)
 {
     juce::String xml = R"(
-        <OscilState version="2">
+        <MultiScoperState version="2">
             <Oscillators/>
             <Theme themeName="Constructed Theme"/>
-        </OscilState>
+        </MultiScoperState>
     )";
 
-    OscilState state(xml);
+    MultiScoperState state(xml);
 
     EXPECT_EQ(state.getThemeName(), "Constructed Theme");
 }
@@ -119,20 +119,20 @@ TEST_F(StatePersistenceLoadTest, ConstructFromValidXml)
 // Test: Construct from invalid XML
 TEST_F(StatePersistenceLoadTest, ConstructFromInvalidXml)
 {
-    OscilState state("invalid xml content");
+    MultiScoperState state("invalid xml content");
 
     // Should have default state
-    EXPECT_EQ(state.getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state.getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(state.getThemeName(), "Dark Professional");
 }
 
 // Test: Construct from empty string
 TEST_F(StatePersistenceLoadTest, ConstructFromEmptyString)
 {
-    OscilState state("");
+    MultiScoperState state("");
 
     // Should have default state
-    EXPECT_EQ(state.getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state.getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
 }
 
 // Test: Display options defaults

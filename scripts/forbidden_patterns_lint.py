@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Forbidden-patterns lint for Oscil.
+Forbidden-patterns lint for MultiScoper.
 
 Rejects specific API uses that have bitten us before. Each entry pins an
 ADR or a past bug so future engineers can evaluate before suppressing.
@@ -14,12 +14,12 @@ Rules today:
      safely restored under multi-instance teardown. Use
      `Component::setLookAndFeel(&lookAndFeel_)` on the editor subtree
      instead.  See ADR-014 (failure modes section) and the 2026-Q2 fix to
-     OscilPluginEditor.
+     MultiScoperPluginEditor.
 
   2. `setContinuousRepainting(true)` is forbidden everywhere except inside
      `src/ui/controllers/OpenGLLifecycleManager.cpp` (and is only
      permitted there for historical comparison in comments, not in code).
-     Reason: Oscil relies on signal-gated repainting to keep idle multi-
+     Reason: MultiScoper relies on signal-gated repainting to keep idle multi-
      instance CPU cost near zero. Re-enabling continuous repainting
      regresses that contract silently. See ADR-014.
 
@@ -73,7 +73,7 @@ RULES: list[ForbiddenRule] = [
     ForbiddenRule(
         name="setContinuousRepainting(true)",
         # Matches setContinuousRepainting(true) with optional whitespace.
-        # We tolerate literal false — it is the only correct call in Oscil.
+        # We tolerate literal false — it is the only correct call in MultiScoper.
         pattern=re.compile(r"setContinuousRepainting\s*\(\s*true\s*\)"),
         allow_files=frozenset(),
         rationale=(
@@ -86,8 +86,8 @@ RULES: list[ForbiddenRule] = [
     ForbiddenRule(
         name="stdio logging (std::cout / std::cerr / printf / fprintf)",
         # Direct writes to process stdout/stderr from plugin code bypass the
-        # OSCIL_LOG channel system and leak to the DAW's console, which some
-        # hosts route to the user-visible log viewer. Use OSCIL_LOG or DBG()
+        # MULTISCOPER_LOG channel system and leak to the DAW's console, which some
+        # hosts route to the user-visible log viewer. Use MULTISCOPER_LOG or DBG()
         # instead so logging stays category-gated and build-type-gated.
         pattern=re.compile(
             r"\b(?:std::c(?:out|err)\s*<<|std::printf\s*\(|printf\s*\(|fprintf\s*\()"
@@ -95,7 +95,7 @@ RULES: list[ForbiddenRule] = [
         allow_files=frozenset(),
         rationale=(
             "Do not write to stdout/stderr directly from plugin code; the DAW "
-            "console is user-visible in some hosts. Use OSCIL_LOG(CATEGORY, ...) "
+            "console is user-visible in some hosts. Use MULTISCOPER_LOG(CATEGORY, ...) "
             "for categorised logging or DBG() for debug-only traces."
         ),
     ),
@@ -177,7 +177,7 @@ def scan_file(path: Path, root: Path) -> list[Violation]:
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Forbid Oscil anti-patterns.")
+    parser = argparse.ArgumentParser(description="Forbid MultiScoper anti-patterns.")
     parser.add_argument(
         "--root",
         type=Path,

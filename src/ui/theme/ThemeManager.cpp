@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Manager Implementation
+    MultiScoper - Theme Manager Implementation
     (ColorTheme serialization and file I/O are in ThemeManagerSerialization.cpp)
 */
 
@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-namespace oscil
+namespace multiscoper
 {
 
 void ColorTheme::initializeDefaultWaveformColors()
@@ -373,4 +373,4 @@ void ThemeManager::notifyListeners()
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

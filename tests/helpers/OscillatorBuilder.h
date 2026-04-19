@@ -1,16 +1,16 @@
 /*
-    Oscil - Oscillator Builder
+    MultiScoper - Oscillator Builder
     Fluent builder for creating Oscillator objects in tests
 */
 
 #pragma once
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 
 #include <memory>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -283,4 +283,4 @@ inline OscillatorId makeOscillatorId(const juce::String& id) { return Oscillator
  */
 inline PaneId makePaneId(const juce::String& id) { return PaneId{id}; }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

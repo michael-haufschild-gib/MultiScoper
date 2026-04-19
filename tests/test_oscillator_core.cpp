@@ -1,15 +1,15 @@
 /*
-    Oscil - Oscillator Core Tests
+    MultiScoper - Oscillator Core Tests
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 
 #include <cmath>
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class OscillatorCoreTest : public ::testing::Test
 {

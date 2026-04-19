@@ -1,5 +1,5 @@
 /*
-    Oscil - Signal Processor Tests (Edge Cases & Precision)
+    MultiScoper - Signal Processor Tests (Edge Cases & Precision)
 */
 
 #include "core/dsp/SignalProcessor.h"
@@ -9,7 +9,7 @@
 #include <limits>
 #include <span>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SignalProcessorEdgeTest : public ::testing::Test
 {

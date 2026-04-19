@@ -1,5 +1,5 @@
 /*
-    Oscil - Screenshot Handler Implementation
+    MultiScoper - Screenshot Handler Implementation
 */
 
 #include "tools/test_server/ScreenshotHandler.h"
@@ -8,7 +8,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 void ScreenshotHandler::handleTakeScreenshot(const httplib::Request& req, httplib::Response& res)
@@ -67,4 +67,4 @@ void ScreenshotHandler::handleTakeScreenshot(const httplib::Request& req, httpli
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

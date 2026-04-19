@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Layout Tests (Edge Cases)
+    MultiScoper - Pane Layout Tests (Edge Cases)
     Listeners, serialization, invalid inputs, stress tests
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class PaneLayoutManagerEdgeTest : public ::testing::Test
 {

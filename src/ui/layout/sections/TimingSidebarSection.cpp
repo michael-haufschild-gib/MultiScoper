@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Sidebar Section Implementation
+    MultiScoper - Timing Sidebar Section Implementation
     Timing controls section for the sidebar (TIME/MELODIC modes)
 */
 
@@ -8,7 +8,7 @@
 #include "ui/theme/ColorTheme.h"
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 TimingSidebarSection::TimingSidebarSection(ServiceContext& context) : TimingSidebarSection(context.themeService) {}
@@ -65,15 +65,15 @@ void TimingSidebarSection::setupModeToggle()
             presenter_->setTimingMode(static_cast<TimingMode>(id));
     };
     addAndMakeVisible(*modeToggle_);
-    OSCIL_REGISTER_CHILD_TEST_ID(*modeToggle_, "sidebar_timing_modeToggle");
+    MULTISCOPER_REGISTER_CHILD_TEST_ID(*modeToggle_, "sidebar_timing_modeToggle");
 
     waveformModeLabel_ = std::make_unique<juce::Label>();
     waveformModeLabel_->setText("Mode", juce::dontSendNotification);
     waveformModeLabel_->setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(*waveformModeLabel_);
 
-    waveformModeSelector_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "Select mode...", "sidebar_timing_waveformModeDropdown");
+    waveformModeSelector_ = std::make_unique<MultiScoperDropdown>(getThemeService(), "Select mode...",
+                                                                  "sidebar_timing_waveformModeDropdown");
     populateWaveformModeSelector();
     waveformModeSelector_->onSelectionChanged = [this](int index) {
         if (index >= 0 && index <= static_cast<int>(WaveformMode::RestartOnNote))
@@ -84,8 +84,8 @@ void TimingSidebarSection::setupModeToggle()
 
 void TimingSidebarSection::setupTimeControls()
 {
-    timeIntervalField_ =
-        std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Number, "sidebar_timing_intervalField");
+    timeIntervalField_ = std::make_unique<MultiScoperTextField>(getThemeService(), TextFieldVariant::Number,
+                                                                "sidebar_timing_intervalField");
     timeIntervalField_->setRange(0.1, 4000.0);
     timeIntervalField_->setStep(0.1);
     timeIntervalField_->setDecimalPlaces(1);
@@ -100,7 +100,7 @@ void TimingSidebarSection::setupTimeControls()
 void TimingSidebarSection::setupMelodicControls()
 {
     noteIntervalSelector_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "Select note...", "sidebar_timing_noteDropdown");
+        std::make_unique<MultiScoperDropdown>(getThemeService(), "Select note...", "sidebar_timing_noteDropdown");
     populateNoteIntervalSelector();
     noteIntervalSelector_->onSelectionChanged = [this](int index) {
         if (index >= 0 && index <= 16)
@@ -108,7 +108,7 @@ void TimingSidebarSection::setupMelodicControls()
     };
     addAndMakeVisible(*noteIntervalSelector_);
 
-    syncToggle_ = std::make_unique<OscilToggle>(getThemeService(), "Sync", "sidebar_timing_syncToggle");
+    syncToggle_ = std::make_unique<MultiScoperToggle>(getThemeService(), "Sync", "sidebar_timing_syncToggle");
     syncToggle_->setValue(presenter_->isHostSyncEnabled(), false);
     syncToggle_->onValueChanged = [this](bool value) { presenter_->setHostSyncEnabled(value); };
     addAndMakeVisible(*syncToggle_);
@@ -119,7 +119,7 @@ void TimingSidebarSection::setupMelodicControls()
     addAndMakeVisible(*bpmLabel_);
 
     bpmField_ =
-        std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Number, "sidebar_timing_bpmField");
+        std::make_unique<MultiScoperTextField>(getThemeService(), TextFieldVariant::Number, "sidebar_timing_bpmField");
     bpmField_->setRange(20.0, 300.0);
     bpmField_->setStep(0.1);
     bpmField_->setDecimalPlaces(1);
@@ -131,7 +131,7 @@ void TimingSidebarSection::setupMelodicControls()
     bpmValueLabel_->setText(juce::String(presenter_->getHostBPM(), 1), juce::dontSendNotification);
     bpmValueLabel_->setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(*bpmValueLabel_);
-    OSCIL_REGISTER_CHILD_TEST_ID(*bpmValueLabel_, "sidebar_timing_bpmDisplay");
+    MULTISCOPER_REGISTER_CHILD_TEST_ID(*bpmValueLabel_, "sidebar_timing_bpmDisplay");
 
     syncStatusLabel_ = std::make_unique<juce::Label>();
     syncStatusLabel_->setJustificationType(juce::Justification::centred);
@@ -213,7 +213,7 @@ void TimingSidebarSection::paint(juce::Graphics& g)
         // Green pill background
         constexpr float kBgAlpha = 0.2f;
         g.setColour(theme.statusActive.withAlpha(kBgAlpha));
-        g.fillRoundedRectangle(pillRect, 10.0f);
+        g.fillRect(pillRect);
 
         // Theme-aware text: status hue on status-tinted bg fails AA in light
         // themes (green on pale green). Pick contrast-safe text.
@@ -285,7 +285,7 @@ void TimingSidebarSection::resized()
 
 void TimingSidebarSection::onThemeChanged(const ColorTheme& newTheme)
 {
-    // Oscil components handle their own theming
+    // MultiScoper components handle their own theming
     // Style the remaining JUCE Labels
 
     // Waveform mode label
@@ -409,4 +409,4 @@ void TimingSidebarSection::notifyHeightChanged()
         onPreferredHeightChanged();
 }
 
-} // namespace oscil
+} // namespace multiscoper

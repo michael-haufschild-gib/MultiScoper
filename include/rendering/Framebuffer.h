@@ -1,5 +1,5 @@
 /*
-    Oscil - Framebuffer
+    MultiScoper - Framebuffer
     OpenGL framebuffer wrapper for off-screen rendering
 */
 
@@ -7,10 +7,10 @@
 
 #include <juce_core/juce_core.h>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -122,6 +122,6 @@ private:
     bool checkFramebufferComplete();
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

@@ -1,5 +1,5 @@
 /*
-    Oscil - Source List Item Implementation
+    MultiScoper - Source List Item Implementation
     Rich source item rendering for SourceSelectorComponent
 */
 
@@ -7,7 +7,7 @@
 #include "ui/panels/SourceSelectorComponent.h"
 #include "ui/theme/Typography.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 SourceListItem::SourceListItem(IThemeService& themeService, const SourceInfo& source)
@@ -33,12 +33,12 @@ void SourceListItem::paint(juce::Graphics& g)
     if (selected_)
     {
         g.setColour(glass.accentSubtle);
-        g.fillRoundedRectangle(bounds.reduced(4, 2), 4.0f);
+        g.fillRect(bounds.reduced(4, 2));
     }
     else if (hovered_)
     {
         g.setColour(glass.bgHover);
-        g.fillRoundedRectangle(bounds.reduced(4, 2), 4.0f);
+        g.fillRect(bounds.reduced(4, 2));
     }
 
     bounds = bounds.reduced(8, 4);
@@ -68,7 +68,7 @@ void SourceListItem::paint(juce::Graphics& g)
     constexpr float kBadgeAlpha = 0.2f;
 
     g.setColour(badgeColor.withAlpha(kBadgeAlpha));
-    g.fillRoundedRectangle(badgeBounds.reduced(2, 6), 8.0f);
+    g.fillRect(badgeBounds.reduced(2, 6));
     // Theme-aware text — same-hue text on same-hue bg (blue-on-pale-blue /
     // gray-on-pale-gray) fails AA. Pick contrast-safe text.
     g.setColour(ColorTheme::pickContrastingText(
@@ -183,7 +183,7 @@ void NoSourceItem::paint(juce::Graphics& g)
     if (hovered_)
     {
         g.setColour(theme.textPrimary.withAlpha(0.08f));
-        g.fillRoundedRectangle(bounds.reduced(4, 2), 4.0f);
+        g.fillRect(bounds.reduced(4, 2));
     }
 
     // Separator line above
@@ -226,7 +226,7 @@ SourceSelectorPopup::SourceSelectorPopup(IThemeService& themeService, IInstanceR
     , instanceRegistry_(instanceRegistry)
 {
     // Search input with magnifier icon
-    searchInput_ = std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Search, "");
+    searchInput_ = std::make_unique<MultiScoperTextField>(getThemeService(), TextFieldVariant::Search, "");
     searchInput_->setPlaceholder("Search sources...");
     searchInput_->onTextChanged = [this](const juce::String& /*text*/) { handleFilterChange(); };
     addAndMakeVisible(*searchInput_);
@@ -383,7 +383,7 @@ void SourceSelectorPopup::onThemeChanged(const ColorTheme& newTheme) { updateThe
 
 void SourceSelectorPopup::updateThemeColors(const ColorTheme& /*newTheme*/)
 {
-    // OscilTextField and SectionHeader both subclass ThemedComponent and
+    // MultiScoperTextField and SectionHeader both subclass ThemedComponent and
     // react to theme changes on their own. No per-field colour push needed.
 }
 
@@ -404,4 +404,4 @@ int SourceSelectorPopup::getPreferredHeight() const
 // SourceSelectorComponent implementation
 //==============================================================================
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,11 +1,11 @@
 /*
-    Oscil - Global Preferences Implementation
+    MultiScoper - Global Preferences Implementation
     User-wide preferences stored separately from project state
 */
 
 #include "core/GlobalPreferences.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 // Sidebar width bounds — must match WindowLayout::MIN/MAX/DEFAULT_SIDEBAR_WIDTH.
@@ -25,7 +25,7 @@ GlobalPreferences::~GlobalPreferences() {}
 juce::File GlobalPreferences::getPreferencesFile() const
 {
     auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    return appDataDir.getChildFile("Oscil").getChildFile("preferences.xml");
+    return appDataDir.getChildFile("MultiScoper").getChildFile("preferences.xml");
 }
 
 void GlobalPreferences::load()
@@ -129,4 +129,4 @@ void GlobalPreferences::clampPersistedValues()
     clampInt("defaultSidebarWidth", SIDEBAR_MIN, SIDEBAR_MAX, SIDEBAR_DEFAULT);
 }
 
-} // namespace oscil
+} // namespace multiscoper

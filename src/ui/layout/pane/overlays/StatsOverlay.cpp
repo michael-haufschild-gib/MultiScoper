@@ -1,5 +1,5 @@
 /*
-    Oscil - Stats Overlay Implementation
+    MultiScoper - Stats Overlay Implementation
 */
 
 #include "ui/layout/pane/overlays/StatsOverlay.h"
@@ -10,12 +10,16 @@
 
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
-StatsOverlay::StatsOverlay(IThemeService& themeService) : PaneOverlay(themeService)
+StatsOverlay::StatsOverlay(IThemeService& themeService) : PaneOverlay(themeService, "statsOverlay")
 {
-    setTestId("statsOverlay");
+    // Route testId registration through PaneOverlay's testId-aware
+    // constructor so the harness can observe overlay visibility without
+    // relying on a hit-test on child elements.  Previously `setTestId`
+    // stored the id but never invoked the registration hook, leaving the
+    // overlay invisible to the test harness element registry.
     setupComponents();
 }
 
@@ -50,7 +54,7 @@ void StatsOverlay::setupComponents()
     addChildComponent(*statsDisplay_); // Hidden until visible
 
     // Reset Button
-    resetButton_ = std::make_unique<OscilButton>(getThemeService(), "", "statsOverlay_resetBtn");
+    resetButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "", "statsOverlay_resetBtn");
     resetButton_->setVariant(ButtonVariant::Icon);
     resetButton_->setIconPath(ListItemIcons::createRedoIcon(static_cast<float>(RESET_BUTTON_SIZE)));
     resetButton_->setTooltip("Reset Accumulated Stats");
@@ -209,4 +213,4 @@ juce::String StatsOverlay::getDisplayedText() const
     return statsDisplay_ ? statsDisplay_->getText() : juce::String();
 }
 
-} // namespace oscil
+} // namespace multiscoper

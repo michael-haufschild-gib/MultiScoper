@@ -1,10 +1,10 @@
 /*
-    Oscil - Waveform OpenGL Renderer Implementation
+    MultiScoper - Waveform OpenGL Renderer Implementation
 */
 
 #include "rendering/WaveformGLRenderer.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
     #include "rendering/RenderEngine.h"
     #include "rendering/ShaderRegistry.h"
@@ -13,7 +13,7 @@
     #include <chrono>
     #include <unordered_set>
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -80,6 +80,11 @@ void WaveformGLRenderer::initializeRenderEngine()
     }
     else
     {
+        // Seed the new engine's clear color from the cached theme background so
+        // the first rendered frame matches the active theme.  Without this, a
+        // GPU-enable or context recreation would flash transparent-black until
+        // the next theme change pushed a fresh value.
+        renderEngine_->setBackgroundColour(backgroundColour_);
         GL_LOG("RenderEngine initialized successfully");
         DBG("WaveformGLRenderer: RenderEngine initialized");
     }
@@ -238,7 +243,17 @@ void WaveformGLRenderer::updateWaveform(const WaveformRenderData& data)
     waveforms_[data.id] = data;
 }
 
-void WaveformGLRenderer::setBackgroundColour(juce::Colour colour) { backgroundColour_ = colour; }
+void WaveformGLRenderer::setBackgroundColour(juce::Colour colour)
+{
+    backgroundColour_ = colour;
+    // Forward into the RenderEngine so the scene FBO clears to the themed
+    // background each frame.  That FBO is what ultimately gets blitted to the
+    // visible framebuffer — if we only stored the colour locally it would only
+    // affect the fallback clear in the no-engine branch.
+    const juce::ScopedReadLock lock(engineLock_);
+    if (renderEngine_)
+        renderEngine_->setBackgroundColour(colour);
+}
 
 int WaveformGLRenderer::getWaveformCount() const
 {
@@ -253,6 +268,6 @@ void WaveformGLRenderer::clearAllWaveforms()
     DBG("WaveformGLRenderer: Cleared all waveforms");
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

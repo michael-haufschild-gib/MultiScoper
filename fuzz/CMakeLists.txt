@@ -1,19 +1,19 @@
 # =============================================================================
-# libFuzzer targets for Oscil.
+# libFuzzer targets for MultiScoper.
 #
-# Guarded by OSCIL_BUILD_FUZZERS (see top-level CMakeLists.txt). Clang-only:
+# Guarded by MULTISCOPER_BUILD_FUZZERS (see top-level CMakeLists.txt). Clang-only:
 # AppleClang does not ship a working libFuzzer runtime, and MSVC's
 # /fsanitize=fuzzer is out of scope here. Supported toolchain: mainline LLVM
 # Clang >= 14 on Linux (see .github/workflows/fuzz.yml for the reference
 # environment).
 #
-# Design: rather than factor a new OscilLib INTERFACE library out of the main
+# Design: rather than factor a new MultiScoperLib INTERFACE library out of the main
 # CMakeLists.txt (which would touch the juce_add_plugin target and its
 # warning/suppression wiring), we scope the fuzz link closure to the minimum
 # needed by each fuzz target:
 #
-#   * fuzz_oscil_state_fromxml  -> compiles every src/core/**/*.cpp source
-#     listed in OSCIL_SOURCES. That is exactly what OscilState::fromXmlString
+#   * fuzz_multiscoper_state_fromxml  -> compiles every src/core/**/*.cpp source
+#     listed in MULTISCOPER_SOURCES. That is exactly what MultiScoperState::fromXmlString
 #     depends on transitively (Oscillator, Pane, Source, SchemaMigration,
 #     AnalysisEngine, etc.). No rendering/, ui/, plugin/, or tools/ sources
 #     are pulled in, so the fuzzer does not drag in OpenGL/X11/gui_basics.
@@ -28,7 +28,7 @@
 # (libFuzzer convention).
 # =============================================================================
 
-if(NOT OSCIL_BUILD_FUZZERS)
+if(NOT MULTISCOPER_BUILD_FUZZERS)
     return()
 endif()
 
@@ -36,7 +36,7 @@ endif()
 # excludes it intentionally — its libFuzzer runtime is not functional.
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     message(FATAL_ERROR
-        "OSCIL_BUILD_FUZZERS requires mainline LLVM Clang (>= 14). "
+        "MULTISCOPER_BUILD_FUZZERS requires mainline LLVM Clang (>= 14). "
         "Current compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}. "
         "AppleClang does NOT ship a working libFuzzer runtime. "
         "On macOS install LLVM via Homebrew and point CMAKE_CXX_COMPILER "
@@ -48,7 +48,7 @@ endif()
 # (use-after-free, heap overflow) and UBSan (signed overflow, null deref,
 # alignment). -g / -O1 keep symbols for crash triage while still letting the
 # fuzzer make forward progress.
-set(OSCIL_FUZZ_FLAGS
+set(MULTISCOPER_FUZZ_FLAGS
     -fsanitize=fuzzer,address,undefined
     -fno-omit-frame-pointer
     -g
@@ -56,21 +56,21 @@ set(OSCIL_FUZZ_FLAGS
 )
 
 # -----------------------------------------------------------------------------
-# Fuzzer 1: OscilState::fromXmlString
+# Fuzzer 1: MultiScoperState::fromXmlString
 # -----------------------------------------------------------------------------
-# Filter OSCIL_SOURCES to just the src/core/ subtree. This is populated by
+# Filter MULTISCOPER_SOURCES to just the src/core/ subtree. This is populated by
 # cmake/Sources.cmake which the top-level CMakeLists.txt includes before
-# add_subdirectory(fuzz), so OSCIL_SOURCES is already in scope here.
-set(OSCIL_FUZZ_CORE_SOURCES "")
-foreach(_src ${OSCIL_SOURCES})
+# add_subdirectory(fuzz), so MULTISCOPER_SOURCES is already in scope here.
+set(MULTISCOPER_FUZZ_CORE_SOURCES "")
+foreach(_src ${MULTISCOPER_SOURCES})
     if(_src MATCHES "/src/core/")
-        list(APPEND OSCIL_FUZZ_CORE_SOURCES "${_src}")
+        list(APPEND MULTISCOPER_FUZZ_CORE_SOURCES "${_src}")
     endif()
 endforeach()
 
-if(NOT OSCIL_FUZZ_CORE_SOURCES)
+if(NOT MULTISCOPER_FUZZ_CORE_SOURCES)
     message(FATAL_ERROR
-        "OSCIL_FUZZ_CORE_SOURCES is empty — expected OSCIL_SOURCES to contain "
+        "MULTISCOPER_FUZZ_CORE_SOURCES is empty — expected MULTISCOPER_SOURCES to contain "
         "src/core/**/*.cpp entries. Check that cmake/Sources.cmake is included "
         "before add_subdirectory(fuzz).")
 endif()
@@ -86,10 +86,10 @@ endif()
 #   juce_graphics         — juce::Colour (pulled by Oscillator.h)
 #   juce_audio_basics     — juce::AudioBuffer (analysis/AnalysisEngine.h)
 #   juce_dsp              — DSP primitives referenced from core/dsp headers
-function(add_oscil_core_fuzzer target source)
+function(add_multiscoper_core_fuzzer target source)
     add_executable(${target}
         ${source}
-        ${OSCIL_FUZZ_CORE_SOURCES}
+        ${MULTISCOPER_FUZZ_CORE_SOURCES}
     )
 
     target_include_directories(${target} PRIVATE
@@ -108,19 +108,19 @@ function(add_oscil_core_fuzzer target source)
         juce::juce_recommended_warning_flags
     )
 
-    target_compile_options(${target} PRIVATE ${OSCIL_FUZZ_FLAGS})
-    target_link_options(${target} PRIVATE ${OSCIL_FUZZ_FLAGS})
+    target_compile_options(${target} PRIVATE ${MULTISCOPER_FUZZ_FLAGS})
+    target_link_options(${target} PRIVATE ${MULTISCOPER_FUZZ_FLAGS})
 endfunction()
 
-add_oscil_core_fuzzer(fuzz_oscil_state_fromxml   fuzz_oscil_state_fromxml.cpp)
+add_multiscoper_core_fuzzer(fuzz_multiscoper_state_fromxml   fuzz_multiscoper_state_fromxml.cpp)
 
 # -----------------------------------------------------------------------------
-# Fuzzer 1b: OscilState XML round-trip preservation.
+# Fuzzer 1b: MultiScoperState XML round-trip preservation.
 # Shares the core/ source set and JUCE link closure with fuzzer 1. Asserts
 # that fromXmlString(toXmlString(fromXmlString(x))) succeeds and produces a
 # byte-stable re-serialization (so count drops / parameter resets are caught).
 # -----------------------------------------------------------------------------
-add_oscil_core_fuzzer(fuzz_oscil_state_roundtrip fuzz_oscil_state_roundtrip.cpp)
+add_multiscoper_core_fuzzer(fuzz_multiscoper_state_roundtrip fuzz_multiscoper_state_roundtrip.cpp)
 
 # -----------------------------------------------------------------------------
 # Fuzzer 2: Plugin test-server JSON parse path
@@ -138,7 +138,7 @@ target_link_libraries(fuzz_plugin_test_server_state PRIVATE
     nlohmann_json::nlohmann_json
 )
 
-target_compile_options(fuzz_plugin_test_server_state PRIVATE ${OSCIL_FUZZ_FLAGS})
-target_link_options(fuzz_plugin_test_server_state PRIVATE ${OSCIL_FUZZ_FLAGS})
+target_compile_options(fuzz_plugin_test_server_state PRIVATE ${MULTISCOPER_FUZZ_FLAGS})
+target_link_options(fuzz_plugin_test_server_state PRIVATE ${MULTISCOPER_FUZZ_FLAGS})
 
-message(STATUS "Fuzz targets enabled: fuzz_oscil_state_fromxml, fuzz_oscil_state_roundtrip, fuzz_plugin_test_server_state")
+message(STATUS "Fuzz targets enabled: fuzz_multiscoper_state_fromxml, fuzz_multiscoper_state_roundtrip, fuzz_plugin_test_server_state")

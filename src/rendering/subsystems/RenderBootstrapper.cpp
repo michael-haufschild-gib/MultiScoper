@@ -1,12 +1,12 @@
 /*
-    Oscil - Render Bootstrapper Implementation
+    MultiScoper - Render Bootstrapper Implementation
 */
 
 #include "rendering/subsystems/RenderBootstrapper.h"
 
 #include <juce_core/juce_core.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -82,7 +82,7 @@ RenderBootstrapper::RenderBootstrapper() {}
 RenderBootstrapper::~RenderBootstrapper() {}
 
 bool RenderBootstrapper::compileAndLink(juce::OpenGLShaderProgram& shader, const char* vertexSource,
-                                        const char* fragmentSource, const char* label)
+                                        const char* fragmentSource, [[maybe_unused]] const char* label)
 {
     if (!shader.addVertexShader(vertexSource) || !shader.addFragmentShader(fragmentSource))
     {
@@ -133,4 +133,4 @@ void RenderBootstrapper::shutdown(juce::OpenGLContext& /*context*/)
     compositeTextureLoc_ = -1;
 }
 
-} // namespace oscil
+} // namespace multiscoper

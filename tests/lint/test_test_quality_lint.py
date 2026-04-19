@@ -158,9 +158,9 @@ class TestQualityLintTests(unittest.TestCase):
             self.assertIn("tautological", result.stdout)
 
     @unittest.skipUnless(
-        os.environ.get("OSCIL_LINT_FULL_REPO") == "1",
+        os.environ.get("MULTISCOPER_LINT_FULL_REPO") == "1",
         "Full-repo scan is owned by the ctest target; "
-        "set OSCIL_LINT_FULL_REPO=1 to opt in locally.",
+        "set MULTISCOPER_LINT_FULL_REPO=1 to opt in locally.",
     )
     def test_real_repo_passes(self):
         # Opt-in only: the ctest target is the canonical repo-wide gate.

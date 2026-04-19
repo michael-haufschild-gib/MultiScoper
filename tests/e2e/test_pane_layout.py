@@ -20,7 +20,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 # Tolerance for width comparisons — accounts for the 2px margin per side
@@ -48,7 +48,7 @@ class TestPaneLayoutEndpoint:
     """Verify the /panes endpoint returns valid data."""
 
     def test_panes_endpoint_returns_data(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: /panes endpoint not implemented or returning error,
@@ -70,7 +70,7 @@ class TestPaneLayoutEndpoint:
         assert pane["bounds"]["width"] > 0, "Pane width must be positive"
         assert pane["bounds"]["height"] > 0, "Pane height must be positive"
 
-    def test_layout_info_endpoint(self, editor: OscilTestClient):
+    def test_layout_info_endpoint(self, editor: MultiScoperTestClient):
         """
         Bug caught: /layout endpoint returning wrong column count.
         """
@@ -87,7 +87,7 @@ class TestSingleColumnLayout:
     """Verify panes use full available width in 1-column mode."""
 
     def test_single_pane_uses_full_width(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: THE specific bug — 1-column layout with 1 pane renders
@@ -108,7 +108,7 @@ class TestSingleColumnLayout:
         _assert_pane_width_fraction(layout, 1.0, pane_index=0)
 
     def test_two_panes_stacked_vertically_full_width(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: in 1-column mode with 2 panes, panes split horizontally
@@ -148,7 +148,7 @@ class TestMultiColumnWidth:
     """Verify pane widths are correct fractions of available area."""
 
     def test_two_column_two_panes_half_width(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: 2-column mode not dividing width equally between panes.
@@ -170,7 +170,7 @@ class TestMultiColumnWidth:
             _assert_pane_width_fraction(layout, 0.5, pane_index=i)
 
     def test_three_column_three_panes_third_width(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: 3-column mode not distributing panes across 3 columns.
@@ -198,7 +198,7 @@ class TestColumnSwitching:
     """Verify pane widths update correctly when switching column counts."""
 
     def test_switch_2col_to_1col_widens_panes(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: switching from 2 columns to 1 doesn't recalculate
@@ -227,7 +227,7 @@ class TestColumnSwitching:
         _assert_pane_width_fraction(layout_1col, 1.0, pane_index=0)
 
     def test_switch_1col_to_2col_narrows_panes(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: switching from 1 to 2 columns doesn't trigger resized(),
@@ -254,7 +254,7 @@ class TestColumnSwitching:
         )
 
     def test_cycle_1_2_3_1_columns_width_correct(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: cycling through all column modes leaves stale column
@@ -285,7 +285,7 @@ class TestColumnIndexAssignment:
     """Verify panes are assigned to correct columns after redistribution."""
 
     def test_single_column_all_panes_column_0(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: panes retaining stale column indices from a previous
@@ -309,7 +309,7 @@ class TestColumnIndexAssignment:
             )
 
     def test_two_column_round_robin(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: panes not distributed round-robin across columns
@@ -336,7 +336,7 @@ class TestLayoutDropdown:
     """Verify layout changes via the sidebar options dropdown."""
 
     def test_dropdown_selection_changes_column_count(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: layout dropdown onSelectionChanged not wired to
@@ -392,7 +392,7 @@ class TestPaneMoveOrder:
     """Verify pane reorder operations work with different layouts."""
 
     def test_move_pane_changes_order(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: /pane/move endpoint not updating pane order in layout manager.
@@ -422,7 +422,7 @@ class TestPaneMoveOrder:
         )
 
     def test_move_in_multi_column_preserves_column_assignment(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: moving a pane triggers redistributePanes which
@@ -457,7 +457,7 @@ class TestPaneRemovalRedistribution:
     """Verify pane removal triggers correct redistribution in multi-column."""
 
     def test_remove_pane_in_2col_redistributes(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: removing a pane in 2-column mode leaves the remaining
@@ -497,7 +497,7 @@ class TestLayoutPersistence:
     """Verify column layout survives state save/load and editor lifecycle."""
 
     def test_column_layout_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: ColumnLayout enum not serialized in state XML,
@@ -511,7 +511,7 @@ class TestLayoutPersistence:
         layout_before = editor.get_pane_layout()
         assert layout_before["columns"] == 2
 
-        path = "/tmp/oscil_e2e_layout_persist.xml"
+        path = "/tmp/multiscoper_e2e_layout_persist.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save not available")
@@ -530,7 +530,7 @@ class TestLayoutPersistence:
         )
 
     def test_column_layout_survives_editor_lifecycle(
-        self, client: OscilTestClient
+        self, client: MultiScoperTestClient
     ):
         """
         Bug caught: column layout stored only in UI state, lost when
@@ -573,7 +573,7 @@ class TestLayoutDynamicOperations:
     """Verify layout correctness after dynamic pane/oscillator operations."""
 
     def test_add_pane_after_layout_change(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding a pane after switching to 2-column mode assigns
@@ -598,7 +598,7 @@ class TestLayoutDynamicOperations:
             )
 
     def test_layout_change_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: changing column layout while transport is playing
@@ -628,7 +628,7 @@ class TestLayoutDynamicOperations:
         editor.transport_stop()
 
     def test_layout_dropdown_all_options_produce_correct_widths(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: dropdown selection fires index-based callback that

@@ -1,6 +1,6 @@
-# Oscil OpenGL Shader Waveforms - Image Prompt
+# MultiScoper OpenGL Shader Waveforms - Image Prompt
 
-Optimized prompt for Google Nano Banana (Gemini Image Generation) to create a showcase of OpenGL shader-based waveform visualization styles for the Oscil audio plugin.
+Optimized prompt for Google Nano Banana (Gemini Image Generation) to create a showcase of OpenGL shader-based waveform visualization styles for the MultiScoper audio plugin.
 
 ---
 

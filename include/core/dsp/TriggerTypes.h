@@ -1,5 +1,5 @@
 /*
-    Oscil - Trigger Type Definitions
+    MultiScoper - Trigger Type Definitions
     Trigger and waveform mode enums for timing synchronization
 */
 
@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -116,4 +116,4 @@ inline WaveformMode stringToWaveformMode(const juce::String& str)
     return WaveformMode::FreeRunning;
 }
 
-} // namespace oscil
+} // namespace multiscoper

@@ -84,7 +84,7 @@ Not structural; the harness can hit these, tests just don't.
 (Formerly listed: "Harness HTTP thread-safety pass — 9 endpoints need MessageManager hops." Resolved in this PR via the ADR-016 MT-dispatch migration and `forbidden_patterns_lint` enforcement.)
 
 (Formerly listed: `PluginTestServer` compile-time gate. Resolved — sources
-are now gated behind `OSCIL_ENABLE_TEST_SERVER`, off for shipping builds.)
+are now gated behind `MULTISCOPER_ENABLE_TEST_SERVER`, off for shipping builds.)
 
 ## Exit criteria for "tests now match reality"
 

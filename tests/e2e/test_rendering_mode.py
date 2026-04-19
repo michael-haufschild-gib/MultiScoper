@@ -9,13 +9,13 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestRenderingModeToggle:
     """GPU Acceleration toggle in Options section."""
 
-    def test_toggle_exists_and_visible(self, options_section: OscilTestClient):
+    def test_toggle_exists_and_visible(self, options_section: MultiScoperTestClient):
         """
         Bug caught: GPU toggle removed from options section layout.
         """
@@ -28,7 +28,7 @@ class TestRenderingModeToggle:
         assert el is not None
         assert el.visible, "GPU toggle should be visible when options expanded"
 
-    def test_toggle_click_does_not_crash(self, options_section: OscilTestClient):
+    def test_toggle_click_does_not_crash(self, options_section: MultiScoperTestClient):
         """
         Bug caught: toggling GPU mode dereferences null OpenGL context.
         """
@@ -51,7 +51,7 @@ class TestRenderingModeToggle:
         assert state is not None, "Harness should still be responsive after restore"
 
     def test_toggle_with_oscillators_present(
-        self, options_section: OscilTestClient, source_id: str
+        self, options_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: switching renderer while waveforms are actively drawing
@@ -87,7 +87,7 @@ class TestRenderingModeToggle:
         c.transport_stop()
 
     def test_waveform_data_survives_gpu_toggle(
-        self, options_section: OscilTestClient, source_id: str
+        self, options_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: toggling GPU mode during active audio causes the
@@ -142,7 +142,7 @@ class TestRenderingModeToggle:
 
         c.transport_stop()
 
-    def test_toggle_persists_across_editor_lifecycle(self, client: OscilTestClient):
+    def test_toggle_persists_across_editor_lifecycle(self, client: MultiScoperTestClient):
         """
         Bug caught: rendering mode preference not serialized.
         """
@@ -164,54 +164,50 @@ class TestRenderingModeToggle:
             client.close_editor()
             pytest.fail("GPU rendering toggle not registered")
 
+        def _toggle_state(el) -> bool | None:
+            if el is None:
+                return None
+            v = el.extra.get("toggled", el.extra.get("value"))
+            return None if v is None else bool(v)
+
         # Record initial toggle state
         el_before = client.get_element(toggle_id)
-        toggled_before = el_before.extra.get("toggled", el_before.extra.get("value")) if el_before else None
-
-        # Toggle once
-        client.click(toggle_id)
-
-        # Wait for toggle state to change
-        try:
-            client.wait_until(
-                lambda: (e := client.get_element(toggle_id))
-                and e.extra.get("toggled", e.extra.get("value")) != toggled_before,
-                timeout_s=2.0,
-                desc="toggle state to change",
-            )
-        except TimeoutError:
-            pass  # Toggle may not report state in extra
-
-        el_after_toggle = client.get_element(toggle_id)
-        toggled_after_toggle = (
-            el_after_toggle.extra.get("toggled", el_after_toggle.extra.get("value"))
-            if el_after_toggle else None
+        toggled_before = _toggle_state(el_before)
+        assert toggled_before is not None, (
+            f"Toggle '{toggle_id}' must expose its state in element.extra "
+            "(toggled/value); update the harness or the testId constant"
         )
 
-        # Close and reopen
+        # Toggle once; state MUST change (if it doesn't, the click is broken
+        # and the persistence question is moot).
+        client.click(toggle_id)
+        client.wait_until(
+            lambda: _toggle_state(client.get_element(toggle_id)) != toggled_before,
+            timeout_s=3.0,
+            desc="toggle state to change after click",
+        )
+        toggled_after_toggle = _toggle_state(client.get_element(toggle_id))
+        assert toggled_after_toggle is not None and toggled_after_toggle != toggled_before, (
+            f"click on toggle did not change its state: "
+            f"before={toggled_before}, after={toggled_after_toggle}"
+        )
+
+        # Close and reopen the editor — state should persist.
         client.close_editor()
         client.open_editor()
-
         if client.element_exists(options_id):
             client.click(options_id)
-
         el_after_reopen = client.get_element(toggle_id)
         client.close_editor()
 
         assert el_after_reopen is not None, "Toggle should exist after reopen"
+        toggled_after_reopen = _toggle_state(el_after_reopen)
+        assert toggled_after_reopen == toggled_after_toggle, (
+            f"Toggle state should persist across editor close/reopen: "
+            f"before_close={toggled_after_toggle}, after_reopen={toggled_after_reopen}"
+        )
 
-        # If toggle state is available, verify it persisted
-        if toggled_after_toggle is not None and el_after_reopen:
-            toggled_after_reopen = el_after_reopen.extra.get(
-                "toggled", el_after_reopen.extra.get("value")
-            )
-            if toggled_after_reopen is not None:
-                assert toggled_after_reopen == toggled_after_toggle, (
-                    f"Toggle state should persist: "
-                    f"expected {toggled_after_toggle}, got {toggled_after_reopen}"
-                )
-
-    def test_toggle_rapid_cycling_stability(self, options_section: OscilTestClient):
+    def test_toggle_rapid_cycling_stability(self, options_section: MultiScoperTestClient):
         """
         Bug caught: rapid GPU/Software toggling causing OpenGL context
         race condition or resource leak.

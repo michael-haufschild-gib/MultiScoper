@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Tests
+    MultiScoper - Pane Tests
 */
 
 #include "core/Pane.h"
@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class PaneTest : public ::testing::Test
 {

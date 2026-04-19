@@ -1,19 +1,19 @@
 /*
-    Oscil - Color Picker Component Header
+    MultiScoper - Color Picker Component Header
     Color selection with RGBA and hex support
 */
 
 #pragma once
 
-#include "ui/components/OscilSlider.h"
-#include "ui/components/OscilTextField.h"
+#include "ui/components/MultiScoperSlider.h"
+#include "ui/components/MultiScoperTextField.h"
 #include "ui/theme/IThemeService.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -78,10 +78,10 @@ private:
     juce::Colour currentColour_{juce::Colours::green};
 
     // RGBA Sliders
-    std::unique_ptr<OscilSlider> redSlider_;
-    std::unique_ptr<OscilSlider> greenSlider_;
-    std::unique_ptr<OscilSlider> blueSlider_;
-    std::unique_ptr<OscilSlider> alphaSlider_;
+    std::unique_ptr<MultiScoperSlider> redSlider_;
+    std::unique_ptr<MultiScoperSlider> greenSlider_;
+    std::unique_ptr<MultiScoperSlider> blueSlider_;
+    std::unique_ptr<MultiScoperSlider> alphaSlider_;
 
     // Labels
     std::unique_ptr<juce::Label> redLabel_;
@@ -91,7 +91,7 @@ private:
 
     // Hex input
     std::unique_ptr<juce::Label> hexLabel_;
-    std::unique_ptr<OscilTextField> hexInput_;
+    std::unique_ptr<MultiScoperTextField> hexInput_;
 
     // Color preview
     juce::Rectangle<int> previewBounds_;
@@ -105,4 +105,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ColorPickerComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

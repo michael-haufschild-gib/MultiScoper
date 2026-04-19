@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Buffer Tests: Extended Concurrency
+    MultiScoper - Capture Buffer Tests: Extended Concurrency
     Stereo consistency, analysis methods, oversized writes, and tryLock under concurrency
 */
 
@@ -13,8 +13,8 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class CaptureBufferConcurrentTest : public ::testing::Test
 {

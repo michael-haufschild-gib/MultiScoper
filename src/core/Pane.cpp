@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Implementation
+    MultiScoper - Pane Implementation
     Pane value type: identity, serialization, and basic property accessors.
     PaneLayoutManager (add/remove/move/bounds/listeners) lives in
     PaneLayoutManager.cpp.
@@ -7,11 +7,11 @@
 
 #include "core/Pane.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 Pane::Pane() : id_(PaneId::generate()) {}
@@ -53,4 +53,4 @@ void Pane::fromValueTree(const juce::ValueTree& state)
     heightRatio_ = juce::jlimit(MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO, safeHeightRatio);
 }
 
-} // namespace oscil
+} // namespace multiscoper

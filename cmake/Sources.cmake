@@ -1,7 +1,7 @@
-# Oscil Source Files
+# MultiScoper Source Files
 # Shared between main plugin target and test harness
 
-set(OSCIL_SOURCES
+set(MULTISCOPER_SOURCES
     # Plugin (entry points)
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginProcessor.cpp
     ${CMAKE_SOURCE_DIR}/src/plugin/PluginProcessorState.cpp
@@ -17,8 +17,8 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/core/DecimatingCaptureBufferQueries.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManager.cpp
     ${CMAKE_SOURCE_DIR}/src/core/MemoryBudgetManagerQueries.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/OscilState.cpp
-    ${CMAKE_SOURCE_DIR}/src/core/OscilStateLayout.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/MultiScoperState.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/MultiScoperStateLayout.cpp
     ${CMAKE_SOURCE_DIR}/src/core/SchemaMigration.cpp
     ${CMAKE_SOURCE_DIR}/src/core/GlobalPreferences.cpp
     ${CMAKE_SOURCE_DIR}/src/core/Source.cpp
@@ -78,36 +78,36 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/components/SurfaceStyle.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/SurfacePainter.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/ThemedComponent.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButton.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilButtonPainting.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextField.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTextFieldPainting.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilToggle.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSlider.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSliderPainting.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilSliderInteraction.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperButton.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperButtonPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperTextField.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperTextFieldPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperToggle.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperSlider.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperSliderPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperSliderInteraction.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/MagneticSnapController.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilCheckbox.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButton.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButtonPainting.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilRadioButtonInteraction.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdown.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownInteraction.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownPopup.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilDropdownPopupEvents.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabs.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilTabsPainting.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordion.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilAccordionSection.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilBadge.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperCheckbox.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperRadioButton.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperRadioButtonPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperRadioButtonInteraction.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperDropdown.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperDropdownInteraction.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperDropdownPopup.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperDropdownPopupEvents.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperTabs.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperTabsPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperAccordion.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperAccordionSection.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperBadge.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/SectionHeader.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModal.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModalAlert.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilModalPainting.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorSwatches.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorPicker.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilColorPickerCalc.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/components/OscilMeterBar.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperModal.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperModalAlert.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperModalPainting.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperColorSwatches.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperColorPicker.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperColorPickerCalc.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/components/MultiScoperMeterBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/SegmentedButtonBar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/UIAudioFeedback.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/components/PaneSelectorComponent.cpp
@@ -116,7 +116,6 @@ set(OSCIL_SOURCES
     # UI (panels)
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListComponentEvents.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListToolbar.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListItem.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/panels/OscillatorListItemPainting.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/dialogs/OscillatorConfigDialog.cpp
@@ -177,17 +176,17 @@ set(OSCIL_SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeEditorActions.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ColorPickerComponent.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/theme/ThemeCoordinator.cpp
-    ${CMAKE_SOURCE_DIR}/src/ui/theme/OscilLookAndFeel.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/theme/MultiScoperLookAndFeel.cpp
 
 )
 
 # Test-server sources — separated so production plugin builds can omit them.
 # These expose an HTTP server from inside the plugin when loaded as
 # Standalone; shipping a release binary that opens port 9876 is a security
-# and supply-chain liability.  The OscilTestHarness target always compiles
-# them in; the main Oscil plugin only does so when OSCIL_ENABLE_TEST_SERVER
+# and supply-chain liability.  The MultiScoperTestHarness target always compiles
+# them in; the main MultiScoper plugin only does so when MULTISCOPER_ENABLE_TEST_SERVER
 # is ON (default OFF).
-set(OSCIL_TEST_SERVER_SOURCES
+set(MULTISCOPER_TEST_SERVER_SOURCES
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/PluginTestServer.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/LayoutHandler.cpp
     ${CMAKE_SOURCE_DIR}/src/tools/test_server/OscillatorHandler.cpp
@@ -204,7 +203,7 @@ set(OSCIL_TEST_SERVER_SOURCES
 
 # Add platform-specific sources
 if(APPLE)
-    list(APPEND OSCIL_SOURCES
+    list(APPEND MULTISCOPER_SOURCES
         ${CMAKE_SOURCE_DIR}/src/platform/macos/AnimationSettings.mm
     )
 endif()

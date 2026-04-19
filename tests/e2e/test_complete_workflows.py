@@ -19,7 +19,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 from page_objects import (
     SidebarPage,
     AddOscillatorDialog,
@@ -35,7 +35,7 @@ class TestFirstTimeUserWorkflow:
     """Simulates a new user's first session with the plugin."""
 
     def test_new_user_complete_session(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: any step in the fundamental user journey failing silently.
@@ -112,7 +112,7 @@ class TestMultiOscillatorConfigurationWorkflow:
     """Configure multiple oscillators with different settings in one session."""
 
     def test_configure_three_oscillators_differently(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: configuring oscillator N via popup actually modifies
@@ -171,7 +171,7 @@ class TestFullStatePersistenceWorkflow:
     """Build complex state, save, destroy, load, verify every property."""
 
     def test_complex_state_roundtrip(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: any property not serialized in state XML — name, mode,
@@ -199,7 +199,7 @@ class TestFullStatePersistenceWorkflow:
         panes_before = editor.get_panes()
 
         # Step 4: Save
-        path = "/tmp/oscil_e2e_complex_roundtrip.xml"
+        path = "/tmp/multiscoper_e2e_complex_roundtrip.xml"
         state_mgr = StateManager(editor)
         state_mgr.save_state(path)
 
@@ -248,10 +248,10 @@ class TestDAWSessionRecallWorkflow:
     """Simulate DAW closing and reopening with saved state."""
 
     def test_editor_close_reopen_preserves_state(
-        self, client: OscilTestClient
+        self, client: MultiScoperTestClient
     ):
         """
-        Bug caught: state held only in UI components (not OscilState), so
+        Bug caught: state held only in UI components (not MultiScoperState), so
         closing editor destroys the state and reopening shows defaults.
         """
         # Step 1: Set up state
@@ -298,7 +298,7 @@ class TestLivePerformanceStabilityWorkflow:
     """Add/remove/configure oscillators during active playback."""
 
     def test_operations_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: any operation during active audio processing causing
@@ -350,7 +350,7 @@ class TestTimingExplorationWorkflow:
     """User explores all timing modes and verifies displaySamples changes."""
 
     def test_timing_mode_exploration(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: switching timing modes loses displaySamples state or
@@ -418,7 +418,7 @@ class TestBulkOperationsWorkflow:
     """Add many, hide some, filter, delete, show, verify."""
 
     def test_bulk_hide_filter_delete_show(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: filter tab state inconsistent after bulk visibility
@@ -479,7 +479,7 @@ class TestConfigPopupAllPropertiesWorkflow:
     """Open popup, set every property, close, reopen, verify all persisted."""
 
     def test_all_popup_properties_persist(
-        self, editor: OscilTestClient, oscillator: str
+        self, editor: MultiScoperTestClient, oscillator: str
     ):
         """
         Bug caught: popup storing changes in local state that get discarded
@@ -552,7 +552,7 @@ class TestPaneSelectorWorkflow:
     """Use the config popup pane selector to move an oscillator between panes."""
 
     def test_move_via_config_popup_pane_selector(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: pane selector in config popup is cosmetic — clicking
@@ -612,7 +612,7 @@ class TestAddDialogFullWorkflow:
     """Exercise every field in the Add Oscillator dialog."""
 
     def test_add_dialog_all_fields(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: dialog fields not wired — source dropdown, name field,
@@ -665,7 +665,7 @@ class TestAddDialogFullWorkflow:
 class TestEditorLifecycleDuringComplexState:
     """Repeatedly close/reopen editor with complex state, verify integrity."""
 
-    def test_triple_close_reopen_cycle(self, client: OscilTestClient):
+    def test_triple_close_reopen_cycle(self, client: MultiScoperTestClient):
         """
         Bug caught: editor destructor/constructor not properly saving/restoring
         state, accumulating corruption over multiple cycles.
@@ -706,7 +706,7 @@ class TestCrossFeatureStressWorkflow:
     """Rapid cross-feature operations to stress shared state."""
 
     def test_rapid_cross_feature_sequence(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: race conditions between subsystems when features are
@@ -770,7 +770,7 @@ class TestCrossFeatureStressWorkflow:
 class TestPaneManagementWorkflow:
     """Full pane lifecycle: create, assign, move, remove, verify."""
 
-    def test_pane_lifecycle(self, editor: OscilTestClient, source_id: str):
+    def test_pane_lifecycle(self, editor: MultiScoperTestClient, source_id: str):
         """
         Bug caught: pane operations leaving orphaned oscillators or breaking
         audio bindings.
@@ -836,7 +836,7 @@ class TestSaveLoadDuringPlaybackWorkflow:
     """Save and load state while audio is actively playing."""
 
     def test_save_load_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: state save capturing partial audio buffer state,
@@ -857,7 +857,7 @@ class TestSaveLoadDuringPlaybackWorkflow:
         editor.wait_for_waveform_data(pane_index=0, timeout_s=5.0)
 
         # Step 3: Save while playing
-        path = "/tmp/oscil_e2e_playback_save.xml"
+        path = "/tmp/multiscoper_e2e_playback_save.xml"
         saved = editor.save_state(path)
         assert saved, "Should be able to save during playback"
         assert editor.is_playing(), "Transport should still be playing after save"
@@ -884,7 +884,7 @@ class TestThemeAndOscillatorWorkflow:
     """Change themes while oscillators are configured and playing."""
 
     def test_theme_change_preserves_oscillator_state(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: theme change resetting oscillator properties, or theme

@@ -1,5 +1,5 @@
 /*
-    Oscil - Signal Processor
+    MultiScoper - Signal Processor
     Per-oscillator signal processing for visualization modes
 */
 
@@ -14,7 +14,7 @@
 #include <span>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -178,4 +178,4 @@ private:
     int targetSamples_ = 800;
 };
 
-} // namespace oscil
+} // namespace multiscoper

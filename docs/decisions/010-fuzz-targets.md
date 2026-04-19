@@ -6,10 +6,10 @@ Accepted
 
 ## Context
 
-Oscil has two ingress points where it parses structured input that did not
+MultiScoper has two ingress points where it parses structured input that did not
 originate inside the plugin's own code:
 
-1. **`oscil::OscilState::fromXmlString`** (`src/core/OscilState.cpp:73`) is the
+1. **`multiscoper::MultiScoperState::fromXmlString`** (`src/core/MultiScoperState.cpp:73`) is the
    single entry point for DAW-persisted plugin state. When a DAW reloads a
    session, the host passes the XML blob it serialized previously — but
    nothing guarantees that blob was written by this build, or even by a
@@ -36,9 +36,9 @@ produce.
 ## Decision
 
 Two libFuzzer targets are added under `fuzz/`, gated by the
-`OSCIL_BUILD_FUZZERS` CMake option (default `OFF`):
+`MULTISCOPER_BUILD_FUZZERS` CMake option (default `OFF`):
 
-* **`fuzz_oscil_state_fromxml`** — drives `OscilState::fromXmlString` with
+* **`fuzz_multiscoper_state_fromxml`** — drives `MultiScoperState::fromXmlString` with
   arbitrary byte sequences. Built by compiling every source file under
   `src/core/` (the transitive closure of what `fromXmlString` depends on)
   plus the minimum JUCE modules (`juce_core`, `juce_data_structures`,
@@ -83,7 +83,7 @@ Seed corpora live under `fuzz/corpus/`. They are hand-crafted minimal
 examples designed to give libFuzzer's coverage-guided mutator good
 starting points:
 
-* `fuzz/corpus/oscil_state/` — five seeds: empty-valid, realistic
+* `fuzz/corpus/multiscoper_state/` — five seeds: empty-valid, realistic
   three-oscillator state, adversarial overlapping/duplicate IDs, malformed
   (missing close tag), and a future-version blob (exercises ADR-009
   fail-closed migration).
@@ -106,7 +106,7 @@ GitHub artifact on failure. Triage steps:
 
 1. Download the `fuzz-crashes` artifact from the failed workflow run.
 2. Reproduce locally:
-   `./fuzz_oscil_state_fromxml fuzz-<hash>.crash`. libFuzzer prints the
+   `./fuzz_multiscoper_state_fromxml fuzz-<hash>.crash`. libFuzzer prints the
    ASan/UBSan stack trace and the minimized input.
 3. Add a regression test in `tests/` that feeds the minimized input
    through the affected API.
@@ -129,12 +129,12 @@ GitHub artifact on failure. Triage steps:
 
 ## Alternatives Rejected
 
-* **Factor a reusable `OscilLib` INTERFACE library out of the main
+* **Factor a reusable `MultiScoperLib` INTERFACE library out of the main
   CMakeLists.txt.** Considered as a cleaner link surface for both the
   plugin and the fuzz targets, but would require reworking the
   `juce_add_plugin` target's warning/suppression wiring and the
   per-source clang-tidy/thread-safety attribute dance. Scope creep. The
-  fuzz target instead directly reuses the `OSCIL_SOURCES` variable from
+  fuzz target instead directly reuses the `MULTISCOPER_SOURCES` variable from
   `cmake/Sources.cmake` (filtered to `src/core/`), which gives the same
   code-reuse without touching plugin wiring.
 * **Fuzz on macOS with AppleClang.** Rejected: AppleClang's fuzzer runtime

@@ -1,5 +1,5 @@
 /*
-    Oscil - Post-Process Effect Base Class
+    MultiScoper - Post-Process Effect Base Class
     Abstract base for all post-processing effects
 */
 
@@ -12,10 +12,10 @@
 
 #include <atomic>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -146,6 +146,6 @@ protected:
     std::atomic<bool> compileFailedPermanently_{false};
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

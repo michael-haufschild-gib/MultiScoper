@@ -1,6 +1,6 @@
 # Agent Library
 
-Quick reference for all available subagents in the Oscil project.
+Quick reference for all available subagents in the MultiScoper project.
 
 ## Implementation Agents (Write Code)
 

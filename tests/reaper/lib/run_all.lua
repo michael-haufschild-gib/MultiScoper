@@ -3,8 +3,8 @@
 -- Responsibilities:
 --   1. Put lib/ on package.path so scenarios can require("reaper_test_lib").
 --   2. Discover every scenarios/*.lua.
---   3. Execute each (respecting OSCIL_TEST_SCENARIO_FILTER).
---   4. Aggregate results; write JSON to OSCIL_TEST_RESULTS_FILE.
+--   3. Execute each (respecting MULTISCOPER_TEST_SCENARIO_FILTER).
+--   4. Aggregate results; write JSON to MULTISCOPER_TEST_RESULTS_FILE.
 --   5. Tear down project state between scenarios.
 
 -- ---------------------------------------------------------------------------
@@ -16,10 +16,10 @@ local function getenv(name, default)
   return v
 end
 
-local LIB_DIR       = getenv("OSCIL_TEST_LIB_DIR",       nil)
-local SCENARIOS_DIR = getenv("OSCIL_TEST_SCENARIOS_DIR", nil)
-local RESULTS_FILE  = getenv("OSCIL_TEST_RESULTS_FILE",  "/tmp/oscil_reaper_results.json")
-local FILTER        = getenv("OSCIL_TEST_SCENARIO_FILTER", "")
+local LIB_DIR       = getenv("MULTISCOPER_TEST_LIB_DIR",       nil)
+local SCENARIOS_DIR = getenv("MULTISCOPER_TEST_SCENARIOS_DIR", nil)
+local RESULTS_FILE  = getenv("MULTISCOPER_TEST_RESULTS_FILE",  "/tmp/multiscoper_reaper_results.json")
+local FILTER        = getenv("MULTISCOPER_TEST_SCENARIO_FILTER", "")
 
 -- Fallback: if env vars absent (e.g. running manually from Reaper actions),
 -- infer from this script's location.

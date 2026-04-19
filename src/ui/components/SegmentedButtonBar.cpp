@@ -1,5 +1,5 @@
 /*
-    Oscil - Segmented Button Bar Implementation
+    MultiScoper - Segmented Button Bar Implementation
     Flat-surface segmented control with a spring-animated sliding indicator.
     (Historical: "glassmorphism-styled" prior to the 2026-Q2 uplift.)
 */
@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 SegmentedButtonBar::SegmentedButtonBar(IThemeService& themeService) : ThemedComponent(themeService)
@@ -77,9 +77,11 @@ void SegmentedButtonBar::resized()
         buttons_[i]->setBounds(startX + (static_cast<int>(i) * buttonWidth), 0, buttonWidth, bounds.getHeight());
     }
 
-    // Update indicator width and position after layout
+    // Update indicator width and position after layout. The `animate` arg
+    // is off on the very first resize (initial layout should snap) and on
+    // thereafter (subsequent resizes smoothly animate the indicator).
     indicatorWidth_ = static_cast<float>(buttonWidth);
-    updateIndicatorTarget(!indicatorInitialized_ ? false : true);
+    updateIndicatorTarget(indicatorInitialized_);
 
     if (!indicatorInitialized_ && selectedId_ >= 0)
     {
@@ -97,7 +99,7 @@ void SegmentedButtonBar::resized()
 void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce::String& testId,
                                    const juce::String& tooltip)
 {
-    auto button = std::make_unique<OscilButton>(getThemeService(), label, testId);
+    auto button = std::make_unique<MultiScoperButton>(getThemeService(), label, testId);
 
     // Configure as transparent segment button — the bar paints the indicator
     button->setToggleable(true);
@@ -129,7 +131,7 @@ void SegmentedButtonBar::addButton(const juce::String& label, int id, const juce
 void SegmentedButtonBar::addButtonWithPath(const juce::Path& iconPath, int id, const juce::String& testId,
                                            const juce::String& tooltip)
 {
-    auto button = std::make_unique<OscilButton>(getThemeService(), juce::String{}, testId);
+    auto button = std::make_unique<MultiScoperButton>(getThemeService(), juce::String{}, testId);
 
     // Configure as transparent segment button with path icon
     button->setToggleable(true);
@@ -305,4 +307,4 @@ void SegmentedButtonBar::timerCallback()
     repaint();
 }
 
-} // namespace oscil
+} // namespace multiscoper

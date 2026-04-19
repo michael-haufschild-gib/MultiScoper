@@ -1,5 +1,5 @@
 /*
-    Oscil - Audio Buffer Builder
+    MultiScoper - Audio Buffer Builder
     Fluent builder for creating JUCE AudioBuffer<float> objects in tests
 */
 
@@ -12,7 +12,7 @@
 
 #include <cmath>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -254,4 +254,4 @@ private:
     juce::AudioBuffer<float> buffer_;
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

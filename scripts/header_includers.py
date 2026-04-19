@@ -16,7 +16,7 @@ Exit codes:
     1 — bad arguments / usage error.
     2 — compile-db missing (caller should fall back).
 
-Zero third-party dependencies. Designed to scan the full Oscil tree (~300 TUs)
+Zero third-party dependencies. Designed to scan the full MultiScoper tree (~300 TUs)
 in well under 2 seconds by:
   * parsing each .cpp / .h file at most once (cache keyed by realpath),
   * resolving #includes against the per-TU -I list and the repo include/ root,

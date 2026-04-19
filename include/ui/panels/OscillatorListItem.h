@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator List Item
+    MultiScoper - Oscillator List Item
     Compact list item that expands when selected to show controls
 */
 
@@ -7,8 +7,8 @@
 
 #include "core/Oscillator.h"
 #include "ui/components/InlineEditLabel.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperToggle.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -17,7 +17,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 class IInstanceRegistry;
@@ -139,9 +139,9 @@ private:
     // Child components
     std::unique_ptr<InlineEditLabel> nameLabel_;
     std::unique_ptr<juce::Label> trackLabel_;
-    std::unique_ptr<OscilButton> deleteButton_;
-    std::unique_ptr<OscilButton> settingsButton_;
-    std::unique_ptr<OscilButton> visibilityButton_; // Used for icon-only visibility toggle
+    std::unique_ptr<MultiScoperButton> deleteButton_;
+    std::unique_ptr<MultiScoperButton> settingsButton_;
+    std::unique_ptr<MultiScoperButton> visibilityButton_; // Used for icon-only visibility toggle
     std::unique_ptr<SegmentedButtonBar> modeButtons_;
 
     juce::ListenerList<Listener> listeners_;
@@ -154,9 +154,9 @@ private:
 
     // TestIdSupport
     void registerTestId() override;
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListItemComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - Layout Handler
+    MultiScoper - Layout Handler
     Handles layout-related test server endpoints
 */
 
@@ -7,7 +7,7 @@
 
 #include "TestServerHandlerBase.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -28,4 +28,4 @@ public:
     void handleMovePane(const httplib::Request& req, httplib::Response& res);
 };
 
-} // namespace oscil
+} // namespace multiscoper

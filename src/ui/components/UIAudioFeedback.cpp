@@ -1,5 +1,5 @@
 /*
-    Oscil - UI Audio Feedback Implementation
+    MultiScoper - UI Audio Feedback Implementation
 */
 
 #include "ui/components/UIAudioFeedback.h"
@@ -7,7 +7,7 @@
 #include <atomic>
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Simple sound player using AudioSourcePlayer
@@ -374,4 +374,4 @@ void UIAudioFeedback::applyEnvelope(juce::AudioBuffer<float>& buffer, float atta
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

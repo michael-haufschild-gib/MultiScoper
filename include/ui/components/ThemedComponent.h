@@ -1,5 +1,5 @@
 /*
-    Oscil - Themed Component Base Class
+    MultiScoper - Themed Component Base Class
     Eliminates duplicate theme change handling across UI components
 */
 
@@ -11,7 +11,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -103,4 +103,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ThemedComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

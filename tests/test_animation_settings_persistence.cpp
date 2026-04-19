@@ -1,5 +1,5 @@
 /*
-    Oscil - Animation Settings Tests: Persistence & Threading
+    MultiScoper - Animation Settings Tests: Persistence & Threading
     Tests for scope overrides, state persistence, and thread safety
 */
 
@@ -10,7 +10,7 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class AnimationSettingsPersistenceTest : public ::testing::Test
 {

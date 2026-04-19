@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Buffer Tests: Data Integrity
+    MultiScoper - Capture Buffer Tests: Data Integrity
     Verifies exact sample values after ring wraps, channel separation,
     clear-then-write sequences, and metadata update correctness.
 */
@@ -10,8 +10,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class CaptureBufferIntegrityTest : public ::testing::Test
 {

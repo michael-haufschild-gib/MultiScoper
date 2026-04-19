@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Editor Header
+    MultiScoper - Plugin Editor Header
     Main plugin GUI
 */
 
@@ -7,18 +7,18 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 #endif
 #include "core/ServiceContext.h"
 #include "ui/components/TestId.h"
 #include "ui/layout/SidebarComponent.h"
 #include "ui/layout/WindowLayout.h"
-#include "ui/theme/OscilLookAndFeel.h"
+#include "ui/theme/MultiScoperLookAndFeel.h"
 
 #include "plugin/PluginProcessor.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -40,18 +40,18 @@ class DialogManager;
 class DisplaySettingsManager;
 
 /**
- * Adapter class to bridge SidebarComponent::Listener to OscilPluginEditor
+ * Adapter class to bridge SidebarComponent::Listener to MultiScoperPluginEditor
  * This avoids multiple inheritance with conflicting method signatures
  */
 // SidebarListenerAdapter removed - OscillatorPanelController listens directly
 
 /**
- * Adapter class to bridge OscillatorConfigDialog::Listener to OscilPluginEditor
+ * Adapter class to bridge OscillatorConfigDialog::Listener to MultiScoperPluginEditor
  */
 class ConfigPopupListenerAdapter;
 
 /**
- * Adapter class to bridge TimingEngine::Listener to OscilPluginEditor
+ * Adapter class to bridge TimingEngine::Listener to MultiScoperPluginEditor
  */
 class TimingEngineListenerAdapter;
 
@@ -60,7 +60,7 @@ class TimingEngineListenerAdapter;
  * Uses coordinator classes to handle listener callbacks, reducing direct
  * coupling and improving testability.
  */
-class OscilPluginEditor
+class MultiScoperPluginEditor
     : public juce::AudioProcessorEditor
     , public juce::DragAndDropContainer
     , public SidebarComponent::Listener
@@ -69,8 +69,8 @@ class OscilPluginEditor
 {
 public:
     /// Construct the editor, wiring all coordinators and UI subsystems.
-    explicit OscilPluginEditor(OscilPluginProcessor& processor);
-    ~OscilPluginEditor() override;
+    explicit MultiScoperPluginEditor(MultiScoperPluginProcessor& processor);
+    ~MultiScoperPluginEditor() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -101,7 +101,7 @@ public:
     void onConfigPopupClosed();
 
     /// Access the underlying processor (for adapter classes).
-    OscilPluginProcessor& getProcessor() { return processor_; }
+    MultiScoperPluginProcessor& getProcessor() { return processor_; }
 
     /// Apply grid visibility setting to all panes.
     void setShowGridForAllPanes(bool enabled);
@@ -141,6 +141,7 @@ private:
 
     // Coordinator callbacks
     void onSourcesChanged();
+    void onSourceRemoved(const SourceId& sourceId);
     void onThemeChanged(const ColorTheme& newTheme);
     void onLayoutChanged();
 
@@ -163,7 +164,7 @@ private:
     void bufferDurationChanged(BufferDuration duration) override;
     void autoAdjustQualityChanged(bool enabled) override;
 
-    OscilPluginProcessor& processor_;
+    MultiScoperPluginProcessor& processor_;
     ServiceContext serviceContext_;
     WindowLayout windowLayout_;
 
@@ -173,7 +174,7 @@ private:
     // LookAndFeel_V4 defaults into dark-theme dialogs. The process-wide
     // JUCE default LookAndFeel is deliberately NOT set from here — see
     // the ctor comment for the rationale and the AlertWindow trade-off.
-    OscilLookAndFeel lookAndFeel_;
+    MultiScoperLookAndFeel lookAndFeel_;
 
     // Coordinators (manage listener registrations)
     std::unique_ptr<SourceCoordinator> sourceCoordinator_;
@@ -199,9 +200,9 @@ private:
     // Display Settings Manager
     std::unique_ptr<DisplaySettingsManager> displaySettingsManager_;
 
-#if OSCIL_ENABLE_TEST_SERVER
+#if MULTISCOPER_ENABLE_TEST_SERVER
     // Test server (for automated UI testing). Only compiled in when
-    // OSCIL_ENABLE_TEST_SERVER is defined — production plugin builds must
+    // MULTISCOPER_ENABLE_TEST_SERVER is defined — production plugin builds must
     // not open port 9876. The standalone test harness flips this on.
     std::unique_ptr<PluginTestServer> testServer_;
 #endif
@@ -228,9 +229,9 @@ private:
     static constexpr int MIN_PANE_HEIGHT = 200;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscilPluginEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MultiScoperPluginEditor)
 };
 
-} // namespace oscil
+} // namespace multiscoper

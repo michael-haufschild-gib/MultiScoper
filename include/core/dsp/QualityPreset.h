@@ -1,5 +1,5 @@
 /*
-    Oscil - Quality Preset Definitions
+    MultiScoper - Quality Preset Definitions
     Capture rate constants and quality/buffer duration presets
 */
 
@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 //==============================================================================
@@ -175,4 +175,4 @@ inline juce::String bufferDurationToDisplayName(BufferDuration duration)
     return "4 seconds";
 }
 
-} // namespace oscil
+} // namespace multiscoper

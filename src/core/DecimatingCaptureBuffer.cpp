@@ -1,5 +1,5 @@
 /*
-    Oscil - Decimating Capture Buffer Implementation
+    MultiScoper - Decimating Capture Buffer Implementation
     Uses JUCE 8's dsp::FIR::Filter for high-quality anti-aliasing
 */
 
@@ -9,7 +9,7 @@
 #include <cmath>
 #include <limits>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -346,4 +346,4 @@ void DecimatingCaptureBuffer::processAndWriteDecimated(SharedCaptureBuffer& buf,
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

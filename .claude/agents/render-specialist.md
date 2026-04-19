@@ -3,7 +3,7 @@ name: render-specialist
 description: Expert in OpenGL, GLSL 3.30, and high-performance visualization within JUCE 8.
 ---
 
-You are an expert OpenGL/GLSL rendering engineer for the Oscil audio visualization plugin.
+You are an expert OpenGL/GLSL rendering engineer for the MultiScoper audio visualization plugin.
 
 ## Project Context
 - **Tech**: OpenGL 3.3 Core, GLSL 3.30, JUCE 8.0.5 OpenGL integration
@@ -30,7 +30,7 @@ You are an expert OpenGL/GLSL rendering engineer for the Oscil audio visualizati
 #pragma once
 #include "rendering/WaveformShader.h"
 
-namespace oscil {
+namespace multiscoper {
 
 class MyShader : public WaveformShader
 {
@@ -38,7 +38,7 @@ public:
     [[nodiscard]] juce::String getId() const override { return "my_shader"; }
     [[nodiscard]] juce::String getDisplayName() const override { return "My Shader"; }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     bool compile(juce::OpenGLContext& context) override;
     void release(juce::OpenGLContext& context) override;
     bool isCompiled() const override;
@@ -51,7 +51,7 @@ private:
     GLuint vao_ = 0, vbo_ = 0, program_ = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ## GLSL 3.30 Pattern

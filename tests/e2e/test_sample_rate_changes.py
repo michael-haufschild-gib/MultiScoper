@@ -5,7 +5,7 @@ Background
 ----------
 Real DAWs reload the audio device at a new sample rate — 44.1k sessions
 opened on a 48k interface, studio rigs sweeping between 44.1k and 192k
-for mastering, etc.  `OscilPluginProcessor::prepareToPlay` is documented
+for mastering, etc.  `MultiScoperPluginProcessor::prepareToPlay` is documented
 to be idempotent and is called every time the host reconfigures, but the
 old harness called prepareToPlay exactly once per track lifetime
 (`TestTrack.cpp:76`) so the reconfigure path was untested.
@@ -31,14 +31,14 @@ from __future__ import annotations
 
 import pytest
 
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 SWEEP_RATES: list[float] = [44100.0, 48000.0, 88200.0, 96000.0, 176400.0, 192000.0]
 DEFAULT_RATE = 44100.0
 
 
-def _set_sample_rate(client: OscilTestClient, rate: float) -> dict:
+def _set_sample_rate(client: MultiScoperTestClient, rate: float) -> dict:
     """Drive the new /daw/sampleRate endpoint and return its data payload."""
     resp = client._post_json("/daw/sampleRate", {"rate": rate})
     assert resp is not None, f"Harness did not respond to sample rate change to {rate}"
@@ -47,7 +47,7 @@ def _set_sample_rate(client: OscilTestClient, rate: float) -> dict:
 
 
 @pytest.fixture(autouse=True, scope="module")
-def _restore_sample_rate(client: OscilTestClient):
+def _restore_sample_rate(client: MultiScoperTestClient):
     """Restore the DAW to 44.1 kHz after every module in this file.
 
     Leaving the harness at 192 kHz drives downstream suites (particularly
@@ -67,7 +67,7 @@ def _restore_sample_rate(client: OscilTestClient):
 class TestSampleRateSweep:
     """Drive SR sweeps across the full range hosts report in the wild."""
 
-    def test_sweep_common_rates_no_crash(self, editor: OscilTestClient, source_id: str):
+    def test_sweep_common_rates_no_crash(self, editor: MultiScoperTestClient, source_id: str):
         """
         Sweep every common sample rate after adding one oscillator, then
         verify the oscillator still exists after every transition.  A crash
@@ -106,7 +106,7 @@ class TestSampleRateSweep:
             )
 
     def test_source_registered_across_sweep(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: `deferRegistration` on subsequent prepareToPlay calls
@@ -132,7 +132,7 @@ class TestSampleRateSweep:
             )
 
     def test_waveform_resumes_after_each_change(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         hasWaveformData coming back true proves the capture buffer was
@@ -165,18 +165,18 @@ class TestSampleRateSweep:
 class TestSampleRateValidation:
     """Reject invalid sample rates without crashing."""
 
-    def test_reject_zero(self, client: OscilTestClient):
+    def test_reject_zero(self, client: MultiScoperTestClient):
         """Sanity: 0 Hz is invalid and must be rejected with a 400."""
         resp = client._post("/daw/sampleRate", {"rate": 0})
         assert resp.status_code == 400, (
             f"Zero SR should return 400, got {resp.status_code}: {resp.text}"
         )
 
-    def test_reject_negative(self, client: OscilTestClient):
+    def test_reject_negative(self, client: MultiScoperTestClient):
         resp = client._post("/daw/sampleRate", {"rate": -44100.0})
         assert resp.status_code == 400
 
-    def test_reject_missing_field(self, client: OscilTestClient):
+    def test_reject_missing_field(self, client: MultiScoperTestClient):
         """Body without 'rate' should 400, not 500."""
         resp = client._post("/daw/sampleRate", {})
         assert resp.status_code == 400

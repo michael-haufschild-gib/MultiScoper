@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Configuration & Serialization
+    MultiScoper - Timing Engine Configuration & Serialization
     Config setters, ValueTree persistence, and entity config conversion
 */
 
@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 // === Configuration Getters ===
@@ -403,4 +403,4 @@ TimingConfig TimingEngine::toEntityConfig() const
     return entityConfig;
 }
 
-} // namespace oscil
+} // namespace multiscoper

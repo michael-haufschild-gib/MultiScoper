@@ -1,15 +1,15 @@
 /*
-    Oscil - Visual Preset Manager Implementation
+    MultiScoper - Visual Preset Manager Implementation
 */
 
 #include "rendering/PresetManager.h"
 
 #include <optional>
 
-namespace oscil
+namespace multiscoper
 {
 
-static const juce::Identifier PRESET_WRAPPER_TYPE("OscilPreset");
+static const juce::Identifier PRESET_WRAPPER_TYPE("MultiScoperPreset");
 
 std::optional<juce::ValueTree> PresetManager::parsePresetFile(const juce::File& file)
 {
@@ -33,8 +33,8 @@ PresetManager::PresetManager()
 #if JUCE_MAC
                       .getChildFile("Application Support")
 #endif
-                      .getChildFile("OscilAudio")
-                      .getChildFile("oscil4")
+                      .getChildFile("MultiScoper")
+                      .getChildFile("MultiScoper")
                       .getChildFile("presets");
 
     presetsDir_.createDirectory();
@@ -240,4 +240,4 @@ std::vector<juce::File> PresetManager::getUserPresetFiles() const
     return files;
 }
 
-} // namespace oscil
+} // namespace multiscoper

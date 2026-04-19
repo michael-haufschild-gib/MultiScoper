@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Oscil Reaper on-demand integration test runner.
+# MultiScoper Reaper on-demand integration test runner.
 # Launches Reaper with a Lua driver, reads JSON results, reports pass/fail.
 
 set -euo pipefail
@@ -10,8 +10,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # --- Configurable via env ---
 REAPER_PATH="${REAPER_PATH:-/Applications/REAPER.app/Contents/MacOS/REAPER}"
-OSCIL_PLUGIN_DIR="${OSCIL_PLUGIN_DIR:-${REPO_ROOT}/build/dev/Oscil_artefacts/Debug/VST3}"
-RESULTS_FILE="${RESULTS_FILE:-/tmp/oscil_reaper_results.json}"
+MULTISCOPER_PLUGIN_DIR="${MULTISCOPER_PLUGIN_DIR:-${REPO_ROOT}/build/dev/MultiScoper_artefacts/Debug/VST3}"
+RESULTS_FILE="${RESULTS_FILE:-/tmp/multiscoper_reaper_results.json}"
 
 DRIVER_LUA="${SCRIPT_DIR}/lib/run_all.lua"
 SCENARIOS_DIR="${SCRIPT_DIR}/scenarios"
@@ -27,13 +27,13 @@ if [[ ! -x "${REAPER_PATH}" ]]; then
   fail "Reaper binary not found at ${REAPER_PATH}. Install Reaper or set REAPER_PATH."
 fi
 
-if [[ ! -d "${OSCIL_PLUGIN_DIR}" ]]; then
-  fail "Oscil plugin dir missing: ${OSCIL_PLUGIN_DIR}
-Build the plugin first (cmake --build --preset dev) or set OSCIL_PLUGIN_DIR."
+if [[ ! -d "${MULTISCOPER_PLUGIN_DIR}" ]]; then
+  fail "MultiScoper plugin dir missing: ${MULTISCOPER_PLUGIN_DIR}
+Build the plugin first (cmake --build --preset dev) or set MULTISCOPER_PLUGIN_DIR."
 fi
 
-if ! compgen -G "${OSCIL_PLUGIN_DIR}/oscil4.vst3" > /dev/null; then
-  fail "oscil4.vst3 not found in ${OSCIL_PLUGIN_DIR}. Build the plugin first."
+if ! compgen -G "${MULTISCOPER_PLUGIN_DIR}/MultiScoper.vst3" > /dev/null; then
+  fail "MultiScoper.vst3 not found in ${MULTISCOPER_PLUGIN_DIR}. Build the plugin first."
 fi
 
 if [[ ! -f "${DRIVER_LUA}" ]]; then
@@ -44,13 +44,13 @@ fi
 rm -f "${RESULTS_FILE}"
 
 # --- Export context for Lua driver (Reaper exposes OS env to scripts). ---
-export OSCIL_TEST_SCENARIOS_DIR="${SCENARIOS_DIR}"
-export OSCIL_TEST_RESULTS_FILE="${RESULTS_FILE}"
-export OSCIL_TEST_SCENARIO_FILTER="${SCENARIO_FILTER}"
-export OSCIL_TEST_LIB_DIR="${SCRIPT_DIR}/lib"
+export MULTISCOPER_TEST_SCENARIOS_DIR="${SCENARIOS_DIR}"
+export MULTISCOPER_TEST_RESULTS_FILE="${RESULTS_FILE}"
+export MULTISCOPER_TEST_SCENARIO_FILTER="${SCENARIO_FILTER}"
+export MULTISCOPER_TEST_LIB_DIR="${SCRIPT_DIR}/lib"
 
 log "Reaper:      ${REAPER_PATH}"
-log "Plugin dir:  ${OSCIL_PLUGIN_DIR}"
+log "Plugin dir:  ${MULTISCOPER_PLUGIN_DIR}"
 log "Scenarios:   ${SCENARIOS_DIR}"
 log "Results:     ${RESULTS_FILE}"
 if [[ -n "${SCENARIO_FILTER}" ]]; then
@@ -66,7 +66,7 @@ log "Launching Reaper..."
 
 # --- Wait for results file.
 # The driver writes synchronously on completion; bounded poll guards against hangs.
-WAIT_SECS="${OSCIL_TEST_WAIT_SECS:-120}"
+WAIT_SECS="${MULTISCOPER_TEST_WAIT_SECS:-120}"
 elapsed=0
 while [[ ! -s "${RESULTS_FILE}" && ${elapsed} -lt ${WAIT_SECS} ]]; do
   sleep 1

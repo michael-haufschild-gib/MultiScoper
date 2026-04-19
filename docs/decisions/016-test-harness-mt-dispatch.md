@@ -8,7 +8,7 @@ Status: Accepted
 The in-process test harness (`test_harness/`) serves an HTTP API on port 8765.
 Every HTTP request is handled on an httplib worker thread — an arbitrary
 `std::thread` with no relationship to the JUCE message thread (MT). The
-plugin code under test (OscilPluginProcessor, OscilPluginEditor, OscilState,
+plugin code under test (MultiScoperPluginProcessor, MultiScoperPluginEditor, MultiScoperState,
 TestTrack) assumes message-thread affinity: structural edits, editor ops,
 parameter changes, state mutation, and JUCE Component queries are only
 legal on the MT.
@@ -29,12 +29,12 @@ load:
    stress level.
 
 2. **Data races on plugin internals.** Even without UAF, reading an
-   `OscilState` oscillator list or a `DecimatingCaptureBuffer`'s peak/RMS
+   `MultiScoperState` oscillator list or a `DecimatingCaptureBuffer`'s peak/RMS
    stats from the HTTP worker while the MT mutated them was torn-read
    territory — invisible under light load, flaky under stress.
 
 The `harness_api_audit.md` flagged 14+ endpoints reading `tracks_` on the
-HTTP thread and 9 reading `OscilState` / `InstanceRegistry` /
+HTTP thread and 9 reading `MultiScoperState` / `InstanceRegistry` /
 `CaptureBuffer` / `TimingEngine` without any MT hop.
 
 ## Decision
@@ -152,11 +152,11 @@ that passes `[&]` captures into `runOnTrackSync` /
 scripts now enforce this automatically:
 
 - `scripts/forbidden_patterns_lint.py` — catches the broader set of
-  past-bug regressions (gated by `OSCIL_ENABLE_FORBIDDEN_PATTERNS_LINT`).
+  past-bug regressions (gated by `MULTISCOPER_ENABLE_FORBIDDEN_PATTERNS_LINT`).
 - `scripts/harness_mt_capture_lint.py` — specifically flags `[&]` and
   stack-borrowing captures feeding `runOnTrackSync` /
   `runOnMessageThreadBlocking` / `callAsync` under `test_harness/`
-  (gated by `OSCIL_ENABLE_HARNESS_MT_CAPTURE_LINT`; both CMake switches
+  (gated by `MULTISCOPER_ENABLE_HARNESS_MT_CAPTURE_LINT`; both CMake switches
   default ON in the `dev` preset).
 
 Reviewers should still flag the pattern on sight — the linters shrink the

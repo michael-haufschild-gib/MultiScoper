@@ -1,5 +1,5 @@
 /*
-    Oscil - SingleShaderEffect subclass tests
+    MultiScoper - SingleShaderEffect subclass tests
 
     Covers the non-GL surface of each effect: id/displayName stability
     (preset persistence relies on these strings), settings round-trip via
@@ -19,9 +19,9 @@
 
 #include <gtest/gtest.h>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-using namespace oscil;
+using namespace multiscoper;
 
 // -----------------------------------------------------------------------------
 // Id / display name stability — preset files reference these by string.
@@ -190,4 +190,4 @@ TEST(SingleShaderEffectConfigure, ConfigureIsIdempotentAcrossRepeatedCalls)
     EXPECT_FLOAT_EQ(effect.getSettings().intensity, 0.1f) << "configure must fully overwrite prior state, not merge";
 }
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

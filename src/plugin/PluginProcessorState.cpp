@@ -1,17 +1,17 @@
 /*
-    Oscil - Plugin Processor State Serialization
+    MultiScoper - Plugin Processor State Serialization
     getStateInformation, setStateInformation, and updateCachedState
 */
 
-#include "core/OscilLog.h"
+#include "core/MultiScoperLog.h"
 
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginProcessor.h"
 
-namespace oscil
+namespace multiscoper
 {
 
-void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
+void MultiScoperPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     // CRITICAL: Some DAWs (Pro Tools, Reaper) may call this from audio thread
     // during save operations. We must not allocate memory in that case.
@@ -30,7 +30,7 @@ void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
         return;
     }
 
-    OSCIL_LOG(PLUGIN, "getStateInformation: serializing on message thread");
+    MULTISCOPER_LOG(PLUGIN, "getStateInformation: serializing on message thread");
     // Message thread path: perform full serialization then read the result.
     updateCachedState();
 
@@ -43,11 +43,16 @@ void OscilPluginProcessor::getStateInformation(juce::MemoryBlock& destData)
         destData.replaceAll(state->data(), state->size());
 }
 
-void OscilPluginProcessor::updateCachedState()
+void MultiScoperPluginProcessor::updateCachedState()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    // Sync timing engine state to OscilState before saving
+    // Persist the current trackIdentifier so cross-instance oscillator bindings
+    // can resolve after DAW save/reload. See PluginProcessor.cpp::ctor and
+    // reRegisterUnderPersistedTrackIdentifier.
+    state_.setTrackIdentifier(trackIdentifier_);
+
+    // Sync timing engine state to MultiScoperState before saving
     auto timingState = timingEngine_.toValueTree();
     auto& stateTree = state_.getState();
 
@@ -73,25 +78,33 @@ void OscilPluginProcessor::updateCachedState()
     }
 }
 
-void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
+void MultiScoperPluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     // Defer to message thread: fromXmlString allocates, state_ isn't thread-safe.
     // WeakReference handles processor destruction before callback runs.
     auto xmlString = std::make_shared<juce::String>(juce::String::createStringFromData(data, sizeInBytes));
     auto sampleRate = static_cast<int>(currentSampleRate_);
 
-    auto doRestoreState = [weakThis = juce::WeakReference<OscilPluginProcessor>(this), xmlString, sampleRate]() {
+    auto doRestoreState = [weakThis = juce::WeakReference<MultiScoperPluginProcessor>(this), xmlString, sampleRate]() {
         auto* processor = weakThis.get();
         if (!processor)
             return;
 
         // Parse and apply state (now safely on message thread)
-        OSCIL_LOG(PLUGIN, "setStateInformation: restoring state (" << xmlString->length() << " chars)");
+        MULTISCOPER_LOG(PLUGIN, "setStateInformation: restoring state (" << xmlString->length() << " chars)");
         if (!processor->state_.fromXmlString(*xmlString))
         {
-            OSCIL_LOG(PLUGIN, "setStateInformation: FAILED to parse state XML (" << xmlString->length() << " chars)");
+            MULTISCOPER_LOG(PLUGIN,
+                            "setStateInformation: FAILED to parse state XML (" << xmlString->length() << " chars)");
             return;
         }
+
+        // Restore persisted trackIdentifier before any source-binding work so
+        // the instance re-registers (or will register on prepareToPlay) under
+        // its stable identity, letting oscillators with persisted sourceIds
+        // resolve to the same sources across DAW save/reload.
+        const auto persistedTrackId = processor->state_.getTrackIdentifier();
+        processor->reRegisterUnderPersistedTrackIdentifier(persistedTrackId);
 
         // Apply restored timing state (TimingEngine uses atomics internally)
         auto timingTree = processor->state_.getState().getChildWithName(StateIds::Timing);
@@ -117,8 +130,8 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
         // Update cached state for real-time safe getStateInformation()
         processor->updateCachedState();
 
-        OSCIL_LOG(PLUGIN, "setStateInformation: restored successfully, " << processor->state_.getOscillatorCount()
-                                                                         << " oscillators");
+        MULTISCOPER_LOG(PLUGIN, "setStateInformation: restored successfully, " << processor->state_.getOscillatorCount()
+                                                                               << " oscillators");
     };
 
     if (juce::MessageManager::getInstance()->isThisTheMessageThread())
@@ -127,4 +140,4 @@ void OscilPluginProcessor::setStateInformation(const void* data, int sizeInBytes
         juce::MessageManager::callAsync(std::move(doRestoreState));
 }
 
-} // namespace oscil
+} // namespace multiscoper

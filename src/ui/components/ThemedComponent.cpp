@@ -1,10 +1,10 @@
 /*
-    Oscil - Themed Component Base Class Implementation
+    MultiScoper - Themed Component Base Class Implementation
 */
 
 #include "ui/components/ThemedComponent.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 ThemedComponent::ThemedComponent(IThemeService& themeService) : themeService_(themeService)
@@ -42,4 +42,4 @@ void ThemedComponent::onThemeChanged(const ColorTheme& /*newTheme*/)
     // Subclasses can override to add custom logic
 }
 
-} // namespace oscil
+} // namespace multiscoper

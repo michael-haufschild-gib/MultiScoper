@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator DSP-Related Tests
+    MultiScoper - Oscillator DSP-Related Tests
     Tests for processing mode semantics, trace behavior, string conversion,
     line width constraints, and interaction between mode and rendering state.
 */
@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class OscillatorDspTest : public ::testing::Test
 {

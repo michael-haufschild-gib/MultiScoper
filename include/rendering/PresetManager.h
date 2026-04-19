@@ -7,7 +7,7 @@
 #include <optional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct PresetInfo
@@ -60,4 +60,4 @@ private:
     juce::File presetsDir_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

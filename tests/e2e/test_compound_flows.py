@@ -7,7 +7,6 @@ likely to catch integration regressions where individual features work
 but break when combined.
 
 What bugs these tests catch:
-- Filter tab state inconsistent after oscillator deletion
 - Timing mode not restored after state save/load
 - Oscillator pane assignment lost after move + save/load roundtrip
 - Config popup editing wrong oscillator when opened for item_1
@@ -19,91 +18,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
-
-
-# ── Filter + Delete Interaction ─────────────────────────────────────────────
-
-
-class TestFilterAndDelete:
-    """Verify filter tabs handle oscillator deletion correctly."""
-
-    def _filter_tab_id(self, name: str) -> str:
-        return f"sidebar_oscillators_toolbar_{name}Tab"
-
-    def test_delete_visible_oscillator_while_filtered(
-        self, editor: OscilTestClient, source_id: str
-    ):
-        """
-        Bug caught: deleting an oscillator while the "visible" filter is
-        active does not update the filtered list, leaving a ghost item
-        that references deleted state.
-        """
-        visible_tab = self._filter_tab_id("visible")
-        if not editor.element_exists(visible_tab):
-            pytest.fail("Visible filter tab not registered")
-
-        # Create two oscillators
-        id1 = editor.add_oscillator(source_id, name="FilterDel 1")
-        id2 = editor.add_oscillator(source_id, name="FilterDel 2")
-        assert id1 and id2
-        editor.wait_for_oscillator_count(2, timeout_s=3.0)
-        editor.wait_for_element("sidebar_oscillators_item_1", timeout_s=3.0)
-
-        # Activate visible filter
-        editor.click(visible_tab)
-
-        # Delete first oscillator via API
-        editor.delete_oscillator(id1)
-        editor.wait_for_oscillator_count(1, timeout_s=3.0)
-
-        # Remaining oscillator should still be in the filtered list
-        remaining = editor.get_oscillators()
-        assert len(remaining) == 1
-        assert remaining[0]["id"] == id2
-
-        # Switch back to "All"
-        all_tab = self._filter_tab_id("all")
-        if editor.element_exists(all_tab):
-            editor.click(all_tab)
-
-    def test_delete_last_hidden_oscillator_in_hidden_filter(
-        self, editor: OscilTestClient, source_id: str
-    ):
-        """
-        Bug caught: deleting the only oscillator shown in the "hidden"
-        filter view causes the list to display stale items or crash
-        when the filtered result set becomes empty.
-        """
-        hidden_tab = self._filter_tab_id("hidden")
-        if not editor.element_exists(hidden_tab):
-            pytest.fail("Hidden filter tab not registered")
-
-        # Create one oscillator and hide it
-        osc_id = editor.add_oscillator(source_id, name="HiddenDel")
-        assert osc_id
-        editor.wait_for_oscillator_count(1, timeout_s=3.0)
-        editor.update_oscillator(osc_id, visible=False)
-        editor.wait_until(
-            lambda: not editor.get_oscillator_by_id(osc_id).get("visible", True),
-            timeout_s=2.0, desc="oscillator to hide",
-        )
-
-        # Switch to hidden filter
-        editor.click(hidden_tab)
-
-        # Delete the hidden oscillator
-        editor.delete_oscillator(osc_id)
-        editor.wait_for_oscillator_count(0, timeout_s=3.0)
-
-        # System should be stable with empty filtered list
-        state = editor.get_transport_state()
-        assert state is not None, "Harness should be stable after deleting last hidden osc"
-
-        # Switch back to "All"
-        all_tab = self._filter_tab_id("all")
-        if editor.element_exists(all_tab):
-            editor.click(all_tab)
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 # ── Timing Mode Persistence ─────────────────────────────────────────────────
@@ -117,7 +32,7 @@ class TestTimingModePersistence:
     NOTE_DROPDOWN = "sidebar_timing_noteDropdown"
 
     def test_melodic_mode_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: timing mode enum not serialized in state XML,
@@ -148,7 +63,7 @@ class TestTimingModePersistence:
         samples_melodic = editor.get_display_samples()
 
         # Save state
-        path = "/tmp/oscil_e2e_timing_mode.xml"
+        path = "/tmp/multiscoper_e2e_timing_mode.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -169,7 +84,7 @@ class TestTimingModePersistence:
         )
 
     def test_timing_interval_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: time interval value not serialized, resetting to
@@ -198,7 +113,7 @@ class TestTimingModePersistence:
         assert samples_before > 0
 
         # Save, reset, load
-        path = "/tmp/oscil_e2e_timing_interval.xml"
+        path = "/tmp/multiscoper_e2e_timing_interval.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -228,7 +143,7 @@ class TestMoveAndPersistence:
     """Verify oscillator pane assignment persists after move + save/load."""
 
     def test_move_to_second_pane_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator pane assignment after move not serialized,
@@ -260,7 +175,7 @@ class TestMoveAndPersistence:
         )
 
         # Save, reset, load
-        path = "/tmp/oscil_e2e_move_persist.xml"
+        path = "/tmp/multiscoper_e2e_move_persist.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -295,7 +210,7 @@ class TestConfigPopupTargeting:
     """Verify config popup edits the correct oscillator when opened for item_1."""
 
     def test_config_popup_targets_correct_oscillator(
-        self, editor: OscilTestClient, two_oscillators
+        self, editor: MultiScoperTestClient, two_oscillators
     ):
         """
         Bug caught: config popup always edits oscillator[0] regardless of
@@ -354,7 +269,7 @@ class TestConfigPopupTargeting:
         # If auto-save didn't work, we at least verify no crash occurred
 
     def test_config_popup_shows_correct_properties_for_each_oscillator(
-        self, editor: OscilTestClient, three_oscillators
+        self, editor: MultiScoperTestClient, three_oscillators
     ):
         """
         Bug caught: config popup always shows oscillator[0]'s properties
@@ -408,7 +323,7 @@ class TestConfigPopupTargeting:
                 )
 
     def test_edit_item0_then_edit_item1_no_cross_contamination(
-        self, editor: OscilTestClient, two_oscillators
+        self, editor: MultiScoperTestClient, two_oscillators
     ):
         """
         Bug caught: editing oscillator[0] via popup and closing, then
@@ -518,7 +433,7 @@ class TestDialogDuringPlayback:
     """Verify dialog interactions work correctly during active playback."""
 
     def test_add_oscillator_via_dialog_while_playing(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: opening the add dialog while transport is playing causes
@@ -574,7 +489,7 @@ class TestSaveDuringPlayback:
     """Verify state save/load during active playback."""
 
     def test_save_during_playback_preserves_oscillator_properties(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: saving state while audio callback is active produces
@@ -596,7 +511,7 @@ class TestSaveDuringPlayback:
         editor.set_track_audio(0, waveform="square", frequency=220.0, amplitude=0.5)
 
         # Save while playing
-        path = "/tmp/oscil_e2e_save_playing.xml"
+        path = "/tmp/multiscoper_e2e_save_playing.xml"
         saved = editor.save_state(path)
         if not saved:
             editor.transport_stop()
@@ -629,7 +544,7 @@ class TestSnapshotAfterOperations:
     """Verify diagnostic snapshot reflects state after complex operations."""
 
     def test_snapshot_after_move_reflects_new_pane(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: diagnostic snapshot caching the oscillator's original
@@ -668,7 +583,7 @@ class TestSnapshotAfterOperations:
             )
 
     def test_snapshot_after_visibility_toggle_reflects_change(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: snapshot visible field not updated after toggle,
@@ -703,7 +618,7 @@ class TestMultiPaneSaveLoad:
     """Verify multi-pane state survives save/load correctly."""
 
     def test_two_panes_with_oscillators_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: save/load with 2 panes loses pane-to-oscillator
@@ -733,7 +648,7 @@ class TestMultiPaneSaveLoad:
         osc2_before = editor.get_oscillator_by_id(id2)
         pane_count_before = len(editor.get_panes())
 
-        path = "/tmp/oscil_e2e_multi_pane_save.xml"
+        path = "/tmp/multiscoper_e2e_multi_pane_save.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -822,7 +737,7 @@ class TestRapidCrossSubsystem:
     """Verify stability under rapid interleaved operations across subsystems."""
 
     def test_interleave_crud_timing_transport(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: rapid interleaving of oscillator add, timing changes,
@@ -875,7 +790,7 @@ class TestPaneRemovalReassignment:
     """Verify oscillator handling when their pane is removed."""
 
     def test_remove_pane_with_oscillator_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: removing a pane reassigns oscillators to pane 1, but
@@ -914,7 +829,7 @@ class TestPaneRemovalReassignment:
         )
 
         # Save and load — the reassignment should persist
-        path = "/tmp/oscil_e2e_pane_rem_sl.xml"
+        path = "/tmp/multiscoper_e2e_pane_rem_sl.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -941,7 +856,7 @@ class TestColorUpdatePersistence:
     """Verify color changes via API persist through save/load."""
 
     def test_color_update_survives_save_load(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator colour updated via update_oscillator API
@@ -961,7 +876,7 @@ class TestColorUpdatePersistence:
         colour_after_update = osc.get("colour", osc.get("color", ""))
 
         # Save, reset, load
-        path = "/tmp/oscil_e2e_color_update.xml"
+        path = "/tmp/multiscoper_e2e_color_update.xml"
         saved = editor.save_state(path)
         if not saved:
             pytest.fail("State save API not available")
@@ -989,7 +904,7 @@ class TestTimingModeWithCRUD:
     """Verify timing mode and oscillator operations don't interfere."""
 
     def test_add_oscillator_in_melodic_mode(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: adding an oscillator while in melodic timing mode

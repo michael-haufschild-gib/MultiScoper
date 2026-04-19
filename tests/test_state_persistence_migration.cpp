@@ -1,16 +1,16 @@
 /*
-    Oscil - State Persistence Tests: Schema Migration
+    MultiScoper - State Persistence Tests: Schema Migration
     Tests for version migrations and backward compatibility
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 
 #include "helpers/Fixtures.h"
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class StatePersistenceMigrationTest : public StateTestFixture
 {
@@ -22,15 +22,15 @@ class StatePersistenceMigrationTest : public StateTestFixture
 TEST_F(StatePersistenceMigrationTest, MissingSchemaVersion)
 {
     juce::String oldXml = R"(
-        <OscilState>
+        <MultiScoperState>
             <Oscillators/>
             <Theme themeName="Classic Green"/>
-        </OscilState>
+        </MultiScoperState>
     )";
     EXPECT_TRUE(state->fromXmlString(oldXml));
 
     // Post-migration the version is stamped to current.
-    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(state->getThemeName(), "Classic Green");
 }
 
@@ -38,14 +38,14 @@ TEST_F(StatePersistenceMigrationTest, MissingSchemaVersion)
 TEST_F(StatePersistenceMigrationTest, OldSchemaVersion)
 {
     juce::String v1Xml = R"(
-        <OscilState version="1">
+        <MultiScoperState version="1">
             <Oscillators/>
             <Theme themeName="Old Theme"/>
-        </OscilState>
+        </MultiScoperState>
     )";
     EXPECT_TRUE(state->fromXmlString(v1Xml));
 
-    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(state->getThemeName(), "Old Theme");
 }
 
@@ -54,14 +54,14 @@ TEST_F(StatePersistenceMigrationTest, FutureSchemaVersion)
 {
     auto const themeBefore = state->getThemeName();
     juce::String futureXml = R"(
-        <OscilState version="999">
+        <MultiScoperState version="999">
             <Oscillators/>
             <Theme themeName="Future Theme"/>
-        </OscilState>
+        </MultiScoperState>
     )";
     EXPECT_FALSE(state->fromXmlString(futureXml));
 
-    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(state->getThemeName(), themeBefore);
     EXPECT_NE(state->getThemeName(), "Future Theme");
 }
@@ -70,10 +70,10 @@ TEST_F(StatePersistenceMigrationTest, FutureSchemaVersion)
 TEST_F(StatePersistenceMigrationTest, MalformedXmlRecovery)
 {
     // Malformed XML (unclosed tag)
-    EXPECT_FALSE(state->fromXmlString("<OscilState><broken"));
+    EXPECT_FALSE(state->fromXmlString("<MultiScoperState><broken"));
 
     // State should remain usable with defaults
-    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
 }
 
 // Test: Truncated XML recovery

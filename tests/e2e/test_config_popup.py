@@ -16,7 +16,7 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestConfigPopupLifecycle:
@@ -57,7 +57,7 @@ class TestConfigPopupLifecycle:
     def test_source_selector_present(self, config_popup):
         """
         Bug caught: source selector not present or not visible in config popup.
-        Note: SourceSelectorComponent is not an OscilDropdown, so numItems
+        Note: SourceSelectorComponent is not an MultiScoperDropdown, so numItems
         is not available through the element info API.  We verify presence
         and visibility instead.
         """

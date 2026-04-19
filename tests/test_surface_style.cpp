@@ -1,5 +1,5 @@
 /*
-    Oscil - SurfaceStyle Tests
+    MultiScoper - SurfaceStyle Tests
 
     Validates the flat surface token pack computed from a ColorTheme. The
     previous glassmorphism aesthetic (translucent fills, inset highlight,
@@ -13,7 +13,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SurfaceStyleTest : public ::testing::Test
 {

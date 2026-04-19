@@ -1,5 +1,5 @@
 -- reaper_test_lib.lua
--- Shared helpers for Oscil Reaper integration scenarios.
+-- Shared helpers for MultiScoper Reaper integration scenarios.
 -- Scenarios require() this module; the driver (run_all.lua) loads it first
 -- and places its directory on package.path.
 
@@ -64,7 +64,7 @@ end
 
 -- Reaper uses prefix conventions in TrackFX_AddByName to disambiguate formats:
 --   "VST3:<name>" forces VST3, "AU:<name>" forces AU, "CLAP:<name>" forces CLAP.
--- plugin_name here is the bare name (e.g. "oscil4"); prefix is added per fn.
+-- plugin_name here is the bare name (e.g. "MultiScoper"); prefix is added per fn.
 local function add_fx(track_idx, prefixed_name)
   local tr = ensure_track(track_idx)
   -- instantiate = -1 => always instantiate. Returns fx index or -1 on failure.
@@ -168,7 +168,7 @@ function M.dump_plugin_state(track_idx, plugin_idx)
   return trchunk
 end
 
--- Returns true if the given state chunk contains a recognizable oscil4 FX block.
+-- Returns true if the given state chunk contains a recognizable MultiScoper FX block.
 -- Covers both VST3, AU, and CLAP wrappers — we just check the name.
 function M.state_mentions_plugin(chunk, plugin_name)
   if type(chunk) ~= "string" then return false end

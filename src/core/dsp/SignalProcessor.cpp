@@ -1,5 +1,5 @@
 /*
-    Oscil - Signal Processor Implementation
+    MultiScoper - Signal Processor Implementation
 */
 
 #include "core/dsp/SignalProcessor.h"
@@ -12,14 +12,14 @@
 // double-underscore spelling; this TU-scoped macro resolves to the correct
 // keyword per compiler (kept local since no other TU currently needs it).
 #ifdef _MSC_VER
-    #define OSCIL_RESTRICT __restrict
+    #define MULTISCOPER_RESTRICT __restrict
 #elif defined(__GNUC__) || defined(__clang__)
-    #define OSCIL_RESTRICT __restrict__
+    #define MULTISCOPER_RESTRICT __restrict__
 #else
-    #define OSCIL_RESTRICT
+    #define MULTISCOPER_RESTRICT
 #endif
 
-namespace oscil
+namespace multiscoper
 {
 namespace
 {
@@ -136,8 +136,8 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
     int const numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
 
-    float* OSCIL_RESTRICT out = output.channel1.data();
-    const float* OSCIL_RESTRICT lp = left.data();
+    float* MULTISCOPER_RESTRICT out = output.channel1.data();
+    const float* MULTISCOPER_RESTRICT lp = left.data();
     auto const n = static_cast<size_t>(numSamples);
 
     // Hoist loop-invariant branch outside the loop so the body has no data
@@ -146,7 +146,7 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
     // (see logs/perf/baseline_20260417.json).
     if (right.size() >= n)
     {
-        const float* OSCIL_RESTRICT rp = right.data();
+        const float* MULTISCOPER_RESTRICT rp = right.data();
         for (size_t i = 0; i < n; ++i)
             out[i] = (lp[i] + rp[i]) * 0.5f;
     }
@@ -154,7 +154,7 @@ void SignalProcessor::processMono(std::span<const float> left, std::span<const f
     {
         // Uncommon: right is shorter than left.  Straight portion, then mono-fold tail.
         const size_t common = right.size();
-        const float* OSCIL_RESTRICT rp = right.data();
+        const float* MULTISCOPER_RESTRICT rp = right.data();
         for (size_t i = 0; i < common; ++i)
             out[i] = (lp[i] + rp[i]) * 0.5f;
         for (size_t i = common; i < n; ++i)
@@ -181,21 +181,21 @@ void SignalProcessor::processSide(std::span<const float> left, std::span<const f
     int const numSamples = static_cast<int>(left.size());
     output.resize(numSamples, false);
 
-    float* OSCIL_RESTRICT out = output.channel1.data();
-    const float* OSCIL_RESTRICT lp = left.data();
+    float* MULTISCOPER_RESTRICT out = output.channel1.data();
+    const float* MULTISCOPER_RESTRICT lp = left.data();
     auto const n = static_cast<size_t>(numSamples);
 
     // See processMono for rationale on hoisting the branch.
     if (right.size() >= n)
     {
-        const float* OSCIL_RESTRICT rp = right.data();
+        const float* MULTISCOPER_RESTRICT rp = right.data();
         for (size_t i = 0; i < n; ++i)
             out[i] = (lp[i] - rp[i]) * 0.5f;
     }
     else if (!right.empty())
     {
         const size_t common = right.size();
-        const float* OSCIL_RESTRICT rp = right.data();
+        const float* MULTISCOPER_RESTRICT rp = right.data();
         for (size_t i = 0; i < common; ++i)
             out[i] = (lp[i] - rp[i]) * 0.5f;
         for (size_t i = common; i < n; ++i)
@@ -292,10 +292,17 @@ float SignalProcessor::calculateRMS(std::span<const float> samples)
     if (samples.empty())
         return 0.0f;
 
+    // NaN-safe accumulation: a single NaN sample would poison sumSquares
+    // via NaN*NaN=NaN → sqrt(NaN)=NaN, producing "nan" in the UI's RMS
+    // label. Peak already filters NaN via absVal > peak (always false).
+    // Match that contract here so mixed-thread capture buffers, malformed
+    // test injections, and denormals-flushed-to-NaN paths all produce a
+    // finite RMS without leaking NaN into the UI or auto-scale logic.
     double sumSquares = 0.0;
     for (float const sample : samples)
     {
-        sumSquares += sample * sample;
+        float const s = std::isfinite(sample) ? sample : 0.0f;
+        sumSquares += static_cast<double>(s) * static_cast<double>(s);
     }
     return static_cast<float>(std::sqrt(sumSquares / static_cast<double>(samples.size())));
 }
@@ -432,4 +439,4 @@ void AdaptiveDecimator::processWithEnvelope(std::span<const float> input, std::v
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>empty-state</title>
+<style>
+body { margin:0; padding:24px; background:#05070B; font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; color:#E8EAED; font-variant-numeric: tabular-nums; }
+.variant-label { font-size:12px; color:#8A94A3; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 8px 0; }
+.frame { position:relative; width:1200px; height:760px; overflow:hidden; margin:0 0 24px 0; background:#0A0D12; border-radius:10px; }
+.content-area { position:absolute; left:0; top:0; height:738px; background:#0A0D12; }
+.sidebar { position:absolute; right:0; top:0; height:738px; background:#10141B; border-left:1px solid #1F2630; }
+.status-bar { position:absolute; left:0; bottom:0; width:1200px; height:22px; background:#10141B; }
+.icon-btn { position:absolute; width:24px; height:24px; border-radius:4px; }
+.sec-header { position:absolute; height:40px; }
+.sec-label { position:absolute; top:0; line-height:40px; font-size:10px; font-weight:600; color:#8A94A3; text-transform:uppercase; letter-spacing:0.12em; }
+.count-badge { position:absolute; top:11px; width:18px; height:18px; border-radius:999px; text-align:center; line-height:18px; font-size:10px; font-weight:600; }
+.osc-row { position:absolute; left:0; width:300px; height:56px; }
+.sb-divider { position:absolute; left:16px; right:16px; height:1px; background:#1F2630; }
+.sub-header { position:absolute; font-size:10px; font-weight:600; color:#8A94A3; text-transform:uppercase; letter-spacing:0.12em; }
+.dropdown { position:absolute; height:32px; border-radius:6px; background:#161B24; border:1px solid #242A35; }
+.dropdown-text { position:absolute; left:10px; top:0; line-height:32px; font-size:12px; color:#E8EAED; }
+.dropdown-chev { position:absolute; right:8px; top:9px; color:#8A94A3; }
+.toggle-track { position:absolute; width:34px; height:18px; border-radius:999px; }
+.toggle-thumb { position:absolute; top:2px; width:14px; height:14px; border-radius:999px; }
+.slider-track { position:absolute; height:4px; border-radius:2px; background:#242A35; }
+.slider-fill { position:absolute; height:4px; border-radius:2px; background:#1FD4F3; }
+.slider-thumb { position:absolute; width:14px; height:14px; border-radius:999px; background:#FFFFFF; top:-5px; }
+.metric { position:absolute; top:0; line-height:22px; font-size:11px; color:#8A94A3; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="variant-label">EMPTY STATE — NO OSCILLATORS</div>
+<div class="frame">
+  <div class="content-area" style="width:900px;"></div>
+
+  <!-- Empty-state card -->
+  <div style="position:absolute;left:210px;top:209px;width:480px;height:320px;background:#0F131A;border:1px solid rgba(232,234,237,0.12);border-radius:12px;">
+    <!-- Illustration area -->
+    <div style="position:absolute;left:0;top:0;right:0;height:160px;">
+      <div style="position:absolute;left:140px;top:20px;width:200px;height:120px;">
+        <!-- faint grid -->
+        <svg width="200" height="120" viewBox="0 0 200 120" style="position:absolute;left:0;top:0;">
+          <line x1="40" y1="0" x2="40" y2="120" stroke="#171C25" stroke-width="1"/>
+          <line x1="80" y1="0" x2="80" y2="120" stroke="#242A35" stroke-width="1"/>
+          <line x1="120" y1="0" x2="120" y2="120" stroke="#242A35" stroke-width="1"/>
+          <line x1="160" y1="0" x2="160" y2="120" stroke="#171C25" stroke-width="1"/>
+          <line x1="0" y1="40" x2="200" y2="40" stroke="#171C25" stroke-width="1"/>
+          <line x1="0" y1="80" x2="200" y2="80" stroke="#171C25" stroke-width="1"/>
+        </svg>
+        <!-- three lines -->
+        <svg width="200" height="120" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:-40px;">
+          <polyline fill="none" stroke="#1FD4F3" stroke-opacity="0.4" stroke-width="1.5" stroke-linejoin="round" points="0,100 30,98 60,102 90,95 120,108 150,88 180,112 210,80 240,120 270,70 300,130 330,60 360,140 390,50 420,145 450,55 480,135 510,65 540,125 570,75 600,115 630,85 660,105 690,95 720,100 750,98 780,102 810,99 840,100 870,100 900,101 930,99 960,100 990,100 1000,100"/>
+        </svg>
+        <svg width="200" height="120" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:0;">
+          <polyline fill="none" stroke="#E24BA6" stroke-opacity="0.4" stroke-width="1.5" stroke-linejoin="round" points="0,100 30,98 60,102 90,95 120,108 150,88 180,112 210,80 240,120 270,70 300,130 330,60 360,140 390,50 420,145 450,55 480,135 510,65 540,125 570,75 600,115 630,85 660,105 690,95 720,100 750,98 780,102 810,99 840,100 870,100 900,101 930,99 960,100 990,100 1000,100"/>
+        </svg>
+        <svg width="200" height="120" viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute;left:0;top:40px;">
+          <polyline fill="none" stroke="#4AD070" stroke-opacity="0.4" stroke-width="1.5" stroke-linejoin="round" points="0,100 30,98 60,102 90,95 120,108 150,88 180,112 210,80 240,120 270,70 300,130 330,60 360,140 390,50 420,145 450,55 480,135 510,65 540,125 570,75 600,115 630,85 660,105 690,95 720,100 750,98 780,102 810,99 840,100 870,100 900,101 930,99 960,100 990,100 1000,100"/>
+        </svg>
+      </div>
+    </div>
+    <!-- Title -->
+    <div style="position:absolute;left:0;top:176px;right:0;height:24px;text-align:center;font-size:18px;font-weight:600;color:#E8EAED;line-height:24px;">No Oscillators Yet</div>
+    <!-- Body -->
+    <div style="position:absolute;left:40px;top:208px;right:40px;height:40px;text-align:center;font-size:13px;color:#8A94A3;line-height:20px;">Add an oscillator to start visualizing any track in your session.</div>
+    <!-- CTA -->
+    <div style="position:absolute;left:150px;top:260px;width:180px;height:36px;border-radius:6px;background:#007ACC;text-align:center;line-height:36px;font-size:13px;font-weight:600;color:#FFFFFF;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:36px;top:11px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span style="position:absolute;left:56px;top:0;">Add Oscillator</span>
+    </div>
+  </div>
+
+  <!-- Sidebar expanded -->
+  <div class="sidebar" style="width:300px;">
+    <div style="position:absolute;left:0;top:0;width:300px;height:40px;border-bottom:1px solid #1F2630;">
+      <div class="icon-btn" style="right:8px;top:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><polyline points="15 18 9 12 15 6"/></svg></div>
+    </div>
+
+    <!-- OSCILLATORS (empty) -->
+    <div class="sec-header" style="left:0;top:40px;width:300px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="sec-label" style="left:28px;">OSCILLATORS</span>
+      <div class="count-badge" style="right:16px;background:rgba(138,148,163,0.20);color:#4B5563;">0</div>
+    </div>
+    <div style="position:absolute;left:16px;top:88px;width:268px;height:32px;border-radius:6px;background:#007ACC;text-align:center;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;">+ Add Oscillator</div>
+    <!-- Empty placeholder -->
+    <div style="position:absolute;left:16px;top:132px;width:266px;height:78px;border:1px dashed #242A35;border-radius:6px;">
+      <div style="position:absolute;left:0;top:0;width:266px;height:78px;text-align:center;line-height:78px;font-size:12px;color:#4B5563;">Oscillators will appear here</div>
+    </div>
+    <div class="sb-divider" style="top:228px;"></div>
+
+    <!-- TIMING -->
+    <div class="sec-header" style="left:0;top:236px;width:300px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="sec-label" style="left:28px;">TIMING</span>
+    </div>
+    <div style="position:absolute;left:16px;top:284px;width:268px;height:28px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+      <div style="position:absolute;left:0;top:0;width:134px;height:28px;border-radius:6px;background:rgba(31,212,243,0.15);text-align:center;line-height:28px;font-size:11px;font-weight:600;color:#1FD4F3;">TIME</div>
+      <div style="position:absolute;left:134px;top:0;width:1px;height:28px;background:#242A35;"></div>
+      <div style="position:absolute;left:135px;top:0;width:133px;height:28px;text-align:center;line-height:28px;font-size:11px;color:#8A94A3;">MELODIC</div>
+    </div>
+    <span style="position:absolute;left:16px;top:324px;line-height:32px;font-size:12px;color:#E8EAED;">Mode</span>
+    <div class="dropdown" style="left:80px;top:324px;width:204px;"><span class="dropdown-text">Free Running</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="dropdown" style="left:16px;top:364px;width:268px;"><span class="dropdown-text">1/4 Note</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <span style="position:absolute;left:16px;top:404px;line-height:32px;font-size:12px;color:#E8EAED;">BPM</span>
+    <div class="dropdown" style="left:52px;top:404px;width:80px;"><span style="position:absolute;left:0;top:0;width:80px;line-height:32px;text-align:center;font-size:12px;font-weight:600;color:#E8EAED;">120.0</span></div>
+    <div class="toggle-track" style="left:144px;top:411px;background:#3A3A3A;"><div class="toggle-thumb" style="left:2px;background:#E0E0E0;"></div></div>
+    <span style="position:absolute;left:186px;top:404px;line-height:32px;font-size:12px;color:#E8EAED;">Sync</span>
+    <div class="sb-divider" style="top:460px;"></div>
+
+    <!-- OPTIONS -->
+    <div class="sec-header" style="left:0;top:468px;width:300px;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#8A94A3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:13px;"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="sec-label" style="left:28px;">OPTIONS</span>
+    </div>
+    <span style="position:absolute;left:16px;top:516px;font-size:12px;font-weight:600;color:#E8EAED;">Gain</span>
+    <span style="position:absolute;right:16px;top:516px;font-size:12px;color:#8A94A3;">0.0 dB</span>
+    <div style="position:absolute;left:16px;top:540px;width:268px;height:14px;"><div class="slider-track" style="left:0;top:5px;width:268px;"></div><div class="slider-fill" style="left:0;top:5px;width:134px;"></div><div class="slider-thumb" style="left:127px;"></div></div>
+    <span class="sub-header" style="left:16px;top:568px;">DISPLAY</span>
+    <span style="position:absolute;left:16px;top:590px;line-height:22px;font-size:12px;color:#E8EAED;">Show Grid</span>
+    <div class="toggle-track" style="right:16px;top:592px;background:#4AD070;"><div class="toggle-thumb" style="left:18px;background:#FFFFFF;"></div></div>
+    <span style="position:absolute;left:16px;top:618px;line-height:22px;font-size:12px;color:#E8EAED;">Auto-Scale</span>
+    <div class="toggle-track" style="right:16px;top:620px;background:#3A3A3A;"><div class="toggle-thumb" style="left:2px;background:#E0E0E0;"></div></div>
+    <span class="sub-header" style="left:16px;top:648px;">LAYOUT</span>
+    <div class="dropdown" style="left:16px;top:670px;width:268px;"><span class="dropdown-text">2 Columns</span><svg class="dropdown-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span style="position:absolute;left:10px;top:0;line-height:22px;font-size:12px;color:#8A94A3;">Click Add Oscillator to begin</span>
+    <div style="position:absolute;right:508px;top:5px;width:1px;height:12px;background:#1F2630;"></div>
+    <span class="metric" style="right:8px;width:70px;color:#00DD00;">60.0 FPS</span>
+    <span class="metric" style="right:86px;width:80px;">CPU: 1.1%</span>
+    <span class="metric" style="right:174px;width:90px;">Mem: 241.0 MB</span>
+    <span class="metric" style="right:272px;width:60px;">Osc: 0</span>
+    <span class="metric" style="right:340px;width:60px;">Src: 6</span>
+    <span class="metric" style="right:408px;width:80px;">OpenGL</span>
+  </div>
+</div>
+
+</body>
+</html>

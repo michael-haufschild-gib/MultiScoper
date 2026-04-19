@@ -1,5 +1,5 @@
 /*
-    Oscil - Decimating Capture Buffer Tests (Edge Cases)
+    MultiScoper - Decimating Capture Buffer Tests (Edge Cases)
     Memory usage, clear/reset, metering, reconfiguration, internal access
 */
 
@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 #include <numeric>
 
-using namespace oscil;
+using namespace multiscoper;
 
 //==============================================================================
 // Memory Usage Tests

@@ -1,5 +1,5 @@
 /*
-    Oscil - SignalProcessor Property-Based Tests (rapidcheck)
+    MultiScoper - SignalProcessor Property-Based Tests (rapidcheck)
 
     Invariants asserted here complement the hand-written tests in
     test_signal_processor.cpp by exercising generated inputs across
@@ -53,7 +53,7 @@ float boundedMagnitudeEpsilon(float inputBound)
 
 } // namespace
 
-using namespace oscil;
+using namespace multiscoper;
 
 // ---------------------------------------------------------------------------
 // Property: Output magnitude is bounded by input magnitude (all modes).

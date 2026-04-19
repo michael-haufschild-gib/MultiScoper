@@ -1,12 +1,12 @@
 /*
-    Oscil - Single Shader Effect Base Class Implementation
+    MultiScoper - Single Shader Effect Base Class Implementation
 */
 
 #include "rendering/effects/SingleShaderEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -77,6 +77,6 @@ void SingleShaderEffect::apply(juce::OpenGLContext& context, Framebuffer* source
     destination->unbind();
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

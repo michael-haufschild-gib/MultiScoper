@@ -1,5 +1,5 @@
 /*
-    Oscil - State Handler
+    MultiScoper - State Handler
     Handles state management test server endpoints
 */
 
@@ -11,7 +11,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace oscil
+namespace multiscoper
 {
 
 class SharedCaptureBuffer;
@@ -24,7 +24,7 @@ class SharedCaptureBuffer;
 class StateHandler : public TestServerHandlerBase
 {
 public:
-    StateHandler(OscilPluginEditor& editor,
+    StateHandler(MultiScoperPluginEditor& editor,
                  std::unordered_map<std::string, std::shared_ptr<SharedCaptureBuffer>>& testSourceBuffers, int port)
         : TestServerHandlerBase(editor)
         , testSourceBuffers_(testSourceBuffers)
@@ -42,4 +42,4 @@ private:
     int port_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

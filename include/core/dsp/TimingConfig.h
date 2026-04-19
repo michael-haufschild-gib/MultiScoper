@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Configuration Entity
+    MultiScoper - Timing Configuration Entity
     Manages timing modes, intervals, and host synchronization
     PRD aligned: Entities -> TimingConfig
 */
@@ -15,7 +15,7 @@
 #include <cmath>
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -80,7 +80,7 @@ struct TimingConfig
      */
     static float getNoteIntervalMultiplier(NoteInterval interval, int timeSigNumerator = 4)
     {
-        return oscil::getNoteIntervalMultiplier(interval, timeSigNumerator);
+        return multiscoper::getNoteIntervalMultiplier(interval, timeSigNumerator);
     }
 
     /**
@@ -243,4 +243,4 @@ struct GridConfiguration
     int timeSigDenominator = 4;
 };
 
-} // namespace oscil
+} // namespace multiscoper

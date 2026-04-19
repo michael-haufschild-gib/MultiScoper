@@ -1,6 +1,6 @@
 /*
-    Oscil - Add Oscillator Dialog Implementation
-    Content component for adding a new oscillator (hosted in OscilModal)
+    MultiScoper - Add Oscillator Dialog Implementation
+    Content component for adding a new oscillator (hosted in MultiScoperModal)
 */
 
 #include "ui/dialogs/AddOscillatorDialog.h"
@@ -9,12 +9,12 @@
 
 #include "rendering/VisualConfiguration.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 AddOscillatorDialog::AddOscillatorDialog(IThemeService& themeService) : ThemedComponent(themeService)
 {
-    OSCIL_REGISTER_TEST_ID("addOscillatorDialog");
+    MULTISCOPER_REGISTER_TEST_ID("addOscillatorDialog");
     setupComponents();
 }
 
@@ -24,8 +24,8 @@ void AddOscillatorDialog::createFormFields()
 {
     sourceLabel_ = std::make_unique<juce::Label>("", "Source");
     addAndMakeVisible(*sourceLabel_);
-    sourceDropdown_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "Select source...", "addOscillatorDialog_sourceDropdown");
+    sourceDropdown_ = std::make_unique<MultiScoperDropdown>(getThemeService(), "Select source...",
+                                                            "addOscillatorDialog_sourceDropdown");
     sourceDropdown_->onSelectionChanged = [this](int) { handleSourceChange(); };
     addAndMakeVisible(*sourceDropdown_);
 
@@ -38,21 +38,21 @@ void AddOscillatorDialog::createFormFields()
 
     nameLabel_ = std::make_unique<juce::Label>("", "Name");
     addAndMakeVisible(*nameLabel_);
-    nameField_ =
-        std::make_unique<OscilTextField>(getThemeService(), TextFieldVariant::Text, "addOscillatorDialog_nameField");
+    nameField_ = std::make_unique<MultiScoperTextField>(getThemeService(), TextFieldVariant::Text,
+                                                        "addOscillatorDialog_nameField");
     nameField_->setPlaceholder("Oscillator name");
     addAndMakeVisible(*nameField_);
 
     colorLabel_ = std::make_unique<juce::Label>("", "Color");
     addAndMakeVisible(*colorLabel_);
-    colorSwatches_ = std::make_unique<OscilColorSwatches>(getThemeService(), "addOscillatorDialog_colorPicker");
+    colorSwatches_ = std::make_unique<MultiScoperColorSwatches>(getThemeService(), "addOscillatorDialog_colorPicker");
     colorSwatches_->setColors(getDefaultColors());
     addAndMakeVisible(*colorSwatches_);
 
     visualPresetLabel_ = std::make_unique<juce::Label>("", "Visual Preset");
     addAndMakeVisible(*visualPresetLabel_);
     visualPresetDropdown_ =
-        std::make_unique<OscilDropdown>(getThemeService(), "", "addOscillatorDialog_visualPresetDropdown");
+        std::make_unique<MultiScoperDropdown>(getThemeService(), "", "addOscillatorDialog_visualPresetDropdown");
     populateVisualPresetDropdown();
     addAndMakeVisible(*visualPresetDropdown_);
 
@@ -65,12 +65,12 @@ void AddOscillatorDialog::setupComponents()
 {
     createFormFields();
 
-    okButton_ = std::make_unique<OscilButton>(getThemeService(), "OK", "addOscillatorDialog_okBtn");
+    okButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "OK", "addOscillatorDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() { handleOkClick(); };
     addAndMakeVisible(*okButton_);
 
-    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "Cancel", "addOscillatorDialog_cancelBtn");
+    cancelButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Cancel", "addOscillatorDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() { handleCancelClick(); };
     addAndMakeVisible(*cancelButton_);
@@ -81,7 +81,7 @@ void AddOscillatorDialog::setupComponents()
 
 void AddOscillatorDialog::paint(juce::Graphics& /*g*/)
 {
-    // No custom painting - OscilModal handles backdrop/frame
+    // No custom painting - MultiScoperModal handles backdrop/frame
     // Child components handle their own painting
 }
 
@@ -324,4 +324,4 @@ bool AddOscillatorDialog::validateInput()
     return true;
 }
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Benchmarks for oscil::SharedCaptureBuffer write/read hot paths.
+    Benchmarks for multiscoper::SharedCaptureBuffer write/read hot paths.
 
     Write is the audio-thread hot path; read is the UI/render-thread hot
     path. Both sweep numSamples ∈ {64, 256, 1024, 4096} at 2 channels —
@@ -36,9 +36,9 @@ void fillDeterministic(std::vector<float>& buf, int offset)
     }
 }
 
-oscil::CaptureFrameMetadata makeMetadata(int numSamples)
+multiscoper::CaptureFrameMetadata makeMetadata(int numSamples)
 {
-    oscil::CaptureFrameMetadata meta;
+    multiscoper::CaptureFrameMetadata meta;
     meta.sampleRate = kSampleRate;
     meta.numChannels = kChannels;
     meta.timestamp = 0;
@@ -57,7 +57,7 @@ static void BM_SharedCaptureBuffer_Write(benchmark::State& state)
 {
     const int numSamples = static_cast<int>(state.range(0));
 
-    oscil::SharedCaptureBuffer buffer;
+    multiscoper::SharedCaptureBuffer buffer;
 
     std::vector<float> left(static_cast<size_t>(numSamples));
     std::vector<float> right(static_cast<size_t>(numSamples));
@@ -89,7 +89,7 @@ static void BM_SharedCaptureBuffer_Read(benchmark::State& state)
 {
     const int numSamples = static_cast<int>(state.range(0));
 
-    oscil::SharedCaptureBuffer buffer;
+    multiscoper::SharedCaptureBuffer buffer;
 
     // Prime the buffer with one block of data so read() has something to copy.
     std::vector<float> seedL(static_cast<size_t>(numSamples));

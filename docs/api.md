@@ -11,7 +11,7 @@
 The E2E test harness hosts the plugin and exposes HTTP endpoints for automation.
 
 ```
-OscilTestHarness (Standalone App)
+MultiScoperTestHarness (Standalone App)
     │
     ├── PluginTestServer (HTTP Server on :8765)
     │       │
@@ -26,7 +26,7 @@ OscilTestHarness (Standalone App)
     │       │
     │       └── TestElementRegistry (UI element lookup by testId)
     │
-    └── OscilPluginProcessor + OscilPluginEditor
+    └── MultiScoperPluginProcessor + MultiScoperPluginEditor
 ```
 
 ---
@@ -36,11 +36,11 @@ OscilTestHarness (Standalone App)
 ### 1. Start the Test Harness
 ```bash
 # Build
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-cmake --build --preset dev --target OscilTestHarness
+cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target MultiScoperTestHarness
 
 # Run
-"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &
+"./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness" &
 ```
 
 ### 2. Open the Editor (CRITICAL)
@@ -84,7 +84,7 @@ curl http://localhost:8765/ui/element/sidebar_oscillators_add
 ```json
 {
   "id": "button_testId",
-  "type": "OscilButton",
+  "type": "MultiScoperButton",
   "bounds": { "x": 10, "y": 20, "width": 100, "height": 30 },
   "visible": true,
   "enabled": true
@@ -139,7 +139,7 @@ curl http://localhost:8765/ui/element/sidebar_oscillators_add
 
 #include "tools/test_server/TestServerHandlerBase.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 class MyHandler : public TestServerHandlerBase
@@ -154,7 +154,7 @@ private:
     void handlePostThing(const httplib::Request& req, httplib::Response& res);
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ### Step 2: Create Implementation
@@ -165,7 +165,7 @@ private:
 #include "tools/test_server/PluginTestServer.h"
 #include <nlohmann/json.hpp>
 
-namespace oscil
+namespace multiscoper
 {
 
 MyHandler::MyHandler(PluginTestServer& server)
@@ -216,7 +216,7 @@ void MyHandler::handlePostThing(const httplib::Request& req, httplib::Response& 
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ### Step 3: Register Handler
@@ -256,8 +256,8 @@ protected:
     PluginTestServer& server_;
 
     // Get processor/editor (may be null!)
-    OscilPluginProcessor* getProcessor();
-    OscilPluginEditor* getEditor();
+    MultiScoperPluginProcessor* getProcessor();
+    MultiScoperPluginEditor* getEditor();
 
     // Run on message thread (required for UI operations)
     void runOnMessageThread(std::function<void()> fn);
@@ -277,7 +277,7 @@ class MyComponent : public juce::Component, public TestIdSupport
 public:
     MyComponent()
     {
-        OSCIL_REGISTER_TEST_ID("my_component_testId");
+        MULTISCOPER_REGISTER_TEST_ID("my_component_testId");
     }
 };
 ```

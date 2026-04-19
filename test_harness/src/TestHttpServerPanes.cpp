@@ -1,21 +1,21 @@
 /*
-    Oscil Test Harness - HTTP Server: Pane Management Handlers
+    MultiScoper Test Harness - HTTP Server: Pane Management Handlers
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "ui/layout/PaneComponent.h"
 
 #include "TestHttpServer.h"
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 namespace
 {
 
-void reassignOrphansAndRemovePane(OscilState& state, PaneLayoutManager& layoutManager, PaneId paneId)
+void reassignOrphansAndRemovePane(MultiScoperState& state, PaneLayoutManager& layoutManager, PaneId paneId)
 {
     PaneId fallback = PaneId::invalid();
     for (const auto& pane : layoutManager.getPanes())
@@ -60,7 +60,7 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
                     pane->setName("Pane " + juce::String(layoutManager.getPaneCount() + 1));
                 pane->setOrderIndex(static_cast<int>(layoutManager.getPaneCount()));
                 layoutManager.addPane(*pane);
-                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                if (auto* ed = dynamic_cast<MultiScoperPluginEditor*>(track.getEditor()))
                     ed->refreshPanels();
             },
             5000);
@@ -79,6 +79,40 @@ void TestHttpServer::handlePaneAdd(const httplib::Request& req, httplib::Respons
     }
 }
 
+namespace
+{
+enum class RemovePaneOutcome
+{
+    Removed,
+    LastPane,
+    PaneMissing
+};
+
+RemovePaneOutcome removePaneOnTrack(TestTrack& track, const PaneId& paneId)
+{
+    auto& state = track.getProcessor().getState();
+    auto& layoutManager = state.getLayoutManager();
+    if (layoutManager.getPaneCount() <= 1)
+        return RemovePaneOutcome::LastPane;
+    // PaneLayoutManager::removePane silently no-ops on unknown IDs; without
+    // this explicit check the handler would lie "success" for a call that
+    // did nothing.
+    bool exists = false;
+    for (const auto& p : layoutManager.getPanes())
+        if (p.getId() == paneId)
+        {
+            exists = true;
+            break;
+        }
+    if (!exists)
+        return RemovePaneOutcome::PaneMissing;
+    reassignOrphansAndRemovePane(state, layoutManager, paneId);
+    if (auto* ed = dynamic_cast<MultiScoperPluginEditor*>(track.getEditor()))
+        ed->refreshPanels();
+    return RemovePaneOutcome::Removed;
+}
+} // namespace
+
 void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Response& res)
 {
     try
@@ -96,29 +130,25 @@ void TestHttpServer::handlePaneRemove(const httplib::Request& req, httplib::Resp
         }
 
         PaneId paneId{juce::String(idStr)};
-        auto lastPane = std::make_shared<bool>(false);
+        auto outcome = std::make_shared<RemovePaneOutcome>(RemovePaneOutcome::Removed);
 
         const auto result = runOnTrackSync(
-            trackId,
-            [paneId, lastPane](TestTrack& track) {
-                auto& state = track.getProcessor().getState();
-                auto& layoutManager = state.getLayoutManager();
-                if (layoutManager.getPaneCount() <= 1)
-                {
-                    *lastPane = true;
-                    return;
-                }
-                reassignOrphansAndRemovePane(state, layoutManager, paneId);
-                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
-                    ed->refreshPanels();
-            },
-            5000);
+            trackId, [paneId, outcome](TestTrack& track) { *outcome = removePaneOnTrack(track, paneId); }, 5000);
 
         if (respondIfTrackCallFailed(result, res, "No track available", "Timeout removing pane"))
             return;
-        if (*lastPane)
+        if (*outcome == RemovePaneOutcome::LastPane)
         {
             res.set_content(errorResponse("Cannot remove the last pane").dump(), "application/json");
+            return;
+        }
+        if (*outcome == RemovePaneOutcome::PaneMissing)
+        {
+            // Follow the handler convention: keep status 200 with success=false
+            // in the body. The harness installs a generic error_handler that
+            // clobbers response bodies for non-2xx status, so setting
+            // res.status=404 would lose our specific "Pane not found: X".
+            res.set_content(errorResponse("Pane not found: " + idStr).dump(), "application/json");
             return;
         }
 
@@ -175,7 +205,7 @@ void TestHttpServer::handleOscillatorMove(const httplib::Request& req, httplib::
                 Oscillator osc = existingOsc.value();
                 osc.setPaneId(targetPaneId);
                 state.updateOscillator(osc);
-                if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+                if (auto* ed = dynamic_cast<MultiScoperPluginEditor*>(track.getEditor()))
                     ed->refreshPanels();
             },
             5000);
@@ -243,7 +273,7 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
 
         const auto result = runOnTrackSync(trackId, [layout, resolvedColumns](TestTrack& track) {
             track.getProcessor().getState().setColumnLayout(layout);
-            if (auto* ed = dynamic_cast<OscilPluginEditor*>(track.getEditor()))
+            if (auto* ed = dynamic_cast<MultiScoperPluginEditor*>(track.getEditor()))
                 ed->refreshPanels();
             *resolvedColumns = track.getProcessor().getState().getLayoutManager().getColumnCount();
         });
@@ -265,7 +295,7 @@ void TestHttpServer::handleSetLayout(const httplib::Request& req, httplib::Respo
 namespace
 {
 
-json buildAvailableArea(OscilPluginEditor* editor)
+json buildAvailableArea(MultiScoperPluginEditor* editor)
 {
     int x = 0, y = 0, w = 0, h = 0;
     if (editor)
@@ -288,7 +318,7 @@ json buildAvailableArea(OscilPluginEditor* editor)
     return {{"x", x}, {"y", y}, {"width", w}, {"height", h}};
 }
 
-json buildPaneBounds(const PaneId& paneId, OscilPluginEditor* editor)
+json buildPaneBounds(const PaneId& paneId, MultiScoperPluginEditor* editor)
 {
     if (editor)
     {
@@ -318,7 +348,7 @@ void TestHttpServer::handlePaneLayout(const httplib::Request& req, httplib::Resp
         trackId,
         [data](TestTrack& track) {
             auto& layoutManager = track.getProcessor().getState().getLayoutManager();
-            auto* editor = dynamic_cast<OscilPluginEditor*>(track.getEditor());
+            auto* editor = dynamic_cast<MultiScoperPluginEditor*>(track.getEditor());
             (*data)["columns"] = layoutManager.getColumnCount();
             (*data)["availableArea"] = buildAvailableArea(editor);
 
@@ -457,4 +487,4 @@ void TestHttpServer::handleStateSources(const httplib::Request&, httplib::Respon
     res.set_content(successResponse(sources).dump(), "application/json");
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

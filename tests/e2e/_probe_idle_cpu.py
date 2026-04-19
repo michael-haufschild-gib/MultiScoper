@@ -7,14 +7,14 @@ from __future__ import annotations
 import logging
 import sys
 
-from oscil_test_utils import OscilTestClient, settle
+from multiscoper_test_utils import MultiScoperTestClient, settle
 from perf_monitor import ResourceMonitor
 
 log = logging.getLogger(__name__)
 
 
 def main(n_editors: int) -> None:
-    c = OscilTestClient()
+    c = MultiScoperTestClient()
     # Fail loudly if the harness isn't reachable rather than spinning on
     # an unbounded provisioning loop below.
     c.wait_for_harness(max_retries=15, delay=1.0)
@@ -80,7 +80,7 @@ def main(n_editors: int) -> None:
 
     settle(1.5, reason="post-silence tail / editor animations before idle probe")
 
-    # Pin ResourceMonitor to the same harness URL that OscilTestClient is
+    # Pin ResourceMonitor to the same harness URL that MultiScoperTestClient is
     # talking to; otherwise a non-default base URL would silently sample a
     # different process than the one we just prepared.
     with ResourceMonitor(

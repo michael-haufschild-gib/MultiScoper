@@ -1,12 +1,12 @@
 """
 E2E tests for multi-instance behavior.
 
-Verifies that multiple Oscil plugin instances running simultaneously
+Verifies that multiple MultiScoper plugin instances running simultaneously
 behave correctly: independent state, cross-instance source discovery,
 and proper lifecycle management.
 
 This is the most critical test file in the suite because multi-instance
-communication is Oscil's core differentiating feature. A DAW user runs
+communication is MultiScoper's core differentiating feature. A DAW user runs
 multiple plugin instances and expects each to display signals from any
 other instance — correctly, without crashes, and with proper isolation.
 
@@ -15,13 +15,13 @@ Each test documents what production bug it catches.
 
 import pytest
 import time
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestSourceDiscovery:
     """Verify instances can discover each other's sources."""
 
-    def test_all_tracks_register_sources(self, client: OscilTestClient):
+    def test_all_tracks_register_sources(self, client: MultiScoperTestClient):
         """
         Bug caught: some tracks fail to register sources because
         prepareToPlay is not called or InstanceRegistry is not shared.
@@ -31,7 +31,7 @@ class TestSourceDiscovery:
             f"Test harness has 3 tracks; expected >= 3 sources, got {len(sources)}"
         )
 
-    def test_source_ids_differ_across_tracks(self, client: OscilTestClient):
+    def test_source_ids_differ_across_tracks(self, client: MultiScoperTestClient):
         """
         Bug caught: all tracks register with the same source ID due to
         deduplication using identical track identifiers.
@@ -53,13 +53,13 @@ class TestSourceDiscovery:
             )
 
     def test_instance_sees_other_track_sources(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: source list for one instance only shows its own source,
         not sources from other tracks.
 
-        In Oscil, every instance sees ALL sources from the global
+        In MultiScoper, every instance sees ALL sources from the global
         InstanceRegistry, enabling cross-track waveform display.
         """
         sources = multi_editor.get_sources()
@@ -76,7 +76,7 @@ class TestCrossInstanceOscillator:
     """Verify oscillators can display signals from other instances."""
 
     def test_add_oscillator_with_other_tracks_source(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: adding an oscillator with a foreign source ID fails
@@ -104,7 +104,7 @@ class TestCrossInstanceOscillator:
         )
 
     def test_cross_instance_waveform_has_data(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: oscillator bound to foreign source shows flat line
@@ -143,7 +143,7 @@ class TestIndependentState:
     """Verify each instance maintains independent state."""
 
     def test_oscillator_added_to_one_instance_not_visible_on_other(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: adding an oscillator writes to a shared state object,
@@ -169,7 +169,7 @@ class TestIndependentState:
         )
 
     def test_panes_are_independent(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: pane layout shared between instances, causing pane
@@ -195,11 +195,11 @@ class TestIndependentState:
         )
 
     def test_reset_one_instance_does_not_affect_other(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: reset_state resets a global object rather than the
-        per-instance OscilState.
+        per-instance MultiScoperState.
         """
         source0 = track_sources[0]
         source1 = track_sources[1]
@@ -236,7 +236,7 @@ class TestMultiEditorUI:
     """Verify both editors can be open and interacted with independently."""
 
     def test_both_editors_open_simultaneously(
-        self, multi_editor: OscilTestClient
+        self, multi_editor: MultiScoperTestClient
     ):
         """
         Bug caught: opening a second editor closes the first, or the
@@ -250,7 +250,7 @@ class TestMultiEditorUI:
         )
 
     def test_element_registry_has_entries_for_both_editors(
-        self, multi_editor: OscilTestClient
+        self, multi_editor: MultiScoperTestClient
     ):
         """
         Bug caught: element registry only stores one component per ID,
@@ -266,7 +266,7 @@ class TestMultiEditorUI:
         )
 
     def test_click_on_track0_does_not_affect_track1(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: UI interaction routes to the wrong editor window
@@ -309,7 +309,7 @@ class TestMultiEditorUI:
 class TestSourceLifecycle:
     """Verify source registration/deregistration on track add/remove."""
 
-    def test_add_track_registers_new_source(self, client: OscilTestClient):
+    def test_add_track_registers_new_source(self, client: MultiScoperTestClient):
         """
         Bug caught: dynamically added track doesn't call prepareToPlay,
         so no source is registered with InstanceRegistry.
@@ -333,7 +333,7 @@ class TestSourceLifecycle:
         # Clean up
         client.remove_track(result["trackIndex"])
 
-    def test_remove_track_deregisters_source(self, client: OscilTestClient):
+    def test_remove_track_deregisters_source(self, client: MultiScoperTestClient):
         """
         Bug caught: removing a track doesn't unregister the source,
         leaving dangling entries in InstanceRegistry.
@@ -358,7 +358,7 @@ class TestSourceLifecycle:
         assert len(sources_after) == len(sources_before) - 1
 
     def test_other_instances_see_new_source(
-        self, multi_editor: OscilTestClient
+        self, multi_editor: MultiScoperTestClient
     ):
         """
         Bug caught: InstanceRegistry notifications don't propagate to
@@ -386,7 +386,7 @@ class TestSourceLifecycle:
         multi_editor.remove_track(result["trackIndex"])
 
     def test_remove_track_with_bound_oscillators(
-        self, multi_editor: OscilTestClient
+        self, multi_editor: MultiScoperTestClient
     ):
         """
         Bug caught: removing a track whose source is used by oscillators
@@ -426,7 +426,7 @@ class TestWaveformDataFlow:
     """Verify each instance receives its own track's audio correctly."""
 
     def test_each_track_has_independent_audio_pipeline(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: all instances share one capture buffer, showing
@@ -486,7 +486,7 @@ class TestCrossInstanceConfiguration:
     """Verify oscillator configuration works correctly with foreign sources."""
 
     def test_processing_mode_on_cross_instance_oscillator(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: setting processing mode (Mono/Mid/Side) on an oscillator
@@ -513,7 +513,7 @@ class TestCrossInstanceConfiguration:
             )
 
     def test_visibility_toggle_cross_instance_oscillator(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: toggling visibility on a cross-instance oscillator
@@ -538,7 +538,7 @@ class TestCrossInstanceConfiguration:
         assert osc["sourceId"] == track1_source
 
     def test_opacity_linewidth_on_cross_instance_oscillator(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: visual property changes on cross-instance oscillators
@@ -558,7 +558,7 @@ class TestCrossInstanceConfiguration:
             assert abs(osc["lineWidth"] - 4.5) < 0.5
 
     def test_multiple_cross_instance_oscillators_same_source(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: adding a second oscillator bound to the same foreign
@@ -590,7 +590,7 @@ class TestConcurrentOperations:
     """Verify operations on multiple instances don't interfere."""
 
     def test_rapid_add_oscillators_both_instances(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: rapid oscillator adds on both instances cause a race
@@ -631,7 +631,7 @@ class TestConcurrentOperations:
         assert names_t1 == {"T1-0", "T1-1", "T1-2"}
 
     def test_delete_on_one_instance_add_on_another(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: deleting on one instance while adding on another causes
@@ -670,7 +670,7 @@ class TestConcurrentOperations:
         assert remaining_t0[0]["name"] == "T0-1"
 
     def test_operations_during_active_cross_instance_playback(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: modifying state while cross-instance audio is flowing
@@ -712,7 +712,7 @@ class TestEditorLifecycleCrossInstance:
     """Verify editor close/reopen preserves cross-instance state."""
 
     def test_close_reopen_editor_with_cross_instance_oscillators(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: closing and reopening an editor that has cross-instance
@@ -733,7 +733,7 @@ class TestEditorLifecycleCrossInstance:
         # Close track 0's editor
         multi_editor.close_editor(track_id=0)
 
-        # State should survive (it's in OscilState, not the editor)
+        # State should survive (it's in MultiScoperState, not the editor)
         oscs = multi_editor.get_oscillators_for_track(0)
         assert len(oscs) == 1, "Oscillator should survive editor close"
         assert oscs[0]["sourceId"] == track1_source
@@ -748,7 +748,7 @@ class TestEditorLifecycleCrossInstance:
         assert oscs[0]["name"] == "Survive Close"
 
     def test_close_source_track_editor_does_not_affect_display(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: closing the editor of the track that IS the source
@@ -798,7 +798,7 @@ class TestEditorLifecycleCrossInstance:
 class TestSourceDiscoveryEdgeCases:
     """Edge cases in source registration and discovery."""
 
-    def test_source_count_after_add_remove_add(self, client: OscilTestClient):
+    def test_source_count_after_add_remove_add(self, client: MultiScoperTestClient):
         """
         Bug caught: after add → remove → add, the source count is wrong
         because the slot reuse in TestDAW leaves null entries.
@@ -828,7 +828,7 @@ class TestSourceDiscoveryEdgeCases:
         # Clean up
         client.remove_track(r2["trackIndex"])
 
-    def test_source_names_are_not_confused(self, client: OscilTestClient):
+    def test_source_names_are_not_confused(self, client: MultiScoperTestClient):
         """
         Bug caught: all sources have the same display name, making it
         impossible for users to distinguish them in the oscillator config.
@@ -839,7 +839,7 @@ class TestSourceDiscoveryEdgeCases:
             assert s.get("name"), f"Source {s['id']} has empty name"
 
     def test_self_reference_oscillator(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: binding an oscillator to its OWN track's source could
@@ -878,30 +878,36 @@ class TestSourceDiscoveryEdgeCases:
         multi_editor.transport_stop()
 
     def test_oscillator_bound_to_nonexistent_source(
-        self, multi_editor: OscilTestClient
+        self, multi_editor: MultiScoperTestClient
     ):
         """
         Bug caught: adding an oscillator with a fabricated source ID
         crashes due to null pointer when looking up the capture buffer.
+        Either outcome (graceful None OR oscillator-with-no-data) is
+        product-acceptable — what MUST hold is that the harness is still
+        healthy afterwards. The old version only checked health in the
+        created-oscillator branch, so a graceful None return hid any
+        crash in the "add failed but left corrupt state" case.
         """
         fake_source = "00000000000000000000000000000000"
         osc_id = multi_editor.add_oscillator_to_track(
             0, fake_source, name="Phantom"
         )
-        # Should either fail gracefully (None) or create but show no data
+
+        # Health check runs unconditionally — the real invariant under test.
+        health = multi_editor.health_check()
+        assert health.get("data", {}).get("status") == "ok"
+
         if osc_id is not None:
             osc = multi_editor.get_oscillator_by_id(osc_id)
             assert osc is not None
-            # The oscillator exists but should not crash the system
-            health = multi_editor.health_check()
-            assert health.get("data", {}).get("status") == "ok"
 
 
 class TestMultiInstancePaneIsolation:
     """Verify pane operations are fully isolated between instances."""
 
     def test_add_pane_one_instance_other_unaffected(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: pane add writes to a shared layout manager, so adding
@@ -933,7 +939,7 @@ class TestMultiInstancePaneIsolation:
         )
 
     def test_move_oscillator_between_panes_cross_instance(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: moving a cross-instance oscillator between panes on
@@ -975,7 +981,7 @@ class TestStatePersistenceCrossInstance:
     """Verify state save/load works with cross-instance oscillators."""
 
     def test_save_load_preserves_cross_instance_bindings(
-        self, multi_editor: OscilTestClient, track_sources: dict, tmp_path
+        self, multi_editor: MultiScoperTestClient, track_sources: dict, tmp_path
     ):
         """
         Bug caught: state XML serialization doesn't include sourceId for
@@ -1031,7 +1037,7 @@ class TestStatePersistenceCrossInstance:
         )
 
     def test_editor_close_reopen_cross_instance_state_intact(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: editor reconstruction reads state but skips source
@@ -1064,7 +1070,7 @@ class TestThreeInstanceInteraction:
     """Tests using all 3 default tracks for complex multi-instance scenarios."""
 
     @pytest.fixture
-    def three_editors(self, client: OscilTestClient):
+    def three_editors(self, client: MultiScoperTestClient):
         """Open all 3 editors and reset state. Yields client."""
         for tid in range(3):
             client.open_editor(track_id=tid)
@@ -1098,7 +1104,7 @@ class TestThreeInstanceInteraction:
             client.close_editor(track_id=tid)
 
     @pytest.fixture
-    def three_sources(self, three_editors: OscilTestClient) -> dict:
+    def three_sources(self, three_editors: MultiScoperTestClient) -> dict:
         """Return source IDs for all 3 tracks."""
         sources = {}
         for tid in range(3):
@@ -1108,7 +1114,7 @@ class TestThreeInstanceInteraction:
         return sources
 
     def test_one_instance_displays_all_others(
-        self, three_editors: OscilTestClient, three_sources: dict
+        self, three_editors: MultiScoperTestClient, three_sources: dict
     ):
         """
         Bug caught: aggregator instance (displaying signals from multiple
@@ -1129,7 +1135,7 @@ class TestThreeInstanceInteraction:
         assert s2 in source_ids
 
     def test_triangle_cross_instance_display(
-        self, three_editors: OscilTestClient, three_sources: dict
+        self, three_editors: MultiScoperTestClient, three_sources: dict
     ):
         """
         Bug caught: circular cross-instance references (T0→T1, T1→T2, T2→T0)
@@ -1153,7 +1159,7 @@ class TestThreeInstanceInteraction:
         assert health.get("data", {}).get("status") == "ok"
 
     def test_all_instances_display_each_other(
-        self, three_editors: OscilTestClient, three_sources: dict
+        self, three_editors: MultiScoperTestClient, three_sources: dict
     ):
         """
         Bug caught: having every instance display every other instance's
@@ -1185,7 +1191,7 @@ class TestThreeInstanceInteraction:
         assert health.get("data", {}).get("status") == "ok"
 
     def test_remove_middle_track_cascade(
-        self, three_editors: OscilTestClient, three_sources: dict
+        self, three_editors: MultiScoperTestClient, three_sources: dict
     ):
         """
         Bug caught: removing a track (the source) while multiple other
@@ -1226,7 +1232,7 @@ class TestThreeInstanceInteraction:
         assert len(three_editors.get_oscillators_for_track(2)) == 1
 
     def test_three_track_independent_audio_pipelines(
-        self, three_editors: OscilTestClient, three_sources: dict
+        self, three_editors: MultiScoperTestClient, three_sources: dict
     ):
         """
         Bug caught: with 3+ active tracks, the audio processing loop
@@ -1265,7 +1271,7 @@ class TestThreeInstanceInteraction:
 class TestStressAndStability:
     """Stress tests for multi-instance resilience."""
 
-    def test_rapid_track_add_remove_cycle(self, client: OscilTestClient):
+    def test_rapid_track_add_remove_cycle(self, client: MultiScoperTestClient):
         """
         Bug caught: rapid track creation and destruction causes resource
         leaks, dangling pointers, or source registry corruption.
@@ -1295,7 +1301,7 @@ class TestStressAndStability:
         assert health.get("data", {}).get("status") == "ok"
 
     def test_many_oscillators_across_instances(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: performance degrades or crashes when many oscillators
@@ -1324,7 +1330,7 @@ class TestStressAndStability:
         assert health.get("data", {}).get("status") == "ok"
 
     def test_reset_all_instances_during_playback(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: resetting state during active playback causes the
@@ -1358,7 +1364,7 @@ class TestStressAndStability:
         multi_editor.transport_stop()
 
     def test_delete_all_oscillators_one_by_one_during_playback(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: deleting oscillators one at a time during playback
@@ -1397,7 +1403,7 @@ class TestTransportCrossInstance:
     """Verify transport affects all instances correctly."""
 
     def test_transport_start_stop_affects_all_instances(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: transport state is per-instance rather than global,
@@ -1421,7 +1427,7 @@ class TestTransportCrossInstance:
         multi_editor.transport_stop()
 
     def test_bpm_change_during_cross_instance_display(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: BPM change during active cross-instance display causes
@@ -1449,7 +1455,7 @@ class TestWaveformDataAccuracy:
     """Verify waveform DATA content (not just existence) across instances."""
 
     def test_cross_instance_amplitude_correspondence(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: cross-instance oscillator shows signal at wrong amplitude
@@ -1491,7 +1497,7 @@ class TestWaveformDataAccuracy:
         multi_editor.transport_stop()
 
     def test_cross_instance_silence_when_source_stops(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: after source track stops producing audio, the
@@ -1539,7 +1545,7 @@ class TestWaveformDataAccuracy:
         multi_editor.transport_stop()
 
     def test_different_sources_produce_different_peaks(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: all cross-instance oscillators show identical data
@@ -1603,7 +1609,7 @@ class TestDynamicBindingAndLifecycle:
     """Tests for dynamic source binding changes and lifecycle edge cases."""
 
     def test_bind_to_source_before_playback_then_start(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: oscillator bound to a source that hasn't started
@@ -1640,7 +1646,7 @@ class TestDynamicBindingAndLifecycle:
         multi_editor.transport_stop()
 
     def test_add_new_track_during_active_display(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: adding a new track while an existing cross-instance
@@ -1693,7 +1699,7 @@ class TestDynamicBindingAndLifecycle:
         multi_editor.transport_stop()
 
     def test_rebind_oscillator_to_different_source(
-        self, multi_editor: OscilTestClient, track_sources: dict
+        self, multi_editor: MultiScoperTestClient, track_sources: dict
     ):
         """
         Bug caught: changing an oscillator's source binding via update
@@ -1730,7 +1736,7 @@ class TestDynamicBindingAndLifecycle:
             )
 
     def test_concurrent_source_registration(
-        self, client: OscilTestClient
+        self, client: MultiScoperTestClient
     ):
         """
         Bug caught: two tracks registering sources simultaneously causes
@@ -1766,7 +1772,7 @@ class TestCrossInstanceStatePersistenceEdgeCases:
     """Edge cases in state persistence with cross-instance bindings."""
 
     def test_save_load_roundtrip_with_all_three_instances(
-        self, client: OscilTestClient, tmp_path
+        self, client: MultiScoperTestClient, tmp_path
     ):
         """
         Bug caught: state save/load with cross-instance oscillators from
@@ -1820,7 +1826,7 @@ class TestCrossInstanceStatePersistenceEdgeCases:
         client.close_editor()
 
     def test_load_state_preserves_oscillator_order(
-        self, multi_editor: OscilTestClient, track_sources: dict, tmp_path
+        self, multi_editor: MultiScoperTestClient, track_sources: dict, tmp_path
     ):
         """
         Bug caught: oscillator order changes after save/load because the
@@ -1861,7 +1867,7 @@ class TestCrossInstanceStatePersistenceEdgeCases:
         )
 
     def test_multiple_save_load_cycles_stable(
-        self, multi_editor: OscilTestClient, track_sources: dict, tmp_path
+        self, multi_editor: MultiScoperTestClient, track_sources: dict, tmp_path
     ):
         """
         Bug caught: repeated save/load cycles accumulate state corruption

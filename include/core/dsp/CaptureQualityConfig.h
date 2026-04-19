@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Quality Configuration
+    MultiScoper - Capture Quality Configuration
     Manages waveform capture resolution and memory budget settings
     Enables adaptive quality based on track count and available memory
 */
@@ -13,7 +13,7 @@
 
 #include <cstddef>
 
-namespace oscil
+namespace multiscoper
 {
 
 //==============================================================================
@@ -261,7 +261,7 @@ inline juce::String formatBytes(size_t bytes)
     return juce::String(bytes) + " B";
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
 // Include QualityOverride for backward compatibility — consumers that included
 // CaptureQualityConfig.h previously got QualityOverride types from the same file.

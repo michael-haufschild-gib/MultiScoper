@@ -1,11 +1,11 @@
 /*
-    Oscil - Service Context
+    MultiScoper - Service Context
     Aggregates core services for dependency injection
 */
 
 #pragma once
 
-namespace oscil
+namespace multiscoper
 {
 
 class IInstanceRegistry;
@@ -21,4 +21,4 @@ struct ServiceContext
     PresetManager& presetManager;
 };
 
-} // namespace oscil
+} // namespace multiscoper

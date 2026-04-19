@@ -1,10 +1,10 @@
 /*
-    Oscil - Pane Overlay Base Class Implementation
+    MultiScoper - Pane Overlay Base Class Implementation
 */
 
 #include "ui/layout/pane/overlays/PaneOverlay.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 // Helper timer class for fade animation
@@ -31,8 +31,8 @@ PaneOverlay::PaneOverlay(IThemeService& themeService) : ThemedComponent(themeSer
 
 PaneOverlay::PaneOverlay(IThemeService& themeService, const juce::String& testId) : PaneOverlay(themeService)
 {
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
-    OSCIL_REGISTER_TEST_ID(testId.toRawUTF8());
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
+    MULTISCOPER_REGISTER_TEST_ID(testId.toRawUTF8());
 #else
     juce::ignoreUnused(testId);
 #endif
@@ -58,8 +58,6 @@ void PaneOverlay::setVisibleAnimated(bool shouldBeVisible)
 {
     if (shouldBeVisible == isVisible() && !isAnimating_)
         return;
-
-    targetOpacity_ = shouldBeVisible ? 1.0f : 0.0f;
 
     if (shouldBeVisible)
     {
@@ -197,4 +195,4 @@ void PaneOverlay::updatePositionInParent(juce::Rectangle<int> parentBounds)
     setBounds(x, y, width, height);
 }
 
-} // namespace oscil
+} // namespace multiscoper

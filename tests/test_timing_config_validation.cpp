@@ -1,5 +1,5 @@
 /*
-    Oscil - TimingConfig Validation Tests
+    MultiScoper - TimingConfig Validation Tests
     Tests for configuration validation, bounds checking, and mode calculations
 */
 
@@ -11,8 +11,8 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class TimingConfigValidationTest : public ::testing::Test
 {

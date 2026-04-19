@@ -1,5 +1,5 @@
 /*
-    Oscil - Stats Overlay Tests
+    MultiScoper - Stats Overlay Tests
 */
 
 #include "ui/layout/pane/overlays/StatsOverlay.h"
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class StatsOverlayTest : public ::testing::Test
 {
@@ -82,7 +82,7 @@ TEST_F(StatsOverlayTest, ResetCallback)
     // Iterate children to find and click the button
     for (auto* child : overlay.getChildren())
     {
-        if (auto* btn = dynamic_cast<OscilButton*>(child))
+        if (auto* btn = dynamic_cast<MultiScoperButton*>(child))
         {
             btn->triggerClick();
             break;

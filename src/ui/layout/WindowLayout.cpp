@@ -1,5 +1,5 @@
 /*
-    Oscil - Window Layout
+    MultiScoper - Window Layout
     Implementation of window dimension and sidebar management
 */
 
@@ -7,7 +7,7 @@
 
 #include <juce_events/juce_events.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 WindowLayout::WindowLayout() {}
@@ -167,4 +167,4 @@ void WindowLayout::notifySidebarCollapseStateChanged()
     listeners_.call([this](Listener& l) { l.sidebarCollapseStateChanged(sidebarCollapsed_); });
 }
 
-} // namespace oscil
+} // namespace multiscoper

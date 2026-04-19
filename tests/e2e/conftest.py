@@ -1,5 +1,5 @@
 """
-Pytest fixtures for Oscil E2E tests.
+Pytest fixtures for MultiScoper E2E tests.
 
 Fixture hierarchy:
   client              -- session-scoped HTTP client, connected to the harness
@@ -18,7 +18,7 @@ Page objects (function-scoped):
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient, HarnessConnectionError, HarnessCrashedError
+from multiscoper_test_utils import MultiScoperTestClient, HarnessConnectionError, HarnessCrashedError
 from page_objects import (
     SidebarPage,
     AddOscillatorDialog,
@@ -27,6 +27,10 @@ from page_objects import (
     OptionsSection,
     StateManager,
     TransportControl,
+    PaneActionBarPage,
+    StatsOverlayPage,
+    ColorDialogPage,
+    SelectPaneDialogPage,
 )
 
 
@@ -57,9 +61,9 @@ OSCILLATOR_ITEM_ELEMENTS = frozenset({
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
-def client() -> OscilTestClient:
+def client() -> MultiScoperTestClient:
     """Connect to the test harness once per session."""
-    c = OscilTestClient()
+    c = MultiScoperTestClient()
     try:
         c.wait_for_harness(max_retries=15, delay=1.0)
     except HarnessConnectionError:
@@ -68,7 +72,7 @@ def client() -> OscilTestClient:
 
 
 @pytest.fixture(scope="session")
-def harness_capabilities(client: OscilTestClient) -> dict:
+def harness_capabilities(client: MultiScoperTestClient) -> dict:
     """
     Probe the harness once to discover which optional features are available.
 
@@ -91,7 +95,6 @@ def harness_capabilities(client: OscilTestClient) -> dict:
         )
 
     # Probe optional features
-    caps["has_filter_tabs"] = client.element_exists("sidebar_oscillators_toolbar_allTab")
     caps["has_diagnostic_snapshot"] = client.get_diagnostic_snapshot() is not None
     caps["has_metrics"] = client.metrics_current() is not None
     caps["has_state_save"] = True  # Will be checked when first used
@@ -126,7 +129,7 @@ def harness_capabilities(client: OscilTestClient) -> dict:
 
 
 @pytest.fixture(autouse=True)
-def _abort_on_harness_crash(client: OscilTestClient):
+def _abort_on_harness_crash(client: MultiScoperTestClient):
     """Abort the entire test session immediately if the harness has crashed."""
     try:
         yield
@@ -143,7 +146,7 @@ def _abort_on_harness_crash(client: OscilTestClient):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def editor(client: OscilTestClient):
+def editor(client: MultiScoperTestClient):
     """
     Open editor, then reset state so tests start clean.
 
@@ -164,7 +167,7 @@ def editor(client: OscilTestClient):
 
 
 @pytest.fixture()
-def source_id(editor: OscilTestClient) -> str:
+def source_id(editor: MultiScoperTestClient) -> str:
     """Return track 0's source ID.
 
     Depends on ``editor`` to ensure the editor is open before querying
@@ -185,7 +188,7 @@ def source_id(editor: OscilTestClient) -> str:
 
 
 @pytest.fixture()
-def oscillator(editor: OscilTestClient, source_id: str) -> str:
+def oscillator(editor: MultiScoperTestClient, source_id: str) -> str:
     """
     Create a single oscillator and return its ID.
     Editor is already open via the ``editor`` fixture.
@@ -199,7 +202,7 @@ def oscillator(editor: OscilTestClient, source_id: str) -> str:
     return osc_id
 
 
-def _make_oscillators(client: OscilTestClient, source_id: str, count: int) -> list[str]:
+def _make_oscillators(client: MultiScoperTestClient, source_id: str, count: int) -> list[str]:
     """Helper to create N oscillators and wait for their UI elements."""
     colours = ["#00FF00", "#00BFFF", "#FF6B6B", "#FFD93D", "#FF00FF"]
     ids = []
@@ -224,19 +227,19 @@ def _make_oscillators(client: OscilTestClient, source_id: str, count: int) -> li
 
 
 @pytest.fixture()
-def two_oscillators(editor: OscilTestClient, source_id: str) -> list[str]:
+def two_oscillators(editor: MultiScoperTestClient, source_id: str) -> list[str]:
     """Create 2 oscillators and return their IDs."""
     return _make_oscillators(editor, source_id, 2)
 
 
 @pytest.fixture()
-def three_oscillators(editor: OscilTestClient, source_id: str) -> list[str]:
+def three_oscillators(editor: MultiScoperTestClient, source_id: str) -> list[str]:
     """Create 3 oscillators and return their IDs."""
     return _make_oscillators(editor, source_id, 3)
 
 
 @pytest.fixture()
-def transport_playing(client: OscilTestClient):
+def transport_playing(client: MultiScoperTestClient):
     """Ensure transport is playing before the test, stop after."""
     client.transport_play()
     client.wait_until(lambda: client.is_playing(), timeout_s=2.0, desc="transport to start")
@@ -245,7 +248,7 @@ def transport_playing(client: OscilTestClient):
 
 
 @pytest.fixture()
-def timing_section(editor: OscilTestClient) -> OscilTestClient:
+def timing_section(editor: MultiScoperTestClient) -> MultiScoperTestClient:
     """Expand the timing accordion section. Requires editor to be open."""
     timing_id = "sidebar_timing"
     assert editor.element_exists(timing_id), (
@@ -270,7 +273,7 @@ def timing_section(editor: OscilTestClient) -> OscilTestClient:
 
 
 @pytest.fixture()
-def options_section(editor: OscilTestClient) -> OscilTestClient:
+def options_section(editor: MultiScoperTestClient) -> MultiScoperTestClient:
     """Expand the options accordion section. Requires editor to be open."""
     options_id = "sidebar_options"
     assert editor.element_exists(options_id), (
@@ -292,7 +295,7 @@ def options_section(editor: OscilTestClient) -> OscilTestClient:
 
 
 @pytest.fixture()
-def config_popup(editor: OscilTestClient, oscillator: str):
+def config_popup(editor: MultiScoperTestClient, oscillator: str):
     """
     Open the config popup for the first oscillator.
     Yields (client, oscillator_id). Closes popup on teardown.
@@ -318,7 +321,7 @@ def config_popup(editor: OscilTestClient, oscillator: str):
 
 
 @pytest.fixture()
-def two_panes(editor: OscilTestClient, source_id: str):
+def two_panes(editor: MultiScoperTestClient, source_id: str):
     """
     Create two panes: the auto-created default and a manually added second.
     Returns (pane1_id, pane2_id). Requires editor fixture.
@@ -339,7 +342,7 @@ def two_panes(editor: OscilTestClient, source_id: str):
 
 
 @pytest.fixture()
-def playing_oscillator(editor: OscilTestClient, source_id: str):
+def playing_oscillator(editor: MultiScoperTestClient, source_id: str):
     """
     Create an oscillator with transport playing and sine audio active.
     Yields (client, oscillator_id). Stops transport on teardown.
@@ -359,7 +362,7 @@ def playing_oscillator(editor: OscilTestClient, source_id: str):
 
 
 @pytest.fixture()
-def saved_state_path(editor: OscilTestClient, source_id: str):
+def saved_state_path(editor: MultiScoperTestClient, source_id: str):
     """
     Create a non-trivial state (2 oscillators with different properties),
     save it, and return (client, file_path, oscillator_ids).
@@ -376,7 +379,7 @@ def saved_state_path(editor: OscilTestClient, source_id: str):
 
     editor.update_oscillator(id1, visible=False, opacity=0.7, lineWidth=3.0)
 
-    path = "/tmp/oscil_e2e_fixture_state.xml"
+    path = "/tmp/multiscoper_e2e_fixture_state.xml"
     saved = editor.save_state(path)
     if not saved:
         pytest.fail("State save API not available")
@@ -389,45 +392,71 @@ def saved_state_path(editor: OscilTestClient, source_id: str):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def sidebar_page(editor: OscilTestClient) -> SidebarPage:
+def sidebar_page(editor: MultiScoperTestClient) -> SidebarPage:
     """Sidebar page object for the current editor session."""
     return SidebarPage(editor)
 
 
 @pytest.fixture()
-def add_dialog(editor: OscilTestClient) -> AddOscillatorDialog:
+def add_dialog(editor: MultiScoperTestClient) -> AddOscillatorDialog:
     """Add oscillator dialog page object."""
     return AddOscillatorDialog(editor)
 
 
 @pytest.fixture()
-def config_popup_page(editor: OscilTestClient) -> ConfigPopup:
+def config_popup_page(editor: MultiScoperTestClient) -> ConfigPopup:
     """Config popup page object."""
     return ConfigPopup(editor)
 
 
 @pytest.fixture()
-def timing_page(editor: OscilTestClient) -> TimingSection:
+def timing_page(editor: MultiScoperTestClient) -> TimingSection:
     """Timing section page object."""
     return TimingSection(editor)
 
 
 @pytest.fixture()
-def options_page(editor: OscilTestClient) -> OptionsSection:
+def options_page(editor: MultiScoperTestClient) -> OptionsSection:
     """Options section page object."""
     return OptionsSection(editor)
 
 
 @pytest.fixture()
-def state_mgr(editor: OscilTestClient) -> StateManager:
+def state_mgr(editor: MultiScoperTestClient) -> StateManager:
     """State manager for save/load/reset operations."""
     return StateManager(editor)
 
 
 @pytest.fixture()
-def transport_ctrl(editor: OscilTestClient) -> TransportControl:
+def transport_ctrl(editor: MultiScoperTestClient) -> TransportControl:
     """Transport control for play/stop operations."""
     return TransportControl(editor)
+
+
+@pytest.fixture()
+def pane_action_bar(editor: MultiScoperTestClient, oscillator: str) -> PaneActionBarPage:
+    """Pane action bar page object. Depends on oscillator so a pane exists."""
+    page = PaneActionBarPage(editor)
+    editor.wait_for_element(page.HOLD_BTN, timeout_s=3.0)
+    return page
+
+
+@pytest.fixture()
+def stats_overlay_page(editor: MultiScoperTestClient) -> StatsOverlayPage:
+    """Stats overlay page object (overlay may be hidden initially)."""
+    return StatsOverlayPage(editor)
+
+
+@pytest.fixture()
+def color_dialog(editor: MultiScoperTestClient) -> ColorDialogPage:
+    """OscillatorColorDialog page object."""
+    return ColorDialogPage(editor)
+
+
+@pytest.fixture()
+def select_pane_dialog(editor: MultiScoperTestClient) -> SelectPaneDialogPage:
+    """SelectPaneDialog page object."""
+    return SelectPaneDialogPage(editor)
 
 
 # ---------------------------------------------------------------------------
@@ -435,7 +464,7 @@ def transport_ctrl(editor: OscilTestClient) -> TransportControl:
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def multi_editor(client: OscilTestClient):
+def multi_editor(client: MultiScoperTestClient):
     """
     Open editors for tracks 0 and 1, reset both states.
     Yields client. Closes both editors on teardown.
@@ -491,7 +520,7 @@ def multi_editor(client: OscilTestClient):
 
 
 @pytest.fixture()
-def track_sources(multi_editor: OscilTestClient) -> dict:
+def track_sources(multi_editor: MultiScoperTestClient) -> dict:
     """
     Return a dict mapping track index to its source ID.
     Requires multi_editor fixture (both editors open).
@@ -505,7 +534,7 @@ def track_sources(multi_editor: OscilTestClient) -> dict:
 
 
 @pytest.fixture()
-def three_track_sources(client: OscilTestClient) -> dict:
+def three_track_sources(client: MultiScoperTestClient) -> dict:
     """
     Return source IDs for all 3 default tracks.
     Does not open editors.

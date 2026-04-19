@@ -1,5 +1,5 @@
 /*
-    Oscil - Component Types
+    MultiScoper - Component Types
     Shared enums and type definitions for the UI component library
 */
 
@@ -12,7 +12,7 @@
 #include <functional>
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Button variants
@@ -199,4 +199,4 @@ struct ValidationResult
     static ValidationResult invalid(const juce::String& message) { return {.isValid = false, .errorMessage = message}; }
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Implementation
+    MultiScoper - Timing Engine Implementation
     Aligned with PRD TimingConfig specification
 */
 
@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 TimingEngine::TimingEngine() { recalculateInterval(); }
@@ -411,4 +411,4 @@ void TimingEngine::notifyHostBPMChanged() { pendingFlags_.fetch_or(kPendingHostB
 
 void TimingEngine::notifyHostSyncStateChanged() { pendingFlags_.fetch_or(kPendingHostSync, std::memory_order_relaxed); }
 
-} // namespace oscil
+} // namespace multiscoper

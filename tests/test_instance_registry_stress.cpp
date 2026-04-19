@@ -1,5 +1,5 @@
 /*
-    Oscil - Instance Registry Stress Tests
+    MultiScoper - Instance Registry Stress Tests
     Concurrent registration/unregistration and lookup under contention.
 
     Bug targets:
@@ -20,7 +20,7 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class InstanceRegistryStressTest : public ::testing::Test
 {

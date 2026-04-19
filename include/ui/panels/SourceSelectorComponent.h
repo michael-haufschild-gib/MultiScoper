@@ -1,12 +1,12 @@
 /*
-    Oscil - Source Selector Component Header
+    MultiScoper - Source Selector Component Header
     Rich dropdown for selecting signal sources with search, icons, badges
 */
 
 #pragma once
 
 #include "core/InstanceRegistry.h"
-#include "ui/components/OscilTextField.h"
+#include "ui/components/MultiScoperTextField.h"
 #include "ui/components/SectionHeader.h"
 #include "ui/components/ThemedComponent.h"
 #include "ui/theme/ThemeManager.h"
@@ -15,7 +15,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -121,7 +121,7 @@ private:
     void handleFilterChange();
     void applyFilter();
 
-    std::unique_ptr<OscilTextField> searchInput_;
+    std::unique_ptr<MultiScoperTextField> searchInput_;
     std::unique_ptr<SectionHeader> sectionHeader_;
     std::unique_ptr<juce::Viewport> listViewport_;
     std::unique_ptr<juce::Component> listContainer_;
@@ -202,4 +202,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourceSelectorComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

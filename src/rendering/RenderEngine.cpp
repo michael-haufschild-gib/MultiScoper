@@ -1,5 +1,5 @@
 /*
-    Oscil - Render Engine Implementation
+    MultiScoper - Render Engine Implementation
 */
 
 #include "rendering/RenderEngine.h"
@@ -9,7 +9,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -337,4 +337,4 @@ void RenderEngine::blitToScreen()
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-} // namespace oscil
+} // namespace multiscoper

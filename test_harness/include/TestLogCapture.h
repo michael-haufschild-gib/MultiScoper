@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Log Capture
+    MultiScoper Test Harness - Log Capture
     Thread-safe ring buffer that captures juce::Logger output for diagnostic snapshots.
 */
 
@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 struct LogEntry
@@ -53,4 +53,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestLogCapture)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

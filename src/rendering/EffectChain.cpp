@@ -1,12 +1,12 @@
 /*
-    Oscil - Effect Chain Implementation
+    MultiScoper - Effect Chain Implementation
 */
 
 #include "rendering/EffectChain.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -73,6 +73,6 @@ void EffectChain::unbindFramebuffer(Framebuffer* fb)
         fb->unbind();
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

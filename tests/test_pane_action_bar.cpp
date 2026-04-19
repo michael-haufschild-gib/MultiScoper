@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Action Bar Tests
+    MultiScoper - Pane Action Bar Tests
 */
 
 #include "ui/layout/pane/PaneActionBar.h"
@@ -7,15 +7,15 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {
-OscilButton* findHoldButton(PaneActionBar& actionBar)
+MultiScoperButton* findHoldButton(PaneActionBar& actionBar)
 {
     for (auto* child : actionBar.getChildren())
     {
-        if (auto* button = dynamic_cast<OscilButton*>(child))
+        if (auto* button = dynamic_cast<MultiScoperButton*>(child))
         {
             if (button->getTooltip().contains("Hold/Pause"))
                 return button;

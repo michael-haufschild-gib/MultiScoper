@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Editor Implementation
+    MultiScoper - Plugin Editor Implementation
     Main plugin GUI
 */
 
@@ -25,7 +25,7 @@
 #include "rendering/ShaderRegistry.h"
 #include "rendering/VisualConfiguration.h"
 #include "tools/PluginEditor_Adapters.h"
-#if OSCIL_ENABLE_TEST_SERVER
+#if MULTISCOPER_ENABLE_TEST_SERVER
     #include "tools/test_server/PluginTestServer.h"
 #endif
 
@@ -57,10 +57,10 @@ int64_t convertTimelineTimestampToCaptureDomain(int64_t timestamp, int sourceRat
 }
 } // namespace
 
-namespace oscil
+namespace multiscoper
 {
 
-OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
+MultiScoperPluginEditor::MultiScoperPluginEditor(MultiScoperPluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processor_(p)
     , serviceContext_{.instanceRegistry = processor_.getInstanceRegistry(),
@@ -68,9 +68,13 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
                       .shaderRegistry = processor_.getShaderRegistry(),
                       .presetManager = processor_.getPresetManager()}
 {
-    // Create coordinators
-    sourceCoordinator_ =
-        std::make_unique<SourceCoordinator>(processor_.getInstanceRegistry(), [this]() { onSourcesChanged(); });
+    // Create coordinators. The dedicated onSourceRemoved callback is the only
+    // path that clears oscillator source bindings — the aggregate onSourcesChanged
+    // no longer destructively clears unresolved persisted bindings (they may
+    // simply be waiting for a sibling plugin's prepareToPlay to complete).
+    sourceCoordinator_ = std::make_unique<SourceCoordinator>(
+        processor_.getInstanceRegistry(), [this]() { onSourcesChanged(); },
+        [this](const SourceId& sourceId) { onSourceRemoved(sourceId); });
     themeCoordinator_ = std::make_unique<ThemeCoordinator>(processor_.getThemeService(),
                                                            [this](const ColorTheme& theme) { onThemeChanged(theme); });
     layoutCoordinator_ = std::make_unique<LayoutCoordinator>(windowLayout_, [this]() { onLayoutChanged(); });
@@ -85,8 +89,8 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     // juce::LookAndFeel::setDefaultLookAndFeel() is deliberately NOT touched.
     // Writing the process-global default from a plugin is a supply-chain
     // hazard:
-    //   (a) non-Oscil plugins loaded in the same DAW process would have
-    //       their theme overridden until Oscil is unloaded, and
+    //   (a) non-MultiScoper plugins loaded in the same DAW process would have
+    //       their theme overridden until MultiScoper is unloaded, and
     //   (b) multi-instance destruction cannot reliably restore a known
     //       prior default because other instances write the same global
     //       concurrently.
@@ -94,7 +98,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     // Trade-off: juce::AlertWindow::showMessageBoxAsync(...) with no
     // associated component uses the global default LookAndFeel, so those
     // (rare) alerts render with JUCE's stock LookAndFeel_V4 chrome rather
-    // than Oscil's dark theme. All other popups (PopupMenu, TooltipWindow,
+    // than MultiScoper's dark theme. All other popups (PopupMenu, TooltipWindow,
     // modal AlertWindow shown from a themed parent) inherit this editor's
     // LookAndFeel through the component hierarchy. If future UX work needs
     // themed async alerts, replace the showMessageBoxAsync call sites with
@@ -117,7 +121,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
     setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     startTimerHz(TIMER_REFRESH_RATE_HZ);
 
-#if OSCIL_ENABLE_TEST_SERVER
+#if MULTISCOPER_ENABLE_TEST_SERVER
     if (juce::PluginHostType::getPluginLoadedAs() == juce::AudioProcessor::wrapperType_Standalone)
     {
         testServer_ = std::make_unique<PluginTestServer>(*this);
@@ -127,7 +131,7 @@ OscilPluginEditor::OscilPluginEditor(OscilPluginProcessor& p)
 #endif
 }
 
-void OscilPluginEditor::initUIComponents()
+void MultiScoperPluginEditor::initUIComponents()
 {
     viewport_ = std::make_unique<juce::Viewport>();
     contentComponent_ = std::make_unique<PaneContainerComponent>(processor_.getThemeService());
@@ -142,7 +146,7 @@ void OscilPluginEditor::initUIComponents()
     addAndMakeVisible(*statusBar_);
 }
 
-void OscilPluginEditor::initManagers()
+void MultiScoperPluginEditor::initManagers()
 {
     dialogManager_ =
         std::make_unique<DialogManager>(*this, processor_.getThemeService(), processor_.getInstanceRegistry());
@@ -157,6 +161,12 @@ void OscilPluginEditor::initManagers()
 
     bool const gpuRenderingEnabled = processor_.getState().isGpuRenderingEnabled();
     renderCoordinator_->setGpuRenderingEnabled(gpuRenderingEnabled);
+    // Seed the GL clear colour from the active theme.  The theme is applied
+    // before this manager is constructed (ctor line ~82), so the first
+    // notify-listeners fires before the renderer exists.  Push the current
+    // theme directly so GPU mode never flashes transparent-black before the
+    // next theme change.
+    renderCoordinator_->setBackgroundColour(processor_.getThemeService().getCurrentTheme().backgroundPane);
     if (auto* optionsSection = sidebar_->getOptionsSection())
     {
         optionsSection->setGpuRenderingEnabled(gpuRenderingEnabled);
@@ -167,7 +177,7 @@ void OscilPluginEditor::initManagers()
     }
 }
 
-void OscilPluginEditor::initControllerAndSettings()
+void MultiScoperPluginEditor::initControllerAndSettings()
 {
     // Two-phase initialization to resolve circular dependency:
     // Controller owns the pane vector, Manager needs to reference it,
@@ -196,14 +206,14 @@ void OscilPluginEditor::initControllerAndSettings()
     });
 }
 
-void OscilPluginEditor::initTimingEngine()
+void MultiScoperPluginEditor::initTimingEngine()
 {
     timingEngineAdapter_ = std::make_unique<TimingEngineListenerAdapter>(*this);
     processor_.getTimingEngine().addListener(timingEngineAdapter_.get());
     refreshTimingSidebarFromEngine();
 }
 
-void OscilPluginEditor::refreshTimingSidebarFromEngine()
+void MultiScoperPluginEditor::refreshTimingSidebarFromEngine()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
@@ -231,14 +241,14 @@ void OscilPluginEditor::refreshTimingSidebarFromEngine()
     timingSection->setWaveformMode(waveformMode);
 }
 
-OscilPluginEditor::~OscilPluginEditor()
+MultiScoperPluginEditor::~MultiScoperPluginEditor()
 {
     stopTimer();
 
     if (renderCoordinator_)
         renderCoordinator_->detach();
 
-#if OSCIL_ENABLE_TEST_SERVER
+#if MULTISCOPER_ENABLE_TEST_SERVER
     if (testServer_)
         testServer_->stop();
 #endif
@@ -256,12 +266,12 @@ OscilPluginEditor::~OscilPluginEditor()
         processor_.getTimingEngine().removeListener(timingEngineAdapter_.get());
 
     // Detach LookAndFeel before lookAndFeel_ is destroyed. The process-wide
-    // default is never modified by Oscil (see ctor comment), so no restore
+    // default is never modified by MultiScoper (see ctor comment), so no restore
     // is needed here.
     setLookAndFeel(nullptr);
 }
 
-void OscilPluginEditor::parentHierarchyChanged()
+void MultiScoperPluginEditor::parentHierarchyChanged()
 {
     juce::AudioProcessorEditor::parentHierarchyChanged();
     if (getParentComponent() == nullptr && renderCoordinator_)
@@ -272,7 +282,7 @@ void OscilPluginEditor::parentHierarchyChanged()
     }
 }
 
-void OscilPluginEditor::paint(juce::Graphics& g)
+void MultiScoperPluginEditor::paint(juce::Graphics& g)
 {
     if (!renderCoordinator_ || !renderCoordinator_->isGpuRenderingEnabled())
     {
@@ -303,7 +313,7 @@ void OscilPluginEditor::paint(juce::Graphics& g)
     }
 }
 
-void OscilPluginEditor::resized()
+void MultiScoperPluginEditor::resized()
 {
     if (editorLayout_)
     {
@@ -317,7 +327,7 @@ void OscilPluginEditor::resized()
         renderCoordinator_->forceRepaint();
 }
 
-void OscilPluginEditor::timerCallback()
+void MultiScoperPluginEditor::timerCallback()
 {
     processor_.getTimingEngine().dispatchPendingUpdates();
 
@@ -353,4 +363,4 @@ void OscilPluginEditor::timerCallback()
         renderCoordinator_->updateRendering(oscillatorPanelController_->getPaneComponents());
 }
 
-} // namespace oscil
+} // namespace multiscoper

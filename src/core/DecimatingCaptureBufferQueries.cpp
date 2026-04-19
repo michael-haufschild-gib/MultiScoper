@@ -1,5 +1,5 @@
 /*
-    Oscil - Decimating Capture Buffer Read/Query Methods
+    MultiScoper - Decimating Capture Buffer Read/Query Methods
     All read, query, and utility operations that forward to the internal buffer.
 
     Every read method acquires the swap lock, snapshots the buffer shared_ptr,
@@ -8,7 +8,7 @@
 
 #include "core/DecimatingCaptureBuffer.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -148,4 +148,4 @@ std::shared_ptr<SharedCaptureBuffer> DecimatingCaptureBuffer::getInternalBuffer(
     return buffer_;
 }
 
-} // namespace oscil
+} // namespace multiscoper

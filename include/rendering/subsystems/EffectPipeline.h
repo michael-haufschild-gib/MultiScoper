@@ -1,5 +1,5 @@
 /*
-    Oscil - Effect Pipeline
+    MultiScoper - Effect Pipeline
     Manages framebuffers and post-processing effects.
 */
 
@@ -18,7 +18,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace oscil
+namespace multiscoper
 {
 
 class EffectPipeline : public IEffectProvider
@@ -80,4 +80,4 @@ private:
     juce::OpenGLContext* context_ = nullptr;
 };
 
-} // namespace oscil
+} // namespace multiscoper

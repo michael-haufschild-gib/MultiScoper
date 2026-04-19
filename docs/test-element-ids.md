@@ -60,10 +60,6 @@ pane_0_header                   # Pane at index 0 > Header (drag handle)
 |----|-----------|------|-------------|
 | `sidebar_oscillators` | OscillatorPanel | Component | Oscillators section container |
 | `sidebar_oscillators_header` | OscillatorPanel | Component | Section header |
-| `sidebar_oscillators_toolbar` | OscillatorListToolbar | Component | Filter toolbar |
-| `sidebar_oscillators_toolbar_allTab` | OscillatorListToolbar | Button | "All" filter tab |
-| `sidebar_oscillators_toolbar_visibleTab` | OscillatorListToolbar | Button | "Visible" filter tab |
-| `sidebar_oscillators_toolbar_hiddenTab` | OscillatorListToolbar | Button | "Hidden" filter tab |
 | `sidebar_oscillators_list` | OscillatorPanel | Component | Oscillator list container |
 | `sidebar_oscillators_item_{index}` | OscillatorListItem | Component | Oscillator item at index |
 | `sidebar_oscillators_item_{index}_colorIndicator` | OscillatorListItem | Component | Color swatch |
@@ -227,10 +223,10 @@ void MyComponent::setupChildren()
 
 ### For Reusable Components (testId as parameter)
 ```cpp
-class OscilSlider : public juce::Slider
+class MultiScoperSlider : public juce::Slider
 {
 public:
-    OscilSlider(const juce::String& testId = "")
+    MultiScoperSlider(const juce::String& testId = "")
     {
         if (testId.isNotEmpty())
             REGISTER_TESTABLE(testId);
@@ -241,7 +237,7 @@ private:
 };
 
 // Usage:
-OscilSlider gainSlider_{"sidebar_masterControls_gainSlider"};
+MultiScoperSlider gainSlider_{"sidebar_masterControls_gainSlider"};
 ```
 
 ---

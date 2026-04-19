@@ -1,5 +1,5 @@
 /*
-    Oscil - GPU Render Coordinator
+    MultiScoper - GPU Render Coordinator
     Manages OpenGL lifecycle and rendering state propagation
 */
 
@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 class GpuRenderCoordinator
@@ -41,6 +41,12 @@ public:
     /// (theme change, pane reorder, oscillator add/remove, resize).
     void forceRepaint();
 
+    /// Push the theme background colour into the GL renderer so the visible
+    /// clear matches the active theme.  Components that skip their background
+    /// fill in GPU mode rely on this to avoid showing transparent-black in
+    /// light themes, which otherwise makes dark text unreadable.
+    void setBackgroundColour(juce::Colour colour);
+
 private:
     std::unique_ptr<OpenGLLifecycleManager> glManager_;
     StatusBarComponent& statusBar_;
@@ -52,4 +58,4 @@ private:
     int silentFrames_ = kPostSilenceFrames;
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,17 +1,17 @@
 /*
-    Oscil - Performance Metrics Controller Implementation
+    MultiScoper - Performance Metrics Controller Implementation
 */
 
 #include "ui/managers/PerformanceMetricsController.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/dsp/CaptureQualityConfig.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 PerformanceMetricsController::PerformanceMetricsController(IAudioDataProvider& dataProvider,
@@ -116,4 +116,4 @@ void PerformanceMetricsController::update()
         statusBar_.repaint();
 }
 
-} // namespace oscil
+} // namespace multiscoper

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Oscil uses CPM.cmake (`cmake/CPM.cmake`) to fetch source dependencies at configure time. Each `CPMAddPackage` call specifies a `GIT_TAG`, which CPM resolves to a commit during the first configure. If the reference is a branch (e.g., `main`, `origin/main`), the resolved commit drifts — different developers and different CI runs can produce different build outputs from identical source trees. This is a reproducibility defect.
+MultiScoper uses CPM.cmake (`cmake/CPM.cmake`) to fetch source dependencies at configure time. Each `CPMAddPackage` call specifies a `GIT_TAG`, which CPM resolves to a commit during the first configure. If the reference is a branch (e.g., `main`, `origin/main`), the resolved commit drifts — different developers and different CI runs can produce different build outputs from identical source trees. This is a reproducibility defect.
 
 Prior to this ADR, one dependency was pinned to `origin/main`, violating reproducibility. All other dependencies were pinned to tagged releases.
 

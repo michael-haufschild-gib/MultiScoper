@@ -1,11 +1,11 @@
 /*
-    Oscil - Pane Action Bar
+    MultiScoper - Pane Action Bar
     Container for action buttons in the pane header
 */
 
 #pragma once
 
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/components/TestId.h"
 #include "ui/theme/IThemeService.h"
 
@@ -15,7 +15,7 @@
 #include <functional>
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -71,17 +71,17 @@ private:
     IThemeService& themeService_;
 
     // Action buttons
-    std::unique_ptr<OscilButton> statsButton_;
-    std::unique_ptr<OscilButton> holdButton_;
+    std::unique_ptr<MultiScoperButton> statsButton_;
+    std::unique_ptr<MultiScoperButton> holdButton_;
 
     // Layout constants
     static constexpr int BUTTON_SIZE = 20;
     static constexpr int BUTTON_SPACING = 4;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneActionBar)
 };
 
-} // namespace oscil
+} // namespace multiscoper

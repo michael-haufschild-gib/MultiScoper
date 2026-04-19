@@ -1,19 +1,19 @@
 /*
-    Oscil - Oscillator Color Dialog
+    MultiScoper - Oscillator Color Dialog
     Content component for color selection modal
 */
 
 #pragma once
 
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilColorSwatches.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperColorSwatches.h"
 #include "ui/components/ThemedComponent.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 class OscillatorColorDialog : public ThemedComponent
@@ -38,9 +38,9 @@ public:
 private:
     void setupComponents();
 
-    std::unique_ptr<OscilColorSwatches> colorSwatches_;
-    std::unique_ptr<OscilButton> okButton_;
-    std::unique_ptr<OscilButton> cancelButton_;
+    std::unique_ptr<MultiScoperColorSwatches> colorSwatches_;
+    std::unique_ptr<MultiScoperButton> okButton_;
+    std::unique_ptr<MultiScoperButton> cancelButton_;
 
     ColorSelectedCallback onColorSelected_;
     std::function<void()> onCancel_;
@@ -48,4 +48,4 @@ private:
     static constexpr int BUTTON_HEIGHT = 32;
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,17 +1,17 @@
 /*
-    Oscil - Stats Overlay
+    MultiScoper - Stats Overlay
     Displays real-time statistics overlay in pane body
 */
 
 #pragma once
 
 #include "core/analysis/AnalysisTypes.h"
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "ui/layout/pane/overlays/PaneOverlay.h"
 
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct MetricSnapshot
@@ -84,7 +84,7 @@ private:
 
     // Components
     std::unique_ptr<juce::TextEditor> statsDisplay_;
-    std::unique_ptr<OscilButton> resetButton_;
+    std::unique_ptr<MultiScoperButton> resetButton_;
 
     // Pixel layout constants
     static constexpr int ROW_HEIGHT = 15;
@@ -108,4 +108,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StatsOverlay)
 };
 
-} // namespace oscil
+} // namespace multiscoper

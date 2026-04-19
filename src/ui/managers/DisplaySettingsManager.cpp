@@ -1,5 +1,5 @@
 /*
-    Oscil - Display Settings Manager Implementation
+    MultiScoper - Display Settings Manager Implementation
     Manages global display settings across all panes
 */
 
@@ -9,7 +9,7 @@
 #include "core/dsp/TimingConfig.h"
 #include "ui/layout/PaneComponent.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 DisplaySettingsManager::DisplaySettingsManager(PaneGetter paneGetter) : paneGetter_(std::move(paneGetter)) {}
@@ -55,4 +55,4 @@ void DisplaySettingsManager::highlightOscillator(const OscillatorId& id)
     forEachPane([&id](PaneComponent& p) { p.highlightOscillator(id); });
 }
 
-} // namespace oscil
+} // namespace multiscoper

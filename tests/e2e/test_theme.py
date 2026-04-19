@@ -10,10 +10,10 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
-def _get_theme_info(client: OscilTestClient):
+def _get_theme_info(client: MultiScoperTestClient):
     """Get theme dropdown info: items list and selected ID."""
     el = client.get_element("sidebar_options_themeDropdown")
     if not el or not el.extra:
@@ -34,7 +34,7 @@ def _item_id(item):
 class TestThemeDropdown:
     """Theme dropdown population and selection."""
 
-    def test_dropdown_has_themes(self, options_section: OscilTestClient):
+    def test_dropdown_has_themes(self, options_section: MultiScoperTestClient):
         """
         Bug caught: theme dropdown not populated (ThemeManager not wired).
         """
@@ -48,7 +48,7 @@ class TestThemeDropdown:
             f"Theme dropdown should have at least 1 theme, got {num}"
         )
 
-    def test_selecting_different_theme_updates_state(self, options_section: OscilTestClient):
+    def test_selecting_different_theme_updates_state(self, options_section: MultiScoperTestClient):
         """
         Bug caught: dropdown selection handler not calling ThemeManager::setTheme.
         """
@@ -85,7 +85,7 @@ class TestThemeDropdown:
             f"Expected theme '{new_theme}', got '{sel_after}'"
         )
 
-    def test_all_themes_selectable_without_error(self, options_section: OscilTestClient):
+    def test_all_themes_selectable_without_error(self, options_section: MultiScoperTestClient):
         """
         Bug caught: specific theme crashing on apply (e.g., missing color key,
         nil dereference in theme parser).
@@ -114,7 +114,7 @@ class TestThemeDropdown:
 class TestThemePersistence:
     """Theme survives editor close/reopen."""
 
-    def test_theme_persists_across_editor_lifecycle(self, client: OscilTestClient):
+    def test_theme_persists_across_editor_lifecycle(self, client: MultiScoperTestClient):
         """
         Bug caught: theme selection not serialized to plugin state, so it
         reverts to default on reopen.
@@ -180,7 +180,7 @@ class TestThemeDuringPlayback:
     """Theme interactions while audio is active."""
 
     def test_theme_change_during_active_rendering(
-        self, options_section: OscilTestClient, source_id: str
+        self, options_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: theme change while waveforms are actively rendering
@@ -218,7 +218,7 @@ class TestThemeDuringPlayback:
         c.transport_stop()
 
     def test_rapid_theme_switching_stability(
-        self, options_section: OscilTestClient
+        self, options_section: MultiScoperTestClient
     ):
         """
         Bug caught: rapidly cycling themes causes resource leak or crash
@@ -245,7 +245,7 @@ class TestThemeDuringPlayback:
         assert state is not None, "Harness should survive rapid theme cycling"
 
     def test_theme_survives_state_save_load(
-        self, options_section: OscilTestClient, source_id: str
+        self, options_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: theme selection not included in state XML, reverting
@@ -280,7 +280,7 @@ class TestThemeDuringPlayback:
         osc_id = c.add_oscillator(source_id, name="ThemeSaveLoad")
         c.wait_for_oscillator_count(1, timeout_s=3.0)
 
-        path = "/tmp/oscil_e2e_theme_save.xml"
+        path = "/tmp/multiscoper_e2e_theme_save.xml"
         saved = c.save_state(path)
         if not saved:
             pytest.fail("State save not available")
@@ -298,13 +298,20 @@ class TestThemeDuringPlayback:
             c.click(options_id)
 
         restored, _, _ = _get_theme_info(c)
-        if restored:
-            assert restored == target, (
-                f"Theme should survive save/load: expected '{target}', got '{restored}'"
-            )
+        # Previous guard `if restored:` silently passed when restored was
+        # empty — which is exactly the "theme reverted to default" failure
+        # the docstring above claims to catch. Empty restored now fails
+        # loudly, with a message that distinguishes the two regression
+        # modes (missing from state XML vs. wrong value in state XML).
+        assert restored == target, (
+            f"Theme should survive save/load: expected '{target}', got "
+            f"'{restored}' (empty means state XML did not restore the "
+            f"theme field; non-empty mismatch means state XML stored the "
+            f"wrong theme)"
+        )
 
     def test_theme_dropdown_item_count_nonzero(
-        self, options_section: OscilTestClient
+        self, options_section: MultiScoperTestClient
     ):
         """
         Bug caught: theme dropdown reports numItems=0 even though

@@ -14,6 +14,17 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      capture_baseline:
+        description: >-
+          Run the suite with --benchmark_repetitions=50 and upload the
+          resulting JSON as the ``bench-baseline`` artifact. Use this from
+          main after a clean-room run to refresh the regression gate
+          baseline. See ADR-012.
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
 
 jobs:
   benchmarks:
@@ -64,22 +75,34 @@ jobs:
         run: |
           cmake -B build/bench -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DOSCIL_BUILD_BENCHMARKS=ON \
-            -DOSCIL_BUILD_TESTS=OFF \
-            -DOSCIL_COPY_PLUGIN_AFTER_BUILD=OFF
+            -DMULTISCOPER_BUILD_BENCHMARKS=ON \
+            -DMULTISCOPER_BUILD_TESTS=OFF \
+            -DMULTISCOPER_COPY_PLUGIN_AFTER_BUILD=OFF
 
-      - name: Build OscilBenchmarks
-        run: cmake --build build/bench --target OscilBenchmarks --parallel
+      - name: Build MultiScoperBenchmarks
+        run: cmake --build build/bench --target MultiScoperBenchmarks --parallel
 
-      # NO regression gate. We only run the suite and archive the JSON.
-      # See docs/decisions/012-benchmarks-no-regression-gate.md.
+      # See docs/decisions/012-benchmarks-no-regression-gate.md for the full
+      # rationale. Regression comparison is now wired via scripts/bench_compare.py
+      # (Mann-Whitney U + Bonferroni + 10% economic tolerance) — but the gate
+      # only fires when a ``bench-baseline.json`` artifact is downloadable from
+      # the most recent push on ``main``. If no baseline is present, the step
+      # is a no-op so the pipeline never breaks on cold starts or rerolls.
+      # REPS=7 on PRs is a trade-off: enough samples for the Mann-Whitney U
+      # test to have usable statistical power (n=3 was below the normal
+      # approximation's validity floor; scripts/bench_compare.py handles that
+      # via exact enumeration but the cliff is still real), without blowing
+      # the 30-minute job timeout. REPS=50 remains the manual baseline-capture
+      # mode documented in ADR-012.
       - name: Run benchmarks
         working-directory: build/bench
+        env:
+          REPS: ${{ (github.event.inputs.capture_baseline == 'true') && '50' || '7' }}
         run: |
-          ./benchmarks/OscilBenchmarks \
+          ./benchmarks/MultiScoperBenchmarks \
             --benchmark_format=json \
             --benchmark_out=bench.json \
-            --benchmark_repetitions=3 \
+            --benchmark_repetitions=${REPS} \
             --benchmark_min_time=1s
 
       - name: Upload benchmark JSON artifact
@@ -88,3 +111,50 @@ jobs:
           name: bench-${{ github.sha }}
           path: build/bench/bench.json
           if-no-files-found: error
+
+      # Upload the captured baseline so future runs can compare against it.
+      # Only fires on manual dispatch with capture_baseline=true, run from
+      # main, to prevent PR authors from moving the baseline arbitrarily.
+      - name: Upload as regression-gate baseline
+        if: >-
+          github.event_name == 'workflow_dispatch'
+          && github.event.inputs.capture_baseline == 'true'
+          && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-baseline
+          path: build/bench/bench.json
+          if-no-files-found: error
+          retention-days: 90
+
+      # Download the latest main-branch baseline, if one has been captured.
+      # ``continue-on-error: true`` — first-ever run of this workflow on a fork
+      # has no baseline; we log-and-skip instead of failing the build.
+      - name: Download baseline (latest main)
+        id: baseline
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          name: bench-baseline
+          branch: main
+          workflow: benchmarks.yml
+          if_no_artifact_found: warn
+
+      # scipy is used by scripts/bench_compare.py for the Mann-Whitney U test;
+      # when available it auto-selects the exact method for small samples.
+      # The pure-Python fallback in the script also has an exact path but is
+      # slower, so we install scipy on CI for both correctness and speed.
+      - name: Install scipy (for bench_compare)
+        if: steps.baseline.outcome == 'success'
+        run: python3 -m pip install --user scipy
+
+      - name: Compare against baseline
+        if: steps.baseline.outcome == 'success'
+        run: |
+          ls -la bench-baseline.json build/bench/bench.json 2>/dev/null || true
+          python3 scripts/bench_compare.py \
+            --baseline bench-baseline.json \
+            --current build/bench/bench.json \
+            --metric cpu_time \
+            --alpha 0.05 \
+            --tolerance 0.10

@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 #include <map>
 
-using namespace oscil;
+using namespace multiscoper;
 
 // Mock Effect
 class MockEffect : public PostProcessEffect

@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Render State
+    MultiScoper - Waveform Render State
     Per-waveform persistent state for the render engine
 */
 
@@ -10,9 +10,9 @@
 
 #include <memory>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -49,6 +49,6 @@ struct WaveformRenderState
     [[nodiscard]] bool needsHistoryFBO() const { return visualConfig.trails.enabled; }
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

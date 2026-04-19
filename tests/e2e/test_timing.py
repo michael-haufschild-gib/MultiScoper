@@ -11,10 +11,10 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
-def wait_for_samples(client: OscilTestClient, predicate, desc: str, timeout_s: float = 3.0):
+def wait_for_samples(client: MultiScoperTestClient, predicate, desc: str, timeout_s: float = 3.0):
     """Poll display samples until predicate(samples) is true."""
     return client.wait_until(
         lambda: predicate(client.get_display_samples()),
@@ -45,7 +45,7 @@ WAVEFORM_MODE = "sidebar_timing_waveformModeDropdown"
 class TestTimingModeToggle:
     """Switch between Time and Melodic modes."""
 
-    def test_switch_to_melodic_mode(self, timing_section: OscilTestClient):
+    def test_switch_to_melodic_mode(self, timing_section: MultiScoperTestClient):
         """
         Bug caught: mode toggle segment click not firing, or melodic-specific
         controls not shown after mode switch.
@@ -68,7 +68,7 @@ class TestTimingModeToggle:
         if not found:
             pytest.fail("No melodic-specific controls registered after mode switch")
 
-    def test_switch_back_to_time_mode(self, timing_section: OscilTestClient):
+    def test_switch_back_to_time_mode(self, timing_section: MultiScoperTestClient):
         """
         Bug caught: switching back to Time mode not restoring interval controls.
         """
@@ -94,7 +94,7 @@ class TestTimingModeToggle:
 class TestTimeIntervalField:
     """Adjusting the time interval in Time mode."""
 
-    def test_field_accepts_values(self, timing_section: OscilTestClient):
+    def test_field_accepts_values(self, timing_section: MultiScoperTestClient):
         """
         Bug caught: text field not wired to timing engine, or value clamping wrong.
         """
@@ -112,7 +112,7 @@ class TestTimeIntervalField:
         assert c.set_slider(INTERVAL_FIELD, 200.0), "Field should accept value 200"
 
     def test_interval_change_affects_display_samples(
-        self, timing_section: OscilTestClient, source_id: str
+        self, timing_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: changing time interval does not recalculate displaySamples.
@@ -156,7 +156,7 @@ class TestTimeIntervalField:
             f"{samples_200} vs {samples_100}"
         )
 
-    def test_extreme_values(self, timing_section: OscilTestClient):
+    def test_extreme_values(self, timing_section: MultiScoperTestClient):
         """
         Bug caught: field not clamping at min/max, causing division by zero
         or buffer overflow when displaySamples is 0 or extremely large.
@@ -175,7 +175,7 @@ class TestMelodicMode:
     """Melodic mode controls: note intervals and BPM interaction."""
 
     def test_melodic_mode_display_samples_differ_from_time_mode(
-        self, timing_section: OscilTestClient, source_id: str
+        self, timing_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: displaySamples not recalculated when switching to
@@ -207,7 +207,7 @@ class TestMelodicMode:
         )
 
     def test_bpm_change_affects_melodic_samples(
-        self, timing_section: OscilTestClient, source_id: str
+        self, timing_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: BPM changes not recalculating displaySamples in melodic mode.
@@ -261,7 +261,7 @@ class TestMelodicMode:
         c.set_bpm(120.0)
 
     def test_note_dropdown_exists_in_melodic_mode(
-        self, timing_section: OscilTestClient
+        self, timing_section: MultiScoperTestClient
     ):
         """
         Bug caught: note interval dropdown not rendered when switching
@@ -281,7 +281,7 @@ class TestMelodicMode:
         assert el.visible, "Note dropdown should be visible in melodic mode"
 
     def test_note_dropdown_selection_affects_display_samples(
-        self, timing_section: OscilTestClient, source_id: str
+        self, timing_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: selecting a different note interval in the dropdown
@@ -313,23 +313,42 @@ class TestMelodicMode:
         )
         samples_first = c.get_display_samples()
 
-        # Select a different item
-        item = items[-1]  # Pick the last item (likely a different note duration)
-        item_id = item.get("id", item) if isinstance(item, dict) else str(item)
-        c.select_dropdown_item(NOTE_DROPDOWN, str(item_id))
+        # Cycle through candidate items — at least one must produce a
+        # displaySamples change. If no item changes the sample count, the
+        # dropdown is cosmetic (the bug this test catches). Previously the
+        # wait was wrapped in `except TimeoutError: pass`, which silently
+        # passed the test even when the dropdown was completely disconnected
+        # from the timing engine — the exact regression the docstring claims
+        # to detect.
+        def _item_id(itm):
+            return str(itm.get("id", itm) if isinstance(itm, dict) else itm)
 
-        # displaySamples should change (different note = different duration)
-        try:
-            c.wait_until(
-                lambda: c.get_display_samples() != samples_first,
-                timeout_s=3.0,
-                desc="display samples to change after note selection",
-            )
-        except TimeoutError:
-            pass  # Some note durations may produce similar sample counts
+        # Candidate list: first and last differ in nearly all musical-note
+        # dropdowns. If only one is selectable-distinct (e.g. current is
+        # already items[-1]), the other will change things.
+        candidates = [items[0], items[-1]] if len(items) >= 2 else list(items)
+        changed = False
+        samples_after = samples_first
+        for candidate in candidates:
+            c.select_dropdown_item(NOTE_DROPDOWN, _item_id(candidate))
+            try:
+                c.wait_until(
+                    lambda: c.get_display_samples() != samples_first,
+                    timeout_s=2.0,
+                    desc="display samples to change after note selection",
+                )
+                changed = True
+                samples_after = c.get_display_samples()
+                break
+            except TimeoutError:
+                continue
 
-        # At minimum, samples should still be positive
-        samples_after = c.get_display_samples()
+        tried = [_item_id(c) for c in candidates]
+        assert changed, (
+            f"Selecting note interval items must change displaySamples — "
+            f"tried {tried!r}, samples stayed at {samples_first} "
+            f"(dropdown appears cosmetic)"
+        )
         assert samples_after > 0, (
             f"displaySamples should be positive after note selection, got {samples_after}"
         )
@@ -338,7 +357,7 @@ class TestMelodicMode:
 class TestWaveformModeDropdown:
     """Waveform mode dropdown in the timing section."""
 
-    def test_waveform_mode_dropdown_exists(self, timing_section: OscilTestClient):
+    def test_waveform_mode_dropdown_exists(self, timing_section: MultiScoperTestClient):
         """
         Bug caught: waveform mode dropdown not registered in timing section.
         """
@@ -351,7 +370,7 @@ class TestWaveformModeDropdown:
         assert el.visible, "Waveform mode dropdown should be visible"
 
     def test_waveform_mode_selection_does_not_crash(
-        self, timing_section: OscilTestClient
+        self, timing_section: MultiScoperTestClient
     ):
         """
         Bug caught: selecting a waveform mode causes null dereference or
@@ -380,7 +399,7 @@ class TestWaveformModeDropdown:
 class TestHostSyncToggle:
     """Host sync toggle in timing section."""
 
-    def test_sync_toggle_clickable(self, timing_section: OscilTestClient):
+    def test_sync_toggle_clickable(self, timing_section: MultiScoperTestClient):
         """
         Bug caught: host sync toggle not responding to clicks.
         """
@@ -396,7 +415,7 @@ class TestHostSyncToggle:
         assert state is not None, "Harness should be responsive after sync toggle"
 
     def test_sync_toggle_does_not_crash_during_playback(
-        self, timing_section: OscilTestClient, source_id: str
+        self, timing_section: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: toggling host sync while audio is playing causes the
@@ -428,7 +447,7 @@ class TestHostSyncToggle:
         c.click(SYNC_TOGGLE)
         c.transport_stop()
 
-    def test_sync_toggle_changes_state(self, timing_section: OscilTestClient):
+    def test_sync_toggle_changes_state(self, timing_section: MultiScoperTestClient):
         """
         Bug caught: sync toggle click accepted by the harness (returns success)
         but does not actually change the toggle's internal state — the button
@@ -481,7 +500,7 @@ class TestTimingPersistence:
     """Timing settings survive oscillator selection and editor close/reopen."""
 
     def test_selecting_oscillator_does_not_reset_timing(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: the specific regression where clicking an oscillator
@@ -524,7 +543,7 @@ class TestTimingPersistence:
             f"{samples_before} -> {samples_after} (ratio {ratio:.2f})"
         )
 
-    def test_timing_survives_editor_close_reopen(self, client: OscilTestClient):
+    def test_timing_survives_editor_close_reopen(self, client: MultiScoperTestClient):
         """
         Bug caught: timing settings not serialized/restored on editor lifecycle.
         """

@@ -1,7 +1,7 @@
 /*
-    Oscil - Add Oscillator Dialog
+    MultiScoper - Add Oscillator Dialog
     Content component for adding a new oscillator
-    Designed to be hosted in OscilModal
+    Designed to be hosted in MultiScoperModal
 */
 
 #pragma once
@@ -9,10 +9,10 @@
 #include "core/InstanceRegistry.h"
 #include "core/Pane.h"
 #include "core/WaveformColorPalette.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilColorSwatches.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilTextField.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperColorSwatches.h"
+#include "ui/components/MultiScoperDropdown.h"
+#include "ui/components/MultiScoperTextField.h"
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -22,12 +22,12 @@
 #include <functional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
  * Content component for the add oscillator dialog
- * Designed to be hosted inside an OscilModal
+ * Designed to be hosted inside an MultiScoperModal
  */
 class AddOscillatorDialog
     : public ThemedComponent
@@ -85,7 +85,7 @@ public:
      */
     void reset();
 
-    // Preferred dimensions for OscilModal
+    // Preferred dimensions for MultiScoperModal
     int getPreferredWidth() const { return CONTENT_WIDTH; }
     int getPreferredHeight() const { return CONTENT_HEIGHT; }
 
@@ -116,7 +116,7 @@ private:
 
     // Source section
     std::unique_ptr<juce::Label> sourceLabel_;
-    std::unique_ptr<OscilDropdown> sourceDropdown_;
+    std::unique_ptr<MultiScoperDropdown> sourceDropdown_;
 
     // Pane section
     std::unique_ptr<juce::Label> paneLabel_;
@@ -124,27 +124,27 @@ private:
 
     // Name section
     std::unique_ptr<juce::Label> nameLabel_;
-    std::unique_ptr<OscilTextField> nameField_;
+    std::unique_ptr<MultiScoperTextField> nameField_;
 
     // Color section
     std::unique_ptr<juce::Label> colorLabel_;
-    std::unique_ptr<OscilColorSwatches> colorSwatches_;
+    std::unique_ptr<MultiScoperColorSwatches> colorSwatches_;
 
     // Visual Preset section
     std::unique_ptr<juce::Label> visualPresetLabel_;
-    std::unique_ptr<OscilDropdown> visualPresetDropdown_;
+    std::unique_ptr<MultiScoperDropdown> visualPresetDropdown_;
 
     // Error message
     std::unique_ptr<juce::Label> errorLabel_;
 
     // Footer buttons
-    std::unique_ptr<OscilButton> okButton_;
-    std::unique_ptr<OscilButton> cancelButton_;
+    std::unique_ptr<MultiScoperButton> okButton_;
+    std::unique_ptr<MultiScoperButton> cancelButton_;
 
     // Get default colors from centralized palette
     std::vector<juce::Colour> getDefaultColors() const { return WaveformColorPalette::getAllColors(); }
 
-    // Layout constants - content only (no header, OscilModal provides title bar)
+    // Layout constants - content only (no header, MultiScoperModal provides title bar)
     static constexpr int CONTENT_WIDTH = 320;
     static constexpr int CONTENT_HEIGHT = 420;
     static constexpr int SECTION_SPACING = 12;
@@ -153,9 +153,9 @@ private:
     static constexpr int BUTTON_HEIGHT = 36;
     static constexpr int COLOR_PICKER_HEIGHT = 32;
 
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AddOscillatorDialog)
 };
 
-} // namespace oscil
+} // namespace multiscoper

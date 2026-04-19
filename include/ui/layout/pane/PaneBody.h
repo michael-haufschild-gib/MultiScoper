@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Body
+    MultiScoper - Pane Body
     Body component for pane containing waveforms and overlays
 */
 
@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -109,9 +109,9 @@ private:
     static constexpr int STATS_UPDATE_HZ = 15; // Approx 66ms
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneBody)
 };
 
-} // namespace oscil
+} // namespace multiscoper

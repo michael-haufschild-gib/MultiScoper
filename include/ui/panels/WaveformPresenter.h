@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Presenter
+    MultiScoper - Waveform Presenter
     Handles audio processing and auto-scaling logic for waveform visualization.
     Separates logic from View (WaveformComponent).
 */
@@ -10,6 +10,7 @@
 #include "core/dsp/SignalProcessor.h"
 #include "core/interfaces/IAudioBuffer.h"
 
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
 #include <cstdint>
@@ -17,7 +18,7 @@
 #include <optional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 class SharedCaptureBuffer; // Forward declare just in case
@@ -105,6 +106,12 @@ private:
     std::vector<float> scratchBufferLeft_;
     std::vector<float> scratchBufferRight_;
 
+    // Stereo scratch for the cross-channel-consistent buffer read.
+    // Kept as a member and grown-only so readAndPadSamples doesn't
+    // allocate a fresh juce::AudioBuffer on every process() call
+    // (was once-per-waveform-per-frame).
+    juce::AudioBuffer<float> stereoScratch_{2, 2048};
+
     float currentPeak_ = 0.0f;
     float currentRMS_ = 0.0f;
     float effectiveScale_ = 1.0f;
@@ -142,4 +149,4 @@ private:
     void updateAutoScale();
 };
 
-} // namespace oscil
+} // namespace multiscoper

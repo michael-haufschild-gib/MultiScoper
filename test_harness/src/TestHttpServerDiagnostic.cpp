@@ -1,11 +1,11 @@
 /*
-    Oscil Test Harness - HTTP Server: Diagnostic Snapshot Handler
+    MultiScoper Test Harness - HTTP Server: Diagnostic Snapshot Handler
 
     Single endpoint that dumps the complete plugin state for automated diagnosis.
     Designed to be consumed by AI coding agents and scenario-based test runners.
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/dsp/TimingEngineTypes.h"
 #include "core/interfaces/IAudioBuffer.h"
@@ -22,13 +22,13 @@
 
 #include <algorithm>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 namespace
 {
 
-json snapshotOscillators(OscilPluginProcessor& processor)
+json snapshotOscillators(MultiScoperPluginProcessor& processor)
 {
     auto& state = processor.getState();
     auto oscillators = state.getOscillators();
@@ -73,7 +73,7 @@ json snapshotOscillators(OscilPluginProcessor& processor)
     return arr;
 }
 
-json snapshotPanes(const OscilState& state)
+json snapshotPanes(const MultiScoperState& state)
 {
     auto& layoutManager = state.getLayoutManager();
     json arr = json::array();
@@ -97,7 +97,7 @@ json snapshotTransport(TestDAW& daw)
             {"sampleRate", daw.getSampleRate()}};
 }
 
-json snapshotTiming(OscilPluginProcessor& processor)
+json snapshotTiming(MultiScoperPluginProcessor& processor)
 {
     auto& timingEngine = processor.getTimingEngine();
     auto config = timingEngine.getConfig();
@@ -235,15 +235,15 @@ json snapshotGUI(TestDAW& daw)
     auto done = std::make_shared<juce::WaitableEvent>();
     juce::MessageManager::callAsync([&daw, result, done]() {
         auto* editor = daw.getPrimaryEditor();
-        auto* oscilEditor = dynamic_cast<OscilPluginEditor*>(editor);
-        if (!oscilEditor)
+        auto* multiscoperEditor = dynamic_cast<MultiScoperPluginEditor*>(editor);
+        if (!multiscoperEditor)
         {
             done->signal();
             return;
         }
 
         (*result)["editorOpen"] = true;
-        const auto& paneComponents = oscilEditor->getPaneComponents();
+        const auto& paneComponents = multiscoperEditor->getPaneComponents();
         json panesArr = json::array();
 
         for (size_t pi = 0; pi < paneComponents.size(); ++pi)
@@ -333,4 +333,4 @@ void TestHttpServer::handleDiagnosticSnapshot(const httplib::Request& req, httpl
     }
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,11 +1,11 @@
 /*
-    Oscil - Oscillator Sidebar Section Implementation
+    MultiScoper - Oscillator Sidebar Section Implementation
     Collapsible section containing the Add Oscillator button and oscillator list
 */
 
 #include "ui/layout/sections/OscillatorSidebarSection.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 OscillatorSidebarSection::OscillatorSidebarSection(ServiceContext& context) : ThemedComponent(context.themeService)
@@ -28,7 +28,7 @@ void OscillatorSidebarSection::setupComponents()
 {
     // Add Oscillator button
     addOscillatorButton_ =
-        std::make_unique<OscilButton>(getThemeService(), "+ Add Oscillator", "sidebar_addOscillator");
+        std::make_unique<MultiScoperButton>(getThemeService(), "+ Add Oscillator", "sidebar_addOscillator");
     addOscillatorButton_->setVariant(ButtonVariant::Primary);
     addOscillatorButton_->onClick = [this]() {
         listeners_.call([](Listener& l) { l.addOscillatorDialogRequested(); });
@@ -129,4 +129,4 @@ void OscillatorSidebarSection::oscillatorNameChanged(const OscillatorId& id, con
     listeners_.call([id, newName](Listener& l) { l.oscillatorNameChanged(id, newName); });
 }
 
-} // namespace oscil
+} // namespace multiscoper

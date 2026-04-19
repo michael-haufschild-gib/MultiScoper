@@ -1,5 +1,5 @@
 /*
-    Oscil - List Item Icons
+    MultiScoper - List Item Icons
     SVG-based icons for oscillator list item buttons (delete, settings, visibility)
     Loaded from BinaryData resources for theme-aware coloring
 */
@@ -11,7 +11,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil::ListItemIcons
+namespace multiscoper::ListItemIcons
 {
 
 /**
@@ -30,7 +30,7 @@ inline std::unique_ptr<juce::Drawable> loadSvgDrawable(const char* data, int dat
 
 /**
  * Create a path from SVG drawable, scaled to target size
- * This allows the icon to be rendered with theme colors via OscilButton::setIconPath()
+ * This allows the icon to be rendered with theme colors via MultiScoperButton::setIconPath()
  */
 inline juce::Path getPathFromDrawable(juce::Drawable* drawable, float targetSize)
 {
@@ -167,4 +167,4 @@ inline juce::Path createRedoIcon(float size)
     return getPathFromDrawable(drawable.get(), size);
 }
 
-} // namespace oscil::ListItemIcons
+} // namespace multiscoper::ListItemIcons

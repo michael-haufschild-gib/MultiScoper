@@ -1,5 +1,5 @@
 /*
-    Oscil - System Theme Definitions
+    MultiScoper - System Theme Definitions
     Pre-defined immutable themes shipped with the application
 */
 
@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-namespace oscil::SystemThemes
+namespace multiscoper::SystemThemes
 {
 
 namespace
@@ -461,4 +461,4 @@ ColorTheme createGlassDarkBlack()
     return theme;
 }
 
-} // namespace oscil::SystemThemes
+} // namespace multiscoper::SystemThemes

@@ -1,5 +1,5 @@
 /*
-    Oscil - Test ID Support for UI Components
+    MultiScoper - Test ID Support for UI Components
 
     Provides testId registration that works with or without the test harness.
     When TEST_HARNESS is not defined, macros become no-ops.
@@ -9,24 +9,25 @@
 
 #include <juce_core/juce_core.h>
 
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
     // Test harness is active - include full registration
     #include "TestableComponent.h"
 
-    // Note: These macros expand to member declarations, use with semicolon: OSCIL_TESTABLE();
-    #define OSCIL_TESTABLE() std::unique_ptr<oscil::test::TestRegistration> testRegistration_
-    #define OSCIL_REGISTER_TEST_ID(id) testRegistration_ = std::make_unique<oscil::test::TestRegistration>(*this, id)
-    #define OSCIL_REGISTER_CHILD_TEST_ID(component, id) REGISTER_TESTABLE_CHILD(component, id)
-    #define OSCIL_UNREGISTER_CHILD_TEST_ID(component, id) UNREGISTER_TESTABLE_CHILD(component, id)
+    // Note: These macros expand to member declarations, use with semicolon: MULTISCOPER_TESTABLE();
+    #define MULTISCOPER_TESTABLE() std::unique_ptr<multiscoper::test::TestRegistration> testRegistration_
+    #define MULTISCOPER_REGISTER_TEST_ID(id) \
+        testRegistration_ = std::make_unique<multiscoper::test::TestRegistration>(*this, id)
+    #define MULTISCOPER_REGISTER_CHILD_TEST_ID(component, id) REGISTER_TESTABLE_CHILD(component, id)
+    #define MULTISCOPER_UNREGISTER_CHILD_TEST_ID(component, id) UNREGISTER_TESTABLE_CHILD(component, id)
 #else
     // No test harness - provide empty stubs that are semicolon-safe
-    #define OSCIL_TESTABLE() static_assert(true, "")
-    #define OSCIL_REGISTER_TEST_ID(id) ((void) 0)
-    #define OSCIL_REGISTER_CHILD_TEST_ID(component, id) ((void) 0)
-    #define OSCIL_UNREGISTER_CHILD_TEST_ID(component, id) ((void) 0)
+    #define MULTISCOPER_TESTABLE() static_assert(true, "")
+    #define MULTISCOPER_REGISTER_TEST_ID(id) ((void) 0)
+    #define MULTISCOPER_REGISTER_CHILD_TEST_ID(component, id) ((void) 0)
+    #define MULTISCOPER_UNREGISTER_CHILD_TEST_ID(component, id) ((void) 0)
 #endif
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -53,7 +54,7 @@ public:
 
         testId_ = testId;
 
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
         // Registration happens via the component that inherits this
         registerTestId();
 #endif
@@ -69,4 +70,4 @@ protected:
     juce::String testId_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

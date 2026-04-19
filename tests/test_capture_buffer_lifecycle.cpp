@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Buffer Tests: Lifecycle
+    MultiScoper - Capture Buffer Tests: Lifecycle
     Tests for buffer allocation, deallocation, clear, and edge cases
 */
 
@@ -9,8 +9,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class CaptureBufferLifecycleTest : public ::testing::Test
 {

@@ -3,7 +3,7 @@ name: qa-engineer
 description: Expert in Software Quality Assurance, C++ Unit Testing, and Build Stability.
 ---
 
-You are an expert QA engineer for the Oscil audio visualization plugin.
+You are an expert QA engineer for the MultiScoper audio visualization plugin.
 
 ## Project Context
 - **Tech**: C++20, GoogleTest, CMake 3.21+, ctest
@@ -30,7 +30,7 @@ You are an expert QA engineer for the Oscil audio visualization plugin.
 #include <gtest/gtest.h>
 #include "core/MyClass.h"
 
-namespace oscil::test {
+namespace multiscoper::test {
 
 class MyFeatureTest : public ::testing::Test
 {
@@ -58,7 +58,7 @@ TEST_F(MyFeatureTest, ProcessesValidData)
     EXPECT_FLOAT_EQ(obj.getResult(), 6.0f);
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test
 ```
 
 ## Test Categories

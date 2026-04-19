@@ -1,5 +1,5 @@
 /*
-    Oscil - Crosshair Overlay
+    MultiScoper - Crosshair Overlay
     Mouse-following crosshair with floating tooltip showing time and amplitude
 */
 
@@ -11,7 +11,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -84,9 +84,9 @@ private:
     static constexpr float LINE_OPACITY = 0.6f;
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CrosshairOverlay)
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - OpenGL Lifecycle Manager Implementation
+    MultiScoper - OpenGL Lifecycle Manager Implementation
 */
 
 #include "ui/controllers/OpenGLLifecycleManager.h"
@@ -7,12 +7,12 @@
 #include "ui/layout/PaneComponent.h"
 #include "ui/panels/WaveformComponent.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 OpenGLLifecycleManager::OpenGLLifecycleManager(juce::AudioProcessorEditor& editor) : editor_(editor)
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     renderer_ = std::make_unique<WaveformGLRenderer>();
     renderer_->setContext(&context_);
 #endif
@@ -22,7 +22,7 @@ OpenGLLifecycleManager::~OpenGLLifecycleManager() { detach(); }
 
 void OpenGLLifecycleManager::detach()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     if (!isDetached_)
     {
         context_.detach();
@@ -33,7 +33,7 @@ void OpenGLLifecycleManager::detach()
 
 void OpenGLLifecycleManager::setGpuRenderingEnabled(bool enabled)
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     gpuRenderingEnabled_ = enabled;
 
     if (enabled && !context_.isAttached())
@@ -73,7 +73,7 @@ void OpenGLLifecycleManager::setGpuRenderingEnabled(bool enabled)
 
 void OpenGLLifecycleManager::clearAllWaveforms()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     if (renderer_)
         renderer_->clearAllWaveforms();
 #endif
@@ -81,7 +81,7 @@ void OpenGLLifecycleManager::clearAllWaveforms()
 
 bool OpenGLLifecycleManager::updateWaveformData(const std::vector<std::unique_ptr<PaneComponent>>& paneComponents)
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     if (!renderer_ || !gpuRenderingEnabled_)
         return false;
 
@@ -121,10 +121,20 @@ bool OpenGLLifecycleManager::updateWaveformData(const std::vector<std::unique_pt
 
 void OpenGLLifecycleManager::triggerRepaint()
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     if (gpuRenderingEnabled_ && context_.isAttached())
         context_.triggerRepaint();
 #endif
 }
 
-} // namespace oscil
+void OpenGLLifecycleManager::setBackgroundColour(juce::Colour colour)
+{
+#if MULTISCOPER_ENABLE_OPENGL
+    if (renderer_)
+        renderer_->setBackgroundColour(colour);
+#else
+    juce::ignoreUnused(colour);
+#endif
+}
+
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Overlay Base Class
+    MultiScoper - Pane Overlay Base Class
     Base class for fixed-position overlays within pane body
 */
 
@@ -13,7 +13,7 @@
 
 #include <cstdint>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -119,7 +119,6 @@ private:
     bool isAnimating_ = false;
     bool fadeDirection_ = true; // true = fade in, false = fade out
     float currentOpacity_ = 0.0f;
-    float targetOpacity_ = 0.0f;
     std::unique_ptr<juce::Timer> fadeTimer_;
 
     // Padding inside the overlay
@@ -131,9 +130,9 @@ private:
     static constexpr int FADE_TIMER_INTERVAL_MS = 16; // ~60fps
 
     // TestIdSupport
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneOverlay)
 };
 
-} // namespace oscil
+} // namespace multiscoper

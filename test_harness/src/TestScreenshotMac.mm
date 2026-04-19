@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - macOS Native Screenshot Capture
+    MultiScoper Test Harness - macOS Native Screenshot Capture
     Uses macOS screencapture command to capture full window including OpenGL
 */
 
@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <cstdlib>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 // Forward declarations for native window capture functions
@@ -45,7 +45,7 @@ juce::Image captureNativeWindowMac(juce::Component* component, const juce::Strin
     // -o removes shadow
     // -x no sound
     juce::String tempPath = outputPath.isEmpty() ? juce::File::getSpecialLocation(juce::File::tempDirectory)
-                                                       .getChildFile("oscil_screenshot_temp.png")
+                                                       .getChildFile("multiscoper_screenshot_temp.png")
                                                        .getFullPathName()
                                                  : outputPath;
 
@@ -86,6 +86,6 @@ juce::Image captureNativeWindowMac(juce::Component* component)
     return captureNativeWindowMac(component, juce::String());
 }
 
-}  // namespace oscil::test
+}  // namespace multiscoper::test
 
 #endif  // JUCE_MAC

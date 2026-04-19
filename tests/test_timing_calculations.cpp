@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Calculation Unit Tests
+    MultiScoper - Timing Calculation Unit Tests
     Tests TimingConfig calculations: display samples, gain conversions, BPM/note intervals
 
     Bug targets:
@@ -13,7 +13,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class TimingConfigTest : public ::testing::Test
 {

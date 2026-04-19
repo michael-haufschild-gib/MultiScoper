@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator Panel Controller Header
+    MultiScoper - Oscillator Panel Controller Header
     Manages the lifecycle, layout, and updates of oscillator panels.
 */
 
@@ -16,7 +16,7 @@
 #include <memory>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -167,4 +167,4 @@ private:
     JUCE_DECLARE_WEAK_REFERENCEABLE(OscillatorPanelController)
 };
 
-} // namespace oscil
+} // namespace multiscoper

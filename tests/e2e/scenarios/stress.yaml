@@ -66,12 +66,12 @@
   steps:
     - check:
         - {check: oscillator_count, expected: 5}
-    - action: {save_state: "/tmp/oscil_stress_5osc.xml"}
+    - action: {save_state: "/tmp/multiscoper_stress_5osc.xml"}
     - action: {reset_state: true}
     - wait: 300ms
     - check:
         - {check: oscillator_count, expected: 0}
-    - action: {load_state: "/tmp/oscil_stress_5osc.xml"}
+    - action: {load_state: "/tmp/multiscoper_stress_5osc.xml"}
     - wait: 1000ms
     - check:
         - {check: oscillator_count, expected: 5}

@@ -1,5 +1,5 @@
 /*
-    Oscil - Effect Chain
+    MultiScoper - Effect Chain
     Manages the sequential application of post-processing effects
 */
 
@@ -15,9 +15,9 @@
 #include <string>
 #include <vector>
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -96,6 +96,6 @@ private:
     std::vector<EffectStep> steps_;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

@@ -1,12 +1,12 @@
 /*
-    Oscil - Waveform Pass Implementation
+    MultiScoper - Waveform Pass Implementation
 */
 
 #include "rendering/subsystems/WaveformPass.h"
 
 #include "rendering/subsystems/RenderStats.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -146,4 +146,4 @@ void WaveformPass::renderGrid(const WaveformRenderData& data)
     glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
 }
 
-} // namespace oscil
+} // namespace multiscoper

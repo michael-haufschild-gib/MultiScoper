@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine
+    MultiScoper - Timing Engine
     Timing and synchronization system for waveform display
     Aligned with PRD TimingConfig specification
 */
@@ -15,7 +15,7 @@
 
 #include <atomic>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -281,4 +281,4 @@ inline const juce::Identifier TriggerChannel{"triggerChannel"};
 inline const juce::Identifier TriggerHysteresis{"triggerHysteresis"};
 } // namespace TimingIds
 
-} // namespace oscil
+} // namespace multiscoper

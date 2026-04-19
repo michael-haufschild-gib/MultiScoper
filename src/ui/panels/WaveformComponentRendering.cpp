@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Component Software Rendering
+    MultiScoper - Waveform Component Software Rendering
     Path building and shader-based drawing for CPU rendering path
 */
 
@@ -8,7 +8,7 @@
 #include "rendering/ShaderRegistry.h"
 #include "rendering/WaveformShader.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 void WaveformComponent::drawWaveformWithShader(juce::Graphics& g, juce::Rectangle<int> bounds)
@@ -113,4 +113,4 @@ void WaveformComponent::updateWaveformPath()
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

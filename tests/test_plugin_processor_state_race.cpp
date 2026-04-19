@@ -1,5 +1,5 @@
 /*
-    Oscil - PluginProcessor getStateInformation / setStateInformation
+    MultiScoper - PluginProcessor getStateInformation / setStateInformation
     race-path coverage.
 
     Context: some DAWs (Pro Tools, Reaper) call AudioProcessor::getStateInformation
@@ -20,11 +20,11 @@
 
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "ui/theme/ThemeManager.h"
 
-#include "OscilTestFixtures.h"
-#include "OscilTestUtils.h"
+#include "MultiScoperTestFixtures.h"
+#include "MultiScoperTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
 #include "rendering/ShaderRegistry.h"
@@ -35,8 +35,8 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 namespace
 {
@@ -48,7 +48,7 @@ int parseBlobAndGetOscillatorCount(const juce::MemoryBlock& block)
         return -1;
 
     auto xml = juce::String::createStringFromData(block.getData(), static_cast<int>(block.getSize()));
-    OscilState parsed;
+    MultiScoperState parsed;
     if (!parsed.fromXmlString(xml))
         return -1;
     return parsed.getOscillatorCount();
@@ -63,7 +63,7 @@ protected:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<OscilPluginProcessor> processor;
+    std::unique_ptr<MultiScoperPluginProcessor> processor;
 
     void SetUp() override
     {
@@ -73,8 +73,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
 
         // Disable GPU so prepareToPlay does not try to attach an OpenGL context
         // on a headless CI box.
@@ -204,7 +204,7 @@ TEST_F(PluginProcessorStateRaceTest, GetStateFromAudioThread_TryLockContended_Si
             }
             // Non-empty → must parse as valid XML state. A torn read would fail here.
             auto xml = juce::String::createStringFromData(block.getData(), static_cast<int>(block.getSize()));
-            OscilState parsed;
+            MultiScoperState parsed;
             if (!parsed.fromXmlString(xml))
                 parseFailures.fetch_add(1, std::memory_order_relaxed);
         }
@@ -307,8 +307,8 @@ TEST_F(PluginProcessorStateRaceTest, SetStateInformation_BeforePrepareToPlay_Sam
     // Build a known state blob on a separate, prepared processor.
     juce::MemoryBlock savedState;
     {
-        auto donor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                            *presetManager_, *memoryBudgetManager_);
+        auto donor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                  *presetManager_, *memoryBudgetManager_);
         donor->getState().setGpuRenderingEnabled(false);
         donor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(50);
@@ -390,8 +390,8 @@ TEST_F(PluginProcessorStateRaceTest, StateRoundTrip_SetThenGet_Deterministic)
     ASSERT_GT(blob2.getSize(), 0u);
 
     // Structural equivalence (stronger than "sizes match" — we actually parse).
-    OscilState parsed1;
-    OscilState parsed2;
+    MultiScoperState parsed1;
+    MultiScoperState parsed2;
     auto xml1 = juce::String::createStringFromData(blob1.getData(), static_cast<int>(blob1.getSize()));
     auto xml2 = juce::String::createStringFromData(blob2.getData(), static_cast<int>(blob2.getSize()));
     ASSERT_TRUE(parsed1.fromXmlString(xml1));

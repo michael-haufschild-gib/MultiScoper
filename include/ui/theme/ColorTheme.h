@@ -1,5 +1,5 @@
 /*
-    Oscil - Color Theme Data Type
+    MultiScoper - Color Theme Data Type
     ColorTheme struct holds palette, typography/glass params, and accessibility
     helpers used by the theme system.
 */
@@ -13,7 +13,7 @@
 #include <cmath>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -305,4 +305,4 @@ struct ColorTheme
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil Google Benchmark entry point.
+    MultiScoper Google Benchmark entry point.
 
     Initializes the JUCE MessageManager on the main thread before running
     benchmarks so that MessageManager::isThisTheMessageThread() returns true

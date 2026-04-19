@@ -1,6 +1,6 @@
 # Shader Development Guide
 
-**Purpose**: Adding GPU-accelerated waveform shaders to Oscil.
+**Purpose**: Adding GPU-accelerated waveform shaders to MultiScoper.
 **Tech Stack**: C++20, JUCE 8.0.12 OpenGL, GLSL 3.30 Core (no legacy translation)
 
 ## Quick Reference
@@ -127,7 +127,7 @@ Create `include/rendering/shaders/MyShader.h`:
 
 ```cpp
 /*
-    Oscil - My Shader
+    MultiScoper - My Shader
     Brief description of the visual effect
 */
 
@@ -136,7 +136,7 @@ Create `include/rendering/shaders/MyShader.h`:
 #include "rendering/WaveformShader.h"
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 class MyShader : public WaveformShader
@@ -153,7 +153,7 @@ public:
         return "Brief description for tooltip";
     }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     bool compile(juce::OpenGLContext& context) override;
     void release(juce::OpenGLContext& context) override;
     [[nodiscard]] bool isCompiled() const override;
@@ -174,7 +174,7 @@ public:
     ) override;
 
 private:
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
 #endif
@@ -183,7 +183,7 @@ private:
     static constexpr float MY_PARAM = 1.0f;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ### Step 2: Create Implementation
@@ -192,16 +192,16 @@ Create `src/rendering/shaders/MyShader.cpp`:
 
 ```cpp
 /*
-    Oscil - My Shader Implementation
+    MultiScoper - My Shader Implementation
 */
 
 #include "rendering/shaders/MyShader.h"
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 using namespace juce::gl;
 
 // GLSL shaders - Modern GLSL 3.30 Core
@@ -255,7 +255,7 @@ struct MyShader::GLResources
 #endif
 
 MyShader::MyShader()
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     : gl_(std::make_unique<GLResources>())
 #endif
 {
@@ -263,7 +263,7 @@ MyShader::MyShader()
 
 MyShader::~MyShader() = default;
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 bool MyShader::compile(juce::OpenGLContext& context)
 {
     if (gl_->compiled)
@@ -465,7 +465,7 @@ void MyShader::renderSoftware(
     WaveformShader::renderSoftware(g, channel1, channel2, params);
 }
 
-} // namespace oscil
+} // namespace multiscoper
 ```
 
 ### Step 3: Register the Shader
@@ -485,7 +485,7 @@ void ShaderRegistry::registerBuiltInShaders()
 
 ### Step 4: Add to CMakeLists.txt
 
-Add to `target_sources(Oscil PRIVATE ...)`:
+Add to `target_sources(MultiScoper PRIVATE ...)`:
 
 ```cmake
 src/rendering/shaders/MyShader.cpp
@@ -500,7 +500,7 @@ ${CMAKE_SOURCE_DIR}/src/rendering/shaders/MyShader.cpp
 ### Step 5: Build and Test
 
 ```bash
-cd build && cmake --build . --target Oscil
+cd build && cmake --build . --target MultiScoper
 ```
 
 ## ShaderRenderParams Reference

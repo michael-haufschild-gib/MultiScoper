@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Engine Tests (Host Info Edge Cases)
+    MultiScoper - Timing Engine Tests (Host Info Edge Cases)
     Play transitions with missing time, negative samples, jitter, sync toggle
 */
 

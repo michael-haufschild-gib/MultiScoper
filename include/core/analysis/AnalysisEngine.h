@@ -1,5 +1,5 @@
 /*
-    Oscil - Analysis Engine
+    MultiScoper - Analysis Engine
     Calculates real-time statistical metrics for audio signals
 */
 
@@ -12,7 +12,7 @@
 
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct AnalysisConfig
@@ -94,4 +94,4 @@ private:
     std::vector<float> sideBuffer_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

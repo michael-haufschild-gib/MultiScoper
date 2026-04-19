@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Container Component
+    MultiScoper - Pane Container Component
     Custom content component that acts as a DragAndDropTarget proxy.
 */
 
@@ -12,7 +12,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -60,4 +60,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PaneContainerComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

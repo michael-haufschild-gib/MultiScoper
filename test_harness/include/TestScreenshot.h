@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Screenshot Capture & Visual Verification
+    MultiScoper Test Harness - Screenshot Capture & Visual Verification
     Captures screenshots and provides visual verification utilities
 */
 
@@ -11,7 +11,7 @@
 
 #include <vector>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -222,4 +222,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestScreenshot)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

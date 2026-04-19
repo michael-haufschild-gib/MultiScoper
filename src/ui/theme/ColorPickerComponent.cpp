@@ -1,5 +1,5 @@
 /*
-    Oscil - Color Picker Component Implementation
+    MultiScoper - Color Picker Component Implementation
     Color selection with RGBA and hex support
 */
 
@@ -7,14 +7,14 @@
 
 #include "ui/components/SurfacePainter.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 ColorPickerComponent::ColorPickerComponent(IThemeService& themeService) : themeService_(themeService)
 {
     // Create sliders for RGBA channels
-    auto createSlider = [this](std::unique_ptr<OscilSlider>& slider) {
-        slider = std::make_unique<OscilSlider>(themeService_);
+    auto createSlider = [this](std::unique_ptr<MultiScoperSlider>& slider) {
+        slider = std::make_unique<MultiScoperSlider>(themeService_);
         slider->setRange(0, 255);
         slider->setStep(1);
         slider->setDecimalPlaces(0);
@@ -42,7 +42,7 @@ ColorPickerComponent::ColorPickerComponent(IThemeService& themeService) : themeS
     createLabel(hexLabel_, "Hex:");
 
     // Create hex input
-    hexInput_ = std::make_unique<OscilTextField>(themeService_, TextFieldVariant::Text, "");
+    hexInput_ = std::make_unique<MultiScoperTextField>(themeService_, TextFieldVariant::Text, "");
     hexInput_->setPlaceholder("#RRGGBBAA");
     hexInput_->onReturnPressed = [this]() { updateFromHex(); };
     addAndMakeVisible(*hexInput_);
@@ -88,7 +88,7 @@ void ColorPickerComponent::resized()
     bounds.removeFromRight(10); // spacing
 
     // Layout sliders vertically
-    auto layoutRow = [&](juce::Label* label, OscilSlider* slider) {
+    auto layoutRow = [&](juce::Label* label, MultiScoperSlider* slider) {
         auto row = bounds.removeFromTop(sliderHeight);
         label->setBounds(row.removeFromLeft(labelWidth));
         slider->setBounds(row);
@@ -235,4 +235,4 @@ void ColorPickerComponent::notifyColourChanged()
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

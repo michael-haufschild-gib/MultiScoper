@@ -1,12 +1,12 @@
 /*
-    Oscil - Plugin Processor Implementation
+    MultiScoper - Plugin Processor Implementation
     Main audio plugin processor
 */
 
 #include "plugin/PluginProcessor.h"
 
 #include "core/InstanceRegistry.h"
-#include "core/OscilLog.h"
+#include "core/MultiScoperLog.h"
 #include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -15,7 +15,7 @@
 #include "rendering/PresetManager.h"
 #include "rendering/ShaderRegistry.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -29,22 +29,22 @@ juce::String normaliseSourceDisplayName(const juce::AudioProcessor::TrackPropert
             return trimmed;
     }
 
-    return "Oscil Track";
+    return "MultiScoper Track";
 }
 } // namespace
 
-OscilPluginProcessor::OscilPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
-                                           ShaderRegistry& shaderRegistry, PresetManager& presetManager,
-                                           MemoryBudgetManager& memoryBudgetManager)
-    : OscilPluginProcessor(PluginProcessorConfig{.instanceRegistry = instanceRegistry,
-                                                 .themeService = themeService,
-                                                 .shaderRegistry = shaderRegistry,
-                                                 .presetManager = presetManager,
-                                                 .memoryBudgetManager = memoryBudgetManager})
+MultiScoperPluginProcessor::MultiScoperPluginProcessor(IInstanceRegistry& instanceRegistry, IThemeService& themeService,
+                                                       ShaderRegistry& shaderRegistry, PresetManager& presetManager,
+                                                       MemoryBudgetManager& memoryBudgetManager)
+    : MultiScoperPluginProcessor(PluginProcessorConfig{.instanceRegistry = instanceRegistry,
+                                                       .themeService = themeService,
+                                                       .shaderRegistry = shaderRegistry,
+                                                       .presetManager = presetManager,
+                                                       .memoryBudgetManager = memoryBudgetManager})
 {
 }
 
-OscilPluginProcessor::OscilPluginProcessor(const PluginProcessorConfig& config)
+MultiScoperPluginProcessor::MultiScoperPluginProcessor(const PluginProcessorConfig& config)
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
@@ -58,8 +58,12 @@ OscilPluginProcessor::OscilPluginProcessor(const PluginProcessorConfig& config)
     captureBuffer_ = std::make_shared<DecimatingCaptureBuffer>();
     analysisEngine_ = std::make_shared<AnalysisEngine>();
 
-    // Generate unique track identifier
+    // Generate a provisional unique track identifier. If the host later calls
+    // setStateInformation with a persisted trackIdentifier, we replace this
+    // value and re-register under the persisted identity — see
+    // PluginProcessorState.cpp::setStateInformation and reRegisterUnderPersistedTrackIdentifier.
     trackIdentifier_ = juce::Uuid().toString();
+    state_.setTrackIdentifier(trackIdentifier_);
 
     // Initialize MemoryBudgetManager with config from state
     // Use default sample rate until prepareToPlay is called
@@ -73,12 +77,12 @@ OscilPluginProcessor::OscilPluginProcessor(const PluginProcessorConfig& config)
     // Initialize cached state for real-time safe getStateInformation()
     updateCachedState();
 
-    OSCIL_LOG(PLUGIN, "PluginProcessor created: trackId=" << trackIdentifier_);
+    MULTISCOPER_LOG(PLUGIN, "PluginProcessor created: trackId=" << trackIdentifier_);
 }
 
-OscilPluginProcessor::~OscilPluginProcessor()
+MultiScoperPluginProcessor::~MultiScoperPluginProcessor()
 {
-    OSCIL_LOG(PLUGIN, "PluginProcessor destroying: trackId=" << trackIdentifier_ << " sourceId=" << sourceId_.id);
+    MULTISCOPER_LOG(PLUGIN, "PluginProcessor destroying: trackId=" << trackIdentifier_ << " sourceId=" << sourceId_.id);
     state_.getState().removeListener(this);
 
     // Unregister from MemoryBudgetManager
@@ -91,25 +95,54 @@ OscilPluginProcessor::~OscilPluginProcessor()
     }
 }
 
-const juce::String OscilPluginProcessor::getName() const { return "Oscil"; }
+const juce::String MultiScoperPluginProcessor::getName() const { return "MultiScoper"; }
 
-bool OscilPluginProcessor::acceptsMidi() const { return true; }
-bool OscilPluginProcessor::producesMidi() const { return false; }
-bool OscilPluginProcessor::isMidiEffect() const { return false; }
+bool MultiScoperPluginProcessor::acceptsMidi() const { return true; }
+bool MultiScoperPluginProcessor::producesMidi() const { return false; }
+bool MultiScoperPluginProcessor::isMidiEffect() const { return false; }
 
-double OscilPluginProcessor::getTailLengthSeconds() const { return 0.0; }
+double MultiScoperPluginProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int OscilPluginProcessor::getNumPrograms() { return 1; }
-int OscilPluginProcessor::getCurrentProgram() { return 0; }
-void OscilPluginProcessor::setCurrentProgram(int /*index*/) {}
-const juce::String OscilPluginProcessor::getProgramName(int /*index*/) { return {}; }
-void OscilPluginProcessor::changeProgramName(int /*index*/, const juce::String& /*newName*/) {}
+int MultiScoperPluginProcessor::getNumPrograms() { return 1; }
+int MultiScoperPluginProcessor::getCurrentProgram() { return 0; }
+void MultiScoperPluginProcessor::setCurrentProgram(int /*index*/) {}
+const juce::String MultiScoperPluginProcessor::getProgramName(int /*index*/) { return {}; }
+void MultiScoperPluginProcessor::changeProgramName(int /*index*/, const juce::String& /*newName*/) {}
 
-void OscilPluginProcessor::deferRegistration(double sampleRate)
+void MultiScoperPluginProcessor::reRegisterUnderPersistedTrackIdentifier(const juce::String& newTrackIdentifier)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (newTrackIdentifier.isEmpty() || newTrackIdentifier == trackIdentifier_)
+        return;
+
+    MULTISCOPER_LOG(PLUGIN, "reRegisterUnderPersistedTrackIdentifier: trackId="
+                                << trackIdentifier_ << " -> " << newTrackIdentifier << " (sourceId was " << sourceId_.id
+                                << ")");
+
+    const bool wasRegistered = sourceId_.isValid();
+    if (wasRegistered)
+    {
+        instanceRegistry_.unregisterInstance(sourceId_);
+        memoryBudgetManager_.unregisterBuffer(trackIdentifier_);
+        sourceId_ = SourceId::invalid();
+    }
+
+    trackIdentifier_ = newTrackIdentifier;
+    state_.setTrackIdentifier(trackIdentifier_);
+
+    // If registration already happened, re-run deferRegistration to bind under
+    // the persisted identity. If prepareToPlay has not run yet, the eventual
+    // first call will naturally pick up the new trackIdentifier_.
+    if (wasRegistered)
+        deferRegistration(currentSampleRate_.load(std::memory_order_relaxed));
+}
+
+void MultiScoperPluginProcessor::deferRegistration(double sampleRate)
 {
     // Memory allocation and mutex operations must happen on message thread.
     // prepareToPlay can be called from audio thread in some hosts (Pro Tools, Reaper).
-    auto doRegistration = [weakThis = juce::WeakReference<OscilPluginProcessor>(this), sampleRate,
+    auto doRegistration = [weakThis = juce::WeakReference<MultiScoperPluginProcessor>(this), sampleRate,
                            captureConfig = getCaptureQualityConfig(), trackId = trackIdentifier_,
                            channelCount = getTotalNumInputChannels()]() {
         auto* p = weakThis.get();
@@ -137,7 +170,7 @@ void OscilPluginProcessor::deferRegistration(double sampleRate)
         juce::MessageManager::callAsync(std::move(doRegistration));
 }
 
-void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void MultiScoperPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     currentSampleRate_.store(sampleRate, std::memory_order_release);
     currentBlockSize_.store(samplesPerBlock, std::memory_order_release);
@@ -151,12 +184,12 @@ void OscilPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         (*analysisEngine_).reset();
     }
 
-    OSCIL_LOG(PLUGIN, "prepareToPlay: sampleRate=" << sampleRate << " blockSize=" << samplesPerBlock
-                                                   << " inputChannels=" << getTotalNumInputChannels());
+    MULTISCOPER_LOG(PLUGIN, "prepareToPlay: sampleRate=" << sampleRate << " blockSize=" << samplesPerBlock
+                                                         << " inputChannels=" << getTotalNumInputChannels());
     deferRegistration(sampleRate);
 }
 
-void OscilPluginProcessor::updateTrackProperties(const TrackProperties& properties)
+void MultiScoperPluginProcessor::updateTrackProperties(const TrackProperties& properties)
 {
     jassert(!juce::MessageManager::getInstanceWithoutCreating() ||
             juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -165,7 +198,7 @@ void OscilPluginProcessor::updateTrackProperties(const TrackProperties& properti
     if (sourceDisplayName_ == normalizedName)
         return;
 
-    OSCIL_LOG(PLUGIN, "updateTrackProperties: name=" << normalizedName << " (was " << sourceDisplayName_ << ")");
+    MULTISCOPER_LOG(PLUGIN, "updateTrackProperties: name=" << normalizedName << " (was " << sourceDisplayName_ << ")");
     sourceDisplayName_ = normalizedName;
 
     if (!sourceId_.isValid())
@@ -175,12 +208,12 @@ void OscilPluginProcessor::updateTrackProperties(const TrackProperties& properti
                                    currentSampleRate_.load(std::memory_order_relaxed));
 }
 
-void OscilPluginProcessor::releaseResources()
+void MultiScoperPluginProcessor::releaseResources()
 {
     // Nothing to release
 }
 
-bool OscilPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+bool MultiScoperPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
     // CRITICAL: Reject disabled buses - this prevents hosts from passing 0-channel buffers
     // Without this check, some hosts (FL Studio, Ableton) may disable audio routing entirely
@@ -197,7 +230,7 @@ bool OscilPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
     return layouts.getMainInputChannelSet() == layouts.getMainOutputChannelSet();
 }
 
-void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void MultiScoperPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals const noDenormals;
 
@@ -253,7 +286,7 @@ void OscilPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     updateCpuUsage(startTime, numSamples);
 }
 
-void OscilPluginProcessor::updateCpuUsage(int64_t startTicks, int numSamples)
+void MultiScoperPluginProcessor::updateCpuUsage(int64_t startTicks, int numSamples)
 {
     double const sampleRate = currentSampleRate_.load(std::memory_order_relaxed);
     if (sampleRate <= 0.0)
@@ -268,13 +301,13 @@ void OscilPluginProcessor::updateCpuUsage(int64_t startTicks, int numSamples)
     cpuUsage_.store((current * 0.9f) + (usage * 0.1f), std::memory_order_relaxed);
 }
 
-bool OscilPluginProcessor::hasEditor() const { return true; }
+bool MultiScoperPluginProcessor::hasEditor() const { return true; }
 
-juce::AudioProcessorEditor* OscilPluginProcessor::createEditor()
+juce::AudioProcessorEditor* MultiScoperPluginProcessor::createEditor()
 {
-    OSCIL_LOG(PLUGIN, "createEditor: sourceId=" << sourceId_.id << " trackId=" << trackIdentifier_);
+    MULTISCOPER_LOG(PLUGIN, "createEditor: sourceId=" << sourceId_.id << " trackId=" << trackIdentifier_);
     // Use unique_ptr for exception safety - if constructor throws, memory is cleaned up
-    auto editor = std::make_unique<OscilPluginEditor>(*this);
+    auto editor = std::make_unique<MultiScoperPluginEditor>(*this);
     // JUCE API requires raw pointer (framework takes ownership and deletes the editor)
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     return editor.release();
@@ -283,16 +316,16 @@ juce::AudioProcessorEditor* OscilPluginProcessor::createEditor()
 // getStateInformation, updateCachedState, and setStateInformation
 // are implemented in PluginProcessorState.cpp
 
-std::shared_ptr<SharedCaptureBuffer> OscilPluginProcessor::getCaptureBuffer() const
+std::shared_ptr<SharedCaptureBuffer> MultiScoperPluginProcessor::getCaptureBuffer() const
 {
     return captureBuffer_->getInternalBuffer();
 }
 
-SourceId OscilPluginProcessor::getSourceId() const { return sourceId_; }
+SourceId MultiScoperPluginProcessor::getSourceId() const { return sourceId_; }
 
-OscilState& OscilPluginProcessor::getState() { return state_; }
+MultiScoperState& MultiScoperPluginProcessor::getState() { return state_; }
 
-int OscilPluginProcessor::getCaptureRate() const
+int MultiScoperPluginProcessor::getCaptureRate() const
 {
     if (captureBuffer_)
         return captureBuffer_->getCaptureRate();
@@ -300,17 +333,17 @@ int OscilPluginProcessor::getCaptureRate() const
     return CaptureRate::STANDARD;
 }
 
-TimingEngine& OscilPluginProcessor::getTimingEngine() { return timingEngine_; }
+TimingEngine& MultiScoperPluginProcessor::getTimingEngine() { return timingEngine_; }
 
-IInstanceRegistry& OscilPluginProcessor::getInstanceRegistry() { return instanceRegistry_; }
+IInstanceRegistry& MultiScoperPluginProcessor::getInstanceRegistry() { return instanceRegistry_; }
 
-IThemeService& OscilPluginProcessor::getThemeService() { return themeService_; }
+IThemeService& MultiScoperPluginProcessor::getThemeService() { return themeService_; }
 
-ShaderRegistry& OscilPluginProcessor::getShaderRegistry() { return shaderRegistry_; }
+ShaderRegistry& MultiScoperPluginProcessor::getShaderRegistry() { return shaderRegistry_; }
 
-PresetManager& OscilPluginProcessor::getPresetManager() { return presetManager_; }
+PresetManager& MultiScoperPluginProcessor::getPresetManager() { return presetManager_; }
 
-std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& sourceId)
+std::shared_ptr<IAudioBuffer> MultiScoperPluginProcessor::getBuffer(const SourceId& sourceId)
 {
     // If the requested source is this processor's own source, return local buffer
     if (sourceId == sourceId_)
@@ -322,18 +355,18 @@ std::shared_ptr<IAudioBuffer> OscilPluginProcessor::getBuffer(const SourceId& so
     return instanceRegistry_.getCaptureBuffer(sourceId);
 }
 
-void OscilPluginProcessor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& /*property*/)
+void MultiScoperPluginProcessor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& /*property*/)
 {
     // Check if CaptureQuality settings changed
     if (tree.hasType(StateIds::CaptureQuality) ||
         (tree.getParent().isValid() && tree.getParent().hasType(StateIds::CaptureQuality)))
     {
-        OSCIL_LOG(PLUGIN, "captureQuality property changed, deferring reconfigure");
+        MULTISCOPER_LOG(PLUGIN, "captureQuality property changed, deferring reconfigure");
         // CRITICAL: Always defer to message thread to guarantee real-time safety
         // ValueTree listeners should be called on message thread, but we verify defensively.
         // The state read MUST happen on message thread to avoid race conditions.
         // Use WeakReference to handle case where processor is destroyed before callback runs.
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<OscilPluginProcessor>(this)]() {
+        juce::MessageManager::callAsync([weakThis = juce::WeakReference<MultiScoperPluginProcessor>(this)]() {
             if (auto* processor = weakThis.get())
             {
                 // Read state only on message thread (thread-safe)
@@ -347,22 +380,22 @@ void OscilPluginProcessor::valueTreePropertyChanged(juce::ValueTree& tree, const
     }
 }
 
-CaptureQualityConfig OscilPluginProcessor::getCaptureQualityConfig() const
+CaptureQualityConfig MultiScoperPluginProcessor::getCaptureQualityConfig() const
 {
     const juce::SpinLock::ScopedLockType sl(captureConfigLock_);
     return cachedCaptureConfig_;
 }
 
-void OscilPluginProcessor::setCaptureQualityConfig(const CaptureQualityConfig& config)
+void MultiScoperPluginProcessor::setCaptureQualityConfig(const CaptureQualityConfig& config)
 {
     const juce::SpinLock::ScopedLockType sl(captureConfigLock_);
     cachedCaptureConfig_ = config;
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
 // This creates the plugin instance
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return oscil::PluginFactory::getInstance().createPluginProcessor().release();
+    return multiscoper::PluginFactory::getInstance().createPluginProcessor().release();
 }

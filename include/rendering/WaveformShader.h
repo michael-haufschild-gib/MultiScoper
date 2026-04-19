@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Shader Base Class
+    MultiScoper - Waveform Shader Base Class
     Abstract base for GPU-accelerated waveform rendering shaders
 */
 
@@ -7,12 +7,12 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     #include <juce_opengl/juce_opengl.h>
 #endif
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -62,7 +62,7 @@ public:
         return {.id = getId(), .displayName = getDisplayName(), .description = getDescription()};
     }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     /**
      * Compile the shader program
      * @param context The OpenGL context to compile for
@@ -102,7 +102,7 @@ public:
 protected:
     WaveformShader() = default;
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     /**
      * Common OpenGL resources shared by all waveform shaders.
      * Shader-specific subclasses extend this with extra uniform locations.
@@ -187,4 +187,4 @@ protected:
                                       float height, float& centerY1, float& centerY2, float& amp1, float& amp2);
 };
 
-} // namespace oscil
+} // namespace multiscoper

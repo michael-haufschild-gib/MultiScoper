@@ -1,5 +1,5 @@
 /*
-    Oscil - Gradient Fill Shader
+    MultiScoper - Gradient Fill Shader
     Renders waveform with a gradient fill under the curve
 */
 
@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -27,7 +27,7 @@ public:
     [[nodiscard]] juce::String getDisplayName() const override { return "Gradient Fill"; }
     [[nodiscard]] juce::String getDescription() const override { return "Waveform with gradient fill under the curve"; }
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     /// Compile the gradient fill shader program.
     bool compile(juce::OpenGLContext& context) override;
     /// Release the shader program and GPU resources.
@@ -39,7 +39,7 @@ public:
 #endif
 
 private:
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     struct GLResources;
     std::unique_ptr<GLResources> gl_;
 
@@ -49,4 +49,4 @@ private:
 #endif
 };
 
-} // namespace oscil
+} // namespace multiscoper

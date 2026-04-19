@@ -1,5 +1,5 @@
 /*
-    Oscil - Shared Capture Buffer Implementation
+    MultiScoper - Shared Capture Buffer Implementation
 */
 
 #include "core/SharedCaptureBuffer.h"
@@ -9,7 +9,7 @@
 #include <thread>
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Round up to next power of 2 for fast bitwise modulo
@@ -349,4 +349,4 @@ void SharedCaptureBuffer::clear()
 
 // Peak/RMS level analysis is implemented in SharedCaptureBufferAnalysis.cpp.
 
-} // namespace oscil
+} // namespace multiscoper

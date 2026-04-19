@@ -8,10 +8,10 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-using namespace oscil;
-using oscil::test::generateRamp;
-using oscil::test::generateSineWave;
-using oscil::test::generateStep;
+using namespace multiscoper;
+using multiscoper::test::generateRamp;
+using multiscoper::test::generateSineWave;
+using multiscoper::test::generateStep;
 
 class TimingEngineTest : public ::testing::Test
 {

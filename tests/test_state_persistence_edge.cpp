@@ -1,9 +1,9 @@
 /*
-    Oscil - State Persistence Tests: Edge Cases
+    MultiScoper - State Persistence Tests: Edge Cases
     Tests for edge cases, boundary conditions, and error handling
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 
 #include "helpers/Fixtures.h"
 #include "helpers/OscillatorBuilder.h"
@@ -11,8 +11,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class StatePersistenceEdgeTest : public StateTestFixture
 {
@@ -106,8 +106,8 @@ TEST_F(StatePersistenceEdgeTest, ReorderEmptyList)
 // Test: Column layout clamping low
 TEST_F(StatePersistenceEdgeTest, ColumnLayoutClampingLow)
 {
-    // Create a new OscilState for this test to avoid fixture issues
-    OscilState testState;
+    // Create a new MultiScoperState for this test to avoid fixture issues
+    MultiScoperState testState;
 
     // Set via direct property manipulation (bypassing setter)
     auto& tree = testState.getState();
@@ -121,8 +121,8 @@ TEST_F(StatePersistenceEdgeTest, ColumnLayoutClampingLow)
 // Test: Column layout clamping high
 TEST_F(StatePersistenceEdgeTest, ColumnLayoutClampingHigh)
 {
-    // Create a new OscilState for this test to avoid fixture issues
-    OscilState testState;
+    // Create a new MultiScoperState for this test to avoid fixture issues
+    MultiScoperState testState;
 
     // Set via direct property manipulation (bypassing setter)
     auto& tree = testState.getState();
@@ -164,7 +164,7 @@ namespace
 {
 
 // Simulate pane close: detach oscillators from pane and remove the pane
-void simulatePaneClose(OscilState& state, const PaneId& paneId)
+void simulatePaneClose(MultiScoperState& state, const PaneId& paneId)
 {
     auto oscillators = state.getOscillators();
     for (auto& osc : oscillators)
@@ -180,7 +180,7 @@ void simulatePaneClose(OscilState& state, const PaneId& paneId)
 }
 
 // Verify oscillator is detached (invisible, invalid pane)
-void verifyOscillatorDetached(const OscilState& state, const OscillatorId& oscId, const juce::String& label)
+void verifyOscillatorDetached(const MultiScoperState& state, const OscillatorId& oscId, const juce::String& label)
 {
     auto osc = state.getOscillator(oscId);
     ASSERT_TRUE(osc.has_value()) << label;
@@ -189,7 +189,7 @@ void verifyOscillatorDetached(const OscilState& state, const OscillatorId& oscId
 }
 
 // Verify oscillator is still attached to a pane
-void verifyOscillatorAttached(const OscilState& state, const OscillatorId& oscId, const PaneId& expectedPaneId,
+void verifyOscillatorAttached(const MultiScoperState& state, const OscillatorId& oscId, const PaneId& expectedPaneId,
                               const juce::String& label)
 {
     auto osc = state.getOscillator(oscId);

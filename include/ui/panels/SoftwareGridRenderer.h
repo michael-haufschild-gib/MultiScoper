@@ -1,5 +1,5 @@
 /*
-    Oscil - Software Grid Renderer
+    MultiScoper - Software Grid Renderer
     Handles CPU-based grid rendering for waveform visualization
     Extracted from WaveformComponent to reduce complexity
 */
@@ -13,7 +13,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -123,4 +123,4 @@ private:
     GridConfiguration gridConfig_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

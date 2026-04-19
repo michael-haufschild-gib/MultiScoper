@@ -1,5 +1,5 @@
 /*
-    Oscil - Effect Pipeline Implementation
+    MultiScoper - Effect Pipeline Implementation
 */
 
 #include "rendering/subsystems/EffectPipeline.h"
@@ -16,7 +16,7 @@
 
 #include <array>
 
-namespace oscil
+namespace multiscoper
 {
 
 EffectPipeline::EffectPipeline()
@@ -186,9 +186,7 @@ Framebuffer* EffectPipeline::applyPostProcessing(Framebuffer* source, WaveformRe
                                                trailsDest,             // Output
                                                *fbPool_, deltaTime);
 
-                // Copy the result back to historyFBO for the next frame
-                // We need to pass compositeShader to applyPostProcessing or have EffectPipeline hold a reference to
-                // Bootstrapper. Now we have it passed in.
+                // Copy the result back to historyFBO for the next frame.
                 copyFramebuffer(context, trailsDest, state.historyFBO.get(), compositeShader, compositeLoc);
 
                 // Use trails output as input for the rest of the chain
@@ -252,4 +250,4 @@ void EffectPipeline::setQualityLevel(QualityLevel level)
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

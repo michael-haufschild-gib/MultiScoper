@@ -1,7 +1,7 @@
 /*
-    Oscil - Processor Integration Tests
+    MultiScoper - Processor Integration Tests
     End-to-end tests that trace data flow across PluginProcessor, InstanceRegistry,
-    CaptureBuffer, OscilState, and TimingEngine boundaries.
+    CaptureBuffer, MultiScoperState, and TimingEngine boundaries.
 
     These tests verify that independently-correct components produce correct
     results when wired together — the class of bugs that unit tests miss.
@@ -9,13 +9,13 @@
 
 #include "core/InstanceRegistry.h"
 #include "core/MemoryBudgetManager.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 #include "core/SharedCaptureBuffer.h"
 #include "ui/theme/ThemeManager.h"
 
-#include "OscilTestFixtures.h"
-#include "OscilTestUtils.h"
+#include "MultiScoperTestFixtures.h"
+#include "MultiScoperTestUtils.h"
 #include "helpers/AudioBufferBuilder.h"
 #include "helpers/OscillatorBuilder.h"
 #include "plugin/PluginProcessor.h"
@@ -25,8 +25,8 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class ProcessorIntegrationTest : public ::testing::Test
 {
@@ -36,7 +36,7 @@ protected:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<OscilPluginProcessor> processor;
+    std::unique_ptr<MultiScoperPluginProcessor> processor;
 
     void SetUp() override
     {
@@ -46,8 +46,8 @@ protected:
         presetManager_ = std::make_unique<PresetManager>();
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
         processor->getState().setGpuRenderingEnabled(false);
         processor->prepareToPlay(44100.0, 512);
         pumpMessageQueue(200);
@@ -122,8 +122,8 @@ TEST_F(ProcessorIntegrationTest, OscillatorSourceIdMatchesRegisteredSource)
 // source or causes ID collision.
 TEST_F(ProcessorIntegrationTest, TwoProcessorsRegisterDistinctSources)
 {
-    auto processor2 = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                             *presetManager_, *memoryBudgetManager_);
+    auto processor2 = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                   *presetManager_, *memoryBudgetManager_);
     processor2->getState().setGpuRenderingEnabled(false);
     processor2->prepareToPlay(48000.0, 256);
     pumpMessageQueue(200);
@@ -172,8 +172,8 @@ TEST_F(ProcessorIntegrationTest, StateRoundTripPreservesOscillators)
     ASSERT_GT(stateData.getSize(), 0u);
 
     // Create a new processor and restore state
-    auto processor2 = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                             *presetManager_, *memoryBudgetManager_);
+    auto processor2 = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                   *presetManager_, *memoryBudgetManager_);
     processor2->getState().setGpuRenderingEnabled(false);
     processor2->setStateInformation(stateData.getData(), static_cast<int>(stateData.getSize()));
     processor2->prepareToPlay(44100.0, 512);

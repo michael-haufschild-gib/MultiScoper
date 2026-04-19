@@ -1,5 +1,5 @@
 /*
-    Oscil - Timing Sidebar Section
+    MultiScoper - Timing Sidebar Section
     Timing controls section for the sidebar (TIME/MELODIC modes)
 */
 
@@ -7,9 +7,9 @@
 
 #include "core/ServiceContext.h"
 #include "core/dsp/TimingConfig.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilTextField.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/MultiScoperDropdown.h"
+#include "ui/components/MultiScoperTextField.h"
+#include "ui/components/MultiScoperToggle.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
@@ -21,7 +21,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -101,21 +101,21 @@ private:
 
     // Waveform mode dropdown (both modes)
     std::unique_ptr<juce::Label> waveformModeLabel_;
-    std::unique_ptr<OscilDropdown> waveformModeSelector_;
+    std::unique_ptr<MultiScoperDropdown> waveformModeSelector_;
 
     // TIME mode controls
-    std::unique_ptr<OscilTextField> timeIntervalField_;
+    std::unique_ptr<MultiScoperTextField> timeIntervalField_;
 
     // MELODIC mode controls
-    std::unique_ptr<OscilDropdown> noteIntervalSelector_;
+    std::unique_ptr<MultiScoperDropdown> noteIntervalSelector_;
 
     // Sync toggle (MELODIC mode only)
-    std::unique_ptr<OscilToggle> syncToggle_;
+    std::unique_ptr<MultiScoperToggle> syncToggle_;
 
     // BPM controls (MELODIC mode only)
     std::unique_ptr<juce::Label> bpmLabel_;
-    std::unique_ptr<OscilTextField> bpmField_;   // Free Running mode
-    std::unique_ptr<juce::Label> bpmValueLabel_; // Host Sync mode (read-only)
+    std::unique_ptr<MultiScoperTextField> bpmField_; // Free Running mode
+    std::unique_ptr<juce::Label> bpmValueLabel_;     // Host Sync mode (read-only)
 
     // Sync status indicator
     std::unique_ptr<juce::Label> syncStatusLabel_;
@@ -124,9 +124,9 @@ private:
 
     juce::ListenerList<Listener> listeners_;
 
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimingSidebarSection)
 };
 
-} // namespace oscil
+} // namespace multiscoper

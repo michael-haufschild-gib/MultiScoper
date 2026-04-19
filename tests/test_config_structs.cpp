@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-using namespace oscil;
+using namespace multiscoper;
 
 // --- HostInfo Tests ---
 

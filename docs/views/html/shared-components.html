@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>shared-components</title>
+<style>
+body { margin:0; padding:24px; background:#05070B; font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; color:#E8EAED; font-variant-numeric: tabular-nums; }
+.variant-label { font-size:12px; color:#8A94A3; text-transform:uppercase; letter-spacing:0.08em; margin:0 0 8px 0; }
+.frame { position:relative; width:1400px; height:2200px; overflow:visible; margin:0 0 24px 0; background:#0F131A; border-radius:10px; padding:40px; }
+.section-header { font-size:12px; font-weight:600; color:#8A94A3; text-transform:uppercase; letter-spacing:0.12em; position:absolute; }
+.section-divider { position:absolute; height:1px; background:#1F2630; }
+.state-label { font-size:10px; font-weight:400; color:#8A94A3; text-transform:uppercase; letter-spacing:0.08em; position:absolute; }
+.btn { position:absolute; width:72px; height:32px; border-radius:6px; text-align:center; line-height:32px; font-size:12px; font-weight:600; font-family:inherit; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+<!-- ============ COLUMN 1 (x=40) — BUTTONS ============ -->
+<div style="position:absolute;left:40px;top:0px;width:340px;">
+<span class="section-header" style="left:0;top:0;">BUTTONS</span>
+<div class="section-divider" style="left:0;top:24px;width:340px;"></div>
+
+<!-- Primary -->
+<span style="position:absolute;left:0;top:40px;font-size:12px;font-weight:600;color:#E8EAED;">Primary</span>
+<div style="position:absolute;left:0;top:60px;width:340px;height:56px;">
+<div class="btn" style="left:0px;top:0px;background:#007ACC;color:#FFFFFF;">Button</div>
+<div class="btn" style="left:84px;top:0px;background:#008AD9;color:#FFFFFF;">Button</div>
+<div class="btn" style="left:168px;top:0px;background:#0062A3;color:#FFFFFF;">Button</div>
+<div class="btn" style="left:252px;top:0px;background:#353535;color:#A0A0A0;">Button</div>
+<span class="state-label" style="left:8px;top:36px;">default</span>
+<span class="state-label" style="left:96px;top:36px;">hover</span>
+<span class="state-label" style="left:172px;top:36px;">pressed</span>
+<span class="state-label" style="left:252px;top:36px;">disabled</span>
+</div>
+
+<!-- Secondary -->
+<span style="position:absolute;left:0;top:120px;font-size:12px;font-weight:600;color:#E8EAED;">Secondary</span>
+<div style="position:absolute;left:0;top:140px;width:340px;height:56px;">
+<div class="btn" style="left:0px;top:0px;background:#3A3A3A;color:#E0E0E0;">Button</div>
+<div class="btn" style="left:84px;top:0px;background:#454545;color:#E0E0E0;">Button</div>
+<div class="btn" style="left:168px;top:0px;background:#303030;color:#E0E0E0;">Button</div>
+<div class="btn" style="left:252px;top:0px;background:#252525;color:#606060;">Button</div>
+<span class="state-label" style="left:8px;top:36px;">default</span>
+<span class="state-label" style="left:96px;top:36px;">hover</span>
+<span class="state-label" style="left:172px;top:36px;">pressed</span>
+<span class="state-label" style="left:252px;top:36px;">disabled</span>
+</div>
+
+<!-- Danger -->
+<span style="position:absolute;left:0;top:200px;font-size:12px;font-weight:600;color:#E8EAED;">Danger</span>
+<div style="position:absolute;left:0;top:220px;width:340px;height:56px;">
+<div class="btn" style="left:0px;top:0px;background:#EE4444;color:#FFFFFF;">Button</div>
+<div class="btn" style="left:84px;top:0px;background:#FF5555;color:#FFFFFF;">Button</div>
+<div class="btn" style="left:168px;top:0px;background:#CC3030;color:#FFFFFF;">Button</div>
+<div class="btn" style="left:252px;top:0px;background:#353535;color:#A0A0A0;">Button</div>
+<span class="state-label" style="left:8px;top:36px;">default</span>
+<span class="state-label" style="left:96px;top:36px;">hover</span>
+<span class="state-label" style="left:172px;top:36px;">pressed</span>
+<span class="state-label" style="left:252px;top:36px;">disabled</span>
+</div>
+
+<!-- Ghost -->
+<span style="position:absolute;left:0;top:280px;font-size:12px;font-weight:600;color:#E8EAED;">Ghost</span>
+<div style="position:absolute;left:0;top:300px;width:340px;height:56px;">
+<div class="btn" style="left:0px;top:0px;background:transparent;color:#E0E0E0;border:1px solid rgba(232,234,237,0.18);">Button</div>
+<div class="btn" style="left:84px;top:0px;background:rgba(255,255,255,0.10);color:#E0E0E0;">Button</div>
+<div class="btn" style="left:168px;top:0px;background:rgba(255,255,255,0.20);color:#E0E0E0;">Button</div>
+<div class="btn" style="left:252px;top:0px;background:transparent;color:#606060;">Button</div>
+<span class="state-label" style="left:8px;top:36px;">default</span>
+<span class="state-label" style="left:96px;top:36px;">hover</span>
+<span class="state-label" style="left:172px;top:36px;">pressed</span>
+<span class="state-label" style="left:252px;top:36px;">disabled</span>
+</div>
+
+<!-- Icon Buttons -->
+<span style="position:absolute;left:0;top:360px;font-size:12px;font-weight:600;color:#E8EAED;">Icon</span>
+<div style="position:absolute;left:0;top:380px;width:340px;height:56px;">
+<div style="position:absolute;left:0px;top:0px;width:28px;height:28px;border-radius:6px;background:transparent;">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:7px;top:7px;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+</div>
+<div style="position:absolute;left:40px;top:0px;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.08);">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:7px;top:7px;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+</div>
+<div style="position:absolute;left:80px;top:0px;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.16);">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:7px;top:7px;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+</div>
+<span class="state-label" style="left:2px;top:32px;">default</span>
+<span class="state-label" style="left:42px;top:32px;">hover</span>
+<span class="state-label" style="left:76px;top:32px;">pressed</span>
+</div>
+
+<!-- TABS + SEGMENTED BARS -->
+<span class="section-header" style="left:0;top:456px;">TABS + SEGMENTED BARS</span>
+<div class="section-divider" style="left:0;top:480px;width:340px;"></div>
+
+<!-- Horizontal Tabs -->
+<span style="position:absolute;left:0;top:496px;font-size:12px;font-weight:600;color:#E8EAED;">Horizontal Tabs</span>
+<div style="position:absolute;left:0;top:516px;width:340px;height:32px;">
+<div style="position:absolute;left:0;top:0;width:85px;height:32px;text-align:center;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;border-bottom:2px solid #1FD4F3;">Oscillators</div>
+<div style="position:absolute;left:85px;top:0;width:85px;height:32px;text-align:center;line-height:32px;font-size:12px;font-weight:400;color:#8A94A3;">Sources</div>
+<div style="position:absolute;left:170px;top:0;width:85px;height:32px;text-align:center;line-height:32px;font-size:12px;font-weight:400;color:#8A94A3;">Timing</div>
+<div style="position:absolute;left:255px;top:0;width:85px;height:32px;text-align:center;line-height:32px;font-size:12px;font-weight:400;color:#8A94A3;">Settings</div>
+<div style="position:absolute;left:0;top:32px;width:340px;height:1px;background:#1F2630;"></div>
+</div>
+
+<!-- Vertical Tabs -->
+<span style="position:absolute;left:0;top:564px;font-size:12px;font-weight:600;color:#E8EAED;">Vertical Tabs</span>
+<div style="position:absolute;left:0;top:584px;width:120px;height:128px;">
+<div style="position:absolute;left:0;top:0;width:120px;height:32px;background:#161B24;border-left:2px solid #1FD4F3;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;padding-left:12px;">Oscillators</div>
+<div style="position:absolute;left:0;top:32px;width:120px;height:32px;line-height:32px;font-size:12px;font-weight:400;color:#8A94A3;padding-left:14px;">Sources</div>
+<div style="position:absolute;left:0;top:64px;width:120px;height:32px;line-height:32px;font-size:12px;font-weight:400;color:#8A94A3;padding-left:14px;">Timing</div>
+<div style="position:absolute;left:0;top:96px;width:120px;height:32px;line-height:32px;font-size:12px;font-weight:400;color:#8A94A3;padding-left:14px;">Settings</div>
+</div>
+
+<!-- Segmented Bar -->
+<span style="position:absolute;left:0;top:728px;font-size:12px;font-weight:600;color:#E8EAED;">Segmented (Processing Mode)</span>
+<div style="position:absolute;left:0;top:748px;width:242px;height:28px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+<div style="position:absolute;left:0;top:0;width:40px;height:28px;border-radius:6px;background:rgba(31,212,243,0.15);text-align:center;line-height:28px;font-size:11px;font-weight:600;color:#1FD4F3;">Stereo</div>
+<div style="position:absolute;left:40px;top:0;width:1px;height:28px;background:#242A35;"></div>
+<div style="position:absolute;left:41px;top:0;width:40px;height:28px;text-align:center;line-height:28px;font-size:11px;font-weight:400;color:#8A94A3;">Mono</div>
+<div style="position:absolute;left:81px;top:0;width:1px;height:28px;background:#242A35;"></div>
+<div style="position:absolute;left:82px;top:0;width:40px;height:28px;text-align:center;line-height:28px;font-size:11px;font-weight:400;color:#8A94A3;">Mid</div>
+<div style="position:absolute;left:122px;top:0;width:1px;height:28px;background:#242A35;"></div>
+<div style="position:absolute;left:123px;top:0;width:40px;height:28px;text-align:center;line-height:28px;font-size:11px;font-weight:400;color:#8A94A3;">Side</div>
+<div style="position:absolute;left:163px;top:0;width:1px;height:28px;background:#242A35;"></div>
+<div style="position:absolute;left:164px;top:0;width:40px;height:28px;text-align:center;line-height:28px;font-size:11px;font-weight:400;color:#8A94A3;">L</div>
+<div style="position:absolute;left:204px;top:0;width:1px;height:28px;background:#242A35;"></div>
+<div style="position:absolute;left:205px;top:0;width:40px;height:28px;text-align:center;line-height:28px;font-size:11px;font-weight:400;color:#8A94A3;">R</div>
+</div>
+
+</div>
+
+<!-- ============ COLUMN 2 (x=400) — INPUT FIELDS ============ -->
+<div style="position:absolute;left:400px;top:0px;width:340px;">
+<span class="section-header" style="left:0;top:0;">INPUT FIELDS</span>
+<div class="section-divider" style="left:0;top:24px;width:340px;"></div>
+
+<!-- Empty -->
+<span class="state-label" style="left:0;top:40px;">empty</span>
+<div style="position:absolute;left:0;top:54px;width:280px;height:32px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+<span style="position:absolute;left:10px;top:0;line-height:32px;font-size:13px;color:#4B5563;">Enter value…</span>
+</div>
+
+<!-- Focused -->
+<span class="state-label" style="left:0;top:102px;">focused</span>
+<div style="position:absolute;left:0;top:116px;width:280px;height:32px;border-radius:6px;background:#161B24;border:2px solid #1FD4F3;">
+<span style="position:absolute;left:10px;top:0;line-height:32px;font-size:13px;color:#F8FAFC;">PF8FAFC</span>
+</div>
+
+<!-- Filled -->
+<span class="state-label" style="left:0;top:164px;">filled</span>
+<div style="position:absolute;left:0;top:178px;width:280px;height:32px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+<span style="position:absolute;left:10px;top:0;line-height:32px;font-size:13px;color:#F8FAFC;">PF8FAFC</span>
+</div>
+
+<!-- Error -->
+<span class="state-label" style="left:0;top:226px;">error</span>
+<div style="position:absolute;left:0;top:240px;width:280px;height:32px;border-radius:6px;background:#161B24;border:1px solid #EE4444;">
+<span style="position:absolute;left:10px;top:0;line-height:32px;font-size:13px;color:#F8FAFC;">PF8FAFC</span>
+</div>
+<span style="position:absolute;left:0;top:276px;font-size:11px;color:#EE4444;">Invalid entry</span>
+
+<!-- Disabled -->
+<span class="state-label" style="left:0;top:296px;">disabled</span>
+<div style="position:absolute;left:0;top:310px;width:280px;height:32px;border-radius:6px;background:rgba(22,27,36,0.5);border:1px solid #242A35;">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#4B5563" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:9px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+<span style="position:absolute;left:30px;top:0;line-height:32px;font-size:13px;color:#4B5563;">Search</span>
+</div>
+
+<!-- Number Input -->
+<span class="state-label" style="left:0;top:358px;">number input</span>
+<div style="position:absolute;left:0;top:372px;width:280px;height:32px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+<div style="position:absolute;left:0;top:0;width:24px;height:32px;text-align:center;line-height:32px;font-size:14px;color:#8A94A3;border-right:1px solid #242A35;">−</div>
+<span style="position:absolute;left:24px;top:0;width:232px;height:32px;text-align:center;line-height:32px;font-size:13px;font-weight:600;color:#E8EAED;">127</span>
+<div style="position:absolute;right:0;top:0;width:24px;height:32px;text-align:center;line-height:32px;font-size:14px;color:#8A94A3;border-left:1px solid #242A35;">+</div>
+</div>
+
+<!-- CHECKBOXES AND RADIOS -->
+<span class="section-header" style="left:0;top:424px;">CHECKBOXES</span>
+<div class="section-divider" style="left:0;top:448px;width:340px;"></div>
+
+<!-- Checkbox row -->
+<div style="position:absolute;left:0;top:464px;width:340px;height:160px;">
+<!-- Empty -->
+<div style="position:absolute;left:0;top:0;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #242A35;background:#161B24;vertical-align:middle;"></div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Empty</span>
+</div>
+<!-- Checked -->
+<div style="position:absolute;left:0;top:28px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:4px;background:#1FD4F3;vertical-align:middle;position:relative;">
+<svg viewBox="0 0 18 18" width="18" height="18" style="position:absolute;left:0;top:0;"><polyline points="4,9 8,13 14,5" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Checked</span>
+</div>
+<!-- Hover -->
+<div style="position:absolute;left:0;top:56px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:4px;background:#1FD4F3;vertical-align:middle;position:relative;">
+<svg viewBox="0 0 18 18" width="18" height="18" style="position:absolute;left:0;top:0;"><polyline points="4,9 8,13 14,5" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Hover</span>
+</div>
+<!-- Indeterminate -->
+<div style="position:absolute;left:0;top:84px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:4px;background:#1FD4F3;vertical-align:middle;position:relative;">
+<svg viewBox="0 0 18 18" width="18" height="18" style="position:absolute;left:0;top:0;"><line x1="5" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Indeterminate</span>
+</div>
+<!-- Disabled -->
+<div style="position:absolute;left:0;top:112px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #242A35;background:#252525;vertical-align:middle;"></div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#4B5563;margin-left:8px;">Disabled</span>
+</div>
+</div>
+
+<!-- RADIOS -->
+<span class="section-header" style="left:0;top:640px;">RADIOS</span>
+<div class="section-divider" style="left:0;top:664px;width:340px;"></div>
+
+<div style="position:absolute;left:0;top:680px;width:340px;height:140px;">
+<!-- Empty -->
+<div style="position:absolute;left:0;top:0;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:999px;border:1px solid #242A35;background:#161B24;vertical-align:middle;"></div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Empty</span>
+</div>
+<!-- Selected -->
+<div style="position:absolute;left:0;top:28px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:999px;border:1px solid #1FD4F3;background:#161B24;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:5px;top:5px;width:8px;height:8px;border-radius:999px;background:#1FD4F3;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Selected</span>
+</div>
+<!-- Unselected -->
+<div style="position:absolute;left:0;top:56px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:999px;border:1px solid #242A35;background:#161B24;vertical-align:middle;"></div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Unselected</span>
+</div>
+<!-- Indeterminate -->
+<div style="position:absolute;left:0;top:84px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:999px;border:1px solid #1FD4F3;background:#161B24;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:4px;top:8px;width:10px;height:2px;border-radius:1px;background:#1FD4F3;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Indeterminate</span>
+</div>
+<!-- Disabled -->
+<div style="position:absolute;left:0;top:112px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:999px;border:1px solid #242A35;background:#252525;vertical-align:middle;"></div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#4B5563;margin-left:8px;">Disabled</span>
+</div>
+</div>
+
+<!-- TOGGLE SWITCHES -->
+<span class="section-header" style="left:0;top:836px;">TOGGLE SWITCHES</span>
+<div class="section-divider" style="left:0;top:860px;width:340px;"></div>
+
+<div style="position:absolute;left:0;top:876px;width:340px;height:160px;">
+<!-- Off -->
+<div style="position:absolute;left:0;top:0;">
+<div style="display:inline-block;width:34px;height:18px;border-radius:999px;background:#3A3A3A;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:999px;background:#E0E0E0;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#8A94A3;margin-left:8px;">Off</span>
+</div>
+<!-- On -->
+<div style="position:absolute;left:0;top:28px;">
+<div style="display:inline-block;width:34px;height:18px;border-radius:999px;background:#4AD070;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:18px;top:2px;width:14px;height:14px;border-radius:999px;background:#FFFFFF;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">On</span>
+</div>
+<!-- Disabled On -->
+<div style="position:absolute;left:0;top:56px;">
+<div style="display:inline-block;width:34px;height:18px;border-radius:999px;background:rgba(58,58,58,0.5);vertical-align:middle;position:relative;">
+<div style="position:absolute;left:18px;top:2px;width:14px;height:14px;border-radius:999px;background:#606060;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#4B5563;margin-left:8px;">Disabled On</span>
+</div>
+<!-- On Dim -->
+<div style="position:absolute;left:0;top:84px;">
+<div style="display:inline-block;width:34px;height:18px;border-radius:999px;background:#1FD4F3;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:18px;top:2px;width:14px;height:14px;border-radius:999px;background:#FFFFFF;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">On Dim</span>
+</div>
+<!-- Labeled: Sync to Host -->
+<div style="position:absolute;left:0;top:120px;">
+<div style="display:inline-block;width:34px;height:18px;border-radius:999px;background:#4AD070;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:18px;top:2px;width:14px;height:14px;border-radius:999px;background:#FFFFFF;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;font-weight:600;color:#E8EAED;margin-left:8px;">Sync to Host</span>
+</div>
+<!-- Labeled: Auto-Pause -->
+<div style="position:absolute;left:0;top:148px;">
+<div style="display:inline-block;width:34px;height:18px;border-radius:999px;background:#3A3A3A;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:999px;background:#E0E0E0;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;font-weight:600;color:#E8EAED;margin-left:8px;">Auto-Pause</span>
+</div>
+</div>
+
+</div>
+
+<!-- ============ COLUMN 3 (x=760) — SLIDERS ============ -->
+<div style="position:absolute;left:760px;top:0px;width:340px;">
+<span class="section-header" style="left:0;top:0;">SLIDERS</span>
+<div class="section-divider" style="left:0;top:24px;width:340px;"></div>
+
+<!-- Default Slider -->
+<span style="position:absolute;left:0;top:40px;font-size:12px;font-weight:600;color:#E8EAED;">Line Width</span>
+<span style="position:absolute;right:0;top:40px;font-size:12px;font-weight:400;color:#8A94A3;">2.0px</span>
+<div style="position:absolute;left:0;top:62px;width:340px;height:14px;">
+<div style="position:absolute;left:0;top:5px;width:340px;height:4px;border-radius:2px;background:#242A35;"></div>
+<div style="position:absolute;left:0;top:5px;width:170px;height:4px;border-radius:2px;background:#1FD4F3;"></div>
+<div style="position:absolute;left:163px;top:0px;width:14px;height:14px;border-radius:999px;background:#FFFFFF;"></div>
+</div>
+
+<!-- Dual Handle Range -->
+<span style="position:absolute;left:0;top:96px;font-size:12px;font-weight:600;color:#E8EAED;">Band</span>
+<span style="position:absolute;right:0;top:96px;font-size:12px;font-weight:400;color:#8A94A3;">80 Hz — 15 kHz</span>
+<div style="position:absolute;left:0;top:118px;width:340px;height:14px;">
+<div style="position:absolute;left:0;top:5px;width:340px;height:4px;border-radius:2px;background:#242A35;"></div>
+<div style="position:absolute;left:80px;top:5px;width:180px;height:4px;border-radius:2px;background:#1FD4F3;"></div>
+<div style="position:absolute;left:73px;top:0px;width:14px;height:14px;border-radius:999px;background:#FFFFFF;"></div>
+<div style="position:absolute;left:253px;top:0px;width:14px;height:14px;border-radius:999px;background:#FFFFFF;"></div>
+</div>
+
+<!-- Disabled Slider -->
+<span style="position:absolute;left:0;top:152px;font-size:12px;font-weight:600;color:#4B5563;">Opacity</span>
+<span style="position:absolute;right:0;top:152px;font-size:12px;font-weight:400;color:#4B5563;">100%</span>
+<div style="position:absolute;left:0;top:174px;width:340px;height:14px;opacity:0.4;">
+<div style="position:absolute;left:0;top:5px;width:340px;height:4px;border-radius:2px;background:#242A35;"></div>
+<div style="position:absolute;left:0;top:5px;width:340px;height:4px;border-radius:2px;background:#1FD4F3;"></div>
+<div style="position:absolute;left:326px;top:0px;width:14px;height:14px;border-radius:999px;background:#8A94A3;"></div>
+</div>
+
+<!-- BADGES -->
+<span class="section-header" style="left:0;top:216px;">BADGES</span>
+<div class="section-divider" style="left:0;top:240px;width:340px;"></div>
+
+<!-- Status Pills -->
+<span style="position:absolute;left:0;top:256px;font-size:12px;font-weight:600;color:#E8EAED;">Status</span>
+<div style="position:absolute;left:0;top:276px;width:340px;height:18px;">
+<div style="position:absolute;left:0;top:0;width:60px;height:18px;border-radius:999px;background:rgba(0,221,0,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#4AD070;">SYNCED</div>
+<div style="position:absolute;left:68px;top:0;width:60px;height:18px;border-radius:999px;background:rgba(221,187,0,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#D4B02C;">PAUSED</div>
+<div style="position:absolute;left:136px;top:0;width:60px;height:18px;border-radius:999px;background:rgba(238,68,68,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#EE4444;">ERROR</div>
+</div>
+
+<!-- Processing Mode Pills -->
+<span style="position:absolute;left:0;top:310px;font-size:12px;font-weight:600;color:#E8EAED;">Processing Mode</span>
+<div style="position:absolute;left:0;top:330px;width:340px;height:18px;">
+<div style="position:absolute;left:0;top:0;width:50px;height:18px;border-radius:999px;background:rgba(31,212,243,0.25);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#1FD4F3;">STEREO</div>
+<div style="position:absolute;left:56px;top:0;width:50px;height:18px;border-radius:999px;background:rgba(226,75,166,0.25);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#E24BA6;">MONO</div>
+<div style="position:absolute;left:112px;top:0;width:50px;height:18px;border-radius:999px;background:rgba(74,208,112,0.25);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#4AD070;">Mid</div>
+<div style="position:absolute;left:168px;top:0;width:50px;height:18px;border-radius:999px;background:rgba(232,123,58,0.25);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#E87B3A;">Side</div>
+<div style="position:absolute;left:224px;top:0;width:50px;height:18px;border-radius:999px;background:rgba(159,112,229,0.25);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#9F70E5;">L</div>
+<div style="position:absolute;left:280px;top:0;width:50px;height:18px;border-radius:999px;background:rgba(224,90,74,0.25);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#E05A4A;">R</div>
+</div>
+
+<!-- DROPDOWNS -->
+<span class="section-header" style="left:0;top:372px;">DROPDOWNS</span>
+<div class="section-divider" style="left:0;top:396px;width:340px;"></div>
+
+<!-- Closed -->
+<span class="state-label" style="left:0;top:412px;">closed</span>
+<div style="position:absolute;left:0;top:426px;width:280px;height:32px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+<span style="position:absolute;left:10px;top:0;line-height:32px;font-size:13px;color:#E8EAED;">Source: Track 1 - Vocals</span>
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:10px;top:9px;color:#8A94A3;"><polyline points="6 9 12 15 18 9"/></svg>
+</div>
+
+<!-- Open -->
+<span class="state-label" style="left:0;top:474px;">open</span>
+<div style="position:absolute;left:0;top:488px;width:280px;height:32px;border-radius:6px;background:#161B24;border:1px solid #1FD4F3;">
+<span style="position:absolute;left:10px;top:0;line-height:32px;font-size:13px;color:#E8EAED;">Source: Track 1 - Vocals</span>
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:10px;top:9px;color:#8A94A3;"><polyline points="6 15 12 9 18 15"/></svg>
+</div>
+<!-- Popup -->
+<div style="position:absolute;left:0;top:522px;width:280px;height:112px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+<div style="position:absolute;left:0;top:0;width:280px;height:36px;background:#1F2630;border-radius:6px 6px 0 0;">
+<span style="position:absolute;left:12px;top:0;line-height:36px;font-size:13px;color:#E8EAED;">Hover</span>
+</div>
+<div style="position:absolute;left:0;top:36px;width:280px;height:1px;background:#1F2630;"></div>
+<div style="position:absolute;left:0;top:37px;width:280px;height:36px;background:rgba(31,212,243,0.15);">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:11px;"><polyline points="20 6 9 17 4 12"/></svg>
+<span style="position:absolute;left:32px;top:0;line-height:36px;font-size:13px;color:#1FD4F3;">Selected item</span>
+</div>
+<div style="position:absolute;left:0;top:73px;width:280px;height:1px;background:#1F2630;"></div>
+<div style="position:absolute;left:0;top:74px;width:280px;height:36px;">
+<span style="position:absolute;left:12px;top:0;line-height:36px;font-size:13px;color:#E8EAED;">Selected item</span>
+</div>
+</div>
+
+<!-- Multi-select -->
+<span class="state-label" style="left:0;top:650px;">multi-select</span>
+<div style="position:absolute;left:0;top:664px;width:280px;height:32px;border-radius:6px;background:#161B24;border:1px solid #242A35;">
+<div style="position:absolute;left:6px;top:5px;width:120px;height:22px;border-radius:999px;background:rgba(31,212,243,0.15);">
+<span style="position:absolute;left:8px;top:0;line-height:22px;font-size:11px;color:#1FD4F3;">Selected item 1</span>
+<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:4px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</div>
+<div style="position:absolute;left:132px;top:5px;width:120px;height:22px;border-radius:999px;background:rgba(31,212,243,0.15);">
+<span style="position:absolute;left:8px;top:0;line-height:22px;font-size:11px;color:#1FD4F3;">Selected item 7</span>
+<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:4px;top:5px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</div>
+</div>
+
+</div>
+
+<!-- ============ COLUMN 4 (x=1120) — ACCORDION SECTIONS ============ -->
+<div style="position:absolute;left:1120px;top:0px;width:320px;">
+<span class="section-header" style="left:0;top:0;">ACCORDION SECTIONS</span>
+<div class="section-divider" style="left:0;top:24px;width:320px;"></div>
+
+<!-- Collapsed -->
+<div style="position:absolute;left:0;top:40px;width:320px;height:40px;background:#0F131A;border-radius:6px;border:1px solid #242A35;">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:13px;color:#8A94A3;"><polyline points="9 18 15 12 9 6"/></svg>
+<span style="position:absolute;left:32px;top:0;line-height:40px;font-size:13px;font-weight:600;color:#E8EAED;">Advanced Settings</span>
+<div style="position:absolute;right:12px;top:11px;width:18px;height:18px;border-radius:999px;background:rgba(31,212,243,0.20);text-align:center;line-height:18px;font-size:10px;font-weight:600;color:#1FD4F3;">8</div>
+</div>
+
+<!-- Expanded -->
+<div style="position:absolute;left:0;top:96px;width:320px;height:40px;background:#0F131A;border-radius:6px 6px 0 0;border:1px solid #242A35;border-bottom:none;">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:13px;color:#8A94A3;"><polyline points="6 9 12 15 18 9"/></svg>
+<span style="position:absolute;left:32px;top:0;line-height:40px;font-size:13px;font-weight:600;color:#E8EAED;">Visual Options</span>
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:12px;top:13px;color:#8A94A3;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</div>
+<div style="position:absolute;left:0;top:136px;width:320px;height:144px;background:#0F131A;border:1px solid #242A35;border-top:1px solid #1F2630;border-radius:0 0 6px 6px;">
+<div style="position:absolute;left:0;top:0;width:320px;height:36px;border-bottom:1px solid #1F2630;">
+<span style="position:absolute;left:16px;top:0;line-height:36px;font-size:12px;color:#E8EAED;">Nested Item 1</span>
+<span style="position:absolute;right:16px;top:0;line-height:36px;font-size:12px;color:#8A94A3;">Default</span>
+</div>
+<div style="position:absolute;left:0;top:36px;width:320px;height:36px;border-bottom:1px solid #1F2630;">
+<span style="position:absolute;left:16px;top:0;line-height:36px;font-size:12px;color:#E8EAED;">Nested Item 2</span>
+<span style="position:absolute;right:16px;top:0;line-height:36px;font-size:12px;color:#8A94A3;">0.0 dB</span>
+</div>
+<div style="position:absolute;left:0;top:72px;width:320px;height:36px;border-bottom:1px solid #1F2630;">
+<span style="position:absolute;left:16px;top:0;line-height:36px;font-size:12px;color:#E8EAED;">Nested Item 3</span>
+<span style="position:absolute;right:16px;top:0;line-height:36px;font-size:12px;color:#8A94A3;">2.0 px</span>
+</div>
+<div style="position:absolute;left:0;top:108px;width:320px;height:36px;">
+<span style="position:absolute;left:16px;top:0;line-height:36px;font-size:12px;color:#E8EAED;">Nested Item 4</span>
+<span style="position:absolute;right:16px;top:0;line-height:36px;font-size:12px;color:#8A94A3;">100%</span>
+</div>
+</div>
+
+<!-- COLOR PICKER -->
+<span class="section-header" style="left:0;top:304px;">COLOR PICKER</span>
+<div class="section-divider" style="left:0;top:328px;width:320px;"></div>
+
+<div style="position:absolute;left:0;top:344px;width:320px;height:420px;background:#161B24;border-radius:10px;padding:16px;">
+<!-- Title -->
+<span style="position:absolute;left:16px;top:16px;font-size:12px;font-weight:600;color:#8A94A3;text-transform:uppercase;letter-spacing:0.12em;">COLOR PICKER</span>
+
+<!-- Swatch grid 8x2 -->
+<div style="position:absolute;left:16px;top:44px;width:288px;height:56px;">
+<div style="position:absolute;left:0px;top:0px;width:24px;height:24px;border-radius:6px;background:#1FD4F3;"></div>
+<div style="position:absolute;left:32px;top:0px;width:24px;height:24px;border-radius:6px;background:#E24BA6;"></div>
+<div style="position:absolute;left:64px;top:0px;width:24px;height:24px;border-radius:6px;background:#4AD070;"></div>
+<div style="position:absolute;left:96px;top:0px;width:24px;height:24px;border-radius:6px;background:#E87B3A;"></div>
+<div style="position:absolute;left:128px;top:0px;width:24px;height:24px;border-radius:6px;background:#9F70E5;"></div>
+<div style="position:absolute;left:160px;top:0px;width:24px;height:24px;border-radius:6px;background:#E05A4A;"></div>
+<div style="position:absolute;left:192px;top:0px;width:24px;height:24px;border-radius:6px;background:#D4B02C;"></div>
+<div style="position:absolute;left:224px;top:0px;width:24px;height:24px;border-radius:6px;background:#3AB0E8;"></div>
+<div style="position:absolute;left:0px;top:32px;width:24px;height:24px;border-radius:6px;background:#C55AC5;"></div>
+<div style="position:absolute;left:32px;top:32px;width:24px;height:24px;border-radius:6px;background:#6EC970;"></div>
+<div style="position:absolute;left:64px;top:32px;width:24px;height:24px;border-radius:6px;background:#F09050;"></div>
+<div style="position:absolute;left:96px;top:32px;width:24px;height:24px;border-radius:6px;background:#7070E5;"></div>
+<div style="position:absolute;left:128px;top:32px;width:24px;height:24px;border-radius:6px;background:#E06060;"></div>
+<div style="position:absolute;left:160px;top:32px;width:24px;height:24px;border-radius:6px;background:#E0C040;"></div>
+<div style="position:absolute;left:192px;top:32px;width:24px;height:24px;border-radius:6px;background:#50C5D0;"></div>
+<div style="position:absolute;left:224px;top:32px;width:24px;height:24px;border-radius:6px;background:#D05090;"></div>
+</div>
+
+<!-- HSV Rectangle -->
+<div style="position:absolute;left:16px;top:112px;width:288px;height:160px;border-radius:6px;overflow:hidden;">
+<svg width="288" height="160" viewBox="0 0 288 160">
+<defs>
+<linearGradient id="sat" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#00D9FF"/></linearGradient>
+<linearGradient id="val" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="#000000"/></linearGradient>
+</defs>
+<rect width="288" height="160" fill="url(#sat)"/>
+<rect width="288" height="160" fill="url(#val)"/>
+<circle cx="230" cy="16" r="7" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+</svg>
+</div>
+
+<!-- Hue Slider -->
+<div style="position:absolute;left:16px;top:280px;width:288px;height:14px;border-radius:7px;overflow:hidden;">
+<svg width="288" height="14" viewBox="0 0 288 14">
+<defs>
+<linearGradient id="hue" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0%" stop-color="#FF0000"/><stop offset="17%" stop-color="#FFFF00"/><stop offset="33%" stop-color="#00FF00"/><stop offset="50%" stop-color="#00FFFF"/><stop offset="67%" stop-color="#0000FF"/><stop offset="83%" stop-color="#FF00FF"/><stop offset="100%" stop-color="#FF0000"/>
+</linearGradient>
+</defs>
+<rect width="288" height="14" rx="7" fill="url(#hue)"/>
+<circle cx="144" cy="7" r="6" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+</svg>
+</div>
+
+<!-- Alpha Slider -->
+<div style="position:absolute;left:16px;top:302px;width:288px;height:14px;border-radius:7px;overflow:hidden;">
+<svg width="288" height="14" viewBox="0 0 288 14">
+<defs>
+<pattern id="checker" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#999"/><rect x="4" y="4" width="4" height="4" fill="#999"/><rect x="4" width="4" height="4" fill="#666"/><rect y="4" width="4" height="4" fill="#666"/></pattern>
+<linearGradient id="alpha" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="rgba(0,217,255,0)"/><stop offset="100%" stop-color="#00D9FF"/></linearGradient>
+</defs>
+<rect width="288" height="14" rx="7" fill="url(#checker)"/>
+<rect width="288" height="14" rx="7" fill="url(#alpha)"/>
+<circle cx="260" cy="7" r="6" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+</svg>
+</div>
+
+<!-- Hex Inputs Row -->
+<div style="position:absolute;left:16px;top:328px;width:288px;height:28px;">
+<div style="position:absolute;left:0;top:0;width:130px;height:28px;border-radius:6px;background:#0F131A;border:1px solid #242A35;">
+<span style="position:absolute;left:10px;top:0;line-height:28px;font-size:11px;color:#E8EAED;">#00D9FF</span>
+</div>
+<div style="position:absolute;left:142px;top:0;width:130px;height:28px;border-radius:6px;background:#0F131A;border:1px solid #242A35;">
+<span style="position:absolute;left:10px;top:0;line-height:28px;font-size:11px;color:#E8EAED;">#E2E8F0</span>
+</div>
+</div>
+
+<!-- Apply Button -->
+<div style="position:absolute;left:224px;top:368px;width:80px;height:32px;border-radius:6px;background:#007ACC;text-align:center;line-height:32px;font-size:12px;font-weight:600;color:#FFFFFF;">Apply</div>
+</div>
+
+<!-- POPUP / MODAL RECAP -->
+<span class="section-header" style="left:0;top:784px;">POPUP / MODAL</span>
+<div class="section-divider" style="left:0;top:808px;width:320px;"></div>
+
+<div style="position:absolute;left:0;top:824px;width:280px;height:200px;background:#161B24;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+<!-- Title bar -->
+<div style="position:absolute;left:0;top:0;width:280px;height:36px;border-radius:10px 10px 0 0;background:rgba(232,234,237,0.08);">
+<span style="position:absolute;left:16px;top:0;line-height:36px;font-size:13px;font-weight:600;color:#E8EAED;">Configure Oscillator</span>
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:12px;top:11px;color:#8A94A3;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</div>
+<!-- Body -->
+<div style="position:absolute;left:16px;top:48px;width:248px;">
+<span style="font-size:12px;font-weight:600;color:#E8EAED;">Form</span>
+<!-- Radio 1 -->
+<div style="position:absolute;left:0;top:24px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:999px;border:1px solid #1FD4F3;background:#161B24;vertical-align:middle;position:relative;">
+<div style="position:absolute;left:5px;top:5px;width:8px;height:8px;border-radius:999px;background:#1FD4F3;"></div>
+</div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Formation</span>
+</div>
+<!-- Radio 2 -->
+<div style="position:absolute;left:0;top:52px;">
+<div style="display:inline-block;width:18px;height:18px;border-radius:999px;border:1px solid #242A35;background:#161B24;vertical-align:middle;"></div>
+<span style="display:inline-block;vertical-align:middle;font-size:12px;color:#E8EAED;margin-left:8px;">Formation</span>
+</div>
+</div>
+<!-- Bottom buttons -->
+<div style="position:absolute;left:16px;top:156px;width:248px;height:28px;">
+<div style="position:absolute;right:78px;top:0;width:70px;height:28px;border-radius:6px;background:#3A3A3A;text-align:center;line-height:28px;font-size:12px;font-weight:600;color:#E0E0E0;">Cancel</div>
+<div style="position:absolute;right:0;top:0;width:70px;height:28px;border-radius:6px;background:#007ACC;text-align:center;line-height:28px;font-size:12px;font-weight:600;color:#FFFFFF;">Save</div>
+</div>
+</div>
+
+<!-- METER BAR -->
+<span class="section-header" style="left:0;top:1044px;">METER BAR</span>
+<div class="section-divider" style="left:0;top:1068px;width:320px;"></div>
+
+<div style="position:absolute;left:0;top:1084px;width:320px;height:10px;border-radius:5px;overflow:hidden;">
+<svg width="320" height="10" viewBox="0 0 320 10">
+<defs>
+<linearGradient id="meter" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0%" stop-color="#4AD070"/>
+<stop offset="60%" stop-color="#4AD070"/>
+<stop offset="80%" stop-color="#D4B02C"/>
+<stop offset="100%" stop-color="#EE4444"/>
+</linearGradient>
+</defs>
+<rect width="320" height="10" rx="5" fill="url(#meter)"/>
+<rect x="249" y="0" width="2" height="10" fill="#FFFFFF"/>
+</svg>
+</div>
+
+<!-- BPM / TRANSPORT -->
+<span class="section-header" style="left:0;top:1116px;">BPM / TRANSPORT</span>
+<div class="section-divider" style="left:0;top:1140px;width:320px;"></div>
+
+<div style="position:absolute;left:0;top:1156px;width:320px;height:60px;">
+<!-- BPM display -->
+<span style="position:absolute;left:0;top:0;font-size:10px;font-weight:600;color:#8A94A3;text-transform:uppercase;letter-spacing:0.08em;">BPM</span>
+<span style="position:absolute;left:0;top:14px;font-size:32px;font-weight:700;color:#E8EAED;font-variant-numeric:tabular-nums;">120.0</span>
+
+<!-- Transport row -->
+<div style="position:absolute;left:120px;top:16px;width:200px;height:24px;">
+<!-- Play -->
+<div style="position:absolute;left:0;top:0;width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.08);">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+</div>
+<!-- Pause -->
+<div style="position:absolute;left:32px;top:0;width:24px;height:24px;border-radius:6px;">
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:5px;top:5px;"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+</div>
+<!-- LINKED pill -->
+<div style="position:absolute;left:68px;top:0;width:70px;height:24px;border-radius:999px;background:rgba(31,212,243,0.15);">
+<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1FD4F3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:8px;top:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+<span style="position:absolute;left:24px;top:0;line-height:24px;font-size:10px;font-weight:600;color:#1FD4F3;">LINKED</span>
+</div>
+</div>
+</div>
+
+</div>
+
+</div>
+</body>
+</html>

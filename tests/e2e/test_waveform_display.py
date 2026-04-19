@@ -17,14 +17,14 @@ What bugs these tests catch:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient
+from multiscoper_test_utils import MultiScoperTestClient
 
 
 class TestWaveformRendering:
     """Verify waveforms render when audio is flowing."""
 
     def test_waveform_renders_with_active_audio(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: render pipeline not connected to audio data, so waveform
@@ -55,7 +55,7 @@ class TestWaveformRendering:
         editor.transport_stop()
 
     def test_waveform_state_has_display_samples(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: displaySamples not computed after oscillator added,
@@ -75,7 +75,7 @@ class TestWaveformRendering:
         )
 
     def test_waveform_peak_rms_with_audio(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: peak/RMS level computation broken, showing 0 even
@@ -106,7 +106,7 @@ class TestWaveformRendering:
         editor.transport_stop()
 
     def test_oscillator_update_via_state_api(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: update_oscillator API not applying changes to existing
@@ -126,7 +126,7 @@ class TestWaveformRendering:
         )
 
     def test_oscillator_visibility_affects_rendering(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: setting visible=false on oscillator but render pipeline
@@ -163,7 +163,7 @@ class TestWaveformRendering:
         assert osc["visible"] is True, "Oscillator should be visible after re-show"
 
     def test_multiple_oscillators_coexist(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: second oscillator overwriting first in render state,
@@ -183,7 +183,7 @@ class TestWaveformRendering:
             assert osc["visible"] is True, f"Oscillator {osc['id']} should be visible"
 
     def test_multiple_oscillators_appear_in_waveform_state(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: waveform state only reporting the first oscillator,
@@ -209,7 +209,7 @@ class TestWaveformRendering:
         )
 
     def test_waveform_data_disappears_with_silence(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: waveform state reporting hasWaveformData=true even
@@ -243,7 +243,7 @@ class TestWaveformRendering:
         editor.transport_stop()
 
     def test_waveform_data_recovers_after_position_reset(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: resetting transport position to 0 while audio is
@@ -280,7 +280,7 @@ class TestWaveformRendering:
         editor.transport_stop()
 
     def test_frequency_change_reflected_in_waveform(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: changing audio frequency does not update the capture
@@ -324,7 +324,7 @@ class TestOscillatorProperties:
     """Verify oscillator property values via state API."""
 
     def test_oscillator_has_source_id(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator created without source binding.
@@ -339,7 +339,7 @@ class TestOscillatorProperties:
         )
 
     def test_oscillator_has_pane_id(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator added without pane assignment (orphaned).
@@ -353,7 +353,7 @@ class TestOscillatorProperties:
         assert pane_id, f"Oscillator should have a pane ID, got '{pane_id}'"
 
     def test_oscillator_order_index(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: order indices not assigned sequentially, causing
@@ -374,7 +374,7 @@ class TestOscillatorProperties:
         )
 
     def test_opacity_and_line_width_via_api(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: update API ignoring opacity/lineWidth fields.
@@ -397,7 +397,7 @@ class TestOscillatorProperties:
         )
 
     def test_oscillator_assigned_to_existing_pane(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: oscillator's paneId doesn't match any actual pane,
@@ -417,7 +417,7 @@ class TestOscillatorProperties:
         )
 
     def test_name_survives_state_roundtrip(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: name serialization truncating or encoding incorrectly
@@ -434,7 +434,7 @@ class TestOscillatorProperties:
         )
 
     def test_delete_oscillator_via_api(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: delete API not removing oscillator from state.
@@ -458,7 +458,7 @@ class TestWaveformFrequencyResponse:
 
     @pytest.mark.slow
     def test_amplitude_change_affects_peak_level(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: peak level computation using stale audio data after
@@ -503,7 +503,7 @@ class TestWaveformFrequencyResponse:
         editor.transport_stop()
 
     def test_zero_amplitude_produces_near_silent_peak(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: amplitude=0 not actually producing silence in the
@@ -536,7 +536,7 @@ class TestWaveformFrequencyResponse:
         editor.transport_stop()
 
     def test_waveform_type_switch_during_playback(
-        self, editor: OscilTestClient, source_id: str
+        self, editor: MultiScoperTestClient, source_id: str
     ):
         """
         Bug caught: switching waveform type while playing causes a torn

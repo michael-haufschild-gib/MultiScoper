@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator Configuration Dialog
+    MultiScoper - Oscillator Configuration Dialog
     Modal dialog for comprehensive oscillator configuration
 */
 
@@ -10,11 +10,11 @@
 #include "core/WaveformColorPalette.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/components/ComponentConstants.h"
-#include "ui/components/OscilButton.h"
-#include "ui/components/OscilColorSwatches.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilSlider.h"
-#include "ui/components/OscilTextField.h"
+#include "ui/components/MultiScoperButton.h"
+#include "ui/components/MultiScoperColorSwatches.h"
+#include "ui/components/MultiScoperDropdown.h"
+#include "ui/components/MultiScoperSlider.h"
+#include "ui/components/MultiScoperTextField.h"
 #include "ui/components/PaneSelectorComponent.h"
 #include "ui/components/SegmentedButtonBar.h"
 #include "ui/components/TestId.h"
@@ -25,7 +25,7 @@
 #include <functional>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -152,7 +152,7 @@ private:
     juce::ValueTree visualOverrides_;
 
     // Header section
-    std::unique_ptr<OscilTextField> nameEditor_;
+    std::unique_ptr<MultiScoperTextField> nameEditor_;
 
     // Source section
     std::unique_ptr<juce::Label> sourceLabel_;
@@ -164,25 +164,25 @@ private:
 
     // Color section
     std::unique_ptr<juce::Label> colorLabel_;
-    std::unique_ptr<OscilColorSwatches> colorSwatches_;
+    std::unique_ptr<MultiScoperColorSwatches> colorSwatches_;
 
     // Visual preset section
     std::unique_ptr<juce::Label> visualPresetLabel_;
-    std::unique_ptr<OscilDropdown> visualPresetDropdown_;
+    std::unique_ptr<MultiScoperDropdown> visualPresetDropdown_;
     juce::String visualPresetId_ = "default";
 
     // Line Width slider
-    std::unique_ptr<OscilSlider> lineWidthSlider_;
+    std::unique_ptr<MultiScoperSlider> lineWidthSlider_;
 
     // Opacity slider
-    std::unique_ptr<OscilSlider> opacitySlider_;
+    std::unique_ptr<MultiScoperSlider> opacitySlider_;
 
     // Pane selector
     std::unique_ptr<juce::Label> paneLabel_;
     std::unique_ptr<PaneSelectorComponent> paneSelectorComponent_;
 
     // Footer buttons
-    std::unique_ptr<OscilButton> footerCloseButton_;
+    std::unique_ptr<MultiScoperButton> footerCloseButton_;
 
     // Debounces keystroke-driven name edits so we do not churn the entire
     // oscillator ValueTree on every character. Flushed on Close / Enter.
@@ -194,9 +194,9 @@ private:
     // Get default colors from centralized palette
     std::vector<juce::Colour> getDefaultColors() const { return WaveformColorPalette::getAllColors(); }
 
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorConfigDialog)
 };
 
-} // namespace oscil
+} // namespace multiscoper

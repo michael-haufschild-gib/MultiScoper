@@ -1,5 +1,5 @@
 """
-Page Objects for Oscil E2E Tests
+Page Objects for MultiScoper E2E Tests
 
 Encapsulates UI navigation, element interactions, and state verification
 into reusable objects that make tests read as user intent rather than
@@ -13,14 +13,14 @@ Each page object:
 """
 
 import pytest
-from oscil_test_utils import OscilTestClient, ElementInfo
+from multiscoper_test_utils import MultiScoperTestClient, ElementInfo
 from typing import Optional
 
 
 class SidebarPage:
     """Encapsulates sidebar interactions: oscillator list, sections, resize."""
 
-    def __init__(self, client: OscilTestClient):
+    def __init__(self, client: MultiScoperTestClient):
         self.c = client
 
     # ── Locators ──────────────────────────────────────────────────
@@ -42,9 +42,6 @@ class SidebarPage:
 
     def item_vis_id(self, index: int) -> str:
         return f"sidebar_oscillators_item_{index}_vis_btn"
-
-    def filter_tab_id(self, name: str) -> str:
-        return f"sidebar_oscillators_toolbar_{name}Tab"
 
     # ── Actions ───────────────────────────────────────────────────
 
@@ -144,7 +141,7 @@ class AddOscillatorDialog:
     CANCEL_BUTTON = "addOscillatorDialog_cancelBtn"
     CLOSE_BUTTON = "addOscillatorDialog_closeBtn"
 
-    def __init__(self, client: OscilTestClient):
+    def __init__(self, client: MultiScoperTestClient):
         self.c = client
 
     def wait_for_open(self, timeout_s: float = 3.0):
@@ -208,7 +205,7 @@ class ConfigPopup:
         "right": "Right",
     }
 
-    def __init__(self, client: OscilTestClient):
+    def __init__(self, client: MultiScoperTestClient):
         self.c = client
 
     def is_open(self) -> bool:
@@ -273,7 +270,7 @@ class TimingSection:
     SYNC_TOGGLE = "sidebar_timing_syncToggle"
     WAVEFORM_MODE = "sidebar_timing_waveformModeDropdown"
 
-    def __init__(self, client: OscilTestClient):
+    def __init__(self, client: MultiScoperTestClient):
         self.c = client
 
     def switch_to_time(self):
@@ -314,7 +311,7 @@ class OptionsSection:
     AUTO_ADJUST_TOGGLE = "sidebar_options_autoAdjustToggle"
     GAIN_SLIDER = "sidebar_options_gainSlider"
 
-    def __init__(self, client: OscilTestClient):
+    def __init__(self, client: MultiScoperTestClient):
         self.c = client
 
     def get_theme_info(self):
@@ -339,7 +336,7 @@ class OptionsSection:
 class StateManager:
     """Encapsulates state save/load/reset operations with assertions."""
 
-    def __init__(self, client: OscilTestClient):
+    def __init__(self, client: MultiScoperTestClient):
         self.c = client
 
     def save_state(self, path: str):
@@ -370,7 +367,7 @@ class StateManager:
 class TransportControl:
     """Encapsulates transport play/stop operations."""
 
-    def __init__(self, client: OscilTestClient):
+    def __init__(self, client: MultiScoperTestClient):
         self.c = client
 
     def play_and_wait(self, timeout_s: float = 2.0):
@@ -406,7 +403,147 @@ class TransportControl:
         assert not self.c.is_playing(), "Transport must be stopped"
 
 
-def require_element(client: OscilTestClient, element_id: str, context: str = ""):
+class PaneActionBarPage:
+    """Encapsulates the per-pane action bar (hold/stats buttons) and header.
+
+    The action bar is duplicated for each pane but shares stable testIds
+    (pane_holdBtn, pane_statsBtn) — the first visible pane's bar is the
+    one returned by element queries.
+    """
+
+    HOLD_BTN = "pane_holdBtn"
+    STATS_BTN = "pane_statsBtn"
+    CLOSE_BTN = "pane_closeBtn"
+    NAME_LABEL = "pane_nameLabel"
+
+    def __init__(self, client: MultiScoperTestClient):
+        self.c = client
+
+    def is_hold_toggled(self) -> bool:
+        el = self.c.get_element(self.HOLD_BTN)
+        return bool(el and el.extra.get("toggled", False))
+
+    def is_stats_toggled(self) -> bool:
+        el = self.c.get_element(self.STATS_BTN)
+        return bool(el and el.extra.get("toggled", False))
+
+    def toggle_hold(self) -> bool:
+        """Click hold button and return the resulting toggled state.
+
+        Callers that need the toggle state to have actually propagated
+        should wait on `is_hold_toggled()` themselves after the click —
+        this method intentionally doesn't wait, because the only signal
+        available here is "element still exists", which was just asserted
+        above and provides no additional settle semantics.
+        """
+        assert self.c.element_exists(self.HOLD_BTN), "pane_holdBtn must be registered"
+        self.c.click(self.HOLD_BTN)
+        return self.is_hold_toggled()
+
+    def toggle_stats(self) -> bool:
+        assert self.c.element_exists(self.STATS_BTN), "pane_statsBtn must be registered"
+        self.c.click(self.STATS_BTN)
+        return self.is_stats_toggled()
+
+    def close_pane(self) -> bool:
+        assert self.c.element_exists(self.CLOSE_BTN), "pane_closeBtn must be registered"
+        return self.c.click(self.CLOSE_BTN)
+
+    def get_name(self) -> str:
+        el = self.c.get_element(self.NAME_LABEL)
+        if not el:
+            return ""
+        return el.extra.get("text", "")
+
+
+class StatsOverlayPage:
+    """Encapsulates the stats overlay (visible when stats toggle is on)."""
+
+    OVERLAY = "statsOverlay"
+    RESET_BTN = "statsOverlay_resetBtn"
+
+    def __init__(self, client: MultiScoperTestClient):
+        self.c = client
+
+    def is_visible(self) -> bool:
+        return self.c.element_visible(self.OVERLAY)
+
+    def click_reset(self) -> bool:
+        assert self.c.element_exists(self.RESET_BTN), (
+            "statsOverlay_resetBtn must be registered when stats overlay is shown"
+        )
+        return self.c.click(self.RESET_BTN)
+
+
+class ColorDialogPage:
+    """Encapsulates the full OscillatorColorDialog (distinct from the
+    inline swatches in the config popup). Opened via double-click on the
+    swatch strip of an oscillator list item.
+    """
+
+    MODAL = "colorDialogModal"
+    CONTENT = "colorDialog_swatches"
+    OK_BTN = "colorDialog_okBtn"
+    CANCEL_BTN = "colorDialog_cancelBtn"
+
+    # The swatch strip occupies the left ~12px of an oscillator list item
+    # (see OscillatorListItemComponent::mouseDoubleClick). Double-clicking
+    # anywhere in that strip opens the full color dialog.
+    SWATCH_STRIP_X = 4
+    SWATCH_STRIP_Y = 20
+
+    def __init__(self, client: MultiScoperTestClient):
+        self.c = client
+
+    def open_via_list_item(self, index: int = 0):
+        """Open by double-clicking the swatch strip of oscillator item N."""
+        item_id = f"sidebar_oscillators_item_{index}"
+        assert self.c.element_exists(item_id), f"{item_id} must be registered"
+        self.c.double_click_at_offset(item_id, self.SWATCH_STRIP_X, self.SWATCH_STRIP_Y)
+        self.c.wait_for_visible(self.MODAL, timeout_s=3.0)
+
+    def is_open(self) -> bool:
+        return self.c.element_visible(self.MODAL)
+
+    def confirm(self):
+        assert self.c.element_exists(self.OK_BTN), "OK button must be registered"
+        self.c.click(self.OK_BTN)
+        self.c.wait_for_not_visible(self.MODAL, timeout_s=3.0)
+
+    def cancel(self):
+        assert self.c.element_exists(self.CANCEL_BTN), "Cancel button must be registered"
+        self.c.click(self.CANCEL_BTN)
+        self.c.wait_for_not_visible(self.MODAL, timeout_s=3.0)
+
+
+class SelectPaneDialogPage:
+    """Encapsulates the select-pane dialog (shown when re-enabling
+    visibility on an oscillator that has no valid pane)."""
+
+    MODAL = "selectPaneModal"
+    PANE_SELECTOR = "selectPaneDialog_paneSelector"
+    DROPDOWN = "selectPaneDialog_paneSelector_dropdown"
+    OK_BTN = "selectPaneDialog_okBtn"
+    CANCEL_BTN = "selectPaneDialog_cancelBtn"
+
+    def __init__(self, client: MultiScoperTestClient):
+        self.c = client
+
+    def is_open(self) -> bool:
+        return self.c.element_visible(self.MODAL)
+
+    def confirm(self):
+        assert self.c.element_exists(self.OK_BTN), "selectPaneDialog OK must be registered"
+        self.c.click(self.OK_BTN)
+        self.c.wait_for_not_visible(self.MODAL, timeout_s=3.0)
+
+    def cancel(self):
+        assert self.c.element_exists(self.CANCEL_BTN), "selectPaneDialog Cancel must be registered"
+        self.c.click(self.CANCEL_BTN)
+        self.c.wait_for_not_visible(self.MODAL, timeout_s=3.0)
+
+
+def require_element(client: MultiScoperTestClient, element_id: str, context: str = ""):
     """Assert an element exists. Use instead of skip for required elements."""
     msg = f"Element '{element_id}' must be registered"
     if context:
@@ -414,7 +551,7 @@ def require_element(client: OscilTestClient, element_id: str, context: str = "")
     assert client.element_exists(element_id), msg
 
 
-def fail_if_missing(client: OscilTestClient, element_id: str, reason: str = ""):
+def fail_if_missing(client: MultiScoperTestClient, element_id: str, reason: str = ""):
     """Fail the test if a required element is missing."""
     if not client.element_exists(element_id):
         pytest.fail(reason or f"Element '{element_id}' not registered")

@@ -1,6 +1,6 @@
 # Local Development Guide
 
-**Purpose**: How to build, run, and debug the Oscil audio plugin locally.
+**Purpose**: How to build, run, and debug the MultiScoper audio plugin locally.
 
 **Tech Stack**: CMake 3.31+, Ninja, ccache, C++20, JUCE 8.0.12
 
@@ -67,16 +67,16 @@ cmake --build --preset dev
 ### Build Specific Target
 ```bash
 # Plugin only (VST3, AU, Standalone)
-cmake --build --preset dev --target Oscil_VST3
-cmake --build --preset dev --target Oscil_AU
-cmake --build --preset dev --target Oscil_Standalone
+cmake --build --preset dev --target MultiScoper_VST3
+cmake --build --preset dev --target MultiScoper_AU
+cmake --build --preset dev --target MultiScoper_Standalone
 
 # Tests only
-cmake --build --preset dev --target OscilTests
+cmake --build --preset dev --target MultiScoperTests
 
 # Test Harness (E2E testing)
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-cmake --build --preset dev --target OscilTestHarness
+cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target MultiScoperTestHarness
 ```
 
 ---
@@ -87,15 +87,15 @@ After `dev` build:
 
 | Artifact | Location |
 |----------|----------|
-| VST3 Plugin | `build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3` |
-| AU Plugin | `build/dev/Oscil_artefacts/Debug/AU/oscil4.component` |
-| Standalone | `build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app` |
-| Test Binary | `build/dev/OscilTests` |
-| Test Harness | `build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app` |
+| VST3 Plugin | `build/dev/MultiScoper_artefacts/Debug/VST3/MultiScoper.vst3` |
+| AU Plugin | `build/dev/MultiScoper_artefacts/Debug/AU/MultiScoper.component` |
+| Standalone | `build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app` |
+| Test Binary | `build/dev/MultiScoperTests` |
+| Test Harness | `build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app` |
 
 ### Install Locations (auto-copied)
-- VST3: `~/Library/Audio/Plug-Ins/VST3/oscil4.vst3`
-- AU: `~/Library/Audio/Plug-Ins/Components/oscil4.component`
+- VST3: `~/Library/Audio/Plug-Ins/VST3/MultiScoper.vst3`
+- AU: `~/Library/Audio/Plug-Ins/Components/MultiScoper.component`
 
 ---
 
@@ -103,7 +103,7 @@ After `dev` build:
 
 ### Standalone
 ```bash
-open build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app
+open build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app
 ```
 
 ### In DAW
@@ -136,13 +136,13 @@ ctest --preset dev -V
 ### Direct GoogleTest Execution
 ```bash
 # Run all
-./build/dev/OscilTests
+./build/dev/MultiScoperTests
 
 # Filter tests
-./build/dev/OscilTests --gtest_filter="OscillatorTest.*"
+./build/dev/MultiScoperTests --gtest_filter="OscillatorTest.*"
 
 # List tests
-./build/dev/OscilTests --gtest_list_tests
+./build/dev/MultiScoperTests --gtest_list_tests
 ```
 
 ---
@@ -151,14 +151,14 @@ ctest --preset dev -V
 
 ### Build
 ```bash
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-cmake --build --preset dev --target OscilTestHarness
+cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target MultiScoperTestHarness
 ```
 
 ### Run
 ```bash
 # Start harness (background)
-"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &
+"./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness" &
 
 # Wait for startup
 sleep 2
@@ -185,13 +185,13 @@ curl -X POST http://localhost:8765/track/0/showEditor
 ### Custom Configuration
 ```bash
 # Enable test harness
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
+cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
 
 # Disable OpenGL (software rendering)
-cmake --preset dev -DOSCIL_ENABLE_OPENGL=OFF
+cmake --preset dev -DMULTISCOPER_ENABLE_OPENGL=OFF
 
 # Disable tests
-cmake --preset dev -DOSCIL_BUILD_TESTS=OFF
+cmake --preset dev -DMULTISCOPER_BUILD_TESTS=OFF
 ```
 
 ---
@@ -209,7 +209,7 @@ touch src/core/MyFeature.cpp
 
 ### Step 2: Update Sources.cmake
 ```cmake
-# In cmake/Sources.cmake, add to OSCIL_SOURCES:
+# In cmake/Sources.cmake, add to MULTISCOPER_SOURCES:
 ${CMAKE_SOURCE_DIR}/src/core/MyFeature.cpp
 ```
 
@@ -227,7 +227,7 @@ cmake --build --preset dev
 ### macOS (lldb)
 ```bash
 # Debug standalone
-lldb build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app
+lldb build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app
 
 # In lldb
 (lldb) run
@@ -246,7 +246,7 @@ lldb build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app
       "name": "Debug Standalone",
       "type": "lldb",
       "request": "launch",
-      "program": "${workspaceFolder}/build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app/Contents/MacOS/oscil4",
+      "program": "${workspaceFolder}/build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app/Contents/MacOS/MultiScoper",
       "cwd": "${workspaceFolder}"
     }
   ]
@@ -255,7 +255,7 @@ lldb build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app
 
 ### Debug Tests
 ```bash
-lldb ./build/dev/OscilTests
+lldb ./build/dev/MultiScoperTests
 (lldb) run --gtest_filter="OscillatorTest.IdGeneration"
 ```
 
@@ -277,8 +277,8 @@ cmake --build --preset dev
 ### Plugin Not Appearing in DAW
 **Fix**: Check install location and rescan
 ```bash
-ls ~/Library/Audio/Plug-Ins/VST3/oscil4.vst3
-ls ~/Library/Audio/Plug-Ins/Components/oscil4.component
+ls ~/Library/Audio/Plug-Ins/VST3/MultiScoper.vst3
+ls ~/Library/Audio/Plug-Ins/Components/MultiScoper.component
 ```
 
 ### Tests Fail Immediately
@@ -288,7 +288,7 @@ ls ~/Library/Audio/Plug-Ins/Components/oscil4.component
 ### OpenGL Errors
 **Fix**: Run on machine with GPU, or disable OpenGL
 ```bash
-cmake --preset dev -DOSCIL_ENABLE_OPENGL=OFF
+cmake --preset dev -DMULTISCOPER_ENABLE_OPENGL=OFF
 ```
 
 ---
@@ -301,8 +301,8 @@ cmake --preset dev -DOSCIL_ENABLE_OPENGL=OFF
 | Build | `cmake --build --preset dev` |
 | Test | `ctest --preset dev` |
 | Clean | `rm -rf build/dev && cmake --preset dev` |
-| Run Standalone | `open build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app` |
-| Build Test Harness | `cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON && cmake --build --preset dev --target OscilTestHarness` |
+| Run Standalone | `open build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app` |
+| Build Test Harness | `cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON && cmake --build --preset dev --target MultiScoperTestHarness` |
 
 ---
 

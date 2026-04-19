@@ -1,5 +1,5 @@
 /*
-    Oscil - Shared Capture Buffer
+    MultiScoper - Shared Capture Buffer
     Lock-free ring buffer for real-time audio capture and visualization
 */
 
@@ -17,7 +17,7 @@
 #include <span>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -197,4 +197,4 @@ private:
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Manager Application Tests
+    MultiScoper - Theme Manager Application Tests
     Tests for theme application, colors, listeners, and properties
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class ThemeManagerApplyTest : public ::testing::Test
 {

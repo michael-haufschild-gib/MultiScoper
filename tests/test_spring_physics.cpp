@@ -1,5 +1,5 @@
 /*
-    Oscil - Ease Animation Tests: Core Behavior
+    MultiScoper - Ease Animation Tests: Core Behavior
     Tests for exponential decay, settling, and preset configurations
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class EaseAnimationTest : public ::testing::Test
 {

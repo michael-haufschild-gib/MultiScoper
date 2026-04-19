@@ -4,7 +4,7 @@
 - **Advanced Thread Safety**: The `SharedCaptureBuffer` implements a lock-free Seqlock (Sequence Lock) to pass data from the real-time audio thread to the UI thread. This avoids priority inversion and ensures glitch-free audio, a hallmark of expert audio programming. The `InstanceRegistry` correctly uses `std::shared_mutex` (Read-Write lock) and releases locks before notifying listeners to prevent deadlocks.
 - **Modern Tooling & Safety**: The build system (`CMakeLists.txt`) is state-of-the-art, integrating `CPM.cmake` for package management and enabling `RealtimeSanitizer` (RTSan) for Clang 20+. The use of RTSan to detect memory allocations in the audio thread demonstrates an uncompromising commitment to correctness.
 - **Testing Discipline**: The test suite goes far beyond simple unit tests. `tests/test_shared_capture_buffer.cpp` includes a concurrent stress test (`SeqLockMetadataConsistency`) that spawns threads to mathematically verify the lock-free data structure against torn reads.
-- **Architectural Clarity**: The codebase strictly adheres to dependency injection (`OscilPluginProcessor` receives `IInstanceRegistry`), ensuring modularity and testability. The separation between `RenderEngine` (GL state), `SignalProcessor` (stateless DSP), and `PluginEditor` (UI) is distinct and well-enforced.
+- **Architectural Clarity**: The codebase strictly adheres to dependency injection (`MultiScoperPluginProcessor` receives `IInstanceRegistry`), ensuring modularity and testability. The separation between `RenderEngine` (GL state), `SignalProcessor` (stateless DSP), and `PluginEditor` (UI) is distinct and well-enforced.
 - **Documentation**: `docs/development.md` provides a high-quality "Decision Tree" for new contributors and explicitly warns against common anti-patterns, effectively acting as an automated senior mentor.
 
 ## Weaknesses
@@ -22,7 +22,7 @@
 
 ## Growth Opportunities Toward Staff-Level Excellence
 - **Coding Style & Practices**: The current style is already at a Staff level. Continued focus should be on maintaining this standard as the team scales.
-- **Architectural/Structural Improvements**: Consider breaking the `Oscil` core into a static library separate from the plugin wrapper to allow for easier integration into other host types or standalone applications beyond JUCE.
+- **Architectural/Structural Improvements**: Consider breaking the `MultiScoper` core into a static library separate from the plugin wrapper to allow for easier integration into other host types or standalone applications beyond JUCE.
 - **Solution Approach & Strategy**: The current strategy is technically flawless but resource-intensive. Evaluate if "Quality Level" presets in `RenderEngine` can dynamically adjust strictly based on hardware capabilities to broaden the supported user base (e.g., users with integrated graphics).
 - **Process & Collaboration**: The documentation is excellent. To further scale, automated architecture compliance checks (e.g., ensuring no UI headers are included in DSP code) could be added to the CI pipeline.
 

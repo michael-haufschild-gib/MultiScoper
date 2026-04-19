@@ -1,5 +1,5 @@
 /*
-    Oscil - Analysis Engine Tests
+    MultiScoper - Analysis Engine Tests
 */
 
 #include "core/analysis/AnalysisEngine.h"
@@ -9,7 +9,7 @@
 #include <limits>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class AnalysisEngineTest : public ::testing::Test
 {

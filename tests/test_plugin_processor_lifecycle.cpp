@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Processor Lifecycle Tests
+    MultiScoper - Plugin Processor Lifecycle Tests
     Tests for construction, metadata, bus layouts, prepare, release, and destruction
 */
 
@@ -9,15 +9,15 @@
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/theme/ThemeManager.h"
 
-#include "OscilTestUtils.h"
+#include "MultiScoperTestUtils.h"
 #include "plugin/PluginProcessor.h"
 #include "rendering/PresetManager.h"
 #include "rendering/ShaderRegistry.h"
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class PluginProcessorLifecycleTest : public ::testing::Test
 {
@@ -27,7 +27,7 @@ protected:
     std::unique_ptr<ShaderRegistry> shaderRegistry_;
     std::unique_ptr<PresetManager> presetManager_;
     std::unique_ptr<MemoryBudgetManager> memoryBudgetManager_;
-    std::unique_ptr<OscilPluginProcessor> processor;
+    std::unique_ptr<MultiScoperPluginProcessor> processor;
 
     void SetUp() override
     {
@@ -39,8 +39,8 @@ protected:
         memoryBudgetManager_ = std::make_unique<MemoryBudgetManager>();
 
         // Create processor with owned services
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, 512);
     }
 
@@ -57,7 +57,7 @@ protected:
 
 // === Plugin Metadata Tests ===
 
-TEST_F(PluginProcessorLifecycleTest, PluginName) { EXPECT_EQ(processor->getName(), "Oscil"); }
+TEST_F(PluginProcessorLifecycleTest, PluginName) { EXPECT_EQ(processor->getName(), "MultiScoper"); }
 
 TEST_F(PluginProcessorLifecycleTest, MidiSupport)
 {
@@ -198,7 +198,7 @@ TEST_F(PluginProcessorLifecycleTest, UpdateTrackProperties_EmptyHostNameFallsBac
 
     auto source = registry_->getSource(sourceId);
     ASSERT_TRUE(source.has_value());
-    EXPECT_EQ(source->name, "Oscil Track");
+    EXPECT_EQ(source->name, "MultiScoper Track");
 }
 
 TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
@@ -208,8 +208,8 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentSampleRates)
 
     for (double rate : sampleRates)
     {
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(rate, 512);
 
         EXPECT_DOUBLE_EQ(processor->getSampleRate(), rate) << "Failed for sample rate: " << rate;
@@ -223,8 +223,8 @@ TEST_F(PluginProcessorLifecycleTest, PrepareToPlay_DifferentBlockSizes)
 
     for (int blockSize : blockSizes)
     {
-        processor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                           *presetManager_, *memoryBudgetManager_);
+        processor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                 *presetManager_, *memoryBudgetManager_);
         processor->prepareToPlay(44100.0, blockSize);
         pumpMessageQueue(200);
 
@@ -389,8 +389,8 @@ TEST_F(PluginProcessorLifecycleTest, DestructorUnregistersFromRegistry)
 TEST_F(PluginProcessorLifecycleTest, SourceIdBeforePrepare)
 {
     // Create a fresh processor not yet prepared
-    auto freshProcessor = std::make_unique<OscilPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
-                                                                 *presetManager_, *memoryBudgetManager_);
+    auto freshProcessor = std::make_unique<MultiScoperPluginProcessor>(*registry_, *themeManager_, *shaderRegistry_,
+                                                                       *presetManager_, *memoryBudgetManager_);
 
     // Source ID before prepareToPlay should be invalid
     SourceId sourceId = freshProcessor->getSourceId();

@@ -1,5 +1,5 @@
 /*
-    Oscil - Processing Mode Icons
+    MultiScoper - Processing Mode Icons
     Application-specific convenience helpers for creating audio processing mode icons
 */
 
@@ -7,7 +7,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-namespace oscil::ProcessingModeIcons
+namespace multiscoper::ProcessingModeIcons
 {
 
 /**
@@ -190,4 +190,4 @@ inline juce::Path createRightIcon(float size, float strokeWidth = 1.5f)
     return stroked;
 }
 
-} // namespace oscil::ProcessingModeIcons
+} // namespace multiscoper::ProcessingModeIcons

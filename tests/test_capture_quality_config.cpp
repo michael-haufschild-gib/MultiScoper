@@ -1,5 +1,5 @@
 /*
-    Oscil - Capture Quality Configuration Unit Tests
+    MultiScoper - Capture Quality Configuration Unit Tests
     Tests for quality presets, memory budget calculations, and buffer sizing
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 //==============================================================================
 // Quality Preset Tests

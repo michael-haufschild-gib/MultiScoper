@@ -16,7 +16,7 @@ not appear on any audio-thread code path. The single-API design hid this
 constraint at the call site — a consumer could not tell from the signature
 whether it was allowed to call `read()` from the audio thread.
 
-Today every Oscil consumer of `IAudioBuffer::read` is on the UI/message
+Today every MultiScoper consumer of `IAudioBuffer::read` is on the UI/message
 thread (WaveformPresenter, tests, etc.), so the current behavior is
 accidentally correct. As new features (real-time analysis, RT transients
 metering, RTSan-enforced builds) are added, an audio-thread call to

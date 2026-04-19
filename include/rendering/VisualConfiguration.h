@@ -1,5 +1,5 @@
 /*
-    Oscil - Visual Configuration
+    MultiScoper - Visual Configuration
     Complete per-waveform visual settings for the render engine
 */
 
@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // ============================================================================
@@ -228,4 +228,4 @@ juce::String shaderTypeToId(ShaderType type);
  */
 ShaderType idToShaderType(const juce::String& id);
 
-} // namespace oscil
+} // namespace multiscoper

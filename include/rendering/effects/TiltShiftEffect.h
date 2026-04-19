@@ -1,5 +1,5 @@
 /*
-    Oscil - Tilt Shift Effect
+    MultiScoper - Tilt Shift Effect
     Simulates depth of field by blurring the top and bottom of the screen.
 */
 
@@ -8,9 +8,9 @@
 #include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -46,6 +46,6 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TiltShiftEffect)
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

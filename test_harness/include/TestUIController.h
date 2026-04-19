@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - UI Controller
+    MultiScoper Test Harness - UI Controller
     Provides programmatic UI interaction for automated E2E testing.
 
     Supports:
@@ -21,7 +21,7 @@
 #include <memory>
 #include <nlohmann/json.hpp>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 using json = nlohmann::json;
@@ -79,6 +79,22 @@ public:
     bool clickWithModifiers(const juce::String& elementId, const ModifierKeyState& modifiers);
 
     bool doubleClick(const juce::String& elementId);
+
+    /**
+     * Click at a specific pixel offset within an element.  Offsets below
+     * zero or past the component bounds are clamped to the nearest edge.
+     * Needed when a component's interactive region is sub-bounds — e.g.,
+     * the left-edge swatch strip on an oscillator list item that opens
+     * the full color dialog; a plain centre click would hit the settings
+     * path instead.
+     */
+    bool clickAtOffset(const juce::String& elementId, int offsetX, int offsetY);
+
+    /**
+     * Double-click at a specific pixel offset within an element.
+     * See {@link clickAtOffset} for rationale.
+     */
+    bool doubleClickAtOffset(const juce::String& elementId, int offsetX, int offsetY);
 
     bool rightClick(const juce::String& elementId);
 
@@ -329,6 +345,8 @@ protected:
 
 private:
     void simulateMouseClick(juce::Component* component, bool doubleClick = false, const juce::ModifierKeys& mods = {});
+    void simulateMouseClickAtPoint(juce::Component* component, juce::Point<int> localPoint, bool doubleClick,
+                                   const juce::ModifierKeys& mods = {});
     void simulateMouseRightClick(juce::Component* component);
     void simulateMouseDrag(juce::Component* from, juce::Component* to, const juce::ModifierKeys& mods = {});
     void simulateMouseDragOffset(juce::Component* component, int deltaX, int deltaY,
@@ -344,7 +362,7 @@ private:
 
     json componentToJson(juce::Component* component, const juce::String& testId);
     void appendComponentTypeInfo(json& info, juce::Component* component);
-    bool appendOscilTypeInfo(json& info, juce::Component* component);
+    bool appendMultiScoperTypeInfo(json& info, juce::Component* component);
     juce::Component* getTargetComponent(const juce::String& elementId);
     juce::Component* getCurrentFocusedComponent();
     juce::String getFocusedElementIdOnMessageThread();
@@ -360,4 +378,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TestUIController)
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test

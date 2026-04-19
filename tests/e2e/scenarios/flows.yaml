@@ -131,13 +131,13 @@
     - check:
         - {check: oscillator_count, expected: 2}
         - {check: snapshot_field, path: "oscillators[0].mode", op: "==", value: "Mono"}
-    - action: {save_state: "/tmp/oscil_flow_test.xml"}
+    - action: {save_state: "/tmp/multiscoper_flow_test.xml"}
     - action: {reset_state: true}
     - wait: 300ms
     - check:
         - {check: oscillator_count, expected: 0}
         - {check: pane_count, expected: 0}
-    - action: {load_state: "/tmp/oscil_flow_test.xml"}
+    - action: {load_state: "/tmp/multiscoper_flow_test.xml"}
     - wait: 500ms
     - check:
         - {check: oscillator_count, expected: 2}

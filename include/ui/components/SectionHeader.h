@@ -1,5 +1,5 @@
 /*
-    Oscil - Section Header
+    MultiScoper - Section Header
 
     Reusable section-title row: small-caps label + optional left/right
     chevron navigator + 1px hairline divider beneath. The visual idiom is
@@ -17,7 +17,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 class SectionHeader : public ThemedComponent
@@ -58,4 +58,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SectionHeader)
 };
 
-} // namespace oscil
+} // namespace multiscoper

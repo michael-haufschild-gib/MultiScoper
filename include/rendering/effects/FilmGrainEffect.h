@@ -1,5 +1,5 @@
 /*
-    Oscil - Film Grain Effect
+    MultiScoper - Film Grain Effect
     Adds animated film grain noise for vintage/analog aesthetic
 */
 
@@ -8,9 +8,9 @@
 #include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -53,6 +53,6 @@ private:
     float accumulatedTime_ = 0.0f;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

@@ -1,5 +1,5 @@
 /*
-    Oscil - Host Information Entity
+    MultiScoper - Host Information Entity
     Stores DAW/host information for proper integration and timing
     PRD aligned: Entities -> HostInfo
 */
@@ -11,7 +11,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -215,4 +215,4 @@ struct HostInfo
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

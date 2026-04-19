@@ -1,9 +1,9 @@
 /*
-    Oscil - Surface Painter
+    MultiScoper - Surface Painter
     Reusable flat-surface painting utilities for UI components. Historical
     name: "GlassPainter" (glassmorphism aesthetic, removed in 2026). The
     `SurfacePainter` namespace is the sole entry point for panel, input,
-    shadow, focus-ring, and ripple painting used across all Oscil widgets.
+    shadow, focus-ring, and ripple painting used across all MultiScoper widgets.
 */
 
 #pragma once
@@ -14,7 +14,7 @@
 
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /// Border intensity levels for glass painting
@@ -100,4 +100,4 @@ void paintFocusRing(juce::Graphics& g, juce::Rectangle<float> bounds, float corn
 void paintCheckerboard(juce::Graphics& g, juce::Rectangle<int> bounds, int checkerSize = 6);
 } // namespace SurfacePainter
 
-} // namespace oscil
+} // namespace multiscoper

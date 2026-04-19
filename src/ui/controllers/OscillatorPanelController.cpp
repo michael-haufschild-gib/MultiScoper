@@ -1,18 +1,18 @@
 /*
-    Oscil - Oscillator Panel Controller Implementation
+    MultiScoper - Oscillator Panel Controller Implementation
 */
 
 #include "ui/controllers/OscillatorPanelController.h"
 
-#include "core/OscilLog.h"
-#include "core/OscilState.h"
+#include "core/MultiScoperLog.h"
+#include "core/MultiScoperState.h"
 #include "core/dsp/TimingEngine.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 #include "ui/controllers/GpuRenderCoordinator.h"
 #include "ui/managers/DialogManager.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 OscillatorPanelController::OscillatorPanelController(IAudioDataProvider& dataProvider, ServiceContext& serviceContext,
@@ -71,8 +71,8 @@ void OscillatorPanelController::runRefreshIteration()
     auto oscillators = dataProvider_.getState().getOscillators();
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
 
-    OSCIL_LOG(CONTROLLER,
-              "refreshPanels: " << oscillators.size() << " oscillators, " << layoutManager.getPaneCount() << " panes");
+    MULTISCOPER_LOG(CONTROLLER, "refreshPanels: " << oscillators.size() << " oscillators, "
+                                                  << layoutManager.getPaneCount() << " panes");
 
     createPaneComponents(oscillators, layoutManager);
     refreshSidebar(oscillators, layoutManager);
@@ -98,7 +98,7 @@ bool OscillatorPanelController::runRefreshLoop()
     for (int iteration = 0; iteration < kMaxRefreshIterations; ++iteration)
     {
         if (iteration > 0)
-            OSCIL_LOG(CONTROLLER, "refreshPanels: processing queued refresh (iteration " << iteration << ")");
+            MULTISCOPER_LOG(CONTROLLER, "refreshPanels: processing queued refresh (iteration " << iteration << ")");
 
         runRefreshIteration();
 
@@ -117,7 +117,7 @@ void OscillatorPanelController::refreshPanels()
 
     if (isUpdating_)
     {
-        OSCIL_LOG(CONTROLLER, "refreshPanels: DEFERRED (already updating)");
+        MULTISCOPER_LOG(CONTROLLER, "refreshPanels: DEFERRED (already updating)");
         pendingRefresh_ = true;
         return;
     }
@@ -126,15 +126,15 @@ void OscillatorPanelController::refreshPanels()
         return;
 
     jassertfalse; // unexpected refresh reentrancy loop
-    OSCIL_LOG(CONTROLLER, "refreshPanels: WARNING — hit max iteration limit");
+    MULTISCOPER_LOG(CONTROLLER, "refreshPanels: WARNING — hit max iteration limit");
     triggerAsyncUpdate(); // preserve the final queued refresh for the next async cycle
 }
 
 void OscillatorPanelController::createPaneComponents(const std::vector<Oscillator>& oscillators,
                                                      const PaneLayoutManager& layoutManager)
 {
-    OSCIL_LOG(CONTROLLER, "createPaneComponents: " << layoutManager.getPaneCount() << " panes, " << oscillators.size()
-                                                   << " oscillators");
+    MULTISCOPER_LOG(CONTROLLER, "createPaneComponents: " << layoutManager.getPaneCount() << " panes, "
+                                                         << oscillators.size() << " oscillators");
     // Group oscillators by pane
     std::map<juce::String, std::vector<Oscillator>> oscillatorsByPane;
     for (const auto& osc : oscillators)
@@ -192,14 +192,15 @@ void OscillatorPanelController::reapplyGlobalSettings()
     // IMPORTANT: Use capture rate (decimated), not source rate, since display buffers are decimated
     auto timingConfig = dataProvider_.getTimingEngine().toEntityConfig();
     int const captureRate = dataProvider_.getCaptureRate();
-    OSCIL_LOG(CONTROLLER, "reapplyGlobalSettings: captureRate="
-                              << captureRate << " actualIntervalMs=" << timingConfig.actualIntervalMs << " hostBPM="
-                              << timingConfig.hostBPM << " timingMode=" << static_cast<int>(timingConfig.timingMode));
+    MULTISCOPER_LOG(CONTROLLER, "reapplyGlobalSettings: captureRate="
+                                    << captureRate << " actualIntervalMs=" << timingConfig.actualIntervalMs
+                                    << " hostBPM=" << timingConfig.hostBPM
+                                    << " timingMode=" << static_cast<int>(timingConfig.timingMode));
     if (captureRate > 0)
     {
         int const displaySamples = static_cast<int>(static_cast<double>(captureRate) *
                                                     (static_cast<double>(timingConfig.actualIntervalMs) / 1000.0));
-        OSCIL_LOG(CONTROLLER, "displaySamples=" << displaySamples);
+        MULTISCOPER_LOG(CONTROLLER, "displaySamples=" << displaySamples);
         if (displaySettings_)
         {
             displaySettings_->setDisplaySamplesForAll(displaySamples);
@@ -237,8 +238,8 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
 
     if (layoutManager.getPaneCount() == 0 && state.getOscillatorCount() == 0)
     {
-        OSCIL_LOG(CONTROLLER, "createDefaultOscillatorIfNeeded: creating default pane + oscillator"
-                                  << " sourceId=" << dataProvider_.getSourceId().id);
+        MULTISCOPER_LOG(CONTROLLER, "createDefaultOscillatorIfNeeded: creating default pane + oscillator"
+                                        << " sourceId=" << dataProvider_.getSourceId().id);
         // Need sources to create meaningful default
         // Just create placeholder if no sources yet, or use first source
 
@@ -268,7 +269,7 @@ void OscillatorPanelController::createDefaultOscillatorIfNeeded()
 
 void OscillatorPanelController::handlePaneReordered(const PaneId& movedPaneId, const PaneId& targetPaneId)
 {
-    OSCIL_LOG(CONTROLLER, "handlePaneReordered: moved=" << movedPaneId.id << " target=" << targetPaneId.id);
+    MULTISCOPER_LOG(CONTROLLER, "handlePaneReordered: moved=" << movedPaneId.id << " target=" << targetPaneId.id);
     auto& layoutManager = dataProvider_.getState().getLayoutManager();
     const Pane* sourcePanePtr = layoutManager.getPane(movedPaneId);
     const Pane* targetPanePtr = layoutManager.getPane(targetPaneId);
@@ -325,7 +326,7 @@ void OscillatorPanelController::handleEmptyColumnDrop(const PaneId& movedPaneId,
 
 void OscillatorPanelController::handlePaneClose(const PaneId& paneId)
 {
-    OSCIL_LOG(CONTROLLER, "handlePaneClose: paneId=" << paneId.id);
+    MULTISCOPER_LOG(CONTROLLER, "handlePaneClose: paneId=" << paneId.id);
     auto& state = dataProvider_.getState();
     auto& layoutManager = state.getLayoutManager();
 
@@ -354,4 +355,4 @@ void OscillatorPanelController::highlightOscillator(const OscillatorId& oscillat
 // Sidebar listener overrides, dialog handlers, and ValueTree listeners
 // are in OscillatorPanelControllerHandlers.cpp
 
-} // namespace oscil
+} // namespace multiscoper

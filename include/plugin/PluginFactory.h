@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Factory
+    MultiScoper - Plugin Factory
     Composition root for dependency injection.
     Owns all core services and creates plugin instances with proper dependencies.
 */
@@ -10,7 +10,7 @@
 
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -22,7 +22,7 @@ class GlobalPreferences;
 class PresetManager;
 
 /**
- * Composition root for the Oscil plugin.
+ * Composition root for the MultiScoper plugin.
  *
  * This is the ONLY singleton in the system. It owns all core services
  * and creates plugin instances with proper dependency injection.
@@ -91,4 +91,4 @@ private:
     PluginFactory& operator=(const PluginFactory&) = delete;
 };
 
-} // namespace oscil
+} // namespace multiscoper

@@ -1,5 +1,5 @@
 /*
-    Oscil - Audio Data Provider Interface
+    MultiScoper - Audio Data Provider Interface
     High-level facade for accessing audio data and plugin state
 */
 
@@ -7,12 +7,12 @@
 
 #include <memory>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
 class IAudioBuffer;
-class OscilState;
+class MultiScoperState;
 class TimingEngine;
 struct SourceId;
 
@@ -41,7 +41,7 @@ public:
     /**
      * Get the plugin state for accessing oscillators, panes, etc.
      */
-    virtual OscilState& getState() = 0;
+    virtual MultiScoperState& getState() = 0;
 
     /**
      * Get the current CPU usage percentage.
@@ -72,4 +72,4 @@ public:
     virtual SourceId getSourceId() const = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper

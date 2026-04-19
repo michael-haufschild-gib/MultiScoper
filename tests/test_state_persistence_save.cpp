@@ -1,9 +1,9 @@
 /*
-    Oscil - State Persistence Tests: Save Operations
+    MultiScoper - State Persistence Tests: Save Operations
     Tests for state serialization, XML output, and save operations
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 
@@ -13,8 +13,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class StatePersistenceSaveTest : public StateTestFixture
 {
@@ -23,7 +23,7 @@ class StatePersistenceSaveTest : public StateTestFixture
 // Test: Default state initialization
 TEST_F(StatePersistenceSaveTest, DefaultStateInitialization)
 {
-    EXPECT_EQ(state->getSchemaVersion(), OscilState::CURRENT_SCHEMA_VERSION);
+    EXPECT_EQ(state->getSchemaVersion(), MultiScoperState::CURRENT_SCHEMA_VERSION);
     EXPECT_EQ(state->getThemeName(), "Dark Professional");
     EXPECT_EQ(state->getColumnLayout(), ColumnLayout::Single);
 }
@@ -123,7 +123,7 @@ TEST_F(StatePersistenceSaveTest, XmlSerializationRoundTrip)
     EXPECT_FALSE(xmlString.isEmpty());
 
     // Restore from XML
-    OscilState restored;
+    MultiScoperState restored;
     EXPECT_TRUE(restored.fromXmlString(xmlString));
 
     // Verify restoration
@@ -174,7 +174,7 @@ TEST_F(StatePersistenceSaveTest, PaneLayoutManagerIntegration)
     // Serialize and restore
     juce::String xmlString = state->toXmlString();
 
-    OscilState restored;
+    MultiScoperState restored;
     (void) restored.fromXmlString(xmlString);
 
     // Note: Pane layout manager serialization is handled separately
@@ -227,7 +227,7 @@ TEST_F(StatePersistenceSaveTest, DisplayOptionsPersistence)
 
     juce::String xml = original->toXmlString();
 
-    OscilState restored;
+    MultiScoperState restored;
     EXPECT_TRUE(restored.fromXmlString(xml));
 
     EXPECT_FALSE(restored.isShowGridEnabled());
@@ -242,7 +242,7 @@ TEST_F(StatePersistenceSaveTest, SidebarPersistence)
 
     juce::String xml = original->toXmlString();
 
-    OscilState restored;
+    MultiScoperState restored;
     EXPECT_TRUE(restored.fromXmlString(xml));
 
     EXPECT_EQ(restored.getSidebarWidth(), 400);
@@ -261,7 +261,7 @@ TEST_F(StatePersistenceSaveTest, ManyOscillators)
     juce::String xml = state->toXmlString();
     EXPECT_FALSE(xml.isEmpty());
 
-    OscilState restored;
+    MultiScoperState restored;
     EXPECT_TRUE(restored.fromXmlString(xml));
     EXPECT_EQ(restored.getOscillators().size(), 100);
 }
@@ -279,7 +279,7 @@ TEST_F(StatePersistenceSaveTest, LongThemeName)
 
     // Should persist correctly
     juce::String xml = state->toXmlString();
-    OscilState restored;
+    MultiScoperState restored;
     EXPECT_TRUE(restored.fromXmlString(xml));
     EXPECT_EQ(restored.getThemeName(), longName);
 }
@@ -290,7 +290,7 @@ TEST_F(StatePersistenceSaveTest, SpecialCharactersInThemeName)
     state->setThemeName("Theme <with> \"special\" & 'chars'");
 
     juce::String xml = state->toXmlString();
-    OscilState restored;
+    MultiScoperState restored;
     EXPECT_TRUE(restored.fromXmlString(xml));
 
     EXPECT_EQ(restored.getThemeName(), "Theme <with> \"special\" & 'chars'");

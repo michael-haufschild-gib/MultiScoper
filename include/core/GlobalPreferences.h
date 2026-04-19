@@ -1,5 +1,5 @@
 /*
-    Oscil - Global Preferences
+    MultiScoper - Global Preferences
     User preferences stored separately from per-project plugin state
 */
 
@@ -10,7 +10,7 @@
 
 #include <mutex>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -97,4 +97,4 @@ private:
     juce::ValueTree preferences_;
 };
 
-} // namespace oscil
+} // namespace multiscoper

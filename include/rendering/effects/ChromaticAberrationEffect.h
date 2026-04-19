@@ -1,5 +1,5 @@
 /*
-    Oscil - Chromatic Aberration Effect
+    MultiScoper - Chromatic Aberration Effect
     Simulates lens color fringing
 */
 
@@ -8,9 +8,9 @@
 #include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -49,6 +49,6 @@ private:
     GLint intensityLoc_ = -1;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

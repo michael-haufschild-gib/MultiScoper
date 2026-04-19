@@ -1,5 +1,5 @@
 /*
-    Oscil - Waveform Stack Implementation
+    MultiScoper - Waveform Stack Implementation
 */
 
 #include "ui/layout/pane/WaveformStack.h"
@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -297,4 +297,4 @@ void WaveformStack::updateLayout()
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

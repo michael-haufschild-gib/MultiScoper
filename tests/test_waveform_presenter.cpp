@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 // Mock SharedCaptureBuffer to control input data.
 // Overrides both the per-channel and multi-channel read APIs so the

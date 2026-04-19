@@ -1,4 +1,4 @@
-# Oscil4 E2E Test Harness
+# MultiScoper E2E Test Harness
 # Standalone application for autonomous testing of the plugin
 # Must be included from the main CMakeLists.txt as a subdirectory
 
@@ -26,6 +26,8 @@ set(TEST_HARNESS_SOURCES
     src/TestHttpServerUIKeyboard.cpp
     src/TestHttpServerVerification.cpp
     src/TestHttpServerState.cpp
+    src/TestHttpServerStatePersistence.cpp
+    src/TestHttpServerProject.cpp
     src/TestHttpServerWaveform.cpp
     src/TestHttpServerDiagnostic.cpp
     src/TestHttpServerPanes.cpp
@@ -65,24 +67,24 @@ set(TEST_HARNESS_HEADERS
 include(${CMAKE_SOURCE_DIR}/cmake/Sources.cmake)
 
 # Create JUCE standalone application
-juce_add_gui_app(OscilTestHarness
-    PRODUCT_NAME "Oscil Test Harness"
-    COMPANY_NAME "OscilAudio"
-    BUNDLE_ID "com.oscilaudio.testharness"
+juce_add_gui_app(MultiScoperTestHarness
+    PRODUCT_NAME "MultiScoper Test Harness"
+    COMPANY_NAME "MultiScoper"
+    BUNDLE_ID "com.multiscoper.testharness"
 )
 
 # Add sources to the target.  The harness always needs the test-server
 # sources so the Python E2E suite can drive the editor via HTTP; production
-# plugin builds gate them behind OSCIL_ENABLE_TEST_SERVER.
-target_sources(OscilTestHarness PRIVATE
+# plugin builds gate them behind MULTISCOPER_ENABLE_TEST_SERVER.
+target_sources(MultiScoperTestHarness PRIVATE
     ${TEST_HARNESS_SOURCES}
     ${TEST_HARNESS_HEADERS}
-    ${OSCIL_SOURCES}
-    ${OSCIL_TEST_SERVER_SOURCES}
+    ${MULTISCOPER_SOURCES}
+    ${MULTISCOPER_TEST_SERVER_SOURCES}
 )
 
 # Include directories
-target_include_directories(OscilTestHarness PRIVATE
+target_include_directories(MultiScoperTestHarness PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
@@ -90,8 +92,8 @@ target_include_directories(OscilTestHarness PRIVATE
 )
 
 # Link against JUCE and libraries
-target_link_libraries(OscilTestHarness PRIVATE
-    OscilBinaryData
+target_link_libraries(MultiScoperTestHarness PRIVATE
+    MultiScoperBinaryData
     juce::juce_audio_processors
     juce::juce_audio_utils
     juce::juce_gui_basics
@@ -102,22 +104,22 @@ target_link_libraries(OscilTestHarness PRIVATE
     juce::juce_events
     juce::juce_audio_basics
     juce::juce_dsp
-    $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:juce::juce_opengl>
+    $<$<BOOL:${MULTISCOPER_ENABLE_OPENGL}>:juce::juce_opengl>
     nlohmann_json::nlohmann_json
     PUBLIC
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
-    OscilWarningSuppressions
+    MultiScoperWarningSuppressions
 )
 
 # Compile definitions
-target_compile_definitions(OscilTestHarness PRIVATE
+target_compile_definitions(MultiScoperTestHarness PRIVATE
     JUCE_STANDALONE_APPLICATION=1
     JUCE_USE_CURL=0
     JUCE_WEB_BROWSER=0
     JUCE_REPORT_APP_USAGE=0
     JUCE_STRICT_REFCOUNTEDPOINTER=1
     TEST_HARNESS=1
-    OSCIL_ENABLE_TEST_SERVER=1
-    $<$<BOOL:${OSCIL_ENABLE_OPENGL}>:OSCIL_ENABLE_OPENGL=1>
+    MULTISCOPER_ENABLE_TEST_SERVER=1
+    $<$<BOOL:${MULTISCOPER_ENABLE_OPENGL}>:MULTISCOPER_ENABLE_OPENGL=1>
 )

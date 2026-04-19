@@ -1,13 +1,13 @@
 /*
-    Oscil - Plugin Editor Layout Implementation
+    MultiScoper - Plugin Editor Layout Implementation
 */
 
 #include "ui/layout/PluginEditorLayout.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/interfaces/IAudioDataProvider.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 PluginEditorLayout::PluginEditorLayout(juce::Component& editor, juce::Viewport& viewport,
@@ -83,4 +83,4 @@ void PluginEditorLayout::updateLayout(const std::vector<std::unique_ptr<PaneComp
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

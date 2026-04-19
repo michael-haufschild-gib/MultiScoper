@@ -1,5 +1,5 @@
 /*
-    Oscil - Signal Processor Tests (Stereo Modes & AudioBuffer Input)
+    MultiScoper - Signal Processor Tests (Stereo Modes & AudioBuffer Input)
     AdaptiveDecimator, fuzz testing, AudioBuffer input edge cases
 */
 
@@ -12,8 +12,8 @@
 #include <limits>
 #include <span>
 
-using namespace oscil;
-using oscil::test::generateRandomVector;
+using namespace multiscoper;
+using multiscoper::test::generateRandomVector;
 
 class SignalProcessorStereoTest : public ::testing::Test
 {

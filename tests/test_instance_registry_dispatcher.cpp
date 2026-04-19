@@ -1,5 +1,5 @@
 /*
-    Oscil - Instance Registry Dispatcher Tests
+    MultiScoper - Instance Registry Dispatcher Tests
     Behavioural coverage for InstanceRegistry::setDispatcher:
       * empty-callable rejection (preserves prior dispatcher),
       * thread-safety of the dispatcher snapshot against concurrent notifications.
@@ -8,7 +8,7 @@
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
 
-#include "Oscil.h"
+#include "MultiScoper.h"
 
 #include <juce_events/juce_events.h>
 
@@ -18,7 +18,7 @@
 #include <memory>
 #include <thread>
 
-namespace oscil
+namespace multiscoper
 {
 
 class InstanceRegistryDispatcherTest : public ::testing::Test
@@ -138,4 +138,4 @@ TEST_F(InstanceRegistryDispatcherTest, IsThreadSafeAgainstConcurrentNotification
     EXPECT_GE(totalDispatches, kIterations) << "Every registerInstance must trigger at least one dispatcher invocation";
 }
 
-} // namespace oscil
+} // namespace multiscoper

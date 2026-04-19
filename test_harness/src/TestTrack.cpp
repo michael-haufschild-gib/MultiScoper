@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Test Track Implementation
+    MultiScoper Test Harness - Test Track Implementation
 */
 
 #include "TestTrack.h"
@@ -7,7 +7,7 @@
 #include "plugin/PluginEditor.h"
 #include "plugin/PluginFactory.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 namespace
@@ -60,14 +60,14 @@ TestTrack::TestTrack(int trackIndex, const juce::String& name, TestTransport& tr
                                            .shaderRegistry = factory.getShaderRegistry(),
                                            .presetManager = factory.getPresetManager(),
                                            .memoryBudgetManager = factory.getMemoryBudgetManager()};
-        processor_ = std::make_unique<OscilPluginProcessor>(config);
+        processor_ = std::make_unique<MultiScoperPluginProcessor>(config);
     }
     else
     {
         // Default path: use the factory's shared registry (normal harness
         // behaviour + production default).
-        processor_ = std::unique_ptr<OscilPluginProcessor>(
-            static_cast<OscilPluginProcessor*>(factory.createPluginProcessor().release()));
+        processor_ = std::unique_ptr<MultiScoperPluginProcessor>(
+            static_cast<MultiScoperPluginProcessor*>(factory.createPluginProcessor().release()));
     }
     processor_->setPlayHead(this);
 
@@ -149,7 +149,7 @@ void TestTrack::showEditor()
     editor_.release();
     editor_.reset(rawEditor);
 
-    editorWindow_ = std::make_unique<EditorWindow>(name_ + " - Oscil", [this]() { hideEditor(); });
+    editorWindow_ = std::make_unique<EditorWindow>(name_ + " - MultiScoper", [this]() { hideEditor(); });
 
     editorWindow_->setUsingNativeTitleBar(true);
     editorWindow_->setContentNonOwned(editor_.get(), true);
@@ -196,7 +196,7 @@ bool TestTrack::reattachEditor()
     // rehydrating the frame around an existing editor.
     if (editorWindow_ == nullptr)
     {
-        editorWindow_ = std::make_unique<EditorWindow>(name_ + " - Oscil", [this]() { hideEditor(); });
+        editorWindow_ = std::make_unique<EditorWindow>(name_ + " - MultiScoper", [this]() { hideEditor(); });
         editorWindow_->setUsingNativeTitleBar(true);
         editorWindow_->setResizable(true, false);
     }
@@ -255,4 +255,4 @@ juce::Optional<juce::AudioPlayHead::PositionInfo> TestTrack::getPosition() const
     return transport_.getPositionInfo();
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

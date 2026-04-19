@@ -1,5 +1,5 @@
 /*
-    Oscil - DecimatingCaptureBuffer Property-Based Tests (rapidcheck)
+    MultiScoper - DecimatingCaptureBuffer Property-Based Tests (rapidcheck)
 
     Invariants across quality-preset / source-rate combinations.
     See docs/decisions/011-property-based-dsp-tests.md.
@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 #include <rapidcheck/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 namespace
 {

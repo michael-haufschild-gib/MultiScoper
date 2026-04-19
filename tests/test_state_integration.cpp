@@ -1,7 +1,7 @@
 /*
-    Oscil - State Integration Tests
+    MultiScoper - State Integration Tests
     Multi-component data flow tests that verify end-to-end correctness
-    across OscilState, Oscillator, Pane, and serialization boundaries.
+    across MultiScoperState, Oscillator, Pane, and serialization boundaries.
 
     Bug targets:
     - State corruption when oscillators reference deleted panes
@@ -11,7 +11,7 @@
     - Maximum oscillator limits interacting with serialization
 */
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/Oscillator.h"
 #include "core/Pane.h"
 
@@ -21,15 +21,15 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
 class StateIntegrationTest : public ::testing::Test
 {
 protected:
-    std::unique_ptr<OscilState> state;
+    std::unique_ptr<MultiScoperState> state;
 
-    void SetUp() override { state = std::make_unique<OscilState>(); }
+    void SetUp() override { state = std::make_unique<MultiScoperState>(); }
 
     // Create a pane, add it to state, and return its ID
     PaneId addPane(const juce::String& name, int orderIndex = 0)
@@ -72,7 +72,7 @@ TEST_F(StateIntegrationTest, FullStateRoundTripPreservesAllRelationships)
     juce::String xml = state->toXmlString();
     ASSERT_FALSE(xml.isEmpty());
 
-    auto restored = std::make_unique<OscilState>();
+    auto restored = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(restored->fromXmlString(xml));
     ASSERT_EQ(restored->getOscillators().size(), 3);
 
@@ -226,7 +226,7 @@ TEST_F(StateIntegrationTest, MaxOscillatorsSerializationRoundTrip)
 
     // Round-trip
     juce::String xml = state->toXmlString();
-    auto restored = std::make_unique<OscilState>();
+    auto restored = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(restored->fromXmlString(xml));
 
     auto restoredOscillators = restored->getOscillators();
@@ -257,12 +257,12 @@ TEST_F(StateIntegrationTest, DoubleSerializationIsIdempotent)
 
     // First round-trip
     juce::String xml1 = state->toXmlString();
-    auto state2 = std::make_unique<OscilState>();
+    auto state2 = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(state2->fromXmlString(xml1));
 
     // Second round-trip
     juce::String xml2 = state2->toXmlString();
-    auto state3 = std::make_unique<OscilState>();
+    auto state3 = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(state3->fromXmlString(xml2));
 
     // Third round-trip to detect accumulating drift
@@ -283,7 +283,7 @@ TEST_F(StateIntegrationTest, EmptyStateSerializationRoundTrip)
     juce::String xml = state->toXmlString();
     ASSERT_FALSE(xml.isEmpty());
 
-    auto restored = std::make_unique<OscilState>();
+    auto restored = std::make_unique<MultiScoperState>();
     bool success = restored->fromXmlString(xml);
     ASSERT_TRUE(success);
 
@@ -304,7 +304,7 @@ TEST_F(StateIntegrationTest, OscillatorWithoutPaneSurvivesRoundTrip)
     state->addOscillator(osc);
 
     juce::String xml = state->toXmlString();
-    auto restored = std::make_unique<OscilState>();
+    auto restored = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(restored->fromXmlString(xml));
 
     auto restoredOsc = restored->getOscillator(osc.getId());
@@ -337,7 +337,7 @@ TEST_F(StateIntegrationTest, OscillatorVisualConfigSurvivesRoundTrip)
     state->addOscillator(osc);
 
     juce::String xml = state->toXmlString();
-    auto restored = std::make_unique<OscilState>();
+    auto restored = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(restored->fromXmlString(xml));
 
     auto r = restored->getOscillator(osc.getId());
@@ -370,7 +370,7 @@ TEST_F(StateIntegrationTest, MultiplePanesOscillatorAssignmentsPreserved)
     addOscillatorToPane("C3", p3);
 
     juce::String xml = state->toXmlString();
-    auto restored = std::make_unique<OscilState>();
+    auto restored = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(restored->fromXmlString(xml));
 
     auto oscillators = restored->getOscillators();
@@ -410,7 +410,7 @@ TEST_F(StateIntegrationTest, ReorderThenSerializePreservesOrder)
     state->reorderOscillators(0, 4);
 
     juce::String xml = state->toXmlString();
-    auto restored = std::make_unique<OscilState>();
+    auto restored = std::make_unique<MultiScoperState>();
     ASSERT_TRUE(restored->fromXmlString(xml));
 
     auto oscillators = restored->getOscillators();

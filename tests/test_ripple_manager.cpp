@@ -1,5 +1,5 @@
 /*
-    Oscil - RippleManager Tests
+    MultiScoper - RippleManager Tests
     Tests for ripple spawn, expiration, and lifecycle management
 */
 
@@ -8,7 +8,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class RippleManagerTest : public ::testing::Test
 {

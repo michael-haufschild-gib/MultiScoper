@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Oscil Scenario-Based E2E Test Runner
+MultiScoper Scenario-Based E2E Test Runner
 
 Reads YAML scenario definitions and executes them against the test harness.
 Produces structured diagnostic reports with full state snapshots on failure.
@@ -24,7 +24,7 @@ from typing import Any
 
 # Add parent for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from oscil_test_utils import OscilTestClient, HarnessConnectionError
+from multiscoper_test_utils import MultiScoperTestClient, HarnessConnectionError
 
 try:
     import yaml
@@ -192,7 +192,7 @@ def evaluate_assertion(assertion: dict, snapshot: dict) -> dict:
 
 # ── Scenario Executor ───────────────────────────────────────────────────────
 
-def execute_setup(client: OscilTestClient, setup: dict):
+def execute_setup(client: MultiScoperTestClient, setup: dict):
     """Execute scenario setup steps."""
     if setup.get("reset", True):
         client.reset_state()
@@ -299,7 +299,7 @@ def execute_setup(client: OscilTestClient, setup: dict):
         time.sleep(int(wait_for[:-2]) / 1000.0)
 
 
-def get_snapshot(client: OscilTestClient) -> dict:
+def get_snapshot(client: MultiScoperTestClient) -> dict:
     """Fetch the diagnostic snapshot."""
     resp = client._get_json("/diagnostic/snapshot")
     if resp and resp.get("success"):
@@ -307,7 +307,7 @@ def get_snapshot(client: OscilTestClient) -> dict:
     return {}
 
 
-def execute_action(client: OscilTestClient, action: dict):
+def execute_action(client: MultiScoperTestClient, action: dict):
     """Execute a single action step. Actions map directly to HTTP API calls."""
     if "update_oscillator" in action:
         params = dict(action["update_oscillator"])  # copy to avoid mutating YAML
@@ -418,7 +418,7 @@ def execute_action(client: OscilTestClient, action: dict):
             pass
 
 
-def run_scenario(client: OscilTestClient, scenario: dict) -> dict:
+def run_scenario(client: MultiScoperTestClient, scenario: dict) -> dict:
     """Run a single scenario. Returns structured result.
 
     Supports two formats:
@@ -542,7 +542,7 @@ def print_report(results: list, json_output: bool = False):
     failed = len(results) - passed
 
     print(f"\n{'='*60}")
-    print(f" OSCIL E2E DIAGNOSTIC REPORT")
+    print(f" MULTISCOPER E2E DIAGNOSTIC REPORT")
     print(f" Scenarios: {passed}/{len(results)} passed", end="")
     if failed:
         print(f", {failed} FAILED")
@@ -605,7 +605,7 @@ def load_scenarios(scenario_filter: str = "") -> list:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Oscil E2E Scenario Runner")
+    parser = argparse.ArgumentParser(description="MultiScoper E2E Scenario Runner")
     parser.add_argument("--scenario", default="", help="Filter by scenario file name")
     parser.add_argument("--json", action="store_true", help="Output JSON report")
     parser.add_argument("--dry-run", action="store_true", help="Parse scenarios only")
@@ -630,14 +630,14 @@ def main():
                 print(f"  - {s.get('name', 'unnamed')} ({n_checks} assertions)")
         return
 
-    client = OscilTestClient(args.url)
+    client = MultiScoperTestClient(args.url)
     try:
         client.wait_for_harness(max_retries=5, delay=1.0)
     except HarnessConnectionError:
         print(f"ERROR: Test harness not running at {args.url}", file=sys.stderr)
         print("Start it with:", file=sys.stderr)
-        print('  "./build/dev/test_harness/OscilTestHarness_artefacts/Debug/'
-              'Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &', file=sys.stderr)
+        print('  "./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/'
+              'MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness" &', file=sys.stderr)
         sys.exit(1)
 
     results = []

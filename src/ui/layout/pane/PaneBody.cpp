@@ -1,16 +1,16 @@
 /*
-    Oscil - Pane Body Implementation
+    MultiScoper - Pane Body Implementation
 */
 
 #include "ui/layout/pane/PaneBody.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/interfaces/IAudioDataProvider.h"
 #include "core/interfaces/IInstanceRegistry.h"
 
 #include "rendering/ShaderRegistry.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 PaneBody::PaneBody(IAudioDataProvider& dataProvider, IInstanceRegistry& instanceRegistry, IThemeService& themeService,
@@ -26,7 +26,10 @@ PaneBody::PaneBody(IAudioDataProvider& dataProvider, IInstanceRegistry& instance
     addAndMakeVisible(*waveformStack_);
 
     // Create crosshair overlay (always visible, follows mouse)
-    crosshairOverlay_ = std::make_unique<CrosshairOverlay>(themeService);
+    // Pass a testId so the harness can observe crosshair presence and
+    // visibility state — previously the overlay was invisible to e2e
+    // assertions, so hover-driven crosshair logic had no coverage.
+    crosshairOverlay_ = std::make_unique<CrosshairOverlay>(themeService, "crosshairOverlay");
     addChildComponent(*crosshairOverlay_);
     crosshairOverlay_->setVisible(false); // Hidden until mouse enters
 
@@ -42,7 +45,7 @@ PaneBody::~PaneBody() { stopTimer(); }
 
 void PaneBody::paint(juce::Graphics& g)
 {
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
     // In GPU mode, the OpenGL renderer handles the background.
     // Only fill if GPU rendering is disabled to avoid occluding the GL content.
     if (dataProvider_.getState().isGpuRenderingEnabled())
@@ -362,4 +365,4 @@ void PaneBody::resetStats()
     }
 }
 
-} // namespace oscil
+} // namespace multiscoper

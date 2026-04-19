@@ -1,10 +1,10 @@
 /*
-    Oscil Test Harness - HTTP Server: Performance Metrics Handlers
+    MultiScoper Test Harness - HTTP Server: Performance Metrics Handlers
 */
 
 #include "TestHttpServer.h"
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 void TestHttpServer::setupMetricsRoutes()
@@ -122,4 +122,4 @@ void TestHttpServer::handleMetricsRecordFrame(const httplib::Request&, httplib::
     res.set_content(successResponse().dump(), "application/json");
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test

@@ -1,5 +1,5 @@
 /*
-    Oscil - SeqLock
+    MultiScoper - SeqLock
     Generic lock-free single-producer / multiple-consumer publish primitive
 */
 
@@ -14,7 +14,7 @@
 #include <thread>
 #include <type_traits>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -101,4 +101,4 @@ private:
     alignas(T) T data_{};
 };
 
-} // namespace oscil
+} // namespace multiscoper

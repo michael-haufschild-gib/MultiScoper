@@ -1,5 +1,5 @@
 /*
-    Oscil - DialogManager tests
+    MultiScoper - DialogManager tests
 
     DialogManager is the single coordinator through which the plugin editor
     shows its four modal dialogs (Add Oscillator, Color Picker, Select Pane,
@@ -15,11 +15,11 @@
 #include "ui/dialogs/OscillatorConfigDialog.h"
 #include "ui/managers/DialogManager.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 
 #include <gtest/gtest.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class DialogManagerTest : public ::testing::Test
@@ -48,8 +48,8 @@ protected:
         return osc;
     }
 
-    oscil::test::MockThemeService themeService_;
-    oscil::test::MockInstanceRegistry instanceRegistry_;
+    multiscoper::test::MockThemeService themeService_;
+    multiscoper::test::MockInstanceRegistry instanceRegistry_;
     std::unique_ptr<juce::Component> parent_;
     std::unique_ptr<DialogManager> manager_;
 };
@@ -179,4 +179,4 @@ TEST_F(DialogManagerTest, ParentDestructionTearsDownModalsSynchronously)
     SUCCEED() << "Synchronous teardown completed without crash";
 }
 
-} // namespace oscil
+} // namespace multiscoper

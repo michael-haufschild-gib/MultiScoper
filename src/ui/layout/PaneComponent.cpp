@@ -1,17 +1,27 @@
 /*
-    Oscil - Pane Component Implementation
+    MultiScoper - Pane Component Implementation
 */
 
 #include "ui/layout/PaneComponent.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 #include "core/interfaces/IAudioDataProvider.h"
+#include "ui/components/SurfacePainter.h"
+#include "ui/components/SurfaceStyle.h"
 #include "ui/theme/ThemeManager.h"
 
+#include <algorithm>
 #include <utility>
 
-namespace oscil
+namespace multiscoper
 {
+
+namespace
+{
+// Shared between PaneComponent::paint and PaneHeader::paint. Square corners
+// per design — keep both files in lockstep if the radius ever changes.
+constexpr float PANE_CORNER_RADIUS = 0.0f;
+} // namespace
 
 PaneComponent::PaneComponent(IAudioDataProvider& dataProvider, ServiceContext& context, PaneId paneId)
     : dataProvider_(dataProvider)
@@ -47,40 +57,44 @@ void PaneComponent::setPaneIndex(int index)
 {
     paneIndex_ = index;
 
-#if defined(TEST_HARNESS) || defined(OSCIL_ENABLE_TEST_IDS)
+#if defined(TEST_HARNESS) || defined(MULTISCOPER_ENABLE_TEST_IDS)
     // Register pane with index-based testId
     auto testId = juce::String("pane_") + juce::String(index);
-    OSCIL_REGISTER_TEST_ID(testId.toRawUTF8());
+    MULTISCOPER_REGISTER_TEST_ID(testId.toRawUTF8());
 #endif
 }
 
 void PaneComponent::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds();
+    auto boundsF = getLocalBounds().toFloat();
     const auto& theme = themeService_.getCurrentTheme();
+    const auto surface = SurfaceStyle::fromTheme(theme);
 
-    // FIX: In GPU mode, the OpenGL renderer handles the background.
-    // Only fill the pane background in software rendering mode.
-#if OSCIL_ENABLE_OPENGL
+    // Tile treatment: rounded corners + subtle hairline border. Matches the
+    // flat surface system used elsewhere and lets tiles breathe on dark bgs.
+    constexpr float kPaneCornerRadius = PANE_CORNER_RADIUS;
+
+    // Background fill is skipped in GPU mode — the GL renderer owns that pass.
+#if MULTISCOPER_ENABLE_OPENGL
     bool const gpuEnabled = dataProvider_.getState().isGpuRenderingEnabled();
-    if (!gpuEnabled)
+#else
+    constexpr bool gpuEnabled = false;
 #endif
+
+    if (!gpuEnabled)
     {
         g.setColour(theme.backgroundPane);
-        g.fillRect(bounds);
+        g.fillRoundedRectangle(boundsF, kPaneCornerRadius);
     }
 
-    // Draw border - highlight if drag target
-    if (isDragOver_)
-    {
-        g.setColour(theme.controlActive);
-        g.drawRect(bounds, 3);
-    }
-    else
-    {
-        g.setColour(theme.controlBorder);
-        g.drawRect(bounds, 1);
-    }
+    // Hairline border. Drag-over uses a slightly thicker accent ring so it
+    // reads clearly over busy waveforms, but still 1.5px — not the old 3px
+    // solid block.
+    float const borderWidth = isDragOver_ ? 1.5f : 1.0f;
+    auto const strokeBounds = boundsF.reduced(borderWidth * 0.5f);
+    auto const strokeRadius = std::max(kPaneCornerRadius - (borderWidth * 0.5f), 0.0f);
+    g.setColour(isDragOver_ ? theme.controlActive : surface.borderSubtle);
+    g.drawRoundedRectangle(strokeBounds, strokeRadius, borderWidth);
 }
 
 void PaneComponent::resized()
@@ -370,4 +384,4 @@ const Oscillator* PaneComponent::getOscillatorAt(size_t index) const
     return nullptr;
 }
 
-} // namespace oscil
+} // namespace multiscoper

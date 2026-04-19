@@ -1,5 +1,5 @@
 /*
-    Oscil Test Harness - Testable Component Helper
+    MultiScoper Test Harness - Testable Component Helper
     Macros and utilities for instrumenting UI components
 */
 
@@ -9,7 +9,7 @@
 
 #include <utility>
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 /**
@@ -66,7 +66,7 @@ private:
     TestRegistration registration_;
 };
 
-} // namespace oscil::test
+} // namespace multiscoper::test
 
 // Convenience macros for quick instrumentation
 
@@ -74,7 +74,7 @@ private:
  * Declare a testable component member.
  * Use in the private section of your component class.
  */
-#define DECLARE_TESTABLE() std::unique_ptr<oscil::test::TestRegistration> testRegistration_
+#define DECLARE_TESTABLE() std::unique_ptr<multiscoper::test::TestRegistration> testRegistration_
 
 /**
  * Register this component for testing.
@@ -82,7 +82,8 @@ private:
  *
  * @param testId The unique identifier for this element
  */
-#define REGISTER_TESTABLE(testId) testRegistration_ = std::make_unique<oscil::test::TestRegistration>(*this, testId)
+#define REGISTER_TESTABLE(testId) \
+    testRegistration_ = std::make_unique<multiscoper::test::TestRegistration>(*this, testId)
 
 /**
  * Register a child component for testing.
@@ -92,7 +93,7 @@ private:
  * @param testId The unique identifier for this element
  */
 #define REGISTER_TESTABLE_CHILD(component, testId) \
-    oscil::test::TestElementRegistry::getInstance().registerElement((testId), &(component))
+    multiscoper::test::TestElementRegistry::getInstance().registerElement((testId), &(component))
 
 /**
  * Unregister a child component.
@@ -101,7 +102,7 @@ private:
  * @param testId The identifier used during registration
  */
 #define UNREGISTER_TESTABLE_CHILD(component, testId) \
-    oscil::test::TestElementRegistry::getInstance().unregisterElement((testId), &(component))
+    multiscoper::test::TestElementRegistry::getInstance().unregisterElement((testId), &(component))
 
 /**
  * Generate a unique testId for indexed elements.

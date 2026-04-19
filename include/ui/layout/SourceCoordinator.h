@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Coordinator
+    MultiScoper - Source Coordinator
     Handles InstanceRegistryListener callbacks and source list management
 */
 
@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -26,12 +26,14 @@ class SourceCoordinator : public InstanceRegistryListener
 {
 public:
     using SourcesChangedCallback = std::function<void()>;
+    using SourceRemovedCallback = std::function<void(const SourceId&)>;
 
     /**
      * Create coordinator with registry reference and change callback.
      * Automatically registers as listener on construction.
      */
-    SourceCoordinator(IInstanceRegistry& registry, SourcesChangedCallback onSourcesChanged);
+    SourceCoordinator(IInstanceRegistry& registry, SourcesChangedCallback onSourcesChanged,
+                      SourceRemovedCallback onSourceRemoved = {});
 
     /**
      * Destructor automatically unregisters from registry.
@@ -67,6 +69,7 @@ private:
 
     IInstanceRegistry& registry_;
     SourcesChangedCallback onSourcesChanged_{};
+    SourceRemovedCallback onSourceRemoved_{};
     std::vector<SourceId> availableSources_{};
 
     // Flag to track if we're still valid for callbacks
@@ -74,4 +77,4 @@ private:
     std::shared_ptr<std::atomic<bool>> isValid_ = std::make_shared<std::atomic<bool>>(true);
 };
 
-} // namespace oscil
+} // namespace multiscoper

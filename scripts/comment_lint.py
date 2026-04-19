@@ -120,7 +120,6 @@ EXEMPT_PATTERNS = [
         r"|oscillator(?:Selected|VisibilityChanged|ModeChanged|ConfigRequested"
         r"|ColorConfigRequested|DeleteRequested|DragStarted|MoveRequested"
         r"|PaneSelectionRequested|NameChanged|sReordered)"
-        r"|filterModeChanged"
         r"|column(?:LayoutChanged)|pane(?:OrderChanged|Added|Removed)"
         r"|addOscillator(?:DialogRequested|Requested)"
         r"|itemDrag(?:Enter|Move|Exit)|itemDropped"

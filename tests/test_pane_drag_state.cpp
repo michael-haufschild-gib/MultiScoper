@@ -1,5 +1,5 @@
 /*
-    Oscil - PaneDragState Edge Case Tests
+    MultiScoper - PaneDragState Edge Case Tests
     Tests for edge cases in the drag-drop state machine.
     Basic operations covered in test_pane.cpp.
 
@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class PaneDragStateEdgeTest : public ::testing::Test
 {

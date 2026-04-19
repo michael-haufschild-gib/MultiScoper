@@ -1,5 +1,5 @@
 /*
-    Oscil - Grid Renderer
+    MultiScoper - Grid Renderer
     Handles rendering of background grids
 */
 
@@ -9,7 +9,7 @@
 
 #include <juce_opengl/juce_opengl.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class GridRenderer
@@ -63,4 +63,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GridRenderer)
 };
 
-} // namespace oscil
+} // namespace multiscoper

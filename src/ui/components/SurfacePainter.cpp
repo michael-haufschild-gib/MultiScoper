@@ -1,5 +1,5 @@
 /*
-    Oscil - Surface Painter (flat) — Implementation
+    MultiScoper - Surface Painter (flat) — Implementation
 
     Historical name: "GlassPainter". The 2026 uplift replaced the glassmorphism
     aesthetic with a flat surface system and the module was renamed to
@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 // ============================================================================
@@ -148,7 +148,11 @@ void paintPanel(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
 void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceStyle& surface, float cornerRadius,
                 bool focused, bool hovered, bool error, juce::Colour errorColour)
 {
-    // Flat input: solid dark fill, 1px border that shifts colour by state.
+    // Flat input: solid dark fill, 1px sharp border that shifts colour by state.
+    // cornerRadius parameter is retained for API compatibility but ignored —
+    // the 2026 design language is sharp-cornered for all basic UI controls.
+    juce::ignoreUnused(cornerRadius);
+
     juce::Colour const bgColour = surface.bgPanel;
     juce::Colour borderColour = surface.borderSubtle;
 
@@ -166,15 +170,11 @@ void paintInput(juce::Graphics& g, juce::Rectangle<float> bounds, const SurfaceS
     }
 
     g.setColour(bgColour);
-    g.fillRoundedRectangle(bounds, cornerRadius);
+    g.fillRect(bounds);
 
-    // Inset the stroke so the focused 1.5px accent border doesn't clip on
-    // tight component edges; see paintPanel above.
     float const borderWidth = focused ? 1.5f : 1.0f;
-    auto const strokeBounds = bounds.reduced(borderWidth * 0.5f);
-    auto const strokeRadius = std::max(cornerRadius - (borderWidth * 0.5f), 0.0f);
     g.setColour(borderColour);
-    g.drawRoundedRectangle(strokeBounds, strokeRadius, borderWidth);
+    g.drawRect(bounds, borderWidth);
 }
 
 void paintRipples(juce::Graphics& g, juce::Rectangle<float> bounds, const std::vector<RippleState>& ripples,
@@ -211,9 +211,16 @@ void paintFocusRing(juce::Graphics& g, juce::Rectangle<float> bounds, float corn
                     float width, float offset)
 {
     // WCAG focus ring: solid accent stroke, offset outside the element.
+    // When the focused element has sharp corners (cornerRadius == 0) — the
+    // 2026 flat-design default for inputs, toggles, checkboxes, tabs, etc. —
+    // the ring is a plain rectangle so it matches the element's silhouette.
     auto ringBounds = bounds.expanded(offset);
     g.setColour(accentColour.withAlpha(ComponentLayout::FOCUS_RING_ALPHA));
-    g.drawRoundedRectangle(ringBounds, cornerRadius + offset, width);
+
+    if (cornerRadius <= 0.0f)
+        g.drawRect(ringBounds, width);
+    else
+        g.drawRoundedRectangle(ringBounds, cornerRadius + offset, width);
 }
 
 void paintCheckerboard(juce::Graphics& g, juce::Rectangle<int> bounds, int checkerSize)
@@ -235,4 +242,4 @@ void paintCheckerboard(juce::Graphics& g, juce::Rectangle<int> bounds, int check
 
 } // namespace SurfacePainter
 
-} // namespace oscil
+} // namespace multiscoper

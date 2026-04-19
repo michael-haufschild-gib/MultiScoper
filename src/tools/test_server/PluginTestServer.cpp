@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Test Server Implementation (Refactored)
+    MultiScoper - Plugin Test Server Implementation (Refactored)
     HTTP server for automated UI testing - thin router delegating to handlers
 */
 
@@ -14,10 +14,10 @@
 #include "tools/test_server/TestRunnerHandler.h"
 #include "tools/test_server/WaveformHandler.h"
 
-namespace oscil
+namespace multiscoper
 {
 
-PluginTestServer::PluginTestServer(OscilPluginEditor& editor) : editor_(editor) {}
+PluginTestServer::PluginTestServer(MultiScoperPluginEditor& editor) : editor_(editor) {}
 
 PluginTestServer::~PluginTestServer() { stop(); }
 
@@ -178,4 +178,4 @@ void PluginTestServer::setupEndpoints()
     setupSourceEndpoints();
 }
 
-} // namespace oscil
+} // namespace multiscoper

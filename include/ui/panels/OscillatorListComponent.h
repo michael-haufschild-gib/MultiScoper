@@ -1,5 +1,5 @@
 /*
-    Oscil - Oscillator List Component
+    MultiScoper - Oscillator List Component
     Manages the list of oscillators, including filtering, selection, and reordering
 */
 
@@ -10,14 +10,13 @@
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
 #include "ui/panels/OscillatorListItem.h"
-#include "ui/panels/OscillatorListToolbar.h"
 #include "ui/theme/IThemeService.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <unordered_map>
 
-namespace oscil
+namespace multiscoper
 {
 
 class IInstanceRegistry;
@@ -29,7 +28,6 @@ class IInstanceRegistry;
 class OscillatorListComponent
     : public ThemedComponent
     , public OscillatorListItemComponent::Listener
-    , public OscillatorListToolbar::Listener
     , public TestIdSupport
     , public juce::DragAndDropContainer
     , public juce::DragAndDropTarget
@@ -72,9 +70,6 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-
-    /// React to filter mode changes from toolbar.
-    void filterModeChanged(OscillatorFilterMode mode) override;
 
     /// Forward list item events to listeners.
     void oscillatorSelected(const OscillatorId& id) override;
@@ -131,32 +126,27 @@ public:
     // Layout constants
     static constexpr int MIN_LIST_HEIGHT = 100;
     static constexpr int MAX_LIST_HEIGHT = 400;
-    static constexpr int OSCILLATOR_TOOLBAR_HEIGHT = OscillatorListToolbar::PREFERRED_HEIGHT;
 
 private:
-    std::vector<Oscillator> filterOscillators(const std::vector<Oscillator>& oscillators) const;
-    void rebuildItems(const std::vector<Oscillator>& filtered,
+    void rebuildItems(const std::vector<Oscillator>& oscillators,
                       std::unordered_map<juce::String, std::unique_ptr<OscillatorListItemComponent>>& reusedItems);
     void syncContainerChildren();
-    void updateOscillatorCounts();
     int getItemIndexAtY(int y) const;
     void updateDragIndicator(int targetIndex);
 
     // TestIdSupport
     void registerTestId() override;
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     IInstanceRegistry& instanceRegistry_;
     juce::ListenerList<Listener> listeners_;
 
-    std::unique_ptr<OscillatorListToolbar> toolbar_;
     std::unique_ptr<juce::Component> container_;
     std::unique_ptr<juce::Viewport> viewport_;
     std::unique_ptr<juce::Label> emptyStateLabel_;
 
     std::vector<std::unique_ptr<OscillatorListItemComponent>> items_;
     std::vector<Oscillator> allOscillators_;
-    OscillatorFilterMode currentFilterMode_ = OscillatorFilterMode::All;
     OscillatorId selectedOscillatorId_;
 
     // Drag and drop state
@@ -165,4 +155,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorListComponent)
 };
 
-} // namespace oscil
+} // namespace multiscoper

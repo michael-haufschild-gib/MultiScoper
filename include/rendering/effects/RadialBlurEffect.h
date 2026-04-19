@@ -1,5 +1,5 @@
 /*
-    Oscil - Radial Blur Effect
+    MultiScoper - Radial Blur Effect
     Zoom-glow effect sampling from center at different distances
 */
 
@@ -8,9 +8,9 @@
 #include "SingleShaderEffect.h"
 #include "rendering/VisualConfiguration.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -52,6 +52,6 @@ private:
     GLint samplesLoc_ = -1;
 };
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

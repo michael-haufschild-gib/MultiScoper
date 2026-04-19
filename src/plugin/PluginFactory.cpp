@@ -1,5 +1,5 @@
 /*
-    Oscil - Plugin Factory Implementation
+    MultiScoper - Plugin Factory Implementation
     Composition root for dependency injection.
 */
 
@@ -15,7 +15,7 @@
 
 #include <atomic>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -60,7 +60,7 @@ std::unique_ptr<juce::AudioProcessor> PluginFactory::createPluginProcessor()
                                        .shaderRegistry = *shaderRegistry_,
                                        .presetManager = *presetManager_,
                                        .memoryBudgetManager = *memoryBudgetManager_};
-    return std::make_unique<OscilPluginProcessor>(config);
+    return std::make_unique<MultiScoperPluginProcessor>(config);
 }
 
 ThemeManager& PluginFactory::getThemeManager() { return *themeManager_; }
@@ -75,4 +75,4 @@ GlobalPreferences& PluginFactory::getGlobalPreferences() { return *globalPrefere
 
 PresetManager& PluginFactory::getPresetManager() { return *presetManager_; }
 
-} // namespace oscil
+} // namespace multiscoper

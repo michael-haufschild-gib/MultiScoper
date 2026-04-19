@@ -13,7 +13,7 @@ tests/                      # Unit tests (GoogleTest)
 ├── test_oscillator.cpp     # Model tests
 ├── test_signal_processor.cpp
 ├── test_timing_engine.cpp
-├── test_oscil_button.cpp   # UI component tests
+├── test_multiscoper_button.cpp   # UI component tests
 └── ...
 
 test_harness/               # E2E test infrastructure
@@ -35,13 +35,13 @@ test_harness/               # E2E test infrastructure
 **Template**:
 ```cpp
 /*
-    Oscil - {ClassName} Tests
+    MultiScoper - {ClassName} Tests
 */
 
 #include <gtest/gtest.h>
 #include "core/MyClass.h"  // Include what you're testing
 
-using namespace oscil;
+using namespace multiscoper;
 
 class MyClassTest : public ::testing::Test
 {
@@ -92,37 +92,37 @@ UI components require JUCE initialization:
 ```cpp
 #include <gtest/gtest.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ui/components/OscilButton.h"
+#include "ui/components/MultiScoperButton.h"
 #include "TestElementRegistry.h"
 
-using namespace oscil;
+using namespace multiscoper;
 
-class OscilButtonTest : public ::testing::Test
+class MultiScoperButtonTest : public ::testing::Test
 {
 protected:
     // No SetUp needed - global JuceTestEnvironment handles initialization
 };
 
-TEST_F(OscilButtonTest, Construction)
+TEST_F(MultiScoperButtonTest, Construction)
 {
-    OscilButton button("Click Me", "test_button");
+    MultiScoperButton button("Click Me", "test_button");
 
     EXPECT_EQ(button.getText(), "Click Me");
     EXPECT_TRUE(button.isEnabled());
 }
 
-TEST_F(OscilButtonTest, TestIdRegistration)
+TEST_F(MultiScoperButtonTest, TestIdRegistration)
 {
-    OscilButton button("Test", "my_test_id");
+    MultiScoperButton button("Test", "my_test_id");
 
-    auto* found = oscil::test::TestElementRegistry::getInstance()
+    auto* found = multiscoper::test::TestElementRegistry::getInstance()
                       .findElement("my_test_id");
     EXPECT_EQ(found, &button);
 }
 
-TEST_F(OscilButtonTest, ClickCallback)
+TEST_F(MultiScoperButtonTest, ClickCallback)
 {
-    OscilButton button;
+    MultiScoperButton button;
     bool clicked = false;
 
     button.onClick = [&clicked]() { clicked = true; };
@@ -186,7 +186,7 @@ ctest --preset dev
 ctest --preset dev -R "Oscillator"
 
 # Run single test binary with filter
-./build/dev/OscilTests --gtest_filter="OscillatorTest.*"
+./build/dev/MultiScoperTests --gtest_filter="OscillatorTest.*"
 ```
 
 ### Verbose Output
@@ -196,7 +196,7 @@ ctest --preset dev --output-on-failure
 
 ### List Available Tests
 ```bash
-./build/dev/OscilTests --gtest_list_tests
+./build/dev/MultiScoperTests --gtest_list_tests
 ```
 
 ---
@@ -233,7 +233,7 @@ TEST_F(OscillatorTest, Works)
 #include <gtest/gtest.h>
 #include "core/MyFeature.h"
 
-using namespace oscil;
+using namespace multiscoper;
 
 class MyFeatureTest : public ::testing::Test { };
 
@@ -262,13 +262,13 @@ ctest --preset dev -R "MyFeature"
 
 ### Build Test Harness
 ```bash
-cmake --preset dev -DOSCIL_BUILD_TEST_HARNESS=ON
-cmake --build --preset dev --target OscilTestHarness
+cmake --preset dev -DMULTISCOPER_BUILD_TEST_HARNESS=ON
+cmake --build --preset dev --target MultiScoperTestHarness
 ```
 
 ### Start Harness
 ```bash
-"./build/dev/test_harness/OscilTestHarness_artefacts/Debug/Oscil Test Harness.app/Contents/MacOS/Oscil Test Harness" &
+"./build/dev/test_harness/MultiScoperTestHarness_artefacts/Debug/MultiScoper Test Harness.app/Contents/MacOS/MultiScoper Test Harness" &
 ```
 
 ### Python E2E Test Pattern
@@ -329,16 +329,16 @@ TEST_F(OscillatorTest, ProcessingModeAffectsOutput)
 ### 2. State Serialization Tests
 Ensure state survives save/load:
 ```cpp
-TEST_F(OscilStateTest, SerializationRoundTrip)
+TEST_F(MultiScoperStateTest, SerializationRoundTrip)
 {
-    OscilState state;
+    MultiScoperState state;
     state.addOscillator(createTestOscillator());
 
     // Serialize
     auto data = state.serialize();
 
     // Deserialize
-    OscilState restored;
+    MultiScoperState restored;
     restored.deserialize(data);
 
     EXPECT_EQ(restored.getOscillatorCount(), 1);
@@ -436,14 +436,14 @@ EXPECT_TRUE(component.isAnimating());  // May fail!
 | `ctest --preset dev` | Run all tests |
 | `ctest --preset dev -R "Pattern"` | Run matching tests |
 | `ctest --preset dev -V` | Verbose output |
-| `./build/dev/OscilTests --gtest_filter="*"` | Run with GoogleTest filter |
-| `./build/dev/OscilTests --gtest_list_tests` | List all tests |
+| `./build/dev/MultiScoperTests --gtest_filter="*"` | Run with GoogleTest filter |
+| `./build/dev/MultiScoperTests --gtest_list_tests` | List all tests |
 
 ---
 
 ## On-demand DAW integration tests (Reaper)
 
-A third tier of tests hosts Oscil inside a real DAW (Reaper) via ReaScript Lua.
+A third tier of tests hosts MultiScoper inside a real DAW (Reaper) via ReaScript Lua.
 This catches bugs that only surface in a real host: VST3/AU/CLAP wrapper
 divergence, DAW save/reload state round-trips, and transport-driven
 `processBlock` cadence. Complementary to unit tests and the in-process test
@@ -453,10 +453,10 @@ harness; see [ADR 015](decisions/015-reaper-ondemand-integration-tests.md).
 
 - Reaper installed at `/Applications/REAPER.app` on macOS (or set
   `REAPER_PATH=/path/to/REAPER`).
-- Oscil built locally: `cmake --build --preset dev`.
+- MultiScoper built locally: `cmake --build --preset dev`.
 - Plugin directory (for VST3): by default
-  `build/dev/Oscil_artefacts/Debug/VST3`. Override with `OSCIL_PLUGIN_DIR`.
-- Reaper must have already scanned oscil4 at least once
+  `build/dev/MultiScoper_artefacts/Debug/VST3`. Override with `MULTISCOPER_PLUGIN_DIR`.
+- Reaper must have already scanned MultiScoper at least once
   (Preferences -> Plug-ins -> VST/AU/CLAP -> Re-scan).
 
 ### How to run
@@ -470,7 +470,7 @@ tests/reaper/run_reaper_tests.sh 02_cross_instance_discovery
 ```
 
 Scenarios live in `tests/reaper/scenarios/*.lua`. Results land at
-`/tmp/oscil_reaper_results.json`; the runner exits non-zero on any failure.
+`/tmp/multiscoper_reaper_results.json`; the runner exits non-zero on any failure.
 
 ### When to run
 
@@ -481,7 +481,7 @@ Scenarios live in `tests/reaper/scenarios/*.lua`. Results land at
 
 ### How to interpret failures
 
-1. Read `/tmp/oscil_reaper_results.json` — each failed scenario includes a
+1. Read `/tmp/multiscoper_reaper_results.json` — each failed scenario includes a
    `detail` field with the Lua error message.
 2. Check Reaper's ReaScript console (Actions -> Show console) for
    `[run_all]`, `[reaper_test_lib]`, and scenario-specific log lines.

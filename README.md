@@ -1,13 +1,13 @@
-# Oscil
+# MultiScoper
 
 **Multi-track audio oscilloscope plugin for engineers and producers.**
 
-[![Build and Test](https://github.com/OscilAudio/Oscil/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/OscilAudio/Oscil/actions/workflows/build_and_test.yml)
+[![Build and Test](https://github.com/MultiScoper/MultiScoper/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/MultiScoper/MultiScoper/actions/workflows/build_and_test.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)]()
 [![JUCE 8](https://img.shields.io/badge/JUCE-8.0.12-green.svg)](https://juce.com)
 
-Oscil is a real-time audio visualization platform that lets you analyze multiple audio sources simultaneously. Drop it on any track in your DAW — each instance registers as a signal source, and a single aggregator displays all waveforms together with sample-accurate timing.
+MultiScoper is a real-time audio visualization platform that lets you analyze multiple audio sources simultaneously. Drop it on any track in your DAW — each instance registers as a signal source, and a single aggregator displays all waveforms together with sample-accurate timing.
 
 ## Features
 
@@ -47,15 +47,15 @@ cmake --build --preset release
 ```
 
 Build artifacts:
-- **VST3:** `build/dev/Oscil_artefacts/Debug/VST3/oscil4.vst3`
-- **AU:** `build/dev/Oscil_artefacts/Debug/AU/oscil4.component`
-- **Standalone:** `build/dev/Oscil_artefacts/Debug/Standalone/oscil4.app`
+- **VST3:** `build/dev/MultiScoper_artefacts/Debug/VST3/MultiScoper.vst3`
+- **AU:** `build/dev/MultiScoper_artefacts/Debug/AU/MultiScoper.component`
+- **Standalone:** `build/dev/MultiScoper_artefacts/Debug/Standalone/MultiScoper.app`
 
 See [docs/building.md](docs/building.md) for detailed build instructions and platform-specific notes.
 
 ## Architecture
 
-Oscil follows a strict layered architecture enforced by automated lint:
+MultiScoper follows a strict layered architecture enforced by automated lint:
 
 ```
 plugin/      Entry points (AudioProcessor, AudioProcessorEditor)
@@ -91,9 +91,9 @@ Higher layers depend on lower layers, never the reverse. See [docs/architecture.
 
 ## Development workflow
 
-Oscil is developed with AI-assisted tooling (primarily [Claude Code](https://claude.ai/claude-code)) operating under the project's lint and test gates:
+MultiScoper is developed with AI-assisted tooling (primarily [Claude Code](https://claude.ai/claude-code)) operating under the project's lint and test gates:
 
-- every commit passes through a pre-commit hook running eight independent lint checks (formatting, file/function size, test quality, source registry, placeholder detection, architecture boundaries, comment quality, clang-tidy) — see [`scripts/pre-commit`](scripts/pre-commit);
+- every commit passes through a pre-commit hook running ten independent lint checks (formatting, file/function size, test quality, source registry, placeholder detection, architecture boundaries, comment quality, forbidden-pattern ratchets (ADR-014), harness MT-dispatch capture rules (ADR-016), clang-tidy) — see [`scripts/pre-commit`](scripts/pre-commit);
 - every push runs the same lint gate plus a multi-platform build (macOS, Windows, Linux), `pluginval` validation at strictness level 10, unit tests, and RealtimeSanitizer on audio-path tests — see [`.github/workflows/build_and_test.yml`](.github/workflows/build_and_test.yml);
 - architectural layer boundaries are enforced by [`scripts/architecture_lint.py`](scripts/architecture_lint.py) and documented in [ADR-005](docs/decisions/005-architecture-lint-enforcement.md);
 - CI failures are investigated by humans, not auto-routed to AI agents — see [ADR-007](docs/decisions/007-ci-failure-triage.md).

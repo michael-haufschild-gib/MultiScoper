@@ -1,5 +1,5 @@
 /*
-    Oscil - Audio Buffer Interface
+    MultiScoper - Audio Buffer Interface
     Abstract interface for read-only audio buffer access
 */
 
@@ -9,7 +9,7 @@
 
 #include <optional>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declaration
@@ -120,4 +120,4 @@ public:
     virtual float getRMSLevel(int channel, int numSamples = 1024) const = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper

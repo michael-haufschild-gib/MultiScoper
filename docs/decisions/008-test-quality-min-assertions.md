@@ -15,13 +15,13 @@ Accepted
 
 `BEHAVIORAL_INDICATORS` (lines 89–99) list patterns that mean a test is legitimately exercising behavior even with a single assertion: `EXPECT_DEATH`, `EXPECT_THROW`, `EXPECT_ANY_THROW`, `EXPECT_THAT`, `.processBlock(`, `.process(`, `.paint(`, `.resized(`.
 
-`OSCIL_MIN_ASSERTIONS_PER_TEST` is currently `1` (`CMakeLists.txt:99`).
+`MULTISCOPER_MIN_ASSERTIONS_PER_TEST` is currently `1` (`CMakeLists.txt:99`).
 
 An earlier audit recommendation proposed raising this to `2` on the grounds that it would catch shallow tests. That recommendation is now withdrawn.
 
 ## Decision
 
-`OSCIL_MIN_ASSERTIONS_PER_TEST` remains at `1`. The primary defense against shallow tests is the combination of:
+`MULTISCOPER_MIN_ASSERTIONS_PER_TEST` remains at `1`. The primary defense against shallow tests is the combination of:
 
 - the existence-only check (rule 2),
 - the tautology check (rule 3),

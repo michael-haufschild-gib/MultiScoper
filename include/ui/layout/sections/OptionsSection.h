@@ -1,5 +1,5 @@
 /*
-    Oscil - Options Sidebar Section
+    MultiScoper - Options Sidebar Section
     Combined section with gain control and display options
     Merges Master Controls and Display Options sections
 */
@@ -8,9 +8,9 @@
 
 #include "core/ServiceContext.h"
 #include "core/dsp/CaptureQualityConfig.h"
-#include "ui/components/OscilDropdown.h"
-#include "ui/components/OscilSlider.h"
-#include "ui/components/OscilToggle.h"
+#include "ui/components/MultiScoperDropdown.h"
+#include "ui/components/MultiScoperSlider.h"
+#include "ui/components/MultiScoperToggle.h"
 #include "ui/components/TestId.h"
 #include "ui/components/ThemedComponent.h"
 #include "ui/layout/sections/DynamicHeightContent.h"
@@ -20,7 +20,7 @@
 
 #include <functional>
 
-namespace oscil
+namespace multiscoper
 {
 
 /**
@@ -121,7 +121,7 @@ public:
     int getPreferredHeight() const override;
 
     // For testing access
-    OscilDropdown* getThemeDropdown() const { return themeDropdown_.get(); }
+    MultiScoperDropdown* getThemeDropdown() const { return themeDropdown_.get(); }
 
     // Gain range constants (from PRD)
     static constexpr float MIN_GAIN_DB = -60.0f;
@@ -148,28 +148,28 @@ private:
 
     // Gain controls (from Master Controls)
     std::unique_ptr<juce::Label> gainLabel_;
-    std::unique_ptr<OscilSlider> gainSlider_;
+    std::unique_ptr<MultiScoperSlider> gainSlider_;
 
     // Display toggles (from Display Options)
     std::unique_ptr<juce::Label> displayLabel_;
-    std::unique_ptr<OscilToggle> showGridToggle_;
-    std::unique_ptr<OscilToggle> autoScaleToggle_;
+    std::unique_ptr<MultiScoperToggle> showGridToggle_;
+    std::unique_ptr<MultiScoperToggle> autoScaleToggle_;
 
     // Layout and theme dropdowns (moved from toolbar)
     std::unique_ptr<juce::Label> layoutLabel_;
-    std::unique_ptr<OscilDropdown> layoutDropdown_;
+    std::unique_ptr<MultiScoperDropdown> layoutDropdown_;
     std::unique_ptr<juce::Label> themeLabel_;
-    std::unique_ptr<OscilDropdown> themeDropdown_;
+    std::unique_ptr<MultiScoperDropdown> themeDropdown_;
 
     // GPU rendering toggle
     std::unique_ptr<juce::Label> renderingLabel_;
-    std::unique_ptr<OscilToggle> gpuRenderingToggle_;
+    std::unique_ptr<MultiScoperToggle> gpuRenderingToggle_;
 
     // Capture quality controls
     std::unique_ptr<juce::Label> qualityLabel_;
-    std::unique_ptr<OscilDropdown> qualityPresetDropdown_;
-    std::unique_ptr<OscilDropdown> bufferDurationDropdown_;
-    std::unique_ptr<OscilToggle> autoAdjustQualityToggle_;
+    std::unique_ptr<MultiScoperDropdown> qualityPresetDropdown_;
+    std::unique_ptr<MultiScoperDropdown> bufferDurationDropdown_;
+    std::unique_ptr<MultiScoperToggle> autoAdjustQualityToggle_;
 
     // State
     float currentGainDb_ = 0.0f;
@@ -184,9 +184,9 @@ private:
 
     juce::ListenerList<Listener> listeners_;
 
-    OSCIL_TESTABLE();
+    MULTISCOPER_TESTABLE();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OptionsSection)
 };
 
-} // namespace oscil
+} // namespace multiscoper

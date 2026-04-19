@@ -1,18 +1,18 @@
 /*
-    Oscil - Instance Registry Lifecycle Tests
+    MultiScoper - Instance Registry Lifecycle Tests
     Tests for startup, shutdown, cleanup, null inputs, boundaries, and lifecycle scenarios
 */
 
 #include "core/InstanceRegistry.h"
 #include "core/SharedCaptureBuffer.h"
 
-#include "Oscil.h"
+#include "MultiScoper.h"
 
 #include <juce_events/juce_events.h>
 
 #include <gtest/gtest.h>
 
-namespace oscil
+namespace multiscoper
 {
 
 class InstanceRegistryLifecycleTest : public ::testing::Test
@@ -456,4 +456,4 @@ TEST_F(InstanceRegistryLifecycleTest, MultipleUpdatesToSameSource)
     EXPECT_EQ(info->sampleRate, 44100.0 + 99 * 1000.0);
 }
 
-} // namespace oscil
+} // namespace multiscoper

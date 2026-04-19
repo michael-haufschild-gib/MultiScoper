@@ -1,5 +1,5 @@
 /*
-    Oscil - Analysis Engine Implementation
+    MultiScoper - Analysis Engine Implementation
 */
 
 #include "core/analysis/AnalysisEngine.h"
@@ -8,7 +8,7 @@
 
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
@@ -211,4 +211,4 @@ void AnalysisEngine::processChannel(const float* samples, int numSamples, Channe
     metrics.decayTimeMs.store(transientDetector.getDecayTimeMs(), std::memory_order_relaxed);
 }
 
-} // namespace oscil
+} // namespace multiscoper

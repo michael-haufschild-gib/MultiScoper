@@ -1,5 +1,5 @@
 /*
-    Oscil - Transient Detector Implementation
+    MultiScoper - Transient Detector Implementation
     Uses dual envelope follower for robust transient detection
 */
 
@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace oscil
+namespace multiscoper
 {
 
 TransientDetector::TransientDetector() { reset(); }
@@ -181,4 +181,4 @@ void TransientDetector::process(const float* samples, int numSamples, double sam
     decayTimeMs_.store(currentDecay, std::memory_order_relaxed);
 }
 
-} // namespace oscil
+} // namespace multiscoper

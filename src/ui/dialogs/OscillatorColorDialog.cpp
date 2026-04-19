@@ -1,10 +1,10 @@
 /*
-    Oscil - Oscillator Color Dialog Implementation
+    MultiScoper - Oscillator Color Dialog Implementation
 */
 
 #include "ui/dialogs/OscillatorColorDialog.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 OscillatorColorDialog::OscillatorColorDialog(IThemeService& themeService) : ThemedComponent(themeService)
@@ -16,10 +16,10 @@ OscillatorColorDialog::~OscillatorColorDialog() = default;
 
 void OscillatorColorDialog::setupComponents()
 {
-    colorSwatches_ = std::make_unique<OscilColorSwatches>(getThemeService(), "colorDialog_swatches");
+    colorSwatches_ = std::make_unique<MultiScoperColorSwatches>(getThemeService(), "colorDialog_swatches");
     addAndMakeVisible(*colorSwatches_);
 
-    okButton_ = std::make_unique<OscilButton>(getThemeService(), "OK", "colorDialog_okBtn");
+    okButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "OK", "colorDialog_okBtn");
     okButton_->setVariant(ButtonVariant::Primary);
     okButton_->onClick = [this]() {
         if (onColorSelected_)
@@ -27,7 +27,7 @@ void OscillatorColorDialog::setupComponents()
     };
     addAndMakeVisible(*okButton_);
 
-    cancelButton_ = std::make_unique<OscilButton>(getThemeService(), "Cancel", "colorDialog_cancelBtn");
+    cancelButton_ = std::make_unique<MultiScoperButton>(getThemeService(), "Cancel", "colorDialog_cancelBtn");
     cancelButton_->setVariant(ButtonVariant::Secondary);
     cancelButton_->onClick = [this]() {
         if (onCancel_)
@@ -84,4 +84,4 @@ void OscillatorColorDialog::resized()
 int OscillatorColorDialog::getPreferredWidth() const { return 300; }
 int OscillatorColorDialog::getPreferredHeight() const { return 220; }
 
-} // namespace oscil
+} // namespace multiscoper

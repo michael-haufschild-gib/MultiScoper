@@ -1,5 +1,5 @@
 /*
-    Oscil - Pane Action Bar Implementation
+    MultiScoper - Pane Action Bar Implementation
 */
 
 #include "ui/layout/pane/PaneActionBar.h"
@@ -7,14 +7,14 @@
 #include "ui/components/ListItemIcons.h"
 #include "ui/components/SurfaceStyle.h"
 
-namespace oscil
+namespace multiscoper
 {
 
 namespace
 {
 constexpr float kHoldIconSize = 14.0f;
 
-void applyHoldButtonVisuals(OscilButton& button, IThemeService& themeService, bool toggled)
+void applyHoldButtonVisuals(MultiScoperButton& button, IThemeService& themeService, bool toggled)
 {
     if (toggled)
     {
@@ -35,9 +35,10 @@ PaneActionBar::PaneActionBar(IThemeService& themeService) : themeService_(themeS
 void PaneActionBar::setupButtons()
 {
     // Hold button
-    holdButton_ = std::make_unique<OscilButton>(themeService_, "", "pane_holdBtn");
+    holdButton_ = std::make_unique<MultiScoperButton>(themeService_, "", "pane_holdBtn");
     holdButton_->setVariant(ButtonVariant::Icon);
     holdButton_->setIconPath(ListItemIcons::createPauseIcon(14.0f));
+    holdButton_->setIconPadding(7.0f); // +2px icon vs SPACING_SM default
     holdButton_->setTooltip("Hold/Pause display for this pane");
     holdButton_->setToggleable(true);
     applyHoldButtonVisuals(*holdButton_, themeService_, holdButton_->isToggled());
@@ -50,9 +51,10 @@ void PaneActionBar::setupButtons()
     addAndMakeVisible(*holdButton_);
 
     // Layout buttons
-    statsButton_ = std::make_unique<OscilButton>(themeService_, "", "pane_statsBtn");
+    statsButton_ = std::make_unique<MultiScoperButton>(themeService_, "", "pane_statsBtn");
     statsButton_->setVariant(ButtonVariant::Icon);
     statsButton_->setIconPath(ListItemIcons::createStatsIcon(static_cast<float>(BUTTON_SIZE)));
+    statsButton_->setIconPadding(7.0f); // +2px icon vs SPACING_SM default
     statsButton_->setTooltip("Toggle Statistics");
     statsButton_->setToggleable(true);
     statsButton_->onClick = [this]() {
@@ -155,4 +157,4 @@ int PaneActionBar::getPreferredWidth() const
     return width;
 }
 
-} // namespace oscil
+} // namespace multiscoper

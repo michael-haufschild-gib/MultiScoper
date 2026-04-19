@@ -1,22 +1,22 @@
 /*
-    Oscil - Pane Body Tests
+    MultiScoper - Pane Body Tests
 */
 
 #include "ui/layout/pane/PaneBody.h"
 
-#include "OscilTestFixtures.h"
+#include "MultiScoperTestFixtures.h"
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
-using namespace oscil::test;
+using namespace multiscoper;
+using namespace multiscoper::test;
 
-class PaneBodyTest : public OscilPluginTestFixture
+class PaneBodyTest : public MultiScoperPluginTestFixture
 {
 protected:
     void SetUp() override
     {
-        OscilPluginTestFixture::SetUp();
+        MultiScoperPluginTestFixture::SetUp();
 
         paneBody_ = std::make_unique<PaneBody>(*processor, getRegistry(), getThemeManager(), getShaderRegistry());
         paneBody_->setBounds(0, 0, 640, 320);
@@ -26,7 +26,7 @@ protected:
     void TearDown() override
     {
         paneBody_.reset();
-        OscilPluginTestFixture::TearDown();
+        MultiScoperPluginTestFixture::TearDown();
     }
 
     std::unique_ptr<PaneBody> paneBody_;

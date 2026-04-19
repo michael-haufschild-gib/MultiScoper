@@ -8,7 +8,7 @@
 // fixtures authored outside the plugin). The real handlers are coupled to a
 // live juce::AudioProcessorEditor and cannot be constructed without a full
 // JUCE GUI host; exercising them here would require bringing up the message
-// manager and an Oscil editor, which is out of scope for a stateless fuzz
+// manager and an MultiScoper editor, which is out of scope for a stateless fuzz
 // target.
 //
 // We therefore fuzz the common attack surface: nlohmann::json::parse itself.

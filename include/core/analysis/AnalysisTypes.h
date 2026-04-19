@@ -1,5 +1,5 @@
 /*
-    Oscil - Analysis Types
+    MultiScoper - Analysis Types
     Data structures for statistical analysis
 */
 
@@ -9,7 +9,7 @@
 
 #include <atomic>
 
-namespace oscil
+namespace multiscoper
 {
 
 struct ChannelMetrics
@@ -52,4 +52,4 @@ struct AnalysisMetrics
     }
 };
 
-} // namespace oscil
+} // namespace multiscoper

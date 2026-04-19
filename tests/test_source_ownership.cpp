@@ -1,5 +1,5 @@
 /*
-    Oscil - Source Ownership Tests
+    MultiScoper - Source Ownership Tests
     Tests for Source owner assignment, backup instances, and ownership transfer
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class SourceOwnershipTest : public ::testing::Test
 {

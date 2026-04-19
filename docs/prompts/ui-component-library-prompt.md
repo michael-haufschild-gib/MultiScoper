@@ -1,6 +1,6 @@
-# Oscil UI Component Library - Image Prompt
+# MultiScoper UI Component Library - Image Prompt
 
-Optimized prompt for Google Nano Banana (Gemini Image Generation) to create a comprehensive UI component reference sheet for the Oscil audio plugin.
+Optimized prompt for Google Nano Banana (Gemini Image Generation) to create a comprehensive UI component reference sheet for the MultiScoper audio plugin.
 
 ---
 

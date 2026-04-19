@@ -1,12 +1,12 @@
 /*
-    Oscil - Preset Manager Tests
+    MultiScoper - Preset Manager Tests
 */
 
 #include "rendering/PresetManager.h"
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class PresetManagerTest : public ::testing::Test
 {

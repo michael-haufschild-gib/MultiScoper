@@ -1,5 +1,5 @@
 /*
-    Oscil - Visual Configuration Preset Tests
+    MultiScoper - Visual Configuration Preset Tests
     Tests for preset management and serialization
 */
 
@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace oscil;
+using namespace multiscoper;
 
 class VisualConfigPresetTest : public ::testing::Test
 {

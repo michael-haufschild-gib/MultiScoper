@@ -1,5 +1,5 @@
 /*
-    Oscil - Theme Service Interface
+    MultiScoper - Theme Service Interface
     Abstract interface for theme management to enable dependency injection
 */
 
@@ -9,7 +9,7 @@
 
 #include <vector>
 
-namespace oscil
+namespace multiscoper
 {
 
 // Forward declarations
@@ -98,4 +98,4 @@ public:
     virtual void removeListener(ThemeManagerListener* listener) = 0;
 };
 
-} // namespace oscil
+} // namespace multiscoper

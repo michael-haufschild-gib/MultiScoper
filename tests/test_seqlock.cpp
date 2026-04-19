@@ -1,5 +1,5 @@
 /*
-    Oscil - SeqLock Tests
+    MultiScoper - SeqLock Tests
     Verifies lock-free single-producer / multiple-consumer correctness
     of the SeqLock primitive used for metadata publishing.
 
@@ -21,7 +21,7 @@
 #include <thread>
 #include <vector>
 
-using namespace oscil;
+using namespace multiscoper;
 
 // ============================================================================
 // Test payload: fields that must stay mutually consistent

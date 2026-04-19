@@ -1,5 +1,5 @@
 /*
-    Oscil - Bloom Effect Implementation (Next-Gen Dual Filter)
+    MultiScoper - Bloom Effect Implementation (Next-Gen Dual Filter)
     Compile + bind + pass orchestration. GLSL shader source strings live
     in BloomEffectShaders.cpp to keep this translation unit focused on
     OpenGL object lifecycle and the bloom chain.
@@ -7,9 +7,9 @@
 
 #include "rendering/effects/BloomEffect.h"
 
-#if OSCIL_ENABLE_OPENGL
+#if MULTISCOPER_ENABLE_OPENGL
 
-namespace oscil
+namespace multiscoper
 {
 
 using namespace juce::gl;
@@ -263,6 +263,6 @@ void BloomEffect::apply(juce::OpenGLContext& context, Framebuffer* source, Frame
     passCombine(source, destination, pool);
 }
 
-} // namespace oscil
+} // namespace multiscoper
 
-#endif // OSCIL_ENABLE_OPENGL
+#endif // MULTISCOPER_ENABLE_OPENGL

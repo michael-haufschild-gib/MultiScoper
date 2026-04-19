@@ -1,10 +1,10 @@
 /*
-    Oscil Test Harness - HTTP Server Core
+    MultiScoper Test Harness - HTTP Server Core
 */
 
 #include "TestHttpServer.h"
 
-#include "core/OscilState.h"
+#include "core/MultiScoperState.h"
 
 #include "TestElementRegistry.h"
 #include "plugin/PluginFactory.h"
@@ -17,7 +17,7 @@
     #include <unistd.h>
 #endif
 
-namespace oscil::test
+namespace multiscoper::test
 {
 
 TestHttpServer::TestHttpServer(TestDAW& daw) : daw_(daw)
@@ -495,4 +495,4 @@ void TestHttpServer::handleDawTracks(const httplib::Request&, httplib::Response&
     res.set_content(successResponse(*tracks).dump(), "application/json");
 }
 
-} // namespace oscil::test
+} // namespace multiscoper::test
