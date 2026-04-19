@@ -83,7 +83,7 @@ def main() -> int:
     for start in range(0, len(files), batch_size):
         batch = files[start : start + batch_size]
         cmd = [exe, "--dry-run", "--Werror", *[str(f) for f in batch]]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
         if proc.returncode != 0:
             batch_had_format_violation = False
             # clang-format prints one diagnostic per file+line on stderr.
