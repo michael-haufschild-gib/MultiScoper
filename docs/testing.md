@@ -93,6 +93,7 @@ UI components require JUCE initialization:
 #include <gtest/gtest.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ui/components/MultiScoperButton.h"
+#include "ui/theme/ThemeManager.h"
 #include "TestElementRegistry.h"
 
 using namespace multiscoper;

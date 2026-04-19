@@ -212,11 +212,17 @@ def main() -> int:
     try:
         baseline = load_iteration_samples(args.baseline, args.metric)
         current = load_iteration_samples(args.current, args.metric)
-    except (OSError, ValueError):
+    except (OSError, ValueError) as e:
         # OSError covers FileNotFoundError / PermissionError / IsADirectoryError.
-        # ValueError covers UnicodeDecodeError from Path.read_text() and
-        # json.JSONDecodeError from json.loads(). Narrow so non-input bugs
+        # ValueError covers UnicodeDecodeError from Path.read_text(),
+        # json.JSONDecodeError from json.loads(), and the shape-validation
+        # errors raised by load_iteration_samples. Narrow so non-input bugs
         # (KeyError, TypeError) surface instead of masquerading as exit 2.
+        # OSError from load_iteration_samples is already surfaced there;
+        # echo shape/decode errors so CI logs show the specific failure
+        # instead of just exit code 2.
+        if not isinstance(e, OSError):
+            print(f"FAILED: {e}", file=sys.stderr)
         return 2
 
     shared = sorted(set(baseline) & set(current))
@@ -274,7 +280,20 @@ def main() -> int:
             continue
         comparable.append(name)
 
-    alpha_per_test = args.alpha / max(1, len(comparable))
+    # Guard: if every shared benchmark is skipped for small-n, the gate
+    # would silently exit 0 after printing SKIPPED. That turns a misconfigured
+    # --benchmark_repetitions run into a free pass. Treat it as an input error.
+    if not comparable:
+        print(
+            "FAILED: shared benchmarks found, but none have >= 2 samples on "
+            "both sides; cannot run statistical comparison.",
+            file=sys.stderr,
+        )
+        for name, nb, nc in skipped_small_n:
+            print(f"  {name}: baseline n={nb}, current n={nc}", file=sys.stderr)
+        return 2
+
+    alpha_per_test = args.alpha / len(comparable)
 
     regressions: list[tuple[str, float, float, float]] = []
     improvements: list[tuple[str, float, float]] = []

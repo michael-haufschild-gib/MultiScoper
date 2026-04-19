@@ -50,7 +50,9 @@ def resolve_macos_sysroot() -> str | None:
     if xcrun is None:
         return None
     try:
-        result = subprocess.run(
+        # S603 is suppressed because ``xcrun`` is resolved via shutil.which()
+        # above and the argument list is a hardcoded literal with shell=False.
+        result = subprocess.run(  # noqa: S603
             [xcrun, "--show-sdk-path"],
             capture_output=True,
             text=True,
