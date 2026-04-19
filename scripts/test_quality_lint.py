@@ -71,6 +71,16 @@ EXISTENCE_PATTERNS: List[re.Pattern] = [
     # EXPECT_GT(x.size(), 0) — checks non-emptiness, not behavior
     re.compile(r"\b(?:EXPECT|ASSERT)_GT\s*\(\s*\w+\.(?:size|count|length)\s*\(\s*\)\s*,\s*0\s*\)"),
     re.compile(r"\b(?:EXPECT|ASSERT)_GE\s*\(\s*\w+\.(?:size|count|length)\s*\(\s*\)\s*,\s*1\s*\)"),
+    # EXPECT_THAT(x, NotNull()) / Not(IsNull()) / IsEmpty() / Not(IsEmpty())
+    # — matchers that check structural properties, not behavior.
+    re.compile(
+        r"\b(?:EXPECT|ASSERT)_THAT\s*\([^,]+,\s*(?:::)?(?:testing::)?"
+        r"(?:NotNull\s*\(\s*\)|Not\s*\(\s*(?:::)?(?:testing::)?IsNull\s*\(\s*\)\s*\))\s*\)"
+    ),
+    re.compile(
+        r"\b(?:EXPECT|ASSERT)_THAT\s*\([^,]+,\s*(?:::)?(?:testing::)?"
+        r"(?:IsEmpty\s*\(\s*\)|Not\s*\(\s*(?:::)?(?:testing::)?IsEmpty\s*\(\s*\)\s*\))\s*\)"
+    ),
 ]
 
 # Structural (existence-only) matchers inside EXPECT_THAT / ASSERT_THAT.
