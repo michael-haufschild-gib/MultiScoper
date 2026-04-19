@@ -200,7 +200,11 @@ def main() -> int:
     try:
         baseline = load_iteration_samples(args.baseline, args.metric)
         current = load_iteration_samples(args.current, args.metric)
-    except Exception:
+    except (OSError, ValueError):
+        # OSError covers FileNotFoundError / PermissionError / IsADirectoryError.
+        # ValueError covers UnicodeDecodeError from Path.read_text() and
+        # json.JSONDecodeError from json.loads(). Narrow so non-input bugs
+        # (KeyError, TypeError) surface instead of masquerading as exit 2.
         return 2
 
     shared = sorted(set(baseline) & set(current))
