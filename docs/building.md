@@ -28,7 +28,7 @@ cmake --build --preset dev --target MultiScoperTestHarness
 
 | Requirement | Version | Install (macOS) |
 |-------------|---------|-----------------|
-| CMake | 3.21+ | `brew install cmake` |
+| CMake | 3.31+ | `brew install cmake` |
 | Ninja | Any | `brew install ninja` |
 | Clang/GCC | C++20 support | Xcode Command Line Tools |
 | ccache (recommended) | Any | `brew install ccache` |
@@ -289,6 +289,7 @@ cmake -B build -DMULTISCOPER_BUILD_TESTS=ON
 ```
 
 **Issue**: Linker errors with OpenGL
+
 ```bash
 # Ensure OpenGL is enabled (default)
 cmake -B build -DMULTISCOPER_ENABLE_OPENGL=ON
@@ -304,6 +305,7 @@ cd /path/to/MultiScoper
 ```
 
 **Issue**: OpenGL tests fail in headless environment
+
 ```bash
 # Some shader tests require OpenGL context
 # Run on machine with display or skip with:

@@ -127,8 +127,11 @@ def main() -> int:
     print(f"  parallelism: {args.jobs}")
 
     if not files:
-        print("FAILED: no .cpp files matched — check --paths.")
-        return 1
+        # Exit code 2 matches the other precondition-error returns above
+        # (missing compile_commands.json, --jobs <= 0, clang-tidy not on PATH).
+        # Exit code 1 is reserved for "clang-tidy found issues".
+        print("FAILED: no .cpp files matched — check --paths.", file=sys.stderr)
+        return 2
 
     failures: list[tuple[str, str]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:

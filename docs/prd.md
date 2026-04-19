@@ -3784,7 +3784,7 @@ public:
 private:
     MultiTrackEngine multiTrackEngine;
     TimingEngine timingEngine;
-    juce::ValueTree multiscoperState;
+    MultiScoperState state_;
 };
 ```
 

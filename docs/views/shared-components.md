@@ -19,6 +19,10 @@ Single frame is OK here — override the `_README` default size:
 
 Render EVERY state listed. A "state" is a separate rendered block with a 10px-uppercase label under it.
 
+### Palette Extension (applies to this file only)
+
+This reference shows per-state colour variants that exist in `ColorTheme` but are not individually named in `_README.md`'s pinned palette (hover/pressed shades, danger-hover/pressed, button overlays, etc.). Every hex literal below is the canonical value of a token defined in `include/ui/theme/ColorTheme.h` (for example `btnPrimaryBg = 0xFF007ACC`, `btnDangerBg = 0xFFEE4444`). Treat these literals as an explicit extension of the pinned palette for this component-reference file only; other views still resolve from `_README.md`'s list.
+
 ### Column 1 — Buttons
 
 Each variant: 4 buttons side by side, each 72 × 32, labeled below: `default` / `hover` / `pressed` / `disabled`.
@@ -117,7 +121,7 @@ Horizontal meter 320 × 10 radius 5, gradient left-to-right: `#4AD070` (0-60%), 
 ### Column 4 — BPM / Transport
 
 - Numeric display `120.0` in 32px bold with label `BPM` small above.
-- Transport row: play / stop / pill-label `LINKED` with chain-link icon. Each icon button 24 × 24.
+- Transport row: `play` / `square` (stop) icons and a pill-label `LINKED` with the `link` icon. Each icon button 24 × 24. All three names are from the Lucide allowlist pinned in `_README.md`.
 
 ## Negative Constraints (this file)
 

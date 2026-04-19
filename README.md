@@ -2,7 +2,7 @@
 
 **Multi-track audio oscilloscope plugin for engineers and producers.**
 
-[![Build and Test](https://github.com/MultiScoper/MultiScoper/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/MultiScoper/MultiScoper/actions/workflows/build_and_test.yml)
+[![Build and Test](https://github.com/michael-haufschild-gib/MultiScoper/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/michael-haufschild-gib/MultiScoper/actions/workflows/build_and_test.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 [![JUCE 8](https://img.shields.io/badge/JUCE-8.0.12-green.svg)](https://juce.com)

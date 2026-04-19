@@ -240,10 +240,15 @@ def main() -> int:
 
     regressions: list[tuple[str, float, float, float]] = []
     improvements: list[tuple[str, float, float]] = []
+    skipped_small_n: list[tuple[str, int, int]] = []
     for name in shared:
         b = baseline[name]
         c = current[name]
         if len(b) < 2 or len(c) < 2:
+            # Keep the compare step transparent: a silently-skipped benchmark
+            # usually means --benchmark_repetitions didn't apply on one side
+            # and we'd otherwise mask a config bug as a clean pass.
+            skipped_small_n.append((name, len(b), len(c)))
             continue
         median_b = median(b)
         median_c = median(c)
@@ -259,6 +264,11 @@ def main() -> int:
             p = _mannwhitneyu_greater(b, c)
             if p < alpha_per_test:
                 improvements.append((name, rel, p))
+
+    if skipped_small_n:
+        print(f"\nSKIPPED (insufficient samples, need >= 2 per side): {len(skipped_small_n)}")
+        for name, nb, nc in skipped_small_n:
+            print(f"  {name}: baseline n={nb}, current n={nc}")
 
     if improvements:
         print("\nIMPROVEMENTS:")

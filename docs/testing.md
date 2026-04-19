@@ -477,12 +477,14 @@ Scenarios live in `tests/reaper/scenarios/*.lua`. Results land at
 
 - Before every release.
 - After touching `PluginProcessor`, `PluginEditor`, or `InstanceRegistry`.
-- After changing plugin state serialization (`PluginProcessorState`).
+- After changing plugin state serialization (`MultiScoperState`).
 - After changing build flags that affect any of VST3/AU/CLAP wrappers.
 
 ### How to interpret failures
 
-1. Read `/tmp/multiscoper_reaper_results.json` — each failed scenario includes a
+1. Read the results JSON (`$TMPDIR/multiscoper_reaper_results.json` on macOS/Linux,
+   `%TEMP%\multiscoper_reaper_results.json` on Windows, or the path from
+   `$MULTISCOPER_REAPER_RESULTS` if set) — each failed scenario includes a
    `detail` field with the Lua error message.
 2. Check Reaper's ReaScript console (Actions -> Show console) for
    `[run_all]`, `[reaper_test_lib]`, and scenario-specific log lines.

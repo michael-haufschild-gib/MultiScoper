@@ -102,7 +102,7 @@ Border alpha overlays (over `backgroundPane`): `subtle` = `textPrimary @ 0.12`, 
 - All icons: inline `<svg viewBox="0 0 24 24" width="W" height="W" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">`.
 - Default W = 14 for row icons, 16 for button icons, 20 for section headers.
 - Use these Lucide path shapes verbatim (copy from lucide.dev if needed):
-  - `trash-2`, `settings`, `eye`, `eye-off`, `chevron-left`, `chevron-right`, `chevron-down`, `chevron-up`, `grip-vertical`, `x`, `plus`, `search`, `pause`, `play`, `bar-chart-3`, `lock`, `unlock`, `music`, `mic`, `sliders-horizontal`.
+  - `trash-2`, `settings`, `eye`, `eye-off`, `chevron-left`, `chevron-right`, `chevron-down`, `chevron-up`, `grip-vertical`, `x`, `plus`, `search`, `pause`, `play`, `square`, `link`, `bar-chart-3`, `lock`, `unlock`, `music`, `mic`, `sliders-horizontal`.
 - NEVER use icon fonts, emoji-as-icons, or image files.
 
 ## Waveform Placeholder SVG

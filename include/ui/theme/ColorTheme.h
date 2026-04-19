@@ -235,7 +235,7 @@ struct ColorTheme
     }
 
     /**
-     * Pick contrast-safe text colour (literal white or near-black) by WCAG
+     * Pick contrast-safe text colour (literal white or pure black) by WCAG
      * ratio against the given surface. Use this for text painted on a
      * computed colour fill (button accent, status pill bg, etc.) where the
      * surface is not a theme token and `textPrimary`/`textHighlight` may be

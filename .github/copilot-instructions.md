@@ -70,7 +70,7 @@ For detailed guidance, refer to:
 
 ### 2. Dependency Issues
 - Dependencies are fetched via `FetchContent` in CMakeLists.txt
-- Current versions: JUCE 8.0.5, GoogleTest 1.17.0, cpp-httplib 0.27.0, nlohmann/json 3.12.0
+- Current versions: JUCE 8.0.12, GoogleTest 1.17.0, cpp-httplib 0.27.0, nlohmann/json 3.12.0
 
 ### 3. Platform-Specific Failures
 - **macOS**: Universal binary (arm64;x86_64), requires Xcode tools

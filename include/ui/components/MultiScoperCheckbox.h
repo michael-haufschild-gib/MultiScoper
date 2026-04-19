@@ -24,7 +24,9 @@ namespace multiscoper
  * - Three states: Unchecked, Checked, Indeterminate
  * - Animated check mark with spring physics
  * - Optional label
- * - Full keyboard accessibility
+ * - Host-aware keyboard handling: Space/Return are passed to the DAW host
+ *   for transport control and do NOT toggle the checkbox (see
+ *   tests/test_key_passthrough.cpp).
  */
 class MultiScoperCheckbox
     : public ThemedComponent

@@ -25,7 +25,9 @@ namespace multiscoper
  * - Spring-based knob animation with slight overshoot
  * - Celebration "pop" effect on activation
  * - APVTS attachment support for DAW automation
- * - Full keyboard accessibility
+ * - Host-aware keyboard handling: Space/Return are passed to the DAW host
+ *   for transport control and do NOT toggle the switch (see
+ *   tests/test_key_passthrough.cpp).
  * - Optional label
  * - E2E test automation via testId
  */
