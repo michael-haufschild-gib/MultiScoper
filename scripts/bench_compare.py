@@ -157,18 +157,19 @@ def load_iteration_samples(path: Path, metric: str) -> dict[str, list[float]]:
 
     # Validate shape before iterating. A well-formed JSON payload with the
     # wrong structure used to escape main() as an AttributeError traceback;
-    # raise ValueError so main()'s ``except (OSError, ValueError)`` converts
-    # it into the documented exit code 2.
+    # raise TypeError (Ruff TRY004 — semantically correct for type mismatches)
+    # so main()'s ``except (OSError, TypeError, ValueError)`` converts it into
+    # the documented exit code 2.
     if not isinstance(data, dict):
-        raise ValueError(f"{path}: expected a top-level JSON object")
+        raise TypeError(f"{path}: expected a top-level JSON object")
     benchmarks = data.get("benchmarks", [])
     if not isinstance(benchmarks, list):
-        raise ValueError(f"{path}: 'benchmarks' must be a list")
+        raise TypeError(f"{path}: 'benchmarks' must be a list")
 
     out: dict[str, list[float]] = {}
     for entry in benchmarks:
         if not isinstance(entry, dict):
-            raise ValueError(f"{path}: benchmark entries must be objects")
+            raise TypeError(f"{path}: benchmark entries must be objects")
         if entry.get("run_type") != "iteration":
             continue
         name = entry.get("name")
@@ -212,12 +213,13 @@ def main() -> int:
     try:
         baseline = load_iteration_samples(args.baseline, args.metric)
         current = load_iteration_samples(args.current, args.metric)
-    except (OSError, ValueError) as e:
+    except (OSError, TypeError, ValueError) as e:
         # OSError covers FileNotFoundError / PermissionError / IsADirectoryError.
-        # ValueError covers UnicodeDecodeError from Path.read_text(),
-        # json.JSONDecodeError from json.loads(), and the shape-validation
-        # errors raised by load_iteration_samples. Narrow so non-input bugs
-        # (KeyError, TypeError) surface instead of masquerading as exit 2.
+        # ValueError covers UnicodeDecodeError from Path.read_text() and
+        # json.JSONDecodeError from json.loads(). TypeError covers the
+        # shape-validation errors raised by load_iteration_samples for
+        # wrong JSON structure. Narrow so unrelated bugs (KeyError, IndexError)
+        # surface instead of masquerading as exit 2.
         # OSError from load_iteration_samples is already surfaced there;
         # echo shape/decode errors so CI logs show the specific failure
         # instead of just exit code 2.
